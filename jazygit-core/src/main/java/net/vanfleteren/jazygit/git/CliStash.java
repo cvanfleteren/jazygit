@@ -63,13 +63,14 @@ final class CliStash {
 
     private static Either<UnexpectedOutput, Stash> stash(String line) {
         return GitOutput.fields(line, 4)
-                .flatMap(fields -> GitOutput.epochSeconds(fields.get(3))
-                        .map(time -> new Stash(
-                                fields.get(0),
-                                new Sha(fields.get(1)),
-                                BRANCH_PREFIX.matcher(fields.get(2)).replaceFirst(""),
-                                branch(fields.get(2)),
-                                time)));
+                .flatMap(fields -> GitOutput.sha(fields.get(1))
+                        .flatMap(sha -> GitOutput.epochSeconds(fields.get(3))
+                                .map(time -> new Stash(
+                                        fields.get(0),
+                                        sha,
+                                        BRANCH_PREFIX.matcher(fields.get(2)).replaceFirst(""),
+                                        branch(fields.get(2)),
+                                        time))));
     }
 
     private static Option<BranchName> branch(String message) {

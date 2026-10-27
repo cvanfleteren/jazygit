@@ -31,10 +31,10 @@ public record RemoteBranch(String remote, BranchName branch) {
     }
 
     /**
-     * Its remote-tracking ref, e.g. {@code refs/remotes/origin/main}.
+     * Its remote-tracking branch, e.g. {@code refs/remotes/origin/main}.
      */
-    public String trackingRef() {
-        return "refs/remotes/" + remote + "/" + branch.value();
+    public BranchRef.Remote tracking() {
+        return new BranchRef.Remote(this);
     }
 
     /**

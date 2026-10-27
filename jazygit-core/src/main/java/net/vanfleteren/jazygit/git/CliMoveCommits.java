@@ -40,7 +40,7 @@ final class CliMoveCommits {
                 () -> GitFailure.widen(CliCheckout.checkoutNewBranch(
                         worktree,
                         to,
-                        onto.map(BranchRef::ref).getOrElse(from.value()),
+                        onto.map(BranchRef::toArg).getOrElse(from.value()),
                         Option.of(onto.map(CliMoveCommits::name).getOrElse(from)))),
                 () -> onto.isDefined()
                         ? copy(worktree, from, oldest)
@@ -78,7 +78,11 @@ final class CliMoveCommits {
             Path worktree, BranchName from, Sha oldest) {
         return Unfinished.runOrUndo(
                 worktree,
-                git("cherry-pick", "--empty=drop", "--allow-empty", parent(oldest) + ".." + Refs.head(from)),
+                git(
+                        "cherry-pick",
+                        "--empty=drop",
+                        "--allow-empty",
+                        parent(oldest) + ".." + new BranchRef.Local(from).toArg()),
                 left -> Option.when(left.picking(), ABORT));
     }
 

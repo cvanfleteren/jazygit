@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.git;
 
 import static net.vanfleteren.jazygit.git.GitCommand.git;
-import static net.vanfleteren.jazygit.git.Refs.HEADS;
+import static net.vanfleteren.jazygit.git.model.BranchRef.HEADS;
 
 import io.vavr.collection.List;
 import io.vavr.collection.Seq;

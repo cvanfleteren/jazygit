@@ -102,7 +102,7 @@ final class CliCheckout {
                         "--track",
                         "-b",
                         name.value(),
-                        Refs.remote(upstream.remote(), upstream.branch()),
+                        upstream.tracking().toArg(),
                         "--"));
     }
 }

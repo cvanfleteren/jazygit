@@ -1,9 +1,20 @@
 package net.vanfleteren.jazygit.git.model;
 
 /**
- * A branch whose log can be shown: a local one, or a remote-tracking one.
+ * A branch whose log can be shown: a local one, or a remote-tracking one. It is the one place a branch's ref is
+ * spelled.
  */
-public sealed interface BranchRef {
+public sealed interface BranchRef extends Revision {
+
+    /**
+     * Where the refs of the local branches are.
+     */
+    String HEADS = "refs/heads/";
+
+    /**
+     * Where the refs of the remote-tracking branches are.
+     */
+    String REMOTES = "refs/remotes/";
 
     /**
      * The name git shows for it, e.g. {@code main} or {@code origin/main}.
@@ -13,7 +24,13 @@ public sealed interface BranchRef {
     /**
      * Its ref, e.g. {@code refs/heads/main} or {@code refs/remotes/origin/main}.
      */
-    String ref();
+    @Override
+    String toArg();
+
+    @Override
+    default String label() {
+        return name();
+    }
 
     /**
      * The local branch {@code branch}.
@@ -26,8 +43,8 @@ public sealed interface BranchRef {
         }
 
         @Override
-        public String ref() {
-            return "refs/heads/" + branch.value();
+        public String toArg() {
+            return HEADS + branch.value();
         }
     }
 
@@ -42,8 +59,8 @@ public sealed interface BranchRef {
         }
 
         @Override
-        public String ref() {
-            return branch.trackingRef();
+        public String toArg() {
+            return REMOTES + branch.remote() + "/" + branch.branch().value();
         }
     }
 }

@@ -63,7 +63,7 @@ final class CliLog {
                         () -> Either.right(List.empty()),
                         tip -> read(
                                 worktree,
-                                filters(query).append(tip.value()).appendAll(notOn.map(base -> "^" + base.ref())),
+                                filters(query).append(tip.value()).appendAll(notOn.map(base -> "^" + base.toArg())),
                                 query.paths(),
                                 MAX_COMMITS)));
     }
@@ -141,7 +141,7 @@ final class CliLog {
         return bases.isEmpty()
                 ? Either.right(Option.none())
                 : Either.<GitError, Option<Sha>>narrow(
-                                resolve(worktree, bases.head().ref()).mapLeft(GitFailure::error))
+                                resolve(worktree, bases.head().toArg()).mapLeft(GitFailure::error))
                         .flatMap(tip -> tip.fold(
                                 () -> firstExisting(worktree, bases.tail()),
                                 found -> Either.right(Option.of(Tuple.of(bases.head(), found)))));
@@ -203,7 +203,7 @@ final class CliLog {
      */
     static Either<GitError, CommitRange> range(
             Path worktree, BranchName branch, Sha oldest, Option<RemoteBranch> upstream) {
-        List<String> revisions = List.of(Refs.head(branch), "^" + oldest.value() + "^");
+        List<String> revisions = List.of(new BranchRef.Local(branch).toArg(), "^" + oldest.value() + "^");
         return Either.narrow(GitProcess.read(
                         worktree,
                         GitCommand.reading(List.of("rev-list", "--parents", "--topo-order")
@@ -211,8 +211,9 @@ final class CliLog {
                                 .append("--")),
                         raw -> Either.right(GitOutput.nonBlankLines(raw)
                                 .map(line -> List.of(line.split(" ")).map(Sha::new))))
-                .flatMap(commits -> upstream.map(remote ->
-                                count(worktree, revisions.append("^" + Refs.remote(remote.remote(), remote.branch()))))
+                .flatMap(commits -> upstream.map(remote -> count(
+                                worktree,
+                                revisions.append("^" + remote.tracking().toArg())))
                         .getOrElse(() -> Either.right(commits.size()))
                         .map(unpushed -> new CommitRange(
                                 commits.size(),
@@ -249,7 +250,7 @@ final class CliLog {
      * How many commits are on {@code branch} and not on {@code base}, counting no further than {@code max}.
      */
     static Either<ProcessError, Integer> countNotOn(Path worktree, BranchRef branch, BranchRef base, int max) {
-        return count(worktree, List.of("--max-count=" + max, branch.ref(), "^" + base.ref()));
+        return count(worktree, List.of("--max-count=" + max, branch.toArg(), "^" + base.toArg()));
     }
 
     /**
@@ -265,7 +266,7 @@ final class CliLog {
 
     private static Either<GitError, Sha> tip(Path worktree, BranchRef branch) {
         return Either.<GitError, Option<Sha>>narrow(
-                        resolve(worktree, branch.ref()).mapLeft(GitFailure::error))
+                        resolve(worktree, branch.toArg()).mapLeft(GitFailure::error))
                 .flatMap(tip -> tip.toEither(() -> new UnknownBranch(branch)));
     }
 

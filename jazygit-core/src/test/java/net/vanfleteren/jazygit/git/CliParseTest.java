@@ -286,4 +286,14 @@ class CliParseTest {
         assertEquals(Option.none(), Sha.parse("  "));
         assertEquals(Option.none(), Sha.parse(A + " " + B));
     }
+
+    @Test
+    void aShaIsFourToSixtyFourHexDigits() {
+        assertEquals(Option.of(new Sha("abc1")), Sha.parse("abc1"));
+        assertEquals(Option.of(new Sha("a".repeat(64))), Sha.parse("a".repeat(64)));
+        assertEquals(Option.none(), Sha.parse("abc"));
+        assertEquals(Option.none(), Sha.parse("a".repeat(65)));
+        assertEquals(Option.none(), Sha.parse("-abc1"));
+        assertEquals(Option.none(), Sha.parse("main"));
+    }
 }

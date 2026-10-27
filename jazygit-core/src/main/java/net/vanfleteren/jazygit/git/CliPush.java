@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.PushRefused;
 import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.PushDefault;
 import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
@@ -84,6 +85,8 @@ final class CliPush {
      * one would type it.
      */
     private static String refspec(BranchName name, RemoteBranch target) {
-        return target.branch().equals(name) ? name.value() : name.value() + ":" + Refs.head(target.branch());
+        return target.branch().equals(name)
+                ? name.value()
+                : name.value() + ":" + new BranchRef.Local(target.branch()).toArg();
     }
 }

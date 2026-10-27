@@ -26,7 +26,7 @@ public final class NewBranchUpdate {
                         model.repo()
                                 .remoteBranch(remote)
                                 .map(known -> new NewBranchPopup(
-                                        remote.trackingRef(), remote.shortName(), Option.of(remote.branch()))));
+                                        remote.tracking().toArg(), remote.shortName(), Option.of(remote.branch()))));
         };
     }
 

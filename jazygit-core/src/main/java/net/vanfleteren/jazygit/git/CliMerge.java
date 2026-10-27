@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.MergeMode;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
@@ -45,13 +46,14 @@ final class CliMerge {
             Path worktree, BranchName branch, String fastForward) {
         return message(worktree, branch)
                 .flatMap(message -> Unfinished.runOrStop(
-                        worktree, git("merge", fastForward, "--no-edit", "-m", message, Refs.head(branch))));
+                        worktree,
+                        git("merge", fastForward, "--no-edit", "-m", message, new BranchRef.Local(branch).toArg())));
     }
 
     private static Either<GitFailure<GitError>, String> message(Path worktree, BranchName branch) {
         return GitProcess.read(
                         worktree,
-                        GitCommand.reading("rev-parse", "--verify", Refs.head(branch)),
+                        GitCommand.reading("rev-parse", "--verify", new BranchRef.Local(branch).toArg()),
                         raw -> Either.right(raw.strip()))
                 .<GitFailure<GitError>>mapLeft(error -> new GitFailure<>(error, List.empty()))
                 .flatMap(sha -> TempFiles.using(
@@ -67,7 +69,7 @@ final class CliMerge {
     }
 
     private static Either<GitFailure<GitError>, List<ExecutedCommand>> squash(Path worktree, BranchName branch) {
-        return Unfinished.runOrStop(worktree, git("merge", "--squash", Refs.head(branch)));
+        return Unfinished.runOrStop(worktree, git("merge", "--squash", new BranchRef.Local(branch).toArg()));
     }
 
     /**

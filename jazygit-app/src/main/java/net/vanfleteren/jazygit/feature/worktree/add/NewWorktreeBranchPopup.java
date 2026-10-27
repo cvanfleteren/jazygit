@@ -37,7 +37,7 @@ public record NewWorktreeBranchPopup(String label, String name, NewBranch from, 
         return new NewWorktreeBranchPopup(
                 remote.shortName(),
                 remote.branch().value(),
-                new NewBranch(remote.trackingRef(), Option.none(), true),
+                new NewBranch(remote.tracking().toArg(), Option.none(), true),
                 ifBlank);
     }
 
