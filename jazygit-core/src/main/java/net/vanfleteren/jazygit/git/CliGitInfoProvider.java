@@ -316,7 +316,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<ProcessError, List<String>> remotes() {
+    public Either<ProcessError, List<RemoteName>> remotes() {
         return CliRemote.remotes(worktree);
     }
 
@@ -341,7 +341,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> fetch(String remote) {
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> fetch(RemoteName remote) {
         return CliFetch.fetch(worktree, remote, Option.of(System.getenv("GIT_SSH_COMMAND")), credentials.get());
     }
 

@@ -33,6 +33,7 @@ import net.vanfleteren.jazygit.git.model.MergeMode;
 import net.vanfleteren.jazygit.git.model.NewBranchStart;
 import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.git.model.RemoteName;
 import net.vanfleteren.jazygit.git.model.RemoteRef;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.ResetMode;
@@ -313,7 +314,7 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<ProcessError, List<String>> remotes() {
+    default Either<ProcessError, List<RemoteName>> remotes() {
         return Either.right(List.empty());
     }
 
@@ -338,7 +339,7 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> fetch(String remote) {
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> fetch(RemoteName remote) {
         return ran();
     }
 

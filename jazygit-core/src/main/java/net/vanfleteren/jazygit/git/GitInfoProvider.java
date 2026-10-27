@@ -202,7 +202,7 @@ public interface GitInfoProvider {
     /**
      * Fetches from {@code remote}. It never asks for credentials or passphrases: what would need them fails.
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> fetch(String remote);
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> fetch(RemoteName remote);
 
     /**
      * Fast-forwards the local branch {@code branch}, which is not checked out, to {@code upstream}, the branch it
@@ -215,7 +215,7 @@ public interface GitInfoProvider {
     /**
      * The remotes that fetching all fetches from: all of them but those with {@code skipFetchAll} set.
      */
-    Either<ProcessError, List<String>> remotes();
+    Either<ProcessError, List<RemoteName>> remotes();
 
     /**
      * The URL of each remote, by its name.

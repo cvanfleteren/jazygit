@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.fetch;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.git.model.RemoteName;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.PullRequestsUpdate;
 import net.vanfleteren.jazygit.state.Update;
@@ -25,16 +26,19 @@ public final class FetchUpdate {
             // A fetch that is still running is not started again.
             case FetchMsg.Tick() when fetching(model) -> Next.of(model);
             case FetchMsg.Tick() -> start(Next.of(model));
-            case FetchMsg.RemotesListed(List<String> remotes) -> next(model, remotes);
+            case FetchMsg.RemotesListed(List<RemoteName> remotes) -> next(model, remotes);
             case FetchMsg.ListingFailed(var failure) -> {
                 Next stopped = Next.of(model.mapJobs(
                         jobs -> jobs.withLastFetch(jobs.lastFetch().failed(LISTING))));
                 yield model.jobs().fetchAgain() ? start(stopped) : stopped;
             }
-            case FetchMsg.Fetched(String remote, List<String> rest) ->
-                next(model.mapJobs(jobs -> jobs.withLastFetch(jobs.lastFetch().succeeded(remote, model.now()))), rest);
-            case FetchMsg.FetchFailed(String remote, List<String> rest, var failure) ->
-                next(model.mapJobs(jobs -> jobs.withLastFetch(jobs.lastFetch().failed(remote))), rest);
+            case FetchMsg.Fetched(RemoteName remote, List<RemoteName> rest) ->
+                next(
+                        model.mapJobs(
+                                jobs -> jobs.withLastFetch(jobs.lastFetch().succeeded(remote.value(), model.now()))),
+                        rest);
+            case FetchMsg.FetchFailed(RemoteName remote, List<RemoteName> rest, var failure) ->
+                next(model.mapJobs(jobs -> jobs.withLastFetch(jobs.lastFetch().failed(remote.value()))), rest);
         };
     }
 
@@ -65,7 +69,7 @@ public final class FetchUpdate {
      * Fetches from the first of {@code remotes}; with none left, the fetch is done and the branches show what
      * came in, and how their pull requests are doing now.
      */
-    private static Next next(Model model, List<String> remotes) {
+    private static Next next(Model model, List<RemoteName> remotes) {
         return remotes.pop2Option()
                 .map(next -> Next.of(model, new FetchCmd.Fetch(next._1, next._2)))
                 .getOrElse(() -> done(model));

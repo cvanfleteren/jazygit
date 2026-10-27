@@ -56,6 +56,7 @@ import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.git.model.RemoteName;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.Revision;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -169,12 +170,12 @@ class ProgramTest {
         }
 
         @Override
-        public Either<ProcessError, List<String>> remotes() {
-            return Either.right(List.of("origin", "upstream"));
+        public Either<ProcessError, List<RemoteName>> remotes() {
+            return Either.right(List.of(new RemoteName("origin"), new RemoteName("upstream")));
         }
 
         @Override
-        public Either<GitFailure<ProcessError>, List<ExecutedCommand>> fetch(String remote) {
+        public Either<GitFailure<ProcessError>, List<ExecutedCommand>> fetch(RemoteName remote) {
             fetches++;
             return StubGitProvider.ran("git fetch --quiet --prune " + remote);
         }

@@ -64,7 +64,7 @@ public final class BranchChecksUpdate {
         List<Branch> branches = model.repo().branches().toOption().getOrElse(List.empty());
         List<BranchName> first = List.of(branches.find(Branch::current), branches.find(Branch::isDefault))
                 .flatMap(branch -> branch.flatMap(Branch::remoteUpstream))
-                .filter(upstream -> checks.remotes().contains(upstream.remote()))
+                .filter(upstream -> checks.remotes().contains(upstream.remote().value()))
                 .map(RemoteBranch::branch);
         List<BranchName> pending = checks.byBranch()
                 .filterValues(state -> state == Checks.PENDING)

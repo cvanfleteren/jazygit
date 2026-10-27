@@ -7,6 +7,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import net.vanfleteren.jazygit.git.model.RemoteName;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -52,16 +53,16 @@ class CliFetchTest {
         git(repo, "remote", "add", "skipped", dir.resolve("nowhere.git").toString());
         git(repo, "config", "remote.skipped.skipFetchAll", "true");
 
-        List<String> remotes = CliRemote.remotes(repo).get();
-        assertEquals(List.of("origin", "other"), remotes);
+        List<RemoteName> remotes = CliRemote.remotes(repo).get();
+        assertEquals(List.of(new RemoteName("origin"), new RemoteName("other")), remotes);
         assertEquals(
                 List.of("git fetch --quiet --prune --no-write-fetch-head origin"),
-                CliFetch.fetch(repo, "origin", Option.none(), HashMap.empty())
+                CliFetch.fetch(repo, new RemoteName("origin"), Option.none(), HashMap.empty())
                         .get()
                         .map(ExecutedCommand::line));
         assertEquals(
                 List.of("git fetch --quiet --prune --no-write-fetch-head other"),
-                CliFetch.fetch(repo, "other", Option.none(), HashMap.empty())
+                CliFetch.fetch(repo, new RemoteName("other"), Option.none(), HashMap.empty())
                         .get()
                         .map(ExecutedCommand::line));
 
@@ -81,7 +82,8 @@ class CliFetchTest {
         git(repo, "branch", "-q", "--track", "feature", "origin/feature");
         git(origin, "branch", "-q", "-D", "feature");
 
-        CliFetch.fetch(repo, "origin", Option.none(), HashMap.empty()).get();
+        CliFetch.fetch(repo, new RemoteName("origin"), Option.none(), HashMap.empty())
+                .get();
 
         assertFalse(git(repo, "branch", "-r").contains("origin/feature"));
         assertTrue(git(repo, "branch", "-vv").contains("[origin/feature: gone]"));
@@ -103,7 +105,8 @@ class CliFetchTest {
         git(clone, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "theirs");
         git(clone, "push", "-q", "origin", "main");
 
-        CliFetch.fetch(repo, "origin", Option.none(), HashMap.empty()).get();
+        CliFetch.fetch(repo, new RemoteName("origin"), Option.none(), HashMap.empty())
+                .get();
 
         assertEquals(pulled, Files.readString(fetchHead));
         assertEquals(git(clone, "rev-parse", "main"), git(repo, "rev-parse", "origin/main"));

@@ -2,10 +2,12 @@ package net.vanfleteren.jazygit.git;
 
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.RemoteName;
 import net.vanfleteren.jazygit.git.model.Revision;
 
 /**
- * The one place a revision or a branch name is turned into text for git (ADR 40): a revision always as its full ref,
+ * The one place a revision, a branch name or a remote is turned into text for git (ADR 40): a revision always as its
+ * full ref,
  * a full sha or {@code HEAD}, so a tag of the same name does not win, and nothing that starts with {@code -}, which
  * git would read as an option. {@code CoreArchitectureTest} keeps the other classes of this package from doing it
  * themselves.
@@ -48,5 +50,12 @@ final class GitArgs {
      */
     static String name(BranchName branch) {
         return branch.value();
+    }
+
+    /**
+     * {@code remote}'s name, where git takes a remote. A name cannot start with {@code -}.
+     */
+    static String remote(RemoteName remote) {
+        return remote.value();
     }
 }

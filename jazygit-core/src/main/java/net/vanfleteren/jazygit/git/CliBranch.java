@@ -18,6 +18,7 @@ import java.util.regex.Pattern;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.UnexpectedOutput;
 import net.vanfleteren.jazygit.git.model.*;
+import net.vanfleteren.jazygit.git.model.RemoteName;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
@@ -26,7 +27,7 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
  */
 final class CliBranch {
 
-    private static final String ORIGIN = BranchRef.REMOTES + RemoteBranch.DEFAULT_REMOTE + "/";
+    private static final String ORIGIN = BranchRef.REMOTES + GitArgs.remote(RemoteBranch.DEFAULT_REMOTE) + "/";
 
     private static final List<String> FIELDS = List.of(
             "%(refname)",
@@ -138,7 +139,11 @@ final class CliBranch {
             Path worktree, RemoteBranch remote, Map<String, String> credentials) {
         return CliRemote.run(
                 worktree,
-                git("push", remote.remote(), "--delete", GitArgs.revision(new BranchRef.Local(remote.branch()))),
+                git(
+                        "push",
+                        GitArgs.remote(remote.remote()),
+                        "--delete",
+                        GitArgs.revision(new BranchRef.Local(remote.branch()))),
                 credentials);
     }
 
@@ -272,7 +277,7 @@ final class CliBranch {
             return remote.flatMap(r -> remoteRef
                     .flatMap(ref -> GitOutput.after(ref, HEADS))
                     .map(BranchName::new)
-                    .map(branch -> r.equals(CliRemote.THIS_REPOSITORY)
+                    .map(branch -> CliRemote.THIS_REPOSITORY.equals(new RemoteName(r))
                             ? new BranchRef.Local(branch)
                             : new BranchRef.Remote(new RemoteBranch(r, branch))));
         }
