@@ -173,6 +173,14 @@ class ThemeTest {
         assertEquals(
                 Style.EMPTY,
                 engine.resolve(new Node("Panel", Set.of(Theme.Classes.FOCUSED))).toStyle());
+        // Only attributes, which no terminal colour can show: the focused pane's border, and the disabled entries.
+        assertTrue(engine.resolve(new Node("Panel", Set.of(Theme.Classes.FOCUSED)))
+                .borderType()
+                .isPresent());
+        assertTrue(engine.resolve(new Node("Panel", Set.of())).borderType().isEmpty());
+        assertEquals(
+                Style.EMPTY.crossedOut(),
+                engine.resolve(new Node("Text", Set.of("disabled"))).toStyle());
         assertEquals(Style.EMPTY, Theme.spanStyles(engine).of(Theme.Classes.DIFF_ADDED));
         assertEquals(Style.EMPTY.reversed(), Theme.highlights(engine).of(true));
         assertEquals(Theme.Backdrop.DIM_ONLY, Theme.backdrop(engine));

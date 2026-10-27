@@ -1,4 +1,15 @@
 /*
- * No styling at all: every element takes the terminal's own colours and the borders tamboui draws by default.
+ * No colours at all: every element takes the terminal's own colours and the borders tamboui draws by default.
  * The highlighted row of the pane in use is reversed, and what is behind a popup is dimmed by the terminal.
+ * Only what cannot be told otherwise is styled, by attribute alone.
  */
+
+/* The pane in use, and the field of a popup that has the focus: a double border. */
+Panel.focused, TextInputElement:focus, TextAreaElement:focus {
+    border-type: double;
+}
+
+/* The draft box of a new pull request, when it has the focus: reversed, as a cursor. */
+.checkbox:focus { text-style: reversed; }
+
+.disabled { text-style: crossed-out; }
