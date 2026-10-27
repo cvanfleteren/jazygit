@@ -1,4 +1,4 @@
-# 39. Typed revisions and remotes
+# 40. Typed revisions and remotes
 
 Date: 2026-10-28
 
