@@ -315,4 +315,35 @@ class UpdateTest {
                 Update.update(retrying, TestModels.commitsLoaded(COMMITS)).model();
         assertFalse(retried.jobs().refreshing().contains(TestModels.loadCommits()));
     }
+
+    @Test
+    void confirmingAnotherPopupLeavesTheOpenOneAlone() {
+        Model asking = loaded().openPopup(new OtherPopup());
+
+        Next next = Update.update(asking, new Msg.PopupConfirmed(EmptyPopup.class));
+
+        assertEquals(List.of(), next.cmds());
+        assertEquals(asking.popup(), next.model().popup());
+    }
+
+    @Test
+    void aPopupThatAsksAboutNothingAsItStandsStaysOpen() {
+        Model asking = loaded().openPopup(new EmptyPopup());
+
+        Next next = Update.update(asking, new Msg.PopupConfirmed(EmptyPopup.class));
+
+        assertEquals(List.of(), next.cmds());
+        assertEquals(asking.popup(), next.model().popup());
+    }
+
+    // A popup whose confirmation starts nothing, as one does with what was entered left blank.
+    private record EmptyPopup() implements ConfirmablePopup {
+
+        @Override
+        public Option<OperationCmd> confirm() {
+            return Option.none();
+        }
+    }
+
+    private record OtherPopup() implements Popup {}
 }

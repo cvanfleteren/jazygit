@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.commit.reword;
 
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.commit.MessagePopup;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
@@ -18,5 +19,12 @@ public record RewordPopup(Commit commit, CommitMessage message) implements Messa
     @Override
     public RewordPopup withMessage(CommitMessage message) {
         return new RewordPopup(commit, message);
+    }
+
+    @Override
+    public Option<RewordCmd> confirm() {
+        // A blank summary keeps the dialog open.
+        CommitMessage stripped = message.stripped();
+        return Option.when(stripped.hasSummary(), () -> new RewordCmd(commit.sha(), stripped));
     }
 }

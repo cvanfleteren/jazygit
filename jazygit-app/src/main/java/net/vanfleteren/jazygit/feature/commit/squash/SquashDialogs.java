@@ -16,12 +16,11 @@ public final class SquashDialogs {
     /**
      * Asks to squash a commit into the one below it.
      */
-    public static final ConfirmDialog.Spec<SquashPopup> SQUASH = new ConfirmDialog.Spec<>(
+    public static final ConfirmDialog.Spec<SquashPopup> SQUASH = ConfirmDialog.Spec.confirming(
             "squash-commit",
             SquashPopup.class,
             popup -> Messages.get("dialog.squash.title"),
-            popup -> Messages.get("dialog.squash.message"),
-            SquashMsg.Confirmed::new);
+            popup -> Messages.get("dialog.squash.message"));
 
     private SquashDialogs() {}
 

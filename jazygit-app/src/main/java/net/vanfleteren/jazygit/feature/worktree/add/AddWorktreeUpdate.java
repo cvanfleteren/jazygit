@@ -44,14 +44,6 @@ public final class AddWorktreeUpdate {
                                 .getOrElse("HEAD")));
             case StartConfirmed() -> startConfirmed(model);
             case NameConfirmed() -> nameConfirmed(model);
-            // A blank location keeps the dialog open.
-            case Confirmed() ->
-                Update.confirm(
-                        model,
-                        NewWorktreePopup.class,
-                        popup -> Option.of(popup.location().strip())
-                                .filter(text -> !text.isEmpty())
-                                .map(text -> new AddWorktreeCmd(popup.source(), text)));
             // The worktrees are shown, the new one among them, and switching to it is offered.
             case Added(var cmd, String location, var commands) -> {
                 Next succeeded = OperationUpdate.succeeded(

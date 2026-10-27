@@ -1,8 +1,11 @@
 package net.vanfleteren.jazygit.feature.branch.newbranch;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.branch.BranchCmd;
+import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutCmd.CheckoutRemote;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.state.ConfirmablePopup;
 import net.vanfleteren.jazygit.state.TextPopup;
 
 /**
@@ -14,7 +17,7 @@ import net.vanfleteren.jazygit.state.TextPopup;
  */
 public record NewBranchPopup(
         String base, String label, String name, Option<RemoteBranch> following, Option<BranchName> parent)
-        implements TextPopup {
+        implements TextPopup, ConfirmablePopup {
 
     public NewBranchPopup(String base, String label, Option<BranchName> parent) {
         this(base, label, "", Option.none(), parent);
@@ -44,5 +47,14 @@ public record NewBranchPopup(
     public static NewBranchPopup following(RemoteBranch remote) {
         return new NewBranchPopup(
                 remote.trackingRef(), remote.shortName(), remote.branch().value(), Option.of(remote), Option.none());
+    }
+
+    @Override
+    public Option<BranchCmd> confirm() {
+        // A name that is no branch name, like a blank one, keeps the dialog open.
+        return BranchName.parse(name)
+                .map(branch -> following
+                        .<BranchCmd>map(remote -> new CheckoutRemote(branch, remote))
+                        .getOrElse(() -> new NewBranchCmd(branch, base, parent)));
     }
 }

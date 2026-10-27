@@ -17,6 +17,7 @@ import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchPopup;
 import net.vanfleteren.jazygit.feature.branch.tabs.BranchesTabMsg;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
@@ -147,7 +148,7 @@ class RemoteBranchUpdateTest {
                 asked.popup(NewBranchPopup.class));
         assertEquals(
                 List.of(new CheckoutRemote(new BranchName("feature-2"), ORIGIN_FEATURE)),
-                Update.update(typed(asked, "feature-2"), new NewBranchMsg.Confirmed())
+                Update.update(typed(asked, "feature-2"), new Msg.PopupConfirmed(NewBranchPopup.class))
                         .cmds());
     }
 
@@ -173,7 +174,7 @@ class RemoteBranchUpdateTest {
         assertEquals(
                 List.of(new NewBranchCmd(
                         new BranchName("topic"), "refs/remotes/origin/new", Option.of(new BranchName("new")))),
-                Update.update(typed(asked, "topic"), new NewBranchMsg.Confirmed())
+                Update.update(typed(asked, "topic"), new Msg.PopupConfirmed(NewBranchPopup.class))
                         .cmds());
     }
 

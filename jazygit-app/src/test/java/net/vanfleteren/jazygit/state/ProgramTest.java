@@ -25,12 +25,14 @@ import java.util.function.BooleanSupplier;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutMsg;
 import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchMsg;
 import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchMsg;
+import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchPopup;
 import net.vanfleteren.jazygit.feature.commit.MessageEdited;
 import net.vanfleteren.jazygit.feature.commit.amend.AmendMsg;
 import net.vanfleteren.jazygit.feature.commit.amend.AmendPopup;
 import net.vanfleteren.jazygit.feature.commit.create.CommitMsg;
 import net.vanfleteren.jazygit.feature.commit.create.CommitPopup;
 import net.vanfleteren.jazygit.feature.commit.reword.RewordMsg;
+import net.vanfleteren.jazygit.feature.commit.reword.RewordPopup;
 import net.vanfleteren.jazygit.feature.fetch.FetchMsg;
 import net.vanfleteren.jazygit.feature.stage.StageMsg;
 import net.vanfleteren.jazygit.gh.StubGitHub;
@@ -390,7 +392,7 @@ class ProgramTest {
 
         program.dispatch(new NewBranchMsg.Requested(new BranchName("other")));
         program.dispatch(new Msg.TextEdited("topic"));
-        program.dispatch(new NewBranchMsg.Confirmed());
+        program.dispatch(new Msg.PopupConfirmed(NewBranchPopup.class));
         settle();
 
         Model model = program.model();
@@ -412,7 +414,7 @@ class ProgramTest {
 
         program.dispatch(new NewBranchMsg.Requested(new BranchName("other")));
         program.dispatch(new Msg.TextEdited("topic"));
-        program.dispatch(new NewBranchMsg.Confirmed());
+        program.dispatch(new Msg.PopupConfirmed(NewBranchPopup.class));
         settle();
 
         assertEquals(Option.of("Creating branch topic failed: fatal: exists"), errorText(program.model()));
@@ -461,7 +463,7 @@ class ProgramTest {
         assertEquals(true, program.model().popup(CommitPopup.class).isDefined());
 
         program.dispatch(new MessageEdited(new CommitMessage("summary", "more")));
-        program.dispatch(new CommitMsg.Confirmed());
+        program.dispatch(new Msg.PopupConfirmed(CommitPopup.class));
         settle();
 
         assertEquals(java.util.List.of("summary|more"), provider.commits);
@@ -493,7 +495,7 @@ class ProgramTest {
         program.dispatch(new RewordMsg.Requested(
                 program.model().repo().commits().toOption().get().head().sha()));
         program.dispatch(new MessageEdited(new CommitMessage("new summary", "new body")));
-        program.dispatch(new RewordMsg.Confirmed());
+        program.dispatch(new Msg.PopupConfirmed(RewordPopup.class));
         settle();
 
         assertEquals(java.util.List.of("reword new summary|new body"), provider.commits);
@@ -511,7 +513,7 @@ class ProgramTest {
 
         program.dispatch(new CommitMsg.Requested());
         program.dispatch(new MessageEdited(new CommitMessage("summary", "")));
-        program.dispatch(new CommitMsg.Confirmed());
+        program.dispatch(new Msg.PopupConfirmed(CommitPopup.class));
         settle();
 
         assertEquals(Option.of("Commit failed: boom"), errorText(program.model()));

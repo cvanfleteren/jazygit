@@ -18,11 +18,6 @@ public sealed interface StashMsg extends Msg {
     record Requested() implements StashMsg {}
 
     /**
-     * The user confirmed the dialog; a blank name asks for a generated one.
-     */
-    record Confirmed() implements StashMsg {}
-
-    /**
      * The user asked to unstash {@code stash}.
      */
     record PopRequested(Stash stash) implements StashMsg {}
@@ -31,6 +26,4 @@ public sealed interface StashMsg extends Msg {
      * The user asked to delete {@code stash}; confirmation is still to be given.
      */
     record DropRequested(Stash stash) implements StashMsg {}
-
-    record DropConfirmed() implements StashMsg {}
 }

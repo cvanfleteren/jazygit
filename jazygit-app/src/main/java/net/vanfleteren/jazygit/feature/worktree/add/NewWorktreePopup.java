@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.feature.worktree.add;
 
+import io.vavr.control.Option;
+import net.vanfleteren.jazygit.state.ConfirmablePopup;
 import net.vanfleteren.jazygit.state.TextPopup;
 
 /**
@@ -7,7 +9,7 @@ import net.vanfleteren.jazygit.state.TextPopup;
  *
  * @param location where it goes, as far as it was typed; it starts out next to the main worktree
  */
-public record NewWorktreePopup(WorktreeSource source, String location) implements TextPopup {
+public record NewWorktreePopup(WorktreeSource source, String location) implements TextPopup, ConfirmablePopup {
 
     @Override
     public String text() {
@@ -17,5 +19,13 @@ public record NewWorktreePopup(WorktreeSource source, String location) implement
     @Override
     public NewWorktreePopup withText(String text) {
         return new NewWorktreePopup(source, text);
+    }
+
+    @Override
+    public Option<AddWorktreeCmd> confirm() {
+        // A blank location keeps the dialog open.
+        return Option.of(location.strip())
+                .filter(text -> !text.isEmpty())
+                .map(text -> new AddWorktreeCmd(source, text));
     }
 }

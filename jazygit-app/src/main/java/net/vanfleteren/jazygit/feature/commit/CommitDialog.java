@@ -12,10 +12,7 @@ import dev.tamboui.widgets.input.TextInputState;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
-import net.vanfleteren.jazygit.feature.commit.create.CommitMsg;
 import net.vanfleteren.jazygit.feature.commit.create.CommitPopup;
-import net.vanfleteren.jazygit.feature.commit.reword.RewordMsg;
 import net.vanfleteren.jazygit.feature.commit.reword.RewordPopup;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.i18n.Messages;
@@ -63,19 +60,13 @@ public final class CommitDialog implements PopupView {
     private final String summaryId;
     private final String descriptionId;
     private final Class<? extends MessagePopup> popupType;
-    private final Supplier<Msg> confirmed;
     private final Consumer<Msg> dispatch;
 
     private CommitDialog(
-            String summaryId,
-            String descriptionId,
-            Class<? extends MessagePopup> popupType,
-            Supplier<Msg> confirmed,
-            Consumer<Msg> dispatch) {
+            String summaryId, String descriptionId, Class<? extends MessagePopup> popupType, Consumer<Msg> dispatch) {
         this.summaryId = summaryId;
         this.descriptionId = descriptionId;
         this.popupType = popupType;
-        this.confirmed = confirmed;
         this.dispatch = dispatch;
     }
 
@@ -85,7 +76,7 @@ public final class CommitDialog implements PopupView {
      * @param dispatch receives the messages for the user's actions, on the render thread
      */
     public CommitDialog(Consumer<Msg> dispatch) {
-        this(ID, DESCRIPTION_ID, CommitPopup.class, CommitMsg.Confirmed::new, dispatch);
+        this(ID, DESCRIPTION_ID, CommitPopup.class, dispatch);
     }
 
     /**
@@ -94,8 +85,7 @@ public final class CommitDialog implements PopupView {
      * @param dispatch receives the messages for the user's actions, on the render thread
      */
     public static CommitDialog reword(Consumer<Msg> dispatch) {
-        return new CommitDialog(
-                REWORD_ID, REWORD_DESCRIPTION_ID, RewordPopup.class, RewordMsg.Confirmed::new, dispatch);
+        return new CommitDialog(REWORD_ID, REWORD_DESCRIPTION_ID, RewordPopup.class, dispatch);
     }
 
     /**
@@ -165,8 +155,8 @@ public final class CommitDialog implements PopupView {
     }
 
     private void confirm() {
-        // A blank summary keeps the popup open, see CommitUpdate and RewordUpdate.
-        dispatch.accept(confirmed.get());
+        // A blank summary keeps the popup open, see CommitPopup.confirm and RewordPopup.confirm.
+        dispatch.accept(new Msg.PopupConfirmed(popupType));
     }
 
     /**

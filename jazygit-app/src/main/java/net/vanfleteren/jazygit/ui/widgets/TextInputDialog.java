@@ -13,6 +13,7 @@ import io.vavr.control.Option;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import net.vanfleteren.jazygit.state.ConfirmablePopup;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Popup;
@@ -113,6 +114,15 @@ public final class TextInputDialog<P extends TextPopup> implements PopupView {
                 Option<String> placeholder,
                 Supplier<Msg> onConfirm) {
             this(id, popupType, title, placeholder, onConfirm, () -> new Msg.PopupDismissed(popupType));
+        }
+
+        /**
+         * A dialog for a popup that asks about one operation, which Enter starts with what was typed and Escape only
+         * closes (ADR 38).
+         */
+        public static <P extends ConfirmablePopup> Spec<P> confirming(
+                String id, Class<P> popupType, Function<P, String> title, Option<String> placeholder) {
+            return new Spec<>(id, popupType, title, placeholder, () -> new Msg.PopupConfirmed(popupType));
         }
 
         /**

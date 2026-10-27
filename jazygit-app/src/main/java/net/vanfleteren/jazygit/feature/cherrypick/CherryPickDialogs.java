@@ -16,7 +16,7 @@ public final class CherryPickDialogs {
     /**
      * Asks to cherry-pick the copied commit onto the checked out branch.
      */
-    public static final ConfirmDialog.Spec<CherryPickPopup> PICK = new ConfirmDialog.Spec<>(
+    public static final ConfirmDialog.Spec<CherryPickPopup> PICK = ConfirmDialog.Spec.confirming(
             "cherry-pick",
             CherryPickPopup.class,
             popup -> Messages.get("dialog.cherryPick.title"),
@@ -24,8 +24,7 @@ public final class CherryPickDialogs {
                     .map(branch -> Messages.get(
                             "dialog.cherryPick.message", popup.commit().shortSha(), branch.value()))
                     .getOrElse(() -> Messages.get(
-                            "dialog.cherryPick.messageDetached", popup.commit().shortSha())),
-            CherryPickMsg.Confirmed::new);
+                            "dialog.cherryPick.messageDetached", popup.commit().shortSha())));
 
     private CherryPickDialogs() {}
 

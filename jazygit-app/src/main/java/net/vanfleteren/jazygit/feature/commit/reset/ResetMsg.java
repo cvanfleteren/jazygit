@@ -22,9 +22,4 @@ public sealed interface ResetMsg extends Msg {
      * The user chose how to reset.
      */
     record Chosen(ResetMode mode) implements ResetMsg {}
-
-    /**
-     * The user confirmed discarding the uncommitted changes with a hard reset.
-     */
-    record HardConfirmed() implements ResetMsg {}
 }

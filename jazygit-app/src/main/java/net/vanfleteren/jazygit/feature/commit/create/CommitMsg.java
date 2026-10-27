@@ -25,9 +25,4 @@ public sealed interface CommitMsg extends Msg {
      * Everything was staged for a commit.
      */
     record StagedForCommit(CreateCommitCmd.StageForCommit cmd, List<ExecutedCommand> commands) implements CommitMsg {}
-
-    /**
-     * The user confirmed the message typed in the popup.
-     */
-    record Confirmed() implements CommitMsg {}
 }

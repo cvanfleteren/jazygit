@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.feature.inprogress;
 
-import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.InProgressAction;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
@@ -19,11 +18,6 @@ public final class InProgressUpdate {
         return switch (msg) {
             case InProgressMsg.Requested() -> requested(model);
             case InProgressMsg.Chosen(InProgressAction action) -> chosen(model, action);
-            case InProgressMsg.Confirmed() ->
-                Update.confirm(
-                        model,
-                        InProgressConfirmPopup.class,
-                        popup -> Option.of(new InProgressCmd(popup.inProgress(), popup.action())));
         };
     }
 

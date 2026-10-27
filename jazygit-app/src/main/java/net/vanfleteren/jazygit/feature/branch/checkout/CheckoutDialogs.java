@@ -16,12 +16,11 @@ public final class CheckoutDialogs {
     /**
      * Asks to take the uncommitted changes along to the branch being checked out, through a stash.
      */
-    public static final ConfirmDialog.Spec<StashCheckoutPopup> STASH_CHECKOUT = new ConfirmDialog.Spec<>(
+    public static final ConfirmDialog.Spec<StashCheckoutPopup> STASH_CHECKOUT = ConfirmDialog.Spec.confirming(
             "stash-checkout",
             StashCheckoutPopup.class,
             popup -> Messages.get("dialog.stashCheckout.title", popup.branch().value()),
-            popup -> Messages.get("dialog.stashCheckout.message"),
-            CheckoutMsg.StashConfirmed::new);
+            popup -> Messages.get("dialog.stashCheckout.message"));
 
     /**
      * Tells that the branch to check out is checked out in another worktree, and asks to switch to that one.

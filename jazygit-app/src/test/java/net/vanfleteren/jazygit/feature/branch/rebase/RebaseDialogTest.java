@@ -37,14 +37,14 @@ class RebaseDialogTest {
     @Test
     void sChoosesASimpleRebase() throws Exception {
         assertEquals(
-                List.of(new RebaseMsg.Chosen()),
+                List.of(new Msg.PopupConfirmed(RebasePopup.class)),
                 pressing(r -> SettledPilot.of(r).press('s')));
     }
 
     @Test
     void enterChoosesTheFirstLine() throws Exception {
         assertEquals(
-                List.of(new RebaseMsg.Chosen()),
+                List.of(new Msg.PopupConfirmed(RebasePopup.class)),
                 pressing(r -> SettledPilot.of(r).press(KeyCode.ENTER)));
     }
 

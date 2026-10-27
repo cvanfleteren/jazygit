@@ -16,15 +16,14 @@ public final class DropDialogs {
     /**
      * Asks to drop a commit.
      */
-    public static final ConfirmDialog.Spec<DropPopup> DROP = new ConfirmDialog.Spec<>(
+    public static final ConfirmDialog.Spec<DropPopup> DROP = ConfirmDialog.Spec.confirming(
             "drop-commit",
             DropPopup.class,
             popup -> Messages.get("dialog.drop.title"),
             popup -> Messages.get(
                     "dialog.drop.message",
                     popup.commit().sha().shortSha(),
-                    popup.commit().message()),
-            DropMsg.Confirmed::new);
+                    popup.commit().message()));
 
     private DropDialogs() {}
 

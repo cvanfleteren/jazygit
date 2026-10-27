@@ -198,7 +198,7 @@ class BranchUpdateTest {
                         new CheckoutMsg.NeedsStash(new CheckoutCmd.Checkout(new BranchName("feature")), List.empty()))
                 .model();
 
-        Next next = Update.update(asked, new CheckoutMsg.StashConfirmed());
+        Next next = Update.update(asked, new Msg.PopupConfirmed(StashCheckoutPopup.class));
 
         assertEquals(List.of(new CheckoutWithStash(new BranchName("feature"))), next.cmds());
         assertEquals(Option.none(), next.model().popup());
@@ -221,7 +221,8 @@ class BranchUpdateTest {
     void confirmingWithoutAnOpenPopupDoesNothing() {
         assertEquals(
                 List.of(),
-                Update.update(loaded(), new CheckoutMsg.StashConfirmed()).cmds());
+                Update.update(loaded(), new Msg.PopupConfirmed(StashCheckoutPopup.class))
+                        .cmds());
     }
 
     @Test
@@ -650,7 +651,7 @@ class BranchUpdateTest {
         Model open = Update.update(loaded(), new NewBranchMsg.Requested(new BranchName("feature")))
                 .model();
 
-        Next next = Update.update(typed(open, " topic "), new NewBranchMsg.Confirmed());
+        Next next = Update.update(typed(open, " topic "), new Msg.PopupConfirmed(NewBranchPopup.class));
 
         assertEquals(
                 List.of(new NewBranchCmd(new BranchName("topic"), "feature", Option.of(new BranchName("feature")))),
@@ -663,7 +664,7 @@ class BranchUpdateTest {
         Model open = Update.update(loaded(), new NewBranchMsg.Requested(new BranchName("feature")))
                 .model();
 
-        Next next = Update.update(typed(open, "  "), new NewBranchMsg.Confirmed());
+        Next next = Update.update(typed(open, "  "), new Msg.PopupConfirmed(NewBranchPopup.class));
 
         assertEquals(List.of(), next.cmds());
         assertEquals(
@@ -999,7 +1000,7 @@ class BranchUpdateTest {
         open = Update.update(open, new RebaseMsg.Requested(new BranchName("feature")))
                 .model();
 
-        Next next = Update.update(open, new RebaseMsg.Chosen());
+        Next next = Update.update(open, new Msg.PopupConfirmed(RebasePopup.class));
 
         assertEquals(List.of(new RebaseCmd(new BranchName("feature"))), next.cmds());
         assertEquals(Option.none(), next.model().popup(RebasePopup.class));

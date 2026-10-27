@@ -1,10 +1,8 @@
 package net.vanfleteren.jazygit.feature.branch.checkout;
 
-import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.Branches;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutCmd.Checkout;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutCmd.CheckoutRemote;
-import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutCmd.CheckoutWithStash;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutMsg.*;
 import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchPopup;
 import net.vanfleteren.jazygit.feature.repos.RecentReposCmd;
@@ -37,9 +35,6 @@ public final class CheckoutUpdate {
             case CheckedOut(var cmd, var commands) ->
                 OperationUpdate.succeeded(
                         model.mapRepoView(repoView -> repoView.withBranchesTab(BranchesTab.LOCAL)), cmd, commands);
-            case StashConfirmed() ->
-                Update.confirm(
-                        model, StashCheckoutPopup.class, popup -> Option.of(new CheckoutWithStash(popup.branch())));
             // It is shown as a checkout here shows it: on the local branches, the focus where it was.
             case SwitchWorktreeConfirmed() ->
                 model.popup(SwitchWorktreePopup.class)

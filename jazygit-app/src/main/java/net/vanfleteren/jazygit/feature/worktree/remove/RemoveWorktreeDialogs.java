@@ -40,13 +40,14 @@ public final class RemoveWorktreeDialogs {
     /**
      * Warns that a worktree has changes, and asks to remove it anyway.
      */
-    public static final ConfirmDialog.Spec<ForceRemoveWorktreePopup> FORCE_REMOVE_WORKTREE = new ConfirmDialog.Spec<>(
-            "force-remove-worktree",
-            ForceRemoveWorktreePopup.class,
-            popup -> Messages.get("dialog.removeWorktree.title", popup.name()),
-            popup -> Messages.get(
-                    "dialog.forceRemoveWorktree.message", popup.removal().location()),
-            RemoveWorktreeMsg.ForceConfirmed::new);
+    public static final ConfirmDialog.Spec<ForceRemoveWorktreePopup> FORCE_REMOVE_WORKTREE =
+            ConfirmDialog.Spec.confirming(
+                    "force-remove-worktree",
+                    ForceRemoveWorktreePopup.class,
+                    popup -> Messages.get("dialog.removeWorktree.title", popup.name()),
+                    popup -> Messages.get(
+                            "dialog.forceRemoveWorktree.message",
+                            popup.removal().location()));
 
     private RemoveWorktreeDialogs() {}
 

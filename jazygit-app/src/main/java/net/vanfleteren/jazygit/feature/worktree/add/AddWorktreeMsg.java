@@ -51,11 +51,6 @@ public sealed interface AddWorktreeMsg extends Msg {
     record NameConfirmed() implements AddWorktreeMsg {}
 
     /**
-     * The user confirmed where the new worktree goes, as typed in the popup.
-     */
-    record Confirmed() implements AddWorktreeMsg {}
-
-    /**
      * {@code cmd} ran {@code commands} and added the worktree, which is at {@code location}.
      */
     record Added(AddWorktreeCmd cmd, String location, List<ExecutedCommand> commands) implements AddWorktreeMsg {}

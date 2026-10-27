@@ -155,7 +155,8 @@ class WorktreeUpdateTest {
 
         assertEquals(
                 List.of(new AddWorktreeCmd(new WorktreeSource.Created(topic, fromFeature), "/repos/app-topic")),
-                Update.update(located.model(), new AddWorktreeMsg.Confirmed()).cmds());
+                Update.update(located.model(), new Msg.PopupConfirmed(NewWorktreePopup.class))
+                        .cmds());
     }
 
     @Test
@@ -447,9 +448,9 @@ class WorktreeUpdateTest {
 
         assertEquals(
                 List.of(),
-                Update.update(typed(asked, "  "), new AddWorktreeMsg.Confirmed())
+                Update.update(typed(asked, "  "), new Msg.PopupConfirmed(NewWorktreePopup.class))
                         .cmds());
-        Next confirmed = Update.update(typed(asked, " ~/elsewhere "), new AddWorktreeMsg.Confirmed());
+        Next confirmed = Update.update(typed(asked, " ~/elsewhere "), new Msg.PopupConfirmed(NewWorktreePopup.class));
 
         assertEquals(
                 List.of(new AddWorktreeCmd(new WorktreeSource.Existing(FEATURE), "~/elsewhere")), confirmed.cmds());
@@ -841,7 +842,7 @@ class WorktreeUpdateTest {
 
         assertEquals(
                 List.of(new RemoveWorktreeCmd("/repos/app-taken", true, Option.of(TAKEN))),
-                Update.update(refused.model(), new RemoveWorktreeMsg.ForceConfirmed())
+                Update.update(refused.model(), new Msg.PopupConfirmed(ForceRemoveWorktreePopup.class))
                         .cmds());
     }
 
@@ -986,7 +987,7 @@ class WorktreeUpdateTest {
                         .map(command -> command.line()));
         assertEquals(
                 List.of(new RemoveWorktreeCmd("/repos/app-taken", true)),
-                Update.update(refused.model(), new RemoveWorktreeMsg.ForceConfirmed())
+                Update.update(refused.model(), new Msg.PopupConfirmed(ForceRemoveWorktreePopup.class))
                         .cmds());
         assertEquals(
                 Option.none(),

@@ -67,7 +67,7 @@ class StashUpdateTest {
     void confirmingStashesUnderTheEnteredName() {
         Model open = Update.update(withChanges(), new StashMsg.Requested()).model();
 
-        Next next = Update.update(typed(open, "  my work "), new StashMsg.Confirmed());
+        Next next = Update.update(typed(open, "  my work "), new Msg.PopupConfirmed(StashPopup.class));
 
         assertEquals(List.of(new Stash(Option.of("my work"))), next.cmds());
         assertEquals(Option.none(), next.model().popup());
@@ -77,7 +77,7 @@ class StashUpdateTest {
     void aBlankNameLeavesNamingTheStashToGit() {
         Model open = Update.update(withChanges(), new StashMsg.Requested()).model();
 
-        Next next = Update.update(typed(open, " "), new StashMsg.Confirmed());
+        Next next = Update.update(typed(open, " "), new Msg.PopupConfirmed(StashPopup.class));
 
         assertEquals(List.of(new Stash(Option.none())), next.cmds());
     }
@@ -116,7 +116,7 @@ class StashUpdateTest {
         assertEquals(List.of(), asked.cmds());
         assertEquals(Option.of(new StashDropPopup(STASH)), asked.model().popup());
 
-        Next confirmed = Update.update(asked.model(), new StashMsg.DropConfirmed());
+        Next confirmed = Update.update(asked.model(), new Msg.PopupConfirmed(StashDropPopup.class));
         assertEquals(List.of(new StashCmd.Drop(STASH)), confirmed.cmds());
         assertEquals(Option.none(), confirmed.model().popup());
 
@@ -138,7 +138,9 @@ class StashUpdateTest {
         assertEquals(Option.none(), cancelled.model().popup());
         assertEquals(List.of(), cancelled.cmds());
         assertEquals(
-                List.of(), Update.update(model, new StashMsg.DropConfirmed()).cmds());
+                List.of(),
+                Update.update(model, new Msg.PopupConfirmed(StashDropPopup.class))
+                        .cmds());
     }
 
     @Test

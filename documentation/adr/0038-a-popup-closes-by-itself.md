@@ -13,7 +13,7 @@ update, in 48 places; a new popup added one more.
 `Model.withoutPopup(type)` already closes the open popup only when it is of that type, so that a popup that opened in
 the meantime stays open.
 
-The confirming side is alike: of the 33 `Confirmed` messages, about 14 only start the operation their popup stands
+The confirming side is alike: of the 33 `Confirmed` messages, 15 only start the operation their popup stands
 for, with `Update.confirm(model, X.class, popup -> Option.of(new XCmd(...)))`.
 
 ## Decision
@@ -44,7 +44,13 @@ and the dialogs send it unless told otherwise. Built in two steps; the second, c
 - A popup whose confirmation only starts an operation implements `ConfirmablePopup`, with
   `Option<? extends OperationCmd> confirm()`: the command it stands for, or none when what was entered cannot be used.
 - `Msg.PopupConfirmed(Class<? extends ConfirmablePopup> type)` does `Update.confirm(model, type,
-  ConfirmablePopup::confirm)`, and the specs send it for Enter by default when their popup is confirmable.
+  ConfirmablePopup::confirm)`: when a popup of another type is open, it stays, and nothing starts.
+- A dialog sends it by being made with `Spec.confirming(...)`, on `ConfirmDialog` and `TextInputDialog`: Enter sends
+  `PopupConfirmed`, Escape `PopupDismissed`. It is a generic factory, as a constructor cannot require that its popup is
+  confirmable. Not: a default that applies whenever the popup is confirmable, which the type of the spec cannot tell.
+  A confirmable popup can still be given a message of its own; the rule below says when not to.
+- `MessagePopup`, of the commit and reword dialog, is a `ConfirmablePopup`, and that dialog sends `PopupConfirmed`
+  itself.
 - A confirmation that reads the model, or does more than start the popup's command, keeps its own message: switching
   to a worktree, for one.
 
@@ -62,3 +68,10 @@ command the popup stands for.
   what the user asked for in most cases, rather than doing nothing.
 - The tests of the updates that tested closing now test `PopupDismissed` for that popup; the dialog tests expect it
   for Escape. `ConfirmDialogTest` tests the default and `cancelledBy`.
+- Step 2 removes 15 `Confirmed` records (one named `Chosen`), with their cases and the helpers that built the
+  commands: checking out with a stash, rebasing, a new branch, cherry-picking, dropping, a hard reset, reverting,
+  squashing, committing, rewording, stashing, dropping a stash, adding and force removing a worktree, and an
+  operation in progress. Their commands are made by the popups' `confirm()`.
+- The tests of the updates that tested confirming now send `PopupConfirmed`. `UpdateTest` tests that it leaves a
+  popup of another type alone, and one that asks about nothing open; `ConfirmDialogTest` and `TextInputDialogTest`
+  test `Spec.confirming`.
