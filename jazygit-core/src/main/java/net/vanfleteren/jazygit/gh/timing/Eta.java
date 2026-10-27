@@ -55,21 +55,25 @@ public sealed interface Eta {
     }
 
     /**
-     * When the checks that the workflow runs among {@code all} have, as {@code history} tells, but that are not among
-     * {@code all} yet, are expected done: as a queued check of their run, while the run has a check that is not done.
-     * A job that needs others is made only once those are done; when none of its run is left, it is not coming.
+     * When the checks that the workflow runs among {@code all} have, as {@code history} tells, but that their run does
+     * not show among {@code all} yet, are expected done: as a queued check of their run, while the run has a check that
+     * is not done. A job that needs others is made only once those are done; when none of its run is left, it is not
+     * coming.
      */
     private static List<Instant> missing(List<Check> all, CheckHistory history) {
-        List<String> shown = all.flatMap(CheckSample::key);
         return all.filter(check -> !check.done())
                 .flatMap(Check::run)
                 .distinctBy(CheckRun::runId)
-                .flatMap(run -> runStart(run, all)
-                        .toList()
-                        .flatMap(start -> history.checksOf(run.workflow(), run.event())
-                                .filter(check -> !shown.contains(check))
-                                .flatMap(history::finished)
-                                .map(start::plus)));
+                .flatMap(run -> {
+                    List<String> shown = all.filter(check -> check.run().exists(other -> other.runId() == run.runId()))
+                            .flatMap(CheckSample::key);
+                    return runStart(run, all)
+                            .toList()
+                            .flatMap(start -> history.checksOf(run.workflow(), run.event())
+                                    .filter(check -> !shown.contains(check))
+                                    .flatMap(history::finished)
+                                    .map(start::plus));
+                });
     }
 
     /**

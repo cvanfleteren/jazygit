@@ -33,8 +33,10 @@ the checks together are expected done at the latest of those too, while the run 
   (`CheckSample.key`), and at least `CheckTimings.MIN_SAMPLES` of its samples are of the run's event. So a workflow
   that runs other jobs on a push than on a pull request waits for those of its own event: `snapshot` on a push to
   `main`, not on a release.
-- It is missing when no check of the commit has that key. A check that is in the rollup, skipped too, is never
-  missing.
+- It is missing when no check of that workflow run has that key. A check that is in the rollup, skipped too, is
+  never missing. Not: no check of the commit, as two runs of one workflow can be on a commit, one for a push and one
+  for a pull request, or a cancelled one next to the one that replaced it, and a check that shows in one is still
+  missing in the other.
 - A missing check is expected at the run's start plus its median `finished`, as a queued check is (ADR 32), with
   the run's start as ADR 32 has it, also for a re-run. Its samples are the same pool of events as the history keeps;
   only whether it is waited for goes by event.
@@ -47,6 +49,9 @@ the checks together are expected done at the latest of those too, while the run 
   good when it never does.
 - Checks of an app other than Actions have no run, so none is missing; a workflow that has not started at all for the
   commit is not waited for either, as nothing tells it will.
+- A workflow that waits to start shows as a queued check named after its workflow (ADR 35). It has no history of its
+  own, so the checks together stay `done in ?`, also when the history knows the checks it will run: how long it waits
+  is still not known.
 
 ### Shown
 
@@ -74,5 +79,6 @@ the checks together are expected done at the latest of those too, while the run 
   it, it is not handled.
 - Tested, in the pure estimate: a run waiting for a check that does not show yet, with its event, and not with
   another event; not waited for with too few samples, once the run's checks are all done, nor for a check that shows
-  as skipped; a re-run; two workflow runs of one commit, each waiting for its own; the dialog's counts line, the
-  popup and the branches pane, with no row for the missing check.
+  as skipped; a re-run; two workflow runs of one commit, each waiting for its own; two runs of one workflow, a check
+  that shows in one still missing in the other; a workflow that waits to start, still not known. The dialog's counts
+  line and the popup's, with no row for the missing check, and the estimate of a pending branch in the branches pane.

@@ -161,6 +161,25 @@ class EtaTest {
     }
 
     @Test
+    void aCheckThatShowsInOneRunOfAWorkflowIsStillMissingInAnother() {
+        List<Check> first = List.of(
+                check("package", 1, 1, Option.of(2), Option.of(60)),
+                check("acceptance", 1, 1, Option.of(62), Option.of(250)));
+
+        assertEquals(
+                new Eta.Expected(at(254)),
+                Eta.of(first.append(check("package", 2, 1, Option.of(2), Option.none())), HISTORY));
+    }
+
+    @Test
+    void aWorkflowThatWaitsToStartIsStillNotKnown() {
+        // ADR 35: a workflow run without check runs yet is a queued check named after its workflow.
+        Check waiting = check("Build", "pull_request", "Build", 1, 1, Option.none(), Option.none());
+
+        assertEquals(new Eta.Unknown(), Eta.of(List.of(waiting), HISTORY));
+    }
+
+    @Test
     void aReRunStartsWhenItsFirstCheckStarted() {
         Check pack = check("package", 9, 2, Option.of(1000), Option.none());
         Check acceptance = check("acceptance", 9, 2, Option.none(), Option.none());
