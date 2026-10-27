@@ -21,22 +21,7 @@ import io.vavr.control.Try;
 import java.time.Clock;
 import java.util.Objects;
 import java.util.function.Consumer;
-import java.util.function.Function;
-import net.vanfleteren.jazygit.feature.branch.BranchFeature;
 import net.vanfleteren.jazygit.feature.branch.tabs.BranchesTabMsg;
-import net.vanfleteren.jazygit.feature.cherrypick.CherryPickDialogs;
-import net.vanfleteren.jazygit.feature.commit.CommitFeature;
-import net.vanfleteren.jazygit.feature.discard.DiscardDialog;
-import net.vanfleteren.jazygit.feature.error.ErrorDialog;
-import net.vanfleteren.jazygit.feature.forcedelete.ForceDeleteDialog;
-import net.vanfleteren.jazygit.feature.github.GitHubFeature;
-import net.vanfleteren.jazygit.feature.help.HelpDialog;
-import net.vanfleteren.jazygit.feature.inprogress.InProgressDialogs;
-import net.vanfleteren.jazygit.feature.repos.RecentReposDialog;
-import net.vanfleteren.jazygit.feature.settings.SettingsPanelDialogs;
-import net.vanfleteren.jazygit.feature.stash.StashDialogs;
-import net.vanfleteren.jazygit.feature.theme.ThemeDialog;
-import net.vanfleteren.jazygit.feature.worktree.WorktreeFeature;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.settings.*;
 import net.vanfleteren.jazygit.state.*;
@@ -79,23 +64,7 @@ public class JazygitApp extends ToolkitApp {
     private final StashPanel stashPanel = new StashPanel(dispatch, () -> openContent(StashPanel.ID), this::highlight);
     private final List<PullRequestsPanel> pullRequestsPanels =
             PullRequestsPanel.all(dispatch, this::openContent, this::highlight);
-    // Every popup, with where the focus goes when it closes. At most one is open; errors come last.
-    private final List<PopupSlot> popups = List.of(
-                    BranchFeature.popups(dispatch),
-                    WorktreeFeature.popups(dispatch),
-                    ForceDeleteDialog.popups(dispatch),
-                    GitHubFeature.popups(dispatch),
-                    CommitFeature.popups(dispatch),
-                    StashDialogs.popups(dispatch),
-                    CherryPickDialogs.popups(dispatch),
-                    DiscardDialog.popups(dispatch),
-                    ThemeDialog.popups(dispatch),
-                    RecentReposDialog.popups(dispatch),
-                    SettingsPanelDialogs.popups(dispatch),
-                    InProgressDialogs.popups(dispatch),
-                    HelpDialog.popups(dispatch),
-                    ErrorDialog.popups(dispatch))
-            .flatMap(Function.identity());
+    private final Popups popups = new Popups(dispatch);
     // The screen the last frame showed; when the model shows another one, its pane gets the focus back.
     private Screen shownScreen = Screen.REPOSITORY;
     // The border between the left column and the content panel, which the user drags.
@@ -151,7 +120,7 @@ public class JazygitApp extends ToolkitApp {
      */
     private String activePane(Model model, String focusedId) {
         return Option.of(focusedId)
-                .filter(id -> popups.forAll(slot -> !slot.view().ids().contains(id)))
+                .filter(id -> !popups.owns(id))
                 .orElse(model.shownPane())
                 .map(id -> contentPanel.paneOfArea(model, id).getOrElse(id))
                 .getOrNull();
@@ -188,9 +157,7 @@ public class JazygitApp extends ToolkitApp {
      */
     private void focusClicked(MouseEvent event) {
         String focused = runner().focusManager().focusedId();
-        if (event.kind() == MouseEventKind.PRESS
-                && event.isLeftButton()
-                && popups.forAll(slot -> !slot.view().ids().contains(focused))) {
+        if (event.kind() == MouseEventKind.PRESS && event.isLeftButton() && !popups.owns(focused)) {
             runner().focusManager().focusAt(event.x(), event.y());
         }
     }
@@ -328,24 +295,13 @@ public class JazygitApp extends ToolkitApp {
                 panes.fill(),
                 FetchLine.render(model, clock.instant(), screenWidth()).length(FetchLine.HEIGHT));
         borderDrag.shown(panes, left);
-        // The open popup takes the focus, and gives it back to where it was opened from.
-        List<Shown> shown = popups.map(slot -> new Shown(
-                slot.view().render(model), slot.view().ids(), slot.returnTo().apply(model)));
         // The framework knows no focus before the first render.
-        Option<String> focus = Option.of(focusedId);
+        Popups.Rendered shown = popups.render(model, Option.of(focusedId));
         report(reports());
-        Option<Shown> open = shown.find(p -> p.element().isDefined());
-        open.fold(
-                        // A popup that just closed gives the focus back.
-                        () -> shown.find(p -> focus.exists(p.ids()::contains)).map(Shown::returnTo),
-                        // A popup that just opened takes the focus.
-                        p -> focus.exists(p.ids()::contains)
-                                ? Option.<String>none()
-                                : p.ids().headOption())
-                .forEach(runner().focusManager()::setFocus);
+        shown.moveTo().forEach(runner().focusManager()::setFocus);
         redrawIfFocusMoves(focusedId);
         // What is behind an open popup is dimmed, so the popup stands out.
-        Element screen = open.flatMap(Shown::element)
+        Element screen = shown.dialog()
                 .<Element>map(d -> stack(new Dimmed(layout, Theme.backdrop(styleEngine)), d))
                 .getOrElse(layout);
         return new SelectedTextColoured(screen, Theme.selectedText(styleEngine));
@@ -417,7 +373,7 @@ public class JazygitApp extends ToolkitApp {
                         .flatMap(change -> change);
         // The framework knows no focus before the first render.
         Option<Msg> focused = Option.of(focusedId)
-                .filter(id -> popups.forAll(slot -> !slot.view().ids().contains(id)))
+                .filter(id -> !popups.owns(id))
                 .filter(id -> !model.shownPane().contains(id))
                 .map(id -> new Msg.Focused(id, ContentPanel.isArea(id)));
         return selections.appendAll(focused);
@@ -455,11 +411,6 @@ public class JazygitApp extends ToolkitApp {
                         - height * (FILES_PERCENT + BRANCHES_PERCENT + COMMITS_PERCENT) / 100)
                 .map(share -> Math.max(MIN_STASH_HEIGHT, Math.min(rows + 2, share)));
     }
-
-    /**
-     * A popup as rendered: its dialog while it is open.
-     */
-    private record Shown(Option<Element> element, List<String> ids, String returnTo) {}
 
     /**
      * Asks for a frame, as {@link #requestRedraw()} does.
