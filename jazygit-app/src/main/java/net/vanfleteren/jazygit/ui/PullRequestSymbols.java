@@ -71,10 +71,24 @@ public final class PullRequestSymbols {
             Option<Symbol> eta,
             Review review,
             Option<MergeStatus> merge) {
+        return state(stack, checks, false, eta, review, merge);
+    }
+
+    /**
+     * As {@link #state(Option, Checks, Option, Review, Option)}, with the checks waiting to start when they run and
+     * {@code waiting} (ADR 35).
+     */
+    public static List<Symbol> state(
+            Option<PullRequestStack> stack,
+            Checks checks,
+            boolean waiting,
+            Option<Symbol> eta,
+            Review review,
+            Option<MergeStatus> merge) {
         return stack.map(PullRequestSymbols::stack)
                 .toList()
                 .appendAll(merge.map(status -> List.of(merge(status)))
-                        .getOrElse(() -> checks(checks)
+                        .getOrElse(() -> checks(checks, waiting)
                                 .toList()
                                 .appendAll(eta.filter(symbol -> checks == Checks.PENDING))
                                 .appendAll(review(review))));
@@ -103,6 +117,13 @@ public final class PullRequestSymbols {
             case FAILING -> Option.of(FAILED);
             case PENDING -> Option.of(RUNNING);
         };
+    }
+
+    /**
+     * As {@link #checks(Checks)}, but waiting to start when they run and {@code waiting}: they all wait (ADR 35).
+     */
+    public static Option<Symbol> checks(Checks checks, boolean waiting) {
+        return waiting && checks == Checks.PENDING ? Option.of(QUEUED) : checks(checks);
     }
 
     /**

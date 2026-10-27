@@ -4,9 +4,11 @@ import io.vavr.control.Option;
 import java.time.Instant;
 
 /**
- * A check run of a GitHub Actions workflow, with when it ran (ADR 32).
+ * A check run of a GitHub Actions workflow, with when it ran (ADR 32); or a workflow run that waits to start, which
+ * has no check run yet, as one that is queued (ADR 35).
  *
- * @param id           its id on GitHub, which tells it apart from every other run of the same check
+ * @param id           its id on GitHub, which tells it apart from every other run of the same check; 0 for a workflow
+ *                     run that waits to start
  * @param workflow     the name of its workflow
  * @param conclusion   how it ended, as GitHub says it: {@code SUCCESS}, {@code FAILURE}, …; empty while it runs
  * @param startedAt    when it started; none while it is queued
