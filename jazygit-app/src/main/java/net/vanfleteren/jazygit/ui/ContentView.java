@@ -271,7 +271,7 @@ final class ContentView {
                         stashes -> stashes.isEmpty() ? dim(title, Messages.get("content.noStashes")) : loading(title)));
     }
 
-    static Option<Stash> stash(Model model, Sha sha) {
+    private static Option<Stash> stash(Model model, Sha sha) {
         return model.repo()
                 .stashes()
                 .toOption()
@@ -290,6 +290,17 @@ final class ContentView {
      * What the content panel shows: a message, or areas with something to scroll through.
      */
     sealed interface Shown {
+
+        /**
+         * The areas shown, top to bottom; none for a message.
+         */
+        default List<Area> areas() {
+            return switch (this) {
+                case Message _ -> List.empty();
+                case Area area -> List.of(area);
+                case Stacked(List<Area> areas) -> areas;
+            };
+        }
 
         /**
          * A panel titled {@code title} with only {@code text}: what is still loading, failed or is not there.

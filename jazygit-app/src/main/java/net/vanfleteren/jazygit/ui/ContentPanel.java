@@ -28,10 +28,8 @@ import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.i18n.Messages;
-import net.vanfleteren.jazygit.state.BranchesTab;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.Preview;
 import net.vanfleteren.jazygit.state.Scrolled;
 import net.vanfleteren.jazygit.state.ScrolledContent;
 import net.vanfleteren.jazygit.ui.ContentView.Body;
@@ -251,65 +249,11 @@ public final class ContentPanel {
      * the staged diff if it shows anything, else the unstaged one, or the commit; none while it shows nothing.
      */
     public Option<String> areaOfPane(Model model, String paneId) {
-        return List.of(ContentArea.values())
-                .filter(area -> area.focusable() && area.pane(model).equals(paneId) && showsContent(model, area))
-                .map(ContentArea::id)
-                .headOption();
-    }
-
-    /**
-     * Whether the area {@code areaId} has something to show in {@code model}.
-     */
-    private static boolean showsContent(Model model, ContentArea area) {
-        return switch (area) {
-            case STAGED ->
-                diffs(model).exists(diffs -> !ContentView.shown(diffs.staged()).isBlank());
-            case UNSTAGED ->
-                diffs(model)
-                        .exists(diffs -> !ContentView.shown(diffs.unstaged()).isBlank());
-            case COMMIT ->
-                model.repoView()
-                        .commitDetail()
-                        .map(Preview::shown)
-                        .exists(detail -> detail.value().toOption().isDefined()
-                                && model.commit(detail.key()).isDefined());
-            case STASH ->
-                model.repoView()
-                        .stashDetail()
-                        .map(Preview::shown)
-                        .exists(detail -> detail.value().toOption().isDefined()
-                                && ContentView.stash(model, detail.key()).isDefined());
-            case DIVERGENCE ->
-                model.repoView()
-                        .divergence()
-                        .filter(view -> model.repoView().branchesTab() == BranchesTab.LOCAL)
-                        .flatMap(view -> view.detail()
-                                .map(Preview::shown)
-                                .filter(detail -> detail.value().toOption().isDefined())
-                                .flatMap(detail -> view.commit(detail.key())))
-                        .isDefined();
-            case BRANCH_COMMIT ->
-                model.repoView()
-                        .branchCommits()
-                        .flatMap(view -> view.detail()
-                                .map(Preview::shown)
-                                .filter(detail -> detail.value().toOption().isDefined())
-                                .flatMap(detail -> view.commit(model, detail.key())))
-                        .isDefined();
-            case PULL_REQUEST ->
-                model.prOverview()
-                        .preview()
-                        .map(Preview::shown)
-                        .exists(preview -> preview.value().toOption().isDefined());
-            case LOG -> false;
-        };
-    }
-
-    private static Option<Diffs> diffs(Model model) {
-        return model.repoView()
-                .fileDiff()
-                .map(Preview::shown)
-                .flatMap(diff -> diff.value().toOption());
+        return ContentView.of(model, paneId)
+                .areas()
+                .map(Shown.Area::area)
+                .find(area -> area.focusable() && area.pane(model).equals(paneId))
+                .map(ContentArea::id);
     }
 
     /**
