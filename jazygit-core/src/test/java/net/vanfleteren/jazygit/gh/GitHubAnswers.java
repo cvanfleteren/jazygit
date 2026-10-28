@@ -65,4 +65,32 @@ final class GitHubAnswers {
                     "push")));
 
     private GitHubAnswers() {}
+
+    /**
+     * Pull request {@code number} of owner/repo as the summary fragment reads it, its last commit with the rollup
+     * {@code rollup} and the suites {@code suites}, and its stack fields {@code stack}.
+     */
+    static String summary(int number, String rollup, String suites, String stack) {
+        return """
+                { "number": %d, "title": "t", "url": "https://github.com/owner/repo/pull/%1$d",
+                  "updatedAt": "2026-10-26T22:00:00Z", "isDraft": false, "isCrossRepository": false,
+                  "headRefName": "b%1$d", "author": { "login": "cvf" }, "repository": { "nameWithOwner": "owner/repo" },
+                  "reviewDecision": null, %s,
+                  "commits": { "nodes": [ { "commit": { "statusCheckRollup": %s, %s } } ] } }""".formatted(number, stack, rollup, suites);
+    }
+
+    /**
+     * {@link #summary(int, String, String, String)} of a pull request that is not stacked.
+     */
+    static String summary(int number, String rollup, String suites) {
+        return summary(number, rollup, suites, NOT_STACKED);
+    }
+
+    // The stack fields of a pull request that is not stacked.
+    static final String NOT_STACKED = "\"stackEntry\": null, \"stack\": null";
+    // The stack fields of the second of two pull requests of stack 96, the first merged.
+    static final String STACKED = """
+            "stackEntry": { "position": 2 }, "stack": { "number": 96, "size": 2, "entries": { "nodes": [
+              { "position": 1, "pullRequest": { "number": 94, "state": "MERGED" } },
+              { "position": 2, "pullRequest": { "number": 95, "state": "OPEN" } } ] } }""";
 }
