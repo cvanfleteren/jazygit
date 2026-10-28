@@ -412,15 +412,6 @@ class CliGitHubTest {
     }
 
     @Test
-    void oneFailedCheckFailsThemAllElseOneRunningKeepsThemPending() {
-        assertEquals(Checks.NONE, CliGitHub.checks(List.empty()));
-        assertEquals(Checks.PASSING, CliGitHub.checks(List.of("SUCCESS", "NEUTRAL", "SKIPPED")));
-        assertEquals(Checks.PENDING, CliGitHub.checks(List.of("SUCCESS", "PENDING")));
-        assertEquals(Checks.FAILING, CliGitHub.checks(List.of("PENDING", "FAILURE")));
-        assertEquals(Checks.FAILING, CliGitHub.checks(List.of("SUCCESS", "ERROR")));
-    }
-
-    @Test
     void theNumberOfACreatedPullRequestIsInTheUrlGhPrints() {
         assertEquals(
                 Option.of(12), CliGitHub.createdNumber("\nCreating pull request...\nhttps://github.com/o/r/pull/12\n"));

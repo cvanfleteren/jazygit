@@ -4,10 +4,8 @@ import static net.vanfleteren.jazygit.gh.GhCommand.gh;
 
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
-import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
-import io.vavr.collection.Set;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
@@ -33,18 +31,55 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
  */
 public final class CliGitHub implements GitHub {
 
+    /*
+     * The open pull requests of the repository, all pages of them, with the states of the checks on their last
+     * commit, and its check suites. gh fills in the repository of the working tree for {owner} and {repo}.
+     */
+    static final String PRS_QUERY = """
+            query($owner: String!, $name: String!, $endCursor: String) { repository(owner: $owner, name: $name) { \
+            pullRequests(states: OPEN, first: 100, after: $endCursor) { pageInfo { hasNextPage endCursor } \
+            nodes { number headRefName isDraft isCrossRepository reviewDecision %s \
+            commits(last: 1) { nodes { commit { statusCheckRollup { contexts(first: 100) { nodes { __typename \
+            ... on CheckRun { status conclusion } ... on StatusContext { state } } } } %s } } } } } } }""".formatted(StackFragment.FIELDS, SuiteFragment.FIELDS);
+
+    /*
+     * Everything about one pull request the dialog shows, its latest commit for its checks. gh fills in the
+     * repository of the working tree for {owner} and {repo}. GitHub no longer says when a commit was pushed, so the
+     * latest of when it was opened, its latest commit and its latest force push tells when it was last pushed to; as
+     * GitHub gives all three as UTC timestamps ending in Z, the latest of them sorts last as text.
+     */
+    static final String DETAILS_QUERY =
+            """
+            query($owner: String!, $name: String!, $number: Int!) { repository(owner: $owner, name: $name) { \
+            nameWithOwner pullRequest(number: $number) { number title author { login } state isDraft headRefName \
+            baseRefName headRefOid %s createdAt additions deletions changedFiles mergeable reviewDecision comments { totalCount } \
+            labels(first: 100) { nodes { name } } latestReviews(first: 100) { nodes { author { login } state } } \
+            reviewRequests(first: 100) { nodes { requestedReviewer { ... on User { login } ... on Bot { login } \
+            ... on Mannequin { login } ... on Team { name } } } } \
+            timelineItems(last: 1, itemTypes: [HEAD_REF_FORCE_PUSHED_EVENT]) { nodes { \
+            ... on HeadRefForcePushedEvent { createdAt } } } \
+            commits(last: 1) { totalCount nodes { commit { committedDate statusCheckRollup { contexts(first: 100) { nodes { __typename \
+            ... on CheckRun { %s } ... on StatusContext { context state } } } } %s } } } \
+            reviewThreads(last: 100) { totalCount nodes { isResolved comments { totalCount } } } } } }""".formatted(StackFragment.FIELDS, CheckFragment.CHECK_RUN_FIELDS, SuiteFragment.FIELDS);
+
+    /*
+     * The branches of the repository with the combined state of the checks on their tip, and its check suites, all
+     * pages of them. gh fills in the repository of the working tree for {owner} and {repo}.
+     */
+    static final String BRANCHES_QUERY = """
+            query($owner: String!, $name: String!, $endCursor: String) { \
+            repository(owner: $owner, name: $name) { nameWithOwner \
+            refs(refPrefix: "refs/heads/", first: 100, after: $endCursor) { pageInfo { hasNextPage endCursor } \
+            nodes { name target { ... on Commit { statusCheckRollup { state } %s } } } } } }""".formatted(SuiteFragment.FIELDS);
+
     // The state of a check, in jq: a check run that is not completed yet is PENDING; a commit status gives its state.
     private static final String CHECK_STATE = """
             (if .__typename == "CheckRun" \
             then (if .status == "COMPLETED" then (.conclusion // "") else "PENDING" end) \
             else (.state // "") end)""";
-    // What there is to know of a check run of a workflow and when it ran, in GraphQL (ADR 32).
-    private static final String CHECK_RUN_FIELDS = """
-            databaseId name status conclusion startedAt completedAt \
-            checkSuite { workflowRun { databaseId createdAt runAttempt event workflow { name } } }""";
     /*
      * A check as the fields of a line, in jq: its name, its state as in CHECK_STATE, and for a check run of a
-     * workflow the fields of CHECK_RUN_FIELDS, empty for the rest: its id, its workflow, its conclusion, when it
+     * workflow the fields of CheckFragment.CHECK_RUN_FIELDS, empty for the rest: its id, its workflow, its conclusion, when it
      * started and was done, and the id, creation, attempt and event of its workflow run.
      */
     private static final String CHECK_JQ = """
@@ -55,13 +90,8 @@ public final class CliGitHub implements GitHub {
             $run.createdAt, ($run.runAttempt | tostring), ($run.event // "")]) \
             else ["", "", "", "", "", "", "", "", ""] end); """.formatted(CHECK_STATE);
     private static final int CHECK_FIELD_COUNT = 1 + 11;
-    // The check suites of a commit, in GraphQL, to find its workflow runs that wait to start, as those have no check
-    // run yet (ADR 35).
-    private static final String SUITE_FIELDS = """
-            checkSuites(first: 20) { nodes { status checkRuns { totalCount } \
-            workflowRun { databaseId createdAt runAttempt event workflow { name } } } }""";
     /*
-     * The workflow runs of a commit that wait to start, in jq: its suites of SUITE_FIELDS of a workflow, not
+     * The workflow runs of a commit that wait to start, in jq: its suites of SuiteFragment.FIELDS of a workflow, not
      * completed, without a check run; and such a suite as the fields of a check of CHECK_JQ, queued, named after its
      * workflow and without an id of its own. A suite of another app has no workflow run: one that never adds a check
      * run stays queued for good.
@@ -72,12 +102,7 @@ public final class CliGitHub implements GitHub {
             def waitingCheck: .workflowRun as $run | [($run.workflow.name // ""), "PENDING", "0", \
             ($run.workflow.name // ""), "", "", "", ($run.databaseId | tostring), $run.createdAt, \
             ($run.runAttempt | tostring), ($run.event // "")]; """;
-    // Where a pull request sits in its stack, and the pull requests of it, in GraphQL: both null when it is not
-    // stacked.
-    private static final String STACK_FIELDS = """
-            stackEntry { position } stack { number size \
-            entries(first: 100) { nodes { position pullRequest { number state } } } }""";
-    // STACK_FIELDS as the fields of a line, in jq: the number of the stack, the position, the size and its pull
+    // StackFragment.FIELDS as the fields of a line, in jq: the number of the stack, the position, the size and its pull
     // requests as position:number:state, separated by commas, all empty when it is not stacked. An entry whose pull
     // request cannot be read is left out.
     private static final String STACK_JQ = """
@@ -86,16 +111,6 @@ public final class CliGitHub implements GitHub {
             ([.stack.entries.nodes[]? | select(.pullRequest != null) \
             | "\\(.position):\\(.pullRequest.number):\\(.pullRequest.state)"] | join(","))]; """;
     private static final int STACK_FIELD_COUNT = 4;
-    /*
-     * The open pull requests of the repository, all pages of them, with the states of the checks on their last
-     * commit, and its check suites. gh fills in the repository of the working tree for {owner} and {repo}.
-     */
-    static final String PRS_QUERY = """
-            query($owner: String!, $name: String!, $endCursor: String) { repository(owner: $owner, name: $name) { \
-            pullRequests(states: OPEN, first: 100, after: $endCursor) { pageInfo { hasNextPage endCursor } \
-            nodes { number headRefName isDraft isCrossRepository reviewDecision %s \
-            commits(last: 1) { nodes { commit { statusCheckRollup { contexts(first: 100) { nodes { __typename \
-            ... on CheckRun { status conclusion } ... on StatusContext { state } } } } %s } } } } } } }""".formatted(STACK_FIELDS, SUITE_FIELDS);
     /*
      * One line per pull request that is not from a fork:
      * number, head branch, whether it is a draft, its review decision, the states of its checks, PENDING for each
@@ -115,7 +130,7 @@ public final class CliGitHub implements GitHub {
     private static final String SUMMARY_FRAGMENT = """
             fragment summary on PullRequest { number title url updatedAt isDraft isCrossRepository headRefName \
             author { login } repository { nameWithOwner } reviewDecision %s \
-            commits(last: 1) { nodes { commit { statusCheckRollup { state } %s } } } }""".formatted(STACK_FIELDS, SUITE_FIELDS);
+            commits(last: 1) { nodes { commit { statusCheckRollup { state } %s } } } }""".formatted(StackFragment.FIELDS, SuiteFragment.FIELDS);
     /*
      * The open pull requests of the repository, the most recently updated first, the one opened last in any state, and
      * the account gh runs as. gh fills in the repository of the working tree for {owner} and {repo}.
@@ -167,24 +182,6 @@ public final class CliGitHub implements GitHub {
     private static final int SUMMARY_LINE_FIELDS = 13 + STACK_FIELD_COUNT;
 
     /*
-     * Everything about one pull request the dialog shows, its latest commit for its checks. gh fills in the
-     * repository of the working tree for {owner} and {repo}. GitHub no longer says when a commit was pushed, so the
-     * latest of when it was opened, its latest commit and its latest force push tells when it was last pushed to; as
-     * GitHub gives all three as UTC timestamps ending in Z, the latest of them sorts last as text.
-     */
-    static final String DETAILS_QUERY = """
-            query($owner: String!, $name: String!, $number: Int!) { repository(owner: $owner, name: $name) { \
-            nameWithOwner pullRequest(number: $number) { number title author { login } state isDraft headRefName \
-            baseRefName headRefOid %s createdAt additions deletions changedFiles mergeable reviewDecision comments { totalCount } \
-            labels(first: 100) { nodes { name } } latestReviews(first: 100) { nodes { author { login } state } } \
-            reviewRequests(first: 100) { nodes { requestedReviewer { ... on User { login } ... on Bot { login } \
-            ... on Mannequin { login } ... on Team { name } } } } \
-            timelineItems(last: 1, itemTypes: [HEAD_REF_FORCE_PUSHED_EVENT]) { nodes { \
-            ... on HeadRefForcePushedEvent { createdAt } } } \
-            commits(last: 1) { totalCount nodes { commit { committedDate statusCheckRollup { contexts(first: 100) { nodes { __typename \
-            ... on CheckRun { %s } ... on StatusContext { context state } } } } %s } } } \
-            reviewThreads(last: 100) { totalCount nodes { isResolved comments { totalCount } } } } } }""".formatted(STACK_FIELDS, CHECK_RUN_FIELDS, SUITE_FIELDS);
-    /*
      * Tab separated lines, each starting with what it is: a "repo" line with the repository as owner/name, one "pr"
      * line with the fields of the pull request, one "threads" line with how many review threads it has, how many of
      * them were read, and how many of those are unresolved and how many comments they hold, a "stack" line with the fields of STACK_JQ when it is stacked,
@@ -222,7 +219,7 @@ public final class CliGitHub implements GitHub {
             commits(last: 1) { nodes { commit { %1$s } } } } } \
             defaultBranchRef { target { ... on Commit { history(first: $count) { nodes { %1$s } } } } } } }""".formatted(
                     "statusCheckRollup { contexts(first: 100) { nodes { __typename ... on CheckRun { %s } } } }"
-                            .formatted(CHECK_RUN_FIELDS));
+                            .formatted(CheckFragment.CHECK_RUN_FIELDS));
     /*
      * The checks on the tips of branches, each in an alias b0, b1, … whose branch is in the variable of that name.
      * gh fills in the repository of the working tree for {owner} and {repo}.
@@ -262,16 +259,6 @@ public final class CliGitHub implements GitHub {
             | [.state, .id, (.author.login // ""), .submittedAt, (.includesCreatedEdit | tostring), "false", "", \
             .body])] | sort_by(.[3]) | .[] | @tsv)""";
     private static final int COMMENT_FIELD_COUNT = 8;
-
-    /*
-     * The branches of the repository with the combined state of the checks on their tip, and its check suites, all
-     * pages of them. gh fills in the repository of the working tree for {owner} and {repo}.
-     */
-    static final String BRANCHES_QUERY = """
-            query($owner: String!, $name: String!, $endCursor: String) { \
-            repository(owner: $owner, name: $name) { nameWithOwner \
-            refs(refPrefix: "refs/heads/", first: 100, after: $endCursor) { pageInfo { hasNextPage endCursor } \
-            nodes { name target { ... on Commit { statusCheckRollup { state } %s } } } } } }""".formatted(SUITE_FIELDS);
     /*
      * Tab separated lines, each starting with what it is: a "repo" line with the repository as owner/name per
      * page, and a "branch" line per branch with its name, the state of the checks on its tip, empty without
@@ -281,10 +268,6 @@ public final class CliGitHub implements GitHub {
             .data.repository | (["repo", .nameWithOwner] | @tsv), \
             (.refs.nodes[] | ["branch", .name, (.target.statusCheckRollup.state // ""), \
             ([.target | waiting] | length > 0 | tostring)] | @tsv)""";
-
-    private static final Set<String> FAILED =
-            HashSet.of("FAILURE", "ERROR", "CANCELLED", "TIMED_OUT", "ACTION_REQUIRED", "STARTUP_FAILURE");
-    private static final Set<String> RUNNING = HashSet.of("PENDING", "EXPECTED", "QUEUED", "IN_PROGRESS", "WAITING");
 
     private static final Pattern CREATED_URL = Pattern.compile("/pull/(\\d{1,9})$");
 
@@ -395,7 +378,8 @@ public final class CliGitHub implements GitHub {
                                         number,
                                         f.get(1),
                                         f.get(2).equals("true"),
-                                        checks(List.of(f.get(4).split(",")).filter(state -> !state.isEmpty())),
+                                        CheckFragment.checks(
+                                                List.of(f.get(4).split(",")).filter(state -> !state.isEmpty())),
                                         review(f.get(3)),
                                         stack)))
                         .toOption());
@@ -450,7 +434,7 @@ public final class CliGitHub implements GitHub {
                         f.get(4),
                         f.get(5).equals("true"),
                         f.get(6).equals("true"),
-                        checks(List.of(f.get(8).split(",")).filter(state -> !state.isEmpty())),
+                        CheckFragment.checks(List.of(f.get(8).split(",")).filter(state -> !state.isEmpty())),
                         review(f.get(7)),
                         Instant.parse(f.get(9)),
                         f.get(10),
@@ -478,7 +462,7 @@ public final class CliGitHub implements GitHub {
                                 .toMap(
                                         f -> f.get(1),
                                         // A workflow run that waits to start is pending, without checks yet.
-                                        f -> checks(List.of(f.get(2))
+                                        f -> CheckFragment.checks(List.of(f.get(2))
                                                 .filter(state -> !state.isEmpty())
                                                 .appendAll(Option.when(f.get(3).equals("true"), "PENDING"))))))
                 .toEither(() -> new UnexpectedOutput(raw));
@@ -550,7 +534,7 @@ public final class CliGitHub implements GitHub {
      * nobody set, is neither passing nor failing. A check run whose timing cannot be read is not timed.
      */
     static Check check(List<String> fields) {
-        Checks state = checks(List.of(fields.get(1)).filter(value -> !value.isEmpty()));
+        Checks state = CheckFragment.checks(List.of(fields.get(1)).filter(value -> !value.isEmpty()));
         Option<CheckRun> run =
                 fields.size() < CHECK_FIELD_COUNT - 1 || fields.get(2).isEmpty()
                         ? Option.none()
@@ -579,7 +563,8 @@ public final class CliGitHub implements GitHub {
         List<Integer> aliases = List.range(0, count);
         return BRANCH_CHECK_RUNS_QUERY.formatted(
                 aliases.map(i -> ", $b" + i + ": String!").mkString(),
-                aliases.map(i -> BRANCH_CHECK_RUNS_REF.formatted(i, CHECK_RUN_FIELDS, SUITE_FIELDS))
+                aliases.map(i -> BRANCH_CHECK_RUNS_REF.formatted(
+                                i, CheckFragment.CHECK_RUN_FIELDS, SuiteFragment.FIELDS))
                         .mkString(" "));
     }
 
@@ -709,14 +694,6 @@ public final class CliGitHub implements GitHub {
             case "CONFLICTING" -> Mergeable.CONFLICTING;
             default -> Mergeable.UNKNOWN;
         };
-    }
-
-    /**
-     * The combined state of the checks with {@code states}, as {@link Checks#combined} combines them.
-     */
-    static Checks checks(List<String> states) {
-        return Checks.combined(states.map(state ->
-                FAILED.contains(state) ? Checks.FAILING : RUNNING.contains(state) ? Checks.PENDING : Checks.PASSING));
     }
 
     static Review review(String decision) {
