@@ -248,6 +248,7 @@ class ForceDeleteTest {
                                         false,
                                         new Sha("ffff"),
                                         Instant.EPOCH,
+                                        Option.none(),
                                         false,
                                         false,
                                         new Tracking.None(),

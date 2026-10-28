@@ -214,6 +214,7 @@ class BranchSegsTest {
                         false,
                         new Sha("1"),
                         java.time.Instant.EPOCH,
+                        Option.none(),
                         false,
                         false,
                         new Tracking.None(),

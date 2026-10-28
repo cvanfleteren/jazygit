@@ -3,11 +3,13 @@ package net.vanfleteren.jazygit.git;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
+import io.vavr.Tuple;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.concurrent.TimeoutException;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -242,7 +244,7 @@ class CliGitInfoProviderTest {
     void branchesListTheCurrentOneFirstThenTheMostRecentlyCommittedTo() throws Exception {
         commitAt("main", "2020-01-02T00:00:00Z");
         for (String branch : List.of("old", "newest", "middle")) {
-            git("branch", branch, "main");
+            gitAt("2020-01-02T12:00:00Z", "branch", branch, "main");
         }
         commitAt("old", "2020-01-03T00:00:00Z");
         commitAt("middle", "2020-01-05T00:00:00Z");
@@ -266,22 +268,47 @@ class CliGitInfoProviderTest {
                         .toList());
     }
 
+    @Test
+    void aNewBranchIsAsOldAsWhenItWasMadeUntilItIsCommittedTo() throws Exception {
+        commitAt("main", "2020-01-02T00:00:00Z");
+        gitAt("2020-01-02T12:00:00Z", "branch", "old", "main");
+        commitAt("old", "2020-01-03T00:00:00Z");
+        gitAt("2020-01-04T00:00:00Z", "branch", "fresh", "main");
+
+        List<Branch> branches = provider.allBranches().map(AllBranches::local).get();
+        assertEquals(
+                List.of(
+                        Tuple.of("main", Instant.parse("2020-01-02T00:00:00Z")),
+                        Tuple.of("fresh", Instant.parse("2020-01-04T00:00:00Z")),
+                        Tuple.of("old", Instant.parse("2020-01-03T00:00:00Z"))),
+                branches.map(b -> Tuple.of(b.name().value(), b.lastActivity())));
+
+        commitAt("fresh", "2020-01-05T00:00:00Z");
+        assertEquals(
+                Instant.parse("2020-01-05T00:00:00Z"),
+                provider.allBranches()
+                        .map(AllBranches::local)
+                        .get()
+                        .find(b -> b.name().value().equals("fresh"))
+                        .get()
+                        .lastActivity());
+    }
+
     private void commitAt(String branch, String date) throws Exception {
         git("checkout", "-q", branch);
+        gitAt(date, "commit", "-q", "--allow-empty", "-m", "at " + date);
+        git("checkout", "-q", "main");
+    }
+
+    /**
+     * Runs git with {@code date} as the time of the commits it makes and of the reflog entries it writes.
+     */
+    private void gitAt(String date, String... args) throws Exception {
+        java.util.List<String> command = new java.util.ArrayList<>(java.util.List.of(
+                "git", "-c", "user.name=Test", "-c", "user.email=test@example.com", "-c", "commit.gpgsign=false"));
+        command.addAll(java.util.List.of(args));
         ProcessResult result = new ProcessExecutor()
-                .command(
-                        "git",
-                        "-c",
-                        "user.name=Test",
-                        "-c",
-                        "user.email=test@example.com",
-                        "-c",
-                        "commit.gpgsign=false",
-                        "commit",
-                        "-q",
-                        "--allow-empty",
-                        "-m",
-                        "at " + date)
+                .command(command)
                 .environment("GIT_COMMITTER_DATE", date)
                 .directory(repo.toFile())
                 .readOutput(true)

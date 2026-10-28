@@ -11,6 +11,7 @@ import java.time.Instant;
  * @param current   whether it is the branch checked out here
  * @param tip       the commit the branch points to
  * @param tipTime   when that commit was made
+ * @param created   when git made the branch, as its reflog says; none when that is not known, as after a clone
  * @param hasRemote whether the branch it is pushed to exists, according to the remote-tracking refs: its upstream,
  *                  or {@code origin/<name>} without one
  * @param isDefault whether this is the repository's main branch, i.e. the default branch of the remote
@@ -23,10 +24,19 @@ public record Branch(
         boolean current,
         Sha tip,
         Instant tipTime,
+        Option<Instant> created,
         boolean hasRemote,
         boolean isDefault,
         Tracking tracking,
         Option<Path> worktree) {
+
+    /**
+     * When the branch was last worked on: when its tip was committed, or when it was made if that is later, so a
+     * new branch is as old as itself rather than as the commit it was made from (ADR 41).
+     */
+    public Instant lastActivity() {
+        return created.filter(time -> time.isAfter(tipTime)).getOrElse(tipTime);
+    }
 
     /**
      * The branch it follows, if that exists; none when its upstream is gone.

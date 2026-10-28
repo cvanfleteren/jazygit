@@ -3,6 +3,8 @@ package net.vanfleteren.jazygit.git;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.vavr.Tuple;
+import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
@@ -29,6 +31,13 @@ class CliParseTest {
         return ref(name, sha, time, "", "", "", "", symref, "", "");
     }
 
+    /**
+     * One entry of a reflog as {@code git log --walk-reflogs} lists it.
+     */
+    private static String reflog(String ref, long time, String subject) {
+        return ref + "@{" + time + "}\u001f" + subject + "\n";
+    }
+
     @Test
     void remoteBranchesAreTheMostRecentlyCommittedToFirstWithoutTheHeadOfARemote() {
         String raw = remote("refs/remotes/origin/HEAD", A, "300", "refs/remotes/origin/trunk")
@@ -51,10 +60,10 @@ class CliParseTest {
                                 new RemoteBranch("origin", new BranchName("old")),
                                 new Sha(B),
                                 Instant.ofEpochSecond(100))),
-                CliBranch.parseAll(raw).get().remote());
+                CliBranch.parseAll(raw, HashMap.empty()).get().remote());
         assertEquals(
                 List.of(new BranchName("main")),
-                CliBranch.parseAll(raw).get().local().map(Branch::name));
+                CliBranch.parseAll(raw, HashMap.empty()).get().local().map(Branch::name));
     }
 
     @Test
@@ -62,7 +71,7 @@ class CliParseTest {
         String raw = ref("refs/heads/odd", A, "300", "*", "-oProxyCommand=x", "refs/heads/odd", "", "", "", "")
                 + ref("refs/heads/path", B, "200", " ", "/repos/my repo", "refs/heads/path", "", "", "", "");
 
-        List<Branch> local = CliBranch.parseAll(raw).get().local();
+        List<Branch> local = CliBranch.parseAll(raw, HashMap.empty()).get().local();
 
         assertEquals(
                 List.of(Option.none(), Option.of(new RemoteBranch("/repos/my repo", new BranchName("path")))),
@@ -141,7 +150,7 @@ class CliParseTest {
                                 false,
                                 new Tracking.Gone(
                                         new BranchRef.Remote(new RemoteBranch("origin", new BranchName("gone")))))),
-                CliBranch.parseAll(raw).get().local());
+                CliBranch.parseAll(raw, HashMap.empty()).get().local());
     }
 
     @Test
@@ -159,7 +168,9 @@ class CliParseTest {
                         "")
                 + ref("refs/remotes/origin/elsewhere", A, "1", " ", "", "", "", "", "", "");
 
-        assertEquals(List.of(true), CliBranch.parseAll(raw).get().local().map(Branch::hasRemote));
+        assertEquals(
+                List.of(true),
+                CliBranch.parseAll(raw, HashMap.empty()).get().local().map(Branch::hasRemote));
     }
 
     @Test
@@ -168,7 +179,7 @@ class CliParseTest {
                 + ref("refs/heads/feature", B, "1", "*", ".", "refs/heads/main", "", "", "refs/heads/main", "")
                 + ref("refs/remotes/origin/feature", B, "1", " ", "", "", "", "", "", "");
 
-        Branch feature = CliBranch.parseAll(raw)
+        Branch feature = CliBranch.parseAll(raw, HashMap.empty())
                 .get()
                 .local()
                 .find(branch -> branch.name().equals(new BranchName("feature")))
@@ -191,7 +202,7 @@ class CliParseTest {
                 "refs/remotes/my/fork/feature/x",
                 "");
 
-        Branch local = CliBranch.parseAll(raw).get().local().head();
+        Branch local = CliBranch.parseAll(raw, HashMap.empty()).get().local().head();
         assertEquals(
                 Option.of(new BranchRef.Remote(new RemoteBranch("my/fork", new BranchName("feature/x")))),
                 local.upstream().map(Upstream::branch));
@@ -206,14 +217,16 @@ class CliParseTest {
 
         assertEquals(
                 List.of(Option.none(), Option.of(java.nio.file.Path.of("/repos/linked dir")), Option.none()),
-                CliBranch.parseAll(raw).get().local().map(Branch::worktree));
+                CliBranch.parseAll(raw, HashMap.empty()).get().local().map(Branch::worktree));
     }
 
     @Test
     void withoutOriginHeadMainOrMasterIsTheDefault() {
         String raw = ref("refs/heads/master", A, "1", "*", "", "", "", "", "", "");
 
-        assertEquals(List.of(true), CliBranch.parseAll(raw).get().local().map(Branch::isDefault));
+        assertEquals(
+                List.of(true),
+                CliBranch.parseAll(raw, HashMap.empty()).get().local().map(Branch::isDefault));
     }
 
     @Test
@@ -246,14 +259,60 @@ class CliParseTest {
     }
 
     @Test
+    void aBranchIsMadeWhenItsOldestReflogEntrySaysGitCreatedIt() {
+        String raw = reflog("refs/heads/fresh", 50, "branch: Created from main")
+                + reflog("refs/heads/feature/a@b", 100, "commit: Work")
+                + reflog("refs/heads/feature/a@b", 50, "branch: Created from HEAD")
+                + reflog("refs/heads/renamed", 80, "Branch: renamed refs/heads/old to refs/heads/renamed")
+                + reflog("refs/heads/renamed", 60, "branch: Created from main")
+                + reflog("refs/heads/main", 90, "pull: Fast-forward")
+                + reflog("refs/heads/main", 70, "clone: from https://example.com/repo.git")
+                + reflog("refs/heads/expired", 40, "reset: moving to HEAD~1");
+
+        assertEquals(
+                HashMap.of(
+                        new BranchName("fresh"), Instant.ofEpochSecond(50),
+                        new BranchName("feature/a@b"), Instant.ofEpochSecond(50),
+                        new BranchName("renamed"), Instant.ofEpochSecond(60)),
+                CliBranch.parseCreated(raw).get());
+    }
+
+    @Test
+    void aBranchIsAsOldAsWhenItWasMadeUntilItIsCommittedToAfterwards() {
+        String raw = ref("refs/heads/fresh", A, "10", " ", "", "", "", "", "", "")
+                + ref("refs/heads/worked", A, "100", " ", "", "", "", "", "", "")
+                + ref("refs/heads/unknown", A, "20", " ", "", "", "", "", "", "");
+        HashMap<BranchName, Instant> created = HashMap.of(
+                new BranchName("fresh"), Instant.ofEpochSecond(50),
+                new BranchName("worked"), Instant.ofEpochSecond(50));
+
+        assertEquals(
+                List.of(
+                        Tuple.of("worked", Instant.ofEpochSecond(100)),
+                        Tuple.of("fresh", Instant.ofEpochSecond(50)),
+                        Tuple.of("unknown", Instant.ofEpochSecond(20))),
+                CliBranch.parseAll(raw, created)
+                        .get()
+                        .local()
+                        .map(b -> Tuple.of(b.name().value(), b.lastActivity())));
+    }
+
+    @Test
     void malformedOutputIsAnErrorRatherThanAnException() {
         assertEquals(
                 new GitError.UnexpectedOutput("refs/heads/main\u001f" + A),
-                CliBranch.parseAll(ref("refs/heads/main", A)).getLeft());
+                CliBranch.parseAll(ref("refs/heads/main", A), HashMap.empty()).getLeft());
         assertEquals(
                 new GitError.UnexpectedOutput("soon"),
-                CliBranch.parseAll(ref("refs/heads/main", A, "soon", "*", "", "", "", "", "", ""))
+                CliBranch.parseAll(ref("refs/heads/main", A, "soon", "*", "", "", "", "", "", ""), HashMap.empty())
                         .getLeft());
+        assertEquals(
+                new GitError.UnexpectedOutput("refs/heads/main@{soon}\u001fcommit: A"),
+                CliBranch.parseCreated("refs/heads/main@{soon}\u001fcommit: A\n")
+                        .getLeft());
+        assertEquals(
+                new GitError.UnexpectedOutput("refs/heads/main\u001fcommit: A"),
+                CliBranch.parseCreated("refs/heads/main\u001fcommit: A\n").getLeft());
         assertEquals(
                 new GitError.UnexpectedOutput(" "),
                 CliLog.parse(String.join("\u001f", " ", "", "Ada", "ada@example.com", "60", "S", "", "S\n"))
