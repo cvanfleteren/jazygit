@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 
@@ -30,6 +31,10 @@ public final class PushUpdate {
                 model.popup(ForcePushPopup.class)
                         .map(popup -> forceConfirmed(model, popup))
                         .getOrElse(() -> Next.of(model));
+            // The push ran and pushed nothing; where to push it is asked instead of the failure (ADR 40).
+            case PushMsg.Refused(var cmd, var refused, var commands) ->
+                Update.refresh(OperationUpdate.done(model, cmd, commands)
+                        .openPopupIfFree(SetUpstreamPopup.refused(cmd.branch(), refused)));
         };
     }
 
@@ -55,12 +60,14 @@ public final class PushUpdate {
         // A branch that is being pushed or deleted is not pushed meanwhile. A branch without an upstream on a
         // remote (none, one that is gone, or a local branch, which a push would move) is pushed where the user
         // says. Pushing a diverged branch needs a force push, which the user must confirm; a branch that is only
-        // behind has nothing to push.
+        // behind has nothing to push. That is only known of an upstream of the same name: for one of another name,
+        // push.default says where the push goes when it runs, so it is pushed, and git or push.default refuse what
+        // they would (ADR 40).
         return model.idleBranch(branch)
                 .map(known -> known.remoteUpstream()
                         .map(upstream -> diverged(known)
                                 ? Update.ask(model, new ForcePushPopup(branch))
-                                : known.behind() > 0
+                                : sameName(known) && known.behind() > 0
                                         ? Next.of(model.fail(new AppError.BehindUpstream(branch)))
                                         : Update.start(
                                                 model.clearError(), new Push(branch, upstream, PushMode.FAST_FORWARD)))
@@ -69,7 +76,14 @@ public final class PushUpdate {
     }
 
     private static boolean diverged(Branch branch) {
-        return branch.ahead() > 0 && branch.behind() > 0;
+        return sameName(branch) && branch.ahead() > 0 && branch.behind() > 0;
+    }
+
+    /**
+     * Whether {@code branch} follows a remote branch of its own name, which its ahead and behind are counted against.
+     */
+    private static boolean sameName(Branch branch) {
+        return branch.remoteUpstream().exists(upstream -> upstream.branch().equals(branch.name()));
     }
 
     /**

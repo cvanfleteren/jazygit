@@ -308,7 +308,7 @@ class BranchUpdateTest {
             Next next = Update.update(typed(asked, text), new PushMsg.UpstreamConfirmed());
             assertEquals(List.of(), next.cmds());
             assertEquals(
-                    Option.of(new SetUpstreamPopup(new BranchName("feature"), text)),
+                    Option.of(new SetUpstreamPopup(new BranchName("feature"), text, Option.none())),
                     next.model().popup());
             assertTrue(next.model().outcome().error().isDefined());
         }
@@ -320,6 +320,31 @@ class BranchUpdateTest {
                 List.of(),
                 Update.update(typed(loaded(), "origin feature"), new PushMsg.UpstreamConfirmed())
                         .cmds());
+    }
+
+    @Test
+    void aPushThatPushDefaultRefusesAsksWhereToPushTheBranchOnItsUpstreamsRemote() {
+        PushCmd.Push push = new PushCmd.Push(
+                new BranchName("feature"),
+                new RemoteBranch("origin", new BranchName("feature")),
+                PushMode.FAST_FORWARD);
+        Model pushing = TestModels.stepped(tracking(), new PushMsg.Requested(new BranchName("feature")))
+                .model();
+        SetUpstreamPopup.Refusal refused =
+                new SetUpstreamPopup.Refusal("simple", new RemoteBranch("upstream", new BranchName("develop")));
+
+        Next next = TestModels.done(pushing, push, new PushMsg.Refused(push, refused, List.empty()));
+
+        assertEquals(
+                Option.of(new SetUpstreamPopup(new BranchName("feature"), "upstream feature", Option.of(refused))),
+                next.model().popup());
+        assertEquals(Option.none(), next.model().outcome().error());
+        assertEquals(
+                io.vavr.collection.HashSet.empty(), next.model().jobs().busy().keySet());
+        assertEquals(
+                List.of(new PushCmd.PushSettingUpstream(
+                        new BranchName("feature"), new RemoteBranch("upstream", new BranchName("feature")))),
+                Update.update(next.model(), new PushMsg.UpstreamConfirmed()).cmds());
     }
 
     @Test
@@ -422,6 +447,35 @@ class BranchUpdateTest {
     private static Model featureTracking(int ahead, int behind) {
         return localBranchesRead(loaded(), featureTrackingBranches(ahead, behind))
                 .model();
+    }
+
+    @Test
+    void aBranchFollowingAnotherNameIsPushedWhetherThatOneIsBehindOrDiverged() {
+        RemoteBranch develop = new RemoteBranch("origin", new BranchName("develop"));
+        for (var counts : List.of(io.vavr.Tuple.of(0, 2), io.vavr.Tuple.of(1, 2))) {
+            Model model = localBranchesRead(
+                            loaded(),
+                            List.of(
+                                    Fixtures.branch(new BranchName("main"), true, new Sha("aaaa")),
+                                    Fixtures.branch(
+                                            new BranchName("feature"),
+                                            false,
+                                            new Sha("ffff"),
+                                            Instant.EPOCH,
+                                            true,
+                                            false,
+                                            Option.of(new Upstream(
+                                                    new BranchRef.Remote(develop), counts._1, counts._2)))))
+                    .model();
+
+            Next next = Update.update(model, new PushMsg.Requested(new BranchName("feature")));
+
+            // Where it goes, and whether git takes it, is known once push.default is read (ADR 40).
+            assertEquals(
+                    List.of(new PushCmd.Push(new BranchName("feature"), develop, PushMode.FAST_FORWARD)), next.cmds());
+            assertEquals(Option.none(), next.model().popup());
+            assertEquals(Option.none(), next.model().outcome().error());
+        }
     }
 
     @Test

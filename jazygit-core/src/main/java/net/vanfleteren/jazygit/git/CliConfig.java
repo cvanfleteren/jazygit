@@ -12,7 +12,8 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
- * The configuration of the repository itself, through {@code git config --local}.
+ * The configuration, through {@code git config}: what jazygit records in the repository's own, with {@code --local},
+ * and the settings of git it follows, as git reads them from the repository's, the user's and the system's.
  */
 final class CliConfig {
 
@@ -45,8 +46,22 @@ final class CliConfig {
      * up, so not logged.
      */
     static Either<ProcessError, Option<String>> get(Path worktree, String key) {
+        return read(worktree, List.of("--local"), key);
+    }
+
+    /**
+     * The value of {@code key} as git sees it: from the repository's configuration, the user's or the system's,
+     * whichever sets it last. Only looked up, so not logged.
+     */
+    static Either<ProcessError, Option<String>> effective(Path worktree, String key) {
+        return read(worktree, List.empty(), key);
+    }
+
+    private static Either<ProcessError, Option<String>> read(Path worktree, List<String> scope, String key) {
         // git config --get exits with 1, saying nothing, when the key is not set.
-        return GitProcess.ask(worktree, GitCommand.reading("config", "--local", "--get", key))
+        return GitProcess.ask(
+                        worktree,
+                        GitCommand.reading(List.of("config").appendAll(scope).appendAll(List.of("--get", key))))
                 .map(answer -> answer.map(output -> output.stdout().strip()))
                 .mapLeft(GitFailure::error);
     }

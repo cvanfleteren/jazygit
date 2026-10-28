@@ -166,10 +166,13 @@ public interface GitInfoProvider {
     // Pushing branches, as git push does.
 
     /**
-     * Pushes the local branch {@code branch} to {@code upstream}, the branch it tracks.
+     * Pushes the local branch {@code branch}, which tracks {@code upstream}, where {@code push.default} says: to
+     * {@code upstream}, or to the branch of the same name on its remote.
+     *
+     * @return the command lines that were run, or why git failed; {@link GitError.PushRefused} when
+     *     {@code push.default} does not push the branch there, before anything is pushed
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(
-            BranchName branch, RemoteBranch upstream, PushMode mode);
+    Either<GitFailure<GitError>, List<ExecutedCommand>> push(BranchName branch, RemoteBranch upstream, PushMode mode);
 
     /**
      * Pushes the local branch {@code branch} to {@code upstream}, which becomes its upstream once the push

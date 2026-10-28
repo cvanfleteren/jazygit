@@ -1613,10 +1613,11 @@ class CliGitInfoProviderTest {
     }
 
     @Test
-    void anUpstreamUnderAnotherNameIsWherePushingAndDeletingGo() throws Exception {
+    void withPushDefaultUpstreamAnUpstreamUnderAnotherNameIsWherePushingAndDeletingGo() throws Exception {
         java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
         git("init", "-q", "--bare", "-b", "main", bare.toString());
         git("remote", "add", "mirror", bare.toString());
+        git("config", "push.default", "upstream");
 
         assertEquals(
                 List.of("git push --set-upstream mirror main:refs/heads/shared"),
@@ -1648,6 +1649,60 @@ class CliGitInfoProviderTest {
         assertEquals(
                 Option.none(),
                 provider.allBranches().map(AllBranches::local).get().head().upstream());
+    }
+
+    @Test
+    void withPushDefaultSimpleAnUpstreamUnderAnotherNameIsNotPushedTo() throws Exception {
+        java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
+        git("init", "-q", "--bare", "-b", "main", bare.toString());
+        git("remote", "add", "mirror", bare.toString());
+        git("config", "push.default", "simple");
+        RemoteBranch shared = new RemoteBranch("mirror", new BranchName("shared"));
+        provider.pushSettingUpstream(new BranchName("main"), shared).get();
+        git("commit", "-q", "--allow-empty", "-m", "local");
+
+        GitFailure<GitError> refused = provider.push(new BranchName("main"), shared, PushMode.FAST_FORWARD)
+                .getLeft();
+
+        assertEquals(new GitError.PushRefused("simple", shared), refused.error());
+        assertEquals(List.of(), refused.commands());
+        assertEquals(List.of(1, 0), counts("main"));
+    }
+
+    @Test
+    void withPushDefaultNothingNoBranchIsPushedWithoutBeingToldWhere() throws Exception {
+        java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
+        git("init", "-q", "--bare", "-b", "main", bare.toString());
+        git("remote", "add", "origin", bare.toString());
+        RemoteBranch main = new RemoteBranch("origin", new BranchName("main"));
+        provider.pushSettingUpstream(new BranchName("main"), main).get();
+        git("config", "push.default", "nothing");
+        git("commit", "-q", "--allow-empty", "-m", "local");
+
+        assertEquals(
+                new GitError.PushRefused("nothing", main),
+                provider.push(new BranchName("main"), main, PushMode.FAST_FORWARD)
+                        .getLeft()
+                        .error());
+        assertEquals(List.of(1, 0), counts("main"));
+    }
+
+    @Test
+    void aPushDefaultGitDoesNotKnowPushesNothing() throws Exception {
+        java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
+        git("init", "-q", "--bare", "-b", "main", bare.toString());
+        git("remote", "add", "origin", bare.toString());
+        RemoteBranch main = new RemoteBranch("origin", new BranchName("main"));
+        provider.pushSettingUpstream(new BranchName("main"), main).get();
+        git("commit", "-q", "--allow-empty", "-m", "local");
+        // Git fails most commands on a value it does not know, so it is set last.
+        git("config", "push.default", "sideways");
+
+        assertEquals(
+                new GitError.PushRefused("sideways", main),
+                provider.push(new BranchName("main"), main, PushMode.FAST_FORWARD)
+                        .getLeft()
+                        .error());
     }
 
     @Test

@@ -161,7 +161,7 @@ class ProgramTest {
         }
 
         @Override
-        public Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(
+        public Either<GitFailure<GitError>, List<ExecutedCommand>> push(
                 BranchName branch, RemoteBranch upstream, PushMode mode) {
             pushed.add(branch.value() + (mode == PushMode.FORCE_WITH_LEASE ? " force" : ""));
             return StubGitProvider.ran("git push");

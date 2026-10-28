@@ -63,9 +63,11 @@ public final class DeleteBranchUpdate {
                 .map(error -> Next.of(model.fail(error)))
                 .getOrElse(() -> Update.ask(
                         model,
-                        Option.when(
-                                Branches.isOtherIdleBranch(model, branch),
-                                () -> new DeleteBranchPopup(branch, worktree.map(Worktree::name)))));
+                        model.repo()
+                                .branch(branch)
+                                .filter(known -> Branches.isOtherIdleBranch(model, branch))
+                                .map(known -> new DeleteBranchPopup(
+                                        branch, known.pushTarget(), worktree.map(Worktree::name)))));
     }
 
     /**
@@ -109,16 +111,19 @@ public final class DeleteBranchUpdate {
     }
 
     private static Next chosen(Model model, DeleteScope scope) {
-        // Deleting on the remote is not possible for a local-only branch, nor for the default one; deleting it
-        // locally is not possible while another worktree has it checked out.
+        // Deleting on the remote is not possible for a local-only branch, nor for the default one, nor when the remote
+        // branch is no longer the one the dialog named; deleting it locally is not possible while another worktree
+        // has it checked out.
         return Update.confirm(
                 model,
                 DeleteBranchPopup.class,
                 popup -> model.repo()
                         .branch(popup.branch())
-                        .filter(branch -> scope == DeleteScope.LOCAL || branch.remoteDeletable())
+                        .filter(branch -> scope == DeleteScope.LOCAL
+                                || (branch.remoteDeletable()
+                                        && branch.pushTarget().equals(popup.remote())))
                         .filter(branch -> scope == DeleteScope.REMOTE || !branch.checkedOutElsewhere())
-                        .map(branch -> new DeleteBranch(branch.name(), branch.pushTarget(), scope)));
+                        .map(branch -> new DeleteBranch(branch.name(), popup.remote(), scope)));
     }
 
     /**

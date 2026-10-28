@@ -155,6 +155,8 @@ public final class ErrorText {
             case GitError.NotFullyMerged(String explanation) -> explanation;
             case GitError.StashNotRestored(var cause) -> Messages.get("git.stashPopFailed", of(cause));
             case GitError.StashGone(String message) -> Messages.get("git.stashGone", message);
+            case GitError.PushRefused(String pushDefault, RemoteBranch upstream) ->
+                Messages.get("git.pushRefused", pushDefault, upstream.shortName());
             case GitError.StoppedOnConflicts(var inProgress, int conflicts) ->
                 Messages.get("git.stoppedOnConflicts", conflicts);
             case GitError.TempFileFailed(Throwable cause) -> Messages.get("git.tempFileFailed", reason(cause));
