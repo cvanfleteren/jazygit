@@ -667,8 +667,8 @@ class ContentPanelTest {
 
     @Test
     void aTruncatedDiffEndsWithALineSayingSo() {
-        assertEquals("+a\n", ContentPanel.shown(DiffText.of("+a\n")));
-        assertEquals("+a\n… truncated\n", ContentPanel.shown(new DiffText("+a\n", true)));
+        assertEquals("+a\n", ContentView.shown(DiffText.of("+a\n")));
+        assertEquals("+a\n… truncated\n", ContentView.shown(new DiffText("+a\n", true)));
     }
 
     @Test

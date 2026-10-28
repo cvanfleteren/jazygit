@@ -15,7 +15,6 @@ import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.MouseEvent;
 import dev.tamboui.tui.event.MouseEventKind;
-import io.vavr.Tuple;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
@@ -25,28 +24,23 @@ import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.i18n.Messages;
-import net.vanfleteren.jazygit.state.AheadUpdate;
-import net.vanfleteren.jazygit.state.BranchCommitsView;
 import net.vanfleteren.jazygit.state.BranchesTab;
-import net.vanfleteren.jazygit.state.DivergenceView;
-import net.vanfleteren.jazygit.state.Failure;
-import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Preview;
-import net.vanfleteren.jazygit.state.Screen;
 import net.vanfleteren.jazygit.state.Scrolled;
 import net.vanfleteren.jazygit.state.ScrolledContent;
+import net.vanfleteren.jazygit.ui.ContentView.Body;
+import net.vanfleteren.jazygit.ui.ContentView.Shown;
+import net.vanfleteren.jazygit.ui.ContentView.Tone;
 
 /**
- * The right-hand content panel: it always mirrors whichever left pane currently has focus,
- * showing the file diff, the branch log, the commit diff/body or what a stash stashed; on the pull requests screen,
- * the highlighted pull request.
+ * The right-hand content panel: it draws what {@link ContentView} says it shows, styling the diffs, the log, the
+ * commits, the stashes and the pull requests, and keeps the areas that scroll through them.
  */
 public final class ContentPanel {
 
@@ -93,30 +87,6 @@ public final class ContentPanel {
      */
     public static boolean isArea(String id) {
         return ContentArea.focusable(id).isDefined();
-    }
-
-    /**
-     * The text of {@code diff}, with a line saying it is truncated when it was cut off.
-     */
-    static String shown(DiffText diff) {
-        return diff.truncated() ? diff.text() + Messages.get("git.diff.truncated") + "\n" : diff.text();
-    }
-
-    /**
-     * What a commit changed as it is shown: when changes to whitespace only are left out and nothing else
-     * changed, a line that says so.
-     */
-    static String shownChanges(DiffText changes, DiffOptions options) {
-        return changes.isBlank() && options.ignoreWhitespace()
-                ? Messages.get("content.onlyWhitespace") + "\n"
-                : shown(changes);
-    }
-
-    /**
-     * {@code title}, saying that changes to whitespace only are left out when they are.
-     */
-    static String titled(String title, DiffOptions options) {
-        return options.ignoreWhitespace() ? Messages.get("panel.ignoringWhitespace", title) : title;
     }
 
     /**
@@ -217,17 +187,6 @@ public final class ContentPanel {
                                         .prepend(""));
     }
 
-    private static Option<Commit> commit(Model model, Sha sha) {
-        return model.commit(sha);
-    }
-
-    private static Option<Stash> stash(Model model, Sha sha) {
-        return model.repo()
-                .stashes()
-                .toOption()
-                .flatMap(stashes -> stashes.find(stash -> stash.sha().equals(sha)));
-    }
-
     /**
      * The {@code Date:} line of a commit or a stash, as {@code git show} has it.
      */
@@ -279,24 +238,6 @@ public final class ContentPanel {
         return Span.styled(text, styles.of(cssClass));
     }
 
-    private static StyledElement<?> loadingPanel(String title) {
-        return dimPanel(title, Placeholders.loading());
-    }
-
-    private static StyledElement<?> dimPanel(String title, String content) {
-        return panel(title, text(content).addClass(Theme.Classes.DIM));
-    }
-
-    private static <T> StyledElement<?> whenLoaded(
-            String title, Loadable<T> loadable, Function<T, StyledElement<?>> view) {
-        return switch (loadable) {
-            case Loadable.Loaded<T>(T value) -> view.apply(value);
-            case Loadable.Loading<T>() -> loadingPanel(title);
-            case Loadable.Failed<T>(Failure failure) ->
-                panel(title, text(Placeholders.error(failure)).addClass(Theme.Classes.ERROR));
-        };
-    }
-
     /**
      * The pane that gets the focus back when Escape is pressed in the area with id {@code areaId}, if that
      * is a focusable area: the pane whose highlighted row it shows.
@@ -321,21 +262,23 @@ public final class ContentPanel {
      */
     private static boolean showsContent(Model model, ContentArea area) {
         return switch (area) {
-            case STAGED -> diffs(model).exists(diffs -> !shown(diffs.staged()).isBlank());
+            case STAGED ->
+                diffs(model).exists(diffs -> !ContentView.shown(diffs.staged()).isBlank());
             case UNSTAGED ->
-                diffs(model).exists(diffs -> !shown(diffs.unstaged()).isBlank());
+                diffs(model)
+                        .exists(diffs -> !ContentView.shown(diffs.unstaged()).isBlank());
             case COMMIT ->
                 model.repoView()
                         .commitDetail()
                         .map(Preview::shown)
                         .exists(detail -> detail.value().toOption().isDefined()
-                                && commit(model, detail.key()).isDefined());
+                                && model.commit(detail.key()).isDefined());
             case STASH ->
                 model.repoView()
                         .stashDetail()
                         .map(Preview::shown)
                         .exists(detail -> detail.value().toOption().isDefined()
-                                && stash(model, detail.key()).isDefined());
+                                && ContentView.stash(model, detail.key()).isDefined());
             case DIVERGENCE ->
                 model.repoView()
                         .divergence()
@@ -376,14 +319,42 @@ public final class ContentPanel {
      */
     public StyledElement<?> render(Model model, String focusedId) {
         tabbableWhileIn(focusedId);
-        if (model.screen() == Screen.PULL_REQUESTS) {
-            return pullRequestView(model, focusedId);
-        }
-        return switch (mirrored(model, focusedId)) {
-            case FILES -> fileDiffView(model, focusedId);
-            case BRANCHES -> branchesView(model, focusedId);
-            case COMMITS -> commitDiffView(model, focusedId);
-            case STASH -> stashDiffView(model, focusedId);
+        return element(ContentView.of(model, focusedId), model, focusedId);
+    }
+
+    /**
+     * How {@code shown} is drawn: a message in a panel, or the areas, where the model has them scrolled to.
+     */
+    private StyledElement<?> element(Shown shown, Model model, String focusedId) {
+        return switch (shown) {
+            case Shown.Message(String title, String content, Tone tone) ->
+                panel(
+                        title,
+                        switch (tone) {
+                            case PLAIN -> text(content);
+                            case DIM -> text(content).addClass(Theme.Classes.DIM);
+                            case ERROR -> text(content).addClass(Theme.Classes.ERROR);
+                        });
+            case Shown.Area area ->
+                area(area.area()).show(model, focusedId, area.title(), area.content(), bodyText(area.body()));
+            case Shown.Stacked(List<Shown.Area> stacked) ->
+                column(stacked.<Element>map(area -> element(area, model, focusedId))
+                        .toJavaArray(Element[]::new));
+        };
+    }
+
+    /**
+     * {@code body}, styled.
+     */
+    private Text bodyText(Body body) {
+        return switch (body) {
+            case Body.Diff(String diff) -> diffText(diff, styles);
+            case Body.BranchLog(List<Commit> commits, AheadView ahead) ->
+                logText(commits, ZoneId.systemDefault(), ahead, styles);
+            case Body.CommitChanges(Commit commit, String changes) -> commitText(commit, changes, styles);
+            case Body.StashChanges(Stash stash, String changes) -> stashText(stash, changes, styles);
+            case Body.PullRequest(PullRequestSummary pullRequest, PullRequestPreview preview) ->
+                pullRequestText(pullRequest, preview, styles);
         };
     }
 
@@ -397,57 +368,6 @@ public final class ContentPanel {
 
     private ScrollArea area(ContentArea area) {
         return areas.apply(area);
-    }
-
-    /**
-     * The pane {@code focusedId} is or belongs to; while a popup has the focus, the pane, or the pane of the area,
-     * it was opened from. Nothing has the focus before the first render.
-     */
-    private Mirrored mirrored(Model model, String focusedId) {
-        Option<String> id = isArea(focusedId) || Mirrored.of(focusedId).isDefined()
-                ? Option.of(focusedId)
-                : model.repoView().focusedPane().orElse(Option.of(focusedId));
-        return id.map(known -> paneOfArea(model, known).getOrElse(known))
-                .flatMap(Mirrored::of)
-                .getOrElse(Mirrored.FILES);
-    }
-
-    /**
-     * The commit highlighted in the divergence the local branches pane lists, or in the commits of a branch the pane
-     * lists, or else the log of the branch.
-     */
-    private StyledElement<?> branchesView(Model model, String focusedId) {
-        return model.repoView()
-                .divergence()
-                .filter(view -> model.repoView().branchesTab() == BranchesTab.LOCAL)
-                .<StyledElement<?>>map(view -> divergenceCommitView(model, focusedId, view))
-                .orElse(() -> model.repoView().branchCommits().map(view -> branchCommitView(model, focusedId, view)))
-                .getOrElse(() -> branchLogView(model, focusedId));
-    }
-
-    /**
-     * The pull request highlighted in the pane of the pull requests screen in use, as {@link #pullRequestText}
-     * shows it; the one shown before stays while it is read.
-     */
-    private StyledElement<?> pullRequestView(Model model, String focusedId) {
-        String title = Messages.get("panel.pullRequest.title");
-        return model.prOverview()
-                .preview()
-                .map(Preview::shown)
-                .<StyledElement<?>>map(preview -> whenLoaded(
-                        title,
-                        preview.value(),
-                        read -> area(ContentArea.PULL_REQUEST)
-                                .show(
-                                        model,
-                                        focusedId,
-                                        Messages.get(
-                                                "panel.pullRequest.titleFor",
-                                                preview.key().repository(),
-                                                String.valueOf(preview.key().number())),
-                                        new ScrolledContent.PullRequest(preview.key(), read),
-                                        pullRequestText(preview.key(), read, styles))))
-                .getOrElse(() -> dimPanel(title, Messages.get("content.noPullRequest")));
     }
 
     /**
@@ -486,173 +406,6 @@ public final class ContentPanel {
                                         ? preview.diff() + Messages.get("git.diff.truncated") + "\n"
                                         : preview.diff())
                         .map(line -> diffLine(line, styles))));
-    }
-
-    /**
-     * One panel for the staged changes and one for the unstaged changes, one above the other when both exist.
-     */
-    private StyledElement<?> fileDiffView(Model model, String focusedId) {
-        DiffOptions options = model.preferences().diffOptions();
-        String title = titled(Messages.get("panel.diff.title"), options);
-        // With no files there is nothing to highlight, so no diff is ever requested.
-        return model.repo().status().toOption().exists(status -> status.files().isEmpty())
-                ? dimPanel(title, Messages.get("content.noChangedFiles"))
-                : model.repoView()
-                        .fileDiff()
-                        .map(Preview::shown)
-                        .<StyledElement<?>>map(diff ->
-                                whenLoaded(title, diff.value(), diffs -> diffPanels(model, focusedId, title, diffs)))
-                        .getOrElse(() -> loadingPanel(title));
-    }
-
-    private StyledElement<?> diffPanels(Model model, String focusedId, String title, Diffs diffs) {
-        DiffOptions options = model.preferences().diffOptions();
-        if (diffs.isEmpty()) {
-            return dimPanel(
-                    title, Messages.get(options.ignoreWhitespace() ? "content.onlyWhitespace" : "content.noChanges"));
-        }
-        List<Element> panels = List.of(
-                        Tuple.of(area(ContentArea.STAGED), "content.staged", diffs.staged()),
-                        Tuple.of(area(ContentArea.UNSTAGED), "content.unstaged", diffs.unstaged()))
-                .filter(panel -> !shown(panel._3).isBlank())
-                .map(panel -> panel._1.show(
-                        model,
-                        focusedId,
-                        titled(Messages.get(panel._2), options),
-                        new ScrolledContent.Diff(panel._3),
-                        diffText(shown(panel._3), styles)));
-        return column(panels.toJavaArray(Element[]::new));
-    }
-
-    private StyledElement<?> branchLogView(Model model, String focusedId) {
-        return model.repoView()
-                .branchLog()
-                .map(Preview::shown)
-                .<StyledElement<?>>map(log -> {
-                    String title = Messages.get("panel.log.titleFor", log.key().name());
-                    AheadView ahead = new AheadView(
-                            AheadUpdate.branch(model, log.key()),
-                            model.repoView().onlyAhead());
-                    return whenLoaded(ahead.title(title), log.value(), commits -> {
-                        List<Commit> shown = ahead.shown(commits);
-                        return area(ContentArea.LOG)
-                                .show(
-                                        model,
-                                        focusedId,
-                                        ahead.title(title),
-                                        new ScrolledContent.BranchLog(shown),
-                                        logText(shown, ZoneId.systemDefault(), ahead, styles));
-                    });
-                })
-                .getOrElse(() -> loadingPanel(Messages.get("panel.log.title")));
-    }
-
-    /**
-     * The commit highlighted in the divergence {@code view}, as the commits pane shows its commits.
-     */
-    private StyledElement<?> divergenceCommitView(Model model, String focusedId, DivergenceView view) {
-        DiffOptions options = model.preferences().diffOptions();
-        String title = Messages.get("panel.commit.title");
-        return view.detail()
-                .map(Preview::shown)
-                .<StyledElement<?>>map(detail -> whenLoaded(
-                        title,
-                        detail.value(),
-                        changes -> view.commit(detail.key())
-                                .<StyledElement<?>>map(commit -> area(ContentArea.DIVERGENCE)
-                                        .show(
-                                                model,
-                                                focusedId,
-                                                titled(
-                                                        Messages.get("panel.commit.titleFor", commit.shortSha()),
-                                                        options),
-                                                new ScrolledContent.CommitChanges(commit, changes),
-                                                commitText(commit, shownChanges(changes, options), styles)))
-                                .getOrElse(() -> loadingPanel(title))))
-                .getOrElse(() -> view.commits().toOption().exists(Divergence::isEmpty)
-                        ? dimPanel(title, Messages.get("content.noDivergence"))
-                        : loadingPanel(title));
-    }
-
-    /**
-     * The commit highlighted in the commits of a branch {@code view}, as the commits pane shows its commits.
-     */
-    private StyledElement<?> branchCommitView(Model model, String focusedId, BranchCommitsView view) {
-        DiffOptions options = model.preferences().diffOptions();
-        String title = Messages.get("panel.commit.title");
-        return view.detail()
-                .map(Preview::shown)
-                .<StyledElement<?>>map(detail -> whenLoaded(
-                        title,
-                        detail.value(),
-                        changes -> view.commit(model, detail.key())
-                                .<StyledElement<?>>map(commit -> area(ContentArea.BRANCH_COMMIT)
-                                        .show(
-                                                model,
-                                                focusedId,
-                                                titled(
-                                                        Messages.get("panel.commit.titleFor", commit.shortSha()),
-                                                        options),
-                                                new ScrolledContent.CommitChanges(commit, changes),
-                                                commitText(commit, shownChanges(changes, options), styles)))
-                                .getOrElse(() -> loadingPanel(title))))
-                .getOrElse(() -> view.commits(model).toOption().exists(List::isEmpty)
-                        ? panel(title, text(Messages.get("content.noCommits")))
-                        : loadingPanel(title));
-    }
-
-    private StyledElement<?> commitDiffView(Model model, String focusedId) {
-        DiffOptions options = model.preferences().diffOptions();
-        String title = Messages.get("panel.commit.title");
-        return model.repoView()
-                .commitDetail()
-                .map(Preview::shown)
-                .<StyledElement<?>>map(detail -> whenLoaded(
-                        title,
-                        detail.value(),
-                        changes -> commit(model, detail.key())
-                                .<StyledElement<?>>map(commit -> area(ContentArea.COMMIT)
-                                        .show(
-                                                model,
-                                                focusedId,
-                                                titled(
-                                                        Messages.get("panel.commit.titleFor", commit.shortSha()),
-                                                        options),
-                                                new ScrolledContent.CommitChanges(commit, changes),
-                                                commitText(commit, shownChanges(changes, options), styles)))
-                                .getOrElse(() -> loadingPanel(title))))
-                .getOrElse(() -> model.repo().commits().toOption().exists(List::isEmpty)
-                        ? panel(title, text(Messages.get("content.noCommits")))
-                        : loadingPanel(title));
-    }
-
-    /**
-     * What the highlighted stash stashed, as {@link #stashText} shows it; the stash shown before stays while it is
-     * read. Without stashes, it says there are none.
-     */
-    private StyledElement<?> stashDiffView(Model model, String focusedId) {
-        DiffOptions options = model.preferences().diffOptions();
-        String title = Messages.get("panel.stash.title");
-        return model.repoView()
-                .stashDetail()
-                .map(Preview::shown)
-                .flatMap(detail -> stash(model, detail.key())
-                        .<StyledElement<?>>map(stash -> whenLoaded(
-                                title,
-                                detail.value(),
-                                (DiffText changes) -> area(ContentArea.STASH)
-                                        .show(
-                                                model,
-                                                focusedId,
-                                                titled(Messages.get("panel.stash.titleFor", stash.ref()), options),
-                                                new ScrolledContent.StashChanges(stash.sha(), changes),
-                                                stashText(stash, shownChanges(changes, options), styles)))))
-                .getOrElse(() -> whenLoaded(
-                        title,
-                        model.repo().stashes(),
-                        stashes -> stashes.isEmpty()
-                                ? dimPanel(title, Messages.get("content.noStashes"))
-                                : loadingPanel(title)));
     }
 
     /**
@@ -754,27 +507,6 @@ public final class ContentPanel {
             RichTextState state = element.state();
             dispatch.accept(new Msg.ContentScrolled(id, new Scrolled(content, state.scrollRow(), state.scrollCol())));
             return EventResult.HANDLED;
-        }
-    }
-
-    /**
-     * The left pane whose highlight the content panel shows on the repository screen. Its areas are resolved to it
-     * by {@link #paneOfArea}.
-     */
-    private enum Mirrored {
-        FILES(FilesPanel.ID),
-        BRANCHES(BranchesPanel.ID),
-        COMMITS(CommitsPanel.ID),
-        STASH(StashPanel.ID);
-
-        private final String id;
-
-        Mirrored(String id) {
-            this.id = id;
-        }
-
-        static Option<Mirrored> of(String id) {
-            return List.of(values()).find(mirrored -> mirrored.id.equals(id));
         }
     }
 }
