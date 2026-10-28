@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.GitError.*;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.git.model.Revision;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
@@ -69,12 +70,14 @@ final class CliCheckout {
     /**
      * Runs {@code git checkout -b <name> <startPoint>} in {@code worktree}: creates the branch at
      * {@code startPoint} and switches to it; then records {@code parent} as the branch it came from, if given.
-     * The parent is only a hint, so failing to record it does not fail the branch, which is there.
+     * The parent is only a hint, so failing to record it does not fail the branch, which is there. Whether the
+     * branch follows {@code startPoint} is up to git's {@code branch.autoSetupMerge} (ADR 40).
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewBranch(
-            Path worktree, BranchName name, String startPoint, Option<BranchName> parent) {
+            Path worktree, BranchName name, Revision startPoint, Option<BranchName> parent) {
         return GitFailure.sequence(
-                () -> GitProcess.log(worktree, git("checkout", "--quiet", "-b", name.value(), startPoint, "--")),
+                () -> GitProcess.log(
+                        worktree, git("checkout", "--quiet", "-b", name.value(), startPoint.toArg(), "--")),
                 () -> parent.map(p -> recordParent(worktree, name, p)).getOrElse(GitFailure::nothing));
     }
 

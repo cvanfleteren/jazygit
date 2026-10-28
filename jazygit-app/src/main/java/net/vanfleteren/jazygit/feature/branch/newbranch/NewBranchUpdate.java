@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.branch.newbranch;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchMsg.Requested;
 import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.Revision;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
@@ -25,15 +26,13 @@ public final class NewBranchUpdate {
                         model,
                         model.repo()
                                 .remoteBranch(remote)
-                                .map(known -> new NewBranchPopup(
-                                        remote.tracking().toArg(), remote.shortName(), Option.of(remote.branch()))));
+                                .map(known -> new NewBranchPopup(remote.tracking(), Option.of(remote.branch()))));
         };
     }
 
     private static Next atCommit(Model model, Sha sha) {
         return Update.ask(
                 model,
-                model.commit(sha)
-                        .map(commit -> new NewBranchPopup(commit.sha().value(), commit.shortSha(), Option.none())));
+                model.commit(sha).map(commit -> new NewBranchPopup(new Revision.Commit(commit.sha()), Option.none())));
     }
 }

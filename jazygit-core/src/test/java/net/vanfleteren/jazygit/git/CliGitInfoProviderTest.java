@@ -1419,7 +1419,10 @@ class CliGitInfoProviderTest {
         git("commit", "-q", "-m", "On other");
         git("checkout", "-q", "main");
 
-        provider.checkoutNewBranch(new BranchName("topic"), "other", Option.of(new BranchName("other")))
+        provider.checkoutNewBranch(
+                        new BranchName("topic"),
+                        new BranchRef.Local(new BranchName("other")),
+                        Option.of(new BranchName("other")))
                 .get();
 
         assertEquals(
@@ -1432,8 +1435,35 @@ class CliGitInfoProviderTest {
     }
 
     @Test
+    void aBranchMadeFromARemoteBranchFollowsItAsGitIsConfiguredTo() throws Exception {
+        git("remote", "add", "origin", repo.toString());
+        git("update-ref", "refs/remotes/origin/develop", "HEAD");
+        Revision develop = new RemoteBranch("origin", new BranchName("develop")).tracking();
+
+        git("config", "branch.autoSetupMerge", "true");
+        provider.checkoutNewBranch(new BranchName("follows"), develop, Option.none())
+                .get();
+        git("config", "branch.autoSetupMerge", "false");
+        provider.checkoutNewBranch(new BranchName("alone"), develop, Option.none())
+                .get();
+
+        assertTrue(gitSucceedsIn(repo, "config", "--get", "branch.follows.merge"));
+        assertFalse(gitSucceedsIn(repo, "config", "--get", "branch.alone.merge"));
+    }
+
+    @Test
+    void whatTheUserTypedIsResolvedToTheCommitItNamesAndNeverReadAsAnOption() throws Exception {
+        git("tag", "v1");
+        Sha head = provider.resolve("HEAD").get().get();
+
+        assertEquals(Option.of(head), provider.resolve("v1").get());
+        assertEquals(Option.none(), provider.resolve("--all").get());
+        assertEquals(Option.none(), provider.resolve("nowhere").get());
+    }
+
+    @Test
     void aBranchMadeWithoutAParentHasNoneRecorded() throws Exception {
-        provider.checkoutNewBranch(new BranchName("topic"), "main", Option.none())
+        provider.checkoutNewBranch(new BranchName("topic"), new BranchRef.Local(new BranchName("main")), Option.none())
                 .get();
 
         assertEquals(
@@ -1445,7 +1475,10 @@ class CliGitInfoProviderTest {
         // git config cannot write the configuration while another writer holds its lock.
         Files.writeString(repo.resolve(".git/config.lock"), "");
 
-        var made = provider.checkoutNewBranch(new BranchName("topic"), "main", Option.of(new BranchName("main")));
+        var made = provider.checkoutNewBranch(
+                new BranchName("topic"),
+                new BranchRef.Local(new BranchName("main")),
+                Option.of(new BranchName("main")));
 
         assertTrue(made.isRight());
         assertEquals(2, made.get().size());
@@ -2087,7 +2120,8 @@ class CliGitInfoProviderTest {
     void checkoutNewBranchFailsWhenTheNameIsTaken() throws Exception {
         git("branch", "topic");
 
-        assertTrue(provider.checkoutNewBranch(new BranchName("topic"), "main", Option.none())
+        assertTrue(provider.checkoutNewBranch(
+                        new BranchName("topic"), new BranchRef.Local(new BranchName("main")), Option.none())
                 .isLeft());
     }
 

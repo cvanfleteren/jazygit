@@ -129,7 +129,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> addDetachedWorktree(
-            Path location, String startPoint) {
+            Path location, Revision startPoint) {
         return CliWorktree.addDetached(worktree, location, startPoint);
     }
 
@@ -140,8 +140,8 @@ public final class CliGitInfoProvider implements GitInfoProvider {
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> addWorktreeWithNewBranch(
-            Path location, BranchName name, String startPoint, Option<BranchName> parent, boolean track) {
-        return CliWorktree.addNewBranch(worktree, location, name, startPoint, parent, track);
+            Path location, BranchName name, NewBranchStart start) {
+        return CliWorktree.addNewBranch(worktree, location, name, start);
     }
 
     @Override
@@ -257,8 +257,13 @@ public final class CliGitInfoProvider implements GitInfoProvider {
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewBranch(
-            BranchName name, String startPoint, Option<BranchName> parent) {
+            BranchName name, Revision startPoint, Option<BranchName> parent) {
         return CliCheckout.checkoutNewBranch(worktree, name, startPoint, parent);
+    }
+
+    @Override
+    public Either<GitFailure<ProcessError>, Option<Sha>> resolve(String text) {
+        return CliLog.resolve(worktree, text);
     }
 
     @Override

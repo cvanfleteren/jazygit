@@ -689,7 +689,7 @@ class BranchUpdateTest {
                 .model();
 
         assertEquals(
-                Option.of(new NewBranchPopup("abc1234567", "abc1234", Option.none())),
+                Option.of(new NewBranchPopup(new Revision.Commit(new Sha("abc1234567")), Option.none())),
                 Update.update(model, new NewBranchMsg.RequestedAtCommit(commit.sha()))
                         .model()
                         .popup());
@@ -708,7 +708,10 @@ class BranchUpdateTest {
         Next next = Update.update(typed(open, " topic "), new Msg.PopupConfirmed(NewBranchPopup.class));
 
         assertEquals(
-                List.of(new NewBranchCmd(new BranchName("topic"), "feature", Option.of(new BranchName("feature")))),
+                List.of(new NewBranchCmd(
+                        new BranchName("topic"),
+                        new BranchRef.Local(new BranchName("feature")),
+                        Option.of(new BranchName("feature")))),
                 next.cmds());
         assertEquals(Option.none(), next.model().popup());
     }
@@ -729,7 +732,13 @@ class BranchUpdateTest {
     @Test
     void failedBranchCreationIsStored() {
         Model model = Update.update(
-                        loaded(), failed(new NewBranchCmd(new BranchName("topic"), "main", Option.none()), "boom"))
+                        loaded(),
+                        failed(
+                                new NewBranchCmd(
+                                        new BranchName("topic"),
+                                        new BranchRef.Local(new BranchName("main")),
+                                        Option.none()),
+                                "boom"))
                 .model();
 
         assertEquals(Option.of("Creating branch topic failed: boom"), errorText(model));

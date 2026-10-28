@@ -30,12 +30,14 @@ import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.InProgressAction;
 import net.vanfleteren.jazygit.git.model.MergeMode;
+import net.vanfleteren.jazygit.git.model.NewBranchStart;
 import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.RemoteRef;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.ResetMode;
 import net.vanfleteren.jazygit.git.model.ResetTarget;
+import net.vanfleteren.jazygit.git.model.Revision;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.SquashMode;
 import net.vanfleteren.jazygit.git.model.Stash;
@@ -133,7 +135,7 @@ public interface StubGitProvider extends GitInfoProvider {
 
     @Override
     default Either<GitFailure<ProcessError>, List<ExecutedCommand>> addDetachedWorktree(
-            Path location, String startPoint) {
+            Path location, Revision startPoint) {
         return ran();
     }
 
@@ -144,7 +146,7 @@ public interface StubGitProvider extends GitInfoProvider {
 
     @Override
     default Either<GitFailure<ProcessError>, List<ExecutedCommand>> addWorktreeWithNewBranch(
-            Path location, BranchName name, String startPoint, Option<BranchName> parent, boolean track) {
+            Path location, BranchName name, NewBranchStart start) {
         return ran();
     }
 
@@ -259,8 +261,13 @@ public interface StubGitProvider extends GitInfoProvider {
 
     @Override
     default Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewBranch(
-            BranchName name, String startPoint, Option<BranchName> parent) {
+            BranchName name, Revision startPoint, Option<BranchName> parent) {
         return ran();
+    }
+
+    @Override
+    default Either<GitFailure<ProcessError>, Option<Sha>> resolve(String text) {
+        return Either.right(Option.none());
     }
 
     @Override
