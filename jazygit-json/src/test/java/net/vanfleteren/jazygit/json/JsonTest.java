@@ -87,6 +87,14 @@ class JsonTest {
     }
 
     @Test
+    void aNumberWhoseExponentDoesNotFitIsAnError() {
+        assertEquals(
+                List.of("not JSON: Too many nonzero exponent digits.", "not JSON: Too many nonzero exponent digits."),
+                List.of("1e99999999999", "[1e-99999999999]")
+                        .map(text -> Json.parse(text).getLeft().message()));
+    }
+
+    @Test
     void jsonNestedAsDeeplyAsAllowedIsRead() {
         assertTrue(Json.parse("[".repeat(500) + "]".repeat(500)).isRight());
     }

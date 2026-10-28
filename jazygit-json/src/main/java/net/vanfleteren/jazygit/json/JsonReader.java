@@ -11,6 +11,7 @@ import jakarta.json.stream.JsonParser;
 import jakarta.json.stream.JsonParser.Event;
 import jakarta.json.stream.JsonParsingException;
 import java.io.StringReader;
+import java.math.BigDecimal;
 import net.vanfleteren.jazygit.json.Json.JArray;
 import net.vanfleteren.jazygit.json.Json.JBool;
 import net.vanfleteren.jazygit.json.Json.JNull;
@@ -43,8 +44,7 @@ final class JsonReader {
             return atEnd(parser)
                     ? Either.right(json)
                     : Either.left(DecodeError.of("expected one JSON value, got more after it"));
-            // Parsson's limit on the length of a number, 1100 characters, throws an UnsupportedOperationException.
-        } catch (JsonException | UnsupportedOperationException e) {
+        } catch (JsonException e) {
             return Either.left(DecodeError.of("not JSON: " + e.getMessage()));
         }
     }
@@ -66,12 +66,22 @@ final class JsonReader {
             case START_OBJECT -> object(parser, depth);
             case START_ARRAY -> array(parser, depth);
             case VALUE_STRING -> new JString(parser.getString());
-            case VALUE_NUMBER -> new JNumber(parser.getBigDecimal());
+            case VALUE_NUMBER -> new JNumber(number(parser));
             case VALUE_TRUE -> new JBool(true);
             case VALUE_FALSE -> new JBool(false);
             case VALUE_NULL -> new JNull();
             default -> throw new IllegalStateException("A JSON value does not start with " + event);
         };
+    }
+
+    // Parsson's limit on the length of a number, 1100 characters, throws an UnsupportedOperationException, and
+    // BigDecimal a NumberFormatException for an exponent that does not fit in an int, like 1e99999999999.
+    private static BigDecimal number(JsonParser parser) {
+        try {
+            return parser.getBigDecimal();
+        } catch (UnsupportedOperationException | NumberFormatException e) {
+            throw new JsonParsingException(e.getMessage(), e, parser.getLocation());
+        }
     }
 
     private static JObject object(JsonParser parser, int depth) {
