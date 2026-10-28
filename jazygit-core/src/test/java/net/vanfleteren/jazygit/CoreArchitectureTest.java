@@ -9,6 +9,7 @@ import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaModifier;
 import com.tngtech.archunit.core.importer.ImportOption;
+import com.tngtech.archunit.core.importer.Location;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
@@ -22,7 +23,9 @@ import net.vanfleteren.jazygit.git.model.Revision;
  * Rules about how the parts of jazygit-core depend on each other. That they know nothing of the application is
  * seen to by the compiler: the application is not on this module's classpath.
  */
-@AnalyzeClasses(packages = "net.vanfleteren.jazygit", importOptions = ImportOption.DoNotIncludeTests.class)
+@AnalyzeClasses(
+        packages = "net.vanfleteren.jazygit",
+        importOptions = {ImportOption.DoNotIncludeTests.class, CoreArchitectureTest.LeaveOutJson.class})
 class CoreArchitectureTest {
 
     /**
@@ -97,6 +100,13 @@ class CoreArchitectureTest {
             .orShould()
             .callMethod(Runtime.class, "exec", String.class);
     /**
+     * JSON is read through jazygit-json's {@code Json} and {@code Decoder}; Parsson, which comes along with it, is
+     * not used here (ADR 42).
+     */
+    @ArchTest
+    static final ArchRule nothingUsesParsson =
+            noClasses().should().dependOnClassesThat().resideInAnyPackage("jakarta.json..", "org.eclipse.parsson..");
+    /**
      * The parts of the core depend on each other one way only.
      */
     @ArchTest
@@ -125,4 +135,14 @@ class CoreArchitectureTest {
             .haveRawReturnType(JAVA_UTIL_COLLECTION)
             .orShould()
             .haveRawParameterTypes(anyElementThat(JAVA_UTIL_COLLECTION));
+
+    /**
+     * jazygit-json is checked by its own rules; its classes are left out here.
+     */
+    static final class LeaveOutJson implements ImportOption {
+        @Override
+        public boolean includes(Location location) {
+            return !location.contains("/jazygit-json/");
+        }
+    }
 }

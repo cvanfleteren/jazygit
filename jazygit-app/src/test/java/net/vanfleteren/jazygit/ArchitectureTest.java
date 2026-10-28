@@ -27,16 +27,17 @@ import net.vanfleteren.jazygit.state.Program;
  */
 @AnalyzeClasses(
         packages = "net.vanfleteren.jazygit",
-        importOptions = {ImportOption.DoNotIncludeTests.class, ArchitectureTest.LeaveOutCore.class})
+        importOptions = {ImportOption.DoNotIncludeTests.class, ArchitectureTest.LeaveOutCoreAndJson.class})
 class ArchitectureTest {
 
     /**
-     * jazygit-core is checked by its own rules; its classes, and its test-jar, are left out here.
+     * jazygit-core and jazygit-json are checked by their own rules; their classes, and the core's test-jar, are left
+     * out here.
      */
-    static final class LeaveOutCore implements ImportOption {
+    static final class LeaveOutCoreAndJson implements ImportOption {
         @Override
         public boolean includes(Location location) {
-            return !location.contains("/jazygit-core/");
+            return !location.contains("/jazygit-core/") && !location.contains("/jazygit-json/");
         }
     }
 
@@ -61,6 +62,13 @@ class ArchitectureTest {
             .should()
             .dependOnClassesThat()
             .resideInAPackage("com.electronwill.nightconfig..");
+    /**
+     * JSON is read through jazygit-json's {@code Json} and {@code Decoder}; Parsson, which comes along with it, is
+     * not used here (ADR 42).
+     */
+    @ArchTest
+    static final ArchRule nothingUsesParsson =
+            noClasses().should().dependOnClassesThat().resideInAnyPackage("jakarta.json..", "org.eclipse.parsson..");
     /**
      * The command line stands on its own: it reads how jazygit is asked to start, and knows nothing of what is
      * started.
