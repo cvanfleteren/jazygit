@@ -129,6 +129,35 @@ class SettingsPanelUpdateTest {
     }
 
     @Test
+    void aCheckOfAnotherGhExecutableIsDroppedOnceTheOneOnThePathWasEnteredLast() {
+        Settings saved = Settings.DEFAULT.withGhExecutable(Option.of("/opt/gh/bin/gh"));
+        Model first = Update.update(
+                        typed(
+                                TestModels.loaded()
+                                        .mapPreferences(preferences -> preferences.withSettings(saved))
+                                        .openPopup(new GhExecutablePopup("")),
+                                "/old/gh"),
+                        new SettingsPanelMsg.GhExecutableEntered())
+                .model();
+        Model onThePath = Update.update(
+                        typed(first.openPopup(new GhExecutablePopup("/old/gh")), " "),
+                        new SettingsPanelMsg.GhExecutableEntered())
+                .model();
+
+        Next older = Update.update(
+                onThePath, new SettingsPanelMsg.GhExecutableChecked(Option.of("/old/gh"), Either.right("2.102.0")));
+        Next latest = Update.update(
+                onThePath, new SettingsPanelMsg.GhExecutableChecked(Option.none(), Either.right("2.102.0")));
+
+        assertEquals(onThePath, older.model());
+        assertEquals(List.empty(), older.cmds());
+        assertEquals(Option.none(), latest.model().preferences().settings().ghExecutable());
+        assertEquals(
+                List.of(new Cmd.SaveSettings(saved, Settings.DEFAULT), new SettingsPanelCmd.Reopen(Landing.START)),
+                latest.cmds());
+    }
+
+    @Test
     void anEmptyGhExecutableIsTheOneOnThePath() {
         Model entering = TestModels.loaded().openPopup(new GhExecutablePopup("/opt/gh/bin/gh"));
 
@@ -142,7 +171,7 @@ class SettingsPanelUpdateTest {
         Settings chosen = Settings.DEFAULT.withGhExecutable(Option.of("/opt/gh/bin/gh"));
 
         Next next = Update.update(
-                TestModels.loaded(),
+                TestModels.loaded().mapJobs(jobs -> jobs.withGhExecutableEntered(Option.of("/opt/gh/bin/gh"))),
                 new SettingsPanelMsg.GhExecutableChecked(Option.of("/opt/gh/bin/gh"), Either.right("2.102.0")));
 
         assertEquals(chosen, next.model().preferences().settings());
@@ -154,7 +183,8 @@ class SettingsPanelUpdateTest {
     @Test
     void theRepositoryIsShownAgainWhereItWas() {
         Model there = TestModels.loaded()
-                .mapRepoView(view -> view.withBranchesTab(BranchesTab.WORKTREES).withFocusedPane(Option.of("commits")));
+                .mapRepoView(view -> view.withBranchesTab(BranchesTab.WORKTREES).withFocusedPane(Option.of("commits")))
+                .mapJobs(jobs -> jobs.withGhExecutableEntered(Option.of("/opt/gh/bin/gh")));
 
         Next next = Update.update(
                 there, new SettingsPanelMsg.GhExecutableChecked(Option.of("/opt/gh/bin/gh"), Either.right("2.102.0")));
@@ -169,7 +199,7 @@ class SettingsPanelUpdateTest {
         Failure failure = new Failure.GitHub(new GhError.GhUnavailable(new java.io.IOException("no such file")));
 
         Next next = Update.update(
-                TestModels.loaded(),
+                TestModels.loaded().mapJobs(jobs -> jobs.withGhExecutableEntered(Option.of("/nowhere/gh"))),
                 new SettingsPanelMsg.GhExecutableChecked(Option.of("/nowhere/gh"), Either.left(failure)));
 
         assertEquals(Settings.DEFAULT, next.model().preferences().settings());
