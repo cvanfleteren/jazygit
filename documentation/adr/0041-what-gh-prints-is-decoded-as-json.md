@@ -1,16 +1,16 @@
-# 40. What gh prints is decoded as JSON
+# 41. What gh prints is decoded as JSON
 
 Date: 2026-10-28
 
 ## Context
 
 `CliGitHub` reads GitHub through gh, and every read hands gh a `--jq` filter that turns the answer into tab separated
-lines, which Java parses by the position of each field. The class has 1127 lines:
+lines, which Java parses by the position of each field. The class has 1126 lines:
 
 - Every query is written twice, once in jq and once in Java, and nothing ties the two together. A field added to the
   jq on one side moves the indexes on the other; that fails as `UnexpectedOutput`, with no word of which field.
-- 58 `f.get(n)` calls hang off 12 `*_FIELD_COUNT` constants, and splitting the lines and undoing `@tsv`'s escapes is
-  copied into 7 parsers.
+- 61 `f.get(n)` calls hang off 7 constants of how many fields a line has, and splitting the lines and undoing
+  `@tsv`'s escapes is copied into 8 places.
 - The jq holds logic of its own: the state of a check, the workflow runs that wait to start (ADR 35), when a pull
   request was last pushed to as the latest of three timestamps, and which comments show and in what order. It is
   only tested by running jq (`CliGitHubJqTest`, ADR 35), so the tests need jq on the machine.
@@ -46,6 +46,12 @@ and Jackson 3's `tools.jackson.core:jackson-core`, nothing of jazygit.
 - A missing field fails; `null` is only taken where `nullable` gives it as `Option.none()`. GraphQL and `gh --json`
   always answer each field asked for, so a missing one is a query and its decoder that went apart. Not: missing and
   `null` alike, which hides that.
+- But for the fields asked for in a fragment on a union or an interface: a node of another type answers none of them,
+  like a search hit that is not a pull request, which is `{}`. So each such fragment asks for `__typename` too, and
+  its node is decoded with `byField("__typename", decoders)`, which takes a fallback for the types it does not know:
+  one that leaves the node out, as `Option.none()` that the list flattens, or one that fails, as the read does now.
+  Not: a decoder that recovers from any failed field or element, which would let a query and its decoder go apart
+  unseen anywhere.
 - The ArchUnit tests of jazygit-core and jazygit-app say that no class of theirs uses `tools.jackson`, which reaches
   them through `jazygit-json`. Not: Maven's `dependency:analyze`, which is stricter about every dependency.
 
@@ -63,7 +69,9 @@ and Jackson 3's `tools.jackson.core:jackson-core`, nothing of jazygit.
   that wait to start. A record shaped like GitHub's answer is only made where such logic needs one, for the check
   suites. Not: decoding everything into records shaped like the answer first, which doubles the types.
 - A query that reads all pages, of the pull requests and of the branches, runs gh with `--paginate --slurp`, so gh
-  prints one array of all pages. That needs gh 2.48 or later; jazygit asks for no version of gh.
+  prints one array of all pages. That needs gh 2.48 or later, which README's requirements say. jazygit does not check
+  the version beforehand; when an older gh fails with `unknown flag: --slurp`, the error says that gh 2.48 or later is
+  needed, instead of gh's own message.
 - The commands that are not GraphQL stay as they are and lose their `--jq`: the comments through `gh pr view --json`,
   whose filtering and order move to Java, the merges through REST's `merge-async`, the accounts through
   `gh auth status --json`, and the preview through `gh pr view --json`.
@@ -90,16 +98,18 @@ longer need jq. `CliGitHubTest` keeps what is about how gh is run.
 
 One pull request each, the old parsing next to the new until the last:
 
-1. The `jazygit-json` module, `Json` and `Decoder` with their tests, the ArchUnit rules, and a native image built
-   with it.
+1. The `jazygit-json` module, `Json` and `Decoder` with their tests, the ArchUnit rules, a native image built with
+   it, and the module in ARCHITECTURE.md.
 2. `GhProcess.readJson` and the simple commands: the accounts, the merges, the preview, how far behind its base.
 3. The fragments of the checks, the check suites and the stack, with their logic in Java.
-4. The branches, the check runs of branches, and the recent checks.
+4. The branches, the check runs of branches, and the recent checks; gh 2.48 in README's requirements, and the error
+   of an older gh that does not know `--slurp`.
 5. The lists of pull requests: of the repository, mine, and those of the branches.
 6. `PullRequestDetails` in its records, changing nothing it shows.
 7. The details of a pull request.
 8. The comments, and then what is left of the old parsing goes: `unescape`, the `*_FIELD_COUNT` constants,
-   `CliGitHubJqTest` and jq in the dev shell. ADRs 7 and 35 get a reference to this one.
+   `CliGitHubJqTest` and jq in the dev shell. ARCHITECTURE.md's GitHub layer tells of the decoders instead of the
+   jq and its lines. ADRs 7 and 35 get a reference to this one.
 
 ## Consequences
 
@@ -107,5 +117,8 @@ One pull request each, the old parsing next to the new until the last:
 - The logic the jq held is Java, tested without jq; jq is no longer needed to build or test jazygit.
 - jazygit has a JSON library: Jackson's streaming parser, in one module, behind `Json.parse`.
 - What the user is shown when gh's output cannot be read is the path and what was wrong, not the output.
-- jazygit needs gh 2.48 or later for the pages of pull requests and branches; an older gh fails those reads.
-- Not changed: what jazygit reads from GitHub, the commands that write, and how errors are shown.
+- jazygit needs gh 2.48 or later for the pages of pull requests and branches; with an older gh those reads fail with
+  an error that says so.
+- A node of a type a fragment is not on is decoded by `__typename`, not by the fields it lacks.
+- Not changed: what jazygit reads from GitHub, the commands that write, and how errors other than unreadable output
+  are shown.
