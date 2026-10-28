@@ -315,6 +315,32 @@ class ContentPanelTest {
     }
 
     @Test
+    void anAreaStylesItsBodyAgainOnlyOnceItOrTheThemeChanges() throws Exception {
+        java.util.concurrent.atomic.AtomicInteger styled = new java.util.concurrent.atomic.AtomicInteger();
+        ContentPanel counting = new ContentPanel(
+                cssClass -> {
+                    styled.incrementAndGet();
+                    return dev.tamboui.style.Style.EMPTY;
+                },
+                () -> false);
+        Model selected = showingCommit("+added line\n");
+        Model light = selected.mapPreferences(preferences ->
+                preferences.withThemeOverride(Option.of(net.vanfleteren.jazygit.settings.ThemeName.LIGHT)));
+        Model other = showingCommit("+other line\n");
+
+        counting.render(selected, CommitsPanel.ID);
+        int once = styled.get();
+        counting.render(selected, CommitsPanel.ID);
+        assertEquals(once, styled.get());
+
+        counting.render(light, CommitsPanel.ID);
+        assertTrue(styled.get() > once, "restyled in another theme");
+        int inLight = styled.get();
+        counting.render(other, CommitsPanel.ID);
+        assertTrue(styled.get() > inLight, "restyled for another body");
+    }
+
+    @Test
     void theDiffAreasReturnToTheFilesPane() {
         Model model = TestModels.loaded();
         assertEquals(Option.none(), content.paneOfArea(model, "unknown"));

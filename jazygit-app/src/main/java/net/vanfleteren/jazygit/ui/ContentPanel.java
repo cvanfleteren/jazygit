@@ -24,10 +24,12 @@ import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Scrolled;
@@ -278,8 +280,7 @@ public final class ContentPanel {
                             case DIM -> text(content).addClass(Theme.Classes.DIM);
                             case ERROR -> text(content).addClass(Theme.Classes.ERROR);
                         });
-            case Shown.Area area ->
-                area(area.area()).show(model, focusedId, area.title(), area.content(), bodyText(area.body()));
+            case Shown.Area area -> area(area.area()).show(model, focusedId, area, this::bodyText);
             case Shown.Stacked(List<Shown.Area> stacked) ->
                 column(stacked.<Element>map(area -> element(area, model, focusedId))
                         .toJavaArray(Element[]::new));
@@ -365,6 +366,9 @@ public final class ContentPanel {
         private final BooleanSupplier leaveScrollArea;
         private final Consumer<String> focus;
         private final Consumer<Msg> dispatch;
+        // The body last shown, the theme it was styled in and its text: a frame that shows the same, like one drawn
+        // only to turn a spinner, does not style it again.
+        private Option<Styled> styled = Option.none();
 
         ScrollArea(ContentArea area, BooleanSupplier leaveScrollArea, Consumer<String> focus, Consumer<Msg> dispatch) {
             this.area = area;
@@ -384,12 +388,17 @@ public final class ContentPanel {
         }
 
         /**
-         * The area titled {@code title}, showing {@code text}, the text of {@code content}, where the model has it
-         * scrolled to.
+         * The area as {@code shown}, its body as {@code style} styles it, where the model has it scrolled to.
          */
-        RichTextAreaElement show(Model model, String focusedId, String title, ScrolledContent content, Text text) {
+        RichTextAreaElement show(Model model, String focusedId, Shown.Area shown, Function<Body, Text> style) {
+            ThemeName theme = model.preferences().theme();
+            Styled current = styled.filter(last -> last.body().equals(shown.body()) && last.theme() == theme)
+                    .getOrElse(() -> new Styled(shown.body(), theme, style.apply(shown.body())));
+            styled = Option.of(current);
+            ScrolledContent content = shown.content();
             Scrolled at = model.scrolled(id, content);
-            RichTextState state = element.text(text).title(title).state();
+            RichTextState state =
+                    element.text(current.text()).title(shown.title()).state();
             state.scrollToTop();
             state.scrollDown(at.row());
             state.scrollRight(at.column());
@@ -451,5 +460,10 @@ public final class ContentPanel {
             dispatch.accept(new Msg.ContentScrolled(id, new Scrolled(content, state.scrollRow(), state.scrollCol())));
             return EventResult.HANDLED;
         }
+
+        /**
+         * {@code body}, styled in {@code theme} as {@code text}.
+         */
+        private record Styled(Body body, ThemeName theme, Text text) {}
     }
 }
