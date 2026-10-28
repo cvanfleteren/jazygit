@@ -28,6 +28,11 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.*;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Activity;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Branches;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Conversation;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Size;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Status;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.gh.timing.CheckHistory;
 import net.vanfleteren.jazygit.gh.timing.CheckSample;
@@ -52,26 +57,20 @@ class PullRequestDialogTest {
             42,
             "Add rename support to the files panel",
             "cvf",
-            State.OPEN,
-            true,
-            "support_rename",
-            "main",
-            Instant.parse("2026-10-10T08:00:00Z"),
-            Instant.parse("2026-10-12T09:00:00Z"),
-            120,
-            34,
-            7,
-            3,
-            Mergeable.MERGEABLE,
-            Review.CHANGES_REQUESTED,
-            5,
-            new ReviewThreads(5, 5, 2, 12),
-            List.of("enhancement", "ui"),
-            List.of(
-                    new Reviewer("alice", ReviewerState.APPROVED),
-                    new Reviewer("bob", ReviewerState.CHANGES_REQUESTED),
-                    new Reviewer("dave", ReviewerState.REQUESTED),
-                    new Reviewer("carol", ReviewerState.COMMENTED)),
+            new Status(State.OPEN, true, Mergeable.MERGEABLE),
+            new Branches("support_rename", "main"),
+            new Activity(Instant.parse("2026-10-10T08:00:00Z"), Instant.parse("2026-10-12T09:00:00Z")),
+            new Size(120, 34, 7, 3),
+            new Conversation(
+                    Review.CHANGES_REQUESTED,
+                    List.of(
+                            new Reviewer("alice", ReviewerState.APPROVED),
+                            new Reviewer("bob", ReviewerState.CHANGES_REQUESTED),
+                            new Reviewer("dave", ReviewerState.REQUESTED),
+                            new Reviewer("carol", ReviewerState.COMMENTED)),
+                    5,
+                    new ReviewThreads(5, 5, 2, 12),
+                    List.of("enhancement", "ui")),
             List.of(
                     new Check("lint", Checks.PASSING),
                     new Check("integration", Checks.PENDING),
@@ -81,22 +80,11 @@ class PullRequestDialogTest {
             42,
             "Ready",
             "cvf",
-            State.OPEN,
-            false,
-            "support_rename",
-            "main",
-            NOW,
-            NOW,
-            1,
-            1,
-            1,
-            1,
-            Mergeable.MERGEABLE,
-            Review.APPROVED,
-            0,
-            ReviewThreads.NONE,
-            List.empty(),
-            List.empty(),
+            new Status(State.OPEN, false, Mergeable.MERGEABLE),
+            new Branches("support_rename", "main"),
+            new Activity(NOW, NOW),
+            new Size(1, 1, 1, 1),
+            new Conversation(Review.APPROVED, List.empty(), 0, ReviewThreads.NONE, List.empty()),
             List.empty());
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
@@ -104,31 +92,7 @@ class PullRequestDialogTest {
 
     // DETAILS at commit head, into base, not known to be behind it.
     private static PullRequestDetails at(String head, String base) {
-        return new PullRequestDetails(
-                DETAILS.number(),
-                DETAILS.title(),
-                DETAILS.author(),
-                DETAILS.state(),
-                DETAILS.draft(),
-                DETAILS.headBranch(),
-                base,
-                DETAILS.createdAt(),
-                DETAILS.pushedAt(),
-                DETAILS.additions(),
-                DETAILS.deletions(),
-                DETAILS.changedFiles(),
-                DETAILS.commits(),
-                DETAILS.mergeable(),
-                DETAILS.review(),
-                DETAILS.comments(),
-                DETAILS.reviewThreads(),
-                DETAILS.labels(),
-                DETAILS.reviewers(),
-                DETAILS.checks(),
-                GhCommit.parse(head),
-                Option.none(),
-                Option.none(),
-                "");
+        return DETAILS.withBranches(new Branches(DETAILS.branches().head(), base, GhCommit.parse(head), Option.none()));
     }
 
     /**
@@ -139,25 +103,16 @@ class PullRequestDialogTest {
                 READY.number(),
                 READY.title(),
                 READY.author(),
-                READY.state(),
-                READY.draft(),
-                READY.headBranch(),
-                READY.baseBranch(),
-                READY.createdAt(),
-                READY.pushedAt(),
-                READY.additions(),
-                READY.deletions(),
-                READY.changedFiles(),
-                READY.commits(),
-                READY.mergeable(),
-                READY.review(),
-                READY.comments(),
-                READY.reviewThreads(),
-                READY.labels(),
-                READY.reviewers(),
+                READY.status(),
+                new Branches(
+                        READY.branches().head(),
+                        READY.branches().base(),
+                        Option.of(new GhCommit("abc123")),
+                        Option.none()),
+                READY.activity(),
+                READY.size(),
+                READY.conversation(),
                 checks,
-                Option.of(new GhCommit("abc123")),
-                Option.none(),
                 Option.none(),
                 "owner/repo");
     }
@@ -359,26 +314,17 @@ class PullRequestDialogTest {
                 READY.number(),
                 READY.title(),
                 READY.author(),
-                READY.state(),
-                READY.draft(),
-                READY.headBranch(),
-                READY.baseBranch(),
-                READY.createdAt(),
-                READY.pushedAt(),
-                READY.additions(),
-                READY.deletions(),
-                READY.changedFiles(),
-                READY.commits(),
-                READY.mergeable(),
-                READY.review(),
-                READY.comments(),
-                READY.reviewThreads(),
-                READY.labels(),
-                READY.reviewers(),
+                READY.status(),
+                new Branches(
+                        READY.branches().head(),
+                        READY.branches().base(),
+                        Option.of(new GhCommit("abc123")),
+                        Option.none()),
+                READY.activity(),
+                READY.size(),
+                READY.conversation(),
                 READY.checks(),
-                Option.of(new GhCommit("abc123")),
                 Option.of(stack),
-                Option.none(),
                 "");
     }
 
@@ -475,22 +421,11 @@ class PullRequestDialogTest {
                 READY.number(),
                 READY.title(),
                 READY.author(),
-                READY.state(),
-                READY.draft(),
-                READY.headBranch(),
-                READY.baseBranch(),
-                READY.createdAt(),
-                READY.pushedAt(),
-                0,
-                0,
-                0,
-                0,
-                READY.mergeable(),
-                READY.review(),
-                READY.comments(),
-                READY.reviewThreads(),
-                READY.labels(),
-                READY.reviewers(),
+                READY.status(),
+                READY.branches(),
+                READY.activity(),
+                new Size(0, 0, 0, 0),
+                READY.conversation(),
                 READY.checks());
 
         String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
@@ -529,22 +464,16 @@ class PullRequestDialogTest {
                 READY.number(),
                 READY.title(),
                 READY.author(),
-                READY.state(),
-                READY.draft(),
-                READY.headBranch(),
-                READY.baseBranch(),
-                READY.createdAt(),
-                READY.createdAt(),
-                READY.additions(),
-                READY.deletions(),
-                READY.changedFiles(),
-                READY.commits(),
-                READY.mergeable(),
-                READY.review(),
-                READY.comments(),
-                threads,
-                READY.labels(),
-                READY.reviewers(),
+                READY.status(),
+                READY.branches(),
+                READY.activity(),
+                READY.size(),
+                new Conversation(
+                        READY.conversation().review(),
+                        READY.conversation().reviewers(),
+                        READY.conversation().comments(),
+                        threads,
+                        READY.conversation().labels()),
                 READY.checks());
     }
 
@@ -556,22 +485,11 @@ class PullRequestDialogTest {
                 DETAILS.number(),
                 title,
                 DETAILS.author(),
-                DETAILS.state(),
-                DETAILS.draft(),
-                DETAILS.headBranch(),
-                DETAILS.baseBranch(),
-                DETAILS.createdAt(),
-                DETAILS.createdAt(),
-                DETAILS.additions(),
-                DETAILS.deletions(),
-                DETAILS.changedFiles(),
-                DETAILS.commits(),
-                DETAILS.mergeable(),
-                DETAILS.review(),
-                DETAILS.comments(),
-                DETAILS.reviewThreads(),
-                DETAILS.labels(),
-                DETAILS.reviewers(),
+                DETAILS.status(),
+                DETAILS.branches(),
+                new Activity(DETAILS.activity().createdAt(), DETAILS.activity().createdAt()),
+                DETAILS.size(),
+                DETAILS.conversation(),
                 DETAILS.checks());
 
         String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
@@ -588,22 +506,11 @@ class PullRequestDialogTest {
                 42,
                 "t",
                 "",
-                State.OPEN,
-                false,
-                "a",
-                "b",
-                NOW,
-                NOW,
-                0,
-                0,
-                0,
-                1,
-                Mergeable.UNKNOWN,
-                Review.NONE,
-                0,
-                ReviewThreads.NONE,
-                List.empty(),
-                List.empty(),
+                new Status(State.OPEN, false, Mergeable.UNKNOWN),
+                new Branches("a", "b"),
+                new Activity(NOW, NOW),
+                new Size(0, 0, 0, 1),
+                new Conversation(Review.NONE, List.empty(), 0, ReviewThreads.NONE, List.empty()),
                 checks);
 
         String screen = screen(PullRequestPopup.loading(new BranchName("a"), PR, Instant.EPOCH, 0)
@@ -716,22 +623,12 @@ class PullRequestDialogTest {
                         + "as wide as it is, so here are some more of them, and then a few more still, to be sure "
                         + "that it really does not fit",
                 "cvf",
-                State.OPEN,
-                false,
-                "a",
-                "b",
-                NOW,
-                NOW,
-                0,
-                0,
-                0,
-                1,
-                Mergeable.UNKNOWN,
-                Review.APPROVED,
-                0,
-                ReviewThreads.NONE,
-                List.of("ui"),
-                DETAILS.reviewers(),
+                new Status(State.OPEN, false, Mergeable.UNKNOWN),
+                new Branches("a", "b"),
+                new Activity(NOW, NOW),
+                new Size(0, 0, 0, 1),
+                new Conversation(
+                        Review.APPROVED, DETAILS.conversation().reviewers(), 0, ReviewThreads.NONE, List.of("ui")),
                 checks);
         PullRequestPopup loading = PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0);
 
@@ -829,27 +726,8 @@ class PullRequestDialogTest {
     }
 
     private static PullRequestDetails readyIn(State state) {
-        return new PullRequestDetails(
-                READY.number(),
-                READY.title(),
-                READY.author(),
-                state,
-                READY.draft(),
-                READY.headBranch(),
-                READY.baseBranch(),
-                READY.createdAt(),
-                READY.createdAt(),
-                READY.additions(),
-                READY.deletions(),
-                READY.changedFiles(),
-                READY.commits(),
-                READY.mergeable(),
-                READY.review(),
-                READY.comments(),
-                READY.reviewThreads(),
-                READY.labels(),
-                READY.reviewers(),
-                READY.checks());
+        return READY.withStatus(
+                new Status(state, READY.status().draft(), READY.status().mergeable()));
     }
 
     @Test

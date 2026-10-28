@@ -20,6 +20,11 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestComment;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.*;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Activity;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Branches;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Conversation;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Size;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Status;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import org.junit.jupiter.api.Test;
@@ -73,7 +78,7 @@ class CliGitHubTest {
 
         PullRequestDetails details = CliGitHub.parseDetails(raw).get();
 
-        assertEquals(Option.of(new GhCommit("abc123")), details.head());
+        assertEquals(Option.of(new GhCommit("abc123")), details.branches().headCommit());
         assertEquals(Option.of(STACK), details.stack());
         assertEquals(Option.of(STACK), details.listed().get().stack());
         assertTrue(CliGitHub.parseDetails(raw + "stack\t96\t2\t2\n").isLeft());
@@ -88,6 +93,7 @@ class CliGitHubTest {
                                 "pr\t95\tFix\t\tOPEN\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1"
                                         + "\tMERGEABLE\t\t0\tabc123\t1\nthreads\t0\t0\t0\t0\n")
                         .get()
+                        .branches()
                         .behindBase());
     }
 
@@ -217,25 +223,19 @@ class CliGitHubTest {
                         42,
                         "Add\trename",
                         "cvf",
-                        State.OPEN,
-                        true,
-                        "support_rename",
-                        "main",
-                        Instant.parse("2026-10-10T08:00:00Z"),
-                        Instant.parse("2026-10-12T09:00:00Z"),
-                        120,
-                        34,
-                        7,
-                        3,
-                        Mergeable.MERGEABLE,
-                        Review.CHANGES_REQUESTED,
-                        2,
-                        new ReviewThreads(130, 100, 2, 12),
-                        List.of("ui"),
-                        List.of(
-                                new Reviewer("bob", ReviewerState.CHANGES_REQUESTED),
-                                new Reviewer("carol", ReviewerState.REQUESTED),
-                                new Reviewer("core-team", ReviewerState.REQUESTED)),
+                        new Status(State.OPEN, true, Mergeable.MERGEABLE),
+                        new Branches("support_rename", "main"),
+                        new Activity(Instant.parse("2026-10-10T08:00:00Z"), Instant.parse("2026-10-12T09:00:00Z")),
+                        new Size(120, 34, 7, 3),
+                        new Conversation(
+                                Review.CHANGES_REQUESTED,
+                                List.of(
+                                        new Reviewer("bob", ReviewerState.CHANGES_REQUESTED),
+                                        new Reviewer("carol", ReviewerState.REQUESTED),
+                                        new Reviewer("core-team", ReviewerState.REQUESTED)),
+                                2,
+                                new ReviewThreads(130, 100, 2, 12),
+                                List.of("ui")),
                         List.of(new Check("build", Checks.PENDING), new Check("ci/lint", Checks.PASSING)))),
                 CliGitHub.parseDetails(raw));
     }
@@ -251,22 +251,11 @@ class CliGitHubTest {
                         5,
                         "Fix",
                         "",
-                        State.MERGED,
-                        false,
-                        "fix",
-                        "main",
-                        Instant.parse("2026-01-01T00:00:00Z"),
-                        Instant.parse("2026-01-01T00:00:00Z"),
-                        1,
-                        0,
-                        1,
-                        1,
-                        Mergeable.UNKNOWN,
-                        Review.NONE,
-                        0,
-                        ReviewThreads.NONE,
-                        List.empty(),
-                        List.empty(),
+                        new Status(State.MERGED, false, Mergeable.UNKNOWN),
+                        new Branches("fix", "main"),
+                        new Activity(Instant.parse("2026-01-01T00:00:00Z"), Instant.parse("2026-01-01T00:00:00Z")),
+                        new Size(1, 0, 1, 1),
+                        new Conversation(Review.NONE, List.empty(), 0, ReviewThreads.NONE, List.empty()),
                         List.empty())),
                 CliGitHub.parseDetails(raw));
     }
@@ -509,7 +498,7 @@ class CliGitHubTest {
         PullRequestDetails details =
                 detailsFrom(dir, "OPEN", "abc123", BEHIND_BY_2).get();
 
-        assertEquals(Option.of(2), details.behindBase());
+        assertEquals(Option.of(2), details.branches().behindBase());
         String asked = Files.readString(dir.resolve("compared"));
         assertTrue(asked.contains(" base=refs/heads/main "), asked);
         assertTrue(asked.contains(" head=abc123 "), asked);
@@ -521,9 +510,13 @@ class CliGitHubTest {
 
         assertEquals(
                 Option.none(),
-                detailsFrom(dir, "MERGED", "abc123", BEHIND_BY_2).get().behindBase());
+                detailsFrom(dir, "MERGED", "abc123", BEHIND_BY_2)
+                        .get()
+                        .branches()
+                        .behindBase());
         assertEquals(
-                Option.none(), detailsFrom(dir, "OPEN", "", BEHIND_BY_2).get().behindBase());
+                Option.none(),
+                detailsFrom(dir, "OPEN", "", BEHIND_BY_2).get().branches().behindBase());
         assertFalse(Files.exists(dir.resolve("compared")));
     }
 
@@ -533,10 +526,13 @@ class CliGitHubTest {
 
         assertEquals(
                 Option.none(),
-                detailsFrom(dir, "OPEN", "abc123", "exit 1").get().behindBase());
+                detailsFrom(dir, "OPEN", "abc123", "exit 1").get().branches().behindBase());
         assertEquals(
                 Option.none(),
-                detailsFrom(dir, "OPEN", "abc123", BEHIND_BY_MANY).get().behindBase());
+                detailsFrom(dir, "OPEN", "abc123", BEHIND_BY_MANY)
+                        .get()
+                        .branches()
+                        .behindBase());
     }
 
     @Test

@@ -75,14 +75,18 @@ public record PullRequestPopup(
     }
 
     private PullRequestDetails keepingBehindBase(PullRequestDetails read) {
-        return read.behindBase().isDefined()
-                        || read.state() != PullRequestDetails.State.OPEN
-                        || read.head().isEmpty()
+        return read.branches().behindBase().isDefined()
+                        || read.status().state() != PullRequestDetails.State.OPEN
+                        || read.branches().headCommit().isEmpty()
                 ? read
                 : readDetails()
-                        .filter(shown -> shown.head().equals(read.head())
-                                && shown.baseBranch().equals(read.baseBranch()))
-                        .flatMap(PullRequestDetails::behindBase)
+                        .filter(shown -> shown.branches()
+                                        .headCommit()
+                                        .equals(read.branches().headCommit())
+                                && shown.branches()
+                                        .base()
+                                        .equals(read.branches().base()))
+                        .flatMap(shown -> shown.branches().behindBase())
                         .map(read::withBehindBase)
                         .getOrElse(read);
     }
@@ -138,7 +142,7 @@ public record PullRequestPopup(
      * Whether it is a draft, once its details are read.
      */
     public Option<Boolean> draft() {
-        return readDetails().map(PullRequestDetails::draft);
+        return readDetails().map(read -> read.status().draft());
     }
 
     /**
@@ -152,7 +156,7 @@ public record PullRequestPopup(
      * Whether it is known to be open, so it can be closed: once its details are read.
      */
     public boolean open() {
-        return readDetails().exists(details -> details.state() == PullRequestDetails.State.OPEN);
+        return readDetails().exists(details -> details.status().state() == PullRequestDetails.State.OPEN);
     }
 
     /**
@@ -163,15 +167,15 @@ public record PullRequestPopup(
     public boolean mergeable() {
         return open()
                 && readDetails()
-                        .exists(details ->
-                                !details.draft() && details.mergeable() != PullRequestDetails.Mergeable.CONFLICTING);
+                        .exists(details -> !details.status().draft()
+                                && details.status().mergeable() != PullRequestDetails.Mergeable.CONFLICTING);
     }
 
     /**
      * The commit its branch was at when it was read, which a merge is only done at; none before it is read.
      */
     public Option<GhCommit> head() {
-        return readDetails().flatMap(PullRequestDetails::head);
+        return readDetails().flatMap(read -> read.branches().headCommit());
     }
 
     /**

@@ -253,26 +253,26 @@ public final class CliGitHub implements GitHub {
                                 Integer.parseInt(f.get(1)),
                                 f.get(2),
                                 f.get(3),
-                                PullRequestDetails.State.valueOf(f.get(4)),
-                                f.get(5).equals("true"),
-                                f.get(6),
-                                f.get(7),
-                                Instant.parse(f.get(8)),
-                                Instant.parse(f.get(9)),
-                                Integer.parseInt(f.get(10)),
-                                Integer.parseInt(f.get(11)),
-                                Integer.parseInt(f.get(12)),
-                                Integer.parseInt(f.get(17)),
-                                mergeable(f.get(13)),
-                                review(f.get(14)),
-                                Integer.parseInt(f.get(15)),
-                                reviewThreads,
-                                labels,
-                                reviewers,
+                                new PullRequestDetails.Status(
+                                        PullRequestDetails.State.valueOf(f.get(4)),
+                                        f.get(5).equals("true"),
+                                        mergeable(f.get(13))),
+                                new PullRequestDetails.Branches(
+                                        f.get(6), f.get(7), GhCommit.parse(f.get(16)), Option.none()),
+                                new PullRequestDetails.Activity(Instant.parse(f.get(8)), Instant.parse(f.get(9))),
+                                new PullRequestDetails.Size(
+                                        Integer.parseInt(f.get(10)),
+                                        Integer.parseInt(f.get(11)),
+                                        Integer.parseInt(f.get(12)),
+                                        Integer.parseInt(f.get(17))),
+                                new PullRequestDetails.Conversation(
+                                        review(f.get(14)),
+                                        reviewers,
+                                        Integer.parseInt(f.get(15)),
+                                        reviewThreads,
+                                        labels),
                                 checks,
-                                GhCommit.parse(f.get(16)),
                                 pullRequestStack,
-                                Option.none(),
                                 repository))
                         .toOption()))
                 .toEither(() -> new UnexpectedOutput(raw));
@@ -461,9 +461,10 @@ public final class CliGitHub implements GitHub {
                                 "--jq",
                                 DETAILS_JQ),
                         CliGitHub::parseDetails)
-                .map(details -> details.head()
-                        .filter(head -> details.state() == PullRequestDetails.State.OPEN)
-                        .flatMap(head -> behindBase(details.baseBranch(), head))
+                .map(details -> details.branches()
+                        .headCommit()
+                        .filter(head -> details.status().state() == PullRequestDetails.State.OPEN)
+                        .flatMap(head -> behindBase(details.branches().base(), head))
                         .map(details::withBehindBase)
                         .getOrElse(details));
     }

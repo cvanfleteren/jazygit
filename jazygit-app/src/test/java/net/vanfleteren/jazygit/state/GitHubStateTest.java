@@ -11,7 +11,12 @@ import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Activity;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Branches;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Conversation;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Size;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.State;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Status;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import org.junit.jupiter.api.Test;
 
@@ -28,22 +33,12 @@ class GitHubStateTest {
                 number,
                 "A pull request",
                 "someone",
-                state,
-                true,
-                headBranch,
-                "main",
-                Instant.EPOCH,
-                Instant.EPOCH,
-                0,
-                0,
-                0,
-                1,
-                PullRequestDetails.Mergeable.UNKNOWN,
-                Review.CHANGES_REQUESTED,
-                0,
-                PullRequestDetails.ReviewThreads.NONE,
-                List.empty(),
-                List.empty(),
+                new Status(state, true, PullRequestDetails.Mergeable.UNKNOWN),
+                new Branches(headBranch, "main"),
+                new Activity(Instant.EPOCH, Instant.EPOCH),
+                new Size(0, 0, 0, 1),
+                new Conversation(
+                        Review.CHANGES_REQUESTED, List.empty(), 0, PullRequestDetails.ReviewThreads.NONE, List.empty()),
                 List.of(new PullRequestDetails.Check("test", Checks.FAILING)));
     }
 

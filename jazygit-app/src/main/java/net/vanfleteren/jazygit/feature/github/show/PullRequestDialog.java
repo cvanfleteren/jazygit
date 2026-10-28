@@ -169,17 +169,18 @@ public final class PullRequestDialog implements PopupView {
 
     private static String state(PullRequestDetails pr) {
         String state = Messages.get(
-                switch (pr.state()) {
+                switch (pr.status().state()) {
                     case OPEN -> "dialog.pullRequest.state.open";
                     case CLOSED -> "dialog.pullRequest.state.closed";
                     case MERGED -> "dialog.pullRequest.state.merged";
                 });
-        return pr.draft() ? state + " · " + Messages.get("dialog.pullRequest.draft") : state;
+        return pr.status().draft() ? state + " · " + Messages.get("dialog.pullRequest.draft") : state;
     }
 
     // Mergeable only says it merges without conflicts; GitHub warns about a base that moved on apart from that.
     private static Option<StyledElement<?>> behindBase(PullRequestDetails pr) {
-        return pr.behindBase()
+        return pr.branches()
+                .behindBase()
                 .filter(commits -> commits > 0)
                 .map(commits -> text(" · " + Messages.get("dialog.pullRequest.branch.behind", String.valueOf(commits)))
                         .addClass(Theme.Classes.BEHIND));
@@ -212,7 +213,8 @@ public final class PullRequestDialog implements PopupView {
      * Each reviewer, preceded by the symbol of their review like the review line; two spaces in between.
      */
     private static List<StyledElement<?>> reviewers(PullRequestDetails pr) {
-        return pr.reviewers()
+        return pr.conversation()
+                .reviewers()
                 .map(reviewer -> List.<StyledElement<?>>of(
                         symbol(PullRequestSymbols.reviewer(reviewer.state())), text(" "), text("@" + reviewer.login())))
                 .zipWithIndex()
@@ -324,33 +326,48 @@ public final class PullRequestDialog implements PopupView {
                         !pr.author().isEmpty(),
                         () -> Line.labelled("dialog.pullRequest.author", text("@" + pr.author()))))
                 .append(Line.pieces(List.<StyledElement<?>>of(
-                                label("dialog.pullRequest.branch"), text(pr.headBranch() + " → " + pr.baseBranch()))
+                                label("dialog.pullRequest.branch"),
+                                text(pr.branches().head() + " → "
+                                        + pr.branches().base()))
                         .appendAll(behindBase(pr))))
                 .appendAll(pr.stack().map(PullRequestDialog::stack))
                 .appendAll(List.of(
-                        Line.labelled("dialog.pullRequest.created", text(when(pr.createdAt(), now))),
-                        Line.labelled("dialog.pullRequest.pushed", text(when(pr.pushedAt(), now))),
+                        Line.labelled(
+                                "dialog.pullRequest.created",
+                                text(when(pr.activity().createdAt(), now))),
+                        Line.labelled(
+                                "dialog.pullRequest.pushed",
+                                text(when(pr.activity().pushedAt(), now))),
                         Line.labelled(
                                 "dialog.pullRequest.changes",
-                                text("+" + pr.additions()).addClass(Theme.Classes.DIFF_ADDED),
-                                text(" −" + pr.deletions()).addClass(Theme.Classes.DIFF_REMOVED),
+                                text("+" + pr.size().additions()).addClass(Theme.Classes.DIFF_ADDED),
+                                text(" −" + pr.size().deletions()).addClass(Theme.Classes.DIFF_REMOVED),
                                 text(" "
                                         + Messages.get(
-                                                "dialog.pullRequest.changes.files", pr.changedFiles(), pr.commits()))),
-                        Line.labelled("dialog.pullRequest.mergeable", mergeable(pr.mergeable())),
+                                                "dialog.pullRequest.changes.files",
+                                                pr.size().changedFiles(),
+                                                pr.size().commits()))),
+                        Line.labelled(
+                                "dialog.pullRequest.mergeable",
+                                mergeable(pr.status().mergeable())),
                         Line.blank(),
                         Line.pieces(List.<StyledElement<?>>of(label("dialog.pullRequest.review"))
-                                .appendAll(review(pr.review())))))
+                                .appendAll(review(pr.conversation().review())))))
                 .appendAll(Option.when(
-                        !pr.reviewers().isEmpty(),
+                        !pr.conversation().reviewers().isEmpty(),
                         () -> Line.pieces(List.<StyledElement<?>>of(label("dialog.pullRequest.reviewers"))
                                 .appendAll(reviewers(pr)))))
-                .append(Line.labelled("dialog.pullRequest.comments", text(String.valueOf(pr.comments()))))
-                .append(Line.labelled("dialog.pullRequest.threads", text(threads(pr.reviewThreads()))))
+                .append(Line.labelled(
+                        "dialog.pullRequest.comments",
+                        text(String.valueOf(pr.conversation().comments()))))
+                .append(Line.labelled(
+                        "dialog.pullRequest.threads",
+                        text(threads(pr.conversation().reviewThreads()))))
                 .appendAll(Option.when(
-                        !pr.labels().isEmpty(),
+                        !pr.conversation().labels().isEmpty(),
                         () -> Line.labelled(
-                                "dialog.pullRequest.labels", text(pr.labels().mkString(", ")))))
+                                "dialog.pullRequest.labels",
+                                text(pr.conversation().labels().mkString(", ")))))
                 .append(Line.blank())
                 .appendAll(checks(pr.checks(), times, now));
     }
