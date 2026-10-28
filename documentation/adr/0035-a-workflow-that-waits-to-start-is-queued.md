@@ -80,3 +80,5 @@ queued check of a first attempt shows how long it has been queued.
   in the branches pane, `💤` and how long while all that is not done waits, with and without a pull request, `💤`
   alone for a re-run and not the estimate, `⏳` and the estimate while one runs and `❌` when one failed, and `<1m`,
   `3m` and `1h 5m`.
+
+Later: ADR 42 decodes what GitHub answers as JSON in Java; the jq filters, and the tests that ran them with jq, are gone.

@@ -52,3 +52,5 @@ read.
 ### The model
 
 `PullRequestDetails` gets a `ReviewThreads(threads, read, unresolved, comments)` component, after `comments`.
+
+Later: ADR 42 decodes what GitHub answers as JSON in Java; the jq filter and its lines are gone.

@@ -766,14 +766,21 @@ Every `Cli*` class runs git through `GitProcess`; only a few of those arrows are
 the GitHub repository from the git remotes itself. It mirrors the git layer without depending on it:
 `GhCommand` (run with `GH_PROMPT_DISABLED=1`), `GhProcess`, and its own errors, `GhError` and `GhFailure`.
 
-- **Reading the pull requests:** `gh pr list --json ... --jq ...`. gh's built-in jq turns the JSON into one
-  tab-separated line per pull request (fork pull requests left out), which `CliGitHub.parse` reads; there is
-  no JSON library. The CI checks are folded into one state: failing, else pending, else passing.
+- **Reading:** gh prints the JSON GitHub answers, without `--jq`, and `GhProcess.readJson` decodes it with a
+  `Decoder` of `jazygit-json` (ADR 42). Each read is a class of its own, with its command, its GraphQL and its
+  decoder: `PullRequestsQuery`, `RepositoryPullRequestsQuery`, `MyPullRequestsQuery`, `DetailsQuery`,
+  `BranchesQuery`, `BranchCheckRunsQuery`, `RecentChecksQuery`, `BehindQuery`, `CommentsQuery`, `PreviewQuery`,
+  `LoginsQuery` and `MergeQuery`. What several share is a fragment, its GraphQL next to its decoder:
+  `CheckFragment` (a check, and how the states of checks fold into one: failing, else pending, else passing),
+  `SuiteFragment` (the workflow runs that wait to start, ADR 35), `StackFragment` and `SummaryFragment`. A node of
+  a union asks for its `__typename`, by which it is decoded. What cannot be decoded is `GhError.UnexpectedOutput`,
+  with the path to where and why.
+- **The pull requests of the branches** (fork pull requests left out) and **the branches**: `gh api graphql
+  --paginate --slurp`, all pages as one array, which needs gh 2.48 or newer; an older one is `GhError.TooOld`.
 - **The details of one pull request**, for its dialog: one `gh api graphql` query, gh filling in the repository of
-  the working tree for `{owner}` and `{repo}`, as `gh pr view --json` has no review threads (ADR 7). Its jq prints
-  one tab-separated line per piece (the pull request; its review threads: how many, how many were read, and of those
-  how many are unresolved and how many comments they hold; its labels, reviews, requested reviewers and checks),
-  which `CliGitHub.parseDetails` reads. Every list is read up to 100, the review threads the newest 100.
+  the working tree for `{owner}` and `{repo}`, as `gh pr view --json` has no review threads (ADR 7). Every list is
+  read up to 100, the review threads the newest 100. `PullRequestDetails` holds what it reads in the parts its
+  dialog shows together: `Status`, `Branches`, `Activity`, `Size` and `Conversation`.
 - **Creating and opening:** `gh pr create --head <branch on the remote> --base <base> --fill` and
   `gh pr view <n> --web`. The name of the branch on its remote is the branch's push target, as the branches
   were read (`Branch.pushTarget`), which `PullRequestUpdate` puts in `PullRequestCmd.CreatePullRequest`.

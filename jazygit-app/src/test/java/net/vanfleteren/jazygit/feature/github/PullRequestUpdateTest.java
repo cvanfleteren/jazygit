@@ -1632,7 +1632,7 @@ class PullRequestUpdateTest {
         assertTrue(merging.gitHub().merging(42));
         assertEquals(
                 "gh api --method PUT 'repos/{owner}/{repo}/pulls/42/merge-async' -f merge_method=merge -f sha=abc123",
-                merging.outcome().commandLog().last().commands().last().line().replaceAll(" --jq .*", ""));
+                merging.outcome().commandLog().last().commands().last().line());
     }
 
     @Test
