@@ -40,7 +40,8 @@ and Jackson 3's `tools.jackson.core:jackson-core`, nothing of jazygit.
 - A `DecodeError` is the path to where it failed, like `data.repository.pullRequest.commits.nodes[0].commit
   .committedDate`, and what was wrong there, like `expected a string, got null`. Each field and index adds to the path.
 - What decoders are made of: `string`, `bool`, `integer`, `longValue`, `instant`, `enumOf`; `field` and `at` for a
-  path of fields; `nullable` and `list`; `map`, `flatMap`, `map2` to `map8` on vavr's functions; `succeed` and `fail`;
+  path of fields; `nullable` and `list`; `dict` for an object whose names are data, like the hosts gh is logged in to
+  or the aliases of a query; `map`, `flatMap`, `map2` to `map8` on vavr's functions; `succeed` and `fail`;
   and `byField("__typename", decoders)` for GraphQL's unions, like a check that is a `CheckRun` or a `StatusContext`.
   A record of more than eight fields is built from decoders of its parts.
 - A missing field fails; `null` is only taken where `nullable` gives it as `Option.none()`. GraphQL and `gh --json`
