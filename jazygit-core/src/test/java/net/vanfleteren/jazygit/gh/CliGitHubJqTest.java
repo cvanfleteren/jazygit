@@ -1,19 +1,20 @@
 package net.vanfleteren.jazygit.gh;
 
+import static net.vanfleteren.jazygit.gh.GitHubAnswers.RAN_SUITES;
+import static net.vanfleteren.jazygit.gh.GitHubAnswers.VERIFY_PASSED;
+import static net.vanfleteren.jazygit.gh.GitHubAnswers.WAITING;
+import static net.vanfleteren.jazygit.gh.GitHubAnswers.WAITING_SUITES;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
-import io.vavr.control.Option;
 import io.vavr.control.Try;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 import net.vanfleteren.jazygit.gh.model.BranchChecks;
-import net.vanfleteren.jazygit.gh.model.CheckRun;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Check;
@@ -26,43 +27,6 @@ import org.junit.jupiter.api.Test;
  * but not on CI, where a missing jq fails them.
  */
 class CliGitHubJqTest {
-
-    // The suites of the commit on main while its publish workflow waited for the run before it: the claude app's
-    // suite, which stays queued for good, the waiting workflow, and a workflow whose jobs were all skipped.
-    private static final String WAITING_SUITES = """
-            "checkSuites": { "nodes": [
-              { "status": "QUEUED", "checkRuns": { "totalCount": 0 }, "workflowRun": null },
-              { "status": "PENDING", "checkRuns": { "totalCount": 0 }, "workflowRun": {
-                "databaseId": 404, "createdAt": "2026-10-26T23:32:02Z", "runAttempt": 1, "event": "push",
-                "workflow": { "name": "Publish" } } },
-              { "status": "COMPLETED", "checkRuns": { "totalCount": 0 }, "workflowRun": {
-                "databaseId": 403, "createdAt": "2026-10-26T23:00:00Z", "runAttempt": 1, "event": "push",
-                "workflow": { "name": "Skipped" } } } ] }""";
-    // The suites of a commit whose workflow ran.
-    private static final String RAN_SUITES = """
-            "checkSuites": { "nodes": [
-              { "status": "QUEUED", "checkRuns": { "totalCount": 0 }, "workflowRun": null },
-              { "status": "COMPLETED", "checkRuns": { "totalCount": 1 }, "workflowRun": {
-                "databaseId": 401, "createdAt": "2026-10-26T22:00:00Z", "runAttempt": 1, "event": "push",
-                "workflow": { "name": "Build" } } } ] }""";
-    private static final String VERIFY_PASSED = """
-            { "__typename": "CheckRun", "databaseId": 122, "name": "verify", "status": "COMPLETED",
-              "conclusion": "SUCCESS", "startedAt": "2026-10-26T22:00:02Z", "completedAt": "2026-10-26T22:02:00Z",
-              "checkSuite": { "workflowRun": { "databaseId": 401, "createdAt": "2026-10-26T22:00:00Z",
-                "runAttempt": 1, "event": "push", "workflow": { "name": "Build" } } } }""";
-    private static final Check WAITING = new Check(
-            "Publish",
-            Checks.PENDING,
-            Option.of(new CheckRun(
-                    0,
-                    "Publish",
-                    "",
-                    Option.none(),
-                    Option.none(),
-                    404,
-                    Instant.parse("2026-10-26T23:32:02Z"),
-                    1,
-                    "push")));
 
     /**
      * What jq prints of {@code json} through {@code filter}, as gh's {@code --jq} does: strings raw.
