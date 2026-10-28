@@ -11,21 +11,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.BranchChecks;
-import net.vanfleteren.jazygit.gh.model.CheckRun;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
-import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.NewPullRequest;
-import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestComment;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.*;
-import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Activity;
-import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Branches;
-import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Conversation;
-import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Size;
-import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Status;
-import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -41,13 +32,6 @@ class CliGitHubTest {
             "echo '{\"data\": {\"repository\": {\"ref\": {\"compare\": {\"behindBy\": \"many\"}}}}}'";
     private static final String PARAGRAPH_SEPARATOR = Character.toString(0x2029);
 
-    // Pull request 95 on top of 94, which is merged already.
-    private static final PullRequestStack STACK = new PullRequestStack(
-            96,
-            2,
-            2,
-            List.of(new PullRequestStack.Entry(1, 94, State.MERGED), new PullRequestStack.Entry(2, 95, State.OPEN)));
-
     /*
      * The details of a pull request in state, at commit head, into main, as read through a gh that runs compare when
      * asked how far behind its base it is, writing what it was asked with to the file "compared" in dir.
@@ -60,41 +44,10 @@ class CliGitHubTest {
                         + "case \"$*\" in\n"
                         + "  *base=refs/heads/*) echo \" $* \" > '" + dir.resolve("compared") + "'; " + compare
                         + " ;;\n"
-                        + "  *) printf 'pr\\t95\\tFix\\t\\t" + state
-                        + "\\tfalse\\tfix\\tmain\\t2026-01-01T00:00:00Z\\t2026-01-01T00:00:00Z\\t1\\t0\\t1\\tMERGEABLE"
-                        + "\\t\\t0\\t" + head + "\\t1\\nthreads\\t0\\t0\\t0\\t0\\n' ;;\n"
+                        + "  *) cat <<'EOF'\n" + DetailsQueryTest.details(95, state, head) + "\nEOF\n ;;\n"
                         + "esac\n");
         gh.toFile().setExecutable(true);
         return new CliGitHub(dir, gh.toString(), GhToken.NONE).pullRequestDetails(95);
-    }
-
-    @Test
-    void theDetailsOfAStackedPullRequestSayWhereItSitsAndWhatItsHeadIs() {
-        String raw =
-                "pr\t95\tFix\t\tOPEN\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0"
-                        + "\tabc123\t1\n"
-                        + "threads\t0\t0\t0\t0\n"
-                        + "stack\t96\t2\t2\t1:94:MERGED,2:95:OPEN\n";
-
-        PullRequestDetails details = CliGitHub.parseDetails(raw).get();
-
-        assertEquals(Option.of(new GhCommit("abc123")), details.branches().headCommit());
-        assertEquals(Option.of(STACK), details.stack());
-        assertEquals(Option.of(STACK), details.listed().get().stack());
-        assertTrue(CliGitHub.parseDetails(raw + "stack\t96\t2\t2\n").isLeft());
-        assertEquals(0, details.stack().get().below());
-    }
-
-    @Test
-    void theDetailsAsReadAreNotKnownToBeBehindTheirBase() {
-        assertEquals(
-                Option.none(),
-                CliGitHub.parseDetails(
-                                "pr\t95\tFix\t\tOPEN\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1"
-                                        + "\tMERGEABLE\t\t0\tabc123\t1\nthreads\t0\t0\t0\t0\n")
-                        .get()
-                        .branches()
-                        .behindBase());
     }
 
     @Test
@@ -204,198 +157,16 @@ class CliGitHubTest {
     }
 
     @Test
-    void parsesTheDetailsOfAPullRequest() {
-        String raw =
-                "pr\t42\tAdd\\trename\tcvf\tOPEN\ttrue\tsupport_rename\tmain\t2026-10-10T08:00:00Z\t2026-10-12T09:00:00Z\t120\t34\t7"
-                        + "\tMERGEABLE\tCHANGES_REQUESTED\t2\t\t3\n"
-                        + "threads\t130\t100\t2\t12\n"
-                        + "label\tui\n"
-                        + "review\tbob\tCHANGES_REQUESTED\n"
-                        + "review\tcarol\tAPPROVED\n"
-                        + "review\tdave\tDISMISSED\n"
-                        + "requested\tcarol\n"
-                        + "requested\tcore-team\n"
-                        + "check\tbuild\tPENDING\n"
-                        + "check\tci/lint\tSUCCESS\n";
-
-        assertEquals(
-                Either.right(new PullRequestDetails(
-                        42,
-                        "Add\trename",
-                        "cvf",
-                        new Status(State.OPEN, true, Mergeable.MERGEABLE),
-                        new Branches("support_rename", "main"),
-                        new Activity(Instant.parse("2026-10-10T08:00:00Z"), Instant.parse("2026-10-12T09:00:00Z")),
-                        new Size(120, 34, 7, 3),
-                        new Conversation(
-                                Review.CHANGES_REQUESTED,
-                                List.of(
-                                        new Reviewer("bob", ReviewerState.CHANGES_REQUESTED),
-                                        new Reviewer("carol", ReviewerState.REQUESTED),
-                                        new Reviewer("core-team", ReviewerState.REQUESTED)),
-                                2,
-                                new ReviewThreads(130, 100, 2, 12),
-                                List.of("ui")),
-                        List.of(new Check("build", Checks.PENDING), new Check("ci/lint", Checks.PASSING)))),
-                CliGitHub.parseDetails(raw));
-    }
-
-    @Test
-    void aMergedPullRequestWithoutChecksLabelsOrReviewers() {
-        String raw =
-                "pr\t5\tFix\t\tMERGED\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0\t\t1\n"
-                        + "threads\t0\t0\t0\t0\n";
-
-        assertEquals(
-                Either.right(new PullRequestDetails(
-                        5,
-                        "Fix",
-                        "",
-                        new Status(State.MERGED, false, Mergeable.UNKNOWN),
-                        new Branches("fix", "main"),
-                        new Activity(Instant.parse("2026-01-01T00:00:00Z"), Instant.parse("2026-01-01T00:00:00Z")),
-                        new Size(1, 0, 1, 1),
-                        new Conversation(Review.NONE, List.empty(), 0, ReviewThreads.NONE, List.empty()),
-                        List.empty())),
-                CliGitHub.parseDetails(raw));
-    }
-
-    @Test
-    void detailsThatCannotBeReadAreUnexpectedOutput() {
-        assertTrue(CliGitHub.parseDetails("").isLeft());
-        assertTrue(CliGitHub.parseDetails("label\tui\n").isLeft());
-        assertTrue(CliGitHub.parseDetails("pr\tx\n").isLeft());
-        assertTrue(CliGitHub.parseDetails("something\telse\n").isLeft());
-        // Without its review threads.
-        assertTrue(CliGitHub.parseDetails(
-                        "pr\t5\tFix\t\tMERGED\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0\t\t1\n")
-                .isLeft());
-        assertTrue(CliGitHub.parseDetails(
-                        "pr\t5\tFix\t\tMERGED\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0\t\t1\n"
-                                + "threads\tx\t0\t0\t0\n")
-                .isLeft());
-    }
-
-    @Test
-    void aCheckWithoutAStateYetIsNeitherPassingNorFailing() {
-        String raw =
-                "pr\t5\tFix\t\tOPEN\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0\t\t1\n"
-                        + "threads\t0\t0\t0\t0\n"
-                        + "check\tci/status\t\n";
-
-        assertEquals(
-                List.of(new Check("ci/status", Checks.NONE)),
-                CliGitHub.parseDetails(raw).get().checks());
-    }
-
-    @Test
-    void theChecksOfAPullRequestAreTimedAndItsRepositoryKnown() {
-        String raw = "repo\tcvanfleteren/jazygit\n"
-                + "pr\t5\tFix\t\tOPEN\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0\t\t1\n"
-                + "threads\t0\t0\t0\t0\n"
-                + "check\tacceptance\tPENDING\t121\tBuild\t\t\t\t401\t2026-10-24T22:18:29Z\t1\tpull_request\n"
-                + "check\tverify\tSUCCESS\t122\tBuild\tSUCCESS\t2026-10-24T22:18:31Z\t2026-10-24T22:20:25Z"
-                + "\t401\t2026-10-24T22:18:29Z\t2\tpush\n"
-                + "check\tci/status\tPENDING\t\t\t\t\t\t\t\t\t\n";
-
-        PullRequestDetails details = CliGitHub.parseDetails(raw).get();
-
-        assertEquals("cvanfleteren/jazygit", details.repository());
-        assertEquals(
-                List.of(
-                        new Check(
-                                "acceptance",
-                                Checks.PENDING,
-                                Option.of(new CheckRun(
-                                        121,
-                                        "Build",
-                                        "",
-                                        Option.none(),
-                                        Option.none(),
-                                        401,
-                                        Instant.parse("2026-10-24T22:18:29Z"),
-                                        1,
-                                        "pull_request"))),
-                        new Check(
-                                "verify",
-                                Checks.PASSING,
-                                Option.of(new CheckRun(
-                                        122,
-                                        "Build",
-                                        "SUCCESS",
-                                        Option.of(Instant.parse("2026-10-24T22:18:31Z")),
-                                        Option.of(Instant.parse("2026-10-24T22:20:25Z")),
-                                        401,
-                                        Instant.parse("2026-10-24T22:18:29Z"),
-                                        2,
-                                        "push"))),
-                        new Check("ci/status", Checks.PENDING)),
-                details.checks());
-        assertTrue(details.checks().head().queued());
-        assertFalse(details.checks().last().queued());
-    }
-
-    @Test
-    void aCheckWhoseTimingCannotBeReadIsNotTimed() {
-        assertEquals(
-                new Check("verify", Checks.PENDING),
-                CliGitHub.check(List.of("verify", "PENDING", "x", "Build", "", "", "", "401", "nope", "1", "push")));
-    }
-
-    @Test
     void theSuitesOfACommitAreReadWhereverItsChecksAre() {
         // Without them, a workflow that waits to start reads as no checks (ADR 35).
         List.of(
                         BranchesQuery.QUERY,
                         BranchCheckRunsQuery.query(1),
-                        CliGitHub.DETAILS_QUERY,
+                        DetailsQuery.QUERY,
                         PullRequestsQuery.QUERY,
                         RepositoryPullRequestsQuery.QUERY,
                         MyPullRequestsQuery.QUERY)
                 .forEach(query -> assertTrue(query.contains("checkSuites(first: 20)"), query));
-    }
-
-    @Test
-    void aWorkflowRunThatWaitsToStartIsAQueuedCheckOfThePullRequestNextToItsOthers() {
-        String raw = "repo\tcvanfleteren/jazygit\n"
-                + "pr\t42\tAdd\tcvf\tOPEN\tfalse\tfeature\tmain\t2026-10-26T22:00:00Z\t2026-10-26T22:00:00Z\t1\t2\t3"
-                + "\tMERGEABLE\t\t0\tabc123\t1\n"
-                + "threads\t0\t0\t0\t0\n"
-                + "check\tci/status\tSUCCESS\t\t\t\t\t\t\t\t\t\n"
-                + "check\tPublish\tPENDING\t0\tPublish\t\t\t\t404\t2026-10-26T23:32:02Z\t1\tpush\n";
-
-        List<Check> checks = CliGitHub.parseDetails(raw).get().checks();
-
-        assertEquals(new Check("ci/status", Checks.PASSING), checks.head());
-        assertEquals(
-                new Check(
-                        "Publish",
-                        Checks.PENDING,
-                        Option.of(new CheckRun(
-                                0,
-                                "Publish",
-                                "",
-                                Option.none(),
-                                Option.none(),
-                                404,
-                                Instant.parse("2026-10-26T23:32:02Z"),
-                                1,
-                                "push"))),
-                checks.last());
-        assertTrue(checks.last().queued());
-    }
-
-    @Test
-    void detailLinesWithTooFewFieldsAreUnexpectedOutput() {
-        String pr =
-                "pr\t5\tFix\t\tOPEN\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0\t\t1\n"
-                        + "threads\t0\t0\t0\t0\n";
-
-        assertTrue(CliGitHub.parseDetails(pr + "check\tbuild\n").isLeft());
-        assertTrue(CliGitHub.parseDetails(pr + "review\tbob\n").isLeft());
-        assertTrue(CliGitHub.parseDetails(pr + "label\n").isLeft());
-        assertTrue(CliGitHub.parseDetails(pr + "requested\n").isLeft());
-        assertTrue(CliGitHub.parseDetails(pr + "threads\t0\t0\n").isLeft());
     }
 
     @Test
@@ -449,16 +220,6 @@ class CliGitHubTest {
                                 false,
                                 Option.none()))),
                 CliGitHub.parseComments(raw));
-    }
-
-    @Test
-    void aFormFeedOrUnicodeLineSeparatorInATitleDoesNotSplitTheLine() {
-        String title = "a\fb" + LINE_SEPARATOR + "c\u0085d\u000be" + PARAGRAPH_SEPARATOR + "f";
-
-        String details = "pr\t95\t" + title
-                + "\t\tOPEN\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0"
-                + "\tabc123\t1\nthreads\t0\t0\t0\t0\n";
-        assertEquals(title, CliGitHub.parseDetails(details).get().title());
     }
 
     @Test
