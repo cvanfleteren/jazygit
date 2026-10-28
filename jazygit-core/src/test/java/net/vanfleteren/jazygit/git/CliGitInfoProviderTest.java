@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import io.vavr.Tuple;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -294,6 +295,38 @@ class CliGitInfoProviderTest {
                         .lastActivity());
     }
 
+    @Test
+    void aBranchCheckedOutFromARemoteIsAsOldAsItsTipButOneStartedFromAnotherIsNew() throws Exception {
+        commitAt("main", "2020-01-02T00:00:00Z");
+        gitAt("2020-01-02T12:00:00Z", "branch", "colleague", "main");
+        commitAt("colleague", "2020-01-03T00:00:00Z");
+        java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
+        git("init", "-q", "--bare", "-b", "main", bare.toString());
+        git("remote", "add", "origin", bare.toString());
+        git("push", "-q", "origin", "main", "colleague");
+        git("branch", "-D", "colleague");
+        git("fetch", "-q", "origin");
+
+        provider.checkoutNewTrackingBranch(
+                        new BranchName("colleague"), new RemoteBranch("origin", new BranchName("colleague")))
+                .get();
+        gitAt("2020-01-04T00:00:00Z", "checkout", "-q", "-b", "feature", "origin/main");
+
+        Map<String, Branch> branches = provider.allBranches()
+                .map(AllBranches::local)
+                .get()
+                .toMap(b -> Tuple.of(b.name().value(), b));
+        assertEquals(
+                Instant.parse("2020-01-03T00:00:00Z"),
+                branches.get("colleague").get().lastActivity());
+        assertEquals(
+                Option.of(new RemoteBranch("origin", new BranchName("main"))),
+                branches.get("feature").get().remoteUpstream());
+        assertEquals(
+                Instant.parse("2020-01-04T00:00:00Z"),
+                branches.get("feature").get().lastActivity());
+    }
+
     private void commitAt(String branch, String date) throws Exception {
         git("checkout", "-q", branch);
         gitAt(date, "commit", "-q", "--allow-empty", "-m", "at " + date);
@@ -304,19 +337,7 @@ class CliGitInfoProviderTest {
      * Runs git with {@code date} as the time of the commits it makes and of the reflog entries it writes.
      */
     private void gitAt(String date, String... args) throws Exception {
-        java.util.List<String> command = new java.util.ArrayList<>(java.util.List.of(
-                "git", "-c", "user.name=Test", "-c", "user.email=test@example.com", "-c", "commit.gpgsign=false"));
-        command.addAll(java.util.List.of(args));
-        ProcessResult result = new ProcessExecutor()
-                .command(command)
-                .environment("GIT_COMMITTER_DATE", date)
-                .directory(repo.toFile())
-                .readOutput(true)
-                .redirectErrorStream(true)
-                .exitValueAny()
-                .execute();
-        assertEquals(0, result.getExitValue(), result.outputUTF8());
-        git("checkout", "-q", "main");
+        gitWithEnvironment("GIT_COMMITTER_DATE", date, args);
     }
 
     @Test

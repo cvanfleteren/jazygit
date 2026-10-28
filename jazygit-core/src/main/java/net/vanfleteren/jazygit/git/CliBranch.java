@@ -172,7 +172,7 @@ final class CliBranch {
      * The branches in {@code raw}, as {@code for-each-ref} lists them, with when the local ones were made as
      * {@code created} says.
      */
-    static Either<UnexpectedOutput, AllBranches> parseAll(String raw, Map<BranchName, Instant> created) {
+    static Either<UnexpectedOutput, AllBranches> parseAll(String raw, Map<BranchName, Creation> created) {
         return Either.sequenceRight(GitOutput.nonBlankLines(raw).map(Ref::parse))
                 .map(Seq::toList)
                 .map(refs -> new AllBranches(branches(refs, created), remoteRefs(refs)));
@@ -184,13 +184,14 @@ final class CliBranch {
      * another one, like that of a clone or of a pull once the older entries expired, or that has no reflog, is not
      * among them (ADR 41).
      */
-    static Either<UnexpectedOutput, Map<BranchName, Instant>> parseCreated(String raw) {
+    static Either<UnexpectedOutput, Map<BranchName, Creation>> parseCreated(String raw) {
         return Either.sequenceRight(GitOutput.nonBlankLines(raw).map(ReflogEntry::parse))
                 .map(entries -> entries.foldLeft(
                                 HashMap.<BranchName, ReflogEntry>empty(),
                                 (oldest, entry) -> oldest.put(entry.branch(), entry))
                         .filterValues(entry -> entry.subject().startsWith(CREATED))
-                        .mapValues(ReflogEntry::time));
+                        .mapValues(entry ->
+                                new Creation(entry.time(), entry.subject().substring(CREATED.length()))));
     }
 
     /**
@@ -210,7 +211,7 @@ final class CliBranch {
                 .sorted(REMOTE_ORDER);
     }
 
-    private static List<Branch> branches(List<Ref> refs, Map<BranchName, Instant> created) {
+    private static List<Branch> branches(List<Ref> refs, Map<BranchName, Creation> created) {
         Set<String> remote =
                 refs.map(Ref::name).filter(name -> name.startsWith(REMOTES)).toSet();
         List<BranchName> local = refs.flatMap(Ref::localName);
@@ -221,7 +222,9 @@ final class CliBranch {
                                 ref.head(),
                                 ref.tip(),
                                 ref.time(),
-                                created.get(name),
+                                created.get(name)
+                                        .filter(creation -> !ref.checkedOutFromItsRemote(name, creation.start()))
+                                        .map(Creation::time),
                                 remote.contains(ref.pushedTo(name)),
                                 defaultBranch.contains(name),
                                 tracking(ref),
@@ -339,6 +342,19 @@ final class CliBranch {
         }
 
         /**
+         * Whether git made the branch {@code branch} from {@code start}, the remote branch of the same name that it
+         * follows: checking out someone's branch from a remote, which is getting their work rather than starting
+         * one's own. Git spells that start as it was given, e.g. {@code origin/main} or
+         * {@code refs/remotes/origin/main} (ADR 41).
+         */
+        boolean checkedOutFromItsRemote(BranchName branch, String start) {
+            return upstream()
+                    .exists(upstream -> upstream instanceof BranchRef.Remote(RemoteBranch remote)
+                            && remote.branch().equals(branch)
+                            && (start.equals(remote.shortName()) || start.equals(GitArgs.revision(remote.tracking()))));
+        }
+
+        /**
          * The worktree the branch is checked out in, if that is not this one: the one where it is {@code HEAD}.
          */
         Option<Path> otherWorktree() {
@@ -346,6 +362,13 @@ final class CliBranch {
                     .flatMap(path -> Try.of(() -> Path.of(path)).toOption());
         }
     }
+
+    /**
+     * When git made a local branch, and from what.
+     *
+     * @param start what it was made from, as git was given it, e.g. {@code main} or {@code origin/main}
+     */
+    record Creation(Instant time, String start) {}
 
     /**
      * One entry of the reflog of a local branch, as {@code git log --walk-reflogs} lists it.

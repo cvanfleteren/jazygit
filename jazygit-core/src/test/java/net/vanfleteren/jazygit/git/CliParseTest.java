@@ -271,9 +271,9 @@ class CliParseTest {
 
         assertEquals(
                 HashMap.of(
-                        new BranchName("fresh"), Instant.ofEpochSecond(50),
-                        new BranchName("feature/a@b"), Instant.ofEpochSecond(50),
-                        new BranchName("renamed"), Instant.ofEpochSecond(60)),
+                        new BranchName("fresh"), new CliBranch.Creation(Instant.ofEpochSecond(50), "main"),
+                        new BranchName("feature/a@b"), new CliBranch.Creation(Instant.ofEpochSecond(50), "HEAD"),
+                        new BranchName("renamed"), new CliBranch.Creation(Instant.ofEpochSecond(60), "main")),
                 CliBranch.parseCreated(raw).get());
     }
 
@@ -282,9 +282,9 @@ class CliParseTest {
         String raw = ref("refs/heads/fresh", A, "10", " ", "", "", "", "", "", "")
                 + ref("refs/heads/worked", A, "100", " ", "", "", "", "", "", "")
                 + ref("refs/heads/unknown", A, "20", " ", "", "", "", "", "", "");
-        HashMap<BranchName, Instant> created = HashMap.of(
-                new BranchName("fresh"), Instant.ofEpochSecond(50),
-                new BranchName("worked"), Instant.ofEpochSecond(50));
+        HashMap<BranchName, CliBranch.Creation> created = HashMap.of(
+                new BranchName("fresh"), new CliBranch.Creation(Instant.ofEpochSecond(50), "main"),
+                new BranchName("worked"), new CliBranch.Creation(Instant.ofEpochSecond(50), "main"));
 
         assertEquals(
                 List.of(
@@ -295,6 +295,44 @@ class CliParseTest {
                         .get()
                         .local()
                         .map(b -> Tuple.of(b.name().value(), b.lastActivity())));
+    }
+
+    @Test
+    void aBranchCheckedOutFromTheRemoteBranchOfItsNameIsAsOldAsItsTip() {
+        String raw = ref(
+                        "refs/heads/colleague",
+                        A,
+                        "10",
+                        " ",
+                        "origin",
+                        "refs/heads/colleague",
+                        "",
+                        "",
+                        "refs/remotes/origin/colleague",
+                        "")
+                + ref("refs/heads/short", A, "10", " ", "origin", "refs/heads/short", "", "", "", "")
+                + ref("refs/heads/feature", A, "10", " ", "origin", "refs/heads/main", "", "", "", "")
+                + ref("refs/heads/untracked", A, "10", " ", "", "", "", "", "", "");
+        HashMap<BranchName, CliBranch.Creation> created = HashMap.of(
+                new BranchName("colleague"),
+                new CliBranch.Creation(Instant.ofEpochSecond(50), "refs/remotes/origin/colleague"),
+                new BranchName("short"),
+                new CliBranch.Creation(Instant.ofEpochSecond(50), "origin/short"),
+                new BranchName("feature"),
+                new CliBranch.Creation(Instant.ofEpochSecond(50), "origin/main"),
+                new BranchName("untracked"),
+                new CliBranch.Creation(Instant.ofEpochSecond(50), "origin/untracked"));
+
+        assertEquals(
+                HashMap.of(
+                        "colleague", Instant.ofEpochSecond(10),
+                        "short", Instant.ofEpochSecond(10),
+                        "feature", Instant.ofEpochSecond(50),
+                        "untracked", Instant.ofEpochSecond(50)),
+                CliBranch.parseAll(raw, created)
+                        .get()
+                        .local()
+                        .toMap(b -> Tuple.of(b.name().value(), b.lastActivity())));
     }
 
     @Test

@@ -16,6 +16,9 @@ Git does not store when a branch was made, but its reflog does (checked with git
 - A rename keeps the reflog; deleting a branch removes it.
 - The `main` of a clone starts with `clone: from <url>`, at the time of the clone, and a remote-tracking branch with
   `fetch` entries.
+- Checking out a branch from a remote, with `git switch <name>`, or `checkout --track -b` as jazygit does, also makes
+  it: `branch: Created from refs/remotes/origin/<name>`, or `origin/<name>` as it was typed. So does starting one's
+  own branch from a remote one, `git switch -c feature origin/main`, which then follows `origin/main` by default.
 - There is no reflog after a clone for the branches it did not make, when the entries have expired (90 days by
   default) or with `core.logAllRefUpdates` off. The oldest entry that is left can then be a pull or a reset.
 - `git log --walk-reflogs --glob=refs/heads/` lists the reflogs of every branch in one call, each newest first, with
@@ -29,6 +32,10 @@ Git does not store when a branch was made, but its reflog does (checked with git
   The branches are ordered by it, so a new one comes first after the one checked out.
 - When it was made is the time of the oldest entry in its reflog, only when that says `branch: Created from`. Not:
   any oldest entry, which after a clone or an expiry is the time of the clone or a pull.
+- A branch made from the remote branch of its own name that it follows was checked out, not made: that is getting
+  someone's work, like a pull, so the tip is its age. A colleague's branch of three months does not show `0s` once
+  checked out. Not: ignoring every branch made from its upstream, which would take the age of `main` for
+  `git switch -c feature origin/main`, the case of #188.
 - Without that, when it was made is not known and the tip is the age, as before, without telling the user so. Not:
   the oldest commit not on the default branch, which costs a `git log` per branch and is still the parent's age for a
   new branch, the one that matters here.
