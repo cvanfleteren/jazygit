@@ -39,8 +39,11 @@ as far as it can, without the warnings.
   (`Branch.hasRemote`). A push target of another name, like `origin/main` for a branch made from it, or on another
   remote, is left alone, and the dialog does not name it. Not: deleting the push target whatever its name, which
   would delete `main`.
-- As the local branch is not the default one, a remote branch of its name on `origin` is not the default one either.
-  The default branch is only known for `origin` (`origin/HEAD`), so a remote branch on another remote could be its
+- As the local branch is not the default one, a remote branch of its name on `origin` is not the default one either,
+  as far as `origin/HEAD` tells. `CliBranch.defaultBranch` falls back to a local `main` or `master` when `origin/HEAD`
+  is missing, and git before 2.48 does not update it after the default branch of `origin` is renamed. A remote that
+  refuses to delete its default branch makes that step fail, which is said as any failed step.
+- The default branch is only known for `origin` (`origin/HEAD`), so a remote branch on another remote could be its
   default one, like `upstream/develop` in a fork. Not: telling the default branch of every remote from
   `refs/remotes/<remote>/HEAD`, which takes reading it for every remote, and which a remote does not always have.
 
