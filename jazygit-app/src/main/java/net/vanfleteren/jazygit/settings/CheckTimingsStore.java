@@ -5,6 +5,7 @@ import io.vavr.control.Option;
 import io.vavr.control.Try;
 import java.time.Instant;
 import java.util.function.UnaryOperator;
+import lombok.With;
 
 /**
  * Where how long the checks of each repository took is kept, from one session to the next (ADR 32). It is state
@@ -45,13 +46,9 @@ public interface CheckTimingsStore {
      * @param runs     the runs of its checks
      * @param toppedUp when the checks that ran lately were last read from GitHub, or that was tried; none when never
      */
-    record Kept(List<Run> runs, Option<Instant> toppedUp) {
+    record Kept(@With List<Run> runs, Option<Instant> toppedUp) {
 
         public static final Kept EMPTY = new Kept(List.empty(), Option.none());
-
-        public Kept withRuns(List<Run> runs) {
-            return new Kept(runs, toppedUp);
-        }
 
         public Kept withToppedUp(Instant toppedUp) {
             return new Kept(runs, Option.of(toppedUp));

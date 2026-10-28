@@ -2,6 +2,8 @@ package net.vanfleteren.jazygit.feature.commit;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import lombok.AccessLevel;
+import lombok.With;
 import net.vanfleteren.jazygit.git.model.Commit;
 
 /**
@@ -14,7 +16,8 @@ import net.vanfleteren.jazygit.git.model.Commit;
  *                  {@code typed}
  * @param typed     what was typed before the first Up
  */
-public record SummaryHistory(List<String> summaries, int index, String typed) {
+public record SummaryHistory(
+        List<String> summaries, @With(AccessLevel.PRIVATE) int index, String typed) {
 
     private static final int TYPED = -1;
 
@@ -51,9 +54,5 @@ public record SummaryHistory(List<String> summaries, int index, String typed) {
 
     private List<String> others() {
         return summaries.filter(summary -> !summary.equals(typed));
-    }
-
-    private SummaryHistory withIndex(int index) {
-        return new SummaryHistory(summaries, index, typed);
     }
 }

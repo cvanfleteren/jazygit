@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.commit.create;
 
 import io.vavr.control.Option;
+import lombok.With;
 import net.vanfleteren.jazygit.feature.commit.MessagePopup;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
 
@@ -9,6 +10,7 @@ import net.vanfleteren.jazygit.git.model.CommitMessage;
  *
  * @param message the message as far as it was typed
  */
+@With
 public record CommitPopup(CommitMessage message) implements MessagePopup {
 
     /**
@@ -16,11 +18,6 @@ public record CommitPopup(CommitMessage message) implements MessagePopup {
      */
     public CommitPopup() {
         this(new CommitMessage("", ""));
-    }
-
-    @Override
-    public CommitPopup withMessage(CommitMessage message) {
-        return new CommitPopup(message);
     }
 
     @Override

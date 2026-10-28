@@ -4,6 +4,8 @@ import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import java.time.Duration;
+import lombok.AccessLevel;
+import lombok.With;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
@@ -12,7 +14,10 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
  * @param args        the arguments after {@code git}
  * @param environment set on top of the inherited environment
  */
-record GitCommand(List<String> args, Map<String, String> environment, Duration timeout) {
+record GitCommand(
+        List<String> args,
+        Map<String, String> environment,
+        @With(AccessLevel.PACKAGE) Duration timeout) {
 
     // A command that changes the repository can run hooks, like a pre-commit hook running the tests.
     private static final Duration DEFAULT_TIMEOUT = Duration.ofMinutes(5);
@@ -77,10 +82,6 @@ record GitCommand(List<String> args, Map<String, String> environment, Duration t
         int configured =
                 args.grouped(2).takeWhile(pair -> pair.head().equals("-c")).size() * 2;
         return new GitCommand(args.insertAll(configured, List.of("-c", key + "=" + value)), environment, timeout);
-    }
-
-    GitCommand withTimeout(Duration timeout) {
-        return new GitCommand(args, environment, timeout);
     }
 
     List<String> commandLine() {
