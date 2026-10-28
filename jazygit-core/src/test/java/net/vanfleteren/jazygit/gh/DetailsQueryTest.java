@@ -196,6 +196,25 @@ class DetailsQueryTest {
     }
 
     @Test
+    void aTimelineItemOfAnotherTypeIsNoForcePush() {
+        assertEquals(
+                Instant.parse("2026-01-01T00:00:00Z"),
+                read(MERGED.put("timelineItems", "{ \"nodes\": [ { \"__typename\": \"Other\" } ] }"))
+                        .get()
+                        .activity()
+                        .pushedAt());
+    }
+
+    @Test
+    void withoutCommitsItWasLastPushedToWhenItWasOpenedAndHasNoChecks() {
+        PullRequestDetails details = read(MERGED.put("commits", "{ \"totalCount\": 0, \"nodes\": [] }"))
+                .get();
+
+        assertEquals(Instant.parse("2026-01-01T00:00:00Z"), details.activity().pushedAt());
+        assertEquals(List.empty(), details.checks());
+    }
+
+    @Test
     void theChecksOfAPullRequestAreTimedWithTheWorkflowRunsThatWaitToStart() {
         List<Check> checks = read(MERGED.put(
                         "commits",
@@ -242,6 +261,25 @@ class DetailsQueryTest {
         assertEquals(
                 Option.none(),
                 read(MERGED.put("headRefOid", "\"abc123\"")).get().branches().behindBase());
+    }
+
+    @Test
+    void aReviewByADeletedAccountIsByNoName() {
+        assertEquals(
+                List.of(new Reviewer("", ReviewerState.APPROVED)),
+                read(MERGED.put("latestReviews", """
+                                { "nodes": [ { "author": null, "state": "APPROVED" } ] }""")).get().conversation().reviewers());
+    }
+
+    @Test
+    void aBotOrAMannequinIsAskedForByItsLogin() {
+        assertEquals(
+                List.of(
+                        new Reviewer("dependabot", ReviewerState.REQUESTED),
+                        new Reviewer("old-cvs", ReviewerState.REQUESTED)),
+                read(MERGED.put("reviewRequests", """
+                                { "nodes": [ { "requestedReviewer": { "__typename": "Bot", "login": "dependabot" } },
+                                  { "requestedReviewer": { "__typename": "Mannequin", "login": "old-cvs" } } ] }""")).get().conversation().reviewers());
     }
 
     @Test

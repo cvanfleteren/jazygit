@@ -17,7 +17,6 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestComment;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.*;
-import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -32,13 +31,6 @@ class CliGitHubTest {
     private static final String BEHIND_BY_MANY =
             "echo '{\"data\": {\"repository\": {\"ref\": {\"compare\": {\"behindBy\": \"many\"}}}}}'";
     private static final String PARAGRAPH_SEPARATOR = Character.toString(0x2029);
-
-    // Pull request 95 on top of 94, which is merged already.
-    private static final PullRequestStack STACK = new PullRequestStack(
-            96,
-            2,
-            2,
-            List.of(new PullRequestStack.Entry(1, 94, State.MERGED), new PullRequestStack.Entry(2, 95, State.OPEN)));
 
     /*
      * The details of a pull request in state, at commit head, into main, as read through a gh that runs compare when
