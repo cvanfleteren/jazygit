@@ -60,7 +60,7 @@ public sealed interface BranchRef extends Revision {
 
         @Override
         public String toArg() {
-            return REMOTES + branch.remote() + "/" + branch.branch().value();
+            return REMOTES + branch.shortName();
         }
     }
 }

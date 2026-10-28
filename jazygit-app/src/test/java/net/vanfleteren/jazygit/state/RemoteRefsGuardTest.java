@@ -21,6 +21,7 @@ import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.DeleteScope;
 import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.git.model.RemoteName;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -34,7 +35,7 @@ class RemoteRefsGuardTest {
 
     @Test
     void fetchingPullingAndPushingTakeIt() {
-        assertEquals(GUARDED, new FetchCmd.Fetch("origin", List.empty()).guard());
+        assertEquals(GUARDED, new FetchCmd.Fetch(new RemoteName("origin"), List.empty()).guard());
         assertEquals(GUARDED, new PullCmd.Pull(FEATURE).guard());
         assertEquals(GUARDED, new PullCmd.FastForward(FEATURE, new BranchRef.Remote(UPSTREAM)).guard());
         assertEquals(GUARDED, new PushCmd.Push(FEATURE, UPSTREAM, PushMode.FAST_FORWARD).guard());

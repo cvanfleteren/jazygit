@@ -49,7 +49,7 @@ final class CliPush {
                                         mode == PushMode.FORCE_WITH_LEASE
                                                 ? List.of("--force-with-lease")
                                                 : List.empty())
-                                .append(target.remote())
+                                .append(GitArgs.remote(target.remote()))
                                 .append(refspec(name, target))),
                         credentials)));
     }
@@ -77,7 +77,9 @@ final class CliPush {
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushSettingUpstream(
             Path worktree, BranchName name, RemoteBranch upstream, Map<String, String> credentials) {
         return CliRemote.run(
-                worktree, git("push", "--set-upstream", upstream.remote(), refspec(name, upstream)), credentials);
+                worktree,
+                git("push", "--set-upstream", GitArgs.remote(upstream.remote()), refspec(name, upstream)),
+                credentials);
     }
 
     /**

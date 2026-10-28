@@ -26,7 +26,7 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
  */
 final class CliBranch {
 
-    private static final String ORIGIN = BranchRef.REMOTES + RemoteBranch.DEFAULT_REMOTE + "/";
+    private static final String ORIGIN = BranchRef.REMOTES + GitArgs.remote(RemoteBranch.DEFAULT_REMOTE) + "/";
 
     private static final List<String> FIELDS = List.of(
             "%(refname)",
@@ -138,7 +138,11 @@ final class CliBranch {
             Path worktree, RemoteBranch remote, Map<String, String> credentials) {
         return CliRemote.run(
                 worktree,
-                git("push", remote.remote(), "--delete", GitArgs.revision(new BranchRef.Local(remote.branch()))),
+                git(
+                        "push",
+                        GitArgs.remote(remote.remote()),
+                        "--delete",
+                        GitArgs.revision(new BranchRef.Local(remote.branch()))),
                 credentials);
     }
 
@@ -266,15 +270,19 @@ final class CliBranch {
 
         /**
          * The branch it follows, as git's configuration says, whether or not that still exists: one on a remote, or
-         * one of this repository.
+         * one of this repository. Its remote, {@code branch.<name>.remote}, is free text git never checked: one that
+         * starts with {@code -}, which git would read as an option, is no remote, so the branch follows nothing
+         * (ADR 40). One with whitespace in it, like the path of a local remote, is kept.
          */
         Option<BranchRef> upstream() {
-            return remote.flatMap(r -> remoteRef
-                    .flatMap(ref -> GitOutput.after(ref, HEADS))
-                    .map(BranchName::new)
-                    .map(branch -> r.equals(CliRemote.THIS_REPOSITORY)
-                            ? new BranchRef.Local(branch)
-                            : new BranchRef.Remote(new RemoteBranch(r, branch))));
+            return remote.filter(r -> !r.startsWith("-"))
+                    .map(RemoteName::new)
+                    .flatMap(r -> remoteRef
+                            .flatMap(ref -> GitOutput.after(ref, HEADS))
+                            .map(BranchName::new)
+                            .map(branch -> CliRemote.THIS_REPOSITORY.equals(r)
+                                    ? new BranchRef.Local(branch)
+                                    : new BranchRef.Remote(new RemoteBranch(r, branch))));
         }
 
         /**

@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.git.model.RemoteName;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 import net.vanfleteren.jazygit.state.LoadPullRequests;
 import net.vanfleteren.jazygit.state.Model;
@@ -45,21 +46,28 @@ class FetchUpdateTest {
 
     @Test
     void theRemotesAreFetchedOneAfterTheOtherAndThenTheBranchesReload() {
-        FetchCmd.Fetch fromOrigin = new FetchCmd.Fetch("origin", List.of("upstream"));
-        FetchCmd.Fetch fromUpstream = new FetchCmd.Fetch("upstream", List.empty());
+        FetchCmd.Fetch fromOrigin = new FetchCmd.Fetch(new RemoteName("origin"), List.of(new RemoteName("upstream")));
+        FetchCmd.Fetch fromUpstream = new FetchCmd.Fetch(new RemoteName("upstream"), List.empty());
 
-        Next origin = done(listing(), LIST, new FetchMsg.RemotesListed(List.of("origin", "upstream")));
+        Next origin = done(
+                listing(),
+                LIST,
+                new FetchMsg.RemotesListed(List.of(new RemoteName("origin"), new RemoteName("upstream"))));
         assertEquals(List.of(fromOrigin), origin.cmds());
 
         // A remote that cannot be fetched from does not stop the others.
         Next upstream = done(
                 origin.model(),
                 fromOrigin,
-                new FetchMsg.FetchFailed("origin", List.of("upstream"), refused("Could not resolve host")));
+                new FetchMsg.FetchFailed(
+                        new RemoteName("origin"),
+                        List.of(new RemoteName("upstream")),
+                        refused("Could not resolve host")));
         assertEquals(List.of(fromUpstream), upstream.cmds());
         assertTrue(fetching(upstream.model()));
 
-        Next done = done(upstream.model(), fromUpstream, new FetchMsg.Fetched("upstream", List.empty()));
+        Next done =
+                done(upstream.model(), fromUpstream, new FetchMsg.Fetched(new RemoteName("upstream"), List.empty()));
         assertFalse(fetching(done.model()));
         assertTrue(done.cmds().contains(new LoadBranches()));
         assertTrue(done.cmds().contains(new LoadPullRequests()));
@@ -96,23 +104,23 @@ class FetchUpdateTest {
 
     @Test
     void aFetchRequestedWhileOneRunsFollowsItOnceItIsDone() {
-        FetchCmd.Fetch fromOrigin = new FetchCmd.Fetch("origin", List.empty());
-        Model fetching = done(listing(), LIST, new FetchMsg.RemotesListed(List.of("origin")))
+        FetchCmd.Fetch fromOrigin = new FetchCmd.Fetch(new RemoteName("origin"), List.empty());
+        Model fetching = done(listing(), LIST, new FetchMsg.RemotesListed(List.of(new RemoteName("origin"))))
                 .model();
 
         Next requested = FetchUpdate.requested(Next.of(fetching));
         assertEquals(List.of(), requested.cmds());
         assertTrue(requested.model().jobs().fetchAgain());
 
-        Next done = done(requested.model(), fromOrigin, new FetchMsg.Fetched("origin", List.empty()));
+        Next done = done(requested.model(), fromOrigin, new FetchMsg.Fetched(new RemoteName("origin"), List.empty()));
         assertTrue(done.cmds().contains(new LoadBranches()));
         assertTrue(done.cmds().contains(LIST), done.cmds().toString());
         assertFalse(done.model().jobs().fetchAgain());
 
         // That one is not followed by another.
-        Model listed = done(done.model(), LIST, new FetchMsg.RemotesListed(List.of("origin")))
+        Model listed = done(done.model(), LIST, new FetchMsg.RemotesListed(List.of(new RemoteName("origin"))))
                 .model();
-        Next over = done(listed, fromOrigin, new FetchMsg.Fetched("origin", List.empty()));
+        Next over = done(listed, fromOrigin, new FetchMsg.Fetched(new RemoteName("origin"), List.empty()));
         assertFalse(over.cmds().contains(LIST));
         assertFalse(fetching(over.model()));
     }
@@ -130,21 +138,24 @@ class FetchUpdateTest {
     @Test
     void theLastFetchSaysWhenByTheClockARemoteWasFetchedFromAndWhichFailedSince() {
         Instant at = Instant.parse("2026-10-17T12:00:00Z");
-        Model listed = done(listing(), LIST, new FetchMsg.RemotesListed(List.of("origin", "upstream")))
+        Model listed = done(
+                        listing(),
+                        LIST,
+                        new FetchMsg.RemotesListed(List.of(new RemoteName("origin"), new RemoteName("upstream"))))
                 .model();
 
         Model fetched = done(
                         listed.withNow(at),
-                        new FetchCmd.Fetch("origin", List.of("upstream")),
-                        new FetchMsg.Fetched("origin", List.of("upstream")))
+                        new FetchCmd.Fetch(new RemoteName("origin"), List.of(new RemoteName("upstream"))),
+                        new FetchMsg.Fetched(new RemoteName("origin"), List.of(new RemoteName("upstream"))))
                 .model();
         assertEquals(Option.of(at), fetched.jobs().lastFetch().read());
         assertFalse(fetched.jobs().lastFetch().stale());
 
         Model failed = done(
                         fetched,
-                        new FetchCmd.Fetch("upstream", List.empty()),
-                        new FetchMsg.FetchFailed("upstream", List.empty(), refused("offline")))
+                        new FetchCmd.Fetch(new RemoteName("upstream"), List.empty()),
+                        new FetchMsg.FetchFailed(new RemoteName("upstream"), List.empty(), refused("offline")))
                 .model();
         assertEquals(Option.of(at), failed.jobs().lastFetch().read());
         assertTrue(failed.jobs().lastFetch().stale());

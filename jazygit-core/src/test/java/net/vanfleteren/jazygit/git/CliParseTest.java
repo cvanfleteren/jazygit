@@ -58,6 +58,18 @@ class CliParseTest {
     }
 
     @Test
+    void aRemoteConfiguredWithALeadingDashIsNoUpstreamButOneWithASpaceIs() {
+        String raw = ref("refs/heads/odd", A, "300", "*", "-oProxyCommand=x", "refs/heads/odd", "", "", "", "")
+                + ref("refs/heads/path", B, "200", " ", "/repos/my repo", "refs/heads/path", "", "", "", "");
+
+        List<Branch> local = CliBranch.parseAll(raw).get().local();
+
+        assertEquals(
+                List.of(Option.none(), Option.of(new RemoteBranch("/repos/my repo", new BranchName("path")))),
+                local.map(Branch::remoteUpstream));
+    }
+
+    @Test
     void branchesKnowTheirUpstreamRemoteAndWhetherTheyAreTheDefault() {
         String raw = ref(
                         "refs/heads/feature",

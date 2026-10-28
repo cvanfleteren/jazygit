@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.feature.fetch;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.git.model.RemoteName;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
@@ -42,11 +43,11 @@ public sealed interface FetchCmd extends Cmd {
     /**
      * Fetches from {@code remote}, and then from {@code rest}, one after the other.
      */
-    record Fetch(String remote, List<String> rest) implements FetchCmd {
+    record Fetch(RemoteName remote, List<RemoteName> rest) implements FetchCmd {
 
         @Override
         public Option<Label> label() {
-            return Option.of(Label.of("work.fetch", remote));
+            return Option.of(Label.of("work.fetch", remote.value()));
         }
 
         @Override

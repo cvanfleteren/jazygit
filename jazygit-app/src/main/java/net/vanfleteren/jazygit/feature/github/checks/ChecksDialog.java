@@ -137,8 +137,7 @@ public final class ChecksDialog implements PopupView {
     private static String name(BranchRef branch) {
         return switch (branch) {
             case BranchRef.Local(BranchName name) -> name.value();
-            case BranchRef.Remote(var remote) ->
-                remote.remote() + "/" + remote.branch().value();
+            case BranchRef.Remote(var remote) -> remote.shortName();
         };
     }
 

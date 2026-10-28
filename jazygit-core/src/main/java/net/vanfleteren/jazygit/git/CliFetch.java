@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.git.model.RemoteName;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
@@ -31,10 +32,10 @@ final class CliFetch {
      * @param credentials environment variables that tell the credential helper which account to use
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> fetch(
-            Path worktree, String remote, Option<String> environment, Map<String, String> credentials) {
+            Path worktree, RemoteName remote, Option<String> environment, Map<String, String> credentials) {
         return CliRemote.toRemote(
                         worktree,
-                        git("fetch", "--quiet", "--prune", "--no-write-fetch-head", remote),
+                        git("fetch", "--quiet", "--prune", "--no-write-fetch-head", GitArgs.remote(remote)),
                         environment,
                         credentials)
                 .flatMap(fetch -> GitProcess.log(worktree, fetch));
@@ -56,10 +57,13 @@ final class CliFetch {
     }
 
     private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(
-            Path worktree, BranchName name, String remote, BranchName branch, Map<String, String> credentials) {
+            Path worktree, BranchName name, RemoteName remote, BranchName branch, Map<String, String> credentials) {
         return CliRemote.run(
                 worktree,
-                git("fetch", remote, GitArgs.refspec(new BranchRef.Local(branch), new BranchRef.Local(name))),
+                git(
+                        "fetch",
+                        GitArgs.remote(remote),
+                        GitArgs.refspec(new BranchRef.Local(branch), new BranchRef.Local(name))),
                 credentials);
     }
 }

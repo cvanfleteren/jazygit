@@ -9,6 +9,7 @@ import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.time.Duration;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
+import net.vanfleteren.jazygit.git.model.RemoteName;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
@@ -20,7 +21,7 @@ final class CliRemote {
     /**
      * The remote git names for this repository itself, as for a branch created with {@code --track} from a local one.
      */
-    static final String THIS_REPOSITORY = ".";
+    static final RemoteName THIS_REPOSITORY = new RemoteName(".");
 
     // A first fetch of a big repository takes a while; a fetch that is still running is not started again.
     // Talking to a remote takes a while for a big repository, or over a slow connection.
@@ -34,10 +35,11 @@ final class CliRemote {
     /**
      * The remotes {@code git fetch --all} would fetch: all of them but those with {@code skipFetchAll} set.
      */
-    static Either<ProcessError, List<String>> remotes(Path worktree) {
+    static Either<ProcessError, List<RemoteName>> remotes(Path worktree) {
         return GitProcess.read(worktree, GitCommand.reading("remote"), raw -> Either.right(names(raw)))
                 .flatMap(remotes ->
-                        skippedByFetchAll(worktree).map(remotes::removeAll).mapLeft(GitFailure::error));
+                        skippedByFetchAll(worktree).map(remotes::removeAll).mapLeft(GitFailure::error))
+                .map(remotes -> remotes.flatMap(RemoteName::parse));
     }
 
     private static List<String> names(String raw) {

@@ -184,7 +184,7 @@ public record GitHubState(
      */
     public Option<Checks> checks(RemoteBranch remote) {
         return branchChecks
-                .filter(checks -> checks.remotes().contains(remote.remote()))
+                .filter(checks -> checks.remotes().contains(remote.remote().value()))
                 .flatMap(checks -> checks.byBranch().get(remote.branch()));
     }
 
@@ -242,7 +242,8 @@ public record GitHubState(
     }
 
     private boolean onGitHub(RemoteBranch remote) {
-        return branchChecks.exists(checks -> checks.remotes().contains(remote.remote()));
+        return branchChecks.exists(
+                checks -> checks.remotes().contains(remote.remote().value()));
     }
 
     /**
