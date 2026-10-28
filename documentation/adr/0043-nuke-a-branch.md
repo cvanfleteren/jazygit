@@ -35,10 +35,14 @@ as far as it can, without the warnings.
 
 ### Which remote branch
 
-- The remote branch deleted is the push target, only when it has the branch's own name and exists
-  (`Branch.hasRemote`). A push target of another name, like `origin/main` for a branch made from it, is left alone,
-  and the dialog does not name it. Not: deleting the push target whatever its name, which would delete `main`.
+- The remote branch deleted is the push target, only when it is on `origin`, has the branch's own name and exists
+  (`Branch.hasRemote`). A push target of another name, like `origin/main` for a branch made from it, or on another
+  remote, is left alone, and the dialog does not name it. Not: deleting the push target whatever its name, which
+  would delete `main`.
 - As the local branch is not the default one, a remote branch of its name on `origin` is not the default one either.
+  The default branch is only known for `origin` (`origin/HEAD`), so a remote branch on another remote could be its
+  default one, like `upstream/develop` in a fork. Not: telling the default branch of every remote from
+  `refs/remotes/<remote>/HEAD`, which takes reading it for every remote, and which a remote does not always have.
 
 ### One dialog
 
@@ -75,7 +79,8 @@ as far as it can, without the warnings.
 ## Consequences
 
 - A slip from `d` to `D` loses commits and changes after one confirmation, which says so but not how many.
-- A branch that follows a remote branch of another name keeps that one; it is deleted with `d`, whose dialog names it.
+- A branch that follows a remote branch of another name, or one on another remote than `origin`, keeps that one; it
+  is deleted with `d`, whose dialog names it.
 - Acceptance tests cover a nuke with a worktree, a locked one, one with changes and a gone and locked one; a branch
-  that is not merged, one that is local only, and one that follows `origin/main`, which stays; the three refusals;
-  and a step that fails.
+  that is not merged, one that is local only, one that follows `origin/main` and one that follows
+  `upstream/<its name>`, whose remote branches stay; the three refusals; and a step that fails.
