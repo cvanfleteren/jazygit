@@ -15,6 +15,7 @@ import static net.vanfleteren.jazygit.json.Decoder.map2;
 import static net.vanfleteren.jazygit.json.Decoder.map3;
 import static net.vanfleteren.jazygit.json.Decoder.map8;
 import static net.vanfleteren.jazygit.json.Decoder.nullable;
+import static net.vanfleteren.jazygit.json.Decoder.optionalField;
 import static net.vanfleteren.jazygit.json.Decoder.string;
 import static net.vanfleteren.jazygit.json.Decoder.succeed;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -97,6 +98,24 @@ class DecoderTest {
     void aMissingFieldFailsEvenWhereNullIsTaken() {
         assertEquals(
                 Either.left("startedAt: missing"), decode(CHECK, "{\"name\": \"verify\", \"state\": \"FAILURE\"}"));
+    }
+
+    @Test
+    void anOptionalFieldThatIsMissingIsNone() {
+        Decoder<Option<String>> message = optionalField("message", string());
+
+        assertEquals(Either.right(Option.none()), decode(message, "{}"));
+        assertEquals(Either.right(Option.some("conflict")), decode(message, "{\"message\": \"conflict\"}"));
+    }
+
+    @Test
+    void anOptionalFieldLeavesNullToItsDecoder() {
+        assertEquals(
+                Either.left("message: expected a string, got null"),
+                decode(optionalField("message", string()), "{\"message\": null}"));
+        assertEquals(
+                Either.right(Option.some(Option.none())),
+                decode(optionalField("message", nullable(string())), "{\"message\": null}"));
     }
 
     @Test

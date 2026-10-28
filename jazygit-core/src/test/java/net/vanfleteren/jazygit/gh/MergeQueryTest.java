@@ -73,12 +73,14 @@ class MergeQueryTest {
                 Either.right(new MergeStatus.Failed("")),
                 status("{\"status\": \"failed\", \"details\": {\"message\": null}}"));
         assertEquals(Either.right(new MergeStatus.Failed("")), status("{\"status\": \"failed\", \"details\": null}"));
+        assertEquals(Either.right(new MergeStatus.Failed("")), status("{\"status\": \"failed\", \"details\": {}}"));
+        assertEquals(Either.right(new MergeStatus.Failed("")), status("{\"status\": \"failed\"}"));
     }
 
     @Test
     void aPendingMergeWithoutItsIdIsUnexpected() {
         assertEquals(
-                Either.left(new GhError.UnexpectedOutput("expected the id of the merge")),
+                Either.left(new GhError.UnexpectedOutput("details.uuid: expected the id of the merge")),
                 status("{\"status\": \"pending\", \"details\": {\"uuid\": \"\"}}"));
         assertEquals(
                 Either.left(new GhError.UnexpectedOutput("details: missing")), status("{\"status\": \"pending\"}"));

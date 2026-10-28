@@ -5,6 +5,7 @@ import static net.vanfleteren.jazygit.json.Decoder.at;
 import static net.vanfleteren.jazygit.json.Decoder.fail;
 import static net.vanfleteren.jazygit.json.Decoder.field;
 import static net.vanfleteren.jazygit.json.Decoder.nullable;
+import static net.vanfleteren.jazygit.json.Decoder.optionalField;
 import static net.vanfleteren.jazygit.json.Decoder.string;
 import static net.vanfleteren.jazygit.json.Decoder.succeed;
 
@@ -23,15 +24,19 @@ final class MergeQuery {
 
     static final Decoder<MergeStatus> DECODER = field("status", string()).flatMap(status -> switch (status) {
         case "pending" ->
-            at("details.uuid", string())
-                    .flatMap(id -> id.isEmpty() ? fail("expected the id of the merge") : succeed(id))
+            at(
+                            "details.uuid",
+                            string().flatMap(id -> id.isEmpty() ? fail("expected the id of the merge") : succeed(id)))
                     .map(MergeStatus.Pending::new);
         case "merged" -> succeed(new MergeStatus.Merged());
         case "enqueued" -> succeed(new MergeStatus.Enqueued());
+        // A merge that failed is told as failed, whatever GitHub gives or leaves out of why.
         case "failed" ->
-            field("details", nullable(field("message", nullable(string()))))
-                    .map(message ->
-                            new MergeStatus.Failed(message.flatMap(m -> m).getOrElse("")));
+            optionalField("details", nullable(optionalField("message", nullable(string()))))
+                    .map(details -> new MergeStatus.Failed(details.flatMap(d -> d)
+                            .flatMap(message -> message)
+                            .flatMap(message -> message)
+                            .getOrElse("")));
         default -> fail("expected pending, merged, enqueued or failed, got \"" + status + "\"");
     });
 
