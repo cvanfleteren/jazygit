@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.gh.model;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
+import lombok.With;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 
@@ -22,6 +23,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
  * @param stack        where it sits in its stack, if it is stacked
  * @param repository   the repository it is of, as {@code owner/name}; empty when not known
  */
+@With
 public record PullRequestDetails(
         int number,
         String title,
@@ -63,21 +65,6 @@ public record PullRequestDetails(
      */
     public PullRequestDetails withBehindBase(int behind) {
         return withBranches(branches.withBehindBase(behind));
-    }
-
-    public PullRequestDetails withStatus(Status status) {
-        return new PullRequestDetails(
-                number, title, author, status, branches, activity, size, conversation, checks, stack, repository);
-    }
-
-    public PullRequestDetails withBranches(Branches branches) {
-        return new PullRequestDetails(
-                number, title, author, status, branches, activity, size, conversation, checks, stack, repository);
-    }
-
-    public PullRequestDetails withChecks(List<Check> checks) {
-        return new PullRequestDetails(
-                number, title, author, status, branches, activity, size, conversation, checks, stack, repository);
     }
 
     /**
@@ -130,12 +117,8 @@ public record PullRequestDetails(
      * @param draft     whether it is still a draft
      * @param mergeable whether it merges without conflicts
      */
-    public record Status(State state, boolean draft, Mergeable mergeable) {
-
-        public Status withDraft(boolean draft) {
-            return new Status(state, draft, mergeable);
-        }
-    }
+    @With
+    public record Status(State state, boolean draft, Mergeable mergeable) {}
 
     /**
      * The branches a pull request merges from and into.
