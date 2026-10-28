@@ -4,6 +4,7 @@ import static net.vanfleteren.jazygit.git.GitCommand.git;
 import static net.vanfleteren.jazygit.git.model.BranchRef.HEADS;
 import static net.vanfleteren.jazygit.git.model.BranchRef.REMOTES;
 
+import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.collection.Seq;
@@ -40,15 +41,23 @@ final class CliBranch {
             "%(upstream)",
             "%(worktreepath)");
     private static final String FORMAT = FIELDS.mkString(GitOutput.REF_FIELD_SEPARATOR);
+    // The ref with the time of the entry, like refs/heads/main@{1700000000} with --date=unix, then the subject: last,
+    // as it is free text.
+    private static final String REFLOG_FORMAT = List.of("%gD", "%gs").mkString(GitOutput.PRETTY_FIELD_SEPARATOR);
+    // What starts the reflog of a branch git made, with git branch, checkout -b, switch -c or worktree add -b.
+    // Git writes it untranslated.
+    private static final String CREATED = "branch: Created from ";
+    // What separates the ref from the time of the entry. A ref name has no "@{".
+    private static final String SELECTOR = "@{";
     private static final Pattern AHEAD = Pattern.compile("ahead (\\d{1,9})");
     private static final Pattern BEHIND = Pattern.compile("behind (\\d{1,9})");
     // What git says when it refuses to delete a branch that is not merged. It is matched in English, so git is run
     // with the C locale.
     private static final String NOT_FULLY_MERGED = "is not fully merged";
-    // The checked out branch first, then the most recently committed to.
+    // The checked out branch first, then the most recently worked on.
     private static final Comparator<Branch> ORDER = Comparator.comparing(Branch::current)
             .reversed()
-            .thenComparing(Comparator.comparing(Branch::tipTime).reversed())
+            .thenComparing(Comparator.comparing(Branch::lastActivity).reversed())
             .thenComparing(Branch::name);
 
     private static final Comparator<RemoteRef> REMOTE_ORDER = Comparator.comparing(RemoteRef::tipTime)
@@ -59,13 +68,26 @@ final class CliBranch {
 
     /**
      * The local and the remote-tracking branches, from a single {@code git for-each-ref}: the local branches need
-     * the remote ones anyway, to tell which are pushed and which is the default.
+     * the remote ones anyway, to tell which are pushed and which is the default. When the local ones were made comes
+     * from their reflogs, read with one {@code git log --walk-reflogs} before.
      */
     static Either<ProcessError, AllBranches> all(Path worktree) {
         return GitProcess.read(
-                worktree,
-                GitCommand.reading("for-each-ref", "--format=" + FORMAT, HEADS, REMOTES),
-                CliBranch::parseAll);
+                        worktree,
+                        GitCommand.reading(
+                                "log",
+                                "--walk-reflogs",
+                                "--no-color",
+                                "--no-show-signature",
+                                "--date=unix",
+                                "--format=" + REFLOG_FORMAT,
+                                "--glob=" + HEADS,
+                                "--"),
+                        CliBranch::parseCreated)
+                .flatMap(created -> GitProcess.read(
+                        worktree,
+                        GitCommand.reading("for-each-ref", "--format=" + FORMAT, HEADS, REMOTES),
+                        raw -> parseAll(raw, created)));
     }
 
     /**
@@ -146,10 +168,30 @@ final class CliBranch {
                 credentials);
     }
 
-    static Either<UnexpectedOutput, AllBranches> parseAll(String raw) {
+    /**
+     * The branches in {@code raw}, as {@code for-each-ref} lists them, with when the local ones were made as
+     * {@code created} says.
+     */
+    static Either<UnexpectedOutput, AllBranches> parseAll(String raw, Map<BranchName, Creation> created) {
         return Either.sequenceRight(GitOutput.nonBlankLines(raw).map(Ref::parse))
                 .map(Seq::toList)
-                .map(refs -> new AllBranches(branches(refs), remoteRefs(refs)));
+                .map(refs -> new AllBranches(branches(refs, created), remoteRefs(refs)));
+    }
+
+    /**
+     * When git made each local branch, from their reflogs as {@code git log --walk-reflogs} lists them: the time of
+     * the oldest entry of a branch, the last one listed, when that says git made it. A branch whose oldest entry is
+     * another one, like that of a clone or of a pull once the older entries expired, or that has no reflog, is not
+     * among them (ADR 41).
+     */
+    static Either<UnexpectedOutput, Map<BranchName, Creation>> parseCreated(String raw) {
+        return Either.sequenceRight(GitOutput.nonBlankLines(raw).map(ReflogEntry::parse))
+                .map(entries -> entries.foldLeft(
+                                HashMap.<BranchName, ReflogEntry>empty(),
+                                (oldest, entry) -> oldest.put(entry.branch(), entry))
+                        .filterValues(entry -> entry.subject().startsWith(CREATED))
+                        .mapValues(entry ->
+                                new Creation(entry.time(), entry.subject().substring(CREATED.length()))));
     }
 
     /**
@@ -169,7 +211,7 @@ final class CliBranch {
                 .sorted(REMOTE_ORDER);
     }
 
-    private static List<Branch> branches(List<Ref> refs) {
+    private static List<Branch> branches(List<Ref> refs, Map<BranchName, Creation> created) {
         Set<String> remote =
                 refs.map(Ref::name).filter(name -> name.startsWith(REMOTES)).toSet();
         List<BranchName> local = refs.flatMap(Ref::localName);
@@ -180,6 +222,9 @@ final class CliBranch {
                                 ref.head(),
                                 ref.tip(),
                                 ref.time(),
+                                created.get(name)
+                                        .filter(creation -> !ref.checkedOutFromItsRemote(name, creation.start()))
+                                        .map(Creation::time),
                                 remote.contains(ref.pushedTo(name)),
                                 defaultBranch.contains(name),
                                 tracking(ref),
@@ -297,11 +342,54 @@ final class CliBranch {
         }
 
         /**
+         * Whether git made the branch {@code branch} from {@code start}, the remote branch of the same name that it
+         * follows: checking out someone's branch from a remote, which is getting their work rather than starting
+         * one's own. Git spells that start as it was given, e.g. {@code origin/main} or
+         * {@code refs/remotes/origin/main} (ADR 41).
+         */
+        boolean checkedOutFromItsRemote(BranchName branch, String start) {
+            return upstream()
+                    .exists(upstream -> upstream instanceof BranchRef.Remote(RemoteBranch remote)
+                            && remote.branch().equals(branch)
+                            && (start.equals(remote.shortName()) || start.equals(GitArgs.revision(remote.tracking()))));
+        }
+
+        /**
          * The worktree the branch is checked out in, if that is not this one: the one where it is {@code HEAD}.
          */
         Option<Path> otherWorktree() {
             return worktree.filter(path -> !head)
                     .flatMap(path -> Try.of(() -> Path.of(path)).toOption());
+        }
+    }
+
+    /**
+     * When git made a local branch, and from what.
+     *
+     * @param start what it was made from, as git was given it, e.g. {@code main} or {@code origin/main}
+     */
+    record Creation(Instant time, String start) {}
+
+    /**
+     * One entry of the reflog of a local branch, as {@code git log --walk-reflogs} lists it.
+     *
+     * @param time    when the branch was changed
+     * @param subject what changed it, e.g. {@code branch: Created from main}
+     */
+    private record ReflogEntry(BranchName branch, Instant time, String subject) {
+
+        static Either<UnexpectedOutput, ReflogEntry> parse(String line) {
+            return GitOutput.fields(line, 2).flatMap(f -> {
+                String selector = f.get(0);
+                int at = selector.lastIndexOf(SELECTOR);
+                return Option.when(at > 0 && selector.endsWith("}"), at)
+                        .flatMap(i -> GitOutput.after(selector.substring(0, i), HEADS))
+                        .toEither(() -> new UnexpectedOutput(line))
+                        .flatMap(name -> GitOutput.epochSeconds(
+                                        selector.substring(at + SELECTOR.length(), selector.length() - 1))
+                                .mapLeft(e -> new UnexpectedOutput(line))
+                                .map(time -> new ReflogEntry(new BranchName(name), time, f.get(1))));
+            });
         }
     }
 }

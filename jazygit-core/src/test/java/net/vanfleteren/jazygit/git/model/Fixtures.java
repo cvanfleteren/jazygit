@@ -55,7 +55,7 @@ public final class Fixtures {
             boolean hasRemote,
             boolean isDefault,
             Tracking tracking) {
-        return new Branch(name, current, tip, tipTime, hasRemote, isDefault, tracking, Option.none());
+        return new Branch(name, current, tip, tipTime, Option.none(), hasRemote, isDefault, tracking, Option.none());
     }
 
     public static Commit commit(

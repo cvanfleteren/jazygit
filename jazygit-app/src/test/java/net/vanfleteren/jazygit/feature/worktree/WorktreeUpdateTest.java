@@ -100,6 +100,7 @@ class WorktreeUpdateTest {
                                         false,
                                         new Sha("1111"),
                                         Instant.EPOCH,
+                                        Option.none(),
                                         takenOnRemote,
                                         false,
                                         new Tracking.None(),

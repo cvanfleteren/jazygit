@@ -84,6 +84,7 @@ class MoveUpdateTest {
                         false,
                         ROOT.sha(),
                         Instant.EPOCH,
+                        Option.none(),
                         false,
                         false,
                         new Tracking.None(),

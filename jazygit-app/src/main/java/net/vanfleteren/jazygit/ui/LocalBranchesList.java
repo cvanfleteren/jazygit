@@ -94,7 +94,7 @@ class LocalBranchesList implements BranchesTabList {
                 model.repo().branches(),
                 branches -> branches.map(b -> row(
                         b,
-                        Duration.between(b.tipTime(), model.now()),
+                        Duration.between(b.lastActivity(), model.now()),
                         BranchSegs.gitHub(
                                 model.gitHub().pullRequest(b),
                                 model.gitHub().merge(model.gitHub().pullRequest(b)),
