@@ -209,8 +209,7 @@ final class CliLog {
                         GitCommand.reading(List.of("rev-list", "--parents", "--topo-order")
                                 .appendAll(revisions)
                                 .append("--")),
-                        raw -> Either.right(GitOutput.nonBlankLines(raw)
-                                .map(line -> List.of(line.split(" ")).map(Sha::new))))
+                        CliLog::parents)
                 .flatMap(commits -> upstream.map(remote -> count(
                                 worktree,
                                 revisions.append("^" + remote.tracking().toArg())))
@@ -220,6 +219,18 @@ final class CliLog {
                                 commits.count(commit -> commit.size() > 2),
                                 commits.size() - unpushed,
                                 mergedThrough(commits, oldest)))));
+    }
+
+    /**
+     * The lines of {@code git rev-list --parents}: each commit, then its parents. What is not a full sha fails the
+     * read, as these are handed back to git (ADR 40).
+     */
+    static Either<UnexpectedOutput, List<List<Sha>>> parents(String raw) {
+        return Either.sequenceRight(GitOutput.nonBlankLines(raw)
+                        .map(line -> Either.sequenceRight(
+                                        List.of(line.split(" ")).map(GitOutput::sha))
+                                .map(Seq::toList)))
+                .map(Seq::toList);
     }
 
     /**

@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.git;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
@@ -285,6 +286,14 @@ class CliParseTest {
         assertEquals(Option.of(new Sha(A)), Sha.parse(" " + A + "\n"));
         assertEquals(Option.none(), Sha.parse("  "));
         assertEquals(Option.none(), Sha.parse(A + " " + B));
+    }
+
+    @Test
+    void theParentsOfTheCommitsAreReadAsFullShasOnly() {
+        assertEquals(
+                List.of(List.of(new Sha(A), new Sha(B)), List.of(new Sha(B))),
+                CliLog.parents(A + " " + B + "\n" + B + "\n").get());
+        assertTrue(CliLog.parents(A + " " + B + "\nwarning: something\n").isLeft());
     }
 
     @Test
