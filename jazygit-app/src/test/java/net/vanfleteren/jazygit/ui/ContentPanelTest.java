@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import dev.tamboui.text.Span;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
-import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
@@ -25,14 +24,12 @@ import net.vanfleteren.jazygit.state.TestModels;
 import org.junit.jupiter.api.Test;
 
 /**
- * Unit tests on {@link ContentPanel}, exercising its three view branches (file status,
- * branch log, commit diff) and boundary selection indices, without needing a live TUI runner.
+ * Tests on {@link ContentPanel}: how it draws what {@link ContentView} shows, styles the texts, and lets the areas
+ * be focused and scrolled.
  */
 class ContentPanelTest {
 
     private final ContentPanel content = new ContentPanel(Theme.SpanStyles.NONE, () -> false);
-
-    private final Model model = TestModels.loaded(new SampleData(), "feature/initial-layout");
 
     private static Commit plain(String sha, String... parents) {
         return Fixtures.commit(
@@ -61,12 +58,6 @@ class ContentPanelTest {
     }
 
     @Test
-    void filesFocusedRendersFileStatusView() {
-        StyledElement<?> panel = content.render(model, FilesPanel.ID);
-        assertNotNull(panel);
-    }
-
-    @Test
     void filesFocusedWithoutChangedFilesSaysSoInsteadOfLoading() throws Exception {
         Model clean = TestModels.loaded();
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> content.render(clean, FilesPanel.ID))) {
@@ -74,109 +65,6 @@ class ContentPanelTest {
             assertTrue(screen.contains("No changed files"), screen);
             assertFalse(screen.contains(Placeholders.loading()), screen);
         }
-    }
-
-    @Test
-    void filesFocusedStillLoadsWhileTheStatusIsLoading() throws Exception {
-        Model loading = TestModels.loading("repo");
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> content.render(loading, FilesPanel.ID))) {
-            String screen = RenderedText.of(testRunner, () -> content.render(loading, FilesPanel.ID));
-            assertTrue(screen.contains(Placeholders.loading()), screen);
-        }
-    }
-
-    @Test
-    void branchesFocusedRendersTheLogOfTheSelectedBranch() throws Exception {
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> content.render(model, BranchesPanel.ID))) {
-            String screen = RenderedText.ofLarge(testRunner, () -> content.render(model, BranchesPanel.ID));
-            assertTrue(screen.contains("Log: feature/initial-layout"), screen);
-            assertTrue(screen.contains("commit 0a1b2c3"), screen);
-            assertFalse(screen.contains("a1b2c3d"), screen);
-        }
-    }
-
-    @Test
-    void aPopupThatJustClosedKeepsShowingTheBranchLogUntilTheFocusIsBack() throws Exception {
-        // The popup is gone from the model, but has the focus until the render gives it back.
-        Model closed = model.mapRepoView(repoView -> repoView.withFocusedPane(Option.of(BranchesPanel.ID)));
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> content.render(closed, "new-branch"))) {
-            String screen = RenderedText.ofLarge(testRunner, () -> content.render(closed, "new-branch"));
-            assertTrue(screen.contains("Log: feature/initial-layout"), screen);
-        }
-    }
-
-    @Test
-    void aPopupOpenedFromTheBranchesKeepsShowingTheBranchLog() throws Exception {
-        Model withPopup = model.mapRepoView(repoView -> repoView.withFocusedPane(Option.of(BranchesPanel.ID)))
-                .openPopup(new net.vanfleteren.jazygit.feature.help.HelpPopup(BranchesPanel.ID, List.empty()));
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> content.render(withPopup, "help"))) {
-            String screen = RenderedText.ofLarge(testRunner, () -> content.render(withPopup, "help"));
-            assertTrue(screen.contains("Log: feature/initial-layout"), screen);
-        }
-    }
-
-    @Test
-    void aPopupOpenedFromTheCommitChangesKeepsShowingTheCommit() throws Exception {
-        Model selected = Update.update(
-                        Update.update(TestModels.loaded(), new SelectionMsg.CommitSelected(new Sha("aaaa")))
-                                .model(),
-                        new LoadMsg.CommitDetailLoaded(new Sha("aaaa"), DiffOptions.DEFAULT, DiffText.of("")))
-                .model();
-        // The area had the focus when the popup opened, so that is what the focus goes back to.
-        Model withPopup = selected.mapRepoView(repoView -> repoView.withFocusedPane(Option.of("commit-changes")))
-                .openPopup(new net.vanfleteren.jazygit.feature.help.HelpPopup("commit-changes", List.empty()));
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> content.render(withPopup, "help"))) {
-            String screen = RenderedText.ofLarge(testRunner, () -> content.render(withPopup, "help"));
-            assertTrue(screen.contains("Commit: aaaa"), screen);
-        }
-    }
-
-    @Test
-    void branchesFocusedShowsLoadingBeforeABranchIsSelected() throws Exception {
-        Model unselected = TestModels.loaded(new SampleData());
-        try (ToolkitTestRunner testRunner =
-                ToolkitTestRunner.runTest(() -> content.render(unselected, BranchesPanel.ID))) {
-            String screen = RenderedText.of(testRunner, () -> content.render(unselected, BranchesPanel.ID));
-            assertTrue(screen.contains(Placeholders.loading()), screen);
-        }
-    }
-
-    @Test
-    void branchesFocusedKeepsShowingThePreviousLogWhileTheNewOneLoads() throws Exception {
-        Model switching = TestModels.switchingBranch(model, "other");
-        try (ToolkitTestRunner testRunner =
-                ToolkitTestRunner.runTest(() -> content.render(switching, BranchesPanel.ID))) {
-            String screen = RenderedText.of(testRunner, () -> content.render(switching, BranchesPanel.ID));
-            assertTrue(screen.contains("Log: feature/initial-layout"), screen);
-            assertTrue(screen.contains("commit 0a1b2c3"), screen);
-            assertFalse(screen.contains(Placeholders.loading()), screen);
-        }
-    }
-
-    @Test
-    void commitsFocusedRendersCommitDiffView() {
-        StyledElement<?> panel = content.render(model, CommitsPanel.ID);
-        assertNotNull(panel);
-    }
-
-    @Test
-    void unknownFocusFallsBackToFileStatusView() {
-        StyledElement<?> panel = content.render(model, "unknown");
-        assertNotNull(panel);
-    }
-
-    @Test
-    void nothingFocusedBeforeTheFirstRenderFallsBackToFileStatusView() {
-        StyledElement<?> panel = content.render(model, null);
-        assertNotNull(panel);
-    }
-
-    @Test
-    void rendersPlaceholdersWhileLoading() {
-        Model loading = TestModels.loading("repo");
-        assertNotNull(content.render(loading, FilesPanel.ID));
-        assertNotNull(content.render(loading, BranchesPanel.ID));
-        assertNotNull(content.render(loading, CommitsPanel.ID));
     }
 
     @Test
@@ -190,180 +78,6 @@ class ContentPanelTest {
         String area = content.areaOfPane(selected, CommitsPanel.ID).get();
         assertEquals(Option.of(CommitsPanel.ID), content.paneOfArea(selected, area));
         assertNotNull(content.render(selected, area));
-    }
-
-    @Test
-    void ignoringWhitespaceSaysSoAndThatOnlyWhitespaceChanged() throws Exception {
-        DiffOptions ignoring = DiffOptions.DEFAULT.withIgnoreWhitespace(true);
-        Model dirty = Update.update(TestModels.loaded(), new LoadMsg.StatusLoaded(TestModels.DIRTY))
-                .model()
-                .mapPreferences(preferences -> preferences.withDiffOptions(ignoring));
-        List<FileEntry> files = TestModels.DIRTY.files();
-        Model selected =
-                Update.update(dirty, new SelectionMsg.FilesSelected(files)).model();
-        Model blank = Update.update(selected, new LoadMsg.FileDiffLoaded(files, ignoring, new Diffs("", "")))
-                .model();
-        Model changed = Update.update(selected, new LoadMsg.FileDiffLoaded(files, ignoring, new Diffs("", "+a\n")))
-                .model();
-
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> content.render(blank, FilesPanel.ID))) {
-            String screen = RenderedText.ofLarge(testRunner, () -> content.render(blank, FilesPanel.ID));
-            assertTrue(screen.contains("Diff · ignoring whitespace"), screen);
-            assertTrue(screen.contains("No changes besides whitespace"), screen);
-
-            String diff = RenderedText.ofLarge(testRunner, () -> content.render(changed, FilesPanel.ID));
-            assertTrue(diff.contains("Unstaged changes · ignoring whitespace"), diff);
-        }
-    }
-
-    @Test
-    void aCommitThatOnlyChangedWhitespaceSaysSoWhileIgnoringIt() throws Exception {
-        DiffOptions ignoring = DiffOptions.DEFAULT.withIgnoreWhitespace(true);
-        Model selected = Update.update(
-                        Update.update(
-                                        TestModels.loaded()
-                                                .mapPreferences(preferences -> preferences.withDiffOptions(ignoring)),
-                                        new SelectionMsg.CommitSelected(new Sha("aaaa")))
-                                .model(),
-                        new LoadMsg.CommitDetailLoaded(new Sha("aaaa"), ignoring, DiffText.of("")))
-                .model();
-
-        try (ToolkitTestRunner testRunner =
-                ToolkitTestRunner.runTest(() -> content.render(selected, CommitsPanel.ID))) {
-            String screen = RenderedText.ofLarge(testRunner, () -> content.render(selected, CommitsPanel.ID));
-            assertTrue(screen.contains("Commit: aaaa · ignoring whitespace"), screen);
-            assertTrue(screen.contains("No changes besides whitespace"), screen);
-        }
-    }
-
-    @Test
-    void withADivergenceOpenTheBranchesShowItsHighlightedCommitWhichCanBeFocused() throws Exception {
-        Commit ours = plain("cccc");
-        Model diverged = TestModels.loaded()
-                .mapRepoView(repoView -> repoView.withDivergence(Option.of(new DivergenceView(
-                        new BranchName("main"),
-                        new BranchRef.Remote(new RemoteBranch("origin", new BranchName("main"))),
-                        DivergenceView.Against.UPSTREAM,
-                        new Loadable.Loaded<>(new Divergence(
-                                new Divergence.Side(List.of(ours), 1), new Divergence.Side(List.of(), 0))),
-                        Option.none()))));
-        Model selected = Update.update(
-                        Update.update(diverged, new SelectionMsg.DivergenceCommitSelected(new Sha("cccc")))
-                                .model(),
-                        new LoadMsg.CommitDetailLoaded(
-                                new Sha("cccc"), DiffOptions.DEFAULT, DiffText.of("+added line")))
-                .model();
-
-        try (ToolkitTestRunner testRunner =
-                ToolkitTestRunner.runTest(() -> content.render(selected, BranchesPanel.ID))) {
-            String screen = RenderedText.ofLarge(testRunner, () -> content.render(selected, BranchesPanel.ID));
-            assertTrue(screen.contains("Commit: cccc"), screen);
-            assertTrue(screen.contains("+added line"), screen);
-            assertFalse(screen.contains("Log:"), screen);
-        }
-
-        String area = content.areaOfPane(selected, BranchesPanel.ID).get();
-        assertEquals(Option.of(BranchesPanel.ID), content.paneOfArea(selected, area));
-    }
-
-    @Test
-    void withTheCommitsOfABranchOpenTheBranchesShowTheHighlightedOneWhichCanBeFocused() throws Exception {
-        BranchRef feature = new BranchRef.Local(new BranchName("feature"));
-        Model logRead = Update.update(
-                        Update.update(TestModels.loaded(), new SelectionMsg.BranchSelected(feature))
-                                .model(),
-                        TestModels.branchLogLoaded(feature, TestModels.FEATURE_COMMITS))
-                .model();
-        Model open =
-                Update.update(logRead, new BranchCommitsMsg.Opened(feature)).model();
-        Model loading = Update.update(open, new SelectionMsg.BranchCommitSelected(new Sha("ffff")))
-                .model();
-        Model selected = Update.update(
-                        loading,
-                        new LoadMsg.CommitDetailLoaded(
-                                new Sha("ffff"), DiffOptions.DEFAULT, DiffText.of("+added line")))
-                .model();
-
-        try (ToolkitTestRunner testRunner =
-                ToolkitTestRunner.runTest(() -> content.render(selected, BranchesPanel.ID))) {
-            String screen = RenderedText.ofLarge(testRunner, () -> content.render(selected, BranchesPanel.ID));
-            assertTrue(screen.contains("Commit: ffff"), screen);
-            assertTrue(screen.contains("+added line"), screen);
-            assertFalse(screen.contains("Log:"), screen);
-        }
-
-        assertEquals(Option.none(), content.areaOfPane(loading, BranchesPanel.ID));
-        String area = content.areaOfPane(selected, BranchesPanel.ID).get();
-        assertEquals(Option.of(BranchesPanel.ID), content.paneOfArea(selected, area));
-    }
-
-    @Test
-    void aDivergenceWithoutCommitsSaysTheBranchesHaveNotDiverged() throws Exception {
-        Model diverged = TestModels.loaded()
-                .mapRepoView(repoView -> repoView.withDivergence(Option.of(new DivergenceView(
-                        new BranchName("main"),
-                        new BranchRef.Local(new BranchName("feature")),
-                        DivergenceView.Against.BASE,
-                        new Loadable.Loaded<>(
-                                new Divergence(new Divergence.Side(List.of(), 0), new Divergence.Side(List.of(), 0))),
-                        Option.none()))));
-
-        try (ToolkitTestRunner testRunner =
-                ToolkitTestRunner.runTest(() -> content.render(diverged, BranchesPanel.ID))) {
-            String screen = RenderedText.ofLarge(testRunner, () -> content.render(diverged, BranchesPanel.ID));
-            assertTrue(screen.contains("The branches have not diverged"), screen);
-        }
-    }
-
-    @Test
-    void stashFocusedShowsTheHighlightedStashUnderAHeaderWhichCanBeFocused() throws Exception {
-        Stash stash =
-                new Stash("stash@{0}", new Sha("5555"), "my work", Option.of(new BranchName("main")), Instant.EPOCH);
-        Model stashed = Update.update(TestModels.loaded(), new LoadMsg.StashesLoaded(List.of(stash)))
-                .model();
-        Model selected = Update.update(
-                        Update.update(stashed, new SelectionMsg.StashSelected(stash.sha()))
-                                .model(),
-                        new LoadMsg.StashDetailLoaded(
-                                stash.sha(), DiffOptions.DEFAULT, DiffText.of(" a.txt | 1 +\n\n+added line\n")))
-                .model();
-
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> content.render(selected, StashPanel.ID))) {
-            String screen = RenderedText.ofLarge(testRunner, () -> content.render(selected, StashPanel.ID));
-            assertTrue(screen.contains("Stash: stash@{0}"), screen);
-            assertTrue(screen.contains("stash@{0}: my work"), screen);
-            assertTrue(screen.contains("Branch: main"), screen);
-            assertTrue(screen.contains("Date: "), screen);
-            assertTrue(screen.contains(" a.txt | 1 +"), screen);
-            assertTrue(screen.contains("+added line"), screen);
-        }
-
-        String area = content.areaOfPane(selected, StashPanel.ID).get();
-        assertTrue(ContentPanel.isArea(area));
-        assertEquals(Option.of(StashPanel.ID), content.paneOfArea(selected, area));
-    }
-
-    @Test
-    void stashFocusedWithoutStashesSaysSo() throws Exception {
-        Model clean = Update.update(TestModels.loaded(), new LoadMsg.StashesLoaded(List.of()))
-                .model();
-
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> content.render(clean, StashPanel.ID))) {
-            String screen = RenderedText.of(testRunner, () -> content.render(clean, StashPanel.ID));
-            assertTrue(screen.contains("No stash entries"), screen);
-            assertFalse(screen.contains("Unstaged changes"), screen);
-        }
-        assertEquals(Option.none(), content.areaOfPane(clean, StashPanel.ID));
-    }
-
-    @Test
-    void stashFocusedWhileTheStashesLoadSaysSo() throws Exception {
-        Model loading = TestModels.loading("repo");
-
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> content.render(loading, StashPanel.ID))) {
-            String screen = RenderedText.of(testRunner, () -> content.render(loading, StashPanel.ID));
-            assertTrue(screen.contains(Placeholders.loading()), screen);
-        }
     }
 
     @Test
@@ -579,11 +293,92 @@ class ContentPanelTest {
     }
 
     @Test
+    void theBranchCommitAreaCanBeFocusedOnceItsCommitIsLoaded() {
+        BranchRef feature = new BranchRef.Local(new BranchName("feature"));
+        Model logRead = Update.update(
+                        Update.update(TestModels.loaded(), new SelectionMsg.BranchSelected(feature))
+                                .model(),
+                        TestModels.branchLogLoaded(feature, TestModels.FEATURE_COMMITS))
+                .model();
+        Model open =
+                Update.update(logRead, new BranchCommitsMsg.Opened(feature)).model();
+        Model loading = Update.update(open, new SelectionMsg.BranchCommitSelected(new Sha("ffff")))
+                .model();
+        assertEquals(Option.none(), content.areaOfPane(loading, BranchesPanel.ID));
+
+        Model loaded = Update.update(
+                        loading,
+                        new LoadMsg.CommitDetailLoaded(new Sha("ffff"), DiffOptions.DEFAULT, DiffText.of("+a")))
+                .model();
+        String area = content.areaOfPane(loaded, BranchesPanel.ID).get();
+        assertEquals(Option.of(BranchesPanel.ID), content.paneOfArea(loaded, area));
+    }
+
+    @Test
+    void anAreaStylesItsBodyAgainOnlyOnceItOrTheThemeChanges() throws Exception {
+        java.util.concurrent.atomic.AtomicInteger styled = new java.util.concurrent.atomic.AtomicInteger();
+        ContentPanel counting = new ContentPanel(
+                cssClass -> {
+                    styled.incrementAndGet();
+                    return dev.tamboui.style.Style.EMPTY;
+                },
+                () -> false);
+        Model selected = showingCommit("+added line\n");
+        Model light = selected.mapPreferences(preferences ->
+                preferences.withThemeOverride(Option.of(net.vanfleteren.jazygit.settings.ThemeName.LIGHT)));
+        Model other = showingCommit("+other line\n");
+
+        counting.render(selected, CommitsPanel.ID);
+        int once = styled.get();
+        counting.render(selected, CommitsPanel.ID);
+        assertEquals(once, styled.get());
+
+        counting.render(light, CommitsPanel.ID);
+        assertTrue(styled.get() > once, "restyled in another theme");
+        int inLight = styled.get();
+        counting.render(other, CommitsPanel.ID);
+        assertTrue(styled.get() > inLight, "restyled for another body");
+    }
+
+    @Test
     void theDiffAreasReturnToTheFilesPane() {
         Model model = TestModels.loaded();
         assertEquals(Option.none(), content.paneOfArea(model, "unknown"));
         assertEquals(Option.of(FilesPanel.ID), content.paneOfArea(model, "diff-staged"));
         assertEquals(Option.of(FilesPanel.ID), content.paneOfArea(model, "diff-unstaged"));
+    }
+
+    @Test
+    void thePullRequestAreaIsFocusedFromTheListWhosePullRequestItShows() {
+        PullRequestSummary pr = new PullRequestSummary(
+                "owner/repo",
+                42,
+                "Fix the login",
+                "alice",
+                "fix/login",
+                false,
+                false,
+                PullRequest.Checks.NONE,
+                PullRequest.Review.NONE,
+                Instant.EPOCH,
+                "https://github.com/owner/repo/pull/42");
+        Model read = TestModels.loaded()
+                .withScreen(Screen.PULL_REQUESTS)
+                .withPrOverview(net.vanfleteren.jazygit.state.prs.PrOverview.INITIAL
+                        .withHighlighted(Option.of(pr))
+                        .withPreview(Option.of(new Preview<>(
+                                pr, new Loadable.Loaded<>(new PullRequestPreview("main", "Why", "+fixed\n", false))))));
+        String first = PullRequestsPanel.FIRST_PANE_ID;
+        String second = net.vanfleteren.jazygit.keys.Scopes.PR_REVIEW_REQUESTED.id();
+
+        // Before a list had the focus, the pull request is that of the first list.
+        assertEquals(Option.of("pull-request-preview"), content.areaOfPane(read, first));
+        assertEquals(Option.none(), content.areaOfPane(read, second));
+
+        Model fromSecond = read.withPrOverview(read.prOverview().withListPane(Option.of(second)));
+        assertEquals(Option.of("pull-request-preview"), content.areaOfPane(fromSecond, second));
+        assertEquals(Option.none(), content.areaOfPane(fromSecond, first));
+        assertEquals(Option.of(second), content.paneOfArea(fromSecond, "pull-request-preview"));
     }
 
     @Test
@@ -654,6 +449,22 @@ class ContentPanelTest {
     }
 
     @Test
+    void stashTextShowsTheStashItsBranchWhenItWasStashedADividerAndTheChanges() {
+        Stash stash =
+                new Stash("stash@{0}", new Sha("5555"), "my work", Option.of(new BranchName("main")), Instant.EPOCH);
+
+        List<String> lines =
+                ContentPanel.stashText(stash, " a.txt | 1 +\n\n+added line\n", Theme.SpanStyles.NONE).lines().stream()
+                        .map(line -> line.spans().stream().map(Span::content).collect(Collectors.joining()))
+                        .collect(List.collector());
+
+        assertEquals("stash@{0}: my work", lines.get(0));
+        assertEquals("Branch: main", lines.get(1));
+        assertTrue(lines.get(2).startsWith("Date: "), lines.get(2));
+        assertEquals(List.of("---", " a.txt | 1 +", "", "+added line"), lines.drop(3));
+    }
+
+    @Test
     void commitTextHasNoBlankLineWithoutAnExtendedMessage() {
         Commit commit =
                 Fixtures.commit(new Sha("a1b2c3d4e5f6"), "Ada", "ada@example.com", Instant.EPOCH, "Subject", "");
@@ -667,14 +478,8 @@ class ContentPanelTest {
 
     @Test
     void aTruncatedDiffEndsWithALineSayingSo() {
-        assertEquals("+a\n", ContentPanel.shown(DiffText.of("+a\n")));
-        assertEquals("+a\n… truncated\n", ContentPanel.shown(new DiffText("+a\n", true)));
-    }
-
-    @Test
-    void outOfRangeSelectionIsClampedRatherThanThrowing() {
-        assertDoesNotThrow(() -> content.render(model, CommitsPanel.ID));
-        assertDoesNotThrow(() -> content.render(model, CommitsPanel.ID));
+        assertEquals("+a\n", ContentView.shown(DiffText.of("+a\n")));
+        assertEquals("+a\n… truncated\n", ContentView.shown(new DiffText("+a\n", true)));
     }
 
     @Test
