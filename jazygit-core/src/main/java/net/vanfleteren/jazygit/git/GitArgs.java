@@ -7,10 +7,9 @@ import net.vanfleteren.jazygit.git.model.Revision;
 
 /**
  * The one place a revision, a branch name or a remote is turned into text for git (ADR 40): a revision always as its
- * full ref,
- * a full sha or {@code HEAD}, so a tag of the same name does not win, and nothing that starts with {@code -}, which
- * git would read as an option. {@code CoreArchitectureTest} keeps the other classes of this package from doing it
- * themselves.
+ * full ref, a full sha or {@code HEAD}, so a tag of the same name does not win, and nothing that starts with
+ * {@code -}, which git would read as an option. {@code CoreArchitectureTest} keeps the other classes of this package
+ * from doing it themselves.
  */
 final class GitArgs {
 
