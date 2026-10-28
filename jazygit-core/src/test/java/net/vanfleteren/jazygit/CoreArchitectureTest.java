@@ -1,10 +1,7 @@
 package net.vanfleteren.jazygit;
 
 import static com.tngtech.archunit.base.DescribedPredicate.anyElementThat;
-import static com.tngtech.archunit.core.domain.JavaCall.Predicates.target;
 import static com.tngtech.archunit.core.domain.JavaClass.Predicates.assignableTo;
-import static com.tngtech.archunit.core.domain.properties.HasName.Predicates.name;
-import static com.tngtech.archunit.core.domain.properties.HasOwner.Predicates.With.owner;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.*;
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 
@@ -66,7 +63,8 @@ class CoreArchitectureTest {
             .resideInAnyPackage("..jazygit.git..", "..jazygit.gh..");
     /**
      * Only {@code GitArgs} turns a revision or a branch name into text for git: a branch is given as its full ref,
-     * so that a tag of the same name does not win, and nothing can be read as an option (ADR 40).
+     * so that a tag of the same name does not win, and nothing can be read as an option (ADR 40). A method reference,
+     * like {@code BranchName::value}, is an access too, so it counts as a call does.
      */
     @ArchTest
     static final ArchRule onlyGitArgsWritesRevisionsAndNames = noClasses()
@@ -75,9 +73,12 @@ class CoreArchitectureTest {
             .and()
             .doNotHaveSimpleName("GitArgs")
             .should()
-            .callMethodWhere(target(name("toArg")).and(target(owner(assignableTo(Revision.class)))))
-            .orShould()
-            .callMethod(BranchName.class, "value");
+            .accessTargetWhere(DescribedPredicate.describe(
+                    "Revision.toArg() or BranchName.value()",
+                    access -> access.getName().equals("toArg")
+                                    && access.getTargetOwner().isAssignableTo(Revision.class)
+                            || access.getName().equals("value")
+                                    && access.getTargetOwner().isEquivalentTo(BranchName.class)));
     /**
      * {@code Exec} is the only place that starts a program.
      */

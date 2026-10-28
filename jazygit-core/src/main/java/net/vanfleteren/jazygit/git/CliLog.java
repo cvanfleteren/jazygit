@@ -290,7 +290,12 @@ final class CliLog {
     private static Either<ProcessError, Tuple2<Integer, Integer>> counts(Path worktree, Sha ours, Sha theirs) {
         return GitProcess.read(
                 worktree,
-                GitCommand.reading("rev-list", "--left-right", "--count", ours.value() + "..." + theirs.value(), "--"),
+                GitCommand.reading(
+                        "rev-list",
+                        "--left-right",
+                        "--count",
+                        GitArgs.symmetric(new Revision.Commit(ours), new Revision.Commit(theirs)),
+                        "--"),
                 CliLog::counts);
     }
 
