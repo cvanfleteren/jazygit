@@ -71,7 +71,7 @@ final class CliPush {
     }
 
     /**
-     * Runs {@code git push --set-upstream <remote> <name>:<branch>}: pushes {@code name} to {@code upstream},
+     * Runs {@code git push --set-upstream <remote> refs/heads/<name>:refs/heads/<branch>}: pushes {@code name} to {@code upstream},
      * which it then tracks. Git only sets the upstream when the push succeeds.
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushSettingUpstream(
@@ -81,12 +81,10 @@ final class CliPush {
     }
 
     /**
-     * What to push {@code name} as: just the name when the remote branch has it too, so the command reads as
-     * one would type it.
+     * What to push {@code name} as: {@code refs/heads/<name>:refs/heads/<branch>}, in full, so that a tag of the same
+     * name is not pushed instead (ADR 40).
      */
     private static String refspec(BranchName name, RemoteBranch target) {
-        return target.branch().equals(name)
-                ? name.value()
-                : name.value() + ":" + new BranchRef.Local(target.branch()).toArg();
+        return GitArgs.refspec(new BranchRef.Local(name), new BranchRef.Local(target.branch()));
     }
 }

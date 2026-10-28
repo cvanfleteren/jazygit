@@ -47,19 +47,25 @@ final class CliMerge {
         return message(worktree, branch)
                 .flatMap(message -> Unfinished.runOrStop(
                         worktree,
-                        git("merge", fastForward, "--no-edit", "-m", message, new BranchRef.Local(branch).toArg())));
+                        git(
+                                "merge",
+                                fastForward,
+                                "--no-edit",
+                                "-m",
+                                message,
+                                GitArgs.revision(new BranchRef.Local(branch)))));
     }
 
     private static Either<GitFailure<GitError>, String> message(Path worktree, BranchName branch) {
         return GitProcess.read(
                         worktree,
-                        GitCommand.reading("rev-parse", "--verify", new BranchRef.Local(branch).toArg()),
+                        GitCommand.reading("rev-parse", "--verify", GitArgs.revision(new BranchRef.Local(branch))),
                         raw -> Either.right(raw.strip()))
                 .<GitFailure<GitError>>mapLeft(error -> new GitFailure<>(error, List.empty()))
                 .flatMap(sha -> TempFiles.using(
                         "jazygit-merge",
                         // What git merge hands to fmt-merge-msg for a local branch, as in FETCH_HEAD.
-                        file -> Files.writeString(file, sha + "\t\tbranch '" + branch.value() + "' of .\n"),
+                        file -> Files.writeString(file, sha + "\t\tbranch '" + GitArgs.name(branch) + "' of .\n"),
                         failed -> new GitFailure<GitError>(failed, List.empty()),
                         file -> GitProcess.read(
                                         worktree,
@@ -69,7 +75,7 @@ final class CliMerge {
     }
 
     private static Either<GitFailure<GitError>, List<ExecutedCommand>> squash(Path worktree, BranchName branch) {
-        return Unfinished.runOrStop(worktree, git("merge", "--squash", new BranchRef.Local(branch).toArg()));
+        return Unfinished.runOrStop(worktree, git("merge", "--squash", GitArgs.revision(new BranchRef.Local(branch))));
     }
 
     /**

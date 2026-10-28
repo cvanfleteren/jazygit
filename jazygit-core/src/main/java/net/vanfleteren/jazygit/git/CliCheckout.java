@@ -34,7 +34,7 @@ final class CliCheckout {
      */
     static Either<GitFailure<GitError>, List<ExecutedCommand>> checkout(Path worktree, BranchName branch) {
         // A trailing "--" keeps git from treating branch names as paths.
-        return GitProcess.log(worktree, git("checkout", "--quiet", branch.value(), "--"))
+        return GitProcess.log(worktree, git("checkout", "--quiet", GitArgs.name(branch), "--"))
                 .mapLeft(failure -> failure.map(CliCheckout::classify));
     }
 
@@ -77,7 +77,8 @@ final class CliCheckout {
             Path worktree, BranchName name, Revision startPoint, Option<BranchName> parent) {
         return GitFailure.sequence(
                 () -> GitProcess.log(
-                        worktree, git("checkout", "--quiet", "-b", name.value(), startPoint.toArg(), "--")),
+                        worktree,
+                        git("checkout", "--quiet", "-b", GitArgs.name(name), GitArgs.revision(startPoint), "--")),
                 () -> parent.map(p -> recordParent(worktree, name, p)).getOrElse(GitFailure::nothing));
     }
 
@@ -104,8 +105,8 @@ final class CliCheckout {
                         "--quiet",
                         "--track",
                         "-b",
-                        name.value(),
-                        upstream.tracking().toArg(),
+                        GitArgs.name(name),
+                        GitArgs.revision(upstream.tracking()),
                         "--"));
     }
 }

@@ -34,11 +34,11 @@ final class CliConfig {
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> setParent(
             Path worktree, BranchName branch, BranchName parent) {
-        return set(worktree, parentKey(branch), Option.of(parent.value()));
+        return set(worktree, parentKey(branch), Option.of(GitArgs.name(parent)));
     }
 
     private static String parentKey(BranchName branch) {
-        return "branch." + branch.value() + ".gh-merge-base";
+        return "branch." + GitArgs.name(branch) + ".gh-merge-base";
     }
 
     /**

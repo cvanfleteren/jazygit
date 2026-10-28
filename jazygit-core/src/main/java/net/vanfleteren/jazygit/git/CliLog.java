@@ -67,7 +67,7 @@ final class CliLog {
                         () -> Either.right(List.empty()),
                         tip -> read(
                                 worktree,
-                                filters(query).append(tip.value()).appendAll(notOn.map(base -> "^" + base.toArg())),
+                                filters(query).append(tip.value()).appendAll(notOn.map(base -> GitArgs.not(base))),
                                 query.paths(),
                                 MAX_COMMITS)));
     }
@@ -144,8 +144,8 @@ final class CliLog {
             Path worktree, List<BranchRef> bases) {
         return bases.isEmpty()
                 ? Either.right(Option.none())
-                : Either.<GitError, Option<Sha>>narrow(
-                                resolve(worktree, bases.head().toArg()).mapLeft(GitFailure::error))
+                : Either.<GitError, Option<Sha>>narrow(resolve(worktree, GitArgs.revision(bases.head()))
+                                .mapLeft(GitFailure::error))
                         .flatMap(tip -> tip.fold(
                                 () -> firstExisting(worktree, bases.tail()),
                                 found -> Either.right(Option.of(Tuple.of(bases.head(), found)))));
@@ -207,16 +207,15 @@ final class CliLog {
      */
     static Either<GitError, CommitRange> range(
             Path worktree, BranchName branch, Sha oldest, Option<RemoteBranch> upstream) {
-        List<String> revisions = List.of(new BranchRef.Local(branch).toArg(), "^" + oldest.value() + "^");
+        List<String> revisions = List.of(GitArgs.revision(new BranchRef.Local(branch)), "^" + oldest.value() + "^");
         return Either.narrow(GitProcess.read(
                         worktree,
                         GitCommand.reading(List.of("rev-list", "--parents", "--topo-order")
                                 .appendAll(revisions)
                                 .append("--")),
                         CliLog::parents)
-                .flatMap(commits -> upstream.map(remote -> count(
-                                worktree,
-                                revisions.append("^" + remote.tracking().toArg())))
+                .flatMap(commits -> upstream.map(
+                                remote -> count(worktree, revisions.append(GitArgs.not(remote.tracking()))))
                         .getOrElse(() -> Either.right(commits.size()))
                         .map(unpushed -> new CommitRange(
                                 commits.size(),
@@ -265,7 +264,7 @@ final class CliLog {
      * How many commits are on {@code branch} and not on {@code base}, counting no further than {@code max}.
      */
     static Either<ProcessError, Integer> countNotOn(Path worktree, BranchRef branch, BranchRef base, int max) {
-        return count(worktree, List.of("--max-count=" + max, branch.toArg(), "^" + base.toArg()));
+        return count(worktree, List.of("--max-count=" + max, GitArgs.revision(branch), GitArgs.not(base)));
     }
 
     /**
@@ -281,7 +280,7 @@ final class CliLog {
 
     private static Either<GitError, Sha> tip(Path worktree, BranchRef branch) {
         return Either.<GitError, Option<Sha>>narrow(
-                        resolve(worktree, branch.toArg()).mapLeft(GitFailure::error))
+                        resolve(worktree, GitArgs.revision(branch)).mapLeft(GitFailure::error))
                 .flatMap(tip -> tip.toEither(() -> new UnknownBranch(branch)));
     }
 
@@ -291,7 +290,12 @@ final class CliLog {
     private static Either<ProcessError, Tuple2<Integer, Integer>> counts(Path worktree, Sha ours, Sha theirs) {
         return GitProcess.read(
                 worktree,
-                GitCommand.reading("rev-list", "--left-right", "--count", ours.value() + "..." + theirs.value(), "--"),
+                GitCommand.reading(
+                        "rev-list",
+                        "--left-right",
+                        "--count",
+                        GitArgs.symmetric(new Revision.Commit(ours), new Revision.Commit(theirs)),
+                        "--"),
                 CliLog::counts);
     }
 
