@@ -20,7 +20,12 @@ import net.vanfleteren.jazygit.gh.model.CheckRun;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Activity;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Branches;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Check;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Conversation;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Size;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Status;
 import net.vanfleteren.jazygit.gh.model.RecentChecks;
 import net.vanfleteren.jazygit.gh.timing.CheckHistory;
 import net.vanfleteren.jazygit.gh.timing.CheckSample;
@@ -334,25 +339,17 @@ class CheckTimesUpdateTest {
                 42,
                 "t",
                 "",
-                PullRequestDetails.State.OPEN,
-                false,
-                "feature",
-                "main",
-                NOW,
-                NOW,
-                0,
-                0,
-                0,
-                1,
-                PullRequestDetails.Mergeable.UNKNOWN,
-                net.vanfleteren.jazygit.gh.model.PullRequest.Review.NONE,
-                0,
-                PullRequestDetails.ReviewThreads.NONE,
-                List.empty(),
-                List.empty(),
+                new Status(PullRequestDetails.State.OPEN, false, PullRequestDetails.Mergeable.UNKNOWN),
+                new Branches("feature", "main", Option.of(new GhCommit("abc")), Option.none()),
+                new Activity(NOW, NOW),
+                new Size(0, 0, 0, 1),
+                new Conversation(
+                        net.vanfleteren.jazygit.gh.model.PullRequest.Review.NONE,
+                        List.empty(),
+                        0,
+                        PullRequestDetails.ReviewThreads.NONE,
+                        List.empty()),
                 List.of(PASSED),
-                Option.of(new GhCommit("abc")),
-                Option.none(),
                 Option.none(),
                 REPO);
 

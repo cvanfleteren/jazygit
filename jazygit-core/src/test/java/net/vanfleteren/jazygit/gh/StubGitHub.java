@@ -7,6 +7,11 @@ import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.*;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Activity;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Branches;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Conversation;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Size;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Status;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
@@ -102,22 +107,12 @@ public interface StubGitHub extends GitHub {
                 number,
                 "A pull request",
                 "someone",
-                PullRequestDetails.State.OPEN,
-                false,
-                "feature",
-                "main",
-                Instant.EPOCH,
-                Instant.EPOCH,
-                0,
-                0,
-                0,
-                1,
-                PullRequestDetails.Mergeable.UNKNOWN,
-                PullRequest.Review.NONE,
-                0,
-                PullRequestDetails.ReviewThreads.NONE,
-                List.empty(),
-                List.empty(),
+                new Status(PullRequestDetails.State.OPEN, false, PullRequestDetails.Mergeable.UNKNOWN),
+                new Branches("feature", "main"),
+                new Activity(Instant.EPOCH, Instant.EPOCH),
+                new Size(0, 0, 0, 1),
+                new Conversation(
+                        PullRequest.Review.NONE, List.empty(), 0, PullRequestDetails.ReviewThreads.NONE, List.empty()),
                 List.empty()));
     }
 

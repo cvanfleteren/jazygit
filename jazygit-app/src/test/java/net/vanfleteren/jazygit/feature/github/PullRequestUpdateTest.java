@@ -45,6 +45,8 @@ import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Conversation;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Status;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.gh.timing.CheckTimings;
@@ -964,22 +966,16 @@ class PullRequestUpdateTest {
                 42,
                 details.title(),
                 details.author(),
-                details.state(),
-                true,
-                details.headBranch(),
-                details.baseBranch(),
-                details.createdAt(),
-                details.createdAt(),
-                0,
-                0,
-                0,
-                1,
-                details.mergeable(),
-                Review.CHANGES_REQUESTED,
-                0,
-                details.reviewThreads(),
-                List.empty(),
-                List.empty(),
+                details.status().withDraft(true),
+                details.branches(),
+                details.activity(),
+                details.size(),
+                new Conversation(
+                        Review.CHANGES_REQUESTED,
+                        List.empty(),
+                        0,
+                        details.conversation().reviewThreads(),
+                        List.empty()),
                 List.of(
                         new PullRequestDetails.Check("build", Checks.PASSING),
                         new PullRequestDetails.Check("test", Checks.FAILING)));
@@ -1003,27 +999,10 @@ class PullRequestUpdateTest {
         Model shown =
                 Update.update(withPr(), new PullRequestMsg.Requested(FEATURE)).model();
         PullRequestDetails details = StubGitHub.empty().pullRequestDetails(42).get();
-        PullRequestDetails merged = new PullRequestDetails(
-                42,
-                details.title(),
-                details.author(),
+        PullRequestDetails merged = details.withStatus(new Status(
                 PullRequestDetails.State.MERGED,
-                details.draft(),
-                details.headBranch(),
-                details.baseBranch(),
-                details.createdAt(),
-                details.createdAt(),
-                0,
-                0,
-                0,
-                1,
-                details.mergeable(),
-                details.review(),
-                0,
-                details.reviewThreads(),
-                List.empty(),
-                List.empty(),
-                List.empty());
+                details.status().draft(),
+                details.status().mergeable()));
 
         Model loaded = Update.update(shown, new PullRequestMsg.DetailsLoaded(42, lastRead(shown), merged))
                 .model();
@@ -1198,31 +1177,7 @@ class PullRequestUpdateTest {
      * {@code details} with one check that runs, of a commit status, which is not timed.
      */
     private static PullRequestDetails withARunningCheck(PullRequestDetails details) {
-        return new PullRequestDetails(
-                details.number(),
-                details.title(),
-                details.author(),
-                details.state(),
-                details.draft(),
-                details.headBranch(),
-                details.baseBranch(),
-                details.createdAt(),
-                details.pushedAt(),
-                details.additions(),
-                details.deletions(),
-                details.changedFiles(),
-                details.commits(),
-                details.mergeable(),
-                details.review(),
-                details.comments(),
-                details.reviewThreads(),
-                details.labels(),
-                details.reviewers(),
-                List.of(new PullRequestDetails.Check("ci/status", Checks.PENDING)),
-                details.head(),
-                details.stack(),
-                details.behindBase(),
-                details.repository());
+        return details.withChecks(List.of(new PullRequestDetails.Check("ci/status", Checks.PENDING)));
     }
 
     @Test

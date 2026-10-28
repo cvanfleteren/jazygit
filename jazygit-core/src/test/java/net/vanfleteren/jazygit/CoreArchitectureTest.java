@@ -37,7 +37,7 @@ class CoreArchitectureTest {
             .resideInAnyPackage("..jazygit.git.model..", "..jazygit.gh.model..")
             .should()
             .onlyDependOnClassesThat()
-            .resideInAnyPackage("java..", "io.vavr..", "..jazygit.git.model..", "..jazygit.gh.model..");
+            .resideInAnyPackage("java..", "io.vavr..", "lombok..", "..jazygit.git.model..", "..jazygit.gh.model..");
     /**
      * git and gh are reached each on their own; the features combine them. The process layer runs any program,
      * and knows neither.

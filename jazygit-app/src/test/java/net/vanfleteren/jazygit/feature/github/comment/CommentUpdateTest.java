@@ -33,6 +33,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestComment;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Status;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.StubGitProvider;
@@ -90,27 +91,10 @@ class CommentUpdateTest {
     void aClosedOrMergedPullRequestTakesCommentsToo() {
         PullRequestPopup merged = PullRequestPopup.loading(FEATURE, FEATURE_PR, Instant.EPOCH, 0)
                 .with(
-                        Either.right(new PullRequestDetails(
-                                DETAILS.number(),
-                                DETAILS.title(),
-                                DETAILS.author(),
+                        Either.right(DETAILS.withStatus(new Status(
                                 PullRequestDetails.State.MERGED,
-                                DETAILS.draft(),
-                                DETAILS.headBranch(),
-                                DETAILS.baseBranch(),
-                                DETAILS.createdAt(),
-                                DETAILS.createdAt(),
-                                DETAILS.additions(),
-                                DETAILS.deletions(),
-                                DETAILS.changedFiles(),
-                                1,
-                                DETAILS.mergeable(),
-                                DETAILS.review(),
-                                DETAILS.comments(),
-                                DETAILS.reviewThreads(),
-                                DETAILS.labels(),
-                                DETAILS.reviewers(),
-                                DETAILS.checks())),
+                                DETAILS.status().draft(),
+                                DETAILS.status().mergeable()))),
                         0);
 
         Next next = Update.update(loaded().openPopup(merged), new CommentMsg.Requested());

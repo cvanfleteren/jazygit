@@ -7,8 +7,13 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Activity;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Branches;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Check;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Conversation;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Size;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.State;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Status;
 import org.junit.jupiter.api.Test;
 
 class PullRequestDetailsTest {
@@ -18,22 +23,11 @@ class PullRequestDetailsTest {
                 42,
                 "A pull request",
                 "someone",
-                state,
-                true,
-                "feature",
-                "main",
-                Instant.EPOCH,
-                Instant.EPOCH,
-                0,
-                0,
-                0,
-                1,
-                PullRequestDetails.Mergeable.UNKNOWN,
-                Review.REQUIRED,
-                0,
-                PullRequestDetails.ReviewThreads.NONE,
-                List.empty(),
-                List.empty(),
+                new Status(state, true, PullRequestDetails.Mergeable.UNKNOWN),
+                new Branches("feature", "main"),
+                new Activity(Instant.EPOCH, Instant.EPOCH),
+                new Size(0, 0, 0, 1),
+                new Conversation(Review.REQUIRED, List.empty(), 0, PullRequestDetails.ReviewThreads.NONE, List.empty()),
                 checks);
     }
 
@@ -58,8 +52,8 @@ class PullRequestDetailsTest {
     void howFarBehindItsBaseLeavesItsOwnCommitsAsTheyAre() {
         PullRequestDetails behind = details(State.OPEN, List.empty()).withBehindBase(5);
 
-        assertEquals(1, behind.commits());
-        assertEquals(Option.of(5), behind.behindBase());
+        assertEquals(1, behind.size().commits());
+        assertEquals(Option.of(5), behind.branches().behindBase());
     }
 
     @Test
