@@ -71,6 +71,14 @@ class JsonTest {
     }
 
     @Test
+    void jsonNestedTooDeeplyIsAnError() {
+        // Jackson's limit of nesting is what keeps JsonReader's recursion from overflowing the stack.
+        DecodeError error = Json.parse("[".repeat(3000) + "]".repeat(3000)).getLeft();
+
+        assertTrue(error.message().startsWith("not JSON: Document nesting depth"), error.message());
+    }
+
+    @Test
     void moreThanOneValueIsAnError() {
         // As gh prints the pages of --paginate without --slurp.
         assertEquals(Either.left(DecodeError.of("expected one JSON value, got more after it")), Json.parse("{} {}"));

@@ -98,6 +98,13 @@ class DecoderTest {
     }
 
     @Test
+    void nullableDoesNotTakeAValueOfAnotherKind() {
+        assertEquals(
+                Either.left("startedAt: expected a string, got a number"),
+                decode(CHECK, "{\"name\": \"verify\", \"state\": \"FAILURE\", \"startedAt\": 3}"));
+    }
+
+    @Test
     void theErrorSaysWhereItFailed() {
         Decoder<List<Check>> checks = at("data.commit.checks", list(CHECK));
 

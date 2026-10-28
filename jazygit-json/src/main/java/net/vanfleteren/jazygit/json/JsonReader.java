@@ -22,6 +22,8 @@ import tools.jackson.core.json.JsonFactory;
  */
 final class JsonReader {
 
+    // Its default limit of nesting, 500, is what bounds the recursion of value: deeper JSON is a JacksonException,
+    // not a StackOverflowError (JsonTest).
     private static final JsonFactory FACTORY = new JsonFactory();
 
     private JsonReader() {}

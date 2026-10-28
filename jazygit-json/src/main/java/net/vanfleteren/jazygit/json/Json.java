@@ -37,6 +37,10 @@ public sealed interface Json {
 
     record JString(String value) implements Json {}
 
+    /**
+     * A number as it was written. Two are equal as {@link BigDecimal}s are, scale and all: {@code 1.0} is not
+     * {@code 1.00}. Decoders read it with {@code intValueExact} and {@code longValueExact}, which do not care.
+     */
     record JNumber(BigDecimal value) implements Json {}
 
     record JBool(boolean value) implements Json {}
