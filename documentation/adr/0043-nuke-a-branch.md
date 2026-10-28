@@ -10,76 +10,72 @@ locked, whether to unlock it is asked first (`UnlockWorktreePopup`). A worktree 
 removing it anyway is confirmed (`RemoveWorktreeMsg.NeedsForce`). A branch that is not merged is deleted only once
 losing its commits is confirmed (`ForceDeleteCmd.refused`, `ForceDeleteMsg.NotFullyMerged`).
 
-The user wants one confirmation, after which jazygit deletes the branch, its push target and its worktree, as far
-as it can, without the warnings.
+The user wants one confirmation, after which jazygit deletes the branch, its branch on the remote and its worktree,
+as far as it can, without the warnings.
 
-What the model already knows of what would be lost is little:
-
-- `Branch.ahead()` counts the commits not on the upstream, but the upstream is deleted too, so pushed commits are
-  lost as well.
-- `GitInfoProvider.countOnlyOn` counts the commits no other branch, remote-tracking branch or tag has. It counts the
-  ones on the push target as kept, and that one is deleted too.
-- `Repo.hasChanges(worktree)` (ADR 11) says whether a worktree has changes, without a count, and only while the
-  worktrees are shown.
+`Branch.pushTarget()` is where the branch is pushed: its upstream, which can have another name. A branch made from
+`origin/main` follows `origin/main` under git's default `branch.autoSetupMerge`, as it does when jazygit makes it
+(ADR 40). `Branch.isDefault` only says whether the local branch is the default one.
 
 ## Decision
 
 ### `D` on a local branch
 
-- `D` on the local branches deletes the branch, its worktree and its push target, after one confirmation. It is
-  git's `-d`/`-D` pair. Not: `D` on the remote branches, where it would be `d` without its dialog.
-- It is refused, with the errors `d` already gives, before anything is read:
+- `D` on the local branches deletes the branch, its worktree and its branch on the remote, after one confirmation.
+  It is git's `-d`/`-D` pair. Not: `D` on the remote branches, where it would be `d` without its dialog.
+- It is refused, with the errors `d` already gives:
   - the default branch: `AppError.DefaultBranch`;
   - a branch checked out in the worktree shown: `ShownWorktreeNotRemovable`;
   - a branch checked out in the main worktree: `MainWorktreeNotRemovable`.
 
-  Not: deleting what still can be, the push target alone, which is not what a nuke of the branch promises.
-- A branch cannot be nuked while it is being pushed or deleted, as with `d`.
+  Not: deleting what still can be, the remote branch alone, which is not what a nuke of the branch promises.
+- Like `d`, it opens its dialog only for a known branch that no operation runs on, and not while an operation runs
+  on its remote branch either. Confirming checks that again (`Update.confirm`), and that the worktree and the remote
+  branch are still the ones the dialog named; when not, nothing starts.
 
-### What would be lost is read before asking
+### Which remote branch
 
-- `D` marks the branch busy and starts one command that reads what would be lost; its message opens the dialog. The
-  dialog is not opened when the branch is gone or no longer idle by then, and nothing is said.
-- The commits lost: those of the branch that no other branch, remote-tracking branch or tag has, apart from its push
-  target. That is `countOnlyOn` with the push target excluded too (`--exclude=<remote>/<branch>` before `--remotes`),
-  one `git rev-list --count`.
-- The files lost: those `git status --porcelain -z --untracked-files=normal` lists in the worktree removed, as ADR 11
-  reads its changes; ignored files are not counted. Only when there is a worktree to remove and its directory exists.
-- A count that cannot be read is left out of the dialog, which opens anyway. Not: failing the nuke, which the user
-  asked to go ahead regardless.
+- The remote branch deleted is the push target, only when it has the branch's own name and exists
+  (`Branch.hasRemote`). A push target of another name, like `origin/main` for a branch made from it, is left alone,
+  and the dialog does not name it. Not: deleting the push target whatever its name, which would delete `main`.
+- As the local branch is not the default one, a remote branch of its name on `origin` is not the default one either.
 
 ### One dialog
 
-- `NukeBranchPopup` names what goes: the branch, its push target when it has one, and the worktree that has it checked
-  out, marked `locked` or `gone`. It says how many commits and uncommitted files are lost, each only when more than 0.
-- It is a yes/no `ConfirmDialog`, confirmed as the others are (ADR 38). Not: typing the branch name to confirm.
-- What is lost is not read again once confirmed: the confirmation stands for whatever is there when it runs.
+- `NukeBranchPopup` is a yes/no `ConfirmDialog`, confirmed as the others are (ADR 38). It opens at once, with nothing
+  read first.
+- It says sternly that the branch is nuked, and names what goes: the branch, its remote branch when it deletes one,
+  and the worktree that has it checked out, marked `locked` when it is. It warns that commits only that branch has
+  and uncommitted changes in that worktree are lost, without counting them. Not: counting the commits and files lost,
+  which takes git commands before the dialog, and a slip from `d` is already caught by the stern dialog.
+- Not: typing the branch name to confirm.
 
 ### One command
 
 - `NukeBranchCmd`, in `feature/branch/nuke`, does every step in its own `perform`, and is one entry in the log with
-  every git command it ran. The branch stays busy until it is done. It guards the remote refs when it deletes the push
-  target (ADR 27). Not: chaining `RemoveWorktreeCmd` and `DeleteBranch` through messages, whose refusals would open
-  their own popups half way.
+  every git command it ran. The local branch is busy until it is done. It guards the remote refs when it deletes the
+  remote branch (ADR 27). Not: chaining `RemoveWorktreeCmd` and `DeleteBranch` through messages, whose refusals would
+  open their own popups half way.
+- The remote branch is not marked busy: a command keeps one branch busy. A `d` on it from the remote branches while
+  the nuke runs waits for the guard, and then fails as the branch is gone.
 - The steps, in this order:
-  1. The worktree: `git worktree remove --force --force`, which removes a locked one and one with changes; when its
-     directory is gone, `git worktree prune` instead.
+  1. The worktree: `git worktree remove --force --force`, which removes one that is locked, that has changes, or
+     whose directory is gone. Not: `git worktree prune` for a gone one, which leaves it when it is locked.
   2. The branch: `git branch -D`.
-  3. The push target: `git push <remote> --delete refs/heads/<branch>` (ADR 40).
+  3. The remote branch: `git push <remote> --delete refs/heads/<branch>` (ADR 40).
 
-  The worktree goes first, as git does not delete a branch that is checked out. The push target goes last, so that a
-  nuke that fails half way has not deleted the remote copy while the local one stays.
+  The worktree goes first, as git does not delete a branch that is checked out. The remote branch goes last, as the
+  only step that talks to the remote; which of the branch and the remote branch goes first loses nothing when the
+  other fails, as the one left keeps the commits.
 - A step that fails skips the steps that need it and not the others: when the worktree is not removed, the branch is
-  not deleted, but its push target is, as the commits are still on the branch. What was not deleted is said in one
-  error. Not: stopping at the first failure, which leaves what could have gone.
-- A branch without a push target, or whose push target is gone, has no third step; one not checked out elsewhere,
-  no first.
+  not deleted, but its remote branch is. What was not deleted is said in one error. Not: stopping at the first
+  failure, which leaves what could have gone.
+- A branch without a remote branch to delete has no third step; one not checked out elsewhere, no first.
 
 ## Consequences
 
-- A slip from `d` to `D` loses commits and changes after one keypress more. The dialog says how many.
-- `D` opens its dialog after one or two git commands, not at once.
-- `GitInfoProvider` gets a count of the commits only a branch and its push target have, and a count of a worktree's
-  changes.
-- Acceptance tests cover a nuke with a worktree, a locked one, one with changes and a gone one; a branch that is not
-  merged and one that is local only; the three refusals; and a step that fails.
+- A slip from `d` to `D` loses commits and changes after one confirmation, which says so but not how many.
+- A branch that follows a remote branch of another name keeps that one; it is deleted with `d`, whose dialog names it.
+- Acceptance tests cover a nuke with a worktree, a locked one, one with changes and a gone and locked one; a branch
+  that is not merged, one that is local only, and one that follows `origin/main`, which stays; the three refusals;
+  and a step that fails.
