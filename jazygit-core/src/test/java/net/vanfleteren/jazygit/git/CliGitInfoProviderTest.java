@@ -1688,6 +1688,24 @@ class CliGitInfoProviderTest {
     }
 
     @Test
+    void aPushDefaultGitDoesNotKnowPushesNothing() throws Exception {
+        java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
+        git("init", "-q", "--bare", "-b", "main", bare.toString());
+        git("remote", "add", "origin", bare.toString());
+        RemoteBranch main = new RemoteBranch("origin", new BranchName("main"));
+        provider.pushSettingUpstream(new BranchName("main"), main).get();
+        git("commit", "-q", "--allow-empty", "-m", "local");
+        // Git fails most commands on a value it does not know, so it is set last.
+        git("config", "push.default", "sideways");
+
+        assertEquals(
+                new GitError.PushRefused("sideways", main),
+                provider.push(new BranchName("main"), main, PushMode.FAST_FORWARD)
+                        .getLeft()
+                        .error());
+    }
+
+    @Test
     void aFailedPushSetsNoUpstream() throws Exception {
         assertTrue(provider.pushSettingUpstream(
                         new BranchName("main"), new RemoteBranch("nowhere", new BranchName("main")))

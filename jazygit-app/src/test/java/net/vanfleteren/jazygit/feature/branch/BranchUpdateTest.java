@@ -450,6 +450,35 @@ class BranchUpdateTest {
     }
 
     @Test
+    void aBranchFollowingAnotherNameIsPushedWhetherThatOneIsBehindOrDiverged() {
+        RemoteBranch develop = new RemoteBranch("origin", new BranchName("develop"));
+        for (var counts : List.of(io.vavr.Tuple.of(0, 2), io.vavr.Tuple.of(1, 2))) {
+            Model model = localBranchesRead(
+                            loaded(),
+                            List.of(
+                                    Fixtures.branch(new BranchName("main"), true, new Sha("aaaa")),
+                                    Fixtures.branch(
+                                            new BranchName("feature"),
+                                            false,
+                                            new Sha("ffff"),
+                                            Instant.EPOCH,
+                                            true,
+                                            false,
+                                            Option.of(new Upstream(
+                                                    new BranchRef.Remote(develop), counts._1, counts._2)))))
+                    .model();
+
+            Next next = Update.update(model, new PushMsg.Requested(new BranchName("feature")));
+
+            // Where it goes, and whether git takes it, is known once push.default is read (ADR 40).
+            assertEquals(
+                    List.of(new PushCmd.Push(new BranchName("feature"), develop, PushMode.FAST_FORWARD)), next.cmds());
+            assertEquals(Option.none(), next.model().popup());
+            assertEquals(Option.none(), next.model().outcome().error());
+        }
+    }
+
+    @Test
     void pushRequestOfABranchOnlyBehindItsUpstreamFailsAndRunsNothing() {
         Next next = Update.update(featureTracking(0, 2), new PushMsg.Requested(new BranchName("feature")));
 

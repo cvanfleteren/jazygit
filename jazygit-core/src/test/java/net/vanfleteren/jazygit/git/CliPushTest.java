@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.PushDefault;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import org.junit.jupiter.api.Test;
 
@@ -15,30 +16,32 @@ class CliPushTest {
 
     @Test
     void simplePushesOnlyToAnUpstreamOfTheSameName() {
-        assertEquals(Option.of(SAME_NAME), CliPush.target("simple", FEATURE, SAME_NAME));
-        assertEquals(Option.none(), CliPush.target("simple", FEATURE, DEVELOP));
+        assertEquals(Option.of(SAME_NAME), CliPush.target(PushDefault.SIMPLE, FEATURE, SAME_NAME));
+        assertEquals(Option.none(), CliPush.target(PushDefault.SIMPLE, FEATURE, DEVELOP));
     }
 
     @Test
     void currentAndMatchingPushToTheSameNameOnTheUpstreamsRemote() {
-        assertEquals(Option.of(SAME_NAME), CliPush.target("current", FEATURE, DEVELOP));
-        assertEquals(Option.of(SAME_NAME), CliPush.target("matching", FEATURE, DEVELOP));
+        assertEquals(Option.of(SAME_NAME), CliPush.target(PushDefault.CURRENT, FEATURE, DEVELOP));
+        assertEquals(Option.of(SAME_NAME), CliPush.target(PushDefault.MATCHING, FEATURE, DEVELOP));
     }
 
     @Test
-    void upstreamAndTrackingPushToTheUpstream() {
-        assertEquals(Option.of(DEVELOP), CliPush.target("upstream", FEATURE, DEVELOP));
-        assertEquals(Option.of(DEVELOP), CliPush.target("tracking", FEATURE, DEVELOP));
+    void upstreamPushesToTheUpstream() {
+        assertEquals(Option.of(DEVELOP), CliPush.target(PushDefault.UPSTREAM, FEATURE, DEVELOP));
     }
 
     @Test
     void nothingPushesNowhere() {
-        assertEquals(Option.none(), CliPush.target("nothing", FEATURE, SAME_NAME));
+        assertEquals(Option.none(), CliPush.target(PushDefault.NOTHING, FEATURE, SAME_NAME));
     }
 
     @Test
-    void aValueGitDoesNotKnowIsTakenAsSimple() {
-        assertEquals(Option.none(), CliPush.target("sideways", FEATURE, DEVELOP));
-        assertEquals(Option.of(SAME_NAME), CliPush.target("sideways", FEATURE, SAME_NAME));
+    void pushDefaultIsReadAsGitReadsIt() {
+        assertEquals(Option.of(PushDefault.UPSTREAM), PushDefault.parse("tracking"));
+        assertEquals(Option.of(PushDefault.UPSTREAM), PushDefault.parse("upstream"));
+        assertEquals(Option.of(PushDefault.SIMPLE), PushDefault.parse(" simple\n"));
+        assertEquals(Option.none(), PushDefault.parse("sideways"));
+        assertEquals(Option.none(), PushDefault.parse("Simple"));
     }
 }

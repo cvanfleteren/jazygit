@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.PushRefused;
 import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.PushDefault;
 import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -30,15 +31,16 @@ final class CliPush {
      * remote, on the branch {@link #target} names.
      *
      * @return the command lines that were run, or why git failed; {@link PushRefused} when {@code push.default}
-     *     pushes the branch nowhere, before anything is pushed
+     *     pushes the branch nowhere, or has a value git does not know, before anything is pushed
      */
     static Either<GitFailure<GitError>, List<ExecutedCommand>> push(
             Path worktree, BranchName name, RemoteBranch upstream, PushMode mode, Map<String, String> credentials) {
         return CliConfig.effective(worktree, PUSH_DEFAULT)
                 .mapLeft(error -> new GitFailure<GitError>(error, List.empty()))
                 .map(setting -> setting.getOrElse(SIMPLE))
-                .flatMap(pushDefault -> target(pushDefault, name, upstream)
-                        .toEither(() -> new GitFailure<GitError>(new PushRefused(pushDefault, upstream), List.empty())))
+                .flatMap(setting -> PushDefault.parse(setting)
+                        .flatMap(pushDefault -> target(pushDefault, name, upstream))
+                        .toEither(() -> new GitFailure<GitError>(new PushRefused(setting, upstream), List.empty())))
                 .flatMap(target -> GitFailure.widen(CliRemote.run(
                         worktree,
                         git(List.of("push")
@@ -54,17 +56,16 @@ final class CliPush {
     /**
      * Where {@code push.default} pushes {@code name}, which tracks {@code upstream}, as {@code git push} would push
      * it when checked out: on {@code upstream}'s remote, to the branch of the same name, or to {@code upstream} for
-     * {@code upstream} and {@code tracking}; none for {@code nothing}, and for {@code simple} when {@code upstream}
-     * has another name. {@code matching}, which pushes every branch of the same name, pushes this one to its name.
-     * A value git does not know is taken as {@code simple}, git's default.
+     * {@code upstream}; none for {@code nothing}, and for {@code simple} when {@code upstream} has another name.
+     * {@code matching}, which pushes every branch of the same name, pushes this one to its name.
      */
-    static Option<RemoteBranch> target(String pushDefault, BranchName name, RemoteBranch upstream) {
+    static Option<RemoteBranch> target(PushDefault pushDefault, BranchName name, RemoteBranch upstream) {
         RemoteBranch sameName = new RemoteBranch(upstream.remote(), name);
         return switch (pushDefault) {
-            case "current", "matching" -> Option.of(sameName);
-            case "upstream", "tracking" -> Option.of(upstream);
-            case "nothing" -> Option.none();
-            default -> Option.when(upstream.branch().equals(name), sameName);
+            case CURRENT, MATCHING -> Option.of(sameName);
+            case UPSTREAM -> Option.of(upstream);
+            case NOTHING -> Option.none();
+            case SIMPLE -> Option.when(upstream.branch().equals(name), sameName);
         };
     }
 
