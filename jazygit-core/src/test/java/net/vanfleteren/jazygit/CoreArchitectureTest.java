@@ -100,12 +100,12 @@ class CoreArchitectureTest {
             .orShould()
             .callMethod(Runtime.class, "exec", String.class);
     /**
-     * JSON is read through jazygit-json's {@code Json} and {@code Decoder}; Jackson, which comes along with it, is
+     * JSON is read through jazygit-json's {@code Json} and {@code Decoder}; Parsson, which comes along with it, is
      * not used here (ADR 42).
      */
     @ArchTest
-    static final ArchRule nothingUsesJackson =
-            noClasses().should().dependOnClassesThat().resideInAPackage("tools.jackson..");
+    static final ArchRule nothingUsesParsson =
+            noClasses().should().dependOnClassesThat().resideInAnyPackage("jakarta.json..", "org.eclipse.parsson..");
     /**
      * The parts of the core depend on each other one way only.
      */

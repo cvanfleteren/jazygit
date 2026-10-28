@@ -72,10 +72,20 @@ class JsonTest {
 
     @Test
     void jsonNestedTooDeeplyIsAnError() {
-        // Jackson's limit of nesting is what keeps JsonReader's recursion from overflowing the stack.
-        DecodeError error = Json.parse("[".repeat(3000) + "]".repeat(3000)).getLeft();
+        // JsonReader's limit of nesting is what keeps its recursion from overflowing the stack.
+        assertEquals(
+                Either.left(DecodeError.of("not JSON: nested deeper than 500")),
+                Json.parse("[".repeat(3000) + "]".repeat(3000)));
+    }
 
-        assertTrue(error.message().startsWith("not JSON: Document nesting depth"), error.message());
+    @Test
+    void jsonNestedAsDeeplyAsAllowedIsRead() {
+        assertTrue(Json.parse("[".repeat(500) + "]".repeat(500)).isRight());
+    }
+
+    @Test
+    void whitespaceAfterTheValueIsNotMore() {
+        assertEquals(Either.right(new JArray(List.empty())), Json.parse(" [] \n"));
     }
 
     @Test

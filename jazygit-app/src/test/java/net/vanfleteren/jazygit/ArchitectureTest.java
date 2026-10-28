@@ -63,12 +63,12 @@ class ArchitectureTest {
             .dependOnClassesThat()
             .resideInAPackage("com.electronwill.nightconfig..");
     /**
-     * JSON is read through jazygit-json's {@code Json} and {@code Decoder}; Jackson, which comes along with it, is
+     * JSON is read through jazygit-json's {@code Json} and {@code Decoder}; Parsson, which comes along with it, is
      * not used here (ADR 42).
      */
     @ArchTest
-    static final ArchRule nothingUsesJackson =
-            noClasses().should().dependOnClassesThat().resideInAPackage("tools.jackson..");
+    static final ArchRule nothingUsesParsson =
+            noClasses().should().dependOnClassesThat().resideInAnyPackage("jakarta.json..", "org.eclipse.parsson..");
     /**
      * The command line stands on its own: it reads how jazygit is asked to start, and knows nothing of what is
      * started.

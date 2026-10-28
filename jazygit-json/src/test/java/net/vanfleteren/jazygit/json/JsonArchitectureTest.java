@@ -23,17 +23,17 @@ import java.util.Map;
 class JsonArchitectureTest {
 
     /**
-     * Jackson is only how text is parsed: {@code JsonReader} uses it, behind {@code Json.parse} (ADR 42). The class
-     * the compiler makes for its switch on Jackson's tokens counts as part of it.
+     * Parsson is only how text is parsed: {@code JsonReader} uses it, behind {@code Json.parse} (ADR 42). The class
+     * the compiler makes for its switch on Parsson's events counts as part of it.
      */
     @ArchTest
-    static final ArchRule onlyTheReaderUsesJackson = noClasses()
+    static final ArchRule onlyTheReaderUsesParsson = noClasses()
             .that(DescribedPredicate.describe(
                     "are not JsonReader or nested in it",
                     type -> !type.getName().startsWith(JsonReader.class.getName())))
             .should()
             .dependOnClassesThat()
-            .resideInAPackage("tools.jackson..");
+            .resideInAnyPackage("jakarta.json..", "org.eclipse.parsson..");
 
     private static final DescribedPredicate<JavaClass> JAVA_UTIL_COLLECTION =
             assignableTo(Collection.class).or(assignableTo(Map.class));

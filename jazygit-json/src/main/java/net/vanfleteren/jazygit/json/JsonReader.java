@@ -5,70 +5,87 @@ import io.vavr.Tuple2;
 import io.vavr.collection.LinkedHashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
+import jakarta.json.JsonException;
+import jakarta.json.spi.JsonProvider;
+import jakarta.json.stream.JsonParser;
+import jakarta.json.stream.JsonParser.Event;
+import jakarta.json.stream.JsonParsingException;
+import java.io.StringReader;
 import net.vanfleteren.jazygit.json.Json.JArray;
 import net.vanfleteren.jazygit.json.Json.JBool;
 import net.vanfleteren.jazygit.json.Json.JNull;
 import net.vanfleteren.jazygit.json.Json.JNumber;
 import net.vanfleteren.jazygit.json.Json.JObject;
 import net.vanfleteren.jazygit.json.Json.JString;
-import tools.jackson.core.JacksonException;
-import tools.jackson.core.JsonParser;
-import tools.jackson.core.JsonToken;
-import tools.jackson.core.ObjectReadContext;
-import tools.jackson.core.json.JsonFactory;
+import org.eclipse.parsson.JsonProviderImpl;
 
 /**
- * Builds a {@link Json} with Jackson's streaming parser, the only class that uses Jackson (ADR 42).
+ * Builds a {@link Json} with Parsson's streaming parser, the only class that uses Parsson (ADR 42).
  */
 final class JsonReader {
 
-    // Its default limit of nesting, 500, is what bounds the recursion of value: deeper JSON is a JacksonException,
-    // not a StackOverflowError (JsonTest).
-    private static final JsonFactory FACTORY = new JsonFactory();
+    // Made directly, not looked up by JsonProvider.provider() through a ServiceLoader.
+    private static final JsonProvider PROVIDER = new JsonProviderImpl();
+
+    // Bounds the recursion of value: deeper JSON is an error, not a StackOverflowError (JsonTest). Parsson's own
+    // limit, 1000, throws a bare RuntimeException.
+    private static final int MAX_DEPTH = 500;
 
     private JsonReader() {}
 
     static Either<DecodeError, Json> read(String text) {
-        try (JsonParser parser = FACTORY.createParser(ObjectReadContext.empty(), text)) {
-            JsonToken first = parser.nextToken();
-            if (first == null) {
+        try (JsonParser parser = PROVIDER.createParser(new StringReader(text))) {
+            // Parsson fails on text without a value, rather than having no next event.
+            if (text.isBlank()) {
                 return Either.left(DecodeError.of("expected JSON, got nothing"));
             }
-            Json json = value(parser, first);
-            return parser.nextToken() == null
+            Json json = value(parser, parser.next(), 1);
+            return atEnd(parser)
                     ? Either.right(json)
                     : Either.left(DecodeError.of("expected one JSON value, got more after it"));
-        } catch (JacksonException e) {
-            return Either.left(DecodeError.of("not JSON: " + e.getOriginalMessage()));
+        } catch (JsonException e) {
+            return Either.left(DecodeError.of("not JSON: " + e.getMessage()));
         }
     }
 
-    private static Json value(JsonParser parser, JsonToken token) {
-        return switch (token) {
-            case START_OBJECT -> object(parser);
-            case START_ARRAY -> array(parser);
+    // Parsson fails on whatever follows the value, rather than having a next event.
+    private static boolean atEnd(JsonParser parser) {
+        try {
+            return !parser.hasNext();
+        } catch (JsonParsingException e) {
+            return false;
+        }
+    }
+
+    private static Json value(JsonParser parser, Event event, int depth) {
+        if (depth > MAX_DEPTH) {
+            throw new JsonParsingException("nested deeper than " + MAX_DEPTH, parser.getLocation());
+        }
+        return switch (event) {
+            case START_OBJECT -> object(parser, depth);
+            case START_ARRAY -> array(parser, depth);
             case VALUE_STRING -> new JString(parser.getString());
-            case VALUE_NUMBER_INT, VALUE_NUMBER_FLOAT -> new JNumber(parser.getDecimalValue());
+            case VALUE_NUMBER -> new JNumber(parser.getBigDecimal());
             case VALUE_TRUE -> new JBool(true);
             case VALUE_FALSE -> new JBool(false);
             case VALUE_NULL -> new JNull();
-            default -> throw new IllegalStateException("A JSON value does not start with " + token);
+            default -> throw new IllegalStateException("A JSON value does not start with " + event);
         };
     }
 
-    private static JObject object(JsonParser parser) {
+    private static JObject object(JsonParser parser, int depth) {
         List<Tuple2<String, Json>> fields = List.empty();
-        for (JsonToken token = parser.nextToken(); token != JsonToken.END_OBJECT; token = parser.nextToken()) {
-            String name = parser.currentName();
-            fields = fields.prepend(Tuple.of(name, value(parser, parser.nextToken())));
+        for (Event event = parser.next(); event != Event.END_OBJECT; event = parser.next()) {
+            String name = parser.getString();
+            fields = fields.prepend(Tuple.of(name, value(parser, parser.next(), depth + 1)));
         }
         return new JObject(LinkedHashMap.ofEntries(fields.reverse()));
     }
 
-    private static JArray array(JsonParser parser) {
+    private static JArray array(JsonParser parser, int depth) {
         List<Json> elements = List.empty();
-        for (JsonToken token = parser.nextToken(); token != JsonToken.END_ARRAY; token = parser.nextToken()) {
-            elements = elements.prepend(value(parser, token));
+        for (Event event = parser.next(); event != Event.END_ARRAY; event = parser.next()) {
+            elements = elements.prepend(value(parser, event, depth + 1));
         }
         return new JArray(elements.reverse());
     }

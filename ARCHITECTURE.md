@@ -18,7 +18,7 @@ The Maven build has three modules under the parent `pom.xml`:
 
 | Module | Holds | Depends on |
 |---|---|---|
-| `jazygit-json` | `json`: JSON as plain values (`Json`), and the decoders that turn it into records (`Decoder`), ADR 42. | vavr, Jackson's streaming parser |
+| `jazygit-json` | `json`: JSON as plain values (`Json`), and the decoders that turn it into records (`Decoder`), ADR 42. | vavr, Parsson's streaming parser |
 | `jazygit-core` | `process`, `git`, `git.model`, `gh`, `gh.model`: running git and gh, and what they report as values. | `jazygit-json`, vavr, zt-exec |
 | `jazygit-app` | Everything else: `JazygitApp`, `cli`, `state`, `feature.*`, `ui`, `keys`, `settings`, `i18n`, and all resources. Builds the fat jar and the native image. | `jazygit-core`, TamboUI, picocli, night-config |
 
@@ -26,7 +26,7 @@ The packages keep their names (`net.vanfleteren.jazygit.git`, ...), whichever mo
 cannot see the application, TamboUI, picocli or night-config, so the compiler stops it from depending on them.
 The rules inside the core (git and gh know nothing of each other, the models are pure) are in
 `CoreArchitectureTest`. The core's test-jar shares `StubGitProvider`, `StubGitHub` and `SampleData` with the
-app's tests. `jazygit-json` knows nothing of jazygit; only its `JsonReader` uses Jackson, and the core and the app
+app's tests. `jazygit-json` knows nothing of jazygit; only its `JsonReader` uses Parsson, and the core and the app
 do not use it at all (`JsonArchitectureTest`, `CoreArchitectureTest`, `ArchitectureTest`).
 
 `mvn verify` at the root builds and tests all three. `./run.sh` runs the fat jar from `jazygit-app/target`, and

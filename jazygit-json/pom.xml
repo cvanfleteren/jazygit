@@ -20,10 +20,11 @@
             <groupId>io.vavr</groupId>
             <artifactId>vavr</artifactId>
         </dependency>
-        <!-- Only its streaming parser, behind Json.parse; nothing binds classes by reflection. -->
+        <!-- Only its streaming parser, behind Json.parse; nothing binds classes by reflection. It brings
+             jakarta.json-api, whose interfaces the parser is used through. -->
         <dependency>
-            <groupId>tools.jackson.core</groupId>
-            <artifactId>jackson-core</artifactId>
+            <groupId>org.eclipse.parsson</groupId>
+            <artifactId>parsson</artifactId>
         </dependency>
     </dependencies>
 </project>
