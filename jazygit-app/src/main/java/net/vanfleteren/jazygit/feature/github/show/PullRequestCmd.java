@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.github.show;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.github.browse.BrowsePullRequestCmd;
+import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
@@ -79,7 +80,7 @@ public sealed interface PullRequestCmd extends Cmd {
      * Asks GitHub to merge pull request {@code number}, from {@code branch}, as {@code method} says, while its branch
      * is at {@code head}: GitHub merges it in the background (ADR 24).
      */
-    record MergePullRequest(BranchName branch, int number, String head, MergeMethod method)
+    record MergePullRequest(BranchName branch, int number, Option<GhCommit> head, MergeMethod method)
             implements PullRequestCmd, ChangingCmd {
 
         @Override

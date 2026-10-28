@@ -74,7 +74,7 @@ public interface GitHub {
     /**
      * Creates a pull request from the remote branch {@code head} into {@code base}, as {@code pullRequest} says.
      */
-    Either<GhFailure, Created> createPullRequest(String head, String base, NewPullRequest pullRequest);
+    Either<GhFailure, Created> createPullRequest(GhBranch head, GhBranch base, NewPullRequest pullRequest);
 
     /**
      * Opens pull request {@code number} in the browser.
@@ -89,7 +89,7 @@ public interface GitHub {
     /**
      * Opens {@code branch}, as it is named on the remote, in the browser.
      */
-    Either<GhFailure, List<ExecutedCommand>> browse(String branch);
+    Either<GhFailure, List<ExecutedCommand>> browse(GhBranch branch);
 
     /**
      * Checks out pull request {@code number} of the repository in the working tree, from a fork too, as gh does:
@@ -105,10 +105,10 @@ public interface GitHub {
 
     /**
      * Has GitHub merge pull request {@code number} in the background as {@code method} says, keeping its branch,
-     * together with the ones below it in its stack: only while its branch is still at {@code head}, unless that is
-     * empty, so what was pushed since it was read is not merged.
+     * together with the ones below it in its stack: only while its branch is still at {@code head}, if given, so
+     * what was pushed since it was read is not merged.
      */
-    Either<GhFailure, Merging> mergePullRequest(int number, String head, MergeMethod method);
+    Either<GhFailure, Merging> mergePullRequest(int number, Option<GhCommit> head, MergeMethod method);
 
     /**
      * How the merge {@code id} of pull request {@code number} is doing.

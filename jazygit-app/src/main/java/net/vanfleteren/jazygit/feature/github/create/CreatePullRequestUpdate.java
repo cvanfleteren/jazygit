@@ -74,7 +74,7 @@ public final class CreatePullRequestUpdate {
                                 .map(known -> new CreatePullRequest(
                                         popup.branch(),
                                         popup.head(),
-                                        new Base(popup.base(), baseRef(model, popup.base())).remoteName(),
+                                        new Base(popup.base(), baseRef(model, popup.base())).remote(),
                                         stripped(popup.pullRequest()))));
             // The branches may have been read again while the user was asked: with nothing to push any more, it was
             // pushed meanwhile or has diverged since, so it is asked about again as it is now.
@@ -196,9 +196,8 @@ public final class CreatePullRequestUpdate {
      */
     private static Next readTitle(Model model, Branch branch, List<BranchName> bases) {
         return bases.headOption()
-                .map(first -> Next.of(
-                        model,
-                        new ReadTitle(branch.name(), branch.pushTarget().branch(), bases, baseRef(model, first))))
+                .map(first ->
+                        Next.of(model, new ReadTitle(branch.name(), branch.pushTarget(), bases, baseRef(model, first))))
                 .getOrElse(() -> Next.of(model.fail(new AppError.NoBase(branch.name()))));
     }
 

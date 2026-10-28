@@ -14,6 +14,8 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.BranchCheckRuns;
 import net.vanfleteren.jazygit.gh.model.BranchChecks;
 import net.vanfleteren.jazygit.gh.model.CheckRun;
+import net.vanfleteren.jazygit.gh.model.GhBranch;
+import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.GhLogin;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.MergeStatus;
@@ -178,7 +180,7 @@ class CliGitHubTest {
 
         PullRequestDetails details = CliGitHub.parseDetails(raw).get();
 
-        assertEquals("abc123", details.head());
+        assertEquals(Option.of(new GhCommit("abc123")), details.head());
         assertEquals(Option.of(STACK), details.stack());
         assertEquals(Option.of(STACK), details.listed().get().stack());
         assertTrue(CliGitHub.parseDetails(raw + "stack\t96\t2\t2\n").isLeft());
@@ -212,11 +214,11 @@ class CliGitHubTest {
                         "merge_method=squash",
                         "-f",
                         "sha=abc123"),
-                CliGitHub.mergeCommand(95, "abc123", MergeMethod.SQUASH)
+                CliGitHub.mergeCommand(95, Option.of(new GhCommit("abc123")), MergeMethod.SQUASH)
                         .executed()
                         .commandLine()
                         .dropRight(2));
-        assertFalse(CliGitHub.mergeCommand(95, "", MergeMethod.REBASE)
+        assertFalse(CliGitHub.mergeCommand(95, Option.none(), MergeMethod.REBASE)
                 .executed()
                 .commandLine()
                 .exists(arg -> arg.startsWith("sha=")));
@@ -387,7 +389,7 @@ class CliGitHubTest {
     void browsingOpensTheBranchByItsNameOnTheRemote() {
         assertEquals(
                 List.of("gh", "browse", "--branch", "feature/login"),
-                CliGitHub.browseCommand("feature/login").commandLine("gh"));
+                CliGitHub.browseCommand(new GhBranch("feature/login")).commandLine("gh"));
     }
 
     @Test
@@ -405,7 +407,10 @@ class CliGitHubTest {
                         "Add login",
                         "--body",
                         ""),
-                CliGitHub.createCommand("feature", "main", new NewPullRequest("Add login", "", false))
+                CliGitHub.createCommand(
+                                new GhBranch("feature"),
+                                new GhBranch("main"),
+                                new NewPullRequest("Add login", "", false))
                         .executed()
                         .commandLine());
         assertEquals(
@@ -422,7 +427,10 @@ class CliGitHubTest {
                         "--body",
                         "Why",
                         "--draft"),
-                CliGitHub.createCommand("feature", "main", new NewPullRequest("Add login", "Why", true))
+                CliGitHub.createCommand(
+                                new GhBranch("feature"),
+                                new GhBranch("main"),
+                                new NewPullRequest("Add login", "Why", true))
                         .executed()
                         .commandLine());
     }
@@ -461,7 +469,7 @@ class CliGitHubTest {
 
     @Test
     void ghRunsFromItsExecutableButIsLoggedAsGh() {
-        GhCommand command = CliGitHub.browseCommand("main");
+        GhCommand command = CliGitHub.browseCommand(new GhBranch("main"));
 
         assertEquals("/opt/gh/bin/gh", command.commandLine("/opt/gh/bin/gh").head());
         assertEquals(

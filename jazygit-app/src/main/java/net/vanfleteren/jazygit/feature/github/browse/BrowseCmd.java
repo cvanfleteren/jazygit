@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.github.browse;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.github.OnGitHub;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Msg;
@@ -26,6 +27,6 @@ public record BrowseCmd(RemoteBranch branch) implements OperationCmd {
 
     @Override
     public Msg run(Env env) {
-        return env.gitHub().browse(branch.branch().value()).fold(this::failedWith, this::succeeded);
+        return env.gitHub().browse(OnGitHub.branch(branch)).fold(this::failedWith, this::succeeded);
     }
 }

@@ -37,6 +37,7 @@ import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.GhFailure;
 import net.vanfleteren.jazygit.gh.GitHub;
 import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.MergeStatus;
 import net.vanfleteren.jazygit.gh.model.NewPullRequest;
@@ -50,6 +51,7 @@ import net.vanfleteren.jazygit.gh.timing.CheckTimings;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.*;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Msg;
@@ -147,7 +149,10 @@ class PullRequestUpdateTest {
 
         assertEquals(
                 List.of(new ReadTitle(
-                        FEATURE, FEATURE, List.of(MAIN.name(), RELEASE.name(), AHEAD.name()), remote("main"))),
+                        FEATURE,
+                        new RemoteBranch("origin", FEATURE),
+                        List.of(MAIN.name(), RELEASE.name(), AHEAD.name()),
+                        remote("main"))),
                 reading.cmds());
         assertEquals(Option.none(), reading.model().popup());
     }
@@ -158,7 +163,10 @@ class PullRequestUpdateTest {
 
         assertEquals(
                 List.of(new ReadTitle(
-                        FEATURE, FEATURE, List.of(AHEAD.name(), MAIN.name(), RELEASE.name()), remote("ahead"))),
+                        FEATURE,
+                        new RemoteBranch("origin", FEATURE),
+                        List.of(AHEAD.name(), MAIN.name(), RELEASE.name()),
+                        remote("ahead"))),
                 reading.cmds());
     }
 
@@ -168,7 +176,10 @@ class PullRequestUpdateTest {
 
         assertEquals(
                 List.of(new ReadTitle(
-                        FEATURE, FEATURE, List.of(MAIN.name(), RELEASE.name(), AHEAD.name()), remote("main"))),
+                        FEATURE,
+                        new RemoteBranch("origin", FEATURE),
+                        List.of(MAIN.name(), RELEASE.name(), AHEAD.name()),
+                        remote("main"))),
                 reading.cmds());
     }
 
@@ -178,7 +189,10 @@ class PullRequestUpdateTest {
 
         Next reading = Update.update(one, new PullRequestMsg.Requested(FEATURE));
 
-        assertEquals(List.of(new ReadTitle(FEATURE, FEATURE, List.of(MAIN.name()), remote("main"))), reading.cmds());
+        assertEquals(
+                List.of(new ReadTitle(
+                        FEATURE, new RemoteBranch("origin", FEATURE), List.of(MAIN.name()), remote("main"))),
+                reading.cmds());
     }
 
     @Test
@@ -337,7 +351,10 @@ class PullRequestUpdateTest {
      */
     private static CreatePullRequestMsg.TitleRead titleRead(Option<String> subject) {
         return new CreatePullRequestMsg.TitleRead(
-                FEATURE, FEATURE, List.of(MAIN.name(), RELEASE.name(), AHEAD.name()), subject);
+                FEATURE,
+                new RemoteBranch("origin", FEATURE),
+                List.of(MAIN.name(), RELEASE.name(), AHEAD.name()),
+                subject);
     }
 
     @Test
@@ -347,7 +364,7 @@ class PullRequestUpdateTest {
         assertEquals(
                 Option.of(new NewPullRequestPopup(
                         FEATURE,
-                        FEATURE,
+                        new RemoteBranch("origin", FEATURE),
                         List.of(MAIN.name(), RELEASE.name(), AHEAD.name()),
                         MAIN.name(),
                         "Add login",
@@ -520,7 +537,10 @@ class PullRequestUpdateTest {
         Model asked = Update.update(
                         loaded,
                         new CreatePullRequestMsg.TitleRead(
-                                FEATURE, FEATURE, List.of(MAIN.name(), DEV.name()), Option.of("Add login")))
+                                FEATURE,
+                                new RemoteBranch("origin", FEATURE),
+                                List.of(MAIN.name(), DEV.name()),
+                                Option.of("Add login")))
                 .model();
         Model picked = Update.update(asked, new BaseMoved(ListCursor.START.at(1), Option.of(DEV.name())))
                 .model();
@@ -529,7 +549,10 @@ class PullRequestUpdateTest {
 
         assertEquals(
                 List.of(new CreatePullRequest(
-                        FEATURE, FEATURE, new BranchName("development"), new NewPullRequest("Add login", "", false))),
+                        FEATURE,
+                        new RemoteBranch("origin", FEATURE),
+                        new RemoteBranch("origin", new BranchName("development")),
+                        new NewPullRequest("Add login", "", false))),
                 created.cmds());
     }
 
@@ -597,7 +620,10 @@ class PullRequestUpdateTest {
 
         assertEquals(
                 List.of(new CreatePullRequest(
-                        FEATURE, FEATURE, MAIN.name(), new NewPullRequest("Add login", "Why", true))),
+                        FEATURE,
+                        new RemoteBranch("origin", FEATURE),
+                        new RemoteBranch("origin", MAIN.name()),
+                        new NewPullRequest("Add login", "Why", true))),
                 created.cmds());
         assertEquals(Option.none(), created.model().popup());
         assertEquals(
@@ -658,6 +684,37 @@ class PullRequestUpdateTest {
      */
     private static Model creating() {
         return Update.update(model(), titleRead(Option.of("Add login"))).model();
+    }
+
+    @Test
+    void aPullRequestIsCreatedFromTheNameTheBranchHasOnItsRemoteNotItsLocalOne() {
+        // #138: local login is pushed to origin/feature/login; gh has to be given that name.
+        RemoteBranch pushedAs = new RemoteBranch("origin", new BranchName("feature/login"));
+        Branch login = Fixtures.branch(
+                new BranchName("login"),
+                false,
+                new Sha("6"),
+                Instant.EPOCH,
+                true,
+                false,
+                Option.of(new Upstream(new BranchRef.Remote(pushedAs), 0, 0)));
+        Model model = Update.update(
+                        localBranchesRead(loaded(), List.of(login, MAIN)).model(),
+                        new PullRequestsMsg.Loaded(List.empty()))
+                .model();
+
+        Next reading = Update.update(model, new CreatePullRequestMsg.ParentRead(login.name(), Option.none()));
+        ReadTitle readTitle = (ReadTitle) reading.cmds().single();
+        assertEquals(pushedAs, readTitle.head());
+        Model asked = Update.update(reading.model(), readTitle.run(env())).model();
+        Next confirmed = TestModels.stepped(asked, new CreatePullRequestMsg.Confirmed());
+        CreatePullRequest create = (CreatePullRequest) confirmed.cmds().single();
+
+        assertEquals(pushedAs, create.head());
+        CreatePullRequestMsg.Created created = (CreatePullRequestMsg.Created) create.run(env());
+        assertTrue(
+                created.commands().exists(command -> command.line().contains("--head feature/login --base main")),
+                created.commands().toString());
     }
 
     @Test
@@ -864,7 +921,10 @@ class PullRequestUpdateTest {
         Model titleRead = Update.update(
                         parentRead,
                         new CreatePullRequestMsg.TitleRead(
-                                UNPUSHED.name(), UNPUSHED.name(), List.of(MAIN.name()), Option.of("Add it")))
+                                UNPUSHED.name(),
+                                new RemoteBranch("origin", UNPUSHED.name()),
+                                List.of(MAIN.name()),
+                                Option.of("Add it")))
                 .model();
 
         assertEquals(other.popup(), titleRead.popup());
@@ -1481,7 +1541,8 @@ class PullRequestUpdateTest {
         Next closing = TestModels.stepped(read, new PullRequestMsg.CloseChosen());
 
         assertEquals(
-                List.of(new MergePullRequest(new BranchName("feature"), 42, "", MergeMethod.SQUASH)), merging.cmds());
+                List.of(new MergePullRequest(new BranchName("feature"), 42, Option.none(), MergeMethod.SQUASH)),
+                merging.cmds());
         assertEquals(Option.none(), merging.model().popup());
         assertEquals(
                 Option.of(PullRequestCmd.MERGE_PR),
@@ -1560,7 +1621,8 @@ class PullRequestUpdateTest {
     private static StubGitHub mergingAtOnce() {
         return new StubGitHub() {
             @Override
-            public Either<GhFailure, GitHub.Merging> mergePullRequest(int number, String head, MergeMethod method) {
+            public Either<GhFailure, GitHub.Merging> mergePullRequest(
+                    int number, Option<GhCommit> head, MergeMethod method) {
                 return Either.right(new GitHub.Merging(new MergeStatus.Merged(), List.empty()));
             }
         };
@@ -1570,14 +1632,14 @@ class PullRequestUpdateTest {
      * {@code model} once GitHub was asked to merge pull request 42 of feature, and said it is doing so.
      */
     private static Model asked(Model model) {
-        MergePullRequest cmd = new MergePullRequest(FEATURE, 42, "abc123", MergeMethod.MERGE);
+        MergePullRequest cmd = new MergePullRequest(FEATURE, 42, Option.of(new GhCommit("abc123")), MergeMethod.MERGE);
         return TestModels.done(TestModels.running(model, cmd), cmd, cmd.run(env()))
                 .model();
     }
 
     @Test
     void aMergedPullRequestIsReadAgainOnceAnEarlierReadIsDone() {
-        MergePullRequest cmd = new MergePullRequest(FEATURE, 42, "", MergeMethod.MERGE);
+        MergePullRequest cmd = new MergePullRequest(FEATURE, 42, Option.none(), MergeMethod.MERGE);
         // The running read started before the merge, and would list the pull request as still open.
         Model merging = TestModels.running(withPr(), cmd, new LoadPullRequests());
 
@@ -1592,7 +1654,7 @@ class PullRequestUpdateTest {
 
     @Test
     void aPullRequestGitHubMergedAtOnceShowsMergedUntilThePullRequestsAreReadAgain() {
-        MergePullRequest cmd = new MergePullRequest(FEATURE, 42, "", MergeMethod.MERGE);
+        MergePullRequest cmd = new MergePullRequest(FEATURE, 42, Option.none(), MergeMethod.MERGE);
         Model merging = TestModels.running(withPr(), cmd);
 
         Next done = TestModels.done(merging, cmd, cmd.run(new Env(new StubGitProvider() {}, mergingAtOnce())));
@@ -1764,7 +1826,7 @@ class PullRequestUpdateTest {
      * {@code status}.
      */
     private static Model askedFor(Model model, String branch, int number, MergeStatus status) {
-        MergePullRequest cmd = new MergePullRequest(new BranchName(branch), number, "", MergeMethod.MERGE);
+        MergePullRequest cmd = new MergePullRequest(new BranchName(branch), number, Option.none(), MergeMethod.MERGE);
         return Update.update(model, new PullRequestMsg.MergeAsked(cmd, status, List.empty()))
                 .model();
     }
@@ -1851,7 +1913,8 @@ class PullRequestUpdateTest {
         // What gh says when e.g. a required check fails or a review is missing.
         StubGitHub refusing = new StubGitHub() {
             @Override
-            public Either<GhFailure, GitHub.Merging> mergePullRequest(int number, String head, MergeMethod method) {
+            public Either<GhFailure, GitHub.Merging> mergePullRequest(
+                    int number, Option<GhCommit> head, MergeMethod method) {
                 return Either.left(new GhFailure(
                         new GhError.CommandFailed(
                                 Option.of(
@@ -1944,8 +2007,11 @@ class PullRequestUpdateTest {
 
     @Test
     void aCreatedPullRequestIsLoggedAndThePullRequestsAreReadAgain() {
-        CreatePullRequest cmd =
-                new CreatePullRequest(FEATURE, FEATURE, MAIN.name(), new NewPullRequest("Login", "", true));
+        CreatePullRequest cmd = new CreatePullRequest(
+                FEATURE,
+                new RemoteBranch("origin", FEATURE),
+                new RemoteBranch("origin", MAIN.name()),
+                new NewPullRequest("Login", "", true));
         Model creating = confirmed(cmd.pullRequest()).model();
 
         Next done = TestModels.done(creating, cmd, cmd.run(new Env(new StubGitProvider() {}, StubGitHub.empty())));
@@ -1960,8 +2026,11 @@ class PullRequestUpdateTest {
 
     @Test
     void aCreatedPullRequestShowsAtOnceEvenIfGitHubDoesNotListItYet() {
-        CreatePullRequest cmd =
-                new CreatePullRequest(FEATURE, FEATURE, MAIN.name(), new NewPullRequest("Login", "", false));
+        CreatePullRequest cmd = new CreatePullRequest(
+                FEATURE,
+                new RemoteBranch("origin", FEATURE),
+                new RemoteBranch("origin", MAIN.name()),
+                new NewPullRequest("Login", "", false));
         PullRequest created = new PullRequest(43, "feature", false, Checks.NONE, Review.NONE);
         Model creating = confirmed(cmd.pullRequest()).model();
 
