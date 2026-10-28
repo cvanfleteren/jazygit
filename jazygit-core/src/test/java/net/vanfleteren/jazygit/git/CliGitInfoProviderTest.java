@@ -1674,7 +1674,7 @@ class CliGitInfoProviderTest {
         assertEquals(List.of(0, 0), counts("main"));
 
         assertEquals(
-                List.of("git push mirror --delete shared"),
+                List.of("git push mirror --delete refs/heads/shared"),
                 provider.deleteBranch(new BranchName("main"), main.pushTarget(), DeleteScope.REMOTE)
                         .get()
                         .map(ExecutedCommand::line));
@@ -1682,6 +1682,20 @@ class CliGitInfoProviderTest {
         assertEquals(
                 Option.none(),
                 provider.allBranches().map(AllBranches::local).get().head().upstream());
+    }
+
+    @Test
+    void deletingABranchOnItsRemoteLeavesATagOfTheSameNameThere() throws Exception {
+        java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
+        git("init", "-q", "--bare", "-b", "main", bare.toString());
+        git("remote", "add", "origin", bare.toString());
+        git("push", "-q", "origin", "HEAD:refs/heads/feature", "HEAD:refs/tags/feature");
+
+        provider.deleteRemoteBranch(new RemoteBranch("origin", new BranchName("feature")))
+                .get();
+
+        assertFalse(gitSucceedsIn(repo, "ls-remote", "--exit-code", "origin", "refs/heads/feature"));
+        assertTrue(gitSucceedsIn(repo, "ls-remote", "--exit-code", "origin", "refs/tags/feature"));
     }
 
     @Test

@@ -131,12 +131,15 @@ final class CliBranch {
     }
 
     /**
-     * Runs {@code git push <remote> --delete <branch>} in {@code worktree}.
+     * Runs {@code git push <remote> --delete refs/heads/<branch>} in {@code worktree}: the branch is named in full, as
+     * it is on the remote, so a tag of the same name there neither makes git refuse nor is deleted instead (ADR 40).
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteRemote(
             Path worktree, RemoteBranch remote, Map<String, String> credentials) {
         return CliRemote.run(
-                worktree, git("push", remote.remote(), "--delete", GitArgs.name(remote.branch())), credentials);
+                worktree,
+                git("push", remote.remote(), "--delete", GitArgs.revision(new BranchRef.Local(remote.branch()))),
+                credentials);
     }
 
     static Either<UnexpectedOutput, AllBranches> parseAll(String raw) {
