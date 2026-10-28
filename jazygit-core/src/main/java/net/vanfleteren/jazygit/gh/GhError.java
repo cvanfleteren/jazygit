@@ -46,6 +46,9 @@ public sealed interface GhError {
 
     /**
      * gh printed something that could not be made sense of.
+     *
+     * @param output why: where its JSON did not decode and what was wrong there, like
+     *     {@code hosts.github.com[0].state: missing} (ADR 42), or, for what is not read as JSON yet, what gh printed
      */
     record UnexpectedOutput(String output) implements GhError {}
 }

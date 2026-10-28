@@ -33,9 +33,6 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
  */
 public final class CliGitHub implements GitHub {
 
-    // The most lines of a diff of a pull request that are shown, as for the diffs of git.
-    static final int MAX_DIFF_LINES = 5000;
-
     // The state of a check, in jq: a check run that is not completed yet is PENDING; a commit status gives its state.
     private static final String CHECK_STATE = """
             (if .__typename == "CheckRun" \
@@ -168,8 +165,6 @@ public final class CliGitHub implements GitHub {
     private static final String LATEST_LINE = "latest\t";
     private static final int LIST_LINE_FIELDS = 4;
     private static final int SUMMARY_LINE_FIELDS = 13 + STACK_FIELD_COUNT;
-    // The base branch of a pull request on the first line, its body after it.
-    private static final String PREVIEW_JQ = ".baseRefName + \"\\n\" + .body";
 
     /*
      * Everything about one pull request the dialog shows, its latest commit for its checks. gh fills in the
@@ -253,20 +248,6 @@ public final class CliGitHub implements GitHub {
             ((.pullRequests.nodes[]?.commits.nodes[]?.commit, .defaultBranchRef.target.history.nodes[]?) \
             | .statusCheckRollup.contexts.nodes[]? | select(.__typename == "CheckRun") | ["check"] + check | @tsv)""";
     /*
-     * How many commits base branch $base has that commit $head does not: GitHub's mergeable only says whether a pull
-     * request merges without conflicts, not that its base moved on. gh fills in the repository of the working tree
-     * for {owner} and {repo}.
-     */
-    private static final String BEHIND_QUERY = """
-            query($owner: String!, $name: String!, $base: String!, $head: String!) { \
-            repository(owner: $owner, name: $name) { ref(qualifiedName: $base) { compare(headRef: $head) { behindBy } } } }""";
-    // The count of BEHIND_QUERY, empty when the base branch is gone.
-    private static final String BEHIND_JQ = ".data.repository.ref.compare.behindBy // \"\" | tostring";
-
-    // How a merge is doing, in jq: its status, its id while it is pending, and why when it failed.
-    private static final String MERGE_JQ = "[.status, (.details.uuid // \"\"), (.details.message // \"\")] | @tsv";
-
-    /*
      * Tab separated lines, one per part of the conversation: what it is ("description", "comment", or the state of
      * a review), its id, its author, when it was written, whether it was edited, whether it is hidden and why, and
      * its text. The description first, then the rest oldest first. A review that only commented and has no text is
@@ -307,11 +288,6 @@ public final class CliGitHub implements GitHub {
 
     private static final Pattern CREATED_URL = Pattern.compile("/pull/(\\d{1,9})$");
 
-    // The accounts gh is logged in to, by host, login, whether it is the active one and whether its token works.
-    private static final String LOGINS_JQ = """
-            .hosts | to_entries[] | .key as $host | .value[] \
-            | [$host, .login, (.active | tostring), .state] | @tsv""";
-
     private final Path worktree;
     private final GhProcess process;
     // As gh's own active accounts: with a token in the environment, gh only knows of that one.
@@ -337,24 +313,6 @@ public final class CliGitHub implements GitHub {
                 .filter(line -> line.startsWith("gh version "))
                 .map(line -> line.substring("gh version ".length()).split(" ")[0])
                 .toEither(() -> new UnexpectedOutput(raw));
-    }
-
-    /**
-     * Parses the lines {@link #LOGINS_JQ} prints.
-     */
-    static Either<UnexpectedOutput, List<GhLogin>> parseLogins(String raw) {
-        return List.of(raw.split("\n"))
-                .filter(line -> !line.isBlank())
-                .map(line -> List.of(line.split("\t", -1)).map(CliGitHub::unescape))
-                .map(fields -> Option.when(fields.size() == 4, fields)
-                        .map(f -> new GhLogin(
-                                f.get(0),
-                                f.get(1),
-                                f.get(2).equals("true"),
-                                f.get(3).equals("success")))
-                        .toEither(() -> new UnexpectedOutput(fields.mkString("\t"))))
-                .transform(Either::sequenceRight)
-                .map(List::ofAll);
     }
 
     /**
@@ -387,54 +345,6 @@ public final class CliGitHub implements GitHub {
 
     static GhCommand browseCommand(GhBranch branch) {
         return gh("browse", "--branch", branch.name());
-    }
-
-    /**
-     * The command that has GitHub merge pull request {@code number} in the background, only while its branch is at
-     * {@code head}, if given. gh fills in the repository of the working tree for {owner} and {repo}.
-     */
-    static GhCommand mergeCommand(int number, Option<GhCommit> head, MergeMethod method) {
-        return gh(List.of(
-                        "api",
-                        "--method",
-                        "PUT",
-                        "repos/{owner}/{repo}/pulls/" + number + "/merge-async",
-                        "-f",
-                        "merge_method=" + mergeMethod(method))
-                .appendAll(head.toList().flatMap(commit -> List.of("-f", "sha=" + commit.oid())))
-                .appendAll(List.of("--jq", MERGE_JQ))
-                .toJavaArray(String[]::new));
-    }
-
-    /**
-     * The command that asks GitHub how the merge {@code id} of pull request {@code number} is doing.
-     */
-    static GhCommand mergeStatusCommand(int number, String id) {
-        return gh("api", "repos/{owner}/{repo}/pulls/" + number + "/merge-async/" + id, "--jq", MERGE_JQ);
-    }
-
-    private static String mergeMethod(MergeMethod method) {
-        return switch (method) {
-            case MERGE -> "merge";
-            case SQUASH -> "squash";
-            case REBASE -> "rebase";
-        };
-    }
-
-    /**
-     * Parses the line {@link #MERGE_JQ} prints.
-     */
-    static Either<UnexpectedOutput, MergeStatus> parseMergeStatus(String raw) {
-        List<String> fields =
-                List.of(raw.replaceFirst("\n\\z", "").split("\t", -1)).map(CliGitHub::unescape);
-        Option<MergeStatus> status = Option.when(fields.size() == 3, fields).flatMap(f -> switch (f.get(0)) {
-            case "pending" -> Option.when(!f.get(1).isEmpty(), () -> new MergeStatus.Pending(f.get(1)));
-            case "merged" -> Option.of(new MergeStatus.Merged());
-            case "enqueued" -> Option.of(new MergeStatus.Enqueued());
-            case "failed" -> Option.of(new MergeStatus.Failed(f.get(2)));
-            default -> Option.none();
-        });
-        return status.toEither(() -> new UnexpectedOutput(raw));
     }
 
     /**
@@ -709,16 +619,6 @@ public final class CliGitHub implements GitHub {
                 .toEither(() -> new UnexpectedOutput(raw));
     }
 
-    /**
-     * Parses what {@link #BEHIND_JQ} prints: none when the base branch is gone.
-     */
-    static Either<UnexpectedOutput, Option<Integer>> parseBehind(String raw) {
-        String count = raw.strip();
-        return count.isEmpty()
-                ? Either.right(Option.none())
-                : Try.of(() -> Option.of(Integer.parseInt(count))).toEither(() -> new UnexpectedOutput(raw));
-    }
-
     private static boolean known(List<String> fields) {
         return switch (fields.head()) {
             case "pr" -> fields.size() == DETAIL_FIELD_COUNT;
@@ -836,7 +736,7 @@ public final class CliGitHub implements GitHub {
     @Override
     public Either<GhError, List<GhLogin>> logins() {
         // Exits with 0 also when an account's token does not work anymore, which the state says.
-        return unconfigured.read(gh("auth", "status", "--json", "hosts", "--jq", LOGINS_JQ), CliGitHub::parseLogins);
+        return unconfigured.readJson(LoginsQuery.COMMAND, LoginsQuery.DECODER);
     }
 
     @Override
@@ -925,23 +825,9 @@ public final class CliGitHub implements GitHub {
 
     @Override
     public Either<GhError, PullRequestPreview> pullRequestPreview(String url) {
-        return process.read(gh("pr", "view", url, "--json", "baseRefName,body", "--jq", PREVIEW_JQ), Either::right)
-                .flatMap(described -> process.read(gh("pr", "diff", url, "--color", "never"), Either::right)
-                        .map(diff -> preview(described, diff)));
-    }
-
-    /**
-     * The preview of a pull request, from what {@link #PREVIEW_JQ} prints and its diff, cut off after
-     * {@link #MAX_DIFF_LINES} lines.
-     */
-    static PullRequestPreview preview(String described, String diff) {
-        int newline = described.indexOf('\n');
-        String base = newline < 0 ? described.strip() : described.substring(0, newline);
-        String body = newline < 0 ? "" : described.substring(newline + 1).stripTrailing();
-        List<String> lines = List.of(diff.split("\n", -1));
-        return lines.size() <= MAX_DIFF_LINES
-                ? new PullRequestPreview(base, body, diff, false)
-                : new PullRequestPreview(base, body, lines.take(MAX_DIFF_LINES).mkString("", "\n", "\n"), true);
+        return process.readJson(PreviewQuery.command(url), PreviewQuery.DECODER)
+                .flatMap(described -> process.read(PreviewQuery.diffCommand(url), Either::right)
+                        .map(diff -> PreviewQuery.preview(described._1(), described._2(), diff)));
     }
 
     @Override
@@ -991,23 +877,7 @@ public final class CliGitHub implements GitHub {
      * also when the read fails, as the rest of the details read fine and come back without it.
      */
     private Option<Integer> behindBase(String base, GhCommit head) {
-        return process.read(
-                        gh(
-                                "api",
-                                "graphql",
-                                "-F",
-                                "owner={owner}",
-                                "-F",
-                                "name={repo}",
-                                "-f",
-                                "base=refs/heads/" + base,
-                                "-f",
-                                "head=" + head.oid(),
-                                "-f",
-                                "query=" + BEHIND_QUERY,
-                                "--jq",
-                                BEHIND_JQ),
-                        CliGitHub::parseBehind)
+        return process.readJson(BehindQuery.command(base, head), BehindQuery.DECODER)
                 .toOption()
                 .flatMap(behind -> behind);
     }
@@ -1090,15 +960,15 @@ public final class CliGitHub implements GitHub {
 
     @Override
     public Either<GhFailure, Merging> mergePullRequest(int number, Option<GhCommit> head, MergeMethod method) {
-        return process.run(mergeCommand(number, head, method))
-                .flatMap(output -> parseMergeStatus(output.stdout())
+        return process.run(MergeQuery.mergeCommand(number, head, method))
+                .flatMap(output -> GhProcess.decoded(output.stdout(), MergeQuery.DECODER)
                         .map(status -> new Merging(status, output.log()))
                         .mapLeft(unexpected -> new GhFailure(unexpected, output.log())));
     }
 
     @Override
     public Either<GhError, MergeStatus> mergeStatus(int number, String id) {
-        return process.read(mergeStatusCommand(number, id), CliGitHub::parseMergeStatus);
+        return process.readJson(MergeQuery.statusCommand(number, id), MergeQuery.DECODER);
     }
 
     @Override

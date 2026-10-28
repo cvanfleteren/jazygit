@@ -16,9 +16,6 @@ import net.vanfleteren.jazygit.gh.model.BranchChecks;
 import net.vanfleteren.jazygit.gh.model.CheckRun;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
-import net.vanfleteren.jazygit.gh.model.GhLogin;
-import net.vanfleteren.jazygit.gh.model.MergeMethod;
-import net.vanfleteren.jazygit.gh.model.MergeStatus;
 import net.vanfleteren.jazygit.gh.model.NewPullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
@@ -27,7 +24,6 @@ import net.vanfleteren.jazygit.gh.model.PullRequestComment;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.*;
 import net.vanfleteren.jazygit.gh.model.PullRequestList;
-import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.gh.model.RecentChecks;
@@ -40,6 +36,11 @@ class CliGitHubTest {
 
     // Not line ends to a tab-separated reader, only to \R.
     private static final String LINE_SEPARATOR = Character.toString(0x2028);
+    // What a gh asked how far behind its base a pull request is prints.
+    private static final String BEHIND_BY_2 =
+            "echo '{\"data\": {\"repository\": {\"ref\": {\"compare\": {\"behindBy\": 2}}}}}'";
+    private static final String BEHIND_BY_MANY =
+            "echo '{\"data\": {\"repository\": {\"ref\": {\"compare\": {\"behindBy\": \"many\"}}}}}'";
     private static final String PARAGRAPH_SEPARATOR = Character.toString(0x2029);
 
     // Pull request 95 on top of 94, which is merged already.
@@ -188,10 +189,7 @@ class CliGitHubTest {
     }
 
     @Test
-    void parsesHowFarBehindItsBaseAPullRequestIs() {
-        assertEquals(Either.right(Option.of(3)), CliGitHub.parseBehind("3\n"));
-        assertEquals(Either.right(Option.none()), CliGitHub.parseBehind("\n"));
-        assertTrue(CliGitHub.parseBehind("many\n").isLeft());
+    void theDetailsAsReadAreNotKnownToBeBehindTheirBase() {
         assertEquals(
                 Option.none(),
                 CliGitHub.parseDetails(
@@ -199,48 +197,6 @@ class CliGitHubTest {
                                         + "\tMERGEABLE\t\t0\tabc123\t1\nthreads\t0\t0\t0\t0\n")
                         .get()
                         .behindBase());
-    }
-
-    @Test
-    void aMergeIsAskedOfTheRestApiWithItsMethodAndOnlyAtTheHeadThatWasRead() {
-        assertEquals(
-                List.of(
-                        "gh",
-                        "api",
-                        "--method",
-                        "PUT",
-                        "repos/{owner}/{repo}/pulls/95/merge-async",
-                        "-f",
-                        "merge_method=squash",
-                        "-f",
-                        "sha=abc123"),
-                CliGitHub.mergeCommand(95, Option.of(new GhCommit("abc123")), MergeMethod.SQUASH)
-                        .executed()
-                        .commandLine()
-                        .dropRight(2));
-        assertFalse(CliGitHub.mergeCommand(95, Option.none(), MergeMethod.REBASE)
-                .executed()
-                .commandLine()
-                .exists(arg -> arg.startsWith("sha=")));
-        assertEquals(
-                List.of("gh", "api", "repos/{owner}/{repo}/pulls/95/merge-async/u-1"),
-                CliGitHub.mergeStatusCommand(95, "u-1").executed().commandLine().dropRight(2));
-    }
-
-    @Test
-    void parsesHowAMergeIsDoing() {
-        assertEquals(Either.right(new MergeStatus.Pending("u-1")), CliGitHub.parseMergeStatus("pending\tu-1\t\n"));
-        assertEquals(Either.right(new MergeStatus.Merged()), CliGitHub.parseMergeStatus("merged\t\tMerged\n"));
-        assertEquals(Either.right(new MergeStatus.Enqueued()), CliGitHub.parseMergeStatus("enqueued\t\t\n"));
-        assertEquals(
-                Either.right(new MergeStatus.Failed("Required status check \"build\" is failing")),
-                CliGitHub.parseMergeStatus("failed\t\tRequired status check \"build\" is failing\n"));
-        assertEquals(
-                Either.right(new MergeStatus.Failed("bad" + LINE_SEPARATOR)),
-                CliGitHub.parseMergeStatus("failed\t\tbad" + LINE_SEPARATOR + "\n"));
-        assertTrue(CliGitHub.parseMergeStatus("pending\t\t\n").isLeft());
-        assertTrue(CliGitHub.parseMergeStatus("done\t\t\n").isLeft());
-        assertTrue(CliGitHub.parseMergeStatus("").isLeft());
     }
 
     @Test
@@ -292,24 +248,6 @@ class CliGitHubTest {
                                         "https://github.com/owner/repo/pull/7")),
                                 1)),
                 lists.get("repository").get());
-    }
-
-    @Test
-    void thePreviewHasTheBaseOnTheFirstLineAndTheBodyAfterIt() {
-        assertEquals(
-                new PullRequestPreview("main", "Fixes the login.\n\nSee #3.", "+a\n", false),
-                CliGitHub.preview("main\nFixes the login.\n\nSee #3.\n", "+a\n"));
-        assertEquals(new PullRequestPreview("main", "", "", false), CliGitHub.preview("main\n", ""));
-    }
-
-    @Test
-    void aLongDiffIsCutOff() {
-        String diff = "+line\n".repeat(CliGitHub.MAX_DIFF_LINES + 10);
-
-        PullRequestPreview preview = CliGitHub.preview("main\n", diff);
-
-        assertTrue(preview.truncated());
-        assertEquals(CliGitHub.MAX_DIFF_LINES, preview.diff().lines().count());
     }
 
     @Test
@@ -451,20 +389,6 @@ class CliGitHubTest {
                 https://github.com/cli/cli/releases/tag/v2.102.0
                 """));
         assertTrue(CliGitHub.parseVersion("Usage: something else").isLeft());
-    }
-
-    @Test
-    void theLoginsOnEachHost() {
-        assertEquals(
-                Either.right(List.of(
-                        new GhLogin("github.com", "alice", true, true),
-                        new GhLogin("github.com", "alice-work", false, false),
-                        new GhLogin("ghe.corp", "alice", true, true))),
-                CliGitHub.parseLogins("""
-                        github.com\talice\ttrue\tsuccess
-                        github.com\talice-work\tfalse\terror
-                        ghe.corp\talice\ttrue\tsuccess
-                        """));
     }
 
     @Test
@@ -925,7 +849,7 @@ class CliGitHubTest {
         assumeTrue(Files.isExecutable(Path.of("/bin/sh")), "no POSIX shell");
 
         PullRequestDetails details =
-                detailsFrom(dir, "OPEN", "abc123", "echo 2").get();
+                detailsFrom(dir, "OPEN", "abc123", BEHIND_BY_2).get();
 
         assertEquals(Option.of(2), details.behindBase());
         String asked = Files.readString(dir.resolve("compared"));
@@ -939,8 +863,9 @@ class CliGitHubTest {
 
         assertEquals(
                 Option.none(),
-                detailsFrom(dir, "MERGED", "abc123", "echo 2").get().behindBase());
-        assertEquals(Option.none(), detailsFrom(dir, "OPEN", "", "echo 2").get().behindBase());
+                detailsFrom(dir, "MERGED", "abc123", BEHIND_BY_2).get().behindBase());
+        assertEquals(
+                Option.none(), detailsFrom(dir, "OPEN", "", BEHIND_BY_2).get().behindBase());
         assertFalse(Files.exists(dir.resolve("compared")));
     }
 
@@ -953,7 +878,7 @@ class CliGitHubTest {
                 detailsFrom(dir, "OPEN", "abc123", "exit 1").get().behindBase());
         assertEquals(
                 Option.none(),
-                detailsFrom(dir, "OPEN", "abc123", "echo many").get().behindBase());
+                detailsFrom(dir, "OPEN", "abc123", BEHIND_BY_MANY).get().behindBase());
     }
 
     @Test

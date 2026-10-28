@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.json;
 import static net.vanfleteren.jazygit.json.Decoder.at;
 import static net.vanfleteren.jazygit.json.Decoder.bool;
 import static net.vanfleteren.jazygit.json.Decoder.byField;
+import static net.vanfleteren.jazygit.json.Decoder.dict;
 import static net.vanfleteren.jazygit.json.Decoder.enumOf;
 import static net.vanfleteren.jazygit.json.Decoder.fail;
 import static net.vanfleteren.jazygit.json.Decoder.field;
@@ -14,11 +15,13 @@ import static net.vanfleteren.jazygit.json.Decoder.map2;
 import static net.vanfleteren.jazygit.json.Decoder.map3;
 import static net.vanfleteren.jazygit.json.Decoder.map8;
 import static net.vanfleteren.jazygit.json.Decoder.nullable;
+import static net.vanfleteren.jazygit.json.Decoder.optionalField;
 import static net.vanfleteren.jazygit.json.Decoder.string;
 import static net.vanfleteren.jazygit.json.Decoder.succeed;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.collection.HashMap;
+import io.vavr.collection.LinkedHashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
@@ -98,6 +101,26 @@ class DecoderTest {
     }
 
     @Test
+    void anOptionalFieldThatIsMissingIsNone() {
+        Decoder<Option<String>> message = optionalField("message", string());
+
+        assertEquals(Either.right(Option.none()), decode(message, "{}"));
+        assertEquals(Either.right(Option.some("conflict")), decode(message, "{\"message\": \"conflict\"}"));
+    }
+
+    @Test
+    void anOptionalFieldThatIsNullIsNone() {
+        assertEquals(Either.right(Option.none()), decode(optionalField("message", string()), "{\"message\": null}"));
+    }
+
+    @Test
+    void anOptionalFieldDoesNotTakeAValueOfAnotherKind() {
+        assertEquals(
+                Either.left("message: expected a string, got a number"),
+                decode(optionalField("message", string()), "{\"message\": 3}"));
+    }
+
+    @Test
     void nullableDoesNotTakeAValueOfAnotherKind() {
         assertEquals(
                 Either.left("startedAt: expected a string, got a number"),
@@ -144,6 +167,18 @@ class DecoderTest {
 
         assertEquals(Either.right("hello"), decode(labelled, "{\"kind\": \"text\", \"text\": \"hello\"}"));
         assertEquals(Either.left("no text in a image"), decode(labelled, "{\"kind\": \"image\"}"));
+    }
+
+    @Test
+    void theFieldsOfAnObjectAreDecodedByNameInTheirOrder() {
+        assertEquals(
+                Either.right(LinkedHashMap.of("ghe.corp", 2, "github.com", 1)),
+                decode(dict(integer()), "{\"ghe.corp\": 2, \"github.com\": 1}"));
+        assertEquals(
+                List.of("b", "a"),
+                decode(dict(integer()), "{\"b\": 1, \"a\": 2}").get().keySet().toList());
+        assertEquals(Either.left("a: expected a number, got null"), decode(dict(integer()), "{\"a\": null}"));
+        assertEquals(Either.left("expected an object, got an array"), decode(dict(integer()), "[]"));
     }
 
     @Test

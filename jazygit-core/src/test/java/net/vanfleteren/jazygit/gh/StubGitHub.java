@@ -157,7 +157,7 @@ public interface StubGitHub extends GitHub {
     default Either<GhFailure, Merging> mergePullRequest(int number, Option<GhCommit> head, MergeMethod method) {
         return Either.right(new Merging(
                 new MergeStatus.Pending("merge-" + number),
-                List.of(CliGitHub.mergeCommand(number, head, method).executed())));
+                List.of(MergeQuery.mergeCommand(number, head, method).executed())));
     }
 
     /**

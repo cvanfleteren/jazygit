@@ -8,6 +8,7 @@ import io.vavr.Function6;
 import io.vavr.Function7;
 import io.vavr.Function8;
 import io.vavr.Tuple;
+import io.vavr.collection.LinkedHashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Either;
@@ -104,6 +105,21 @@ public interface Decoder<T> {
     }
 
     /**
+     * The field {@code name} of an object, decoded, or none when the object has no such field or it is {@code null}:
+     * only for a REST answer, which leaves out or nulls what it has nothing for, never for GraphQL or
+     * {@code gh --json} (ADR 42).
+     */
+    static <T> Decoder<Option<T>> optionalField(String name, Decoder<T> decoder) {
+        return json -> json instanceof JObject(var fields)
+                ? fields.get(name)
+                        .filter(value -> !(value instanceof JNull))
+                        .fold(
+                                () -> Either.right(Option.none()),
+                                value -> decoder.decode(value).map(Option::some).mapLeft(error -> error.inField(name)))
+                : expected("an object", json);
+    }
+
+    /**
      * The field at {@code path}, its names separated by dots, like {@code commits.totalCount}.
      */
     static <T> Decoder<T> at(String path, Decoder<T> decoder) {
@@ -129,6 +145,19 @@ public interface Decoder<T> {
                                         decoder.decode(element._1()).mapLeft(error -> error.atIndex(element._2()))))
                         .map(List::ofAll)
                 : expected("an array", json);
+    }
+
+    /**
+     * Each field of an object, decoded, by its name and in its order: for an object whose names are data, like the
+     * hosts gh is logged in to or the aliases of a GraphQL query. It fails at the first that does not decode.
+     */
+    static <T> Decoder<LinkedHashMap<String, T>> dict(Decoder<T> decoder) {
+        return json -> json instanceof JObject(var fields)
+                ? Either.sequenceRight(fields.map(field -> decoder.decode(field._2())
+                                .map(value -> Tuple.of(field._1(), value))
+                                .mapLeft(error -> error.inField(field._1()))))
+                        .map(LinkedHashMap::ofEntries)
+                : expected("an object", json);
     }
 
     static <T> Decoder<T> succeed(T value) {
