@@ -5,6 +5,7 @@ import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import java.nio.file.Path;
 import java.util.function.Function;
+import net.vanfleteren.jazygit.json.Decoder;
 import net.vanfleteren.jazygit.process.Exec;
 import net.vanfleteren.jazygit.process.ExecFailure;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -61,6 +62,22 @@ final class GhProcess {
      */
     <T> Either<GhError, T> read(GhCommand command, Function<String, Either<GhError.UnexpectedOutput, T>> parse) {
         return execute(command).flatMap(output -> Either.narrow(parse.apply(output.stdout())));
+    }
+
+    /**
+     * Runs {@code command} to read the JSON it prints, which {@code decoder} decodes (ADR 42). JSON that cannot be
+     * parsed or decoded is unexpected output, which says where and why.
+     */
+    <T> Either<GhError, T> readJson(GhCommand command, Decoder<T> decoder) {
+        return read(command, stdout -> decoded(stdout, decoder));
+    }
+
+    /**
+     * What {@code decoder} makes of the JSON {@code stdout}, or the unexpected output that says where and why it
+     * could not.
+     */
+    static <T> Either<GhError.UnexpectedOutput, T> decoded(String stdout, Decoder<T> decoder) {
+        return decoder.parse(stdout).mapLeft(error -> new GhError.UnexpectedOutput(error.text()));
     }
 
     /**
