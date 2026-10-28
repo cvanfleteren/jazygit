@@ -669,7 +669,7 @@ no operation, like switching the lists of the branches pane from the worktrees, 
   committing and rewording both use (`CommitDialog`, `MessagePopup`, `MessageEditor*`). Amending is one operation
   with an `AmendTarget`: the last commit, which is amended in place, also while something is in progress, or an
   older one, which rebases the commits after it and so waits until nothing is.
-- **branch:** `checkout`, `push`, `pull`, `newbranch`, `merge`, `rebase`, `rename`, `delete`, `upstream`, and
+- **branch:** `checkout`, `push`, `pull`, `newbranch`, `merge`, `rebase`, `rename`, `delete`, `nuke`, `upstream`, and
   `tabs` for switching between the local branches, the remote ones and the worktrees. They share `BranchCmd`, the
   branch a command acts on and whether it keeps it busy or checks it out, and `Branches`, which knows which
   branches are checked out where.

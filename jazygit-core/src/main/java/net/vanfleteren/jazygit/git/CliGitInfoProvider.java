@@ -139,6 +139,11 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> removeWorktreeAnyway(Path location) {
+        return CliWorktree.removeAnyway(worktree, location);
+    }
+
+    @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> addWorktreeWithNewBranch(
             Path location, BranchName name, NewBranchStart start) {
         return CliWorktree.addNewBranch(worktree, location, name, start);

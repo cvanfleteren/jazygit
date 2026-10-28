@@ -85,6 +85,12 @@ public final class ErrorText {
                         merge.shortSha(),
                         parent.shortSha());
             case AppError.DefaultBranch(String branch) -> Messages.get("error.deleteBranch.default", branch);
+            case AppError.NotAllNuked(BranchName branch, var left, var failures) ->
+                Messages.get(
+                        "error.nukeBranch.notAll",
+                        branch.value(),
+                        left.mkString(", "),
+                        failures.map(ErrorText::of).mkString("; "));
             case AppError.NotOnRemote(BranchName branch) -> Messages.get("error.browse.notOnRemote", branch.value());
             case AppError.PullRequestsNotRead() -> Messages.get("error.pullRequest.notRead");
             case AppError.PullRequestsUnavailable(Failure failure) ->
