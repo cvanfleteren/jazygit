@@ -9,12 +9,12 @@ import java.util.regex.Pattern;
 public record Sha(String value) {
 
     private static final int SHORT_LENGTH = 7;
-    // From the shortest abbreviation git accepts to a full SHA-256 object id.
-    private static final Pattern HEX = Pattern.compile("[0-9a-fA-F]{4,64}");
+    // A full SHA-1 or SHA-256 object id. An abbreviated one is not taken: a ref of the same name would win over it.
+    private static final Pattern HEX = Pattern.compile("[0-9a-fA-F]{40}|[0-9a-fA-F]{64}");
 
     /**
-     * The sha {@code text} spells, ignoring surrounding whitespace; none unless that is 4 to 64 hex digits, so it
-     * can be handed to git as it is (ADR 40).
+     * The sha {@code text} spells, ignoring surrounding whitespace; none unless that is a full object id, of 40 or 64
+     * hex digits, so it can be handed to git as it is (ADR 40).
      */
     public static Option<Sha> parse(String text) {
         String stripped = text.strip();

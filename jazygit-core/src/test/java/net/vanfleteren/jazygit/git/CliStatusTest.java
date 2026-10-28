@@ -43,9 +43,11 @@ class CliStatusTest {
     @Test
     void parsesBranchHeaders() {
         RepoStatus status = CliStatus.parse(
-                        "# branch.oid 0123abcd\0# branch.head main\0# branch.upstream origin/main\0")
+                        "# branch.oid 0123abcd00000000000000000000000000000000\0# branch.head main\0# branch.upstream origin/main\0")
                 .get();
-        assertEquals(Head.onBranch(new BranchName("main"), new Sha("0123abcd")), status.head());
+        assertEquals(
+                Head.onBranch(new BranchName("main"), new Sha("0123abcd00000000000000000000000000000000")),
+                status.head());
         assertEquals(List.of(), status.files());
     }
 
@@ -57,8 +59,8 @@ class CliStatusTest {
                         .get()
                         .head());
         assertEquals(
-                new Head.Detached(new Sha("0123abcd")),
-                CliStatus.parse("# branch.oid 0123abcd\0# branch.head (detached)\0")
+                new Head.Detached(new Sha("0123abcd00000000000000000000000000000000")),
+                CliStatus.parse("# branch.oid 0123abcd00000000000000000000000000000000\0# branch.head (detached)\0")
                         .get()
                         .head());
     }

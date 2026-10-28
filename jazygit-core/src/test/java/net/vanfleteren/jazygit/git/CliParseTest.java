@@ -288,12 +288,14 @@ class CliParseTest {
     }
 
     @Test
-    void aShaIsFourToSixtyFourHexDigits() {
-        assertEquals(Option.of(new Sha("abc1")), Sha.parse("abc1"));
+    void aShaIsAFullObjectId() {
+        assertEquals(Option.of(new Sha(A)), Sha.parse(A));
         assertEquals(Option.of(new Sha("a".repeat(64))), Sha.parse("a".repeat(64)));
-        assertEquals(Option.none(), Sha.parse("abc"));
-        assertEquals(Option.none(), Sha.parse("a".repeat(65)));
-        assertEquals(Option.none(), Sha.parse("-abc1"));
+        // An abbreviated one would lose to a branch or tag of the same name, as 4711 would.
+        assertEquals(Option.none(), Sha.parse("4711"));
+        assertEquals(Option.none(), Sha.parse("a".repeat(39)));
+        assertEquals(Option.none(), Sha.parse("a".repeat(41)));
+        assertEquals(Option.none(), Sha.parse("-" + "a".repeat(39)));
         assertEquals(Option.none(), Sha.parse("main"));
     }
 }
