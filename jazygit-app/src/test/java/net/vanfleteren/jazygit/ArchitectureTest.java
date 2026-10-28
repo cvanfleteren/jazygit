@@ -140,18 +140,22 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule featuresAreFreeOfCycles =
             slices().matching(ROOT + ".feature.(*)..").should().beFreeOfCycles();
-    // The dialogs of the features, which are views; nested classes included.
-    private static final String DIALOGS = ".*Dialogs?(\\$.*)?";
     /**
      * Only {@code OnGitHub} names a branch for gh, from the branch on its remote, so the name of a local branch is not
-     * handed to gh for it (ADR 40).
+     * handed to gh for it (ADR 40). A constructor reference, {@code GhBranch::new}, is an access too, so it counts as
+     * a call does.
      */
     @ArchTest
     static final ArchRule onlyOnGitHubNamesBranchesForGh = noClasses()
             .that()
             .doNotHaveFullyQualifiedName("net.vanfleteren.jazygit.feature.github.OnGitHub")
             .should()
-            .callConstructor(net.vanfleteren.jazygit.gh.model.GhBranch.class, String.class);
+            .accessTargetWhere(DescribedPredicate.describe(
+                    "a constructor of GhBranch",
+                    access -> access.getTargetOwner().isEquivalentTo(net.vanfleteren.jazygit.gh.model.GhBranch.class)
+                            && access.getName().equals("<init>")));
+    // The dialogs of the features, which are views; nested classes included.
+    private static final String DIALOGS = ".*Dialogs?(\\$.*)?";
     /**
      * Rendering never talks to git or gh: the views only draw the model, and send messages.
      */

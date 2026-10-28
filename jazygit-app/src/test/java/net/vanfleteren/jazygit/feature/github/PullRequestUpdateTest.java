@@ -687,6 +687,37 @@ class PullRequestUpdateTest {
     }
 
     @Test
+    void aPullRequestIsCreatedFromTheNameTheBranchHasOnItsRemoteNotItsLocalOne() {
+        // #138: local login is pushed to origin/feature/login; gh has to be given that name.
+        RemoteBranch pushedAs = new RemoteBranch("origin", new BranchName("feature/login"));
+        Branch login = Fixtures.branch(
+                new BranchName("login"),
+                false,
+                new Sha("6"),
+                Instant.EPOCH,
+                true,
+                false,
+                Option.of(new Upstream(new BranchRef.Remote(pushedAs), 0, 0)));
+        Model model = Update.update(
+                        localBranchesRead(loaded(), List.of(login, MAIN)).model(),
+                        new PullRequestsMsg.Loaded(List.empty()))
+                .model();
+
+        Next reading = Update.update(model, new CreatePullRequestMsg.ParentRead(login.name(), Option.none()));
+        ReadTitle readTitle = (ReadTitle) reading.cmds().single();
+        assertEquals(pushedAs, readTitle.head());
+        Model asked = Update.update(reading.model(), readTitle.run(env())).model();
+        Next confirmed = TestModels.stepped(asked, new CreatePullRequestMsg.Confirmed());
+        CreatePullRequest create = (CreatePullRequest) confirmed.cmds().single();
+
+        assertEquals(pushedAs, create.head());
+        CreatePullRequestMsg.Created created = (CreatePullRequestMsg.Created) create.run(env());
+        assertTrue(
+                created.commands().exists(command -> command.line().contains("--head feature/login --base main")),
+                created.commands().toString());
+    }
+
+    @Test
     void aBranchNotOnItsRemoteIsAskedToBePushedToItsPushTargetFirst() {
         Next asking = Update.update(model(), new PullRequestMsg.Requested(UNPUSHED.name()));
 
