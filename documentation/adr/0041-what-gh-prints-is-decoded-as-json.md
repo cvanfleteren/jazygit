@@ -28,13 +28,14 @@ gh prints the JSON that GitHub answers, and Java decodes it into the model with 
 ### The `jazygit-json` module
 
 A Maven module of its own, `net.vanfleteren.jazygit.json`, which jazygit-core depends on. It depends on vavr, jspecify
-and Jackson 3's `tools.jackson.core:jackson-core`, nothing of jazygit.
+and Parsson, `org.eclipse.parsson:parsson` with the `jakarta.json-api` it brings, nothing of jazygit.
 
 - `Json` is a sealed interface of records: `JObject` (a vavr `LinkedHashMap<String, Json>`), `JArray` (a vavr
-  `List<Json>`), `JString`, `JNumber` (a `BigDecimal`), `JBool` and `JNull`. `Json.parse` builds it with Jackson's
-  streaming parser; no other class uses Jackson. Not: Jackson databind's `JsonNode`, which is mutable and larger.
-  Not: jakarta.json with Parsson, which needs its provider found by `ServiceLoader`. With a type of its own, a
-  decoder matches it in a `switch`, and the library can be swapped behind `parse`.
+  `List<Json>`), `JString`, `JNumber` (a `BigDecimal`), `JBool` and `JNull`. `Json.parse` builds it with Parsson's
+  streaming parser, whose provider it makes itself rather than have `ServiceLoader` find it; no other class uses
+  Parsson. Not: jakarta.json's `JsonValue`, whose objects are `java.util.Map`s. Not: Jackson's streaming parser,
+  which is larger. With a type of its own, a decoder matches it in a `switch`, and the library can be swapped behind
+  `parse`.
 - `Decoder<T>` turns a `Json` into `Either<DecodeError, T>`, stopping at the first error: one is enough to find a
   query and its decoder that went apart. Not: vavr's `Validation`, which collects them all.
 - A `DecodeError` is the path to where it failed, like `data.repository.pullRequest.commits.nodes[0].commit
@@ -56,7 +57,7 @@ and Jackson 3's `tools.jackson.core:jackson-core`, nothing of jazygit.
   one that leaves the node out, as `Option.none()` that the list flattens, or one that fails, as the read does now.
   Not: a decoder that recovers from any failed field or element, which would let a query and its decoder go apart
   unseen anywhere.
-- The ArchUnit tests of jazygit-core and jazygit-app say that no class of theirs uses `tools.jackson`, which reaches
+- The ArchUnit tests of jazygit-core and jazygit-app say that no class of theirs uses `jakarta.json` or Parsson, which reach
   them through `jazygit-json`. Not: Maven's `dependency:analyze`, which is stricter about every dependency.
 
 ### The queries
@@ -119,7 +120,7 @@ One pull request each, the old parsing next to the new until the last:
 
 - A query and its decoder are in one class, and a field added to one side and not the other fails with its path.
 - The logic the jq held is Java, tested without jq; jq is no longer needed to build or test jazygit.
-- jazygit has a JSON library: Jackson's streaming parser, in one module, behind `Json.parse`.
+- jazygit has a JSON library: Parsson's streaming parser, in one module, behind `Json.parse`.
 - What the user is shown when gh's output cannot be read is the path and what was wrong, not the output.
 - jazygit needs gh 2.48 or later for the pages of pull requests and branches; with an older gh those reads fail with
   an error that says so.
