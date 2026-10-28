@@ -146,6 +146,11 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> removeWorktreeAnyway(Path location) {
+        return ran();
+    }
+
+    @Override
     default Either<GitFailure<ProcessError>, List<ExecutedCommand>> addWorktreeWithNewBranch(
             Path location, BranchName name, NewBranchStart start) {
         return ran();

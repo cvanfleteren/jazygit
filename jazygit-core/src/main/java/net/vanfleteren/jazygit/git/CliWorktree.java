@@ -194,6 +194,21 @@ final class CliWorktree {
     }
 
     /**
+     * Runs {@code git worktree remove --force --force <location>} in {@code worktree}: removes it whatever it has,
+     * also when it is locked or its directory is gone.
+     */
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> removeAnyway(Path worktree, Path location) {
+        return GitProcess.log(
+                worktree,
+                git(
+                        "worktree",
+                        "remove",
+                        "--force",
+                        "--force",
+                        worktree.resolve(location).normalize().toString()));
+    }
+
+    /**
      * Runs {@code git worktree prune} in {@code worktree}: forgets the worktrees whose directory is gone.
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> prune(Path worktree) {

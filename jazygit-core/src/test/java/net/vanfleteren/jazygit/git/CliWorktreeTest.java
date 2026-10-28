@@ -265,6 +265,35 @@ class CliWorktreeTest {
     }
 
     @Test
+    void aWorktreeIsRemovedAnywayWhenLockedWithChangesOrGoneAndLocked() throws Exception {
+        assumeTrue(gitAvailable(), "git is not installed");
+        git(main, "init", "-q", "-b", "main");
+        git(main, "commit", "-q", "--allow-empty", "-m", "Initial commit");
+        git(main, "branch", "dirty");
+        git(main, "branch", "gone");
+        CliGitInfoProvider provider = CliGitInfoProvider.open(main).get();
+        Path dirty = main.resolveSibling("dirty");
+        Path gone = main.resolveSibling("gone");
+        provider.addWorktree(dirty, new BranchName("dirty")).get();
+        provider.addWorktree(gone, new BranchName("gone")).get();
+        Files.writeString(dirty.resolve("new.txt"), "untracked\n");
+        provider.lockWorktree(dirty, true).get();
+        provider.lockWorktree(gone, true).get();
+        deleteRecursively(gone);
+        provider.pruneWorktrees().get();
+        assertEquals(List.of(main, dirty, gone), provider.worktrees().get().map(Worktree::path));
+
+        assertEquals(
+                List.of("git worktree remove --force --force " + dirty),
+                provider.removeWorktreeAnyway(dirty).get().map(ExecutedCommand::line));
+        provider.removeWorktreeAnyway(gone).get();
+
+        assertFalse(Files.exists(dirty));
+        assertEquals(List.of(main), provider.worktrees().get().map(Worktree::path));
+        provider.forceDeleteLocalBranch(new BranchName("gone")).get();
+    }
+
+    @Test
     void aNewBranchIsCheckedOutInANewWorktreeFromABranchOrFollowingARemoteOne() throws Exception {
         assumeTrue(gitAvailable(), "git is not installed");
         Path origin = Files.createDirectories(main.resolveSibling("origin"));

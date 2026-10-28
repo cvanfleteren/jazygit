@@ -481,6 +481,12 @@ public interface GitInfoProvider {
     Either<GitFailure<GitError>, List<ExecutedCommand>> removeWorktree(Path location, boolean force);
 
     /**
+     * Removes the linked worktree at {@code location} whatever it has: also when it has changes, which are lost,
+     * when it is locked, and when its directory is gone. Its branch stays.
+     */
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> removeWorktreeAnyway(Path location);
+
+    /**
      * Forgets the worktrees whose directory is gone; their branches stay.
      */
     Either<GitFailure<ProcessError>, List<ExecutedCommand>> pruneWorktrees();

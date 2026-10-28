@@ -418,6 +418,29 @@ class BranchesPane:
 
         self.ui.changing_repo(f"{branch} to be deleted", keys, done)
 
+    def nuke(self, branch: str):
+        """Nukes the branch, as the one dialog the app asks confirms: deletes it with force, the worktree that has
+        it checked out whatever that has, and its branch of the same name on origin."""
+        self.select(branch)
+        remote = f"origin/{branch}"
+        upstream = self.repo.upstream(branch)
+        deletes_remote = upstream == remote or (upstream == "" and remote in self.repo.remote_branches())
+
+        # Each of the three is a git command of its own.
+        def done():
+            return (branch not in self.repo.branches()
+                    and branch not in self.repo.worktrees().values()
+                    and (not deletes_remote or remote not in self.repo.remote_branches()))
+
+        self.ui.changing_repo(f"{branch} to be nuked", lambda: (
+            self.app.press("D"), self.ui.confirm(f"Nuke branch {branch}")), done)
+
+    def try_to_nuke(self, branch: str):
+        """Asks to nuke the branch, for when the app is to refuse it, or to delete only part of it: it does not
+        wait for the repository to change."""
+        self.select(branch)
+        self.app.press("D")
+
     def push(self, branch: str, upstream: str = None):
         """Pushes the branch. One without an upstream is pushed to upstream, "<remote> <branch>", which it then
         tracks; to the branch of the same name on origin, as the app offers, when not given."""

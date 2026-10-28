@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.state;
 
+import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
@@ -229,6 +230,14 @@ public sealed interface AppError {
      * @param branch the short name of the remote branch, e.g. {@code origin/main}
      */
     record DefaultBranch(String branch) implements AppError {}
+
+    /**
+     * Nuking {@code branch} did not delete all it was to delete (ADR 43).
+     *
+     * @param left     what is left, named as the dialog named it: the worktree, the branch, the remote branch
+     * @param failures why, one for each step that failed
+     */
+    record NotAllNuked(BranchName branch, List<String> left, List<Failure> failures) implements AppError {}
 
     /**
      * Opening a branch on GitHub was asked for, but the branch is on no remote, or its upstream is gone.
