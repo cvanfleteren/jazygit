@@ -45,6 +45,14 @@ public sealed interface GhError {
     record TokenUnavailable(GhAccount account, GhError cause) implements GhError {}
 
     /**
+     * gh is older than jazygit needs: it did not know a flag that came with {@code needed}, like {@code --slurp}
+     * with 2.48 (ADR 42).
+     *
+     * @param needed the version of gh it needs at least, like {@code 2.48}
+     */
+    record TooOld(String needed) implements GhError {}
+
+    /**
      * gh printed something that could not be made sense of.
      *
      * @param output why: where its JSON did not decode and what was wrong there, like

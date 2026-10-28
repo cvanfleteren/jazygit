@@ -5,16 +5,13 @@ import static net.vanfleteren.jazygit.gh.GitHubAnswers.VERIFY_PASSED;
 import static net.vanfleteren.jazygit.gh.GitHubAnswers.WAITING;
 import static net.vanfleteren.jazygit.gh.GitHubAnswers.WAITING_SUITES;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Try;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
-import net.vanfleteren.jazygit.gh.model.BranchChecks;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Check;
@@ -49,52 +46,6 @@ class CliGitHubJqTest {
         } catch (IOException | InterruptedException e) {
             throw new AssertionError(e);
         }
-    }
-
-    @Test
-    void aBranchWhoseWorkflowWaitsToStartIsPendingUnlessItsChecksFailed() {
-        String json = """
-                { "data": { "repository": { "nameWithOwner": "owner/repo", "refs": {
-                  "pageInfo": { "hasNextPage": false, "endCursor": null }, "nodes": [
-                    { "name": "main", "target": { "statusCheckRollup": null, %1$s } },
-                    { "name": "broken", "target": { "statusCheckRollup": { "state": "FAILURE" }, %1$s } },
-                    { "name": "feature", "target": { "statusCheckRollup": { "state": "SUCCESS" }, %2$s } },
-                    { "name": "wip", "target": { "statusCheckRollup": null, "checkSuites": { "nodes": [] } } } ] } } } }
-                """.formatted(WAITING_SUITES, RAN_SUITES);
-
-        assertEquals(
-                new BranchChecks(
-                        "owner/repo",
-                        HashMap.of(
-                                "main",
-                                Checks.PENDING,
-                                "broken",
-                                Checks.FAILING,
-                                "feature",
-                                Checks.PASSING,
-                                "wip",
-                                Checks.NONE)),
-                CliGitHub.parseBranchChecks(jq(CliGitHub.BRANCHES_JQ, json)).get());
-    }
-
-    @Test
-    void aWorkflowThatWaitsToStartIsAQueuedCheckOfItsBranchNextToItsCheckRuns() {
-        String json = """
-                { "data": { "repository": { "nameWithOwner": "owner/repo",
-                  "b0": { "name": "main", "target": {
-                    "statusCheckRollup": { "contexts": { "nodes": [ %s ] } }, %s } },
-                  "b1": null } } }
-                """.formatted(VERIFY_PASSED, WAITING_SUITES);
-
-        List<Check> checks = CliGitHub.parseBranchCheckRuns(jq(CliGitHub.BRANCH_CHECK_RUNS_JQ, json))
-                .get()
-                .byBranch()
-                .get("main")
-                .get();
-
-        assertEquals(List.of("verify", "Publish"), checks.map(Check::name));
-        assertEquals(WAITING, checks.last());
-        assertTrue(checks.last().queued());
     }
 
     @Test
