@@ -45,12 +45,13 @@ public final class AddWorktreeUpdate {
                                 .getOrElse("HEAD")));
             case StartConfirmed() -> startConfirmed(model);
             // What was typed starts the worktree once git said which commit it names (ADR 40).
+            // It comes by itself, so it does not take away a dialog the user opened meanwhile.
             case StartResolved(String typed, var commit) ->
-                commit.map(sha -> Update.ask(model, NewWorktreeBranchPopup.fromCommit(typed, sha)))
+                commit.map(sha -> Next.of(model.openPopupIfFree(NewWorktreeBranchPopup.fromCommit(typed, sha))))
                         .getOrElse(() -> Next.of(model.fail(new AppError.UnknownRevision(typed))));
             case StartNotResolved(String typed, var failure) ->
-                Next.of(model.fail(new AppError.OperationFailed(
-                        AddWorktreeCmd.ADD_WORKTREE, io.vavr.control.Option.of(typed), failure)));
+                Next.of(model.fail(
+                        new AppError.OperationFailed(AddWorktreeCmd.ADD_WORKTREE, Option.of(typed), failure)));
             case NameConfirmed() -> nameConfirmed(model);
             // The worktrees are shown, the new one among them, and switching to it is offered.
             case Added(var cmd, String location, var commands) -> {

@@ -302,6 +302,34 @@ class WorktreeUpdateTest {
     }
 
     @Test
+    void aStartResolvedMeanwhileDoesNotTakeAwayADialogTheUserOpened() {
+        NewWorktreeStartPopup typing = new NewWorktreeStartPopup("some");
+        Model opened = model().openPopup(typing);
+
+        Next next = Update.update(opened, new AddWorktreeMsg.StartResolved("v1", Option.of(new Sha("abc123"))));
+
+        assertEquals(Option.of(typing), next.model().popup());
+    }
+
+    @Test
+    void whenGitCannotBeAskedWhatTheStartNamesThatIsSaid() {
+        GitInfoProvider git = new StubGitProvider() {
+            @Override
+            public Either<GitFailure<ProcessError>, Option<Sha>> resolve(String text) {
+                return Either.left(new GitFailure<>(
+                        new GitError.CommandFailed(Option.of("fatal: not a git repository"), 128, ""), List.empty()));
+            }
+        };
+
+        Msg msg = new ResolveStartCmd("v1").run(new Env(git, StubGitHub.empty()));
+
+        assertInstanceOf(AddWorktreeMsg.StartNotResolved.class, msg);
+        assertEquals(
+                Option.of("Creating a worktree for v1 failed: fatal: not a git repository"),
+                TestModels.errorText(Update.update(model(), msg).model()));
+    }
+
+    @Test
     void fromARemoteBranchTheNewBranchFollowsItAndStartsOutNamedAsItButFromACommitItFollowsNone() {
         RemoteBranch other = new RemoteBranch("origin", new BranchName("other"));
         RemoteBranch remote = new RemoteBranch("origin", new BranchName("shared"));
