@@ -5,9 +5,7 @@ import static net.vanfleteren.jazygit.gh.GhCommand.gh;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
-import io.vavr.control.Try;
 import java.nio.file.Path;
-import java.time.Instant;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import net.vanfleteren.jazygit.gh.GhError.UnexpectedOutput;
@@ -20,22 +18,6 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
  * GitHub repository from the git remotes itself.
  */
 public final class CliGitHub implements GitHub {
-
-    /*
-     * Tab separated lines, one per part of the conversation: what it is ("description", "comment", or the state of
-     * a review), its id, its author, when it was written, whether it was edited, whether it is hidden and why, and
-     * its text. The description first, then the rest oldest first. A review that only commented and has no text is
-     * what inline comments hang from; a pending one is not submitted yet.
-     */
-    private static final String COMMENTS_JQ = """
-            (select(.body != "") | ["description", "description", (.author.login // ""), .createdAt, "false", \
-            "false", "", .body] | @tsv), \
-            ([(.comments[]? | ["comment", .id, (.author.login // ""), .createdAt, (.includesCreatedEdit | tostring), \
-            (.isMinimized | tostring), (.minimizedReason // ""), .body]), \
-            (.reviews[]? | select(.state != "PENDING") | select(.body != "" or .state != "COMMENTED") \
-            | [.state, .id, (.author.login // ""), .submittedAt, (.includesCreatedEdit | tostring), "false", "", \
-            .body])] | sort_by(.[3]) | .[] | @tsv)""";
-    private static final int COMMENT_FIELD_COUNT = 8;
 
     private static final Pattern CREATED_URL = Pattern.compile("/pull/(\\d{1,9})$");
 
@@ -96,66 +78,6 @@ public final class CliGitHub implements GitHub {
 
     static GhCommand browseCommand(GhBranch branch) {
         return gh("browse", "--branch", branch.name());
-    }
-
-    /**
-     * Parses the lines the jq filter of {@link #pullRequestComments(int)} prints.
-     */
-    static Either<UnexpectedOutput, List<PullRequestComment>> parseComments(String raw) {
-        return Either.sequenceRight(List.of(raw.split("\n"))
-                        .filter(line -> !line.isBlank())
-                        .map(line -> comment(List.of(line.split("\t", -1)).map(CliGitHub::unescape))
-                                .toEither(() -> new UnexpectedOutput(line))))
-                .map(List::ofAll);
-    }
-
-    private static Option<PullRequestComment> comment(List<String> f) {
-        return Option.when(f.size() == COMMENT_FIELD_COUNT, f)
-                .flatMap(fields -> commentKind(fields.get(0)))
-                .flatMap(kind -> Try.of(() -> new PullRequestComment(
-                                new PullRequestComment.Id(f.get(1)),
-                                kind,
-                                f.get(2),
-                                Instant.parse(f.get(3)),
-                                f.get(7),
-                                f.get(4).equals("true"),
-                                Option.when(f.get(5).equals("true"), f.get(6))))
-                        .toOption());
-    }
-
-    private static Option<PullRequestComment.Kind> commentKind(String kind) {
-        return switch (kind) {
-            case "description" -> Option.of(PullRequestComment.Kind.DESCRIPTION);
-            case "comment" -> Option.of(PullRequestComment.Kind.COMMENT);
-            case "APPROVED" -> Option.of(PullRequestComment.Kind.APPROVED);
-            case "CHANGES_REQUESTED" -> Option.of(PullRequestComment.Kind.CHANGES_REQUESTED);
-            case "COMMENTED" -> Option.of(PullRequestComment.Kind.COMMENTED);
-            case "DISMISSED" -> Option.of(PullRequestComment.Kind.DISMISSED);
-            default -> Option.none();
-        };
-    }
-
-    /**
-     * {@code field} as it was before jq's {@code @tsv} escaped it.
-     */
-    static String unescape(String field) {
-        StringBuilder out = new StringBuilder(field.length());
-        for (int i = 0; i < field.length(); i++) {
-            char c = field.charAt(i);
-            if (c == '\\' && i + 1 < field.length()) {
-                char next = field.charAt(++i);
-                out.append(
-                        switch (next) {
-                            case 't' -> '\t';
-                            case 'n' -> '\n';
-                            case 'r' -> '\r';
-                            default -> next;
-                        });
-            } else {
-                out.append(c);
-            }
-        }
-        return out.toString();
     }
 
     static Review review(String decision) {
@@ -238,16 +160,7 @@ public final class CliGitHub implements GitHub {
 
     @Override
     public Either<GhError, List<PullRequestComment>> pullRequestComments(int number) {
-        return process.read(
-                gh(
-                        "pr",
-                        "view",
-                        String.valueOf(number),
-                        "--json",
-                        "body,author,createdAt,comments,reviews",
-                        "--jq",
-                        COMMENTS_JQ),
-                CliGitHub::parseComments);
+        return process.readJson(CommentsQuery.command(number), CommentsQuery.DECODER);
     }
 
     @Override

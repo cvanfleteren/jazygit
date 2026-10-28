@@ -19,7 +19,7 @@ import net.vanfleteren.jazygit.json.Decoder;
 
 /**
  * The open pull requests of the repository that are not from a fork, all pages of them, for the branches they are of
- * (ADR 24, 41).
+ * (ADR 24, 42).
  */
 final class PullRequestsQuery {
 

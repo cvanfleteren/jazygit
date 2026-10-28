@@ -15,7 +15,7 @@ import net.vanfleteren.jazygit.json.Decoder;
 
 /**
  * The open pull requests of the repository, the most recently updated first, the one opened last in any state, and
- * the account gh runs as (ADR 29, 41).
+ * the account gh runs as (ADR 29, 42).
  */
 final class RepositoryPullRequestsQuery {
 
