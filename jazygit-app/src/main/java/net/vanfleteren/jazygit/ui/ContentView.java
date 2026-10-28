@@ -15,9 +15,7 @@ import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.AheadUpdate;
-import net.vanfleteren.jazygit.state.BranchCommitsView;
 import net.vanfleteren.jazygit.state.BranchesTab;
-import net.vanfleteren.jazygit.state.DivergenceView;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
@@ -46,7 +44,13 @@ final class ContentView {
         return switch (mirrored(model, focusedId)) {
             case FILES -> fileDiffs(model);
             case BRANCHES -> branches(model);
-            case COMMITS -> commit(model);
+            case COMMITS ->
+                commit(
+                        model,
+                        ContentArea.COMMIT,
+                        model.repoView().commitDetail(),
+                        model::commit,
+                        Option.when(model.repo().commits().toOption().exists(List::isEmpty), "content.noCommits"));
             case STASH -> stash(model);
         };
     }
@@ -171,8 +175,21 @@ final class ContentView {
         return model.repoView()
                 .divergence()
                 .filter(view -> model.repoView().branchesTab() == BranchesTab.LOCAL)
-                .map(view -> divergenceCommit(model, view))
-                .orElse(() -> model.repoView().branchCommits().map(view -> branchCommit(model, view)))
+                .map(view -> commit(
+                        model,
+                        ContentArea.DIVERGENCE,
+                        view.detail(),
+                        view::commit,
+                        Option.when(view.commits().toOption().exists(Divergence::isEmpty), "content.noDivergence")))
+                .orElse(() -> model.repoView()
+                        .branchCommits()
+                        .map(view -> commit(
+                                model,
+                                ContentArea.BRANCH_COMMIT,
+                                view.detail(),
+                                sha -> view.commit(model, sha),
+                                Option.when(
+                                        view.commits(model).toOption().exists(List::isEmpty), "content.noCommits"))))
                 .getOrElse(() -> branchLog(model));
     }
 
@@ -198,58 +215,27 @@ final class ContentView {
     }
 
     /**
-     * The commit highlighted in the divergence {@code view}, as the commits pane shows its commits.
+     * The commit {@code detail} is of, found by {@code commit}, in {@code area} once what it changed is read, as the
+     * commits pane shows its commits; the one shown before stays while it is read. Before one is highlighted, the
+     * message {@code nothing} says there is nothing to highlight, if it does.
      */
-    private static Shown divergenceCommit(Model model, DivergenceView view) {
+    private static Shown commit(
+            Model model,
+            ContentArea area,
+            Option<Preview<Sha, DiffText>> detail,
+            Function<Sha, Option<Commit>> commit,
+            Option<String> nothing) {
         DiffOptions options = model.preferences().diffOptions();
         String title = Messages.get("panel.commit.title");
-        return view.detail()
-                .map(Preview::shown)
-                .map(detail -> whenLoaded(
+        return detail.map(Preview::shown)
+                .map(shown -> whenLoaded(
                         title,
-                        detail.value(),
-                        changes -> view.commit(detail.key())
-                                .<Shown>map(commit -> commitArea(ContentArea.DIVERGENCE, commit, changes, options))
+                        shown.value(),
+                        changes -> commit.apply(shown.key())
+                                .<Shown>map(found -> commitArea(area, found, changes, options))
                                 .getOrElse(() -> loading(title))))
-                .getOrElse(() -> view.commits().toOption().exists(Divergence::isEmpty)
-                        ? dim(title, Messages.get("content.noDivergence"))
-                        : loading(title));
-    }
-
-    /**
-     * The commit highlighted in the commits of a branch {@code view}, as the commits pane shows its commits.
-     */
-    private static Shown branchCommit(Model model, BranchCommitsView view) {
-        DiffOptions options = model.preferences().diffOptions();
-        String title = Messages.get("panel.commit.title");
-        return view.detail()
-                .map(Preview::shown)
-                .map(detail -> whenLoaded(
-                        title,
-                        detail.value(),
-                        changes -> view.commit(model, detail.key())
-                                .<Shown>map(commit -> commitArea(ContentArea.BRANCH_COMMIT, commit, changes, options))
-                                .getOrElse(() -> loading(title))))
-                .getOrElse(() -> view.commits(model).toOption().exists(List::isEmpty)
-                        ? new Shown.Message(title, Messages.get("content.noCommits"), Tone.PLAIN)
-                        : loading(title));
-    }
-
-    private static Shown commit(Model model) {
-        DiffOptions options = model.preferences().diffOptions();
-        String title = Messages.get("panel.commit.title");
-        return model.repoView()
-                .commitDetail()
-                .map(Preview::shown)
-                .map(detail -> whenLoaded(
-                        title,
-                        detail.value(),
-                        changes -> model.commit(detail.key())
-                                .<Shown>map(commit -> commitArea(ContentArea.COMMIT, commit, changes, options))
-                                .getOrElse(() -> loading(title))))
-                .getOrElse(() -> model.repo().commits().toOption().exists(List::isEmpty)
-                        ? new Shown.Message(title, Messages.get("content.noCommits"), Tone.PLAIN)
-                        : loading(title));
+                .getOrElse(() -> nothing.map(message -> dim(title, Messages.get(message)))
+                        .getOrElse(() -> loading(title)));
     }
 
     private static Shown.Area commitArea(ContentArea area, Commit commit, DiffText changes, DiffOptions options) {
@@ -296,7 +282,6 @@ final class ContentView {
      * How a message is drawn.
      */
     enum Tone {
-        PLAIN,
         DIM,
         ERROR
     }

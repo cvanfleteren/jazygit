@@ -331,7 +331,6 @@ public final class ContentPanel {
                 panel(
                         title,
                         switch (tone) {
-                            case PLAIN -> text(content);
                             case DIM -> text(content).addClass(Theme.Classes.DIM);
                             case ERROR -> text(content).addClass(Theme.Classes.ERROR);
                         });
