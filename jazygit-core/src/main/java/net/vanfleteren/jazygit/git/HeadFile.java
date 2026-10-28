@@ -6,6 +6,7 @@ import io.vavr.control.Try;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.git.model.Sha;
 
@@ -57,8 +58,8 @@ public final class HeadFile {
         if (line.startsWith(REF)) {
             String ref = line.substring(REF.length()).strip();
             return Option.when(
-                    ref.startsWith(Refs.HEADS),
-                    () -> new Head.OnBranch(new BranchName(ref.substring(Refs.HEADS.length())), Option.none()));
+                    ref.startsWith(BranchRef.HEADS),
+                    () -> new Head.OnBranch(new BranchName(ref.substring(BranchRef.HEADS.length())), Option.none()));
         }
         return Sha.parse(line).map(Head.Detached::new);
     }

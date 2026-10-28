@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.git;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
@@ -285,5 +286,25 @@ class CliParseTest {
         assertEquals(Option.of(new Sha(A)), Sha.parse(" " + A + "\n"));
         assertEquals(Option.none(), Sha.parse("  "));
         assertEquals(Option.none(), Sha.parse(A + " " + B));
+    }
+
+    @Test
+    void theParentsOfTheCommitsAreReadAsFullShasOnly() {
+        assertEquals(
+                List.of(List.of(new Sha(A), new Sha(B)), List.of(new Sha(B))),
+                CliLog.parents(A + " " + B + "\n" + B + "\n").get());
+        assertTrue(CliLog.parents(A + " " + B + "\nwarning: something\n").isLeft());
+    }
+
+    @Test
+    void aShaIsAFullObjectId() {
+        assertEquals(Option.of(new Sha(A)), Sha.parse(A));
+        assertEquals(Option.of(new Sha("a".repeat(64))), Sha.parse("a".repeat(64)));
+        // An abbreviated one would lose to a branch or tag of the same name, as 4711 would.
+        assertEquals(Option.none(), Sha.parse("4711"));
+        assertEquals(Option.none(), Sha.parse("a".repeat(39)));
+        assertEquals(Option.none(), Sha.parse("a".repeat(41)));
+        assertEquals(Option.none(), Sha.parse("-" + "a".repeat(39)));
+        assertEquals(Option.none(), Sha.parse("main"));
     }
 }

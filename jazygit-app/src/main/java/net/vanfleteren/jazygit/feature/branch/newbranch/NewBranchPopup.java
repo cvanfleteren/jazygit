@@ -46,7 +46,11 @@ public record NewBranchPopup(
      */
     public static NewBranchPopup following(RemoteBranch remote) {
         return new NewBranchPopup(
-                remote.trackingRef(), remote.shortName(), remote.branch().value(), Option.of(remote), Option.none());
+                remote.tracking().toArg(),
+                remote.shortName(),
+                remote.branch().value(),
+                Option.of(remote),
+                Option.none());
     }
 
     @Override

@@ -8,12 +8,14 @@ public sealed interface ResetTarget {
     /**
      * What git is given to reset to.
      */
-    String revision();
+    Revision revision();
 
     /**
      * How the target is shown to the user, e.g. {@code abc1234} or {@code origin/main}.
      */
-    String label();
+    default String label() {
+        return revision().label();
+    }
 
     /**
      * A commit.
@@ -21,13 +23,8 @@ public sealed interface ResetTarget {
     record ToCommit(Sha sha) implements ResetTarget {
 
         @Override
-        public String revision() {
-            return sha.value();
-        }
-
-        @Override
-        public String label() {
-            return sha.shortSha();
+        public Revision revision() {
+            return new Revision.Commit(sha);
         }
     }
 
@@ -38,13 +35,8 @@ public sealed interface ResetTarget {
     record ToUpstream(BranchRef branch) implements ResetTarget {
 
         @Override
-        public String revision() {
-            return branch.ref();
-        }
-
-        @Override
-        public String label() {
-            return branch.name();
+        public Revision revision() {
+            return branch;
         }
     }
 }

@@ -1,8 +1,8 @@
 package net.vanfleteren.jazygit.git;
 
 import static net.vanfleteren.jazygit.git.GitCommand.git;
-import static net.vanfleteren.jazygit.git.Refs.HEADS;
-import static net.vanfleteren.jazygit.git.Refs.REMOTES;
+import static net.vanfleteren.jazygit.git.model.BranchRef.HEADS;
+import static net.vanfleteren.jazygit.git.model.BranchRef.REMOTES;
 
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
@@ -26,7 +26,7 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
  */
 final class CliBranch {
 
-    private static final String ORIGIN = Refs.REMOTES + RemoteBranch.DEFAULT_REMOTE + "/";
+    private static final String ORIGIN = BranchRef.REMOTES + RemoteBranch.DEFAULT_REMOTE + "/";
 
     private static final List<String> FIELDS = List.of(
             "%(refname)",
@@ -115,7 +115,13 @@ final class CliBranch {
     static Either<ProcessError, Integer> countOnlyOn(Path worktree, BranchName name) {
         return CliLog.count(
                 worktree,
-                List.of(Refs.head(name), "--not", "--exclude=" + name.value(), "--branches", "--remotes", "--tags"));
+                List.of(
+                        new BranchRef.Local(name).toArg(),
+                        "--not",
+                        "--exclude=" + name.value(),
+                        "--branches",
+                        "--remotes",
+                        "--tags"));
     }
 
     static GitError classify(ProcessError error) {
@@ -265,7 +271,7 @@ final class CliBranch {
             return remote.flatMap(r -> remoteRef
                     .flatMap(ref -> GitOutput.after(ref, HEADS))
                     .map(BranchName::new)
-                    .map(branch -> r.equals(Refs.THIS_REPOSITORY)
+                    .map(branch -> r.equals(CliRemote.THIS_REPOSITORY)
                             ? new BranchRef.Local(branch)
                             : new BranchRef.Remote(new RemoteBranch(r, branch))));
         }

@@ -49,7 +49,7 @@ final class CliFetch {
             Path worktree, BranchName name, BranchRef upstream, Map<String, String> credentials) {
         return switch (upstream) {
             case BranchRef.Local(BranchName branch) ->
-                fastForward(worktree, name, Refs.THIS_REPOSITORY, branch, credentials);
+                fastForward(worktree, name, CliRemote.THIS_REPOSITORY, branch, credentials);
             case BranchRef.Remote(RemoteBranch remote) ->
                 fastForward(worktree, name, remote.remote(), remote.branch(), credentials);
         };
@@ -57,6 +57,9 @@ final class CliFetch {
 
     private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(
             Path worktree, BranchName name, String remote, BranchName branch, Map<String, String> credentials) {
-        return CliRemote.run(worktree, git("fetch", remote, Refs.head(branch) + ":" + Refs.head(name)), credentials);
+        return CliRemote.run(
+                worktree,
+                git("fetch", remote, new BranchRef.Local(branch).toArg() + ":" + new BranchRef.Local(name).toArg()),
+                credentials);
     }
 }

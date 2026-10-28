@@ -17,6 +17,11 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
  */
 final class CliRemote {
 
+    /**
+     * The remote git names for this repository itself, as for a branch created with {@code --track} from a local one.
+     */
+    static final String THIS_REPOSITORY = ".";
+
     // A first fetch of a big repository takes a while; a fetch that is still running is not started again.
     // Talking to a remote takes a while for a big repository, or over a slow connection.
     private static final Duration TIMEOUT = Duration.ofMinutes(2);
