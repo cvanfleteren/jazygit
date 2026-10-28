@@ -40,13 +40,16 @@ and Jackson 3's `tools.jackson.core:jackson-core`, nothing of jazygit.
 - A `DecodeError` is the path to where it failed, like `data.repository.pullRequest.commits.nodes[0].commit
   .committedDate`, and what was wrong there, like `expected a string, got null`. Each field and index adds to the path.
 - What decoders are made of: `string`, `bool`, `integer`, `longValue`, `instant`, `enumOf`; `field` and `at` for a
-  path of fields; `nullable` and `list`; `dict` for an object whose names are data, like the hosts gh is logged in to
+  path of fields; `nullable` and `list`; `optionalField` for REST, below; `dict` for an object whose names are data, like the hosts gh is logged in to
   or the aliases of a query; `map`, `flatMap`, `map2` to `map8` on vavr's functions; `succeed` and `fail`;
   and `byField("__typename", decoders)` for GraphQL's unions, like a check that is a `CheckRun` or a `StatusContext`.
   A record of more than eight fields is built from decoders of its parts.
 - A missing field fails; `null` is only taken where `nullable` gives it as `Option.none()`. GraphQL and `gh --json`
   always answer each field asked for, so a missing one is a query and its decoder that went apart. Not: missing and
   `null` alike, which hides that.
+- But for REST's answers, like `merge-async`'s: they leave out what they have nothing for, like the `details` of a
+  merge that failed. There `optionalField` gives a missing field as `Option.none()`, and leaves `null` to its
+  decoder. Not: a merge that failed told as unexpected output for want of why, where jq read it as failed.
 - But for the fields asked for in a fragment on a union or an interface: a node of another type answers none of them,
   like a search hit that is not a pull request, which is `{}`. So each such fragment asks for `__typename` too, and
   its node is decoded with `byField("__typename", decoders)`, which takes a fallback for the types it does not know:
