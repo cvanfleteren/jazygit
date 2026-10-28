@@ -109,13 +109,15 @@ class DecoderTest {
     }
 
     @Test
-    void anOptionalFieldLeavesNullToItsDecoder() {
+    void anOptionalFieldThatIsNullIsNone() {
+        assertEquals(Either.right(Option.none()), decode(optionalField("message", string()), "{\"message\": null}"));
+    }
+
+    @Test
+    void anOptionalFieldDoesNotTakeAValueOfAnotherKind() {
         assertEquals(
-                Either.left("message: expected a string, got null"),
-                decode(optionalField("message", string()), "{\"message\": null}"));
-        assertEquals(
-                Either.right(Option.some(Option.none())),
-                decode(optionalField("message", nullable(string())), "{\"message\": null}"));
+                Either.left("message: expected a string, got a number"),
+                decode(optionalField("message", string()), "{\"message\": 3}"));
     }
 
     @Test

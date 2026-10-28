@@ -4,7 +4,6 @@ import static net.vanfleteren.jazygit.gh.GhCommand.gh;
 import static net.vanfleteren.jazygit.json.Decoder.at;
 import static net.vanfleteren.jazygit.json.Decoder.fail;
 import static net.vanfleteren.jazygit.json.Decoder.field;
-import static net.vanfleteren.jazygit.json.Decoder.nullable;
 import static net.vanfleteren.jazygit.json.Decoder.optionalField;
 import static net.vanfleteren.jazygit.json.Decoder.string;
 import static net.vanfleteren.jazygit.json.Decoder.succeed;
@@ -32,11 +31,9 @@ final class MergeQuery {
         case "enqueued" -> succeed(new MergeStatus.Enqueued());
         // A merge that failed is told as failed, whatever GitHub gives or leaves out of why.
         case "failed" ->
-            optionalField("details", nullable(optionalField("message", nullable(string()))))
-                    .map(details -> new MergeStatus.Failed(details.flatMap(d -> d)
-                            .flatMap(message -> message)
-                            .flatMap(message -> message)
-                            .getOrElse("")));
+            optionalField("details", optionalField("message", string()))
+                    .map(details -> new MergeStatus.Failed(
+                            details.flatMap(message -> message).getOrElse("")));
         default -> fail("expected pending, merged, enqueued or failed, got \"" + status + "\"");
     });
 

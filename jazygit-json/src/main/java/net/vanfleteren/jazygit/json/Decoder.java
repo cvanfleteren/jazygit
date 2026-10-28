@@ -105,13 +105,14 @@ public interface Decoder<T> {
     }
 
     /**
-     * The field {@code name} of an object, decoded, or none when the object has no such field: only for a REST
-     * answer, which leaves out what it has nothing for, never for GraphQL or {@code gh --json} (ADR 42). A
-     * {@code null} is the decoder's to take.
+     * The field {@code name} of an object, decoded, or none when the object has no such field or it is {@code null}:
+     * only for a REST answer, which leaves out or nulls what it has nothing for, never for GraphQL or
+     * {@code gh --json} (ADR 42).
      */
     static <T> Decoder<Option<T>> optionalField(String name, Decoder<T> decoder) {
         return json -> json instanceof JObject(var fields)
                 ? fields.get(name)
+                        .filter(value -> !(value instanceof JNull))
                         .fold(
                                 () -> Either.right(Option.none()),
                                 value -> decoder.decode(value).map(Option::some).mapLeft(error -> error.inField(name)))
