@@ -15,6 +15,9 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
  */
 final class GhProcess {
 
+    // The version of gh that brought --slurp, which reads all pages as one JSON array (ADR 42).
+    static final String SLURP_SINCE = "2.48";
+
     private final Path worktree;
     private final String executable;
     private final GhToken token;
@@ -106,9 +109,18 @@ final class GhProcess {
                     case ExecFailure.TimedOut() -> new GhError.TimedOut(command.operation());
                     case ExecFailure.Interrupted() -> new GhError.Interrupted(command.operation());
                     case ExecFailure.NonZero(int exitCode, String stderr, String stdout) ->
-                        new GhError.CommandFailed(Exec.explanation(stderr, stdout), exitCode);
+                        tooOld(stderr)
+                                ? new GhError.TooOld(SLURP_SINCE)
+                                : new GhError.CommandFailed(Exec.explanation(stderr, stdout), exitCode);
                 })
                 .map(stdout -> new Output(stdout, command.executed()));
+    }
+
+    /**
+     * Whether gh failed as it does not know {@code --slurp} yet, which it says before anything else.
+     */
+    static boolean tooOld(String stderr) {
+        return stderr.contains("unknown flag: --slurp");
     }
 
     private Either<GhError, Output> executeAgain(GhCommand command) {

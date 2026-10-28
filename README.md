@@ -5,6 +5,7 @@ A lazygit-style terminal UI for git, written in Java on [TamboUI](https://github
 ## Requirements
 
 - **git 2.45 or newer**, on the `PATH`. jazygit does everything through the git command line.
+- **gh 2.48 or newer** (the GitHub CLI), for what jazygit shows of GitHub: pull requests, checks and stacks.
 - **Java 25**, to run the jar. The native image (`mvn -Pnative package`) needs no Java to run.
 - **A real terminal**: jazygit is a full-screen TUI, so it needs a terminal attached to its input and output.
   It runs on Linux, macOS and Windows.

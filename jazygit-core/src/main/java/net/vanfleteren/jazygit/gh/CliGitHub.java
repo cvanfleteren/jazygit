@@ -22,7 +22,6 @@ import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Mergeable;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.ReviewThreads;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Reviewer;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.ReviewerState;
-import net.vanfleteren.jazygit.gh.timing.CheckTimings;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
@@ -61,16 +60,6 @@ public final class CliGitHub implements GitHub {
             commits(last: 1) { totalCount nodes { commit { committedDate statusCheckRollup { contexts(first: 100) { \
             nodes { %s } } } %s } } } \
             reviewThreads(last: 100) { totalCount nodes { isResolved comments { totalCount } } } } } }""".formatted(StackFragment.FIELDS, CheckFragment.FIELDS, SuiteFragment.FIELDS);
-
-    /*
-     * The branches of the repository with the combined state of the checks on their tip, and its check suites, all
-     * pages of them. gh fills in the repository of the working tree for {owner} and {repo}.
-     */
-    static final String BRANCHES_QUERY = """
-            query($owner: String!, $name: String!, $endCursor: String) { \
-            repository(owner: $owner, name: $name) { nameWithOwner \
-            refs(refPrefix: "refs/heads/", first: 100, after: $endCursor) { pageInfo { hasNextPage endCursor } \
-            nodes { name target { ... on Commit { statusCheckRollup { state } %s } } } } } }""".formatted(SuiteFragment.FIELDS);
 
     // The state of a check, in jq: a check run that is not completed yet is PENDING; a commit status gives its state.
     private static final String CHECK_STATE = """
@@ -208,43 +197,6 @@ public final class CliGitHub implements GitHub {
             (.commits.nodes[0].commit | waiting | ["check"] + waitingCheck | @tsv)))""";
     private static final int DETAIL_FIELD_COUNT = 18;
     /*
-     * The check runs on the last commit of the pull requests merged last, and on the last commits of the default
-     * branch, to learn how long checks take from (ADR 32). gh fills in the repository of the working tree for
-     * {owner} and {repo}.
-     */
-    private static final String RECENT_CHECKS_QUERY = """
-            query($owner: String!, $name: String!, $count: Int!) { repository(owner: $owner, name: $name) { \
-            nameWithOwner \
-            pullRequests(first: $count, states: MERGED, orderBy: { field: UPDATED_AT, direction: DESC }) { nodes { \
-            commits(last: 1) { nodes { commit { %1$s } } } } } \
-            defaultBranchRef { target { ... on Commit { history(first: $count) { nodes { %1$s } } } } } } }""".formatted(
-                    "statusCheckRollup { contexts(first: 100) { nodes { __typename ... on CheckRun { %s } } } }"
-                            .formatted(CheckFragment.CHECK_RUN_FIELDS));
-    /*
-     * The checks on the tips of branches, each in an alias b0, b1, … whose branch is in the variable of that name.
-     * gh fills in the repository of the working tree for {owner} and {repo}.
-     */
-    private static final String BRANCH_CHECK_RUNS_QUERY = """
-            query($owner: String!, $name: String!%s) { repository(owner: $owner, name: $name) { nameWithOwner %s } }""";
-    private static final String BRANCH_CHECK_RUNS_REF = """
-            b%1$d: ref(qualifiedName: $b%1$d) { name target { ... on Commit { statusCheckRollup { \
-            contexts(first: 100) { nodes { __typename ... on CheckRun { %2$s } \
-            ... on StatusContext { context state } } } } %3$s } } }""";
-    /*
-     * A "repo" line with the repository as owner/name, then a "check" line per check of each branch, with its name,
-     * and per workflow run that waits to start on it.
-     */
-    static final String BRANCH_CHECK_RUNS_JQ = CHECK_JQ + WAITING_JQ + """
-            .data.repository | (["repo", .nameWithOwner] | @tsv), \
-            (to_entries[] | select(.key | test("^b[0-9]+$")) | .value | select(. != null) | .name as $branch \
-            | .target | ((.statusCheckRollup.contexts.nodes[]? | ["check", $branch] + check), \
-            (waiting | ["check", $branch] + waitingCheck)) | @tsv)""";
-    // A "repo" line with the repository as owner/name, then a "check" line per check run of RECENT_CHECKS_QUERY.
-    private static final String RECENT_CHECKS_JQ = CHECK_JQ + """
-            .data.repository | (["repo", .nameWithOwner] | @tsv), \
-            ((.pullRequests.nodes[]?.commits.nodes[]?.commit, .defaultBranchRef.target.history.nodes[]?) \
-            | .statusCheckRollup.contexts.nodes[]? | select(.__typename == "CheckRun") | ["check"] + check | @tsv)""";
-    /*
      * Tab separated lines, one per part of the conversation: what it is ("description", "comment", or the state of
      * a review), its id, its author, when it was written, whether it was edited, whether it is hidden and why, and
      * its text. The description first, then the rest oldest first. A review that only commented and has no text is
@@ -259,15 +211,6 @@ public final class CliGitHub implements GitHub {
             | [.state, .id, (.author.login // ""), .submittedAt, (.includesCreatedEdit | tostring), "false", "", \
             .body])] | sort_by(.[3]) | .[] | @tsv)""";
     private static final int COMMENT_FIELD_COUNT = 8;
-    /*
-     * Tab separated lines, each starting with what it is: a "repo" line with the repository as owner/name per
-     * page, and a "branch" line per branch with its name, the state of the checks on its tip, empty without
-     * checks, and whether a workflow run on its tip waits to start.
-     */
-    static final String BRANCHES_JQ = WAITING_JQ + """
-            .data.repository | (["repo", .nameWithOwner] | @tsv), \
-            (.refs.nodes[] | ["branch", .name, (.target.statusCheckRollup.state // ""), \
-            ([.target | waiting] | length > 0 | tostring)] | @tsv)""";
 
     private static final Pattern CREATED_URL = Pattern.compile("/pull/(\\d{1,9})$");
 
@@ -443,32 +386,6 @@ public final class CliGitHub implements GitHub {
     }
 
     /**
-     * Parses the lines the jq filter of {@link #branchChecks()} prints.
-     */
-    static Either<UnexpectedOutput, BranchChecks> parseBranchChecks(String raw) {
-        List<List<String>> lines = List.of(raw.split("\n"))
-                .filter(line -> !line.isBlank())
-                .map(line -> List.of(line.split("\t", -1)).map(CliGitHub::unescape));
-        Option<List<String>> unknown =
-                lines.find(fields -> !(fields.size() == 2 && fields.head().equals("repo")
-                        || fields.size() == 4 && fields.head().equals("branch")));
-        if (unknown.isDefined()) {
-            return Either.left(new UnexpectedOutput(unknown.get().mkString("\t")));
-        }
-        return lines.find(f -> f.head().equals("repo"))
-                .map(repo -> new BranchChecks(
-                        repo.get(1),
-                        lines.filter(f -> f.head().equals("branch"))
-                                .toMap(
-                                        f -> f.get(1),
-                                        // A workflow run that waits to start is pending, without checks yet.
-                                        f -> CheckFragment.checks(List.of(f.get(2))
-                                                .filter(state -> !state.isEmpty())
-                                                .appendAll(Option.when(f.get(3).equals("true"), "PENDING"))))))
-                .toEither(() -> new UnexpectedOutput(raw));
-    }
-
-    /**
      * Parses the lines the jq filter of {@link #pullRequestDetails(int)} prints.
      */
     static Either<UnexpectedOutput, PullRequestDetails> parseDetails(String raw) {
@@ -554,54 +471,6 @@ public final class CliGitHub implements GitHub {
 
     private static Option<Instant> instant(String value) {
         return value.isEmpty() ? Option.none() : Option.of(Instant.parse(value));
-    }
-
-    /**
-     * The query of {@link #branchCheckRuns(List)} for {@code count} branches.
-     */
-    static String branchCheckRunsQuery(int count) {
-        List<Integer> aliases = List.range(0, count);
-        return BRANCH_CHECK_RUNS_QUERY.formatted(
-                aliases.map(i -> ", $b" + i + ": String!").mkString(),
-                aliases.map(i -> BRANCH_CHECK_RUNS_REF.formatted(
-                                i, CheckFragment.CHECK_RUN_FIELDS, SuiteFragment.FIELDS))
-                        .mkString(" "));
-    }
-
-    /**
-     * Parses the lines {@link #BRANCH_CHECK_RUNS_JQ} prints.
-     */
-    static Either<UnexpectedOutput, BranchCheckRuns> parseBranchCheckRuns(String raw) {
-        List<List<String>> lines = List.of(raw.split("\n"))
-                .filter(line -> !line.isBlank())
-                .map(line -> List.of(line.split("\t", -1)).map(CliGitHub::unescape));
-        return lines.find(f -> f.head().equals("repo") && f.size() == 2)
-                .filter(repo -> lines.forAll(
-                        f -> f.head().equals("repo") || f.head().equals("check") && f.size() == CHECK_FIELD_COUNT + 1))
-                .map(repo -> new BranchCheckRuns(
-                        repo.get(1),
-                        lines.filter(f -> f.head().equals("check"))
-                                .groupBy(f -> f.get(1))
-                                .mapValues(checks -> checks.map(f -> check(f.drop(2))))))
-                .toEither(() -> new UnexpectedOutput(raw));
-    }
-
-    /**
-     * Parses the lines {@link #RECENT_CHECKS_JQ} prints, keeping the check runs of a workflow.
-     */
-    static Either<UnexpectedOutput, RecentChecks> parseRecentChecks(String raw) {
-        List<List<String>> lines = List.of(raw.split("\n"))
-                .filter(line -> !line.isBlank())
-                .map(line -> List.of(line.split("\t", -1)).map(CliGitHub::unescape));
-        return lines.find(f -> f.head().equals("repo") && f.size() == 2)
-                .filter(repo ->
-                        lines.forAll(f -> f.head().equals("repo") || f.head().equals("check") && known(f)))
-                .map(repo -> new RecentChecks(
-                        repo.get(1),
-                        lines.filter(f -> f.head().equals("check"))
-                                .map(f -> check(f.tail()))
-                                .filter(check -> check.run().isDefined())))
-                .toEither(() -> new UnexpectedOutput(raw));
     }
 
     private static boolean known(List<String> fields) {
@@ -809,20 +678,7 @@ public final class CliGitHub implements GitHub {
 
     @Override
     public Either<GhError, BranchChecks> branchChecks() {
-        return process.read(
-                gh(
-                        "api",
-                        "graphql",
-                        "--paginate",
-                        "-F",
-                        "owner={owner}",
-                        "-F",
-                        "name={repo}",
-                        "-f",
-                        "query=" + BRANCHES_QUERY,
-                        "--jq",
-                        BRANCHES_JQ),
-                CliGitHub::parseBranchChecks);
+        return process.readJson(BranchesQuery.COMMAND, BranchesQuery.DECODER);
     }
 
     @Override
@@ -861,33 +717,12 @@ public final class CliGitHub implements GitHub {
 
     @Override
     public Either<GhError, BranchCheckRuns> branchCheckRuns(List<String> branches) {
-        return process.read(
-                gh(List.of("api", "graphql", "-F", "owner={owner}", "-F", "name={repo}")
-                        .appendAll(branches.zipWithIndex()
-                                .flatMap(branch -> List.of("-f", "b" + branch._2 + "=refs/heads/" + branch._1)))
-                        .appendAll(List.of(
-                                "-f", "query=" + branchCheckRunsQuery(branches.size()), "--jq", BRANCH_CHECK_RUNS_JQ))
-                        .toJavaArray(String[]::new)),
-                CliGitHub::parseBranchCheckRuns);
+        return process.readJson(BranchCheckRunsQuery.command(branches), BranchCheckRunsQuery.decoder(branches.size()));
     }
 
     @Override
     public Either<GhError, RecentChecks> recentChecks() {
-        return process.read(
-                gh(
-                        "api",
-                        "graphql",
-                        "-F",
-                        "owner={owner}",
-                        "-F",
-                        "name={repo}",
-                        "-F",
-                        "count=" + CheckTimings.TOP_UP_COMMITS,
-                        "-f",
-                        "query=" + RECENT_CHECKS_QUERY,
-                        "--jq",
-                        RECENT_CHECKS_JQ),
-                CliGitHub::parseRecentChecks);
+        return process.readJson(RecentChecksQuery.COMMAND, RecentChecksQuery.DECODER);
     }
 
     @Override

@@ -11,7 +11,6 @@ import io.vavr.control.Option;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
-import net.vanfleteren.jazygit.gh.model.BranchCheckRuns;
 import net.vanfleteren.jazygit.gh.model.BranchChecks;
 import net.vanfleteren.jazygit.gh.model.CheckRun;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
@@ -26,8 +25,6 @@ import net.vanfleteren.jazygit.gh.model.PullRequestDetails.*;
 import net.vanfleteren.jazygit.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
-import net.vanfleteren.jazygit.gh.model.RecentChecks;
-import net.vanfleteren.jazygit.gh.timing.CheckSample;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -260,53 +257,6 @@ class CliGitHubTest {
     void aListWhoseCountIsNoNumberIsUnexpected() {
         assertTrue(CliGitHub.parseLists("list\tauthored\t\tmany\n").isLeft());
         assertTrue(CliGitHub.parseLists("list\tauthored\t\n").isLeft());
-    }
-
-    @Test
-    void parsesTheRepositoryAndTheChecksOfEachBranchOverAllPages() {
-        String raw = "repo\towner/repo\n"
-                + "branch\tfeature/login\tSUCCESS\tfalse\n"
-                + "branch\twip\t\tfalse\n"
-                + "repo\towner/repo\n"
-                + "branch\tmain\tFAILURE\tfalse\n"
-                + "branch\tfix\tEXPECTED\tfalse\n";
-
-        assertEquals(
-                Either.right(new BranchChecks(
-                        "owner/repo",
-                        HashMap.of(
-                                "feature/login",
-                                Checks.PASSING,
-                                "wip",
-                                Checks.NONE,
-                                "main",
-                                Checks.FAILING,
-                                "fix",
-                                Checks.PENDING))),
-                CliGitHub.parseBranchChecks(raw));
-    }
-
-    @Test
-    void aWorkflowRunThatWaitsToStartMakesABranchPendingUnlessItsChecksFailed() {
-        String raw = "repo\towner/repo\n"
-                + "branch\tmain\t\ttrue\n"
-                + "branch\tdone\tSUCCESS\ttrue\n"
-                + "branch\tbroken\tFAILURE\ttrue\n";
-
-        assertEquals(
-                Either.right(new BranchChecks(
-                        "owner/repo",
-                        HashMap.of("main", Checks.PENDING, "done", Checks.PENDING, "broken", Checks.FAILING))),
-                CliGitHub.parseBranchChecks(raw));
-    }
-
-    @Test
-    void branchChecksWithoutTheRepositoryAreUnexpected() {
-        assertTrue(CliGitHub.parseBranchChecks("branch\tmain\tSUCCESS\tfalse\n").isLeft());
-        assertTrue(CliGitHub.parseBranchChecks("repo\towner/repo\nbranch\tmain\tSUCCESS\n")
-                .isLeft());
-        assertTrue(CliGitHub.parseBranchChecks("repo\towner/repo\nsomething\telse\n")
-                .isLeft());
     }
 
     @Test
@@ -583,63 +533,11 @@ class CliGitHubTest {
     }
 
     @Test
-    void parsesTheChecksOfBranchesByBranch() {
-        String raw = "repo\tcvanfleteren/jazygit\n"
-                + "check\tmain\tverify\tPENDING\t122\tBuild\t\t2026-10-24T22:18:31Z\t\t401\t2026-10-24T22:18:29Z\t1\tpush\n"
-                + "check\tfeat/x\tci/status\tSUCCESS\t\t\t\t\t\t\t\t\t\n";
-
-        BranchCheckRuns runs = CliGitHub.parseBranchCheckRuns(raw).get();
-
-        assertEquals("cvanfleteren/jazygit", runs.repository());
-        assertEquals(
-                List.of("feat/x", "main"), runs.byBranch().keySet().toList().sorted());
-        assertEquals(
-                Option.of(Instant.parse("2026-10-24T22:18:31Z")),
-                runs.byBranch().get("main").get().head().run().get().startedAt());
-        assertEquals(
-                List.of(new Check("ci/status", Checks.PASSING)),
-                runs.byBranch().get("feat/x").get());
-        assertTrue(CliGitHub.parseBranchCheckRuns(raw + "check\tmain\tverify\tPENDING\n")
-                .isLeft());
-    }
-
-    @Test
-    void aWorkflowRunThatWaitsToStartIsAQueuedCheckThatIsNeverLearnedFrom() {
-        String raw = "repo\tcvanfleteren/jazygit\n"
-                + "check\tmain\tPublish\tPENDING\t0\tPublish\t\t\t\t404\t2026-10-26T23:32:02Z\t1\tpush\n";
-
-        Check waiting = CliGitHub.parseBranchCheckRuns(raw)
-                .get()
-                .byBranch()
-                .get("main")
-                .get()
-                .head();
-
-        assertEquals(
-                new Check(
-                        "Publish",
-                        Checks.PENDING,
-                        Option.of(new CheckRun(
-                                0,
-                                "Publish",
-                                "",
-                                Option.none(),
-                                Option.none(),
-                                404,
-                                Instant.parse("2026-10-26T23:32:02Z"),
-                                1,
-                                "push"))),
-                waiting);
-        assertTrue(waiting.queued());
-        assertEquals(Option.none(), CheckSample.of(waiting));
-    }
-
-    @Test
     void theSuitesOfACommitAreReadWhereverItsChecksAre() {
         // Without them, a workflow that waits to start reads as no checks (ADR 35).
         List.of(
-                        CliGitHub.BRANCHES_QUERY,
-                        CliGitHub.branchCheckRunsQuery(1),
+                        BranchesQuery.QUERY,
+                        BranchCheckRunsQuery.query(1),
                         CliGitHub.DETAILS_QUERY,
                         CliGitHub.PRS_QUERY,
                         CliGitHub.REPOSITORY_PRS_QUERY,
@@ -675,43 +573,6 @@ class CliGitHubTest {
                                 "push"))),
                 checks.last());
         assertTrue(checks.last().queued());
-    }
-
-    @Test
-    void theChecksOfEachBranchAreReadInAnAliasOfTheirOwn() {
-        String query = CliGitHub.branchCheckRunsQuery(2);
-
-        assertTrue(query.contains("$name: String!, $b0: String!, $b1: String!)"), query);
-        assertTrue(query.contains("b0: ref(qualifiedName: $b0)"), query);
-        assertTrue(query.contains("b1: ref(qualifiedName: $b1)"), query);
-        assertFalse(query.contains("$b2"), query);
-    }
-
-    @Test
-    void theBranchesAreAskedForByTheirFullRefInTheVariablesOfTheirAlias(@TempDir Path dir) throws Exception {
-        assumeTrue(Files.isExecutable(Path.of("/bin/sh")), "no POSIX shell");
-        Path gh = Files.writeString(
-                dir.resolve("gh"), "#!/bin/sh\necho \" $* \" > '" + dir.resolve("asked") + "'\necho 'repo\to/r'\n");
-        gh.toFile().setExecutable(true);
-
-        new CliGitHub(dir, gh.toString(), GhToken.NONE).branchCheckRuns(List.of("feat/x", "main"));
-
-        String asked = Files.readString(dir.resolve("asked"));
-        assertTrue(asked.contains(" -f b0=refs/heads/feat/x -f b1=refs/heads/main "), asked);
-    }
-
-    @Test
-    void parsesTheChecksThatRanLately() {
-        String raw = "repo\tcvanfleteren/jazygit\n"
-                + "check\tverify\tSUCCESS\t122\tBuild\tSUCCESS\t2026-10-24T22:18:31Z\t2026-10-24T22:20:25Z"
-                + "\t401\t2026-10-24T22:18:29Z\t1\tpush\n";
-
-        RecentChecks recent = CliGitHub.parseRecentChecks(raw).get();
-
-        assertEquals("cvanfleteren/jazygit", recent.repository());
-        assertEquals(List.of("verify"), recent.checks().map(Check::name));
-        assertTrue(CliGitHub.parseRecentChecks("check\tverify\n").isLeft());
-        assertTrue(CliGitHub.parseRecentChecks(raw + "check\tverify\n").isLeft());
     }
 
     @Test
