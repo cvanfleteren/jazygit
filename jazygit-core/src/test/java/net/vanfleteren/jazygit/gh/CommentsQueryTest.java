@@ -133,6 +133,50 @@ class CommentsQueryTest {
     }
 
     @Test
+    void aDismissedReviewIsKept() {
+        assertEquals(
+                Either.right(List.of(Kind.DISMISSED)),
+                conversation("\"\"", "", review("PRR_1", "DISMISSED", "\"2026-10-10T12:00:00Z\"", ""))
+                        .map(comments -> comments.map(PullRequestComment::kind)));
+    }
+
+    @Test
+    void aReviewByADeletedAccountIsByNoName() {
+        assertEquals(
+                Either.right(List.of("")),
+                conversation("\"\"", "", """
+                                { "id": "PRR_1", "author": null, "state": "APPROVED",
+                                  "submittedAt": "2026-10-10T12:00:00Z", "includesCreatedEdit": false, "body": "" }""").map(comments -> comments.map(PullRequestComment::author)));
+    }
+
+    @Test
+    void aMinimizedCommentWithoutAReasonIsHiddenForNoReasonGiven() {
+        assertEquals(
+                Either.right(List.of(Option.of(""))),
+                conversation("\"\"", """
+                                { "id": "IC_1", "author": { "login": "bob" }, "createdAt": "2026-10-10T09:00:00Z",
+                                  "includesCreatedEdit": false, "isMinimized": true, "minimizedReason": null,
+                                  "body": "Spam" }""", "").map(comments -> comments.map(PullRequestComment::hidden)));
+    }
+
+    @Test
+    void aCommentAndAReviewWrittenAtTheSameTimeTheCommentFirst() {
+        assertEquals(
+                Either.right(List.of("IC_1", "PRR_1")),
+                conversation(
+                                "\"\"",
+                                comment(
+                                        "IC_1",
+                                        "{ \"login\": \"bob\" }",
+                                        "2026-10-10T12:00:00Z",
+                                        false,
+                                        "null",
+                                        "\"First\""),
+                                review("PRR_1", "APPROVED", "\"2026-10-10T12:00:00Z\"", "Same time"))
+                        .map(comments -> comments.map(comment -> comment.id().value())));
+    }
+
+    @Test
     void aConversationWithoutAnything() {
         assertEquals(Either.right(List.empty()), conversation("\"\"", "", ""));
     }

@@ -21,7 +21,7 @@ import net.vanfleteren.jazygit.json.Decoder;
 
 /**
  * The conversation on a pull request, read with {@code gh pr view --json}: its description first, then its comments
- * and reviews, the oldest first (ADR 6, 41).
+ * and reviews, the oldest first (ADR 6, 42).
  */
 final class CommentsQuery {
 

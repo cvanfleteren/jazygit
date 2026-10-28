@@ -20,7 +20,7 @@ import net.vanfleteren.jazygit.json.Decoder;
 
 /**
  * The check runs on the last commit of the pull requests merged last, and on the last commits of the default branch,
- * to learn how long checks take from (ADR 32, 41).
+ * to learn how long checks take from (ADR 32, 42).
  */
 final class RecentChecksQuery {
 

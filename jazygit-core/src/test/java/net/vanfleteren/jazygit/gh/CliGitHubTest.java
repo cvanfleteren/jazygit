@@ -21,14 +21,11 @@ import org.junit.jupiter.api.io.TempDir;
 
 class CliGitHubTest {
 
-    // Not line ends to a tab-separated reader, only to \R.
-    private static final String LINE_SEPARATOR = Character.toString(0x2028);
     // What a gh asked how far behind its base a pull request is prints.
     private static final String BEHIND_BY_2 =
             "echo '{\"data\": {\"repository\": {\"ref\": {\"compare\": {\"behindBy\": 2}}}}}'";
     private static final String BEHIND_BY_MANY =
             "echo '{\"data\": {\"repository\": {\"ref\": {\"compare\": {\"behindBy\": \"many\"}}}}}'";
-    private static final String PARAGRAPH_SEPARATOR = Character.toString(0x2029);
 
     /*
      * The details of a pull request in state, at commit head, into main, as read through a gh that runs compare when
