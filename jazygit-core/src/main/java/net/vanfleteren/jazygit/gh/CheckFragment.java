@@ -8,7 +8,6 @@ import static net.vanfleteren.jazygit.json.Decoder.integer;
 import static net.vanfleteren.jazygit.json.Decoder.longValue;
 import static net.vanfleteren.jazygit.json.Decoder.map2;
 import static net.vanfleteren.jazygit.json.Decoder.map3;
-import static net.vanfleteren.jazygit.json.Decoder.map4;
 import static net.vanfleteren.jazygit.json.Decoder.map5;
 import static net.vanfleteren.jazygit.json.Decoder.nullable;
 import static net.vanfleteren.jazygit.json.Decoder.string;
@@ -47,17 +46,17 @@ final class CheckFragment {
      * The workflow run of a check suite or a check run: its name, empty when it has none, and when and how it was
      * started, none when that cannot be read.
      */
-    static final Decoder<WorkflowRun> WORKFLOW_RUN = map2(
+    static final Decoder<WorkflowRun> WORKFLOW_RUN = map5(
             field("workflow", nullable(field("name", nullable(string()))))
                     .map(workflow -> workflow.flatMap(name -> name).getOrElse("")),
-            orNone(map4(
-                    field("databaseId", longValue()),
-                    field("createdAt", instant()),
-                    field("runAttempt", integer()),
-                    field("event", nullable(string())),
-                    (id, createdAt, attempt, event) ->
-                            new WorkflowRun.Started(id, createdAt, attempt, event.getOrElse("")))),
-            WorkflowRun::new);
+            orNone("databaseId", longValue()),
+            orNone("createdAt", instant()),
+            orNone("runAttempt", integer()),
+            orNone("event", nullable(string())),
+            (workflow, id, createdAt, attempt, event) -> new WorkflowRun(
+                    workflow,
+                    id.flatMap(runId -> createdAt.flatMap(created -> attempt.flatMap(runAttempt ->
+                            event.map(by -> new WorkflowRun.Started(runId, created, runAttempt, by.getOrElse(""))))))));
 
     /**
      * The state of a check as GitHub says it, of {@link #STATE_FIELDS}: a check run that is not completed yet is
@@ -73,24 +72,24 @@ final class CheckFragment {
             succeed(""));
 
     // How a check run of a workflow ran, none for another app's or when it cannot be read.
-    static final Decoder<Option<CheckRun>> RUN = orNone(map5(
-                    field("databaseId", longValue()),
-                    field("conclusion", nullable(string())),
-                    field("startedAt", nullable(instant())),
-                    field("completedAt", nullable(instant())),
-                    at("checkSuite.workflowRun", nullable(WORKFLOW_RUN)),
-                    (id, conclusion, startedAt, completedAt, workflowRun) -> workflowRun.flatMap(run -> run.started()
-                            .map(started -> new CheckRun(
-                                    id,
+    static final Decoder<Option<CheckRun>> RUN = map5(
+            orNone("databaseId", longValue()),
+            field("conclusion", nullable(string())),
+            orNone("startedAt", nullable(instant())),
+            orNone("completedAt", nullable(instant())),
+            at("checkSuite.workflowRun", nullable(WORKFLOW_RUN)),
+            (id, conclusion, startedAt, completedAt, workflowRun) -> workflowRun.flatMap(run -> run.started()
+                    .flatMap(started ->
+                            id.flatMap(runId -> startedAt.flatMap(start -> completedAt.map(done -> new CheckRun(
+                                    runId,
                                     run.workflow(),
                                     conclusion.getOrElse(""),
-                                    startedAt,
-                                    completedAt,
+                                    start,
+                                    done,
                                     started.id(),
                                     started.createdAt(),
                                     started.attempt(),
-                                    started.event())))))
-            .map(run -> run.flatMap(checkRun -> checkRun));
+                                    started.event())))))));
 
     /**
      * A check of {@link #FIELDS}: a check run with how it ran, a commit status, or, of a type not asked for, a check
@@ -138,11 +137,12 @@ final class CheckFragment {
     }
 
     /**
-     * What {@code decoder} decodes, none when it cannot: for when a check ran, which is shown when it can be read and
-     * left out when it cannot, as the check itself still counts (ADR 32). Nothing else is read this leniently.
+     * The field {@code name}, decoded, none when its value cannot be: for when a check ran, which is shown when it can
+     * be read and left out when it cannot, as the check itself still counts (ADR 32). The field missing still fails,
+     * as that is a query and its decoder that went apart (ADR 42). Nothing else is read this leniently.
      */
-    private static <T> Decoder<Option<T>> orNone(Decoder<T> decoder) {
-        return json -> Either.right(decoder.decode(json).toOption());
+    private static <T> Decoder<Option<T>> orNone(String name, Decoder<T> decoder) {
+        return field(name, json -> Either.right(decoder.decode(json).toOption()));
     }
 
     /**

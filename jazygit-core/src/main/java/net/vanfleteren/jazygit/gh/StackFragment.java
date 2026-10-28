@@ -20,7 +20,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.json.Decoder;
 
 /**
- * Where a pull request sits in its stack, and the pull requests of it, in GraphQL and as it is decoded (ADR 24, 41).
+ * Where a pull request sits in its stack, and the pull requests of it, in GraphQL and as it is decoded (ADR 24, 42).
  */
 final class StackFragment {
 

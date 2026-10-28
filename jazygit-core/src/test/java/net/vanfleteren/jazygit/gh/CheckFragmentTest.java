@@ -75,6 +75,28 @@ class CheckFragmentTest {
     }
 
     @Test
+    void aCheckRunWhoseIdIsNullIsNotTimedButStillCounts() {
+        assertEquals(Either.right(new Check("verify", Checks.PENDING)), check("""
+                        { "__typename": "CheckRun", "databaseId": null, "name": "verify", "status": "IN_PROGRESS",
+                          "conclusion": null, "startedAt": "2026-10-26T22:00:02Z", "completedAt": null,
+                          "checkSuite": { "workflowRun": { "databaseId": 401, "createdAt": "2026-10-26T22:00:00Z",
+                            "runAttempt": 1, "event": "push", "workflow": { "name": "Build" } } } }"""));
+    }
+
+    @Test
+    void aCheckRunWithoutWhenItRanIsUnexpected() {
+        assertEquals(Either.left(new GhError.UnexpectedOutput("startedAt: missing")), check("""
+                        { "__typename": "CheckRun", "databaseId": 122, "name": "verify", "status": "IN_PROGRESS",
+                          "conclusion": null, "completedAt": null, "checkSuite": { "workflowRun": null } }"""));
+        assertEquals(
+                Either.left(new GhError.UnexpectedOutput("checkSuite.workflowRun.createdAt: missing")), check("""
+                        { "__typename": "CheckRun", "databaseId": 122, "name": "verify", "status": "IN_PROGRESS",
+                          "conclusion": null, "startedAt": null, "completedAt": null,
+                          "checkSuite": { "workflowRun": { "databaseId": 401,
+                            "runAttempt": 1, "event": "push", "workflow": { "name": "Build" } } } }"""));
+    }
+
+    @Test
     void aCommitStatusIsACheckByItsContext() {
         assertEquals(
                 Either.right(new Check("ci/travis", Checks.FAILING)),

@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.gh;
 
-import static net.vanfleteren.jazygit.json.Decoder.at;
 import static net.vanfleteren.jazygit.json.Decoder.field;
 import static net.vanfleteren.jazygit.json.Decoder.integer;
 import static net.vanfleteren.jazygit.json.Decoder.list;
@@ -18,7 +17,7 @@ import net.vanfleteren.jazygit.json.Decoder;
 
 /**
  * The check suites of a commit, in GraphQL and as they are decoded, to find its workflow runs that wait to start, as
- * those have no check run yet (ADR 35, 41).
+ * those have no check run yet (ADR 35, 42).
  */
 final class SuiteFragment {
 
@@ -28,14 +27,15 @@ final class SuiteFragment {
             workflowRun { databaseId createdAt runAttempt event workflow { name } } } }""";
 
     /*
-     * The workflow run of a suite that waits to start: of a workflow, not completed, without a check run. A suite of
-     * another app has no workflow run: one that never adds a check run stays queued for good.
+     * The workflow run of a suite that waits to start: of a workflow, not completed, without a check run; one whose
+     * check runs GitHub does not give does not wait. A suite of another app has no workflow run: one that never adds
+     * a check run stays queued for good.
      */
     static final Decoder<Option<WorkflowRun>> SUITE = map3(
             field("status", string()),
-            at("checkRuns.totalCount", integer()),
+            field("checkRuns", nullable(field("totalCount", integer()))),
             field("workflowRun", nullable(CheckFragment.WORKFLOW_RUN)),
-            (status, checkRuns, run) -> run.filter(waits -> !status.equals("COMPLETED") && checkRuns == 0));
+            (status, checkRuns, run) -> run.filter(waits -> !status.equals("COMPLETED") && checkRuns.contains(0)));
 
     /**
      * The workflow runs of a commit of {@link #FIELDS} that wait to start, each as a queued check named after its

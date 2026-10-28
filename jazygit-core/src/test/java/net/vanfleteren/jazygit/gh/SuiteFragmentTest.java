@@ -42,6 +42,16 @@ class SuiteFragmentTest {
     }
 
     @Test
+    void aSuiteWhoseCheckRunsAreNotGivenDoesNotWait() {
+        assertEquals(Either.right(List.empty()), waiting("""
+                        "checkSuites": { "nodes": [
+                          { "status": "QUEUED", "checkRuns": null, "workflowRun": {
+                            "databaseId": 404, "createdAt": "2026-10-26T22:00:00Z", "runAttempt": 1, "event": "push",
+                            "workflow": { "name": "Publish" } } },
+                          { "status": "QUEUED", "checkRuns": null, "workflowRun": null } ] }"""));
+    }
+
+    @Test
     void aWaitingRunWhoseStartCannotBeReadStillWaitsButIsNotTimed() {
         assertEquals(Either.right(List.of(new Check("Publish", Checks.PENDING))), waiting("""
                         "checkSuites": { "nodes": [

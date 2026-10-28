@@ -35,12 +35,13 @@ public final class CliGitHub implements GitHub {
      * The open pull requests of the repository, all pages of them, with the states of the checks on their last
      * commit, and its check suites. gh fills in the repository of the working tree for {owner} and {repo}.
      */
-    static final String PRS_QUERY = """
+    static final String PRS_QUERY =
+            """
             query($owner: String!, $name: String!, $endCursor: String) { repository(owner: $owner, name: $name) { \
             pullRequests(states: OPEN, first: 100, after: $endCursor) { pageInfo { hasNextPage endCursor } \
             nodes { number headRefName isDraft isCrossRepository reviewDecision %s \
-            commits(last: 1) { nodes { commit { statusCheckRollup { contexts(first: 100) { nodes { __typename \
-            ... on CheckRun { status conclusion } ... on StatusContext { state } } } } %s } } } } } } }""".formatted(StackFragment.FIELDS, SuiteFragment.FIELDS);
+            commits(last: 1) { nodes { commit { statusCheckRollup { contexts(first: 100) { nodes { %s } } } %s } } } \
+            } } } }""".formatted(StackFragment.FIELDS, CheckFragment.STATE_FIELDS, SuiteFragment.FIELDS);
 
     /*
      * Everything about one pull request the dialog shows, its latest commit for its checks. gh fills in the
@@ -48,8 +49,7 @@ public final class CliGitHub implements GitHub {
      * latest of when it was opened, its latest commit and its latest force push tells when it was last pushed to; as
      * GitHub gives all three as UTC timestamps ending in Z, the latest of them sorts last as text.
      */
-    static final String DETAILS_QUERY =
-            """
+    static final String DETAILS_QUERY = """
             query($owner: String!, $name: String!, $number: Int!) { repository(owner: $owner, name: $name) { \
             nameWithOwner pullRequest(number: $number) { number title author { login } state isDraft headRefName \
             baseRefName headRefOid %s createdAt additions deletions changedFiles mergeable reviewDecision comments { totalCount } \
@@ -58,9 +58,9 @@ public final class CliGitHub implements GitHub {
             ... on Mannequin { login } ... on Team { name } } } } \
             timelineItems(last: 1, itemTypes: [HEAD_REF_FORCE_PUSHED_EVENT]) { nodes { \
             ... on HeadRefForcePushedEvent { createdAt } } } \
-            commits(last: 1) { totalCount nodes { commit { committedDate statusCheckRollup { contexts(first: 100) { nodes { __typename \
-            ... on CheckRun { %s } ... on StatusContext { context state } } } } %s } } } \
-            reviewThreads(last: 100) { totalCount nodes { isResolved comments { totalCount } } } } } }""".formatted(StackFragment.FIELDS, CheckFragment.CHECK_RUN_FIELDS, SuiteFragment.FIELDS);
+            commits(last: 1) { totalCount nodes { commit { committedDate statusCheckRollup { contexts(first: 100) { \
+            nodes { %s } } } %s } } } \
+            reviewThreads(last: 100) { totalCount nodes { isResolved comments { totalCount } } } } } }""".formatted(StackFragment.FIELDS, CheckFragment.FIELDS, SuiteFragment.FIELDS);
 
     /*
      * The branches of the repository with the combined state of the checks on their tip, and its check suites, all
