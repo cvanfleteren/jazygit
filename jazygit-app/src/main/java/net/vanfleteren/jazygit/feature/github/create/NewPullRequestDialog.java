@@ -23,6 +23,7 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.ui.LineEditInput;
 import net.vanfleteren.jazygit.ui.SubmittableTextArea;
 import net.vanfleteren.jazygit.ui.widgets.DialogFrame;
+import net.vanfleteren.jazygit.ui.widgets.FilteredCursor;
 import net.vanfleteren.jazygit.ui.widgets.FocusBordered;
 import net.vanfleteren.jazygit.ui.widgets.FocusHighlighted;
 import net.vanfleteren.jazygit.ui.widgets.HintedDialog;
@@ -152,28 +153,29 @@ public final class NewPullRequestDialog implements PopupView {
      * stays highlighted while another field has the focus; the border shows whether the list has it.
      */
     private Element bases(Bases view) {
-        ListElement<?> list = view.shown().isEmpty()
+        FilteredCursor<BranchName> shown = view.list();
+        ListElement<?> list = shown.lines().isEmpty()
                 ? noMatches
-                : baseList.elements(view.shown()
+                : baseList.elements(shown.lines()
                                 .<StyledElement<?>>map(base -> text(base.value()))
                                 .toJavaArray(StyledElement[]::new))
-                        .selected(view.selected());
+                        .selected(shown.selected());
         list.onKeyEvent(event -> baseKeys(view, event))
                 .onMouseEvent(event -> ListKeys.wheel(
                         event,
-                        view.selected(),
-                        view.shown().size(),
-                        line -> true,
+                        shown.selected(),
+                        shown.size(),
+                        shown::highlightable,
                         line -> dispatch.accept(view.at(line))));
         String base = view.popup().base().value();
         // In a panel, which the themes give the border of the fields; a list's own border is not themed.
         return new FocusBordered(
                 panel(
-                                view.cursor()
+                                shown.cursor()
                                         .filter()
                                         .map(typed -> Messages.get("dialog.newPullRequest.baseFiltered", base, typed))
                                         .getOrElse(() -> Messages.get("dialog.newPullRequest.base", base)),
-                                view.shown().isEmpty() ? list : new FocusHighlighted(list))
+                                shown.lines().isEmpty() ? list : new FocusHighlighted(list))
                         .length(BASE_ROWS + 2),
                 BASES_ID);
     }
@@ -184,7 +186,8 @@ public final class NewPullRequestDialog implements PopupView {
      * of the list, where there is no cursor to move, so it only takes what is typed at its end.
      */
     private EventResult baseKeys(Bases view, KeyEvent event) {
-        if (event.code() == KeyCode.ESCAPE && view.cursor().filter().isDefined()) {
+        FilteredCursor<BranchName> shown = view.list();
+        if (event.code() == KeyCode.ESCAPE && shown.cursor().filter().isDefined()) {
             dispatch.accept(view.filtered(Option.none()));
             return EventResult.HANDLED;
         }
@@ -196,14 +199,13 @@ public final class NewPullRequestDialog implements PopupView {
         if (common.isHandled()) {
             return common;
         }
-        Option<String> edited = filtered(view.cursor().filter().getOrElse(""), event);
+        Option<String> edited = filtered(shown.cursor().filter().getOrElse(""), event);
         if (edited.isDefined()) {
             dispatch.accept(view.filtered(edited.filter(typed -> !typed.isEmpty())));
             return EventResult.HANDLED;
         }
-        Option<Integer> moved =
-                ListKeys.move(event, view.selected(), view.shown().size(), line -> true);
-        moved.filter(line -> line != view.selected()).forEach(line -> dispatch.accept(view.at(line)));
+        Option<Integer> moved = ListKeys.move(event, shown.selected(), shown.size(), shown::highlightable);
+        moved.filter(line -> line != shown.selected()).forEach(line -> dispatch.accept(view.at(line)));
         return moved.isDefined() ? EventResult.HANDLED : EventResult.UNHANDLED;
     }
 
@@ -273,25 +275,20 @@ public final class NewPullRequestDialog implements PopupView {
     }
 
     /**
-     * The bases of {@code popup} as the list shows them, with the model's cursor in it.
+     * The bases of {@code popup} as the list shows them, with the model's cursor in it. The base is the highlighted
+     * one, wherever the cursor says.
      *
-     * @param shown the bases that contain the filter
+     * @param list the bases that contain the filter
      */
-    private record Bases(NewPullRequestPopup popup, ListCursor cursor, List<BranchName> shown) {
+    private record Bases(NewPullRequestPopup popup, FilteredCursor<BranchName> list) {
 
         static Bases of(NewPullRequestPopup popup, ListCursor cursor) {
-            return new Bases(popup, cursor, shown(popup, cursor.filter()));
-        }
-
-        static List<BranchName> shown(NewPullRequestPopup popup, Option<String> filter) {
-            return popup.bases().filter(base -> ListFilter.matches(filter, base.value()));
-        }
-
-        /**
-         * The line of the base among those shown; while the filter hides it, there is none to highlight.
-         */
-        int selected() {
-            return Math.max(0, shown.indexOf(popup.base()));
+            FilteredCursor<BranchName> list = FilteredCursor.of(
+                    filter -> popup.bases().filter(base -> ListFilter.matches(filter, base.value())),
+                    base -> true,
+                    cursor);
+            // While the filter hides the base, there is none to highlight.
+            return new Bases(popup, list.at(cursor.at(Math.max(0, list.lines().indexOf(popup.base())))));
         }
 
         /**
@@ -299,19 +296,16 @@ public final class NewPullRequestDialog implements PopupView {
          */
         CreatePullRequestMsg.BaseMoved at(int line) {
             return new CreatePullRequestMsg.BaseMoved(
-                    cursor.at(line), shown.asPartialFunction().lift().apply(line));
+                    list.at(line), list.lines().asPartialFunction().lift().apply(line));
         }
 
         /**
          * The move to {@code filter}: the base stays while it shows, else the first one shown is the base; while
-         * none shows, the base stays too.
+         * none shows, the base stays too, and comes back once the filter shows it again.
          */
         CreatePullRequestMsg.BaseMoved filtered(Option<String> filter) {
-            List<BranchName> after = shown(popup, filter);
-            int line = Math.max(0, after.indexOf(popup.base()));
-            return new CreatePullRequestMsg.BaseMoved(
-                    new ListCursor(Option.of(line), filter),
-                    after.asPartialFunction().lift().apply(line));
+            ListCursor after = list.refiltered(filter, Option.of(popup.base()));
+            return new CreatePullRequestMsg.BaseMoved(after, list.at(after).highlighted());
         }
     }
 }

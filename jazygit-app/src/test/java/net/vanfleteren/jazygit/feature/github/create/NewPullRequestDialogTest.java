@@ -238,6 +238,24 @@ class NewPullRequestDialogTest {
     }
 
     @Test
+    void theBaseComesBackWhenTheFilterShowsItAgain() throws Exception {
+        try (ToolkitTestRunner runner = start()) {
+            SettledPilot.focus(runner, NewPullRequestDialog.BASES_ID);
+            SettledPilot.of(runner).press(KeyCode.END);
+            type(runner, "az");
+            SettledPilot.of(runner).press(KeyCode.BACKSPACE);
+            SettledPilot.of(runner).pause();
+            String screen = RenderedText.ofLarge(runner, this::view);
+
+            assertTrue(screen.contains("Into: ahead · filter: a"), screen);
+        }
+
+        assertEquals(
+                Option.of(new BranchName("ahead")),
+                model.popup(NewPullRequestPopup.class).map(NewPullRequestPopup::base));
+    }
+
+    @Test
     void theFilterOfTheBasesOnlyTakesWhatIsTypedAtItsEnd() throws Exception {
         try (ToolkitTestRunner runner = start()) {
             SettledPilot.focus(runner, NewPullRequestDialog.BASES_ID);
