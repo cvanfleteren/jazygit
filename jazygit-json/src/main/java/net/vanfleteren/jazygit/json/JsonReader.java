@@ -43,7 +43,8 @@ final class JsonReader {
             return atEnd(parser)
                     ? Either.right(json)
                     : Either.left(DecodeError.of("expected one JSON value, got more after it"));
-        } catch (JsonException e) {
+            // Parsson's limit on the length of a number, 1100 characters, throws an UnsupportedOperationException.
+        } catch (JsonException | UnsupportedOperationException e) {
             return Either.left(DecodeError.of("not JSON: " + e.getMessage()));
         }
     }

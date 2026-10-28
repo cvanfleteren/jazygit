@@ -79,6 +79,14 @@ class JsonTest {
     }
 
     @Test
+    void aNumberTooLongIsAnError() {
+        DecodeError error = Json.parse("1".repeat(2000)).getLeft();
+
+        assertTrue(
+                error.message().startsWith("not JSON: Number of BigDecimal source characters 2000"), error.message());
+    }
+
+    @Test
     void jsonNestedAsDeeplyAsAllowedIsRead() {
         assertTrue(Json.parse("[".repeat(500) + "]".repeat(500)).isRight());
     }
