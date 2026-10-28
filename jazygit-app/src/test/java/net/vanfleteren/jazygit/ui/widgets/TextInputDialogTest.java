@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.ui.widgets;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.control.Option;
+import lombok.With;
 import net.vanfleteren.jazygit.state.ConfirmablePopup;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.OperationCmd;
@@ -20,12 +21,8 @@ class TextInputDialogTest {
         assertEquals(new Msg.PopupDismissed(NamePopup.class), spec.onCancel().get());
     }
 
+    @With
     private record NamePopup(String text) implements TextPopup, ConfirmablePopup {
-
-        @Override
-        public NamePopup withText(String text) {
-            return new NamePopup(text);
-        }
 
         @Override
         public Option<OperationCmd> confirm() {

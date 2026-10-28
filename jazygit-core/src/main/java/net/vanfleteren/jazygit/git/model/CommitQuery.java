@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.git.model;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.BiFunction;
+import lombok.With;
 
 /**
  * What a search of the commits looks for, as typed on one line: bare words, and the prefixes {@code author:},
@@ -15,6 +16,7 @@ import java.util.function.BiFunction;
  * @param paths   the paths, of which the commit changes one
  * @param pickaxe the text the commit changes how often it occurs, as {@code git log -S} looks for it
  */
+@With
 public record CommitQuery(Option<String> message, List<String> authors, List<String> paths, Option<String> pickaxe) {
 
     private static final List<Prefix> PREFIXES = List.of(
@@ -61,22 +63,6 @@ public record CommitQuery(Option<String> message, List<String> authors, List<Str
         return authors.appendAll(message)
                 .appendAll(pickaxe)
                 .forAll(text -> text.chars().noneMatch(Character::isUpperCase));
-    }
-
-    public CommitQuery withMessage(Option<String> message) {
-        return new CommitQuery(message, authors, paths, pickaxe);
-    }
-
-    public CommitQuery withAuthors(List<String> authors) {
-        return new CommitQuery(message, authors, paths, pickaxe);
-    }
-
-    public CommitQuery withPaths(List<String> paths) {
-        return new CommitQuery(message, authors, paths, pickaxe);
-    }
-
-    public CommitQuery withPickaxe(Option<String> pickaxe) {
-        return new CommitQuery(message, authors, paths, pickaxe);
     }
 
     /**

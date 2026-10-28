@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.git.model;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import lombok.With;
 
 /**
  * The state of the working tree and HEAD, as reported by {@code git status}.
@@ -9,6 +10,7 @@ import io.vavr.control.Option;
  * @param files      the changed and untracked files, sorted by path
  * @param inProgress the operation the repository is in the middle of, if any
  */
+@With
 public record RepoStatus(Head head, List<FileEntry> files, Option<InProgress> inProgress) {
 
     /**
@@ -16,10 +18,6 @@ public record RepoStatus(Head head, List<FileEntry> files, Option<InProgress> in
      */
     public RepoStatus(Head head, List<FileEntry> files) {
         this(head, files, Option.none());
-    }
-
-    public RepoStatus withInProgress(Option<InProgress> inProgress) {
-        return new RepoStatus(head, files, inProgress);
     }
 
     /**
