@@ -3,7 +3,6 @@ package net.vanfleteren.jazygit.gh;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-import io.vavr.Tuple;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
@@ -16,15 +15,12 @@ import net.vanfleteren.jazygit.gh.model.CheckRun;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.NewPullRequest;
-import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestComment;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.*;
-import net.vanfleteren.jazygit.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
-import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -68,107 +64,6 @@ class CliGitHubTest {
     }
 
     @Test
-    void parsesOneTabSeparatedLinePerPullRequest() {
-        String raw = "9\tfeature/login\tfalse\tAPPROVED\tSUCCESS,SKIPPED\t\t\t\t\n"
-                + "7\twip\ttrue\t\t\t\t\t\t\n"
-                + "5\tfix/npe\tfalse\tCHANGES_REQUESTED\tSUCCESS,PENDING\t\t\t\t\n";
-
-        assertEquals(
-                Either.right(List.of(
-                        new PullRequest(9, "feature/login", false, Checks.PASSING, Review.APPROVED),
-                        new PullRequest(7, "wip", true, Checks.NONE, Review.NONE),
-                        new PullRequest(5, "fix/npe", false, Checks.PENDING, Review.CHANGES_REQUESTED))),
-                CliGitHub.parse(raw));
-    }
-
-    @Test
-    void aStackedPullRequestSaysWhereItSitsInItsStack() {
-        assertEquals(
-                Either.right(List.of(
-                        new PullRequest(95, "fix-abort-amend", false, Checks.NONE, Review.NONE, Option.of(STACK)))),
-                CliGitHub.parse("95\tfix-abort-amend\tfalse\t\t\t96\t2\t2\t1:94:MERGED,2:95:OPEN\n"));
-        assertTrue(CliGitHub.parse("95\tfix-abort-amend\tfalse\t\t\t96\ttwo\t2\t\n")
-                .isLeft());
-        assertTrue(CliGitHub.parse("95\tfix-abort-amend\tfalse\t\t\t96\t2\t2\t1:94:GONE\n")
-                .isLeft());
-        assertTrue(CliGitHub.parse("95\tfix-abort-amend\tfalse\t\t\t96\t2\t2\t1:94\n")
-                .isLeft());
-        assertTrue(CliGitHub.parse("95\tfix-abort-amend\tfalse\t\t\t96\t2\t2\t1:94:OPEN:x\n")
-                .isLeft());
-    }
-
-    @Test
-    void aStackWhosePullRequestsCannotBeReadHasNoEntries() {
-        assertEquals(
-                Option.of(new PullRequestStack(96, 2, 2, List.empty())),
-                CliGitHub.parse("95\tfix-abort-amend\tfalse\t\t\t96\t2\t2\t\n")
-                        .get()
-                        .head()
-                        .stack());
-    }
-
-    @Test
-    void aStackedPullRequestInAListSaysWhereItSitsInItsStack() {
-        String raw = "list\trepository\towner/repo\t1\n"
-                + "pr\trepository\towner/repo\t95\tFix\talice\tfix\tfalse\tfalse\t\t\t2026-10-15T08:00:00Z"
-                + "\thttps://github.com/owner/repo/pull/95\t96\t2\t2\t1:94:MERGED,2:95:OPEN\n";
-
-        assertEquals(
-                Option.of(STACK),
-                CliGitHub.parseLists(raw)
-                        .get()
-                        .get("repository")
-                        .get()
-                        ._2
-                        .pullRequests()
-                        .head()
-                        .stack());
-    }
-
-    @Test
-    void thePullRequestsOfTheRepositorySayWhoTheyWereReadAs() {
-        String lists = "list\trepository\towner/repo\t1\n"
-                + "pr\trepository\towner/repo\t95\tFix\talice\tfix\tfalse\tfalse\t\t\t2026-10-15T08:00:00Z"
-                + "\thttps://github.com/owner/repo/pull/95\t96\t2\t2\t1:94:MERGED,2:95:OPEN\n";
-
-        var read =
-                CliGitHub.parseRepositoryPullRequests("viewer\tbob\n" + lists).get();
-        assertEquals("owner/repo", read.repository());
-        assertEquals(Option.of("bob"), read.viewer());
-        assertEquals(95, read.open().pullRequests().head().number());
-        assertEquals(
-                Option.none(),
-                CliGitHub.parseRepositoryPullRequests(lists).get().viewer());
-        assertEquals(
-                Option.none(),
-                CliGitHub.parseRepositoryPullRequests("viewer\t\n" + lists)
-                        .get()
-                        .viewer());
-    }
-
-    @Test
-    void thePullRequestsOfTheRepositorySayWhichWasOpenedLast() {
-        String lists = "list\trepository\towner/repo\t0\n";
-
-        assertEquals(
-                142,
-                CliGitHub.parseRepositoryPullRequests("viewer\tbob\nlatest\t142\n" + lists)
-                        .get()
-                        .latest());
-        assertEquals(
-                0,
-                CliGitHub.parseRepositoryPullRequests("latest\t0\n" + lists)
-                        .get()
-                        .latest());
-        assertEquals(
-                0,
-                CliGitHub.parseRepositoryPullRequests("latest\tmany\n" + lists)
-                        .get()
-                        .latest());
-        assertEquals(0, CliGitHub.parseRepositoryPullRequests(lists).get().latest());
-    }
-
-    @Test
     void theDetailsOfAStackedPullRequestSayWhereItSitsAndWhatItsHeadIs() {
         String raw =
                 "pr\t95\tFix\t\tOPEN\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0"
@@ -194,69 +89,6 @@ class CliGitHubTest {
                                         + "\tMERGEABLE\t\t0\tabc123\t1\nthreads\t0\t0\t0\t0\n")
                         .get()
                         .behindBase());
-    }
-
-    @Test
-    void parsesTheListsOfPullRequestsWithTheirRepositoryAndHowManyMatch() {
-        String raw = "list\treviewRequested\t\t52\n"
-                + "pr\treviewRequested\tother/repo\t9\tFix the\\tlogin\talice\tfeature/login\tfalse\tfalse"
-                + "\tAPPROVED\tSUCCESS\t2026-10-16T21:39:59Z\thttps://github.com/other/repo/pull/9\t\t\t\t\n"
-                + "list\tauthored\t\t0\n"
-                + "list\trepository\towner/repo\t1\n"
-                + "pr\trepository\towner/repo\t7\tWIP\t\tpatch-1\ttrue\ttrue\t\t\t2026-10-15T08:00:00Z"
-                + "\thttps://github.com/owner/repo/pull/7\t\t\t\t\n";
-
-        var lists = CliGitHub.parseLists(raw).get();
-
-        assertEquals(
-                Tuple.of(
-                        "",
-                        new PullRequestList(
-                                List.of(new PullRequestSummary(
-                                        "other/repo",
-                                        9,
-                                        "Fix the\tlogin",
-                                        "alice",
-                                        "feature/login",
-                                        false,
-                                        false,
-                                        Checks.PASSING,
-                                        Review.APPROVED,
-                                        Instant.parse("2026-10-16T21:39:59Z"),
-                                        "https://github.com/other/repo/pull/9")),
-                                52)),
-                lists.get("reviewRequested").get());
-        assertEquals(Tuple.of("", PullRequestList.EMPTY), lists.get("authored").get());
-        assertEquals(
-                Tuple.of(
-                        "owner/repo",
-                        new PullRequestList(
-                                List.of(new PullRequestSummary(
-                                        "owner/repo",
-                                        7,
-                                        "WIP",
-                                        "",
-                                        "patch-1",
-                                        true,
-                                        true,
-                                        Checks.NONE,
-                                        Review.NONE,
-                                        Instant.parse("2026-10-15T08:00:00Z"),
-                                        "https://github.com/owner/repo/pull/7")),
-                                1)),
-                lists.get("repository").get());
-    }
-
-    @Test
-    void aPullRequestLineThatCannotBeReadIsUnexpected() {
-        assertTrue(CliGitHub.parseLists("list\tauthored\t\t1\npr\tauthored\towner/repo\tnine\n")
-                .isLeft());
-    }
-
-    @Test
-    void aListWhoseCountIsNoNumberIsUnexpected() {
-        assertTrue(CliGitHub.parseLists("list\tauthored\t\tmany\n").isLeft());
-        assertTrue(CliGitHub.parseLists("list\tauthored\t\n").isLeft());
     }
 
     @Test
@@ -348,17 +180,6 @@ class CliGitHubTest {
         assertEquals("/opt/gh/bin/gh", command.commandLine("/opt/gh/bin/gh").head());
         assertEquals(
                 List.of("gh", "browse", "--branch", "main"), command.executed().commandLine());
-    }
-
-    @Test
-    void noPullRequestsIsAnEmptyList() {
-        assertEquals(Either.right(List.empty()), CliGitHub.parse(""));
-    }
-
-    @Test
-    void aLineThatCannotBeReadIsUnexpectedOutput() {
-        assertTrue(CliGitHub.parse("not a pull request").isLeft());
-        assertTrue(CliGitHub.parse("x\tbranch\tfalse\t\t").isLeft());
     }
 
     @Test
@@ -539,9 +360,9 @@ class CliGitHubTest {
                         BranchesQuery.QUERY,
                         BranchCheckRunsQuery.query(1),
                         CliGitHub.DETAILS_QUERY,
-                        CliGitHub.PRS_QUERY,
-                        CliGitHub.REPOSITORY_PRS_QUERY,
-                        CliGitHub.MY_PRS_QUERY)
+                        PullRequestsQuery.QUERY,
+                        RepositoryPullRequestsQuery.QUERY,
+                        MyPullRequestsQuery.QUERY)
                 .forEach(query -> assertTrue(query.contains("checkSuites(first: 20)"), query));
     }
 
@@ -644,21 +465,6 @@ class CliGitHubTest {
     @Test
     void aFormFeedOrUnicodeLineSeparatorInATitleDoesNotSplitTheLine() {
         String title = "a\fb" + LINE_SEPARATOR + "c\u0085d\u000be" + PARAGRAPH_SEPARATOR + "f";
-
-        String lists = "list\trepository\towner/repo\t1\n"
-                + "pr\trepository\towner/repo\t95\t" + title + "\talice\tfix\tfalse\tfalse\t\t\t2026-10-15T08:00:00Z"
-                + "\thttps://github.com/owner/repo/pull/95\t96\t2\t2\t1:94:MERGED,2:95:OPEN\n";
-        assertEquals(
-                title,
-                CliGitHub.parseLists(lists)
-                        .get()
-                        .get("repository")
-                        .get()
-                        ._2
-                        .pullRequests()
-                        .find(pr -> pr.number() == 95)
-                        .get()
-                        .title());
 
         String details = "pr\t95\t" + title
                 + "\t\tOPEN\tfalse\tfix\tmain\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\t1\t0\t1\tUNKNOWN\t\t0"
