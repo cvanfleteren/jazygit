@@ -323,11 +323,22 @@ class BranchesPane:
     def _shows_sync(self, rows: list, branch: str) -> bool:
         """Whether a row shows branch, with the commits it has to push and to pull, and whether its upstream is
         gone, as git has them."""
-        row = next((row.split() for row in rows if branch in row.split()), None)
+        row = self._words(rows, branch)
         expected = [{"ahead": "↑", "behind": "↓"}[side] + count if count else side
                     for part in self.repo.sync(branch).split(", ") if part
                     for side, _, count in [part.partition(" ")]]
         return row is not None and [word for word in row if word[0] in "↑↓" or word == "gone"] == expected
+
+    @staticmethod
+    def _words(rows: list, branch: str):
+        """The words of the row of branch: its name on the first line, what is known of it on the second; None when
+        no row shows it."""
+        at = next((index for index, row in enumerate(rows) if branch in row.split()), None)
+        return None if at is None else " ".join(rows[at:at + 2]).split()
+
+    def shows_gone(self, branch: str) -> bool:
+        """Whether the row of the local branch says its upstream is gone."""
+        return "gone" in (self._words(self.app.pane_text("Branches").splitlines(), branch) or [])
 
     def show_tab(self, tab: str):
         """Switches the focused pane to the list tab: "Branches", "Remotes" or "Worktrees"."""

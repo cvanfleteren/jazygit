@@ -115,8 +115,8 @@ class BranchesPanelTest {
                 msg -> {}, tab -> {}, java.time.Clock.fixed(java.time.Instant.EPOCH, java.time.ZoneOffset.UTC));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(busy, BranchesPanel.ID))) {
             String screen = RenderedText.of(testRunner, () -> panel.render(busy, BranchesPanel.ID));
-            assertTrue(screen.contains("feature Pushing " + frame), screen);
-            assertTrue(screen.contains("main Pulling " + frame), screen);
+            assertTrue(screen.contains("feature  Pushing " + frame), screen);
+            assertTrue(screen.contains("main  Pulling " + frame), screen);
         }
     }
 
@@ -129,8 +129,8 @@ class BranchesPanelTest {
                 msg -> {}, tab -> {}, java.time.Clock.fixed(java.time.Instant.EPOCH, java.time.ZoneOffset.UTC));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(deleting, BranchesPanel.ID))) {
             String screen = RenderedText.of(testRunner, () -> panel.render(deleting, BranchesPanel.ID));
-            assertTrue(screen.contains("feature " + frame), screen);
-            assertFalse(screen.contains("main " + frame), screen);
+            assertTrue(screen.contains("feature  " + frame), screen);
+            assertFalse(screen.contains("main  " + frame), screen);
         }
     }
 
@@ -293,8 +293,8 @@ class BranchesPanelTest {
     void clickingARemoteBranchHighlightsIt() throws Exception {
         Model remote = withRemotes(before);
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(remote, BranchesPanel.ID))) {
-            // The title, origin/feature, then upstream/main.
-            SettledPilot.of(testRunner).mousePress(MouseButton.LEFT, 5, 2);
+            // The title, origin/feature on two lines, then upstream/main.
+            SettledPilot.of(testRunner).mousePress(MouseButton.LEFT, 5, 3);
             SettledPilot.of(testRunner).quit();
         }
         assertEquals(

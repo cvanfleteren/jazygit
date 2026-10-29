@@ -369,6 +369,13 @@ class App:
         odd = [index for index, background in enumerate(backgrounds) if backgrounds.count(background) == 1]
         if len(odd) == 1 and len(backgrounds) > 1:
             return odd[0]
+        # A row of two lines, like a branch, has both on the background of the cursor: the first of a single run
+        # of rows on another background than the rest.
+        if len(set(backgrounds)) == 2:
+            plain = max(set(backgrounds), key=backgrounds.count)
+            run = [index for index, background in enumerate(backgrounds) if background != plain]
+            if len(run) < backgrounds.count(plain) and run == list(range(run[0], run[-1] + 1)):
+                return run[0]
         # With two rows, both backgrounds are odd ones; a focused pane also marks the cursor's row with a ">".
         marked = [index for index, (text, _) in enumerate(rows) if text.startswith(">")]
         return marked[0] if len(marked) == 1 else None

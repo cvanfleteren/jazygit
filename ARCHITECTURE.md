@@ -206,7 +206,7 @@ one and one whose directory is gone.
   its branch or deleting it locally too, once the worktree is gone (`RemoveWorktreeCmd.deleting`). When git refuses
   because it has changes (`GitError.WorktreeHasChanges`), removing it anyway (`--force`) is offered, still deleting
   the branch when that was chosen.
-- **A branch checked out in another worktree** is marked `(worktree)` in the list of branches. git checks a branch
+- **A branch checked out in another worktree** is marked `wt` in the list of branches (ADR 45). git checks a branch
   out in one worktree at a time, so what it would refuse is not run: checking the branch out offers to switch to
   that worktree instead, and fast-forwarding it or adding a worktree for it fail up front with an
   `AppError.CheckedOutElsewhere` that names the worktree. Deleting it offers to remove that worktree and then delete
