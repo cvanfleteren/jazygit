@@ -161,6 +161,62 @@ class UnifiedDiffTest {
     }
 
     @Test
+    void aCombinedDiffOfAConflictIsAFileOfItsOwnWithItsLinesAsGitPrintedThem() {
+        List<FileDiff> files = UnifiedDiff.parse("""
+                diff --git a/a.txt b/a.txt
+                index 5626abf..814f4a4 100644
+                --- a/a.txt
+                +++ b/a.txt
+                @@ -1 +1 @@
+                -one
+                +two
+                diff --cc f.txt
+                index 189acaa,1ed2302..0000000
+                --- a/f.txt
+                +++ b/f.txt
+                @@@ -1,2 -1,2 +1,4 @@@
+                  a
+                ++<<<<<<< HEAD
+                 +B2
+                + B1
+                """).files();
+
+        assertEquals(2, files.size());
+        assertEquals(List.of("@@ -1 +1 @@"), files.head().hunks().map(Hunk::header));
+        assertEquals(
+                new FileDiff(
+                        ChangeType.CONFLICTED,
+                        "f.txt",
+                        Option.none(),
+                        Option.none(),
+                        false,
+                        List.of(new Hunk(
+                                "@@@ -1,2 -1,2 +1,4 @@@",
+                                List.of("  a", "++<<<<<<< HEAD", " +B2", "+ B1").map(DiffLine::note)))),
+                files.last());
+        assertFalse(files.last().hunks().head().numbered());
+    }
+
+    @Test
+    void anUnmergedPathOfTheStagedChangesIsAConflictedFileWithoutLines() {
+        List<FileDiff> files = UnifiedDiff.parse("""
+                * Unmerged path "f\\303\\266o.txt"
+                diff --git a/a.txt b/a.txt
+                --- a/a.txt
+                +++ b/a.txt
+                @@ -1 +1 @@
+                -one
+                +two
+                """).files();
+
+        assertEquals(
+                new FileDiff(ChangeType.CONFLICTED, "föo.txt", Option.none(), Option.none(), false, List.empty()),
+                files.head());
+        assertEquals(List.of(ChangeType.CONFLICTED, ChangeType.MODIFIED), files.map(FileDiff::type));
+        assertEquals(List.empty(), UnifiedDiff.parse("* Unmerged path f.txt\n").preamble());
+    }
+
+    @Test
     void aHunkIsNumberedWhenGitsNumbersCanBeReadFromItsHeader() {
         assertTrue(new Hunk("@@ -3,4 +3,5 @@ void run() {", List.empty()).numbered());
         assertTrue(new Hunk("@@ -1 +1 @@", List.empty()).numbered());

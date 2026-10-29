@@ -62,6 +62,33 @@ class RichDiffTest {
     }
 
     @Test
+    void aConflictedFileShowsUnderABarOfItsOwnAsGitPrintedIt() {
+        List<String> lines = text(RichDiff.lines("""
+                * Unmerged path g.txt
+                diff --cc f.txt
+                index 189acaa,1ed2302..0000000
+                --- a/f.txt
+                +++ b/f.txt
+                @@@ -1,2 -1,2 +1,3 @@@
+                  a
+                ++<<<<<<< HEAD
+                 +B2
+                """, Theme.SpanStyles.NONE));
+
+        assertEquals(
+                List.of(
+                        " conflicted  g.txt ",
+                        "",
+                        // The bar is as wide as the widest line of the file.
+                        " conflicted  f.txt   ",
+                        "┄┄┄ │ @@@ -1,2 -1,2 +1,3 @@@",
+                        "    │   a",
+                        "    │ ++<<<<<<< HEAD",
+                        "    │  +B2"),
+                lines);
+    }
+
+    @Test
     void aHunkAfterTheFirstStartsWithARuleAsWideAsItsLineNumbers() {
         List<String> lines = text(RichDiff.lines("""
                 diff --git a/a.txt b/a.txt
