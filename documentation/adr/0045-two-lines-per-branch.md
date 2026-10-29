@@ -72,8 +72,11 @@ also in `mono` and `none`.
 | merged | 🟣 | `◆` | `pull-request` |
 | place in the stack | `📚2/4` | `2/4` | `dim` |
 
-`●` is of ambiguous width in Unicode: one column in Western terminals, two in those set up to draw ambiguous
-characters wide. The others are one column everywhere.
+`●`, `≡` and `◆`, like the `↑` and `↓` the list showed before, are of ambiguous width in Unicode (East Asian
+Width `A`): one column in Western terminals, two in those set up to draw ambiguous characters wide, where the rest of
+line 2 then moves a column to the right per symbol. TamboUI counts them as one. The others, `✓ ✗ ◌ + − ? » !`, are
+one column everywhere (`N` or `Na`). The three are kept for their shape; should the wide case matter, symbols of
+neutral width can take their place, such as `◔`, `≣` and `⬥`.
 
 The dialogs, the comments and the pull requests screen keep the emoji: they have the room, and the emoji are
 easier to make out.
