@@ -31,7 +31,7 @@ public final class CheckRows {
 
     /**
      * How many of the checks {@code all} of a commit failed, are running and passed, and when they are expected to be
-     * done together, as far as {@code times} tells: {@code ❌ 1 failed · ⏳ 2 running · done in ~3m}.
+     * done together, as far as {@code times} tells: {@code ✗ 1 failed · ● 2 running · done in ~3m}.
      */
     public static List<StyledElement<?>> counts(List<Check> all, Option<CheckTimes> times, Instant now) {
         return List.of(
@@ -76,9 +76,9 @@ public final class CheckRows {
     /**
      * {@code check}, one of the checks {@code all} of a commit, taking {@code width} columns: its symbol and its name
      * on the left, cut to leave room, and how it is doing or how long it took on the right, in a column
-     * {@code doingWidth} wide, lined up on the right: {@code ⏳ acceptance  running 2m 30s · ~1m 5s left}, dimmed; a
-     * queued one is dimmed all along, as its emoji ignores dimming. One that is done shows how long it took when
-     * {@code took}: {@code ✅ verify          2m}, {@code ❌ lint  failed after 1m 30s}.
+     * {@code doingWidth} wide, lined up on the right: {@code ● acceptance  running 2m 30s · ~1m 5s left}, dimmed; a
+     * queued one is dimmed all along. One that is done shows how long it took when
+     * {@code took}: {@code ✓ verify          2m}, {@code ✗ lint  failed after 1m 30s}.
      */
     public static List<StyledElement<?>> filling(
             Check check,

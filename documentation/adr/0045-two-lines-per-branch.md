@@ -80,3 +80,6 @@ neutral width can take their place, such as `◔`, `≣` and `⬥`.
 
 The dialogs, the comments and the pull requests screen keep the emoji: they have the room, and the emoji are
 easier to make out.
+
+Later: ADR 48 shows the symbols one column wide in the dialogs, the comments and the pull requests screen too; the
+emoji are gone.

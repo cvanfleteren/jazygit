@@ -366,15 +366,15 @@ class PullRequestDialogTest {
         assertTrue(screen.contains("   Pushed  2026-10-12 (1d ago)"), screen);
         assertTrue(screen.contains("  Changes  +120 −34 in 7 files, 3 commits"), screen);
         assertTrue(screen.contains("Mergeable  yes"), screen);
-        assertTrue(screen.contains("   Review  👎 changes requested"), screen);
-        assertTrue(screen.contains("Reviewers  👍 @alice  👎 @bob  ? @dave  💬 @carol"), screen);
+        assertTrue(screen.contains("   Review  − changes requested"), screen);
+        assertTrue(screen.contains("Reviewers  + @alice  − @bob  ? @dave  ~ @carol"), screen);
         assertTrue(screen.contains(" Comments  5"), screen);
         assertTrue(screen.contains("  Threads  5 with 12 comments, 2 unresolved"), screen);
         assertTrue(screen.contains("   Labels  enhancement, ui"), screen);
-        assertTrue(screen.contains("   Checks  ❌ 1 failed · ⏳ 1 running · ✅ 1 passed"), screen);
+        assertTrue(screen.contains("   Checks  ✗ 1 failed · ● 1 running · ✓ 1 passed"), screen);
         // The failed check first, then the running one; the passed one is only counted.
-        assertTrue(screen.indexOf("❌ build") < screen.indexOf("⏳ integration"), screen);
-        assertFalse(screen.contains("✅ lint"), screen);
+        assertTrue(screen.indexOf("✗ build") < screen.indexOf("● integration"), screen);
+        assertFalse(screen.contains("✓ lint"), screen);
         assertTrue(screen.contains("(enter) select   (esc) cancel"), screen);
     }
 
@@ -535,11 +535,11 @@ class PullRequestDialogTest {
                 learned());
 
         // verify and the status are not known, so neither is when they are all done.
-        assertTrue(screen.contains("Checks  ⏳ 4 running · done in ?"), screen);
-        assertTrue(screen.contains("⏳ package" + " ".repeat(35) + "running 1m 58s · due│"), screen);
-        assertTrue(screen.contains("⏳ verify" + " ".repeat(36) + "running 30s · ? left│"), screen);
-        assertTrue(screen.contains("⏳ ci/status" + " ".repeat(46) + "running│"), screen);
-        assertTrue(screen.contains("💤 acceptance" + " ".repeat(28) + "queued 2m · ~2m 15s left│"), screen);
+        assertTrue(screen.contains("Checks  ● 4 running · done in ?"), screen);
+        assertTrue(screen.contains("● package" + " ".repeat(36) + "running 1m 58s · due│"), screen);
+        assertTrue(screen.contains("● verify" + " ".repeat(37) + "running 30s · ? left│"), screen);
+        assertTrue(screen.contains("● ci/status" + " ".repeat(47) + "running│"), screen);
+        assertTrue(screen.contains("◌ acceptance" + " ".repeat(29) + "queued 2m · ~2m 15s left│"), screen);
         // Running before queued, the soonest done first, those not known last.
         assertTrue(screen.indexOf("package") < screen.indexOf("verify"), screen);
         assertTrue(screen.indexOf("ci/status") < screen.indexOf("acceptance"), screen);
@@ -566,8 +566,8 @@ class PullRequestDialogTest {
                 List.of(new Check("integration-tests-windows", Checks.FAILING), timed("verify", 120, Option.of(30))),
                 learned());
 
-        assertTrue(screen.contains("❌ integration-tests-windows"), screen);
-        assertTrue(screen.contains("⏳ verify" + " ".repeat(36) + "running 30s · ? left│"), screen);
+        assertTrue(screen.contains("✗ integration-tests-windows"), screen);
+        assertTrue(screen.contains("● verify" + " ".repeat(37) + "running 30s · ? left│"), screen);
     }
 
     @Test
@@ -575,7 +575,7 @@ class PullRequestDialogTest {
         String screen = timedScreen(
                 List.of(timed("package", 120, Option.of(118)), timed("acceptance", 120, Option.none())), learned());
 
-        assertTrue(screen.contains("Checks  ⏳ 2 running · done in ~2m"), screen);
+        assertTrue(screen.contains("Checks  ● 2 running · done in ~2m"), screen);
     }
 
     @Test
@@ -583,7 +583,7 @@ class PullRequestDialogTest {
         // acceptance waits for package, so GitHub makes it once package is done; it is done 254s into its run.
         String screen = timedScreen(List.of(timed("package", 120, Option.of(118))), learned());
 
-        assertTrue(screen.contains("Checks  ⏳ 1 running · done in ~2m 15s"), screen);
+        assertTrue(screen.contains("Checks  ● 1 running · done in ~2m 15s"), screen);
         assertFalse(screen.contains("acceptance"), screen);
     }
 
@@ -591,8 +591,8 @@ class PullRequestDialogTest {
     void aCheckPastItsEstimateIsOverdue() throws Exception {
         String screen = timedScreen(List.of(timed("acceptance", 500, Option.of(400))), learned());
 
-        assertTrue(screen.contains("Checks  ⏳ 1 running · taking longer than usual"), screen);
-        assertTrue(screen.contains("⏳ acceptance" + " ".repeat(28) + "running 6m 40s · overdue│"), screen);
+        assertTrue(screen.contains("Checks  ● 1 running · taking longer than usual"), screen);
+        assertTrue(screen.contains("● acceptance" + " ".repeat(29) + "running 6m 40s · overdue│"), screen);
     }
 
     @Test
@@ -600,8 +600,8 @@ class PullRequestDialogTest {
         String screen = timedScreen(
                 List.of(timed("verify", 120, Option.of(30))), learned().withTopUp(NOW));
 
-        assertTrue(screen.contains("Checks  ⏳ 1 running · done in …"), screen);
-        assertTrue(screen.contains("⏳ verify" + " ".repeat(36) + "running 30s · … left│"), screen);
+        assertTrue(screen.contains("Checks  ● 1 running · done in …"), screen);
+        assertTrue(screen.contains("● verify" + " ".repeat(37) + "running 30s · … left│"), screen);
     }
 
     @Test

@@ -20,8 +20,6 @@ import net.vanfleteren.jazygit.state.*;
  */
 final class BranchSegs {
 
-    private static final PullRequestSymbols.Glyphs GLYPHS = PullRequestSymbols.NARROW;
-
     private BranchSegs() {}
 
     /**
@@ -131,17 +129,17 @@ final class BranchSegs {
                 .toList()
                 .flatMap(pr -> merge.fold(
                                 () -> checks(pr.checks(), waiting, after),
-                                status -> List.of(symbol(GLYPHS.merge(status))))
+                                status -> List.of(symbol(PullRequestSymbols.merge(status))))
                         .append(LoadableList.Seg.styled(
                                 " #" + pr.number(), pr.draft() ? Theme.Classes.DIM : Theme.Classes.PULL_REQUEST))
                         .appendAll(group(
                                 merge.isDefined()
                                         ? List.empty()
-                                        : GLYPHS.review(pr.review())
+                                        : PullRequestSymbols.review(pr.review())
                                                 .map(BranchSegs::symbol)
                                                 .toList()))
                         .appendAll(group(pr.stack()
-                                .map(GLYPHS::stack)
+                                .map(PullRequestSymbols::stack)
                                 .map(BranchSegs::symbol)
                                 .toList())));
     }
@@ -151,7 +149,7 @@ final class BranchSegs {
      * {@code after} after their symbol, dimmed, while they run.
      */
     private static List<LoadableList.Seg> checks(Checks state, boolean waiting, Option<String> after) {
-        return GLYPHS.checks(state, waiting)
+        return PullRequestSymbols.checks(state, waiting)
                 .map(BranchSegs::symbol)
                 .toList()
                 .appendAll(after.filter(text -> state == Checks.PENDING)

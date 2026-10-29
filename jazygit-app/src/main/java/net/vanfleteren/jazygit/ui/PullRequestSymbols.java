@@ -12,46 +12,23 @@ import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 
 /**
  * The coloured symbols for how the checks and the review of a pull request are doing, the same wherever
- * they show.
+ * they show (ADR 48). Each is one column wide, told apart by its shape as well as its colour (ADR 45).
  */
 public final class PullRequestSymbols {
 
-    /**
-     * The emoji, for the dialogs and the pull requests screen.
-     */
-    public static final Glyphs EMOJI = new Glyphs(
-            new Symbol("✅", Theme.Classes.CHECKS_PASSED),
-            new Symbol("❌", Theme.Classes.CHECKS_FAILED),
-            new Symbol("⏳", Theme.Classes.CHECKS_RUNNING),
-            // Not ⏸, which most terminals show one column wide, and some two.
-            new Symbol("💤", Theme.Classes.DIM),
-            new Symbol("👍", Theme.Classes.REVIEW_APPROVED),
-            new Symbol("👎", Theme.Classes.REVIEW_CHANGES),
-            new Symbol("?", Theme.Classes.DIM),
-            new Symbol("🔀", Theme.Classes.DIM),
-            new Symbol("🚦", Theme.Classes.DIM),
-            new Symbol("💥", Theme.Classes.CHECKS_FAILED),
-            new Symbol("🟣", Theme.Classes.PULL_REQUEST),
-            "📚");
+    public static final Symbol PASSED = new Symbol("✓", Theme.Classes.CHECKS_PASSED);
+    public static final Symbol FAILED = new Symbol("✗", Theme.Classes.CHECKS_FAILED);
+    public static final Symbol RUNNING = new Symbol("●", Theme.Classes.CHECKS_RUNNING);
+    public static final Symbol QUEUED = new Symbol("◌", Theme.Classes.DIM);
+    public static final Symbol APPROVED = new Symbol("+", Theme.Classes.REVIEW_APPROVED);
+    public static final Symbol CHANGES = new Symbol("−", Theme.Classes.REVIEW_CHANGES);
+    public static final Symbol TO_REVIEW = new Symbol("?", Theme.Classes.DIM);
+    public static final Symbol MERGING = new Symbol("»", Theme.Classes.DIM);
+    public static final Symbol ENQUEUED = new Symbol("≡", Theme.Classes.DIM);
+    public static final Symbol MERGE_FAILED = new Symbol("!", Theme.Classes.CHECKS_FAILED);
+    public static final Symbol MERGED = new Symbol("◆", Theme.Classes.PULL_REQUEST);
 
-    /**
-     * Symbols one column wide, told apart by their shape as well as their colour, for the branch lists (ADR 45).
-     */
-    public static final Glyphs NARROW = new Glyphs(
-            new Symbol("✓", Theme.Classes.CHECKS_PASSED),
-            new Symbol("✗", Theme.Classes.CHECKS_FAILED),
-            new Symbol("●", Theme.Classes.CHECKS_RUNNING),
-            new Symbol("◌", Theme.Classes.DIM),
-            new Symbol("+", Theme.Classes.REVIEW_APPROVED),
-            new Symbol("−", Theme.Classes.REVIEW_CHANGES),
-            new Symbol("?", Theme.Classes.DIM),
-            new Symbol("»", Theme.Classes.DIM),
-            new Symbol("≡", Theme.Classes.DIM),
-            new Symbol("!", Theme.Classes.CHECKS_FAILED),
-            new Symbol("◆", Theme.Classes.PULL_REQUEST),
-            "");
-
-    private static final Symbol COMMENTED = new Symbol("💬", Theme.Classes.DIM);
+    private static final Symbol COMMENTED = new Symbol("~", Theme.Classes.DIM);
     private static final Symbol DISMISSED = new Symbol("⊘", Theme.Classes.DIM);
 
     private PullRequestSymbols() {}
@@ -60,14 +37,19 @@ public final class PullRequestSymbols {
      * How a merge of a pull request goes, which shows instead of its checks and its review (ADR 24).
      */
     public static Symbol merge(MergeStatus status) {
-        return EMOJI.merge(status);
+        return switch (status) {
+            case MergeStatus.Pending pending -> MERGING;
+            case MergeStatus.Enqueued queue -> ENQUEUED;
+            case MergeStatus.Failed failure -> MERGE_FAILED;
+            case MergeStatus.Merged done -> MERGED;
+        };
     }
 
     /**
-     * Where a pull request sits in its stack: {@code 📚2/3}.
+     * Where a pull request sits in its stack, dimmed: {@code 2/3}.
      */
     public static Symbol stack(PullRequestStack stack) {
-        return EMOJI.stack(stack);
+        return new Symbol(stack.position() + "/" + stack.size(), Theme.Classes.DIM);
     }
 
     /**
@@ -88,8 +70,8 @@ public final class PullRequestSymbols {
     public static Option<Symbol> comment(PullRequestComment.Kind kind) {
         return switch (kind) {
             case DESCRIPTION, COMMENT -> Option.none();
-            case APPROVED -> Option.of(EMOJI.approved());
-            case CHANGES_REQUESTED -> Option.of(EMOJI.changes());
+            case APPROVED -> Option.of(APPROVED);
+            case CHANGES_REQUESTED -> Option.of(CHANGES);
             case COMMENTED -> Option.of(COMMENTED);
             case DISMISSED -> Option.of(DISMISSED);
         };
@@ -99,21 +81,38 @@ public final class PullRequestSymbols {
      * Nothing for no checks.
      */
     public static Option<Symbol> checks(Checks checks) {
-        return EMOJI.checks(checks);
+        return switch (checks) {
+            case NONE -> Option.none();
+            case PASSING -> Option.of(PASSED);
+            case FAILING -> Option.of(FAILED);
+            case PENDING -> Option.of(RUNNING);
+        };
+    }
+
+    /**
+     * As {@link #checks(Checks)}, but waiting to start when they run and {@code waiting}: they all wait (ADR 35).
+     */
+    public static Option<Symbol> checks(Checks checks, boolean waiting) {
+        return waiting && checks == Checks.PENDING ? Option.of(QUEUED) : checks(checks);
     }
 
     /**
      * How one check is doing: as {@link #checks(Checks)}, but waiting to start while it is queued (ADR 32).
      */
     public static Option<Symbol> check(Check check) {
-        return check.queued() ? Option.of(EMOJI.queued()) : checks(check.state());
+        return check.queued() ? Option.of(QUEUED) : checks(check.state());
     }
 
     /**
      * Nothing when no review is needed.
      */
     public static Option<Symbol> review(Review review) {
-        return EMOJI.review(review);
+        return switch (review) {
+            case NONE -> Option.none();
+            case APPROVED -> Option.of(APPROVED);
+            case CHANGES_REQUESTED -> Option.of(CHANGES);
+            case REQUIRED -> Option.of(TO_REVIEW);
+        };
     }
 
     /**
@@ -121,9 +120,9 @@ public final class PullRequestSymbols {
      */
     public static Symbol reviewer(ReviewerState state) {
         return switch (state) {
-            case APPROVED -> EMOJI.approved();
-            case CHANGES_REQUESTED -> EMOJI.changes();
-            case REQUESTED -> EMOJI.toReview();
+            case APPROVED -> APPROVED;
+            case CHANGES_REQUESTED -> CHANGES;
+            case REQUESTED -> TO_REVIEW;
             case COMMENTED -> COMMENTED;
         };
     }
@@ -132,74 +131,4 @@ public final class PullRequestSymbols {
      * A symbol, in the colour of {@code cssClass}.
      */
     public record Symbol(String text, String cssClass) {}
-
-    /**
-     * A symbol for each state of the checks, the review and the merge of a pull request, and what goes before
-     * where it sits in its stack.
-     */
-    public record Glyphs(
-            Symbol passed,
-            Symbol failed,
-            Symbol running,
-            Symbol queued,
-            Symbol approved,
-            Symbol changes,
-            Symbol toReview,
-            Symbol merging,
-            Symbol enqueued,
-            Symbol mergeFailed,
-            Symbol merged,
-            String stackPrefix) {
-
-        /**
-         * How a merge of a pull request goes (ADR 24).
-         */
-        public Symbol merge(MergeStatus status) {
-            return switch (status) {
-                case MergeStatus.Pending pending -> merging;
-                case MergeStatus.Enqueued queue -> enqueued;
-                case MergeStatus.Failed failure -> mergeFailed;
-                case MergeStatus.Merged done -> merged;
-            };
-        }
-
-        /**
-         * Where a pull request sits in its stack, dimmed.
-         */
-        public Symbol stack(PullRequestStack stack) {
-            return new Symbol(stackPrefix + stack.position() + "/" + stack.size(), Theme.Classes.DIM);
-        }
-
-        /**
-         * Nothing for no checks.
-         */
-        public Option<Symbol> checks(Checks checks) {
-            return switch (checks) {
-                case NONE -> Option.none();
-                case PASSING -> Option.of(passed);
-                case FAILING -> Option.of(failed);
-                case PENDING -> Option.of(running);
-            };
-        }
-
-        /**
-         * As {@link #checks(Checks)}, but waiting to start when they run and {@code waiting}: they all wait
-         * (ADR 35).
-         */
-        public Option<Symbol> checks(Checks checks, boolean waiting) {
-            return waiting && checks == Checks.PENDING ? Option.of(queued) : checks(checks);
-        }
-
-        /**
-         * Nothing when no review is needed.
-         */
-        public Option<Symbol> review(Review review) {
-            return switch (review) {
-                case NONE -> Option.none();
-                case APPROVED -> Option.of(approved);
-                case CHANGES_REQUESTED -> Option.of(changes);
-                case REQUIRED -> Option.of(toReview);
-            };
-        }
-    }
 }

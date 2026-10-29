@@ -142,7 +142,7 @@ class ChecksDialogTest {
                 .mapGitHub(gitHub -> gitHub.withCheckTimes(Option.of(times)))
                 .openPopup(read(List.of(check("package", Checks.PENDING, 30, Option.none())))));
 
-        assertTrue(screen.contains("⏳ 1 running · done in ~3m 40s"), screen);
+        assertTrue(screen.contains("● 1 running · done in ~3m 40s"), screen);
         assertFalse(screen.contains("acceptance"), screen);
     }
 
@@ -155,12 +155,12 @@ class ChecksDialogTest {
                 new Check("ci/status", Checks.PASSING))));
 
         assertTrue(screen.contains("Checks of main"), screen);
-        assertTrue(screen.contains("❌ 1 failed · ⏳ 1 running · ✅ 2 passed · done in ?"), screen);
+        assertTrue(screen.contains("✗ 1 failed · ● 1 running · ✓ 2 passed · done in ?"), screen);
         // The names on the left, how each is doing or how long it took on the right.
-        assertTrue(screen.contains("❌ lint" + " ".repeat(52) + "failed after 1m 30s│"), screen);
-        assertTrue(screen.contains("⏳ verify" + " ".repeat(46) + "running 2m 30s · ? left│"), screen);
-        assertTrue(screen.contains("✅ package" + " ".repeat(66) + "1m│"), screen);
-        assertTrue(screen.contains("✅ ci/status"), screen);
+        assertTrue(screen.contains("✗ lint" + " ".repeat(53) + "failed after 1m 30s│"), screen);
+        assertTrue(screen.contains("● verify" + " ".repeat(47) + "running 2m 30s · ? left│"), screen);
+        assertTrue(screen.contains("✓ package" + " ".repeat(67) + "1m│"), screen);
+        assertTrue(screen.contains("✓ ci/status"), screen);
         // Failed, running, then passed.
         assertTrue(screen.indexOf("lint") < screen.indexOf("verify"), screen);
         assertTrue(screen.indexOf("verify") < screen.indexOf("package"), screen);
@@ -216,9 +216,9 @@ class ChecksDialogTest {
         String longName = "x".repeat(80);
         String screen = screen(read(List.of(check(longName, Checks.PASSING, 300, Option.of(60)))));
 
-        // 78 columns: the symbol takes 2, a space 1, the name 71 of which the last is the ellipsis, then 2 and "1m".
-        assertFalse(screen.contains("x".repeat(71)), screen);
-        assertTrue(screen.contains("✅ " + "x".repeat(70) + "…  1m│"), screen);
+        // 78 columns: the symbol takes 1, a space 1, the name 72 of which the last is the ellipsis, then 2 and "1m".
+        assertFalse(screen.contains("x".repeat(72)), screen);
+        assertTrue(screen.contains("✓ " + "x".repeat(71) + "…  1m│"), screen);
     }
 
     @Test
@@ -227,8 +227,8 @@ class ChecksDialogTest {
         String screen = screen(read(List.of(new Check(longName, Checks.PASSING))));
 
         assertFalse(screen.contains(longName), screen);
-        // 78 columns: the symbol takes 2, a space 1, so the name keeps 75 of which the last is the ellipsis.
-        assertTrue(screen.contains("✅ " + "y".repeat(74) + "…│"), screen);
+        // 78 columns: the symbol takes 1, a space 1, so the name keeps 76 of which the last is the ellipsis.
+        assertTrue(screen.contains("✓ " + "y".repeat(75) + "…│"), screen);
     }
 
     @Test
@@ -243,10 +243,10 @@ class ChecksDialogTest {
         String top = screen(model);
         String scrolled = screen(model.withListCursor(ListCursor.START.at(1)));
 
-        // 78 columns: the symbol takes 2, a space 1, then the name 57 of which the last is the ellipsis, 2, and the
+        // 78 columns: the symbol takes 1, a space 1, then the name 58 of which the last is the ellipsis, 2, and the
         // timings 16, as wide as "failed after 10m" also when it is not shown.
-        String checkb = "checkb" + "z".repeat(50) + "…" + " ".repeat(2 + 14) + "1m│";
-        assertTrue(top.contains("checka" + " ".repeat(53) + "failed after 10m│"), top);
+        String checkb = "checkb" + "z".repeat(51) + "…" + " ".repeat(2 + 14) + "1m│";
+        assertTrue(top.contains("checka" + " ".repeat(54) + "failed after 10m│"), top);
         assertTrue(top.contains(checkb), top);
         assertFalse(scrolled.contains("checka"), scrolled);
         assertTrue(scrolled.contains(checkb), scrolled);

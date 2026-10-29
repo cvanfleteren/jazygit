@@ -79,7 +79,8 @@ class HelpDialogTest {
     @Test
     void theDescriptionsOfTheLegendLineUpWhateverTheWidthOfTheSymbols() throws Exception {
         List<String> lines = List.of(screen(Scopes.BRANCHES.id()).split("\n"));
-        // #42 takes a column a character, the emoji of the checks and the review two.
+        // The symbols in front of the descriptions differ in width: #42 takes three columns, those of the checks
+        // seven and those of the review five.
         List<Integer> columns = List.of("Pull request (dim: draft)", "CI passed", "Approved / changes")
                 .map(description -> {
                     String line = lines.find(text -> text.contains(description)).get();
