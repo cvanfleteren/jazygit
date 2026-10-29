@@ -114,8 +114,8 @@ public final class TestModels {
                 .model();
         model = done(model, new Cmd.LoadBranches(), new LoadMsg.BranchesLoaded(new AllBranches(BRANCHES, List.empty())))
                 .model();
-        Cmd.LoadBehind behind = LoadUpdate.behind(model);
-        model = done(model, behind, new LoadMsg.BehindLoaded(behind, io.vavr.collection.HashMap.empty()))
+        Cmd.LoadBaseDistance distance = LoadUpdate.baseDistance(model);
+        model = done(model, distance, new LoadMsg.BaseDistanceLoaded(distance, io.vavr.collection.HashMap.empty()))
                 .model();
         model = done(model, new Cmd.LoadStashes(), new LoadMsg.StashesLoaded(io.vavr.collection.List.of()))
                 .model();
@@ -154,10 +154,10 @@ public final class TestModels {
 
     /**
      * {@code model} after the branches were read again, finding the local branches {@code local} and the
-     * remote-tracking branches it had, for a test about the local ones; without the read of how far they are behind.
+     * remote-tracking branches it had, for a test about the local ones; without the read of how far they are from their base.
      */
     public static Update.Next localBranchesRead(Model model, List<Branch> local) {
-        return withoutBehind(Update.update(
+        return withoutBaseDistance(Update.update(
                 model,
                 new LoadMsg.BranchesLoaded(
                         new AllBranches(local, model.repo().remoteBranches().getOrElse(List.empty())))));
@@ -165,21 +165,21 @@ public final class TestModels {
 
     /**
      * {@code model} after the branches were read again, finding the local branches it had and the remote-tracking
-     * branches {@code remote}, for a test about the remote ones; without the read of how far they are behind.
+     * branches {@code remote}, for a test about the remote ones; without the read of how far they are from their base.
      */
     public static Update.Next remoteBranchesRead(Model model, List<RemoteRef> remote) {
-        return withoutBehind(Update.update(
+        return withoutBaseDistance(Update.update(
                 model,
                 new LoadMsg.BranchesLoaded(
                         new AllBranches(model.repo().branches().getOrElse(List.empty()), remote))));
     }
 
     /**
-     * {@code next} without the read of how far the branches are behind their base, which every read of the branches
+     * {@code next} without the read of how far the branches are from their base, which every read of the branches
      * asks for (ADR 46): the tests of what else a read of the branches asks for leave it out.
      */
-    private static Update.Next withoutBehind(Update.Next next) {
-        return new Update.Next(next.model(), next.cmds().filter(cmd -> !(cmd instanceof Cmd.LoadBehind)));
+    private static Update.Next withoutBaseDistance(Update.Next next) {
+        return new Update.Next(next.model(), next.cmds().filter(cmd -> !(cmd instanceof Cmd.LoadBaseDistance)));
     }
 
     /**

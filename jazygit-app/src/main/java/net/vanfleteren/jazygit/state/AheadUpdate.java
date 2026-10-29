@@ -4,6 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Ahead;
+import net.vanfleteren.jazygit.git.model.BaseDistance;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
@@ -60,6 +61,25 @@ public final class AheadUpdate {
                 .toOption()
                 .flatMap(ahead -> ahead)
                 .filter(ahead -> readFor(ahead, model.repo().commits()));
+    }
+
+    /**
+     * How far the checked out branch is from its base, once that is read (ADR 46).
+     */
+    public static Option<BaseDistance> headDistance(Model model) {
+        return model.repo()
+                .currentBranch()
+                .flatMap(branch -> model.repo().baseDistance().get(branch.name()));
+    }
+
+    /**
+     * How far {@code branch} is from its base, once that is read; a remote branch has no base (ADR 46).
+     */
+    public static Option<BaseDistance> distance(Model model, BranchRef branch) {
+        return switch (branch) {
+            case BranchRef.Local(BranchName name) -> model.repo().baseDistance().get(name);
+            case BranchRef.Remote _ -> Option.none();
+        };
     }
 
     /**

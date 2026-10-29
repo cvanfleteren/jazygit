@@ -215,13 +215,16 @@ one and one whose directory is gone.
   the worktree feature for this, so the keys switching the tabs of the branches pane, the worktrees' too, are the
   branch feature's.
 
-## Behind the base
+## The distance from the base
 
-A local branch shows how many commits of its base it does not have, `⇣58` (ADR 46), the base being that of ADR 20:
-its parent, else the main branch, from `origin` when it is there. Every read of the branches asks for
-`Cmd.LoadBehind`, which runs `GitInfoProvider.behind` (`CliBehind`: one `git config --get-regexp` for the parents,
-one `for-each-ref` for the refs, then one `for-each-ref --format=%(ahead-behind:<base>)` per base) and keeps the
-counts in `Repo.behind`. A read that fails, or one that has not come in yet, leaves the counts read before.
+A local branch shows how many commits it has that its base does not, and how many of its base it does not have,
+`⇡1 ⇣58` (ADR 46), the base being that of ADR 20: its parent, else the main branch, from `origin` when it is there.
+A branch whose base is its upstream shows only `↑`/`↓`. Every read of the branches asks for `Cmd.LoadBaseDistance`,
+which runs `GitInfoProvider.baseDistance` (`CliBaseDistance`: one `git config --get-regexp` for the parents, one
+`for-each-ref` for the refs, then one `for-each-ref --format=%(ahead-behind:<base>)` per base) and keeps a
+`BaseDistance` per branch in `Repo.baseDistance`. A read that fails, or one that has not come in yet, leaves the
+counts read before. The title of the log of a branch takes both counts from there, once they are read against the
+base its log was compared with.
 
 ## Divergence
 

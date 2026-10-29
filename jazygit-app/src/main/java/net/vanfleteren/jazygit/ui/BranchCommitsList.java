@@ -70,7 +70,9 @@ class BranchCommitsList {
     private Panel panel(Model model, BranchCommitsView view, boolean focused, boolean active) {
         Option<Sha> copied = model.repoView().cherryPick().map(Commit::sha);
         AheadView ahead = new AheadView(
-                AheadUpdate.branch(model, view.branch()), model.repoView().onlyAhead());
+                AheadUpdate.branch(model, view.branch()),
+                AheadUpdate.distance(model, view.branch()),
+                model.repoView().onlyAhead());
         return list.render(
                 view.commits(model).map(ahead::shown),
                 commits -> CommitsPanel.marked(CommitsPanel.rows(CommitGraph.layout(commits), copied), commits, ahead),

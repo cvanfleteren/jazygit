@@ -9,52 +9,53 @@ import net.vanfleteren.jazygit.git.model.*;
 import org.junit.jupiter.api.Test;
 
 /**
- * How many commits of its base each local branch does not have: read after every read of the branches, and kept
+ * How far each local branch is from its base: read after every read of the branches, and kept
  * until a read replaces it (ADR 46).
  */
-class BehindUpdateTest {
+class BaseDistanceUpdateTest {
 
     private static final BranchName FEATURE = new BranchName("feature");
+    private static final BaseDistance DISTANCE = new BaseDistance(new BranchRef.Local(new BranchName("main")), 1, 58);
 
     @Test
-    void everyReadOfTheBranchesReadsHowFarTheyAreBehind() {
+    void everyReadOfTheBranchesReadsHowFarTheyAreFromTheirBase() {
         Model model = loaded();
 
         Update.Next next = Update.update(
                 model, new LoadMsg.BranchesLoaded(new AllBranches(BRANCHES, io.vavr.collection.List.empty())));
 
         assertTrue(
-                next.cmds().contains(LoadUpdate.behind(next.model())),
+                next.cmds().contains(LoadUpdate.baseDistance(next.model())),
                 next.cmds().toString());
     }
 
     @Test
-    void nothingIsBehindBeforeTheFirstRead() {
-        assertEquals(HashMap.empty(), loaded().repo().behind());
+    void noDistanceIsKnownBeforeTheFirstRead() {
+        assertEquals(HashMap.empty(), loaded().repo().baseDistance());
     }
 
     @Test
     void theCountsReadAreKept() {
         Model model = loaded();
-        Cmd.LoadBehind load = LoadUpdate.behind(model);
+        Cmd.LoadBaseDistance load = LoadUpdate.baseDistance(model);
 
-        Model read = Update.update(model, new LoadMsg.BehindLoaded(load, HashMap.of(FEATURE, 58)))
+        Model read = Update.update(model, new LoadMsg.BaseDistanceLoaded(load, HashMap.of(FEATURE, DISTANCE)))
                 .model();
 
-        assertEquals(HashMap.of(FEATURE, 58), read.repo().behind());
+        assertEquals(HashMap.of(FEATURE, DISTANCE), read.repo().baseDistance());
     }
 
     @Test
     void aReadThatFailsKeepsTheCountsReadBefore() {
         Model model = loaded();
-        Cmd.LoadBehind load = LoadUpdate.behind(model);
-        Model read = Update.update(model, new LoadMsg.BehindLoaded(load, HashMap.of(FEATURE, 58)))
+        Cmd.LoadBaseDistance load = LoadUpdate.baseDistance(model);
+        Model read = Update.update(model, new LoadMsg.BaseDistanceLoaded(load, HashMap.of(FEATURE, DISTANCE)))
                 .model();
 
         Model failed = Update.update(
                         read, new LoadMsg.Failed(load, new Failure.Git(new GitError.UnexpectedOutput("garbled"))))
                 .model();
 
-        assertEquals(HashMap.of(FEATURE, 58), failed.repo().behind());
+        assertEquals(HashMap.of(FEATURE, DISTANCE), failed.repo().baseDistance());
     }
 }

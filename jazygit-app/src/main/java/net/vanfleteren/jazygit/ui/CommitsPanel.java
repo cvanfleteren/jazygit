@@ -173,8 +173,10 @@ public class CommitsPanel {
     public Panel render(Model model, String focusedId, String activeId) {
         Option<Sha> copied = model.repoView().cherryPick().map(Commit::sha);
         Option<CommitSearch> search = model.repoView().commitSearch();
-        AheadView ahead =
-                new AheadView(AheadUpdate.head(model), model.repoView().onlyAhead());
+        AheadView ahead = new AheadView(
+                AheadUpdate.head(model),
+                AheadUpdate.headDistance(model),
+                model.repoView().onlyAhead());
         typing = model.repoView().searchLine();
         searching = search.isDefined();
         list.whenEmpty(search.map(found -> Messages.get("panel.commits.noMatches")));

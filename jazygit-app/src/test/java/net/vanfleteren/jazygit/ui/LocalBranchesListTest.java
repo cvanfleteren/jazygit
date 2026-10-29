@@ -18,6 +18,9 @@ import org.junit.jupiter.api.Test;
 
 class LocalBranchesListTest {
 
+    private static final BranchRef ORIGIN_MAIN =
+            new BranchRef.Remote(new RemoteBranch("origin", new BranchName("main")));
+
     @Test
     void theCurrentBranchStandsOutByTheStyleOfItsNameAlone() {
         LoadableList.Row current = LocalBranchesList.row(
@@ -40,7 +43,7 @@ class LocalBranchesListTest {
     }
 
     @Test
-    void aBranchShowsItsNameAndSpinnerAboveItsAgeSyncBehindPullRequestAndWorktree() {
+    void aBranchShowsItsNameAndSpinnerAboveItsAgeSyncBaseDistancePullRequestAndWorktree() {
         Branch branch = new Branch(
                 new BranchName("feature"),
                 false,
@@ -55,13 +58,13 @@ class LocalBranchesListTest {
         LoadableList.Row row = LocalBranchesList.row(
                 branch,
                 Duration.ofDays(3),
-                Option.of(58),
+                Option.of(new BaseDistance(ORIGIN_MAIN, 1, 58)),
                 BranchSegs.gitHub(
                         Option.of(new PullRequest(42, "b", false, Checks.PASSING, Review.APPROVED)), Option.none()),
                 Option.of("Pushing |"));
 
         assertEquals("feature  Pushing |", row.text());
-        assertEquals(Option.of("  3d  ↑2 ↓5  ⇣58  ✓ #42  +  wt"), row.detailText());
+        assertEquals(Option.of("  3d  ↑2 ↓5  ⇡1 ⇣58  ✓ #42  +  wt"), row.detailText());
         assertEquals(2, row.height());
     }
 
@@ -79,15 +82,42 @@ class LocalBranchesListTest {
     }
 
     @Test
-    void aBranchNotBehindItsBaseSaysNothingOfIt() {
-        LoadableList.Row row = LocalBranchesList.row(
-                Fixtures.branch(new BranchName("feature"), false, new Sha("1")),
-                Duration.ofDays(7),
-                Option.of(0),
-                List.empty(),
+    void aBranchEvenWithItsBaseSaysNothingOfIt() {
+        assertEquals(Option.of("  7d"), detail(Fixtures.branch(new BranchName("feature"), false, new Sha("1")), 0, 0));
+    }
+
+    @Test
+    void aBranchOnlyAheadOfItsBaseOrOnlyBehindItShowsThatCountAlone() {
+        Branch branch = Fixtures.branch(new BranchName("feature"), false, new Sha("1"));
+
+        assertEquals(Option.of("  7d  ⇡3"), detail(branch, 3, 0));
+        assertEquals(Option.of("  7d  ⇣4"), detail(branch, 0, 4));
+    }
+
+    @Test
+    void aBranchWhoseBaseIsItsUpstreamShowsOnlyHowFarItIsFromItsUpstream() {
+        Branch branch = new Branch(
+                new BranchName("feature"),
+                false,
+                new Sha("1"),
+                Instant.EPOCH,
+                Option.none(),
+                false,
+                false,
+                new Tracking.Tracks(new Upstream(ORIGIN_MAIN, 2, 5)),
                 Option.none());
 
-        assertEquals(Option.of("  7d"), row.detailText());
+        assertEquals(Option.of("  7d  ↑2 ↓5"), detail(branch, 2, 5));
+    }
+
+    private static Option<String> detail(Branch branch, int ahead, int behind) {
+        return LocalBranchesList.row(
+                        branch,
+                        Duration.ofDays(7),
+                        Option.of(new BaseDistance(ORIGIN_MAIN, ahead, behind)),
+                        List.empty(),
+                        Option.none())
+                .detailText();
     }
 
     @Test
