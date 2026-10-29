@@ -170,7 +170,7 @@ def test_a_branch_whose_upstream_was_deleted_is_gone(repo, origin, clone, jazygi
 
     ui.branches.try_to_pull("feature")
 
-    assert "feature gone" in ui.app.pane_text("Branches")
+    assert ui.branches.shows_gone("feature")
     ui.app.wait_for("Branch feature has no upstream anymore: origin/feature was deleted on the remote")
     assert repo.sync("feature") == "gone"
 
@@ -230,7 +230,7 @@ def test_delete_a_remote_branch(repo, origin, jazygit):
     # The local branch stays, and shows its upstream is gone.
     assert repo.branches() == ["feature", "main"]
     ui.branches.select("feature")
-    assert "feature gone" in ui.app.pane_text("Branches")
+    assert ui.branches.shows_gone("feature")
 
 
 def test_the_default_branch_is_not_deleted_on_the_remote(repo, origin, jazygit):
