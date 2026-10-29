@@ -109,3 +109,6 @@ whose highlighted node's diff the content panel shows: a directory shows the fil
 - The rich view of a merge shows other changes than the plain view: those against its first parent only.
 - While the tree is open, the files of the working tree cannot be seen nor staged; Escape is one key away.
 - The tree has no actions yet; `wanted.md` lists them.
+
+Amended by ADR 47: the diff style draws the staged and unstaged changes of the working tree too, and a conflicted
+file shows under a bar of its own.
