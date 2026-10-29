@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.git.model;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.List;
@@ -160,12 +161,11 @@ class UnifiedDiffTest {
     }
 
     @Test
-    void theHeadingOfAHunkIsWhatGitGivesAfterItsNumbers() {
-        assertEquals(Option.of("void run() {"), new Hunk("@@ -3,4 +3,5 @@ void run() {", List.empty()).heading());
-        assertEquals(Option.none(), new Hunk("@@ -1 +1 @@", List.empty()).heading());
-        assertEquals(Option.none(), new Hunk("", List.empty()).heading());
-        // A header whose numbers cannot be read is kept whole.
-        assertEquals(Option.of("@@ garbled"), new Hunk("@@ garbled", List.empty()).heading());
+    void aHunkIsNumberedWhenGitsNumbersCanBeReadFromItsHeader() {
+        assertTrue(new Hunk("@@ -3,4 +3,5 @@ void run() {", List.empty()).numbered());
+        assertTrue(new Hunk("@@ -1 +1 @@", List.empty()).numbered());
+        assertFalse(new Hunk("@@ garbled", List.empty()).numbered());
+        assertFalse(new Hunk("", List.empty()).numbered());
     }
 
     @Test

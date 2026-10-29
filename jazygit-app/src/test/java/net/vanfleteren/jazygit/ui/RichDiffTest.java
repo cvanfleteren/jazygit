@@ -37,9 +37,8 @@ class RichDiffTest {
                         " 1 file changed",
                         "",
                         " modified  a.txt ",
-                        // Where the hunk starts, with the heading git gives it but not its numbers, which the gutter
-                        // has.
-                        "┄┄┄┄┄ │ section",
+                        // Where the hunk starts, without git's numbers, which the gutter has, nor its heading.
+                        "┄┄┄┄┄ │ ",
                         " 9  9 │  nine",
                         // Changed lines are padded to the width of the file, so their background makes a block.
                         "10    │ -ten = 1 ",
@@ -51,7 +50,20 @@ class RichDiffTest {
     }
 
     @Test
-    void aHunkWithoutAHeadingStartsWithARuleAsWideAsItsLineNumbers() {
+    void aHunkHeaderWhoseNumbersCannotBeReadFollowsTheRuleAsGitPrintedIt() {
+        List<String> lines = text(RichDiff.lines("""
+                diff --git a/a.txt b/a.txt
+                --- a/a.txt
+                +++ b/a.txt
+                @@ garbled
+                -one
+                """, Theme.SpanStyles.NONE));
+
+        assertEquals(List.of(" modified  a.txt ", "┄┄┄ │ @@ garbled", "    │ -one"), lines);
+    }
+
+    @Test
+    void aHunkStartsWithARuleAsWideAsItsLineNumbers() {
         List<String> lines = text(RichDiff.lines("""
                 diff --git a/a.txt b/a.txt
                 --- a/a.txt

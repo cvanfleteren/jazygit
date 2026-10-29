@@ -259,13 +259,10 @@ public record UnifiedDiff(List<String> preamble, List<FileDiff> files) {
     public record Hunk(String header, List<DiffLine> lines) {
 
         /**
-         * The section heading git gives after the numbers of the header, like the function the hunk is in, if it
-         * gives one; or the whole header when git's numbers cannot be read from it, so that nothing git printed is
-         * lost.
+         * Whether git's numbers could be read from the header, so its lines are numbered.
          */
-        public Option<String> heading() {
-            Matcher numbers = HUNK.matcher(header);
-            return Option.of(numbers.matches() ? numbers.group(3) : header).filter(heading -> !heading.isBlank());
+        public boolean numbered() {
+            return HUNK.matcher(header).matches();
         }
     }
 
