@@ -126,7 +126,7 @@ class ProgramTest {
         }
 
         @Override
-        public Either<ProcessError, List<Commit>> commits() {
+        public Either<ProcessError, List<Commit>> commits(Sha head) {
             commitLoads++;
             return Either.right(List.of(commit(status.headCommit().get().value())));
         }

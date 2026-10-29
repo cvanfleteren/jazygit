@@ -216,8 +216,8 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<ProcessError, List<Commit>> commits() {
-        return CliLog.commits(worktree);
+    public Either<ProcessError, List<Commit>> commits(Sha head) {
+        return CliLog.log(worktree, head);
     }
 
     @Override
@@ -226,8 +226,8 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<GitError, Option<Ahead>> ahead(Option<BranchRef> branch, List<BranchRef> bases) {
-        return CliLog.ahead(worktree, branch, bases, MAX_COMMITS);
+    public Either<ProcessError, Ahead> ahead(Sha tip, BranchRef base, Sha baseTip) {
+        return CliLog.ahead(worktree, tip, base, baseTip, MAX_COMMITS);
     }
 
     @Override
@@ -356,8 +356,14 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<ProcessError, Map<BranchName, BaseDistance>> baseDistance(Option<BranchName> main) {
-        return CliBaseDistance.read(worktree, main);
+    public Either<ProcessError, Map<BranchName, BranchName>> parents() {
+        return CliConfig.parents(worktree);
+    }
+
+    @Override
+    public Map<BranchName, BaseDistance> baseDistance(
+            Map<BranchRef, Sha> tips, Map<BranchName, BranchName> parents, Option<BranchName> main) {
+        return CliBaseDistance.read(worktree, tips, parents, main);
     }
 
     @Override
