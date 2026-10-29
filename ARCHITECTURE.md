@@ -352,7 +352,9 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md`.
   pane they were opened from, the `CommitFile`s read (`Cmd.LoadCommitFiles`), and the diff of the highlighted node
   as a `Preview` (`Cmd.LoadCommitFileDiff`, a `DiffLoad` with a slot of its own). The files pane lists them in place
   of the working tree's (`ui.FileTreeList`, one per tree, so each keeps its own highlight and collapsed
-  directories), and the content panel shows the diff in `ContentArea.COMMIT_FILE`.
+  directories), and the content panel shows the diff in `ContentArea.COMMIT_FILE`. They open on the first directory
+  that holds files directly (`FileTreeList.firstWithDiff`), whose diff shows something: the root only when files
+  changed at the top of the repository.
 - **Their focus:** `FocusKeeper` moves the focus into the files pane when they open, and back to the pane they were
   opened from when Escape closes them. `Model.withShownPane` closes them when another pane gets the focus, and
   `LoadUpdate` when the stash they are of is dropped.

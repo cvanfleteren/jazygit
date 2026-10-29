@@ -18,7 +18,8 @@ import net.vanfleteren.jazygit.ui.widgets.Pane;
 /**
  * Left-side panel showing the changed files, as in {@code git status}, as a directory tree; or, while they are open,
  * the files a commit or a stash changed (ADR 44). Each tree keeps its own selection and expansion, so the files of the
- * working tree are as they were when those of a commit are closed.
+ * working tree are as they were when those of a commit are closed. The files of a commit open on the first directory
+ * that holds files directly, so its diff shows at once.
  */
 public class FilesPanel {
 
@@ -43,9 +44,17 @@ public class FilesPanel {
      */
     public FilesPanel(Consumer<Msg> dispatch, Runnable openDiff, Theme.Highlights highlights) {
         statusTree = new FileTreeList<>(
-                ID, file -> file.entry().type().marker() + " " + name(file), FilesPanel::drawEntry, highlights);
+                ID,
+                file -> file.entry().type().marker() + " " + name(file),
+                FilesPanel::drawEntry,
+                highlights,
+                FileTreeList::first);
         commitTree = new FileTreeList<>(
-                ID, file -> file.entry().type().marker() + " " + name(file), FilesPanel::drawCommitFile, highlights);
+                ID,
+                file -> file.entry().type().marker() + " " + name(file),
+                FilesPanel::drawCommitFile,
+                highlights,
+                FileTreeList::firstWithDiff);
         statusTree.onKey(PaneKeys.whileFocused(
                 () -> focused,
                 event -> event.code() == KeyCode.ENTER && statusTree.selected().isDefined()

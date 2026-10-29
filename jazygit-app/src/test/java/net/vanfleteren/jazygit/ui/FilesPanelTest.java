@@ -26,6 +26,12 @@ import org.junit.jupiter.api.Test;
  */
 class FilesPanelTest {
 
+    private static final CommitFilesView.Changes COMMIT = new CommitFilesView.Changes.OfCommit(new Sha("aaaa"));
+    private static final String MODEL = "core/src/main/java/model";
+    private static final List<CommitFile> MODEL_AND_TEST = List.of(
+            new CommitFile(MODEL + "/WordDiff.java", ChangeType.MODIFIED),
+            new CommitFile("core/src/test/java/model/WordDiffTest.java", ChangeType.MODIFIED));
+
     private final FilesPanel panel = new FilesPanel(msg -> {}, () -> {});
 
     @Test
@@ -293,6 +299,92 @@ class FilesPanelTest {
 
             SettledPilot.of(testRunner).quit();
         }
+    }
+
+    @Test
+    void theFilesOfACommitOpenOnTheFirstDirectoryThatHoldsFiles() throws Exception {
+        assertEquals(MODEL, highlightedOnOpen(MODEL_AND_TEST));
+        assertEquals(
+                "",
+                highlightedOnOpen(List.of(
+                        new CommitFile("pom.xml", ChangeType.MODIFIED),
+                        new CommitFile("bench/Bench.java", ChangeType.ADDED))));
+        assertEquals("a/b", highlightedOnOpen(List.of(new CommitFile("a/b/c.txt", ChangeType.MODIFIED))));
+    }
+
+    @Test
+    void theFilesOfACommitOpenedAgainOpenOnTheFirstDirectoryThatHoldsFilesAgain() throws Exception {
+        FilesPanel panel = new FilesPanel(msg -> {}, () -> {});
+        Model opened = opened(TestModels.loaded(new FixedProvider(List.of())));
+        Model loaded = loaded(opened, MODEL_AND_TEST);
+        Model closed = Update.update(loaded, new CommitFilesMsg.Closed()).model();
+        Model reopened = opened(closed);
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(opened, FilesPanel.ID))) {
+            for (Model model : List.of(opened, loaded, closed, reopened, loaded(reopened, MODEL_AND_TEST))) {
+                RenderedText.of(testRunner, () -> panel.render(model, FilesPanel.ID));
+            }
+            assertEquals(MODEL, highlighted(panel));
+            SettledPilot.of(testRunner).quit();
+        }
+    }
+
+    @Test
+    void theFilesOfACommitOnlyOpenOnTheFirstDirectoryThatHoldsFilesOnce() throws Exception {
+        FilesPanel panel = new FilesPanel(msg -> {}, () -> {});
+        Model opened = opened(TestModels.loaded(new FixedProvider(List.of())));
+        Model loaded = loaded(opened, MODEL_AND_TEST);
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(opened, FilesPanel.ID))) {
+            RenderedText.of(testRunner, () -> panel.render(opened, FilesPanel.ID));
+            RenderedText.of(testRunner, () -> panel.render(loaded, FilesPanel.ID));
+            panel.commitTree().selected(0);
+            RenderedText.of(testRunner, () -> panel.render(loaded, FilesPanel.ID));
+            RenderedText.of(
+                    testRunner,
+                    () -> panel.render(
+                            loaded(opened, MODEL_AND_TEST.append(new CommitFile("x/y.txt", ChangeType.ADDED))),
+                            FilesPanel.ID));
+            assertEquals("", highlighted(panel));
+            SettledPilot.of(testRunner).quit();
+        }
+    }
+
+    /**
+     * The path of the node highlighted when the files of a commit open with {@code files}.
+     */
+    private static String highlightedOnOpen(List<CommitFile> files) throws Exception {
+        FilesPanel panel = new FilesPanel(msg -> {}, () -> {});
+        Model opened = opened(TestModels.loaded(new FixedProvider(List.of())));
+        Model loaded = loaded(opened, files);
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(opened, FilesPanel.ID))) {
+            RenderedText.of(testRunner, () -> panel.render(opened, FilesPanel.ID));
+            RenderedText.of(testRunner, () -> panel.render(loaded, FilesPanel.ID));
+            String path = highlighted(panel);
+            SettledPilot.of(testRunner).quit();
+            return path;
+        }
+    }
+
+    /**
+     * {@code model} with the files of {@link #COMMIT} opened from the commits pane, while they are read.
+     */
+    private static Model opened(Model model) {
+        return Update.update(model, new CommitFilesMsg.Opened(COMMIT, CommitsPanel.ID))
+                .model();
+    }
+
+    /**
+     * {@code model} once the files of {@link #COMMIT} are read as {@code files}.
+     */
+    private static Model loaded(Model model, List<CommitFile> files) {
+        return Update.update(model, new LoadMsg.CommitFilesLoaded(COMMIT, files))
+                .model();
+    }
+
+    private static String highlighted(FilesPanel panel) {
+        return panel.commitTree().selectedNode().data().path();
     }
 
     private record FixedProvider(List<FileEntry> files) implements StubGitProvider {
