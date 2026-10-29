@@ -21,7 +21,7 @@ class RichDiffTest {
                 index 5626abf..814f4a4 100644
                 --- a/a.txt
                 +++ b/a.txt
-                @@ -9,2 +9,2 @@
+                @@ -9,2 +9,2 @@ section
                  nine
                 -ten = 1
                 +ten = 2
@@ -37,7 +37,9 @@ class RichDiffTest {
                         " 1 file changed",
                         "",
                         " modified  a.txt ",
-                        "@@ -9,2 +9,2 @@",
+                        // Where the hunk starts, with the heading git gives it but not its numbers, which the gutter
+                        // has.
+                        "┄┄┄┄┄ │ section",
                         " 9  9 │  nine",
                         // Changed lines are padded to the width of the file, so their background makes a block.
                         "10    │ -ten = 1 ",
@@ -46,6 +48,21 @@ class RichDiffTest {
                         " renamed  old.txt → new.txt ",
                         "renamed, contents unchanged"),
                 lines);
+    }
+
+    @Test
+    void aHunkWithoutAHeadingStartsWithARuleAsWideAsItsLineNumbers() {
+        List<String> lines = text(RichDiff.lines("""
+                diff --git a/a.txt b/a.txt
+                --- a/a.txt
+                +++ b/a.txt
+                @@ -1 +1 @@
+                -one
+                +two
+                """, Theme.SpanStyles.NONE));
+
+        // The changed lines are padded to the width of the bar.
+        assertEquals(List.of(" modified  a.txt ", "┄┄┄ │ ", "1   │ -one       ", "  1 │ +two       "), lines);
     }
 
     @Test

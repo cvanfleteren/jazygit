@@ -16,7 +16,7 @@ import java.util.regex.Pattern;
 public record UnifiedDiff(List<String> preamble, List<FileDiff> files) {
 
     private static final String FILE_START = "diff --git ";
-    private static final Pattern HUNK = Pattern.compile("^@@ -(\\d+)(?:,\\d+)? \\+(\\d+)(?:,\\d+)? @@.*");
+    private static final Pattern HUNK = Pattern.compile("^@@ -(\\d+)(?:,\\d+)? \\+(\\d+)(?:,\\d+)? @@ ?(.*)");
 
     /**
      * {@code text} parsed. What it does not know is kept: before the first file in the preamble, and in a file as a
@@ -256,7 +256,18 @@ public record UnifiedDiff(List<String> preamble, List<FileDiff> files) {
      * @param header its {@code @@ -a,b +c,d @@} line, as git printed it; empty for the lines of a file's header git
      *               printed that the diff does not know
      */
-    public record Hunk(String header, List<DiffLine> lines) {}
+    public record Hunk(String header, List<DiffLine> lines) {
+
+        /**
+         * The section heading git gives after the numbers of the header, like the function the hunk is in, if it
+         * gives one; or the whole header when git's numbers cannot be read from it, so that nothing git printed is
+         * lost.
+         */
+        public Option<String> heading() {
+            Matcher numbers = HUNK.matcher(header);
+            return Option.of(numbers.matches() ? numbers.group(3) : header).filter(heading -> !heading.isBlank());
+        }
+    }
 
     /**
      * A line of a hunk, without its marker.
