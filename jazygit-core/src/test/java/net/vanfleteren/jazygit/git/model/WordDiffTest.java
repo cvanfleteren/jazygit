@@ -92,6 +92,50 @@ class WordDiffTest {
     }
 
     @Test
+    void aRewrittenPairLeavesTheBudgetToThePairsAfterIt() {
+        // The rewritten pair would fill 9 cells, all of the budget, were it compared; the pair after it fills one.
+        List<DiffLine> hunk = List.of(
+                line(Kind.REMOVED, "alpha beta"),
+                line(Kind.REMOVED, "a = 1"),
+                line(Kind.ADDED, "gamma delta"),
+                line(Kind.ADDED, "a = 2"));
+
+        assertEquals(
+                List.of(List.of(
+                        List.of(changed(false, "alpha beta")),
+                        List.of(changed(false, "a = "), changed(true, "1")),
+                        List.of(changed(false, "gamma delta")),
+                        List.of(changed(false, "a = "), changed(true, "2")))),
+                WordDiff.segments(List.of(hunk), 9));
+    }
+
+    @Test
+    void aPairWhoseWordsMovedIsComparedAndDrawnWholeIfTooLittleIsKept() {
+        // Every word is in both lines, so only comparing them in order shows that too little is kept.
+        assertEquals(
+                Tuple.of(List.of(changed(false, "one two three four")), List.of(changed(false, "four three two one"))),
+                WordDiff.compared("one two three four", "four three two one"));
+    }
+
+    @Test
+    void aPairWhoseWordsMovedSpendsItsCells() {
+        // The moved pair keeps every token by count, so it is compared and fills its 7 x 7 cells, all of the budget.
+        List<DiffLine> hunk = List.of(
+                line(Kind.REMOVED, "one two three four"),
+                line(Kind.REMOVED, "a = 1"),
+                line(Kind.ADDED, "four three two one"),
+                line(Kind.ADDED, "a = 2"));
+
+        assertEquals(
+                List.of(List.of(
+                        List.of(changed(false, "one two three four")),
+                        List.of(changed(false, "a = 1")),
+                        List.of(changed(false, "four three two one")),
+                        List.of(changed(false, "a = 2")))),
+                WordDiff.segments(List.of(hunk), 49));
+    }
+
+    @Test
     void manyLongSimilarLinesAreDrawnQuickly() {
         // 499 tokens a line, so each pair is just small enough to be compared on its own.
         String words = List.range(0, 249).map(i -> "word" + i).mkString(" ");

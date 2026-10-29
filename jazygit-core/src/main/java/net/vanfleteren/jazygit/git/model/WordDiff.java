@@ -7,6 +7,8 @@ import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.stream.IntStream;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
 
@@ -19,7 +21,8 @@ public final class WordDiff {
 
     /**
      * How many cells the comparisons of a whole diff may fill: each pair fills the product of the counts of its words,
-     * leaving out those it starts and ends with alike.
+     * leaving out those it starts and ends with alike; a pair that could not keep enough to be highlighted, whatever
+     * the order of its words, fills none.
      * The comparisons run where the diff is drawn, so a diff of many long lines must not hold that up; once this is
      * spent, the lines left are drawn whole, but for a pair that differs in an insertion or a deletion only, which
      * fills no cells.
@@ -147,8 +150,15 @@ public final class WordDiff {
         // line changed in a word or two leaves next to nothing.
         int prefix = commonPrefix(before, after);
         int suffix = commonSuffix(before, after, prefix);
+        int total = removed.length() + added.length();
         long cells = (long) (before.length - prefix - suffix) * (after.length - prefix - suffix);
-        if (cells > MAX_CELLS || cells > budget) {
+        // A pair that could not keep enough even if its tokens were in the same order was rewritten: it is drawn whole
+        // without filling the table, and leaves the budget to the pairs after it. Counting its tokens is not worth it
+        // for a table of no more cells than it has tokens to count.
+        int between = before.length + after.length - 2 * (prefix + suffix);
+        if (cells > MAX_CELLS
+                || cells > budget
+                || (cells > between && rewritten(mostKept(before, after, prefix, suffix), total))) {
             return Tuple.of(Tuple.of(whole(removed), whole(added)), budget);
         }
         Tuple2<boolean[], boolean[]> kept = kept(before, after, prefix, suffix);
@@ -156,12 +166,42 @@ public final class WordDiff {
                 .filter(i -> kept._1[i])
                 .map(i -> before[i].length())
                 .sum();
-        int total = removed.length() + added.length();
         return Tuple.of(
-                total == 0 || 2.0 * keptChars / total < MIN_KEPT
+                rewritten(keptChars, total)
                         ? Tuple.of(whole(removed), whole(added))
                         : Tuple.of(joined(before, kept._1), joined(after, kept._2)),
                 budget - cells);
+    }
+
+    /**
+     * Whether a pair of {@code total} characters, of which {@code keptChars} of each line are kept, was rewritten.
+     */
+    private static boolean rewritten(int keptChars, int total) {
+        return total == 0 || 2.0 * keptChars / total < MIN_KEPT;
+    }
+
+    /**
+     * The most characters of {@code before} its longest common subsequence with {@code after} can keep: those of
+     * the first {@code prefix} and the last {@code suffix} tokens, and of each token between them as often as both
+     * have it there, whatever their order. Counting them takes no table.
+     */
+    private static int mostKept(String[] before, String[] after, int prefix, int suffix) {
+        // Counted in a map filled in place, as it runs for most pairs that are compared.
+        Map<String, int[]> inAfter = new HashMap<>();
+        for (int j = prefix; j < after.length - suffix; j++) {
+            inAfter.computeIfAbsent(after[j], token -> new int[1])[0]++;
+        }
+        int kept = IntStream.concat(IntStream.range(0, prefix), IntStream.range(before.length - suffix, before.length))
+                .map(i -> before[i].length())
+                .sum();
+        for (int i = prefix; i < before.length - suffix; i++) {
+            int[] left = inAfter.get(before[i]);
+            if (left != null && left[0] > 0) {
+                left[0]--;
+                kept += before[i].length();
+            }
+        }
+        return kept;
     }
 
     /**

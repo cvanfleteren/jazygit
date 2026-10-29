@@ -99,8 +99,8 @@ public class WordDiffBenchmark {
             }
         },
         /**
-         * Thousands of long, similar lines, as in a generated or data file: the comparisons are bounded by
-         * {@link WordDiff#BUDGET} only.
+         * Thousands of long, similar lines, as in a generated or data file: each pair differs in its last word only, so
+         * it fills one cell, and the time goes to splitting the lines into words.
          */
         LONG_SIMILAR {
             @Override
@@ -114,7 +114,7 @@ public class WordDiffBenchmark {
             }
         },
         /**
-         * Lines that were rewritten: every pair is compared, and has too little in common to be highlighted.
+         * Lines that were rewritten: no pair has words enough in common to be highlighted, so none fills cells.
          */
         REWRITTEN {
             @Override
@@ -124,6 +124,24 @@ public class WordDiffBenchmark {
                         file -> List.of("@@ -1,2500 +1,2500 @@")
                                 .appendAll(List.range(0, 2500).map(i -> "-" + sentence("old", i)))
                                 .appendAll(List.range(0, 2500).map(i -> "+" + sentence("new", i))));
+            }
+        },
+        /**
+         * A file of rewritten lines, as {@link #REWRITTEN}, before one whose lines changed in two words far apart, so
+         * that each of its pairs fills cells: they are highlighted only if the rewritten lines left them the budget.
+         */
+        REWRITTEN_THEN_EDITED {
+            @Override
+            String diff() {
+                return files(
+                        2,
+                        file -> file == 0
+                                ? List.of("@@ -1,2000 +1,2000 @@")
+                                        .appendAll(List.range(0, 2000).map(i -> "-" + sentence("old", i)))
+                                        .appendAll(List.range(0, 2000).map(i -> "+" + sentence("new", i)))
+                                : List.of("@@ -1,500 +1,500 @@")
+                                        .appendAll(List.range(0, 500).map(i -> "-" + edited(i, "first", "last")))
+                                        .appendAll(List.range(0, 500).map(i -> "+" + edited(i, "start", "end"))));
             }
         },
         /**
@@ -167,6 +185,15 @@ public class WordDiffBenchmark {
 
         private static String sentence(String word, int line) {
             return List.range(0, 30).map(i -> word + (line * 31 + i)).mkString(" ");
+        }
+
+        /**
+         * Forty words of line {@code line}, the tenth {@code first} and the thirtieth {@code last}.
+         */
+        private static String edited(int line, String first, String last) {
+            return List.range(0, 40)
+                    .map(i -> i == 10 ? first : i == 30 ? last : "word" + (line * 41 + i))
+                    .mkString(" ");
         }
     }
 }
