@@ -17,7 +17,7 @@ public sealed interface DiffOptionsMsg extends Msg {
     record WhitespaceToggled() implements DiffOptionsMsg {}
 
     /**
-     * The user asked to draw the changes of the commits and the stashes in the other style.
+     * The user asked to draw the diffs of the working tree, of a commit and of a stash in the other style.
      */
     record StyleToggled() implements DiffOptionsMsg {}
 }

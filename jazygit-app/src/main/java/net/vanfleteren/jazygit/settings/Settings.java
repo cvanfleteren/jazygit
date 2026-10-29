@@ -14,7 +14,7 @@ import lombok.With;
  * @param ghExecutable      the gh executable to run, if not the one on the PATH
  * @param repositoryWidth   the share of the width the left column takes on the repository screen, in percent
  * @param pullRequestsWidth the share of the width the left column takes on the pull requests screen, in percent
- * @param diffStyle         how the changes of a commit or a stash are drawn
+ * @param diffStyle         how the diffs of the working tree, of a commit and of a stash are drawn
  */
 @With
 public record Settings(

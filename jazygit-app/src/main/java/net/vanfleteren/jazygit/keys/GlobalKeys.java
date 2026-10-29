@@ -115,7 +115,8 @@ final class GlobalKeys {
     }
 
     /**
-     * Whether {@code event} is the shortcut that draws the changes of the commits and the stashes in the other style.
+     * Whether {@code event} is the shortcut that draws the diffs of the working tree, of a commit and of a stash in the
+     * other style.
      */
     static boolean isDiffStyleKey(KeyEvent event) {
         return event.hasCtrl() && event.isCharIgnoreCase('d');

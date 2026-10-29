@@ -13,9 +13,10 @@ import net.vanfleteren.jazygit.state.Preview;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
- * How the diffs are read, and how the changes of the commits and the stashes are drawn. Changing either reads the
- * diffs that are shown again, which keep showing as they were until they are read; what was read before the change is
- * dropped when it arrives. The style decides how a merge is read (ADR 44), so it changes how the diffs are read too.
+ * How the diffs are read, and how the diffs of the working tree, of a commit and of a stash are drawn. Changing either
+ * reads the diffs that are shown again, which keep showing as they were until they are read; what was read before the
+ * change is dropped when it arrives. The style decides how a merge is read (ADR 44), so it changes how the diffs are
+ * read too.
  */
 public final class DiffOptionsUpdate {
 

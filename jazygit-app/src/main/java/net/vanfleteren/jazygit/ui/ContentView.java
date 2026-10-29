@@ -154,11 +154,17 @@ final class ContentView {
                 : model.repoView()
                         .fileDiff()
                         .map(Preview::shown)
-                        .map(diff -> whenLoaded(title, diff.value(), diffs -> diffAreas(options, title, diffs)))
+                        .map(diff -> whenLoaded(
+                                title,
+                                diff.value(),
+                                diffs -> diffAreas(options, model.preferences().diffStyle(), title, diffs)))
                         .getOrElse(() -> loading(title));
     }
 
-    private static Shown diffAreas(DiffOptions options, String title, Diffs diffs) {
+    /**
+     * The staged and the unstaged changes of {@code diffs}, each drawn in {@code style} on its own (ADR 47).
+     */
+    private static Shown diffAreas(DiffOptions options, DiffStyle style, String title, Diffs diffs) {
         if (diffs.isEmpty()) {
             return dim(
                     title, Messages.get(options.ignoreWhitespace() ? "content.onlyWhitespace" : "content.noChanges"));
@@ -171,7 +177,7 @@ final class ContentView {
                         area._1,
                         titled(Messages.get(area._2), options),
                         new ScrolledContent.Diff(area._3),
-                        new Body.Diff(shown(area._3)))));
+                        new Body.Diff(shown(area._3), style))));
     }
 
     /**
@@ -282,7 +288,7 @@ final class ContentView {
                                                 options),
                                         new ScrolledContent.FileChanges(
                                                 view.of().sha(), diff.key(), changes),
-                                        new Body.FileChanges(
+                                        new Body.Diff(
                                                 shownChanges(changes, options),
                                                 model.preferences().diffStyle()))))
                 .getOrElse(() -> whenLoaded(
@@ -393,9 +399,10 @@ final class ContentView {
     sealed interface Body {
 
         /**
-         * A unified diff.
+         * A unified diff, drawn in {@code style}: the staged or the unstaged changes of the working tree, or what a
+         * commit or a stash changed in some of its files.
          */
-        record Diff(String diff) implements Body {}
+        record Diff(String diff, DiffStyle style) implements Body {}
 
         /**
          * The log of a branch, as far as {@code ahead} shows it.
@@ -411,11 +418,6 @@ final class ContentView {
          * A stash and what it stashed, drawn in {@code style}.
          */
         record StashChanges(Stash stash, String changes, DiffStyle style) implements Body {}
-
-        /**
-         * What a commit or a stash changed in some of its files, drawn in {@code style}.
-         */
-        record FileChanges(String changes, DiffStyle style) implements Body {}
 
         /**
          * A pull request, and what it says and changes.

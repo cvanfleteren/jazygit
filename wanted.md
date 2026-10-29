@@ -29,10 +29,10 @@ Features to consider, roughly most valuable first.
 9. **Search commits.** Filter by message, author or path (`-S` for pickaxe), possibly reusing `ListFilter`.
 10. **Commit graph.** `CommitGraph` exists in the model; draw the lanes in the commits panel if it doesn't yet.
 11. **Diff options.** Ignoring whitespace is done (Ctrl+W, `DiffOptions`), and so is the rich view of the changes of
-    a commit or a stash, with line numbers and the changed words highlighted (Ctrl+D, ADR 44). Still to do: change the
-    amount of context, and side-by-side, as more fields of `DiffOptions`; the rich view for the diffs of the working
-    tree and of a pull request. The pull request diff (`gh pr diff`) shows all whitespace; it could be filtered, or
-    read with git when the branches are fetched.
+    the working tree, of a commit and of a stash, with line numbers and the changed words highlighted (Ctrl+D, ADR 44,
+    ADR 47). Still to do: change the amount of context, and side-by-side, as more fields of `DiffOptions`; the rich
+    view for the diff of a pull request. The pull request diff (`gh pr diff`) shows all whitespace; it could be
+    filtered, or read with git when the branches are fetched.
     - **Act on the files of a commit** in the tree `F` opens (ADR 44): check a file out as it was in the commit, open
       it in the editor, or revert the changes of one file.
 12. **Start from git's prepared message.** Fill the commit dialog from `MERGE_MSG` or `SQUASH_MSG` (see TODO.md).

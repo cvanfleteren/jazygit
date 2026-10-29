@@ -4,7 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 
 /**
- * How the changes of a commit or a stash are drawn.
+ * How the diffs of the working tree, of a commit and of a stash are drawn (ADR 44, ADR 47).
  */
 public enum DiffStyle {
     /**
