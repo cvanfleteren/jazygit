@@ -214,6 +214,7 @@ final class ContentView {
                     String title = Messages.get("panel.log.titleFor", log.key().name());
                     AheadView ahead = new AheadView(
                             AheadUpdate.branch(model, log.key()),
+                            AheadUpdate.distance(model, log.key()),
                             model.repoView().onlyAhead());
                     return whenLoaded(ahead.title(title), log.value(), commits -> {
                         List<Commit> shown = ahead.shown(commits);

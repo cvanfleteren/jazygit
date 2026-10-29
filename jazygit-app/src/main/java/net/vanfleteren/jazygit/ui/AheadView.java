@@ -4,6 +4,8 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.Ahead;
+import net.vanfleteren.jazygit.git.model.BaseDistance;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.i18n.Messages;
@@ -12,24 +14,36 @@ import net.vanfleteren.jazygit.i18n.Messages;
  * How a log shows which of its commits are not on the base of its branch: the others dimmed, and the count in the
  * title; or only those, with the commit they forked from.
  *
- * @param ahead the commits not on the base, if the branch has one and they were read
- * @param only  whether only those are listed
+ * @param ahead    the commits not on the base, if the branch has one and they were read
+ * @param distance how far the branch is from its base, if that was read (ADR 46)
+ * @param only     whether only those are listed
  */
-record AheadView(Option<Ahead> ahead, boolean only) {
+record AheadView(Option<Ahead> ahead, Option<BaseDistance> distance, boolean only) {
 
     /**
-     * {@code title}, followed by how many commits are not on the base, and which branch that is; the same whether
-     * only those are listed or not.
+     * {@code title}, followed by how many commits are not on the base and how many of the base are not on the branch,
+     * leaving out a count of none, and which branch that is; the same whether only those are listed or not. Until
+     * how far the branch is from that base is read, the count of the commits read stands in for those ahead.
      */
     String title(String title) {
-        return ahead.map(read -> Messages.get(
-                        "panel.ahead",
-                        title,
-                        read.more()
-                                ? Messages.get("panel.ahead.more", GitInfoProvider.MAX_COMMITS)
-                                : String.valueOf(read.commits().size()),
-                        read.base().name()))
+        return ahead.map(read -> distance.filter(counts -> counts.base().equals(read.base())
+                                && counts.tip().equals(read.tip()))
+                        .map(counts -> title(title, counts.ahead(), false, counts.behind(), read.base()))
+                        .getOrElse(() -> title(title, read.commits().size(), read.more(), 0, read.base())))
                 .getOrElse(title);
+    }
+
+    /**
+     * @param more whether there are more than {@code ahead} commits ahead
+     */
+    private static String title(String title, int ahead, boolean more, int behind, BranchRef base) {
+        String aheadText = more ? Messages.get("panel.ahead.more", GitInfoProvider.MAX_COMMITS) : String.valueOf(ahead);
+        if (behind == 0) {
+            return Messages.get("panel.ahead", title, aheadText, base.name());
+        }
+        return ahead == 0
+                ? Messages.get("panel.behind", title, String.valueOf(behind), base.name())
+                : Messages.get("panel.aheadBehind", title, aheadText, String.valueOf(behind), base.name());
     }
 
     /**

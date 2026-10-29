@@ -233,19 +233,21 @@ public interface Cmd {
     }
 
     /**
-     * Reads how many commits of its base each local branch does not have, {@code main} being the base of those
-     * without a parent (ADR 46).
+     * Reads how far each local branch is from its base, {@code main} being the base of those without a parent
+     * (ADR 46).
      */
-    record LoadBehind(Option<BranchName> main) implements Load {
+    record LoadBaseDistance(Option<BranchName> main) implements Load {
 
         @Override
         public Option<Label> label() {
-            return Option.of(Label.of("work.behind"));
+            return Option.of(Label.of("work.baseDistance"));
         }
 
         @Override
         public Msg run(Env env) {
-            return env.git().behind(main).fold(this::failedWith, counts -> new LoadMsg.BehindLoaded(this, counts));
+            return env.git()
+                    .baseDistance(main)
+                    .fold(this::failedWith, counts -> new LoadMsg.BaseDistanceLoaded(this, counts));
         }
     }
 

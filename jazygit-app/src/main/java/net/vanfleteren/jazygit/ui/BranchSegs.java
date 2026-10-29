@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.ui;
 
+import io.vavr.Tuple;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
@@ -83,13 +84,17 @@ final class BranchSegs {
     }
 
     /**
-     * How many commits of its base a branch does not have, dimmed and with a leading space: {@code ⇣58}; nothing for
-     * none, or for a branch without a base (ADR 46).
+     * How far {@code branch} is from its base, dimmed and each with a leading space: the commits it has that the base
+     * does not, {@code ⇡2}, then those of the base it does not have, {@code ⇣58}; nothing for none, for a branch
+     * without a base, or for one whose base is its upstream, which {@link #sync} already counts against (ADR 46).
      */
-    static List<LoadableList.Seg> behind(Option<Integer> behind) {
-        return behind.filter(n -> n > 0)
-                .map(n -> LoadableList.Seg.styled(" ⇣" + n, Theme.Classes.DIM))
-                .toList();
+    static List<LoadableList.Seg> baseDistance(Branch branch, Option<BaseDistance> distance) {
+        return distance.filter(read ->
+                        !branch.upstream().exists(upstream -> upstream.branch().equals(read.base())))
+                .toList()
+                .flatMap(read -> List.of(Tuple.of("⇡", read.ahead()), Tuple.of("⇣", read.behind())))
+                .filter(count -> count._2 > 0)
+                .map(count -> LoadableList.Seg.styled(" " + count._1 + count._2, Theme.Classes.DIM));
     }
 
     /**

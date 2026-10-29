@@ -114,15 +114,20 @@ def test_move_commits_onto_an_existing_branch(repo, jazygit):
     assert repo("status", "--porcelain") == ""
 
 
-def test_a_branch_says_how_far_its_base_moved_on(repo, jazygit):
+def test_a_branch_says_how_far_it_is_from_its_base(repo, jazygit):
     three_commits(repo)
     repo("branch", "feature", "HEAD~2")
-    repo("branch", "stacked", "HEAD~2")
+    repo("checkout", "-q", "-b", "stacked", "HEAD~2")
+    repo.commit("Add stacked", **{"stacked.txt": "stacked\n"})
+    repo("checkout", "-q", "main")
     repo("config", "branch.stacked.gh-merge-base", "feature")
     ui = jazygit()
     ui.caught_up()
 
-    # feature misses the two commits main got since; stacked has all of feature, its parent.
+    # feature misses the two commits main got since; stacked has all of feature, its parent, and one more.
     assert ui.app.eventually(lambda: ui.branches.behind("feature"), "how far feature is behind main") == 2
+    assert ui.branches.ahead("feature") is None
+    assert ui.branches.ahead("stacked") == 1
     assert ui.branches.behind("stacked") is None
+    assert ui.branches.ahead("main") is None
     assert ui.branches.behind("main") is None

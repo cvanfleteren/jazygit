@@ -20,8 +20,8 @@ import net.vanfleteren.jazygit.git.model.*;
  * @param worktrees       the worktrees of the repository, the one shown first
  * @param worktreeChanges whether the other worktrees have changes, by their location, as read last; one that was
  *                        not read, or could not be read the last time, is not known
- * @param behind          how many commits of its base each local branch that has one does not have, by its name, as
- *                        read last (ADR 46); none before the first read
+ * @param baseDistance    how far each local branch that has a base is from it, by its name, as read last (ADR 46);
+ *                        none before the first read
  */
 @With
 public record Repo(
@@ -33,7 +33,7 @@ public record Repo(
         Loadable<List<Stash>> stashes,
         Loadable<List<Worktree>> worktrees,
         Map<String, Boolean> worktreeChanges,
-        Map<BranchName, Integer> behind) {
+        Map<BranchName, BaseDistance> baseDistance) {
 
     public static final Repo LOADING = new Repo(
             Loadable.loading(),

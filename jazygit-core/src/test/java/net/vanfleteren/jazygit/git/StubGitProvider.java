@@ -11,6 +11,7 @@ import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.model.Ahead;
 import net.vanfleteren.jazygit.git.model.AllBranches;
+import net.vanfleteren.jazygit.git.model.BaseDistance;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
@@ -360,7 +361,7 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<ProcessError, Map<BranchName, Integer>> behind(Option<BranchName> main) {
+    default Either<ProcessError, Map<BranchName, BaseDistance>> baseDistance(Option<BranchName> main) {
         return Either.right(HashMap.empty());
     }
 

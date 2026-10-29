@@ -40,23 +40,60 @@ class AheadViewTest {
 
     @Test
     void theTitleCountsTheCommitsNotOnTheBase() {
-        assertEquals("Commits · 2 ahead of origin/main", new AheadView(Option.of(AHEAD), false).title("Commits"));
-        assertEquals("Commits · 2 ahead of origin/main", new AheadView(Option.of(AHEAD), true).title("Commits"));
-        assertEquals("Commits · 300+ ahead of origin/main", new AheadView(Option.of(MORE), false).title("Commits"));
-        assertEquals("Commits", new AheadView(Option.none(), true).title("Commits"));
+        assertEquals(
+                "Commits · 2 ahead of origin/main",
+                new AheadView(Option.of(AHEAD), Option.none(), false).title("Commits"));
+        assertEquals(
+                "Commits · 2 ahead of origin/main",
+                new AheadView(Option.of(AHEAD), Option.none(), true).title("Commits"));
+        assertEquals(
+                "Commits · 300+ ahead of origin/main",
+                new AheadView(Option.of(MORE), Option.none(), false).title("Commits"));
+        assertEquals("Commits", new AheadView(Option.none(), Option.none(), true).title("Commits"));
+    }
+
+    @Test
+    void theTitleCountsTheCommitsAheadAndBehindOnceThoseAreRead() {
+        assertEquals("Commits · 1 ahead, 6 behind origin/main", title(1, 6));
+        assertEquals("Commits · 301 ahead of origin/main", title(301, 0));
+        assertEquals("Commits · 6 behind origin/main", title(0, 6));
+        assertEquals("Commits · 0 ahead of origin/main", title(0, 0));
+    }
+
+    @Test
+    void countsAgainstAnotherBaseAreNotTheTitles() {
+        BaseDistance other = new BaseDistance(new BranchRef.Local(new BranchName("main")), TIP.sha(), 1, 6);
+
+        assertEquals(
+                "Commits · 2 ahead of origin/main",
+                new AheadView(Option.of(AHEAD), Option.of(other), false).title("Commits"));
+    }
+
+    private static String title(int ahead, int behind) {
+        return new AheadView(Option.of(MORE), Option.of(new BaseDistance(MAIN, TIP.sha(), ahead, behind)), false)
+                .title("Commits");
+    }
+
+    @Test
+    void countsReadAtAnotherTipOfTheBranchAreNotTheTitles() {
+        BaseDistance before = new BaseDistance(MAIN, MIDDLE.sha(), 1, 6);
+
+        assertEquals(
+                "Commits · 2 ahead of origin/main",
+                new AheadView(Option.of(AHEAD), Option.of(before), false).title("Commits"));
     }
 
     @Test
     void onlyTheCommitsNotOnTheBaseAndTheForkPointAreListedWhenAsked() {
-        assertEquals(LOG, new AheadView(Option.of(AHEAD), false).shown(LOG));
-        assertEquals(List.of(TIP, MIDDLE, FORK), new AheadView(Option.of(AHEAD), true).shown(LOG));
-        assertEquals(List.of(TIP, MIDDLE), new AheadView(Option.of(MORE), true).shown(LOG));
-        assertEquals(LOG, new AheadView(Option.none(), true).shown(LOG));
+        assertEquals(LOG, new AheadView(Option.of(AHEAD), Option.none(), false).shown(LOG));
+        assertEquals(List.of(TIP, MIDDLE, FORK), new AheadView(Option.of(AHEAD), Option.none(), true).shown(LOG));
+        assertEquals(List.of(TIP, MIDDLE), new AheadView(Option.of(MORE), Option.none(), true).shown(LOG));
+        assertEquals(LOG, new AheadView(Option.none(), Option.none(), true).shown(LOG));
     }
 
     @Test
     void theCommitsOnTheBaseAreDimmedAndTheForkPointMarked() {
-        AheadView only = new AheadView(Option.of(AHEAD), true);
+        AheadView only = new AheadView(Option.of(AHEAD), Option.none(), true);
 
         List<LoadableList.Row> rows =
                 CommitsPanel.marked(CommitsPanel.rows(CommitGraph.layout(only.shown(LOG))), only.shown(LOG), only);
@@ -64,14 +101,14 @@ class AheadViewTest {
         assertEquals("aaaaaaa Ad ○ ⑂ origin/main msg a", rows.last().text());
         assertTrue(rows.last().segs().forAll(seg -> seg.cssClass().contains(Theme.Classes.DIM)));
         assertTrue(rows.head().segs().forAll(seg -> seg.cssClass().isEmpty()));
-        assertFalse(new AheadView(Option.of(MORE), false).dimmed(OLD.sha()));
+        assertFalse(new AheadView(Option.of(MORE), Option.none(), false).dimmed(OLD.sha()));
     }
 
     @Test
     void theBranchLogDimsTheCommitsOnTheBaseAndMarksTheForkPointAfterItsSha() {
         Style dimmed = Style.EMPTY.dim();
         Theme.SpanStyles styles = cssClass -> cssClass.equals(Theme.Classes.DIM) ? dimmed : Style.EMPTY;
-        AheadView only = new AheadView(Option.of(AHEAD), true);
+        AheadView only = new AheadView(Option.of(AHEAD), Option.none(), true);
 
         java.util.List<Line> lines = ContentPanel.logText(only.shown(LOG), ZoneOffset.UTC, only, styles)
                 .lines();
