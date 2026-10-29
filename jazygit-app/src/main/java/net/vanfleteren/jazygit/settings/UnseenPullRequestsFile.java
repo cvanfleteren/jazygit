@@ -67,11 +67,9 @@ public final class UnseenPullRequestsFile implements UnseenPullRequestsStore {
     @Override
     public Try<UnseenPullRequests> save(String repository, UnseenPullRequests unseen) {
         return TomlFile.change(file, config -> {
-                    config.set(path(repository, HIGHEST).toJavaList(), unseen.highest());
-                    config.set(
-                            path(repository, NUMBERS).toJavaList(),
-                            unseen.numbers().toJavaList());
-                })
-                .map(written -> unseen);
+            config.set(path(repository, HIGHEST).toJavaList(), unseen.highest());
+            config.set(path(repository, NUMBERS).toJavaList(), unseen.numbers().toJavaList());
+            return unseen;
+        });
     }
 }

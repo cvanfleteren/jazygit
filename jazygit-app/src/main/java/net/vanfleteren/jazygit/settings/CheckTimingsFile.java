@@ -11,7 +11,6 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.TemporalAccessor;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.UnaryOperator;
 
 /**
@@ -132,11 +131,10 @@ public final class CheckTimingsFile implements CheckTimingsStore {
 
     @Override
     public Try<Kept> change(String repository, UnaryOperator<Kept> change) {
-        AtomicReference<Kept> changed = new AtomicReference<>(Kept.EMPTY);
         return TomlFile.change(file, config -> {
-                    changed.set(change.apply(kept(config, repository)));
-                    config.set(path(repository).toJavaList(), table(config, changed.get()));
-                })
-                .map(written -> changed.get());
+            Kept changed = change.apply(kept(config, repository));
+            config.set(path(repository).toJavaList(), table(config, changed));
+            return changed;
+        });
     }
 }
