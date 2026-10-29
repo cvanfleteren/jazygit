@@ -39,17 +39,18 @@ public final class AddWorktreeDialogs {
      * open, unless it is blank and the worktree can do without a new branch, which the title says.
      */
     public static final TextInputDialog.Spec<NewWorktreeBranchPopup> NEW_WORKTREE_BRANCH = new TextInputDialog.Spec<>(
-            "new-worktree-branch",
-            NewWorktreeBranchPopup.class,
-            popup -> popup.ifBlank()
-                    .map(blank -> Messages.get(
-                            blank instanceof WorktreeSource.Existing
-                                    ? "dialog.newWorktreeBranch.orExisting"
-                                    : "dialog.newWorktreeBranch.orDetached",
-                            popup.label()))
-                    .getOrElse(() -> Messages.get("dialog.newWorktreeBranch.title", popup.label())),
-            Option.of(Messages.get("dialog.newBranch.placeholder")),
-            AddWorktreeMsg.NameConfirmed::new);
+                    "new-worktree-branch",
+                    NewWorktreeBranchPopup.class,
+                    popup -> popup.ifBlank()
+                            .map(blank -> Messages.get(
+                                    blank instanceof WorktreeSource.Existing
+                                            ? "dialog.newWorktreeBranch.orExisting"
+                                            : "dialog.newWorktreeBranch.orDetached",
+                                    popup.label()))
+                            .getOrElse(() -> Messages.get("dialog.newWorktreeBranch.title", popup.label())),
+                    Option.of(Messages.get("dialog.newBranch.placeholder")),
+                    AddWorktreeMsg.NameConfirmed::new)
+            .withWidth(TextInputDialog.BRANCH_NAME_WIDTH);
 
     /**
      * Tells that the worktree was added, and asks to switch to it.

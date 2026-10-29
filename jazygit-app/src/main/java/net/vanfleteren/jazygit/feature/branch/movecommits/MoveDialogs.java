@@ -50,14 +50,15 @@ public final class MoveDialogs {
      * Asks for the name of the new branch. A blank name, or that of a branch that exists, keeps it open.
      */
     public static final TextInputDialog.Spec<MoveNamePopup> NAME = new TextInputDialog.Spec<>(
-            "move-commits-name",
-            MoveNamePopup.class,
-            popup -> Messages.get(
-                    "dialog.moveCommits.title",
-                    popup.request().range().commits(),
-                    popup.request().from().value()),
-            Option.of(Messages.get("dialog.newBranch.placeholder")),
-            MoveMsg.NameConfirmed::new);
+                    "move-commits-name",
+                    MoveNamePopup.class,
+                    popup -> Messages.get(
+                            "dialog.moveCommits.title",
+                            popup.request().range().commits(),
+                            popup.request().from().value()),
+                    Option.of(Messages.get("dialog.newBranch.placeholder")),
+                    MoveMsg.NameConfirmed::new)
+            .withWidth(TextInputDialog.BRANCH_NAME_WIDTH);
 
     /**
      * Asks where the new branch starts: where the commits are, the first option, or a branch they are copied onto.

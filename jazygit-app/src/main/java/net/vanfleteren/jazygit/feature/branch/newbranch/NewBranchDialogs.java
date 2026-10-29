@@ -14,11 +14,6 @@ import net.vanfleteren.jazygit.ui.widgets.TextInputDialog;
 public final class NewBranchDialogs {
 
     /**
-     * Wide enough for long branch names, and the title they show in.
-     */
-    private static final int WIDTH = 80;
-
-    /**
      * Asks for the name of a new branch. A blank name keeps it open.
      */
     public static final TextInputDialog.Spec<NewBranchPopup> NEW_BRANCH = TextInputDialog.Spec.confirming(
@@ -26,7 +21,7 @@ public final class NewBranchDialogs {
                     NewBranchPopup.class,
                     popup -> Messages.get("dialog.newBranch.title", popup.label()),
                     Option.of(Messages.get("dialog.newBranch.placeholder")))
-            .withWidth(WIDTH);
+            .withWidth(TextInputDialog.BRANCH_NAME_WIDTH);
 
     private NewBranchDialogs() {}
 

@@ -30,9 +30,15 @@ import net.vanfleteren.jazygit.ui.LineEditInput;
 public final class TextInputDialog<P extends TextPopup> implements PopupView {
 
     /**
+     * The width of a dialog that shows branch names, in its title or its input, borders included: wide enough for
+     * long ones.
+     */
+    public static final int BRANCH_NAME_WIDTH = 80;
+
+    /**
      * The width of the dialog, borders included, unless its spec asks for another.
      */
-    public static final int WIDTH = 50;
+    private static final int WIDTH = 50;
 
     private final Spec<P> spec;
     private final Consumer<Msg> dispatch;
@@ -99,7 +105,7 @@ public final class TextInputDialog<P extends TextPopup> implements PopupView {
      * @param onConfirm   the message for Enter; its update reads the text from the popup, and decides whether it
      *                    closes
      * @param onCancel    the message for Escape; by default a {@link Msg.PopupDismissed}
-     * @param width       the width of the dialog, borders included; by default {@link #WIDTH}
+     * @param width       the width of the dialog, borders included; by default {@value #WIDTH}
      */
     public record Spec<P extends Popup>(
             String id,
