@@ -44,13 +44,17 @@ public class FilesPanel {
      */
     public FilesPanel(Consumer<Msg> dispatch, Runnable openDiff, Theme.Highlights highlights) {
         statusTree = new FileTreeList<>(
-                ID, file -> file.entry().type().marker() + " " + name(file), FilesPanel::drawEntry, highlights, false);
+                ID,
+                file -> file.entry().type().marker() + " " + name(file),
+                FilesPanel::drawEntry,
+                highlights,
+                FileTreeList::first);
         commitTree = new FileTreeList<>(
                 ID,
                 file -> file.entry().type().marker() + " " + name(file),
                 FilesPanel::drawCommitFile,
                 highlights,
-                true);
+                FileTreeList::firstWithDiff);
         statusTree.onKey(PaneKeys.whileFocused(
                 () -> focused,
                 event -> event.code() == KeyCode.ENTER && statusTree.selected().isDefined()
