@@ -33,14 +33,15 @@ Other ways were considered:
   the groups:
   1. the age;
   2. `↑2 ↓5`, or `gone`;
-  3. the pull request: `#1234`, its checks and when they are expected to be done or how long they waited
-     (ADR 32, 35), or how its merge goes (ADR 24); then its review; then where it sits in its stack, as `2/4`.
-     A branch without a pull request shows the checks on its tip instead;
+  3. the checks and when they are expected to be done or how long they waited (ADR 32, 35), or how the merge
+     of the pull request goes (ADR 24); then the pull request `#1234`; then its review; then where it sits in its
+     stack, as `2/4`. A branch without a pull request shows the checks on its tip, in the same place: the checks
+     come before the number, so they line up between branches with and without a pull request;
   4. `wt`, for a branch checked out in another worktree.
 
   ```
    feat/payment-retry-backoff  Pushing ⠋
-     3d  ↑2 ↓5  #1234 ● ~4m  −  2/4  wt
+     3d  ↑2 ↓5  ● ~4m #1234  −  2/4  wt
    main
      9d  ↓3  ✓
   ```

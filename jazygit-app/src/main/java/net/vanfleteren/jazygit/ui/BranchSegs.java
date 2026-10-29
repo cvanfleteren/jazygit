@@ -95,9 +95,9 @@ final class BranchSegs {
     }
 
     /**
-     * The pull request of a branch, with a leading space: its number (dimmed for a draft), then how its CI checks
-     * are doing, then apart where its review stands, then apart where it sits in its stack; nothing for a branch
-     * without one (ADR 45).
+     * The pull request of a branch, with a leading space: how its CI checks are doing, where those of a branch
+     * without one show too, then its number (dimmed for a draft), then apart where its review stands, then apart
+     * where it sits in its stack; nothing for a branch without one (ADR 45).
      */
     static List<LoadableList.Seg> pullRequest(Option<PullRequest> pullRequest) {
         return pullRequest(pullRequest, Option.none());
@@ -119,14 +119,17 @@ final class BranchSegs {
             Option<PullRequest> pullRequest, Option<MergeStatus> merge, boolean waiting, Option<String> after) {
         return pullRequest
                 .toList()
-                .flatMap(pr -> List.of(LoadableList.Seg.styled(
+                .flatMap(pr -> merge.fold(
+                                () -> checks(pr.checks(), waiting, after),
+                                status -> List.of(symbol(GLYPHS.merge(status))))
+                        .append(LoadableList.Seg.styled(
                                 " #" + pr.number(), pr.draft() ? Theme.Classes.DIM : Theme.Classes.PULL_REQUEST))
-                        .appendAll(merge.fold(
-                                () -> checks(pr.checks(), waiting, after)
-                                        .appendAll(group(GLYPHS.review(pr.review())
+                        .appendAll(group(
+                                merge.isDefined()
+                                        ? List.empty()
+                                        : GLYPHS.review(pr.review())
                                                 .map(BranchSegs::symbol)
-                                                .toList())),
-                                status -> List.of(symbol(GLYPHS.merge(status)))))
+                                                .toList()))
                         .appendAll(group(pr.stack()
                                 .map(GLYPHS::stack)
                                 .map(BranchSegs::symbol)

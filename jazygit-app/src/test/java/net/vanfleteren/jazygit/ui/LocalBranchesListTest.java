@@ -58,7 +58,7 @@ class LocalBranchesListTest {
                 Option.of("Pushing |"));
 
         assertEquals("feature  Pushing |", row.text());
-        assertEquals(Option.of("  3d  ↑2 ↓5  #42 ✓  +  wt"), row.detailText());
+        assertEquals(Option.of("  3d  ↑2 ↓5  ✓ #42  +  wt"), row.detailText());
         assertEquals(2, row.height());
     }
 
