@@ -277,8 +277,12 @@ class ArchitectureTest {
             .that()
             .areDeclaredInClassesThat()
             .areAssignableTo(Cmd.class)
-            .should()
-            .notDeclareThrowableOfType(Exception.class);
+            .and()
+            .doNotHaveModifier(JavaModifier.SYNTHETIC)
+            .should(ArchCondition.from(DescribedPredicate.describe(
+                    "declare no exception",
+                    method -> method.getThrowsClause().getTypes().stream()
+                            .noneMatch(thrown -> thrown.isAssignableTo(Exception.class)))));
     /**
      * The model is built of values all the way down: what a field holds never changes either. A {@code Failure.Bug}
      * keeps what a command threw, to report it.
@@ -482,7 +486,7 @@ class ArchitectureTest {
                     || owner.isEquivalentTo(ProcessHandle.class)
                     || owner.isEquivalentTo(Math.class) && name.equals("random")
                     || owner.isEquivalentTo(java.util.UUID.class) && name.equals("randomUUID")
-                    || owner.isAssignableTo(java.util.Random.class);
+                    || owner.isAssignableTo(java.util.random.RandomGenerator.class);
         });
     }
 

@@ -6,8 +6,10 @@ import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPac
 import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaField;
+import com.tngtech.archunit.core.domain.JavaParameterizedType;
 import com.tngtech.archunit.core.domain.JavaType;
 import com.tngtech.archunit.core.domain.JavaTypeVariable;
+import com.tngtech.archunit.core.domain.JavaWildcardType;
 import com.tngtech.archunit.lang.ArchCondition;
 import io.vavr.collection.List;
 import java.util.Collection;
@@ -38,7 +40,8 @@ public final class Values {
     /**
      * A field holds a value: a primitive, an enum, a record, one of Vavr's types, one of the JDK's that never
      * change ({@code String}, the boxed primitives, {@code java.time}, a {@code Path}, ...), a function, a type
-     * variable, or an interface of jazygit, whose implementations are checked where they are declared.
+     * variable, or an interface of jazygit, whose implementations are checked where they are declared. What it is
+     * of, its type arguments, are values too, or {@code Object}; a function's and a class's are not looked at.
      */
     public static ArchCondition<JavaField> holdAValue() {
         return ArchCondition.from(
@@ -80,6 +83,9 @@ public final class Values {
         if (type instanceof JavaTypeVariable<?>) {
             return true;
         }
+        if (type instanceof JavaWildcardType wildcard) {
+            return List.ofAll(wildcard.getUpperBounds()).forAll(Values::isValueArgument);
+        }
         JavaClass raw = type.toErasure();
         String pkg = raw.getPackageName();
         return !mutable().test(raw)
@@ -90,6 +96,15 @@ public final class Values {
                         || pkg.equals("java.time")
                         || pkg.equals("java.util.function")
                         || VALUES.exists(raw::isEquivalentTo)
-                        || pkg.startsWith("net.vanfleteren.jazygit") && raw.isInterface());
+                        || pkg.startsWith("net.vanfleteren.jazygit") && raw.isInterface())
+                && (!(type instanceof JavaParameterizedType parameterized)
+                        || pkg.equals("java.util.function")
+                        || raw.isEquivalentTo(Class.class)
+                        || List.ofAll(parameterized.getActualTypeArguments()).forAll(Values::isValueArgument));
+    }
+
+    // Object, as what a type is of, says no more than a type variable does.
+    private static boolean isValueArgument(JavaType argument) {
+        return argument.toErasure().isEquivalentTo(Object.class) || isValue(argument);
     }
 }

@@ -13,6 +13,7 @@ import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.core.importer.Location;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
+import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ArchRule;
 import java.util.Collection;
 import java.util.Map;
@@ -159,8 +160,15 @@ class CoreArchitectureTest {
      * What git and gh report, and how they fail, are told as values: what the core offers declares no exception.
      */
     @ArchTest
-    static final ArchRule failuresAreValues =
-            methods().that().arePublic().should().notDeclareThrowableOfType(Exception.class);
+    static final ArchRule failuresAreValues = methods()
+            .that()
+            .arePublic()
+            .and()
+            .doNotHaveModifier(JavaModifier.SYNTHETIC)
+            .should(ArchCondition.from(DescribedPredicate.describe(
+                    "declare no exception",
+                    method -> method.getThrowsClause().getTypes().stream()
+                            .noneMatch(thrown -> thrown.isAssignableTo(Exception.class)))));
     /**
      * State is never kept in a static field.
      */

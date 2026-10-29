@@ -15,12 +15,12 @@ The updates, messages, popups and the model are pure. Pure code:
 - returns values: no `void` methods
 - fails with a value, never by throwing
 - never fills a mutable collection or a `StringBuilder`; it builds new values
-- never reads the clock, the environment, the machine's defaults or chance: no `java.time` `now`, `System.currentTimeMillis`/`nanoTime`/`getenv`/`getProperty`, `ZoneId.systemDefault`, `Clock.system*`, `Locale`/`TimeZone.getDefault`, `Runtime`, `ProcessHandle`, `Random`, `UUID.randomUUID`. That is IO, for a command; the model is told the time.
+- never reads the clock, the environment, the machine's defaults or chance: no `java.time` `now`, `System.currentTimeMillis`/`nanoTime`/`getenv`/`getProperty`, `ZoneId.systemDefault`, `Clock.system*`, `Locale`/`TimeZone.getDefault`, `Runtime`, `ProcessHandle`, `Random` or any other `RandomGenerator`, `UUID.randomUUID`. That is IO, for a command; the model is told the time.
 
 ### Values all the way down
-- A field in state, feature, settings, cli and the git and gh models holds a value that never changes: a primitive, `String`, a boxed primitive, `Class`, `java.time`, `Path`, `FileTime`, `Pattern`, a function, an enum, a record, a Vavr type, or an interface of jazygit. Arrays, `Object`, `CharSequence`, java.util collections, `StringBuilder` and `java.util.concurrent` types are not. (`Failure.Bug` keeps what a command threw, to report it.)
+- A field in state, feature, settings, cli and the git and gh models holds a value that never changes: a primitive, `String`, a boxed primitive, `Class`, `java.time`, `Path`, `FileTime`, `Pattern`, a function, an enum, a record, a Vavr type, or an interface of jazygit. Arrays, `Object`, `CharSequence`, java.util collections, `StringBuilder` and `java.util.concurrent` types are not. What a type is of counts too: `List<StringBuilder>` is no value, though `Object` there says no more than a type variable, and a function's or a `Class`'s type arguments are not looked at. (`Failure.Bug` keeps what a command threw, to report it.)
 - Fields are final; static fields are final too, and never of a mutable type.
 - Collections are Vavr's: no method takes or returns one of java.util's, but where a library's interface says so.
 - A missing value is Vavr's `Option`, not `java.util.Optional`, but where a library's interface says so (TamboUI, picocli in `cli`).
 - Classes are built of records and interfaces: no class in state, feature or the models extends another.
-- Commands, and the public methods of the core, declare no exceptions: failures are values (`Either`, `Failure`).
+- Commands, and the public methods of the core, declare no exceptions, checked or unchecked, of any type: failures are values (`Either`, `Failure`).
