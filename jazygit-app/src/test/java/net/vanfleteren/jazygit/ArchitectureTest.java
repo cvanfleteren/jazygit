@@ -25,6 +25,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Cmd;
+import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Popup;
 import net.vanfleteren.jazygit.state.Program;
@@ -278,7 +279,8 @@ class ArchitectureTest {
             .should()
             .notDeclareThrowableOfType(Exception.class);
     /**
-     * The model is built of values all the way down: what a field holds never changes either.
+     * The model is built of values all the way down: what a field holds never changes either. A {@code Failure.Bug}
+     * keeps what a command threw, to report it.
      */
     @ArchTest
     static final ArchRule valuesAreValuesAllTheWayDown = fields().that()
@@ -286,6 +288,8 @@ class ArchitectureTest {
             .resideInAnyPackage("..jazygit.state..", "..jazygit.feature..", "..jazygit.settings..", "..jazygit.cli..")
             .and()
             .areNotDeclaredIn(Program.class)
+            .and()
+            .areNotDeclaredIn(Failure.Bug.class)
             .and()
             .areDeclaredInClassesThat()
             .haveNameNotMatching(DIALOGS)
@@ -456,7 +460,8 @@ class ArchitectureTest {
     }
 
     /**
-     * Reading the clock, the environment or chance; a method reference, like {@code Instant::now}, included.
+     * Reading the clock, the environment, the machine's defaults (its time zone, its locale) or chance; a method
+     * reference, like {@code Instant::now}, included.
      */
     private static DescribedPredicate<JavaAccess<?>> tellsTheTimeOrChance() {
         return DescribedPredicate.describe("tell the time, read the environment or draw a random number", access -> {
@@ -464,8 +469,14 @@ class ArchitectureTest {
             String name = access.getName();
             return owner.getPackageName().equals("java.time") && name.equals("now")
                     || owner.isEquivalentTo(System.class)
-                            && Stream.of("currentTimeMillis", "nanoTime", "getenv", "getProperty")
+                            && Stream.of("currentTimeMillis", "nanoTime", "getenv", "getProperty", "getProperties")
                                     .anyMatch(name::equals)
+                    || owner.isEquivalentTo(java.time.ZoneId.class) && name.equals("systemDefault")
+                    || owner.isEquivalentTo(java.time.Clock.class) && name.startsWith("system")
+                    || owner.isEquivalentTo(java.util.Locale.class) && name.equals("getDefault")
+                    || owner.isEquivalentTo(java.util.TimeZone.class) && name.equals("getDefault")
+                    || owner.isEquivalentTo(Runtime.class)
+                    || owner.isEquivalentTo(ProcessHandle.class)
                     || owner.isEquivalentTo(Math.class) && name.equals("random")
                     || owner.isEquivalentTo(java.util.UUID.class) && name.equals("randomUUID")
                     || owner.isAssignableTo(java.util.Random.class);

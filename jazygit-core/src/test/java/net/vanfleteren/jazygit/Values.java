@@ -9,10 +9,10 @@ import com.tngtech.archunit.core.domain.JavaField;
 import com.tngtech.archunit.core.domain.JavaType;
 import com.tngtech.archunit.core.domain.JavaTypeVariable;
 import com.tngtech.archunit.lang.ArchCondition;
+import io.vavr.collection.List;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.stream.Stream;
 
 /**
  * What the architecture rules of the core and of the application take for a value: something that never changes.
@@ -37,8 +37,8 @@ public final class Values {
 
     /**
      * A field holds a value: a primitive, an enum, a record, one of Vavr's types, one of the JDK's that never
-     * change (a {@code Path}, a {@code FileTime}, ...), a function, a type variable, or an interface of jazygit,
-     * whose implementations are checked where they are declared.
+     * change ({@code String}, the boxed primitives, {@code java.time}, a {@code Path}, ...), a function, a type
+     * variable, or an interface of jazygit, whose implementations are checked where they are declared.
      */
     public static ArchCondition<JavaField> holdAValue() {
         return ArchCondition.from(
@@ -60,6 +60,22 @@ public final class Values {
                         .orElse(true)));
     }
 
+    // The JDK's types, outside java.time, that never change.
+    private static final List<Class<?>> VALUES = List.of(
+            String.class,
+            Boolean.class,
+            Character.class,
+            Byte.class,
+            Short.class,
+            Integer.class,
+            Long.class,
+            Float.class,
+            Double.class,
+            Class.class,
+            java.nio.file.Path.class,
+            java.nio.file.attribute.FileTime.class,
+            java.util.regex.Pattern.class);
+
     private static boolean isValue(JavaType type) {
         if (type instanceof JavaTypeVariable<?>) {
             return true;
@@ -71,10 +87,9 @@ public final class Values {
                         || raw.isEnum()
                         || raw.isAssignableTo(Record.class)
                         || pkg.startsWith("io.vavr")
-                        || Stream.of("java.lang", "java.time", "java.util.function", "java.nio.file")
-                                .anyMatch(pkg::equals)
-                        || raw.isEquivalentTo(java.util.regex.Pattern.class)
-                        || raw.isEquivalentTo(java.nio.file.attribute.FileTime.class)
+                        || pkg.equals("java.time")
+                        || pkg.equals("java.util.function")
+                        || VALUES.exists(raw::isEquivalentTo)
                         || pkg.startsWith("net.vanfleteren.jazygit") && raw.isInterface());
     }
 }
