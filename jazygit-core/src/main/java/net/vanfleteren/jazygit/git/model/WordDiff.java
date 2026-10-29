@@ -21,7 +21,8 @@ public final class WordDiff {
 
     /**
      * How many cells the comparisons of a whole diff may fill: each pair fills the product of the counts of its words,
-     * leaving out those it starts and ends with alike; a pair that could not keep enough to be highlighted, whatever the order of its words, fills none.
+     * leaving out those it starts and ends with alike; a pair that could not keep enough to be highlighted, whatever
+     * the order of its words, fills none.
      * The comparisons run where the diff is drawn, so a diff of many long lines must not hold that up; once this is
      * spent, the lines left are drawn whole, but for a pair that differs in an insertion or a deletion only, which
      * fills no cells.

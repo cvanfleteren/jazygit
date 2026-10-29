@@ -118,6 +118,24 @@ class WordDiffTest {
     }
 
     @Test
+    void aPairWhoseWordsMovedSpendsItsCells() {
+        // The moved pair keeps every token by count, so it is compared and fills its 7 x 7 cells, all of the budget.
+        List<DiffLine> hunk = List.of(
+                line(Kind.REMOVED, "one two three four"),
+                line(Kind.REMOVED, "a = 1"),
+                line(Kind.ADDED, "four three two one"),
+                line(Kind.ADDED, "a = 2"));
+
+        assertEquals(
+                List.of(List.of(
+                        List.of(changed(false, "one two three four")),
+                        List.of(changed(false, "a = 1")),
+                        List.of(changed(false, "four three two one")),
+                        List.of(changed(false, "a = 2")))),
+                WordDiff.segments(List.of(hunk), 49));
+    }
+
+    @Test
     void manyLongSimilarLinesAreDrawnQuickly() {
         // 499 tokens a line, so each pair is just small enough to be compared on its own.
         String words = List.range(0, 249).map(i -> "word" + i).mkString(" ");
