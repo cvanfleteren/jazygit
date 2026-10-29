@@ -196,7 +196,7 @@ public final class AheadUpdate {
     private static Predicate<Cmd> reads(Cmd.LoadAhead load) {
         return cmd -> cmd.equals(load)
                 || cmd instanceof Cmd.LoadCommits(var with) && with.equals(load)
-                || cmd instanceof Cmd.LoadBranchLog(var branch, var with) && with.equals(load);
+                || cmd instanceof Cmd.LoadBranchLog(_, var with) && with.equals(load);
     }
 
     /**
