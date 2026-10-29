@@ -13,12 +13,18 @@
     <artifactId>jazygit-benchmarks</artifactId>
 
     <name>jazygit-benchmarks</name>
-    <description>JMH benchmarks of the pure parts of the core, like the rich view of a diff; built only with -Pbench</description>
+    <description>JMH benchmarks of the pure parts of the core and the app, like the rich view of a diff; built only with -Pbench</description>
 
     <dependencies>
         <dependency>
             <groupId>net.vanfleteren</groupId>
             <artifactId>jazygit-core</artifactId>
+        </dependency>
+        <!-- For what drawing a diff costs where the app styles it (RichDiffBenchmark). -->
+        <dependency>
+            <groupId>net.vanfleteren</groupId>
+            <artifactId>jazygit-app</artifactId>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>io.vavr</groupId>

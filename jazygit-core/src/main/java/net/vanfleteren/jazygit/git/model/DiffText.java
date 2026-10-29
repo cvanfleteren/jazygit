@@ -5,8 +5,16 @@ package net.vanfleteren.jazygit.git.model;
  *
  * @param text      the diff, or only its first lines when it is truncated
  * @param truncated whether lines were left out
+ * @param parsed    {@code text} parsed, with its words compared
  */
-public record DiffText(String text, boolean truncated) {
+public record DiffText(String text, boolean truncated, ParsedDiff parsed) {
+
+    /**
+     * {@code text}, parsed where it is made, on the thread that read it from git (ADR 49).
+     */
+    public DiffText(String text, boolean truncated) {
+        this(text, truncated, ParsedDiff.of(text));
+    }
 
     /**
      * The whole of {@code text}.

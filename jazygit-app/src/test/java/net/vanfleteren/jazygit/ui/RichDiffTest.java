@@ -7,13 +7,14 @@ import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
 import io.vavr.collection.List;
 import java.util.stream.Collectors;
+import net.vanfleteren.jazygit.git.model.ParsedDiff;
 import org.junit.jupiter.api.Test;
 
 class RichDiffTest {
 
     @Test
     void drawsABarForEachFileAndNumbersItsLines() {
-        List<String> lines = text(RichDiff.lines("""
+        List<String> lines = text(RichDiff.lines(ParsedDiff.of("""
                  a.txt | 2 +-
                  1 file changed
 
@@ -29,7 +30,7 @@ class RichDiffTest {
                 similarity index 100%
                 rename from old.txt
                 rename to new.txt
-                """, Theme.SpanStyles.NONE));
+                """), Theme.SpanStyles.NONE));
 
         assertEquals(
                 List.of(
@@ -50,20 +51,20 @@ class RichDiffTest {
 
     @Test
     void aHunkHeaderWhoseNumbersCannotBeReadFollowsTheRuleAsGitPrintedIt() {
-        List<String> lines = text(RichDiff.lines("""
+        List<String> lines = text(RichDiff.lines(ParsedDiff.of("""
                 diff --git a/a.txt b/a.txt
                 --- a/a.txt
                 +++ b/a.txt
                 @@ garbled
                 -one
-                """, Theme.SpanStyles.NONE));
+                """), Theme.SpanStyles.NONE));
 
         assertEquals(List.of(" modified  a.txt ", "┄┄┄ │ @@ garbled", "    │ -one"), lines);
     }
 
     @Test
     void aConflictedFileShowsUnderABarOfItsOwnAsGitPrintedIt() {
-        List<String> lines = text(RichDiff.lines("""
+        List<String> lines = text(RichDiff.lines(ParsedDiff.of("""
                 * Unmerged path g.txt
                 diff --cc f.txt
                 index 189acaa,1ed2302..0000000
@@ -73,7 +74,7 @@ class RichDiffTest {
                   a
                 ++<<<<<<< HEAD
                  +B2
-                """, Theme.SpanStyles.NONE));
+                """), Theme.SpanStyles.NONE));
 
         assertEquals(
                 List.of(
@@ -90,7 +91,7 @@ class RichDiffTest {
 
     @Test
     void aHunkAfterTheFirstStartsWithARuleAsWideAsItsLineNumbers() {
-        List<String> lines = text(RichDiff.lines("""
+        List<String> lines = text(RichDiff.lines(ParsedDiff.of("""
                 diff --git a/a.txt b/a.txt
                 --- a/a.txt
                 +++ b/a.txt
@@ -99,7 +100,7 @@ class RichDiffTest {
                 +two
                 @@ -5 +5 @@
                 -five
-                """, Theme.SpanStyles.NONE));
+                """), Theme.SpanStyles.NONE));
 
         // The changed lines are padded to the width of the bar.
         assertEquals(
@@ -112,14 +113,14 @@ class RichDiffTest {
         Style word = Style.EMPTY.reversed();
         Theme.SpanStyles styles = cssClass -> cssClass.endsWith("-word") ? word : Style.EMPTY;
 
-        List<Line> lines = RichDiff.lines("""
+        List<Line> lines = RichDiff.lines(ParsedDiff.of("""
                 diff --git a/a.txt b/a.txt
                 --- a/a.txt
                 +++ b/a.txt
                 @@ -1 +1 @@
                 -count = 1
                 +count = 2
-                """, styles);
+                """), styles);
 
         assertEquals(
                 List.of("2"),

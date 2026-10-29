@@ -393,7 +393,10 @@ class ContentPanelTest {
                 "More\ntext");
 
         List<String> lines = ContentPanel.commitText(
-                        commit, " a.txt | 1 +\n 1 file changed\n\n+added\n", DiffStyle.PLAIN, Theme.SpanStyles.NONE)
+                        commit,
+                        ContentView.shown(DiffText.of(" a.txt | 1 +\n 1 file changed\n\n+added\n")),
+                        DiffStyle.PLAIN,
+                        Theme.SpanStyles.NONE)
                 .lines()
                 .stream()
                 .map(line -> line.spans().stream().map(Span::content).collect(Collectors.joining()))
@@ -455,7 +458,10 @@ class ContentPanelTest {
                 new Stash("stash@{0}", new Sha("5555"), "my work", Option.of(new BranchName("main")), Instant.EPOCH);
 
         List<String> lines = ContentPanel.stashText(
-                        stash, " a.txt | 1 +\n\n+added line\n", DiffStyle.PLAIN, Theme.SpanStyles.NONE)
+                        stash,
+                        ContentView.shown(DiffText.of(" a.txt | 1 +\n\n+added line\n")),
+                        DiffStyle.PLAIN,
+                        Theme.SpanStyles.NONE)
                 .lines()
                 .stream()
                 .map(line -> line.spans().stream().map(Span::content).collect(Collectors.joining()))
@@ -472,18 +478,22 @@ class ContentPanelTest {
         Commit commit =
                 Fixtures.commit(new Sha("a1b2c3d4e5f6"), "Ada", "ada@example.com", Instant.EPOCH, "Subject", "");
 
-        List<String> lines =
-                ContentPanel.commitText(commit, "x", DiffStyle.PLAIN, Theme.SpanStyles.NONE).lines().stream()
-                        .map(line -> line.spans().stream().map(Span::content).collect(Collectors.joining()))
-                        .collect(List.collector());
+        List<String> lines = ContentPanel.commitText(
+                        commit, ContentView.shown(DiffText.of("x")), DiffStyle.PLAIN, Theme.SpanStyles.NONE)
+                .lines()
+                .stream()
+                .map(line -> line.spans().stream().map(Span::content).collect(Collectors.joining()))
+                .collect(List.collector());
 
         assertEquals(List.of("", "    Subject", "---", "x"), lines.drop(3));
     }
 
     @Test
     void aTruncatedDiffEndsWithALineSayingSo() {
-        assertEquals("+a\n", ContentView.shown(DiffText.of("+a\n")));
-        assertEquals("+a\n… truncated\n", ContentView.shown(new DiffText("+a\n", true)));
+        assertEquals("+a\n", ContentView.shown(DiffText.of("+a\n")).text());
+        assertEquals(
+                "+a\n… truncated\n",
+                ContentView.shown(new DiffText("+a\n", true)).text());
     }
 
     @Test

@@ -22,8 +22,8 @@ import org.openjdk.jmh.annotations.Warmup;
 
 /**
  * How long the rich view of a diff takes before it is styled (ADR 44): parsing the diff, and comparing the words of
- * its changed lines, which both run where the diff is drawn. Each {@link Shape} is a diff of a kind that is common, or
- * that is slow.
+ * its changed lines, which both run where the diff is read (ADR 49). Each {@link Shape} is a diff of a kind that is
+ * common, or that is slow.
  *
  * <p>Run with {@code java -jar jazygit-benchmarks/target/benchmarks.jar WordDiff}; add {@code -p shape=CODE} for one
  * shape, or {@code -prof gc} for what is allocated.
@@ -83,7 +83,7 @@ public class WordDiffBenchmark {
          */
         CODE {
             @Override
-            String diff() {
+            public String diff() {
                 return files(
                         100,
                         file -> List.range(0, 4).flatMap(hunk -> {
@@ -104,7 +104,7 @@ public class WordDiffBenchmark {
          */
         LONG_SIMILAR {
             @Override
-            String diff() {
+            public String diff() {
                 String words = List.range(0, 249).map(i -> "word" + i).mkString(" ");
                 return files(
                         1,
@@ -118,7 +118,7 @@ public class WordDiffBenchmark {
          */
         REWRITTEN {
             @Override
-            String diff() {
+            public String diff() {
                 return files(
                         1,
                         file -> List.of("@@ -1,2500 +1,2500 @@")
@@ -131,7 +131,7 @@ public class WordDiffBenchmark {
          */
         ADDED {
             @Override
-            String diff() {
+            public String diff() {
                 return "diff --git a/New.java b/New.java\nnew file mode 100644\n--- /dev/null\n+++ b/New.java\n"
                         + "@@ -0,0 +1,5000 @@\n"
                         + List.range(0, 5000)
@@ -143,7 +143,7 @@ public class WordDiffBenchmark {
         /**
          * The text of the diff, as git prints it.
          */
-        abstract String diff();
+        public abstract String diff();
 
         private static String files(int count, java.util.function.IntFunction<List<String>> hunks) {
             return List.range(0, count)

@@ -63,6 +63,13 @@ class ContentViewTest {
     }
 
     /**
+     * {@code diff} shown as it is, whole.
+     */
+    private static ContentView.ShownDiff whole(String diff) {
+        return new ContentView.ShownDiff(DiffText.of(diff), Option.none());
+    }
+
+    /**
      * The one area {@code shown} is.
      */
     private static Shown.Area area(Shown shown) {
@@ -208,7 +215,7 @@ class ContentViewTest {
                         ContentArea.COMMIT,
                         "Commit: aaaa",
                         new ScrolledContent.CommitChanges(commit, DiffText.of("+added line\n")),
-                        new Body.CommitChanges(commit, "+added line\n", DiffStyle.PLAIN)),
+                        new Body.CommitChanges(commit, whole("+added line\n"), DiffStyle.PLAIN)),
                 ContentView.of(selected, CommitsPanel.ID));
     }
 
@@ -236,7 +243,7 @@ class ContentViewTest {
                         ContentArea.COMMIT_FILE,
                         "aaaa · src/a.txt",
                         new ScrolledContent.FileChanges(new Sha("aaaa"), List.of(file), DiffText.of("+a\n")),
-                        new Body.Diff("+a\n", DiffStyle.RICH)),
+                        new Body.Diff(whole("+a\n"), DiffStyle.RICH)),
                 ContentView.of(selected, FilesPanel.ID));
         assertEquals(
                 new Shown.Message("Files of aaaa", Placeholders.loading(), Tone.DIM),
@@ -312,7 +319,9 @@ class ContentViewTest {
         assertEquals("Commit: aaaa · ignoring whitespace", commit.title());
         assertEquals(
                 "No changes besides whitespace\n",
-                assertInstanceOf(Body.CommitChanges.class, commit.body()).changes());
+                assertInstanceOf(Body.CommitChanges.class, commit.body())
+                        .changes()
+                        .text());
     }
 
     @Test
@@ -328,7 +337,7 @@ class ContentViewTest {
                         ContentArea.DIVERGENCE,
                         "Commit: cccc",
                         new ScrolledContent.CommitChanges(plain("cccc"), DiffText.of("+added line")),
-                        new Body.CommitChanges(plain("cccc"), "+added line", DiffStyle.PLAIN)),
+                        new Body.CommitChanges(plain("cccc"), whole("+added line"), DiffStyle.PLAIN)),
                 ContentView.of(selected, BranchesPanel.ID));
     }
 
@@ -374,7 +383,9 @@ class ContentViewTest {
         assertEquals("Commit: ffff", commit.title());
         assertEquals(
                 "+added line",
-                assertInstanceOf(Body.CommitChanges.class, commit.body()).changes());
+                assertInstanceOf(Body.CommitChanges.class, commit.body())
+                        .changes()
+                        .text());
     }
 
     @Test
@@ -406,7 +417,7 @@ class ContentViewTest {
                         ContentArea.STASH,
                         "Stash: stash@{0}",
                         new ScrolledContent.StashChanges(stash.sha(), DiffText.of("+added line\n")),
-                        new Body.StashChanges(stash, "+added line\n", DiffStyle.PLAIN)),
+                        new Body.StashChanges(stash, whole("+added line\n"), DiffStyle.PLAIN)),
                 ContentView.of(selected, StashPanel.ID));
     }
 

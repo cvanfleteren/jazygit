@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.Divergence;
+import net.vanfleteren.jazygit.git.model.ParsedDiff;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.i18n.Messages;
@@ -32,6 +33,8 @@ import net.vanfleteren.jazygit.state.ScrolledContent;
  * the highlighted pull request.
  */
 final class ContentView {
+
+    private static final DiffText NO_CHANGES = DiffText.of("");
 
     private ContentView() {}
 
@@ -63,19 +66,19 @@ final class ContentView {
     }
 
     /**
-     * The text of {@code diff}, with a line saying it is truncated when it was cut off.
+     * {@code diff}, with a line saying it is truncated when it was cut off.
      */
-    static String shown(DiffText diff) {
-        return diff.truncated() ? diff.text() + Messages.get("git.diff.truncated") + "\n" : diff.text();
+    static ShownDiff shown(DiffText diff) {
+        return new ShownDiff(diff, Option.when(diff.truncated(), () -> Messages.get("git.diff.truncated")));
     }
 
     /**
      * What a commit changed as it is shown: when changes to whitespace only are left out and nothing else
      * changed, a line that says so.
      */
-    static String shownChanges(DiffText changes, DiffOptions options) {
+    static ShownDiff shownChanges(DiffText changes, DiffOptions options) {
         return changes.isBlank() && options.ignoreWhitespace()
-                ? Messages.get("content.onlyWhitespace") + "\n"
+                ? new ShownDiff(NO_CHANGES, Option.of(Messages.get("content.onlyWhitespace")))
                 : shown(changes);
     }
 
@@ -403,7 +406,7 @@ final class ContentView {
          * A unified diff, drawn in {@code style}: the staged or the unstaged changes of the working tree, or what a
          * commit or a stash changed in some of its files.
          */
-        record Diff(String diff, DiffStyle style) implements Body {}
+        record Diff(ShownDiff diff, DiffStyle style) implements Body {}
 
         /**
          * The log of a branch, as far as {@code ahead} shows it.
@@ -413,17 +416,44 @@ final class ContentView {
         /**
          * A commit and what it changed, drawn in {@code style}.
          */
-        record CommitChanges(Commit commit, String changes, DiffStyle style) implements Body {}
+        record CommitChanges(Commit commit, ShownDiff changes, DiffStyle style) implements Body {}
 
         /**
          * A stash and what it stashed, drawn in {@code style}.
          */
-        record StashChanges(Stash stash, String changes, DiffStyle style) implements Body {}
+        record StashChanges(Stash stash, ShownDiff changes, DiffStyle style) implements Body {}
 
         /**
          * A pull request, and what it says and changes.
          */
         record PullRequest(PullRequestSummary pullRequest, PullRequestPreview preview) implements Body {}
+    }
+
+    /**
+     * A diff as it is shown: {@code diff}, then the line {@code note}, which git did not print, if there is one.
+     */
+    record ShownDiff(DiffText diff, Option<String> note) {
+
+        /**
+         * Whether nothing is shown.
+         */
+        boolean isBlank() {
+            return diff.isBlank() && note.isEmpty();
+        }
+
+        /**
+         * The text shown, as the plain view draws it.
+         */
+        String text() {
+            return diff.text() + note.map(line -> line + "\n").getOrElse("");
+        }
+
+        /**
+         * The diff shown parsed, as the rich view draws it; parsed when it was read, but for the note.
+         */
+        ParsedDiff parsed() {
+            return note.map(diff.parsed()::withNote).getOrElse(diff.parsed());
+        }
     }
 
     /**

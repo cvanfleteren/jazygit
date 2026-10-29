@@ -112,3 +112,5 @@ whose highlighted node's diff the content panel shows: a directory shows the fil
 
 Amended by ADR 47: the diff style draws the staged and unstaged changes of the working tree too, and a conflicted
 file shows under a bar of its own.
+
+Amended by ADR 49: a diff is parsed and its words compared where it is read, not where it is drawn.
