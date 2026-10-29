@@ -257,17 +257,18 @@ class ArchitectureTest {
             .haveRawReturnType(void.class);
     /**
      * Pure code fails with a value, never by throwing. The {@code MatchException} the compiler adds to a switch over a
-     * sealed type is never thrown.
+     * sealed type is never thrown. A constructor reference, {@code IllegalStateException::new}, counts as a call does.
      */
     @ArchTest
     static final ArchRule pureCodeThrowsNothing = noClasses()
             .that()
             .haveNameMatching(PURE)
             .should()
-            .callConstructorWhere(DescribedPredicate.describe(
+            .accessTargetWhere(DescribedPredicate.<JavaAccess<?>>describe(
                     "a constructor of an exception",
-                    call -> call.getTargetOwner().isAssignableTo(Throwable.class)
-                            && !call.getTargetOwner().isEquivalentTo(MatchException.class)));
+                    access -> access.getName().equals(JavaConstructor.CONSTRUCTOR_NAME)
+                            && access.getTargetOwner().isAssignableTo(Throwable.class)
+                            && !access.getTargetOwner().isEquivalentTo(MatchException.class)));
     /**
      * The commands report how they failed as messages: none declares an exception.
      */
@@ -309,7 +310,8 @@ class ArchitectureTest {
             .andShould()
             .notHaveRawType(Values.mutable());
     /**
-     * The model and the updates make new collections, never fill one in.
+     * The model and the updates make new collections, never fill one in. A constructor reference,
+     * {@code ArrayList::new}, counts as a call does.
      */
     @ArchTest
     static final ArchRule pureCodeFillsNoCollections = noClasses()
@@ -320,9 +322,10 @@ class ArchitectureTest {
             .and()
             .haveNameNotMatching(DIALOGS)
             .should()
-            .callConstructorWhere(DescribedPredicate.describe(
+            .accessTargetWhere(DescribedPredicate.<JavaAccess<?>>describe(
                     "a constructor of a collection that changes or a StringBuilder",
-                    call -> Values.mutable().test(call.getTargetOwner())));
+                    access -> access.getName().equals(JavaConstructor.CONSTRUCTOR_NAME)
+                            && Values.mutable().test(access.getTargetOwner())));
     /**
      * A missing value is Vavr's {@code Option}, but where a library's interface says otherwise: picocli fills the
      * command line in as {@code Optional}.
