@@ -7,6 +7,9 @@ import io.vavr.Tuple;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Duration;
+import java.util.regex.MatchResult;
+import java.util.regex.Pattern;
+import java.util.stream.IntStream;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine.Kind;
 import net.vanfleteren.jazygit.git.model.WordDiff.Segment;
@@ -76,7 +79,7 @@ class WordDiffTest {
 
     @Test
     void theHunksOfADiffShareABudgetAndOnceItIsSpentTheirLinesAreWhole() {
-        // Each pair has five tokens a line, so fills twenty-five cells: the budget covers the first pair only.
+        // The pairs differ in their last token only, so each fills one cell: the budget covers the first pair only.
         List<DiffLine> hunk = List.of(line(Kind.REMOVED, "a = 1"), line(Kind.ADDED, "a = 2"));
 
         assertEquals(
@@ -85,7 +88,7 @@ class WordDiffTest {
                                 List.of(changed(false, "a = "), changed(true, "1")),
                                 List.of(changed(false, "a = "), changed(true, "2"))),
                         List.of(List.of(changed(false, "a = 1")), List.of(changed(false, "a = 2")))),
-                WordDiff.segments(List.of(hunk, hunk), 30));
+                WordDiff.segments(List.of(hunk, hunk), 1));
     }
 
     @Test
@@ -97,6 +100,52 @@ class WordDiffTest {
                 .appendAll(List.range(0, 2000).map(i -> line(Kind.ADDED, words + " x" + i)));
 
         assertTimeoutPreemptively(Duration.ofSeconds(2), () -> WordDiff.segments(List.of(hunk)));
+    }
+
+    @Test
+    void aLineIsSplitIntoWordsRunsOfWhitespaceAndSingleOtherCharactersAsUnicodesWordPatternHasThem() {
+        Pattern token = Pattern.compile("\\w+|\\s+|.", Pattern.UNICODE_CHARACTER_CLASS);
+        for (String line : List.of(
+                "int count = compute(a_b, 42) + x;",
+                "  \t leading and trailing  ",
+                "naïve café — Ⅻ ①, déjà-vu 😀 é x y",
+                "",
+                "!!==>>")) {
+            assertEquals(
+                    List.ofAll(token.matcher(line).results().map(MatchResult::group)),
+                    List.of(WordDiff.tokens(line)),
+                    line);
+        }
+    }
+
+    @Test
+    void everyCodePointIsAWordWhitespaceOrNeitherAsUnicodesPatternsHaveIt() {
+        Pattern word = Pattern.compile("\\w", Pattern.UNICODE_CHARACTER_CLASS);
+        Pattern space = Pattern.compile("\\s", Pattern.UNICODE_CHARACTER_CLASS);
+        List<String> wrong = List.ofAll(IntStream.rangeClosed(0, Character.MAX_CODE_POINT)
+                        .filter(codePoint -> Character.getType(codePoint) != Character.SURROGATE)
+                        .boxed())
+                .filter(codePoint -> {
+                    String character = Character.toString(codePoint);
+                    int expected = word.matcher(character).matches()
+                            ? WordDiff.WORD
+                            : space.matcher(character).matches() ? WordDiff.SPACE : WordDiff.OTHER;
+                    return WordDiff.kind(codePoint) != expected;
+                })
+                .map(codePoint -> "U+%04X".formatted(codePoint));
+
+        assertEquals(List.empty(), wrong);
+    }
+
+    @Test
+    void aPairThatDiffersInAnInsertionOnlyIsHighlightedOnceTheBudgetIsSpent() {
+        List<DiffLine> hunk = List.of(line(Kind.REMOVED, "foo(a)"), line(Kind.ADDED, "foo(a, b)"));
+
+        assertEquals(
+                List.of(List.of(
+                        List.of(changed(false, "foo(a)")),
+                        List.of(changed(false, "foo(a"), changed(true, ", b"), changed(false, ")")))),
+                WordDiff.segments(List.of(hunk), 0));
     }
 
     private static List<List<Segment>> segments(List<DiffLine> lines) {
