@@ -8,17 +8,19 @@ import io.vavr.Tuple2;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
+import io.vavr.collection.Set;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.UnexpectedOutput;
 import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 
 /**
  * How many commits the base of each local branch has that the branch does not (ADR 46): the base as ADR 20 has it,
- * the branch it was made from, else the main branch, each from {@code origin} when it is there.
+ * {@link BranchRef#bases}.
  */
 final class CliBehind {
 
@@ -30,7 +32,8 @@ final class CliBehind {
 
     /**
      * The count of each local branch that has a base, by its name: one {@code git config} for the parents, one
-     * {@code for-each-ref} for the refs, then one {@code for-each-ref} per base.
+     * {@code for-each-ref} for the refs, then one {@code for-each-ref} per base. The branches of a base whose count
+     * cannot be read are left out, not all of them.
      *
      * @param main the main branch, the base of a branch without a parent
      */
@@ -38,29 +41,50 @@ final class CliBehind {
         return parents(worktree)
                 .flatMap(parents -> GitProcess.read(
                                 worktree,
-                                GitCommand.reading("for-each-ref", "--format=%(refname)", HEADS, ORIGIN),
-                                raw -> Either.right(GitOutput.nonBlankLines(raw)))
+                                GitCommand.reading(
+                                        "for-each-ref",
+                                        "--format=%(refname)" + GitOutput.REF_FIELD_SEPARATOR + "%(objectname)",
+                                        HEADS,
+                                        ORIGIN),
+                                CliBehind::parseRefs)
                         .map(refs -> bases(refs, parents, main)))
-                .flatMap(bases -> Either.sequenceRight(bases.groupBy(base -> base._2)
-                                .map(group -> behind(worktree, group._1, group._2.map(base -> base._1))))
-                        .map(counts -> counts.fold(HashMap.empty(), Map::merge)));
+                .map(bases -> bases.groupBy(Tuple2::_2)
+                        .map(group -> behind(
+                                        worktree,
+                                        group._1,
+                                        group._2.map(Tuple2::_1).toSet())
+                                .getOrElse(HashMap.empty()))
+                        .fold(HashMap.empty(), Map::merge));
     }
 
     /**
-     * Each local branch among {@code refs} that has a base there, with the full name of that ref.
+     * Each local branch among {@code refs} that has a base there, with the commit that base is at: the commit, not
+     * its name, is what it is compared with, as a name can hold a {@code )}, which ends the {@code %(ahead-behind:)}
+     * of {@code for-each-ref}, and the ref can be gone by then.
+     *
+     * @param refs the commit of each ref, by its full name
      */
     static List<Tuple2<BranchName, String>> bases(
-            List<String> refs, Map<BranchName, BranchName> parents, Option<BranchName> main) {
-        return refs.flatMap(ref -> GitOutput.after(ref, HEADS))
+            Map<String, String> refs, Map<BranchName, BranchName> parents, Option<BranchName> main) {
+        return refs.keySet()
+                .toList()
+                .sorted()
+                .flatMap(ref -> GitOutput.after(ref, HEADS))
                 .map(BranchName::new)
-                .flatMap(branch -> parents.get(branch)
-                        .toList()
-                        .appendAll(main)
-                        .filter(base -> !base.equals(branch))
-                        .distinct()
-                        .flatMap(base -> List.of(ORIGIN + GitArgs.name(base), HEADS + GitArgs.name(base)))
-                        .find(refs::contains)
-                        .map(base -> Tuple.of(branch, base)));
+                .flatMap(branch -> BranchRef.bases(Option.of(branch), parents.get(branch), main)
+                        .map(GitArgs::revision)
+                        .find(refs::containsKey)
+                        .flatMap(refs::get)
+                        .map(sha -> Tuple.of(branch, sha)));
+    }
+
+    /**
+     * The refs in {@code raw}, a line per ref: its full name, then the commit it is at.
+     */
+    static Either<UnexpectedOutput, Map<String, String>> parseRefs(String raw) {
+        return Either.sequenceRight(GitOutput.nonBlankLines(raw)
+                        .map(line -> GitOutput.fields(line, 2).map(fields -> Tuple.of(fields.get(0), fields.get(1)))))
+                .map(HashMap::ofEntries);
     }
 
     /**
@@ -102,10 +126,10 @@ final class CliBehind {
     }
 
     /**
-     * How many commits of {@code base} each of {@code branches} does not have.
+     * How many commits of {@code base}, a commit, each of {@code branches} does not have.
      */
     private static Either<ProcessError, Map<BranchName, Integer>> behind(
-            Path worktree, String base, List<BranchName> branches) {
+            Path worktree, String base, Set<BranchName> branches) {
         return GitProcess.read(
                         worktree,
                         GitCommand.reading(

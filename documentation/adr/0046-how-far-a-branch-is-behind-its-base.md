@@ -47,7 +47,11 @@ gone falls back to the main branch, without saying so.
 
 - `GitInfoProvider.behind(main)` reads the parents of all branches with one `git config --get-regexp`, the refs that
   could be bases with one `for-each-ref`, and then, for each base that some branch has, one
-  `for-each-ref --format=%(ahead-behind:<base>)` over the local branches.
+  `for-each-ref --format=%(ahead-behind:<base>)` over the local branches. The base is given by the commit the first
+  `for-each-ref` found it at, not by its name: a branch name can hold a `)`, which ends the atom, and the ref can be
+  gone by then. The branches of a base whose count cannot be read show none; the others still do.
+- Which refs are the bases of a branch, `BranchRef.bases`, is the one list both this and the commits ahead of the
+  base in the log (ADR 20) go by.
 - `Cmd.LoadBehind` runs it after every read of the branches, in the background: after a fetch, a pull, a checkout,
   and whatever else changes the refs.
 - The counts live in `Repo.behind`. Until the first read is done, no branch shows one; a read again keeps the counts

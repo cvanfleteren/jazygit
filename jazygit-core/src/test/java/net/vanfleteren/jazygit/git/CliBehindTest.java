@@ -104,19 +104,38 @@ class CliBehindTest {
     }
 
     @Test
-    void eachBranchTakesTheFirstBaseThatIsThere() {
+    void eachBranchTakesTheCommitOfTheFirstBaseThatIsThere() {
         assertEquals(
-                List.of(
-                        io.vavr.Tuple.of(FEATURE, "refs/remotes/origin/main"),
-                        io.vavr.Tuple.of(STACKED, "refs/heads/feature")),
+                List.of(io.vavr.Tuple.of(FEATURE, "2222"), io.vavr.Tuple.of(STACKED, "1111")),
                 CliBehind.bases(
-                        List.of(
-                                "refs/heads/feature",
-                                "refs/heads/main",
-                                "refs/heads/stacked",
-                                "refs/remotes/origin/main"),
+                        HashMap.of(
+                                "refs/heads/feature", "1111",
+                                "refs/heads/main", "3333",
+                                "refs/heads/stacked", "4444",
+                                "refs/remotes/origin/main", "2222"),
                         HashMap.of(STACKED, FEATURE),
                         Option.of(MAIN)));
+    }
+
+    @Test
+    void theRefsAreReadWithTheCommitsTheyAreAt() {
+        assertEquals(
+                HashMap.of("refs/heads/fix)x", "1111", "refs/remotes/origin/main", "2222"),
+                CliBehind.parseRefs("refs/heads/fix)x\u001f1111\nrefs/remotes/origin/main\u001f2222\n")
+                        .get());
+    }
+
+    @Test
+    void aBaseWhoseNameHoldsAParenthesisCountsToo() throws Exception {
+        git("branch", "fix)x");
+        git("branch", "stacked");
+        git("config", "--local", "branch.stacked.gh-merge-base", "fix)x");
+        git("checkout", "-q", "fix)x");
+        commit("on fix)x");
+
+        assertEquals(
+                HashMap.of(new BranchName("fix)x"), 0, STACKED, 1),
+                CliBehind.read(repo, Option.of(MAIN)).get());
     }
 
     private void commit(String message) throws Exception {

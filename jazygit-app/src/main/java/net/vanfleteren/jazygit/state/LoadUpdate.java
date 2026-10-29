@@ -191,11 +191,7 @@ public final class LoadUpdate {
      * branch (ADR 46).
      */
     public static Cmd.LoadBehind behind(Model model) {
-        return new Cmd.LoadBehind(model.repo()
-                .branches()
-                .toOption()
-                .flatMap(branches -> branches.find(Branch::isDefault))
-                .map(Branch::name));
+        return new Cmd.LoadBehind(AheadUpdate.main(model));
     }
 
     /**

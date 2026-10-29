@@ -403,13 +403,7 @@ public interface Cmd {
          * The branches to compare with, the first that exists counting.
          */
         List<BranchRef> bases(Option<BranchName> parent) {
-            return parent.toList()
-                    .appendAll(main)
-                    .filter(base -> !named.contains(base))
-                    .distinct()
-                    .flatMap(base -> List.<BranchRef>of(
-                            new BranchRef.Remote(new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, base)),
-                            new BranchRef.Local(base)));
+            return BranchRef.bases(named, parent, main);
         }
     }
 
