@@ -3,7 +3,10 @@
 Git and your pull requests, their reviews and their CI, in one terminal UI. In the spirit of
 [lazygit](https://github.com/jesseduffield/lazygit), written in Java on [TamboUI](https://github.com/tamboui).
 
-![jazygit showing the files, branches, commits and stash of a repository, with the rich diff of a changed file](documentation/images/screenshot.png)
+![jazygit showing the files, branches, commits and stash of a repository, with the rich diff of a changed file](documentation/images/jazygit-diff.png)
+
+![jazygit showing Pr details](documentation/images/jazygit-pr.png)
+
 
 ## Highlights
 
