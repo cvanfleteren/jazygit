@@ -214,7 +214,7 @@ class ArchitectureTest {
     static final ArchRule onlyTheProgramRunsCommands = noClasses()
             .that()
             .haveNameNotMatching("(" + Pattern.quote(Program.class.getName()) + "|"
-                    + Pattern.quote("net.vanfleteren.jazygit.StartApp") + ")(\\$.*)?")
+                    + Pattern.quote(StartApp.class.getName()) + ")(\\$.*)?")
             .and()
             .areNotAssignableTo(Cmd.class)
             .should()
