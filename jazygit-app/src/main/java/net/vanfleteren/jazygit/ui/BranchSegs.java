@@ -20,7 +20,7 @@ import net.vanfleteren.jazygit.state.*;
  */
 final class BranchSegs {
 
-    private static final PullRequestSymbols.Glyphs GLYPHS = PullRequestSymbols.NARROW;
+    private static final PullRequestSymbols.Glyphs GLYPHS = PullRequestSymbols.GLYPHS;
 
     private BranchSegs() {}
 

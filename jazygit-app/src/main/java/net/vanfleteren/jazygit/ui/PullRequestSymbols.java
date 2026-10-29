@@ -17,27 +17,10 @@ import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 public final class PullRequestSymbols {
 
     /**
-     * The emoji, for the dialogs and the pull requests screen.
+     * Symbols one column wide, told apart by their shape as well as their colour (ADR 45), wherever they show
+     * (ADR 48).
      */
-    public static final Glyphs EMOJI = new Glyphs(
-            new Symbol("✅", Theme.Classes.CHECKS_PASSED),
-            new Symbol("❌", Theme.Classes.CHECKS_FAILED),
-            new Symbol("⏳", Theme.Classes.CHECKS_RUNNING),
-            // Not ⏸, which most terminals show one column wide, and some two.
-            new Symbol("💤", Theme.Classes.DIM),
-            new Symbol("👍", Theme.Classes.REVIEW_APPROVED),
-            new Symbol("👎", Theme.Classes.REVIEW_CHANGES),
-            new Symbol("?", Theme.Classes.DIM),
-            new Symbol("🔀", Theme.Classes.DIM),
-            new Symbol("🚦", Theme.Classes.DIM),
-            new Symbol("💥", Theme.Classes.CHECKS_FAILED),
-            new Symbol("🟣", Theme.Classes.PULL_REQUEST),
-            "📚");
-
-    /**
-     * Symbols one column wide, told apart by their shape as well as their colour, for the branch lists (ADR 45).
-     */
-    public static final Glyphs NARROW = new Glyphs(
+    public static final Glyphs GLYPHS = new Glyphs(
             new Symbol("✓", Theme.Classes.CHECKS_PASSED),
             new Symbol("✗", Theme.Classes.CHECKS_FAILED),
             new Symbol("●", Theme.Classes.CHECKS_RUNNING),
@@ -51,7 +34,7 @@ public final class PullRequestSymbols {
             new Symbol("◆", Theme.Classes.PULL_REQUEST),
             "");
 
-    private static final Symbol COMMENTED = new Symbol("💬", Theme.Classes.DIM);
+    private static final Symbol COMMENTED = new Symbol("~", Theme.Classes.DIM);
     private static final Symbol DISMISSED = new Symbol("⊘", Theme.Classes.DIM);
 
     private PullRequestSymbols() {}
@@ -60,14 +43,14 @@ public final class PullRequestSymbols {
      * How a merge of a pull request goes, which shows instead of its checks and its review (ADR 24).
      */
     public static Symbol merge(MergeStatus status) {
-        return EMOJI.merge(status);
+        return GLYPHS.merge(status);
     }
 
     /**
-     * Where a pull request sits in its stack: {@code 📚2/3}.
+     * Where a pull request sits in its stack: {@code 2/3}.
      */
     public static Symbol stack(PullRequestStack stack) {
-        return EMOJI.stack(stack);
+        return GLYPHS.stack(stack);
     }
 
     /**
@@ -88,8 +71,8 @@ public final class PullRequestSymbols {
     public static Option<Symbol> comment(PullRequestComment.Kind kind) {
         return switch (kind) {
             case DESCRIPTION, COMMENT -> Option.none();
-            case APPROVED -> Option.of(EMOJI.approved());
-            case CHANGES_REQUESTED -> Option.of(EMOJI.changes());
+            case APPROVED -> Option.of(GLYPHS.approved());
+            case CHANGES_REQUESTED -> Option.of(GLYPHS.changes());
             case COMMENTED -> Option.of(COMMENTED);
             case DISMISSED -> Option.of(DISMISSED);
         };
@@ -99,21 +82,21 @@ public final class PullRequestSymbols {
      * Nothing for no checks.
      */
     public static Option<Symbol> checks(Checks checks) {
-        return EMOJI.checks(checks);
+        return GLYPHS.checks(checks);
     }
 
     /**
      * How one check is doing: as {@link #checks(Checks)}, but waiting to start while it is queued (ADR 32).
      */
     public static Option<Symbol> check(Check check) {
-        return check.queued() ? Option.of(EMOJI.queued()) : checks(check.state());
+        return check.queued() ? Option.of(GLYPHS.queued()) : checks(check.state());
     }
 
     /**
      * Nothing when no review is needed.
      */
     public static Option<Symbol> review(Review review) {
-        return EMOJI.review(review);
+        return GLYPHS.review(review);
     }
 
     /**
@@ -121,9 +104,9 @@ public final class PullRequestSymbols {
      */
     public static Symbol reviewer(ReviewerState state) {
         return switch (state) {
-            case APPROVED -> EMOJI.approved();
-            case CHANGES_REQUESTED -> EMOJI.changes();
-            case REQUESTED -> EMOJI.toReview();
+            case APPROVED -> GLYPHS.approved();
+            case CHANGES_REQUESTED -> GLYPHS.changes();
+            case REQUESTED -> GLYPHS.toReview();
             case COMMENTED -> COMMENTED;
         };
     }

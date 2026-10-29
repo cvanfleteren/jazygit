@@ -60,8 +60,8 @@ public final class CommentsDialog implements PopupView {
     private static final int FRAME_HEIGHT = 2 + 2;
     // The border of a pane.
     private static final int PANE_BORDER = 2;
-    // A symbol takes one or two columns, as an emoji does, and a space after it.
-    private static final int SYMBOL_WIDTH = 3;
+    // A symbol takes one column, and a space after it.
+    private static final int SYMBOL_WIDTH = 2;
     private static final int AUTHOR_WIDTH = 16;
     private static final int AGE_WIDTH = 5;
     private static final DateTimeFormatter WRITTEN = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");

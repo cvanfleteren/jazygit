@@ -65,23 +65,23 @@ public final class HelpDialog implements PopupView {
                     Tuple.of("#42", "help.branches.legend.pullRequest"),
                     Tuple.of(
                             texts(
-                                    PullRequestSymbols.NARROW.passed(),
-                                    PullRequestSymbols.NARROW.failed(),
-                                    PullRequestSymbols.NARROW.running(),
-                                    PullRequestSymbols.NARROW.queued()),
+                                    PullRequestSymbols.GLYPHS.passed(),
+                                    PullRequestSymbols.GLYPHS.failed(),
+                                    PullRequestSymbols.GLYPHS.running(),
+                                    PullRequestSymbols.GLYPHS.queued()),
                             "help.branches.legend.checks"),
                     Tuple.of(
                             texts(
-                                    PullRequestSymbols.NARROW.approved(),
-                                    PullRequestSymbols.NARROW.changes(),
-                                    PullRequestSymbols.NARROW.toReview()),
+                                    PullRequestSymbols.GLYPHS.approved(),
+                                    PullRequestSymbols.GLYPHS.changes(),
+                                    PullRequestSymbols.GLYPHS.toReview()),
                             "help.branches.legend.review"),
                     Tuple.of(
                             texts(
-                                    PullRequestSymbols.NARROW.merging(),
-                                    PullRequestSymbols.NARROW.enqueued(),
-                                    PullRequestSymbols.NARROW.mergeFailed(),
-                                    PullRequestSymbols.NARROW.merged()),
+                                    PullRequestSymbols.GLYPHS.merging(),
+                                    PullRequestSymbols.GLYPHS.enqueued(),
+                                    PullRequestSymbols.GLYPHS.mergeFailed(),
+                                    PullRequestSymbols.GLYPHS.merged()),
                             "help.branches.legend.merge"),
                     Tuple.of("2/4", "help.branches.legend.stack")));
 
