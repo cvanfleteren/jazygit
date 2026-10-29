@@ -150,7 +150,7 @@ class CliGitInfoProviderTest {
         RepoStatus status = provider.status().get();
         assertNotEquals(headBefore, status.headCommit().get());
         assertEquals(List.of(), status.files());
-        List<Commit> commits = provider.commits().get();
+        List<Commit> commits = commits().get();
         assertEquals("Second commit", commits.get(0).message());
         assertEquals(status.headCommit().get(), commits.get(0).sha());
     }
@@ -391,7 +391,7 @@ class CliGitInfoProviderTest {
     }
 
     @Test
-    void aheadListsTheCommitsNotOnTheFirstBaseThatExists() throws Exception {
+    void aheadListsTheCommitsNotOnTheBase() throws Exception {
         Sha fork = provider.status().get().headCommit().get();
         git("checkout", "-q", "-b", "side");
         git("commit", "-q", "--allow-empty", "-m", "Side one");
@@ -400,9 +400,9 @@ class CliGitInfoProviderTest {
         git("checkout", "-q", "side");
         git("merge", "-q", "--no-edit", "main");
         BranchRef main = new BranchRef.Local(new BranchName("main"));
-        BranchRef gone = new BranchRef.Local(new BranchName("gone"));
+        Sha head = provider.status().get().headCommit().get();
 
-        Ahead ahead = provider.ahead(Option.none(), List.of(gone, main)).get().get();
+        Ahead ahead = provider.ahead(head, main, tip("main")).get();
 
         assertEquals(main, ahead.base());
         assertEquals(
@@ -412,8 +412,7 @@ class CliGitInfoProviderTest {
         assertTrue(ahead.forkPoint().exists(commit -> commit.message().equals("Main one")));
         assertFalse(ahead.shared(ahead.commits().head().sha()));
         assertTrue(ahead.shared(fork));
-        assertEquals(
-                Option.none(), provider.ahead(Option.of(main), List.of(gone)).get());
+        assertEquals(head, ahead.tip());
     }
 
     @Test
@@ -422,10 +421,11 @@ class CliGitInfoProviderTest {
         git("commit", "-q", "--allow-empty", "-m", "Side one");
         git("commit", "-q", "--allow-empty", "-m", "Side two");
         git("commit", "-q", "--allow-empty", "-m", "Side three");
-        List<BranchRef> main = List.of(new BranchRef.Local(new BranchName("main")));
+        BranchRef main = new BranchRef.Local(new BranchName("main"));
+        Sha head = provider.status().get().headCommit().get();
 
-        Ahead three = CliLog.ahead(repo, Option.none(), main, 3).get().get();
-        Ahead two = CliLog.ahead(repo, Option.none(), main, 2).get().get();
+        Ahead three = CliLog.ahead(repo, head, main, tip("main"), 3).get();
+        Ahead two = CliLog.ahead(repo, head, main, tip("main"), 2).get();
 
         assertFalse(three.more());
         assertTrue(two.more());
@@ -439,7 +439,8 @@ class CliGitInfoProviderTest {
         git("commit", "-q", "--allow-empty", "-m", "Other root");
         BranchRef main = new BranchRef.Local(new BranchName("main"));
 
-        Ahead ahead = provider.ahead(Option.none(), List.of(main)).get().get();
+        Ahead ahead = provider.ahead(provider.status().get().headCommit().get(), main, tip("main"))
+                .get();
 
         assertEquals(List.of("Other root"), ahead.commits().map(Commit::message));
         assertEquals(Option.none(), ahead.forkPoint());
@@ -496,7 +497,7 @@ class CliGitInfoProviderTest {
 
         git("checkout", "-q", "--detach");
         assertEquals(
-                new Head.Detached(provider.commits().get().get(0).sha()),
+                new Head.Detached(commits().get().get(0).sha()),
                 provider.status().get().head());
     }
 
@@ -550,7 +551,7 @@ class CliGitInfoProviderTest {
         git("commit", "-q", "-m", "Main work");
         git("merge", "-q", "--no-ff", "-m", "Merge feature", "feature");
 
-        List<Commit> commits = provider.commits().get();
+        List<Commit> commits = commits().get();
 
         assertEquals(
                 List.of("Merge feature", "Feature work", "Main work"),
@@ -568,7 +569,7 @@ class CliGitInfoProviderTest {
         git("add", "b.txt");
         git("commit", "-q", "-m", "Third");
         Files.writeString(repo.resolve("README.md"), "dirty\n");
-        List<Commit> before = provider.commits().get();
+        List<Commit> before = commits().get();
 
         List<String> executed = provider.reword(before.get(1).sha(), new CommitMessage("Second, better", "because"))
                 .get()
@@ -579,7 +580,7 @@ class CliGitInfoProviderTest {
                         + " rebase --interactive --autostash --keep-empty --rebase-merges "
                         + before.get(1).sha().value() + "^"),
                 executed);
-        List<Commit> after = provider.commits().get();
+        List<Commit> after = commits().get();
         assertEquals(
                 List.of("Third", "Second, better", "Initial commit"),
                 after.map(Commit::message).toList());
@@ -607,7 +608,7 @@ class CliGitInfoProviderTest {
                 executed);
         assertEquals(
                 List.of("Feature work", "Main work", "Initial commit"),
-                provider.commits().get().map(Commit::message).toList());
+                commits().get().map(Commit::message).toList());
     }
 
     @Test
@@ -628,7 +629,7 @@ class CliGitInfoProviderTest {
 
         assertEquals(
                 List.of("Feature work", "Main work", "Initial commit"),
-                provider.commits().get().map(Commit::message).toList());
+                commits().get().map(Commit::message).toList());
     }
 
     @Test
@@ -658,7 +659,7 @@ class CliGitInfoProviderTest {
 
         provider.rebase(new BranchName("main")).get();
 
-        List<Commit> after = provider.commits().get();
+        List<Commit> after = commits().get();
         assertEquals(List.of("fixup! Feature work", "Merge side"), after.take(2).map(Commit::message));
         assertTrue(after.get(1).isMerge());
         assertTrue(after.exists(c -> c.message().equals("Main work")));
@@ -708,7 +709,7 @@ class CliGitInfoProviderTest {
         assertTrue(Files.notExists(repo.resolve(".git/rebase-merge")));
         assertEquals(
                 List.of("Remove x", "Add x", "Initial commit"),
-                provider.commits().get().map(Commit::message).toList());
+                commits().get().map(Commit::message).toList());
     }
 
     @Test
@@ -726,7 +727,7 @@ class CliGitInfoProviderTest {
         Files.writeString(repo.resolve("f.txt"), "f\n");
         git("add", "f.txt");
         git("commit", "-q", "-m", "Feature work");
-        Sha picked = provider.commits().get().head().sha();
+        Sha picked = commits().get().head().sha();
         git("checkout", "-q", "main");
 
         List<String> executed = provider.cherryPick(picked).get().map(ExecutedCommand::line);
@@ -734,7 +735,7 @@ class CliGitInfoProviderTest {
         assertEquals(List.of("git cherry-pick " + picked.value()), executed);
         assertEquals(
                 List.of("Feature work", "Initial commit"),
-                provider.commits().get().map(Commit::message).toList());
+                commits().get().map(Commit::message).toList());
         assertEquals("f\n", Files.readString(repo.resolve("f.txt")));
     }
 
@@ -743,7 +744,7 @@ class CliGitInfoProviderTest {
         git("checkout", "-q", "-b", "feature");
         Files.writeString(repo.resolve("README.md"), "feature\n");
         git("commit", "-q", "-am", "Feature edit");
-        Sha picked = provider.commits().get().head().sha();
+        Sha picked = commits().get().head().sha();
         git("checkout", "-q", "main");
         Files.writeString(repo.resolve("README.md"), "main\n");
         git("commit", "-q", "-am", "Main edit");
@@ -763,7 +764,7 @@ class CliGitInfoProviderTest {
         Files.writeString(repo.resolve("f.txt"), "f\n");
         git("add", "f.txt");
         git("commit", "-q", "-m", "Feature work");
-        Sha picked = provider.commits().get().head().sha();
+        Sha picked = commits().get().head().sha();
         git("checkout", "-q", "main");
         Files.writeString(repo.resolve("f.txt"), "f\n");
         git("add", "f.txt");
@@ -775,7 +776,7 @@ class CliGitInfoProviderTest {
 
         assertEquals(
                 List.of("Same work", "Initial commit"),
-                provider.commits().get().map(Commit::message).toList());
+                commits().get().map(Commit::message).toList());
         assertTrue(!gitSucceedsIn(repo, "rev-parse", "--verify", "--quiet", "CHERRY_PICK_HEAD"));
     }
 
@@ -785,7 +786,7 @@ class CliGitInfoProviderTest {
         Files.writeString(repo.resolve("f.txt"), "f\n");
         git("add", "f.txt");
         git("commit", "-q", "-m", "Feature work");
-        Sha picked = provider.commits().get().head().sha();
+        Sha picked = commits().get().head().sha();
         git("checkout", "-q", "main");
         // Picking it would overwrite it, so git refuses before it starts.
         Files.writeString(repo.resolve("f.txt"), "untracked\n");
@@ -803,12 +804,12 @@ class CliGitInfoProviderTest {
         Files.writeString(repo.resolve("f.txt"), "f\n");
         git("add", "f.txt");
         git("commit", "-q", "-m", "Add f");
-        Commit reverted = provider.commits().get().head();
+        Commit reverted = commits().get().head();
 
         List<String> executed = provider.revert(reverted).get().map(ExecutedCommand::line);
 
         assertEquals(List.of("git revert --no-edit " + reverted.sha().value()), executed);
-        Commit revert = provider.commits().get().head();
+        Commit revert = commits().get().head();
         assertEquals("Revert \"Add f\"", revert.message());
         assertEquals("This reverts commit " + reverted.sha().value() + ".", revert.body());
         assertTrue(!Files.exists(repo.resolve("f.txt")));
@@ -822,12 +823,12 @@ class CliGitInfoProviderTest {
         git("commit", "-q", "-m", "Feature work");
         git("checkout", "-q", "main");
         git("merge", "-q", "--no-ff", "-m", "Merge feature", "feature");
-        Commit merge = provider.commits().get().head();
+        Commit merge = commits().get().head();
 
         List<String> executed = provider.revert(merge).get().map(ExecutedCommand::line);
 
         assertEquals(List.of("git revert --no-edit -m 1 " + merge.sha().value()), executed);
-        assertEquals("Revert \"Merge feature\"", provider.commits().get().head().message());
+        assertEquals("Revert \"Merge feature\"", commits().get().head().message());
         assertTrue(!Files.exists(repo.resolve("f.txt")));
     }
 
@@ -835,7 +836,7 @@ class CliGitInfoProviderTest {
     void aConflictingRevertIsLeftForTheUserToResolve() throws Exception {
         Files.writeString(repo.resolve("README.md"), "first\n");
         git("commit", "-q", "-am", "First edit");
-        Commit reverted = provider.commits().get().head();
+        Commit reverted = commits().get().head();
         Files.writeString(repo.resolve("README.md"), "second\n");
         git("commit", "-q", "-am", "Second edit");
 
@@ -853,7 +854,7 @@ class CliGitInfoProviderTest {
         Files.writeString(repo.resolve("f.txt"), "f\n");
         git("add", "f.txt");
         git("commit", "-q", "-m", "Add f");
-        Commit reverted = provider.commits().get().head();
+        Commit reverted = commits().get().head();
         git("rm", "-q", "f.txt");
         git("commit", "-q", "-m", "Remove f");
 
@@ -863,7 +864,7 @@ class CliGitInfoProviderTest {
 
         assertEquals(
                 List.of("Remove f", "Add f", "Initial commit"),
-                provider.commits().get().map(Commit::message).toList());
+                commits().get().map(Commit::message).toList());
         assertTrue(!gitSucceedsIn(repo, "rev-parse", "--verify", "--quiet", "REVERT_HEAD"));
     }
 
@@ -879,7 +880,7 @@ class CliGitInfoProviderTest {
         git("add", "c.txt");
         git("commit", "-q", "-m", "Fourth");
         Files.writeString(repo.resolve("README.md"), "dirty\n");
-        List<Commit> before = provider.commits().get();
+        List<Commit> before = commits().get();
 
         List<String> executed =
                 provider.squash(before.get(1).sha(), SquashMode.SQUASH).get().map(ExecutedCommand::line);
@@ -889,7 +890,7 @@ class CliGitInfoProviderTest {
                         .startsWith("git -c rebase.abbreviateCommands=false -c core.abbrev=no"
                                 + " rebase --interactive --autostash --keep-empty --rebase-merges"),
                 executed.toString());
-        List<Commit> after = provider.commits().get();
+        List<Commit> after = commits().get();
         assertEquals(
                 List.of("Fourth", "Second", "Initial commit"),
                 after.map(Commit::message).toList());
@@ -904,12 +905,10 @@ class CliGitInfoProviderTest {
         git("add", "a.txt");
         git("commit", "-q", "-m", "Second");
 
-        provider.squash(provider.commits().get().head().sha(), SquashMode.SQUASH)
-                .get();
+        provider.squash(commits().get().head().sha(), SquashMode.SQUASH).get();
 
         assertEquals(
-                List.of("Initial commit"),
-                provider.commits().get().map(Commit::message).toList());
+                List.of("Initial commit"), commits().get().map(Commit::message).toList());
     }
 
     @Test
@@ -924,11 +923,11 @@ class CliGitInfoProviderTest {
         git("add", "c.txt");
         git("commit", "-q", "-m", "Fourth");
         Files.writeString(repo.resolve("README.md"), "dirty\n");
-        List<Commit> before = provider.commits().get();
+        List<Commit> before = commits().get();
 
         provider.squash(before.get(1).sha(), SquashMode.FIXUP).get();
 
-        List<Commit> after = provider.commits().get();
+        List<Commit> after = commits().get();
         assertEquals(
                 List.of("Fourth", "Second", "Initial commit"),
                 after.map(Commit::message).toList());
@@ -945,11 +944,11 @@ class CliGitInfoProviderTest {
         Files.writeString(repo.resolve("b.txt"), "b\n");
         git("add", "b.txt");
         git("commit", "-q", "--author", "Other <other@example.com>", "-m", "Third", "-m", "Third body");
-        List<Commit> before = provider.commits().get();
+        List<Commit> before = commits().get();
 
         provider.squash(before.head().sha(), SquashMode.FIXUP_KEEP_MESSAGE).get();
 
-        List<Commit> after = provider.commits().get();
+        List<Commit> after = commits().get();
         assertEquals(
                 List.of("Third", "Initial commit"), after.map(Commit::message).toList());
         assertEquals("Third body", after.head().body().strip());
@@ -963,16 +962,15 @@ class CliGitInfoProviderTest {
         Files.writeString(repo.resolve("a.txt"), "a\n");
         git("add", "a.txt");
         git("commit", "-q", "-m", "Second");
-        Sha second = provider.commits().get().head().sha();
-        Sha initial = provider.commits().get().get(1).sha();
+        Sha second = commits().get().head().sha();
+        Sha initial = commits().get().get(1).sha();
 
         List<String> executed = provider.reset(new ResetTarget.ToCommit(initial), ResetMode.SOFT)
                 .get()
                 .map(ExecutedCommand::line);
         assertEquals(List.of("git reset --quiet --soft " + initial.value()), executed);
         assertEquals(
-                List.of("Initial commit"),
-                provider.commits().get().map(Commit::message).toList());
+                List.of("Initial commit"), commits().get().map(Commit::message).toList());
         assertTrue(provider.status().get().files().exists(file -> file.path().equals("a.txt") && file.staged()));
 
         git("reset", "-q", "--hard", second.value());
@@ -984,8 +982,7 @@ class CliGitInfoProviderTest {
         Files.writeString(repo.resolve("untracked.txt"), "kept\n");
         provider.reset(new ResetTarget.ToCommit(initial), ResetMode.HARD).get();
         assertEquals(
-                List.of("Initial commit"),
-                provider.commits().get().map(Commit::message).toList());
+                List.of("Initial commit"), commits().get().map(Commit::message).toList());
         assertTrue(Files.notExists(repo.resolve("a.txt")));
         assertEquals("hello\n", Files.readString(repo.resolve("README.md")));
         assertEquals("kept\n", Files.readString(repo.resolve("untracked.txt")));
@@ -997,7 +994,7 @@ class CliGitInfoProviderTest {
         git("init", "-q", "--bare", "-b", "main", bare.toString());
         git("remote", "add", "origin", bare.toString());
         git("push", "-q", "-u", "origin", "main");
-        Sha pushed = provider.commits().get().head().sha();
+        Sha pushed = commits().get().head().sha();
         git("commit", "-q", "--allow-empty", "-m", "local");
         RemoteBranch upstream = new RemoteBranch("origin", new BranchName("main"));
 
@@ -1007,7 +1004,7 @@ class CliGitInfoProviderTest {
                 .map(ExecutedCommand::line);
 
         assertEquals(List.of("git reset --quiet --hard refs/remotes/origin/main"), executed);
-        assertEquals(pushed, provider.commits().get().head().sha());
+        assertEquals(pushed, commits().get().head().sha());
     }
 
     @Test
@@ -1016,23 +1013,22 @@ class CliGitInfoProviderTest {
         git("add", "a.txt");
         git("commit", "-q", "-m", "Second");
 
-        provider.reword(provider.commits().get().get(1).sha(), new CommitMessage("Start", ""))
+        provider.reword(commits().get().get(1).sha(), new CommitMessage("Start", ""))
                 .get();
 
         assertEquals(
-                List.of("Second", "Start"),
-                provider.commits().get().map(Commit::message).toList());
+                List.of("Second", "Start"), commits().get().map(Commit::message).toList());
     }
 
     @Test
     void rewordOfALastCommitAmendsIt() throws Exception {
-        List<String> executed = provider.reword(provider.commits().get().head().sha(), new CommitMessage("Renamed", ""))
+        List<String> executed = provider.reword(commits().get().head().sha(), new CommitMessage("Renamed", ""))
                 .get()
                 .map(ExecutedCommand::line);
 
         assertEquals(1, executed.size());
         assertTrue(executed.head().startsWith("git commit"), executed.toString());
-        assertEquals("Renamed", provider.commits().get().head().message());
+        assertEquals("Renamed", commits().get().head().message());
     }
 
     @Test
@@ -1049,12 +1045,12 @@ class CliGitInfoProviderTest {
         Files.writeString(repo.resolve("after.txt"), "x\n");
         git("add", "after.txt");
         git("commit", "-q", "-m", "After merge");
-        Commit merge = provider.commits().get().get(1);
+        Commit merge = commits().get().get(1);
 
         provider.reword(merge.sha(), new CommitMessage("Merged the feature", ""))
                 .get();
 
-        List<Commit> after = provider.commits().get();
+        List<Commit> after = commits().get();
         assertEquals("After merge", after.head().message());
         assertEquals("Merged the feature", after.get(1).message());
         assertTrue(after.get(1).isMerge());
@@ -1067,13 +1063,12 @@ class CliGitInfoProviderTest {
         Files.writeString(repo.resolve("b.txt"), "b\n");
         git("add", "b.txt");
         git("commit", "-q", "-m", "Second");
-        Commit initial = provider.commits().get().get(1);
+        Commit initial = commits().get().get(1);
 
         provider.reword(initial.sha(), new CommitMessage("First", "")).get();
 
         assertEquals(
-                List.of("Second", "First"),
-                provider.commits().get().map(Commit::message).toList());
+                List.of("Second", "First"), commits().get().map(Commit::message).toList());
     }
 
     @Test
@@ -1081,12 +1076,12 @@ class CliGitInfoProviderTest {
         Files.writeString(repo.resolve("b.txt"), "b\n");
         git("add", "b.txt");
         git("commit", "-q", "-m", "Second");
-        Commit initial = provider.commits().get().get(1);
+        Commit initial = commits().get().get(1);
 
         provider.reword(initial.sha(), new CommitMessage("#12 First", "#13 too"))
                 .get();
 
-        Commit reworded = provider.commits().get().get(1);
+        Commit reworded = commits().get().get(1);
         assertEquals("#12 First", reworded.message());
         assertEquals("#13 too", reworded.body());
     }
@@ -1100,7 +1095,7 @@ class CliGitInfoProviderTest {
         git("add", "b.txt");
         git("commit", "-q", "-m", "Third");
         Files.writeString(repo.resolve("README.md"), "dirty\n");
-        List<Commit> before = provider.commits().get();
+        List<Commit> before = commits().get();
 
         List<String> executed = provider.dropCommit(before.get(1).sha()).get().map(ExecutedCommand::line);
 
@@ -1111,7 +1106,7 @@ class CliGitInfoProviderTest {
                 executed.toString());
         assertEquals(
                 List.of("Third", "Initial commit"),
-                provider.commits().get().map(Commit::message).toList());
+                commits().get().map(Commit::message).toList());
         assertTrue(Files.notExists(repo.resolve("a.txt")));
         assertTrue(Files.exists(repo.resolve("b.txt")));
         assertEquals("dirty\n", Files.readString(repo.resolve("README.md")));
@@ -1122,12 +1117,11 @@ class CliGitInfoProviderTest {
         Files.writeString(repo.resolve("a.txt"), "a\n");
         git("add", "a.txt");
         git("commit", "-q", "-m", "Second");
-        Sha root = provider.commits().get().last().sha();
+        Sha root = commits().get().last().sha();
 
         provider.dropCommit(root).get();
 
-        assertEquals(
-                List.of("Second"), provider.commits().get().map(Commit::message).toList());
+        assertEquals(List.of("Second"), commits().get().map(Commit::message).toList());
         assertTrue(Files.notExists(repo.resolve("README.md")));
     }
 
@@ -1137,7 +1131,7 @@ class CliGitInfoProviderTest {
         git("commit", "-q", "-am", "Second");
         Files.writeString(repo.resolve("README.md"), "third\n");
         git("commit", "-q", "-am", "Third");
-        Sha second = provider.commits().get().get(1).sha();
+        Sha second = commits().get().get(1).sha();
 
         assertInstanceOf(
                 GitError.StoppedOnConflicts.class,
@@ -1158,13 +1152,13 @@ class CliGitInfoProviderTest {
         Files.writeString(repo.resolve("a.txt"), "amended\n");
         git("add", "a.txt");
         Files.writeString(repo.resolve("README.md"), "dirty\n");
-        Sha second = provider.commits().get().get(1).sha();
+        Sha second = commits().get().get(1).sha();
 
         provider.amendCommit(second).get();
 
         assertEquals(
                 List.of("Third", "Second", "Initial commit"),
-                provider.commits().get().map(Commit::message).toList());
+                commits().get().map(Commit::message).toList());
         assertEquals("amended\n", git("show", "HEAD~1:a.txt"));
         assertEquals("", git("diff", "--cached", "--name-only"));
         assertEquals("dirty\n", Files.readString(repo.resolve("README.md")));
@@ -1178,15 +1172,13 @@ class CliGitInfoProviderTest {
         Files.writeString(repo.resolve("a.txt"), "amended\n");
         git("add", "a.txt");
 
-        List<String> executed = provider.amendCommit(
-                        provider.commits().get().head().sha())
-                .get()
-                .map(ExecutedCommand::line);
+        List<String> executed =
+                provider.amendCommit(commits().get().head().sha()).get().map(ExecutedCommand::line);
 
         assertEquals(List.of("git commit --quiet --amend --no-edit"), executed);
         assertEquals(
                 List.of("Second", "Initial commit"),
-                provider.commits().get().map(Commit::message).toList());
+                commits().get().map(Commit::message).toList());
         assertEquals("amended\n", git("show", "HEAD:a.txt"));
     }
 
@@ -1197,13 +1189,13 @@ class CliGitInfoProviderTest {
         git("commit", "-q", "-m", "Second");
         Files.writeString(repo.resolve("root.txt"), "root\n");
         git("add", "root.txt");
-        Sha root = provider.commits().get().last().sha();
+        Sha root = commits().get().last().sha();
 
         provider.amendCommit(root).get();
 
         assertEquals(
                 List.of("Second", "Initial commit"),
-                provider.commits().get().map(Commit::message).toList());
+                commits().get().map(Commit::message).toList());
         assertEquals("root\n", git("show", "HEAD~1:root.txt"));
     }
 
@@ -1212,7 +1204,7 @@ class CliGitInfoProviderTest {
         Files.writeString(repo.resolve("a.txt"), "a\n");
         git("add", "a.txt");
         git("commit", "-q", "-m", "Second");
-        Sha second = provider.commits().get().head().sha();
+        Sha second = commits().get().head().sha();
         Files.writeString(repo.resolve("b.txt"), "b\n");
         git("add", "b.txt");
         git("commit", "-q", "--fixup=" + second.value());
@@ -1223,7 +1215,7 @@ class CliGitInfoProviderTest {
 
         assertEquals(
                 List.of("fixup! Second", "Second", "Initial commit"),
-                provider.commits().get().map(Commit::message).toList());
+                commits().get().map(Commit::message).toList());
         assertEquals("c\n", git("show", "HEAD~1:c.txt"));
     }
 
@@ -1233,7 +1225,7 @@ class CliGitInfoProviderTest {
         git("commit", "-q", "-am", "Second");
         Files.writeString(repo.resolve("README.md"), "third\n");
         git("commit", "-q", "-am", "Third");
-        Sha initial = provider.commits().get().last().sha();
+        Sha initial = commits().get().last().sha();
         Files.writeString(repo.resolve("README.md"), "staged\n");
         git("add", "README.md");
 
@@ -1253,7 +1245,7 @@ class CliGitInfoProviderTest {
         Files.writeString(repo.resolve("c.txt"), "c\n");
         git("add", "c.txt");
         git("commit", "-q", "-m", "Elsewhere");
-        Sha elsewhere = provider.commits().get().head().sha();
+        Sha elsewhere = commits().get().head().sha();
         git("checkout", "-q", "main");
         Files.writeString(repo.resolve("b.txt"), "staged\n");
         git("add", "b.txt");
@@ -1262,7 +1254,7 @@ class CliGitInfoProviderTest {
 
         assertEquals(
                 List.of("Second", "Initial commit"),
-                provider.commits().get().map(Commit::message).toList());
+                commits().get().map(Commit::message).toList());
         assertEquals("b.txt\n", git("diff", "--cached", "--name-only"));
         assertTrue(Files.notExists(repo.resolve(".git/rebase-merge")));
     }
@@ -1276,14 +1268,14 @@ class CliGitInfoProviderTest {
         Files.writeString(repo.resolve("c.txt"), "c\n");
         git("add", "c.txt");
         git("commit", "-q", "-m", "Elsewhere");
-        Sha elsewhere = provider.commits().get().head().sha();
+        Sha elsewhere = commits().get().head().sha();
         git("checkout", "-q", "main");
 
         assertTrue(provider.squash(elsewhere, SquashMode.SQUASH).isLeft());
 
         assertEquals(
                 List.of("Second", "Initial commit"),
-                provider.commits().get().map(Commit::message).toList());
+                commits().get().map(Commit::message).toList());
         assertTrue(Files.notExists(repo.resolve(".git/rebase-merge")));
     }
 
@@ -1312,7 +1304,7 @@ class CliGitInfoProviderTest {
         assertTrue(
                 failure.commands().head().line().startsWith("git rev-list"),
                 failure.commands().toString());
-        assertEquals("Initial commit", provider.commits().get().head().message());
+        assertEquals("Initial commit", commits().get().head().message());
         assertTrue(Files.notExists(repo.resolve(".git/rebase-merge")));
     }
 
@@ -1333,7 +1325,7 @@ class CliGitInfoProviderTest {
     @Test
     void stashWithoutANameIsNamedByGit() throws Exception {
         Files.writeString(repo.resolve("README.md"), "changed\n");
-        Commit head = provider.commits().get().head();
+        Commit head = commits().get().head();
 
         List<String> executed = provider.stash(Option.none()).get().map(ExecutedCommand::line);
 
@@ -1450,7 +1442,7 @@ class CliGitInfoProviderTest {
     @Test
     void branchesCarryTheTimeOfTheirLastCommit() {
         assertEquals(
-                provider.commits().get().get(0).authorTime().getEpochSecond(),
+                commits().get().get(0).authorTime().getEpochSecond(),
                 provider.allBranches()
                         .map(AllBranches::local)
                         .get()
@@ -2304,8 +2296,8 @@ class CliGitInfoProviderTest {
         Files.createDirectories(empty);
         gitIn(empty, "init", "-q", "-b", "main");
         CliGitInfoProvider emptyProvider = CliGitInfoProvider.open(empty).get();
+        // Without a commit in HEAD there is no log to read (ADR 49).
         assertEquals(Option.none(), emptyProvider.status().get().headCommit());
-        assertEquals(List.of(), emptyProvider.commits().get());
         assertEquals(
                 List.of(), emptyProvider.allBranches().map(AllBranches::local).get());
         // Without a commit there is neither a stash nor a HEAD to fall back to.
@@ -2314,6 +2306,22 @@ class CliGitInfoProviderTest {
 
     private String git(String... args) throws IOException, InterruptedException, TimeoutException {
         return gitIn(repo, args);
+    }
+
+    /**
+     * The log of HEAD, from where the status says it is, as the app reads it (ADR 49).
+     */
+    private io.vavr.control.Either<GitError.ProcessError, List<Commit>> commits() {
+        return provider.status()
+                .flatMap(status ->
+                        status.headCommit().fold(() -> io.vavr.control.Either.right(List.empty()), provider::commits));
+    }
+
+    /**
+     * The commit the local branch {@code branch} is at.
+     */
+    private Sha tip(String branch) throws IOException, InterruptedException, TimeoutException {
+        return new Sha(git("rev-parse", "refs/heads/" + branch).strip());
     }
 
     private void gitWithEnvironment(String variable, String value, String... args) throws Exception {

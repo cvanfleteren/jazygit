@@ -48,15 +48,6 @@ final class CliLog {
     }
 
     /**
-     * The log of HEAD, newest first; empty in a repository without commits.
-     */
-    static Either<ProcessError, List<Commit>> commits(Path worktree) {
-        return resolve(worktree, "HEAD")
-                .mapLeft(GitFailure::error)
-                .flatMap(head -> head.fold(() -> Either.right(List.empty()), tip -> log(worktree, tip)));
-    }
-
-    /**
      * The commits of the log of HEAD that {@code query} finds, newest first; none in a repository without commits.
      * They are left as git lists them: with commits left out, merges and what they brought in no longer join up.
      */
@@ -119,51 +110,18 @@ final class CliLog {
     }
 
     /**
-     * The commits of {@code branch}, or of HEAD for none, that are not on the first of {@code bases} that exists, at
-     * most {@code max} of them; none when none of the bases exists, or HEAD has no commits yet.
+     * The commits from {@code tip} that are not on {@code base}, whose tip is {@code baseTip}, at most {@code max}, and
+     * the commit they forked from. They are only counted when there are that many, to tell whether there are more.
      */
-    static Either<GitError, Option<Ahead>> ahead(
-            Path worktree, Option<BranchRef> branch, List<BranchRef> bases, int max) {
-        return branch.fold(
-                        () -> Either.<GitError, Option<Sha>>narrow(
-                                resolve(worktree, "HEAD").mapLeft(GitFailure::error)),
-                        named -> tip(worktree, named).map(Option::of))
-                .flatMap(tip -> tip.fold(
-                        () -> Either.right(Option.none()),
-                        ours -> firstExisting(worktree, bases)
-                                .flatMap(base -> base.fold(
-                                        () -> Either.right(Option.none()),
-                                        theirs -> Either.narrow(notOn(worktree, ours, theirs._1, theirs._2, max)
-                                                .map(Option::of))))));
-    }
-
-    /**
-     * The first of {@code bases} that exists, with its tip.
-     */
-    private static Either<GitError, Option<Tuple2<BranchRef, Sha>>> firstExisting(
-            Path worktree, List<BranchRef> bases) {
-        return bases.isEmpty()
-                ? Either.right(Option.none())
-                : Either.<GitError, Option<Sha>>narrow(resolve(worktree, GitArgs.revision(bases.head()))
-                                .mapLeft(GitFailure::error))
-                        .flatMap(tip -> tip.fold(
-                                () -> firstExisting(worktree, bases.tail()),
-                                found -> Either.right(Option.of(Tuple.of(bases.head(), found)))));
-    }
-
-    /**
-     * The commits from {@code ours} that are not on {@code base}, whose tip is {@code theirs}, at most {@code max}.
-     * They are only counted when there are that many, to tell whether there are more.
-     */
-    private static Either<ProcessError, Ahead> notOn(Path worktree, Sha ours, BranchRef base, Sha theirs, int max) {
-        List<String> revisions = List.of(ours.value(), "^" + theirs.value());
+    static Either<ProcessError, Ahead> ahead(Path worktree, Sha tip, BranchRef base, Sha baseTip, int max) {
+        List<String> revisions = List.of(tip.value(), "^" + baseTip.value());
         return selected(worktree, revisions, max)
                 .flatMap(commits -> (commits.size() < max
                                 ? Either.<ProcessError, Boolean>right(false)
                                 : count(worktree, revisions.prepend("--max-count=" + (max + 1)))
                                         .map(count -> count > max))
-                        .flatMap(more -> forkPoint(worktree, ours, theirs)
-                                .map(fork -> new Ahead(ours, base, commits, more, fork))));
+                        .flatMap(more -> forkPoint(worktree, tip, baseTip)
+                                .map(fork -> new Ahead(tip, base, commits, more, fork))));
     }
 
     /**

@@ -206,7 +206,7 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<ProcessError, List<Commit>> commits() {
+    default Either<ProcessError, List<Commit>> commits(Sha head) {
         return Either.right(List.empty());
     }
 
@@ -216,8 +216,8 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<GitError, Option<Ahead>> ahead(Option<BranchRef> branch, List<BranchRef> bases) {
-        return Either.right(Option.none());
+    default Either<ProcessError, Ahead> ahead(Sha tip, BranchRef base, Sha baseTip) {
+        return Either.right(new Ahead(tip, base, List.empty(), false, Option.none()));
     }
 
     /**

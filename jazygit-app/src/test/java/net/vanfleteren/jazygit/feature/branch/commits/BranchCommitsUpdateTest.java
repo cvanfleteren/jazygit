@@ -144,7 +144,7 @@ class BranchCommitsUpdateTest {
         Update.Next gone = localBranchesRead(open, List.of(Fixtures.branch(MAIN, true, new Sha("aaaa"))));
 
         assertTrue(
-                moved.cmds().contains(TestModels.loadBranchLog(FEATURE)),
+                moved.cmds().contains(TestModels.loadBranchLog(moved.model(), FEATURE)),
                 moved.cmds().toString());
         assertEquals(Option.of(BranchCommitsView.of(FEATURE)), view(moved.model()));
         assertEquals(Option.none(), view(gone.model()));

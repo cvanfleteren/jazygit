@@ -149,6 +149,13 @@ public final class TestModels {
     }
 
     /**
+     * The load of the log of {@code branch} as {@code model} has it.
+     */
+    public static Cmd.LoadBranchLog loadBranchLog(Model model, BranchRef branch) {
+        return new Cmd.LoadBranchLog(branch, AheadUpdate.of(model, branch));
+    }
+
+    /**
      * The log of {@code branch} of the sample model read as {@code commits}, which has no base to compare with.
      */
     public static LoadMsg.BranchLogLoaded branchLogLoaded(BranchRef branch, List<Commit> commits) {

@@ -9,16 +9,17 @@ import java.nio.file.Path;
 import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.GhFailure;
 import net.vanfleteren.jazygit.git.GitError;
+import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.model.Ahead;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.CommitQuery;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.GitMetadata;
-import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.settings.Settings;
 
@@ -336,7 +337,9 @@ public interface Cmd {
     }
 
     /**
-     * Reads the log of HEAD, and then what of it is not on its base, as {@code ahead} does: the log is shown with it.
+     * Reads the log of HEAD from the commit {@code ahead} reads from, where the status read last says HEAD is (ADR 49),
+     * and then what of it is not on its base, as {@code ahead} does: the log is shown with it. Without a commit, the
+     * log is empty and nothing is read.
      */
     record LoadCommits(LoadAhead ahead) implements Load {
 
@@ -347,8 +350,8 @@ public interface Cmd {
 
         @Override
         public Msg run(Env env) {
-            return env.git()
-                    .commits()
+            return ahead.tip()
+                    .fold(() -> Either.<ProcessError, List<Commit>>right(List.empty()), env.git()::commits)
                     .fold(this::failedWith, commits -> new LoadMsg.CommitsLoaded(commits, ahead, ahead.read(env)));
         }
     }
@@ -372,18 +375,15 @@ public interface Cmd {
     }
 
     /**
-     * Reads the commits of {@code branch}, or of HEAD for none, that are not on its base: the branch {@code named}
-     * was made from, if that was recorded, else {@code main}. Of each, the remote-tracking one on
-     * {@link RemoteBranch#DEFAULT_REMOTE} when there is one, else the local one. The branch {@code named} is no base
-     * of itself.
+     * Reads the commits from {@code tip}, where {@code branch} is, or HEAD for none, that are not on {@code base}. Both
+     * are where the status and the branches read last have them (ADR 49), so two loads are equal only when they read
+     * the same.
      *
-     * @param named  the name of the branch, local or remote; none for a detached HEAD
-     * @param parent the branch {@code named} was made from, as read last with the distances to the bases (ADR 49)
-     * @param main   the main branch, once the branches are read and one is
+     * @param tip  the commit the branch or HEAD is at; none for a HEAD without commits, or a branch not read
+     * @param base the base of ADR 20, {@link BranchRef#bases}, with the commit it is at: the first of them the branches
+     *             read last have; none when there is none to compare with
      */
-    record LoadAhead(
-            Option<BranchRef> branch, Option<BranchName> named, Option<BranchName> parent, Option<BranchName> main)
-            implements Load {
+    record LoadAhead(Option<BranchRef> branch, Option<Sha> tip, Option<Base> base) implements Load {
 
         @Override
         public Option<Label> label() {
@@ -396,18 +396,21 @@ public interface Cmd {
         }
 
         /**
-         * The commits not on the base, none when there is no base to compare with; or why they could not be read.
+         * The commits not on the base, none when there is no base to compare with, or nothing to compare; or why they
+         * could not be read.
          */
         Either<Failure, Option<Ahead>> read(Env env) {
-            return env.git().ahead(branch, bases()).<Failure>mapLeft(Failure.Git::new);
+            return tip.flatMap(ours -> base.map(theirs -> env.git()
+                            .ahead(ours, theirs.ref(), theirs.tip())
+                            .<Failure>mapLeft(Failure.Git::new)
+                            .map(Option::of)))
+                    .getOrElse(() -> Either.right(Option.none()));
         }
 
         /**
-         * The branches to compare with, the first that exists counting.
+         * A branch compared with, and the commit it is at.
          */
-        List<BranchRef> bases() {
-            return BranchRef.bases(named, parent, main);
-        }
+        public record Base(BranchRef ref, Sha tip) {}
     }
 
     /**

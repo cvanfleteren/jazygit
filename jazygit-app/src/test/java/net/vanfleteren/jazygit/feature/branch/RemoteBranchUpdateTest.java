@@ -232,7 +232,7 @@ class RemoteBranchUpdateTest {
         Next unmoved = TestModels.remoteBranchesRead(
                 model, List.of(new RemoteRef(ORIGIN_NEW, new Sha("eeee"), Instant.EPOCH)));
 
-        assertEquals(List.of(TestModels.loadBranchLog(remote)), moved.cmds());
+        assertEquals(List.of(TestModels.loadBranchLog(moved.model(), remote)), moved.cmds());
         assertEquals(List.of(), unmoved.cmds());
     }
 }

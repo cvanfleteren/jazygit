@@ -45,7 +45,7 @@ public final class LoadUpdate {
             // The commits ahead of a base go by the parents too, so those whose base is another one now are read again.
             case LoadMsg.BaseDistanceLoaded(var load, var parents, var counts) -> {
                 Model read = done.mapRepo(repo -> repo.withBaseDistance(counts).withParents(parents));
-                yield new Next(read, AheadUpdate.parentsLoaded(done, read));
+                yield new Next(read, AheadUpdate.basesRead(done, read));
             }
             // The files of a stash that is dropped close, as its name is now that of another stash.
             case StashesLoaded(var stashes) ->
@@ -78,7 +78,7 @@ public final class LoadUpdate {
                                 load,
                                 ahead)
                         : Next.of(done);
-            case AheadLoaded(var load, var ahead) -> AheadUpdate.loaded(done, load, ahead);
+            case AheadLoaded(var load, var ahead) -> AheadUpdate.aheadLoaded(done, load, ahead);
             case DivergenceLoaded(var branch, var other, var divergence) ->
                 Next.of(done.mapRepoView(repoView -> repoView.withDivergence(repoView.divergence()
                         .map(view -> view.load().equals(msg.cmd())
@@ -185,9 +185,7 @@ public final class LoadUpdate {
                         branch -> !tipOf(before, branch).equals(tipOf(next, branch))));
         return new Next(
                 reloaded.model(),
-                reloaded.cmds()
-                        .appendAll(AheadUpdate.branchesLoaded(before, next))
-                        .append(baseDistance(next)));
+                reloaded.cmds().appendAll(AheadUpdate.basesRead(before, next)).append(baseDistance(next)));
     }
 
     /**
