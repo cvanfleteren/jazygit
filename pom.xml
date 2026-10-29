@@ -35,8 +35,8 @@
         <spotless.version>3.10.4</spotless.version>
         <palantir-java-format.version>2.102.0</palantir-java-format.version>
         <checkstyle.version>14.3.0</checkstyle.version>
-        <errorprone.version>2.50.0</errorprone.version>
-        <native-maven-plugin.version>1.1.14</native-maven-plugin.version>
+        <errorprone.version>2.51.0</errorprone.version>
+        <native-maven-plugin.version>1.1.17</native-maven-plugin.version>
         <pitest.version>1.30.1</pitest.version>
         <pitest-junit5-plugin.version>1.2.3</pitest-junit5-plugin.version>
         <pitest.threads>8</pitest.threads>
@@ -91,7 +91,7 @@
             <dependency>
                 <groupId>io.vavr</groupId>
                 <artifactId>vavr</artifactId>
-                <version>1.0.1</version>
+                <version>1.1.0</version>
             </dependency>
             <dependency>
                 <groupId>com.electronwill.night-config</groupId>
@@ -193,7 +193,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
-                    <version>3.6.0</version>
+                    <version>3.6.1</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
