@@ -65,23 +65,23 @@ public final class HelpDialog implements PopupView {
                     Tuple.of("#42", "help.branches.legend.pullRequest"),
                     Tuple.of(
                             texts(
-                                    PullRequestSymbols.GLYPHS.passed(),
-                                    PullRequestSymbols.GLYPHS.failed(),
-                                    PullRequestSymbols.GLYPHS.running(),
-                                    PullRequestSymbols.GLYPHS.queued()),
+                                    PullRequestSymbols.PASSED,
+                                    PullRequestSymbols.FAILED,
+                                    PullRequestSymbols.RUNNING,
+                                    PullRequestSymbols.QUEUED),
                             "help.branches.legend.checks"),
                     Tuple.of(
                             texts(
-                                    PullRequestSymbols.GLYPHS.approved(),
-                                    PullRequestSymbols.GLYPHS.changes(),
-                                    PullRequestSymbols.GLYPHS.toReview()),
+                                    PullRequestSymbols.APPROVED,
+                                    PullRequestSymbols.CHANGES,
+                                    PullRequestSymbols.TO_REVIEW),
                             "help.branches.legend.review"),
                     Tuple.of(
                             texts(
-                                    PullRequestSymbols.GLYPHS.merging(),
-                                    PullRequestSymbols.GLYPHS.enqueued(),
-                                    PullRequestSymbols.GLYPHS.mergeFailed(),
-                                    PullRequestSymbols.GLYPHS.merged()),
+                                    PullRequestSymbols.MERGING,
+                                    PullRequestSymbols.ENQUEUED,
+                                    PullRequestSymbols.MERGE_FAILED,
+                                    PullRequestSymbols.MERGED),
                             "help.branches.legend.merge"),
                     Tuple.of("2/4", "help.branches.legend.stack")));
 
