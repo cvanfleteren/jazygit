@@ -22,7 +22,7 @@ import org.openjdk.jmh.annotations.Warmup;
 
 /**
  * How long the rich view of a diff takes before it is styled (ADR 44): parsing the diff, and comparing the words of
- * its changed lines, which both run where the diff is read (ADR 49). Each {@link Shape} is a diff of a kind that is
+ * its changed lines, which both run where the diff is read (ADR 50). Each {@link Shape} is a diff of a kind that is
  * common, or that is slow.
  *
  * <p>Run with {@code java -jar jazygit-benchmarks/target/benchmarks.jar WordDiff}; add {@code -p shape=CODE} for one

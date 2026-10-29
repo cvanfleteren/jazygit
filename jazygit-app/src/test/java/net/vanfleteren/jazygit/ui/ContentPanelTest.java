@@ -493,7 +493,7 @@ class ContentPanelTest {
         assertEquals("+a\n", ContentView.shown(DiffText.of("+a\n")).text());
         assertEquals(
                 "+a\n… truncated\n",
-                ContentView.shown(new DiffText("+a\n", true)).text());
+                ContentView.shown(DiffText.of("+a\n", true)).text());
     }
 
     @Test

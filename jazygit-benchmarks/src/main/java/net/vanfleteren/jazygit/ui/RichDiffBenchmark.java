@@ -19,7 +19,7 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 
 /**
- * How long the rich view of a diff holds up the render thread (ADR 49), and what it costs where the diff is read. In
+ * How long the rich view of a diff holds up the render thread (ADR 50), and what it costs where the diff is read. In
  * the package of {@link RichDiff}, which the app keeps to itself.
  *
  * <p>Run with {@code java -jar jazygit-benchmarks/target/benchmarks.jar RichDiff}.

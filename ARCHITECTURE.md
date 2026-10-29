@@ -21,7 +21,7 @@ The Maven build has three modules under the parent `pom.xml`, and a fourth with 
 | `jazygit-json` | `json`: JSON as plain values (`Json`), and the decoders that turn it into records (`Decoder`), ADR 42. | vavr, Parsson's streaming parser |
 | `jazygit-core` | `process`, `git`, `git.model`, `gh`, `gh.model`: running git and gh, and what they report as values. | `jazygit-json`, vavr, zt-exec |
 | `jazygit-app` | Everything else: `JazygitApp`, `cli`, `state`, `feature.*`, `ui`, `keys`, `settings`, `i18n`, and all resources. Builds the fat jar and the native image. | `jazygit-core`, TamboUI, picocli, night-config |
-| `jazygit-benchmarks` | JMH benchmarks of pure parts of the core and the app: `WordDiffBenchmark` times parsing a diff and comparing the words of its changed lines, for the rich view (ADR 44); `RichDiffBenchmark` what reading a diff costs and what drawing it costs the render thread (ADR 49). Only built with `-Pbench`, so no part of `verify` or CI. | `jazygit-core`, `jazygit-app`, JMH |
+| `jazygit-benchmarks` | JMH benchmarks of pure parts of the core and the app: `WordDiffBenchmark` times parsing a diff and comparing the words of its changed lines, for the rich view (ADR 44); `RichDiffBenchmark` what reading a diff costs and what drawing it costs the render thread (ADR 50). Only built with `-Pbench`, so no part of `verify` or CI. | `jazygit-core`, `jazygit-app`, JMH |
 
 The packages keep their names (`net.vanfleteren.jazygit.git`, ...), whichever module they are in. The core
 cannot see the application, TamboUI, picocli or night-config, so the compiler stops it from depending on them.
@@ -359,7 +359,7 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
 - **The rich view** is drawn by `ui.RichDiff` from a `ParsedDiff`: `UnifiedDiff`, the diff parsed into files, hunks
   and numbered lines, and `WordDiff`, which pairs the removed and added lines of a block and finds the words that
   changed in a pair. All are pure, in `git.model`. A `DiffText` is parsed where it is made, on the thread that read it
-  from git (ADR 49), so the render thread only styles it; the line the content panel adds after a diff, that it is
+  from git (ADR 50), so the render thread only styles it; the line the content panel adds after a diff, that it is
   truncated or that only whitespace changed, is added as a note (`ParsedDiff.withNote`). The content panel styles a
   body only when it changes, not on every frame. A hunk starts with a dimmed rule in the gutter, not with git's
   `@@ -a,b +c,d @@` line, whose numbers the gutter shows already, nor the section heading git gives after them, a line
