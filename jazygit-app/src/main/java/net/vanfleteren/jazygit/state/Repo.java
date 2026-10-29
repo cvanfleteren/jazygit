@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.state;
 
+import io.vavr.Tuple;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
@@ -22,6 +23,8 @@ import net.vanfleteren.jazygit.git.model.*;
  *                        not read, or could not be read the last time, is not known
  * @param baseDistance    how far each local branch that has a base is from it, by its name, as read last (ADR 46);
  *                        none before the first read
+ * @param parents         the branch each branch was made from, of those that have one recorded, as read last with
+ *                        the distances to their bases; none before the first read
  */
 @With
 public record Repo(
@@ -33,7 +36,8 @@ public record Repo(
         Loadable<List<Stash>> stashes,
         Loadable<List<Worktree>> worktrees,
         Map<String, Boolean> worktreeChanges,
-        Map<BranchName, BaseDistance> baseDistance) {
+        Map<BranchName, BaseDistance> baseDistance,
+        Map<BranchName, BranchName> parents) {
 
     public static final Repo LOADING = new Repo(
             Loadable.loading(),
@@ -43,6 +47,7 @@ public record Repo(
             Loadable.loading(),
             Loadable.loading(),
             Loadable.loading(),
+            HashMap.empty(),
             HashMap.empty(),
             HashMap.empty());
 
@@ -69,6 +74,23 @@ public record Repo(
         return remoteBranches
                 .toOption()
                 .flatMap(loaded -> loaded.find(ref -> ref.branch().equals(branch)));
+    }
+
+    /**
+     * The commit each local branch and each branch on {@link RemoteBranch#DEFAULT_REMOTE} is at, as read last: those
+     * that can be the base of a branch (ADR 20). Empty until the branches are read.
+     */
+    public Map<BranchRef, Sha> tips() {
+        return HashMap.<BranchRef, Sha>ofEntries(branches.toOption()
+                        .toList()
+                        .flatMap(loaded -> loaded)
+                        .map(branch -> Tuple.of(new BranchRef.Local(branch.name()), branch.tip())))
+                .merge(HashMap.ofEntries(remoteBranches
+                        .toOption()
+                        .toList()
+                        .flatMap(loaded -> loaded)
+                        .filter(ref -> ref.branch().remote().equals(RemoteBranch.DEFAULT_REMOTE))
+                        .map(ref -> Tuple.of(new BranchRef.Remote(ref.branch()), ref.tip()))));
     }
 
     /**

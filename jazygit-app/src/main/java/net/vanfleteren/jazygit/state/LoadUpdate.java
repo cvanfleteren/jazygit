@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.state;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
@@ -42,8 +43,11 @@ public final class LoadUpdate {
                         done.mapRepo(repo -> repo.withBranches(repo.branches().reload(branches.local()))
                                 .withRemoteBranches(repo.remoteBranches().reload(branches.remote()))));
             case MetadataChecked(var stamps) -> metadataChecked(done, stamps);
-            case LoadMsg.BaseDistanceLoaded(var load, var counts) ->
-                Next.of(done.mapRepo(repo -> repo.withBaseDistance(counts)));
+            // What was read for older branches is dropped: the read of the branches that replaced them asked for it
+            // again. The commits ahead of a base go by the parents too, so those whose base is another one now are
+            // read again.
+            case LoadMsg.BaseDistanceLoaded(var load, var parents, var counts) ->
+                load.equals(baseDistance(done)) ? distancesRead(done, parents, counts) : Next.of(done);
             // The files of a stash that is dropped close, as its name is now that of another stash.
             case StashesLoaded(var stashes) ->
                 Next.of(done.mapRepo(repo -> repo.withStashes(repo.stashes().reload(stashes)))
@@ -75,7 +79,7 @@ public final class LoadUpdate {
                                 load,
                                 ahead)
                         : Next.of(done);
-            case AheadLoaded(var load, var ahead) -> AheadUpdate.loaded(done, load, ahead);
+            case AheadLoaded(var load, var ahead) -> AheadUpdate.aheadLoaded(done, load, ahead);
             case DivergenceLoaded(var branch, var other, var divergence) ->
                 Next.of(done.mapRepoView(repoView -> repoView.withDivergence(repoView.divergence()
                         .map(view -> view.load().equals(msg.cmd())
@@ -182,9 +186,17 @@ public final class LoadUpdate {
                         branch -> !tipOf(before, branch).equals(tipOf(next, branch))));
         return new Next(
                 reloaded.model(),
-                reloaded.cmds()
-                        .appendAll(AheadUpdate.branchesLoaded(before, next))
-                        .append(baseDistance(next)));
+                reloaded.cmds().appendAll(AheadUpdate.basesRead(before, next)).append(baseDistance(next)));
+    }
+
+    /**
+     * Keeps how far each local branch is from its base, and the parents that went by, and reads the commits ahead
+     * again whose base is another one by them.
+     */
+    private static Next distancesRead(
+            Model model, Map<BranchName, BranchName> parents, Map<BranchName, BaseDistance> counts) {
+        Model read = model.mapRepo(repo -> repo.withBaseDistance(counts).withParents(parents));
+        return new Next(read, AheadUpdate.basesRead(model, read));
     }
 
     /**
@@ -192,7 +204,7 @@ public final class LoadUpdate {
      * branch (ADR 46).
      */
     public static Cmd.LoadBaseDistance baseDistance(Model model) {
-        return new Cmd.LoadBaseDistance(AheadUpdate.main(model));
+        return new Cmd.LoadBaseDistance(AheadUpdate.main(model), model.repo().tips());
     }
 
     /**

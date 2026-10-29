@@ -47,7 +47,7 @@ class PanePositionTest {
         }
 
         @Override
-        public Either<ProcessError, List<Commit>> commits() {
+        public Either<ProcessError, List<Commit>> commits(Sha head) {
             return Either.right(commitList);
         }
 
