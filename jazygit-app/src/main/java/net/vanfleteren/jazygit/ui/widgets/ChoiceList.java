@@ -111,12 +111,13 @@ public final class ChoiceList<P extends Popup> {
      * @param opensAt the key of the option highlighted until the user moves, if not the first
      */
     public StyledElement<?> render(Model model, P popup, Option<Character> opensAt) {
-        View view = view(rows(model, popup), model.listCursor(), opensAt);
-        list.elements(view.lines().map(line -> element(line, view.rows())).toJavaArray(StyledElement[]::new))
+        List<Row> rows = rows(model, popup);
+        FilteredCursor<Line> view = view(rows, model.listCursor(), opensAt);
+        list.elements(view.lines().map(line -> element(line, rows)).toJavaArray(StyledElement[]::new))
                 .selected(view.selected())
-                .onKeyEvent(event -> handleKey(view, event))
+                .onKeyEvent(event -> handleKey(view, rows, event))
                 .onMouseEvent(event -> ListKeys.wheel(
-                        event, view.selected(), view.size(), view::highlightable, line -> highlight(view, line)));
+                        event, view.selected(), view.size(), view::highlightable, line -> moved(view, view.at(line))));
         return list.length(height(model, popup));
     }
 
@@ -186,15 +187,14 @@ public final class ChoiceList<P extends Popup> {
      * What the list shows for {@code rows} at {@code cursor}: the options that contain its filter, and the line it
      * highlights; until the user moves, that of {@code opensAt}, or the first option.
      */
-    private View view(List<Row> rows, ListCursor cursor, Option<Character> opensAt) {
-        List<Line> lines = lines(choices, visible(rows, cursor.filter()));
-        int selected = cursor.line()
-                .map(line -> Math.clamp(line, 0, lines.size() - 1))
-                .orElse(() -> opensAt.flatMap(key -> choices.indexWhereOption(choice -> choice.key() == key))
-                        .map(index -> lines.indexOf(new OptionLine(index)))
-                        .filter(line -> line >= 0))
-                .getOrElse(() -> firstOption(lines));
-        return new View(rows, lines, selected, cursor);
+    private FilteredCursor<Line> view(List<Row> rows, ListCursor cursor, Option<Character> opensAt) {
+        return FilteredCursor.of(
+                filter -> lines(choices, visible(rows, filter)),
+                // A heading, a blank line, and the line saying nothing matches are not options.
+                OptionLine.class::isInstance,
+                lines -> opensAt.flatMap(key -> choices.indexWhereOption(choice -> choice.key() == key))
+                        .map(index -> lines.indexOf(new OptionLine(index))),
+                cursor);
     }
 
     /**
@@ -204,13 +204,6 @@ public final class ChoiceList<P extends Popup> {
         return List.range(0, choices.size())
                 .filter(index -> rows.get(index).shown()
                         && ListFilter.matches(filter, rows.get(index).label()));
-    }
-
-    /**
-     * The line of the first option among {@code lines}, or the first line when there is none.
-     */
-    private static int firstOption(List<Line> lines) {
-        return Math.max(0, lines.indexWhere(OptionLine.class::isInstance));
     }
 
     private StyledElement<?> element(Line line, List<Row> rows) {
@@ -235,59 +228,39 @@ public final class ChoiceList<P extends Popup> {
         };
     }
 
-    private EventResult handleKey(View view, KeyEvent event) {
+    private EventResult handleKey(FilteredCursor<Line> view, List<Row> rows, KeyEvent event) {
         return ListKeys.classify(event, view, filterable, filter)
                 .map(key -> switch (key) {
-                    case ListKey.CloseFilter() -> refilter(view, Option.none());
-                    case ListKey.OpenFilter() -> {
-                        dispatch.accept(new Msg.ListCursorChanged(
-                                view.cursor().at(view.selected()).withFilter(Option.of(""))));
-                        yield EventResult.HANDLED;
-                    }
-                    case ListKey.EditFilter(String text) -> refilter(view, Option.of(text));
                     // The list is not left to move the highlight, which would not skip headings, nor say it moved.
-                    case ListKey.Move(int line) -> {
-                        if (line != view.selected()) {
-                            highlight(view, line);
-                        }
+                    case ListKey.CursorKey cursorKey -> {
+                        view.after(cursorKey).forEach(cursor -> moved(view, cursor));
                         yield EventResult.HANDLED;
                     }
                     case ListKey.Cancel() -> {
                         dispatch.accept(onCancel.get());
                         yield EventResult.HANDLED;
                     }
-                    case ListKey.Confirm() -> choose(view, view.option().map(choices::get));
+                    case ListKey.Confirm() ->
+                        choose(
+                                rows,
+                                view.highlighted().flatMap(ChoiceList::index).map(choices::get));
                 })
                 // While the filter is open, the letters are its own.
                 .getOrElse(() -> view.cursor().filter().isDefined()
                         ? EventResult.UNHANDLED
-                        : choose(view, choices.find(choice -> event.isChar(choice.key()))));
+                        : choose(rows, choices.find(choice -> event.isChar(choice.key()))));
     }
 
     /**
-     * Highlights {@code line}, which says so when its option previews what choosing it does.
+     * Moves {@code view} to {@code cursor}; when that highlights another option, says so when it previews what
+     * choosing it does.
      */
-    private void highlight(View view, int line) {
-        dispatch.accept(new Msg.ListCursorChanged(view.cursor().at(line)));
-        preview(view.lineOption(line));
-    }
-
-    /**
-     * Shows the options that contain {@code filter}, keeping the highlighted one when it does, else highlighting the
-     * first; when that is another option, says it moved.
-     */
-    private EventResult refilter(View view, Option<String> filter) {
-        List<Line> lines = lines(choices, visible(view.rows(), filter));
-        int line = view.option()
-                .map(index -> lines.indexOf(new OptionLine(index)))
-                .filter(found -> found >= 0)
-                .getOrElse(() -> firstOption(lines));
-        dispatch.accept(new Msg.ListCursorChanged(new ListCursor(Option.of(line), filter)));
-        Option<Integer> after = lines.asPartialFunction().lift().apply(line).flatMap(ChoiceList::index);
-        if (!after.equals(view.option())) {
-            preview(after);
+    private void moved(FilteredCursor<Line> view, ListCursor cursor) {
+        dispatch.accept(new Msg.ListCursorChanged(cursor));
+        Option<Line> after = view.at(cursor).highlighted();
+        if (!after.equals(view.highlighted())) {
+            preview(after.flatMap(ChoiceList::index));
         }
-        return EventResult.HANDLED;
     }
 
     private void preview(Option<Integer> option) {
@@ -297,9 +270,9 @@ public final class ChoiceList<P extends Popup> {
     /**
      * Chooses {@code chosen}, if any. A disabled or left out option is not actionable, but its key is still taken.
      */
-    private EventResult choose(View view, Option<Choice<P>> chosen) {
+    private EventResult choose(List<Row> rows, Option<Choice<P>> chosen) {
         chosen.forEach(choice -> {
-            Row row = view.rows().get(choices.indexOf(choice));
+            Row row = rows.get(choices.indexOf(choice));
             if (row.shown() && row.enabled()) {
                 dispatch.accept(choice.msg().get());
             }
@@ -309,44 +282,6 @@ public final class ChoiceList<P extends Popup> {
 
     private static Option<Integer> index(Line line) {
         return line instanceof OptionLine(int index) ? Option.of(index) : Option.none();
-    }
-
-    /**
-     * What the list shows for its popup and the model's cursor in it.
-     *
-     * @param rows     what each option shows, whatever the filter
-     * @param lines    the lines shown, of the options that contain the filter
-     * @param selected the highlighted line
-     */
-    private record View(List<Row> rows, List<Line> lines, int selected, ListCursor cursor) implements FilteredList {
-
-        @Override
-        public int size() {
-            return lines.size();
-        }
-
-        /**
-         * Whether {@code line} is an option, which a heading, a blank line, and the line saying nothing matches are
-         * not.
-         */
-        @Override
-        public boolean highlightable(int line) {
-            return lines.get(line) instanceof OptionLine;
-        }
-
-        /**
-         * The index of the option on {@code line}, if that is one.
-         */
-        Option<Integer> lineOption(int line) {
-            return lines.asPartialFunction().lift().apply(line).flatMap(ChoiceList::index);
-        }
-
-        /**
-         * The index of the highlighted option.
-         */
-        Option<Integer> option() {
-            return lineOption(selected);
-        }
     }
 
     /**
