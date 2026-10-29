@@ -15,14 +15,21 @@ import net.vanfleteren.jazygit.ui.widgets.TextInputDialog;
 public final class RenameBranchDialogs {
 
     /**
+     * Wide enough for long branch names, and the title they show in.
+     */
+    private static final int WIDTH = 80;
+
+    /**
      * Asks for the new name of a branch, starting out with the one it has. A blank name keeps it open.
      */
     public static final TextInputDialog.Spec<RenameBranchPopup> RENAME_BRANCH = new TextInputDialog.Spec<>(
-            "rename-branch",
-            RenameBranchPopup.class,
-            popup -> Messages.get("dialog.renameBranch.title", popup.branch().value()),
-            Option.of(Messages.get("dialog.renameBranch.placeholder")),
-            RenameBranchMsg.Confirmed::new);
+                    "rename-branch",
+                    RenameBranchPopup.class,
+                    popup -> Messages.get(
+                            "dialog.renameBranch.title", popup.branch().value()),
+                    Option.of(Messages.get("dialog.renameBranch.placeholder")),
+                    RenameBranchMsg.Confirmed::new)
+            .withWidth(WIDTH);
 
     private RenameBranchDialogs() {}
 
