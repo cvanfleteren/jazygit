@@ -188,10 +188,10 @@ public record UnifiedDiff(List<String> preamble, List<FileDiff> files) {
         if (quoted.isEmpty()) {
             return "";
         }
-        char c = quoted.charAt(0);
+        int c = quoted.codePointAt(0);
         if (c != '\\' || quoted.length() == 1) {
-            return new String(String.valueOf(c).getBytes(StandardCharsets.UTF_8), StandardCharsets.ISO_8859_1)
-                    + unquote(quoted.substring(1));
+            return new String(Character.toString(c).getBytes(StandardCharsets.UTF_8), StandardCharsets.ISO_8859_1)
+                    + unquote(quoted.substring(Character.charCount(c)));
         } else if (quoted.length() >= 4 && quoted.substring(1, 4).chars().allMatch(d -> d >= '0' && d <= '7')) {
             return asByte(Integer.parseInt(quoted.substring(1, 4), 8)) + unquote(quoted.substring(4));
         } else {

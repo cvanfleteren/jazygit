@@ -144,6 +144,21 @@ class UnifiedDiffTest {
     }
 
     @Test
+    void readsTheCEscapesOfAQuotedPath() {
+        assertEquals("a\t\n\"\\\u0007\b\u000b\f\rz", UnifiedDiff.path("\"a\\t\\n\\\"\\\\\\a\\b\\v\\f\\rz\""));
+    }
+
+    @Test
+    void readsPlainCharactersOfAQuotedPathAsTheyAre() {
+        assertEquals("plain föo €.txt", UnifiedDiff.path("\"plain föo €.txt\""));
+    }
+
+    @Test
+    void readsACharacterOutsideTheBmpThatGitLeavesUnescaped() {
+        assertEquals("smile-😀.txt", UnifiedDiff.path("\"smile-😀.txt\""));
+    }
+
+    @Test
     void keepsTheLinesOfAFileHeaderItDoesNotKnow() {
         FileDiff file = UnifiedDiff.parse("""
                 diff --git a/a.txt b/a.txt
