@@ -5,8 +5,9 @@ import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
-import java.util.regex.MatchResult;
-import java.util.regex.Pattern;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.stream.IntStream;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
 
 /**
@@ -17,14 +18,22 @@ import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
 public final class WordDiff {
 
     /**
-     * How many cells the comparisons of a whole diff may fill: each pair fills the product of the counts of its words.
+     * How many cells the comparisons of a whole diff may fill: each pair fills the product of the counts of its words,
+     * leaving out those it starts and ends with alike.
      * The comparisons run where the diff is drawn, so a diff of many long lines must not hold that up; once this is
-     * spent, the lines left are drawn whole.
+     * spent, the lines left are drawn whole, but for a pair that differs in an insertion or a deletion only, which
+     * fills no cells.
      */
     public static final long BUDGET = 2_000_000;
 
-    // A word, a run of whitespace, or any other single character.
-    private static final Pattern TOKEN = Pattern.compile("\\w+|\\s+|.", Pattern.UNICODE_CHARACTER_CLASS);
+    // What a character of a line is part of: a word, a run of whitespace, or neither, when it is a token by itself.
+    static final int WORD = 0;
+    static final int SPACE = 1;
+    static final int OTHER = 2;
+    // The join controls, which Unicode counts as word characters, and the one whitespace below U+00A0 outside 9-13.
+    private static final int ZERO_WIDTH_NON_JOINER = 0x200C;
+    private static final int ZERO_WIDTH_JOINER = 0x200D;
+    private static final int NEXT_LINE = 0x85;
     // Below this share of the characters of a pair kept, the line was rewritten, and nothing is highlighted.
     private static final double MIN_KEPT = 0.5;
     // Longer pairs are not compared, whatever is left of the budget.
@@ -34,8 +43,8 @@ public final class WordDiff {
 
     /**
      * The segments of each line of each of {@code hunks}, the hunks of a diff, which share one {@link #BUDGET}: one
-     * unchanged segment for a line that is not part of a pair, or whose pair changed too much or was not compared;
-     * else the parts it shares with its pair, and those it does not.
+     * unchanged segment for a line that is not part of a pair, or whose pair changed too much or was not compared as
+     * the budget was spent; else the parts it shares with its pair, and those it does not.
      */
     public static List<List<List<Segment>>> segments(List<List<DiffLine>> hunks) {
         return segments(hunks, BUDGET);
@@ -134,16 +143,19 @@ public final class WordDiff {
             String removed, String added, long budget) {
         String[] before = tokens(removed);
         String[] after = tokens(added);
-        long cells = (long) before.length * after.length;
+        // The tokens both start and end with are kept as they are; only those between them are compared, which for a
+        // line changed in a word or two leaves next to nothing.
+        int prefix = commonPrefix(before, after);
+        int suffix = commonSuffix(before, after, prefix);
+        long cells = (long) (before.length - prefix - suffix) * (after.length - prefix - suffix);
         if (cells > MAX_CELLS || cells > budget) {
             return Tuple.of(Tuple.of(whole(removed), whole(added)), budget);
         }
-        Tuple2<boolean[], boolean[]> kept = kept(before, after);
-        int keptChars = Vector.range(0, before.length)
+        Tuple2<boolean[], boolean[]> kept = kept(before, after, prefix, suffix);
+        int keptChars = IntStream.range(0, before.length)
                 .filter(i -> kept._1[i])
                 .map(i -> before[i].length())
-                .sum()
-                .intValue();
+                .sum();
         int total = removed.length() + added.length();
         return Tuple.of(
                 total == 0 || 2.0 * keptChars / total < MIN_KEPT
@@ -153,29 +165,57 @@ public final class WordDiff {
     }
 
     /**
-     * Which of the tokens of {@code before} and of {@code after} are in their longest common subsequence.
+     * How many tokens {@code before} and {@code after} start with alike.
      */
-    private static Tuple2<boolean[], boolean[]> kept(String[] before, String[] after) {
-        int n = before.length;
-        int m = after.length;
+    private static int commonPrefix(String[] before, String[] after) {
+        int shorter = Math.min(before.length, after.length);
+        return IntStream.range(0, shorter)
+                .filter(i -> !before[i].equals(after[i]))
+                .findFirst()
+                .orElse(shorter);
+    }
+
+    /**
+     * How many tokens {@code before} and {@code after} end with alike, of those after the first {@code prefix}.
+     */
+    private static int commonSuffix(String[] before, String[] after, int prefix) {
+        int shorter = Math.min(before.length, after.length) - prefix;
+        return IntStream.range(0, shorter)
+                .filter(i -> !before[before.length - 1 - i].equals(after[after.length - 1 - i]))
+                .findFirst()
+                .orElse(shorter);
+    }
+
+    /**
+     * Which of the tokens of {@code before} and of {@code after} are in their longest common subsequence: the first
+     * {@code prefix} and the last {@code suffix}, which they share, and those of the longest common subsequence of the
+     * tokens between them.
+     */
+    private static Tuple2<boolean[], boolean[]> kept(String[] before, String[] after, int prefix, int suffix) {
+        int n = before.length - suffix;
+        int m = after.length - suffix;
+        boolean[] keptBefore = new boolean[before.length];
+        boolean[] keptAfter = new boolean[after.length];
+        Arrays.fill(keptBefore, 0, prefix, true);
+        Arrays.fill(keptAfter, 0, prefix, true);
+        Arrays.fill(keptBefore, n, before.length, true);
+        Arrays.fill(keptAfter, m, after.length, true);
         // The classic table, filled in place, on arrays as it is the hot loop: lengths[i][j] is the longest common
-        // subsequence of the tokens from i and from j on.
-        int[][] lengths = new int[n + 1][m + 1];
-        for (int i = n - 1; i >= 0; i--) {
-            for (int j = m - 1; j >= 0; j--) {
-                lengths[i][j] = before[i].equals(after[j])
+        // subsequence of the tokens from prefix + i and from prefix + j on, up to the suffix.
+        int[][] lengths = new int[n - prefix + 1][m - prefix + 1];
+        for (int i = n - prefix - 1; i >= 0; i--) {
+            for (int j = m - prefix - 1; j >= 0; j--) {
+                lengths[i][j] = before[prefix + i].equals(after[prefix + j])
                         ? lengths[i + 1][j + 1] + 1
                         : Math.max(lengths[i + 1][j], lengths[i][j + 1]);
             }
         }
-        boolean[] keptBefore = new boolean[n];
-        boolean[] keptAfter = new boolean[m];
         int i = 0;
         int j = 0;
-        while (i < n && j < m) {
-            if (before[i].equals(after[j])) {
-                keptBefore[i++] = true;
-                keptAfter[j++] = true;
+        while (prefix + i < n && prefix + j < m) {
+            if (before[prefix + i].equals(after[prefix + j])) {
+                keptBefore[prefix + i++] = true;
+                keptAfter[prefix + j++] = true;
             } else if (lengths[i + 1][j] >= lengths[i][j + 1]) {
                 i++;
             } else {
@@ -185,23 +225,61 @@ public final class WordDiff {
         return Tuple.of(keptBefore, keptAfter);
     }
 
-    private static String[] tokens(String line) {
-        return TOKEN.matcher(line).results().map(MatchResult::group).toArray(String[]::new);
+    /**
+     * The words, runs of whitespace and single other characters of {@code line}, scanned by hand rather than matched
+     * with a pattern, as every changed line is split.
+     */
+    static String[] tokens(String line) {
+        java.util.List<String> tokens = new ArrayList<>();
+        int start = 0;
+        while (start < line.length()) {
+            int kind = kind(line.codePointAt(start));
+            int end = start + Character.charCount(line.codePointAt(start));
+            while (kind != OTHER && end < line.length() && kind(line.codePointAt(end)) == kind) {
+                end += Character.charCount(line.codePointAt(end));
+            }
+            tokens.add(line.substring(start, end));
+            start = end;
+        }
+        return tokens.toArray(String[]::new);
+    }
+
+    /**
+     * Whether {@code codePoint} is part of a word, of whitespace, or neither, as {@code \w} and {@code \s} have it
+     * with {@link java.util.regex.Pattern#UNICODE_CHARACTER_CLASS}: a word is the Unicode Alphabetic property, a
+     * digit, a mark, connector punctuation or a join control; whitespace is the Unicode White_Space property.
+     */
+    static int kind(int codePoint) {
+        if (Character.isAlphabetic(codePoint)
+                || Character.isDigit(codePoint)
+                || codePoint == ZERO_WIDTH_NON_JOINER
+                || codePoint == ZERO_WIDTH_JOINER) {
+            return WORD;
+        }
+        if (Character.isSpaceChar(codePoint) || (codePoint >= '\t' && codePoint <= '\r') || codePoint == NEXT_LINE) {
+            return SPACE;
+        }
+        return switch (Character.getType(codePoint)) {
+            case Character.CONNECTOR_PUNCTUATION,
+                    Character.NON_SPACING_MARK,
+                    Character.ENCLOSING_MARK,
+                    Character.COMBINING_SPACING_MARK -> WORD;
+            default -> OTHER;
+        };
     }
 
     /**
      * The {@code tokens}, the ones not {@code kept} changed, with neighbours that are alike joined.
      */
     private static List<Segment> joined(String[] tokens, boolean[] kept) {
-        return Vector.range(0, tokens.length)
-                .foldLeft(
-                        List.<Segment>empty(),
-                        (joined, i) -> joined.headOption()
-                                .filter(last -> last.changed() == !kept[i])
-                                .map(last ->
-                                        joined.tail().prepend(new Segment(last.text() + tokens[i], last.changed())))
-                                .getOrElse(() -> joined.prepend(new Segment(tokens[i], !kept[i]))))
-                .reverse();
+        // Where each run of alike tokens starts; each run is joined at once, as joining it a token at a time copies
+        // it once for every token.
+        int[] starts = IntStream.rangeClosed(0, tokens.length)
+                .filter(i -> i == 0 || i == tokens.length || kept[i] != kept[i - 1])
+                .toArray();
+        return List.range(0, starts.length - 1)
+                .map(run -> Tuple.of(starts[run], starts[run + 1]))
+                .map(run -> new Segment(String.join("", Arrays.asList(tokens).subList(run._1, run._2)), !kept[run._1]));
     }
 
     private static List<Segment> whole(String text) {

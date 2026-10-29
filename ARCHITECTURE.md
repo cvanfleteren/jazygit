@@ -14,7 +14,7 @@ Rendering never talks to git, and update functions never do IO.
 
 ## Modules
 
-The Maven build has three modules under the parent `pom.xml`:
+The Maven build has three modules under the parent `pom.xml`, and a fourth with `-Pbench`:
 
 | Module | Holds | Depends on |
 |---|---|---|
