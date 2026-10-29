@@ -43,22 +43,27 @@ preamble when it comes first.
 - The diff style draws the staged and the unstaged changes of the working tree too: Ctrl+D switches every diff git
   reads. Not: a setting of its own for the working tree. `PLAIN` stays the default.
 - This lifts ADR 44's reason to keep them plain. Staging hunks and lines (`wanted.md` 1) will build on the parsed
-  `UnifiedDiff`, in either style: its hunks and line numbers are what a range is picked from. So `UnifiedDiff` keeps
-  enough of git's text, its headers and its `\ No newline at end of file`, to make a patch out of again.
+  `UnifiedDiff`, in either style: its hunks and line numbers are what a range is picked from. So `UnifiedDiff` will
+  have to keep enough of git's text to make a patch out of again. Today it keeps the `\ No newline at end of file`,
+  but drops the header lines it knows (`index`, `new file mode`, `copy from`, …) and the counts of a hunk's header;
+  keeping them is left to that work.
 
 ### Reading
 
 - The diffs of the working tree are read with `--src-prefix=a/ --dst-prefix=b/` (`CliDiff.PREFIXES`) in both
-  styles, as those of a commit and a stash are. Switching the style only draws them again, it does not read them.
+  styles, as those of a commit and a stash are. Switching the style reads them again, as it does every diff shown
+  (ADR 44): `DiffOptions.firstParent` changes with it, though a diff of the working tree has no merge to read.
 
 ### Drawing
 
 - An untracked file is drawn as an added one: its bar says `added  path`. The files pane already marks it `??`.
   Not: a bar of its own, which needs the untracked paths where the diff is drawn.
 - `UnifiedDiff` also starts a file at `diff --cc ` and at `* Unmerged path `. Such a file's bar says
-  `conflicted  path`; its hunks are shown as git prints them, without line numbers and without changed words. Not:
-  a full drawing of a combined diff, with a gutter for each parent, for a state that lasts until the conflict is
-  resolved (`wanted.md` 2); nor drawing a whole area plain once it has a conflict.
+  `conflicted  path`; its hunks are shown as git prints them, without line numbers and without changed words: the
+  numbers of a `@@@` header cannot be read, so its lines are kept as notes, dimmed, and none is taken for an added or
+  a removed line by its first column only. Not: a full drawing of a combined diff, with a gutter for each parent,
+  for a state that lasts until the conflict is resolved (`wanted.md` 2); nor drawing a whole area plain once it has
+  a conflict.
 - The staged and the unstaged areas are parsed and drawn each on their own: each has its own budget of
   `WordDiff.BUDGET`, its files their own gutter widths, and each says it is cut off after `CliDiff.MAX_LINES` lines,
   as now. Their titles, and the messages when there are no changes or only changes to whitespace, stay as they are.
