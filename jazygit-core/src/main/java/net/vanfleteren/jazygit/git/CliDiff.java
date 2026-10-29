@@ -121,7 +121,7 @@ final class CliDiff {
         List<String> lines = GitOutput.lines(diff);
         return lines.size() <= MAX_LINES
                 ? DiffText.of(diff)
-                : new DiffText(lines.take(MAX_LINES).mkString("", "\n", "\n"), true);
+                : DiffText.of(lines.take(MAX_LINES).mkString("", "\n", "\n"), true);
     }
 
     private static Either<ProcessError, String> run(Path worktree, List<String> args, Map<String, String> env) {

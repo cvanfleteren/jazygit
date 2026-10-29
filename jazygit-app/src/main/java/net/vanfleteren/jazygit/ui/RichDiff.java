@@ -8,11 +8,11 @@ import io.vavr.collection.List;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.ChangeType;
+import net.vanfleteren.jazygit.git.model.ParsedDiff;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.FileDiff;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.Hunk;
-import net.vanfleteren.jazygit.git.model.WordDiff;
 import net.vanfleteren.jazygit.git.model.WordDiff.Segment;
 import net.vanfleteren.jazygit.i18n.Messages;
 
@@ -28,14 +28,12 @@ final class RichDiff {
     private RichDiff() {}
 
     /**
-     * The lines of {@code diff}, styled.
+     * The lines of {@code diff}, styled. It was parsed and its words compared when it was read (ADR 50), so drawing
+     * it only styles it.
      */
-    static List<Line> lines(String diff, Theme.SpanStyles styles) {
-        UnifiedDiff parsed = UnifiedDiff.parse(diff);
-        // The words of the whole diff are compared at once, as they share one budget.
-        Vector<List<List<Segment>>> words = WordDiff.segments(
-                        parsed.files().flatMap(FileDiff::hunks).map(Hunk::lines))
-                .toVector();
+    static List<Line> lines(ParsedDiff diff, Theme.SpanStyles styles) {
+        UnifiedDiff parsed = diff.diff();
+        Vector<List<List<Segment>>> words = diff.words().toVector();
         List<Tuple2<FileDiff, Vector<List<List<Segment>>>>> files = parsed.files()
                 .foldLeft(
                         Tuple.of(List.<Tuple2<FileDiff, Vector<List<List<Segment>>>>>empty(), 0),
