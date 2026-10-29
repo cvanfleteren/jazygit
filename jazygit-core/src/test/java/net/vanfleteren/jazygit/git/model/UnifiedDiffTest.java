@@ -200,7 +200,7 @@ class UnifiedDiffTest {
     @Test
     void anUnmergedPathOfTheStagedChangesIsAConflictedFileWithoutLines() {
         List<FileDiff> files = UnifiedDiff.parse("""
-                * Unmerged path "f\\303\\266o.txt"
+                * Unmerged path föo.txt
                 diff --git a/a.txt b/a.txt
                 --- a/a.txt
                 +++ b/a.txt
@@ -214,6 +214,39 @@ class UnifiedDiffTest {
                 files.head());
         assertEquals(List.of(ChangeType.CONFLICTED, ChangeType.MODIFIED), files.map(FileDiff::type));
         assertEquals(List.empty(), UnifiedDiff.parse("* Unmerged path f.txt\n").preamble());
+    }
+
+    @Test
+    void theUnmergedPathIsNeverUnquotedAsGitPrintsItAsItIs() {
+        assertEquals(
+                List.of("\"x\""),
+                UnifiedDiff.parse("* Unmerged path \"x\"\n").files().map(FileDiff::path));
+    }
+
+    @Test
+    void aCombinedDiffWithoutPrefixesTakesItsQuotedPathFromItsStart() {
+        FileDiff file = UnifiedDiff.parse("""
+                diff --cc "f\\303\\266o.txt"
+                index 189acaa,1ed2302..0000000
+                --- "f\\303\\266o.txt"
+                +++ "f\\303\\266o.txt"
+                @@@ -1,2 -1,2 +1,4 @@@
+                  a
+                """).files().head();
+
+        assertEquals("föo.txt", file.path());
+    }
+
+    @Test
+    void aBinaryConflictHasNoLines() {
+        FileDiff file = UnifiedDiff.parse("""
+                diff --cc bin.dat
+                index 65b7b65,10f50c4..0000000
+                Binary files differ
+                """).files().head();
+
+        assertEquals(
+                new FileDiff(ChangeType.CONFLICTED, "bin.dat", Option.none(), Option.none(), true, List.empty()), file);
     }
 
     @Test

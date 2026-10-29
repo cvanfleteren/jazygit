@@ -17,10 +17,15 @@ public record UnifiedDiff(List<String> preamble, List<FileDiff> files) {
 
     private static final String FILE_START = "diff --git ";
     /**
-     * How git starts a path a merge left unmerged: as a combined diff in the changes of the working tree, and on one
-     * line in the staged changes.
+     * How git starts a path a merge left unmerged in the changes of the working tree: as a combined diff, whose path
+     * it quotes as that of {@code diff --git}.
      */
-    private static final List<String> CONFLICT_STARTS = List.of("diff --cc ", "* Unmerged path ");
+    private static final String COMBINED_START = "diff --cc ";
+    /**
+     * How git starts a path a merge left unmerged in the staged changes, and one deleted on one side of the merge in
+     * the changes of the working tree: on one line, with its path as it is, never quoted.
+     */
+    private static final String UNMERGED_START = "* Unmerged path ";
 
     private static final Pattern HUNK = Pattern.compile("^@@ -(\\d+)(?:,\\d+)? \\+(\\d+)(?:,\\d+)? @@ ?(.*)");
 
@@ -46,7 +51,7 @@ public record UnifiedDiff(List<String> preamble, List<FileDiff> files) {
     }
 
     private static boolean startsFile(String line) {
-        return line.startsWith(FILE_START) || CONFLICT_STARTS.exists(line::startsWith);
+        return line.startsWith(FILE_START) || line.startsWith(COMBINED_START) || line.startsWith(UNMERGED_START);
     }
 
     /**
@@ -56,10 +61,9 @@ public record UnifiedDiff(List<String> preamble, List<FileDiff> files) {
      */
     private static FileDiff conflicted(String start, List<String> lines) {
         List<String> header = lines.takeWhile(line -> !line.startsWith("@@"));
-        String named = CONFLICT_STARTS
-                .find(start::startsWith)
-                .map(prefix -> path(start.substring(prefix.length())))
-                .getOrElse(start);
+        String named = start.startsWith(COMBINED_START)
+                ? path(start.substring(COMBINED_START.length()))
+                : start.substring(UNMERGED_START.length());
         return new FileDiff(
                 ChangeType.CONFLICTED,
                 side(header, "+++ b/").orElse(side(header, "--- a/")).getOrElse(named),
