@@ -7,9 +7,10 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.*;
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 
 import com.tngtech.archunit.base.DescribedPredicate;
+import com.tngtech.archunit.core.domain.JavaAccess;
 import com.tngtech.archunit.core.domain.JavaClass;
+import com.tngtech.archunit.core.domain.JavaConstructor;
 import com.tngtech.archunit.core.domain.JavaMethod;
-import com.tngtech.archunit.core.domain.JavaMethodCall;
 import com.tngtech.archunit.core.domain.JavaModifier;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.core.importer.Location;
@@ -137,7 +138,7 @@ class ArchitectureTest {
             .should()
             .dependOnClassesThat(effects())
             .orShould()
-            .callMethodWhere(tellsTheTimeOrChance());
+            .accessTargetWhere(tellsTheTimeOrChance());
     // The dialogs of the features, which are views; nested classes included.
     private static final String DIALOGS = ".*Dialogs?(\\$.*)?";
     /**
@@ -204,22 +205,27 @@ class ArchitectureTest {
             .should()
             .beStatic();
     /**
-     * The updates make commands; only the program runs them. A command may run another, as part of itself.
+     * The updates make commands; only the program runs them, and {@code StartApp} those of the start screen (ADR 28).
+     * A command may run another, as part of itself. A method reference, {@code Cmd::run}, is an access too, so it
+     * counts as a call does.
      */
     @ArchTest
     static final ArchRule onlyTheProgramRunsCommands = noClasses()
             .that()
-            .haveNameNotMatching(Pattern.quote(Program.class.getName()) + "(\\$.*)?")
+            .haveNameNotMatching("(" + Pattern.quote(Program.class.getName()) + "|"
+                    + Pattern.quote("net.vanfleteren.jazygit.StartApp") + ")(\\$.*)?")
             .and()
             .areNotAssignableTo(Cmd.class)
             .should()
-            .callMethodWhere(DescribedPredicate.<JavaMethodCall>describe(
+            .accessTargetWhere(DescribedPredicate.<JavaAccess<?>>describe(
                     "Cmd.run or GitOperationCmd.perform",
-                    call -> call.getTargetOwner().isAssignableTo(Cmd.class)
-                            && (call.getName().equals("run") || call.getName().equals("perform"))));
+                    access -> access.getTargetOwner().isAssignableTo(Cmd.class)
+                            && (access.getName().equals("run")
+                                    || access.getName().equals("perform"))));
     /**
      * The views and the keys only send messages: they neither make commands nor apply a message themselves. They may
-     * read one, as the data it is.
+     * read one, as the data it is. A reference, {@code Msg::apply} or a command's {@code ::new}, counts as a call
+     * does.
      */
     @ArchTest
     static final ArchRule viewsOnlySendMessages = noClasses()
@@ -230,13 +236,12 @@ class ArchitectureTest {
             .or()
             .haveSimpleNameEndingWith("Keys")
             .should()
-            .callConstructorWhere(DescribedPredicate.describe(
-                    "a constructor of a command", call -> call.getTargetOwner().isAssignableTo(Cmd.class)))
-            .orShould()
-            .callMethodWhere(DescribedPredicate.<JavaMethodCall>describe(
-                    "Msg.apply",
-                    call -> call.getTargetOwner().isAssignableTo(Msg.class)
-                            && call.getName().equals("apply")));
+            .accessTargetWhere(DescribedPredicate.<JavaAccess<?>>describe(
+                    "a constructor of a command, or Msg.apply",
+                    access -> access.getTargetOwner().isAssignableTo(Cmd.class)
+                                    && access.getName().equals(JavaConstructor.CONSTRUCTOR_NAME)
+                            || access.getTargetOwner().isAssignableTo(Msg.class)
+                                    && access.getName().equals("apply")));
     /**
      * A pure method returns what it works out: one that returns nothing could only have done something.
      */
@@ -450,10 +455,13 @@ class ArchitectureTest {
                 .as("run git or gh");
     }
 
-    private static DescribedPredicate<JavaMethodCall> tellsTheTimeOrChance() {
-        return DescribedPredicate.describe("tell the time, read the environment or draw a random number", call -> {
-            JavaClass owner = call.getTargetOwner();
-            String name = call.getName();
+    /**
+     * Reading the clock, the environment or chance; a method reference, like {@code Instant::now}, included.
+     */
+    private static DescribedPredicate<JavaAccess<?>> tellsTheTimeOrChance() {
+        return DescribedPredicate.describe("tell the time, read the environment or draw a random number", access -> {
+            JavaClass owner = access.getTargetOwner();
+            String name = access.getName();
             return owner.getPackageName().equals("java.time") && name.equals("now")
                     || owner.isEquivalentTo(System.class)
                             && Stream.of("currentTimeMillis", "nanoTime", "getenv", "getProperty")
