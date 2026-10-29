@@ -192,7 +192,7 @@ public final class LoadUpdate {
      * branch (ADR 46).
      */
     public static Cmd.LoadBaseDistance baseDistance(Model model) {
-        return new Cmd.LoadBaseDistance(AheadUpdate.main(model));
+        return new Cmd.LoadBaseDistance(AheadUpdate.main(model), model.repo().tips());
     }
 
     /**

@@ -361,7 +361,8 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<ProcessError, Map<BranchName, BaseDistance>> baseDistance(Option<BranchName> main) {
+    default Either<ProcessError, Map<BranchName, BaseDistance>> baseDistance(
+            Map<BranchRef, Sha> tips, Option<BranchName> main) {
         return Either.right(HashMap.empty());
     }
 

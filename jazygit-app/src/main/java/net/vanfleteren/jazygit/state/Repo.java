@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.state;
 
+import io.vavr.Tuple;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
@@ -69,6 +70,23 @@ public record Repo(
         return remoteBranches
                 .toOption()
                 .flatMap(loaded -> loaded.find(ref -> ref.branch().equals(branch)));
+    }
+
+    /**
+     * The commit each local branch and each branch on {@link RemoteBranch#DEFAULT_REMOTE} is at, as read last: those
+     * that can be the base of a branch (ADR 20). Empty until the branches are read.
+     */
+    public Map<BranchRef, Sha> tips() {
+        return HashMap.<BranchRef, Sha>ofEntries(branches.toOption()
+                        .toList()
+                        .flatMap(loaded -> loaded)
+                        .map(branch -> Tuple.of(new BranchRef.Local(branch.name()), branch.tip())))
+                .merge(HashMap.ofEntries(remoteBranches
+                        .toOption()
+                        .toList()
+                        .flatMap(loaded -> loaded)
+                        .filter(ref -> ref.branch().remote().equals(RemoteBranch.DEFAULT_REMOTE))
+                        .map(ref -> Tuple.of(new BranchRef.Remote(ref.branch()), ref.tip()))));
     }
 
     /**

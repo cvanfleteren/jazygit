@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.git;
 
 import static net.vanfleteren.jazygit.git.model.BranchRef.HEADS;
-import static net.vanfleteren.jazygit.git.model.BranchRef.REMOTES;
 
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
@@ -16,7 +15,7 @@ import net.vanfleteren.jazygit.git.GitError.UnexpectedOutput;
 import net.vanfleteren.jazygit.git.model.BaseDistance;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
-import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.git.model.Sha;
 
 /**
  * How far each local branch is from its base (ADR 46): the commits it has that the base does not, and those the base
@@ -24,34 +23,34 @@ import net.vanfleteren.jazygit.git.model.RemoteBranch;
  */
 final class CliBaseDistance {
 
-    private static final String ORIGIN = REMOTES + GitArgs.remote(RemoteBranch.DEFAULT_REMOTE) + "/";
     private static final String PARENT_PREFIX = "branch.";
     private static final String PARENT_SUFFIX = ".gh-merge-base";
 
     private CliBaseDistance() {}
 
     /**
-     * The counts of each local branch that has a base, by its name: one {@code git config} for the parents, one
-     * {@code for-each-ref} for the refs, then one {@code for-each-ref} per base. The branches of a base whose count
-     * cannot be read are left out, not all of them.
+     * The counts of each local branch that has a base, by its name: one {@code git config} for the parents, then one
+     * {@code for-each-ref} that counts against every base at once (ADR 49). One base git cannot find fails that
+     * {@code for-each-ref} as a whole: then each base is counted in one of its own, so that only the branches of that
+     * base are left out.
      *
+     * @param tips the commit of each local branch and of each branch on {@code origin}, as the branches read last have
+     *             them
      * @param main the main branch, the base of a branch without a parent
      */
-    static Either<ProcessError, Map<BranchName, BaseDistance>> read(Path worktree, Option<BranchName> main) {
-        return parents(worktree)
-                .flatMap(parents -> GitProcess.read(
-                                worktree,
-                                GitCommand.reading(
-                                        "for-each-ref",
-                                        "--format=%(refname)" + GitOutput.REF_FIELD_SEPARATOR + "%(objectname)",
-                                        HEADS,
-                                        ORIGIN),
-                                CliBaseDistance::parseRefs)
-                        .map(refs -> bases(refs, parents, main)))
-                .map(bases -> bases.groupBy(branch -> branch._2.commit())
-                        .map(group -> distances(worktree, group._1, HashMap.ofEntries(group._2))
-                                .getOrElse(HashMap.empty()))
-                        .fold(HashMap.empty(), Map::merge));
+    static Either<ProcessError, Map<BranchName, BaseDistance>> read(
+            Path worktree, Map<BranchRef, Sha> tips, Option<BranchName> main) {
+        Map<String, String> refs = tips.mapKeys(GitArgs::revision).mapValues(Sha::value);
+        return parents(worktree).map(parents -> bases(refs, parents, main)).map(bases -> {
+            Map<BranchName, Base> branches = HashMap.ofEntries(bases);
+            List<String> commits = bases.map(branch -> branch._2.commit()).distinct();
+            return distances(worktree, commits, branches)
+                    .getOrElse(() -> commits.size() < 2
+                            ? HashMap.empty()
+                            : commits.map(commit -> distances(worktree, List.of(commit), branches)
+                                            .getOrElse(HashMap.empty()))
+                                    .fold(HashMap.empty(), Map::merge));
+        });
     }
 
     /**
@@ -72,15 +71,6 @@ final class CliBaseDistance {
                         .flatMap(base -> refs.get(GitArgs.revision(base)).map(sha -> new Base(base, sha)))
                         .headOption()
                         .map(base -> Tuple.of(branch, base)));
-    }
-
-    /**
-     * The refs in {@code raw}, a line per ref: its full name, then the commit it is at.
-     */
-    static Either<UnexpectedOutput, Map<String, String>> parseRefs(String raw) {
-        return Either.sequenceRight(GitOutput.nonBlankLines(raw)
-                        .map(line -> GitOutput.fields(line, 2).map(fields -> Tuple.of(fields.get(0), fields.get(1)))))
-                .map(HashMap::ofEntries);
     }
 
     /**
@@ -122,47 +112,70 @@ final class CliBaseDistance {
     }
 
     /**
-     * How far each of {@code branches} is from {@code base}, a commit; the branches by their name, with the base they
-     * are compared with by its name.
+     * How far each of {@code branches} whose base is at one of {@code commits} is from it, in one {@code for-each-ref}
+     * with an {@code %(ahead-behind:)} per commit; the branches by their name, with the base they are compared with by
+     * its name.
      */
     private static Either<ProcessError, Map<BranchName, BaseDistance>> distances(
-            Path worktree, String base, Map<BranchName, Base> branches) {
-        return GitProcess.read(
-                worktree,
-                GitCommand.reading(
-                        "for-each-ref",
-                        "--format=%(refname)" + GitOutput.REF_FIELD_SEPARATOR + "%(objectname)"
-                                + GitOutput.REF_FIELD_SEPARATOR + "%(ahead-behind:" + base + ")",
-                        HEADS),
-                raw -> parseCounts(raw, branches));
+            Path worktree, List<String> commits, Map<BranchName, Base> branches) {
+        return commits.isEmpty()
+                ? Either.right(HashMap.empty())
+                : GitProcess.read(
+                        worktree,
+                        GitCommand.reading(
+                                "for-each-ref",
+                                "--format="
+                                        + List.of("%(refname)", "%(objectname)")
+                                                .appendAll(commits.map(commit -> "%(ahead-behind:" + commit + ")"))
+                                                .mkString(GitOutput.REF_FIELD_SEPARATOR),
+                                HEADS),
+                        raw -> parseCounts(raw, commits, branches));
     }
 
     /**
-     * How far each of {@code branches} is from its base, from {@code raw}, a line per local branch: its full name,
-     * the commit it is at, then the commits it has ahead of the base and behind it, separated by a space. The other
-     * branches are left out.
+     * How far each of {@code branches} is from its base, from {@code raw}, a line per local branch: its full name, the
+     * commit it is at, then for each of {@code commits} the commits it has ahead of it and behind it, separated by a
+     * space. Each branch takes the column of the commit its base is at; those not among {@code branches}, or whose base
+     * is at none of {@code commits}, are left out.
      */
     static Either<UnexpectedOutput, Map<BranchName, BaseDistance>> parseCounts(
-            String raw, Map<BranchName, Base> branches) {
+            String raw, List<String> commits, Map<BranchName, Base> branches) {
         return Either.sequenceRight(GitOutput.nonBlankLines(raw)
-                        .map(line -> GitOutput.fields(line, 3).flatMap(fields -> {
-                            List<String> counts = List.of(fields.get(2).split(" "));
-                            return GitOutput.after(fields.get(0), HEADS)
-                                    .filter(name -> counts.size() == 2)
-                                    .toEither(() -> new UnexpectedOutput(line))
-                                    .flatMap(name -> GitOutput.sha(fields.get(1))
-                                            .flatMap(tip -> GitOutput.number(counts.get(0))
-                                                    .flatMap(ahead -> GitOutput.number(counts.get(1))
-                                                            .map(behind -> branches.get(new BranchName(name))
-                                                                    .map(of -> Tuple.of(
-                                                                            new BranchName(name),
-                                                                            new BaseDistance(
-                                                                                    of.ref(),
-                                                                                    tip,
-                                                                                    ahead.intValue(),
-                                                                                    behind.intValue())))))));
-                        })))
+                        .map(line -> GitOutput.fields(line, 2 + commits.size())
+                                .flatMap(fields -> GitOutput.after(fields.get(0), HEADS)
+                                        .map(BranchName::new)
+                                        .toEither(() -> new UnexpectedOutput(line))
+                                        .flatMap(name -> branches.get(name)
+                                                .filter(base -> commits.contains(base.commit()))
+                                                .fold(
+                                                        () -> Either
+                                                                .<UnexpectedOutput,
+                                                                        Option<Tuple2<BranchName, BaseDistance>>>
+                                                                        right(Option.none()),
+                                                        base -> distance(
+                                                                        line,
+                                                                        fields.get(1),
+                                                                        fields.get(2 + commits.indexOf(base.commit())),
+                                                                        base.ref())
+                                                                .map(distance ->
+                                                                        Option.of(Tuple.of(name, distance))))))))
                 .map(found -> HashMap.ofEntries(found.flatMap(entry -> entry)));
+    }
+
+    /**
+     * How far a branch at {@code tip} is from {@code base}, from {@code counts}: the commits ahead, a space, then
+     * those behind.
+     */
+    private static Either<UnexpectedOutput, BaseDistance> distance(
+            String line, String tip, String counts, BranchRef base) {
+        List<String> aheadBehind = List.of(counts.split(" "));
+        return aheadBehind.size() != 2
+                ? Either.left(new UnexpectedOutput(line))
+                : GitOutput.sha(tip)
+                        .flatMap(sha -> GitOutput.number(aheadBehind.get(0))
+                                .flatMap(ahead -> GitOutput.number(aheadBehind.get(1))
+                                        .map(behind ->
+                                                new BaseDistance(base, sha, ahead.intValue(), behind.intValue()))));
     }
 
     /**

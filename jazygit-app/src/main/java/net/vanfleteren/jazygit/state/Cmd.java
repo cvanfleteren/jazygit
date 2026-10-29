@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.state;
 
 import io.vavr.Tuple;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
@@ -234,9 +235,9 @@ public interface Cmd {
 
     /**
      * Reads how far each local branch is from its base, {@code main} being the base of those without a parent
-     * (ADR 46).
+     * (ADR 46), the branches and their bases at the commits {@code tips} has them at (ADR 49).
      */
-    record LoadBaseDistance(Option<BranchName> main) implements Load {
+    record LoadBaseDistance(Option<BranchName> main, Map<BranchRef, Sha> tips) implements Load {
 
         @Override
         public Option<Label> label() {
@@ -246,7 +247,7 @@ public interface Cmd {
         @Override
         public Msg run(Env env) {
             return env.git()
-                    .baseDistance(main)
+                    .baseDistance(tips, main)
                     .fold(this::failedWith, counts -> new LoadMsg.BaseDistanceLoaded(this, counts));
         }
     }
