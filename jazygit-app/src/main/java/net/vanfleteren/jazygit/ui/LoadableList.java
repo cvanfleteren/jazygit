@@ -9,6 +9,7 @@ import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.elements.ListElement;
 import dev.tamboui.toolkit.elements.Panel;
+import dev.tamboui.toolkit.elements.TextElement;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.MouseEvent;
@@ -254,9 +255,9 @@ final class LoadableList<T> {
     }
 
     /**
-     * A row of the list: consecutive pieces, each with its own colour.
+     * A row of the list: consecutive pieces, each with its own colour, and maybe a second line below them.
      */
-    record Row(List<Seg> segs, Option<String> detail) {
+    record Row(List<Seg> segs, Option<List<Seg>> detail) {
 
         Row(List<Seg> segs) {
             this(segs, Option.none());
@@ -274,11 +275,26 @@ final class LoadableList<T> {
          * This row with a dimmed line below it, still one item of the list.
          */
         Row withDetail(String line) {
-            return new Row(segs, Option.of(line));
+            return withDetail(List.of(Seg.of(line)));
+        }
+
+        /**
+         * This row with a line of {@code pieces} below it, still one item of the list: the pieces without a colour
+         * of their own dimmed. The pieces of both lines are cut off with an ellipsis when they do not fit.
+         */
+        Row withDetail(List<Seg> pieces) {
+            return new Row(segs, Option.of(pieces));
         }
 
         String text() {
             return segs.map(Seg::text).mkString();
+        }
+
+        /**
+         * The text of the line below the row, if it has one.
+         */
+        Option<String> detailText() {
+            return detail.map(pieces -> pieces.map(Seg::text).mkString());
         }
 
         /**
@@ -289,17 +305,25 @@ final class LoadableList<T> {
         }
 
         StyledElement<?> element() {
-            StyledElement<?> first = firstLine();
+            StyledElement<?> first = line(segs, Option.none(), detail.isDefined());
             return detail.<StyledElement<?>>map(
-                            line -> column(first, Toolkit.text(line).addClass(Theme.Classes.DIM)))
+                            pieces -> column(first, line(pieces, Option.of(Theme.Classes.DIM), true)))
                     .getOrElse(first);
         }
 
-        private StyledElement<?> firstLine() {
-            List<StyledElement<?>> pieces = segs.map(seg -> seg.cssClass()
-                    .<StyledElement<?>>map(cssClass -> Toolkit.text(seg.text()).addClass(cssClass))
-                    .getOrElse(() -> Toolkit.text(seg.text())));
-            return pieces.size() == 1 ? pieces.head() : row(pieces.toJavaArray(StyledElement[]::new));
+        /**
+         * The pieces as one line, those without a colour of their own in {@code plain}, if there is one; each cut
+         * off with an ellipsis when it does not fit, if {@code ellipsis}.
+         */
+        private static StyledElement<?> line(List<Seg> pieces, Option<String> plain, boolean ellipsis) {
+            List<StyledElement<?>> texts = pieces.map(seg -> {
+                TextElement text = ellipsis ? Toolkit.text(seg.text()).ellipsis() : Toolkit.text(seg.text());
+                return seg.cssClass()
+                        .orElse(plain)
+                        .<StyledElement<?>>map(text::addClass)
+                        .getOrElse(text);
+            });
+            return texts.size() == 1 ? texts.head() : row(texts.toJavaArray(StyledElement[]::new));
         }
     }
 }

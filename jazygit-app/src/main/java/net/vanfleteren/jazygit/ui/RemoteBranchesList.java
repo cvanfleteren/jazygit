@@ -45,19 +45,21 @@ class RemoteBranchesList implements BranchesTabList {
     }
 
     /**
-     * A remote branch: how long ago its tip was committed and its name, dimmed when a local branch follows it; then
-     * how it is doing on GitHub and its spinner while it is busy.
+     * A remote branch on two lines (ADR 45): its name, dimmed when a local branch follows it, and its spinner while
+     * it is busy; below them how long ago its tip was committed and how it is doing on GitHub.
      *
      * @param tracked whether a local branch follows it
      * @param spinner the label and the spinner frame of a busy branch, as one text
      */
     static LoadableList.Row row(
             RemoteRef ref, Duration since, boolean tracked, List<LoadableList.Seg> gitHub, Option<String> spinner) {
-        String text = "%4s ".formatted(TimeText.age(since)) + ref.branch().shortName();
+        String name = ref.branch().shortName();
+        String age = "  " + TimeText.age(since);
         return new LoadableList.Row(
-                List.of(tracked ? LoadableList.Seg.styled(text, Theme.Classes.DIM) : LoadableList.Seg.of(text))
-                        .appendAll(gitHub)
-                        .appendAll(BranchSegs.spinnerSeg(spinner)));
+                        List.of(tracked ? LoadableList.Seg.styled(name, Theme.Classes.DIM) : LoadableList.Seg.of(name))
+                                .appendAll(BranchSegs.group(
+                                        BranchSegs.spinnerSeg(spinner).toList())))
+                .withDetail(List.of(LoadableList.Seg.of(age)).appendAll(BranchSegs.group(gitHub)));
     }
 
     @Override

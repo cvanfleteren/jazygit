@@ -26,20 +26,20 @@ class BranchSegsTest {
         assertEquals(
                 List.of(
                         LoadableList.Seg.styled(" #42", Theme.Classes.PULL_REQUEST),
-                        LoadableList.Seg.styled(" ✅", Theme.Classes.CHECKS_PASSED),
-                        LoadableList.Seg.styled(" 👍", Theme.Classes.REVIEW_APPROVED)),
+                        LoadableList.Seg.styled(" ✓", Theme.Classes.CHECKS_PASSED),
+                        LoadableList.Seg.styled("  +", Theme.Classes.REVIEW_APPROVED)),
                 BranchSegs.pullRequest(Option.of(new PullRequest(42, "b", false, Checks.PASSING, Review.APPROVED))));
         assertEquals(
                 List.of(
                         LoadableList.Seg.styled(" #40", Theme.Classes.PULL_REQUEST),
-                        LoadableList.Seg.styled(" ❌", Theme.Classes.CHECKS_FAILED),
-                        LoadableList.Seg.styled(" ?", Theme.Classes.DIM)),
+                        LoadableList.Seg.styled(" ✗", Theme.Classes.CHECKS_FAILED),
+                        LoadableList.Seg.styled("  ?", Theme.Classes.DIM)),
                 BranchSegs.pullRequest(Option.of(new PullRequest(40, "b", false, Checks.FAILING, Review.REQUIRED))));
         assertEquals(
                 List.of(
                         LoadableList.Seg.styled(" #38", Theme.Classes.PULL_REQUEST),
-                        LoadableList.Seg.styled(" ⏳", Theme.Classes.CHECKS_RUNNING),
-                        LoadableList.Seg.styled(" 👎", Theme.Classes.REVIEW_CHANGES)),
+                        LoadableList.Seg.styled(" ●", Theme.Classes.CHECKS_RUNNING),
+                        LoadableList.Seg.styled("  −", Theme.Classes.REVIEW_CHANGES)),
                 BranchSegs.pullRequest(
                         Option.of(new PullRequest(38, "b", false, Checks.PENDING, Review.CHANGES_REQUESTED))));
         // A draft without checks or reviews shows only its number, dimmed.
@@ -49,12 +49,24 @@ class BranchSegsTest {
     }
 
     @Test
-    void aStackedPullRequestShowsWhereItSitsInItsStack() {
+    void aGroupIsSetApartByOneMoreSpace() {
+        assertEquals(
+                List.of(
+                        LoadableList.Seg.styled("  ↑2", Theme.Classes.AHEAD),
+                        LoadableList.Seg.styled(" ↓5", Theme.Classes.BEHIND)),
+                BranchSegs.group(List.of(
+                        LoadableList.Seg.styled(" ↑2", Theme.Classes.AHEAD),
+                        LoadableList.Seg.styled(" ↓5", Theme.Classes.BEHIND))));
+        assertEquals(List.of(), BranchSegs.group(List.of()));
+    }
+
+    @Test
+    void aStackedPullRequestShowsWhereItSitsInItsStackLast() {
         assertEquals(
                 List.of(
                         LoadableList.Seg.styled(" #95", Theme.Classes.PULL_REQUEST),
-                        LoadableList.Seg.styled(" 📚2/3", Theme.Classes.DIM),
-                        LoadableList.Seg.styled(" ✅", Theme.Classes.CHECKS_PASSED)),
+                        LoadableList.Seg.styled(" ✓", Theme.Classes.CHECKS_PASSED),
+                        LoadableList.Seg.styled("  2/3", Theme.Classes.DIM)),
                 BranchSegs.pullRequest(Option.of(new PullRequest(
                         95,
                         "b",
@@ -78,19 +90,19 @@ class BranchSegsTest {
         assertEquals(
                 List.of(
                         LoadableList.Seg.styled(" #42", Theme.Classes.PULL_REQUEST),
-                        LoadableList.Seg.styled(" 🔀", Theme.Classes.DIM)),
+                        LoadableList.Seg.styled(" »", Theme.Classes.DIM)),
                 BranchSegs.pullRequest(pr, Option.of(new MergeStatus.Pending("u-1"))));
         assertEquals(
-                " 🚦",
+                " ≡",
                 BranchSegs.pullRequest(pr, Option.of(new MergeStatus.Enqueued()))
                         .last()
                         .text());
         assertEquals(
-                LoadableList.Seg.styled(" 💥", Theme.Classes.CHECKS_FAILED),
+                LoadableList.Seg.styled(" !", Theme.Classes.CHECKS_FAILED),
                 BranchSegs.pullRequest(pr, Option.of(new MergeStatus.Failed("no")))
                         .last());
         assertEquals(
-                " 🟣",
+                " ◆",
                 BranchSegs.pullRequest(pr, Option.of(new MergeStatus.Merged()))
                         .last()
                         .text());
@@ -104,7 +116,7 @@ class BranchSegsTest {
                 List.of(LoadableList.Seg.styled(" #42", Theme.Classes.PULL_REQUEST)),
                 BranchSegs.gitHub(Option.of(pr), Option.of(Checks.FAILING)));
         assertEquals(
-                List.of(LoadableList.Seg.styled(" ❌", Theme.Classes.CHECKS_FAILED)),
+                List.of(LoadableList.Seg.styled(" ✗", Theme.Classes.CHECKS_FAILED)),
                 BranchSegs.gitHub(Option.none(), Option.of(Checks.FAILING)));
         assertEquals(List.of(), BranchSegs.gitHub(Option.none(), Option.of(Checks.NONE)));
         assertEquals(List.of(), BranchSegs.gitHub(Option.none(), Option.none()));
@@ -117,23 +129,23 @@ class BranchSegsTest {
         assertEquals(
                 List.of(
                         LoadableList.Seg.styled(" #38", Theme.Classes.PULL_REQUEST),
-                        LoadableList.Seg.styled(" ⏳", Theme.Classes.CHECKS_RUNNING),
+                        LoadableList.Seg.styled(" ●", Theme.Classes.CHECKS_RUNNING),
                         LoadableList.Seg.styled(" ~4m", Theme.Classes.DIM),
-                        LoadableList.Seg.styled(" 👍", Theme.Classes.REVIEW_APPROVED)),
+                        LoadableList.Seg.styled("  +", Theme.Classes.REVIEW_APPROVED)),
                 BranchSegs.gitHub(Option.of(running), Option.none(), Option.none(), Option.of("~4m")));
         assertEquals(
                 List.of(
-                        LoadableList.Seg.styled(" ⏳", Theme.Classes.CHECKS_RUNNING),
+                        LoadableList.Seg.styled(" ●", Theme.Classes.CHECKS_RUNNING),
                         LoadableList.Seg.styled(" late", Theme.Classes.DIM)),
                 BranchSegs.gitHub(Option.none(), Option.none(), Option.of(Checks.PENDING), Option.of("late")));
         // Only while they run, and not while the pull request is merged.
         assertEquals(
-                List.of(LoadableList.Seg.styled(" ✅", Theme.Classes.CHECKS_PASSED)),
+                List.of(LoadableList.Seg.styled(" ✓", Theme.Classes.CHECKS_PASSED)),
                 BranchSegs.gitHub(Option.none(), Option.none(), Option.of(Checks.PASSING), Option.of("~4m")));
         assertEquals(
                 List.of(
                         LoadableList.Seg.styled(" #38", Theme.Classes.PULL_REQUEST),
-                        LoadableList.Seg.styled(" 🔀", Theme.Classes.DIM)),
+                        LoadableList.Seg.styled(" »", Theme.Classes.DIM)),
                 BranchSegs.gitHub(
                         Option.of(running),
                         Option.of(new MergeStatus.Pending("u-1")),
@@ -148,20 +160,20 @@ class BranchSegsTest {
 
         assertEquals(
                 List.of(
-                        LoadableList.Seg.styled(" 💤", Theme.Classes.DIM),
+                        LoadableList.Seg.styled(" ◌", Theme.Classes.DIM),
                         LoadableList.Seg.styled(" 3m", Theme.Classes.DIM)),
                 BranchSegs.gitHub(
                         Option.none(), Option.none(), Option.of(Checks.PENDING), waiting, Option.of("~4m"), NOW));
         assertEquals(
                 List.of(
                         LoadableList.Seg.styled(" #38", Theme.Classes.PULL_REQUEST),
-                        LoadableList.Seg.styled(" 💤", Theme.Classes.DIM),
+                        LoadableList.Seg.styled(" ◌", Theme.Classes.DIM),
                         LoadableList.Seg.styled(" 3m", Theme.Classes.DIM),
-                        LoadableList.Seg.styled(" 👍", Theme.Classes.REVIEW_APPROVED)),
+                        LoadableList.Seg.styled("  +", Theme.Classes.REVIEW_APPROVED)),
                 BranchSegs.gitHub(Option.of(running), Option.none(), Option.none(), waiting, Option.of("~4m"), NOW));
         // Failed checks fail, also while another waits.
         assertEquals(
-                List.of(LoadableList.Seg.styled(" ❌", Theme.Classes.CHECKS_FAILED)),
+                List.of(LoadableList.Seg.styled(" ✗", Theme.Classes.CHECKS_FAILED)),
                 BranchSegs.gitHub(
                         Option.none(), Option.none(), Option.of(Checks.FAILING), waiting, Option.of("~4m"), NOW));
     }
@@ -169,7 +181,7 @@ class BranchSegsTest {
     @Test
     void checksThatWaitToStartForAReRunSayNotHowLongNorWhenTheyAreDone() {
         assertEquals(
-                List.of(LoadableList.Seg.styled(" 💤", Theme.Classes.DIM)),
+                List.of(LoadableList.Seg.styled(" ◌", Theme.Classes.DIM)),
                 BranchSegs.gitHub(
                         Option.none(),
                         Option.none(),
@@ -183,7 +195,7 @@ class BranchSegsTest {
     void checksThatDoNotAllWaitSayWhenTheyAreExpectedToBeDone() {
         assertEquals(
                 List.of(
-                        LoadableList.Seg.styled(" ⏳", Theme.Classes.CHECKS_RUNNING),
+                        LoadableList.Seg.styled(" ●", Theme.Classes.CHECKS_RUNNING),
                         LoadableList.Seg.styled(" ~4m", Theme.Classes.DIM)),
                 BranchSegs.gitHub(
                         Option.none(), Option.none(), Option.of(Checks.PENDING), Option.none(), Option.of("~4m"), NOW));
@@ -208,7 +220,7 @@ class BranchSegsTest {
     @Test
     void aBranchCheckedOutInAnotherWorktreeSaysSo() {
         assertEquals(
-                List.of(LoadableList.Seg.styled(" (worktree)", Theme.Classes.DIM)),
+                List.of(LoadableList.Seg.styled(" wt", Theme.Classes.DIM)),
                 BranchSegs.worktree(new Branch(
                         new BranchName("b"),
                         false,

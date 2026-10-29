@@ -26,6 +26,7 @@ import net.vanfleteren.jazygit.state.ListCursor;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.ui.PopupSlot;
+import net.vanfleteren.jazygit.ui.PullRequestSymbols;
 import net.vanfleteren.jazygit.ui.TextWidth;
 import net.vanfleteren.jazygit.ui.Theme;
 import net.vanfleteren.jazygit.ui.widgets.DialogFrame;
@@ -59,10 +60,29 @@ public final class HelpDialog implements PopupView {
             Scopes.BRANCHES.id(),
             List.of(
                     Tuple.of(Messages.get("branches.gone"), "help.branches.legend.gone"),
-                    Tuple.of(Messages.get("branches.worktree"), "help.branches.legend.worktree"),
+                    Tuple.of(Messages.get("branches.worktree.short"), "help.branches.legend.worktree"),
                     Tuple.of("#42", "help.branches.legend.pullRequest"),
-                    Tuple.of("✅ ❌ ⏳", "help.branches.legend.checks"),
-                    Tuple.of("👍 👎 ?", "help.branches.legend.review")));
+                    Tuple.of(
+                            texts(
+                                    PullRequestSymbols.NARROW.passed(),
+                                    PullRequestSymbols.NARROW.failed(),
+                                    PullRequestSymbols.NARROW.running(),
+                                    PullRequestSymbols.NARROW.queued()),
+                            "help.branches.legend.checks"),
+                    Tuple.of(
+                            texts(
+                                    PullRequestSymbols.NARROW.approved(),
+                                    PullRequestSymbols.NARROW.changes(),
+                                    PullRequestSymbols.NARROW.toReview()),
+                            "help.branches.legend.review"),
+                    Tuple.of(
+                            texts(
+                                    PullRequestSymbols.NARROW.merging(),
+                                    PullRequestSymbols.NARROW.enqueued(),
+                                    PullRequestSymbols.NARROW.mergeFailed(),
+                                    PullRequestSymbols.NARROW.merged()),
+                            "help.branches.legend.merge"),
+                    Tuple.of("2/4", "help.branches.legend.stack")));
 
     private final Consumer<Msg> dispatch;
     private final Keymap keymap;
@@ -97,6 +117,13 @@ public final class HelpDialog implements PopupView {
                 .map(symbols -> List.<Row>of(new Text(""), Text.heading("dialog.help.legend"))
                         .appendAll(symbols.map(symbol -> new Text(line(symbol._1, symbol._2)))))
                 .getOrElse(List.empty());
+    }
+
+    /**
+     * The texts of {@code symbols}, a space apart.
+     */
+    private static String texts(PullRequestSymbols.Symbol... symbols) {
+        return List.of(symbols).map(PullRequestSymbols.Symbol::text).mkString(" ");
     }
 
     private static StyledElement<?> element(Row row) {

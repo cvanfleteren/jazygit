@@ -16,9 +16,11 @@ import net.vanfleteren.jazygit.state.*;
 
 /**
  * The parts of a row the lists of the branches pane have in common: how far a branch is from its upstream, how it
- * is doing on GitHub, and the spinner of a busy one.
+ * is doing on GitHub, and the spinner of a busy one. The symbols are one column wide (ADR 45).
  */
 final class BranchSegs {
+
+    private static final PullRequestSymbols.Glyphs GLYPHS = PullRequestSymbols.NARROW;
 
     private BranchSegs() {}
 
@@ -59,7 +61,7 @@ final class BranchSegs {
     static List<LoadableList.Seg> worktree(Branch branch) {
         return Option.when(
                         branch.checkedOutElsewhere(),
-                        () -> LoadableList.Seg.styled(" " + Messages.get("branches.worktree"), Theme.Classes.DIM))
+                        () -> LoadableList.Seg.styled(" " + Messages.get("branches.worktree.short"), Theme.Classes.DIM))
                 .toList();
     }
 
@@ -83,9 +85,19 @@ final class BranchSegs {
     }
 
     /**
-     * The pull request of a branch, with a leading space: its number (dimmed for a draft), where it sits in its
-     * stack, then how its CI checks are doing and where its review stands, each as a coloured symbol; nothing for a
-     * branch without one.
+     * {@code segs}, each with a leading space, set apart from what comes before them by one more space; nothing for
+     * no segs (ADR 45).
+     */
+    static List<LoadableList.Seg> group(List<LoadableList.Seg> segs) {
+        return segs.isEmpty()
+                ? segs
+                : segs.update(0, first -> new LoadableList.Seg(" " + first.text(), first.cssClass()));
+    }
+
+    /**
+     * The pull request of a branch, with a leading space: its number (dimmed for a draft), then how its CI checks
+     * are doing, then apart where its review stands, then apart where it sits in its stack; nothing for a branch
+     * without one (ADR 45).
      */
     static List<LoadableList.Seg> pullRequest(Option<PullRequest> pullRequest) {
         return pullRequest(pullRequest, Option.none());
@@ -96,45 +108,41 @@ final class BranchSegs {
      * checks and review while it goes, or went (ADR 24).
      */
     static List<LoadableList.Seg> pullRequest(Option<PullRequest> pullRequest, Option<MergeStatus> merge) {
-        return pullRequest(pullRequest, merge, Option.none());
+        return pullRequest(pullRequest, merge, false, Option.none());
     }
 
     /**
-     * The pull request of a branch, as {@link #pullRequest(Option, Option)}, with when its checks are expected to be
-     * done, {@code eta}, after their symbol while they run (ADR 32).
-     */
-    static List<LoadableList.Seg> pullRequest(
-            Option<PullRequest> pullRequest, Option<MergeStatus> merge, Option<String> eta) {
-        return pullRequest(pullRequest, merge, false, eta);
-    }
-
-    /**
-     * The pull request of a branch, as {@link #pullRequest(Option, Option, Option)}, with its checks waiting to start
-     * while they run and {@code waiting} (ADR 35).
+     * The pull request of a branch, as {@link #pullRequest(Option, Option)}, with its checks waiting to start while
+     * they run and {@code waiting} (ADR 35), and {@code after} after their symbol.
      */
     private static List<LoadableList.Seg> pullRequest(
-            Option<PullRequest> pullRequest, Option<MergeStatus> merge, boolean waiting, Option<String> eta) {
+            Option<PullRequest> pullRequest, Option<MergeStatus> merge, boolean waiting, Option<String> after) {
         return pullRequest
                 .toList()
-                .flatMap(pr -> PullRequestSymbols.state(
-                                pr.stack(),
-                                pr.checks(),
-                                waiting,
-                                eta.map(text -> new PullRequestSymbols.Symbol(text, Theme.Classes.DIM)),
-                                pr.review(),
-                                merge)
-                        .map(BranchSegs::symbol)
-                        .prepend(LoadableList.Seg.styled(
-                                " #" + pr.number(), pr.draft() ? Theme.Classes.DIM : Theme.Classes.PULL_REQUEST)));
+                .flatMap(pr -> List.of(LoadableList.Seg.styled(
+                                " #" + pr.number(), pr.draft() ? Theme.Classes.DIM : Theme.Classes.PULL_REQUEST))
+                        .appendAll(merge.fold(
+                                () -> checks(pr.checks(), waiting, after)
+                                        .appendAll(group(GLYPHS.review(pr.review())
+                                                .map(BranchSegs::symbol)
+                                                .toList())),
+                                status -> List.of(symbol(GLYPHS.merge(status)))))
+                        .appendAll(group(pr.stack()
+                                .map(GLYPHS::stack)
+                                .map(BranchSegs::symbol)
+                                .toList())));
     }
 
     /**
-     * When checks that are {@code checks} are expected to be done, {@code eta}, dimmed with a leading space: only
-     * while they run.
+     * How checks that are {@code state} are doing, waiting to start while they run and {@code waiting}, with
+     * {@code after} after their symbol, dimmed, while they run.
      */
-    private static Option<LoadableList.Seg> etaSeg(Checks checks, Option<String> eta) {
-        return eta.filter(text -> checks == Checks.PENDING)
-                .map(text -> LoadableList.Seg.styled(" " + text, Theme.Classes.DIM));
+    private static List<LoadableList.Seg> checks(Checks state, boolean waiting, Option<String> after) {
+        return GLYPHS.checks(state, waiting)
+                .map(BranchSegs::symbol)
+                .toList()
+                .appendAll(after.filter(text -> state == Checks.PENDING)
+                        .map(text -> LoadableList.Seg.styled(" " + text, Theme.Classes.DIM)));
     }
 
     /**
@@ -165,8 +173,8 @@ final class BranchSegs {
 
     /**
      * How a branch is doing on GitHub, as {@link #gitHub(Option, Option, Option, Option)}, but while its checks all
-     * wait to start, {@code waiting}, waiting and then how long they have at {@code now}: {@code 💤 3m}; only
-     * {@code 💤} for a re-run (ADR 35).
+     * wait to start, {@code waiting}, waiting and then how long they have at {@code now}: {@code ◌ 3m}; only
+     * {@code ◌} for a re-run (ADR 35).
      */
     static List<LoadableList.Seg> gitHub(
             Option<PullRequest> pullRequest,
@@ -196,11 +204,7 @@ final class BranchSegs {
             Option<String> after) {
         return pullRequest.isDefined()
                 ? pullRequest(pullRequest, merge, waiting, after)
-                : checks.toList()
-                        .flatMap(state -> PullRequestSymbols.checks(state, waiting)
-                                .map(BranchSegs::symbol)
-                                .toList()
-                                .appendAll(etaSeg(state, after)));
+                : checks.toList().flatMap(state -> checks(state, waiting, after));
     }
 
     /**
