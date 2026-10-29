@@ -170,6 +170,12 @@ class AheadUpdateTest {
         // When the load of now runs already, it is not started twice.
         Model running = logRead.mapJobs(jobs -> jobs.withStarted(List.of(current), Instant.EPOCH));
         assertEquals(List.empty(), Update.update(running, stale).cmds());
+        // Nor when it is read with the log of HEAD, or with that of a branch.
+        Model withLog = logRead.mapJobs(jobs -> jobs.withStarted(List.of(new Cmd.LoadCommits(current)), Instant.EPOCH));
+        assertEquals(List.empty(), Update.update(withLog, stale).cmds());
+        Model withBranchLog = logRead.mapJobs(
+                jobs -> jobs.withStarted(List.of(new Cmd.LoadBranchLog(FEATURE_LOG, current)), Instant.EPOCH));
+        assertEquals(List.empty(), Update.update(withBranchLog, stale).cmds());
     }
 
     @Test

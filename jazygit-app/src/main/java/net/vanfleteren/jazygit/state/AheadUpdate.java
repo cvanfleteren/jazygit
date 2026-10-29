@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.state;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import java.util.function.Predicate;
 import net.vanfleteren.jazygit.git.model.Ahead;
 import net.vanfleteren.jazygit.git.model.BaseDistance;
 import net.vanfleteren.jazygit.git.model.Branch;
@@ -173,7 +174,8 @@ public final class AheadUpdate {
      * Keeps what {@code load} read on its own, not with a log, when it is the load the model makes now; what was read
      * for a branch no longer shown is dropped. Read from where the model had HEAD, the branch or its base then, it can
      * be outdated by a read of the status, the branches or the parents since, which no tick would read again: then it
-     * is dropped, as there is no log to show it with, and the load of now is run, unless it runs already (ADR 49).
+     * is dropped, as there is no log to show it with, and the load of now is run, unless it runs already, on its own
+     * or with a log (ADR 49).
      */
     static Next aheadLoaded(Model model, Cmd.LoadAhead load, Option<Ahead> ahead) {
         boolean shown = load.branch()
@@ -185,7 +187,16 @@ public final class AheadUpdate {
                 ? Next.of(model)
                 : current.equals(load)
                         ? loaded(model, load, ahead)
-                        : model.jobs().runs(current) ? Next.of(model) : Next.of(model, current);
+                        : model.jobs().runs(reads(current)) ? Next.of(model) : Next.of(model, current);
+    }
+
+    /**
+     * Whether a command reads what {@code load} reads: it, or the log of HEAD or of a branch read with it.
+     */
+    private static Predicate<Cmd> reads(Cmd.LoadAhead load) {
+        return cmd -> cmd.equals(load)
+                || cmd instanceof Cmd.LoadCommits(var with) && with.equals(load)
+                || cmd instanceof Cmd.LoadBranchLog(var branch, var with) && with.equals(load);
     }
 
     /**
