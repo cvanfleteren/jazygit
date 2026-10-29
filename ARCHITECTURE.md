@@ -628,7 +628,9 @@ classDiagram
 - **The cursors of the panes and the focus are view state.** The highlighted row of a pane lives in its TamboUI
   list, not in the `Model`: no update needs to know where it is. What the model needs is the item highlighted,
   which the view reports back as a `SelectionMsg` ([The view reports back](#the-view-reports-back)). The cursor of
-  a popup's list is the exception, as its update needs it (`ListCursor`).
+  a popup's list is the exception, as its update needs it (`ListCursor`). The dialogs read it through a
+  `FilteredCursor`, which tells the lines its filter shows and the one it highlights, and keeps that one
+  highlighted while the filter changes.
   The focus lives in TamboUI's `FocusManager`. The model only remembers, per screen, which pane had it last
   outside the popups (`Msg.Focused`, `Model.shownPane`, and `PrOverview.listPane` for the list of pull requests in
   use), so a closing popup or a screen shown again can give it back. No update decides anything on it.

@@ -29,6 +29,7 @@ import net.vanfleteren.jazygit.ui.PopupSlot;
 import net.vanfleteren.jazygit.ui.TextWidth;
 import net.vanfleteren.jazygit.ui.Theme;
 import net.vanfleteren.jazygit.ui.widgets.DialogFrame;
+import net.vanfleteren.jazygit.ui.widgets.FilteredCursor;
 import net.vanfleteren.jazygit.ui.widgets.ListKeys;
 import net.vanfleteren.jazygit.ui.widgets.PopupView;
 import net.vanfleteren.jazygit.ui.widgets.WithDetails;
@@ -140,18 +141,13 @@ public final class HelpDialog implements PopupView {
 
     private Element render(HelpPopup popup, ListCursor cursor) {
         List<Row> rows = rows(popup);
-        // Until the user moves, the first key is highlighted.
-        View view = new View(
-                rows,
-                cursor.line()
-                        .map(line -> Math.clamp(line, 0, rows.size() - 1))
-                        .getOrElse(() -> Math.max(0, rows.indexWhere(Key.class::isInstance))),
-                cursor);
+        // Until the user moves, the first key is highlighted; the help has no filter.
+        FilteredCursor<Row> view = FilteredCursor.of(filter -> rows, Key.class::isInstance, cursor);
         list.elements(rows.map(HelpDialog::element).toJavaArray(StyledElement[]::new))
                 .selected(view.selected())
                 .onKeyEvent(event -> handleKey(view, event))
                 .onMouseEvent(event -> ListKeys.wheel(
-                        event, view.selected(), rows.size(), view::isKey, line -> highlight(view, line)));
+                        event, view.selected(), view.size(), view::highlightable, line -> highlight(view, line)));
         int widest = rows.map(HelpDialog::line).map(String::length).max().getOrElse(0);
         DialogElement frame = DialogFrame.withHint(
                         Messages.get(
@@ -164,7 +160,7 @@ public final class HelpDialog implements PopupView {
                 .length(rows.size() + 2 + 2);
         return new WithDetails(
                 frame,
-                view.key().flatMap(HelpDialog::details),
+                key(view).flatMap(HelpDialog::details),
                 rows.filter(Key.class::isInstance).map(Key.class::cast).flatMap(HelpDialog::details));
     }
 
@@ -188,23 +184,22 @@ public final class HelpDialog implements PopupView {
                                 Option.of(global.action()))));
     }
 
-    private EventResult handleKey(View view, KeyEvent event) {
+    private EventResult handleKey(FilteredCursor<Row> view, KeyEvent event) {
         if (event.code() == KeyCode.ESCAPE || Keymap.HELP_KEY.equals(event.string())) {
             dispatch.accept(new Msg.PopupDismissed(HelpPopup.class));
             return EventResult.HANDLED;
         }
         if (event.isConfirm()) {
-            view.key().forEach(this::run);
+            key(view).forEach(this::run);
             return EventResult.HANDLED;
         }
-        Option<Integer> moved =
-                ListKeys.move(event, view.selected(), view.rows().size(), view::isKey);
+        Option<Integer> moved = ListKeys.move(event, view.selected(), view.size(), view::highlightable);
         if (moved.isDefined()) {
             moved.filter(line -> line != view.selected()).forEach(line -> highlight(view, line));
             return EventResult.HANDLED;
         }
         // The keys of the panel come first, as they are listed first.
-        Option<Key> pressed = view.rows()
+        Option<Key> pressed = view.lines()
                 .iterator()
                 .filter(Key.class::isInstance)
                 .map(Key.class::cast)
@@ -213,8 +208,15 @@ public final class HelpDialog implements PopupView {
         return pressed.isDefined() ? EventResult.HANDLED : EventResult.UNHANDLED;
     }
 
-    private void highlight(View view, int line) {
-        dispatch.accept(new Msg.ListCursorChanged(view.cursor().at(line)));
+    private void highlight(FilteredCursor<Row> view, int line) {
+        dispatch.accept(new Msg.ListCursorChanged(view.at(line)));
+    }
+
+    /**
+     * The highlighted key, if the highlighted row is one.
+     */
+    private static Option<Key> key(FilteredCursor<Row> view) {
+        return view.highlighted().map(Key.class::cast);
     }
 
     /**
@@ -223,29 +225,6 @@ public final class HelpDialog implements PopupView {
     private void run(Key key) {
         // Quitting is up to the model, which only sees the message as is.
         key.action().forEach(msg -> dispatch.accept(msg instanceof Msg.Quit ? msg : new HelpMsg.Chosen(msg)));
-    }
-
-    /**
-     * What the help shows for its popup and the model's cursor in it.
-     *
-     * @param selected the highlighted row
-     */
-    private record View(List<Row> rows, int selected, ListCursor cursor) {
-
-        boolean isKey(int line) {
-            return rows.get(line) instanceof Key;
-        }
-
-        /**
-         * The highlighted key, if the highlighted row is one.
-         */
-        Option<Key> key() {
-            return rows.asPartialFunction()
-                    .lift()
-                    .apply(selected)
-                    .filter(Key.class::isInstance)
-                    .map(Key.class::cast);
-        }
     }
 
     /**
