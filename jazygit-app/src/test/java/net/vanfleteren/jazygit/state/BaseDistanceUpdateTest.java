@@ -40,7 +40,8 @@ class BaseDistanceUpdateTest {
         Model model = loaded();
         Cmd.LoadBaseDistance load = LoadUpdate.baseDistance(model);
 
-        Model read = Update.update(model, new LoadMsg.BaseDistanceLoaded(load, HashMap.of(FEATURE, DISTANCE)))
+        Model read = Update.update(
+                        model, new LoadMsg.BaseDistanceLoaded(load, HashMap.empty(), HashMap.of(FEATURE, DISTANCE)))
                 .model();
 
         assertEquals(HashMap.of(FEATURE, DISTANCE), read.repo().baseDistance());
@@ -50,7 +51,8 @@ class BaseDistanceUpdateTest {
     void aReadThatFailsKeepsTheCountsReadBefore() {
         Model model = loaded();
         Cmd.LoadBaseDistance load = LoadUpdate.baseDistance(model);
-        Model read = Update.update(model, new LoadMsg.BaseDistanceLoaded(load, HashMap.of(FEATURE, DISTANCE)))
+        Model read = Update.update(
+                        model, new LoadMsg.BaseDistanceLoaded(load, HashMap.empty(), HashMap.of(FEATURE, DISTANCE)))
                 .model();
 
         Model failed = Update.update(

@@ -9,7 +9,6 @@ import java.nio.file.Path;
 import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.GhFailure;
 import net.vanfleteren.jazygit.git.GitError;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.model.Ahead;
 import net.vanfleteren.jazygit.git.model.BranchName;
@@ -247,8 +246,11 @@ public interface Cmd {
         @Override
         public Msg run(Env env) {
             return env.git()
-                    .baseDistance(tips, main)
-                    .fold(this::failedWith, counts -> new LoadMsg.BaseDistanceLoaded(this, counts));
+                    .parents()
+                    .fold(
+                            this::failedWith,
+                            parents -> new LoadMsg.BaseDistanceLoaded(
+                                    this, parents, env.git().baseDistance(tips, parents, main)));
         }
     }
 
@@ -375,10 +377,13 @@ public interface Cmd {
      * {@link RemoteBranch#DEFAULT_REMOTE} when there is one, else the local one. The branch {@code named} is no base
      * of itself.
      *
-     * @param named the name of the branch, local or remote; none for a detached HEAD
-     * @param main  the main branch, once the branches are read and one is
+     * @param named  the name of the branch, local or remote; none for a detached HEAD
+     * @param parent the branch {@code named} was made from, as read last with the distances to the bases (ADR 49)
+     * @param main   the main branch, once the branches are read and one is
      */
-    record LoadAhead(Option<BranchRef> branch, Option<BranchName> named, Option<BranchName> main) implements Load {
+    record LoadAhead(
+            Option<BranchRef> branch, Option<BranchName> named, Option<BranchName> parent, Option<BranchName> main)
+            implements Load {
 
         @Override
         public Option<Label> label() {
@@ -394,18 +399,13 @@ public interface Cmd {
          * The commits not on the base, none when there is no base to compare with; or why they could not be read.
          */
         Either<Failure, Option<Ahead>> read(Env env) {
-            return named.fold(
-                            () -> Either.<ProcessError, Option<BranchName>>right(Option.none()),
-                            env.git()::parentBranch)
-                    .<GitError>mapLeft(error -> error)
-                    .flatMap(parent -> env.git().ahead(branch, bases(parent)))
-                    .<Failure>mapLeft(Failure.Git::new);
+            return env.git().ahead(branch, bases()).<Failure>mapLeft(Failure.Git::new);
         }
 
         /**
          * The branches to compare with, the first that exists counting.
          */
-        List<BranchRef> bases(Option<BranchName> parent) {
+        List<BranchRef> bases() {
             return BranchRef.bases(named, parent, main);
         }
     }

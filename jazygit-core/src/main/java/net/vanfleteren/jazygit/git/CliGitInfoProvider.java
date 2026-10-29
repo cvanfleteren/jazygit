@@ -356,9 +356,14 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<ProcessError, Map<BranchName, BaseDistance>> baseDistance(
-            Map<BranchRef, Sha> tips, Option<BranchName> main) {
-        return CliBaseDistance.read(worktree, tips, main);
+    public Either<ProcessError, Map<BranchName, BranchName>> parents() {
+        return CliConfig.parents(worktree);
+    }
+
+    @Override
+    public Map<BranchName, BaseDistance> baseDistance(
+            Map<BranchRef, Sha> tips, Map<BranchName, BranchName> parents, Option<BranchName> main) {
+        return CliBaseDistance.read(worktree, tips, parents, main);
     }
 
     @Override

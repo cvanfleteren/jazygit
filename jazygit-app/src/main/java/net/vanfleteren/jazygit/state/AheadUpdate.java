@@ -112,14 +112,23 @@ public final class AheadUpdate {
      * The load of the commits of HEAD that are not on its base, as the branches read last tell what that is.
      */
     public static Cmd.LoadAhead ofHead(Model model) {
-        return new Cmd.LoadAhead(Option.none(), model.repo().currentBranch().map(Branch::name), main(model));
+        Option<BranchName> named = model.repo().currentBranch().map(Branch::name);
+        return new Cmd.LoadAhead(Option.none(), named, parent(model, named), main(model));
     }
 
     /**
      * The load of the commits of {@code branch} that are not on its base.
      */
     public static Cmd.LoadAhead of(Model model, BranchRef branch) {
-        return new Cmd.LoadAhead(Option.of(branch), Option.of(name(branch)), main(model));
+        Option<BranchName> named = Option.of(name(branch));
+        return new Cmd.LoadAhead(Option.of(branch), named, parent(model, named), main(model));
+    }
+
+    /**
+     * The branch {@code named} was made from, as the parents read last have it.
+     */
+    private static Option<BranchName> parent(Model model, Option<BranchName> named) {
+        return named.flatMap(name -> model.repo().parents().get(name));
     }
 
     /**
@@ -185,6 +194,22 @@ public final class AheadUpdate {
                 .filter(shown -> LoadUpdate.tipOf(before, shown).equals(LoadUpdate.tipOf(next, shown)))
                 .filter(shown -> !of(before, shown).equals(of(next, shown))
                         || baseMoved(before, next, AheadUpdate.branch(next, shown)))
+                .map(shown -> of(next, shown));
+        return head.toList().appendAll(branch);
+    }
+
+    /**
+     * The loads to run again once the parents were read: those whose base is another one now. Not that of HEAD while
+     * its log is read again anyway.
+     *
+     * @param before the model before the parents were read
+     */
+    static List<Cmd> parentsLoaded(Model before, Model next) {
+        Option<Cmd> head = Option.when(logOfHead(next) && !ofHead(before).equals(ofHead(next)), () -> ofHead(next));
+        Option<Cmd> branch = next.repoView()
+                .branchAhead()
+                .map(Preview::key)
+                .filter(shown -> !of(before, shown).equals(of(next, shown)))
                 .map(shown -> of(next, shown));
         return head.toList().appendAll(branch);
     }

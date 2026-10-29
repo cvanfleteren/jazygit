@@ -42,8 +42,11 @@ public final class LoadUpdate {
                         done.mapRepo(repo -> repo.withBranches(repo.branches().reload(branches.local()))
                                 .withRemoteBranches(repo.remoteBranches().reload(branches.remote()))));
             case MetadataChecked(var stamps) -> metadataChecked(done, stamps);
-            case LoadMsg.BaseDistanceLoaded(var load, var counts) ->
-                Next.of(done.mapRepo(repo -> repo.withBaseDistance(counts)));
+            // The commits ahead of a base go by the parents too, so those whose base is another one now are read again.
+            case LoadMsg.BaseDistanceLoaded(var load, var parents, var counts) -> {
+                Model read = done.mapRepo(repo -> repo.withBaseDistance(counts).withParents(parents));
+                yield new Next(read, AheadUpdate.parentsLoaded(done, read));
+            }
             // The files of a stash that is dropped close, as its name is now that of another stash.
             case StashesLoaded(var stashes) ->
                 Next.of(done.mapRepo(repo -> repo.withStashes(repo.stashes().reload(stashes)))

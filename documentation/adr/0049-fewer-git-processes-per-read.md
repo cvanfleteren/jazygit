@@ -50,8 +50,9 @@ not change.
    first read, no base is known, and the commits ahead are read once they are, as now when the main branch becomes
    known.
 4. **The parents are read once.** The parents `LoadBaseDistance` reads are kept in the `Repo`, and the commits ahead
-   of the base go by them, instead of a `git config --get` each. When jazygit records a parent itself, it keeps it
-   in the `Repo` too.
+   of the base go by them, instead of a `git config --get` each. Once they are read, the commits ahead whose base is
+   another one by them are read again. A parent jazygit records itself comes with a new branch, so the read of the
+   branches that follows reads the parents again too.
 
 The tips of the two branches of a divergence and of a first subject, which the user asks for, are read in one
 `for-each-ref --format=%(refname)%00%(objectname)` over their full refs instead of a `rev-parse` each. A

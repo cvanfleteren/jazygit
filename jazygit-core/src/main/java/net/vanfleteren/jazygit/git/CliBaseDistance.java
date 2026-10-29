@@ -23,34 +23,31 @@ import net.vanfleteren.jazygit.git.model.Sha;
  */
 final class CliBaseDistance {
 
-    private static final String PARENT_PREFIX = "branch.";
-    private static final String PARENT_SUFFIX = ".gh-merge-base";
-
     private CliBaseDistance() {}
 
     /**
-     * The counts of each local branch that has a base, by its name: one {@code git config} for the parents, then one
-     * {@code for-each-ref} that counts against every base at once (ADR 49). One base git cannot find fails that
+     * The counts of each local branch that has a base, by its name, in one {@code for-each-ref} that counts against
+     * every base at once (ADR 49). One base git cannot find fails that
      * {@code for-each-ref} as a whole: then each base is counted in one of its own, so that only the branches of that
      * base are left out.
      *
      * @param tips the commit of each local branch and of each branch on {@code origin}, as the branches read last have
      *             them
-     * @param main the main branch, the base of a branch without a parent
+     * @param parents the branch each branch was made from, of those that have one recorded
+     * @param main    the main branch, the base of a branch without a parent
      */
-    static Either<ProcessError, Map<BranchName, BaseDistance>> read(
-            Path worktree, Map<BranchRef, Sha> tips, Option<BranchName> main) {
-        Map<String, String> refs = tips.mapKeys(GitArgs::revision).mapValues(Sha::value);
-        return parents(worktree).map(parents -> bases(refs, parents, main)).map(bases -> {
-            Map<BranchName, Base> branches = HashMap.ofEntries(bases);
-            List<String> commits = bases.map(branch -> branch._2.commit()).distinct();
-            return distances(worktree, commits, branches)
-                    .getOrElse(() -> commits.size() < 2
-                            ? HashMap.empty()
-                            : commits.map(commit -> distances(worktree, List.of(commit), branches)
-                                            .getOrElse(HashMap.empty()))
-                                    .fold(HashMap.empty(), Map::merge));
-        });
+    static Map<BranchName, BaseDistance> read(
+            Path worktree, Map<BranchRef, Sha> tips, Map<BranchName, BranchName> parents, Option<BranchName> main) {
+        List<Tuple2<BranchName, Base>> bases =
+                bases(tips.mapKeys(GitArgs::revision).mapValues(Sha::value), parents, main);
+        Map<BranchName, Base> branches = HashMap.ofEntries(bases);
+        List<String> commits = bases.map(branch -> branch._2.commit()).distinct();
+        return distances(worktree, commits, branches)
+                .getOrElse(() -> commits.size() < 2
+                        ? HashMap.empty()
+                        : commits.map(commit -> distances(worktree, List.of(commit), branches)
+                                        .getOrElse(HashMap.empty()))
+                                .fold(HashMap.empty(), Map::merge));
     }
 
     /**
@@ -71,44 +68,6 @@ final class CliBaseDistance {
                         .flatMap(base -> refs.get(GitArgs.revision(base)).map(sha -> new Base(base, sha)))
                         .headOption()
                         .map(base -> Tuple.of(branch, base)));
-    }
-
-    /**
-     * The parent of each branch that has one recorded, as {@code gh} does.
-     */
-    private static Either<ProcessError, Map<BranchName, BranchName>> parents(Path worktree) {
-        // git config --get-regexp exits with 1, saying nothing, when no key matches.
-        return GitProcess.ask(
-                        worktree,
-                        GitCommand.reading(
-                                "config",
-                                "--local",
-                                "--get-regexp",
-                                "^" + PARENT_PREFIX.replace(".", "\\.") + ".*" + PARENT_SUFFIX.replace(".", "\\.")
-                                        + "$"))
-                .mapLeft(GitFailure::error)
-                .map(answer ->
-                        answer.map(output -> parseParents(output.stdout())).getOrElse(HashMap.empty()));
-    }
-
-    /**
-     * The parents in {@code raw}, as {@code git config --get-regexp} lists them: the key, a space and the value per
-     * line. A value that is no branch name is left out.
-     */
-    static Map<BranchName, BranchName> parseParents(String raw) {
-        return HashMap.ofEntries(GitOutput.nonBlankLines(raw).flatMap(line -> {
-            int space = line.indexOf(' ');
-            String key = space < 0 ? line : line.substring(0, space);
-            Option<BranchName> branch = Option.when(
-                            key.startsWith(PARENT_PREFIX)
-                                    && key.endsWith(PARENT_SUFFIX)
-                                    && key.length() > PARENT_PREFIX.length() + PARENT_SUFFIX.length(),
-                            () -> key.substring(PARENT_PREFIX.length(), key.length() - PARENT_SUFFIX.length()))
-                    .map(BranchName::new);
-            Option<BranchName> parent =
-                    Option.when(space >= 0, () -> line.substring(space + 1)).flatMap(BranchName::parse);
-            return branch.flatMap(name -> parent.map(value -> Tuple.of(name, value)));
-        }));
     }
 
     /**

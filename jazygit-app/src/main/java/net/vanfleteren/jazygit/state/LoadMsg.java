@@ -81,9 +81,12 @@ public sealed interface LoadMsg extends Msg {
     }
 
     /**
-     * How far each local branch that has a base is from it, by its name (ADR 46).
+     * How far each local branch that has a base is from it, by its name (ADR 46), with the parents of the branches
+     * that have one recorded, which it went by.
      */
-    record BaseDistanceLoaded(Cmd.LoadBaseDistance cmd, Map<BranchName, BaseDistance> counts) implements LoadMsg {}
+    record BaseDistanceLoaded(
+            Cmd.LoadBaseDistance cmd, Map<BranchName, BranchName> parents, Map<BranchName, BaseDistance> counts)
+            implements LoadMsg {}
 
     /**
      * The log of HEAD, with what {@code load} read of it after.

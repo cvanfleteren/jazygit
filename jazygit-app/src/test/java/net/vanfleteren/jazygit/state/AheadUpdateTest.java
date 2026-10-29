@@ -45,30 +45,35 @@ class AheadUpdateTest {
 
     @Test
     void theBaseIsTheParentElseTheMainBranchTheRemoteOneFirst() {
-        Cmd.LoadAhead load = new Cmd.LoadAhead(Option.of(FEATURE_LOG), Option.of(FEATURE), Option.of(MAIN));
-
         assertEquals(
                 List.of(
                         origin("parent"),
                         new BranchRef.Local(new BranchName("parent")),
                         origin("main"),
                         new BranchRef.Local(MAIN)),
-                load.bases(Option.of(new BranchName("parent"))));
-        assertEquals(List.of(origin("main"), new BranchRef.Local(MAIN)), load.bases(Option.none()));
+                new Cmd.LoadAhead(
+                                Option.of(FEATURE_LOG),
+                                Option.of(FEATURE),
+                                Option.of(new BranchName("parent")),
+                                Option.of(MAIN))
+                        .bases());
+        assertEquals(
+                List.of(origin("main"), new BranchRef.Local(MAIN)),
+                new Cmd.LoadAhead(Option.of(FEATURE_LOG), Option.of(FEATURE), Option.none(), Option.of(MAIN)).bases());
     }
 
     @Test
     void aBranchIsNoBaseOfItself() {
         assertEquals(
                 List.empty(),
-                new Cmd.LoadAhead(Option.of(origin("main")), Option.of(MAIN), Option.of(MAIN)).bases(Option.none()));
+                new Cmd.LoadAhead(Option.of(origin("main")), Option.of(MAIN), Option.none(), Option.of(MAIN)).bases());
     }
 
     @Test
     void aDetachedHeadIsComparedWithTheMainBranch() {
         assertEquals(
                 List.of(origin("main"), new BranchRef.Local(MAIN)),
-                new Cmd.LoadAhead(Option.none(), Option.none(), Option.of(MAIN)).bases(Option.none()));
+                new Cmd.LoadAhead(Option.none(), Option.none(), Option.none(), Option.of(MAIN)).bases());
     }
 
     @Test
@@ -141,6 +146,36 @@ class AheadUpdateTest {
                         new LoadMsg.AheadLoaded(current, Option.of(ahead(FEATURE_TIP, origin("main")))))
                 .model();
         assertEquals(Option.of(ahead(FEATURE_TIP, origin("main"))), AheadUpdate.branch(read, FEATURE_LOG));
+    }
+
+    @Test
+    void theCommitsAheadAreReadAgainWhenTheParentsTellAnotherBase() {
+        Model model = featureLogRead();
+        BranchName head = model.repo().currentBranch().get().name();
+        Cmd.LoadBaseDistance load = LoadUpdate.baseDistance(model);
+
+        Update.Next read = Update.update(
+                model,
+                new LoadMsg.BaseDistanceLoaded(
+                        load,
+                        io.vavr.collection.HashMap.of(head, FEATURE, FEATURE, new BranchName("parent")),
+                        io.vavr.collection.HashMap.empty()));
+
+        assertEquals(Option.of(FEATURE), AheadUpdate.ofHead(read.model()).parent());
+        assertEquals(
+                Option.of(new BranchName("parent")),
+                AheadUpdate.of(read.model(), FEATURE_LOG).parent());
+        assertTrue(read.cmds().contains(AheadUpdate.ofHead(read.model())));
+        assertTrue(read.cmds().contains(AheadUpdate.of(read.model(), FEATURE_LOG)));
+
+        // The same parents again change no base.
+        assertEquals(
+                List.empty(),
+                Update.update(
+                                read.model(),
+                                new LoadMsg.BaseDistanceLoaded(
+                                        load, read.model().repo().parents(), io.vavr.collection.HashMap.empty()))
+                        .cmds());
     }
 
     @Test

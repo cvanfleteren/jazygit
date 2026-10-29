@@ -241,15 +241,21 @@ public interface GitInfoProvider {
     Either<ProcessError, Option<BranchName>> parentBranch(BranchName branch);
 
     /**
+     * The branch each branch was made from, of those that have one recorded, as {@link #parentBranch} reads it.
+     */
+    Either<ProcessError, Map<BranchName, BranchName>> parents();
+
+    /**
      * How far each local branch is from its base, by its name, for those that have a base (ADR 46): the branch it was
-     * made from, as {@link #parentBranch} reads it, else {@code main}; of each, the one on {@code origin} when it is
-     * there, else the local one; never the branch itself. The branches and their bases are those of {@code tips}, at
-     * the commits it has them at (ADR 49).
+     * made from, as {@code parents} has it, else {@code main}; of each, the one on {@code origin} when it is there,
+     * else the local one; never the branch itself. The branches and their bases are those of {@code tips}, at the
+     * commits it has them at (ADR 49). The branches of a base whose count cannot be read are left out.
      *
      * @param tips the commit of each local branch and of each branch on {@code origin}, as the branches read last
      *             have them
      */
-    Either<ProcessError, Map<BranchName, BaseDistance>> baseDistance(Map<BranchRef, Sha> tips, Option<BranchName> main);
+    Map<BranchName, BaseDistance> baseDistance(
+            Map<BranchRef, Sha> tips, Map<BranchName, BranchName> parents, Option<BranchName> main);
 
     // The history, as git log shows it.
 

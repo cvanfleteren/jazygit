@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
-import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.model.BaseDistance;
@@ -45,9 +44,7 @@ class CliBaseDistanceTest {
         commit("two");
         commit("three");
 
-        assertEquals(
-                HashMap.of(FEATURE, distance(LOCAL_MAIN, "feature", 0, 2)),
-                read(Option.of(MAIN)).get());
+        assertEquals(HashMap.of(FEATURE, distance(LOCAL_MAIN, "feature", 0, 2)), read(Option.of(MAIN)));
     }
 
     @Test
@@ -58,19 +55,15 @@ class CliBaseDistanceTest {
         commit("two");
         commit("three");
 
-        assertEquals(
-                HashMap.of(FEATURE, distance(LOCAL_MAIN, "feature", 1, 2)),
-                read(Option.of(MAIN)).get());
+        assertEquals(HashMap.of(FEATURE, distance(LOCAL_MAIN, "feature", 1, 2)), read(Option.of(MAIN)));
     }
 
     @Test
     void theMainBranchHasNoBaseNorDoesAnyBranchWithoutOne() throws Exception {
         git("branch", "feature");
 
-        assertEquals(
-                HashMap.of(FEATURE, distance(LOCAL_MAIN, "feature", 0, 0)),
-                read(Option.of(MAIN)).get());
-        assertEquals(HashMap.empty(), read(Option.none()).get());
+        assertEquals(HashMap.of(FEATURE, distance(LOCAL_MAIN, "feature", 0, 0)), read(Option.of(MAIN)));
+        assertEquals(HashMap.empty(), read(Option.none()));
     }
 
     @Test
@@ -88,7 +81,7 @@ class CliBaseDistanceTest {
                         distance(LOCAL_MAIN, "feature", 2, 0),
                         STACKED,
                         distance(new BranchRef.Local(FEATURE), "stacked", 0, 1)),
-                read(Option.of(MAIN)).get());
+                read(Option.of(MAIN)));
     }
 
     @Test
@@ -97,9 +90,7 @@ class CliBaseDistanceTest {
         git("config", "--local", "branch.stacked.gh-merge-base", "deleted");
         commit("two");
 
-        assertEquals(
-                HashMap.of(STACKED, distance(LOCAL_MAIN, "stacked", 0, 1)),
-                read(Option.of(MAIN)).get());
+        assertEquals(HashMap.of(STACKED, distance(LOCAL_MAIN, "stacked", 0, 1)), read(Option.of(MAIN)));
     }
 
     @Test
@@ -111,16 +102,14 @@ class CliBaseDistanceTest {
         commit("four");
 
         // origin/main has one commit feature does not; the local main, three.
-        assertEquals(
-                HashMap.of(FEATURE, distance(ORIGIN_MAIN, "feature", 0, 1)),
-                read(Option.of(MAIN)).get());
+        assertEquals(HashMap.of(FEATURE, distance(ORIGIN_MAIN, "feature", 0, 1)), read(Option.of(MAIN)));
     }
 
     @Test
     void theParentsAreReadFromTheKeysGhSets() {
         assertEquals(
                 HashMap.of(new BranchName("feat.x"), MAIN, STACKED, FEATURE),
-                CliBaseDistance.parseParents(
+                CliConfig.parseParents(
                         "branch.feat.x.gh-merge-base main\nbranch.stacked.gh-merge-base feature\nbranch.odd.gh-merge-base\n"));
     }
 
@@ -174,7 +163,7 @@ class CliBaseDistanceTest {
 
         assertEquals(
                 HashMap.of(FEATURE, distance(LOCAL_MAIN, "feature", 0, 1)),
-                CliBaseDistance.read(repo, tips, Option.of(MAIN)).get());
+                CliBaseDistance.read(repo, tips, CliConfig.parents(repo).get(), Option.of(MAIN)));
     }
 
     @Test
@@ -193,7 +182,7 @@ class CliBaseDistanceTest {
                         distance(new BranchRef.Local(FEATURE), "stacked", 0, 0),
                         new BranchName("other"),
                         distance(LOCAL_MAIN, "other", 0, 0)),
-                read(Option.of(MAIN)).get());
+                read(Option.of(MAIN)));
     }
 
     @Test
@@ -226,15 +215,14 @@ class CliBaseDistanceTest {
                         distance(LOCAL_MAIN, "fix)x", 1, 0),
                         STACKED,
                         distance(new BranchRef.Local(new BranchName("fix)x")), "stacked", 0, 1)),
-                read(Option.of(MAIN)).get());
+                read(Option.of(MAIN)));
     }
 
     /**
      * How far each branch is from its base, its branches and their bases where they are now.
      */
-    private Either<GitError.ProcessError, Map<BranchName, BaseDistance>> read(Option<BranchName> main)
-            throws Exception {
-        return CliBaseDistance.read(repo, tips(), main);
+    private Map<BranchName, BaseDistance> read(Option<BranchName> main) throws Exception {
+        return CliBaseDistance.read(repo, tips(), CliConfig.parents(repo).get(), main);
     }
 
     /**

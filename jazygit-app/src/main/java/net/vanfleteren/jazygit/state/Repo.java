@@ -23,6 +23,8 @@ import net.vanfleteren.jazygit.git.model.*;
  *                        not read, or could not be read the last time, is not known
  * @param baseDistance    how far each local branch that has a base is from it, by its name, as read last (ADR 46);
  *                        none before the first read
+ * @param parents         the branch each branch was made from, of those that have one recorded, as read last with
+ *                        the distances to their bases; none before the first read
  */
 @With
 public record Repo(
@@ -34,7 +36,8 @@ public record Repo(
         Loadable<List<Stash>> stashes,
         Loadable<List<Worktree>> worktrees,
         Map<String, Boolean> worktreeChanges,
-        Map<BranchName, BaseDistance> baseDistance) {
+        Map<BranchName, BaseDistance> baseDistance,
+        Map<BranchName, BranchName> parents) {
 
     public static final Repo LOADING = new Repo(
             Loadable.loading(),
@@ -44,6 +47,7 @@ public record Repo(
             Loadable.loading(),
             Loadable.loading(),
             Loadable.loading(),
+            HashMap.empty(),
             HashMap.empty(),
             HashMap.empty());
 
