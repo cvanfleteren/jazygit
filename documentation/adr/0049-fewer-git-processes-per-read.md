@@ -67,5 +67,12 @@ bases.
 
 - `GitInfoProvider.commits` and `ahead` take the commit HEAD is at, and `ahead` the parent of the branch, instead of
   finding them out. `baseDistance` takes the tips of the branches.
-- What is read from the model can be a moment older than what git would say now. A tip or HEAD that moved since is
-  read again by the next tick, as the status and the branches it moved are.
+- `Cmd.LoadAhead` holds the commit HEAD is at and the parent of the branch, so two loads of it are equal only when
+  they read from the same HEAD, with the same base.
+- What is read from the model can be older than what git would say now. The status and the branches are read side
+  by side, and either can arrive first: after a `git pull --rebase`, which moves HEAD and `origin/main` together, the
+  branches can ask for the commits ahead of the HEAD of the status before. So the commits ahead of HEAD that arrive
+  on their own, not with a log, are kept as those that arrive with one are: only when their load is the one
+  `AheadUpdate.ofHead` makes of the model now; otherwise that one is read instead. Without it, the commits ahead read
+  for the old HEAD would be hidden, as they are not of the log shown, and nothing would read them again until HEAD
+  or the base moved once more.
