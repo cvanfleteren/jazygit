@@ -60,7 +60,9 @@ final class TomlFile {
                         Files.writeString(temp, text.toString(), StandardCharsets.UTF_8);
                         return move(temp, target);
                     })
-                    .onFailure(failed -> Try.run(() -> Files.deleteIfExists(temp)))
+                    .onFailure(failed -> {
+                        var _ = Try.run(() -> Files.deleteIfExists(temp));
+                    })
                     .get();
         });
     }

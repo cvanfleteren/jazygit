@@ -37,7 +37,7 @@ public sealed interface RecentReposCmd extends Cmd {
         List<Path> kept = recent.load();
         List<Path> gone = kept.filter(directory -> !Files.isDirectory(directory));
         if (gone.nonEmpty()) {
-            recent.forget(gone).onFailure(RecentReposCmd::notKept);
+            var _ = recent.forget(gone).onFailure(RecentReposCmd::notKept);
         }
         return kept.removeAll(gone)
                 .map(directory -> new RecentRepo(
@@ -89,11 +89,11 @@ public sealed interface RecentReposCmd extends Cmd {
                     .switchTo(chosen, landing)
                     .fold(
                             error -> {
-                                env.recent().forget(List.of(chosen)).onFailure(RecentReposCmd::notKept);
+                                var _ = env.recent().forget(List.of(chosen)).onFailure(RecentReposCmd::notKept);
                                 return failedWith(error);
                             },
                             worktree -> {
-                                env.recent().opened(worktree).onFailure(RecentReposCmd::notKept);
+                                var _ = env.recent().opened(worktree).onFailure(RecentReposCmd::notKept);
                                 return new RecentReposMsg.Switched(worktree.toString());
                             });
         }
