@@ -46,7 +46,7 @@ not change.
 3. **The bases come from the branches read.** The bases of ADR 20 are local branches and those on `origin`, whose
    tips the model holds since the branches were read: the first of `BranchRef.bases` among them counts, at the tip
    the model has, without a `rev-parse` each. The commits ahead are then counted against the tip whose move
-   `AheadUpdate.branchesLoaded` reads them again for, as the distances of decision 1 are. Before the branches are
+   `AheadUpdate.basesRead` reads them again for, as the distances of decision 1 are. Before the branches are
    first read, no base is known, and the commits ahead are read once they are, as now when the main branch becomes
    known.
 4. **The parents are read once.** The parents `LoadBaseDistance` reads are kept in the `Repo`, and the commits ahead
@@ -90,8 +90,11 @@ the two agree as branches point to commits.
   read from the same HEAD, against the same base where it is.
 - What is read from the model can be older than what git would say now. The status and the branches are read side
   by side, and either can arrive first: after a `git pull --rebase`, which moves HEAD and `origin/main` together, the
-  branches can ask for the commits ahead of the HEAD of the status before. So the commits ahead of HEAD that arrive
-  on their own, not with a log, are kept as those that arrive with one are: only when their load is the one
-  `AheadUpdate.ofHead` makes of the model now; otherwise that one is read instead. The same holds for a base that moved. Without it, the commits ahead read
-  for the old HEAD would be hidden, as they are not of the log shown, and nothing would read them again until HEAD
-  or the base moved once more.
+  branches can ask for the commits ahead of the HEAD of the status before; and the parents, read with the
+  distances, can tell another base after the commits ahead were asked for. So the commits ahead that arrive on
+  their own, not with a log, are kept only when their load is the one `AheadUpdate.ofHead`, or `AheadUpdate.of`,
+  makes of the model now. Otherwise they are dropped, and that one is read instead, unless it runs already. Kept,
+  the commits ahead of an old HEAD would be hidden, as they are not of the log shown, and nothing would read them
+  again until HEAD or the base moved once more.
+- The distances to the bases, and the parents read with them, are kept only when their load is the one the model
+  makes now: one read for older tips that arrives after a newer one would put back what that replaced.

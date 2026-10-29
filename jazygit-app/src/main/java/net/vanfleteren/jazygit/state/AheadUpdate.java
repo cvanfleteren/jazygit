@@ -170,17 +170,22 @@ public final class AheadUpdate {
     }
 
     /**
-     * Keeps what {@code load} read on its own, not with a log, as {@link #read} does, unless it was for a branch no
-     * longer shown. Read from where the model had HEAD, the branch or its base then, it can be outdated by a read of
-     * the status or the branches since, which no tick would read again: then it is read again (ADR 49).
+     * Keeps what {@code load} read on its own, not with a log, when it is the load the model makes now; what was read
+     * for a branch no longer shown is dropped. Read from where the model had HEAD, the branch or its base then, it can
+     * be outdated by a read of the status, the branches or the parents since, which no tick would read again: then it
+     * is dropped, as there is no log to show it with, and the load of now is run, unless it runs already (ADR 49).
      */
     static Next aheadLoaded(Model model, Cmd.LoadAhead load, Option<Ahead> ahead) {
-        return load.branch()
-                        .forAll(branch -> model.repoView()
-                                .branchAhead()
-                                .exists(preview -> preview.key().equals(branch)))
-                ? read(model, load, Either.right(ahead))
-                : Next.of(model);
+        boolean shown = load.branch()
+                .forAll(branch -> model.repoView()
+                        .branchAhead()
+                        .exists(preview -> preview.key().equals(branch)));
+        Cmd.LoadAhead current = load.branch().fold(() -> ofHead(model), branch -> of(model, branch));
+        return !shown
+                ? Next.of(model)
+                : current.equals(load)
+                        ? loaded(model, load, ahead)
+                        : model.jobs().runs(current) ? Next.of(model) : Next.of(model, current);
     }
 
     /**

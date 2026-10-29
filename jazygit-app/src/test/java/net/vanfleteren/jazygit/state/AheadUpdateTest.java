@@ -160,11 +160,16 @@ class AheadUpdateTest {
         Model logRead = Update.update(moved, new LoadMsg.CommitsLoaded(log, current, Either.right(Option.none())))
                 .model();
 
-        Update.Next late =
-                Update.update(logRead, new LoadMsg.AheadLoaded(old, Option.of(ahead(HEAD, new BranchRef.Local(MAIN)))));
+        LoadMsg.AheadLoaded stale = new LoadMsg.AheadLoaded(old, Option.of(ahead(HEAD, new BranchRef.Local(MAIN))));
+        Update.Next late = Update.update(logRead, stale);
 
         assertNotEquals(old, current);
-        assertTrue(late.cmds().contains(current));
+        assertEquals(List.of(current), late.cmds());
+        // What was read for the old HEAD is not kept, not even for a moment.
+        assertEquals(logRead.repo().ahead(), late.model().repo().ahead());
+        // When the load of now runs already, it is not started twice.
+        Model running = logRead.mapJobs(jobs -> jobs.withStarted(List.of(current), Instant.EPOCH));
+        assertEquals(List.empty(), Update.update(running, stale).cmds());
     }
 
     @Test

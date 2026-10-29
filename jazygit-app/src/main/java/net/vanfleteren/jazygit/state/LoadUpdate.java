@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.state;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
@@ -42,11 +43,11 @@ public final class LoadUpdate {
                         done.mapRepo(repo -> repo.withBranches(repo.branches().reload(branches.local()))
                                 .withRemoteBranches(repo.remoteBranches().reload(branches.remote()))));
             case MetadataChecked(var stamps) -> metadataChecked(done, stamps);
-            // The commits ahead of a base go by the parents too, so those whose base is another one now are read again.
-            case LoadMsg.BaseDistanceLoaded(var load, var parents, var counts) -> {
-                Model read = done.mapRepo(repo -> repo.withBaseDistance(counts).withParents(parents));
-                yield new Next(read, AheadUpdate.basesRead(done, read));
-            }
+            // What was read for older branches is dropped: the read of the branches that replaced them asked for it
+            // again. The commits ahead of a base go by the parents too, so those whose base is another one now are
+            // read again.
+            case LoadMsg.BaseDistanceLoaded(var load, var parents, var counts) ->
+                load.equals(baseDistance(done)) ? distancesRead(done, parents, counts) : Next.of(done);
             // The files of a stash that is dropped close, as its name is now that of another stash.
             case StashesLoaded(var stashes) ->
                 Next.of(done.mapRepo(repo -> repo.withStashes(repo.stashes().reload(stashes)))
@@ -186,6 +187,16 @@ public final class LoadUpdate {
         return new Next(
                 reloaded.model(),
                 reloaded.cmds().appendAll(AheadUpdate.basesRead(before, next)).append(baseDistance(next)));
+    }
+
+    /**
+     * Keeps how far each local branch is from its base, and the parents that went by, and reads the commits ahead
+     * again whose base is another one by them.
+     */
+    private static Next distancesRead(
+            Model model, Map<BranchName, BranchName> parents, Map<BranchName, BaseDistance> counts) {
+        Model read = model.mapRepo(repo -> repo.withBaseDistance(counts).withParents(parents));
+        return new Next(read, AheadUpdate.basesRead(model, read));
     }
 
     /**

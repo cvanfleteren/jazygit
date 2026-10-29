@@ -48,6 +48,28 @@ class BaseDistanceUpdateTest {
     }
 
     @Test
+    void aReadForBranchesReadSinceIsDropped() {
+        Model model = loaded();
+        Cmd.LoadBaseDistance older = LoadUpdate.baseDistance(model);
+        // A fetch moved feature: the branches are read again, which asks for the distances again.
+        Model moved = localBranchesRead(
+                        model,
+                        io.vavr.collection.List.of(
+                                Fixtures.branch(new BranchName("main"), true, new Sha("aaaa")),
+                                Fixtures.branch(FEATURE, false, new Sha("eeee"))))
+                .model();
+
+        Update.Next late = Update.update(
+                moved,
+                new LoadMsg.BaseDistanceLoaded(
+                        older, HashMap.of(FEATURE, new BranchName("main")), HashMap.of(FEATURE, DISTANCE)));
+
+        assertNotEquals(older, LoadUpdate.baseDistance(moved));
+        assertEquals(moved.repo(), late.model().repo());
+        assertEquals(io.vavr.collection.List.empty(), late.cmds());
+    }
+
+    @Test
     void aReadThatFailsKeepsTheCountsReadBefore() {
         Model model = loaded();
         Cmd.LoadBaseDistance load = LoadUpdate.baseDistance(model);
