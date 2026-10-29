@@ -21,6 +21,7 @@ The Maven build has three modules under the parent `pom.xml`:
 | `jazygit-json` | `json`: JSON as plain values (`Json`), and the decoders that turn it into records (`Decoder`), ADR 42. | vavr, Parsson's streaming parser |
 | `jazygit-core` | `process`, `git`, `git.model`, `gh`, `gh.model`: running git and gh, and what they report as values. | `jazygit-json`, vavr, zt-exec |
 | `jazygit-app` | Everything else: `JazygitApp`, `cli`, `state`, `feature.*`, `ui`, `keys`, `settings`, `i18n`, and all resources. Builds the fat jar and the native image. | `jazygit-core`, TamboUI, picocli, night-config |
+| `jazygit-benchmarks` | JMH benchmarks of pure parts of the core: `WordDiffBenchmark` times parsing a diff and comparing the words of its changed lines, for the rich view (ADR 44). Only built with `-Pbench`, so no part of `verify` or CI. | `jazygit-core`, JMH |
 
 The packages keep their names (`net.vanfleteren.jazygit.git`, ...), whichever module they are in. The core
 cannot see the application, TamboUI, picocli or night-config, so the compiler stops it from depending on them.

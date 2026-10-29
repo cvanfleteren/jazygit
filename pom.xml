@@ -40,6 +40,7 @@
         <pitest.version>1.30.1</pitest.version>
         <pitest-junit5-plugin.version>1.2.3</pitest-junit5-plugin.version>
         <pitest.threads>8</pitest.threads>
+        <jmh.version>1.37</jmh.version>
     </properties>
 
     <repositories>
@@ -376,6 +377,15 @@
     </build>
 
     <profiles>
+        <!-- The JMH benchmarks, on demand only, no part of verify or CI:
+             ./mvnw -Pbench -pl jazygit-benchmarks -am package -DskipTests
+             java -jar jazygit-benchmarks/target/benchmarks.jar -->
+        <profile>
+            <id>bench</id>
+            <modules>
+                <module>jazygit-benchmarks</module>
+            </modules>
+        </profile>
         <!-- On by itself in CI (GitHub Actions sets CI=true): fail on unformatted code instead of reformatting it. -->
         <profile>
             <id>ci</id>
