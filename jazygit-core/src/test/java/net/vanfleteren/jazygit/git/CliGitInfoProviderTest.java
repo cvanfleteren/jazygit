@@ -391,6 +391,27 @@ class CliGitInfoProviderTest {
     }
 
     @Test
+    void onlyTheBranchNamedExactlyIsCompared() throws Exception {
+        // for-each-ref refs/heads/side also lists refs/heads/side/x: that is no branch side.
+        git("branch", "side/x");
+        BranchRef side = new BranchRef.Local(new BranchName("side"));
+        BranchRef main = new BranchRef.Local(new BranchName("main"));
+
+        assertEquals(
+                new GitError.UnknownBranch(side),
+                provider.divergence(side, main).getLeft());
+        assertEquals(
+                new GitError.UnknownBranch(side),
+                provider.firstSubject(main, side).getLeft());
+        assertEquals(
+                0,
+                provider.divergence(new BranchRef.Local(new BranchName("side/x")), main)
+                        .get()
+                        .ahead()
+                        .count());
+    }
+
+    @Test
     void aheadListsTheCommitsNotOnTheBase() throws Exception {
         Sha fork = provider.status().get().headCommit().get();
         git("checkout", "-q", "-b", "side");

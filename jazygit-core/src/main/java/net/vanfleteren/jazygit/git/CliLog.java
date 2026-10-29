@@ -95,18 +95,46 @@ final class CliLog {
      * each, and how many there are in all.
      */
     static Either<GitError, Divergence> divergence(Path worktree, BranchRef branch, BranchRef other) {
-        return tip(worktree, branch)
-                .flatMap(ours -> tip(worktree, other)
-                        .flatMap(theirs -> Either.narrow(counts(worktree, ours, theirs)
-                                .flatMap(counts -> selected(
-                                                worktree, List.of(ours.value(), "^" + theirs.value()), MAX_COMMITS)
-                                        .flatMap(ahead -> selected(
-                                                        worktree,
-                                                        List.of(theirs.value(), "^" + ours.value()),
-                                                        MAX_COMMITS)
-                                                .map(behind -> new Divergence(
-                                                        new Divergence.Side(ahead, counts._1),
-                                                        new Divergence.Side(behind, counts._2))))))));
+        return tips(worktree, branch, other)
+                .flatMap(tips -> tips.apply((ours, theirs) -> Either.narrow(counts(worktree, ours, theirs)
+                        .flatMap(counts -> selected(worktree, List.of(ours.value(), "^" + theirs.value()), MAX_COMMITS)
+                                .flatMap(ahead -> selected(
+                                                worktree, List.of(theirs.value(), "^" + ours.value()), MAX_COMMITS)
+                                        .map(behind -> new Divergence(
+                                                new Divergence.Side(ahead, counts._1),
+                                                new Divergence.Side(behind, counts._2))))))));
+    }
+
+    /**
+     * The commits {@code ours} and {@code theirs} are at, read in one {@code for-each-ref} over their full refs (ADR 49).
+     */
+    private static Either<GitError, Tuple2<Sha, Sha>> tips(Path worktree, BranchRef ours, BranchRef theirs) {
+        return Either.<GitError, Map<String, Sha>>narrow(GitProcess.read(
+                        worktree,
+                        GitCommand.reading(List.of(
+                                "for-each-ref",
+                                "--format=%(refname)" + GitOutput.REF_FIELD_SEPARATOR + "%(objectname)",
+                                GitArgs.revision(ours),
+                                GitArgs.revision(theirs))),
+                        CliLog::refs))
+                .flatMap(found -> found.get(GitArgs.revision(ours))
+                        .toEither(() -> (GitError) new UnknownBranch(ours))
+                        .flatMap(sha -> found.get(GitArgs.revision(theirs))
+                                .toEither(() -> (GitError) new UnknownBranch(theirs))
+                                .map(other -> Tuple.of(sha, other))));
+    }
+
+    /**
+     * The commit of each ref in {@code raw}, by its full name, a line per ref as {@code for-each-ref} lists it: its
+     * name, then the object it points to, which for a branch is its commit. A pattern of {@code for-each-ref} also
+     * matches the refs below it, so the refs asked for are looked up by their exact name.
+     */
+    static Either<UnexpectedOutput, Map<String, Sha>> refs(String raw) {
+        return Either.sequenceRight(GitOutput.nonBlankLines(raw)
+                        .map(line -> GitOutput.fields(line, 2)
+                                .flatMap(fields ->
+                                        GitOutput.sha(fields.get(1)).map(sha -> Tuple.of(fields.get(0), sha)))))
+                .map(HashMap::ofEntries);
     }
 
     /**
@@ -142,19 +170,18 @@ final class CliLog {
      * The subject of the oldest commit on {@code branch} that is not on {@code base}; none when there is none.
      */
     static Either<GitError, Option<String>> firstSubject(Path worktree, BranchRef branch, BranchRef base) {
-        return tip(worktree, branch)
-                .flatMap(ours -> tip(worktree, base)
-                        .flatMap(theirs -> Either.narrow(GitProcess.read(
-                                worktree,
-                                GitCommand.reading(
-                                        "log",
-                                        "--no-color",
-                                        "--reverse",
-                                        "--format=%s",
-                                        ours.value(),
-                                        "^" + theirs.value(),
-                                        "--"),
-                                raw -> Either.right(GitOutput.nonBlankLines(raw).headOption())))));
+        return tips(worktree, branch, base)
+                .flatMap(tips -> tips.apply((ours, theirs) -> Either.narrow(GitProcess.read(
+                        worktree,
+                        GitCommand.reading(
+                                "log",
+                                "--no-color",
+                                "--reverse",
+                                "--format=%s",
+                                ours.value(),
+                                "^" + theirs.value(),
+                                "--"),
+                        raw -> Either.right(GitOutput.nonBlankLines(raw).headOption())))));
     }
 
     /**
