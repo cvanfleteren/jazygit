@@ -30,8 +30,9 @@ final class CliDiff {
      */
     static final List<String> PREFIXES = List.of("--src-prefix=a/", "--dst-prefix=b/");
 
-    private static final List<String> STAGED = List.of("diff", "--cached", "--no-color", "--no-ext-diff");
-    private static final List<String> UNSTAGED = List.of("diff", "--no-color", "--no-ext-diff");
+    private static final List<String> STAGED =
+            List.of("diff", "--cached", "--no-color", "--no-ext-diff").appendAll(PREFIXES);
+    private static final List<String> UNSTAGED = List.of("diff", "--no-color", "--no-ext-diff").appendAll(PREFIXES);
 
     private CliDiff() {}
 

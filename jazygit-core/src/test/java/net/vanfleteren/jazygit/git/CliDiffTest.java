@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.Fixtures;
+import net.vanfleteren.jazygit.git.model.UnifiedDiff;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.zeroturnaround.exec.ProcessExecutor;
@@ -102,6 +103,42 @@ class CliDiffTest {
         assertTrue(
                 ignoring.unstaged().text().contains("+first"),
                 ignoring.unstaged().text());
+    }
+
+    @Test
+    void theDiffsOfTheWorkingTreeKeepGitsOwnPrefixesWhateverTheUserConfigured() throws Exception {
+        git("init", "-q");
+        git("config", "user.email", "t@t");
+        git("config", "user.name", "t");
+        git("config", "diff.mnemonicPrefix", "true");
+        git("config", "diff.srcPrefix", "old/");
+        Files.writeString(repo.resolve("a.txt"), "one\n");
+        Files.writeString(repo.resolve("b.txt"), "one\n");
+        git("add", "a.txt", "b.txt");
+        git("commit", "-qm", "init");
+        Files.writeString(repo.resolve("a.txt"), "two\n");
+        git("add", "a.txt");
+        Files.writeString(repo.resolve("b.txt"), "two\n");
+        Files.writeString(repo.resolve("new.txt"), "first\n");
+
+        Diffs diffs = CliDiff.diff(
+                        repo,
+                        List.of(
+                                new FileEntry("a.txt", ChangeType.MODIFIED, true, false),
+                                Fixtures.fileEntry("b.txt", ChangeType.MODIFIED),
+                                Fixtures.fileEntry("new.txt", ChangeType.UNTRACKED)),
+                        DiffOptions.DEFAULT)
+                .get();
+
+        assertTrue(
+                diffs.staged().text().contains("--- a/a.txt\n+++ b/a.txt\n"),
+                diffs.staged().text());
+        assertEquals(
+                List.of("b.txt", "new.txt"),
+                UnifiedDiff.parse(diffs.unstaged().text()).files().map(UnifiedDiff.FileDiff::path));
+        assertTrue(
+                diffs.unstaged().text().contains("+++ b/new.txt\n"),
+                diffs.unstaged().text());
     }
 
     @Test
