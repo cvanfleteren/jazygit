@@ -260,11 +260,12 @@ public record UnifiedDiff(List<String> preamble, List<FileDiff> files) {
 
         /**
          * The section heading git gives after the numbers of the header, like the function the hunk is in, if it
-         * gives one.
+         * gives one; or the whole header when git's numbers cannot be read from it, so that nothing git printed is
+         * lost.
          */
         public Option<String> heading() {
             Matcher numbers = HUNK.matcher(header);
-            return Option.when(numbers.matches(), () -> numbers.group(3)).filter(heading -> !heading.isBlank());
+            return Option.of(numbers.matches() ? numbers.group(3) : header).filter(heading -> !heading.isBlank());
         }
     }
 

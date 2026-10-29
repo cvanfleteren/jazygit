@@ -51,6 +51,21 @@ class RichDiffTest {
     }
 
     @Test
+    void aHunkWithoutAHeadingStartsWithARuleAsWideAsItsLineNumbers() {
+        List<String> lines = text(RichDiff.lines("""
+                diff --git a/a.txt b/a.txt
+                --- a/a.txt
+                +++ b/a.txt
+                @@ -1 +1 @@
+                -one
+                +two
+                """, Theme.SpanStyles.NONE));
+
+        // The changed lines are padded to the width of the bar.
+        assertEquals(List.of(" modified  a.txt ", "┄┄┄ │ ", "1   │ -one       ", "  1 │ +two       "), lines);
+    }
+
+    @Test
     void highlightsTheChangedWordsOfAChangedLine() {
         Style word = Style.EMPTY.reversed();
         Theme.SpanStyles styles = cssClass -> cssClass.endsWith("-word") ? word : Style.EMPTY;
