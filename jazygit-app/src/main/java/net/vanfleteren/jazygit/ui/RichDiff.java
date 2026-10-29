@@ -28,7 +28,7 @@ final class RichDiff {
     private RichDiff() {}
 
     /**
-     * The lines of {@code diff}, styled. It was parsed and its words compared when it was read (ADR 49), so drawing
+     * The lines of {@code diff}, styled. It was parsed and its words compared when it was read (ADR 50), so drawing
      * it only styles it.
      */
     static List<Line> lines(ParsedDiff diff, Theme.SpanStyles styles) {

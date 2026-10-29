@@ -146,7 +146,7 @@ class CliDiffTest {
         String full = List.range(0, CliDiff.MAX_LINES).map(i -> "+" + i + "\n").mkString();
 
         assertEquals(DiffText.of(full), CliDiff.truncated(full));
-        assertEquals(new DiffText(full, true), CliDiff.truncated(full + "+more\n"));
+        assertEquals(DiffText.of(full, true), CliDiff.truncated(full + "+more\n"));
     }
 
     private String git(String... args) throws Exception {

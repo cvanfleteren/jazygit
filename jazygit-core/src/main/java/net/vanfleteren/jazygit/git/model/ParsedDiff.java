@@ -7,7 +7,7 @@ import net.vanfleteren.jazygit.git.model.UnifiedDiff.Hunk;
 import net.vanfleteren.jazygit.git.model.WordDiff.Segment;
 
 /**
- * A unified diff parsed, with the words of its changed lines compared: what the rich view draws (ADR 49). It is made
+ * A unified diff parsed, with the words of its changed lines compared: what the rich view draws (ADR 50). It is made
  * where the diff is read, as comparing the words of a long diff takes too long to do where it is drawn.
  *
  * @param diff  the diff parsed
