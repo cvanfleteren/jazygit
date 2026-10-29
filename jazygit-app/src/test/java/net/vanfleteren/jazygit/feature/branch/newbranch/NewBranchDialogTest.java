@@ -95,6 +95,16 @@ class NewBranchDialogTest {
     }
 
     @Test
+    void aLongBranchNameFitsInTheTitle() throws Exception {
+        String base = "feature/some-rather-long-branch-name-here";
+        open = TestModels.loaded(new SampleData()).openPopup(new NewBranchPopup(new BranchName(base)));
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view)) {
+            String screen = RenderedText.ofLarge(runner, this::view);
+            assertTrue(screen.contains("New branch from " + base), screen);
+        }
+    }
+
+    @Test
     void closedModelShowsNoPopup() {
         assertTrue(dialog.render(TestModels.loaded(new SampleData())).isEmpty());
     }

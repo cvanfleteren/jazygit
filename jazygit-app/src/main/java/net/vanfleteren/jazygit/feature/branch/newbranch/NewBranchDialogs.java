@@ -17,10 +17,11 @@ public final class NewBranchDialogs {
      * Asks for the name of a new branch. A blank name keeps it open.
      */
     public static final TextInputDialog.Spec<NewBranchPopup> NEW_BRANCH = TextInputDialog.Spec.confirming(
-            "new-branch-name",
-            NewBranchPopup.class,
-            popup -> Messages.get("dialog.newBranch.title", popup.label()),
-            Option.of(Messages.get("dialog.newBranch.placeholder")));
+                    "new-branch-name",
+                    NewBranchPopup.class,
+                    popup -> Messages.get("dialog.newBranch.title", popup.label()),
+                    Option.of(Messages.get("dialog.newBranch.placeholder")))
+            .withWidth(TextInputDialog.BRANCH_NAME_WIDTH);
 
     private NewBranchDialogs() {}
 

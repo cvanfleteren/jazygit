@@ -29,7 +29,17 @@ import net.vanfleteren.jazygit.ui.LineEditInput;
  */
 public final class TextInputDialog<P extends TextPopup> implements PopupView {
 
+    /**
+     * The width of a dialog that shows branch names, in its title or its input, borders included: wide enough for
+     * long ones.
+     */
+    public static final int BRANCH_NAME_WIDTH = 80;
+
+    /**
+     * The width of the dialog, borders included, unless its spec asks for another.
+     */
     private static final int WIDTH = 50;
+
     private final Spec<P> spec;
     private final Consumer<Msg> dispatch;
     private final TextInputState input = new TextInputState();
@@ -58,7 +68,7 @@ public final class TextInputDialog<P extends TextPopup> implements PopupView {
                 input.setText(open.text());
                 input.moveCursorToEnd();
             }
-            return DialogFrame.of(spec.title().apply(open), WIDTH, field())
+            return DialogFrame.of(spec.title().apply(open), spec.width(), field())
                     .onConfirm(this::confirm)
                     .onCancel(this::cancel);
         });
@@ -95,6 +105,7 @@ public final class TextInputDialog<P extends TextPopup> implements PopupView {
      * @param onConfirm   the message for Enter; its update reads the text from the popup, and decides whether it
      *                    closes
      * @param onCancel    the message for Escape; by default a {@link Msg.PopupDismissed}
+     * @param width       the width of the dialog, borders included; by default {@value #WIDTH}
      */
     public record Spec<P extends Popup>(
             String id,
@@ -102,7 +113,18 @@ public final class TextInputDialog<P extends TextPopup> implements PopupView {
             Function<P, String> title,
             Option<String> placeholder,
             Supplier<Msg> onConfirm,
-            Supplier<Msg> onCancel) {
+            Supplier<Msg> onCancel,
+            int width) {
+
+        public Spec(
+                String id,
+                Class<P> popupType,
+                Function<P, String> title,
+                Option<String> placeholder,
+                Supplier<Msg> onConfirm,
+                Supplier<Msg> onCancel) {
+            this(id, popupType, title, placeholder, onConfirm, onCancel, WIDTH);
+        }
 
         /**
          * A dialog which Escape only closes (ADR 38).
@@ -129,7 +151,14 @@ public final class TextInputDialog<P extends TextPopup> implements PopupView {
          * This dialog, sending {@code onCancel} for Escape, for a popup that does more than close then.
          */
         public Spec<P> cancelledBy(Supplier<Msg> onCancel) {
-            return new Spec<>(id, popupType, title, placeholder, onConfirm, onCancel);
+            return new Spec<>(id, popupType, title, placeholder, onConfirm, onCancel, width);
+        }
+
+        /**
+         * This dialog, {@code width} wide, borders included.
+         */
+        public Spec<P> withWidth(int width) {
+            return new Spec<>(id, popupType, title, placeholder, onConfirm, onCancel, width);
         }
     }
 }

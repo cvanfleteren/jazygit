@@ -21,17 +21,18 @@ public final class PushDialogs {
      * What cannot be read that way keeps it open.
      */
     public static final TextInputDialog.Spec<SetUpstreamPopup> SET_UPSTREAM = new TextInputDialog.Spec<>(
-            "set-upstream",
-            SetUpstreamPopup.class,
-            popup -> popup.refused()
-                    .map(refused -> Messages.get(
-                            "dialog.setUpstream.refusedTitle",
-                            popup.branch().value(),
-                            refused.upstream().shortName(),
-                            refused.pushDefault()))
-                    .getOrElse(() -> Messages.get("dialog.setUpstream.title")),
-            Option.none(),
-            PushMsg.UpstreamConfirmed::new);
+                    "set-upstream",
+                    SetUpstreamPopup.class,
+                    popup -> popup.refused()
+                            .map(refused -> Messages.get(
+                                    "dialog.setUpstream.refusedTitle",
+                                    popup.branch().value(),
+                                    refused.upstream().shortName(),
+                                    refused.pushDefault()))
+                            .getOrElse(() -> Messages.get("dialog.setUpstream.title")),
+                    Option.none(),
+                    PushMsg.UpstreamConfirmed::new)
+            .withWidth(TextInputDialog.BRANCH_NAME_WIDTH);
 
     /**
      * Warns that a branch has diverged from its remote branch, and asks to force push it.
