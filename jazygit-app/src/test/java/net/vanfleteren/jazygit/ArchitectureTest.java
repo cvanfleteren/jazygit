@@ -7,18 +7,27 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.*;
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 
 import com.tngtech.archunit.base.DescribedPredicate;
+import com.tngtech.archunit.core.domain.JavaAccess;
 import com.tngtech.archunit.core.domain.JavaClass;
+import com.tngtech.archunit.core.domain.JavaConstructor;
 import com.tngtech.archunit.core.domain.JavaMethod;
 import com.tngtech.archunit.core.domain.JavaModifier;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.core.importer.Location;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
+import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ArchRule;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Optional;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
+import net.vanfleteren.jazygit.state.Cmd;
+import net.vanfleteren.jazygit.state.Failure;
+import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.Popup;
 import net.vanfleteren.jazygit.state.Program;
 
 /**
@@ -116,6 +125,9 @@ class ArchitectureTest {
             .dependOnClassesThat()
             .resideInAnyPackage(
                     "..jazygit.feature..", "..jazygit.ui..", "..jazygit.keys..", "..jazygit.i18n..", "dev.tamboui..");
+    // The updates, the messages, the popups and the model, which are pure; nested classes included.
+    private static final String PURE =
+            ".*\\.(\\w*(Update|Msg|Popup)|Model|Preview|Loadable|AppError|Operation|LogEntry|CommandLog)(\\$.*)?";
     /**
      * The updates, the messages they handle, the popups and the model are pure: running git or gh is left to
      * the commands, showing anything to the views. The commands that ran are only passed on as data.
@@ -123,14 +135,227 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule updatesArePure = noClasses()
             .that()
-            .haveNameMatching(".*\\.(\\w*(Update|Msg|Popup)|Model|Preview|Loadable|AppError|Operation"
-                    + "|LogEntry|CommandLog)(\\$.*)?")
+            .haveNameMatching(PURE)
             .should()
             .dependOnClassesThat(effects())
             .orShould()
-            .callMethod(java.time.Instant.class, "now")
+            .accessTargetWhere(tellsTheTimeOrChance());
+    // The dialogs of the features, which are views; nested classes included.
+    private static final String DIALOGS = ".*Dialogs?(\\$.*)?";
+    /**
+     * What happens, what is asked for and what a dialog is about are values: records, or enums.
+     */
+    @ArchTest
+    static final ArchRule messagesCommandsAndPopupsAreValues = classes()
+            .that()
+            .areAssignableTo(Msg.class)
+            .or()
+            .areAssignableTo(Cmd.class)
+            .or()
+            .areAssignableTo(Popup.class)
+            .and()
+            .areNotInterfaces()
+            .should()
+            .beAssignableTo(Record.class)
             .orShould()
-            .callMethod(System.class, "currentTimeMillis");
+            .beAssignableTo(Enum.class);
+    /**
+     * The messages of a feature are a sealed set, so that its update switches over all of them, without a default.
+     */
+    @ArchTest
+    static final ArchRule featureMessagesAreSealed = classes()
+            .that()
+            .areInterfaces()
+            .and()
+            .areAssignableTo(Msg.class)
+            .and()
+            .doNotBelongToAnyOf(Msg.class)
+            .and()
+            .haveSimpleNameEndingWith("Msg")
+            .should(ArchCondition.from(DescribedPredicate.describe(
+                    "be sealed", type -> type.reflect().isSealed())));
+    /**
+     * An update is only functions: a class that cannot be made, of static methods and constants.
+     */
+    @ArchTest
+    static final ArchRule updatesAreFunctions = classes()
+            .that()
+            .haveSimpleNameEndingWith("Update")
+            .and()
+            .areNotInterfaces()
+            .should()
+            .haveModifier(JavaModifier.FINAL)
+            .andShould()
+            .haveOnlyPrivateConstructors();
+
+    @ArchTest
+    static final ArchRule updatesKeepNothing = fields().that()
+            .areDeclaredInClassesThat()
+            .haveSimpleNameEndingWith("Update")
+            .should()
+            .beStatic();
+
+    @ArchTest
+    static final ArchRule updatesAreStaticMethods = methods()
+            .that()
+            .areDeclaredInClassesThat()
+            .haveSimpleNameEndingWith("Update")
+            .and()
+            .areDeclaredInClassesThat()
+            .areNotInterfaces()
+            .should()
+            .beStatic();
+    /**
+     * The updates make commands; only the program runs them, and {@code StartApp} those of the start screen (ADR 28).
+     * A command may run another, as part of itself. A method reference, {@code Cmd::run}, is an access too, so it
+     * counts as a call does.
+     */
+    @ArchTest
+    static final ArchRule onlyTheProgramRunsCommands = noClasses()
+            .that()
+            .haveNameNotMatching("(" + Pattern.quote(Program.class.getName()) + "|"
+                    + Pattern.quote(StartApp.class.getName()) + ")(\\$.*)?")
+            .and()
+            .areNotAssignableTo(Cmd.class)
+            .should()
+            .accessTargetWhere(DescribedPredicate.<JavaAccess<?>>describe(
+                    "Cmd.run or GitOperationCmd.perform",
+                    access -> access.getTargetOwner().isAssignableTo(Cmd.class)
+                            && (access.getName().equals("run")
+                                    || access.getName().equals("perform"))));
+    /**
+     * The views and the keys only send messages: they neither make commands nor apply a message themselves. They may
+     * read one, as the data it is. A reference, {@code Msg::apply} or a command's {@code ::new}, counts as a call
+     * does.
+     */
+    @ArchTest
+    static final ArchRule viewsOnlySendMessages = noClasses()
+            .that()
+            .resideInAnyPackage("..jazygit.ui..", "..jazygit.keys..")
+            .or()
+            .haveNameMatching(DIALOGS)
+            .or()
+            .haveSimpleNameEndingWith("Keys")
+            .should()
+            .accessTargetWhere(DescribedPredicate.<JavaAccess<?>>describe(
+                    "a constructor of a command, or Msg.apply",
+                    access -> access.getTargetOwner().isAssignableTo(Cmd.class)
+                                    && access.getName().equals(JavaConstructor.CONSTRUCTOR_NAME)
+                            || access.getTargetOwner().isAssignableTo(Msg.class)
+                                    && access.getName().equals("apply")));
+    /**
+     * A pure method returns what it works out: one that returns nothing could only have done something.
+     */
+    @ArchTest
+    static final ArchRule pureCodeReturnsValues = noMethods()
+            .that()
+            .areDeclaredInClassesThat()
+            .haveNameMatching(PURE)
+            .and()
+            .doNotHaveModifier(JavaModifier.SYNTHETIC)
+            .should()
+            .haveRawReturnType(void.class);
+    /**
+     * Pure code fails with a value, never by throwing. The {@code MatchException} the compiler adds to a switch over a
+     * sealed type is never thrown. A constructor reference, {@code IllegalStateException::new}, counts as a call does.
+     */
+    @ArchTest
+    static final ArchRule pureCodeThrowsNothing = noClasses()
+            .that()
+            .haveNameMatching(PURE)
+            .should()
+            .accessTargetWhere(DescribedPredicate.<JavaAccess<?>>describe(
+                    "a constructor of an exception",
+                    access -> access.getName().equals(JavaConstructor.CONSTRUCTOR_NAME)
+                            && access.getTargetOwner().isAssignableTo(Throwable.class)
+                            && !access.getTargetOwner().isEquivalentTo(MatchException.class)));
+    /**
+     * The commands report how they failed as messages: none declares an exception.
+     */
+    @ArchTest
+    static final ArchRule commandsDeclareNoExceptions = methods()
+            .that()
+            .areDeclaredInClassesThat()
+            .areAssignableTo(Cmd.class)
+            .and()
+            .doNotHaveModifier(JavaModifier.SYNTHETIC)
+            .should(ArchCondition.from(DescribedPredicate.describe(
+                    "declare no exception",
+                    method -> method.getThrowsClause().getTypes().stream()
+                            .noneMatch(thrown -> thrown.isAssignableTo(Exception.class)))));
+    /**
+     * The model is built of values all the way down: what a field holds never changes either. A {@code Failure.Bug}
+     * keeps what a command threw, to report it.
+     */
+    @ArchTest
+    static final ArchRule valuesAreValuesAllTheWayDown = fields().that()
+            .areDeclaredInClassesThat()
+            .resideInAnyPackage("..jazygit.state..", "..jazygit.feature..", "..jazygit.settings..", "..jazygit.cli..")
+            .and()
+            .areNotDeclaredIn(Program.class)
+            .and()
+            .areNotDeclaredIn(Failure.Bug.class)
+            .and()
+            .areDeclaredInClassesThat()
+            .haveNameNotMatching(DIALOGS)
+            .and()
+            .doNotHaveModifier(JavaModifier.SYNTHETIC)
+            .should(Values.holdAValue());
+    /**
+     * State is never kept in a static field.
+     */
+    @ArchTest
+    static final ArchRule staticFieldsKeepNothing = fields().that()
+            .areStatic()
+            .and()
+            .doNotHaveModifier(JavaModifier.SYNTHETIC)
+            .should()
+            .beFinal()
+            .andShould()
+            .notHaveRawType(Values.mutable());
+    /**
+     * The model and the updates make new collections, never fill one in. A constructor reference,
+     * {@code ArrayList::new}, counts as a call does.
+     */
+    @ArchTest
+    static final ArchRule pureCodeFillsNoCollections = noClasses()
+            .that()
+            .resideInAnyPackage("..jazygit.state..", "..jazygit.feature..")
+            .and()
+            .doNotBelongToAnyOf(Program.class)
+            .and()
+            .haveNameNotMatching(DIALOGS)
+            .should()
+            .accessTargetWhere(DescribedPredicate.<JavaAccess<?>>describe(
+                    "a constructor of a collection that changes or a StringBuilder",
+                    access -> access.getName().equals(JavaConstructor.CONSTRUCTOR_NAME)
+                            && Values.mutable().test(access.getTargetOwner())));
+    /**
+     * A missing value is Vavr's {@code Option}, but where a library's interface says otherwise: picocli fills the
+     * command line in as {@code Optional}.
+     */
+    @ArchTest
+    static final ArchRule noJavaUtilOptional = noMethods()
+            .that()
+            .doNotHaveModifier(JavaModifier.SYNTHETIC)
+            .and(not(implementALibraryMethod()))
+            .and()
+            .areDeclaredInClassesThat()
+            .resideOutsideOfPackage("..jazygit.cli..")
+            .should()
+            .haveRawReturnType(Optional.class)
+            .orShould()
+            .haveRawParameterTypes(anyElementThat(equivalentTo(Optional.class)));
+    /**
+     * The model and its features are made of records and interfaces, not of classes that extend each other.
+     */
+    @ArchTest
+    static final ArchRule noClassesExtendOthers = classes()
+            .that()
+            .resideInAnyPackage("..jazygit.state..", "..jazygit.feature..")
+            .and()
+            .haveNameNotMatching(DIALOGS)
+            .should(Values.extendNothing());
 
     private static final String ROOT = "net.vanfleteren.jazygit";
     /**
@@ -162,8 +387,6 @@ class ArchitectureTest {
                     "a constructor of GhBranch",
                     access -> access.getTargetOwner().isEquivalentTo(net.vanfleteren.jazygit.gh.model.GhBranch.class)
                             && access.getName().equals("<init>")));
-    // The dialogs of the features, which are views; nested classes included.
-    private static final String DIALOGS = ".*Dialogs?(\\$.*)?";
     /**
      * Rendering never talks to git or gh: the views only draw the model, and send messages.
      */
@@ -241,6 +464,30 @@ class ArchitectureTest {
                 .and(simpleNameStartingWith("Cli").or(simpleNameEndingWith("Process")))
                 .or(resideInAnyPackage("..jazygit.process").and(simpleName("Exec")))
                 .as("run git or gh");
+    }
+
+    /**
+     * Reading the clock, the environment, the machine's defaults (its time zone, its locale) or chance; a method
+     * reference, like {@code Instant::now}, included.
+     */
+    private static DescribedPredicate<JavaAccess<?>> tellsTheTimeOrChance() {
+        return DescribedPredicate.describe("tell the time, read the environment or draw a random number", access -> {
+            JavaClass owner = access.getTargetOwner();
+            String name = access.getName();
+            return owner.getPackageName().equals("java.time") && name.equals("now")
+                    || owner.isEquivalentTo(System.class)
+                            && Stream.of("currentTimeMillis", "nanoTime", "getenv", "getProperty", "getProperties")
+                                    .anyMatch(name::equals)
+                    || owner.isEquivalentTo(java.time.ZoneId.class) && name.equals("systemDefault")
+                    || owner.isEquivalentTo(java.time.Clock.class) && name.startsWith("system")
+                    || owner.isEquivalentTo(java.util.Locale.class) && name.equals("getDefault")
+                    || owner.isEquivalentTo(java.util.TimeZone.class) && name.equals("getDefault")
+                    || owner.isEquivalentTo(Runtime.class)
+                    || owner.isEquivalentTo(ProcessHandle.class)
+                    || owner.isEquivalentTo(Math.class) && name.equals("random")
+                    || owner.isEquivalentTo(java.util.UUID.class) && name.equals("randomUUID")
+                    || owner.isAssignableTo(java.util.random.RandomGenerator.class);
+        });
     }
 
     private static DescribedPredicate<JavaClass> effects() {

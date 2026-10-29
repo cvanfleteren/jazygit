@@ -2,7 +2,6 @@ package net.vanfleteren.jazygit.git.model;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -178,29 +177,34 @@ public record UnifiedDiff(List<String> preamble, List<FileDiff> files) {
         if (!raw.startsWith("\"") || !raw.endsWith("\"") || raw.length() < 2) {
             return raw;
         }
-        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-        unquote(raw.substring(1, raw.length() - 1), bytes);
-        return bytes.toString(StandardCharsets.UTF_8);
+        byte[] bytes = unquote(raw.substring(1, raw.length() - 1)).getBytes(StandardCharsets.ISO_8859_1);
+        return new String(bytes, StandardCharsets.UTF_8);
     }
 
     /**
-     * Writes the bytes {@code quoted}, the inside of a quoted path, stands for to {@code bytes}.
+     * The bytes {@code quoted}, the inside of a quoted path, stands for, one character for each byte.
      */
-    private static void unquote(String quoted, ByteArrayOutputStream bytes) {
+    private static String unquote(String quoted) {
         if (quoted.isEmpty()) {
-            return;
+            return "";
         }
         char c = quoted.charAt(0);
         if (c != '\\' || quoted.length() == 1) {
-            bytes.writeBytes(String.valueOf(c).getBytes(StandardCharsets.UTF_8));
-            unquote(quoted.substring(1), bytes);
+            return new String(String.valueOf(c).getBytes(StandardCharsets.UTF_8), StandardCharsets.ISO_8859_1)
+                    + unquote(quoted.substring(1));
         } else if (quoted.length() >= 4 && quoted.substring(1, 4).chars().allMatch(d -> d >= '0' && d <= '7')) {
-            bytes.write(Integer.parseInt(quoted.substring(1, 4), 8));
-            unquote(quoted.substring(4), bytes);
+            return asByte(Integer.parseInt(quoted.substring(1, 4), 8)) + unquote(quoted.substring(4));
         } else {
-            bytes.write(escaped(quoted.charAt(1)));
-            unquote(quoted.substring(2), bytes);
+            return asByte(escaped(quoted.charAt(1))) + unquote(quoted.substring(2));
         }
+    }
+
+    /**
+     * The byte {@code value} as one character, as {@code unquote} gives the bytes; above 255 only its lowest byte
+     * counts.
+     */
+    private static String asByte(int value) {
+        return String.valueOf((char) (value & 0xFF));
     }
 
     private static int escaped(char c) {

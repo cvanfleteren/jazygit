@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit;
 
 import static com.tngtech.archunit.base.DescribedPredicate.anyElementThat;
 import static com.tngtech.archunit.core.domain.JavaClass.Predicates.assignableTo;
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.equivalentTo;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.*;
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 
@@ -12,9 +13,11 @@ import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.core.importer.Location;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
+import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ArchRule;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Optional;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteName;
 import net.vanfleteren.jazygit.git.model.Revision;
@@ -121,6 +124,74 @@ class CoreArchitectureTest {
             .resideInAnyPackage("..jazygit.git.model..", "..jazygit.gh.model..")
             .should()
             .beFinal();
+
+    /**
+     * What git and GitHub report are values all the way down: what a field holds never changes either.
+     */
+    @ArchTest
+    static final ArchRule modelsAreValuesAllTheWayDown = fields().that()
+            .areDeclaredInClassesThat()
+            .resideInAnyPackage("..jazygit.git.model..", "..jazygit.gh.model..")
+            .and()
+            .doNotHaveModifier(JavaModifier.SYNTHETIC)
+            .should(Values.holdAValue());
+    /**
+     * The models are made of records and interfaces, not of classes that extend each other.
+     */
+    @ArchTest
+    static final ArchRule modelsExtendNothing = classes()
+            .that()
+            .resideInAnyPackage("..jazygit.git.model..", "..jazygit.gh.model..")
+            .should(Values.extendNothing());
+    /**
+     * A method of a model works something out and returns it: one that returns nothing could only have done
+     * something.
+     */
+    @ArchTest
+    static final ArchRule modelsReturnValues = noMethods()
+            .that()
+            .areDeclaredInClassesThat()
+            .resideInAnyPackage("..jazygit.git.model..", "..jazygit.gh.model..")
+            .and()
+            .doNotHaveModifier(JavaModifier.SYNTHETIC)
+            .should()
+            .haveRawReturnType(void.class);
+    /**
+     * What git and gh report, and how they fail, are told as values: what the core offers declares no exception.
+     */
+    @ArchTest
+    static final ArchRule failuresAreValues = methods()
+            .that()
+            .arePublic()
+            .and()
+            .doNotHaveModifier(JavaModifier.SYNTHETIC)
+            .should(ArchCondition.from(DescribedPredicate.describe(
+                    "declare no exception",
+                    method -> method.getThrowsClause().getTypes().stream()
+                            .noneMatch(thrown -> thrown.isAssignableTo(Exception.class)))));
+    /**
+     * State is never kept in a static field.
+     */
+    @ArchTest
+    static final ArchRule staticFieldsKeepNothing = fields().that()
+            .areStatic()
+            .and()
+            .doNotHaveModifier(JavaModifier.SYNTHETIC)
+            .should()
+            .beFinal()
+            .andShould()
+            .notHaveRawType(Values.mutable());
+    /**
+     * A missing value is Vavr's {@code Option}.
+     */
+    @ArchTest
+    static final ArchRule noJavaUtilOptional = noMethods()
+            .that()
+            .doNotHaveModifier(JavaModifier.SYNTHETIC)
+            .should()
+            .haveRawReturnType(Optional.class)
+            .orShould()
+            .haveRawParameterTypes(anyElementThat(equivalentTo(Optional.class)));
 
     private static final DescribedPredicate<JavaClass> JAVA_UTIL_COLLECTION =
             assignableTo(Collection.class).or(assignableTo(Map.class));
