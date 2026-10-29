@@ -5,6 +5,7 @@ import java.util.function.UnaryOperator;
 import net.vanfleteren.jazygit.feature.branch.BranchFeature;
 import net.vanfleteren.jazygit.feature.cherrypick.CherryPickKeys;
 import net.vanfleteren.jazygit.feature.commit.CommitFeature;
+import net.vanfleteren.jazygit.feature.diff.CommitFilesAction;
 import net.vanfleteren.jazygit.feature.discard.DiscardKeys;
 import net.vanfleteren.jazygit.feature.edit.EditKeys;
 import net.vanfleteren.jazygit.feature.github.GitHubFeature;
@@ -27,6 +28,7 @@ final class Standard {
                     BranchFeature::register,
                     GitHubFeature::register,
                     WorktreeFeature::register,
+                    CommitFilesAction.ACTION.keys(),
                     GlobalKeys::register)
             .foldLeft(Keymap.empty(), (keymap, feature) -> feature.apply(keymap));
 

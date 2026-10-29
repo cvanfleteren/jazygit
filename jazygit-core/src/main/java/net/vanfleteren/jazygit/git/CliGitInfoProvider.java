@@ -191,6 +191,16 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
+    public Either<ProcessError, List<CommitFile>> stashFiles(Sha sha) {
+        return CliStash.files(worktree, sha);
+    }
+
+    @Override
+    public Either<ProcessError, DiffText> stashFileChanges(Sha sha, List<CommitFile> files, DiffOptions options) {
+        return CliStash.fileChanges(worktree, sha, files, options);
+    }
+
+    @Override
     public Either<GitFailure<GitError>, List<ExecutedCommand>> drop(Stash stash) {
         return CliStash.drop(worktree, stash);
     }
@@ -456,6 +466,16 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     @Override
     public Either<ProcessError, DiffText> commitChanges(Sha sha, DiffOptions options) {
         return CliShow.changes(worktree, sha, options);
+    }
+
+    @Override
+    public Either<ProcessError, List<CommitFile>> commitFiles(Sha sha) {
+        return CliShow.files(worktree, sha);
+    }
+
+    @Override
+    public Either<ProcessError, DiffText> commitFileChanges(Sha sha, List<CommitFile> files, DiffOptions options) {
+        return CliShow.fileChanges(worktree, sha, files, options);
     }
 
     @Override

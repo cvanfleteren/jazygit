@@ -299,6 +299,17 @@ public interface GitInfoProvider {
      */
     Either<ProcessError, DiffText> commitChanges(Sha sha, DiffOptions options);
 
+    /**
+     * The files the commit {@code sha} changed, those of a merge against its first parent.
+     */
+    Either<ProcessError, List<CommitFile>> commitFiles(Sha sha);
+
+    /**
+     * What the commit {@code sha} changed in {@code files}, like {@code git show -- <paths>}: only the diff, a merge
+     * against its first parent, read with {@code options}. Long output is cut off.
+     */
+    Either<ProcessError, DiffText> commitFileChanges(Sha sha, List<CommitFile> files, DiffOptions options);
+
     // The changes in the working tree and the index, as git diff shows them.
 
     /**
@@ -318,6 +329,17 @@ public interface GitInfoProvider {
      * summary of the changes, a blank line and the diff, read with {@code options}. Long output is cut off.
      */
     Either<ProcessError, DiffText> stashChanges(Sha sha, DiffOptions options);
+
+    /**
+     * The files the stash {@code sha} changed, untracked ones too.
+     */
+    Either<ProcessError, List<CommitFile>> stashFiles(Sha sha);
+
+    /**
+     * What the stash {@code sha} stashed of {@code files}: only the diff, untracked files too, read with
+     * {@code options}. Long output is cut off.
+     */
+    Either<ProcessError, DiffText> stashFileChanges(Sha sha, List<CommitFile> files, DiffOptions options);
 
     /**
      * Stashes the changes, staged and unstaged, and the untracked files, under the name {@code message}.

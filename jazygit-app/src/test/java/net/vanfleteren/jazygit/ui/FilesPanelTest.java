@@ -9,11 +9,16 @@ import dev.tamboui.tui.event.MouseButton;
 import dev.tamboui.tui.pilot.Pilot;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
+import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.*;
+import net.vanfleteren.jazygit.state.CommitFilesView;
+import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
+import net.vanfleteren.jazygit.state.Update;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -258,6 +263,35 @@ class FilesPanelTest {
             assertEquals("f15.txt", ((FileTree.File) panel.tree().selectedNode().data()).name());
 
             pilot.quit();
+        }
+    }
+
+    @Test
+    void theFilesOfACommitShowInPlaceOfThoseOfTheWorkingTreeUntilTheyClose() throws Exception {
+        Model model =
+                TestModels.loaded(new FixedProvider(List.of(Fixtures.fileEntry("work.txt", ChangeType.MODIFIED))));
+        CommitFilesView.Changes of = new CommitFilesView.Changes.OfCommit(new Sha("aaaa"));
+        Model open = Update.update(
+                        Update.update(model, new CommitFilesMsg.Opened(of, CommitsPanel.ID))
+                                .model(),
+                        new LoadMsg.CommitFilesLoaded(
+                                of,
+                                List.of(
+                                        new CommitFile("lib/new.txt", ChangeType.RENAMED, Option.of("old.txt")),
+                                        new CommitFile("gone.txt", ChangeType.DELETED))))
+                .model();
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(open, FilesPanel.ID))) {
+            String commit = RenderedText.ofLarge(testRunner, () -> panel.render(open, FilesPanel.ID));
+            assertTrue(commit.contains("Files of aaaa"), commit);
+            assertTrue(commit.contains("D gone.txt"), commit);
+            assertTrue(commit.contains("R old.txt -> new.txt"), commit);
+            assertFalse(commit.contains("work.txt"), commit);
+
+            String working = RenderedText.of(testRunner, () -> panel.render(model, FilesPanel.ID));
+            assertTrue(working.contains("work.txt"), working);
+
+            SettledPilot.of(testRunner).quit();
         }
     }
 

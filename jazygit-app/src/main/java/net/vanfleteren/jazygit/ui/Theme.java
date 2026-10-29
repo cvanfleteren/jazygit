@@ -165,6 +165,13 @@ public final class Theme {
         public static final String DIFF_ADDED = "diff-added";
         public static final String DIFF_REMOVED = "diff-removed";
         public static final String DIFF_HUNK = "diff-hunk";
+        // The rich view of a diff (ADR 44).
+        public static final String DIFF_FILE_HEADER = "diff-file-header";
+        public static final String DIFF_LINE_NUMBER = "diff-line-number";
+        public static final String DIFF_ADDED_LINE = "diff-added-line";
+        public static final String DIFF_ADDED_WORD = "diff-added-word";
+        public static final String DIFF_REMOVED_LINE = "diff-removed-line";
+        public static final String DIFF_REMOVED_WORD = "diff-removed-word";
         public static final String CURRENT_BRANCH = "current-branch";
         public static final String SHA = "sha";
         public static final String TAG = "tag";

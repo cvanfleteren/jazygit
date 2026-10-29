@@ -29,6 +29,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -198,7 +199,7 @@ public final class ContentPanel {
     /**
      * Like {@code git show}: the commit's header, its indented message, a {@code ---} line and then the changes.
      */
-    static Text commitText(Commit commit, String changes, Theme.SpanStyles styles) {
+    static Text commitText(Commit commit, String changes, DiffStyle style, Theme.SpanStyles styles) {
         List<String> message = messageLines(commit);
         return styledText(List.of(
                         styled(Messages.get("content.commitSha", commit.sha().value()), Theme.Classes.SHA, styles),
@@ -209,21 +210,31 @@ public final class ContentPanel {
                 .map(Line::from)
                 .appendAll(message.tail().map(line -> Line.from(Span.raw(line))))
                 .append(Line.from(Span.raw("---")))
-                .appendAll(lines(changes).map(line -> diffLine(line, styles))));
+                .appendAll(changeLines(changes, style, styles)));
     }
 
     /**
      * Like {@link #commitText}: the stash's name and message, the branch it was stashed on if its message says, when
      * it was stashed, a {@code ---} line and then the changes.
      */
-    static Text stashText(Stash stash, String changes, Theme.SpanStyles styles) {
+    static Text stashText(Stash stash, String changes, DiffStyle style, Theme.SpanStyles styles) {
         return styledText(List.of(styled(
                         Messages.get("content.stashHeader", stash.ref(), stash.message()), Theme.Classes.SHA, styles))
                 .appendAll(stash.branch().map(branch -> Span.raw(Messages.get("content.stashBranch", branch.value()))))
                 .append(dateLine(stash.time()))
                 .map(Line::from)
                 .append(Line.from(Span.raw("---")))
-                .appendAll(lines(changes).map(line -> diffLine(line, styles))));
+                .appendAll(changeLines(changes, style, styles)));
+    }
+
+    /**
+     * The changes of a commit or a stash, a unified diff, drawn in {@code style}.
+     */
+    static List<Line> changeLines(String changes, DiffStyle style, Theme.SpanStyles styles) {
+        return switch (style) {
+            case PLAIN -> lines(changes).map(line -> diffLine(line, styles));
+            case RICH -> RichDiff.lines(changes, styles);
+        };
     }
 
     private static List<String> lines(String text) {
@@ -295,8 +306,11 @@ public final class ContentPanel {
             case Body.Diff(String diff) -> diffText(diff, styles);
             case Body.BranchLog(List<Commit> commits, AheadView ahead) ->
                 logText(commits, ZoneId.systemDefault(), ahead, styles);
-            case Body.CommitChanges(Commit commit, String changes) -> commitText(commit, changes, styles);
-            case Body.StashChanges(Stash stash, String changes) -> stashText(stash, changes, styles);
+            case Body.CommitChanges(Commit commit, String changes, DiffStyle style) ->
+                commitText(commit, changes, style, styles);
+            case Body.StashChanges(Stash stash, String changes, DiffStyle style) ->
+                stashText(stash, changes, style, styles);
+            case Body.FileChanges(String changes, DiffStyle style) -> styledText(changeLines(changes, style, styles));
             case Body.PullRequest(PullRequestSummary pullRequest, PullRequestPreview preview) ->
                 pullRequestText(pullRequest, preview, styles);
         };

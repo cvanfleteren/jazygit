@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Commit;
+import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.git.model.CommitQuery;
 import net.vanfleteren.jazygit.git.model.CommitRange;
@@ -107,6 +108,16 @@ public interface StubGitProvider extends GitInfoProvider {
 
     @Override
     default Either<ProcessError, DiffText> stashChanges(Sha sha, DiffOptions options) {
+        return Either.right(DiffText.of(""));
+    }
+
+    @Override
+    default Either<ProcessError, List<CommitFile>> stashFiles(Sha sha) {
+        return Either.right(List.empty());
+    }
+
+    @Override
+    default Either<ProcessError, DiffText> stashFileChanges(Sha sha, List<CommitFile> files, DiffOptions options) {
         return Either.right(DiffText.of(""));
     }
 
@@ -247,6 +258,16 @@ public interface StubGitProvider extends GitInfoProvider {
 
     @Override
     default Either<ProcessError, DiffText> commitChanges(Sha sha, DiffOptions options) {
+        return Either.right(DiffText.of(""));
+    }
+
+    @Override
+    default Either<ProcessError, List<CommitFile>> commitFiles(Sha sha) {
+        return Either.right(List.empty());
+    }
+
+    @Override
+    default Either<ProcessError, DiffText> commitFileChanges(Sha sha, List<CommitFile> files, DiffOptions options) {
         return Either.right(DiffText.of(""));
     }
 

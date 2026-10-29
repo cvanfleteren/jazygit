@@ -12,6 +12,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import net.vanfleteren.jazygit.git.GitError.*;
 import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -98,9 +99,62 @@ final class CliStash {
                                 "--patch",
                                 "--no-color",
                                 "--no-ext-diff")
+                        .appendAll(CliDiff.PREFIXES)
                         .appendAll(CliDiff.flags(options))
                         .append(stash.value())),
                 output -> Either.right(CliDiff.truncated(output)));
+    }
+
+    /**
+     * The files {@code stash} changed, its untracked files included, with renames found.
+     */
+    static Either<ProcessError, List<CommitFile>> files(Path worktree, Sha stash) {
+        return GitProcess.read(
+                worktree,
+                GitCommand.reading("stash", "show", "--include-untracked", "--name-status", "-z", "-M", stash.value()),
+                CliShow::parseFiles);
+    }
+
+    /**
+     * What {@code stash} changed in {@code files}, read with {@code options}, as {@link #changes} shows it. Long
+     * output is cut off. {@code git stash show} takes no paths, so the stashed changes are diffed against the commit
+     * they were stashed on, and the untracked files, which a stash keeps in a third parent of its own, by showing
+     * that parent. Without files, nothing is read: git would show every file.
+     */
+    static Either<ProcessError, DiffText> fileChanges(
+            Path worktree, Sha stash, List<CommitFile> files, DiffOptions options) {
+        if (files.isEmpty()) {
+            return Either.right(DiffText.of(""));
+        }
+        List<String> flags = List.of("--patch", "--no-color", "--no-ext-diff", "-M")
+                .appendAll(CliDiff.PREFIXES)
+                .appendAll(CliDiff.flags(options));
+        List<String> paths = files.flatMap(CommitFile::paths).prepend("--");
+        String untracked = stash.value() + "^3";
+        return GitProcess.read(
+                        worktree,
+                        GitCommand.reading(List.of("diff")
+                                        .appendAll(flags)
+                                        .append(stash.value() + "^1")
+                                        .append(stash.value())
+                                        .appendAll(paths))
+                                .withLiteralPaths(),
+                        Either::right)
+                .flatMap(tracked -> GitProcess.ask(
+                                worktree, GitCommand.reading("rev-parse", "--quiet", "--verify", untracked))
+                        .mapLeft(GitFailure::error)
+                        .flatMap(parent -> parent.isEmpty()
+                                ? Either.right("")
+                                : GitProcess.read(
+                                        worktree,
+                                        GitCommand.reading(List.of("show", "--format=")
+                                                        .appendAll(flags)
+                                                        .append(untracked)
+                                                        .appendAll(paths))
+                                                .withLiteralPaths(),
+                                        Either::right))
+                        .map(tracked::concat))
+                .map(CliDiff::truncated);
     }
 
     /**

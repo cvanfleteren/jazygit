@@ -237,7 +237,17 @@ public final class Update {
                         .stashDetail()
                         .filter(detail -> detail.value() instanceof Failed)
                         .map(detail -> new Cmd.LoadStashDetail(
-                                detail.key(), model.preferences().diffOptions())));
+                                detail.key(), model.preferences().diffOptions())))
+                .appendAll(model.repoView()
+                        .commitFiles()
+                        .filter(view -> view.files() instanceof Failed)
+                        .map(CommitFilesView::load))
+                .appendAll(model.repoView()
+                        .commitFiles()
+                        .flatMap(view -> view.diff()
+                                .filter(diff -> diff.value() instanceof Failed)
+                                .map(diff -> view.diffLoad(
+                                        diff.key(), model.preferences().diffOptions()))));
     }
 
     /**

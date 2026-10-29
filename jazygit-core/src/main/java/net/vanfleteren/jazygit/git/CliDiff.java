@@ -23,6 +23,13 @@ import net.vanfleteren.jazygit.git.model.FileEntry;
 final class CliDiff {
 
     static final int MAX_LINES = 5000;
+    /**
+     * The flags that keep git's own {@code a/} and {@code b/} before the paths of a diff that is parsed
+     * ({@code UnifiedDiff}), whatever the user's {@code diff.noprefix}, {@code diff.mnemonicPrefix},
+     * {@code diff.srcPrefix} or {@code diff.dstPrefix} say.
+     */
+    static final List<String> PREFIXES = List.of("--src-prefix=a/", "--dst-prefix=b/");
+
     private static final List<String> STAGED = List.of("diff", "--cached", "--no-color", "--no-ext-diff");
     private static final List<String> UNSTAGED = List.of("diff", "--no-color", "--no-ext-diff");
 

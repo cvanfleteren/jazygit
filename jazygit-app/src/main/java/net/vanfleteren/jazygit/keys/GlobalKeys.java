@@ -40,6 +40,11 @@ final class GlobalKeys {
                         GlobalKeys::isWhitespaceKey,
                         DiffOptionsMsg.WhitespaceToggled::new))
                 .global(new Keymap.Global.Dispatching(
+                        "ctrl+d",
+                        "help.global.diffStyle",
+                        GlobalKeys::isDiffStyleKey,
+                        DiffOptionsMsg.StyleToggled::new))
+                .global(new Keymap.Global.Dispatching(
                         "ctrl+p", "help.global.screen", GlobalKeys::isScreenKey, PrOverviewMsg.Toggled::new))
                 // Escape only gets here when nothing else, like a dialog, took it.
                 .global(new Keymap.Global.Dispatching(
@@ -107,6 +112,13 @@ final class GlobalKeys {
      */
     static boolean isWhitespaceKey(KeyEvent event) {
         return event.hasCtrl() && event.isCharIgnoreCase('w');
+    }
+
+    /**
+     * Whether {@code event} is the shortcut that draws the changes of the commits and the stashes in the other style.
+     */
+    static boolean isDiffStyleKey(KeyEvent event) {
+        return event.hasCtrl() && event.isCharIgnoreCase('d');
     }
 
     /**

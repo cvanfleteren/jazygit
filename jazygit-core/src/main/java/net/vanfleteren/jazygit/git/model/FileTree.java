@@ -1,17 +1,20 @@
 package net.vanfleteren.jazygit.git.model;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 
 /**
  * Changed files arranged as a directory tree. A directory whose only child is another directory is
  * merged with it, so a chain like {@code src/main/java} shows as a single node.
+ *
+ * @param <T> the files: those of the working tree, or those a commit changed
  */
-public sealed interface FileTree {
+public sealed interface FileTree<T extends Pathed> {
 
     /**
      * The roots of the tree for the given files: files first, then directories, each sorted by name.
      */
-    static List<FileTree> of(List<FileEntry> files) {
+    static <T extends Pathed> List<FileTree<T>> of(List<T> files) {
         return children("", files);
     }
 
@@ -19,21 +22,21 @@ public sealed interface FileTree {
      * The nodes directly below the directory {@code prefix} (empty, or ending in {@code /}), which all
      * {@code files} are inside of.
      */
-    private static List<FileTree> children(String prefix, List<FileEntry> files) {
+    private static <T extends Pathed> List<FileTree<T>> children(String prefix, List<T> files) {
         var nested = files.partition(f -> relative(prefix, f).contains("/"));
-        List<FileTree> dirs = nested._1
+        List<FileTree<T>> dirs = nested._1
                 .groupBy(f -> relative(prefix, f).split("/", 2)[0])
                 .toList()
                 .sortBy(entry -> entry._1)
                 .map(entry ->
-                        merged(new Dir(entry._1, prefix + entry._1, children(prefix + entry._1 + "/", entry._2))));
-        List<FileTree> leaves = nested._2
-                .<FileTree>map(f -> new File(relative(prefix, f), f))
+                        merged(new Dir<>(entry._1, prefix + entry._1, children(prefix + entry._1 + "/", entry._2))));
+        List<FileTree<T>> leaves = nested._2
+                .<FileTree<T>>map(f -> new File<>(relative(prefix, f), f))
                 .sorted((a, b) -> a.name().compareTo(b.name()));
         return leaves.appendAll(dirs);
     }
 
-    private static String relative(String prefix, FileEntry file) {
+    private static String relative(String prefix, Pathed file) {
         return file.path().substring(prefix.length());
     }
 
@@ -41,13 +44,12 @@ public sealed interface FileTree {
      * Merges a directory with its only child directory. The child was already merged with its own
      * descendants, so one step is enough.
      */
-    private static FileTree merged(Dir dir) {
+    private static <T extends Pathed> FileTree<T> merged(Dir<T> dir) {
         return dir.children()
                 .headOption()
                 .filter(only -> dir.children().size() == 1)
-                .filter(Dir.class::isInstance)
-                .map(Dir.class::cast)
-                .<FileTree>map(child -> new Dir(dir.name() + "/" + child.name(), child.path(), child.children()))
+                .flatMap(only -> only instanceof Dir<T> child ? Option.of(child) : Option.none())
+                .<FileTree<T>>map(child -> new Dir<>(dir.name() + "/" + child.name(), child.path(), child.children()))
                 .getOrElse(dir);
     }
 
@@ -57,12 +59,17 @@ public sealed interface FileTree {
     String name();
 
     /**
+     * The repository-relative path of this node: of the directory, or of the file.
+     */
+    String path();
+
+    /**
      * All files in this node: the file itself, or every file below a directory.
      */
-    default List<FileEntry> entries() {
+    default List<T> entries() {
         return switch (this) {
-            case File file -> List.of(file.entry());
-            case Dir dir -> dir.children().flatMap(FileTree::entries);
+            case File<T> file -> List.of(file.entry());
+            case Dir<T> dir -> dir.children().flatMap(FileTree::entries);
         };
     }
 
@@ -70,21 +77,24 @@ public sealed interface FileTree {
      * The files shown in the diff panel: the file itself, or only the files directly inside a directory,
      * not those in its subdirectories.
      */
-    default List<FileEntry> directEntries() {
+    default List<T> directEntries() {
         return switch (this) {
-            case File file -> List.of(file.entry());
-            case Dir dir ->
-                dir.children()
-                        .filter(File.class::isInstance)
-                        .map(File.class::cast)
-                        .map(File::entry);
+            case File<T> file -> List.of(file.entry());
+            case Dir<T> dir ->
+                dir.children().flatMap(child -> child instanceof File<T> file ? List.of(file.entry()) : List.empty());
         };
     }
 
     /**
      * @param path the full repository-relative path of the directory
      */
-    record Dir(String name, String path, List<FileTree> children) implements FileTree {}
+    record Dir<T extends Pathed>(String name, String path, List<FileTree<T>> children) implements FileTree<T> {}
 
-    record File(String name, FileEntry entry) implements FileTree {}
+    record File<T extends Pathed>(String name, T entry) implements FileTree<T> {
+
+        @Override
+        public String path() {
+            return entry.path();
+        }
+    }
 }

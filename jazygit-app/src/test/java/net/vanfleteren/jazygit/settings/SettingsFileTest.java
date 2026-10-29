@@ -256,6 +256,37 @@ class SettingsFileTest {
     }
 
     @Test
+    void readsTheDiffStyleAndAnUnknownOneIsInvalid() throws IOException {
+        write("""
+                [ui]
+                diff-style = "rich"
+                """);
+        assertEquals(
+                new Loaded(Settings.DEFAULT.withDiffStyle(DiffStyle.RICH), Option.none()),
+                settingsFile().load());
+
+        write("""
+                [ui]
+                diff-style = "fancy"
+                """);
+        assertEquals(
+                new Loaded(Settings.DEFAULT, Option.of(new SettingsProblem.Invalid(file(), List.of("ui.diff-style")))),
+                settingsFile().load());
+    }
+
+    @Test
+    void savingTheDiffStyleAndGoingBackToTheDefaultRemovesIt() throws IOException {
+        Settings rich = Settings.DEFAULT.withDiffStyle(DiffStyle.RICH);
+        settingsFile().save(Settings.DEFAULT, rich);
+
+        assertEquals(rich, settingsFile().load().settings());
+
+        settingsFile().save(rich, Settings.DEFAULT);
+
+        assertFalse(Files.readString(file()).contains("diff-style"), Files.readString(file()));
+    }
+
+    @Test
     void savingAWidthAndGoingBackToTheDefaultRemovesIt() throws IOException {
         Settings wide = Settings.DEFAULT.withPullRequestsWidth(50);
         settingsFile().save(Settings.DEFAULT, wide);

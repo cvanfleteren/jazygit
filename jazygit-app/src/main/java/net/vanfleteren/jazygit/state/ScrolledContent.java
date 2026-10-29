@@ -4,6 +4,7 @@ import io.vavr.collection.List;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.Commit;
+import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Sha;
 
@@ -32,6 +33,11 @@ public sealed interface ScrolledContent {
      * dropped.
      */
     record StashChanges(Sha sha, DiffText changes) implements ScrolledContent {}
+
+    /**
+     * What the commit or the stash {@code sha} changed in {@code files}.
+     */
+    record FileChanges(Sha sha, List<CommitFile> files, DiffText diff) implements ScrolledContent {}
 
     /**
      * A pull request, and what it says and changes.

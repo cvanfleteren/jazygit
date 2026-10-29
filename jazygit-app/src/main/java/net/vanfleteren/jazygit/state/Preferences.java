@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.state;
 import io.vavr.control.Option;
 import lombok.With;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
+import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.settings.Settings;
 import net.vanfleteren.jazygit.settings.ThemeName;
 
@@ -12,15 +13,29 @@ import net.vanfleteren.jazygit.settings.ThemeName;
  * @param settings      what the user chose to keep from one session to the next, like the theme
  * @param themeOverride the theme asked for at startup, or highlighted in the theme dialog, for this session only,
  *                      until the user chooses one
- * @param diffOptions   how the diffs of the files and the commits are read, for this session only
+ * @param ignoreWhitespace whether the diffs leave out changes to whitespace only, for this session only
  * @param dragged       the width the left column of a screen is dragged to, which is kept once it is let go
  */
 @With
 public record Preferences(
-        Settings settings, Option<ThemeName> themeOverride, DiffOptions diffOptions, Option<Dragged> dragged) {
+        Settings settings, Option<ThemeName> themeOverride, boolean ignoreWhitespace, Option<Dragged> dragged) {
 
-    public static final Preferences DEFAULT =
-            new Preferences(Settings.DEFAULT, Option.none(), DiffOptions.DEFAULT, Option.none());
+    public static final Preferences DEFAULT = new Preferences(Settings.DEFAULT, Option.none(), false, Option.none());
+
+    /**
+     * How the diffs of the files and the commits are read: a merge against its first parent when changes are drawn
+     * rich, as the rich view does not draw git's combined diff (ADR 44).
+     */
+    public DiffOptions diffOptions() {
+        return new DiffOptions(ignoreWhitespace, settings.diffStyle() == DiffStyle.RICH);
+    }
+
+    /**
+     * How the changes of a commit or a stash are drawn.
+     */
+    public DiffStyle diffStyle() {
+        return settings.diffStyle();
+    }
 
     /**
      * The theme the UI is drawn in: the one asked for at startup, else the saved one.
