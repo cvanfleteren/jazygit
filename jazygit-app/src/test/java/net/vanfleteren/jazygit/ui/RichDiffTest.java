@@ -37,8 +37,7 @@ class RichDiffTest {
                         " 1 file changed",
                         "",
                         " modified  a.txt ",
-                        // Where the hunk starts, without git's numbers, which the gutter has, nor its heading.
-                        "┄┄┄┄┄ │ ",
+                        // The first hunk has no rule: the bar is right above it.
                         " 9  9 │  nine",
                         // Changed lines are padded to the width of the file, so their background makes a block.
                         "10    │ -ten = 1 ",
@@ -63,7 +62,7 @@ class RichDiffTest {
     }
 
     @Test
-    void aHunkStartsWithARuleAsWideAsItsLineNumbers() {
+    void aHunkAfterTheFirstStartsWithARuleAsWideAsItsLineNumbers() {
         List<String> lines = text(RichDiff.lines("""
                 diff --git a/a.txt b/a.txt
                 --- a/a.txt
@@ -71,10 +70,14 @@ class RichDiffTest {
                 @@ -1 +1 @@
                 -one
                 +two
+                @@ -5 +5 @@
+                -five
                 """, Theme.SpanStyles.NONE));
 
         // The changed lines are padded to the width of the bar.
-        assertEquals(List.of(" modified  a.txt ", "┄┄┄ │ ", "1   │ -one       ", "  1 │ +two       "), lines);
+        assertEquals(
+                List.of(" modified  a.txt ", "1   │ -one       ", "  1 │ +two       ", "┄┄┄ │ ", "5   │ -five      "),
+                lines);
     }
 
     @Test
