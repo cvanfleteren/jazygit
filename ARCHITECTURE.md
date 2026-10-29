@@ -341,9 +341,10 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md`.
 - **The rich view** is drawn by `ui.RichDiff` from `UnifiedDiff`, the diff parsed into files, hunks and numbered
   lines, and `WordDiff`, which pairs the removed and added lines of a block and finds the words that changed in a
   pair. Both are pure, in `git.model`. The content panel styles a body only when it changes, so a diff is parsed once
-  each time it is shown again, not on every frame. A hunk starts with a dimmed rule in the gutter and the section
-  heading git gives after its `@@ -a,b +c,d @@` (`Hunk.heading`), not with that line itself, whose numbers the gutter
-  shows already.
+  each time it is shown again, not on every frame. A hunk starts with a dimmed rule in the gutter, not with git's
+  `@@ -a,b +c,d @@` line, whose numbers the gutter shows already, nor the section heading git gives after them, a line
+  from above the hunk that reads as one of its own. Only a header whose numbers cannot be read (`Hunk.numbered`) follows
+  the rule as git printed it, as its lines have no numbers.
 - **The files of a commit or a stash**, which `F` opens from the commits, divergence, branch commits and stash panes
   (`feature.diff.CommitFilesAction`), are a `CommitFilesView` in `RepoView.commitFiles`: whose changes they are, the
   pane they were opened from, the `CommitFile`s read (`Cmd.LoadCommitFiles`), and the diff of the highlighted node

@@ -113,17 +113,19 @@ final class RichDiff {
     /**
      * The lines of {@code hunk}, whose lines have the segments {@code words}, under a rule that marks where it starts
      * unless it has no header: changed lines are padded to {@code width}, so their background makes a block. The rule
-     * stands in for git's {@code @@ -a,b +c,d @@}, whose numbers the gutter shows already, and only keeps the section
-     * heading git gives after it.
+     * stands in for git's {@code @@ -a,b +c,d @@}, whose numbers the gutter shows already. Not the section heading git
+     * gives after them: it is a line from above the hunk, which reads as one of its own. A header whose numbers cannot
+     * be read, whose lines are not numbered, follows the rule as git printed it.
      */
     private static List<Line> hunk(
             Hunk hunk, List<List<Segment>> words, int digits, int width, Theme.SpanStyles styles) {
         Span rule = styled("┄".repeat(2 * digits + 1) + GUTTER_END, Theme.Classes.DIFF_LINE_NUMBER, styles);
         List<Line> header = hunk.header().isEmpty()
                 ? List.empty()
-                : List.of(hunk.heading()
-                        .map(heading -> Line.from(rule, styled(heading, Theme.Classes.DIFF_HUNK, styles)))
-                        .getOrElse(() -> Line.from(rule)));
+                : List.of(
+                        hunk.numbered()
+                                ? Line.from(rule)
+                                : Line.from(rule, styled(hunk.header(), Theme.Classes.DIFF_HUNK, styles)));
         return header.appendAll(hunk.lines().zip(words).map(line -> line(line._1, line._2, digits, width, styles)));
     }
 
