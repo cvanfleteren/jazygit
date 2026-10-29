@@ -344,7 +344,8 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md`.
   each time it is shown again, not on every frame. A hunk starts with a dimmed rule in the gutter, not with git's
   `@@ -a,b +c,d @@` line, whose numbers the gutter shows already, nor the section heading git gives after them, a line
   from above the hunk that reads as one of its own. Only a header whose numbers cannot be read (`Hunk.numbered`) follows
-  the rule as git printed it, as its lines have no numbers.
+  the rule as git printed it, as its lines have no numbers. The first hunk of a file has no rule otherwise: the bar of
+  the file is right above it.
 - **The files of a commit or a stash**, which `F` opens from the commits, divergence, branch commits and stash panes
   (`feature.diff.CommitFilesAction`), are a `CommitFilesView` in `RepoView.commitFiles`: whose changes they are, the
   pane they were opened from, the `CommitFile`s read (`Cmd.LoadCommitFiles`), and the diff of the highlighted node

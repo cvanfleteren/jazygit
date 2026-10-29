@@ -78,7 +78,8 @@ final class RichDiff {
                 .appendAll(note(file).map(text -> Line.from(styled(text, Theme.Classes.DIM, styles))))
                 .appendAll(file.hunks()
                         .zip(words)
-                        .flatMap(hunk -> hunk(hunk._1, hunk._2, digits, width - gutter, styles)));
+                        .zipWithIndex()
+                        .flatMap(hunk -> hunk(hunk._1._1, hunk._1._2, hunk._2 == 0, digits, width - gutter, styles)));
     }
 
     /**
@@ -115,12 +116,13 @@ final class RichDiff {
      * unless it has no header: changed lines are padded to {@code width}, so their background makes a block. The rule
      * stands in for git's {@code @@ -a,b +c,d @@}, whose numbers the gutter shows already. Not the section heading git
      * gives after them: it is a line from above the hunk, which reads as one of its own. A header whose numbers cannot
-     * be read, whose lines are not numbered, follows the rule as git printed it.
+     * be read, whose lines are not numbered, follows the rule as git printed it. The {@code first} hunk of a file has
+     * no rule, as the bar of the file marks where it starts, unless its header has to be shown.
      */
     private static List<Line> hunk(
-            Hunk hunk, List<List<Segment>> words, int digits, int width, Theme.SpanStyles styles) {
+            Hunk hunk, List<List<Segment>> words, boolean first, int digits, int width, Theme.SpanStyles styles) {
         Span rule = styled("┄".repeat(2 * digits + 1) + GUTTER_END, Theme.Classes.DIFF_LINE_NUMBER, styles);
-        List<Line> header = hunk.header().isEmpty()
+        List<Line> header = hunk.header().isEmpty() || (first && hunk.numbered())
                 ? List.empty()
                 : List.of(
                         hunk.numbered()
