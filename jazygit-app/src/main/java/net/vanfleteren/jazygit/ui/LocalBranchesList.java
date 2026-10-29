@@ -43,11 +43,14 @@ class LocalBranchesList implements BranchesTabList {
 
     /**
      * A branch on two lines (ADR 45): its name and its spinner while it is busy; below them its age, how far it is
-     * from its upstream, how it is doing on GitHub and whether it is checked out in another worktree.
+     * from its upstream and behind its base (ADR 46), how it is doing on GitHub and whether it is checked out in
+     * another worktree.
      *
+     * @param behind  how many commits of its base the branch does not have, if that is known
      * @param spinner the label and the spinner frame of a busy branch, as one text
      */
-    static LoadableList.Row row(Branch b, Duration since, List<LoadableList.Seg> gitHub, Option<String> spinner) {
+    static LoadableList.Row row(
+            Branch b, Duration since, Option<Integer> behind, List<LoadableList.Seg> gitHub, Option<String> spinner) {
         return new LoadableList.Row(List.of(
                                 b.current()
                                         ? LoadableList.Seg.styled(b.name().value(), Theme.Classes.CURRENT)
@@ -56,6 +59,7 @@ class LocalBranchesList implements BranchesTabList {
                                 BranchSegs.group(BranchSegs.spinnerSeg(spinner).toList())))
                 .withDetail(List.of(LoadableList.Seg.of("  " + TimeText.age(since)))
                         .appendAll(BranchSegs.group(BranchSegs.sync(b)))
+                        .appendAll(BranchSegs.group(BranchSegs.behind(behind)))
                         .appendAll(BranchSegs.group(gitHub))
                         .appendAll(BranchSegs.group(BranchSegs.worktree(b))));
     }
@@ -99,6 +103,7 @@ class LocalBranchesList implements BranchesTabList {
                 branches -> branches.map(b -> row(
                         b,
                         Duration.between(b.lastActivity(), model.now()),
+                        model.repo().behind().get(b.name()),
                         BranchSegs.gitHub(
                                 model.gitHub().pullRequest(b),
                                 model.gitHub().merge(model.gitHub().pullRequest(b)),

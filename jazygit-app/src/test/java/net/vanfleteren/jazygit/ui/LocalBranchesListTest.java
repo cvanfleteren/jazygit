@@ -23,11 +23,13 @@ class LocalBranchesListTest {
         LoadableList.Row current = LocalBranchesList.row(
                 Fixtures.branch(new BranchName("main"), true, new Sha("1")),
                 Duration.ofMinutes(5),
+                Option.none(),
                 List.empty(),
                 Option.none());
         LoadableList.Row other = LocalBranchesList.row(
                 Fixtures.branch(new BranchName("feature"), false, new Sha("2")),
                 Duration.ofMinutes(5),
+                Option.none(),
                 List.empty(),
                 Option.none());
 
@@ -38,7 +40,7 @@ class LocalBranchesListTest {
     }
 
     @Test
-    void aBranchShowsItsNameAndSpinnerAboveItsAgeSyncPullRequestAndWorktree() {
+    void aBranchShowsItsNameAndSpinnerAboveItsAgeSyncBehindPullRequestAndWorktree() {
         Branch branch = new Branch(
                 new BranchName("feature"),
                 false,
@@ -53,12 +55,13 @@ class LocalBranchesListTest {
         LoadableList.Row row = LocalBranchesList.row(
                 branch,
                 Duration.ofDays(3),
+                Option.of(58),
                 BranchSegs.gitHub(
                         Option.of(new PullRequest(42, "b", false, Checks.PASSING, Review.APPROVED)), Option.none()),
                 Option.of("Pushing |"));
 
         assertEquals("feature  Pushing |", row.text());
-        assertEquals(Option.of("  3d  ↑2 ↓5  ✓ #42  +  wt"), row.detailText());
+        assertEquals(Option.of("  3d  ↑2 ↓5  ⇣58  ✓ #42  +  wt"), row.detailText());
         assertEquals(2, row.height());
     }
 
@@ -67,6 +70,7 @@ class LocalBranchesListTest {
         LoadableList.Row row = LocalBranchesList.row(
                 Fixtures.branch(new BranchName("main"), false, new Sha("1")),
                 Duration.ofDays(7),
+                Option.none(),
                 List.empty(),
                 Option.none());
 
@@ -75,10 +79,23 @@ class LocalBranchesListTest {
     }
 
     @Test
+    void aBranchNotBehindItsBaseSaysNothingOfIt() {
+        LoadableList.Row row = LocalBranchesList.row(
+                Fixtures.branch(new BranchName("feature"), false, new Sha("1")),
+                Duration.ofDays(7),
+                Option.of(0),
+                List.empty(),
+                Option.none());
+
+        assertEquals(Option.of("  7d"), row.detailText());
+    }
+
+    @Test
     void aLongNameIsCutOffAndTheSpinnerStaysInView() throws Exception {
         LoadableList.Row row = LocalBranchesList.row(
                 Fixtures.branch(new BranchName("feat/payment-retry-backoff"), false, new Sha("1")),
                 Duration.ofDays(3),
+                Option.none(),
                 BranchSegs.gitHub(Option.none(), Option.of(Checks.FAILING)),
                 Option.of("Pushing |"));
 

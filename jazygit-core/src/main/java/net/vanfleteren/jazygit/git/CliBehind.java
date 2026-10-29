@@ -1,0 +1,135 @@
+package net.vanfleteren.jazygit.git;
+
+import static net.vanfleteren.jazygit.git.model.BranchRef.HEADS;
+import static net.vanfleteren.jazygit.git.model.BranchRef.REMOTES;
+
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
+import io.vavr.collection.HashMap;
+import io.vavr.collection.List;
+import io.vavr.collection.Map;
+import io.vavr.control.Either;
+import io.vavr.control.Option;
+import java.nio.file.Path;
+import net.vanfleteren.jazygit.git.GitError.ProcessError;
+import net.vanfleteren.jazygit.git.GitError.UnexpectedOutput;
+import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
+
+/**
+ * How many commits the base of each local branch has that the branch does not (ADR 46): the base as ADR 20 has it,
+ * the branch it was made from, else the main branch, each from {@code origin} when it is there.
+ */
+final class CliBehind {
+
+    private static final String ORIGIN = REMOTES + GitArgs.remote(RemoteBranch.DEFAULT_REMOTE) + "/";
+    private static final String PARENT_PREFIX = "branch.";
+    private static final String PARENT_SUFFIX = ".gh-merge-base";
+
+    private CliBehind() {}
+
+    /**
+     * The count of each local branch that has a base, by its name: one {@code git config} for the parents, one
+     * {@code for-each-ref} for the refs, then one {@code for-each-ref} per base.
+     *
+     * @param main the main branch, the base of a branch without a parent
+     */
+    static Either<ProcessError, Map<BranchName, Integer>> read(Path worktree, Option<BranchName> main) {
+        return parents(worktree)
+                .flatMap(parents -> GitProcess.read(
+                                worktree,
+                                GitCommand.reading("for-each-ref", "--format=%(refname)", HEADS, ORIGIN),
+                                raw -> Either.right(GitOutput.nonBlankLines(raw)))
+                        .map(refs -> bases(refs, parents, main)))
+                .flatMap(bases -> Either.sequenceRight(bases.groupBy(base -> base._2)
+                                .map(group -> behind(worktree, group._1, group._2.map(base -> base._1))))
+                        .map(counts -> counts.fold(HashMap.empty(), Map::merge)));
+    }
+
+    /**
+     * Each local branch among {@code refs} that has a base there, with the full name of that ref.
+     */
+    static List<Tuple2<BranchName, String>> bases(
+            List<String> refs, Map<BranchName, BranchName> parents, Option<BranchName> main) {
+        return refs.flatMap(ref -> GitOutput.after(ref, HEADS))
+                .map(BranchName::new)
+                .flatMap(branch -> parents.get(branch)
+                        .toList()
+                        .appendAll(main)
+                        .filter(base -> !base.equals(branch))
+                        .distinct()
+                        .flatMap(base -> List.of(ORIGIN + GitArgs.name(base), HEADS + GitArgs.name(base)))
+                        .find(refs::contains)
+                        .map(base -> Tuple.of(branch, base)));
+    }
+
+    /**
+     * The parent of each branch that has one recorded, as {@code gh} does.
+     */
+    private static Either<ProcessError, Map<BranchName, BranchName>> parents(Path worktree) {
+        // git config --get-regexp exits with 1, saying nothing, when no key matches.
+        return GitProcess.ask(
+                        worktree,
+                        GitCommand.reading(
+                                "config",
+                                "--local",
+                                "--get-regexp",
+                                "^" + PARENT_PREFIX.replace(".", "\\.") + ".*" + PARENT_SUFFIX.replace(".", "\\.")
+                                        + "$"))
+                .mapLeft(GitFailure::error)
+                .map(answer ->
+                        answer.map(output -> parseParents(output.stdout())).getOrElse(HashMap.empty()));
+    }
+
+    /**
+     * The parents in {@code raw}, as {@code git config --get-regexp} lists them: the key, a space and the value per
+     * line. A value that is no branch name is left out.
+     */
+    static Map<BranchName, BranchName> parseParents(String raw) {
+        return HashMap.ofEntries(GitOutput.nonBlankLines(raw).flatMap(line -> {
+            int space = line.indexOf(' ');
+            String key = space < 0 ? line : line.substring(0, space);
+            Option<BranchName> branch = Option.when(
+                            key.startsWith(PARENT_PREFIX)
+                                    && key.endsWith(PARENT_SUFFIX)
+                                    && key.length() > PARENT_PREFIX.length() + PARENT_SUFFIX.length(),
+                            () -> key.substring(PARENT_PREFIX.length(), key.length() - PARENT_SUFFIX.length()))
+                    .map(BranchName::new);
+            Option<BranchName> parent =
+                    Option.when(space >= 0, () -> line.substring(space + 1)).flatMap(BranchName::parse);
+            return branch.flatMap(name -> parent.map(value -> Tuple.of(name, value)));
+        }));
+    }
+
+    /**
+     * How many commits of {@code base} each of {@code branches} does not have.
+     */
+    private static Either<ProcessError, Map<BranchName, Integer>> behind(
+            Path worktree, String base, List<BranchName> branches) {
+        return GitProcess.read(
+                        worktree,
+                        GitCommand.reading(
+                                "for-each-ref",
+                                "--format=%(refname)" + GitOutput.REF_FIELD_SEPARATOR + "%(ahead-behind:" + base + ")",
+                                HEADS),
+                        CliBehind::parseBehind)
+                .map(counts -> counts.filterKeys(branches::contains));
+    }
+
+    /**
+     * The counts in {@code raw}, a line per branch: its full name, then the commits it has ahead of the base and
+     * behind it, separated by a space.
+     */
+    static Either<UnexpectedOutput, Map<BranchName, Integer>> parseBehind(String raw) {
+        return Either.sequenceRight(GitOutput.nonBlankLines(raw)
+                        .map(line -> GitOutput.fields(line, 2).flatMap(fields -> {
+                            List<String> counts = List.of(fields.get(1).split(" "));
+                            return GitOutput.after(fields.get(0), HEADS)
+                                    .filter(name -> counts.size() == 2)
+                                    .toEither(() -> new UnexpectedOutput(line))
+                                    .flatMap(name -> GitOutput.number(counts.get(1))
+                                            .map(behind -> Tuple.of(new BranchName(name), behind.intValue())));
+                        })))
+                .map(HashMap::ofEntries);
+    }
+}

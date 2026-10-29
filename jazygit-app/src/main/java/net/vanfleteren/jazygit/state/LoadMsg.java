@@ -81,6 +81,11 @@ public sealed interface LoadMsg extends Msg {
     }
 
     /**
+     * How many commits of its base each local branch that has one does not have, by its name (ADR 46).
+     */
+    record BehindLoaded(Cmd.LoadBehind cmd, Map<BranchName, Integer> counts) implements LoadMsg {}
+
+    /**
      * The log of HEAD, with what {@code load} read of it after.
      */
     record CommitsLoaded(List<Commit> commits, Cmd.LoadAhead load, Either<Failure, Option<Ahead>> ahead)

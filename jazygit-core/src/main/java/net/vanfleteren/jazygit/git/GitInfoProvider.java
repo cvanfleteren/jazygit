@@ -240,6 +240,13 @@ public interface GitInfoProvider {
      */
     Either<ProcessError, Option<BranchName>> parentBranch(BranchName branch);
 
+    /**
+     * How many commits the base of each local branch has that the branch does not, by its name, for those that have
+     * a base (ADR 46): the branch it was made from, as {@link #parentBranch} reads it, else {@code main}; of each,
+     * the one on {@code origin} when it is there, else the local one; never the branch itself.
+     */
+    Either<ProcessError, Map<BranchName, Integer>> behind(Option<BranchName> main);
+
     // The history, as git log shows it.
 
     /**
