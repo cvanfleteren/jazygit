@@ -160,6 +160,13 @@ class UnifiedDiffTest {
     }
 
     @Test
+    void theHeadingOfAHunkIsWhatGitGivesAfterItsNumbers() {
+        assertEquals(Option.of("void run() {"), new Hunk("@@ -3,4 +3,5 @@ void run() {", List.empty()).heading());
+        assertEquals(Option.none(), new Hunk("@@ -1 +1 @@", List.empty()).heading());
+        assertEquals(Option.none(), new Hunk("", List.empty()).heading());
+    }
+
+    @Test
     void anEmptyDiffHasNoFiles() {
         assertEquals(new UnifiedDiff(List.empty(), List.empty()), UnifiedDiff.parse(""));
     }
