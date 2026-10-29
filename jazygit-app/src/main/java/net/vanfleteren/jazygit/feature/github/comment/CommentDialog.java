@@ -61,10 +61,9 @@ public final class CommentDialog implements PopupView {
                 text.setText(popup.text());
                 text.moveCursorToEnd();
             }
+            // Without a title, the text area has no border of its own: the dialog's is enough.
             Element area = new SubmittableTextArea(
-                            textArea(text)
-                                    .title(Messages.get("dialog.comment.field"))
-                                    .placeholder(Messages.get("dialog.comment.placeholder")),
+                            textArea(text).placeholder(Messages.get("dialog.comment.placeholder")),
                             text,
                             ID,
                             this::confirm)
