@@ -62,7 +62,7 @@ class AheadViewTest {
 
     @Test
     void countsAgainstAnotherBaseAreNotTheTitles() {
-        BaseDistance other = new BaseDistance(new BranchRef.Local(new BranchName("main")), 1, 6);
+        BaseDistance other = new BaseDistance(new BranchRef.Local(new BranchName("main")), TIP.sha(), 1, 6);
 
         assertEquals(
                 "Commits · 2 ahead of origin/main",
@@ -70,7 +70,17 @@ class AheadViewTest {
     }
 
     private static String title(int ahead, int behind) {
-        return new AheadView(Option.of(MORE), Option.of(new BaseDistance(MAIN, ahead, behind)), false).title("Commits");
+        return new AheadView(Option.of(MORE), Option.of(new BaseDistance(MAIN, TIP.sha(), ahead, behind)), false)
+                .title("Commits");
+    }
+
+    @Test
+    void countsReadAtAnotherTipOfTheBranchAreNotTheTitles() {
+        BaseDistance before = new BaseDistance(MAIN, MIDDLE.sha(), 1, 6);
+
+        assertEquals(
+                "Commits · 2 ahead of origin/main",
+                new AheadView(Option.of(AHEAD), Option.of(before), false).title("Commits"));
     }
 
     @Test

@@ -218,13 +218,14 @@ one and one whose directory is gone.
 ## The distance from the base
 
 A local branch shows how many commits it has that its base does not, and how many of its base it does not have,
-`⇡1 ⇣58` (ADR 46), the base being that of ADR 20: its parent, else the main branch, from `origin` when it is there.
+`⇡1 ⇣58`, the base being that of ADR 20: its parent, else the main branch, from `origin` when it is there.
 A branch whose base is its upstream shows only `↑`/`↓`. Every read of the branches asks for `Cmd.LoadBaseDistance`,
 which runs `GitInfoProvider.baseDistance` (`CliBaseDistance`: one `git config --get-regexp` for the parents, one
 `for-each-ref` for the refs, then one `for-each-ref --format=%(ahead-behind:<base>)` per base) and keeps a
 `BaseDistance` per branch in `Repo.baseDistance`. A read that fails, or one that has not come in yet, leaves the
 counts read before. The title of the log of a branch takes both counts from there, once they are read against the
-base its log was compared with.
+base its log was compared with and at the tip it was read from; until then, from the commits read. ADR 46
+counted only those behind; the count of those ahead came later, from the same `%(ahead-behind:)`.
 
 ## Divergence
 

@@ -128,34 +128,41 @@ final class CliBaseDistance {
     private static Either<ProcessError, Map<BranchName, BaseDistance>> distances(
             Path worktree, String base, Map<BranchName, Base> branches) {
         return GitProcess.read(
-                        worktree,
-                        GitCommand.reading(
-                                "for-each-ref",
-                                "--format=%(refname)" + GitOutput.REF_FIELD_SEPARATOR + "%(ahead-behind:" + base + ")",
-                                HEADS),
-                        CliBaseDistance::parseCounts)
-                .map(counts -> counts.flatMap((name, count) ->
-                        branches.get(name).map(of -> Tuple.of(name, new BaseDistance(of.ref(), count._1, count._2)))));
+                worktree,
+                GitCommand.reading(
+                        "for-each-ref",
+                        "--format=%(refname)" + GitOutput.REF_FIELD_SEPARATOR + "%(objectname)"
+                                + GitOutput.REF_FIELD_SEPARATOR + "%(ahead-behind:" + base + ")",
+                        HEADS),
+                raw -> parseCounts(raw, branches));
     }
 
     /**
-     * The counts in {@code raw}, a line per branch: its full name, then the commits it has ahead of the base and
-     * behind it, separated by a space; each as the commits ahead and those behind.
+     * How far each of {@code branches} is from its base, from {@code raw}, a line per local branch: its full name,
+     * the commit it is at, then the commits it has ahead of the base and behind it, separated by a space. The other
+     * branches are left out.
      */
-    static Either<UnexpectedOutput, Map<BranchName, Tuple2<Integer, Integer>>> parseCounts(String raw) {
+    static Either<UnexpectedOutput, Map<BranchName, BaseDistance>> parseCounts(
+            String raw, Map<BranchName, Base> branches) {
         return Either.sequenceRight(GitOutput.nonBlankLines(raw)
-                        .map(line -> GitOutput.fields(line, 2).flatMap(fields -> {
-                            List<String> counts = List.of(fields.get(1).split(" "));
+                        .map(line -> GitOutput.fields(line, 3).flatMap(fields -> {
+                            List<String> counts = List.of(fields.get(2).split(" "));
                             return GitOutput.after(fields.get(0), HEADS)
                                     .filter(name -> counts.size() == 2)
                                     .toEither(() -> new UnexpectedOutput(line))
-                                    .flatMap(name -> GitOutput.number(counts.get(0))
-                                            .flatMap(ahead -> GitOutput.number(counts.get(1))
-                                                    .map(behind -> Tuple.of(
-                                                            new BranchName(name),
-                                                            Tuple.of(ahead.intValue(), behind.intValue())))));
+                                    .flatMap(name -> GitOutput.sha(fields.get(1))
+                                            .flatMap(tip -> GitOutput.number(counts.get(0))
+                                                    .flatMap(ahead -> GitOutput.number(counts.get(1))
+                                                            .map(behind -> branches.get(new BranchName(name))
+                                                                    .map(of -> Tuple.of(
+                                                                            new BranchName(name),
+                                                                            new BaseDistance(
+                                                                                    of.ref(),
+                                                                                    tip,
+                                                                                    ahead.intValue(),
+                                                                                    behind.intValue())))))));
                         })))
-                .map(HashMap::ofEntries);
+                .map(found -> HashMap.ofEntries(found.flatMap(entry -> entry)));
     }
 
     /**

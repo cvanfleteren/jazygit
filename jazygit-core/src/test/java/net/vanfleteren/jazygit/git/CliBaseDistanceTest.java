@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.git.model.BaseDistance;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.git.model.Sha;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -43,7 +44,7 @@ class CliBaseDistanceTest {
         commit("three");
 
         assertEquals(
-                HashMap.of(FEATURE, new BaseDistance(LOCAL_MAIN, 0, 2)),
+                HashMap.of(FEATURE, distance(LOCAL_MAIN, "feature", 0, 2)),
                 CliBaseDistance.read(repo, Option.of(MAIN)).get());
     }
 
@@ -56,7 +57,7 @@ class CliBaseDistanceTest {
         commit("three");
 
         assertEquals(
-                HashMap.of(FEATURE, new BaseDistance(LOCAL_MAIN, 1, 2)),
+                HashMap.of(FEATURE, distance(LOCAL_MAIN, "feature", 1, 2)),
                 CliBaseDistance.read(repo, Option.of(MAIN)).get());
     }
 
@@ -65,7 +66,7 @@ class CliBaseDistanceTest {
         git("branch", "feature");
 
         assertEquals(
-                HashMap.of(FEATURE, new BaseDistance(LOCAL_MAIN, 0, 0)),
+                HashMap.of(FEATURE, distance(LOCAL_MAIN, "feature", 0, 0)),
                 CliBaseDistance.read(repo, Option.of(MAIN)).get());
         assertEquals(HashMap.empty(), CliBaseDistance.read(repo, Option.none()).get());
     }
@@ -82,9 +83,9 @@ class CliBaseDistanceTest {
         assertEquals(
                 HashMap.of(
                         FEATURE,
-                        new BaseDistance(LOCAL_MAIN, 2, 0),
+                        distance(LOCAL_MAIN, "feature", 2, 0),
                         STACKED,
-                        new BaseDistance(new BranchRef.Local(FEATURE), 0, 1)),
+                        distance(new BranchRef.Local(FEATURE), "stacked", 0, 1)),
                 CliBaseDistance.read(repo, Option.of(MAIN)).get());
     }
 
@@ -95,7 +96,7 @@ class CliBaseDistanceTest {
         commit("two");
 
         assertEquals(
-                HashMap.of(STACKED, new BaseDistance(LOCAL_MAIN, 0, 1)),
+                HashMap.of(STACKED, distance(LOCAL_MAIN, "stacked", 0, 1)),
                 CliBaseDistance.read(repo, Option.of(MAIN)).get());
     }
 
@@ -109,7 +110,7 @@ class CliBaseDistanceTest {
 
         // origin/main has one commit feature does not; the local main, three.
         assertEquals(
-                HashMap.of(FEATURE, new BaseDistance(ORIGIN_MAIN, 0, 1)),
+                HashMap.of(FEATURE, distance(ORIGIN_MAIN, "feature", 0, 1)),
                 CliBaseDistance.read(repo, Option.of(MAIN)).get());
     }
 
@@ -122,17 +123,49 @@ class CliBaseDistanceTest {
     }
 
     @Test
-    void theCountsAreTheCommitsAheadThenThoseBehind() {
+    void theCountsAreTheTipThenTheCommitsAheadThenThoseBehind() {
+        Sha tip = new Sha("a".repeat(40));
+        HashMap<BranchName, CliBaseDistance.Base> branches =
+                HashMap.of(FEATURE, new CliBaseDistance.Base(ORIGIN_MAIN, "2222"));
+
         assertEquals(
-                HashMap.of(FEATURE, io.vavr.Tuple.of(1, 58), MAIN, io.vavr.Tuple.of(0, 0)),
-                CliBaseDistance.parseCounts("refs/heads/feature\u001f1 58\nrefs/heads/main\u001f0 0\n")
+                HashMap.of(FEATURE, new BaseDistance(ORIGIN_MAIN, tip, 1, 58)),
+                CliBaseDistance.parseCounts(
+                                "refs/heads/feature\u001f" + tip.value() + "\u001f1 58\nrefs/heads/main\u001f"
+                                        + tip.value() + "\u001f0 0\n",
+                                branches)
                         .get());
         assertEquals(
                 true,
-                CliBaseDistance.parseCounts("refs/heads/feature\u001f58\n").isLeft());
+                CliBaseDistance.parseCounts("refs/heads/feature\u001f" + tip.value() + "\u001f58\n", branches)
+                        .isLeft());
         assertEquals(
                 true,
-                CliBaseDistance.parseCounts("refs/heads/feature\u001fx 58\n").isLeft());
+                CliBaseDistance.parseCounts("refs/heads/feature\u001f" + tip.value() + "\u001fx 58\n", branches)
+                        .isLeft());
+        assertEquals(
+                true,
+                CliBaseDistance.parseCounts("refs/heads/feature\u001fnot a sha\u001f1 58\n", branches)
+                        .isLeft());
+    }
+
+    @Test
+    void branchesWhoseBasesAreAtTheSameCommitKeepTheirOwnBase() throws Exception {
+        git("branch", "feature");
+        git("branch", "stacked");
+        git("branch", "other");
+        git("config", "--local", "branch.stacked.gh-merge-base", "feature");
+
+        // feature, main and so the bases of stacked and other are all at one commit, counted against in one go.
+        assertEquals(
+                HashMap.of(
+                        FEATURE,
+                        distance(LOCAL_MAIN, "feature", 0, 0),
+                        STACKED,
+                        distance(new BranchRef.Local(FEATURE), "stacked", 0, 0),
+                        new BranchName("other"),
+                        distance(LOCAL_MAIN, "other", 0, 0)),
+                CliBaseDistance.read(repo, Option.of(MAIN)).get());
     }
 
     @Test
@@ -170,10 +203,24 @@ class CliBaseDistanceTest {
         assertEquals(
                 HashMap.of(
                         new BranchName("fix)x"),
-                        new BaseDistance(LOCAL_MAIN, 1, 0),
+                        distance(LOCAL_MAIN, "fix)x", 1, 0),
                         STACKED,
-                        new BaseDistance(new BranchRef.Local(new BranchName("fix)x")), 0, 1)),
+                        distance(new BranchRef.Local(new BranchName("fix)x")), "stacked", 0, 1)),
                 CliBaseDistance.read(repo, Option.of(MAIN)).get());
+    }
+
+    /**
+     * How far {@code branch} is from {@code base}, counted at the commit it is at now.
+     */
+    private BaseDistance distance(BranchRef base, String branch, int ahead, int behind) throws Exception {
+        String tip = new ProcessExecutor()
+                .command("git", "-C", repo.toString(), "rev-parse", "refs/heads/" + branch)
+                .readOutput(true)
+                .exitValueNormal()
+                .execute()
+                .outputUTF8()
+                .strip();
+        return new BaseDistance(base, new Sha(tip), ahead, behind);
     }
 
     private void commit(String message) throws Exception {

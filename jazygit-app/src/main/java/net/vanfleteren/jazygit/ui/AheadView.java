@@ -26,7 +26,8 @@ record AheadView(Option<Ahead> ahead, Option<BaseDistance> distance, boolean onl
      * how far the branch is from that base is read, the count of the commits read stands in for those ahead.
      */
     String title(String title) {
-        return ahead.map(read -> distance.filter(counts -> counts.base().equals(read.base()))
+        return ahead.map(read -> distance.filter(counts -> counts.base().equals(read.base())
+                                && counts.tip().equals(read.tip()))
                         .map(counts -> title(title, counts.ahead(), false, counts.behind(), read.base()))
                         .getOrElse(() -> title(title, read.commits().size(), read.more(), 0, read.base())))
                 .getOrElse(title);

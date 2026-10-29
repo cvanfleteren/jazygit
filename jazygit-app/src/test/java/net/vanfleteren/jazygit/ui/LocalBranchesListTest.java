@@ -58,7 +58,7 @@ class LocalBranchesListTest {
         LoadableList.Row row = LocalBranchesList.row(
                 branch,
                 Duration.ofDays(3),
-                Option.of(new BaseDistance(ORIGIN_MAIN, 1, 58)),
+                Option.of(new BaseDistance(ORIGIN_MAIN, new Sha("1"), 1, 58)),
                 BranchSegs.gitHub(
                         Option.of(new PullRequest(42, "b", false, Checks.PASSING, Review.APPROVED)), Option.none()),
                 Option.of("Pushing |"));
@@ -114,7 +114,7 @@ class LocalBranchesListTest {
         return LocalBranchesList.row(
                         branch,
                         Duration.ofDays(7),
-                        Option.of(new BaseDistance(ORIGIN_MAIN, ahead, behind)),
+                        Option.of(new BaseDistance(ORIGIN_MAIN, new Sha("1"), ahead, behind)),
                         List.empty(),
                         Option.none())
                 .detailText();

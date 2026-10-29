@@ -15,7 +15,8 @@ import org.junit.jupiter.api.Test;
 class BaseDistanceUpdateTest {
 
     private static final BranchName FEATURE = new BranchName("feature");
-    private static final BaseDistance DISTANCE = new BaseDistance(new BranchRef.Local(new BranchName("main")), 1, 58);
+    private static final BaseDistance DISTANCE =
+            new BaseDistance(new BranchRef.Local(new BranchName("main")), new Sha("1"), 1, 58);
 
     @Test
     void everyReadOfTheBranchesReadsHowFarTheyAreFromTheirBase() {
