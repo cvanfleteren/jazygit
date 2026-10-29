@@ -356,6 +356,11 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
+    public Either<ProcessError, Map<BranchName, Integer>> behind(Option<BranchName> main) {
+        return CliBehind.read(worktree, main);
+    }
+
+    @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> fetch(RemoteName remote) {
         return CliFetch.fetch(worktree, remote, Option.of(System.getenv("GIT_SSH_COMMAND")), credentials.get());
     }

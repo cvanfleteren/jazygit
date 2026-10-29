@@ -69,3 +69,6 @@ commits to act on, by what was read for another HEAD.
 - The marking shows after the log, as it is read once the log is.
 
 The title no longer says `only` while `b` is on: see ADR 0023.
+
+Amended by ADR 46: the branches list shows how many commits of its base each local branch does not have, read for
+all branches at once with `for-each-ref --format=%(ahead-behind:<base>)`.

@@ -233,6 +233,23 @@ public interface Cmd {
     }
 
     /**
+     * Reads how many commits of its base each local branch does not have, {@code main} being the base of those
+     * without a parent (ADR 46).
+     */
+    record LoadBehind(Option<BranchName> main) implements Load {
+
+        @Override
+        public Option<Label> label() {
+            return Option.of(Label.of("work.behind"));
+        }
+
+        @Override
+        public Msg run(Env env) {
+            return env.git().behind(main).fold(this::failedWith, counts -> new LoadMsg.BehindLoaded(this, counts));
+        }
+    }
+
+    /**
      * Looks at the files that the branches, the stashes and the worktrees are read from, so that a tick only reads
      * again those that changed: that takes a git process each, this none.
      */
@@ -386,13 +403,7 @@ public interface Cmd {
          * The branches to compare with, the first that exists counting.
          */
         List<BranchRef> bases(Option<BranchName> parent) {
-            return parent.toList()
-                    .appendAll(main)
-                    .filter(base -> !named.contains(base))
-                    .distinct()
-                    .flatMap(base -> List.<BranchRef>of(
-                            new BranchRef.Remote(new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, base)),
-                            new BranchRef.Local(base)));
+            return BranchRef.bases(named, parent, main);
         }
     }
 

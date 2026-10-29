@@ -42,6 +42,7 @@ public final class LoadUpdate {
                         done.mapRepo(repo -> repo.withBranches(repo.branches().reload(branches.local()))
                                 .withRemoteBranches(repo.remoteBranches().reload(branches.remote()))));
             case MetadataChecked(var stamps) -> metadataChecked(done, stamps);
+            case LoadMsg.BehindLoaded(var load, var counts) -> Next.of(done.mapRepo(repo -> repo.withBehind(counts)));
             // The files of a stash that is dropped close, as its name is now that of another stash.
             case StashesLoaded(var stashes) ->
                 Next.of(done.mapRepo(repo -> repo.withStashes(repo.stashes().reload(stashes)))
@@ -178,7 +179,19 @@ public final class LoadUpdate {
                 reloadMovedLog(
                         closeGoneBranchCommits(next),
                         branch -> !tipOf(before, branch).equals(tipOf(next, branch))));
-        return new Next(reloaded.model(), reloaded.cmds().appendAll(AheadUpdate.branchesLoaded(before, next)));
+        return new Next(
+                reloaded.model(),
+                reloaded.cmds()
+                        .appendAll(AheadUpdate.branchesLoaded(before, next))
+                        .append(behind(next)));
+    }
+
+    /**
+     * The read of how far each local branch is behind its base, as the branches read last tell which is the main
+     * branch (ADR 46).
+     */
+    public static Cmd.LoadBehind behind(Model model) {
+        return new Cmd.LoadBehind(AheadUpdate.main(model));
     }
 
     /**
@@ -295,6 +308,8 @@ public final class LoadUpdate {
             case Cmd.LoadBranches() ->
                 model.mapRepo(repo -> repo.withBranches(repo.branches().failed(failure))
                         .withRemoteBranches(repo.remoteBranches().failed(failure)));
+            // The counts read before stay, as they would while reading again (ADR 46).
+            case Cmd.LoadBehind _ -> model;
             case Cmd.LoadStashes() ->
                 model.mapRepo(repo -> repo.withStashes(repo.stashes().failed(failure)));
             case Cmd.LoadWorktrees() ->

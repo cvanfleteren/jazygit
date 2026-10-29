@@ -114,6 +114,9 @@ public final class TestModels {
                 .model();
         model = done(model, new Cmd.LoadBranches(), new LoadMsg.BranchesLoaded(new AllBranches(BRANCHES, List.empty())))
                 .model();
+        Cmd.LoadBehind behind = LoadUpdate.behind(model);
+        model = done(model, behind, new LoadMsg.BehindLoaded(behind, io.vavr.collection.HashMap.empty()))
+                .model();
         model = done(model, new Cmd.LoadStashes(), new LoadMsg.StashesLoaded(io.vavr.collection.List.of()))
                 .model();
         return done(model, new Cmd.LoadWorktrees(), new LoadMsg.WorktreesLoaded(io.vavr.collection.List.of()))
@@ -151,24 +154,32 @@ public final class TestModels {
 
     /**
      * {@code model} after the branches were read again, finding the local branches {@code local} and the
-     * remote-tracking branches it had, for a test about the local ones.
+     * remote-tracking branches it had, for a test about the local ones; without the read of how far they are behind.
      */
     public static Update.Next localBranchesRead(Model model, List<Branch> local) {
-        return Update.update(
+        return withoutBehind(Update.update(
                 model,
                 new LoadMsg.BranchesLoaded(
-                        new AllBranches(local, model.repo().remoteBranches().getOrElse(List.empty()))));
+                        new AllBranches(local, model.repo().remoteBranches().getOrElse(List.empty())))));
     }
 
     /**
      * {@code model} after the branches were read again, finding the local branches it had and the remote-tracking
-     * branches {@code remote}, for a test about the remote ones.
+     * branches {@code remote}, for a test about the remote ones; without the read of how far they are behind.
      */
     public static Update.Next remoteBranchesRead(Model model, List<RemoteRef> remote) {
-        return Update.update(
+        return withoutBehind(Update.update(
                 model,
                 new LoadMsg.BranchesLoaded(
-                        new AllBranches(model.repo().branches().getOrElse(List.empty()), remote)));
+                        new AllBranches(model.repo().branches().getOrElse(List.empty()), remote))));
+    }
+
+    /**
+     * {@code next} without the read of how far the branches are behind their base, which every read of the branches
+     * asks for (ADR 46): the tests of what else a read of the branches asks for leave it out.
+     */
+    private static Update.Next withoutBehind(Update.Next next) {
+        return new Update.Next(next.model(), next.cmds().filter(cmd -> !(cmd instanceof Cmd.LoadBehind)));
     }
 
     /**

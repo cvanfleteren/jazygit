@@ -200,7 +200,10 @@ public final class AheadUpdate {
         return ahead.exists(read -> !LoadUpdate.tipOf(before, read.base()).equals(LoadUpdate.tipOf(next, read.base())));
     }
 
-    private static Option<BranchName> main(Model model) {
+    /**
+     * The main branch, as the branches read last tell, if they were read and have one.
+     */
+    static Option<BranchName> main(Model model) {
         return model.repo()
                 .branches()
                 .toOption()

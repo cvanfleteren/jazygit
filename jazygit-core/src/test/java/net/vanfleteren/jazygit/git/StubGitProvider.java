@@ -360,6 +360,11 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
+    default Either<ProcessError, Map<BranchName, Integer>> behind(Option<BranchName> main) {
+        return Either.right(HashMap.empty());
+    }
+
+    @Override
     default Either<GitFailure<ProcessError>, List<ExecutedCommand>> setLocalConfig(String key, Option<String> value) {
         return ran();
     }

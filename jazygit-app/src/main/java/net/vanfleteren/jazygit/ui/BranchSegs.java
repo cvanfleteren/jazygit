@@ -85,6 +85,16 @@ final class BranchSegs {
     }
 
     /**
+     * How many commits of its base a branch does not have, dimmed and with a leading space: {@code ⇣58}; nothing for
+     * none, or for a branch without a base (ADR 46).
+     */
+    static List<LoadableList.Seg> behind(Option<Integer> behind) {
+        return behind.filter(n -> n > 0)
+                .map(n -> LoadableList.Seg.styled(" ⇣" + n, Theme.Classes.DIM))
+                .toList();
+    }
+
+    /**
      * {@code segs}, each with a leading space, set apart from what comes before them by one more space; nothing for
      * no segs (ADR 45).
      */

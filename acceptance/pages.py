@@ -336,6 +336,12 @@ class BranchesPane:
         at = next((index for index, row in enumerate(rows) if branch in row.split()), None)
         return None if at is None else " ".join(rows[at:at + 2]).split()
 
+    def behind(self, branch: str):
+        """How many commits of its base the row of the local branch says it does not have, as `⇣N`; None when it
+        says nothing of it."""
+        words = self._words(self.app.pane_text("Branches").splitlines(), branch) or []
+        return next((int(word[1:]) for word in words if word.startswith("⇣")), None)
+
     def shows_gone(self, branch: str) -> bool:
         """Whether the row of the local branch says its upstream is gone."""
         return "gone" in (self._words(self.app.pane_text("Branches").splitlines(), branch) or [])

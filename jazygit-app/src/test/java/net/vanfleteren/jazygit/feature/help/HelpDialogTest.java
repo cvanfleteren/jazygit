@@ -225,7 +225,8 @@ class HelpDialogTest {
     private String screen(String topic) throws Exception {
         Model open = open(topic);
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(open))) {
-            return RenderedText.ofTall(runner, () -> view(open));
+            // The keys of the branches, their legend and the global keys take more than the 44 lines of ofTall.
+            return RenderedText.ofSize(runner, () -> view(open), 100, 54);
         }
     }
 
