@@ -6,7 +6,7 @@ Date: 2026-10-29
 
 Everything jazygit shows is read through the git command line, a process per question. A tick costs one
 `git status`, and `CheckMetadata` keeps the other reads from running until their files change. A commit, which moves
-HEAD and a branch at once, costs far more: 14 to 17 processes, and one more per base for stacked branches.
+HEAD and a branch at once, costs far more: 14 to 18 processes, and one more per base for stacked branches.
 
 | Load | git processes |
 |---|---|
@@ -32,25 +32,43 @@ Several of these ask what is already known:
 A read asks git only what it does not know yet, and asks it in as few processes as git allows. What it shows does
 not change.
 
-1. **The distances to the bases (ADR 46) take one process, or two.** `LoadBaseDistance` is given the tips of the
-   branches just read, instead of reading them with a `for-each-ref` of its own, and counts every base in one
-   `for-each-ref`, with an `%(ahead-behind:<commit>)` atom per base; each branch takes the column of its own base.
-   Git then counts every branch against every base, which costs less than a process per base for any number of
-   branches a repository has.
+1. **The distances to the bases (ADR 46) take two processes.** `LoadBaseDistance` is given the tips of the branches
+   just read, instead of reading them with a `for-each-ref` of its own. It reads the parents with
+   `git config --get-regexp`, as before, and counts every base in one `for-each-ref`, with an
+   `%(ahead-behind:<commit>)` atom per base; each branch takes the column of its own base. Git then counts every
+   branch against every base, which costs less than a process per base for any number of branches a repository has.
+   One base git cannot find fails the whole `for-each-ref`, without a count: a base rewritten and pruned since the
+   branches were read. Then each base is counted in a `for-each-ref` of its own, as before, so that only the
+   branches of that base show none (ADR 46).
 2. **HEAD is resolved once, by the status.** The log of HEAD and the commits ahead of its base start from the commit
    the status read last says HEAD is at, instead of a `rev-parse HEAD` each. Without commits, the status says so,
    and neither is read.
-3. **The bases are resolved in one process.** A `for-each-ref --format=%(refname)%00%(objectname)` over the full
-   refs of all the bases of ADR 20 tells which exist and where they are; the first, in the order of
-   `BranchRef.bases`, counts. A `for-each-ref` pattern also matches the refs below it, `refs/heads/a` also
-   `refs/heads/a/b`, so only the refs named exactly count. The tips of the branches of a divergence, of a log and of
-   a first subject are read the same way, one process for both.
-4. **The parents are read once.** The parents `LoadBaseDistance` reads with `git config --get-regexp` are kept in
-   the `Repo`, and the commits ahead of the base go by them, instead of a `git config --get` each. Until the first
-   read of the distances, or when a parent was just recorded by jazygit itself, the commits ahead read it as before.
+3. **The bases come from the branches read.** The bases of ADR 20 are local branches and those on `origin`, whose
+   tips the model holds since the branches were read: the first of `BranchRef.bases` among them counts, at the tip
+   the model has, without a `rev-parse` each. The commits ahead are then counted against the tip whose move
+   `AheadUpdate.branchesLoaded` reads them again for, as the distances of decision 1 are. Before the branches are
+   first read, no base is known, and the commits ahead are read once they are, as now when the main branch becomes
+   known.
+4. **The parents are read once.** The parents `LoadBaseDistance` reads are kept in the `Repo`, and the commits ahead
+   of the base go by them, instead of a `git config --get` each. When jazygit records a parent itself, it keeps it
+   in the `Repo` too.
 
-A commit then costs about 9 processes instead of 15, and the distances to the bases 1 or 2 whatever the number of
-bases.
+The tips of the two branches of a divergence and of a first subject, which the user asks for, are read in one
+`for-each-ref --format=%(refname)%00%(objectname)` over their full refs instead of a `rev-parse` each. A
+`for-each-ref` pattern also matches the refs below it, `refs/heads/a` also `refs/heads/a/b`, so only the refs named
+exactly count. `%(objectname)` is the object the ref points to, not its commit as `rev-parse <ref>^{commit}` says:
+the two agree as branches point to commits.
+
+### What a commit costs
+
+| Load | today | then |
+|---|---|---|
+| `LoadStatus` | 1 | 1 |
+| `LoadCommits` | 2: `rev-parse HEAD`, `log` | 1: `log` |
+| its `LoadAhead` | 6–10: `config`, `rev-parse HEAD`, 1–4 `rev-parse`, `log`, `rev-list --count` when full, `merge-base`, `log --no-walk` | 3–4: `log`, `rev-list --count` when full, `merge-base`, `log --no-walk` |
+| `LoadBranches` | 2 | 2 |
+| its `LoadBaseDistance` | 2 + 1 per base | 2: `config --get-regexp`, `for-each-ref` |
+| **total, one base** | **14–18** | **9–10** |
 
 ### What stays
 
@@ -65,14 +83,14 @@ bases.
 
 ### Consequences
 
-- `GitInfoProvider.commits` and `ahead` take the commit HEAD is at, and `ahead` the parent of the branch, instead of
-  finding them out. `baseDistance` takes the tips of the branches.
-- `Cmd.LoadAhead` holds the commit HEAD is at and the parent of the branch, so two loads of it are equal only when
-  they read from the same HEAD, with the same base.
+- `GitInfoProvider.commits` takes the commit HEAD is at, and `ahead` the tip of the branch and its base with the tip
+  of that, instead of finding them out. `baseDistance` takes the tips of the branches.
+- `Cmd.LoadAhead` holds the commit HEAD is at, and the base with its tip, so two loads of it are equal only when they
+  read from the same HEAD, against the same base where it is.
 - What is read from the model can be older than what git would say now. The status and the branches are read side
   by side, and either can arrive first: after a `git pull --rebase`, which moves HEAD and `origin/main` together, the
   branches can ask for the commits ahead of the HEAD of the status before. So the commits ahead of HEAD that arrive
   on their own, not with a log, are kept as those that arrive with one are: only when their load is the one
-  `AheadUpdate.ofHead` makes of the model now; otherwise that one is read instead. Without it, the commits ahead read
+  `AheadUpdate.ofHead` makes of the model now; otherwise that one is read instead. The same holds for a base that moved. Without it, the commits ahead read
   for the old HEAD would be hidden, as they are not of the log shown, and nothing would read them again until HEAD
   or the base moved once more.
