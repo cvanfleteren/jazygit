@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.json;
 
 import static com.tngtech.archunit.base.DescribedPredicate.anyElementThat;
 import static com.tngtech.archunit.core.domain.JavaClass.Predicates.assignableTo;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.fields;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noMethods;
 
@@ -34,6 +35,19 @@ class JsonArchitectureTest {
             .should()
             .dependOnClassesThat()
             .resideInAnyPackage("jakarta.json..", "org.eclipse.parsson..");
+
+    /**
+     * State is never kept in a static field.
+     */
+    @ArchTest
+    static final ArchRule staticFieldsKeepNothing = fields().that()
+            .areStatic()
+            .and()
+            .doNotHaveModifier(JavaModifier.SYNTHETIC)
+            .should()
+            .beFinal()
+            .andShould()
+            .notHaveRawType(assignableTo(Collection.class).or(assignableTo(Map.class)));
 
     private static final DescribedPredicate<JavaClass> JAVA_UTIL_COLLECTION =
             assignableTo(Collection.class).or(assignableTo(Map.class));
