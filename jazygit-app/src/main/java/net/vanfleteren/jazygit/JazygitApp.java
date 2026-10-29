@@ -226,7 +226,7 @@ public class JazygitApp extends ToolkitApp {
         Element screen = shown.dialog()
                 .<Element>map(d -> stack(new Dimmed(layout, Theme.backdrop(styleEngine)), d))
                 .getOrElse(layout);
-        return new SelectedTextColoured(screen, Theme.selectedText(styleEngine));
+        return new WholeWideCharacters(new SelectedTextColoured(screen, Theme.selectedText(styleEngine)));
     }
 
     /**
