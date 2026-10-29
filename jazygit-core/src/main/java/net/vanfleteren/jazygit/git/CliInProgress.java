@@ -82,9 +82,9 @@ final class CliInProgress {
      * aborting leaves that commit on the branch, as aborting it outside jazygit does.
      */
     static void markAmending(Path worktree) {
-        markers(worktree).forEach(markers -> {
-            var _ = Try.run(() -> Files.createFile(markers.rebaseMerge().resolve(AMENDING)));
-        });
+        markers(worktree)
+                .forEach(markers ->
+                        Try.run(() -> Files.createFile(markers.rebaseMerge().resolve(AMENDING))));
     }
 
     /**

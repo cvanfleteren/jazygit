@@ -51,7 +51,7 @@ final class Launcher {
                     SettingsStore.Loaded loaded = settings.load();
                     return open(start, recent, loaded, options.theme(), engine)
                             .map(opened -> opened.map(provider -> {
-                                var _ = recent.opened(provider.worktree()).onFailure(BugLog::log);
+                                recent.opened(provider.worktree()).onFailure(BugLog::log);
                                 Env env = RepositoryEnv.of(
                                         provider,
                                         loaded.settings(),

@@ -248,7 +248,7 @@
                                     <arg>--should-stop=ifError=FLOW</arg>
                                     <!-- Every call into our code or Vavr must use its result, without annotating the code;
                                          the calls in errorprone-ignorable-results.txt are the exception. -->
-                                    <arg>-Xplugin:ErrorProne -XepOpt:CheckReturnValue:Packages=net.vanfleteren.jazygit,io.vavr -XepOpt:CheckReturnValue:ApiExclusionList=${maven.multiModuleProjectDirectory}/errorprone-ignorable-results.txt -Xep:UnnecessaryLambda:OFF -Xep:JavaTimeDefaultTimeZone:OFF -Xep:MissingSummary:OFF</arg>
+                                    <arg>-Xplugin:ErrorProne -XepOpt:CheckReturnValue:Packages=net.vanfleteren.jazygit,io.vavr -XepOpt:CheckReturnValue:ApiIgnorableList=${maven.multiModuleProjectDirectory}/errorprone-ignorable-results.txt -Xep:UnnecessaryLambda:OFF -Xep:JavaTimeDefaultTimeZone:OFF -Xep:MissingSummary:OFF</arg>
                                 </compilerArgs>
                             </configuration>
                         </execution>

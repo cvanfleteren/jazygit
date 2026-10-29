@@ -26,7 +26,7 @@ final class BugLog {
         LoggerFactory.getLogger(BugLog.class).error("A command threw", bug);
         StringWriter trace = new StringWriter();
         bug.printStackTrace(new PrintWriter(trace));
-        var _ = Try.run(() -> Files.writeString(
+        Try.run(() -> Files.writeString(
                 FILE,
                 Instant.now() + " " + trace + System.lineSeparator(),
                 StandardOpenOption.CREATE,

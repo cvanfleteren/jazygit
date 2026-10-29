@@ -122,7 +122,7 @@ final class RepositorySession {
     void close() {
         runtime.forEach(running -> {
             stop(running);
-            var _ = Try.of(() -> running.io().awaitTermination(2, TimeUnit.SECONDS))
+            Try.of(() -> running.io().awaitTermination(2, TimeUnit.SECONDS))
                     .onFailure(
                             InterruptedException.class,
                             e -> Thread.currentThread().interrupt());

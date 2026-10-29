@@ -15,7 +15,7 @@ public record SaveUnseenPullRequests(String repository, UnseenPullRequests unsee
 
     @Override
     public Msg run(Env env) {
-        var _ = env.unseen()
+        env.unseen()
                 .save(repository, unseen)
                 .onFailure(failed -> LoggerFactory.getLogger(SaveUnseenPullRequests.class)
                         .debug("The unseen pull requests could not be kept", failed));

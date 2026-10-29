@@ -194,14 +194,14 @@ public final class Program {
                 .map(Tuple2::_1)
                 .forEach(older -> done(older, older.cmd().skipped()));
         // Once the app stops, the executors take nothing anymore, and what is left is dropped.
-        var _ = Try.run(() -> (cmd.background() ? background : io).execute(task));
+        Try.run(() -> (cmd.background() ? background : io).execute(task));
     }
 
     /**
      * Reports, on the {@code ui} executor's thread, that the command of {@code launch} is done, with {@code result}.
      */
     private void done(Launch launch, Option<Msg> result) {
-        var _ = Try.run(() -> ui.execute(() -> dispatch(new Msg.Done(launch.id(), result))));
+        Try.run(() -> ui.execute(() -> dispatch(new Msg.Done(launch.id(), result))));
     }
 
     /**

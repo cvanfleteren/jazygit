@@ -42,7 +42,7 @@ final class TempFiles {
      * delete it is not a failure.
      */
     private static <X> X deleting(Path file, X outcome) {
-        var _ = Try.run(() -> Files.deleteIfExists(file));
+        Try.run(() -> Files.deleteIfExists(file));
         return outcome;
     }
 }
