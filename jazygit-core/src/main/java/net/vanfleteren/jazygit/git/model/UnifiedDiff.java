@@ -16,6 +16,17 @@ import java.util.regex.Pattern;
 public record UnifiedDiff(List<String> preamble, List<FileDiff> files) {
 
     private static final String FILE_START = "diff --git ";
+    /**
+     * How git starts a path a merge left unmerged in the changes of the working tree: as a combined diff, whose path
+     * it quotes as that of {@code diff --git}.
+     */
+    private static final String COMBINED_START = "diff --cc ";
+    /**
+     * How git starts a path a merge left unmerged in the staged changes, and one deleted on one side of the merge in
+     * the changes of the working tree: on one line, with its path as it is, never quoted.
+     */
+    private static final String UNMERGED_START = "* Unmerged path ";
+
     private static final Pattern HUNK = Pattern.compile("^@@ -(\\d+)(?:,\\d+)? \\+(\\d+)(?:,\\d+)? @@ ?(.*)");
 
     /**
@@ -24,7 +35,7 @@ public record UnifiedDiff(List<String> preamble, List<FileDiff> files) {
      */
     public static UnifiedDiff parse(String text) {
         List<String> lines = List.ofAll(text.lines());
-        List<String> preamble = lines.takeWhile(line -> !line.startsWith(FILE_START));
+        List<String> preamble = lines.takeWhile(line -> !startsFile(line));
         return new UnifiedDiff(preamble, files(lines.drop(preamble.size()), List.empty()));
     }
 
@@ -33,8 +44,33 @@ public record UnifiedDiff(List<String> preamble, List<FileDiff> files) {
             return parsed.reverse();
         }
         List<String> rest = lines.tail();
-        List<String> own = rest.takeWhile(line -> !line.startsWith(FILE_START));
-        return files(rest.drop(own.size()), parsed.prepend(file(lines.head(), own)));
+        List<String> own = rest.takeWhile(line -> !startsFile(line));
+        String start = lines.head();
+        FileDiff file = start.startsWith(FILE_START) ? file(start, own) : conflicted(start, own);
+        return files(rest.drop(own.size()), parsed.prepend(file));
+    }
+
+    private static boolean startsFile(String line) {
+        return line.startsWith(FILE_START) || line.startsWith(COMBINED_START) || line.startsWith(UNMERGED_START);
+    }
+
+    /**
+     * The conflicted file that starts with the line {@code start}, {@code diff --cc <path>} or
+     * {@code * Unmerged path <path>}, and goes on with {@code lines}. The numbers of a combined diff's hunks,
+     * {@code @@@ … @@@}, cannot be read, so their lines are kept as git printed them.
+     */
+    private static FileDiff conflicted(String start, List<String> lines) {
+        List<String> header = lines.takeWhile(line -> !line.startsWith("@@"));
+        String named = start.startsWith(COMBINED_START)
+                ? path(start.substring(COMBINED_START.length()))
+                : start.substring(UNMERGED_START.length());
+        return new FileDiff(
+                ChangeType.CONFLICTED,
+                side(header, "+++ b/").orElse(side(header, "--- a/")).getOrElse(named),
+                Option.none(),
+                Option.none(),
+                header.exists(line -> line.startsWith("Binary files ")),
+                fileHunks(header, lines.drop(header.size())));
     }
 
     /**
@@ -57,15 +93,23 @@ public record UnifiedDiff(List<String> preamble, List<FileDiff> files) {
                         : header.exists(line -> line.startsWith("deleted file mode "))
                                 ? ChangeType.DELETED
                                 : ChangeType.MODIFIED;
-        List<DiffLine> notes = header.filter(UnifiedDiff::unknownHeader).map(DiffLine::note);
-        List<Hunk> hunks = hunks(lines.drop(header.size()), List.empty());
         return new FileDiff(
                 type,
                 path,
                 renamedFrom,
                 oldMode.flatMap(from -> newMode.map(to -> new ModeChange(from, to))),
                 header.exists(line -> line.startsWith("Binary files ")),
-                notes.isEmpty() ? hunks : hunks.prepend(new Hunk("", notes)));
+                fileHunks(header, lines.drop(header.size())));
+    }
+
+    /**
+     * The hunks of a file with {@code header} that go on with {@code lines}: the lines of the header it does not
+     * know, as a hunk of their own, then those of {@code lines}.
+     */
+    private static List<Hunk> fileHunks(List<String> header, List<String> lines) {
+        List<DiffLine> notes = header.filter(UnifiedDiff::unknownHeader).map(DiffLine::note);
+        List<Hunk> hunks = hunks(lines, List.empty());
+        return notes.isEmpty() ? hunks : hunks.prepend(new Hunk("", notes));
     }
 
     /**
@@ -230,7 +274,8 @@ public record UnifiedDiff(List<String> preamble, List<FileDiff> files) {
      * One file of a diff.
      *
      * @param type   what happened to it: {@link ChangeType#ADDED} (also for a copy), {@link ChangeType#MODIFIED},
-     *               {@link ChangeType#DELETED} or {@link ChangeType#RENAMED}
+     *               {@link ChangeType#DELETED}, {@link ChangeType#RENAMED}, or {@link ChangeType#CONFLICTED} for a
+     *               path a merge left unmerged
      * @param path   its path, the new one of a rename
      * @param origin the path a renamed file was moved from
      * @param mode   how its mode changed, if it did

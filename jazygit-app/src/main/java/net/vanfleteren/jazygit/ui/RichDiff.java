@@ -91,6 +91,7 @@ final class RichDiff {
                     case ADDED -> "content.file.added";
                     case DELETED -> "content.file.deleted";
                     case RENAMED -> "content.file.renamed";
+                    case CONFLICTED -> "content.file.conflicted";
                     default -> "content.file.modified";
                 });
         String path = file.origin().map(origin -> origin + " → ").getOrElse("") + file.path();
