@@ -241,18 +241,28 @@ public interface GitInfoProvider {
     Either<ProcessError, Option<BranchName>> parentBranch(BranchName branch);
 
     /**
-     * How far each local branch is from its base, by its name, for those that have a base (ADR 46): the branch it was
-     * made from, as {@link #parentBranch} reads it, else {@code main}; of each, the one on {@code origin} when it is
-     * there, else the local one; never the branch itself.
+     * The branch each branch was made from, of those that have one recorded, as {@link #parentBranch} reads it.
      */
-    Either<ProcessError, Map<BranchName, BaseDistance>> baseDistance(Option<BranchName> main);
+    Either<ProcessError, Map<BranchName, BranchName>> parents();
+
+    /**
+     * How far each local branch is from its base, by its name, for those that have a base (ADR 46): the branch it was
+     * made from, as {@code parents} has it, else {@code main}; of each, the one on {@code origin} when it is there,
+     * else the local one; never the branch itself. The branches and their bases are those of {@code tips}, at the
+     * commits it has them at (ADR 49). The branches of a base whose count cannot be read are left out.
+     *
+     * @param tips the commit of each local branch and of each branch on {@code origin}, as the branches read last
+     *             have them
+     */
+    Map<BranchName, BaseDistance> baseDistance(
+            Map<BranchRef, Sha> tips, Map<BranchName, BranchName> parents, Option<BranchName> main);
 
     // The history, as git log shows it.
 
     /**
-     * The log of HEAD, newest first.
+     * The log of HEAD, newest first, from {@code head}, the commit the status read last says it is at (ADR 49).
      */
-    Either<ProcessError, List<Commit>> commits();
+    Either<ProcessError, List<Commit>> commits(Sha head);
 
     /**
      * The commits of the log of HEAD that {@code query} finds, newest first, as many as {@link #commits} reads at
@@ -263,11 +273,11 @@ public interface GitInfoProvider {
     Either<ProcessError, List<Commit>> search(CommitQuery query, Option<BranchRef> notOn);
 
     /**
-     * The commits of {@code branch}, or of HEAD for none, that are not on the first of {@code bases} that exists:
-     * at most as many as {@link #commits} reads, laid out as a log; and the commit they forked from. None when none
-     * of {@code bases} exists, or HEAD has no commits yet.
+     * The commits from {@code tip} that are not on {@code base}, which is at {@code baseTip}: at most as many as
+     * {@link #commits} reads, laid out as a log; and the commit they forked from. The tips are those the status and
+     * the branches read last have, not looked up again (ADR 49).
      */
-    Either<GitError, Option<Ahead>> ahead(Option<BranchRef> branch, List<BranchRef> bases);
+    Either<ProcessError, Ahead> ahead(Sha tip, BranchRef base, Sha baseTip);
 
     /**
      * The log of the branch {@code branch}, local or remote-tracking, newest first.

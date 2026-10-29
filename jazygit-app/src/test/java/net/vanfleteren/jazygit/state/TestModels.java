@@ -115,7 +115,11 @@ public final class TestModels {
         model = done(model, new Cmd.LoadBranches(), new LoadMsg.BranchesLoaded(new AllBranches(BRANCHES, List.empty())))
                 .model();
         Cmd.LoadBaseDistance distance = LoadUpdate.baseDistance(model);
-        model = done(model, distance, new LoadMsg.BaseDistanceLoaded(distance, io.vavr.collection.HashMap.empty()))
+        model = done(
+                        model,
+                        distance,
+                        new LoadMsg.BaseDistanceLoaded(
+                                distance, io.vavr.collection.HashMap.empty(), io.vavr.collection.HashMap.empty()))
                 .model();
         model = done(model, new Cmd.LoadStashes(), new LoadMsg.StashesLoaded(io.vavr.collection.List.of()))
                 .model();
@@ -142,6 +146,13 @@ public final class TestModels {
      */
     public static Cmd.LoadBranchLog loadBranchLog(BranchRef branch) {
         return new Cmd.LoadBranchLog(branch, AheadUpdate.of(branchesRead(), branch));
+    }
+
+    /**
+     * The load of the log of {@code branch} as {@code model} has it.
+     */
+    public static Cmd.LoadBranchLog loadBranchLog(Model model, BranchRef branch) {
+        return new Cmd.LoadBranchLog(branch, AheadUpdate.of(model, branch));
     }
 
     /**

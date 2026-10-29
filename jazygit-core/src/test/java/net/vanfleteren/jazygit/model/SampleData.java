@@ -107,6 +107,13 @@ public final class SampleData implements StubGitProvider {
     }
 
     @Override
+    public Either<ProcessError, List<Commit>> commits(Sha head) {
+        return commits();
+    }
+
+    /**
+     * The log of HEAD, wherever it is.
+     */
     public Either<ProcessError, List<Commit>> commits() {
         return Either.right(MAIN);
     }

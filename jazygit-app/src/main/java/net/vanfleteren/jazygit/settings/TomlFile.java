@@ -20,7 +20,7 @@ import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.util.LinkedHashMap;
 import java.util.UUID;
-import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
@@ -75,14 +75,14 @@ final class TomlFile {
     }
 
     /**
-     * Writes {@code file} with what {@code change} does to it, keeping the rest. A file that cannot be read is
-     * written anew, as nothing in it is worth keeping.
+     * Writes {@code file} with what {@code change} does to it, keeping the rest, and gives what {@code change} returned
+     * once it is written. A file that cannot be read is written anew, as nothing in it is worth keeping.
      */
-    static Try<Path> change(Path file, Consumer<CommentedConfig> change) {
+    static <T> Try<T> change(Path file, Function<CommentedConfig, T> change) {
         return locked(file, () -> {
             CommentedConfig config = Files.exists(file) ? read(file).getOrElse(TomlFile::newConfig) : newConfig();
-            change.accept(config);
-            return write(file, config);
+            T changed = change.apply(config);
+            return write(file, config).map(written -> changed);
         });
     }
 

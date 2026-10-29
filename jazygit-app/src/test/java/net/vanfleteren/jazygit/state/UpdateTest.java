@@ -253,7 +253,7 @@ class UpdateTest {
     void movedHeadReloadsCommits() {
         Next next = Update.update(loaded(), new LoadMsg.StatusLoaded(MOVED));
 
-        assertEquals(List.of(TestModels.loadCommits()), next.cmds());
+        assertEquals(List.of(new Cmd.LoadCommits(AheadUpdate.ofHead(next.model()))), next.cmds());
     }
 
     @Test

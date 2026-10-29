@@ -382,14 +382,14 @@ class SelectionUpdateTest {
                                         Fixtures.branch(new BranchName("main"), true, new Sha("moved")),
                                         Fixtures.branch(new BranchName("feature"), false, new Sha("ffff"))))
                         .cmds());
+        Next moved = localBranchesRead(
+                model,
+                List.of(
+                        Fixtures.branch(new BranchName("main"), true, new Sha("aaaa")),
+                        Fixtures.branch(new BranchName("feature"), false, new Sha("moved"))));
         assertEquals(
-                List.of(TestModels.loadBranchLog(new BranchRef.Local(new BranchName("feature")))),
-                localBranchesRead(
-                                model,
-                                List.of(
-                                        Fixtures.branch(new BranchName("main"), true, new Sha("aaaa")),
-                                        Fixtures.branch(new BranchName("feature"), false, new Sha("moved"))))
-                        .cmds());
+                List.of(TestModels.loadBranchLog(moved.model(), new BranchRef.Local(new BranchName("feature")))),
+                moved.cmds());
     }
 
     @Test

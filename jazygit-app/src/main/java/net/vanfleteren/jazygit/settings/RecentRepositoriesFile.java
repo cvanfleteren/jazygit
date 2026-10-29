@@ -6,7 +6,6 @@ import io.vavr.control.Option;
 import io.vavr.control.Try;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 /**
@@ -72,11 +71,10 @@ public final class RecentRepositoriesFile implements RecentRepositories {
      * Writes what {@code change} makes of the recent repositories in the file, keeping what else it has.
      */
     private Try<List<Path>> change(Function<List<Path>, List<Path>> change) {
-        AtomicReference<List<Path>> changed = new AtomicReference<>(List.empty());
         return TomlFile.change(file, config -> {
-                    changed.set(change.apply(paths(config)));
-                    config.set(KEY, changed.get().map(Path::toString).toJavaList());
-                })
-                .map(written -> changed.get());
+            List<Path> changed = change.apply(paths(config));
+            config.set(KEY, changed.map(Path::toString).toJavaList());
+            return changed;
+        });
     }
 }

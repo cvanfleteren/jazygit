@@ -43,32 +43,139 @@ class AheadUpdateTest {
                 .model();
     }
 
+    /**
+     * {@code model} with the local branches {@code main}, the main branch, and {@code feature}, and {@code remote} as
+     * the remote-tracking ones, as last read; and {@code parents} as the parents read last.
+     */
+    private static Model withBranches(
+            Model model, List<RemoteRef> remote, io.vavr.collection.Map<BranchName, BranchName> parents) {
+        return model.mapRepo(repo -> repo.withBranches(repo.branches()
+                        .reload(List.of(
+                                Fixtures.branch(MAIN, true, HEAD, Instant.EPOCH, false, true),
+                                Fixtures.branch(FEATURE, false, FEATURE_TIP),
+                                Fixtures.branch(new BranchName("parent"), false, new Sha("2222")))))
+                .withRemoteBranches(repo.remoteBranches().reload(remote))
+                .withParents(parents));
+    }
+
+    private static RemoteRef remote(String name, Sha tip) {
+        return new RemoteRef(new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, new BranchName(name)), tip, Instant.EPOCH);
+    }
+
+    /**
+     * {@code model} with {@code main}, the main branch and checked out, at {@code main}, and {@code feature} at
+     * {@code feature}.
+     */
+    private static Model withMain(Model model, Sha main, Sha feature) {
+        return model.mapRepo(repo -> repo.withBranches(repo.branches().reload(mainAnd(main, feature))));
+    }
+
+    private static List<Branch> mainAnd(Sha main, Sha feature) {
+        return List.of(
+                Fixtures.branch(MAIN, true, main, Instant.EPOCH, false, true),
+                Fixtures.branch(FEATURE, false, feature));
+    }
+
     @Test
-    void theBaseIsTheParentElseTheMainBranchTheRemoteOneFirst() {
-        Cmd.LoadAhead load = new Cmd.LoadAhead(Option.of(FEATURE_LOG), Option.of(FEATURE), Option.of(MAIN));
+    void theBaseIsTheParentElseTheMainBranchTheRemoteOneFirstWhereTheBranchesReadHaveIt() {
+        io.vavr.collection.Map<BranchName, BranchName> parented =
+                io.vavr.collection.HashMap.of(FEATURE, new BranchName("parent"));
+        List<RemoteRef> both = List.of(remote("parent", new Sha("3333")), remote("main", new Sha("1111")));
 
         assertEquals(
-                List.of(
-                        origin("parent"),
-                        new BranchRef.Local(new BranchName("parent")),
-                        origin("main"),
-                        new BranchRef.Local(MAIN)),
-                load.bases(Option.of(new BranchName("parent"))));
-        assertEquals(List.of(origin("main"), new BranchRef.Local(MAIN)), load.bases(Option.none()));
+                Option.of(new Cmd.LoadAhead.Base(origin("parent"), new Sha("3333"))),
+                AheadUpdate.of(withBranches(loaded(), both, parented), FEATURE_LOG)
+                        .base());
+        assertEquals(
+                Option.of(new Cmd.LoadAhead.Base(new BranchRef.Local(new BranchName("parent")), new Sha("2222"))),
+                AheadUpdate.of(withBranches(loaded(), List.empty(), parented), FEATURE_LOG)
+                        .base());
+        assertEquals(
+                Option.of(new Cmd.LoadAhead.Base(origin("main"), new Sha("1111"))),
+                AheadUpdate.of(withBranches(loaded(), both, io.vavr.collection.HashMap.empty()), FEATURE_LOG)
+                        .base());
+        assertEquals(
+                Option.of(new Cmd.LoadAhead.Base(new BranchRef.Local(MAIN), HEAD)),
+                AheadUpdate.of(withBranches(loaded(), List.empty(), io.vavr.collection.HashMap.empty()), FEATURE_LOG)
+                        .base());
+    }
+
+    @Test
+    void aBranchIsComparedFromWhereTheBranchesReadHaveIt() {
+        Model model =
+                withBranches(loaded(), List.of(remote("feature", new Sha("4444"))), io.vavr.collection.HashMap.empty());
+
+        assertEquals(Option.of(FEATURE_TIP), AheadUpdate.of(model, FEATURE_LOG).tip());
+        assertEquals(
+                Option.of(new Sha("4444")),
+                AheadUpdate.of(model, origin("feature")).tip());
+        assertEquals(Option.none(), AheadUpdate.of(model, origin("gone")).tip());
     }
 
     @Test
     void aBranchIsNoBaseOfItself() {
-        assertEquals(
-                List.empty(),
-                new Cmd.LoadAhead(Option.of(origin("main")), Option.of(MAIN), Option.of(MAIN)).bases(Option.none()));
+        Model model =
+                withBranches(loaded(), List.of(remote("main", new Sha("1111"))), io.vavr.collection.HashMap.empty());
+
+        assertEquals(Option.none(), AheadUpdate.of(model, origin("main")).base());
+        assertEquals(Option.none(), AheadUpdate.ofHead(model).base());
     }
 
     @Test
-    void aDetachedHeadIsComparedWithTheMainBranch() {
+    void headIsComparedFromWhereTheStatusHasItADetachedOneWithTheMainBranch() {
+        Model detached = loaded().mapRepo(repo -> repo.withStatus(
+                        repo.status().reload(new RepoStatus(new Head.Detached(FEATURE_TIP), List.empty())))
+                .withBranches(repo.branches()
+                        .reload(List.of(
+                                Fixtures.branch(MAIN, false, HEAD, Instant.EPOCH, false, true),
+                                Fixtures.branch(FEATURE, false, FEATURE_TIP)))));
+
+        assertEquals(Option.of(FEATURE_TIP), AheadUpdate.ofHead(detached).tip());
         assertEquals(
-                List.of(origin("main"), new BranchRef.Local(MAIN)),
-                new Cmd.LoadAhead(Option.none(), Option.none(), Option.of(MAIN)).bases(Option.none()));
+                Option.of(new Cmd.LoadAhead.Base(new BranchRef.Local(MAIN), HEAD)),
+                AheadUpdate.ofHead(detached).base());
+    }
+
+    @Test
+    void withoutABaseOrACommitNothingIsRead() {
+        assertEquals(
+                Either.right(Option.none()),
+                new Cmd.LoadAhead(Option.none(), Option.of(HEAD), Option.none()).read(null));
+        assertEquals(
+                Either.right(Option.none()),
+                new Cmd.LoadAhead(Option.none(), Option.none(), Option.of(new Cmd.LoadAhead.Base(origin("main"), HEAD)))
+                        .read(null));
+    }
+
+    @Test
+    void theCommitsAheadOfAnOlderHeadAreReadAgainWhenTheyArriveAfterTheLog() {
+        // The branches arrive first and ask for the commits ahead of HEAD where the status had it; the status then
+        // moves HEAD, and the log of it is read before those commits ahead arrive.
+        Model before = withBranches(loaded(), List.empty(), io.vavr.collection.HashMap.empty());
+        Cmd.LoadAhead old = AheadUpdate.ofHead(before);
+        Model moved = Update.update(before, new LoadMsg.StatusLoaded(MOVED)).model();
+        Cmd.LoadAhead current = AheadUpdate.ofHead(moved);
+        List<Commit> log =
+                List.of(Fixtures.commit(new Sha("bbbb"), "Ada", "ada@example.com", Instant.EPOCH, "Second", ""));
+        Model logRead = Update.update(moved, new LoadMsg.CommitsLoaded(log, current, Either.right(Option.none())))
+                .model();
+
+        LoadMsg.AheadLoaded stale = new LoadMsg.AheadLoaded(old, Option.of(ahead(HEAD, new BranchRef.Local(MAIN))));
+        Update.Next late = Update.update(logRead, stale);
+
+        assertNotEquals(old, current);
+        assertEquals(List.of(current), late.cmds());
+        // What was read for the old HEAD is not kept, not even for a moment.
+        assertEquals(logRead.repo().ahead(), late.model().repo().ahead());
+        // When the load of now runs already, it is not started twice.
+        Model running = logRead.mapJobs(jobs -> jobs.withStarted(List.of(current), Instant.EPOCH));
+        assertEquals(List.empty(), Update.update(running, stale).cmds());
+        // Nor when it is read with the log of HEAD, or with that of a branch.
+        Model withLog = logRead.mapJobs(jobs -> jobs.withStarted(List.of(new Cmd.LoadCommits(current)), Instant.EPOCH));
+        assertEquals(List.empty(), Update.update(withLog, stale).cmds());
+        Model withBranchLog = logRead.mapJobs(
+                jobs -> jobs.withStarted(List.of(new Cmd.LoadBranchLog(FEATURE_LOG, current)), Instant.EPOCH));
+        assertEquals(List.empty(), Update.update(withBranchLog, stale).cmds());
     }
 
     @Test
@@ -100,22 +207,29 @@ class AheadUpdateTest {
     @Test
     void whatIsReadWithTheLogOfHeadIsReadAgainWhenTheBranchesArrivedMeanwhile() {
         // At the start the status arrives first: the log is asked for before the branches tell its base.
-        Update.Next started = Update.update(Update.init("repo").model(), new LoadMsg.StatusLoaded(CLEAN));
+        Update.Next started = Update.update(
+                Update.init("repo").model(),
+                new LoadMsg.StatusLoaded(new RepoStatus(Head.onBranch(FEATURE, FEATURE_TIP), List.empty())));
         Cmd.LoadAhead issued = ((Cmd.LoadCommits) started.cmds().single()).ahead();
         Model branchesRead = Update.update(
-                        started.model(), new LoadMsg.BranchesLoaded(new AllBranches(BRANCHES, List.empty())))
+                        started.model(),
+                        new LoadMsg.BranchesLoaded(new AllBranches(
+                                List.of(
+                                        Fixtures.branch(MAIN, false, HEAD, Instant.EPOCH, false, true),
+                                        Fixtures.branch(FEATURE, true, FEATURE_TIP)),
+                                List.empty())))
                 .model();
 
-        Update.Next logRead =
-                Update.update(branchesRead, new LoadMsg.CommitsLoaded(COMMITS, issued, Either.right(Option.none())));
+        Update.Next logRead = Update.update(
+                branchesRead, new LoadMsg.CommitsLoaded(FEATURE_COMMITS, issued, Either.right(Option.none())));
 
         Cmd.LoadAhead current = AheadUpdate.ofHead(logRead.model());
         assertNotEquals(issued, current);
         assertTrue(logRead.cmds().contains(current));
-        Model read = Update.update(
-                        logRead.model(), new LoadMsg.AheadLoaded(current, Option.of(ahead(HEAD, origin("main")))))
+        Ahead ahead = ahead(FEATURE_TIP, new BranchRef.Local(MAIN));
+        Model read = Update.update(logRead.model(), new LoadMsg.AheadLoaded(current, Option.of(ahead)))
                 .model();
-        assertEquals(Option.of(ahead(HEAD, origin("main"))), AheadUpdate.head(read));
+        assertEquals(Option.of(ahead), AheadUpdate.head(read));
     }
 
     @Test
@@ -141,6 +255,38 @@ class AheadUpdateTest {
                         new LoadMsg.AheadLoaded(current, Option.of(ahead(FEATURE_TIP, origin("main")))))
                 .model();
         assertEquals(Option.of(ahead(FEATURE_TIP, origin("main"))), AheadUpdate.branch(read, FEATURE_LOG));
+    }
+
+    @Test
+    void theCommitsAheadAreReadAgainWhenTheParentsTellAnotherBase() {
+        Model model = featureLogRead();
+        BranchName head = model.repo().currentBranch().get().name();
+        Cmd.LoadBaseDistance load = LoadUpdate.baseDistance(model);
+
+        Update.Next read = Update.update(
+                model,
+                new LoadMsg.BaseDistanceLoaded(
+                        load,
+                        io.vavr.collection.HashMap.of(head, FEATURE, FEATURE, MAIN),
+                        io.vavr.collection.HashMap.empty()));
+
+        assertEquals(
+                Option.of(new Cmd.LoadAhead.Base(new BranchRef.Local(FEATURE), FEATURE_TIP)),
+                AheadUpdate.ofHead(read.model()).base());
+        assertEquals(
+                Option.of(new Cmd.LoadAhead.Base(new BranchRef.Local(MAIN), HEAD)),
+                AheadUpdate.of(read.model(), FEATURE_LOG).base());
+        assertTrue(read.cmds().contains(AheadUpdate.ofHead(read.model())));
+        assertTrue(read.cmds().contains(AheadUpdate.of(read.model(), FEATURE_LOG)));
+
+        // The same parents again change no base.
+        assertEquals(
+                List.empty(),
+                Update.update(
+                                read.model(),
+                                new LoadMsg.BaseDistanceLoaded(
+                                        load, read.model().repo().parents(), io.vavr.collection.HashMap.empty()))
+                        .cmds());
     }
 
     @Test
@@ -198,13 +344,6 @@ class AheadUpdateTest {
     }
 
     @Test
-    void aBranchIsNamedWithoutItsRemote() {
-        assertEquals(Option.of(FEATURE), AheadUpdate.of(loaded(), FEATURE_LOG).named());
-        assertEquals(
-                Option.of(FEATURE), AheadUpdate.of(loaded(), origin("feature")).named());
-    }
-
-    @Test
     void theLogOfABranchNoLongerHighlightedIsDropped() {
         Model selected = Update.update(loaded(), new SelectionMsg.BranchSelected(FEATURE_LOG))
                 .model();
@@ -232,28 +371,23 @@ class AheadUpdateTest {
 
     @Test
     void theCommitsOfTheHighlightedBranchAreReadAgainWhenItsBaseMovedButNotWhenItMovedToo() {
-        Model logRead = featureLogRead();
+        Model logRead = withMain(featureLogRead(), HEAD, FEATURE_TIP);
         Cmd.LoadAhead load = AheadUpdate.of(logRead, FEATURE_LOG);
         Model read = Update.update(
                         logRead,
                         new LoadMsg.AheadLoaded(load, Option.of(ahead(FEATURE_TIP, new BranchRef.Local(MAIN)))))
                 .model();
 
-        Update.Next baseMoved = localBranchesRead(
-                read,
-                List.of(Fixtures.branch(MAIN, true, new Sha("cccc")), Fixtures.branch(FEATURE, false, FEATURE_TIP)));
-        Update.Next bothMoved = localBranchesRead(
-                read,
-                List.of(
-                        Fixtures.branch(MAIN, true, new Sha("cccc")),
-                        Fixtures.branch(FEATURE, false, new Sha("eeee"))));
+        Update.Next baseMoved = localBranchesRead(read, mainAnd(new Sha("cccc"), FEATURE_TIP));
+        Update.Next bothMoved = localBranchesRead(read, mainAnd(new Sha("cccc"), new Sha("eeee")));
 
-        assertTrue(baseMoved.cmds().contains(load), baseMoved.cmds().toString());
+        Cmd.LoadAhead moved = AheadUpdate.of(baseMoved.model(), FEATURE_LOG);
+        assertEquals(Option.of(new Cmd.LoadAhead.Base(new BranchRef.Local(MAIN), new Sha("cccc"))), moved.base());
+        assertTrue(baseMoved.cmds().contains(moved), baseMoved.cmds().toString());
         // Its log is read again, and what is not on its base after it.
-        assertTrue(
-                bothMoved.cmds().contains(TestModels.loadBranchLog(FEATURE_LOG)),
-                bothMoved.cmds().toString());
-        assertFalse(bothMoved.cmds().contains(load), bothMoved.cmds().toString());
+        assertEquals(
+                List.of(new Cmd.LoadBranchLog(FEATURE_LOG, AheadUpdate.of(bothMoved.model(), FEATURE_LOG))),
+                bothMoved.cmds());
     }
 
     @Test
@@ -270,7 +404,8 @@ class AheadUpdateTest {
 
     @Test
     void theCommitsAreReadAgainWhenTheBaseMoved() {
-        Model model = loaded();
+        // main was made from feature.
+        Model model = loaded().mapRepo(repo -> repo.withParents(io.vavr.collection.HashMap.of(MAIN, FEATURE)));
         Cmd.LoadAhead load = AheadUpdate.ofHead(model);
         Model read = Update.update(
                         model, new LoadMsg.AheadLoaded(load, Option.of(ahead(HEAD, new BranchRef.Local(FEATURE)))))
@@ -283,8 +418,9 @@ class AheadUpdateTest {
                         Fixtures.branch(FEATURE, false, new Sha("eeee"))));
         Update.Next still = localBranchesRead(read, BRANCHES);
 
-        assertTrue(moved.cmds().contains(load));
-        assertFalse(still.cmds().contains(load));
+        assertEquals(Option.of(new Cmd.LoadAhead.Base(new BranchRef.Local(FEATURE), FEATURE_TIP)), load.base());
+        assertTrue(moved.cmds().contains(AheadUpdate.ofHead(moved.model())));
+        assertFalse(still.cmds().exists(Cmd.LoadAhead.class::isInstance));
     }
 
     @Test
@@ -320,16 +456,24 @@ class AheadUpdateTest {
                 .model();
         Update.Next branchMoved = localBranchesRead(
                 logRead, List.of(Fixtures.branch(MAIN, true, HEAD), Fixtures.branch(FEATURE, false, new Sha("eeee"))));
-        assertEquals(List.of(TestModels.loadBranchLog(FEATURE_LOG)), branchMoved.cmds());
+        assertEquals(
+                List.of(new Cmd.LoadBranchLog(FEATURE_LOG, AheadUpdate.of(branchMoved.model(), FEATURE_LOG))),
+                branchMoved.cmds());
     }
 
     @Test
     void checkingOutABranchWhereHeadIsReadsWhatIsNotOnItsBase() {
-        Model model = loaded();
+        Model model = withMain(loaded(), HEAD, FEATURE_TIP);
 
         Update.Next checkedOut = localBranchesRead(
-                model, List.of(Fixtures.branch(MAIN, false, HEAD), Fixtures.branch(FEATURE, true, HEAD)));
+                model,
+                List.of(
+                        Fixtures.branch(MAIN, false, HEAD, Instant.EPOCH, false, true),
+                        Fixtures.branch(FEATURE, true, HEAD)));
 
+        assertEquals(
+                Option.of(new Cmd.LoadAhead.Base(new BranchRef.Local(MAIN), HEAD)),
+                AheadUpdate.ofHead(checkedOut.model()).base());
         assertTrue(checkedOut.cmds().contains(AheadUpdate.ofHead(checkedOut.model())));
     }
 

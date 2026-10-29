@@ -3,12 +3,15 @@ package net.vanfleteren.jazygit.state;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import java.util.function.Predicate;
 import net.vanfleteren.jazygit.git.model.Ahead;
 import net.vanfleteren.jazygit.git.model.BaseDistance;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Commit;
+import net.vanfleteren.jazygit.git.model.RepoStatus;
+import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
@@ -112,14 +115,38 @@ public final class AheadUpdate {
      * The load of the commits of HEAD that are not on its base, as the branches read last tell what that is.
      */
     public static Cmd.LoadAhead ofHead(Model model) {
-        return new Cmd.LoadAhead(Option.none(), model.repo().currentBranch().map(Branch::name), main(model));
+        return load(
+                model,
+                Option.none(),
+                model.repo().status().toOption().flatMap(RepoStatus::headCommit),
+                model.repo().currentBranch().map(Branch::name));
     }
 
     /**
      * The load of the commits of {@code branch} that are not on its base.
      */
     public static Cmd.LoadAhead of(Model model, BranchRef branch) {
-        return new Cmd.LoadAhead(Option.of(branch), Option.of(name(branch)), main(model));
+        return load(
+                model, Option.of(branch), LoadUpdate.tipOf(model, branch).flatMap(tip -> tip), Option.of(name(branch)));
+    }
+
+    /**
+     * The load of the commits from {@code tip}, of {@code branch} or of HEAD, named {@code named}, that are not on
+     * its base: the first of the bases of ADR 20 the branches read last have, where they have it (ADR 49).
+     */
+    private static Cmd.LoadAhead load(
+            Model model, Option<BranchRef> branch, Option<Sha> tip, Option<BranchName> named) {
+        return new Cmd.LoadAhead(
+                branch,
+                tip,
+                BranchRef.bases(
+                                named,
+                                named.flatMap(name -> model.repo().parents().get(name)),
+                                main(model))
+                        .flatMap(base -> LoadUpdate.tipOf(model, base)
+                                .flatMap(found -> found)
+                                .map(at -> new Cmd.LoadAhead.Base(base, at)))
+                        .headOption());
     }
 
     /**
@@ -141,6 +168,35 @@ public final class AheadUpdate {
         Next kept = ahead.fold(failure -> Next.of(failed(model, load, failure)), read -> loaded(model, load, read));
         Cmd.LoadAhead current = load.branch().fold(() -> ofHead(kept.model()), branch -> of(kept.model(), branch));
         return current.equals(load) ? kept : new Next(kept.model(), kept.cmds().append(current));
+    }
+
+    /**
+     * Keeps what {@code load} read on its own, not with a log, when it is the load the model makes now; what was read
+     * for a branch no longer shown is dropped. Read from where the model had HEAD, the branch or its base then, it can
+     * be outdated by a read of the status, the branches or the parents since, which no tick would read again: then it
+     * is dropped, as there is no log to show it with, and the load of now is run, unless it runs already, on its own
+     * or with a log (ADR 49).
+     */
+    static Next aheadLoaded(Model model, Cmd.LoadAhead load, Option<Ahead> ahead) {
+        boolean shown = load.branch()
+                .forAll(branch -> model.repoView()
+                        .branchAhead()
+                        .exists(preview -> preview.key().equals(branch)));
+        Cmd.LoadAhead current = load.branch().fold(() -> ofHead(model), branch -> of(model, branch));
+        return !shown
+                ? Next.of(model)
+                : current.equals(load)
+                        ? loaded(model, load, ahead)
+                        : model.jobs().runs(reads(current)) ? Next.of(model) : Next.of(model, current);
+    }
+
+    /**
+     * Whether a command reads what {@code load} reads: it, or the log of HEAD or of a branch read with it.
+     */
+    private static Predicate<Cmd> reads(Cmd.LoadAhead load) {
+        return cmd -> cmd.equals(load)
+                || cmd instanceof Cmd.LoadCommits(var with) && with.equals(load)
+                || cmd instanceof Cmd.LoadBranchLog log && log.ahead().equals(load);
     }
 
     /**
@@ -169,22 +225,19 @@ public final class AheadUpdate {
     }
 
     /**
-     * The loads to run again once the branches were read: those whose base is another one now, or whose base moved.
-     * Not those whose log is read again anyway, as that reads them too: of HEAD, when it is not where its log was
-     * read; of the highlighted branch, when it moved.
+     * The loads to run again once the branches or the parents were read: those whose base is another one now, or
+     * whose base moved, as their load tells. Not those whose log is read again anyway, as that reads them too: of
+     * HEAD, when it is not where its log was read; of the highlighted branch, when it moved.
      *
-     * @param before the model before the branches were read
+     * @param before the model before the branches or the parents were read
      */
-    static List<Cmd> branchesLoaded(Model before, Model next) {
-        Option<Cmd> head = Option.when(
-                logOfHead(next) && (!ofHead(before).equals(ofHead(next)) || baseMoved(before, next, head(next))),
-                () -> ofHead(next));
+    static List<Cmd> basesRead(Model before, Model next) {
+        Option<Cmd> head = Option.when(logOfHead(next) && !ofHead(before).equals(ofHead(next)), () -> ofHead(next));
         Option<Cmd> branch = next.repoView()
                 .branchAhead()
                 .map(Preview::key)
                 .filter(shown -> LoadUpdate.tipOf(before, shown).equals(LoadUpdate.tipOf(next, shown)))
-                .filter(shown -> !of(before, shown).equals(of(next, shown))
-                        || baseMoved(before, next, AheadUpdate.branch(next, shown)))
+                .filter(shown -> !of(before, shown).equals(of(next, shown)))
                 .map(shown -> of(next, shown));
         return head.toList().appendAll(branch);
     }
@@ -214,10 +267,6 @@ public final class AheadUpdate {
                         .branchAhead()
                         .filter(preview -> preview.value() instanceof Loadable.Failed)
                         .map(preview -> of(model, preview.key())));
-    }
-
-    private static boolean baseMoved(Model before, Model next, Option<Ahead> ahead) {
-        return ahead.exists(read -> !LoadUpdate.tipOf(before, read.base()).equals(LoadUpdate.tipOf(next, read.base())));
     }
 
     /**

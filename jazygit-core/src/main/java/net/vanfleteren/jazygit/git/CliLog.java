@@ -48,15 +48,6 @@ final class CliLog {
     }
 
     /**
-     * The log of HEAD, newest first; empty in a repository without commits.
-     */
-    static Either<ProcessError, List<Commit>> commits(Path worktree) {
-        return resolve(worktree, "HEAD")
-                .mapLeft(GitFailure::error)
-                .flatMap(head -> head.fold(() -> Either.right(List.empty()), tip -> log(worktree, tip)));
-    }
-
-    /**
      * The commits of the log of HEAD that {@code query} finds, newest first; none in a repository without commits.
      * They are left as git lists them: with commits left out, merges and what they brought in no longer join up.
      */
@@ -104,66 +95,61 @@ final class CliLog {
      * each, and how many there are in all.
      */
     static Either<GitError, Divergence> divergence(Path worktree, BranchRef branch, BranchRef other) {
-        return tip(worktree, branch)
-                .flatMap(ours -> tip(worktree, other)
-                        .flatMap(theirs -> Either.narrow(counts(worktree, ours, theirs)
-                                .flatMap(counts -> selected(
-                                                worktree, List.of(ours.value(), "^" + theirs.value()), MAX_COMMITS)
-                                        .flatMap(ahead -> selected(
-                                                        worktree,
-                                                        List.of(theirs.value(), "^" + ours.value()),
-                                                        MAX_COMMITS)
-                                                .map(behind -> new Divergence(
-                                                        new Divergence.Side(ahead, counts._1),
-                                                        new Divergence.Side(behind, counts._2))))))));
+        return tips(worktree, branch, other)
+                .flatMap(tips -> tips.apply((ours, theirs) -> Either.narrow(counts(worktree, ours, theirs)
+                        .flatMap(counts -> selected(worktree, List.of(ours.value(), "^" + theirs.value()), MAX_COMMITS)
+                                .flatMap(ahead -> selected(
+                                                worktree, List.of(theirs.value(), "^" + ours.value()), MAX_COMMITS)
+                                        .map(behind -> new Divergence(
+                                                new Divergence.Side(ahead, counts._1),
+                                                new Divergence.Side(behind, counts._2))))))));
     }
 
     /**
-     * The commits of {@code branch}, or of HEAD for none, that are not on the first of {@code bases} that exists, at
-     * most {@code max} of them; none when none of the bases exists, or HEAD has no commits yet.
+     * The commits {@code ours} and {@code theirs} are at, read in one {@code for-each-ref} over their full refs (ADR 49).
      */
-    static Either<GitError, Option<Ahead>> ahead(
-            Path worktree, Option<BranchRef> branch, List<BranchRef> bases, int max) {
-        return branch.fold(
-                        () -> Either.<GitError, Option<Sha>>narrow(
-                                resolve(worktree, "HEAD").mapLeft(GitFailure::error)),
-                        named -> tip(worktree, named).map(Option::of))
-                .flatMap(tip -> tip.fold(
-                        () -> Either.right(Option.none()),
-                        ours -> firstExisting(worktree, bases)
-                                .flatMap(base -> base.fold(
-                                        () -> Either.right(Option.none()),
-                                        theirs -> Either.narrow(notOn(worktree, ours, theirs._1, theirs._2, max)
-                                                .map(Option::of))))));
+    private static Either<GitError, Tuple2<Sha, Sha>> tips(Path worktree, BranchRef ours, BranchRef theirs) {
+        return Either.<GitError, Map<String, Sha>>narrow(GitProcess.read(
+                        worktree,
+                        GitCommand.reading(List.of(
+                                "for-each-ref",
+                                "--format=%(refname)" + GitOutput.REF_FIELD_SEPARATOR + "%(objectname)",
+                                GitArgs.revision(ours),
+                                GitArgs.revision(theirs))),
+                        CliLog::refs))
+                .flatMap(found -> found.get(GitArgs.revision(ours))
+                        .toEither(() -> (GitError) new UnknownBranch(ours))
+                        .flatMap(sha -> found.get(GitArgs.revision(theirs))
+                                .toEither(() -> (GitError) new UnknownBranch(theirs))
+                                .map(other -> Tuple.of(sha, other))));
     }
 
     /**
-     * The first of {@code bases} that exists, with its tip.
+     * The commit of each ref in {@code raw}, by its full name, a line per ref as {@code for-each-ref} lists it: its
+     * name, then the object it points to, which for a branch is its commit. A pattern of {@code for-each-ref} also
+     * matches the refs below it, so the refs asked for are looked up by their exact name.
      */
-    private static Either<GitError, Option<Tuple2<BranchRef, Sha>>> firstExisting(
-            Path worktree, List<BranchRef> bases) {
-        return bases.isEmpty()
-                ? Either.right(Option.none())
-                : Either.<GitError, Option<Sha>>narrow(resolve(worktree, GitArgs.revision(bases.head()))
-                                .mapLeft(GitFailure::error))
-                        .flatMap(tip -> tip.fold(
-                                () -> firstExisting(worktree, bases.tail()),
-                                found -> Either.right(Option.of(Tuple.of(bases.head(), found)))));
+    static Either<UnexpectedOutput, Map<String, Sha>> refs(String raw) {
+        return Either.sequenceRight(GitOutput.nonBlankLines(raw)
+                        .map(line -> GitOutput.fields(line, 2)
+                                .flatMap(fields ->
+                                        GitOutput.sha(fields.get(1)).map(sha -> Tuple.of(fields.get(0), sha)))))
+                .map(HashMap::ofEntries);
     }
 
     /**
-     * The commits from {@code ours} that are not on {@code base}, whose tip is {@code theirs}, at most {@code max}.
-     * They are only counted when there are that many, to tell whether there are more.
+     * The commits from {@code tip} that are not on {@code base}, whose tip is {@code baseTip}, at most {@code max}, and
+     * the commit they forked from. They are only counted when there are that many, to tell whether there are more.
      */
-    private static Either<ProcessError, Ahead> notOn(Path worktree, Sha ours, BranchRef base, Sha theirs, int max) {
-        List<String> revisions = List.of(ours.value(), "^" + theirs.value());
+    static Either<ProcessError, Ahead> ahead(Path worktree, Sha tip, BranchRef base, Sha baseTip, int max) {
+        List<String> revisions = List.of(tip.value(), "^" + baseTip.value());
         return selected(worktree, revisions, max)
                 .flatMap(commits -> (commits.size() < max
                                 ? Either.<ProcessError, Boolean>right(false)
                                 : count(worktree, revisions.prepend("--max-count=" + (max + 1)))
                                         .map(count -> count > max))
-                        .flatMap(more -> forkPoint(worktree, ours, theirs)
-                                .map(fork -> new Ahead(ours, base, commits, more, fork))));
+                        .flatMap(more -> forkPoint(worktree, tip, baseTip)
+                                .map(fork -> new Ahead(tip, base, commits, more, fork))));
     }
 
     /**
@@ -184,19 +170,18 @@ final class CliLog {
      * The subject of the oldest commit on {@code branch} that is not on {@code base}; none when there is none.
      */
     static Either<GitError, Option<String>> firstSubject(Path worktree, BranchRef branch, BranchRef base) {
-        return tip(worktree, branch)
-                .flatMap(ours -> tip(worktree, base)
-                        .flatMap(theirs -> Either.narrow(GitProcess.read(
-                                worktree,
-                                GitCommand.reading(
-                                        "log",
-                                        "--no-color",
-                                        "--reverse",
-                                        "--format=%s",
-                                        ours.value(),
-                                        "^" + theirs.value(),
-                                        "--"),
-                                raw -> Either.right(GitOutput.nonBlankLines(raw).headOption())))));
+        return tips(worktree, branch, base)
+                .flatMap(tips -> tips.apply((ours, theirs) -> Either.narrow(GitProcess.read(
+                        worktree,
+                        GitCommand.reading(
+                                "log",
+                                "--no-color",
+                                "--reverse",
+                                "--format=%s",
+                                ours.value(),
+                                "^" + theirs.value(),
+                                "--"),
+                        raw -> Either.right(GitOutput.nonBlankLines(raw).headOption())))));
     }
 
     /**
