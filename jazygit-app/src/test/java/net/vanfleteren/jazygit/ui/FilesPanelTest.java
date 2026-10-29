@@ -295,6 +295,42 @@ class FilesPanelTest {
         }
     }
 
+    @Test
+    void theFilesOfACommitOpenOnTheFirstDirectoryThatHoldsFiles() throws Exception {
+        String model = "core/src/main/java/model";
+        assertEquals(
+                model,
+                highlightedOnOpen(List.of(
+                        new CommitFile(model + "/WordDiff.java", ChangeType.MODIFIED),
+                        new CommitFile("core/src/test/java/model/WordDiffTest.java", ChangeType.MODIFIED))));
+        assertEquals(
+                "",
+                highlightedOnOpen(List.of(
+                        new CommitFile("pom.xml", ChangeType.MODIFIED),
+                        new CommitFile("bench/Bench.java", ChangeType.ADDED))));
+    }
+
+    /**
+     * The path of the node highlighted when the files of a commit open with {@code files}.
+     */
+    private static String highlightedOnOpen(List<CommitFile> files) throws Exception {
+        FilesPanel panel = new FilesPanel(msg -> {}, () -> {});
+        CommitFilesView.Changes of = new CommitFilesView.Changes.OfCommit(new Sha("aaaa"));
+        Model opened = Update.update(
+                        TestModels.loaded(new FixedProvider(List.of())), new CommitFilesMsg.Opened(of, CommitsPanel.ID))
+                .model();
+        Model loaded =
+                Update.update(opened, new LoadMsg.CommitFilesLoaded(of, files)).model();
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(opened, FilesPanel.ID))) {
+            RenderedText.of(testRunner, () -> panel.render(opened, FilesPanel.ID));
+            RenderedText.of(testRunner, () -> panel.render(loaded, FilesPanel.ID));
+            String path = panel.commitTree().selectedNode().data().path();
+            SettledPilot.of(testRunner).quit();
+            return path;
+        }
+    }
+
     private record FixedProvider(List<FileEntry> files) implements StubGitProvider {
 
         @Override

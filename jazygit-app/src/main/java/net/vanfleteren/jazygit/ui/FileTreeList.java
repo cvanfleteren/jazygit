@@ -26,7 +26,8 @@ import net.vanfleteren.jazygit.state.Loadable;
 /**
  * Changed files as a directory tree under a root that holds them all, in a tree widget that keeps its own selection
  * and expansion. It is only rebuilt when the files change, and then keeps the collapsed directories and the selected
- * path, or the nearest one when that is gone; files of something else start afresh.
+ * path, or the nearest one when that is gone; files of something else start afresh, on the root or, if asked, on the
+ * first directory that holds files directly, whose diff shows something.
  *
  * @param <T> the files: those of the working tree, or those a commit changed
  */
@@ -41,10 +42,13 @@ final class FileTreeList<T extends Pathed> {
     private final Function<FileTree.File<T>, String> label;
     private final Function<FileTree.File<T>, StyledElement<?>> drawFile;
     private final Theme.Highlights highlights;
+    private final boolean startOnDiff;
     private List<TreeNode<FileTree<T>>> roots = List.of();
     // What the files are of, and the files, that the tree was built for.
     private Option<Object> shownOf = Option.none();
     private Option<Loadable<List<T>>> shown = Option.none();
+    // Whether the files of what the tree is built for have not been read yet, so the start highlight is still to place.
+    private boolean unread;
     // The nodes drawn for the frame being rendered, with what they were drawn as, to find the one clicked on.
     private List<Drawn<T>> drawn = List.of();
 
@@ -53,15 +57,19 @@ final class FileTreeList<T extends Pathed> {
      * @param label      the label of the node of a file
      * @param drawFile   how the node of a file is drawn
      * @param highlights how the highlighted node is shown, also when the pane is not in use
+     * @param startOnDiff whether files of something else start on the first directory that holds files directly,
+     *                    rather than on the root
      */
     FileTreeList(
             String id,
             Function<FileTree.File<T>, String> label,
             Function<FileTree.File<T>, StyledElement<?>> drawFile,
-            Theme.Highlights highlights) {
+            Theme.Highlights highlights,
+            boolean startOnDiff) {
         this.label = label;
         this.drawFile = drawFile;
         this.highlights = highlights;
+        this.startOnDiff = startOnDiff;
         tree = Toolkit.<FileTree<T>>tree()
                 .id(id)
                 .focusable()
@@ -92,11 +100,28 @@ final class FileTreeList<T extends Pathed> {
             roots = List.of();
             rebuild(files);
             tree.selected(0);
+            unread = true;
         } else if (!shown.contains(files)) {
             shown = Option.of(files);
             rebuild(files);
         }
+        if (unread && files instanceof Loadable.Loaded<List<T>>) {
+            unread = false;
+            if (startOnDiff) {
+                tree.selected(firstWithDiff(visible(roots)));
+            }
+        }
         return tree;
+    }
+
+    /**
+     * The row of the first directory of {@code rows} that holds files directly, or else the first row.
+     */
+    private static <T extends Pathed> int firstWithDiff(List<TreeNode<FileTree<T>>> rows) {
+        return Math.max(
+                0,
+                rows.indexWhere(n -> n.data() instanceof FileTree.Dir<T> dir
+                        && !dir.directEntries().isEmpty()));
     }
 
     /**
