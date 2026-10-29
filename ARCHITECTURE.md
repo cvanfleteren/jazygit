@@ -341,12 +341,17 @@ there.
 
 ### The diff style and the files of a commit
 
-See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md`.
+See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
+`documentation/adr/0047-the-rich-view-for-the-working-tree.md`.
 
-- **The diff style** (`settings.DiffStyle`, kept as `ui.diff-style`) says how the changes of a commit or a stash are
-  drawn: `PLAIN`, git's text, or `RICH`. Ctrl+D switches it (`DiffOptionsMsg.StyleToggled`), saves it and reads the
-  diffs shown again, as Ctrl+W does: `RICH` reads a merge against its first parent (`DiffOptions.firstParent`,
-  `--diff-merges=first-parent`), as the rich view does not draw git's combined diff.
+- **The diff style** (`settings.DiffStyle`, kept as `ui.diff-style`) says how the diffs git reads are drawn: the
+  staged and unstaged changes of the working tree, and the changes of a commit or a stash. `PLAIN` is git's text,
+  `RICH` the rich view. Ctrl+D switches it (`DiffOptionsMsg.StyleToggled`), saves it and reads the diffs shown again,
+  as Ctrl+W does: `RICH` reads a merge against its first parent (`DiffOptions.firstParent`,
+  `--diff-merges=first-parent`), as the rich view does not draw git's combined diff of a merge. A path left
+  unmerged by a conflict still shows as a combined diff (`diff --cc`) in the working tree: `UnifiedDiff` makes it a
+  `CONFLICTED` file, whose lines are kept as git printed them. The staged and the unstaged areas are each a
+  `Body.Diff` of their own, so each is parsed and its words compared on its own.
 - **The rich view** is drawn by `ui.RichDiff` from `UnifiedDiff`, the diff parsed into files, hunks and numbered
   lines, and `WordDiff`, which pairs the removed and added lines of a block and finds the words that changed in a
   pair. Both are pure, in `git.model`. The content panel styles a body only when it changes, so a diff is parsed once

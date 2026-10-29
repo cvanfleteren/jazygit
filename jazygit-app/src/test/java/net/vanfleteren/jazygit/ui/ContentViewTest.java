@@ -236,7 +236,7 @@ class ContentViewTest {
                         ContentArea.COMMIT_FILE,
                         "aaaa · src/a.txt",
                         new ScrolledContent.FileChanges(new Sha("aaaa"), List.of(file), DiffText.of("+a\n")),
-                        new Body.FileChanges("+a\n", DiffStyle.RICH)),
+                        new Body.Diff("+a\n", DiffStyle.RICH)),
                 ContentView.of(selected, FilesPanel.ID));
         assertEquals(
                 new Shown.Message("Files of aaaa", Placeholders.loading(), Tone.DIM),
@@ -278,6 +278,30 @@ class ContentViewTest {
                 List.of(ContentArea.STAGED, ContentArea.UNSTAGED), diffs.areas().map(Shown.Area::area));
         assertEquals(
                 List.of("Staged changes", "Unstaged changes"), diffs.areas().map(Shown.Area::title));
+    }
+
+    @Test
+    void theStagedAndUnstagedChangesAreDrawnInTheStyleChosen() {
+        Model selected = TestModels.withFilesSelected(
+                new SampleData(),
+                List.of(
+                        new FileEntry("a.txt", ChangeType.MODIFIED, true, false),
+                        new FileEntry("b.txt", ChangeType.MODIFIED, false, true)));
+        Model rich = selected.mapPreferences(
+                preferences -> preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
+
+        assertEquals(
+                List.of(DiffStyle.PLAIN, DiffStyle.PLAIN),
+                ContentView.of(selected, FilesPanel.ID)
+                        .areas()
+                        .map(area ->
+                                assertInstanceOf(Body.Diff.class, area.body()).style()));
+        assertEquals(
+                List.of(DiffStyle.RICH, DiffStyle.RICH),
+                ContentView.of(rich, FilesPanel.ID)
+                        .areas()
+                        .map(area ->
+                                assertInstanceOf(Body.Diff.class, area.body()).style()));
     }
 
     @Test

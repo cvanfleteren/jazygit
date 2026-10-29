@@ -31,7 +31,7 @@ public record Preferences(
     }
 
     /**
-     * How the changes of a commit or a stash are drawn.
+     * How the diffs of the working tree, of a commit and of a stash are drawn.
      */
     public DiffStyle diffStyle() {
         return settings.diffStyle();

@@ -91,10 +91,11 @@ public final class ContentPanel {
     }
 
     /**
-     * The unified diff as one styled text, so it is a single element to lay out however long the diff is.
+     * The unified diff drawn in {@code style}, as one styled text, so it is a single element to lay out however long
+     * the diff is.
      */
-    static Text diffText(String diff, Theme.SpanStyles styles) {
-        return styledText(lines(diff).map(line -> diffLine(line, styles)));
+    static Text diffText(String diff, DiffStyle style, Theme.SpanStyles styles) {
+        return styledText(changeLines(diff, style, styles));
     }
 
     /**
@@ -228,7 +229,7 @@ public final class ContentPanel {
     }
 
     /**
-     * The changes of a commit or a stash, a unified diff, drawn in {@code style}.
+     * A unified diff, drawn in {@code style}.
      */
     static List<Line> changeLines(String changes, DiffStyle style, Theme.SpanStyles styles) {
         return switch (style) {
@@ -303,14 +304,13 @@ public final class ContentPanel {
      */
     private Text bodyText(Body body) {
         return switch (body) {
-            case Body.Diff(String diff) -> diffText(diff, styles);
+            case Body.Diff(String diff, DiffStyle style) -> diffText(diff, style, styles);
             case Body.BranchLog(List<Commit> commits, AheadView ahead) ->
                 logText(commits, ZoneId.systemDefault(), ahead, styles);
             case Body.CommitChanges(Commit commit, String changes, DiffStyle style) ->
                 commitText(commit, changes, style, styles);
             case Body.StashChanges(Stash stash, String changes, DiffStyle style) ->
                 stashText(stash, changes, style, styles);
-            case Body.FileChanges(String changes, DiffStyle style) -> styledText(changeLines(changes, style, styles));
             case Body.PullRequest(PullRequestSummary pullRequest, PullRequestPreview preview) ->
                 pullRequestText(pullRequest, preview, styles);
         };
