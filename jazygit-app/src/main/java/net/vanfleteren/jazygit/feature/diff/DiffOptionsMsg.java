@@ -15,4 +15,9 @@ public sealed interface DiffOptionsMsg extends Msg {
      * The user asked to show changes to whitespace only, or to leave them out.
      */
     record WhitespaceToggled() implements DiffOptionsMsg {}
+
+    /**
+     * The user asked to draw the changes of the commits and the stashes in the other style.
+     */
+    record StyleToggled() implements DiffOptionsMsg {}
 }

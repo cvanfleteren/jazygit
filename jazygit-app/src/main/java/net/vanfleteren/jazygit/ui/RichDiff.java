@@ -1,0 +1,170 @@
+package net.vanfleteren.jazygit.ui;
+
+import dev.tamboui.text.Line;
+import dev.tamboui.text.Span;
+import io.vavr.collection.List;
+import io.vavr.control.Option;
+import net.vanfleteren.jazygit.git.model.ChangeType;
+import net.vanfleteren.jazygit.git.model.UnifiedDiff;
+import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
+import net.vanfleteren.jazygit.git.model.UnifiedDiff.FileDiff;
+import net.vanfleteren.jazygit.git.model.UnifiedDiff.Hunk;
+import net.vanfleteren.jazygit.git.model.WordDiff;
+import net.vanfleteren.jazygit.git.model.WordDiff.Segment;
+import net.vanfleteren.jazygit.i18n.Messages;
+
+/**
+ * A unified diff drawn rich (ADR 44): what comes before its first file as it is, then each file under a bar that
+ * says what happened to it, its lines numbered in the old and the new file, and the words that changed in a changed
+ * line highlighted.
+ */
+final class RichDiff {
+
+    private static final String GUTTER_END = " │ ";
+
+    private RichDiff() {}
+
+    /**
+     * The lines of {@code diff}, styled.
+     */
+    static List<Line> lines(String diff, Theme.SpanStyles styles) {
+        UnifiedDiff parsed = UnifiedDiff.parse(diff);
+        return parsed.preamble()
+                .map(line -> Line.from(Span.raw(line)))
+                .appendAll(parsed.files()
+                        .zipWithIndex()
+                        .flatMap(file ->
+                                file(file._1, styles).prependAll(file._2 > 0 ? List.of(Line.from("")) : List.empty())));
+    }
+
+    private static List<Line> file(FileDiff file, Theme.SpanStyles styles) {
+        int digits = file.hunks()
+                .flatMap(Hunk::lines)
+                .flatMap(line -> line.oldNumber().toList().appendAll(line.newNumber()))
+                .max()
+                .map(number -> String.valueOf(number).length())
+                .getOrElse(1);
+        int gutter = 2 * digits + 1 + GUTTER_END.length();
+        String bar = bar(file);
+        int width = Math.max(
+                width(bar),
+                gutter
+                        + file.hunks()
+                                .flatMap(Hunk::lines)
+                                .map(line -> width(line.text()) + 1)
+                                .max()
+                                .getOrElse(0));
+        return List.of(Line.from(styled(padded(bar, width), Theme.Classes.DIFF_FILE_HEADER, styles)))
+                .appendAll(note(file).map(text -> Line.from(styled(text, Theme.Classes.DIM, styles))))
+                .appendAll(file.hunks().flatMap(hunk -> hunk(hunk, digits, width - gutter, styles)));
+    }
+
+    /**
+     * What the bar of {@code file} says: what happened to it and its path, and how its mode changed if it did.
+     */
+    private static String bar(FileDiff file) {
+        String what = Messages.get(
+                switch (file.type()) {
+                    case ADDED -> "content.file.added";
+                    case DELETED -> "content.file.deleted";
+                    case RENAMED -> "content.file.renamed";
+                    default -> "content.file.modified";
+                });
+        String path = file.origin().map(origin -> origin + " → ").getOrElse("") + file.path();
+        String mode = file.mode()
+                .map(change -> "  " + Messages.get("content.file.mode", change.from(), change.to()))
+                .getOrElse("");
+        return " " + what + "  " + path + mode + " ";
+    }
+
+    /**
+     * Why {@code file} has no lines to show, if it has none and that does not go without saying.
+     */
+    private static Option<String> note(FileDiff file) {
+        return file.binary()
+                ? Option.of(Messages.get("content.file.binary"))
+                : Option.when(
+                        file.hunks().isEmpty() && file.type() == ChangeType.RENAMED,
+                        () -> Messages.get("content.file.renamedUnchanged"));
+    }
+
+    /**
+     * The lines of {@code hunk}, under its header unless it has none: changed lines are padded to {@code width}, so
+     * their background makes a block.
+     */
+    private static List<Line> hunk(Hunk hunk, int digits, int width, Theme.SpanStyles styles) {
+        List<Line> header = hunk.header().isEmpty()
+                ? List.empty()
+                : List.of(Line.from(styled(hunk.header(), Theme.Classes.DIFF_HUNK, styles)));
+        return header.appendAll(hunk.lines()
+                .zip(WordDiff.segments(hunk.lines()))
+                .map(line -> line(line._1, line._2, digits, width, styles)));
+    }
+
+    private static Line line(DiffLine line, List<Segment> segments, int digits, int width, Theme.SpanStyles styles) {
+        Span gutter = styled(
+                number(line.oldNumber(), digits) + " " + number(line.newNumber(), digits) + GUTTER_END,
+                Theme.Classes.DIFF_LINE_NUMBER,
+                styles);
+        return switch (line.kind()) {
+            case CONTEXT -> Line.from(gutter, Span.raw(" " + line.text()));
+            case NOTE -> Line.from(gutter, styled(line.text(), Theme.Classes.DIM, styles));
+            case ADDED ->
+                changed(
+                        gutter,
+                        "+",
+                        segments,
+                        width,
+                        Theme.Classes.DIFF_ADDED_LINE,
+                        Theme.Classes.DIFF_ADDED_WORD,
+                        styles);
+            case REMOVED ->
+                changed(
+                        gutter,
+                        "-",
+                        segments,
+                        width,
+                        Theme.Classes.DIFF_REMOVED_LINE,
+                        Theme.Classes.DIFF_REMOVED_WORD,
+                        styles);
+        };
+    }
+
+    /**
+     * A changed line: its marker and its unchanged parts in {@code lineClass}, its changed words in
+     * {@code wordClass}, padded to {@code width}.
+     */
+    private static Line changed(
+            Span gutter,
+            String marker,
+            List<Segment> segments,
+            int width,
+            String lineClass,
+            String wordClass,
+            Theme.SpanStyles styles) {
+        int used = 1 + segments.map(segment -> width(segment.text())).sum().intValue();
+        List<Span> spans = segments.map(
+                        segment -> styled(segment.text(), segment.changed() ? wordClass : lineClass, styles))
+                .prepend(styled(marker, lineClass, styles))
+                .append(styled(" ".repeat(Math.max(0, width - used)), lineClass, styles))
+                .prepend(gutter);
+        return Line.from(spans.toJavaList());
+    }
+
+    private static String number(Option<Integer> number, int digits) {
+        String text = number.map(String::valueOf).getOrElse("");
+        return " ".repeat(digits - text.length()) + text;
+    }
+
+    private static String padded(String text, int width) {
+        return text + " ".repeat(Math.max(0, width - width(text)));
+    }
+
+    private static int width(String text) {
+        return Span.raw(text).width();
+    }
+
+    private static Span styled(String text, String cssClass, Theme.SpanStyles styles) {
+        return Span.styled(text, styles.of(cssClass));
+    }
+}

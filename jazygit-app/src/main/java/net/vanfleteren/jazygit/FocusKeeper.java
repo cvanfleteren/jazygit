@@ -7,6 +7,7 @@ import dev.tamboui.tui.event.MouseEventKind;
 import io.vavr.control.Option;
 import java.util.Objects;
 import java.util.function.Supplier;
+import net.vanfleteren.jazygit.state.CommitFilesView;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Screen;
@@ -28,6 +29,8 @@ final class FocusKeeper {
     private Screen shownScreen = Screen.REPOSITORY;
     // The focus the last frame was drawn with that was not empty, which a click on nothing that takes it clears.
     private Option<String> lastFocus = Option.none();
+    // The files of a commit the last frame listed; when the model opens or closes them, the focus follows.
+    private Option<CommitFilesView> shownFiles = Option.none();
 
     /**
      * @param runner        the runner of the app, once it is started
@@ -81,9 +84,32 @@ final class FocusKeeper {
             shownScreen = model.screen();
             moveToPaneOf(model);
         }
+        followCommitFiles(model);
         String focusedId = focusedId();
         lastFocus = Option.of(focusedId).orElse(lastFocus);
         return focusedId;
+    }
+
+    /**
+     * Moves the focus into the pane that lists the files of a commit or a stash once they are opened, and back to the
+     * pane they were opened from once they are closed while that pane, or the diff it shows, has it (ADR 44).
+     */
+    private void followCommitFiles(Model model) {
+        Option<CommitFilesView> files = model.repoView().commitFiles();
+        if (files.map(CommitFilesView::of).equals(shownFiles.map(CommitFilesView::of))) {
+            return;
+        }
+        Option<CommitFilesView> closed = shownFiles;
+        shownFiles = files;
+        files.forEach(opened -> moveTo(opened.listedIn()));
+        if (files.isEmpty()) {
+            closed.filter(view -> {
+                        String focusedId = focusedId();
+                        return view.listedIn().equals(focusedId)
+                                || contentPanel.paneOfArea(model, focusedId).contains(view.listedIn());
+                    })
+                    .forEach(view -> moveTo(view.pane()));
+        }
     }
 
     /**

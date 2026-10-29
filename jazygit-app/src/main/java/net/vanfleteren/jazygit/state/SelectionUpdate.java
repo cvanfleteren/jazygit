@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.state.Cmd.LoadFileDiff;
 import net.vanfleteren.jazygit.state.Cmd.LoadStashDetail;
 import net.vanfleteren.jazygit.state.SelectionMsg.BranchCommitSelected;
 import net.vanfleteren.jazygit.state.SelectionMsg.BranchSelected;
+import net.vanfleteren.jazygit.state.SelectionMsg.CommitFilesSelected;
 import net.vanfleteren.jazygit.state.SelectionMsg.CommitSelected;
 import net.vanfleteren.jazygit.state.SelectionMsg.DivergenceCommitSelected;
 import net.vanfleteren.jazygit.state.SelectionMsg.FilesSelected;
@@ -67,6 +68,18 @@ public final class SelectionUpdate {
                         model.repoView().fileDiff(),
                         diff -> model.mapRepoView(repoView -> repoView.withFileDiff(diff)),
                         entries -> new LoadFileDiff(entries, model.preferences().diffOptions()));
+            case CommitFilesSelected(var files) ->
+                model.repoView()
+                        .commitFiles()
+                        .map(view -> selected(
+                                model,
+                                files,
+                                view.diff(),
+                                diff -> model.mapRepoView(
+                                        repoView -> repoView.withCommitFiles(Option.of(view.withDiff(diff)))),
+                                entries -> view.diffLoad(
+                                        entries, model.preferences().diffOptions())))
+                        .getOrElse(() -> Next.of(model));
             case StashSelected(var sha) ->
                 selected(
                         model,

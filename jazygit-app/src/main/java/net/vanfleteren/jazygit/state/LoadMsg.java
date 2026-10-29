@@ -167,6 +167,23 @@ public sealed interface LoadMsg extends Msg {
         }
     }
 
+    record CommitFilesLoaded(CommitFilesView.Changes of, List<CommitFile> files) implements LoadMsg {
+
+        @Override
+        public Cmd.Load cmd() {
+            return new Cmd.LoadCommitFiles(of);
+        }
+    }
+
+    record CommitFileDiffLoaded(CommitFilesView.Changes of, List<CommitFile> files, DiffOptions options, DiffText diff)
+            implements LoadMsg {
+
+        @Override
+        public Cmd.Load cmd() {
+            return new Cmd.LoadCommitFileDiff(of, files, options);
+        }
+    }
+
     record Failed(Cmd.Load cmd, Failure failure) implements LoadMsg {}
 
     /**

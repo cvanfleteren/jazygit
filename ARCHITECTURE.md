@@ -136,8 +136,8 @@ does that when `~/.config/jazygit` does not exist yet), the lock is in the dotfi
 the setting still holds until jazygit stops.
 
 Ctrl+S shows the settings (`feature.settings`): the gh executable, the theme, and the GitHub account of the
-repository. The keys in `config.toml` are `ui.theme` and `github.executable`, the gh to run when it is not the
-one on the PATH; a new one is only kept once `<executable> --version` runs. Changing the gh executable or the
+repository. The keys in `config.toml` are `ui.theme`, `ui.diff-style` (which Ctrl+D switches, ADR 44) and
+`github.executable`, the gh to run when it is not the one on the PATH; a new one is only kept once `<executable> --version` runs. Changing the gh executable or the
 account shows the repository again through `Env.repositories()`, as switching to a recent repository does, so a
 new `Env` runs gh as the settings say now.
 
@@ -311,10 +311,11 @@ request. The design and the steps still to come are in `prs.md`.
 
 ## Diff options
 
-How the diffs of the files and the commits are read is a `DiffOptions` (in `git.model`), kept in
-`Model.diffOptions` for the session only. For now it says whether changes to whitespace only are left out, which
-Ctrl+W toggles anywhere outside a dialog (`feature.diff`); the context and word or side-by-side diffs are to
-follow it there.
+How the diffs of the files and the commits are read is a `DiffOptions` (in `git.model`), which
+`Preferences.diffOptions()` makes of what the user chose. It says whether changes to whitespace only are left out,
+which Ctrl+W toggles anywhere outside a dialog (`feature.diff`) for the session only, and whether a merge is read
+against its first parent, which the diff style decides (below); the context and side-by-side diffs are to follow it
+there.
 
 - `GitInfoProvider.diff` and `commitChanges` take the options, which `CliDiff.flags` turns into git's
   (`--ignore-all-space`). A file whose changes are all whitespace is then left out of the diff entirely, also from
@@ -328,6 +329,28 @@ follow it there.
 - The titles of the diffs say when whitespace is ignored, and a diff that comes back blank says that only
   whitespace changed.
 - The diff of a pull request is read with `gh pr diff`, which has no such option, so it shows all changes.
+
+### The diff style and the files of a commit
+
+See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md`.
+
+- **The diff style** (`settings.DiffStyle`, kept as `ui.diff-style`) says how the changes of a commit or a stash are
+  drawn: `PLAIN`, git's text, or `RICH`. Ctrl+D switches it (`DiffOptionsMsg.StyleToggled`), saves it and reads the
+  diffs shown again, as Ctrl+W does: `RICH` reads a merge against its first parent (`DiffOptions.firstParent`,
+  `--diff-merges=first-parent`), as the rich view does not draw git's combined diff.
+- **The rich view** is drawn by `ui.RichDiff` from `UnifiedDiff`, the diff parsed into files, hunks and numbered
+  lines, and `WordDiff`, which pairs the removed and added lines of a block and finds the words that changed in a
+  pair. Both are pure, in `git.model`. The content panel styles a body only when it changes, so a diff is parsed once
+  each time it is shown again, not on every frame.
+- **The files of a commit or a stash**, which `F` opens from the commits, divergence, branch commits and stash panes
+  (`feature.diff.CommitFilesAction`), are a `CommitFilesView` in `RepoView.commitFiles`: whose changes they are, the
+  pane they were opened from, the `CommitFile`s read (`Cmd.LoadCommitFiles`), and the diff of the highlighted node
+  as a `Preview` (`Cmd.LoadCommitFileDiff`, a `DiffLoad` with a slot of its own). The files pane lists them in place
+  of the working tree's (`ui.FileTreeList`, one per tree, so each keeps its own highlight and collapsed
+  directories), and the content panel shows the diff in `ContentArea.COMMIT_FILE`.
+- **Their focus:** `FocusKeeper` moves the focus into the files pane when they open, and back to the pane they were
+  opened from when Escape closes them. `Model.withShownPane` closes them when another pane gets the focus, and
+  `LoadUpdate` when the stash they are of is dropped.
 
 ## The editor
 

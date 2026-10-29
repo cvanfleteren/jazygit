@@ -13,6 +13,8 @@ enum ContentArea {
     UNSTAGED("diff-unstaged", FilesPanel.ID),
     COMMIT("commit-changes", CommitsPanel.ID),
     STASH("stash-changes", StashPanel.ID),
+    // What a commit or a stash changed in the files highlighted in the tree of them the files pane lists.
+    COMMIT_FILE("commit-file-changes", FilesPanel.ID),
     // The commit highlighted in the divergence the branches pane lists.
     DIVERGENCE("divergence-commit", BranchesPanel.ID),
     // The commit highlighted in the commits of a branch the branches pane lists.

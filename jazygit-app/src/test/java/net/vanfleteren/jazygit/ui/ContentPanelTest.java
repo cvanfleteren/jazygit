@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.model.SampleData;
+import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.TestModels;
 import org.junit.jupiter.api.Test;
@@ -391,12 +392,12 @@ class ContentPanelTest {
                 "Subject",
                 "More\ntext");
 
-        List<String> lines =
-                ContentPanel.commitText(commit, " a.txt | 1 +\n 1 file changed\n\n+added\n", Theme.SpanStyles.NONE)
-                        .lines()
-                        .stream()
-                        .map(line -> line.spans().stream().map(Span::content).collect(Collectors.joining()))
-                        .collect(List.collector());
+        List<String> lines = ContentPanel.commitText(
+                        commit, " a.txt | 1 +\n 1 file changed\n\n+added\n", DiffStyle.PLAIN, Theme.SpanStyles.NONE)
+                .lines()
+                .stream()
+                .map(line -> line.spans().stream().map(Span::content).collect(Collectors.joining()))
+                .collect(List.collector());
 
         assertEquals("commit a1b2c3d4e5f6", lines.get(0));
         assertEquals("Author: Ada Lovelace <ada@example.com>", lines.get(1));
@@ -453,10 +454,12 @@ class ContentPanelTest {
         Stash stash =
                 new Stash("stash@{0}", new Sha("5555"), "my work", Option.of(new BranchName("main")), Instant.EPOCH);
 
-        List<String> lines =
-                ContentPanel.stashText(stash, " a.txt | 1 +\n\n+added line\n", Theme.SpanStyles.NONE).lines().stream()
-                        .map(line -> line.spans().stream().map(Span::content).collect(Collectors.joining()))
-                        .collect(List.collector());
+        List<String> lines = ContentPanel.stashText(
+                        stash, " a.txt | 1 +\n\n+added line\n", DiffStyle.PLAIN, Theme.SpanStyles.NONE)
+                .lines()
+                .stream()
+                .map(line -> line.spans().stream().map(Span::content).collect(Collectors.joining()))
+                .collect(List.collector());
 
         assertEquals("stash@{0}: my work", lines.get(0));
         assertEquals("Branch: main", lines.get(1));
@@ -469,9 +472,10 @@ class ContentPanelTest {
         Commit commit =
                 Fixtures.commit(new Sha("a1b2c3d4e5f6"), "Ada", "ada@example.com", Instant.EPOCH, "Subject", "");
 
-        List<String> lines = ContentPanel.commitText(commit, "x", Theme.SpanStyles.NONE).lines().stream()
-                .map(line -> line.spans().stream().map(Span::content).collect(Collectors.joining()))
-                .collect(List.collector());
+        List<String> lines =
+                ContentPanel.commitText(commit, "x", DiffStyle.PLAIN, Theme.SpanStyles.NONE).lines().stream()
+                        .map(line -> line.spans().stream().map(Span::content).collect(Collectors.joining()))
+                        .collect(List.collector());
 
         assertEquals(List.of("", "    Subject", "---", "x"), lines.drop(3));
     }

@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.model.Ahead;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.CommitQuery;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.FileEntry;
@@ -135,6 +136,10 @@ public interface Cmd {
          * The changes of the stash highlighted.
          */
         STASH_DETAIL,
+        /**
+         * The diff of the node highlighted in the tree of the files of a commit or a stash.
+         */
+        COMMIT_FILE_DIFF,
         /**
          * The diff of the files highlighted.
          */
@@ -484,6 +489,56 @@ public interface Cmd {
             return env.git()
                     .stashChanges(sha, options)
                     .fold(this::failedWith, changes -> new LoadMsg.StashDetailLoaded(sha, options, changes));
+        }
+    }
+
+    /**
+     * Reads the files a commit or a stash changed, for the tree of them the files pane lists.
+     */
+    record LoadCommitFiles(CommitFilesView.Changes of) implements Load {
+
+        @Override
+        public Option<Label> label() {
+            return Option.of(Label.of("work.commitFiles", of.sha().shortSha()));
+        }
+
+        @Override
+        public Msg run(Env env) {
+            return (switch (of) {
+                        case CommitFilesView.Changes.OfCommit(Sha sha) ->
+                            env.git().commitFiles(sha);
+                        case CommitFilesView.Changes.OfStash(Sha sha) ->
+                            env.git().stashFiles(sha);
+                    })
+                    .fold(this::failedWith, files -> new LoadMsg.CommitFilesLoaded(of, files));
+        }
+    }
+
+    /**
+     * Reads what a commit or a stash changed in the files of the node highlighted in the tree of its files.
+     */
+    record LoadCommitFileDiff(CommitFilesView.Changes of, List<CommitFile> files, DiffOptions options)
+            implements DiffLoad {
+
+        @Override
+        public Option<Label> label() {
+            return Option.of(Label.of("work.diff"));
+        }
+
+        @Override
+        public Option<Slot> slot() {
+            return Option.of(Slot.COMMIT_FILE_DIFF);
+        }
+
+        @Override
+        public Msg run(Env env) {
+            return (switch (of) {
+                        case CommitFilesView.Changes.OfCommit(Sha sha) ->
+                            env.git().commitFileChanges(sha, files, options);
+                        case CommitFilesView.Changes.OfStash(Sha sha) ->
+                            env.git().stashFileChanges(sha, files, options);
+                    })
+                    .fold(this::failedWith, diff -> new LoadMsg.CommitFileDiffLoaded(of, files, options, diff));
         }
     }
 

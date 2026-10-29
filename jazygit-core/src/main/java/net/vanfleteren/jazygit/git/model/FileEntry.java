@@ -18,7 +18,8 @@ public record FileEntry(
         boolean staged,
         boolean unstaged,
         Option<Conflict> conflict,
-        Option<String> origin) {
+        Option<String> origin)
+        implements Pathed {
 
     public FileEntry(String path, ChangeType type, boolean staged, boolean unstaged) {
         this(path, type, staged, unstaged, Option.none(), Option.none());

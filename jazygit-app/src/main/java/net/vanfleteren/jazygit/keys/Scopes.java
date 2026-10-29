@@ -12,7 +12,13 @@ public final class Scopes {
     /**
      * The selected node of the file tree.
      */
-    public static final Scope<FileTree> FILES = new Scope<>("files", "panel.files.title");
+    public static final Scope<FileTree<FileEntry>> FILES = new Scope<>("files", "panel.files.title");
+    /**
+     * The selected node of the tree of the files a commit or a stash changed, which the files pane lists in place of
+     * the files of the working tree.
+     */
+    public static final Scope<FileTree<CommitFile>> COMMIT_FILES =
+            new Scope<>("commitFiles", "panel.commitFiles.title");
     /**
      * The name of the selected branch.
      */

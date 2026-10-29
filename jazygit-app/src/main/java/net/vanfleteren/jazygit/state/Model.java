@@ -78,7 +78,11 @@ public record Model(
      */
     public Model withShownPane(String id, boolean content) {
         return switch (screen) {
-            case REPOSITORY -> withRepoView(repoView.withFocusedPane(Option.of(id)));
+            // The files of a commit close when another pane gets the focus, as Escape closes them (ADR 44).
+            case REPOSITORY ->
+                withRepoView(repoView.withFocusedPane(Option.of(id))
+                        .withCommitFiles(repoView.commitFiles()
+                                .filter(view -> content || view.listedIn().equals(id))));
             case PULL_REQUESTS ->
                 withPrOverview(prOverview
                         .withFocusedPane(Option.of(id))

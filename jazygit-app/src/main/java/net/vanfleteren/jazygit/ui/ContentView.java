@@ -7,6 +7,7 @@ import java.util.function.Function;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.Commit;
+import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Diffs;
@@ -14,8 +15,10 @@ import net.vanfleteren.jazygit.git.model.Divergence;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.state.AheadUpdate;
 import net.vanfleteren.jazygit.state.BranchesTab;
+import net.vanfleteren.jazygit.state.CommitFilesView;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
@@ -42,7 +45,11 @@ final class ContentView {
             return pullRequest(model);
         }
         return switch (mirrored(model, focusedId)) {
-            case FILES -> fileDiffs(model);
+            case FILES ->
+                model.repoView()
+                        .commitFiles()
+                        .map(view -> commitFiles(model, view))
+                        .getOrElse(() -> fileDiffs(model));
             case BRANCHES -> branches(model);
             case COMMITS ->
                 commit(
@@ -232,18 +239,76 @@ final class ContentView {
                         title,
                         shown.value(),
                         changes -> commit.apply(shown.key())
-                                .<Shown>map(found -> commitArea(area, found, changes, options))
+                                .<Shown>map(found -> commitArea(
+                                        area,
+                                        found,
+                                        changes,
+                                        options,
+                                        model.preferences().diffStyle()))
                                 .getOrElse(() -> loading(title))))
                 .getOrElse(() -> nothing.map(message -> dim(title, Messages.get(message)))
                         .getOrElse(() -> loading(title)));
     }
 
-    private static Shown.Area commitArea(ContentArea area, Commit commit, DiffText changes, DiffOptions options) {
+    private static Shown.Area commitArea(
+            ContentArea area, Commit commit, DiffText changes, DiffOptions options, DiffStyle style) {
         return new Shown.Area(
                 area,
                 titled(Messages.get("panel.commit.titleFor", commit.shortSha()), options),
                 new ScrolledContent.CommitChanges(commit, changes),
-                new Body.CommitChanges(commit, shownChanges(changes, options)));
+                new Body.CommitChanges(commit, shownChanges(changes, options), style));
+    }
+
+    /**
+     * What the commit or the stash whose files the files pane lists changed in the files of the node highlighted in
+     * them; what was shown before stays while it is read. Before a node is highlighted, it is loading, or says that
+     * nothing changed.
+     */
+    private static Shown commitFiles(Model model, CommitFilesView view) {
+        DiffOptions options = model.preferences().diffOptions();
+        String name = changesName(model, view.of());
+        String title = titled(Messages.get("panel.commitFiles.titleFor", name), options);
+        return view.diff()
+                .map(Preview::shown)
+                .map(diff -> whenLoaded(
+                        title,
+                        diff.value(),
+                        changes -> diff.key().isEmpty()
+                                ? dim(title, Messages.get("content.noDirectFiles"))
+                                : new Shown.Area(
+                                        ContentArea.COMMIT_FILE,
+                                        titled(
+                                                Messages.get("panel.commitFile.titleFor", name, nodePath(diff.key())),
+                                                options),
+                                        new ScrolledContent.FileChanges(
+                                                view.of().sha(), diff.key(), changes),
+                                        new Body.FileChanges(
+                                                shownChanges(changes, options),
+                                                model.preferences().diffStyle()))))
+                .getOrElse(() -> whenLoaded(
+                        title,
+                        view.files(),
+                        files -> files.isEmpty() ? dim(title, Messages.get("content.noChanges")) : loading(title)));
+    }
+
+    /**
+     * How the commit or the stash {@code of} is named: by its short sha, or by its {@code stash@{n}}.
+     */
+    static String changesName(Model model, CommitFilesView.Changes of) {
+        return switch (of) {
+            case CommitFilesView.Changes.OfCommit(Sha sha) -> sha.shortSha();
+            case CommitFilesView.Changes.OfStash(Sha sha) ->
+                stash(model, sha).map(Stash::ref).getOrElse(sha::shortSha);
+        };
+    }
+
+    /**
+     * The path of the node whose direct {@code files} they are: the one file, or the directory they are in, {@code /}
+     * for the root.
+     */
+    private static String nodePath(List<CommitFile> files) {
+        String first = files.head().path();
+        return files.size() == 1 ? first : "/" + first.substring(0, first.lastIndexOf('/') + 1);
     }
 
     /**
@@ -264,7 +329,10 @@ final class ContentView {
                                         ContentArea.STASH,
                                         titled(Messages.get("panel.stash.titleFor", stash.ref()), options),
                                         new ScrolledContent.StashChanges(stash.sha(), changes),
-                                        new Body.StashChanges(stash, shownChanges(changes, options))))))
+                                        new Body.StashChanges(
+                                                stash,
+                                                shownChanges(changes, options),
+                                                model.preferences().diffStyle())))))
                 .getOrElse(() -> whenLoaded(
                         title,
                         model.repo().stashes(),
@@ -335,14 +403,19 @@ final class ContentView {
         record BranchLog(List<Commit> commits, AheadView ahead) implements Body {}
 
         /**
-         * A commit and what it changed.
+         * A commit and what it changed, drawn in {@code style}.
          */
-        record CommitChanges(Commit commit, String changes) implements Body {}
+        record CommitChanges(Commit commit, String changes, DiffStyle style) implements Body {}
 
         /**
-         * A stash and what it stashed.
+         * A stash and what it stashed, drawn in {@code style}.
          */
-        record StashChanges(Stash stash, String changes) implements Body {}
+        record StashChanges(Stash stash, String changes, DiffStyle style) implements Body {}
+
+        /**
+         * What a commit or a stash changed in some of its files, drawn in {@code style}.
+         */
+        record FileChanges(String changes, DiffStyle style) implements Body {}
 
         /**
          * A pull request, and what it says and changes.

@@ -6,12 +6,14 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.feature.branch.commits.BranchCommitsMsg;
+import net.vanfleteren.jazygit.feature.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.feature.help.HelpPopup;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.model.SampleData;
+import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.prs.PrOverview;
 import net.vanfleteren.jazygit.ui.ContentView.Body;
@@ -83,7 +85,8 @@ class ContentViewTest {
         return Update.update(
                         Update.update(
                                         TestModels.loaded()
-                                                .mapPreferences(preferences -> preferences.withDiffOptions(options)),
+                                                .mapPreferences(preferences ->
+                                                        preferences.withIgnoreWhitespace(options.ignoreWhitespace())),
                                         new SelectionMsg.CommitSelected(new Sha("aaaa")))
                                 .model(),
                         new LoadMsg.CommitDetailLoaded(new Sha("aaaa"), options, DiffText.of(changes)))
@@ -205,8 +208,39 @@ class ContentViewTest {
                         ContentArea.COMMIT,
                         "Commit: aaaa",
                         new ScrolledContent.CommitChanges(commit, DiffText.of("+added line\n")),
-                        new Body.CommitChanges(commit, "+added line\n")),
+                        new Body.CommitChanges(commit, "+added line\n", DiffStyle.PLAIN)),
                 ContentView.of(selected, CommitsPanel.ID));
+    }
+
+    @Test
+    void theFilesOfACommitShowWhatItChangedInTheHighlightedNodeInTheStyleChosen() {
+        CommitFilesView.Changes of = new CommitFilesView.Changes.OfCommit(new Sha("aaaa"));
+        CommitFile file = new CommitFile("src/a.txt", ChangeType.MODIFIED);
+        Model rich = TestModels.loaded()
+                .mapPreferences(preferences ->
+                        preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
+        Model open = Update.update(
+                        Update.update(rich, new CommitFilesMsg.Opened(of, CommitsPanel.ID))
+                                .model(),
+                        new LoadMsg.CommitFilesLoaded(of, List.of(file)))
+                .model();
+        Model selected = Update.update(
+                        Update.update(open, new SelectionMsg.CommitFilesSelected(List.of(file)))
+                                .model(),
+                        new LoadMsg.CommitFileDiffLoaded(
+                                of, List.of(file), rich.preferences().diffOptions(), DiffText.of("+a\n")))
+                .model();
+
+        assertEquals(
+                new Shown.Area(
+                        ContentArea.COMMIT_FILE,
+                        "aaaa · src/a.txt",
+                        new ScrolledContent.FileChanges(new Sha("aaaa"), List.of(file), DiffText.of("+a\n")),
+                        new Body.FileChanges("+a\n", DiffStyle.RICH)),
+                ContentView.of(selected, FilesPanel.ID));
+        assertEquals(
+                new Shown.Message("Files of aaaa", Placeholders.loading(), Tone.DIM),
+                ContentView.of(open, FilesPanel.ID));
     }
 
     @Test
@@ -214,7 +248,7 @@ class ContentViewTest {
         DiffOptions ignoring = DiffOptions.DEFAULT.withIgnoreWhitespace(true);
         Model dirty = Update.update(TestModels.loaded(), new LoadMsg.StatusLoaded(TestModels.DIRTY))
                 .model()
-                .mapPreferences(preferences -> preferences.withDiffOptions(ignoring));
+                .mapPreferences(preferences -> preferences.withIgnoreWhitespace(ignoring.ignoreWhitespace()));
         List<FileEntry> files = TestModels.DIRTY.files();
         Model selected =
                 Update.update(dirty, new SelectionMsg.FilesSelected(files)).model();
@@ -270,7 +304,7 @@ class ContentViewTest {
                         ContentArea.DIVERGENCE,
                         "Commit: cccc",
                         new ScrolledContent.CommitChanges(plain("cccc"), DiffText.of("+added line")),
-                        new Body.CommitChanges(plain("cccc"), "+added line")),
+                        new Body.CommitChanges(plain("cccc"), "+added line", DiffStyle.PLAIN)),
                 ContentView.of(selected, BranchesPanel.ID));
     }
 
@@ -348,7 +382,7 @@ class ContentViewTest {
                         ContentArea.STASH,
                         "Stash: stash@{0}",
                         new ScrolledContent.StashChanges(stash.sha(), DiffText.of("+added line\n")),
-                        new Body.StashChanges(stash, "+added line\n")),
+                        new Body.StashChanges(stash, "+added line\n", DiffStyle.PLAIN)),
                 ContentView.of(selected, StashPanel.ID));
     }
 

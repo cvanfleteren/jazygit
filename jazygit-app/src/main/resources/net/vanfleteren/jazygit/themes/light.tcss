@@ -73,6 +73,13 @@ Span.diff-header { text-style: bold; }
 Span.diff-added { color: $added; }
 Span.diff-removed { color: $removed; }
 Span.diff-hunk { color: $hunk; }
+/* The rich view of a diff (ADR 44): a bar for each file, the line numbers, and the changed lines and words. */
+Span.diff-file-header { text-style: reversed; }
+Span.diff-line-number { color: $muted; }
+Span.diff-added-line { color: $added; background: #e6ffec; }
+Span.diff-added-word { color: $added; background: #abf2bc; }
+Span.diff-removed-line { color: $removed; background: #ffebe9; }
+Span.diff-removed-word { color: $removed; background: #ffc1c0; }
 Span.current-branch { color: $warn; }
 Span.sha { color: $warn; }
 Span.tag { color: green; }

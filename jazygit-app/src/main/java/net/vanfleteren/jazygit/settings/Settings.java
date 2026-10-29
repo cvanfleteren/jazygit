@@ -14,9 +14,11 @@ import lombok.With;
  * @param ghExecutable      the gh executable to run, if not the one on the PATH
  * @param repositoryWidth   the share of the width the left column takes on the repository screen, in percent
  * @param pullRequestsWidth the share of the width the left column takes on the pull requests screen, in percent
+ * @param diffStyle         how the changes of a commit or a stash are drawn
  */
 @With
-public record Settings(ThemeName theme, Option<String> ghExecutable, int repositoryWidth, int pullRequestsWidth) {
+public record Settings(
+        ThemeName theme, Option<String> ghExecutable, int repositoryWidth, int pullRequestsWidth, DiffStyle diffStyle) {
 
     /**
      * The narrowest the left column may get, in percent of the width.
@@ -34,7 +36,8 @@ public record Settings(ThemeName theme, Option<String> ghExecutable, int reposit
     /**
      * The settings of a first session.
      */
-    public static final Settings DEFAULT = new Settings(ThemeName.DARK, Option.none(), DEFAULT_WIDTH, DEFAULT_WIDTH);
+    public static final Settings DEFAULT =
+            new Settings(ThemeName.DARK, Option.none(), DEFAULT_WIDTH, DEFAULT_WIDTH, DiffStyle.PLAIN);
 
     /**
      * The key of the theme in the settings file.
@@ -52,6 +55,10 @@ public record Settings(ThemeName theme, Option<String> ghExecutable, int reposit
      * The key of the width of the left column of the pull requests screen in the settings file.
      */
     static final String PULL_REQUESTS_WIDTH = "ui.pull-requests-width";
+    /**
+     * The key of the diff style in the settings file.
+     */
+    static final String DIFF_STYLE = "ui.diff-style";
 
     /**
      * {@code width} brought within the widths the left column may have.
@@ -75,20 +82,26 @@ public record Settings(ThemeName theme, Option<String> ghExecutable, int reposit
         Option<Integer> validRepositoryWidth = repositoryWidth.flatMap(Settings::width);
         Option<Object> pullRequestsWidth = value.apply(PULL_REQUESTS_WIDTH);
         Option<Integer> validPullRequestsWidth = pullRequestsWidth.flatMap(Settings::width);
+        Option<Object> diffStyle = value.apply(DIFF_STYLE);
+        Option<DiffStyle> validDiffStyle = diffStyle
+                .filter(String.class::isInstance)
+                .map(String.class::cast)
+                .flatMap(DiffStyle::of);
         return new Read(
                 new Settings(
                         validTheme.getOrElse(DEFAULT.theme),
                         validGh,
                         validRepositoryWidth.getOrElse(DEFAULT_WIDTH),
-                        validPullRequestsWidth.getOrElse(DEFAULT_WIDTH)),
+                        validPullRequestsWidth.getOrElse(DEFAULT_WIDTH),
+                        validDiffStyle.getOrElse(DEFAULT.diffStyle)),
                 Option.when(theme.isDefined() && validTheme.isEmpty(), THEME)
                         .toList()
                         .appendAll(Option.when(gh.isDefined() && validGh.isEmpty(), GH_EXECUTABLE))
                         .appendAll(Option.when(
                                 repositoryWidth.isDefined() && validRepositoryWidth.isEmpty(), REPOSITORY_WIDTH))
                         .appendAll(Option.when(
-                                pullRequestsWidth.isDefined() && validPullRequestsWidth.isEmpty(),
-                                PULL_REQUESTS_WIDTH)));
+                                pullRequestsWidth.isDefined() && validPullRequestsWidth.isEmpty(), PULL_REQUESTS_WIDTH))
+                        .appendAll(Option.when(diffStyle.isDefined() && validDiffStyle.isEmpty(), DIFF_STYLE)));
     }
 
     /**
@@ -119,7 +132,11 @@ public record Settings(ThemeName theme, Option<String> ghExecutable, int reposit
                         .map(path -> LinkedHashMap.<String, Object>of(GH_EXECUTABLE, path))
                         .getOrElse(LinkedHashMap.empty()))
                 .merge(widthEntry(REPOSITORY_WIDTH, repositoryWidth))
-                .merge(widthEntry(PULL_REQUESTS_WIDTH, pullRequestsWidth));
+                .merge(widthEntry(PULL_REQUESTS_WIDTH, pullRequestsWidth))
+                .merge(
+                        diffStyle == DEFAULT.diffStyle
+                                ? LinkedHashMap.empty()
+                                : LinkedHashMap.of(DIFF_STYLE, diffStyle.id()));
     }
 
     private static Map<String, Object> widthEntry(String key, int width) {

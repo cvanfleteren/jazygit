@@ -13,3 +13,8 @@ Panel.focused, TextInputElement:focus, TextAreaElement:focus {
 .checkbox:focus { text-style: reversed; }
 
 .disabled { text-style: crossed-out; }
+
+/* The rich view of a diff (ADR 44): the bar of each file and the changed words are reversed. */
+Span.diff-file-header { text-style: reversed; }
+Span.diff-added-word { text-style: reversed; }
+Span.diff-removed-word { text-style: reversed; }

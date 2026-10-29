@@ -42,8 +42,12 @@ public final class LoadUpdate {
                         done.mapRepo(repo -> repo.withBranches(repo.branches().reload(branches.local()))
                                 .withRemoteBranches(repo.remoteBranches().reload(branches.remote()))));
             case MetadataChecked(var stamps) -> metadataChecked(done, stamps);
+            // The files of a stash that is dropped close, as its name is now that of another stash.
             case StashesLoaded(var stashes) ->
-                Next.of(done.mapRepo(repo -> repo.withStashes(repo.stashes().reload(stashes))));
+                Next.of(done.mapRepo(repo -> repo.withStashes(repo.stashes().reload(stashes)))
+                        .mapRepoView(repoView -> repoView.withCommitFiles(repoView.commitFiles()
+                                .filter(view -> !(view.of() instanceof CommitFilesView.Changes.OfStash stash)
+                                        || stashes.exists(listed -> listed.sha().equals(stash.sha()))))));
             case LoadMsg.WorktreesLoaded(var worktrees) ->
                 Next.of(done.mapRepo(repo -> repo.withWorktrees(repo.worktrees().reload(worktrees))));
             case WorktreeChangesLoaded loaded ->
@@ -87,6 +91,16 @@ public final class LoadUpdate {
             case FileDiffLoaded(var files, var options, var diff) ->
                 Next.of(done.mapRepoView(repoView ->
                         repoView.withFileDiff(Preview.updated(repoView.fileDiff(), files, d -> d.reload(diff)))));
+            case CommitFilesLoaded(var of, var files) ->
+                Next.of(done.mapRepoView(repoView -> repoView.withCommitFiles(repoView.commitFiles()
+                        .map(view -> view.of().equals(of)
+                                ? view.withFiles(view.files().reload(files))
+                                : view))));
+            case CommitFileDiffLoaded(var of, var files, var options, var diff) ->
+                Next.of(done.mapRepoView(repoView -> repoView.withCommitFiles(repoView.commitFiles()
+                        .map(view -> view.of().equals(of)
+                                ? view.withDiff(Preview.updated(view.diff(), files, d -> d.reload(diff)))
+                                : view))));
             // Without the files to tell, the loads they guard run, as they would without them.
             case LoadMsg.Failed(Cmd.CheckMetadata cmd, var failure) ->
                 metadataChecked(done, Cmd.CheckMetadata.GUARDED.map(load -> Tuple.of(load, Option.none())));
@@ -310,6 +324,14 @@ public final class LoadUpdate {
             case LoadStashDetail(Sha sha, var options) ->
                 model.mapRepoView(repoView ->
                         repoView.withStashDetail(Preview.updated(repoView.stashDetail(), sha, d -> d.failed(failure))));
+            case Cmd.LoadCommitFiles(var of) ->
+                model.mapRepoView(repoView -> repoView.withCommitFiles(repoView.commitFiles()
+                        .map(view -> view.of().equals(of) ? view.withFiles(new Failed<>(failure)) : view)));
+            case Cmd.LoadCommitFileDiff(var of, var files, var options) ->
+                model.mapRepoView(repoView -> repoView.withCommitFiles(repoView.commitFiles()
+                        .map(view -> view.of().equals(of)
+                                ? view.withDiff(Preview.updated(view.diff(), files, d -> d.failed(failure)))
+                                : view)));
             case LoadBranchLog(var branch, var _) ->
                 model.mapRepoView(repoView -> repoView.withBranchLog(
                         Preview.updated(repoView.branchLog(), branch, log -> log.failed(failure))));
