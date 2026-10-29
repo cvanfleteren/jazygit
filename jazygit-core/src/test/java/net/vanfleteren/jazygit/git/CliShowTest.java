@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.git.model.UnifiedDiff;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.zeroturnaround.exec.ProcessExecutor;
@@ -173,6 +174,26 @@ class CliShowTest {
         assertTrue(changes.contains("+side"), changes);
         assertTrue(whole.contains("diff --git a/side.txt b/side.txt"), whole);
         assertFalse(combined.contains("diff --git"), combined);
+    }
+
+    @Test
+    void theChangesKeepGitsOwnPrefixesWhateverTheUserConfigured() throws Exception {
+        init();
+        git("config", "diff.noprefix", "true");
+        Files.createDirectories(repo.resolve("src"));
+        Files.writeString(repo.resolve("src/one.txt"), "one\n");
+        commitAll("init");
+        Files.writeString(repo.resolve("src/one.txt"), "one\ntwo\n");
+        commitAll("second");
+
+        String whole = CliShow.changes(repo, head(), DiffOptions.DEFAULT).get().text();
+        String file = CliShow.fileChanges(
+                        repo, head(), CliShow.files(repo, head()).get(), DiffOptions.DEFAULT)
+                .get()
+                .text();
+
+        assertEquals(List.of("src/one.txt"), UnifiedDiff.parse(whole).files().map(UnifiedDiff.FileDiff::path));
+        assertEquals(List.of("src/one.txt"), UnifiedDiff.parse(file).files().map(UnifiedDiff.FileDiff::path));
     }
 
     private void init() throws Exception {

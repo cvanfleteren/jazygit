@@ -25,8 +25,9 @@ final class CliShow {
      */
     static final String FIRST_PARENT = "--diff-merges=first-parent";
 
-    private static final List<String> SHOW =
-            List.of("show", "--format=", "--no-color", "--no-ext-diff", "--no-show-signature");
+    private static final List<String> SHOW = List.of(
+                    "show", "--format=", "--no-color", "--no-ext-diff", "--no-show-signature")
+            .appendAll(CliDiff.PREFIXES);
 
     private CliShow() {}
 

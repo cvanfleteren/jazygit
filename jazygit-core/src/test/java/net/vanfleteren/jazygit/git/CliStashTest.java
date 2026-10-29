@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Stash;
+import net.vanfleteren.jazygit.git.model.UnifiedDiff;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -64,6 +65,27 @@ class CliStashTest {
         assertFalse(tracked.contains("untracked"), tracked);
         assertTrue(untracked.contains("+u"), untracked);
         assertFalse(untracked.contains("other"), untracked);
+    }
+
+    @Test
+    void theChangesOfAStashKeepGitsOwnPrefixesWhateverTheUserConfigured() throws Exception {
+        init();
+        git("config", "diff.mnemonicPrefix", "true");
+        git("config", "diff.srcPrefix", "old/");
+        Files.writeString(repo.resolve("a.txt"), "one\ntwo\n");
+        Files.writeString(repo.resolve("untracked.txt"), "u\n");
+        git("stash", "push", "-u", "-qm", "my work");
+
+        String whole =
+                CliStash.changes(repo, stash(), DiffOptions.DEFAULT).get().text();
+        String files = CliStash.fileChanges(
+                        repo, stash(), CliStash.files(repo, stash()).get(), DiffOptions.DEFAULT)
+                .get()
+                .text();
+
+        List<String> paths = List.of("a.txt", "untracked.txt");
+        assertEquals(paths, UnifiedDiff.parse(whole).files().map(UnifiedDiff.FileDiff::path));
+        assertEquals(paths, UnifiedDiff.parse(files).files().map(UnifiedDiff.FileDiff::path));
     }
 
     @Test

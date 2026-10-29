@@ -2,7 +2,10 @@ package net.vanfleteren.jazygit.ui;
 
 import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
 import io.vavr.collection.List;
+import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff;
@@ -29,15 +32,32 @@ final class RichDiff {
      */
     static List<Line> lines(String diff, Theme.SpanStyles styles) {
         UnifiedDiff parsed = UnifiedDiff.parse(diff);
+        // The words of the whole diff are compared at once, as they share one budget.
+        Vector<List<List<Segment>>> words = WordDiff.segments(
+                        parsed.files().flatMap(FileDiff::hunks).map(Hunk::lines))
+                .toVector();
+        List<Tuple2<FileDiff, Vector<List<List<Segment>>>>> files = parsed.files()
+                .foldLeft(
+                        Tuple.of(List.<Tuple2<FileDiff, Vector<List<List<Segment>>>>>empty(), 0),
+                        (done, file) -> Tuple.of(
+                                done._1.prepend(Tuple.of(
+                                        file,
+                                        words.slice(
+                                                done._2, done._2 + file.hunks().size()))),
+                                done._2 + file.hunks().size()))
+                ._1
+                .reverse();
         return parsed.preamble()
                 .map(line -> Line.from(Span.raw(line)))
-                .appendAll(parsed.files()
-                        .zipWithIndex()
-                        .flatMap(file ->
-                                file(file._1, styles).prependAll(file._2 > 0 ? List.of(Line.from("")) : List.empty())));
+                .appendAll(files.zipWithIndex()
+                        .flatMap(file -> file(file._1._1, file._1._2, styles)
+                                .prependAll(file._2 > 0 ? List.of(Line.from("")) : List.empty())));
     }
 
-    private static List<Line> file(FileDiff file, Theme.SpanStyles styles) {
+    /**
+     * The lines of {@code file}, whose hunks have the segments {@code words}.
+     */
+    private static List<Line> file(FileDiff file, Vector<List<List<Segment>>> words, Theme.SpanStyles styles) {
         int digits = file.hunks()
                 .flatMap(Hunk::lines)
                 .flatMap(line -> line.oldNumber().toList().appendAll(line.newNumber()))
@@ -56,7 +76,9 @@ final class RichDiff {
                                 .getOrElse(0));
         return List.of(Line.from(styled(padded(bar, width), Theme.Classes.DIFF_FILE_HEADER, styles)))
                 .appendAll(note(file).map(text -> Line.from(styled(text, Theme.Classes.DIM, styles))))
-                .appendAll(file.hunks().flatMap(hunk -> hunk(hunk, digits, width - gutter, styles)));
+                .appendAll(file.hunks()
+                        .zip(words)
+                        .flatMap(hunk -> hunk(hunk._1, hunk._2, digits, width - gutter, styles)));
     }
 
     /**
@@ -89,16 +111,15 @@ final class RichDiff {
     }
 
     /**
-     * The lines of {@code hunk}, under its header unless it has none: changed lines are padded to {@code width}, so
-     * their background makes a block.
+     * The lines of {@code hunk}, whose lines have the segments {@code words}, under its header unless it has none:
+     * changed lines are padded to {@code width}, so their background makes a block.
      */
-    private static List<Line> hunk(Hunk hunk, int digits, int width, Theme.SpanStyles styles) {
+    private static List<Line> hunk(
+            Hunk hunk, List<List<Segment>> words, int digits, int width, Theme.SpanStyles styles) {
         List<Line> header = hunk.header().isEmpty()
                 ? List.empty()
                 : List.of(Line.from(styled(hunk.header(), Theme.Classes.DIFF_HUNK, styles)));
-        return header.appendAll(hunk.lines()
-                .zip(WordDiff.segments(hunk.lines()))
-                .map(line -> line(line._1, line._2, digits, width, styles)));
+        return header.appendAll(hunk.lines().zip(words).map(line -> line(line._1, line._2, digits, width, styles)));
     }
 
     private static Line line(DiffLine line, List<Segment> segments, int digits, int width, Theme.SpanStyles styles) {

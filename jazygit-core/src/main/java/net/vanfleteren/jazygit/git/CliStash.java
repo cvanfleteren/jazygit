@@ -99,6 +99,7 @@ final class CliStash {
                                 "--patch",
                                 "--no-color",
                                 "--no-ext-diff")
+                        .appendAll(CliDiff.PREFIXES)
                         .appendAll(CliDiff.flags(options))
                         .append(stash.value())),
                 output -> Either.right(CliDiff.truncated(output)));
@@ -125,8 +126,9 @@ final class CliStash {
         if (files.isEmpty()) {
             return Either.right(DiffText.of(""));
         }
-        List<String> flags =
-                List.of("--patch", "--no-color", "--no-ext-diff", "-M").appendAll(CliDiff.flags(options));
+        List<String> flags = List.of("--patch", "--no-color", "--no-ext-diff", "-M")
+                .appendAll(CliDiff.PREFIXES)
+                .appendAll(CliDiff.flags(options));
         List<String> paths = files.flatMap(CommitFile::paths).prepend("--");
         String untracked = stash.value() + "^3";
         return GitProcess.read(

@@ -51,6 +51,13 @@ whose highlighted node's diff the content panel shows: a directory shows the fil
   - A pair is split into words, runs of whitespace and single other characters, and the longest common subsequence
     of those is kept. The rest is highlighted, but only when at least half of the characters of the pair are kept:
     a line that was rewritten would be highlighted all over.
+  - What git notes in a block, like `\ No newline at end of file` after a changed last line, does not end it.
+  - The comparisons run where the diff is drawn, so a whole diff shares a budget (`WordDiff.BUDGET`, two million
+    cells of the comparison tables). Once it is spent, the lines left get only the colour of their line. Not: a
+    limit per pair only, which let a diff of thousands of long, similar lines hold the screen up for seconds.
+- The diffs that are parsed are read with git's own `a/` and `b/` before their paths (`--src-prefix=a/
+  --dst-prefix=b/`), whatever the user's `diff.noprefix`, `diff.mnemonicPrefix`, `diff.srcPrefix` or
+  `diff.dstPrefix` say. Not: `--default-prefix`, which needs git 2.41.
 - A changed line has a tinted background (`diff-added-line`, `diff-removed-line`), and its changed words a stronger
   one (`diff-added-word`, `diff-removed-word`); its text keeps the colour of its kind. The line numbers are
   `diff-line-number`, the bar `diff-file-header`. Every theme has these; `mono` and `none` reverse the changed words
