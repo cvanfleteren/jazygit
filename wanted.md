@@ -46,6 +46,10 @@ Features to consider, roughly most valuable first.
 13. **Create a PR** from the current branch, with base selection and draft or ready status (`gh pr create`).
 14. **Check out someone else's PR** (`gh pr checkout`), possibly into a new worktree.
 15. **CI check details and logs** for a failing check, and a rerun action.
+    - **More of the review remarks** in the diff of a pull request (ADR 55): reply to a thread, resolve it, or start
+      one on a line, once the content panel can highlight a line; the diff, and its remarks, of a merged or closed
+      pull request, read against the commit it was merged with; the remarks in the preview of the pull requests
+      screen, for a pull request of another repository.
 
 ## Nice to have
 

@@ -119,3 +119,5 @@ Amended by ADR 51: a pair that could not keep enough to be highlighted, whatever
 whole and spends none of the budget.
 
 Amended by ADR 54: whitespace between two changed words is highlighted with them.
+
+Amended by ADR 55: the tree lists the files a pull request changes too, read with git.
