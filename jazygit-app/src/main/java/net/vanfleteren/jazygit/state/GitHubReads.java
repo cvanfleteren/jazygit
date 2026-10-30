@@ -21,6 +21,14 @@ final class GitHubReads {
     }
 
     /**
+     * {@code next}, also running {@code read} as a timer asks: unless it runs already, or keeps failing and has not
+     * waited long enough since ({@link FailingRead}).
+     */
+    static Next poll(Next next, Cmd read) {
+        return FailingRead.due(next.model(), read) ? load(next, read) : next;
+    }
+
+    /**
      * {@code next}, also running {@code read}; when it runs already, once it is done.
      */
     static Next loadAnyway(Next next, Cmd read) {

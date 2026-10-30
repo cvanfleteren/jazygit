@@ -21,14 +21,20 @@ public final class PullRequestsUpdate {
             case PullRequestsMsg.Refresh() -> load(Next.of(model));
             case PullRequestsMsg.Loaded(List<PullRequest> pullRequests) ->
                 GitHubReads.done(
-                        model.mapGitHub(gitHub -> gitHub.withPullRequests(Option.of(byHeadBranch(pullRequests)))
-                                .withPullRequestsFailure(Option.none())),
+                        FailingRead.ran(
+                                model.mapGitHub(gitHub -> gitHub.withPullRequests(Option.of(byHeadBranch(pullRequests)))
+                                        .withPullRequestsFailure(Option.none())),
+                                new LoadPullRequests(),
+                                false),
                         new LoadPullRequests());
             // gh can be missing, logged out or offline, or the remote not on GitHub: then no pull requests show.
             // That is no reason to bother the user until they ask for a pull request. The account they chose for
             // the repository not being available is, once: gh is not run as another one.
             case PullRequestsMsg.LoadFailed(var failure) -> {
-                Model failed = model.mapGitHub(gitHub -> gitHub.withPullRequestsFailure(Option.of(failure)));
+                Model failed = FailingRead.ran(
+                        model.mapGitHub(gitHub -> gitHub.withPullRequestsFailure(Option.of(failure))),
+                        new LoadPullRequests(),
+                        true);
                 yield GitHubReads.done(
                         failure.accountUnavailable()
                                         && !model.gitHub().pullRequestsFailure().contains(failure)
@@ -45,6 +51,14 @@ public final class PullRequestsUpdate {
      */
     public static Next load(Next next) {
         return BranchChecksUpdate.load(GitHubReads.load(next, new LoadPullRequests()));
+    }
+
+    /**
+     * {@code next}, also reading the pull requests and the checks of the branches again, as a timer asks: only those
+     * that do not keep failing ({@link FailingRead}), and unless a read is still running.
+     */
+    public static Next poll(Next next) {
+        return BranchChecksUpdate.poll(GitHubReads.poll(next, new LoadPullRequests()));
     }
 
     /**

@@ -79,7 +79,7 @@ public final class FetchUpdate {
      * The fetch is done; one that was asked for meanwhile starts right away.
      */
     private static Next done(Model model) {
-        Next done = PullRequestsUpdate.load(Update.refresh(model));
+        Next done = PullRequestsUpdate.poll(Update.refresh(model));
         return model.jobs().fetchAgain() ? start(done) : done;
     }
 }

@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.gh.model.RepositoryPullRequests;
 import net.vanfleteren.jazygit.settings.UnseenPullRequests;
 import net.vanfleteren.jazygit.state.Cmd;
+import net.vanfleteren.jazygit.state.FailingRead;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Jobs;
 import net.vanfleteren.jazygit.state.Loadable;
@@ -44,11 +45,16 @@ public final class PrOverviewUpdate {
             // The screen already shown stays as it is, without reading it again.
             case PrOverviewMsg.Chosen(Screen screen) ->
                 screen == model.screen() ? Next.of(model) : reloadIfShown(Next.of(model.withScreen(screen)));
+            // The reads that keep failing wait longer the more they failed (ADR 58).
             case PrOverviewMsg.Tick() ->
-                model.screen() == Screen.PULL_REQUESTS ? reload(Next.of(model)) : loaded(Next.of(model), HIDDEN_LOADS);
+                loaded(
+                        Next.of(model),
+                        (model.screen() == Screen.PULL_REQUESTS ? LOADS : HIDDEN_LOADS)
+                                .filter(load -> FailingRead.due(model, load)));
             default -> {
-                Step step = update(model.prOverview(), msg, model.now(), model.jobs());
-                yield new Next(model.withPrOverview(step.overview()), step.cmds());
+                Model ran = readTold(model, msg);
+                Step step = update(ran.prOverview(), msg, ran.now(), ran.jobs());
+                yield new Next(ran.withPrOverview(step.overview()), step.cmds());
             }
         };
     }
@@ -101,6 +107,19 @@ public final class PrOverviewUpdate {
                 Step.of(overview.withPreview(Preview.updated(overview.preview(), key, shown -> shown.failed(failure))));
             case PrOverviewMsg.Toggled(), PrOverviewMsg.Tick(), PrOverviewMsg.UnseenKept() -> Step.of(overview);
             case PrOverviewMsg.Chosen(Screen screen) -> Step.of(overview);
+        };
+    }
+
+    /**
+     * {@code model} knowing whether the read {@code msg} tells of succeeded, if it tells of one.
+     */
+    private static Model readTold(Model model, PrOverviewMsg msg) {
+        return switch (msg) {
+            case PrOverviewMsg.RepositoryLoaded _ -> FailingRead.ran(model, new LoadRepositoryPullRequests(), false);
+            case PrOverviewMsg.RepositoryLoadFailed _ -> FailingRead.ran(model, new LoadRepositoryPullRequests(), true);
+            case PrOverviewMsg.MineLoaded _ -> FailingRead.ran(model, new LoadMyPullRequests(), false);
+            case PrOverviewMsg.MineLoadFailed _ -> FailingRead.ran(model, new LoadMyPullRequests(), true);
+            default -> model;
         };
     }
 

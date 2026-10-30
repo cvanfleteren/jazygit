@@ -42,6 +42,13 @@ ADR 56 (`0056-fewer-git-processes-after-a-commit.md`) cut what a commit costs. T
    kept instead of handled; once back, each is handled once, so what they would have read is read at once. A merge
    that is being checked on still is, and what the user does is handled as ever. A terminal that does not report the
    focus, or a tmux without `focus-events`, never says the app is away, and nothing changes there.
+5. **A read from GitHub that keeps failing waits longer the more it failed.** A repository without a remote on
+   GitHub, or gh missing, logged out or offline, made each timer run gh for nothing: 3 failing processes a minute,
+   all day. `GitHubState.failing` keeps, per read, how often it failed in a row and when last (`FailingRead`); the
+   timers (the read of the pull requests and the checks after each fetch, and the tick of the pull requests
+   overview) start a read that failed once at the next tick, one that failed twice after 2 minutes, three times
+   after 5, and more after 10. A read that succeeds is no longer failing. What the user does, and what an operation
+   on GitHub asks for, reads at once, as before.
 
 The other chains of loads stay as they are: the commits ahead of HEAD go by the HEAD of the status and the bases of
 the branches, read by loads of their own, and the log of the highlighted branch, the divergence and the operations
