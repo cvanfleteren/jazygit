@@ -78,7 +78,9 @@ three runs), so you can `cd` into it and look around, or start jazygit on it you
 
 `.github/workflows/build.yml` runs them on every pull request and before every publish, with Python 3.12 and the
 dependencies from `requirements.txt`. A job builds the jar without tests, and the acceptance tests run on it while
-`./mvnw verify` runs in a job of its own, at the same time.
+`./mvnw verify` runs in a job of its own, at the same time. They run on four machines at once, each taking a share
+of the tests with `--shard 1/4` to `--shard 4/4`; a share runs four at a time like the whole. A share is every fourth
+test, so the four scenarios, collected next to each other, get one each: a fifth would share one with another.
 
 ## Writing a test
 
