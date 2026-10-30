@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.IntPredicate;
 import java.util.stream.IntStream;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
 
@@ -309,17 +310,27 @@ public final class WordDiff {
     }
 
     /**
-     * The {@code tokens}, the ones not {@code kept} changed, with neighbours that are alike joined.
+     * The {@code tokens}, the ones not {@code kept} changed, with neighbours that are alike joined. Whitespace kept
+     * between two changed tokens is changed too, so that changed words with only whitespace between them are one
+     * segment rather than one each.
      */
     private static List<Segment> joined(String[] tokens, boolean[] kept) {
+        // A run of whitespace is one token, so whitespace between two changed tokens is a single token.
+        IntPredicate unchanged = i -> kept[i]
+                && !(i > 0
+                        && i < tokens.length - 1
+                        && !kept[i - 1]
+                        && !kept[i + 1]
+                        && kind(tokens[i].codePointAt(0)) == SPACE);
         // Where each run of alike tokens starts; each run is joined at once, as joining it a token at a time copies
         // it once for every token.
         int[] starts = IntStream.rangeClosed(0, tokens.length)
-                .filter(i -> i == 0 || i == tokens.length || kept[i] != kept[i - 1])
+                .filter(i -> i == 0 || i == tokens.length || unchanged.test(i) != unchanged.test(i - 1))
                 .toArray();
         return List.range(0, starts.length - 1)
                 .map(run -> Tuple.of(starts[run], starts[run + 1]))
-                .map(run -> new Segment(String.join("", Arrays.asList(tokens).subList(run._1, run._2)), !kept[run._1]));
+                .map(run -> new Segment(
+                        String.join("", Arrays.asList(tokens).subList(run._1, run._2)), !unchanged.test(run._1)));
     }
 
     private static List<Segment> whole(String text) {
@@ -329,7 +340,8 @@ public final class WordDiff {
     /**
      * A part of a line.
      *
-     * @param changed whether it is not in the line it was compared with
+     * @param changed whether it is not in the line it was compared with, or is whitespace between two parts that are
+     *     not
      */
     public record Segment(String text, boolean changed) {}
 
