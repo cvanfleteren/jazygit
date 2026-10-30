@@ -43,6 +43,22 @@
 
     <build>
         <plugins>
+            <!-- The forks already spread the test classes over the cores; inside a fork, the methods of a class run
+                 side by side, as each works in a repository of its own. Set here rather than in a
+                 junit-platform.properties, which the test-jar would hand to the app's tests. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <properties>
+                        <configurationParameters>
+                            junit.jupiter.execution.parallel.enabled=true
+                            junit.jupiter.execution.parallel.mode.default=concurrent
+                            junit.jupiter.execution.parallel.mode.classes.default=same_thread
+                        </configurationParameters>
+                    </properties>
+                </configuration>
+            </plugin>
             <!-- The stub git and the sample data are shared with the app's tests. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
