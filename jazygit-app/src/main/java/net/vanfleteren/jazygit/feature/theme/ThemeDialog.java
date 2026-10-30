@@ -47,7 +47,9 @@ public final class ThemeDialog {
      * The popups of this feature, which send what the user does to {@code dispatch}.
      */
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
-        return List.of(PopupSlot.returningToFocus(new ChoiceDialog<>(SPEC, dispatch)));
+        // The theme highlighted is previewed on the screen behind, which is not dimmed so it shows as it will be.
+        return List.of(
+                PopupSlot.returningToFocus(new ChoiceDialog<>(SPEC, dispatch)).undimmed());
     }
 
     /**
