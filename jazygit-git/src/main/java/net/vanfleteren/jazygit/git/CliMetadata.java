@@ -54,15 +54,17 @@ final class CliMetadata {
     static GitMetadata read(Locations at, Instant now) {
         Path common = at.commonDir();
         List<Path> worktrees = children(common.resolve("worktrees"));
-        // The upstreams are in the config, and the checked out branches in the HEAD of each worktree.
-        MetadataStamp branches = stamp(List.of(
-                        at.gitDir().resolve("HEAD"),
-                        common.resolve("HEAD"),
+        // A reftable repository keeps the HEAD of each worktree in its tables, not in its HEAD file, which git leaves
+        // as it was: the main worktree's with the branches, a linked one's in tables of its own.
+        List<Path> heads = List.of(at.gitDir().resolve("HEAD"), common.resolve("HEAD"))
+                .appendAll(worktrees.flatMap(
+                        worktree -> List.of(worktree.resolve("HEAD"), worktree.resolve("reftable/tables.list"))));
+        // The upstreams and the parents are in the config, and the checked out branches in the HEAD of each worktree.
+        MetadataStamp branches = stamp(heads.appendAll(List.of(
                         common.resolve("config"),
                         common.resolve("packed-refs"),
                         common.resolve("reftable"),
-                        common.resolve("reftable/tables.list"))
-                .appendAll(worktrees.map(worktree -> worktree.resolve("HEAD")))
+                        common.resolve("reftable/tables.list")))
                 .appendAll(directories(common.resolve("refs/heads")))
                 .appendAll(directories(common.resolve("refs/remotes"))));
         // A stash is read from the reflog of refs/stash.
@@ -72,15 +74,13 @@ final class CliMetadata {
                 common.resolve("packed-refs"),
                 common.resolve("reftable/tables.list")));
         // What a worktree has checked out is in its HEAD; a commit on its branch moves the branch, not the HEAD, and
-        // the commit it moved to is not shown with the worktree (ADR 56).
-        MetadataStamp worktreeList = stamp(List.of(at.gitDir().resolve("HEAD"), common.resolve("HEAD"))
+        // the commit it moved to is not shown with the worktree (ADR 56). The main worktree of a reftable repository
+        // has its HEAD in the tables of the branches, so there a commit lists the worktrees again.
+        MetadataStamp worktreeList = stamp(heads.append(common.resolve("reftable/tables.list"))
                 .append(common.resolve("worktrees"))
-                .appendAll(worktrees.flatMap(worktree ->
-                        List.of(worktree.resolve("HEAD"), worktree.resolve("gitdir"), worktree.resolve("locked")))));
-        // The parents of the branches are in the config (ADR 49).
-        MetadataStamp config = stamp(List.of(common.resolve("config")));
-        return new GitMetadata(
-                settled(branches, now), settled(stashes, now), settled(worktreeList, now), settled(config, now));
+                .appendAll(worktrees.flatMap(
+                        worktree -> List.of(worktree.resolve("gitdir"), worktree.resolve("locked")))));
+        return new GitMetadata(settled(branches, now), settled(stashes, now), settled(worktreeList, now));
     }
 
     /**

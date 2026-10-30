@@ -56,7 +56,6 @@ class OperationUpdateTest {
                         new LoadBranches(),
                         new LoadStashes(),
                         new Cmd.LoadWorktrees(),
-                        new Cmd.LoadParents(),
                         new LoadPullRequests(),
                         new LoadBranchChecks()),
                 next.cmds());
@@ -69,13 +68,7 @@ class OperationUpdateTest {
         Next next = Update.update(loaded(), succeeded(pull, "git pull"));
 
         assertEquals(
-                List.of(
-                        new LoadStatus(),
-                        new LoadBranches(),
-                        new LoadStashes(),
-                        new Cmd.LoadWorktrees(),
-                        new Cmd.LoadParents()),
-                next.cmds());
+                List.of(new LoadStatus(), new LoadBranches(), new LoadStashes(), new Cmd.LoadWorktrees()), next.cmds());
     }
 
     @Test
@@ -187,13 +180,7 @@ class OperationUpdateTest {
         assertEquals(Option.none(), next.model().outcome().error());
         assertEquals(Option.of(notice), next.model().outcome().notice());
         assertEquals(
-                List.of(
-                        new LoadStatus(),
-                        new LoadBranches(),
-                        new LoadStashes(),
-                        new Cmd.LoadWorktrees(),
-                        new Cmd.LoadParents()),
-                next.cmds());
+                List.of(new LoadStatus(), new LoadBranches(), new LoadStashes(), new Cmd.LoadWorktrees()), next.cmds());
     }
 
     @Test

@@ -3,7 +3,6 @@ package net.vanfleteren.jazygit.state;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.collection.List;
-import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
@@ -37,17 +36,15 @@ public final class LoadUpdate {
                 statusLoaded(
                         model,
                         done.mapRepo(repo -> repo.withStatus(repo.status().reload(status))));
-            case BranchesLoaded(var branches) ->
-                branchesLoaded(
-                        model,
-                        done.mapRepo(repo -> repo.withBranches(repo.branches().reload(branches.local()))
-                                .withRemoteBranches(repo.remoteBranches().reload(branches.remote()))));
+            // The parents and the counts that could not be read stay as read before (ADR 46).
+            case BranchesLoaded(var branches, var bases) ->
+                branchesLoaded(model, done.mapRepo(repo -> {
+                    Repo read = repo.withBranches(repo.branches().reload(branches.local()))
+                            .withRemoteBranches(repo.remoteBranches().reload(branches.remote()));
+                    return bases.fold(
+                            () -> read, of -> read.withParents(of.parents()).withBaseDistance(of.counts()));
+                }));
             case MetadataChecked(var stamps) -> metadataChecked(done, stamps);
-            // What was read for older branches or parents is dropped: the read of the ones that replaced them asked
-            // for it again.
-            case LoadMsg.BaseDistanceLoaded(var load, var counts) ->
-                Next.of(load.equals(baseDistance(done)) ? done.mapRepo(repo -> repo.withBaseDistance(counts)) : done);
-            case LoadMsg.ParentsLoaded(var parents) -> parentsRead(done, parents);
             // The files of a stash that is dropped close, as its name is now that of another stash.
             case StashesLoaded(var stashes) ->
                 Next.of(done.mapRepo(repo -> repo.withStashes(repo.stashes().reload(stashes)))
@@ -176,7 +173,8 @@ public final class LoadUpdate {
 
     /**
      * Reads what shows a branch again when the branch moved: the log of the highlighted one, and the divergence
-     * that is open, once however many of its branches moved. The commits of a branch that is gone are closed.
+     * that is open, once however many of its branches moved. The commits of a branch that is gone are closed. The
+     * commits ahead whose base moved, or is another one by the parents read with the branches, are read again.
      */
     private static Next branchesLoaded(Model before, Model next) {
         Next reloaded = reloadDivergence(
@@ -184,29 +182,7 @@ public final class LoadUpdate {
                 reloadMovedLog(
                         closeGoneBranchCommits(next),
                         branch -> !tipOf(before, branch).equals(tipOf(next, branch))));
-        return new Next(
-                reloaded.model(),
-                reloaded.cmds().appendAll(AheadUpdate.basesRead(before, next)).append(baseDistance(next)));
-    }
-
-    /**
-     * Keeps the parents of the branches, and, when they changed, reads again how far each local branch is from its
-     * base, and the commits ahead whose base is another one by them (ADR 56).
-     */
-    private static Next parentsRead(Model model, Map<BranchName, BranchName> parents) {
-        Model read = model.mapRepo(repo -> repo.withParents(parents));
-        return parents.equals(model.repo().parents())
-                ? Next.of(read)
-                : new Next(read, AheadUpdate.basesRead(model, read).append(baseDistance(read)));
-    }
-
-    /**
-     * The read of how far each local branch is from its base, as the branches and the parents read last tell which
-     * is the main branch and what the base of each other one is (ADR 46).
-     */
-    public static Cmd.LoadBaseDistance baseDistance(Model model) {
-        return new Cmd.LoadBaseDistance(
-                AheadUpdate.main(model), model.repo().tips(), model.repo().parents());
+        return new Next(reloaded.model(), reloaded.cmds().appendAll(AheadUpdate.basesRead(before, next)));
     }
 
     /**
@@ -320,13 +296,10 @@ public final class LoadUpdate {
             // What was read before stays: reading again can fail for a while, say on a timeout.
             case Cmd.LoadStatus() ->
                 model.mapRepo(repo -> repo.withStatus(repo.status().failed(failure)));
+            // The parents and the counts read before stay, as they would while reading again (ADR 46).
             case Cmd.LoadBranches() ->
                 model.mapRepo(repo -> repo.withBranches(repo.branches().failed(failure))
                         .withRemoteBranches(repo.remoteBranches().failed(failure)));
-            // The counts read before stay, as they would while reading again (ADR 46).
-            case Cmd.LoadBaseDistance _ -> model;
-            // So do the parents: the counts go by them.
-            case Cmd.LoadParents() -> model;
             case Cmd.LoadStashes() ->
                 model.mapRepo(repo -> repo.withStashes(repo.stashes().failed(failure)));
             case Cmd.LoadWorktrees() ->

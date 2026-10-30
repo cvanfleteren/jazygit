@@ -57,10 +57,9 @@ class MetadataGuardTest {
 
     private static Msg cameBack(Cmd cmd) {
         return switch (cmd) {
-            case LoadBranches() -> new LoadMsg.BranchesLoaded(new AllBranches(TestModels.BRANCHES, List.empty()));
+            case LoadBranches() -> TestModels.branchesLoaded(new AllBranches(TestModels.BRANCHES, List.empty()));
             case LoadStashes() -> new LoadMsg.StashesLoaded(List.empty());
             case LoadWorktrees() -> new LoadMsg.WorktreesLoaded(List.empty());
-            case Cmd.LoadParents() -> new LoadMsg.ParentsLoaded(io.vavr.collection.HashMap.empty());
             default -> throw new IllegalArgumentException("Not guarded: " + cmd);
         };
     }

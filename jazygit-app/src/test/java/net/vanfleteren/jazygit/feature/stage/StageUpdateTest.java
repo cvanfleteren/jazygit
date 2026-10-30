@@ -146,8 +146,7 @@ class StageUpdateTest {
                         new LoadStatus(),
                         new LoadBranches(),
                         new net.vanfleteren.jazygit.state.Cmd.LoadStashes(),
-                        new net.vanfleteren.jazygit.state.Cmd.LoadWorktrees(),
-                        new net.vanfleteren.jazygit.state.Cmd.LoadParents()),
+                        new net.vanfleteren.jazygit.state.Cmd.LoadWorktrees()),
                 Update.update(loaded(), succeeded(new StageCmd.Stage(List.of())))
                         .cmds());
 
@@ -158,8 +157,7 @@ class StageUpdateTest {
                         new LoadStatus(),
                         new LoadBranches(),
                         new net.vanfleteren.jazygit.state.Cmd.LoadStashes(),
-                        new net.vanfleteren.jazygit.state.Cmd.LoadWorktrees(),
-                        new net.vanfleteren.jazygit.state.Cmd.LoadParents()),
+                        new net.vanfleteren.jazygit.state.Cmd.LoadWorktrees()),
                 failed.cmds());
     }
 }

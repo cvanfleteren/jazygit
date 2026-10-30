@@ -99,7 +99,7 @@ class CliMetadataTest {
     }
 
     @Test
-    void aCommitChangesTheBranchesButNotTheStashesTheWorktreesOrTheConfig() throws Exception {
+    void aCommitChangesTheBranchesButNotTheStashesOrTheWorktrees() throws Exception {
         GitMetadata before = metadata(main);
 
         commit(main, "b.txt");
@@ -108,7 +108,6 @@ class CliMetadataTest {
         assertNotEquals(before.branches(), after.branches());
         assertEquals(before.worktrees(), after.worktrees());
         assertEquals(before.stashes(), after.stashes());
-        assertEquals(before.config(), after.config());
     }
 
     @Test
@@ -125,13 +124,43 @@ class CliMetadataTest {
     }
 
     @Test
-    void aParentThatIsRecordedChangesTheConfig() throws Exception {
+    void aParentThatIsRecordedChangesTheBranches() throws Exception {
         git(main, "branch", "feature");
         GitMetadata before = metadata(main);
 
         git(main, "config", "branch.feature.gh-merge-base", "main");
 
-        assertNotEquals(before.config(), metadata(main).config());
+        assertNotEquals(before.branches(), metadata(main).branches());
+    }
+
+    @Test
+    void checkingOutInAReftableRepositoryChangesTheWorktrees() throws Exception {
+        Path reftable = dir.resolve("reftable");
+        assumeTrue(reftableSupported(reftable));
+        commit(reftable, "a.txt");
+        git(reftable, "branch", "other");
+        GitMetadata before = metadata(reftable);
+
+        git(reftable, "checkout", "other");
+
+        assertNotEquals(before.worktrees(), metadata(reftable).worktrees());
+    }
+
+    @Test
+    void checkingOutInALinkedWorktreeOfAReftableRepositoryChangesTheWorktreesAndTheBranches() throws Exception {
+        Path reftable = dir.resolve("reftable");
+        assumeTrue(reftableSupported(reftable));
+        commit(reftable, "a.txt");
+        git(reftable, "branch", "other");
+        Path linked = dir.resolve("linked");
+        git(reftable, "worktree", "add", "-b", "feature", linked.toString());
+        GitMetadata before = metadata(reftable);
+
+        git(linked, "checkout", "other");
+
+        GitMetadata after = metadata(reftable);
+        assertNotEquals(before.worktrees(), after.worktrees());
+        assertNotEquals(before.branches(), after.branches());
     }
 
     @Test

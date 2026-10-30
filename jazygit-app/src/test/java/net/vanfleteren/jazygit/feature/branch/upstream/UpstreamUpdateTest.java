@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch.upstream;
 
+import static net.vanfleteren.jazygit.state.TestModels.branchesLoaded;
 import static net.vanfleteren.jazygit.state.TestModels.errorText;
 import static net.vanfleteren.jazygit.state.TestModels.loaded;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -225,8 +226,7 @@ class UpstreamUpdateTest {
                 Option.of(new Upstream(new BranchRef.Remote(ORIGIN_FEATURE), 2, 0)));
         List<RemoteRef> fetched = REMOTES.update(1, new RemoteRef(ORIGIN_FEATURE, new Sha("f1f1"), Instant.EPOCH));
 
-        Next next = Update.update(
-                viewing(), new LoadMsg.BranchesLoaded(new AllBranches(List.of(TRACKING, committed), fetched)));
+        Next next = Update.update(viewing(), branchesLoaded(new AllBranches(List.of(TRACKING, committed), fetched)));
 
         assertEquals(
                 List.of(new Cmd.LoadDivergence(FEATURE, new BranchRef.Remote(ORIGIN_FEATURE))),
