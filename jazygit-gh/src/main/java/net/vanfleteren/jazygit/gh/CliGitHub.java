@@ -101,11 +101,6 @@ public final class CliGitHub implements GitHub {
     }
 
     @Override
-    public Either<GhError, List<PullRequest>> pullRequests() {
-        return process.readJson(PullRequestsQuery.COMMAND, PullRequestsQuery.DECODER);
-    }
-
-    @Override
     public Either<GhError, RepositoryPullRequests> repositoryPullRequests() {
         return process.readJson(RepositoryPullRequestsQuery.COMMAND, RepositoryPullRequestsQuery.DECODER);
     }
@@ -129,23 +124,13 @@ public final class CliGitHub implements GitHub {
 
     @Override
     public Either<GhError, PullRequestDetails> pullRequestDetails(int number) {
+        // gh fails the whole query when GitHub cannot compare the base with the head: then the rest is read on its own.
         return process.readJson(DetailsQuery.command(number), DetailsQuery.DECODER)
-                .map(details -> details.branches()
-                        .headCommit()
-                        .filter(head -> details.status().state() == PullRequestDetails.State.OPEN)
-                        .flatMap(head -> behindBase(details.branches().base(), head))
-                        .map(details::withBehindBase)
-                        .getOrElse(details));
-    }
-
-    /**
-     * How many commits base branch {@code base} has that commit {@code head} does not; none when that cannot be read,
-     * also when the read fails, as the rest of the details read fine and come back without it.
-     */
-    private Option<Integer> behindBase(String base, GhCommit head) {
-        return process.readJson(BehindQuery.command(base, head), BehindQuery.DECODER)
-                .toOption()
-                .flatMap(behind -> behind);
+                .fold(
+                        failed -> failed instanceof GhError.CommandFailed
+                                ? process.readJson(DetailsQuery.withoutBehind(number), DetailsQuery.DECODER)
+                                : Either.left(failed),
+                        Either::right);
     }
 
     @Override

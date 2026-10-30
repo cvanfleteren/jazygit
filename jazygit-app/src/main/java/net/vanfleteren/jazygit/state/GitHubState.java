@@ -39,6 +39,9 @@ import net.vanfleteren.jazygit.git.model.RemoteBranch;
  * @param readsFrom           by the number of a pull request, the lowest id of a read of its details that is still
  *                            taken: past the last one taken, and past every one given out before a change to it, so a
  *                            read that started earlier does not show the change undone (ADR 34)
+ * @param failing             the reads that keep failing, which the timers start again only once they waited longer the
+ *                            more they failed: a repository without a remote on GitHub, gh logged out or offline
+ *                            (ADR 58)
  */
 @With
 public record GitHubState(
@@ -50,7 +53,8 @@ public record GitHubState(
         Option<CheckTimes> checkTimes,
         Option<PendingChecks> pendingChecks,
         long nextRead,
-        Map<Integer, Long> readsFrom) {
+        Map<Integer, Long> readsFrom,
+        Map<Cmd, FailingRead> failing) {
 
     public static final GitHubState NOT_READ = new GitHubState(
             Option.none(),
@@ -61,6 +65,7 @@ public record GitHubState(
             Option.none(),
             Option.none(),
             0,
+            HashMap.empty(),
             HashMap.empty());
 
     /**

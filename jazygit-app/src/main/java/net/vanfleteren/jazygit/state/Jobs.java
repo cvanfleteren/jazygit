@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.state;
 import io.vavr.Tuple;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.HashSet;
+import io.vavr.collection.LinkedHashSet;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.collection.Set;
@@ -21,11 +22,12 @@ import net.vanfleteren.jazygit.git.model.MetadataStamp;
  *                   them: a tick reads them again, as what is kept may be that of another HEAD
  * @param fetchAgain whether to fetch from the remotes again once the fetch that runs is done, as something changed on
  *                   a remote meanwhile that it may have missed
+ * @param fetchChanged whether the fetch that runs, or ran last, changed a remote-tracking branch so far (ADR 58)
  * @param lastFetch  when a remote was last fetched from, and the remotes that failed the last time
  * @param worktreeChangesRead when reading which worktrees have changes last finished, whatever came of it
  * @param readAt     for each load that {@link Cmd.CheckMetadata} guards, what the files it reads looked like when it
- *                   was last started; it is not started again until they change. A load that fails is forgotten,
- *                   so the next tick tries again
+ *                   was last started, and for the highlighted diff, when it was last read (ADR 58); it is not
+ *                   started again until they change. A load that fails is forgotten, so the next tick tries again
  * @param ghExecutableEntered the gh executable the user entered last, to be checked before it is used: none for the
  *                            one on the PATH. Checks can finish in another order than they were asked for; only the
  *                            check of this one decides
@@ -39,11 +41,16 @@ import net.vanfleteren.jazygit.git.model.MetadataStamp;
  * @param nextId     the id the next command that is asked for gets
  * @param lingering  what shows after the commands that showed are done, and until when, so that the indicator does
  *                   not blink out between two commands
+ * @param away       whether the terminal does not have the focus, as one that reports it said last: the timers then
+ *                   read nothing (ADR 58)
+ * @param missed     the messages of the timers that came while away, in the order they first came, to be handled
+ *                   once, when the terminal has the focus again
  */
 @With
 public record Jobs(
         Set<Cmd.Load> failed,
         boolean fetchAgain,
+        boolean fetchChanged,
         Freshness lastFetch,
         Option<Instant> worktreeChangesRead,
         Map<Cmd.Load, MetadataStamp> readAt,
@@ -52,10 +59,13 @@ public record Jobs(
         Map<Cmd.Load, Retry> retries,
         Map<Long, Running> running,
         long nextId,
-        Option<Lingering> lingering) {
+        Option<Lingering> lingering,
+        boolean away,
+        Set<Msg> missed) {
 
     public static final Jobs IDLE = new Jobs(
             HashSet.empty(),
+            false,
             false,
             Freshness.NEVER,
             Option.none(),
@@ -65,7 +75,9 @@ public record Jobs(
             HashMap.empty(),
             HashMap.empty(),
             0,
-            Option.none());
+            Option.none(),
+            false,
+            LinkedHashSet.empty());
 
     /**
      * How long a command runs before it shows: the reads that take a few milliseconds, on every key and every tick,

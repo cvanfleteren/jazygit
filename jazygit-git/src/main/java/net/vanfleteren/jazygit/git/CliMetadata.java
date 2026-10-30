@@ -13,6 +13,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.stream.Stream;
+import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.GitMetadata;
 import net.vanfleteren.jazygit.git.model.MetadataStamp;
 import net.vanfleteren.jazygit.git.model.MetadataStamp.Entry;
@@ -36,6 +37,8 @@ final class CliMetadata {
      * file system keeps, as FAT or many network mounts do.
      */
     static final Duration SETTLED = Duration.ofSeconds(2);
+    // What the lock git takes on a ref while it writes it ends with.
+    private static final String LOCK = ".lock";
 
     private CliMetadata() {}
 
@@ -54,17 +57,21 @@ final class CliMetadata {
     static GitMetadata read(Locations at, Instant now) {
         Path common = at.commonDir();
         List<Path> worktrees = children(common.resolve("worktrees"));
-        // The upstreams are in the config, and the checked out branches in the HEAD of each worktree.
-        MetadataStamp branches = stamp(List.of(
-                        at.gitDir().resolve("HEAD"),
-                        common.resolve("HEAD"),
+        // A reftable repository keeps the HEAD of each worktree in its tables, not in its HEAD file, which git leaves
+        // as it was: the main worktree's with the branches, a linked one's in tables of its own.
+        List<Path> heads = List.of(at.gitDir().resolve("HEAD"), common.resolve("HEAD"))
+                .appendAll(worktrees.flatMap(
+                        worktree -> List.of(worktree.resolve("HEAD"), worktree.resolve("reftable/tables.list"))));
+        // The upstreams and the parents are in the config, and the checked out branches in the HEAD of each worktree.
+        MetadataStamp branches = stamp(heads.appendAll(List.of(
                         common.resolve("config"),
                         common.resolve("packed-refs"),
                         common.resolve("reftable"),
-                        common.resolve("reftable/tables.list"))
-                .appendAll(worktrees.map(worktree -> worktree.resolve("HEAD")))
+                        common.resolve("reftable/tables.list")))
                 .appendAll(directories(common.resolve("refs/heads")))
-                .appendAll(directories(common.resolve("refs/remotes"))));
+                // Since git 2.48, every fetch takes the lock of the HEAD of the remote and lets it go, which changes
+                // the directory without changing a ref: the refs themselves are looked at instead (ADR 58).
+                .appendAll(refFiles(common.resolve("refs/remotes"))));
         // A stash is read from the reflog of refs/stash.
         MetadataStamp stashes = stamp(List.of(
                 common.resolve("refs/stash"),
@@ -72,15 +79,30 @@ final class CliMetadata {
                 common.resolve("packed-refs"),
                 common.resolve("reftable/tables.list")));
         // What a worktree has checked out is in its HEAD; a commit on its branch moves the branch, not the HEAD, and
-        // the commit it moved to is not shown with the worktree (ADR 56).
-        MetadataStamp worktreeList = stamp(List.of(at.gitDir().resolve("HEAD"), common.resolve("HEAD"))
+        // the commit it moved to is not shown with the worktree (ADR 56, ADR 58). The main worktree of a reftable
+        // repository
+        // has its HEAD in the tables of the branches, so there a commit lists the worktrees again.
+        MetadataStamp worktreeList = stamp(heads.append(common.resolve("reftable/tables.list"))
                 .append(common.resolve("worktrees"))
-                .appendAll(worktrees.flatMap(worktree ->
-                        List.of(worktree.resolve("HEAD"), worktree.resolve("gitdir"), worktree.resolve("locked")))));
-        // The parents of the branches are in the config (ADR 49).
-        MetadataStamp config = stamp(List.of(common.resolve("config")));
-        return new GitMetadata(
-                settled(branches, now), settled(stashes, now), settled(worktreeList, now), settled(config, now));
+                .appendAll(worktrees.flatMap(
+                        worktree -> List.of(worktree.resolve("gitdir"), worktree.resolve("locked")))));
+        return new GitMetadata(settled(branches, now), settled(stashes, now), settled(worktreeList, now));
+    }
+
+    /**
+     * The stamp of what the diff of {@code files} in the working tree {@code worktree} is read from, looked at
+     * {@code now}: the files on both sides of each, and the index. A file whose status stays the same can still
+     * change, so the status alone does not tell (ADR 58). HEAD is not among them: the status tells when it moves.
+     * None when one of them is a directory: a submodule, whose diff is the commit it is at, which a commit in it
+     * moves without changing its directory or its status.
+     */
+    static Option<MetadataStamp> diff(Locations at, Path worktree, List<FileEntry> files, Instant now) {
+        List<Path> paths = files.flatMap(file -> file.paths(true).appendAll(file.paths(false)))
+                .distinct()
+                .map(worktree::resolve);
+        return paths.exists(Files::isDirectory)
+                ? Option.none()
+                : settled(stamp(paths.append(at.gitDir().resolve("index"))), now);
     }
 
     /**
@@ -128,6 +150,30 @@ final class CliMetadata {
             @Override
             public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attributes) {
                 found.add(dir);
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult visitFileFailed(Path file, IOException e) {
+                return FileVisitResult.CONTINUE;
+            }
+        }));
+        return List.ofAll(found).sorted();
+    }
+
+    /**
+     * The refs under the directory {@code root}, its files but the locks git takes while it writes one, sorted;
+     * nothing when it is not there. Git replaces a ref it writes by renaming a new file into place, which a stamp of
+     * the file tells, and one that comes or goes changes the list.
+     */
+    private static List<Path> refFiles(Path root) {
+        ArrayList<Path> found = new ArrayList<>();
+        Try.run(() -> Files.walkFileTree(root, new SimpleFileVisitor<>() {
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attributes) {
+                if (!file.getFileName().toString().endsWith(LOCK)) {
+                    found.add(file);
+                }
                 return FileVisitResult.CONTINUE;
             }
 

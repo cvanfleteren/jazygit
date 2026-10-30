@@ -23,12 +23,8 @@ public interface GitHub {
     Either<GhError, List<GhLogin>> logins();
 
     /**
-     * The open pull requests of the repository, from branches of the repository itself (not from forks).
-     */
-    Either<GhError, List<PullRequest>> pullRequests();
-
-    /**
-     * The open pull requests of the repository, also the ones from forks, the most recently updated first.
+     * The open pull requests of the repository, also the ones from forks, the most recently updated first; the
+     * branches show the others ({@link RepositoryPullRequests#ofBranches()}).
      */
     Either<GhError, RepositoryPullRequests> repositoryPullRequests();
 

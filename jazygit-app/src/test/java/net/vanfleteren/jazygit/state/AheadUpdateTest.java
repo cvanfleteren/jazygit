@@ -213,7 +213,7 @@ class AheadUpdateTest {
         Cmd.LoadAhead issued = ((Cmd.LoadCommits) started.cmds().single()).ahead();
         Model branchesRead = Update.update(
                         started.model(),
-                        new LoadMsg.BranchesLoaded(new AllBranches(
+                        branchesLoaded(new AllBranches(
                                 List.of(
                                         Fixtures.branch(MAIN, false, HEAD, Instant.EPOCH, false, true),
                                         Fixtures.branch(FEATURE, true, FEATURE_TIP)),
@@ -263,7 +263,7 @@ class AheadUpdateTest {
         BranchName head = model.repo().currentBranch().get().name();
 
         Update.Next read = Update.update(
-                model, new LoadMsg.ParentsLoaded(io.vavr.collection.HashMap.of(head, FEATURE, FEATURE, MAIN)));
+                model, sameBranchesWith(model, io.vavr.collection.HashMap.of(head, FEATURE, FEATURE, MAIN)));
 
         assertEquals(
                 Option.of(new Cmd.LoadAhead.Base(new BranchRef.Local(FEATURE), FEATURE_TIP)),
@@ -279,8 +279,21 @@ class AheadUpdateTest {
                 List.empty(),
                 Update.update(
                                 read.model(),
-                                new LoadMsg.ParentsLoaded(read.model().repo().parents()))
+                                sameBranchesWith(
+                                        read.model(), read.model().repo().parents()))
                         .cmds());
+    }
+
+    /**
+     * The branches {@code model} has, read again with the parents {@code parents}.
+     */
+    private static LoadMsg.BranchesLoaded sameBranchesWith(
+            Model model, io.vavr.collection.Map<BranchName, BranchName> parents) {
+        return new LoadMsg.BranchesLoaded(
+                new AllBranches(
+                        model.repo().branches().getOrElse(List.empty()),
+                        model.repo().remoteBranches().getOrElse(List.empty())),
+                Option.of(new LoadMsg.Bases(parents, io.vavr.collection.HashMap.empty())));
     }
 
     @Test

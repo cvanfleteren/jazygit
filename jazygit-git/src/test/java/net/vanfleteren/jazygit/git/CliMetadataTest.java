@@ -3,12 +3,16 @@ package net.vanfleteren.jazygit.git;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
+import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import net.vanfleteren.jazygit.git.model.ChangeType;
+import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.GitMetadata;
+import net.vanfleteren.jazygit.git.model.MetadataStamp;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -99,7 +103,7 @@ class CliMetadataTest {
     }
 
     @Test
-    void aCommitChangesTheBranchesButNotTheStashesTheWorktreesOrTheConfig() throws Exception {
+    void aCommitChangesTheBranchesButNotTheStashesOrTheWorktrees() throws Exception {
         GitMetadata before = metadata(main);
 
         commit(main, "b.txt");
@@ -108,7 +112,72 @@ class CliMetadataTest {
         assertNotEquals(before.branches(), after.branches());
         assertEquals(before.worktrees(), after.worktrees());
         assertEquals(before.stashes(), after.stashes());
-        assertEquals(before.config(), after.config());
+    }
+
+    @Test
+    void theStampOfADiffChangesWithItsFilesAndTheIndexOnly() throws Exception {
+        Files.writeString(main.resolve("a.txt"), "changed");
+        Files.writeString(main.resolve("b.txt"), "other");
+        List<FileEntry> files = List.of(new FileEntry("a.txt", ChangeType.MODIFIED, false, true));
+        Option<MetadataStamp> before = diffStamp(files);
+
+        Files.writeString(main.resolve("b.txt"), "other, edited");
+        Option<MetadataStamp> otherEdited = diffStamp(files);
+        Files.writeString(main.resolve("a.txt"), "changed again");
+        Option<MetadataStamp> edited = diffStamp(files);
+        git(main, "add", "a.txt");
+
+        assertTrue(before.isDefined());
+        assertEquals(before, otherEdited);
+        assertNotEquals(otherEdited, edited);
+        assertNotEquals(edited, diffStamp(files));
+    }
+
+    @Test
+    void theDiffOfASubmoduleHasNoStampAsACommitInItChangesNoFileTheStampHolds() throws Exception {
+        Path library = Files.createDirectories(dir.resolve("library")).toRealPath();
+        git(library, "init", "--initial-branch=main");
+        commit(library, "lib.txt");
+        git(main, "-c", "protocol.file.allow=always", "submodule", "add", "-q", library.toString(), "lib");
+        git(main, "commit", "-m", "lib");
+        commit(main.resolve("lib"), "more.txt");
+
+        assertEquals(Option.none(), diffStamp(List.of(new FileEntry("lib", ChangeType.MODIFIED, false, true))));
+    }
+
+    private Option<MetadataStamp> diffStamp(List<FileEntry> files) {
+        return CliMetadata.diff(
+                CliMetadata.locate(main).get(),
+                main,
+                files,
+                Instant.now().plus(CliMetadata.SETTLED).plusSeconds(1));
+    }
+
+    @Test
+    void aFetchThatBringsNothingChangesNoStamp() throws Exception {
+        Path origin = dir.resolve("origin.git");
+        git(dir, "init", "--bare", "--initial-branch=main", origin.toString());
+        git(main, "remote", "add", "origin", origin.toString());
+        git(main, "push", "-u", "origin", "main");
+        git(main, "fetch", "origin");
+        GitMetadata before = metadata(main);
+
+        git(main, "fetch", "--prune", "--no-write-fetch-head", "origin");
+
+        assertEquals(before, metadata(main));
+    }
+
+    @Test
+    void aRemoteTrackingBranchThatComesOrGoesChangesTheBranches() throws Exception {
+        git(main, "update-ref", "refs/remotes/origin/main", "HEAD");
+        GitMetadata before = metadata(main);
+
+        git(main, "update-ref", "refs/remotes/origin/feature/x", "HEAD");
+        GitMetadata added = metadata(main);
+        git(main, "update-ref", "-d", "refs/remotes/origin/feature/x");
+
+        assertNotEquals(before.branches(), added.branches());
+        assertNotEquals(added.branches(), metadata(main).branches());
     }
 
     @Test
@@ -125,13 +194,43 @@ class CliMetadataTest {
     }
 
     @Test
-    void aParentThatIsRecordedChangesTheConfig() throws Exception {
+    void aParentThatIsRecordedChangesTheBranches() throws Exception {
         git(main, "branch", "feature");
         GitMetadata before = metadata(main);
 
         git(main, "config", "branch.feature.gh-merge-base", "main");
 
-        assertNotEquals(before.config(), metadata(main).config());
+        assertNotEquals(before.branches(), metadata(main).branches());
+    }
+
+    @Test
+    void checkingOutInAReftableRepositoryChangesTheWorktrees() throws Exception {
+        Path reftable = dir.resolve("reftable");
+        assumeTrue(reftableSupported(reftable));
+        commit(reftable, "a.txt");
+        git(reftable, "branch", "other");
+        GitMetadata before = metadata(reftable);
+
+        git(reftable, "checkout", "other");
+
+        assertNotEquals(before.worktrees(), metadata(reftable).worktrees());
+    }
+
+    @Test
+    void checkingOutInALinkedWorktreeOfAReftableRepositoryChangesTheWorktreesAndTheBranches() throws Exception {
+        Path reftable = dir.resolve("reftable");
+        assumeTrue(reftableSupported(reftable));
+        commit(reftable, "a.txt");
+        git(reftable, "branch", "other");
+        Path linked = dir.resolve("linked");
+        git(reftable, "worktree", "add", "-b", "feature", linked.toString());
+        GitMetadata before = metadata(reftable);
+
+        git(linked, "checkout", "other");
+
+        GitMetadata after = metadata(reftable);
+        assertNotEquals(before.worktrees(), after.worktrees());
+        assertNotEquals(before.branches(), after.branches());
     }
 
     @Test

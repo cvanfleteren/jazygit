@@ -89,3 +89,6 @@ branches again, and the distances; no longer the worktrees or the parents, whose
 - `Worktree.head` can name an older commit of its branch than the branch is at.
 
 Amends ADR 49.
+
+Amended by ADR 58: the branches, their parents and their distances are read by one load into one message, as the
+separate loads of decision 3 raced; and a reftable repository stamps its tables for the worktrees.

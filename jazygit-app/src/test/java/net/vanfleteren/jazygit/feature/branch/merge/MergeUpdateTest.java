@@ -78,8 +78,7 @@ class MergeUpdateTest {
                         new LoadStatus(),
                         new LoadBranches(),
                         new LoadStashes(),
-                        new net.vanfleteren.jazygit.state.Cmd.LoadWorktrees(),
-                        new net.vanfleteren.jazygit.state.Cmd.LoadParents()),
+                        new net.vanfleteren.jazygit.state.Cmd.LoadWorktrees()),
                 done.cmds());
         assertEquals(
                 executed("git merge --ff --no-edit feature"),

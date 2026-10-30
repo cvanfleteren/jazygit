@@ -30,9 +30,9 @@ class RepositoryPullRequestsQueryTest {
     private static Either<GhError.UnexpectedOutput, RepositoryPullRequests> read(
             String viewer, String latest, int total, String nodes) {
         return GhProcess.decoded("""
-                { "data": { "viewer": %s, "repository": { "nameWithOwner": "owner/repo",
+                [ { "data": { "viewer": %s, "repository": { "nameWithOwner": "owner/repo",
                   "latest": { "nodes": [ %s ] },
-                  "pullRequests": { "totalCount": %d, "nodes": [ %s ] } } } }""".formatted(viewer, latest, total, nodes), RepositoryPullRequestsQuery.DECODER);
+                  "pullRequests": { "totalCount": %d, "nodes": [ %s ] } } } } ]""".formatted(viewer, latest, total, nodes), RepositoryPullRequestsQuery.DECODER);
     }
 
     @Test
@@ -139,9 +139,9 @@ class RepositoryPullRequestsQueryTest {
     void aListWhoseCountIsNoNumberIsUnexpected() {
         assertEquals(
                 Either.left(new GhError.UnexpectedOutput(
-                        "data.repository.pullRequests.totalCount: expected a number, got a string")),
+                        "[0].data.repository.pullRequests.totalCount: expected a number, got a string")),
                 GhProcess.decoded("""
-                        { "data": { "viewer": { "login": "bob" }, "repository": { "nameWithOwner": "owner/repo",
-                          "latest": { "nodes": [] }, "pullRequests": { "totalCount": "many", "nodes": [] } } } }""", RepositoryPullRequestsQuery.DECODER));
+                        [ { "data": { "viewer": { "login": "bob" }, "repository": { "nameWithOwner": "owner/repo",
+                          "latest": { "nodes": [] }, "pullRequests": { "totalCount": "many", "nodes": [] } } } } ]""", RepositoryPullRequestsQuery.DECODER));
     }
 }

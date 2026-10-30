@@ -44,7 +44,8 @@ public class JazygitApp extends ToolkitApp {
     // Tells the time a frame is drawn at, which the spinners turn by.
     private final Clock clock = Clock.systemUTC();
     // The terminal the app is shown on, which it hands over to an editor.
-    private final TerminalHandOver terminal = new TerminalHandOver(this::runner, this::requestRedraw);
+    private final TerminalHandOver terminal =
+            new TerminalHandOver(this::runner, this::requestRedraw, focused -> send(new Msg.TerminalFocused(focused)));
     private final RepositorySession session;
     // Quitting is up to the model, which may refuse; the runner stops on what the update returns.
     private final Consumer<Msg> dispatch = this::send;

@@ -8,8 +8,11 @@ import dev.tamboui.terminal.BackendFactory;
 import dev.tamboui.tui.TuiConfig;
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
 
 /**
  * The terminal backend of the app, which can hand the terminal over to another program, like an editor, and take it
@@ -27,27 +30,45 @@ final class HandOverBackend implements Backend {
 
     // What a read returns when no key came in time.
     private static final int NO_KEY = -2;
+    private static final int ESC = 27;
+    // What a terminal that reports the focus sends when it gets it, ESC [ I, and when it loses it, ESC [ O. TamboUI
+    // reads both as an unknown key, so they are taken out before it reads them (ADR 58).
+    private static final int FOCUS_IN = 'I';
+    private static final int FOCUS_OUT = 'O';
+    private static final String REPORT_FOCUS = "\u001b[?1004h";
+    private static final String STOP_REPORTING_FOCUS = "\u001b[?1004l";
+    // How long the rest of an escape sequence is waited for once its ESC came: the terminal sends it at once.
+    private static final int SEQUENCE_MILLIS = 50;
     // How long a key is read for at a time, which is as long as handing the terminal over waits for a read. As long as
     // TamboUI reads for: shorter slices only wake the reader more often while nothing is typed.
     private static final int SLICE_MILLIS = TuiConfig.DEFAULT_POLL_TIMEOUT;
 
     private final Backend backend;
+    // Told when the terminal gets the focus (true) or loses it (false), on the thread that reads keys.
+    private final Consumer<Boolean> focus;
     // Held while a key is read, so none is read once the terminal is handed over. Fair, as the reader takes it again
     // right after it lets go, and would else keep the render thread waiting in leave for as long as it reads.
     private final Lock reading = new ReentrantLock(true);
+    // What was read past an ESC to tell whether it began a focus report, and was not: read again first. Only the
+    // thread that reads keys touches it.
+    private final Deque<Integer> unread = new ArrayDeque<>();
     private volatile boolean keysPaused;
     private volatile boolean muted;
+    // Whether the terminal has the focus, as it reported last, or a key read since says. Only the thread that reads
+    // keys touches it.
+    private boolean focused = true;
 
-    private HandOverBackend(Backend backend) {
+    HandOverBackend(Backend backend, Consumer<Boolean> focus) {
         this.backend = backend;
+        this.focus = focus;
     }
 
     /**
      * On the terminal of this process, through the backend TamboUI picks, as {@code tamboui.backend} or
-     * {@code TAMBOUI_BACKEND} may say.
+     * {@code TAMBOUI_BACKEND} may say, telling {@code focus} when the terminal gets the focus or loses it.
      */
-    static HandOverBackend system() throws IOException {
-        return new HandOverBackend(BackendFactory.create());
+    static HandOverBackend system(Consumer<Boolean> focus) throws IOException {
+        return new HandOverBackend(BackendFactory.create(), focus);
     }
 
     /**
@@ -69,6 +90,7 @@ final class HandOverBackend implements Backend {
         }
         backend.showCursor();
         if (config.alternateScreen()) {
+            backend.writeRaw(STOP_REPORTING_FOCUS);
             backend.leaveAlternateScreen();
         }
         if (config.rawMode()) {
@@ -89,6 +111,7 @@ final class HandOverBackend implements Backend {
         }
         if (config.alternateScreen()) {
             backend.enterAlternateScreen();
+            backend.writeRaw(REPORT_FOCUS);
         }
         if (config.hideCursor()) {
             backend.hideCursor();
@@ -121,14 +144,62 @@ final class HandOverBackend implements Backend {
     // While the terminal is handed over, no key is read: the read waits as long as it would for a key that does not
     // come.
 
+    /**
+     * The next key within {@code timeoutMs}, leaving out the reports of the focus, which go to {@link #focus}. A key,
+     * a click or a paste only comes from a terminal that has the focus: one read after the terminal said it lost it
+     * tells that it has it again, should the report of that have been lost, split up on its way or never sent.
+     */
     @Override
     public int read(int timeoutMs) throws IOException {
-        return await(timeoutMs, backend::read);
+        int key = next(timeoutMs);
+        if (key != NO_KEY && !focused) {
+            reportFocus(true);
+        }
+        return key;
+    }
+
+    /**
+     * Tells {@link #focus} that the terminal got the focus, or lost it, unless it was told so last.
+     */
+    private void reportFocus(boolean in) {
+        if (in != focused) {
+            focused = in;
+            focus.accept(in);
+        }
+    }
+
+    /**
+     * The next key within {@code timeoutMs}, the reports of the focus left out.
+     */
+    private int next(int timeoutMs) throws IOException {
+        if (!unread.isEmpty()) {
+            return unread.poll();
+        }
+        long deadline = System.nanoTime() + Math.max(timeoutMs, 0) * 1_000_000L;
+        while (true) {
+            int key = await((int) Math.max((deadline - System.nanoTime()) / 1_000_000L, 0), backend::read);
+            if (key != ESC || await(SEQUENCE_MILLIS, backend::peek) != '[') {
+                return key;
+            }
+            int bracket = await(SEQUENCE_MILLIS, backend::read);
+            int last = await(SEQUENCE_MILLIS, backend::read);
+            if (last != FOCUS_IN && last != FOCUS_OUT) {
+                unread.add(bracket);
+                if (last != NO_KEY) {
+                    unread.add(last);
+                }
+                return key;
+            }
+            reportFocus(last == FOCUS_IN);
+            if (System.nanoTime() >= deadline) {
+                return NO_KEY;
+            }
+        }
     }
 
     @Override
     public int peek(int timeoutMs) throws IOException {
-        return await(timeoutMs, backend::peek);
+        return unread.isEmpty() ? await(timeoutMs, backend::peek) : unread.peek();
     }
 
     /**
@@ -218,16 +289,20 @@ final class HandOverBackend implements Backend {
         }
     }
 
+    // The terminal reports the focus while the app is on its alternate screen.
+
     @Override
     public void enterAlternateScreen() throws IOException {
         if (!muted) {
             backend.enterAlternateScreen();
+            backend.writeRaw(REPORT_FOCUS);
         }
     }
 
     @Override
     public void leaveAlternateScreen() throws IOException {
         if (!muted) {
+            backend.writeRaw(STOP_REPORTING_FOCUS);
             backend.leaveAlternateScreen();
         }
     }

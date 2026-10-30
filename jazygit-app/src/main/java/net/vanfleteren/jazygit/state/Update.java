@@ -1,6 +1,8 @@
 package net.vanfleteren.jazygit.state;
 
+import io.vavr.collection.LinkedHashSet;
 import io.vavr.collection.List;
+import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import java.time.Duration;
 import java.time.Instant;
@@ -91,7 +93,25 @@ public final class Update {
     }
 
     public static Next update(Model model, Msg msg) {
-        return msg.apply(model);
+        return model.jobs().away() && msg instanceof Msg.Periodic
+                ? Next.of(model.mapJobs(jobs -> jobs.withMissed(jobs.missed().add(msg))))
+                : msg.apply(model);
+    }
+
+    /**
+     * The terminal got the focus, or lost it. While away, the timers read nothing; once back, what they asked for
+     * meanwhile is read once, as each of their messages is handled once (ADR 58).
+     */
+    static Next focused(Model model, boolean focused) {
+        if (!focused) {
+            return Next.of(model.mapJobs(jobs -> jobs.withAway(true)));
+        }
+        Set<Msg> missed = model.jobs().missed();
+        return missed.foldLeft(
+                Next.of(model.mapJobs(jobs -> jobs.withAway(false).withMissed(LinkedHashSet.empty()))), (next, msg) -> {
+                    Next handled = update(next.model(), msg);
+                    return new Next(handled.model(), next.cmds().appendAll(handled.cmds()));
+                });
     }
 
     /**
@@ -272,21 +292,30 @@ public final class Update {
     }
 
     /**
-     * Reads the highlighted diff again, as files can change on disk without their status changing. This waits
-     * for the status: right after (un)staging, the entries the diff was read for are outdated, and reading
-     * them again would show their changes as gone for as long as the new status takes to arrive.
+     * Reads the highlighted diff again once its files changed, as they can change on disk without their status
+     * changing: it looks at them first, without git (ADR 58), unless HEAD moved, which changes what the staged changes
+     * are compared with. This waits for the status: right after (un)staging, the entries the diff was read for are
+     * outdated, and reading them again would show their changes as gone for as long as the new status takes to
+     * arrive.
      */
-    static Next reloadDiff(Model model, List<Cmd> cmds) {
+    static Next reloadDiff(Model model, List<Cmd> cmds, boolean headMoved) {
+        return shownDiff(model)
+                .filter(load -> !model.jobs().runs(load) && !model.jobs().runs(new Cmd.CheckFileDiff(load)))
+                .map(load -> new Next(model, cmds.append(headMoved ? load : new Cmd.CheckFileDiff(load))))
+                .getOrElse(() -> new Next(model, cmds));
+    }
+
+    /**
+     * The read of the highlighted diff, with the options now chosen, while the status still lists its files.
+     */
+    static Option<LoadFileDiff> shownDiff(Model model) {
         return model.repoView()
                 .fileDiff()
                 .filter(d -> model.repo()
                         .status()
                         .toOption()
                         .exists(status -> status.files().containsAll(d.key())))
-                .map(d -> new LoadFileDiff(d.key(), model.preferences().diffOptions()))
-                .filter(cmd -> !model.jobs().runs(cmd))
-                .map(cmd -> new Next(model, cmds.append(cmd)))
-                .getOrElse(() -> new Next(model, cmds));
+                .map(d -> new LoadFileDiff(d.key(), model.preferences().diffOptions()));
     }
 
     /**

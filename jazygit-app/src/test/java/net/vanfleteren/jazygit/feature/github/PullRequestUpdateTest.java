@@ -59,6 +59,7 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.prs.LoadRepositoryPullRequests;
 import org.junit.jupiter.api.Test;
 
 class PullRequestUpdateTest {
@@ -1610,7 +1611,9 @@ class PullRequestUpdateTest {
 
         assertEquals(Option.of(true), done.model().popup(PullRequestPopup.class).flatMap(PullRequestPopup::draft));
         assertEquals(Option.none(), done.model().jobs().busy().get(new BranchRef.Local(FEATURE)));
-        assertTrue(done.cmds().contains(new LoadPullRequests()), done.cmds().toString());
+        assertTrue(
+                done.cmds().contains(new LoadRepositoryPullRequests()),
+                done.cmds().toString());
         assertEquals(
                 "gh pr ready 42 --undo",
                 done.model().outcome().commandLog().last().commands().last().line());
@@ -1654,14 +1657,17 @@ class PullRequestUpdateTest {
     void aMergedPullRequestIsReadAgainOnceAnEarlierReadIsDone() {
         MergePullRequest cmd = new MergePullRequest(FEATURE, 42, Option.none(), MergeMethod.MERGE);
         // The running read started before the merge, and would list the pull request as still open.
-        Model merging = TestModels.running(withPr(), cmd, new LoadPullRequests());
+        Model merging = TestModels.running(withPr(), cmd, new LoadRepositoryPullRequests());
 
         Next done = TestModels.done(merging, cmd, cmd.run(new Env(new StubGitProvider() {}, mergingAtOnce())));
-        Next earlierRead = TestModels.done(done.model(), new LoadPullRequests(), new PullRequestsMsg.Loaded(List.of()));
+        Next earlierRead =
+                TestModels.done(done.model(), new LoadRepositoryPullRequests(), new PullRequestsMsg.Loaded(List.of()));
 
-        assertFalse(done.cmds().contains(new LoadPullRequests()), done.cmds().toString());
+        assertFalse(
+                done.cmds().contains(new LoadRepositoryPullRequests()),
+                done.cmds().toString());
         assertTrue(
-                earlierRead.cmds().contains(new LoadPullRequests()),
+                earlierRead.cmds().contains(new LoadRepositoryPullRequests()),
                 earlierRead.cmds().toString());
     }
 
@@ -1675,7 +1681,9 @@ class PullRequestUpdateTest {
         assertEquals(Option.of(FEATURE_PR), done.model().gitHub().pullRequests().flatMap(open -> open.get(FEATURE)));
         assertEquals(Option.of(new MergeStatus.Merged()), done.model().gitHub().merge(42));
         assertEquals(Option.none(), done.model().jobs().busy().get(new BranchRef.Local(FEATURE)));
-        assertTrue(done.cmds().contains(new LoadPullRequests()), done.cmds().toString());
+        assertTrue(
+                done.cmds().contains(new LoadRepositoryPullRequests()),
+                done.cmds().toString());
         // The merge changed the base branch on the remote.
         assertTrue(done.cmds().contains(new FetchCmd.ListRemotes()), done.cmds().toString());
     }
@@ -1760,7 +1768,9 @@ class PullRequestUpdateTest {
 
         assertEquals(
                 Option.of(new MergeStatus.Merged()), merged.model().gitHub().merge(42));
-        assertTrue(merged.cmds().contains(new LoadPullRequests()), merged.cmds().toString());
+        assertTrue(
+                merged.cmds().contains(new LoadRepositoryPullRequests()),
+                merged.cmds().toString());
         assertTrue(
                 merged.cmds().contains(new FetchCmd.ListRemotes()),
                 merged.cmds().toString());
@@ -2029,7 +2039,9 @@ class PullRequestUpdateTest {
 
         Next done = TestModels.done(creating, cmd, cmd.run(new Env(new StubGitProvider() {}, StubGitHub.empty())));
 
-        assertTrue(done.cmds().contains(new LoadPullRequests()), done.cmds().toString());
+        assertTrue(
+                done.cmds().contains(new LoadRepositoryPullRequests()),
+                done.cmds().toString());
         assertEquals(Option.none(), done.model().jobs().busy().get(new BranchRef.Local(new BranchName("feature"))));
         assertTrue(done.cmds().contains(new FetchCmd.ListRemotes()), done.cmds().toString());
         assertEquals(
@@ -2052,7 +2064,7 @@ class PullRequestUpdateTest {
         assertEquals(
                 Option.of(created),
                 done.model().gitHub().pullRequests().flatMap(open -> open.get(new BranchName("feature"))));
-        assertTrue(done.cmds().contains(new LoadPullRequests()));
+        assertTrue(done.cmds().contains(new LoadRepositoryPullRequests()));
     }
 
     @Test

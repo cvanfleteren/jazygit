@@ -5,6 +5,7 @@ import dev.tamboui.tui.TuiConfig;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.state.Terminal;
 
@@ -16,6 +17,7 @@ final class TerminalHandOver implements Terminal {
 
     private final Supplier<ToolkitRunner> runner;
     private final Runnable requestRedraw;
+    private final Consumer<Boolean> focus;
     // How the terminal is set up, and the backend that hands it over, once the app is configured.
     private TuiConfig config = TuiConfig.defaults();
     private Option<HandOverBackend> backend = Option.none();
@@ -25,18 +27,24 @@ final class TerminalHandOver implements Terminal {
     /**
      * @param runner        the runner of the app, once it is started
      * @param requestRedraw asks for a frame, on the render thread
+     * @param focus         told on the render thread when the terminal gets the focus (true) or loses it (false), as
+     *                      a terminal that reports it says
      */
-    TerminalHandOver(Supplier<ToolkitRunner> runner, Runnable requestRedraw) {
+    TerminalHandOver(Supplier<ToolkitRunner> runner, Runnable requestRedraw, Consumer<Boolean> focus) {
         this.runner = runner;
         this.requestRedraw = requestRedraw;
+        this.focus = focus;
     }
 
     /**
      * How the app sets the terminal up: with the mouse, without ticks, and on a backend that can hand it over.
      */
     TuiConfig configure() {
-        // Without a backend of its own, the app still runs, but cannot hand the terminal over.
-        backend = Try.of(HandOverBackend::system).onFailure(BugLog::log).toOption();
+        // Without a backend of its own, the app still runs, but cannot hand the terminal over, nor tell the focus.
+        backend = Try.of(() ->
+                        HandOverBackend.system(focused -> runner.get().runOnRenderThread(() -> focus.accept(focused))))
+                .onFailure(BugLog::log)
+                .toOption();
         // Frames are drawn when something changed, not on ticks.
         TuiConfig.Builder builder = TuiConfig.builder().mouseCapture(true).noTick();
         config = backend.map(builder::backend).getOrElse(builder).build();

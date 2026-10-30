@@ -50,6 +50,7 @@ class DetailsQueryTest {
             Tuple.of("baseRefName", "\"main\""),
             Tuple.of("headRefOid", "\"\""),
             Tuple.of("baseRefOid", "\"\""),
+            Tuple.of("baseRef", "{ \"compare\": { \"behindBy\": 2 } }"),
             Tuple.of("stackEntry", "null"),
             Tuple.of("stack", "null"),
             Tuple.of("createdAt", JANUARY),

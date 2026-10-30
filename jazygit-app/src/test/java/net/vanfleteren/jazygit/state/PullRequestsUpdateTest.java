@@ -17,6 +17,8 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.prs.LoadRepositoryPullRequests;
+import net.vanfleteren.jazygit.state.prs.PrOverviewMsg;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -96,7 +98,8 @@ class PullRequestsUpdateTest {
     void aReadOfThePullRequestsIsKeptWhileItRunsAndNotStartedTwice() {
         Next reading = TestModels.stepped(loaded(), new PullRequestsMsg.Refresh());
         assertEquals(
-                HashSet.of(new LoadPullRequests(), new LoadBranchChecks()), TestModels.runningCmds(reading.model()));
+                HashSet.of(new LoadRepositoryPullRequests(), new LoadBranchChecks()),
+                TestModels.runningCmds(reading.model()));
 
         Next again = Update.update(reading.model(), new PullRequestsMsg.Refresh());
         assertEquals(List.empty(), again.cmds());
@@ -104,13 +107,15 @@ class PullRequestsUpdateTest {
         assertEquals(
                 HashSet.of(new LoadBranchChecks()),
                 TestModels.runningCmds(TestModels.done(
-                                reading.model(), new LoadPullRequests(), new PullRequestsMsg.Loaded(List.empty()))
+                                reading.model(),
+                                new LoadRepositoryPullRequests(),
+                                new PullRequestsMsg.Loaded(List.empty()))
                         .model()));
         assertEquals(
                 HashSet.of(new LoadBranchChecks()),
                 TestModels.runningCmds(TestModels.done(
                                 reading.model(),
-                                new LoadPullRequests(),
+                                new LoadRepositoryPullRequests(),
                                 new PullRequestsMsg.LoadFailed(refused("offline")))
                         .model()));
     }
@@ -118,11 +123,11 @@ class PullRequestsUpdateTest {
     @Test
     void refreshingReadsThePullRequests() {
         assertEquals(
-                List.of(new LoadPullRequests(), new LoadBranchChecks()),
+                List.of(new LoadRepositoryPullRequests(), new LoadBranchChecks()),
                 Update.update(loaded(), new PullRequestsMsg.Refresh()).cmds());
         assertInstanceOf(
-                PullRequestsMsg.Loaded.class,
-                new LoadPullRequests().run(new Env(new StubGitProvider() {}, StubGitHub.empty())));
+                PrOverviewMsg.RepositoryLoaded.class,
+                new LoadRepositoryPullRequests().run(new Env(new StubGitProvider() {}, StubGitHub.empty())));
     }
 
     @Test
@@ -134,22 +139,24 @@ class PullRequestsUpdateTest {
 
         assertEquals(List.empty(), asked.cmds());
         assertEquals(
-                HashSet.of(new LoadPullRequests(), new LoadBranchChecks()),
+                HashSet.of(new LoadRepositoryPullRequests(), new LoadBranchChecks()),
                 asked.model().gitHub().again());
 
-        Next done =
-                TestModels.done(asked.model(), new LoadPullRequests(), new PullRequestsMsg.Loaded(List.of(FEATURE_PR)));
+        Next done = TestModels.done(
+                asked.model(), new LoadRepositoryPullRequests(), new PullRequestsMsg.Loaded(List.of(FEATURE_PR)));
 
-        assertEquals(List.of(new LoadPullRequests()), done.cmds());
-        assertEquals(HashSet.of(new LoadPullRequests(), new LoadBranchChecks()), TestModels.runningCmds(done.model()));
+        assertEquals(List.of(new LoadRepositoryPullRequests()), done.cmds());
+        assertEquals(
+                HashSet.of(new LoadRepositoryPullRequests(), new LoadBranchChecks()),
+                TestModels.runningCmds(done.model()));
         assertEquals(HashSet.of(new LoadBranchChecks()), done.model().gitHub().again());
         // What the first read read shows until the one started after the change is done.
         assertEquals(
                 Option.of(FEATURE_PR),
                 done.model().gitHub().pullRequests().flatMap(open -> open.get(new BranchName("feature"))));
 
-        Next readAgain =
-                TestModels.done(done.model(), new LoadPullRequests(), new PullRequestsMsg.Loaded(List.empty()));
+        Next readAgain = TestModels.done(
+                done.model(), new LoadRepositoryPullRequests(), new PullRequestsMsg.Loaded(List.empty()));
 
         assertEquals(List.empty(), readAgain.cmds());
         assertEquals(
@@ -162,18 +169,19 @@ class PullRequestsUpdateTest {
         Model asked = PullRequestsUpdate.loadAnyway(TestModels.stepped(loaded(), new PullRequestsMsg.Refresh()))
                 .model();
 
-        Next failed =
-                TestModels.done(asked, new LoadPullRequests(), new PullRequestsMsg.LoadFailed(refused("offline")));
+        Next failed = TestModels.done(
+                asked, new LoadRepositoryPullRequests(), new PullRequestsMsg.LoadFailed(refused("offline")));
 
-        assertEquals(List.of(new LoadPullRequests()), failed.cmds());
-        assertEquals(HashSet.empty(), failed.model().gitHub().again().filter(LoadPullRequests.class::isInstance));
+        assertEquals(List.of(new LoadRepositoryPullRequests()), failed.cmds());
+        assertEquals(
+                HashSet.empty(), failed.model().gitHub().again().filter(LoadRepositoryPullRequests.class::isInstance));
     }
 
     @Test
     void aReadAskedForAnywayWhileNoneRunsStartsRightAway() {
         Next asked = PullRequestsUpdate.loadAnyway(Next.of(loaded()));
 
-        assertEquals(List.of(new LoadPullRequests(), new LoadBranchChecks()), asked.cmds());
+        assertEquals(List.of(new LoadRepositoryPullRequests(), new LoadBranchChecks()), asked.cmds());
         assertEquals(HashSet.empty(), asked.model().gitHub().again());
     }
 }

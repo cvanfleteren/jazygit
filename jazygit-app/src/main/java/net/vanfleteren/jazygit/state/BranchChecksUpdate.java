@@ -22,8 +22,12 @@ public final class BranchChecksUpdate {
             // The branches whose checks are pending are read one by one too, to tell when they are done (ADR 32).
             case BranchChecksMsg.Loaded(GitHubChecks checks) -> {
                 Next done = GitHubReads.done(
-                        model.mapGitHub(gitHub -> gitHub.withBranchChecks(Option.of(checks))
-                                .withPendingChecks(gitHub.pendingChecks().map(pending -> pending.pendingIn(checks)))),
+                        FailingRead.ran(
+                                model.mapGitHub(gitHub -> gitHub.withBranchChecks(Option.of(checks))
+                                        .withPendingChecks(
+                                                gitHub.pendingChecks().map(pending -> pending.pendingIn(checks)))),
+                                new LoadBranchChecks(),
+                                false),
                         new LoadBranchChecks());
                 List<BranchName> pending = pending(done.model(), checks);
                 yield pending.isEmpty() || readingRuns(done.model())
@@ -31,7 +35,8 @@ public final class BranchChecksUpdate {
                         : startRuns(done, new LoadBranchCheckRuns(pending));
             }
             // Like for the pull requests, a failure is no reason to bother the user: the checks read last stay.
-            case BranchChecksMsg.LoadFailed(var failure) -> GitHubReads.done(model, new LoadBranchChecks());
+            case BranchChecksMsg.LoadFailed(var failure) ->
+                GitHubReads.done(FailingRead.ran(model, new LoadBranchChecks(), true), new LoadBranchChecks());
             // How long the checks take is learned from them too.
             case BranchChecksMsg.RunsLoaded(PendingChecks checks) ->
                 CheckTimesUpdate.read(
@@ -80,6 +85,14 @@ public final class BranchChecksUpdate {
      */
     static Next load(Next next) {
         return GitHubReads.load(next, new LoadBranchChecks());
+    }
+
+    /**
+     * {@code next}, also reading the checks again as a timer asks: unless they keep failing ({@link FailingRead}), or a
+     * read is still running.
+     */
+    static Next poll(Next next) {
+        return GitHubReads.poll(next, new LoadBranchChecks());
     }
 
     /**

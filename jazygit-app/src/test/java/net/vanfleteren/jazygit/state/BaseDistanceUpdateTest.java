@@ -4,30 +4,73 @@ import static net.vanfleteren.jazygit.state.TestModels.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.HashMap;
+import io.vavr.collection.List;
+import io.vavr.collection.Map;
+import io.vavr.control.Either;
+import io.vavr.control.Option;
+import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.git.GitError;
+import net.vanfleteren.jazygit.git.GitError.ProcessError;
+import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.*;
 import org.junit.jupiter.api.Test;
 
 /**
- * How far each local branch is from its base: read after every read of the branches, and after a read of the
- * parents that changed them, and kept until a read replaces it (ADR 46, ADR 56).
+ * The parents of the branches, and how far each local branch is from its base: read with every read of the
+ * branches, from the branches and the parents just read, and kept until a read replaces them (ADR 46, ADR 58).
  */
 class BaseDistanceUpdateTest {
 
+    private static final BranchName MAIN = new BranchName("main");
     private static final BranchName FEATURE = new BranchName("feature");
-    private static final BaseDistance DISTANCE =
-            new BaseDistance(new BranchRef.Local(new BranchName("main")), new Sha("1"), 1, 58);
+    private static final BaseDistance DISTANCE = new BaseDistance(new BranchRef.Local(MAIN), new Sha("1"), 1, 58);
+    private static final Map<BranchName, BranchName> PARENTS = HashMap.of(FEATURE, MAIN);
+    private static final AllBranches READ = new AllBranches(BRANCHES, List.empty());
 
     @Test
-    void everyReadOfTheBranchesReadsHowFarTheyAreFromTheirBase() {
-        Model model = loaded();
+    void theBranchesAreCountedWithTheParentsAndTheTipsJustRead() {
+        StubGitProvider git = new StubGitProvider() {
+            @Override
+            public Either<ProcessError, AllBranches> allBranches() {
+                return Either.right(READ);
+            }
 
-        Update.Next next = Update.update(
-                model, new LoadMsg.BranchesLoaded(new AllBranches(BRANCHES, io.vavr.collection.List.empty())));
+            @Override
+            public Either<ProcessError, Map<BranchName, BranchName>> parents() {
+                return Either.right(PARENTS);
+            }
 
-        assertTrue(
-                next.cmds().contains(LoadUpdate.baseDistance(next.model())),
-                next.cmds().toString());
+            @Override
+            public Map<BranchName, BaseDistance> baseDistance(
+                    Map<BranchRef, Sha> tips, Map<BranchName, BranchName> parents, Option<BranchName> main) {
+                return tips.equals(READ.tips()) && parents.equals(PARENTS) && main.equals(READ.main())
+                        ? HashMap.of(FEATURE, DISTANCE)
+                        : HashMap.empty();
+            }
+        };
+
+        assertEquals(
+                new LoadMsg.BranchesLoaded(READ, Option.of(new LoadMsg.Bases(PARENTS, HashMap.of(FEATURE, DISTANCE)))),
+                new Cmd.LoadBranches().run(new Env(git, StubGitHub.empty())));
+    }
+
+    @Test
+    void branchesWhoseParentsCannotBeReadComeBackWithoutThem() {
+        StubGitProvider git = new StubGitProvider() {
+            @Override
+            public Either<ProcessError, AllBranches> allBranches() {
+                return Either.right(READ);
+            }
+
+            @Override
+            public Either<ProcessError, Map<BranchName, BranchName>> parents() {
+                return Either.left(new GitError.UnexpectedOutput("garbled"));
+            }
+        };
+
+        assertEquals(
+                new LoadMsg.BranchesLoaded(READ, Option.none()),
+                new Cmd.LoadBranches().run(new Env(git, StubGitHub.empty())));
     }
 
     @Test
@@ -36,97 +79,42 @@ class BaseDistanceUpdateTest {
     }
 
     @Test
-    void theCountsReadAreKept() {
-        Model model = loaded();
-        Cmd.LoadBaseDistance load = LoadUpdate.baseDistance(model);
-
-        Model read = Update.update(model, new LoadMsg.BaseDistanceLoaded(load, HashMap.of(FEATURE, DISTANCE)))
+    void theParentsAndTheCountsReadWithTheBranchesAreKept() {
+        Model read = Update.update(loaded(), withBases(PARENTS, HashMap.of(FEATURE, DISTANCE)))
                 .model();
 
+        assertEquals(PARENTS, read.repo().parents());
         assertEquals(HashMap.of(FEATURE, DISTANCE), read.repo().baseDistance());
     }
 
     @Test
-    void aReadForBranchesReadSinceIsDropped() {
-        Model model = loaded();
-        Cmd.LoadBaseDistance older = LoadUpdate.baseDistance(model);
-        // A fetch moved feature: the branches are read again, which asks for the distances again.
-        Model moved = localBranchesRead(
-                        model,
-                        io.vavr.collection.List.of(
-                                Fixtures.branch(new BranchName("main"), true, new Sha("aaaa")),
-                                Fixtures.branch(FEATURE, false, new Sha("eeee"))))
+    void branchesReadWithoutTheirParentsKeepTheParentsAndTheCountsReadBefore() {
+        Model read = Update.update(loaded(), withBases(PARENTS, HashMap.of(FEATURE, DISTANCE)))
                 .model();
 
-        Update.Next late = Update.update(moved, new LoadMsg.BaseDistanceLoaded(older, HashMap.of(FEATURE, DISTANCE)));
+        Model again = Update.update(read, branchesLoaded(READ)).model();
 
-        assertNotEquals(older, LoadUpdate.baseDistance(moved));
-        assertEquals(moved.repo(), late.model().repo());
-        assertEquals(io.vavr.collection.List.empty(), late.cmds());
+        assertEquals(PARENTS, again.repo().parents());
+        assertEquals(HashMap.of(FEATURE, DISTANCE), again.repo().baseDistance());
     }
 
     @Test
-    void parentsThatChangedAreKeptAndCountedAgainst() {
-        Model model = loaded();
-        HashMap<BranchName, BranchName> parents = HashMap.of(FEATURE, new BranchName("main"));
-
-        Update.Next read = Update.update(model, new LoadMsg.ParentsLoaded(parents));
-
-        assertEquals(parents, read.model().repo().parents());
-        assertEquals(parents, LoadUpdate.baseDistance(read.model()).parents());
-        assertTrue(
-                read.cmds().contains(LoadUpdate.baseDistance(read.model())),
-                read.cmds().toString());
-    }
-
-    @Test
-    void theSameParentsAgainCountNothingAgain() {
-        Model model = loaded();
-
-        Update.Next read =
-                Update.update(model, new LoadMsg.ParentsLoaded(model.repo().parents()));
-
-        assertEquals(io.vavr.collection.List.empty(), read.cmds());
-    }
-
-    @Test
-    void aReadForParentsReadSinceIsDropped() {
-        Model model = loaded();
-        Cmd.LoadBaseDistance older = LoadUpdate.baseDistance(model);
-        Model reparented = Update.update(model, new LoadMsg.ParentsLoaded(HashMap.of(FEATURE, new BranchName("main"))))
+    void aReadOfTheBranchesThatFailsKeepsTheParentsAndTheCountsReadBefore() {
+        Model read = Update.update(loaded(), withBases(PARENTS, HashMap.of(FEATURE, DISTANCE)))
                 .model();
-
-        Update.Next late =
-                Update.update(reparented, new LoadMsg.BaseDistanceLoaded(older, HashMap.of(FEATURE, DISTANCE)));
-
-        assertEquals(reparented.repo(), late.model().repo());
-    }
-
-    @Test
-    void aReadThatFailsKeepsTheCountsReadBefore() {
-        Model model = loaded();
-        Cmd.LoadBaseDistance load = LoadUpdate.baseDistance(model);
-        Model read = Update.update(model, new LoadMsg.BaseDistanceLoaded(load, HashMap.of(FEATURE, DISTANCE)))
-                .model();
-
-        Model failed = Update.update(
-                        read, new LoadMsg.Failed(load, new Failure.Git(new GitError.UnexpectedOutput("garbled"))))
-                .model();
-
-        assertEquals(HashMap.of(FEATURE, DISTANCE), failed.repo().baseDistance());
-    }
-
-    @Test
-    void parentsThatCannotBeReadStayAsReadBefore() {
-        HashMap<BranchName, BranchName> parents = HashMap.of(FEATURE, new BranchName("main"));
-        Model read = Update.update(loaded(), new LoadMsg.ParentsLoaded(parents)).model();
 
         Model failed = Update.update(
                         read,
                         new LoadMsg.Failed(
-                                new Cmd.LoadParents(), new Failure.Git(new GitError.UnexpectedOutput("garbled"))))
+                                new Cmd.LoadBranches(), new Failure.Git(new GitError.UnexpectedOutput("garbled"))))
                 .model();
 
-        assertEquals(parents, failed.repo().parents());
+        assertEquals(PARENTS, failed.repo().parents());
+        assertEquals(HashMap.of(FEATURE, DISTANCE), failed.repo().baseDistance());
+    }
+
+    private static LoadMsg.BranchesLoaded withBases(
+            Map<BranchName, BranchName> parents, Map<BranchName, BaseDistance> counts) {
+        return new LoadMsg.BranchesLoaded(READ, Option.of(new LoadMsg.Bases(parents, counts)));
     }
 }

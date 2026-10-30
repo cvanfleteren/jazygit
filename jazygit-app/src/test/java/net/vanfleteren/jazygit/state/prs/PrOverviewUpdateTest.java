@@ -118,15 +118,27 @@ class PrOverviewUpdateTest {
     }
 
     @Test
-    void theRepositoryScreenShowsFirstAndATickOnItOnlyReadsThePullRequestsOfTheRepository() {
+    void theRepositoryScreenShowsFirstAndATickOnItReadsNothing() {
+        // The pull requests of the repository are read after every fetch, for the branches and the new ones (ADR 58).
         Model model = loaded();
 
         assertEquals(Screen.REPOSITORY, model.screen());
-        Next ticked = TestModels.stepped(model, new PrOverviewMsg.Tick());
-        assertEquals(List.of(new LoadRepositoryPullRequests()), ticked.cmds());
         assertEquals(
-                List.empty(),
-                Update.update(ticked.model(), new PrOverviewMsg.Tick()).cmds());
+                List.empty(), Update.update(model, new PrOverviewMsg.Tick()).cmds());
+    }
+
+    @Test
+    void thePullRequestsOfTheRepositoryAreThoseOfTheBranchesToo() {
+        Model read = Update.update(loaded(), repositoryRead(OLD)).model();
+
+        assertEquals(
+                List.of(OLD.number()),
+                read.gitHub()
+                        .pullRequests()
+                        .get()
+                        .values()
+                        .map(pr -> pr.number())
+                        .toList());
     }
 
     @Test
@@ -279,10 +291,13 @@ class PrOverviewUpdateTest {
         assertEquals(
                 List.empty(), Update.update(shown, new PrOverviewMsg.Tick()).cmds());
 
-        Model read = TestModels.done(shown, new LoadRepositoryPullRequests(), repositoryRead(OLD))
+        Model read = TestModels.done(
+                        shown,
+                        new LoadMyPullRequests(),
+                        new PrOverviewMsg.MineLoaded(new MyPullRequests(PullRequestList.EMPTY, PullRequestList.EMPTY)))
                 .model();
         assertEquals(
-                List.of(new LoadRepositoryPullRequests()),
+                List.of(new LoadMyPullRequests()),
                 Update.update(read, new PrOverviewMsg.Tick()).cmds());
     }
 

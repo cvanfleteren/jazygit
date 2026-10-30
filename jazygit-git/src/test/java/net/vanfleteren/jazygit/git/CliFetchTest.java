@@ -8,7 +8,6 @@ import io.vavr.control.Option;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.model.RemoteName;
-import net.vanfleteren.jazygit.process.ExecutedCommand;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.zeroturnaround.exec.ProcessExecutor;
@@ -55,16 +54,13 @@ class CliFetchTest {
 
         List<RemoteName> remotes = CliRemote.remotes(repo).get();
         assertEquals(List.of(new RemoteName("origin"), new RemoteName("other")), remotes);
-        assertEquals(
-                List.of("git fetch --quiet --prune --no-write-fetch-head origin"),
-                CliFetch.fetch(repo, new RemoteName("origin"), Option.none(), HashMap.empty())
-                        .get()
-                        .map(ExecutedCommand::line));
-        assertEquals(
-                List.of("git fetch --quiet --prune --no-write-fetch-head other"),
-                CliFetch.fetch(repo, new RemoteName("other"), Option.none(), HashMap.empty())
-                        .get()
-                        .map(ExecutedCommand::line));
+        assertTrue(CliFetch.fetch(repo, new RemoteName("origin"), Option.none(), HashMap.empty())
+                .get());
+        assertTrue(CliFetch.fetch(repo, new RemoteName("other"), Option.none(), HashMap.empty())
+                .get());
+        // Nothing new on the remote: the fetch says it changed nothing.
+        assertFalse(CliFetch.fetch(repo, new RemoteName("origin"), Option.none(), HashMap.empty())
+                .get());
 
         assertTrue(git(repo, "branch", "-r").contains("origin/main"));
         assertTrue(git(repo, "branch", "-r").contains("other/main"));
@@ -82,8 +78,8 @@ class CliFetchTest {
         git(repo, "branch", "-q", "--track", "feature", "origin/feature");
         git(origin, "branch", "-q", "-D", "feature");
 
-        CliFetch.fetch(repo, new RemoteName("origin"), Option.none(), HashMap.empty())
-                .get();
+        assertTrue(CliFetch.fetch(repo, new RemoteName("origin"), Option.none(), HashMap.empty())
+                .get());
 
         assertFalse(git(repo, "branch", "-r").contains("origin/feature"));
         assertTrue(git(repo, "branch", "-vv").contains("[origin/feature: gone]"));
