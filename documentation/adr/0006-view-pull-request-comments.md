@@ -92,3 +92,6 @@ rendered, at a width, and starts at the top for every comment.
 
 As ADR 5 does for the comment popup, what changes the pull request dialog (its details read, it becoming a draft)
 changes the one the comments popup goes back to, also when the comment popup is open on top of that.
+
+Amended by ADR 55: the review threads, inline comments on the diff, show next to their lines in the diff of a pull
+request.
