@@ -2,10 +2,7 @@ package net.vanfleteren.jazygit.feature.github.create;
 
 import static dev.tamboui.toolkit.Toolkit.*;
 
-import dev.tamboui.style.Style;
 import dev.tamboui.toolkit.element.Element;
-import dev.tamboui.toolkit.element.StyledElement;
-import dev.tamboui.toolkit.elements.ListElement;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
@@ -17,18 +14,13 @@ import java.util.function.Consumer;
 import net.vanfleteren.jazygit.gh.model.NewPullRequest;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.i18n.Messages;
-import net.vanfleteren.jazygit.state.ListCursor;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.ui.BasesField;
 import net.vanfleteren.jazygit.ui.LineEditInput;
 import net.vanfleteren.jazygit.ui.SubmittableTextArea;
 import net.vanfleteren.jazygit.ui.widgets.DialogFrame;
-import net.vanfleteren.jazygit.ui.widgets.FilteredCursor;
-import net.vanfleteren.jazygit.ui.widgets.FocusBordered;
-import net.vanfleteren.jazygit.ui.widgets.FocusHighlighted;
 import net.vanfleteren.jazygit.ui.widgets.HintedDialog;
-import net.vanfleteren.jazygit.ui.widgets.ListFilter;
-import net.vanfleteren.jazygit.ui.widgets.ListKeys;
 import net.vanfleteren.jazygit.ui.widgets.PopupView;
 
 /**
@@ -54,34 +46,25 @@ public final class NewPullRequestDialog implements PopupView {
     /**
      * The class of the draft box, which the themes reverse when it has the focus.
      */
-    static final String CHECKBOX = "checkbox";
+    public static final String CHECKBOX = "checkbox";
 
     // With Ctrl held, creates the pull request from any field; Enter adds a line to the body.
     private static final char CONFIRM_KEY = 's';
-    // With Ctrl held, clears the filter of the bases, as it clears a line in readline.
-    private static final char CLEAR_KEY = 'u';
     private static final int WIDTH = 110;
     private static final int INPUT_HEIGHT = 3;
     private static final int BODY_HEIGHT = 10;
     private static final int BOX_WIDTH = 3;
-    // The bases shown at once, past which the list scrolls; the border takes two more lines.
-    private static final int BASE_ROWS = 5;
 
     private final TextInputState title = new TextInputState();
     private final TextAreaState body = new TextAreaState();
-    private final ListElement<?> baseList = list().id(BASES_ID).focusable().highlightSymbol("");
-    // Shown instead of the bases when the filter shows none: the same id, so it keeps the focus and the keys.
-    private final ListElement<?> noMatches = list().id(BASES_ID)
-            .focusable()
-            .highlightSymbol("")
-            .highlightStyle(Style.EMPTY)
-            .elements(ListFilter.noMatches());
+    private final BasesField<BranchName> bases;
     private final Consumer<Msg> dispatch;
 
     /**
      * @param dispatch receives the messages for the user's actions, on the render thread
      */
     public NewPullRequestDialog(Consumer<Msg> dispatch) {
+        this.bases = new BasesField<>(BASES_ID, BranchName::value, dispatch);
         this.dispatch = dispatch;
     }
 
@@ -113,7 +96,12 @@ public final class NewPullRequestDialog implements PopupView {
                             Messages.get(
                                     "dialog.newPullRequest.title", open.branch().value()),
                             WIDTH,
-                            bases(Bases.of(open, model.listCursor())),
+                            bases.render(
+                                    open.bases(),
+                                    open.base(),
+                                    model.listCursor(),
+                                    CreatePullRequestMsg.BaseMoved::new,
+                                    this::keys),
                             new LineEditInput(
                                             textInput(title)
                                                     .title(Messages.get("dialog.newPullRequest.titleField"))
@@ -149,87 +137,9 @@ public final class NewPullRequestDialog implements PopupView {
     }
 
     /**
-     * The list of the bases, those the filter shows, with the base highlighted, and named in its border. The base
-     * stays highlighted while another field has the focus; the border shows whether the list has it.
-     */
-    private Element bases(Bases view) {
-        FilteredCursor<BranchName> shown = view.list();
-        ListElement<?> list = shown.lines().isEmpty()
-                ? noMatches
-                : baseList.elements(shown.lines()
-                                .<StyledElement<?>>map(base -> text(base.value()))
-                                .toJavaArray(StyledElement[]::new))
-                        .selected(shown.selected());
-        list.onKeyEvent(event -> baseKeys(view, event))
-                .onMouseEvent(event -> ListKeys.wheel(
-                        event,
-                        shown.selected(),
-                        shown.size(),
-                        shown::highlightable,
-                        line -> dispatch.accept(view.at(line))));
-        String base = view.popup().base().value();
-        // In a panel, which the themes give the border of the fields; a list's own border is not themed.
-        return new FocusBordered(
-                panel(
-                                shown.cursor()
-                                        .filter()
-                                        .map(typed -> Messages.get("dialog.newPullRequest.baseFiltered", base, typed))
-                                        .getOrElse(() -> Messages.get("dialog.newPullRequest.base", base)),
-                                shown.lines().isEmpty() ? list : new FocusHighlighted(list))
-                        .length(BASE_ROWS + 2),
-                BASES_ID);
-    }
-
-    /**
-     * Escape clears the filter while there is one, and Enter goes on to the title; the other keys of every field
-     * come next, then those that edit the filter, then those that move the highlight. The filter shows in the border
-     * of the list, where there is no cursor to move, so it only takes what is typed at its end.
-     */
-    private EventResult baseKeys(Bases view, KeyEvent event) {
-        FilteredCursor<BranchName> shown = view.list();
-        if (event.code() == KeyCode.ESCAPE && shown.cursor().filter().isDefined()) {
-            dispatch.accept(view.filtered(Option.none()));
-            return EventResult.HANDLED;
-        }
-        if (event.code() == KeyCode.ENTER) {
-            // The title is next.
-            return EventResult.FOCUS_NEXT;
-        }
-        EventResult common = keys(event);
-        if (common.isHandled()) {
-            return common;
-        }
-        Option<String> edited = filtered(shown.cursor().filter().getOrElse(""), event);
-        if (edited.isDefined()) {
-            dispatch.accept(view.filtered(edited.filter(typed -> !typed.isEmpty())));
-            return EventResult.HANDLED;
-        }
-        Option<Integer> moved = ListKeys.move(event, shown.selected(), shown.size(), shown::highlightable);
-        moved.filter(line -> line != shown.selected()).forEach(line -> dispatch.accept(view.at(line)));
-        return moved.isDefined() ? EventResult.HANDLED : EventResult.UNHANDLED;
-    }
-
-    /**
-     * The filter {@code typed} after {@code event}, if it edits it: a character typed goes at its end, Backspace
-     * takes the last one off, and Ctrl+U clears it.
-     */
-    static Option<String> filtered(String typed, KeyEvent event) {
-        if (event.code() == KeyCode.BACKSPACE) {
-            return Option.of(
-                    typed.isEmpty() ? typed : typed.substring(0, typed.offsetByCodePoints(typed.length(), -1)));
-        }
-        if (event.hasCtrl() && event.isChar(CLEAR_KEY)) {
-            return Option.of("");
-        }
-        return Option.when(
-                event.code() == KeyCode.CHAR && !event.hasCtrl() && !event.hasAlt() && event.codePoint() >= ' ',
-                () -> typed + event.string());
-    }
-
-    /**
      * The draft box, ticked or not.
      */
-    static String box(boolean ticked) {
+    public static String box(boolean ticked) {
         return ticked ? "[x]" : "[ ]";
     }
 
@@ -272,40 +182,5 @@ public final class NewPullRequestDialog implements PopupView {
     private void confirm() {
         // A blank title keeps the popup open, see CreatePullRequestUpdate.
         dispatch.accept(new CreatePullRequestMsg.Confirmed());
-    }
-
-    /**
-     * The bases of {@code popup} as the list shows them, with the model's cursor in it. The base is the highlighted
-     * one, wherever the cursor says.
-     *
-     * @param list the bases that contain the filter
-     */
-    private record Bases(NewPullRequestPopup popup, FilteredCursor<BranchName> list) {
-
-        static Bases of(NewPullRequestPopup popup, ListCursor cursor) {
-            FilteredCursor<BranchName> list = FilteredCursor.of(
-                    filter -> popup.bases().filter(base -> ListFilter.matches(filter, base.value())),
-                    base -> true,
-                    cursor);
-            // While the filter hides the base, there is none to highlight.
-            return new Bases(popup, list.at(cursor.at(Math.max(0, list.lines().indexOf(popup.base())))));
-        }
-
-        /**
-         * The move to the base on {@code line}.
-         */
-        CreatePullRequestMsg.BaseMoved at(int line) {
-            return new CreatePullRequestMsg.BaseMoved(
-                    list.at(line), list.lines().asPartialFunction().lift().apply(line));
-        }
-
-        /**
-         * The move to {@code filter}: the base stays while it shows, else the first one shown is the base; while
-         * none shows, the base stays too, and comes back once the filter shows it again.
-         */
-        CreatePullRequestMsg.BaseMoved filtered(Option<String> filter) {
-            ListCursor after = list.refiltered(filter, Option.of(popup.base()));
-            return new CreatePullRequestMsg.BaseMoved(after, list.at(after).highlighted());
-        }
     }
 }
