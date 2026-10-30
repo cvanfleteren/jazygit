@@ -91,9 +91,18 @@ public final class LoadUpdate {
             case StashDetailLoaded(Sha sha, var options, DiffText changes) ->
                 Next.of(done.mapRepoView(repoView -> repoView.withStashDetail(
                         Preview.updated(repoView.stashDetail(), sha, d -> d.reload(changes)))));
-            case FileDiffLoaded(var files, var options, var diff) ->
+            // What the files looked like is kept, so that the diff is read again only once they change (ADR 58).
+            case FileDiffLoaded(var files, var options, var diff, var stamp) ->
                 Next.of(done.mapRepoView(repoView ->
-                        repoView.withFileDiff(Preview.updated(repoView.fileDiff(), files, d -> d.reload(diff)))));
+                                repoView.withFileDiff(Preview.updated(repoView.fileDiff(), files, d -> d.reload(diff))))
+                        .mapJobs(jobs -> jobs.withReadAt(stamp.fold(
+                                () -> jobs.readAt().remove(msg.cmd()),
+                                now -> jobs.readAt().put(msg.cmd(), now)))));
+            // Only the diff that is still shown, with the options now chosen, is read again.
+            case FileDiffChecked(var load, var stamp) ->
+                Update.shownDiff(done).contains(load)
+                        ? metadataChecked(done, List.of(Tuple.of((Cmd.Load) load, stamp)))
+                        : Next.of(done);
             case CommitFilesLoaded(var of, var files) ->
                 Next.of(done.mapRepoView(repoView -> repoView.withCommitFiles(repoView.commitFiles()
                         .map(view -> view.of().equals(of)
@@ -168,7 +177,7 @@ public final class LoadUpdate {
         // Commit loads are not deduplicated: one queued after HEAD moved must still run, even if
         // an earlier one is in progress.
         List<Cmd> cmds = headMoved ? List.of(new LoadCommits(AheadUpdate.ofHead(next))) : List.empty();
-        return Update.reloadDiff(next, cmds);
+        return Update.reloadDiff(next, cmds, headMoved);
     }
 
     /**
@@ -326,6 +335,8 @@ public final class LoadUpdate {
             case LoadFileDiff(var files, var options) ->
                 model.mapRepoView(repoView ->
                         repoView.withFileDiff(Preview.updated(repoView.fileDiff(), files, d -> d.failed(failure))));
+            // Looking at the files failed: the next status looks again.
+            case Cmd.CheckFileDiff _ -> model;
             case LoadStashDetail(Sha sha, var options) ->
                 model.mapRepoView(repoView ->
                         repoView.withStashDetail(Preview.updated(repoView.stashDetail(), sha, d -> d.failed(failure))));

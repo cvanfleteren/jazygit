@@ -24,8 +24,8 @@ import net.vanfleteren.jazygit.git.model.MetadataStamp;
  * @param lastFetch  when a remote was last fetched from, and the remotes that failed the last time
  * @param worktreeChangesRead when reading which worktrees have changes last finished, whatever came of it
  * @param readAt     for each load that {@link Cmd.CheckMetadata} guards, what the files it reads looked like when it
- *                   was last started; it is not started again until they change. A load that fails is forgotten,
- *                   so the next tick tries again
+ *                   was last started, and for the highlighted diff, when it was last read (ADR 58); it is not
+ *                   started again until they change. A load that fails is forgotten, so the next tick tries again
  * @param ghExecutableEntered the gh executable the user entered last, to be checked before it is used: none for the
  *                            one on the PATH. Checks can finish in another order than they were asked for; only the
  *                            check of this one decides

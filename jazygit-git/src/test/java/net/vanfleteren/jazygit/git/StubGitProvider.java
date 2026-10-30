@@ -32,6 +32,7 @@ import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.InProgressAction;
 import net.vanfleteren.jazygit.git.model.MergeMode;
+import net.vanfleteren.jazygit.git.model.MetadataStamp;
 import net.vanfleteren.jazygit.git.model.NewBranchStart;
 import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.PushMode;
@@ -93,6 +94,11 @@ public interface StubGitProvider extends GitInfoProvider {
     // No files to look at, so what the stub says is read every time.
     @Override
     default Option<GitMetadata> metadata() {
+        return Option.none();
+    }
+
+    @Override
+    default Option<MetadataStamp> diffStamp(List<FileEntry> files) {
         return Option.none();
     }
 

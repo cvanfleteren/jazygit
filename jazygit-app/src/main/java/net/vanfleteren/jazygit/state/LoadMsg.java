@@ -168,11 +168,35 @@ public sealed interface LoadMsg extends Msg {
         }
     }
 
-    record FileDiffLoaded(List<FileEntry> files, DiffOptions options, Diffs diff) implements LoadMsg {
+    /**
+     * The diff of {@code files}, with what the files it was read from looked like before; none when that cannot be
+     * told.
+     */
+    record FileDiffLoaded(List<FileEntry> files, DiffOptions options, Diffs diff, Option<MetadataStamp> stamp)
+            implements LoadMsg {
+
+        /**
+         * The diff of {@code files}, without telling what its files looked like: it is read again with every status.
+         */
+        public FileDiffLoaded(List<FileEntry> files, DiffOptions options, Diffs diff) {
+            this(files, options, diff, Option.none());
+        }
 
         @Override
         public Cmd.Load cmd() {
             return new Cmd.LoadFileDiff(files, options);
+        }
+    }
+
+    /**
+     * What the files the diff {@code load} is read from look like now; none when that cannot be told, and it is then
+     * to be read anyway.
+     */
+    record FileDiffChecked(Cmd.LoadFileDiff load, Option<MetadataStamp> stamp) implements LoadMsg {
+
+        @Override
+        public Cmd.Load cmd() {
+            return new Cmd.CheckFileDiff(load);
         }
     }
 

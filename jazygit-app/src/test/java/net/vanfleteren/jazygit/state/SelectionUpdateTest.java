@@ -439,10 +439,15 @@ class SelectionUpdateTest {
                         model, new LoadMsg.FileDiffLoaded(DIRTY.files(), DiffOptions.DEFAULT, new Diffs("", "+a")))
                 .model();
 
-        // The diff is read again once the status confirms that its files are still as they were.
+        // Once the status confirms that its files are still as they were, they are looked at; without telling what
+        // they looked like, the diff is read again.
+        Cmd.LoadFileDiff load = new Cmd.LoadFileDiff(DIRTY.files(), DiffOptions.DEFAULT);
         Model refreshed = Update.update(model, new Tick()).model();
         Next statusLoaded = Update.update(refreshed, new LoadMsg.StatusLoaded(DIRTY));
-        assertTrue(statusLoaded.cmds().contains(new Cmd.LoadFileDiff(DIRTY.files(), DiffOptions.DEFAULT)));
+        assertTrue(statusLoaded.cmds().contains(new Cmd.CheckFileDiff(load)));
+        assertTrue(Update.update(statusLoaded.model(), new LoadMsg.FileDiffChecked(load, Option.none()))
+                .cmds()
+                .contains(load));
 
         List<FileEntry> next = List.of(Fixtures.fileEntry("b.txt", ChangeType.UNTRACKED));
         Preview<List<FileEntry>, Diffs> loading = Update.update(model, new SelectionMsg.FilesSelected(next))
@@ -451,6 +456,49 @@ class SelectionUpdateTest {
                 .fileDiff()
                 .get();
         assertEquals(Option.of(new Preview<>(DIRTY.files(), new Loaded<>(new Diffs("", "+a")))), loading.previous());
+    }
+
+    @Test
+    void aDiffIsReadAgainOnlyOnceItsFilesChanged() {
+        Cmd.LoadFileDiff load = new Cmd.LoadFileDiff(DIRTY.files(), DiffOptions.DEFAULT);
+        MetadataStamp read = stamp("read");
+        Model dirty = Update.update(loaded(), new LoadMsg.StatusLoaded(DIRTY)).model();
+        Model model = Update.update(dirty, new SelectionMsg.FilesSelected(DIRTY.files()))
+                .model();
+        model = Update.update(
+                        model,
+                        new LoadMsg.FileDiffLoaded(
+                                DIRTY.files(), DiffOptions.DEFAULT, new Diffs("", "+a"), Option.of(read)))
+                .model();
+
+        assertEquals(
+                List.empty(),
+                Update.update(model, new LoadMsg.FileDiffChecked(load, Option.of(read)))
+                        .cmds());
+        assertEquals(
+                List.of(load),
+                Update.update(model, new LoadMsg.FileDiffChecked(load, Option.of(stamp("edited"))))
+                        .cmds());
+        // Once HEAD moved, what the staged changes are compared with moved too: the diff is read without looking.
+        Next moved = Update.update(
+                model,
+                new LoadMsg.StatusLoaded(
+                        new RepoStatus(Head.onBranch(new BranchName("main"), new Sha("bbbb")), DIRTY.files())));
+        assertTrue(moved.cmds().contains(load), moved.cmds().toString());
+    }
+
+    @Test
+    void aCheckOfADiffNoLongerShownReadsNothing() {
+        Cmd.LoadFileDiff load = new Cmd.LoadFileDiff(DIRTY.files(), DiffOptions.DEFAULT);
+
+        assertEquals(
+                List.empty(),
+                Update.update(loaded(), new LoadMsg.FileDiffChecked(load, Option.none()))
+                        .cmds());
+    }
+
+    private static MetadataStamp stamp(String file) {
+        return new MetadataStamp(List.of(new MetadataStamp.Entry(java.nio.file.Path.of(file), Option.none())));
     }
 
     @Test

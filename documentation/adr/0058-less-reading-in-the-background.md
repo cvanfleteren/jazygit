@@ -27,6 +27,13 @@ ADR 56 (`0056-fewer-git-processes-after-a-commit.md`) cut what a commit costs. T
 2. **A reftable repository stamps its tables for the worktrees.** The stamp of the worktrees holds the tables of the
    repository and those of each linked worktree; the stamp of the branches holds those of each linked worktree too.
    There a commit, which writes the tables of the branches, lists the worktrees again.
+3. **The highlighted diff is read again once its files changed, not with every status.** A file can change without
+   its status changing, so the diff was read again after every status: one to three git processes a second for as
+   long as a changed file was highlighted. `LoadFileDiff` now stamps what it reads from before it reads: the files on
+   both sides of each entry, and the index. After a status, `CheckFileDiff` stamps them again, without git, and the
+   diff is read again only when the two differ, or when the stamp tells nothing, as within 2s of a change (ADR 15).
+   A status that says HEAD moved reads the diff at once, as the staged changes are compared with HEAD, which neither
+   stamp holds.
 
 The other chains of loads stay as they are: the commits ahead of HEAD go by the HEAD of the status and the bases of
 the branches, read by loads of their own, and the log of the highlighted branch, the divergence and the operations

@@ -113,6 +113,11 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
+    public Option<MetadataStamp> diffStamp(List<FileEntry> files) {
+        return metadataAt.flatMap(at -> CliMetadata.diff(at, worktree, files, Instant.now()));
+    }
+
+    @Override
     public Either<ProcessError, List<Worktree>> worktrees() {
         return CliWorktree.list(worktree);
     }

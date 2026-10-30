@@ -13,6 +13,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.stream.Stream;
+import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.GitMetadata;
 import net.vanfleteren.jazygit.git.model.MetadataStamp;
 import net.vanfleteren.jazygit.git.model.MetadataStamp.Entry;
@@ -82,6 +83,20 @@ final class CliMetadata {
                 .appendAll(worktrees.flatMap(
                         worktree -> List.of(worktree.resolve("gitdir"), worktree.resolve("locked")))));
         return new GitMetadata(settled(branches, now), settled(stashes, now), settled(worktreeList, now));
+    }
+
+    /**
+     * The stamp of what the diff of {@code files} in the working tree {@code worktree} is read from, looked at
+     * {@code now}: the files on both sides of each, and the index. A file whose status stays the same can still
+     * change, so the status alone does not tell (ADR 58). HEAD is not among them: the status tells when it moves.
+     */
+    static Option<MetadataStamp> diff(Locations at, Path worktree, List<FileEntry> files, Instant now) {
+        return settled(
+                stamp(files.flatMap(file -> file.paths(true).appendAll(file.paths(false)))
+                        .distinct()
+                        .map(worktree::resolve)
+                        .append(at.gitDir().resolve("index"))),
+                now);
     }
 
     /**

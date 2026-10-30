@@ -42,6 +42,12 @@ public interface GitInfoProvider {
      */
     Option<GitMetadata> metadata();
 
+    /**
+     * A stamp of what the diff of {@code files} is read from: the files in the working tree and the index, taken
+     * without running git; none when that cannot be told, and then the diff is to be read every time (ADR 58).
+     */
+    Option<MetadataStamp> diffStamp(List<FileEntry> files);
+
     // Listing, renaming and deleting branches, as git branch does.
 
     /**

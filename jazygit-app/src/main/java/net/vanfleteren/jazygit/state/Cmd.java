@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.git.model.CommitQuery;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.GitMetadata;
+import net.vanfleteren.jazygit.git.model.MetadataStamp;
 import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.settings.Settings;
@@ -576,11 +577,28 @@ public interface Cmd {
             return Option.of(Slot.FILE_DIFF);
         }
 
+        /**
+         * Reads the diff, after a stamp of what it is read from: a change while it is read then shows in the next
+         * stamp, and the diff is read again (ADR 58).
+         */
         @Override
         public Msg run(Env env) {
+            Option<MetadataStamp> stamp = env.git().diffStamp(files);
             return env.git()
                     .diff(files, options)
-                    .fold(this::failedWith, diff -> new LoadMsg.FileDiffLoaded(files, options, diff));
+                    .fold(this::failedWith, diff -> new LoadMsg.FileDiffLoaded(files, options, diff, stamp));
+        }
+    }
+
+    /**
+     * Looks at the files the diff {@code load} is read from, so that it is read again only once they changed: that
+     * takes a git process or more, this none (ADR 58).
+     */
+    record CheckFileDiff(LoadFileDiff load) implements Load {
+
+        @Override
+        public Msg run(Env env) {
+            return new LoadMsg.FileDiffChecked(load, env.git().diffStamp(load.files()));
         }
     }
 }

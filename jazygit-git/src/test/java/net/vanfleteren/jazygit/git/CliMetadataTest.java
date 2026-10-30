@@ -3,12 +3,16 @@ package net.vanfleteren.jazygit.git;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
+import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import net.vanfleteren.jazygit.git.model.ChangeType;
+import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.GitMetadata;
+import net.vanfleteren.jazygit.git.model.MetadataStamp;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -108,6 +112,33 @@ class CliMetadataTest {
         assertNotEquals(before.branches(), after.branches());
         assertEquals(before.worktrees(), after.worktrees());
         assertEquals(before.stashes(), after.stashes());
+    }
+
+    @Test
+    void theStampOfADiffChangesWithItsFilesAndTheIndexOnly() throws Exception {
+        Files.writeString(main.resolve("a.txt"), "changed");
+        Files.writeString(main.resolve("b.txt"), "other");
+        List<FileEntry> files = List.of(new FileEntry("a.txt", ChangeType.MODIFIED, false, true));
+        Option<MetadataStamp> before = diffStamp(files);
+
+        Files.writeString(main.resolve("b.txt"), "other, edited");
+        Option<MetadataStamp> otherEdited = diffStamp(files);
+        Files.writeString(main.resolve("a.txt"), "changed again");
+        Option<MetadataStamp> edited = diffStamp(files);
+        git(main, "add", "a.txt");
+
+        assertTrue(before.isDefined());
+        assertEquals(before, otherEdited);
+        assertNotEquals(otherEdited, edited);
+        assertNotEquals(edited, diffStamp(files));
+    }
+
+    private Option<MetadataStamp> diffStamp(List<FileEntry> files) {
+        return CliMetadata.diff(
+                CliMetadata.locate(main).get(),
+                main,
+                files,
+                Instant.now().plus(CliMetadata.SETTLED).plusSeconds(1));
     }
 
     @Test
