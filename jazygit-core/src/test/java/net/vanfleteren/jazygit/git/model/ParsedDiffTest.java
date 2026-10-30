@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.git.model;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.git.model.syntax.Token;
 import org.junit.jupiter.api.Test;
 
 class ParsedDiffTest {
@@ -21,6 +22,16 @@ class ParsedDiffTest {
                  same
                 -count = 1
                 +count = 2
+                """,
+                // Cut off in a block comment of a file whose code is lexed.
+                """
+                diff --git a/A.java b/A.java
+                --- a/A.java
+                +++ b/A.java
+                @@ -1,2 +1,2 @@
+                 int same;
+                -/* old
+                +/* new
                 """,
                 // Cut off after removed lines, before the added ones they would be paired with.
                 """
@@ -59,6 +70,32 @@ class ParsedDiffTest {
 
         diffs.forEach(diff -> assertEquals(
                 ParsedDiff.of(diff + NOTE + "\n"), ParsedDiff.of(diff).withNote(NOTE), diff));
+    }
+
+    @Test
+    void theCodeOfEachFileIsLexedInItsLanguage() {
+        ParsedDiff diff = ParsedDiff.of("""
+                diff --git a/A.java b/A.java
+                --- a/A.java
+                +++ b/A.java
+                @@ -1 +1 @@
+                -int a;
+                +long a;
+                diff --git a/notes.txt b/notes.txt
+                --- a/notes.txt
+                +++ b/notes.txt
+                @@ -1 +1 @@
+                -int a;
+                +long a;
+                """);
+
+        assertEquals(
+                List.of(
+                        List.of(
+                                List.of(new Token(0, 3, Token.Kind.KEYWORD)),
+                                List.of(new Token(0, 4, Token.Kind.KEYWORD))),
+                        List.of(List.<Token>empty(), List.<Token>empty())),
+                diff.tokens());
     }
 
     @Test
