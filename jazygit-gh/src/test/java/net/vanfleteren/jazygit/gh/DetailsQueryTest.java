@@ -49,6 +49,7 @@ class DetailsQueryTest {
             Tuple.of("headRefName", "\"fix\""),
             Tuple.of("baseRefName", "\"main\""),
             Tuple.of("headRefOid", "\"\""),
+            Tuple.of("baseRefOid", "\"\""),
             Tuple.of("stackEntry", "null"),
             Tuple.of("stack", "null"),
             Tuple.of("createdAt", JANUARY),
@@ -69,7 +70,8 @@ class DetailsQueryTest {
      * What GitHub answers for a pull request of {@code fields}, of cvanfleteren/jazygit.
      */
     private static String answer(LinkedHashMap<String, String> fields) {
-        return "{ \"data\": { \"repository\": { \"nameWithOwner\": \"cvanfleteren/jazygit\", \"pullRequest\": "
+        return "{ \"data\": { \"repository\": { \"nameWithOwner\": \"cvanfleteren/jazygit\", "
+                + "\"url\": \"https://github.com/cvanfleteren/jazygit\", \"pullRequest\": "
                 + fields.map(field -> "\"" + field._1() + "\": " + field._2()).mkString("{ ", ", ", " }")
                 + " } } }";
     }
@@ -126,7 +128,8 @@ class DetailsQueryTest {
                                 List.of("ui")),
                         List.of(new Check("build", Checks.PENDING), new Check("ci/lint", Checks.PASSING)),
                         Option.none(),
-                        "cvanfleteren/jazygit")),
+                        "cvanfleteren/jazygit",
+                        "https://github.com/cvanfleteren/jazygit")),
                 read(MERGED.put("number", "42")
                         .put("title", "\"Add\\trename\"")
                         .put("author", "{ \"login\": \"cvf\" }")
@@ -168,7 +171,8 @@ class DetailsQueryTest {
                         new Conversation(Review.NONE, List.empty(), 0, ReviewThreads.NONE, List.empty()),
                         List.empty(),
                         Option.none(),
-                        "cvanfleteren/jazygit")),
+                        "cvanfleteren/jazygit",
+                        "https://github.com/cvanfleteren/jazygit")),
                 read(MERGED));
     }
 
@@ -254,6 +258,14 @@ class DetailsQueryTest {
         assertEquals(Option.of(stack), details.stack());
         assertEquals(Option.of(stack), details.listed().get().stack());
         assertEquals(0, details.stack().get().below());
+    }
+
+    @Test
+    void theCommitOfTheBaseIsReadToDiffAgainst() {
+        assertEquals(
+                Option.of(new GhCommit("def456")),
+                read(MERGED.put("baseRefOid", "\"def456\"")).get().branches().baseCommit());
+        assertEquals(Option.none(), read(MERGED).get().branches().baseCommit());
     }
 
     @Test

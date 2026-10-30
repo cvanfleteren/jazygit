@@ -52,8 +52,8 @@ final class DetailsQuery {
      */
     static final String QUERY = """
             query($owner: String!, $name: String!, $number: Int!) { repository(owner: $owner, name: $name) { \
-            nameWithOwner pullRequest(number: $number) { number title author { login } state isDraft headRefName \
-            baseRefName headRefOid %s createdAt additions deletions changedFiles mergeable reviewDecision \
+            nameWithOwner url pullRequest(number: $number) { number title author { login } state isDraft headRefName \
+            baseRefName headRefOid baseRefOid %s createdAt additions deletions changedFiles mergeable reviewDecision \
             comments { totalCount } \
             labels(first: 100) { nodes { name } } latestReviews(first: 100) { nodes { author { login } state } } \
             reviewRequests(first: 100) { nodes { requestedReviewer { __typename ... on User { login } \
@@ -71,11 +71,12 @@ final class DetailsQuery {
             Status::new);
 
     // Not yet known to be behind its base, which another query asks.
-    static final Decoder<Branches> BRANCHES = map3(
+    static final Decoder<Branches> BRANCHES = map4(
             field("headRefName", string()),
             field("baseRefName", string()),
             field("headRefOid", nullable(string())).map(oid -> oid.flatMap(GhCommit::parse)),
-            (head, base, commit) -> new Branches(head, base, commit, Option.none()));
+            field("baseRefOid", nullable(string())).map(oid -> oid.flatMap(GhCommit::parse)),
+            (head, base, commit, baseCommit) -> new Branches(head, base, commit, Option.none(), baseCommit));
 
     // When it was last force pushed; none for a node of another type.
     static final Decoder<Option<Instant>> FORCE_PUSH = byField(
@@ -183,10 +184,11 @@ final class DetailsQuery {
 
     static final Decoder<PullRequestDetails> DECODER = at(
             "data.repository",
-            map2(
+            map3(
                     field("nameWithOwner", string()),
                     field("pullRequest", PULL_REQUEST),
-                    (repository, read) -> new PullRequestDetails(
+                    field("url", string()),
+                    (repository, read, url) -> new PullRequestDetails(
                             read._1()._1(),
                             read._1()._2(),
                             read._1()._3(),
@@ -197,7 +199,8 @@ final class DetailsQuery {
                             read._1()._8(),
                             read._2(),
                             read._3(),
-                            repository)));
+                            repository,
+                            url)));
 
     private DetailsQuery() {}
 

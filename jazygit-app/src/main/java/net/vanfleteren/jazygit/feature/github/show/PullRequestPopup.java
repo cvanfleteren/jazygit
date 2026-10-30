@@ -9,6 +9,8 @@ import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.gh.timing.CheckTimings;
 import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.PullRequestCommits;
+import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Reading;
 
@@ -176,6 +178,24 @@ public record PullRequestPopup(
      */
     public Option<GhCommit> head() {
         return readDetails().flatMap(read -> read.branches().headCommit());
+    }
+
+    /**
+     * The commits its changes are diffed between, to list the files it changes (ADR 55): only once it is read and
+     * known not to be merged, a draft or a closed one too, at commits that are known. A merged one is not diffed:
+     * {@code base...head} no longer shows what GitHub kept of it.
+     */
+    public Option<PullRequestCommits> commits() {
+        return readDetails()
+                .filter(read -> read.status().state() != PullRequestDetails.State.MERGED)
+                .flatMap(read -> read.branches()
+                        .baseCommit()
+                        .flatMap(base -> Sha.parse(base.oid()))
+                        .flatMap(base -> read.branches()
+                                .headCommit()
+                                .flatMap(head -> Sha.parse(head.oid()))
+                                .map(head -> new PullRequestCommits(
+                                        read.number(), read.repository(), read.host(), base, head))));
     }
 
     /**

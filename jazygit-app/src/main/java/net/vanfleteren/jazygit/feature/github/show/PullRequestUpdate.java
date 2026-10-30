@@ -6,6 +6,8 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import net.vanfleteren.jazygit.feature.diff.CommitFilesMsg;
+import net.vanfleteren.jazygit.feature.diff.CommitFilesUpdate;
 import net.vanfleteren.jazygit.feature.fetch.FetchUpdate;
 import net.vanfleteren.jazygit.feature.github.browse.BrowsePullRequestCmd;
 import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestUpdate;
@@ -15,6 +17,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.prs.PrOverviewUpdate;
@@ -68,6 +71,16 @@ public final class PullRequestUpdate {
                                 model.clearError(),
                                 new OpenPullRequest(
                                         popup.branch(), popup.pullRequest().number())))
+                        .getOrElse(() -> Next.of(model));
+            // The dialog closes, and the files show in the files pane of the repository screen, which the focus goes
+            // to; Escape there gives it to the branches pane (ADR 55).
+            case PullRequestMsg.FilesChosen() ->
+                model.popup(PullRequestPopup.class)
+                        .flatMap(PullRequestPopup::commits)
+                        .map(commits -> CommitFilesUpdate.update(
+                                model.withoutPopup(PullRequestPopup.class).withScreen(Screen.REPOSITORY),
+                                new CommitFilesMsg.Opened(
+                                        new CommitFilesView.Changes.OfPullRequest(commits), Scopes.BRANCHES.id())))
                         .getOrElse(() -> Next.of(model));
             case PullRequestMsg.MergeChosen(MergeMethod method) ->
                 Update.confirm(

@@ -47,6 +47,11 @@ public sealed interface PullRequestMsg extends Msg {
     record OpenConfirmed() implements PullRequestMsg {}
 
     /**
+     * The user asked for the files the pull request that is shown changes, and what it changes in them (ADR 55).
+     */
+    record FilesChosen() implements PullRequestMsg {}
+
+    /**
      * The user asked to merge the pull request that is shown, as {@code method} says.
      */
     record MergeChosen(MergeMethod method) implements PullRequestMsg {}

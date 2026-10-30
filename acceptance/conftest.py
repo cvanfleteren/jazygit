@@ -1,7 +1,9 @@
 import fcntl
 import hashlib
+import json
 import os
 import shutil
+import sys
 from pathlib import Path
 
 import pytest
@@ -141,6 +143,43 @@ def clone(tmp_path, env, origin):
         return git
 
     return make
+
+
+class FakeGh:
+    """gh as the app finds it on the PATH: fake_gh.py, answering what it is told to (see there)."""
+
+    def __init__(self, path: Path, env: dict):
+        bin_dir = path / "bin"
+        bin_dir.mkdir()
+        self.answers_file = path / "answers.json"
+        self.log_file = path / "calls.log"
+        self.answers_file.write_text("[]")
+        self.log_file.write_text("")
+        gh = bin_dir / "gh"
+        gh.write_text(f"#!/bin/sh\nexec {sys.executable} {ROOT / 'acceptance' / 'fake_gh.py'} \"$@\"\n")
+        gh.chmod(0o755)
+        env["PATH"] = f"{bin_dir}{os.pathsep}{env.get('PATH', '')}"
+        env["FAKE_GH_ANSWERS"] = str(self.answers_file)
+        env["FAKE_GH_LOG"] = str(self.log_file)
+
+    def answer(self, *pairs):
+        """Answers each call that contains the text of a pair with its answer, a string or what json makes of it;
+        the pairs given before go after these."""
+        given = json.loads(self.answers_file.read_text())
+        added = [[text, answer if isinstance(answer, str) else json.dumps(answer)] for text, answer in pairs]
+        self.answers_file.write_text(json.dumps(added + given))
+
+    def calls(self) -> list:
+        """The calls so far, each the list of its arguments."""
+        return [json.loads(line) for line in self.log_file.read_text().splitlines() if line]
+
+
+@pytest.fixture
+def gh(tmp_path, env) -> FakeGh:
+    """A fake gh on the PATH of the app; ask for it before starting the app."""
+    path = tmp_path / "gh"
+    path.mkdir()
+    return FakeGh(path, env)
 
 
 @pytest.fixture

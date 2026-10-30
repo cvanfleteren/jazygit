@@ -135,6 +135,17 @@ test fetches itself what it wants the app to know of. Before each operation the 
 branches pane shows each branch's commits to push (↑) and to pull (↓) as git counts them: the app decides on
 them, such as whether a push must be forced.
 
+### GitHub
+
+Take the `gh` fixture, before starting the app, for a test that needs GitHub: it puts a fake `gh` (`fake_gh.py`) on
+the app's `PATH`, which answers a call that contains a given text with a given answer, and fails any other call as gh
+does outside a GitHub repository. The answer is a string, or what `json.dumps` makes of it:
+
+```python
+gh.answer(("pullRequests(states: OPEN", [{"data": ...}]))   # the open pull requests of the repository
+gh.calls()                                                  # each call so far, as the list of its arguments
+```
+
 ### Conflicts
 
 An operation that stops on conflicts returns once the app shows it stopped: the status line names what is in

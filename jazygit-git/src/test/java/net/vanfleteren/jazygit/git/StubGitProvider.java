@@ -33,6 +33,7 @@ import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.InProgressAction;
 import net.vanfleteren.jazygit.git.model.MergeMode;
 import net.vanfleteren.jazygit.git.model.NewBranchStart;
+import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.RemoteName;
@@ -269,6 +270,17 @@ public interface StubGitProvider extends GitInfoProvider {
 
     @Override
     default Either<ProcessError, DiffText> commitFileChanges(Sha sha, List<CommitFile> files, DiffOptions options) {
+        return Either.right(DiffText.of(""));
+    }
+
+    @Override
+    default Either<ProcessError, List<CommitFile>> pullRequestFiles(PullRequestCommits commits) {
+        return Either.right(List.empty());
+    }
+
+    @Override
+    default Either<ProcessError, DiffText> pullRequestFileChanges(
+            PullRequestCommits commits, List<CommitFile> files, DiffOptions options) {
         return Either.right(DiffText.of(""));
     }
 

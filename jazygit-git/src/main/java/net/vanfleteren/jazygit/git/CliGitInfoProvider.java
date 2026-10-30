@@ -490,6 +490,17 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
+    public Either<ProcessError, List<CommitFile>> pullRequestFiles(PullRequestCommits commits) {
+        return CliPullRequest.files(worktree, commits, credentials.get());
+    }
+
+    @Override
+    public Either<ProcessError, DiffText> pullRequestFileChanges(
+            PullRequestCommits commits, List<CommitFile> files, DiffOptions options) {
+        return CliPullRequest.fileChanges(worktree, commits, files, options);
+    }
+
+    @Override
     public Either<GitError, Diffs> diff(List<FileEntry> files, DiffOptions options) {
         return CliDiff.diff(worktree, files, options);
     }

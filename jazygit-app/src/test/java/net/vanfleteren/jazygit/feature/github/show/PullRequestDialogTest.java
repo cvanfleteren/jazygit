@@ -710,6 +710,29 @@ class PullRequestDialogTest {
     }
 
     @Test
+    void theFilesChangedAreListedForAnOpenPullRequestAtCommitsThatAreKnown() throws Exception {
+        PullRequestDetails known = READY.withBranches(new Branches(
+                "support_rename",
+                "main",
+                GhCommit.parse("a".repeat(40)),
+                Option.none(),
+                GhCommit.parse("b".repeat(40))));
+        PullRequestPopup loading = PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0);
+        for (PullRequestPopup popup :
+                List.of(loading, loading.with(Either.right(READY), 0), loading.with(Either.right(known), 0))) {
+            try (ToolkitTestRunner runner = start(TestModels.loaded().openPopup(popup))) {
+                SettledPilot.of(runner).press('f');
+                SettledPilot.of(runner).pause();
+            }
+        }
+
+        assertEquals(java.util.List.of(new PullRequestMsg.FilesChosen()), dispatched);
+        assertTrue(
+                screen(loading.with(Either.right(known), 0)).contains("(f) Files changed"),
+                screen(loading.with(Either.right(known), 0)));
+    }
+
+    @Test
     void aMergedOrClosedPullRequestIsNeitherChangedMergedNorClosed() throws Exception {
         for (State state : List.of(State.MERGED, State.CLOSED)) {
             PullRequestPopup popup = PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
