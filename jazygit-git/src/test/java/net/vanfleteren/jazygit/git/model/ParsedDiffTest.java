@@ -4,6 +4,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.git.model.ParsedDiff.ParsedFile;
+import net.vanfleteren.jazygit.git.model.ParsedDiff.ParsedLine;
+import net.vanfleteren.jazygit.git.model.UnifiedDiff.Hunk;
 import net.vanfleteren.jazygit.syntax.Token;
 import org.junit.jupiter.api.Test;
 
@@ -92,11 +95,13 @@ class ParsedDiffTest {
 
         diffs.forEach(diff -> assertEquals(
                 ParsedDiff.of(diff + NOTE + "\n"), ParsedDiff.of(diff).withNote(NOTE), diff));
-        // Drawing a diff takes the words and the tokens of a line together.
+        // Each part of the tree wraps the part of the diff it is in: drawing takes a line with its words and tokens.
         diffs.flatMap(diff -> List.of(ParsedDiff.of(diff), ParsedDiff.of(diff).withNote(NOTE)))
                 .forEach(parsed -> assertEquals(
-                        parsed.words().map(List::size),
-                        parsed.tokens().map(List::size),
+                        parsed.diff().files().map(file -> file.hunks().map(Hunk::lines)),
+                        parsed.files()
+                                .map(file ->
+                                        file.hunks().map(hunk -> hunk.lines().map(ParsedLine::line))),
                         parsed.diff().toString()));
     }
 
@@ -123,7 +128,7 @@ class ParsedDiffTest {
                                 Option.of(List.of(new Token(0, 3, Token.Kind.KEYWORD))),
                                 Option.of(List.of(new Token(0, 4, Token.Kind.KEYWORD)))),
                         List.of(Option.<List<Token>>none(), Option.<List<Token>>none())),
-                diff.tokens());
+                diff.files().flatMap(ParsedFile::hunks).map(hunk -> hunk.lines().map(ParsedLine::tokens)));
     }
 
     @Test

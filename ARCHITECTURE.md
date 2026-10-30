@@ -365,8 +365,9 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
   unmerged by a conflict still shows as a combined diff (`diff --cc`) in the working tree: `UnifiedDiff` makes it a
   `CONFLICTED` file, whose lines are kept as git printed them. The staged and the unstaged areas are each a
   `DiffText` of their own, so each is parsed and its words compared on its own.
-- **The rich view** is drawn by `ui.RichDiff` from a `ParsedDiff`: `UnifiedDiff`, the diff parsed into files, hunks
-  and numbered lines, and `WordDiff`, which pairs the removed and added lines of a block and finds the words that
+- **The rich view** is drawn by `ui.RichDiff` from a `ParsedDiff`, one tree of files, hunks and lines, each line with
+  its words and its tokens (ADR 56): `UnifiedDiff`, the diff parsed into files, hunks and numbered lines, which
+  `ParsedDiff.diff()` gives back, and `WordDiff`, which pairs the removed and added lines of a block and finds the words that
   changed in a pair, with the whitespace between two changed words highlighted with them (ADR 54). All are pure, in `git.model`. A `DiffText` is parsed where it is made, on the thread that read it
   from git (ADR 50), so the render thread only styles it; the line the content panel adds after a diff, that it is
   truncated or that only whitespace changed, is added as a note (`ParsedDiff.withNote`). The content panel styles a
@@ -382,8 +383,8 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
   `Language` it knows by its name, its extension or its shebang, with `syntax.Lexer` of `jazygit-syntax`; a `Grammar`
   says what a language's tokens look like. A hunk is lexed as its old and its new text, each from the start of the
   hunk on; a line longer than `Lexer.MAX_LINE` (2 000 `char`s) is not, and the line after it starts outside of
-  everything. `ParsedDiff.tokens`
-  holds them in the shape of its words, found where the diff is read, or none for a line that was not lexed.
+  everything. Each `ParsedLine`
+  holds them beside its words, found where the diff is read, or none for a line that was not lexed.
   `RichDiff` cuts a line where a word or a token starts or ends, in one pass: a changed line keeps the background of
   its class and takes the colour of the `syntax-*` class of a token, and of `syntax-text` outside one; a context line
   takes only the colours of its tokens. A line that was not lexed, a changed line whose class has no background (the

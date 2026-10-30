@@ -132,3 +132,5 @@ tell from the hunk alone.
 - A line of more than 2 000 `char`s is not coloured.
 - Reading a diff takes a little longer, also in the plain view: each line is scanned once more.
 - A theme has four more classes to keep.
+
+Amended by ADR 56: a `ParsedDiff` is one tree of files, hunks and lines, each line with its tokens.
