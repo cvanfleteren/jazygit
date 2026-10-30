@@ -111,15 +111,24 @@ def class_archive(java, jar, tmp_path_factory) -> list:
             repo.commit("Initial commit", **{"README.md": "# Archive\n"})
             app = App([java, f"-XX:ArchiveClassesAtExit={made}", *JVM_OPTIONS, "-jar", str(jar), str(repo.path)],
                       repo.path, env)
+            written = False
             try:
                 Jazygit(app, repo).caught_up()
                 app.press("q")
                 eventually(lambda: app.pump() or app.exited, "jazygit to quit and write the class data archive")
+                written = True
+            except AssertionError as e:
+                # The archive only makes the apps start sooner: one the JVM did not get to write, as when it started
+                # too slowly on a busy runner, fails no test. The apps run without it, and a test of a slow start
+                # still fails on its own.
+                print(f"no class data archive: {e}", file=sys.stderr)
             finally:
                 app.close()
             # A JDK without an archive of its own (or run with -Xshare:off) writes none, and runs as it is.
-            if made.exists():
+            if written and made.exists():
                 made.replace(archive)
+            else:
+                made.unlink(missing_ok=True)
     if not archive.exists():
         return []
     # The JVM tells on stdout, so on the app's screen, where an option differs from the JDK's own archive.
