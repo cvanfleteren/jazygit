@@ -35,8 +35,11 @@ internal, and a code block or a table is laid out as a widget, not as lines.
   `gh pr diff`, drawn plain, without remarks (`wanted.md`).
 - `f`, **Files changed** as GitHub names it, in the pull request dialog opens it: from a branch, or from the pull
   requests screen for a pull request of this repository, the only ones the dialog shows. It is there for an open pull
-  request, a draft too, once its details are read. Not: for a merged or closed one, whose base took its head in, so
-  that `base...head` is empty: GitHub keeps the diff as it was merged, which takes another commit to read for each
+  request, a draft too, and for one closed without being merged, whose diff is what it was while it was open, once
+  its details are read. Not: for a merged one, whose diff GitHub keeps as it was merged, while `base...head` no
+  longer shows it: after a merge commit, the base took the head in and it is empty; after a squash or a rebase, the
+  merge base is still where the head left the base, so it shows the changes of the pull request mixed with what the
+  base got since, and `baseRefOid` no longer moves. Reading the diff as it was merged takes another commit for each
   way of merging (`wanted.md`).
 - It works as `F` on a commit (ADR 44): the files pane lists the files the pull request changes as a tree, titled
   `Files of #123`, and the content panel shows the diff of the highlighted file or directory, titled
@@ -52,8 +55,11 @@ internal, and a code block or a table is laid out as a widget, not as lines.
   `git diff -M <base>...<head> -- <paths>`, with `CliDiff.PREFIXES` and the diff options (Ctrl+W), parsed where it is
   read (ADR 50).
 - When either commit is not in the repository, it is fetched first, without asking:
-  `git fetch --no-write-fetch-head <remote> refs/pull/<n>/head refs/heads/<base>`. GitHub keeps `refs/pull/<n>/head`
-  in the base repository, also for a pull request from a fork. It writes no ref, not even `FETCH_HEAD`, so it needs no
+  `git fetch --no-write-fetch-head --refmap= <remote> refs/pull/<n>/head <baseRefOid>`. GitHub keeps
+  `refs/pull/<n>/head` in the base repository, also for a pull request from a fork, and serves a commit it has by its
+  sha. The base is fetched by its sha, not as `refs/heads/<base>`: the branch may have moved on since the details were
+  read, and git would update `refs/remotes/<remote>/<base>` through the remote's fetch refspec. `--refmap=` leaves no
+  fetch refspec to apply, so it writes no ref, not even `FETCH_HEAD` nor a remote-tracking branch, and it needs no
   guard of the remote refs (ADR 27). The remote is the one whose URL names the repository of the pull request; when
   none does, nothing is fetched, and the read fails as git says. It runs in the background, as it can take the
   network's time, while the files pane says it is loading.
@@ -71,11 +77,15 @@ internal, and a code block or a table is laid out as a widget, not as lines.
 - They are read when the tree opens, and again with `R` in the tree or its diff. When the head or the base commit
   changed, the files and the diff are read again too, at the new commits. Not: read every so often, which costs a
   GitHub request each time for what changes seldom.
+- When `R` finds the pull request merged or closed, the tree stays open at the commits it last read, its remarks are
+  read again, and its title says so: `Files of #123 · merged`. Not: closing it, as a dropped stash does (ADR 44): a
+  stash's name then names another stash, while the number of a pull request still names it.
 
 ### Placing them
 
 - A thread on a line goes after the line with its number on its side: `RIGHT` the number in the new file, `LEFT` in
-  the old one, in the file with its path. One on several lines (`startLine` to `line`) goes after its last line. A
+  the old one, in the file with its path as GitHub gives it: the new path of a renamed file, on either side, and the
+  old path of a deleted one. A file matches on its path or on the path it was renamed from. One on several lines (`startLine` to `line`) goes after its last line. A
   thread about a whole file goes under the bar of the file.
 - A thread that cannot be placed goes in a list at the end of its file, dimmed, each saying the line it was made on:
   an outdated one, one on a line the diff does not show, as its file is cut off after `CliDiff.MAX_LINES` lines, or as
@@ -122,10 +132,11 @@ internal, and a code block or a table is laid out as a widget, not as lines.
 
 ## Consequences
 
-- The remarks of a review can be read next to their lines, without the browser, for an open pull request of the
-  repository.
+- The remarks of a review can be read next to their lines, without the browser, for a pull request of the repository
+  that is not merged.
 - Opening the tree can fetch: the commits of a pull request that were not fetched yet are fetched, without a ref.
 - Opening it takes two more reads: the review threads from GitHub, and the files from git.
 - A remark on a line that git's diff shows otherwise than GitHub's, as its hunks were cut elsewhere, is listed at the
-  end of its file.
+  end of its file. So is a `LEFT` remark on a file git pairs with another file than GitHub does, when their rename
+  detection differs: it has GitHub's new path, which git's diff does not have.
 - The preview of the pull requests screen keeps its plain diff without remarks.
