@@ -14,26 +14,31 @@ Rendering never talks to git, and update functions never do IO.
 
 ## Modules
 
-The Maven build has four modules under the parent `pom.xml`, and a fifth with `-Pbench`:
+The Maven build has seven modules under the parent `pom.xml`, and an eighth with `-Pbench`. The core is
+`jazygit-process`, `jazygit-git` and `jazygit-gh`:
 
 | Module | Holds | Depends on |
 |---|---|---|
 | `jazygit-json` | `json`: JSON as plain values (`Json`), and the decoders that turn it into records (`Decoder`), ADR 42. | vavr, Parsson's streaming parser |
 | `jazygit-syntax` | `syntax`: the scanner that finds the keywords, strings, comments and numbers of a line of code (`Lexer`, `Language`, `Token`), ADR 53. | vavr |
-| `jazygit-core` | `process`, `git`, `git.model`, `gh`, `gh.model`: running git and gh, and what they report as values. | `jazygit-json`, `jazygit-syntax`, vavr, zt-exec |
-| `jazygit-app` | Everything else: `JazygitApp`, `cli`, `state`, `feature.*`, `ui`, `keys`, `settings`, `i18n`, and all resources. Builds the fat jar and the native image. | `jazygit-core`, TamboUI, picocli, night-config |
-| `jazygit-benchmarks` | JMH benchmarks of pure parts of the core and the app: `WordDiffBenchmark` times parsing a diff and comparing the words of its changed lines, for the rich view (ADR 44); `RichDiffBenchmark` what reading a diff costs and what drawing it costs the render thread (ADR 50). Only built with `-Pbench`, so no part of `verify` or CI. | `jazygit-core`, `jazygit-app`, JMH |
+| `jazygit-process` | `process`: running a program, and what it did as a value (`Exec`, `ExecutedCommand`). | vavr, zt-exec |
+| `jazygit-git` | `git`, `git.model`: running git, and what it reports as values. | `jazygit-process`, `jazygit-syntax`, vavr |
+| `jazygit-gh` | `gh`, `gh.model`, `gh.timing`: running gh, and what GitHub reports as values. | `jazygit-process`, `jazygit-json`, vavr |
+| `jazygit-app` | Everything else: `JazygitApp`, `cli`, `state`, `feature.*`, `ui`, `keys`, `settings`, `i18n`, and all resources. Builds the fat jar and the native image. | `jazygit-git`, `jazygit-gh`, TamboUI, picocli, night-config |
+| `jazygit-test-support` | What the architecture tests share: `Values`, and the rules of the core (`CoreRules`, `ModelRules`). Only ever a test dependency. | ArchUnit, vavr |
+| `jazygit-benchmarks` | JMH benchmarks of pure parts of the core and the app: `WordDiffBenchmark` times parsing a diff and comparing the words of its changed lines, for the rich view (ADR 44); `RichDiffBenchmark` what reading a diff costs and what drawing it costs the render thread (ADR 50). Only built with `-Pbench`, so no part of `verify` or CI. | `jazygit-git`, `jazygit-app`, JMH |
 
 The packages keep their names (`net.vanfleteren.jazygit.git`, ...), whichever module they are in. The core
-cannot see the application, TamboUI, picocli or night-config, so the compiler stops it from depending on them.
-The rules inside the core (git and gh know nothing of each other, the models are pure) are in
-`CoreArchitectureTest`. The core's test-jar shares `StubGitProvider`, `StubGitHub` and `SampleData` with the
-app's tests. `jazygit-json` knows nothing of jazygit; only its `JsonReader` uses Parsson, and the core and the app
-do not use it at all (`JsonArchitectureTest`, `CoreArchitectureTest`, `ArchitectureTest`). `jazygit-syntax` knows
-nothing of jazygit either, not even of a diff: it lexes a line from where the line before it left the scanner, and
-uses only the JDK and vavr (`SyntaxArchitectureTest`).
+cannot see the application, TamboUI, picocli or night-config, and git and gh cannot see each other, so the compiler
+stops any such dependency. The rules inside the core (the models are pure, failures are values) are in
+`CoreRules` and `ModelRules`, which `ProcessArchitectureTest`, `GitArchitectureTest` and `GhArchitectureTest` take
+in. The test-jars of git and gh share `StubGitProvider`, `SampleData` and `StubGitHub` with the app's tests.
+`jazygit-json` knows nothing of jazygit; only its `JsonReader` uses Parsson, and the core and the app do not use it
+at all (`JsonArchitectureTest`, `CoreRules`, `ArchitectureTest`). `jazygit-syntax` knows nothing of jazygit either,
+not even of a diff: it lexes a line from where the line before it left the scanner, and uses only the JDK and vavr
+(`SyntaxArchitectureTest`).
 
-`mvn verify` at the root builds and tests all four. `./run.sh` runs the fat jar from `jazygit-app/target`, and
+`mvn verify` at the root builds and tests all seven. `./run.sh` runs the fat jar from `jazygit-app/target`, and
 `mvn -Pnative package` builds `jazygit-app/target/jazygit`.
 
 ## Packages
@@ -85,7 +90,7 @@ graph TD
 ```
 
 The arrows are the dependencies allowed. Inside `jazygit-app`, `ArchitectureTest` fails on any other;
-inside `jazygit-core`, `CoreArchitectureTest` does; and the core cannot reach the app's packages at all.
+inside the core, the compiler does: it cannot reach the app's packages at all, nor git those of gh.
 
 - **The parts have no cycles**, with one exception: `Keymap.standard()` lists the keys of the features, which
   declare them with the types of `keys` (dotted).
@@ -93,7 +98,7 @@ inside `jazygit-core`, `CoreArchitectureTest` does; and the core cannot reach th
   - The dialogs of a feature use the widgets of `ui`.
   - `ui` uses `git` and `gh` only for the errors, which `ErrorText` describes.
   - Nothing in `ui`, `keys` or a dialog runs git or gh.
-- **`git` and `gh` know nothing of each other**, nor of anything above them: they live in `jazygit-core`.
+- **`git` and `gh` know nothing of each other**, nor of anything above them: they live in `jazygit-git` and `jazygit-gh`.
 - **Only views use `i18n`.** `state` does not.
 - **`settings` knows nothing of the application**, and is the only part that reads or writes TOML.
 

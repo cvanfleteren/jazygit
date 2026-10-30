@@ -12,12 +12,16 @@
     <name>jazygit-parent</name>
     <description>A lazygit-style terminal UI for Git, built with TamboUI</description>
 
-    <!-- json reads JSON as values; syntax lexes a line of code; core runs git and gh and knows nothing of the
-         application; app is everything on top of it. -->
+    <!-- json reads JSON as values; syntax lexes a line of code; process runs a program; git and gh run git and gh,
+         each knowing nothing of the other or of the application; app is everything on top of them. test-support
+         holds what the architecture tests share. -->
     <modules>
+        <module>jazygit-test-support</module>
         <module>jazygit-json</module>
         <module>jazygit-syntax</module>
-        <module>jazygit-core</module>
+        <module>jazygit-process</module>
+        <module>jazygit-git</module>
+        <module>jazygit-gh</module>
         <module>jazygit-app</module>
     </modules>
 
@@ -71,14 +75,35 @@
             </dependency>
             <dependency>
                 <groupId>net.vanfleteren</groupId>
-                <artifactId>jazygit-core</artifactId>
+                <artifactId>jazygit-process</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>net.vanfleteren</groupId>
-                <artifactId>jazygit-core</artifactId>
+                <artifactId>jazygit-git</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.vanfleteren</groupId>
+                <artifactId>jazygit-git</artifactId>
                 <version>${project.version}</version>
                 <type>test-jar</type>
+            </dependency>
+            <dependency>
+                <groupId>net.vanfleteren</groupId>
+                <artifactId>jazygit-gh</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.vanfleteren</groupId>
+                <artifactId>jazygit-gh</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
+            </dependency>
+            <dependency>
+                <groupId>net.vanfleteren</groupId>
+                <artifactId>jazygit-test-support</artifactId>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>dev.tamboui</groupId>

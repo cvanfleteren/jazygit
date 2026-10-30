@@ -31,8 +31,9 @@ import net.vanfleteren.jazygit.state.Popup;
 import net.vanfleteren.jazygit.state.Program;
 
 /**
- * Rules about which parts of the application may depend on which, and how. That jazygit-core knows nothing of
- * the application the compiler sees to; its own rules are in its {@code CoreArchitectureTest}.
+ * Rules about which parts of the application may depend on which, and how. That the core (jazygit-process,
+ * jazygit-git and jazygit-gh) knows nothing of the application the compiler sees to; its own rules are in each
+ * module's architecture test.
  */
 @AnalyzeClasses(
         packages = "net.vanfleteren.jazygit",
@@ -40,13 +41,16 @@ import net.vanfleteren.jazygit.state.Program;
 class ArchitectureTest {
 
     /**
-     * jazygit-core, jazygit-json and jazygit-syntax are checked by their own rules; their classes, and the core's
-     * test-jar, are left out here.
+     * The core, jazygit-json and jazygit-syntax are checked by their own rules; their classes, the test-jars of git
+     * and gh, and the shared rules of jazygit-test-support, are left out here.
      */
     static final class LeaveOutTheOtherModules implements ImportOption {
         @Override
         public boolean includes(Location location) {
-            return !location.contains("/jazygit-core/")
+            return !location.contains("/jazygit-process/")
+                    && !location.contains("/jazygit-git/")
+                    && !location.contains("/jazygit-gh/")
+                    && !location.contains("/jazygit-test-support/")
                     && !location.contains("/jazygit-json/")
                     && !location.contains("/jazygit-syntax/");
         }
