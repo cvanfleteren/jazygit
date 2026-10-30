@@ -56,11 +56,12 @@ final class BorderDrag {
     EventResult handle(MouseEvent event, Model model) {
         return dragging.fold(() -> startDrag(event, model), grip -> switch (event.kind()) {
             case DRAG -> {
-                dragging = Option.of(resize(grip, event, model));
+                resize(grip, event, model);
                 yield EventResult.UNHANDLED;
             }
             case RELEASE -> {
-                settle(resize(grip, event, model));
+                resize(grip, event, model);
+                settle(grip);
                 yield EventResult.HANDLED;
             }
             // A release the terminal did not report: let go, and the press may start a new drag.
@@ -83,52 +84,53 @@ final class BorderDrag {
             Screen screen = model.screen();
             dragging = Option.<Grip>when(onBorder(event.x(), event.y()), () -> new LeftEdge(screen))
                     .orElse(() -> PaneBorder.at(leftPaneAreas(), event.x(), event.y())
-                            .map(pane -> new PaneBottom(screen, pane, event.y(), false)));
+                            .map(pane -> new PaneBottom(screen, pane, event.y(), bottom(model, screen, pane))));
             return dragging.isDefined() ? EventResult.HANDLED : EventResult.UNHANDLED;
         }
         return EventResult.UNHANDLED;
     }
 
     /**
-     * Moves the border {@code grip} to where {@code event} is, if that changes the width or the height, and gives the
-     * border as it is then. The bottom border of a pane stays until the mouse leaves the row it was pressed on: the
-     * percent of that row need not be the one kept, as a pane filling what the stash leaves is taller than its share.
+     * Moves the border {@code grip} to where {@code event} is, if that changes the width or the height. On the row the
+     * bottom border of a pane was pressed on, it goes back to where it was then: the percent of that row need not be
+     * the one kept, as a pane filling what the stash leaves is taller than its share, and a row of a column less than
+     * 100 rows tall is several percents.
      */
-    private Grip resize(Grip grip, MouseEvent event, Model model) {
-        return switch (grip) {
-            case LeftEdge(Screen screen) -> {
+    private void resize(Grip grip, MouseEvent event, Model model) {
+        switch (grip) {
+            case LeftEdge(Screen screen) ->
                 leftWidth(event.x())
                         .filter(width -> width != model.preferences().leftWidth(screen))
                         .forEach(width -> dispatch.accept(new LayoutMsg.Resized(screen, width)));
-                yield grip;
-            }
-            case PaneBottom bottom when !bottom.moved() && event.y() == bottom.pressedAt() -> bottom;
-            case PaneBottom(Screen screen, int pane, int pressedAt, boolean moved) -> {
-                int kept = model.preferences()
-                        .leftHeights(screen)
-                        .take(pane + 1)
-                        .sum()
-                        .intValue();
-                shownLeft
-                        .flatMap(left -> Option.of(left.renderedArea()))
-                        .flatMap(left -> PaneBorder.bottom(left, leftPaneAreas(), event.y()))
-                        .filter(border -> border != kept)
+            case PaneBottom(Screen screen, int pane, int pressedAt, int pressedBottom) ->
+                (event.y() == pressedAt
+                                ? Option.of(pressedBottom)
+                                : shownLeft
+                                        .flatMap(left -> Option.of(left.renderedArea()))
+                                        .flatMap(left -> PaneBorder.bottom(left, leftPaneAreas(), event.y())))
+                        .filter(border -> border != bottom(model, screen, pane))
                         .forEach(border -> dispatch.accept(new LayoutMsg.PaneResized(screen, pane, border)));
-                yield new PaneBottom(screen, pane, pressedAt, true);
-            }
-        };
+        }
     }
 
     /**
      * Lets go of the border {@code grip}.
      */
     private void settle(Grip grip) {
-        switch (grip) {
-            case LeftEdge(Screen screen) -> dispatch.accept(new LayoutMsg.Settled(screen));
-            case PaneBottom bottom when bottom.moved() -> dispatch.accept(new LayoutMsg.PaneSettled(bottom.screen()));
-            case PaneBottom bottom -> {}
-        }
+        dispatch.accept(
+                switch (grip) {
+                    case LeftEdge(Screen screen) -> new LayoutMsg.Settled(screen);
+                    case PaneBottom bottom -> new LayoutMsg.PaneSettled(bottom.screen());
+                });
         dragging = Option.none();
+    }
+
+    /**
+     * Where the bottom border of pane {@code pane} of the left column of {@code screen} of {@code model} is, in percent
+     * of the height of the column below the top of the first pane.
+     */
+    private static int bottom(Model model, Screen screen, int pane) {
+        return model.preferences().leftHeights(screen).take(pane + 1).sum().intValue();
     }
 
     /**
@@ -172,7 +174,8 @@ final class BorderDrag {
 
     /**
      * The bottom border of pane {@code pane} of the left column of {@code screen}, counted from the first under the
-     * status, pressed on row {@code pressedAt}; {@code moved} once the mouse left that row.
+     * status, pressed on row {@code pressedAt} when it was {@code pressedBottom} percent of the height of the column
+     * below the top of the first pane.
      */
-    private record PaneBottom(Screen screen, int pane, int pressedAt, boolean moved) implements Grip {}
+    private record PaneBottom(Screen screen, int pane, int pressedAt, int pressedBottom) implements Grip {}
 }

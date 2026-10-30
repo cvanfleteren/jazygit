@@ -15,6 +15,7 @@ import io.vavr.control.Option;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.feature.layout.LayoutMsg;
 import net.vanfleteren.jazygit.feature.theme.ThemePopup;
+import net.vanfleteren.jazygit.settings.Settings;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -151,7 +152,7 @@ class BorderDragTest {
     }
 
     @Test
-    void aClickOnTheBorderOfAPaneTallerThanItsShareSendsNothing() {
+    void aClickOnTheBorderOfAPaneTallerThanItsShareResizesNothing() {
         // The stash shrunk to its rows, the commits fill what it leaves: rows 48 to 87, not their 30 percent.
         drag.shown(
                 drawnAt(PANES),
@@ -167,7 +168,44 @@ class BorderDragTest {
         drag.handle(MouseEvent.drag(MouseButton.LEFT, 12, 87), model);
         assertEquals(EventResult.HANDLED, drag.handle(MouseEvent.release(MouseButton.LEFT, 12, 87), model));
 
-        assertEquals(List.of(), sent());
+        assertEquals(List.of(new LayoutMsg.PaneSettled(Screen.REPOSITORY)), sent());
+    }
+
+    @Test
+    void aBorderOfAPaneTallerThanItsShareDraggedBackKeepsItsShare() {
+        // The commits fill rows 48 to 87, as in the click above; a slip of a row and back.
+        drag.shown(
+                drawnAt(PANES),
+                drawnAt(LEFT),
+                List.of(
+                                new Rect(0, 3, 30, 25),
+                                new Rect(0, 28, 30, 20),
+                                new Rect(0, 48, 30, 40),
+                                new Rect(0, 88, 30, 12))
+                        .map(BorderDragTest::drawnAt));
+
+        drag.handle(MouseEvent.press(MouseButton.LEFT, 10, 87), model);
+        drag.handle(MouseEvent.drag(MouseButton.LEFT, 10, 86), shown());
+        drag.handle(MouseEvent.release(MouseButton.LEFT, 10, 87), shown());
+
+        assertEquals(Settings.DEFAULT, shown().preferences().settings());
+        assertEquals(Option.none(), shown().preferences().draggedHeights());
+    }
+
+    @Test
+    void aBorderDraggedBackInAColumnOfFewerThan100RowsKeepsItsPercent() {
+        // 37 rows, of which the files take rows 3 to 11: 9 rows, which are 24 percent, not the 25 kept.
+        drag.shown(
+                drawnAt(new Rect(0, 0, 100, 37)),
+                drawnAt(new Rect(0, 0, 30, 37)),
+                List.of(new Rect(0, 3, 30, 9), new Rect(0, 12, 30, 8), new Rect(0, 20, 30, 11), new Rect(0, 31, 30, 6))
+                        .map(BorderDragTest::drawnAt));
+
+        drag.handle(MouseEvent.press(MouseButton.LEFT, 10, 11), model);
+        drag.handle(MouseEvent.drag(MouseButton.LEFT, 10, 12), shown());
+        drag.handle(MouseEvent.release(MouseButton.LEFT, 10, 11), shown());
+
+        assertEquals(Settings.DEFAULT, shown().preferences().settings());
     }
 
     @Test
@@ -222,6 +260,13 @@ class BorderDragTest {
 
     private List<Msg> sent() {
         return List.ofAll(sent);
+    }
+
+    /**
+     * The model as the messages sent so far leave it.
+     */
+    private Model shown() {
+        return sent().foldLeft(model, (shown, msg) -> Update.update(shown, msg).model());
     }
 
     private static Element drawnAt(Rect area) {
