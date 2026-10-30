@@ -15,6 +15,7 @@ import io.vavr.collection.Vector;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Locale;
+import java.util.function.Function;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Comment;
 import net.vanfleteren.jazygit.i18n.Messages;
@@ -44,13 +45,14 @@ final class RemarkLines {
     }
 
     /**
-     * The lines of {@code threads}, as blocks that start {@code indent} columns in and are {@code width} wide, each
-     * followed by a blank line, which sets it apart from the line of the diff under it.
+     * The lines of {@code threads}, as blocks that start {@code indent} columns in and are {@code width} wide, with a
+     * blank line between two of them.
      */
     static List<Line> threads(
             List<ReviewThread> threads, int indent, int width, RemarkStyle style, Theme.SpanStyles styles) {
-        return threads.flatMap(
-                thread -> thread(thread, indent, width, style, styles).append(Line.from("")));
+        return threads.map(thread -> thread(thread, indent, width, style, styles))
+                .intersperse(List.of(Line.from("")))
+                .flatMap(Function.identity());
     }
 
     /**

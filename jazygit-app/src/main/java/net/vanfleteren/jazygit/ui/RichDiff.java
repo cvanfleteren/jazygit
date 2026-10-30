@@ -112,9 +112,12 @@ final class RichDiff {
         Vector<List<LineRemarks>> onLines = remarks.map(FileRemarks::lines)
                 .getOrElse(() -> file.hunks().map(hunk -> hunk.lines().map(line -> NO_REMARKS)))
                 .toVector();
+        boolean unplaced = remarks.exists(placed -> !placed.unplaced().isEmpty());
         return List.of(Line.from(styled(padded(bar, width), Theme.Classes.DIFF_FILE_HEADER, styles)))
                 .appendAll(note(file).map(text -> Line.from(styled(text, Theme.Classes.DIM, styles))))
-                .appendAll(remarks.toList().flatMap(placed -> blocks.threads(placed.onFile(), styles)))
+                .appendAll(remarks.toList()
+                        .flatMap(placed ->
+                                blocks.threads(placed.onFile(), !file.hunks().isEmpty() || unplaced, styles)))
                 .appendAll(file.hunks()
                         .zip(marks)
                         .zipWithIndex()
@@ -124,6 +127,7 @@ final class RichDiff {
                                 onLines.get(hunk._2),
                                 blocks,
                                 hunk._2 == 0,
+                                !unplaced && hunk._2 == file.hunks().size() - 1,
                                 digits,
                                 width - gutter,
                                 styles)))
@@ -169,7 +173,8 @@ final class RichDiff {
      * section heading git gives after them: it is a line from above the hunk, which reads as one of its own. A header
      * whose numbers cannot be read, whose lines are not numbered, follows the rule as git printed it. The
      * {@code first} hunk of a file has no rule, as the bar of the file marks where it starts, unless its header has to
-     * be shown. A line that was lexed is coloured by its syntax, one that was not is drawn as before.
+     * be shown. A line that was lexed is coloured by its syntax, one that was not is drawn as before. The threads on
+     * a line are followed by a blank line, unless they are on the last line of the {@code last} hunk of the file.
      */
     private static List<Line> hunk(
             Hunk hunk,
@@ -177,6 +182,7 @@ final class RichDiff {
             List<LineRemarks> remarks,
             Blocks blocks,
             boolean first,
+            boolean last,
             int digits,
             int width,
             Theme.SpanStyles styles) {
@@ -190,12 +196,16 @@ final class RichDiff {
         return header.appendAll(hunk.lines()
                 .zip(marks.words().zip(marks.tokens()))
                 .zip(remarks)
-                .flatMap(line -> blocks.threads(line._2.threads(), styles)
+                .zipWithIndex()
+                .flatMap(line -> blocks.threads(
+                                line._1._2.threads(),
+                                !last || line._2 < hunk.lines().size() - 1,
+                                styles)
                         .prepend(line(
-                                line._1._1,
-                                line._1._2._1,
-                                line._1._2._2,
-                                gutter(line._1._1, line._2, digits, styles),
+                                line._1._1._1,
+                                line._1._1._2._1,
+                                line._1._1._2._2,
+                                gutter(line._1._1._1, line._1._2, digits, styles),
                                 width,
                                 styles))));
     }
@@ -408,8 +418,13 @@ final class RichDiff {
      */
     private record Blocks(int indent, int width, RemarkLines.RemarkStyle style) {
 
-        List<Line> threads(List<ReviewThread> threads, Theme.SpanStyles styles) {
-            return RemarkLines.threads(threads, indent, width, style, styles);
+        /**
+         * The lines of {@code threads}, then a blank line that sets them apart from what follows them in their file,
+         * if they are {@code followed} by anything.
+         */
+        List<Line> threads(List<ReviewThread> threads, boolean followed, Theme.SpanStyles styles) {
+            return RemarkLines.threads(threads, indent, width, style, styles)
+                    .appendAll(followed && !threads.isEmpty() ? List.of(Line.from("")) : List.empty());
         }
     }
 }

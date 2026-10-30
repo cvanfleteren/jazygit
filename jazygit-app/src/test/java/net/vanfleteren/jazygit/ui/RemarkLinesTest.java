@@ -41,8 +41,12 @@ class RemarkLinesTest {
             """;
 
     private static ReviewThread thread(int line, boolean resolved, String... bodies) {
+        return thread("a.txt", line, resolved, bodies);
+    }
+
+    private static ReviewThread thread(String path, int line, boolean resolved, String... bodies) {
         return new ReviewThread(
-                "a.txt",
+                path,
                 Side.RIGHT,
                 Option.of(line),
                 Option.none(),
@@ -60,7 +64,11 @@ class RemarkLinesTest {
     }
 
     private static List<String> rich(ShownRemarks remarks) {
-        return text(RichDiff.lines(ParsedDiff.of(DIFF), false, Option.of(remarks), Theme.SpanStyles.NONE))
+        return rich(DIFF, remarks);
+    }
+
+    private static List<String> rich(String diff, ShownRemarks remarks) {
+        return text(RichDiff.lines(ParsedDiff.of(diff), false, Option.of(remarks), Theme.SpanStyles.NONE))
                 .map(String::stripTrailing);
     }
 
@@ -132,6 +140,57 @@ class RemarkLinesTest {
                         " ".repeat(8) + "┃ carol · just now",
                         " ".repeat(8) + "┃ hidden · outdated"),
                 lines.takeRight(4));
+        assertEquals(
+                List.of(" ".repeat(8) + "┃ 2 more on GitHub", "", " ".repeat(8) + "Not on a line of this diff"),
+                lines.dropRight(3).takeRight(3));
+    }
+
+    @Test
+    void twoThreadsOnALineHaveABlankLineBetweenThem() {
+        List<String> lines = rich(shown(false, thread(2, false, "One"), thread(2, false, "Two")));
+
+        String indent = " ".repeat(8);
+        assertEquals(
+                List.of(
+                        "  2 ● +TWO",
+                        indent + "┃ bob · 2h ago",
+                        indent + "┃ One",
+                        "",
+                        indent + "┃ bob · 2h ago",
+                        indent + "┃ Two",
+                        "",
+                        "3 3 │  three"),
+                lines.drop(3));
+    }
+
+    @Test
+    void nothingButTheBlankLineBetweenFilesFollowsAThreadOnTheLastLineOfAFile() {
+        String diff = DIFF + """
+                diff --git a/b.txt b/b.txt
+                index 3333333..4444444 100644
+                --- a/b.txt
+                +++ b/b.txt
+                @@ -1 +1 @@
+                -x
+                +y
+                """;
+
+        List<String> lines =
+                rich(diff, shown(false, thread("a.txt", 3, false, "End of a"), thread("b.txt", 1, false, "End of b")));
+
+        String indent = " ".repeat(8);
+        assertEquals(
+                List.of(
+                        "3 3 ●  three",
+                        indent + "┃ bob · 2h ago",
+                        indent + "┃ End of a",
+                        "",
+                        " modified  b.txt",
+                        "1   │ -x",
+                        "  1 ● +y",
+                        indent + "┃ bob · 2h ago",
+                        indent + "┃ End of b"),
+                lines.drop(4));
     }
 
     @Test
