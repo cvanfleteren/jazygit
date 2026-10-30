@@ -188,6 +188,8 @@ public final class Theme {
         public static final String DIFF_FILE_HEADER = "diff-file-header";
         public static final String DIFF_LINE_NUMBER = "diff-line-number";
         public static final String DIFF_THREAD = "diff-thread";
+        public static final String DIFF_THREAD_HEADER = "diff-thread-header";
+        public static final String DIFF_THREAD_AUTHOR = "diff-thread-author";
         public static final String DIFF_ADDED_LINE = "diff-added-line";
         public static final String DIFF_ADDED_WORD = "diff-added-word";
         public static final String DIFF_REMOVED_LINE = "diff-removed-line";

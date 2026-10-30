@@ -15,6 +15,7 @@ import io.vavr.collection.Vector;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Locale;
+import java.util.function.Function;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Comment;
 import net.vanfleteren.jazygit.i18n.Messages;
@@ -22,8 +23,8 @@ import net.vanfleteren.jazygit.ui.widgets.MarkdownScroll;
 
 /**
  * The review threads of a pull request drawn as lines of its rich diff (ADR 55): each a block that starts some
- * columns in, with a rule down its left, and its comments under a line that says who wrote them and when, their
- * Markdown drawn as the theme styles it.
+ * columns in, with a rule down its left, and its comments under a header that says who wrote them and when, which
+ * the rule branches into and the theme sets apart, their Markdown drawn as the theme styles it.
  */
 final class RemarkLines {
 
@@ -32,7 +33,13 @@ final class RemarkLines {
     static final int MAX_WIDTH = 100;
     // The narrowest the text of a block gets, past a wide gutter.
     private static final int MIN_TEXT = 20;
-    private static final String RULE = "┃ ";
+    // The rule down the left of a block, which branches into the line that starts it and into each header, and
+    // turns at its end; a block of one line has a rule of its own.
+    private static final String RULE = "┃  ";
+    private static final String TOP = "┏━";
+    private static final String BRANCH = "┣━";
+    private static final String BOTTOM = "┗━";
+    private static final String ALONE = "━━";
 
     private RemarkLines() {}
 
@@ -44,26 +51,33 @@ final class RemarkLines {
     }
 
     /**
-     * The lines of {@code threads}, as blocks that start {@code indent} columns in and are {@code width} wide.
+     * The lines of {@code threads}, as blocks that start {@code indent} columns in and are {@code width} wide, with a
+     * blank line between two of them.
      */
     static List<Line> threads(
             List<ReviewThread> threads, int indent, int width, RemarkStyle style, Theme.SpanStyles styles) {
-        return threads.flatMap(thread -> thread(thread, indent, width, style, styles));
+        return threads.map(thread -> thread(thread, indent, width, true, style, styles))
+                .intersperse(List.of(Line.from("")))
+                .flatMap(Function.identity());
     }
 
     /**
-     * The lines of {@code threads}, which cannot be placed on a line: under a line that says so, each under a line that
-     * says which line it was made on, and whether it is outdated.
+     * The lines of {@code threads}, which cannot be placed on a line: under a line that says so, each under a header
+     * that says which line it was made on, and whether it is outdated, with a blank line between two of them.
      */
     static List<Line> unplaced(
             List<ReviewThread> threads, int indent, int width, RemarkStyle style, Theme.SpanStyles styles) {
+        Span margin = Span.raw(" ".repeat(indent));
         return threads.isEmpty()
                 ? List.empty()
-                : threads.flatMap(thread -> thread(thread, indent, width, style, styles)
-                                .prepend(Line.from(
-                                        Span.raw(" ".repeat(indent)),
-                                        styled(RULE, Theme.Classes.DIFF_THREAD, styles),
-                                        styled(madeOn(thread), Theme.Classes.DIM, styles))))
+                : threads.map(thread -> thread(thread, indent, width, false, style, styles)
+                                .prepend(header(
+                                        List.of(margin, styled(TOP, Theme.Classes.DIFF_THREAD, styles)),
+                                        List.of(styled(madeOn(thread), Theme.Classes.DIM, styles)),
+                                        text(indent, width),
+                                        styles)))
+                        .intersperse(List.of(Line.from("")))
+                        .flatMap(Function.identity())
                         .prepend(Line.from(
                                 Span.raw(" ".repeat(indent)),
                                 styled(Messages.get("content.remarks.unplaced"), Theme.Classes.DIM, styles)));
@@ -80,10 +94,16 @@ final class RemarkLines {
         return thread.outdated() ? Messages.get("content.remarks.outdated", line) : line;
     }
 
+    /**
+     * The lines of {@code thread}, its first header the {@code top} of its block, or under a line above it, and a line
+     * where its rule turns at the end. A resolved thread while the threads are closed is one line, which ends the
+     * rule of the line above it, or has a rule of its own.
+     */
     private static List<Line> thread(
-            ReviewThread thread, int indent, int width, RemarkStyle style, Theme.SpanStyles styles) {
-        List<Span> rule = List.of(Span.raw(" ".repeat(indent)), styled(RULE, Theme.Classes.DIFF_THREAD, styles));
-        int text = Math.max(MIN_TEXT, width - indent - RULE.length());
+            ReviewThread thread, int indent, int width, boolean top, RemarkStyle style, Theme.SpanStyles styles) {
+        Span margin = Span.raw(" ".repeat(indent));
+        List<Span> rule = List.of(margin, styled(RULE, Theme.Classes.DIFF_THREAD, styles));
+        int text = text(indent, width);
         if (thread.resolved() && !style.opened()) {
             String first =
                     thread.comments().headOption().map(RemarkLines::firstLine).getOrElse("");
@@ -91,14 +111,28 @@ final class RemarkLines {
                     .headOption()
                     .map(comment -> author(comment.author()))
                     .getOrElse("");
-            return List.of(Line.from(rule.append(styled(
+            return List.of(Line.from(
+                    margin,
+                    styled((top ? ALONE : BOTTOM) + " ", Theme.Classes.DIFF_THREAD, styles),
+                    styled(
                             cut(Messages.get("content.remarks.resolved", author, first), text),
                             Theme.Classes.DIM,
-                            styles))
-                    .toJavaList()));
+                            styles)));
         }
+        // A line of only the rule between two comments, to show where the next one starts.
         return thread.comments()
-                .flatMap(comment -> comment(comment, rule, text, style, styles))
+                .zipWithIndex()
+                .map(comment -> comment(
+                        comment._1,
+                        List.of(
+                                margin,
+                                styled(top && comment._2 == 0 ? TOP : BRANCH, Theme.Classes.DIFF_THREAD, styles)),
+                        rule,
+                        text,
+                        style,
+                        styles))
+                .intersperse(List.of(Line.from(margin, styled(RULE.strip(), Theme.Classes.DIFF_THREAD, styles))))
+                .flatMap(Function.identity())
                 .appendAll(
                         thread.more() > 0
                                 ? List.of(Line.from(rule.append(styled(
@@ -106,23 +140,26 @@ final class RemarkLines {
                                                 Theme.Classes.DIM,
                                                 styles))
                                         .toJavaList()))
-                                : List.empty());
+                                : List.empty())
+                .append(Line.from(margin, styled(BOTTOM, Theme.Classes.DIFF_THREAD, styles)));
     }
 
     /**
-     * A comment: who wrote it and how long ago, then its text, or why it is hidden while it is closed.
+     * A comment: a header after {@code branch} that says who wrote it and how long ago, on the background of
+     * {@link Theme.Classes#DIFF_THREAD_HEADER} to the end of the block, then its text, or why it is hidden while it is
+     * closed.
      */
     private static List<Line> comment(
-            Comment comment, List<Span> rule, int text, RemarkStyle style, Theme.SpanStyles styles) {
-        Line header = Line.from(rule.appendAll(List.of(
-                        styled(author(comment.author()), Theme.Classes.BOLD, styles),
-                        styled(
-                                Messages.get(
-                                        "content.remarks.ago",
-                                        TimeText.ago(Duration.between(comment.at(), style.now()))),
-                                Theme.Classes.DIM,
-                                styles)))
-                .toJavaList());
+            Comment comment, List<Span> branch, List<Span> rule, int text, RemarkStyle style, Theme.SpanStyles styles) {
+        String author = author(comment.author());
+        String ago = Messages.get("content.remarks.ago", TimeText.ago(Duration.between(comment.at(), style.now())));
+        Line header = header(
+                branch,
+                List.of(
+                        styled(author, Theme.Classes.DIFF_THREAD_AUTHOR, styles),
+                        styled(ago, Theme.Classes.DIM, styles)),
+                text,
+                styles);
         List<Line> body = comment.hidden()
                 .filter(hidden -> !style.opened())
                 .map(reason -> List.of(Line.from(rule.append(styled(
@@ -182,6 +219,33 @@ final class RemarkLines {
                 .map(String::strip)
                 .find(line -> !line.isEmpty())
                 .getOrElse("");
+    }
+
+    /**
+     * How wide the text of a block is that starts {@code indent} columns in and is {@code width} wide, past its rule.
+     */
+    private static int text(int indent, int width) {
+        return Math.max(MIN_TEXT, width - indent - RULE.length());
+    }
+
+    /**
+     * A header: {@code content} after {@code branch}, on the background of {@link Theme.Classes#DIFF_THREAD_HEADER}
+     * to the end of the block, {@code text} columns past the rule.
+     */
+    private static Line header(List<Span> branch, List<Span> content, int text, Theme.SpanStyles styles) {
+        Style band = styles.of(Theme.Classes.DIFF_THREAD_HEADER);
+        int used = content.map(Span::width).sum().intValue();
+        return Line.from(branch.append(Span.styled(" ", band))
+                .appendAll(content.map(span -> Span.styled(span.content(), onBand(span.style(), band))))
+                .append(Span.styled(" ".repeat(Math.max(0, text - used)), band))
+                .toJavaList());
+    }
+
+    /**
+     * {@code style} on the background of {@code band}, if it has one.
+     */
+    private static Style onBand(Style style, Style band) {
+        return band.bg().map(style::bg).orElse(style);
     }
 
     private static String author(String login) {

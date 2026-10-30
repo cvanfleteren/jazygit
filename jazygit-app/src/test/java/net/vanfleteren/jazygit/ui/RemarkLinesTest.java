@@ -2,12 +2,15 @@ package net.vanfleteren.jazygit.ui;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import dev.tamboui.style.Color;
+import dev.tamboui.style.Style;
 import dev.tamboui.style.StylePropertyResolver;
 import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Comment;
@@ -41,8 +44,12 @@ class RemarkLinesTest {
             """;
 
     private static ReviewThread thread(int line, boolean resolved, String... bodies) {
+        return thread("a.txt", line, resolved, bodies);
+    }
+
+    private static ReviewThread thread(String path, int line, boolean resolved, String... bodies) {
         return new ReviewThread(
-                "a.txt",
+                path,
                 Side.RIGHT,
                 Option.of(line),
                 Option.none(),
@@ -60,7 +67,11 @@ class RemarkLinesTest {
     }
 
     private static List<String> rich(ShownRemarks remarks) {
-        return text(RichDiff.lines(ParsedDiff.of(DIFF), false, Option.of(remarks), Theme.SpanStyles.NONE))
+        return rich(DIFF, remarks);
+    }
+
+    private static List<String> rich(String diff, ShownRemarks remarks) {
+        return text(RichDiff.lines(ParsedDiff.of(diff), false, Option.of(remarks), Theme.SpanStyles.NONE))
                 .map(String::stripTrailing);
     }
 
@@ -75,20 +86,56 @@ class RemarkLinesTest {
                         "1 1 │  one",
                         "2   │ -two",
                         "  2 ● +TWO",
-                        indent + "┃ bob · 2h ago",
-                        indent + "┃ Why upper case?",
-                        indent + "┃ bob · 2h ago",
-                        indent + "┃ Shouting.",
+                        indent + "┏━ bob · 2h ago",
+                        indent + "┃  Why upper case?",
+                        indent + "┃",
+                        indent + "┣━ bob · 2h ago",
+                        indent + "┃  Shouting.",
+                        indent + "┗━",
+                        "",
                         "3 3 │  three"),
                 lines);
+    }
+
+    @Test
+    void theHeaderOfACommentIsOnTheBandOfTheThemeToTheEndOfTheBlock() {
+        Theme.SpanStyles styles = cssClass -> switch (cssClass) {
+            case Theme.Classes.DIFF_THREAD_HEADER -> Style.EMPTY.bg(Color.BLUE);
+            case Theme.Classes.DIFF_THREAD_AUTHOR -> Style.EMPTY.fg(Color.CYAN);
+            default -> Style.EMPTY;
+        };
+
+        Line header = RemarkLines.threads(
+                        List.of(thread(2, false, "Why?")),
+                        8,
+                        RemarkLines.MIN_WIDTH,
+                        new RemarkLines.RemarkStyle(false, NOW),
+                        styles)
+                .head();
+
+        List<Span> band = List.ofAll(header.spans()).drop(2);
+        assertEquals(RemarkLines.MIN_WIDTH, header.width());
+        assertTrue(band.forAll(span -> span.style().bg().equals(Optional.of(Color.BLUE))), header.toString());
+        assertTrue(band.exists(
+                span -> span.content().equals("bob") && span.style().fg().equals(Optional.of(Color.CYAN))));
     }
 
     @Test
     void aResolvedThreadIsOneLineUntilTheThreadsAreOpened() {
         ReviewThread resolved = thread(3, true, "Done\n\nmore");
 
-        assertTrue(rich(shown(false, resolved)).contains(" ".repeat(8) + "┃ ✓ resolved · bob: Done"));
-        assertTrue(rich(shown(true, resolved)).contains(" ".repeat(8) + "┃ Done"));
+        assertTrue(rich(shown(false, resolved)).contains(" ".repeat(8) + "━━ ✓ resolved · bob: Done"));
+        assertEquals(
+                List.of(" ".repeat(8) + "┏━ on line 3", " ".repeat(8) + "┗━ ✓ resolved · bob: Done"),
+                text(RemarkLines.unplaced(
+                                List.of(resolved),
+                                8,
+                                RemarkLines.MIN_WIDTH,
+                                new RemarkLines.RemarkStyle(false, NOW),
+                                Theme.SpanStyles.NONE))
+                        .tail()
+                        .map(String::stripTrailing));
+        assertTrue(rich(shown(true, resolved)).contains(" ".repeat(8) + "┃  Done"));
     }
 
     @Test
@@ -122,15 +169,75 @@ class RemarkLinesTest {
 
         assertTrue(lines.contains("1 1 ┃  one"), lines.mkString("\n"));
         assertTrue(lines.contains("3 3 ●  three"), lines.mkString("\n"));
-        assertTrue(lines.contains(" ".repeat(8) + "┃ ghost · just now"), lines.mkString("\n"));
-        assertTrue(lines.contains(" ".repeat(8) + "┃ 2 more on GitHub"), lines.mkString("\n"));
+        assertTrue(lines.contains(" ".repeat(8) + "┏━ ghost · just now"), lines.mkString("\n"));
+        assertTrue(lines.contains(" ".repeat(8) + "┃  2 more on GitHub"), lines.mkString("\n"));
         assertEquals(
                 List.of(
                         " ".repeat(8) + "Not on a line of this diff",
-                        " ".repeat(8) + "┃ on line 40, outdated",
-                        " ".repeat(8) + "┃ carol · just now",
-                        " ".repeat(8) + "┃ hidden · outdated"),
-                lines.takeRight(4));
+                        " ".repeat(8) + "┏━ on line 40, outdated",
+                        " ".repeat(8) + "┣━ carol · just now",
+                        " ".repeat(8) + "┃  hidden · outdated",
+                        " ".repeat(8) + "┗━"),
+                lines.takeRight(5));
+        assertEquals(
+                List.of(
+                        " ".repeat(8) + "┃  2 more on GitHub",
+                        " ".repeat(8) + "┗━",
+                        "",
+                        " ".repeat(8) + "Not on a line of this diff"),
+                lines.dropRight(4).takeRight(4));
+    }
+
+    @Test
+    void twoThreadsOnALineHaveABlankLineBetweenThem() {
+        List<String> lines = rich(shown(false, thread(2, false, "One"), thread(2, false, "Two")));
+
+        String indent = " ".repeat(8);
+        assertEquals(
+                List.of(
+                        "  2 ● +TWO",
+                        indent + "┏━ bob · 2h ago",
+                        indent + "┃  One",
+                        indent + "┗━",
+                        "",
+                        indent + "┏━ bob · 2h ago",
+                        indent + "┃  Two",
+                        indent + "┗━",
+                        "",
+                        "3 3 │  three"),
+                lines.drop(3));
+    }
+
+    @Test
+    void nothingButTheBlankLineBetweenFilesFollowsAThreadOnTheLastLineOfAFile() {
+        String diff = DIFF + """
+                diff --git a/b.txt b/b.txt
+                index 3333333..4444444 100644
+                --- a/b.txt
+                +++ b/b.txt
+                @@ -1 +1 @@
+                -x
+                +y
+                """;
+
+        List<String> lines =
+                rich(diff, shown(false, thread("a.txt", 3, false, "End of a"), thread("b.txt", 1, false, "End of b")));
+
+        String indent = " ".repeat(8);
+        assertEquals(
+                List.of(
+                        "3 3 ●  three",
+                        indent + "┏━ bob · 2h ago",
+                        indent + "┃  End of a",
+                        indent + "┗━",
+                        "",
+                        " modified  b.txt",
+                        "1   │ -x",
+                        "  1 ● +y",
+                        indent + "┏━ bob · 2h ago",
+                        indent + "┃  End of b",
+                        indent + "┗━"),
+                lines.drop(4));
     }
 
     @Test
@@ -151,9 +258,9 @@ class RemarkLinesTest {
         List<String> lines = rich(shown(false, onFile));
 
         assertEquals(
-                List.of(" modified  a.txt", " ".repeat(8) + "┃ bob · 2h ago", " ".repeat(8) + "┃ Split this file"),
+                List.of(" modified  a.txt", " ".repeat(8) + "┏━ bob · 2h ago", " ".repeat(8) + "┃  Split this file"),
                 lines.take(3));
-        assertEquals("1 1 │  one", lines.get(3));
+        assertEquals(List.of(" ".repeat(8) + "┗━", "", "1 1 │  one"), lines.slice(3, 6));
     }
 
     @Test
@@ -171,9 +278,9 @@ class RemarkLinesTest {
                 List.of(new Comment("carol", NOW, "Off topic", Option.of("OFF_TOPIC"))),
                 0);
 
-        assertTrue(rich(shown(false, hidden)).contains(" ".repeat(8) + "┃ hidden · off-topic"));
-        assertFalse(rich(shown(false, hidden)).contains(" ".repeat(8) + "┃ Off topic"));
-        assertTrue(rich(shown(true, hidden)).contains(" ".repeat(8) + "┃ Off topic"));
+        assertTrue(rich(shown(false, hidden)).contains(" ".repeat(8) + "┃  hidden · off-topic"));
+        assertFalse(rich(shown(false, hidden)).contains(" ".repeat(8) + "┃  Off topic"));
+        assertTrue(rich(shown(true, hidden)).contains(" ".repeat(8) + "┃  Off topic"));
     }
 
     @Test
@@ -188,7 +295,41 @@ class RemarkLinesTest {
         assertEquals(
                 " ".repeat(8) + "Not on a line of this diff",
                 lines.dropWhile(line -> !line.contains("three")).get(1));
-        assertTrue(lines.contains(" ".repeat(8) + "┃ Moved on"), lines.mkString("\n"));
+        assertTrue(lines.contains(" ".repeat(8) + "┃  Moved on"), lines.mkString("\n"));
+    }
+
+    @Test
+    void threadsThatCannotBePlacedHaveABlankLineBetweenThemAndAHeaderOnTheBand() {
+        Theme.SpanStyles styles = cssClass ->
+                cssClass.equals(Theme.Classes.DIFF_THREAD_HEADER) ? Style.EMPTY.bg(Color.BLUE) : Style.EMPTY;
+
+        List<Line> lines = RemarkLines.unplaced(
+                List.of(thread(40, false, "Old"), thread(50, false, "Older")),
+                8,
+                RemarkLines.MIN_WIDTH,
+                new RemarkLines.RemarkStyle(false, NOW),
+                styles);
+
+        String indent = " ".repeat(8);
+        assertEquals(
+                List.of(
+                        indent + "Not on a line of this diff",
+                        indent + "┏━ on line 40",
+                        indent + "┣━ bob · 2h ago",
+                        indent + "┃  Old",
+                        indent + "┗━",
+                        "",
+                        indent + "┏━ on line 50",
+                        indent + "┣━ bob · 2h ago",
+                        indent + "┃  Older",
+                        indent + "┗━"),
+                text(lines).map(String::stripTrailing));
+        assertEquals(RemarkLines.MIN_WIDTH, lines.get(1).width());
+        assertTrue(
+                List.ofAll(lines.get(1).spans())
+                        .drop(2)
+                        .forAll(span -> span.style().bg().equals(Optional.of(Color.BLUE))),
+                lines.get(1).toString());
     }
 
     @Test
