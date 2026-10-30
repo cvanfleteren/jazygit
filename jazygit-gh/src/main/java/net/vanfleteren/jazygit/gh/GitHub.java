@@ -72,6 +72,13 @@ public interface GitHub {
     Either<GhError, List<PullRequestComment>> pullRequestComments(int number);
 
     /**
+     * The review threads of pull request {@code number}, on lines of its diff or on whole files, with the commits its
+     * changes are diffed between (ADR 55). The comments of a review that is not submitted yet, which only their author
+     * sees, are left out, and so is a thread of only those.
+     */
+    Either<GhError, ReviewRemarks> reviewRemarks(int number);
+
+    /**
      * Creates a pull request from the remote branch {@code head} into {@code base}, as {@code pullRequest} says.
      */
     Either<GhFailure, Created> createPullRequest(GhBranch head, GhBranch base, NewPullRequest pullRequest);

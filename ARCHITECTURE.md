@@ -850,8 +850,8 @@ the GitHub repository from the git remotes itself. It mirrors the git layer with
 - **Reading:** gh prints the JSON GitHub answers, without `--jq`, and `GhProcess.readJson` decodes it with a
   `Decoder` of `jazygit-json` (ADR 42). Each read is a class of its own, with its command, its GraphQL and its
   decoder: `PullRequestsQuery`, `RepositoryPullRequestsQuery`, `MyPullRequestsQuery`, `DetailsQuery`,
-  `BranchesQuery`, `BranchCheckRunsQuery`, `RecentChecksQuery`, `BehindQuery`, `CommentsQuery`, `PreviewQuery`,
-  `LoginsQuery` and `MergeQuery`. What several share is a fragment, its GraphQL next to its decoder:
+  `BranchesQuery`, `BranchCheckRunsQuery`, `RecentChecksQuery`, `BehindQuery`, `CommentsQuery`,
+  `ReviewThreadsQuery`, `PreviewQuery`, `LoginsQuery` and `MergeQuery`. What several share is a fragment, its GraphQL next to its decoder:
   `CheckFragment` (a check, and how the states of checks fold into one: failing, else pending, else passing),
   `SuiteFragment` (the workflow runs that wait to start, ADR 35), `StackFragment` and `SummaryFragment`. A node of
   a union asks for its `__typename`, by which it is decoded. What cannot be decoded is `GhError.UnexpectedOutput`,
@@ -862,6 +862,11 @@ the GitHub repository from the git remotes itself. It mirrors the git layer with
   the working tree for `{owner}` and `{repo}`, as `gh pr view --json` has no review threads (ADR 7). Every list is
   read up to 100, the review threads the newest 100. `PullRequestDetails` holds what it reads in the parts its
   dialog shows together: `Status`, `Branches`, `Activity`, `Size` and `Conversation`.
+- **The review threads of one pull request** (ADR 55), to show next to their lines: `gh api graphql --paginate
+  --slurp`, 100 threads a page and 50 comments a thread, as `ReviewRemarks`, with the head and base commits they
+  were read at. A comment of a review not submitted yet is left out. `state.PlacedRemarks` places them in a parsed
+  diff: by path (either of a rename), side (`LEFT` the old file, `RIGHT` the new one) and line number, one about a
+  whole file under its bar, and one that cannot be placed at the end of its file.
 - **Creating and opening:** `gh pr create --head <branch on the remote> --base <base> --fill` and
   `gh pr view <n> --web`. The name of the branch on its remote is the branch's push target, as the branches
   were read (`Branch.pushTarget`), which `PullRequestUpdate` puts in `PullRequestCmd.CreatePullRequest`.
