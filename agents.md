@@ -24,3 +24,13 @@ The updates, messages, popups and the model are pure. Pure code:
 - A missing value is Vavr's `Option`, not `java.util.Optional`, but where a library's interface says so (TamboUI, picocli in `cli`).
 - Classes are built of records and interfaces: no class in state, feature or the models extends another.
 - Commands, and the public methods of the core, declare no exceptions, checked or unchecked, of any type: failures are values (`Either`, `Failure`).
+
+
+## Process
+
+### ADR
+
+- Decisions with a big impact on the architecture or were impactful design decisions had to be made are recorded in an ADR (Architecture Decision Record) in `docs/adr`. Each ADR is a markdown file with a name like `0001-foo.md`, where the number is the next available integer. 
+- ADR's are immutable once they are in the main branch. They can be amended in a new ADR, but the old one is never changed apart from a reference to a newer one with a sentence like "Amended by ADR XX: this is why bla bla bla"
+- The ADR's are a historical record of the decisions made, and the reasons for them. They are not a design document, and they are not a specification. They are a record of the decisions made, and the reasons for them.
+
