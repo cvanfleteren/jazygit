@@ -3,6 +3,7 @@ touch, commits no other branch has, uncommitted changes, and the repository as i
 git commands fails half-way."""
 
 import stat
+from pathlib import Path
 
 
 def published(repo, origin):
@@ -21,13 +22,16 @@ def three_commits(repo):
     repo.commit("Add three", **{"three.txt": "three\n"})
 
 
-def failing_commits(repo):
+def failing_commits(repo) -> Path:
     """Makes every commit git makes from here on fail, as a hook can, other than on conflicts: a cherry-pick or a
-    rebase then stops half-way, with nothing to resolve."""
+    rebase then stops half-way, with nothing to resolve. Returns the file the hook leaves once it failed one, which
+    tells that git got as far as committing, so that there was something to undo."""
+    failed = repo.git_dir / "commit-failed"
     hook = repo.git_dir / "hooks" / "prepare-commit-msg"
     hook.parent.mkdir(exist_ok=True)
-    hook.write_text("#!/bin/sh\nexit 1\n")
+    hook.write_text(f"#!/bin/sh\ntouch '{failed}'\nexit 1\n")
     hook.chmod(hook.stat().st_mode | stat.S_IEXEC)
+    return failed
 
 
 def close_error(ui, text: str):
@@ -83,13 +87,14 @@ def test_a_branch_is_not_renamed_to_a_name_git_would_read_as_an_option(repo, jaz
     feature = repo("rev-parse", "feature")
     ui = jazygit()
 
-    # As "git branch -m --force feature", this would overwrite main with feature.
-    ui.branches.try_to_rename("feature", "--force")
+    # Without the app's checks, "git branch --move main --force" would take --force as an option, and force the checked
+    # out feature onto main, overwriting it.
+    ui.branches.try_to_rename("main", "--force")
     # Keys are handled in turn: what is typed after the refused name goes in the dialog, which stays open.
     ui.app.type("x")
     ui.app.wait_for("--forcex")
     ui.app.press("escape")
-    ui.app.wait_gone("Rename branch feature")
+    ui.app.wait_gone("Rename branch main")
 
     ui.caught_up()
     assert repo.branches() == ["feature", "main"]
@@ -218,13 +223,15 @@ def test_moving_commits_onto_a_branch_is_undone_when_copying_them_fails(repo, ja
     repo.commit("Add four", **{"four.txt": "four\n"})
     main = repo("rev-parse", "main")
     elsewhere = repo("rev-parse", "elsewhere")
-    failing_commits(repo)
+    failed = failing_commits(repo)
     ui = jazygit()
 
     ui.commits.try_to_move_to_branch("Add four", "elsewhere")
 
     close_error(ui, "Moving commits to elsewhere failed")
     ui.caught_up()
+    assert failed.exists()
+    assert "git cherry-pick --abort" in ui.app.text()
     assert repo.in_progress() is None
     assert repo.current_branch() == "main"
     assert repo("rev-parse", "main") == main
@@ -241,13 +248,15 @@ def test_moving_commits_to_a_new_branch_elsewhere_is_undone_when_copying_them_fa
     repo.commit("Add main", **{"main.txt": "main\n"})
     repo("switch", "feature")
     feature = repo("rev-parse", "feature")
-    failing_commits(repo)
+    failed = failing_commits(repo)
     ui = jazygit()
 
     ui.commits.try_to_move_to_new_branch("Add three", "fix", start="main")
 
     close_error(ui, "Moving commits to fix failed")
     ui.caught_up()
+    assert failed.exists()
+    assert "git branch -D fix" in ui.app.text()
     assert repo.in_progress() is None
     assert repo.branches() == ["feature", "main"]
     assert repo.current_branch() == "feature"
@@ -263,13 +272,17 @@ def test_a_pull_whose_rebase_fails_is_undone(repo, origin, clone, jazygit):
     repo("config", "pull.rebase", "true")
     repo.commit("Add mine", **{"mine.txt": "mine\n"})
     main = repo("rev-parse", "main")
-    failing_commits(repo)
+    failed = failing_commits(repo)
     ui = jazygit()
 
     ui.branches.try_to_pull("main")
 
     close_error(ui, "Pulling branch main failed")
     ui.caught_up()
+    assert failed.exists()
+    assert "git rebase --abort" in ui.app.text()
+    # The fetch got through: it is the rebase after it that failed, and was undone.
+    assert repo("rev-parse", "origin/main") == teammate("rev-parse", "HEAD")
     assert repo.in_progress() is None
     assert repo.current_branch() == "main"
     assert repo("rev-parse", "main") == main

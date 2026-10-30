@@ -224,6 +224,7 @@ def test_drop_a_commit_below_a_merge_keeps_the_merge(repo, jazygit):
 
     assert merges(repo) == [("Merge branch 'feature'", 2)]
     assert repo.subjects("HEAD~1^1") == ["Add one"]
+    assert repo("rev-parse", "HEAD~1^2") == repo("rev-parse", "feature")
     assert repo("ls-tree", "-r", "--name-only", "HEAD").splitlines() == ["four.txt", "one.txt", "two.txt"]
 
 
@@ -237,6 +238,7 @@ def test_amend_a_commit_below_a_merge_keeps_the_merge(repo, jazygit):
 
     assert merges(repo) == [("Merge branch 'feature'", 2)]
     assert repo("show", "HEAD~1^1:three.txt") == "three, amended"
+    assert repo("rev-parse", "HEAD~1^2") == repo("rev-parse", "feature")
     assert repo("show", "HEAD:three.txt") == "three, amended"
     assert repo.status() == {}
 
