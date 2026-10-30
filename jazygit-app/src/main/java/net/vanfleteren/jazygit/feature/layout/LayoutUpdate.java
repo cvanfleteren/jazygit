@@ -47,9 +47,9 @@ public final class LayoutUpdate {
                                 screen,
                                 drag.width()))
                         .getOrElse(() -> Next.of(model));
-            case LayoutMsg.PaneResized(Screen screen, int pane, int height) ->
-                Next.of(model.mapPreferences(preferences -> preferences.withDraggedHeights(Option.of(new DraggedHeights(
-                        screen, Settings.resizedHeights(preferences.leftHeights(screen), pane, height))))));
+            case LayoutMsg.PaneResized(Screen screen, int pane, int bottom) ->
+                Next.of(model.mapPreferences(preferences -> preferences.withDraggedHeights(Option.of(
+                        new DraggedHeights(screen, resized(preferences.leftHeights(screen), pane, bottom))))));
             case LayoutMsg.PaneSettled(Screen screen) ->
                 model.preferences()
                         .draggedHeights()
@@ -59,6 +59,14 @@ public final class LayoutUpdate {
                                 model.preferences().keepingHeights(screen, drag.heights())))
                         .getOrElse(() -> Next.of(model));
         };
+    }
+
+    /**
+     * {@code heights} with the bottom border of pane {@code pane} at {@code bottom} percent below the top of the first.
+     */
+    private static List<Integer> resized(List<Integer> heights, int pane, int bottom) {
+        return Settings.resizedHeights(
+                heights, pane, bottom - heights.take(pane).sum().intValue());
     }
 
     private static Next keep(Model model, Screen screen, int width) {

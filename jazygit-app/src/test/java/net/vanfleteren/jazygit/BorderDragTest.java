@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Screen;
 import net.vanfleteren.jazygit.state.TestModels;
+import net.vanfleteren.jazygit.state.Update;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -143,10 +144,47 @@ class BorderDragTest {
 
         assertEquals(
                 List.of(
-                        new LayoutMsg.PaneResized(Screen.REPOSITORY, 2, 40),
+                        new LayoutMsg.PaneResized(Screen.REPOSITORY, 2, 85),
                         new LayoutMsg.PaneSettled(Screen.REPOSITORY)),
                 sent());
         assertEquals(EventResult.UNHANDLED, drag.handle(MouseEvent.press(MouseButton.LEFT, 10, 99), model));
+    }
+
+    @Test
+    void aClickOnTheBorderOfAPaneTallerThanItsShareSendsNothing() {
+        // The stash shrunk to its rows, the commits fill what it leaves: rows 48 to 87, not their 30 percent.
+        drag.shown(
+                drawnAt(PANES),
+                drawnAt(LEFT),
+                List.of(
+                                new Rect(0, 3, 30, 25),
+                                new Rect(0, 28, 30, 20),
+                                new Rect(0, 48, 30, 40),
+                                new Rect(0, 88, 30, 12))
+                        .map(BorderDragTest::drawnAt));
+
+        assertEquals(EventResult.HANDLED, drag.handle(MouseEvent.press(MouseButton.LEFT, 10, 87), model));
+        drag.handle(MouseEvent.drag(MouseButton.LEFT, 12, 87), model);
+        assertEquals(EventResult.HANDLED, drag.handle(MouseEvent.release(MouseButton.LEFT, 12, 87), model));
+
+        assertEquals(List.of(), sent());
+    }
+
+    @Test
+    void aBorderDraggedBackToTheRowItWasPressedOnGoesBack() {
+        drag.handle(MouseEvent.press(MouseButton.LEFT, 10, 27), model);
+        drag.handle(MouseEvent.drag(MouseButton.LEFT, 10, 32), model);
+        Model dragged = Update.update(model, new LayoutMsg.PaneResized(Screen.REPOSITORY, 0, 30))
+                .model();
+
+        drag.handle(MouseEvent.release(MouseButton.LEFT, 10, 27), dragged);
+
+        assertEquals(
+                List.of(
+                        new LayoutMsg.PaneResized(Screen.REPOSITORY, 0, 30),
+                        new LayoutMsg.PaneResized(Screen.REPOSITORY, 0, 25),
+                        new LayoutMsg.PaneSettled(Screen.REPOSITORY)),
+                sent());
     }
 
     @Test

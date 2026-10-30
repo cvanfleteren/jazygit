@@ -116,8 +116,9 @@ class LayoutUpdateTest {
 
     @Test
     void eachPaneAndThePaneUnderItKeepTheirLeastHeight() {
+        // The branches start 25 percent below the top of the files.
         Next taller = Update.update(model, new LayoutMsg.PaneResized(Screen.REPOSITORY, 1, 90));
-        Next shorter = Update.update(model, new LayoutMsg.PaneResized(Screen.REPOSITORY, 1, -5));
+        Next shorter = Update.update(model, new LayoutMsg.PaneResized(Screen.REPOSITORY, 1, 20));
         // The stash under the commits has no height of its own: it takes what the others leave.
         Next commits = Update.update(model, new LayoutMsg.PaneResized(Screen.REPOSITORY, 2, 90));
 
@@ -128,7 +129,7 @@ class LayoutUpdateTest {
 
     @Test
     void eachScreenHasItsOwnHeights() {
-        Model dragged = Update.update(model, new LayoutMsg.PaneResized(Screen.PULL_REQUESTS, 1, 50))
+        Model dragged = Update.update(model, new LayoutMsg.PaneResized(Screen.PULL_REQUESTS, 1, 82))
                 .model();
 
         assertEquals(List.of(32, 50), dragged.preferences().leftHeights(Screen.PULL_REQUESTS));

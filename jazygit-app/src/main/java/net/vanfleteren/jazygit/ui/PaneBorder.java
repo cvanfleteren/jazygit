@@ -25,12 +25,13 @@ public final class PaneBorder {
     }
 
     /**
-     * How tall pane {@code pane} of {@code panes} is, in percent of the height of their {@code column}, with its
-     * bottom border at row {@code y}; none for a column without a height. It is the nearest percent, which the left
-     * column rounds back to row {@code y} when it is at most 100 rows tall.
+     * How far below the top of the first of {@code panes} a bottom border at row {@code y} is, in percent of the height
+     * of their {@code column}; none for a column without a height or without panes. It is the nearest percent, which
+     * the left column rounds back to row {@code y} when it is at most 100 rows tall.
      */
-    public static Option<Integer> height(Rect column, List<Rect> panes, int pane, int y) {
-        return Option.when(pane >= 0 && pane < panes.size() && column.height() > 0, () -> panes.get(pane))
-                .map(top -> Math.round((y + 1 - top.y()) * 100f / column.height()));
+    public static Option<Integer> bottom(Rect column, List<Rect> panes, int y) {
+        return panes.headOption()
+                .filter(first -> column.height() > 0)
+                .map(first -> Math.round((y + 1 - first.y()) * 100f / column.height()));
     }
 }

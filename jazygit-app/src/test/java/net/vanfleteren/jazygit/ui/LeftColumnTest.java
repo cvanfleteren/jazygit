@@ -39,7 +39,7 @@ class LeftColumnTest {
 
     @Test
     void theStashTakesAtMostWhatTheDraggedPanesLeave() {
-        Model dragged = Update.update(withStashes(30), new LayoutMsg.PaneResized(Screen.REPOSITORY, 2, 50))
+        Model dragged = Update.update(withStashes(30), new LayoutMsg.PaneResized(Screen.REPOSITORY, 2, 95))
                 .model();
 
         // The commits leave the stash its least share, 10 percent: 100 rows leave 100 - 3 - (25 + 20 + 45) = 7.
@@ -56,6 +56,8 @@ class LeftColumnTest {
         assertEquals(List.of(25, 20, 30, 22), LeftColumn.paneRows(List.of(25, 20, 30), 100));
         assertEquals(List.of(14, 14, 13), LeftColumn.paneRows(List.of(32, 32), 44));
         assertEquals(List.of(1, 0), LeftColumn.paneRows(List.of(50), 2));
+        // The borders are rounded, at 11.1 and 22.2 rows, not the panes, of 11.1 rows each.
+        assertEquals(List.of(11, 11, 12), LeftColumn.paneRows(List.of(30, 30), 37));
     }
 
     @Test

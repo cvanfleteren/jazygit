@@ -59,12 +59,14 @@ public final class LeftColumn {
 
     /**
      * How many rows each pane under the status takes of a column {@code height} rows tall, whose panes but the last
-     * are {@code heights} percent of the column tall: the last takes what they and the status leave.
+     * are {@code heights} percent of the column tall: the last takes what they and the status leave. The borders
+     * between the panes are rounded to a row, not the panes, so moving one border leaves the others where they are.
      */
     static List<Integer> paneRows(List<Integer> heights, int height) {
-        List<Integer> shares = heights.map(share -> Math.round(height * share / 100f));
-        return shares.append(
-                Math.max(0, height - StatusPanel.HEIGHT - shares.sum().intValue()));
+        List<Integer> borders = heights.scanLeft(0, Integer::sum).map(border -> Math.round(height * border / 100f));
+        return borders.tail()
+                .zipWith(borders, (bottom, top) -> bottom - top)
+                .append(Math.max(0, height - StatusPanel.HEIGHT - borders.last()));
     }
 
     /**

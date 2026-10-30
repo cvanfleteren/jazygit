@@ -56,12 +56,11 @@ final class BorderDrag {
     EventResult handle(MouseEvent event, Model model) {
         return dragging.fold(() -> startDrag(event, model), grip -> switch (event.kind()) {
             case DRAG -> {
-                resize(grip, event, model);
+                dragging = Option.of(resize(grip, event, model));
                 yield EventResult.UNHANDLED;
             }
             case RELEASE -> {
-                resize(grip, event, model);
-                settle(grip);
+                settle(resize(grip, event, model));
                 yield EventResult.HANDLED;
             }
             // A release the terminal did not report: let go, and the press may start a new drag.
@@ -84,43 +83,51 @@ final class BorderDrag {
             Screen screen = model.screen();
             dragging = Option.<Grip>when(onBorder(event.x(), event.y()), () -> new LeftEdge(screen))
                     .orElse(() -> PaneBorder.at(leftPaneAreas(), event.x(), event.y())
-                            .map(pane -> new PaneBottom(screen, pane)));
+                            .map(pane -> new PaneBottom(screen, pane, event.y(), false)));
             return dragging.isDefined() ? EventResult.HANDLED : EventResult.UNHANDLED;
         }
         return EventResult.UNHANDLED;
     }
 
     /**
-     * Moves the border {@code grip} to where {@code event} is, if that changes the width or the height.
+     * Moves the border {@code grip} to where {@code event} is, if that changes the width or the height, and gives the
+     * border as it is then. The bottom border of a pane stays until the mouse leaves the row it was pressed on: the
+     * percent of that row need not be the one kept, as a pane filling what the stash leaves is taller than its share.
      */
-    private void resize(Grip grip, MouseEvent event, Model model) {
-        switch (grip) {
-            case LeftEdge(Screen screen) ->
+    private Grip resize(Grip grip, MouseEvent event, Model model) {
+        return switch (grip) {
+            case LeftEdge(Screen screen) -> {
                 leftWidth(event.x())
                         .filter(width -> width != model.preferences().leftWidth(screen))
                         .forEach(width -> dispatch.accept(new LayoutMsg.Resized(screen, width)));
-            case PaneBottom(Screen screen, int pane) ->
+                yield grip;
+            }
+            case PaneBottom bottom when !bottom.moved() && event.y() == bottom.pressedAt() -> bottom;
+            case PaneBottom(Screen screen, int pane, int pressedAt, boolean moved) -> {
+                int kept = model.preferences()
+                        .leftHeights(screen)
+                        .take(pane + 1)
+                        .sum()
+                        .intValue();
                 shownLeft
                         .flatMap(left -> Option.of(left.renderedArea()))
-                        .flatMap(left -> PaneBorder.height(left, leftPaneAreas(), pane, event.y()))
-                        .filter(height -> !model.preferences()
-                                .leftHeights(screen)
-                                .drop(pane)
-                                .headOption()
-                                .contains(height))
-                        .forEach(height -> dispatch.accept(new LayoutMsg.PaneResized(screen, pane, height)));
-        }
+                        .flatMap(left -> PaneBorder.bottom(left, leftPaneAreas(), event.y()))
+                        .filter(border -> border != kept)
+                        .forEach(border -> dispatch.accept(new LayoutMsg.PaneResized(screen, pane, border)));
+                yield new PaneBottom(screen, pane, pressedAt, true);
+            }
+        };
     }
 
     /**
      * Lets go of the border {@code grip}.
      */
     private void settle(Grip grip) {
-        dispatch.accept(
-                switch (grip) {
-                    case LeftEdge(Screen screen) -> new LayoutMsg.Settled(screen);
-                    case PaneBottom(Screen screen, int pane) -> new LayoutMsg.PaneSettled(screen);
-                });
+        switch (grip) {
+            case LeftEdge(Screen screen) -> dispatch.accept(new LayoutMsg.Settled(screen));
+            case PaneBottom bottom when bottom.moved() -> dispatch.accept(new LayoutMsg.PaneSettled(bottom.screen()));
+            case PaneBottom bottom -> {}
+        }
         dragging = Option.none();
     }
 
@@ -165,7 +172,7 @@ final class BorderDrag {
 
     /**
      * The bottom border of pane {@code pane} of the left column of {@code screen}, counted from the first under the
-     * status.
+     * status, pressed on row {@code pressedAt}; {@code moved} once the mouse left that row.
      */
-    private record PaneBottom(Screen screen, int pane) implements Grip {}
+    private record PaneBottom(Screen screen, int pane, int pressedAt, boolean moved) implements Grip {}
 }
