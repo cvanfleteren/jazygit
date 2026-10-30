@@ -55,7 +55,8 @@ Ctrl+O opens it in the editor, Escape goes back; a failed send says why under th
   higher than the panel is read with the keys, as now. PageUp and PageDown move a page, Home and End to the first row
   of the first stop and the last row of the last. `h`/`l` still scroll sideways. The wheel scrolls the view, and pulls
   the cursor along to the nearest stop with a row on the screen when it would leave it, as vim does: the cursor is
-  never off the screen.
+  never off the screen. A click puts the cursor on the stop of the row clicked, the view staying where it is; while a
+  range is open, only on a line of its hunk, which the range then reaches to.
 - It is kept in the model, next to where the panel is scrolled to, as the anchor of its stop: the lead, a line by its
   file, its side and its number on that side, a file by its path, a thread by its id. Not: a row, which another
   styling moves; nor view state kept in the widget, as the panes' cursors are: where the panel is scrolled to is

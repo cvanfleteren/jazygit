@@ -160,6 +160,30 @@ class DiffCursorTest {
     }
 
     @Test
+    void aClickPutsTheCursorOnTheStopOfTheLineClickedAndLeavesTheView() {
+        // The view from line 3 shows the bar, line 1 and the first 3 lines of the thread.
+        assertAt(FILE, 3, on(FILE, 3).clicked(0).get());
+        assertAt(ONE, 3, on(FILE, 3).clicked(1).get());
+        assertAt(THREAD, 3, on(FILE, 3).clicked(4).get());
+        // The 3 lines after line 3 are its.
+        assertAt(THREE, 15, on(TWO, 15).clicked(4).get());
+
+        assertEquals(Option.none(), on(FILE, 3).clicked(-1));
+        assertEquals(Option.none(), on(FILE, 3).clicked(5));
+    }
+
+    @Test
+    void whileARangeIsOpenAClickReachesItOnlyToALineOfItsHunk() {
+        // The view from line 12 shows the end of the thread, line 2 and line 3.
+        DiffCursor range = on(TWO, 12).marked().get();
+
+        assertEquals(Option.none(), range.clicked(0));
+        DiffCursor reached = range.clicked(4).get();
+        assertEquals(THREE, reached.anchor());
+        assertEquals(Option.of(TWO), reached.markAnchor());
+    }
+
+    @Test
     void aMarkThatIsNotALineOfTheHunkOfTheCursorIsDropped() {
         assertEquals(
                 Option.none(),

@@ -163,6 +163,17 @@ record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int stop, 
                 .findLast(this::isThread));
     }
 
+    /**
+     * A click on the {@code line}th line the view shows: the stop that line is part of, the view staying where it is;
+     * while a range is open, only a line of its hunk, which the range then reaches to. None for a line the view does
+     * not show, or one past the end of the diff.
+     */
+    Option<DiffCursor> clicked(int line) {
+        return Option.when(line >= 0 && line < height && row + line < lines, () -> containing(row + line))
+                .filter(index -> mark.isEmpty() || lineOfHunk(index))
+                .map(index -> at(index, row));
+    }
+
     private Option<DiffCursor> thread(Option<Integer> found) {
         return found.filter(ignored -> mark.isEmpty())
                 .map(index -> at(index, row).shown());

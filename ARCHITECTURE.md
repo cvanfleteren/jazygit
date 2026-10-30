@@ -427,7 +427,7 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
   the threads placed in it (`Anchor`: the lead, a file's bar, a line by its side and number, a thread by its id), and
   where it goes when its stop is gone (`DiffStops.nearest`). `RichDiff.drawn` marks the row each stop starts on
   (`RichDiff.Drawn`), and `ui.DiffCursor` moves it: `j`/`k` and the arrows, through a stop higher than the view before
-  the next one, the pages and the wheel pulling it along, a range of one hunk with `v`, the next thread with `n`. The
+  the next one, the pages and the wheel pulling it along, a click on a row, a range of one hunk with `v`, the next thread with `n`. The
   area sends where it moved it and the view in one `Msg.ContentScrolled`: `Scrolled` holds the anchor of the cursor and
   of the other end of its range, and keeps the cursor when the same changes are read again
   (`ScrolledContent.sameChanges`). Until the model has it, the area draws where it told it, so a key right after
