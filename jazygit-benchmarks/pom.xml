@@ -18,7 +18,7 @@
     <dependencies>
         <dependency>
             <groupId>net.vanfleteren</groupId>
-            <artifactId>jazygit-core</artifactId>
+            <artifactId>jazygit-git</artifactId>
         </dependency>
         <!-- For what drawing a diff costs where the app styles it (RichDiffBenchmark). -->
         <dependency>

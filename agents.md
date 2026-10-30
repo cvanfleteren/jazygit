@@ -1,7 +1,7 @@
 ## code style
 - prefer modern, functional java, preferring things like recursion, immutable collections and stream processing over things like javabeans and for loops
 
-The ArchUnit tests (`ArchitectureTest`, `CoreArchitectureTest`, `JsonArchitectureTest`) enforce these rules; a build that breaks one fails.
+The ArchUnit tests (`ArchitectureTest`, `GitArchitectureTest`, `GhArchitectureTest`, `ProcessArchitectureTest`, `JsonArchitectureTest`, `SyntaxArchitectureTest`) enforce these rules; a build that breaks one fails.
 
 ### The Elm loop
 - Messages, commands and popups are values: records, or enums. Each feature's `XxxMsg` is a sealed interface, so its update switches over every message without a `default`.

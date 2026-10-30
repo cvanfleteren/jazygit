@@ -22,7 +22,15 @@
     <dependencies>
         <dependency>
             <groupId>net.vanfleteren</groupId>
-            <artifactId>jazygit-core</artifactId>
+            <artifactId>jazygit-process</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.vanfleteren</groupId>
+            <artifactId>jazygit-git</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.vanfleteren</groupId>
+            <artifactId>jazygit-gh</artifactId>
         </dependency>
         <dependency>
             <groupId>io.vavr</groupId>
@@ -60,8 +68,19 @@
         </dependency>
         <dependency>
             <groupId>net.vanfleteren</groupId>
-            <artifactId>jazygit-core</artifactId>
+            <artifactId>jazygit-git</artifactId>
             <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>net.vanfleteren</groupId>
+            <artifactId>jazygit-gh</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>net.vanfleteren</groupId>
+            <artifactId>jazygit-test-support</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>

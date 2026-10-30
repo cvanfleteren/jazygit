@@ -27,7 +27,7 @@ newest_jar() {
 JAR="$(newest_jar)"
 
 # Rebuild when there is no jar yet, or when the sources or poms are newer than it.
-if [[ -z "$JAR" ]] || [[ -n "$(find jazygit-json/src jazygit-syntax/src jazygit-core/src jazygit-app/src pom.xml jazygit-json/pom.xml jazygit-syntax/pom.xml jazygit-core/pom.xml jazygit-app/pom.xml -newer "$JAR" -print -quit)" ]]; then
+if [[ -z "$JAR" ]] || [[ -n "$(find jazygit-json/src jazygit-syntax/src jazygit-process/src jazygit-git/src jazygit-gh/src jazygit-app/src pom.xml jazygit-json/pom.xml jazygit-syntax/pom.xml jazygit-process/pom.xml jazygit-git/pom.xml jazygit-gh/pom.xml jazygit-app/pom.xml -newer "$JAR" -print -quit)" ]]; then
     mvn -q -DskipTests package
     JAR="$(newest_jar)"
 fi
