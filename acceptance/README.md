@@ -58,7 +58,7 @@ export PYTEST_ADDOPTS="-n 12"
 
 The tests marked `slow` (the scenarios) start first, each on a worker of its own, and the run takes about as long as
 the slowest of them: past twelve workers or so, more don't make it quicker. The apps start from a class data archive
-of the jar, which the first run after a build makes next to it, and read the status every 100ms instead of 750ms
+of the jar, which the first run after a build makes next to it, and read the status every 100ms instead of every second
 (`-Djazygit.refreshInterval`), so that they see sooner what a test wrote.
 
 The java that runs the jar is `JAZYGIT_JAVA` if set, else `$JAVA_HOME/bin/java`, else `java` on the `PATH`. Nix's

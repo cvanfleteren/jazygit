@@ -79,7 +79,7 @@ public record Jobs(
     public static final Duration LINGER = Duration.ofMillis(300);
 
     /**
-     * Caps how long a tick waits before trying a read that failed again at {@code 2^6} = 64 ticks, under a minute at
+     * Caps how long a tick waits before trying a read that failed again at {@code 2^6} = 64 ticks, about a minute at
      * the default interval.
      */
     private static final int MAX_BACKOFF_SHIFT = 6;

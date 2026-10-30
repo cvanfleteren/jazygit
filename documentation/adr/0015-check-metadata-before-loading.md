@@ -50,3 +50,5 @@ other three change when a ref, a HEAD, the config or a worktree changes, and git
   clock is ahead makes every stamp tell nothing, and every tick reads all three, as before this decision.
 - The status is still read on every tick. Telling working tree changes from files would take watching the whole
   tree.
+
+Amended by ADR 52: the tick comes every second.

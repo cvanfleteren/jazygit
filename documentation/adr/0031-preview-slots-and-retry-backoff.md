@@ -46,3 +46,5 @@ that is gone, ran a git process on every tick for as long as it was highlighted.
 - Moving through a list faster than git answers only reads the item highlighted last.
 - A preview that keeps failing shows its error for up to about 48 s before it is tried again, unless the user
   highlights another item and comes back, or an operation refreshes.
+
+Amended by ADR 52: the tick comes every second, so a failed read waits up to 64 s.

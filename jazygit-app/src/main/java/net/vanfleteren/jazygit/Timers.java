@@ -19,7 +19,7 @@ import net.vanfleteren.jazygit.ui.TimeText;
 final class Timers {
 
     // In milliseconds; the acceptance tests tick faster, as each of their steps waits for the app to see a change.
-    static final Duration REFRESH_INTERVAL = Duration.ofMillis(Long.getLong("jazygit.refreshInterval", 750));
+    static final Duration REFRESH_INTERVAL = Duration.ofMillis(Long.getLong("jazygit.refreshInterval", 1000));
     static final Duration FETCH_INTERVAL = Duration.ofMinutes(1);
     // How often GitHub is asked how the merges it does in the background are going (ADR 24).
     static final Duration MERGE_CHECK_INTERVAL = Duration.ofSeconds(2);

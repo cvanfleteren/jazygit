@@ -59,7 +59,7 @@ def java() -> str:
     return "java"
 
 
-# The app reads the status again every 100ms instead of 750ms, so that it sees sooner what a test wrote.
+# The app reads the status again every 100ms instead of every second, so that it sees sooner what a test wrote.
 JVM_OPTIONS = ["--enable-native-access=ALL-UNNAMED", "-Dtamboui.backend=panama", "-Djazygit.refreshInterval=100"]
 
 
