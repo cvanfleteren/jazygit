@@ -164,6 +164,11 @@ public final class CliGitHub implements GitHub {
     }
 
     @Override
+    public Either<GhError, ReviewRemarks> reviewRemarks(int number) {
+        return process.readJson(ReviewThreadsQuery.command(number), ReviewThreadsQuery.DECODER);
+    }
+
+    @Override
     public Either<GhFailure, Created> createPullRequest(GhBranch head, GhBranch base, NewPullRequest pullRequest) {
         return process.run(createCommand(head, base, pullRequest))
                 .map(output -> new Created(createdNumber(output.stdout()), output.log()));

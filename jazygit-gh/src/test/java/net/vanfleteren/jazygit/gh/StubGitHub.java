@@ -99,6 +99,14 @@ public interface StubGitHub extends GitHub {
     }
 
     /**
+     * No review threads, at commits that are not known.
+     */
+    @Override
+    default Either<GhError, ReviewRemarks> reviewRemarks(int number) {
+        return Either.right(new ReviewRemarks(Option.none(), Option.none(), List.empty()));
+    }
+
+    /**
      * An open pull request {@code number} from branch {@code feature} into {@code main}, with nothing else to it.
      */
     @Override
