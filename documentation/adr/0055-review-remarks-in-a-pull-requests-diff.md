@@ -60,33 +60,41 @@ internal, and a code block or a table is laid out as a widget, not as lines.
   sha. The base is fetched by its sha, not as `refs/heads/<base>`: the branch may have moved on since the details were
   read, and git would update `refs/remotes/<remote>/<base>` through the remote's fetch refspec. `--refmap=` leaves no
   fetch refspec to apply, so it writes no ref, not even `FETCH_HEAD` nor a remote-tracking branch, and it needs no
-  guard of the remote refs (ADR 27). The remote is the one whose URL names the repository of the pull request; when
-  none does, nothing is fetched, and the read fails as git says. It runs in the background, as it can take the
-  network's time, while the files pane says it is loading.
+  guard of the remote refs (ADR 27). The remote is the one whose URL names the repository of the pull request, on
+  the host of its URL (`url`, read with its details): a mirror of the same `owner/name` on another host does not have
+  `refs/pull/<n>/head`. When none is on that host, as when an ssh alias names it, the first whose path names the
+  repository is taken; when none does, nothing is fetched, and the read fails as git says. It runs in the background,
+  as it can take the network's time, while the files pane says it is loading.
 - Not: `gh pr diff`, which has GitHub's limits, cannot be read file by file, and shows all whitespace.
 
 ### Reading the remarks
 
 - `ReviewThreadsQuery`: `gh api graphql` on `pullRequest.reviewThreads`, a page of 100 threads at a time
-  (`--paginate --slurp`), with their path, line, start line, side, original line, whether they are resolved or
-  outdated and whether they are about a line or a file, and up to 50 comments each: who wrote it, when, its Markdown,
-  and whether it is hidden and why. A thread with more says how many more there are. It reads the head and base commits
-  of the pull request too.
+  (`--paginate --slurp`), with their path, line, start line, the sides of both, original line, whether they are
+  resolved or outdated and whether they are about a line or a file, and up to 50 comments each: who wrote it, when,
+  its Markdown, and whether it is hidden and why. A thread with more says how many more there are. It reads the head
+  and base commits of the pull request too.
 - A comment of a review that is not submitted yet, pending, is left out, as only its author sees it (ADR 6); a thread
   of only those is left out.
 - They are read when the tree opens, and again with `R` in the tree or its diff. When the head or the base commit
   changed, the files and the diff are read again too, at the new commits. Not: read every so often, which costs a
   GitHub request each time for what changes seldom.
-- When `R` finds the pull request merged or closed, the tree stays open at the commits it last read, its remarks are
-  read again, and its title says so: `Files of #123 · merged`. Not: closing it, as a dropped stash does (ADR 44): a
-  stash's name then names another stash, while the number of a pull request still names it.
+- The remarks are read with the state of the pull request, and the title of the tree follows it:
+  `Files of #123 · merged` or `· closed`, from when the tree opens on a closed one, or from the `R` that finds it so.
+  One that `R` finds merged or closed stays at the commits its files were read at, though GitHub now gives others.
+  Not: closing the tree, as a dropped stash does (ADR 44): a stash's name then names another stash, while the number
+  of a pull request still names it.
 
 ### Placing them
 
 - A thread on a line goes after the line with its number on its side: `RIGHT` the number in the new file, `LEFT` in
   the old one, in the file with its path as GitHub gives it: the new path of a renamed file, on either side, and the
-  old path of a deleted one. A file matches on its path or on the path it was renamed from. One on several lines (`startLine` to `line`) goes after its last line. A
-  thread about a whole file goes under the bar of the file.
+  old path of a deleted one. A file matches on its path or on the path it was renamed from, wherever a thread is
+  matched to a file: placed in its diff, counted in the plain view and in the tree. A thread about a whole file goes
+  under the bar of the file.
+- One on several lines goes after its last line (`line` on `diffSide`), and covers every line of the diff from its
+  first (`startLine` on `startDiffSide`, which may be the other side) to its last, in the order of the diff: the
+  removed lines among added ones too, as GitHub highlights them. Only a thread that is placed covers lines.
 - A thread that cannot be placed goes in a list at the end of its file, dimmed, each saying the line it was made on:
   an outdated one, one on a line the diff does not show, as its file is cut off after `CliDiff.MAX_LINES` lines, or as
   its line is outside the hunks git made. Not: left out with a count, nor placed on its `originalLine`, which may now
