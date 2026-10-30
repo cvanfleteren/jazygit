@@ -151,7 +151,12 @@ class DiffCursorTest {
     void theNextAndThePreviousThread() {
         assertAt(THREAD, 5, on(LEAD, 0).nextThread().get());
         assertAt(THREAD, 10, on(THREE, 15).previousThread().get());
-        assertEquals(Option.none(), on(TWO, 11).nextThread());
+        // Around the end, and the start; the view stays where the thread is shown already.
+        assertAt(THREAD, 11, on(TWO, 11).nextThread().get());
+        assertAt(THREAD, 5, on(LEAD, 0).previousThread().get());
+        // The only thread is no other.
+        assertEquals(Option.none(), on(THREAD, 5).nextThread());
+        assertEquals(Option.none(), on(THREAD, 5).previousThread());
     }
 
     @Test

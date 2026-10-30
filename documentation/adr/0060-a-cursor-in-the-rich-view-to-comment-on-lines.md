@@ -99,7 +99,8 @@ Ctrl+O opens it in the editor, Escape goes back; a failed send says why under th
   - `x` resolves the thread of the cursor, or unresolves it;
   - `Space` opens or closes the thread of the cursor;
   - `v` starts or drops a range;
-  - `n` and `N` move the cursor to the next or the previous thread, and the view with it;
+  - `n` and `N` move the cursor to the next or the previous thread, and the view with it, from the last thread to
+    the first and back;
   - `R` reads the remarks again, as in the tree.
 - They are the bindings of a new scope, `Scopes.PULL_REQUEST_DIFF`, active while a content area has the focus on the
   diff of a pull request's files: `ScrollArea` gives it a key it did not take to move or scroll, through

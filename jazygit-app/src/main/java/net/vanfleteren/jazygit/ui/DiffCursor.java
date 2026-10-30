@@ -145,18 +145,22 @@ record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int stop, 
     }
 
     /**
-     * {@code n}: the next thread, the view following it; none when there is none after the cursor, or a range is
-     * open.
+     * {@code n}: the next thread, the view following it, the first after the last; none when there is no other
+     * thread, or a range is open.
      */
     Option<DiffCursor> nextThread() {
-        return thread(Vector.range(stop + 1, stops.size()).find(this::isThread));
+        return thread(Vector.range(stop + 1, stops.size())
+                .appendAll(Vector.range(0, stop))
+                .find(this::isThread));
     }
 
     /**
-     * {@code N}: the thread before the cursor.
+     * {@code N}: the thread before the cursor, the last before the first.
      */
     Option<DiffCursor> previousThread() {
-        return thread(Vector.range(0, stop).findLast(this::isThread));
+        return thread(Vector.range(stop + 1, stops.size())
+                .appendAll(Vector.range(0, stop))
+                .findLast(this::isThread));
     }
 
     private Option<DiffCursor> thread(Option<Integer> found) {
