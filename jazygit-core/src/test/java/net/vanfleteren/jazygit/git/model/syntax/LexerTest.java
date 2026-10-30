@@ -1,9 +1,11 @@
 package net.vanfleteren.jazygit.git.model.syntax;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.time.Duration;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.FileDiff;
@@ -186,17 +188,17 @@ class LexerTest {
 
         assertEquals(
                 List.of(List.of(
-                        List.of(new Token(0, 3, Token.Kind.KEYWORD)),
-                        List.<Token>of(),
-                        List.of(new Token(0, 3, Token.Kind.KEYWORD)))),
-                lexed(file));
+                        Option.of(List.of(new Token(0, 3, Token.Kind.KEYWORD))),
+                        Option.<List<Token>>none(),
+                        Option.of(List.of(new Token(0, 3, Token.Kind.KEYWORD))))),
+                new Lexer().tokens(file));
     }
 
     @Test
     void aFileOfNoLanguageKnownHasNoTokens() {
         FileDiff file = file("notes.txt", "@@ -1 +1 @@\n-int a;\n+int b;\n");
 
-        assertEquals(List.of(Option.none()), new Lexer().tokens(file));
+        assertEquals(List.of(List.of(Option.none(), Option.none())), new Lexer().tokens(file));
     }
 
     @Test
@@ -222,7 +224,7 @@ class LexerTest {
                         """).files().head();
 
         assertEquals(ChangeType.CONFLICTED, file.type());
-        assertEquals(List.of(Option.none()), new Lexer().tokens(file));
+        assertEquals(List.of(List.of(Option.none())), new Lexer().tokens(file));
     }
 
     @Test
@@ -235,7 +237,7 @@ class LexerTest {
                 """);
 
         assertEquals(
-                List.of(Option.none(), Option.of(List.of(List.of(new Token(0, 3, Token.Kind.KEYWORD))))),
+                List.of(List.of(Option.none()), List.of(Option.of(List.of(new Token(0, 3, Token.Kind.KEYWORD))))),
                 new Lexer().tokens(file));
     }
 
@@ -275,11 +277,38 @@ class LexerTest {
                 tokens(Language.XML, "<script>if (a<b) { x = \"y\"; }</script>"));
     }
 
+    @Test
+    void aLineTooLongIsNotLexedAndTheLineAfterItStartsOutside() {
+        String tooLong = "/* " + "x".repeat(Lexer.MAX_LINE);
+        FileDiff file = file("A.js", "@@ -0,0 +1,2 @@\n+" + tooLong + "\n+let a;\n");
+
+        assertEquals(
+                List.of(List.of(Option.none(), Option.of(List.of(new Token(0, 3, Token.Kind.KEYWORD))))),
+                new Lexer().tokens(file));
+    }
+
+    @Test
+    void aLineAsLongAsMayBeIsLexed() {
+        String longest = "let " + "x".repeat(Lexer.MAX_LINE - 4);
+        FileDiff file = file("A.js", "@@ -0,0 +1 @@\n+" + longest + "\n");
+
+        assertEquals(List.of(List.of(List.of(new Token(0, 3, Token.Kind.KEYWORD)))), lexed(file));
+    }
+
+    @Test
+    void aStringOfManyEscapesIsReadOnce() {
+        String line = "x = \"" + "\\n".repeat(80_000) + "\";";
+
+        Lexed lexed = assertTimeoutPreemptively(Duration.ofMillis(500), () -> line(Language.JSON, new Outside(), line));
+
+        assertEquals(List.of(new Token(4, line.length() - 5, Token.Kind.STRING)), lexed.tokens());
+    }
+
     /**
      * The tokens of each line of each hunk of {@code file}, all of which are lexed.
      */
     private static List<List<List<Token>>> lexed(FileDiff file) {
-        return new Lexer().tokens(file).map(Option::get);
+        return new Lexer().tokens(file).map(hunk -> hunk.map(Option::get));
     }
 
     private static FileDiff file(String path, String hunks) {

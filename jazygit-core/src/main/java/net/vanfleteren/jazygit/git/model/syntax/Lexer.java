@@ -22,6 +22,12 @@ import net.vanfleteren.jazygit.git.model.syntax.Token.Kind;
 public record Lexer() implements Highlighter {
 
     /**
+     * How long a line may be to be lexed, in {@code char}s: a longer one is minified or made by a program, which nobody
+     * reads in a terminal, and lexing it could take long (ADR 53).
+     */
+    public static final int MAX_LINE = 2_000;
+
+    /**
      * The first characters of the comments and the strings of every language: only at one of them can one start.
      */
     private static final String OPENINGS = List.of(Language.values())
@@ -42,12 +48,14 @@ public record Lexer() implements Highlighter {
             .getOrElse(0);
 
     @Override
-    public List<Option<List<List<Token>>>> tokens(FileDiff file) {
+    public List<List<Option<List<Token>>>> tokens(FileDiff file) {
         Option<Grammar> grammar = file.type() == ChangeType.CONFLICTED
                 ? Option.none()
                 : Language.of(file.path(), firstLine(file)).map(Language::grammar);
         return file.hunks()
-                .map(hunk -> grammar.filter(ignored -> hunk.numbered()).map(known -> hunk(known, hunk)));
+                .map(hunk -> grammar.filter(ignored -> hunk.numbered())
+                        .map(known -> hunk(known, hunk))
+                        .getOrElse(() -> hunk.lines().map(line -> Option.none())));
     }
 
     /**
@@ -65,32 +73,48 @@ public record Lexer() implements Highlighter {
 
     /**
      * The tokens of the lines of {@code hunk}: a removed line's from the old text, an added or a context line's from
-     * the new one; a note has none, and leaves both where they were.
+     * the new one. A note is not lexed, and leaves both where they were. A line longer than {@link #MAX_LINE} is not
+     * lexed either, and the line after it in the same text starts outside of everything, as a hunk does.
      */
-    static List<List<Token>> hunk(Grammar grammar, Hunk hunk) {
+    static List<Option<List<Token>>> hunk(Grammar grammar, Hunk hunk) {
         Outside start = new Outside();
         return hunk.lines()
                 .foldLeft(
-                        Tuple.of(List.<List<Token>>empty(), (State) start, (State) start),
+                        Tuple.of(List.<Option<List<Token>>>empty(), (State) start, (State) start),
                         (done, line) -> switch (line.kind()) {
-                            case NOTE -> done.map1(lines -> lines.prepend(List.empty()));
+                            case NOTE -> done.map1(lines -> lines.prepend(Option.none()));
                             case REMOVED -> {
-                                Lexed old = line(grammar, done._2, line.text());
-                                yield Tuple.of(done._1.prepend(old.tokens()), old.state(), done._3);
+                                Option<Lexed> old = lexed(grammar, done._2, line.text());
+                                yield Tuple.of(done._1.prepend(old.map(Lexed::tokens)), after(old), done._3);
                             }
                             case ADDED -> {
-                                Lexed now = line(grammar, done._3, line.text());
-                                yield Tuple.of(done._1.prepend(now.tokens()), done._2, now.state());
+                                Option<Lexed> now = lexed(grammar, done._3, line.text());
+                                yield Tuple.of(done._1.prepend(now.map(Lexed::tokens)), done._2, after(now));
                             }
                             case CONTEXT -> {
-                                Lexed now = line(grammar, done._3, line.text());
+                                Option<Lexed> now = lexed(grammar, done._3, line.text());
                                 // Most often both texts are outside of everything, and lexing it once is enough.
-                                Lexed old = done._2.equals(done._3) ? now : line(grammar, done._2, line.text());
-                                yield Tuple.of(done._1.prepend(now.tokens()), old.state(), now.state());
+                                Option<Lexed> old =
+                                        done._2.equals(done._3) ? now : lexed(grammar, done._2, line.text());
+                                yield Tuple.of(done._1.prepend(now.map(Lexed::tokens)), after(old), after(now));
                             }
                         })
                 ._1
                 .reverse();
+    }
+
+    /**
+     * {@code line} lexed from inside {@code state}, unless it is too long to be.
+     */
+    private static Option<Lexed> lexed(Grammar grammar, State state, String line) {
+        return Option.when(line.length() <= MAX_LINE, () -> line(grammar, state, line));
+    }
+
+    /**
+     * What the scanner is inside of after a line that was {@code lexed}: outside of everything after one that was not.
+     */
+    private static State after(Option<Lexed> lexed) {
+        return lexed.map(Lexed::state).getOrElse(Outside::new);
     }
 
     /**
@@ -285,10 +309,15 @@ public record Lexer() implements Highlighter {
          */
         Scan inside(int start, int from, Inside inside) {
             Delimited delimited = inside.delimited();
-            // From each escape on to the next, until there is no escape before the first close.
-            Option<Integer> end = Iterator.iterate(from, i -> line.indexOf('\\', i) + 2)
-                    .map(i -> Tuple.of(
-                            line.indexOf(delimited.close(), i), delimited.escapes() ? line.indexOf('\\', i) : -1))
+            // From each escape on to the next, until there is no escape before the first close; the close is only
+            // looked for again once an escape has stepped past it, so a string of many escapes is read once.
+            Option<Integer> end = Iterator.iterate(
+                            Tuple.of(
+                                    line.indexOf(delimited.close(), from),
+                                    delimited.escapes() ? line.indexOf('\\', from) : -1),
+                            found -> Tuple.of(
+                                    found._1 >= found._2 + 2 ? found._1 : line.indexOf(delimited.close(), found._2 + 2),
+                                    line.indexOf('\\', found._2 + 2)))
                     .find(found -> found._1 < 0 || found._2 < 0 || found._2 > found._1)
                     .map(found -> found._1)
                     .filter(close -> close >= 0)

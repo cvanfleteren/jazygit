@@ -80,14 +80,20 @@ tell from the hunk alone.
 - What is not code is not lexed, and leaves the scanner where it was: notes (`\ No newline at end of file`), the
   header of a hunk, the lines of a conflicted file (ADR 47), and what comes before the first file.
 - A token is a `Token`: where it starts in its line and how long it is, in the `char`s of the line's text as Java
-  counts them (UTF-16, as the words are cut), and its kind. `ParsedDiff` holds, for each hunk, whether it was lexed,
-  and if so the tokens of each of its lines, next to its words. A hunk is not lexed when its file's language is not
-  known, its file is conflicted or its lines are not numbered; one that is lexed can have lines without tokens.
+  counts them (UTF-16, as the words are cut), and its kind. `ParsedDiff` holds, for each line of each hunk, whether
+  it was lexed and if so its tokens, next to its words and in their shape. No line of a hunk is lexed when its
+  file's language is not known, its file is conflicted or its lines are not numbered; a line that is lexed can have
+  no tokens.
+- A line longer than 2 000 `char`s (`Lexer.MAX_LINE`) is not lexed. Such a line is minified or made by a program,
+  which nobody reads in a terminal, and lexing it, and cutting it into its tokens where it is drawn, takes time for
+  nothing: a minified script has lines of tens of thousands of tokens, and a source map strings of tens of thousands
+  of escapes. The line after it in the same text starts outside of everything, as a hunk does, as what the scanner
+  would have been inside of is not known. Not: lexing it and dropping its tokens, which still costs the lexing.
 - The tokens are found in `ParsedDiff.of`, where the diff is read (ADR 50), also while the plain view is chosen, as
   the words are, and also while `ui.diff-syntax` is `false`: the core reads no settings, and passing the setting to
   every read of a diff, and reading the diffs shown again when it changes, costs more than the lexing does (2 ms for
-  a commit of 100 files). The scanner has no budget: it takes time in proportion to the text, and a diff is cut off
-  after `CliDiff.MAX_LINES` lines.
+  a commit of 100 files). The scanner has no budget beyond the length of a line: it takes time in proportion to the
+  text, and a diff is cut off after `CliDiff.MAX_LINES` lines.
 
 ### Drawing
 
@@ -101,7 +107,7 @@ tell from the hunk alone.
 - A changed line whose class gives it no background, as in the themes `mono` and `none`, is drawn as before, not
   coloured by its syntax: there, the colour of the line is what tells it is changed, and a line of tokens only, like
   a comment or a line of a fenced code block, would look like context. Its context lines are coloured.
-- A hunk that was not lexed is drawn as before.
+- A line that was not lexed is drawn as before: one of a hunk that was not lexed, or one too long to be.
 - The classes of the diff keep their colour in every theme: that is how a changed line is drawn when it is not
   coloured by its syntax, as before. Each theme gets the four classes of the syntax, with colours of its own that
   read on both its added and its removed background; the themes for colour blindness use no red and green for them.
@@ -121,6 +127,8 @@ tell from the hunk alone.
 ## Consequences
 
 - The rich view colours the code of the languages above; a file of another language is drawn as before.
-- A hunk that starts inside a block comment or a multi-line string is coloured wrong until it leaves it.
+- A hunk that starts inside a block comment or a multi-line string is coloured wrong until it leaves it, and so are
+  the lines after a line too long to be lexed that ended inside one.
+- A line of more than 2 000 `char`s is not coloured.
 - Reading a diff takes a little longer, also in the plain view: each line is scanned once more.
 - A theme has four more classes to keep.
