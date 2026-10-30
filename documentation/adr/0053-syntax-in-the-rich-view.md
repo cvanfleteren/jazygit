@@ -34,15 +34,23 @@ tell from the hunk alone.
   later. Not: tree-sitter, nor another program.
 - It finds four kinds of tokens: keywords, strings, comments and numbers. Names, types, annotations and punctuation
   are not coloured: a scanner cannot tell them apart reliably.
-- A language is a constant of the enum `Language`, which holds what the scanner needs: its keywords, whether they
-  are matched ignoring case, its line comments, its block comment, its kinds of strings, and the names and
-  extensions of its files. Not: grammar files on the classpath, which a native image has to be told about.
+- A language is a constant of the enum `Language`, which holds the names and extensions of its files and a
+  `Grammar`: what the scanner needs, its keywords, whether they are matched ignoring case, its line comments, its
+  block comment and its kinds of strings, and the mode it is scanned in. Most languages are code, scanned by the one
+  scanner from that data alone; XML and HTML, and Markdown, have a mode of their own, as their tokens are told by
+  where they stand rather than by what they are. Not: grammar files on the classpath, which a native image has to be
+  told about.
+- A word that is a keyword only in some places is none: Java's words of a module (`module`, `requires`, `to`,
+  `with`, …), Kotlin's soft keywords (`value`, `data`, `get`, `set`, `by`, …), TypeScript's `get`, `set`, `type`,
+  `from` and `of`, Python's `type` and `match`. Elsewhere
+  they are common names, which would be coloured wrong far more often than the few places they are keywords.
 - The scanner knows strings over several lines (Python's `"""` and `'''`, Java's and Kotlin's text blocks), Go's and
   JavaScript's backtick strings (a template literal is a string, `${…}` included), escapes in strings, and
   keywords matched ignoring case (SQL). Not: Rust's raw strings, nested block comments, shell heredocs, nor the
   expressions in Python's f-strings and Kotlin's `${…}`, which are coloured as the string they are in.
 - XML and HTML are scanned for tags: a tag's name is a keyword, the value of an attribute a string, `<!-- -->` a
-  comment.
+  comment. Not: the code in `<script>` and `<style>`, which is scanned as text: a `<` before a letter there is taken
+  for a tag, and a quote in it can open a string that runs on to the next `>`.
 - Markdown: a heading, and the marker of a list item or a quote, is a keyword; inline code and the lines of a fenced
   code block, its fences included, are strings; `<!-- -->` is a comment. Not: the code in a fence coloured in its
   own language, which needs one scanner inside another and goes wrong whenever a hunk starts inside a fence.
@@ -71,10 +79,21 @@ tell from the hunk alone.
   is now.
 - What is not code is not lexed, and leaves the scanner where it was: notes (`\ No newline at end of file`), the
   header of a hunk, the lines of a conflicted file (ADR 47), and what comes before the first file.
-- A token is a `Token`: where it starts in its line, how long it is, and its kind. `ParsedDiff` holds the tokens of
-  each line of each hunk next to its words, in the same shape. They are found in `ParsedDiff.of`, where the diff is
-  read (ADR 50), also while the plain view is chosen, as the words are. The scanner has no budget: it takes time in
-  proportion to the text, and a diff is cut off after `CliDiff.MAX_LINES` lines.
+- A token is a `Token`: where it starts in its line and how long it is, in the `char`s of the line's text as Java
+  counts them (UTF-16, as the words are cut), and its kind. `ParsedDiff` holds, for each line of each hunk, whether
+  it was lexed and if so its tokens, next to its words and in their shape. No line of a hunk is lexed when its
+  file's language is not known, its file is conflicted or its lines are not numbered; a line that is lexed can have
+  no tokens.
+- A line longer than 2 000 `char`s (`Lexer.MAX_LINE`) is not lexed. Such a line is minified or made by a program,
+  which nobody reads in a terminal, and lexing it, and cutting it into its tokens where it is drawn, takes time for
+  nothing: a minified script has lines of tens of thousands of tokens, and a source map strings of tens of thousands
+  of escapes. The line after it in the same text starts outside of everything, as a hunk does, as what the scanner
+  would have been inside of is not known. Not: lexing it and dropping its tokens, which still costs the lexing.
+- The tokens are found in `ParsedDiff.of`, where the diff is read (ADR 50), also while the plain view is chosen, as
+  the words are, and also while `ui.diff-syntax` is `false`: the core reads no settings, and passing the setting to
+  every read of a diff, and reading the diffs shown again when it changes, costs more than the lexing does (2 ms for
+  a commit of 100 files). The scanner has no budget beyond the length of a line: it takes time in proportion to the
+  text, and a diff is cut off after `CliDiff.MAX_LINES` lines.
 
 ### Drawing
 
@@ -84,12 +103,15 @@ tell from the hunk alone.
   of `syntax-text` outside a token, which is the theme's default colour unless the theme gives it one. Its marker,
   `+` or `-`, keeps the whole style of its class. A context line takes the colour of its tokens and no background.
   Where a token and a changed word overlap, the span is cut at the bounds of both.
-- A changed line whose class gives it no background, as in the themes `mono` and `none`, keeps the colour of its
-  class outside a token: there, that colour is what tells it is changed.
-- A file none of whose lines has a token, as its language is not known, is drawn as before.
+  Cutting a line takes time in proportion to its segments and its tokens, as a minified file has one long line.
+- A changed line whose class gives it no background, as in the themes `mono` and `none`, is drawn as before, not
+  coloured by its syntax: there, the colour of the line is what tells it is changed, and a line of tokens only, like
+  a comment or a line of a fenced code block, would look like context. Its context lines are coloured.
+- A line that was not lexed is drawn as before: one of a hunk that was not lexed, or one too long to be.
 - The classes of the diff keep their colour in every theme: that is how a changed line is drawn when it is not
   coloured by its syntax, as before. Each theme gets the four classes of the syntax, with colours of its own that
   read on both its added and its removed background; the themes for colour blindness use no red and green for them.
+  But `none`, which has no colours at all, gets none.
 - It is on by default. `ui.diff-syntax = false` in `config.toml` turns it off; no key switches it, as Ctrl+D switches
   the style already.
 
@@ -98,12 +120,15 @@ tell from the hunk alone.
 1. This ADR.
 2. `Language` and the lexer in `jazygit-core`, tested on their own.
 3. `ParsedDiff` holds the tokens.
-4. `RichDiff` draws them: the classes and their colours in each theme, the setting `ui.diff-syntax`, `ARCHITECTURE.md`,
+4. `RichDiff` draws them: the classes and their colours in each theme but `none`, the changed lines of `mono` and
+   `none` drawn as before, the setting `ui.diff-syntax`, `ARCHITECTURE.md`,
    `wanted.md`, and an acceptance test of a keyword of a staged Java file in the rich view.
 
 ## Consequences
 
 - The rich view colours the code of the languages above; a file of another language is drawn as before.
-- A hunk that starts inside a block comment or a multi-line string is coloured wrong until it leaves it.
+- A hunk that starts inside a block comment or a multi-line string is coloured wrong until it leaves it, and so are
+  the lines after a line too long to be lexed that ended inside one.
+- A line of more than 2 000 `char`s is not coloured.
 - Reading a diff takes a little longer, also in the plain view: each line is scanned once more.
 - A theme has four more classes to keep.

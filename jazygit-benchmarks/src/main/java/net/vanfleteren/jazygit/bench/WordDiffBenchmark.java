@@ -132,7 +132,7 @@ public class WordDiffBenchmark {
          */
         REWRITTEN_THEN_EDITED {
             @Override
-            String diff() {
+            public String diff() {
                 return files(
                         2,
                         file -> file == 0
