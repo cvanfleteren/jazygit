@@ -422,7 +422,7 @@ class RemarkLinesTest {
     void thePlainViewCountsTheRemarksOfEachFileAtItsStart() {
         Text text = new Text(ContentPanel.diffText(
                 new ShownDiff(DiffText.of(DIFF), Option.none()),
-                new DiffLook(DiffStyle.PLAIN, true),
+                new DiffLook(DiffStyle.PLAIN, true, true),
                 Option.of(shown(false, thread(2, false, "a"), thread(3, true, "b"))),
                 Theme.SpanStyles.NONE));
 
@@ -436,7 +436,7 @@ class RemarkLinesTest {
     void whyTheRemarksCouldNotBeReadComesFirst() {
         Text text = new Text(ContentPanel.diffText(
                 new ShownDiff(DiffText.of(DIFF), Option.none()),
-                new DiffLook(DiffStyle.RICH, true),
+                new DiffLook(DiffStyle.RICH, true, true),
                 Option.of(new ShownRemarks(
                         List.empty(),
                         false,

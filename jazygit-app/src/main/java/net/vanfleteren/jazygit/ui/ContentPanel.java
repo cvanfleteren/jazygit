@@ -133,7 +133,7 @@ public final class ContentPanel {
                 RichDiff.Drawn.plain(remarks.filter(shown -> !shown.threads().isEmpty())
                         .map(shown -> counted(diff, shown.threads(), styles))
                         .getOrElse(() -> changeLines(diff, look, styles)));
-            case RICH -> RichDiff.drawn(diff.parsed(), look.syntax(), remarks, styles);
+            case RICH -> RichDiff.drawn(diff.parsed(), look.syntax(), look.words(), remarks, styles);
         };
         return drawn.after(failed).withLead();
     }
@@ -334,7 +334,7 @@ public final class ContentPanel {
     private static RichDiff.Drawn changeDrawn(ShownDiff changes, DiffLook look, Theme.SpanStyles styles) {
         return switch (look.style()) {
             case PLAIN -> RichDiff.Drawn.plain(lines(changes.text()).map(line -> diffLine(line, styles)));
-            case RICH -> RichDiff.drawn(changes.parsed(), look.syntax(), Option.none(), styles);
+            case RICH -> RichDiff.drawn(changes.parsed(), look.syntax(), look.words(), Option.none(), styles);
         };
     }
 

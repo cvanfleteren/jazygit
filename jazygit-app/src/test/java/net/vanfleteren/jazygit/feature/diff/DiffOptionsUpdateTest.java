@@ -62,6 +62,26 @@ class DiffOptionsUpdateTest {
     }
 
     @Test
+    void togglingWordsKeepsItForTheNextSessionWithoutReadingTheDiffsAgain() {
+        Model model = shown();
+
+        Next next = Update.update(model, new DiffOptionsMsg.WordsToggled());
+
+        assertFalse(next.model().preferences().diffLook().words());
+        assertEquals(
+                List.of(new Cmd.SaveSettings(
+                        model.preferences().settings(),
+                        model.preferences().settings().withDiffWords(false))),
+                next.cmds());
+        assertEquals(model.repoView(), next.model().repoView());
+        assertTrue(Update.update(next.model(), new DiffOptionsMsg.WordsToggled())
+                .model()
+                .preferences()
+                .diffLook()
+                .words());
+    }
+
+    @Test
     void whatWasReadBeforeTheToggleIsDropped() {
         Model toggled =
                 Update.update(shown(), new DiffOptionsMsg.WhitespaceToggled()).model();

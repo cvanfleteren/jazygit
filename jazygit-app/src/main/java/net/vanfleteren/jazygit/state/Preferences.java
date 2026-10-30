@@ -40,11 +40,11 @@ public record Preferences(
     }
 
     /**
-     * How the diffs of the working tree, of a commit and of a stash are drawn, and whether the rich view colours their
-     * code by its syntax (ADR 53).
+     * How the diffs of the working tree, of a commit and of a stash are drawn, whether the rich view colours their
+     * code by its syntax (ADR 53), and whether it highlights the words that changed in a line.
      */
     public DiffLook diffLook() {
-        return new DiffLook(settings.diffStyle(), settings.diffSyntax());
+        return new DiffLook(settings.diffStyle(), settings.diffSyntax(), settings.diffWords());
     }
 
     /**

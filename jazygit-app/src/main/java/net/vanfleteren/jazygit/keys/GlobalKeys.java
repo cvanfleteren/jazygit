@@ -44,6 +44,12 @@ final class GlobalKeys {
                         "help.global.diffStyle",
                         GlobalKeys::isDiffStyleKey,
                         DiffOptionsMsg.StyleToggled::new))
+                // Not ctrl+i: a terminal sends it as Tab, which moves the focus before any handler sees it.
+                .global(new Keymap.Global.Dispatching(
+                        "ctrl+e",
+                        "help.global.diffWords",
+                        GlobalKeys::isDiffWordsKey,
+                        DiffOptionsMsg.WordsToggled::new))
                 .global(new Keymap.Global.Dispatching(
                         "ctrl+p", "help.global.screen", GlobalKeys::isScreenKey, PrOverviewMsg.Toggled::new))
                 // Escape only gets here when nothing else, like a dialog, took it.
@@ -120,6 +126,13 @@ final class GlobalKeys {
      */
     static boolean isDiffStyleKey(KeyEvent event) {
         return event.hasCtrl() && event.isCharIgnoreCase('d');
+    }
+
+    /**
+     * Whether {@code event} is the shortcut that highlights the changed words of a line in the rich view, or stops to.
+     */
+    static boolean isDiffWordsKey(KeyEvent event) {
+        return event.hasCtrl() && event.isCharIgnoreCase('e');
     }
 
     /**

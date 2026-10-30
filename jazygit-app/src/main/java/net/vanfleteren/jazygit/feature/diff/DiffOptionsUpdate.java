@@ -30,6 +30,7 @@ public final class DiffOptionsUpdate {
                 changed(model.mapPreferences(
                         preferences -> preferences.withIgnoreWhitespace(!preferences.ignoreWhitespace())));
             case DiffOptionsMsg.StyleToggled() -> styleToggled(model);
+            case DiffOptionsMsg.WordsToggled() -> wordsToggled(model);
         };
     }
 
@@ -41,6 +42,18 @@ public final class DiffOptionsUpdate {
         Settings chosen = previous.withDiffStyle(previous.diffStyle().toggled());
         Next changed = changed(model.mapPreferences(preferences -> preferences.withSettings(chosen)));
         return new Next(changed.model(), changed.cmds().append(new Cmd.SaveSettings(previous, chosen)));
+    }
+
+    /**
+     * Highlights the changed words of a line from now on, or stops to, keeping it for the next session. It only
+     * changes how the diffs are drawn, so they are not read again.
+     */
+    private static Next wordsToggled(Model model) {
+        Settings previous = model.preferences().settings();
+        Settings chosen = previous.withDiffWords(!previous.diffWords());
+        return new Next(
+                model.mapPreferences(preferences -> preferences.withSettings(chosen)),
+                List.of(new Cmd.SaveSettings(previous, chosen)));
     }
 
     /**

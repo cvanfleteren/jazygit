@@ -194,6 +194,19 @@ class RichDiffTest {
     }
 
     @Test
+    void withoutWordsAChangedLineIsDrawnInItsLineClassAlone() {
+        List<Line> lines = RichDiff.drawn(ParsedDiff.of(STRING_CHANGED), false, false, Option.none(), SYNTAX_STYLES)
+                .lines();
+
+        assertEquals(
+                List.of(
+                        Tuple.of("String s = \"", Style.EMPTY.fg(Color.GREEN).bg(Color.BLACK)),
+                        Tuple.of("ac", Style.EMPTY.fg(Color.GREEN).bg(Color.BLACK)),
+                        Tuple.of("\";", Style.EMPTY.fg(Color.GREEN).bg(Color.BLACK))),
+                code(lines.last()));
+    }
+
+    @Test
     void aFileOfNoLanguageKnownIsDrawnInItsClassesAlone() {
         List<Line> lines =
                 RichDiff.lines(ParsedDiff.of(STRING_CHANGED.replace("A.java", "a.txt")), true, SYNTAX_STYLES);

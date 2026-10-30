@@ -29,8 +29,8 @@ import org.junit.jupiter.api.Test;
  */
 class ContentViewTest {
 
-    private static final DiffLook PLAIN_LOOK = new DiffLook(DiffStyle.PLAIN, true);
-    private static final DiffLook RICH_LOOK = new DiffLook(DiffStyle.RICH, true);
+    private static final DiffLook PLAIN_LOOK = new DiffLook(DiffStyle.PLAIN, true, true);
+    private static final DiffLook RICH_LOOK = new DiffLook(DiffStyle.RICH, true, true);
 
     private static final PullRequestSummary PULL_REQUEST = new PullRequestSummary(
             "owner/repo",

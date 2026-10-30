@@ -32,7 +32,7 @@ import org.junit.jupiter.api.Test;
  */
 class ContentPanelTest {
 
-    private static final DiffLook PLAIN_LOOK = new DiffLook(DiffStyle.PLAIN, true);
+    private static final DiffLook PLAIN_LOOK = new DiffLook(DiffStyle.PLAIN, true, true);
 
     private final ContentPanel content = new ContentPanel(Theme.SpanStyles.NONE, () -> false);
 

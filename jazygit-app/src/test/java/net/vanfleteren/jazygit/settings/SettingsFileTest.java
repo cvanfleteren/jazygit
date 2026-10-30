@@ -339,6 +339,37 @@ class SettingsFileTest {
     }
 
     @Test
+    void readsWhetherChangedWordsAreHighlightedAndAnythingButABooleanIsInvalid() throws IOException {
+        write("""
+                [ui]
+                diff-words = false
+                """);
+        assertEquals(
+                new Loaded(Settings.DEFAULT.withDiffWords(false), Option.none()),
+                settingsFile().load());
+
+        write("""
+                [ui]
+                diff-words = "no"
+                """);
+        assertEquals(
+                new Loaded(Settings.DEFAULT, Option.of(new SettingsProblem.Invalid(file(), List.of("ui.diff-words")))),
+                settingsFile().load());
+    }
+
+    @Test
+    void savingTheDiffWordsAndGoingBackToTheDefaultRemovesIt() throws IOException {
+        Settings wholeLines = Settings.DEFAULT.withDiffWords(false);
+        settingsFile().save(Settings.DEFAULT, wholeLines);
+
+        assertEquals(wholeLines, settingsFile().load().settings());
+
+        settingsFile().save(wholeLines, Settings.DEFAULT);
+
+        assertFalse(Files.readString(file()).contains("diff-words"), Files.readString(file()));
+    }
+
+    @Test
     void savingTheDiffSyntaxAndGoingBackToTheDefaultRemovesIt() throws IOException {
         Settings plainCode = Settings.DEFAULT.withDiffSyntax(false);
         settingsFile().save(Settings.DEFAULT, plainCode);

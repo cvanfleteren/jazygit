@@ -67,6 +67,19 @@ final class RichDiff {
      */
     static Drawn drawn(
             ParsedDiff diff, boolean syntax, Option<ContentView.ShownRemarks> remarks, Theme.SpanStyles styles) {
+        return drawn(diff, syntax, true, remarks, styles);
+    }
+
+    /**
+     * The lines of {@code diff}, as {@link #drawn(ParsedDiff, boolean, Option, Theme.SpanStyles)} draws them, with the
+     * words that changed in a changed line highlighted if {@code words}; else the whole line is in its line class.
+     */
+    static Drawn drawn(
+            ParsedDiff diff,
+            boolean syntax,
+            boolean words,
+            Option<ContentView.ShownRemarks> remarks,
+            Theme.SpanStyles styles) {
         UnifiedDiff parsed = diff.diff();
         Vector<Option<FileRemarks>> placed = remarks.map(
                         shown -> PlacedRemarks.place(parsed, shown.threads(), shown.onLines())
@@ -81,7 +94,7 @@ final class RichDiff {
         // many files and one of a long file both hold up the render thread for less.
         List<Pending> pending = inParallel(
                         diff.files().zip(placed).zipWithIndex(),
-                        file -> file(file._1()._1(), file._1()._2(), file._2(), syntax, style, styles))
+                        file -> file(file._1()._1(), file._1()._2(), file._2(), syntax, words, style, styles))
                 .intersperse(List.of(BLANK))
                 .flatMap(file -> file);
         return Drawn.of(parsed.preamble()
@@ -111,7 +124,7 @@ final class RichDiff {
 
     /**
      * The lines still to be drawn of {@code parsed}, with the review threads {@code remarks} on it, its code coloured
-     * by its syntax if {@code syntax}, its threads drawn as {@code style} says: its bar, the threads on it, each of its
+     * by its syntax if {@code syntax}, its changed words highlighted if {@code words}, its threads drawn as {@code style} says: its bar, the threads on it, each of its
      * lines with those after it, once the width of its gutter and its lines is known, and the threads that cannot be
      * placed. The threads on a line are followed by a blank line, unless nothing follows them in the file.
      */
@@ -120,6 +133,7 @@ final class RichDiff {
             Option<FileRemarks> remarks,
             int index,
             boolean syntax,
+            boolean words,
             RemarkLines.RemarkStyle style,
             Theme.SpanStyles styles) {
         FileDiff file = parsed.file();
@@ -137,7 +151,7 @@ final class RichDiff {
         int width = Math.max(
                 width(bar), gutter + measured.map(text -> text + 1).max().getOrElse(0));
         Blocks blocks = new Blocks(gutter + 2, RemarkLines.blockWidth(width), style);
-        Layout layout = new Layout(file.path(), index, digits, width - gutter, width, blocks, syntax, styles);
+        Layout layout = new Layout(file.path(), index, digits, width - gutter, width, blocks, syntax, words, styles);
         Vector<LineRemarks> onLines = remarks.map(
                         placed -> placed.lines().flatMap(hunk -> hunk).toVector())
                 .getOrElse(() -> Vector.fill(lines.size(), () -> NO_REMARKS));
@@ -268,7 +282,7 @@ final class RichDiff {
 
     /**
      * The changed line of {@code row}: its marker and its unchanged parts in the line class of {@code change}, its
-     * changed words in its word class, padded to the width of the {@code layout}. Its code is coloured by its
+     * changed words in its word class if the {@code layout} highlights them, padded to the width of the {@code layout}. Its code is coloured by its
      * {@code tokens} if it was lexed, unless the line class gives it no background: then its colour is what tells it
      * is changed, and a line of tokens only would look like context.
      */
@@ -284,7 +298,7 @@ final class RichDiff {
                         ? row.measured()
                         : pieces.map(piece -> width(piece.text())).sum().intValue());
         List<Span> spans = pieces.map(piece -> {
-                    String cssClass = piece.changed() ? change.wordClass() : change.lineClass();
+                    String cssClass = piece.changed() && layout.words() ? change.wordClass() : change.lineClass();
                     return coloured.isDefined()
                             ? changedCode(piece, cssClass, styles)
                             : styled(piece.text(), cssClass, styles);
@@ -485,7 +499,8 @@ final class RichDiff {
     /**
      * What drawing each line of a file takes from the file: how many {@code digits} its numbers have, how many
      * columns after the gutter its changed lines are padded to, its {@code width}, how the threads on its lines are
-     * drawn, whether its code is coloured by its syntax, and the styles of the theme.
+     * drawn, whether its code is coloured by its syntax, whether the changed words of a line are highlighted, and the
+     * styles of the theme.
      */
     private record Layout(
             String path,
@@ -495,6 +510,7 @@ final class RichDiff {
             int fileWidth,
             Blocks blocks,
             boolean syntax,
+            boolean words,
             Theme.SpanStyles styles) {}
 
     /**
