@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.feature.github.review;
 
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.collection.Set;
 import io.vavr.control.Either;
@@ -112,10 +113,12 @@ public final class ReviewUpdate {
                                 : back,
                         failed.cmds());
             }
-            // The thread says it is being sent until the threads are read again, which shows it resolved.
+            // The thread says it is being sent until the threads are read again after it, which shows it resolved.
             case ReviewMsg.Resolved(Resolve cmd, var commands) -> {
                 Next done = OperationUpdate.succeeded(model, cmd, commands);
-                yield new Next(done.model(), done.cmds().append(new LoadReviewRemarks(cmd.number())));
+                yield new Next(
+                        done.model(),
+                        done.cmds().append(new LoadReviewRemarks(cmd.number(), HashSet.of(cmd.thread()))));
             }
             case ReviewMsg.ResolveFailed(Resolve cmd, Failure failure) -> {
                 Next failed = OperationUpdate.update(model, new OperationMsg.Failed(cmd, failure));
@@ -236,7 +239,9 @@ public final class ReviewUpdate {
                                                 Option.of(line),
                                                 Option.none())))))
                 .getOrElse(closed);
-        return new Next(moved, done.cmds().append(new LoadReviewRemarks(cmd.number())));
+        Set<String> settled =
+                cmd.target() instanceof Target.Reply(String thread, var comment) ? HashSet.of(thread) : HashSet.empty();
+        return new Next(moved, done.cmds().append(new LoadReviewRemarks(cmd.number(), settled)));
     }
 
     /**

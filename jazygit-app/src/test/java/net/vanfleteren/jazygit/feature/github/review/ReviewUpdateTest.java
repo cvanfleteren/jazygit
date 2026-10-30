@@ -54,7 +54,8 @@ class ReviewUpdateTest {
             -ten
             +TEN
             """);
-    private static final ScrolledContent CONTENT = new ScrolledContent.FileChanges(new Sha(HEAD), List.of(A), DIFF);
+    private static final ScrolledContent CONTENT =
+            new ScrolledContent.FileChanges(new CommitFilesView.Changes.OfPullRequest(COMMITS), List.of(A), DIFF);
 
     private static final ReviewThread OPEN = thread("T1", false, ReviewThread.Rights.ALL);
     private static final ReviewThread SETTLED = thread("T2", true, new ReviewThread.Rights(true, true, false));
@@ -126,7 +127,7 @@ class ReviewUpdateTest {
     }
 
     @Test
-    void aThreadIsResolvedAtOnceAndTakesNoSecondKeyUntilItIsReadAgain() {
+    void aThreadIsResolvedAtOnceAndTakesNoSecondKeyUntilItIsReadAgainAfterIt() {
         Next resolving = Update.update(files(), new ReviewMsg.ResolveAsked(at(onThread("T1"))));
 
         ReviewCmd.Resolve resolve = new ReviewCmd.Resolve(7, "T1", true);
@@ -142,20 +143,50 @@ class ReviewUpdateTest {
                         .model()));
 
         Next resolved = Update.update(resolving.model(), new ReviewMsg.Resolved(resolve, List.empty()));
-        assertTrue(resolved.cmds().contains(new CommitFilesCmd.LoadReviewRemarks(7)));
+        assertTrue(resolved.cmds().contains(new CommitFilesCmd.LoadReviewRemarks(7, HashSet.of("T1"))));
         assertEquals(HashSet.of("T1"), view(resolved.model()).sending());
 
-        Model read = Update.update(
-                        resolved.model(),
-                        new CommitFilesMsg.RemarksLoaded(
-                                7,
-                                new ReviewRemarks(
-                                        PullRequestDetails.State.OPEN,
-                                        GhCommit.parse(HEAD),
-                                        GhCommit.parse(BASE),
-                                        List.of(OPEN, SETTLED))))
+        Model read = Update.update(resolved.model(), new CommitFilesMsg.RemarksLoaded(7, remarks(), HashSet.of("T1")))
                 .model();
         assertEquals(HashSet.empty(), view(read).sending());
+    }
+
+    @Test
+    void aReadStartedBeforeAResolveWasSentDoesNotLetTheThreadTakeASecondKey() {
+        Model resolving = Update.update(files(), new ReviewMsg.ResolveAsked(at(onThread("T1"))))
+                .model();
+        Next refreshed = Update.update(resolving, new CommitFilesMsg.RemarksRefreshed());
+        assertEquals(List.of(new CommitFilesCmd.LoadReviewRemarks(7)), refreshed.cmds());
+
+        // The read asked with R comes back before GitHub resolved the thread: it still shows it open.
+        Model stale = Update.update(refreshed.model(), new CommitFilesMsg.RemarksLoaded(7, remarks()))
+                .model();
+        assertEquals(HashSet.of("T1"), view(stale).sending());
+        Next again = Update.update(stale, new ReviewMsg.ResolveAsked(at(onThread("T1"))));
+        assertEquals(List.empty(), again.cmds());
+        assertEquals(Option.of(new AppError.CannotReview(Why.SENDING)), error(again.model()));
+    }
+
+    @Test
+    void aSentResolveIsDoneWithWhenTheReadAfterItFails() {
+        Model resolved = Update.update(
+                        Update.update(files(), new ReviewMsg.ResolveAsked(at(onThread("T1"))))
+                                .model(),
+                        new ReviewMsg.Resolved(new ReviewCmd.Resolve(7, "T1", true), List.empty()))
+                .model();
+
+        Model failed = Update.update(
+                        resolved,
+                        new CommitFilesMsg.RemarksFailed(
+                                7, new Failure.Bug(new RuntimeException("offline")), HashSet.of("T1")))
+                .model();
+
+        assertEquals(HashSet.empty(), view(failed).sending());
+    }
+
+    private static ReviewRemarks remarks() {
+        return new ReviewRemarks(
+                PullRequestDetails.State.OPEN, GhCommit.parse(HEAD), GhCommit.parse(BASE), List.of(OPEN, SETTLED));
     }
 
     @Test
@@ -236,7 +267,7 @@ class ReviewUpdateTest {
 
         Next sent = Update.update(sending.model(), new ReviewMsg.Sent(send, List.empty()));
         assertEquals(Option.none(), sent.model().popup(ReviewPopup.class));
-        assertTrue(sent.cmds().contains(new CommitFilesCmd.LoadReviewRemarks(7)));
+        assertTrue(sent.cmds().contains(new CommitFilesCmd.LoadReviewRemarks(7, HashSet.of("T1"))));
     }
 
     @Test

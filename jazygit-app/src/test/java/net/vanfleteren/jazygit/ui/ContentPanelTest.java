@@ -7,6 +7,7 @@ import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
+import dev.tamboui.tui.event.MouseButton;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
@@ -397,6 +398,52 @@ class ContentPanelTest {
             Model moved = Update.update(model, down).model();
             RenderedText.ofLarge(testRunner, () -> counting.render(moved, area));
             assertEquals(once, styled.get());
+        }
+    }
+
+    @Test
+    void aClickPutsTheCursorOfARichDiffOnTheRowClickedButNotOnItsBorder() throws Exception {
+        java.util.List<Msg> dispatched = new java.util.ArrayList<>();
+        ContentPanel clicking = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, dispatched::add);
+        Model rich = TestModels.loaded()
+                .mapPreferences(preferences ->
+                        preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
+        Model model = Update.update(
+                        Update.update(rich, new SelectionMsg.CommitSelected(new Sha("aaaa")))
+                                .model(),
+                        new LoadMsg.CommitDetailLoaded(
+                                new Sha("aaaa"), rich.preferences().diffOptions(), DiffText.of("""
+                                diff --git a/a.txt b/a.txt
+                                --- a/a.txt
+                                +++ b/a.txt
+                                @@ -0,0 +1,3 @@
+                                +alpha
+                                +beta
+                                +gamma
+                                """)))
+                .model();
+        String area = clicking.areaOfPane(model, CommitsPanel.ID).get();
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> clicking.render(model, area))) {
+            java.util.List<String> screen = RenderedText.ofLarge(testRunner, () -> clicking.render(model, area))
+                    .lines()
+                    .toList();
+            int beta = java.util.stream.IntStream.range(0, screen.size())
+                    .filter(row -> screen.get(row).contains("beta"))
+                    .findFirst()
+                    .getAsInt();
+            dev.tamboui.layout.Rect drawn = SettledPilot.of(testRunner).findElement(area);
+
+            SettledPilot.of(testRunner).mousePress(MouseButton.LEFT, drawn.x() + 3, beta);
+            Msg.ContentScrolled clicked = (Msg.ContentScrolled) dispatched.getLast();
+            assertEquals(
+                    Option.of(new Anchor.OnLine("a.txt", net.vanfleteren.jazygit.gh.model.ReviewThread.Side.RIGHT, 2)),
+                    clicked.to().cursor());
+            assertEquals(0, clicked.to().row());
+
+            int sent = dispatched.size();
+            SettledPilot.of(testRunner).mousePress(MouseButton.LEFT, drawn.x() + 3, drawn.y());
+            assertEquals(sent, dispatched.size());
         }
     }
 

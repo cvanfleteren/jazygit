@@ -29,7 +29,7 @@ import net.vanfleteren.jazygit.git.model.Sha;
  * @param listed   which of the files are listed: all of them, or only those with review threads (ADR 57)
  * @param toggled  the ids of the review threads opened or closed against {@code opened}, one by one (ADR 60)
  * @param sending  the ids of the review threads a reply or a resolving is sent for, until the threads are read again
- *                 or the send failed (ADR 60)
+ *                 after it was sent, or the send failed (ADR 60)
  */
 @With
 public record CommitFilesView(
@@ -171,6 +171,19 @@ public record CommitFilesView(
     public sealed interface Changes {
 
         Sha sha();
+
+        /**
+         * Whether {@code other} are the changes of the same commit, stash or pull request: a pull request stays the
+         * same when its head or its base moved on, as after a force-push (ADR 60).
+         */
+        default boolean sameAs(Changes other) {
+            return this instanceof OfPullRequest(PullRequestCommits commits)
+                    ? other instanceof OfPullRequest(PullRequestCommits those)
+                            && those.number() == commits.number()
+                            && those.repository().equals(commits.repository())
+                            && those.host().equals(commits.host())
+                    : equals(other);
+        }
 
         /**
          * The changes of a commit, of a merge against its first parent.

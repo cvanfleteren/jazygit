@@ -299,8 +299,7 @@ final class ContentView {
                                         titled(
                                                 Messages.get("panel.commitFile.titleFor", name, nodePath(diff.key())),
                                                 options),
-                                        new ScrolledContent.FileChanges(
-                                                view.of().sha(), diff.key(), changes),
+                                        new ScrolledContent.FileChanges(view.of(), diff.key(), changes),
                                         new Body.Diff(
                                                 shownChanges(changes, options),
                                                 model.preferences().diffLook(),

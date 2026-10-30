@@ -32,6 +32,13 @@ class DiffCursorTest {
     private static final Vector<RichDiff.Stop> STOPS = Vector.of(
             stop(LEAD, 3, 0), stop(FILE, 1, 3), line(ONE, 4), stop(THREAD, 10, 5), line(TWO, 15), line(THREE, 16));
 
+    private static final Anchor FIRST = new Anchor.Thread("T1", Option.of(new Anchor.OnLine("a.txt", Side.RIGHT, 1)));
+    private static final Anchor LAST = new Anchor.Thread("T2", Option.of(new Anchor.OnLine("a.txt", Side.RIGHT, 2)));
+
+    // A bar, line 1 and its thread, line 2 and its thread, and line 3: 6 lines, all on one screen.
+    private static final Vector<RichDiff.Stop> TWO_THREADS = Vector.of(
+            stop(FILE, 1, 0), line(ONE, 1), stop(FIRST, 1, 2), line(TWO, 3), stop(LAST, 1, 4), line(THREE, 5));
+
     private static RichDiff.Stop stop(Anchor anchor, int lines, int row) {
         return new RichDiff.Stop(new RichDiff.Mark(anchor, lines, 8, Option.none()), row);
     }
@@ -157,6 +164,19 @@ class DiffCursorTest {
         // The only thread is no other.
         assertEquals(Option.none(), on(THREAD, 5).nextThread());
         assertEquals(Option.none(), on(THREAD, 5).previousThread());
+    }
+
+    @Test
+    void theNextAndThePreviousThreadGoAroundInTheirOwnDirection() {
+        assertEquals(FIRST, onTwoThreads(THREE).nextThread().get().anchor());
+        assertEquals(LAST, onTwoThreads(FILE).previousThread().get().anchor());
+        assertEquals(LAST, onTwoThreads(TWO).nextThread().get().anchor());
+        assertEquals(FIRST, onTwoThreads(TWO).previousThread().get().anchor());
+    }
+
+    private static DiffCursor onTwoThreads(Anchor anchor) {
+        return DiffCursor.of(TWO_THREADS, 6, 20, 0, Option.of(anchor), Option.none())
+                .get();
     }
 
     @Test

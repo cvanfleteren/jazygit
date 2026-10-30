@@ -24,9 +24,9 @@ public sealed interface ScrolledContent {
                         && same.sha().equals(commit.sha());
             case StashChanges(Sha sha, var ignored) ->
                 other instanceof StashChanges(Sha same, var also) && same.equals(sha);
-            case FileChanges(Sha sha, List<CommitFile> files, var ignored) ->
-                other instanceof FileChanges(Sha same, List<CommitFile> those, var also)
-                        && same.equals(sha)
+            case FileChanges(CommitFilesView.Changes of, List<CommitFile> files, var ignored) ->
+                other instanceof FileChanges(CommitFilesView.Changes same, List<CommitFile> those, var also)
+                        && same.sameAs(of)
                         && those.map(CommitFile::path).equals(files.map(CommitFile::path));
             default -> equals(other);
         };
@@ -54,9 +54,9 @@ public sealed interface ScrolledContent {
     record StashChanges(Sha sha, DiffText changes) implements ScrolledContent {}
 
     /**
-     * What the commit or the stash {@code sha} changed in {@code files}.
+     * What the commit, the stash or the pull request {@code of} changed in {@code files}.
      */
-    record FileChanges(Sha sha, List<CommitFile> files, DiffText diff) implements ScrolledContent {}
+    record FileChanges(CommitFilesView.Changes of, List<CommitFile> files, DiffText diff) implements ScrolledContent {}
 
     /**
      * A pull request, and what it says and changes.
