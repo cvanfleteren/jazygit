@@ -136,4 +136,50 @@ class PlacedRemarksTest {
         assertEquals(List.empty(), placed.files().head().unplaced());
         assertTrue(PlacedRemarks.place(renamed, List.of(onLine(Side.RIGHT, 1))).isEmpty());
     }
+
+    @Test
+    void aThreadOnARenamedFileHasItsNewPathOnEitherSideAsGitHubGivesIt() {
+        UnifiedDiff renamed = UnifiedDiff.parse("""
+                diff --git a/old.txt b/new.txt
+                similarity index 80%
+                rename from old.txt
+                rename to new.txt
+                --- a/old.txt
+                +++ b/new.txt
+                @@ -1 +1 @@
+                -x
+                +y
+                """);
+        ReviewThread left = thread("new.txt", Side.LEFT, Option.of(1), Option.none());
+        ReviewThread right = thread("new.txt", Side.RIGHT, Option.of(1), Option.none());
+
+        PlacedRemarks placed = PlacedRemarks.place(renamed, List.of(left, right));
+
+        assertEquals(
+                List.of(List.of(left), List.of(right)),
+                placed.files().head().lines().head().map(LineRemarks::threads));
+        assertEquals(List.empty(), placed.files().head().unplaced());
+    }
+
+    @Test
+    void aThreadOnADeletedFileHasItsOldPath() {
+        UnifiedDiff deleted = UnifiedDiff.parse("""
+                diff --git a/gone.txt b/gone.txt
+                deleted file mode 100644
+                index 1111111..0000000
+                --- a/gone.txt
+                +++ /dev/null
+                @@ -1,2 +0,0 @@
+                -x
+                -y
+                """);
+        ReviewThread left = thread("gone.txt", Side.LEFT, Option.of(2), Option.none());
+
+        PlacedRemarks placed = PlacedRemarks.place(deleted, List.of(left));
+
+        assertEquals(
+                List.of(List.empty(), List.of(left)),
+                placed.files().head().lines().head().map(LineRemarks::threads));
+        assertEquals(List.empty(), placed.files().head().unplaced());
+    }
 }
