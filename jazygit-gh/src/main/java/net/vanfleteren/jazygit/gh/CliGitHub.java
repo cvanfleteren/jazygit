@@ -230,16 +230,14 @@ public final class CliGitHub implements GitHub {
     }
 
     @Override
-    public Either<GhFailure, Started> startReviewThread(String pullRequest, NewReviewThread thread) {
-        return process.run(ReviewThreadMutations.start(pullRequest, thread))
-                .flatMap(output -> GhProcess.decoded(output.stdout(), ReviewThreadMutations.STARTED)
-                        .map(id -> new Started(id, output.log()))
-                        .mapLeft(unexpected -> new GhFailure(unexpected, output.log())));
+    public Either<GhFailure, List<ExecutedCommand>> startReviewThread(
+            int number, String commit, NewReviewThread thread) {
+        return process.log(ReviewThreadMutations.start(number, commit, thread));
     }
 
     @Override
-    public Either<GhFailure, List<ExecutedCommand>> replyToReviewThread(String thread, String body) {
-        return process.log(ReviewThreadMutations.reply(thread, body));
+    public Either<GhFailure, List<ExecutedCommand>> replyToReviewThread(int number, String comment, String body) {
+        return process.log(ReviewThreadMutations.reply(number, comment, body));
     }
 
     @Override

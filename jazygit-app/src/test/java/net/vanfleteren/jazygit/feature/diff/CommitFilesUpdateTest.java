@@ -174,7 +174,7 @@ class CommitFilesUpdateTest {
     }
 
     private static ReviewRemarks remarks(PullRequestDetails.State state, String head, String base) {
-        return new ReviewRemarks(state, GhCommit.parse(head), GhCommit.parse(base), List.of(THREAD), "");
+        return new ReviewRemarks(state, GhCommit.parse(head), GhCommit.parse(base), List.of(THREAD));
     }
 
     private static Model openedPullRequest() {

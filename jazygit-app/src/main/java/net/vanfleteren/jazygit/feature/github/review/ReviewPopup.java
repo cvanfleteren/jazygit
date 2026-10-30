@@ -42,15 +42,16 @@ public record ReviewPopup(
     public sealed interface Target {
 
         /**
-         * A reply to the thread with the id {@code thread}.
+         * A reply to the thread with the id {@code thread}, whose first comment has the id {@code comment}, as REST
+         * numbers it.
          */
-        record Reply(String thread) implements Target {}
+        record Reply(String thread, String comment) implements Target {}
 
         /**
-         * A thread to start on the pull request with the node id {@code pullRequest}, on {@code lines} of the file
+         * A thread to start on the pull request at its head commit {@code commit}, on {@code lines} of the file
          * {@code path}, or on the whole file.
          */
-        record Start(String pullRequest, String path, Option<NewReviewThread.Lines> lines) implements Target {}
+        record Start(String commit, String path, Option<NewReviewThread.Lines> lines) implements Target {}
     }
 
     /**

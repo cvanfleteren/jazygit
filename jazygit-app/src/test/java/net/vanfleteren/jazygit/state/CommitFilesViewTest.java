@@ -76,7 +76,7 @@ class CommitFilesViewTest {
         return CommitFilesView.of(PULL_REQUEST, "branches", "files")
                 .withFiles(new Loadable.Loaded<>(FILES))
                 .withRemarks(Option.of(new Loadable.Loaded<>(
-                        new ReviewRemarks(PullRequestDetails.State.OPEN, Option.none(), Option.none(), threads, ""))));
+                        new ReviewRemarks(PullRequestDetails.State.OPEN, Option.none(), Option.none(), threads))));
     }
 
     private static ReviewThread thread(String path, boolean resolved) {
@@ -90,7 +90,7 @@ class CommitFilesViewTest {
                 resolved,
                 false,
                 ReviewThread.Subject.LINE,
-                List.of(new ReviewThread.Comment("bob", Instant.EPOCH, "Hm", Option.none(), "C")),
+                List.of(new ReviewThread.Comment("bob", Instant.EPOCH, "Hm", Option.none(), "C", "1")),
                 0,
                 "T",
                 ReviewThread.Rights.ALL);

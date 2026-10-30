@@ -28,7 +28,7 @@ class ReviewThreadsQueryTest {
 
     private static String page(String head, String threads) {
         return """
-                { "data": { "repository": { "pullRequest": { "id": "PR_1", "state": "OPEN", "headRefOid": %s, "baseRefOid": "def456",
+                { "data": { "repository": { "pullRequest": { "state": "OPEN", "headRefOid": %s, "baseRefOid": "def456",
                   "reviewThreads": { "pageInfo": { "hasNextPage": false, "endCursor": null },
                   "nodes": [ %s ] } } } } }""".formatted(head, threads);
     }
@@ -48,7 +48,7 @@ class ReviewThreadsQueryTest {
 
     private static String comment(String author, String state, String minimized, String body) {
         return """
-                { "id": "IC_1", "author": %s, "createdAt": "%s", "body": "%s", "state": "%s", "isMinimized": %b,
+                { "id": "IC_1", "fullDatabaseId": "101", "author": %s, "createdAt": "%s", "body": "%s", "state": "%s", "isMinimized": %b,
                   "minimizedReason": %s }""".formatted(author, AT, body, state, !minimized.equals("null"), minimized);
     }
 
@@ -71,16 +71,15 @@ class ReviewThreadsQueryTest {
 
     @Test
     void theThreadsOfAllPagesWithTheCommitsOfTheFirst() {
-        Comment bob = new Comment("bob", Instant.parse(AT), "Rename this?", Option.none(), "IC_1");
-        Comment carol = new Comment("carol", Instant.parse(AT), "Agreed", Option.none(), "IC_1");
+        Comment bob = new Comment("bob", Instant.parse(AT), "Rename this?", Option.none(), "IC_1", "101");
+        Comment carol = new Comment("carol", Instant.parse(AT), "Agreed", Option.none(), "IC_1", "101");
 
         assertEquals(
                 Either.right(new ReviewRemarks(
                         PullRequestDetails.State.OPEN,
                         Option.of(new GhCommit("abc123")),
                         Option.of(new GhCommit("def456")),
-                        List.of(onLine12(List.of(bob), 0), onLine12(List.of(carol), 0)),
-                        "PR_1")),
+                        List.of(onLine12(List.of(bob), 0), onLine12(List.of(carol), 0)))),
                 read(
                         page(
                                 "\"abc123\"",
@@ -102,7 +101,8 @@ class ReviewThreadsQueryTest {
         String theirs = comment("{ \"login\": \"bob\" }", "SUBMITTED", "null", "Done");
 
         assertEquals(
-                List.of(onLine12(List.of(new Comment("bob", Instant.parse(AT), "Done", Option.none(), "IC_1")), 0)),
+                List.of(onLine12(
+                        List.of(new Comment("bob", Instant.parse(AT), "Done", Option.none(), "IC_1", "101")), 0)),
                 read(page(
                                 "\"abc123\"",
                                 thread(onLine(12), 2, theirs + ", " + mine) + ", " + thread(onLine(12), 1, mine)))
@@ -113,7 +113,7 @@ class ReviewThreadsQueryTest {
     @Test
     void aHiddenCommentSaysWhyAndADeletedAuthorHasNoName() {
         assertEquals(
-                List.of(new Comment("", Instant.parse(AT), "spam", Option.of("SPAM"), "IC_1")),
+                List.of(new Comment("", Instant.parse(AT), "spam", Option.of("SPAM"), "IC_1", "101")),
                 read(page("\"abc123\"", thread(onLine(12), 1, comment("null", "SUBMITTED", "\"SPAM\"", "spam"))))
                         .get()
                         .threads()
@@ -180,11 +180,11 @@ class ReviewThreadsQueryTest {
                         thread(onLine(12), 1, comment("{ \"login\": \"bob\" }", "SUBMITTED", "null", "Hm"))))
                 .get();
 
-        assertEquals("PR_1", read.id());
         assertEquals("PRRT_1", read.threads().head().id());
         assertEquals(
                 new ReviewThread.Rights(true, true, false),
                 read.threads().head().rights());
         assertEquals("IC_1", read.threads().head().comments().head().id());
+        assertEquals("101", read.threads().head().comments().head().restId());
     }
 }

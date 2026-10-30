@@ -69,21 +69,18 @@ public sealed interface ReviewCmd extends Cmd {
         @Override
         public Msg run(Env env) {
             return switch (target) {
-                case Target.Reply(String thread) ->
-                    env.gitHub().replyToReviewThread(thread, body).fold(this::failedWith, this::succeeded);
-                case Target.Start(String pullRequest, String path, var lines) ->
+                case Target.Reply(String ignored, String comment) ->
+                    env.gitHub().replyToReviewThread(number, comment, body).fold(this::failedWith, this::succeeded);
+                case Target.Start(String commit, String path, var lines) ->
                     env.gitHub()
-                            .startReviewThread(pullRequest, new NewReviewThread(path, lines, body))
-                            .fold(
-                                    this::failedWith,
-                                    started ->
-                                            new ReviewMsg.Sent(this, Option.of(started.thread()), started.commands()));
+                            .startReviewThread(number, commit, new NewReviewThread(path, lines, body))
+                            .fold(this::failedWith, this::succeeded);
             };
         }
 
         @Override
         public Msg succeeded(List<ExecutedCommand> commands) {
-            return new ReviewMsg.Sent(this, Option.none(), commands);
+            return new ReviewMsg.Sent(this, commands);
         }
 
         @Override

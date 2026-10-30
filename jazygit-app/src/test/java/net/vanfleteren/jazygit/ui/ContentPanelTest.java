@@ -418,7 +418,7 @@ class ContentPanelTest {
                 false,
                 net.vanfleteren.jazygit.gh.model.ReviewThread.Subject.LINE,
                 List.of(new net.vanfleteren.jazygit.gh.model.ReviewThread.Comment(
-                        "bob", Instant.EPOCH, "Why?", Option.none(), "C")),
+                        "bob", Instant.EPOCH, "Why?", Option.none(), "C", "1")),
                 0,
                 "T1",
                 net.vanfleteren.jazygit.gh.model.ReviewThread.Rights.ALL);
@@ -440,8 +440,7 @@ class ContentPanelTest {
                                         net.vanfleteren.jazygit.gh.model.PullRequestDetails.State.OPEN,
                                         net.vanfleteren.jazygit.gh.model.GhCommit.parse("a".repeat(40)),
                                         net.vanfleteren.jazygit.gh.model.GhCommit.parse("b".repeat(40)),
-                                        List.of(thread),
-                                        "PR_1")))
+                                        List.of(thread))))
                 .model();
         Model model = Update.update(
                         Update.update(open, new SelectionMsg.CommitFilesSelected(List.of(file)))

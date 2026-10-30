@@ -15,7 +15,6 @@ import net.vanfleteren.jazygit.feature.github.review.ReviewPopup.Target;
 import net.vanfleteren.jazygit.feature.github.review.ReviewPopup.Where;
 import net.vanfleteren.jazygit.gh.model.NewReviewThread;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
-import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
@@ -79,7 +78,7 @@ public final class ReviewUpdate {
                         .map(popup -> {
                             Model sending = model.clearError().openPopup(popup.withSending(true));
                             return Update.start(
-                                    popup.target() instanceof Target.Reply(String thread)
+                                    popup.target() instanceof Target.Reply(String thread, var comment)
                                             ? sending(sending, set -> set.add(thread))
                                             : sending,
                                     new Send(popup.number(), popup.target(), popup.text()));
@@ -102,13 +101,13 @@ public final class ReviewUpdate {
             case ReviewMsg.EditorFailed(Failure failure) ->
                 Next.of(CommandLog.append(model, ReviewCmd.EDIT_COMMENT, failure.commands())
                         .fail(new AppError.OperationFailed(ReviewCmd.EDIT_COMMENT, Option.none(), failure)));
-            case ReviewMsg.Sent(Send cmd, Option<String> started, var commands) -> sent(model, cmd, started, commands);
+            case ReviewMsg.Sent(Send cmd, var commands) -> sent(model, cmd, commands);
             // The popup stays open, with the comment, to send it again or to copy it.
             case ReviewMsg.SendFailed(Send cmd, Failure failure) -> {
                 Next failed = OperationUpdate.update(model, new OperationMsg.Failed(cmd, failure));
                 Model back = changed(failed.model(), popup -> popup.withSending(false), false);
                 yield new Next(
-                        cmd.target() instanceof Target.Reply(String thread)
+                        cmd.target() instanceof Target.Reply(String thread, var comment)
                                 ? sending(back, set -> set.remove(thread))
                                 : back,
                         failed.cmds());
@@ -135,15 +134,12 @@ public final class ReviewUpdate {
      */
     private static Either<Why, ReviewPopup> start(Model model, DiffCursorAt at) {
         return reviewed(model).flatMap(view -> {
-            String pullRequest = view.remarks()
-                    .flatMap(Loadable::toOption)
-                    .map(ReviewRemarks::id)
-                    .getOrElse("");
+            String commit = view.of().sha().value();
             if (at.mark().isEmpty() && at.cursor() instanceof Anchor.File(String path)) {
                 return Either.right(popup(
                         view,
                         at,
-                        new Target.Start(pullRequest, path, Option.none()),
+                        new Target.Start(commit, path, Option.none()),
                         new Where(path, Option.none(), false),
                         List.empty()));
             }
@@ -172,7 +168,7 @@ public final class ReviewUpdate {
                     view,
                     at,
                     new Target.Start(
-                            pullRequest,
+                            commit,
                             first.path(),
                             Option.of(new NewReviewThread.Lines(
                                     first.side(), first.number(), last.side(), last.number()))),
@@ -192,7 +188,8 @@ public final class ReviewUpdate {
                 .map(found -> popup(
                         found._1(),
                         at,
-                        new Target.Reply(found._2().id()),
+                        new Target.Reply(
+                                found._2().id(), found._2().comments().head().restId()),
                         new Where(found._2().path(), Option.none(), true),
                         found._2()
                                 .comments()
@@ -218,30 +215,32 @@ public final class ReviewUpdate {
     }
 
     /**
-     * {@code cmd} sent: the popup closes, the threads are read again, and the cursor goes to the thread started, if
-     * one was, its range dropped.
+     * {@code cmd} sent: the popup closes, the threads are read again, and the cursor goes to the last line of the
+     * thread started, if one was, which the thread is drawn right after, its range dropped. GitHub does not say which
+     * thread a comment started.
      */
-    private static Next sent(Model model, Send cmd, Option<String> started, List<ExecutedCommand> commands) {
+    private static Next sent(Model model, Send cmd, List<ExecutedCommand> commands) {
         Next done = OperationUpdate.succeeded(model, cmd, commands);
         Option<ReviewPopup> popup =
                 done.model().popup(ReviewPopup.class).filter(open -> open.sending() && open.number() == cmd.number());
         Model closed =
                 popup.map(open -> done.model().withoutPopup(ReviewPopup.class)).getOrElse(done.model());
-        Model moved = popup.flatMap(open -> started.map(thread -> closed.withScrolled(closed.scrolled()
-                        .put(
-                                open.area(),
-                                new Scrolled(
-                                        open.at().content(),
-                                        open.at().row(),
-                                        open.at().column(),
-                                        Option.of(new Anchor.Thread(thread, lastLine(open.target()))),
-                                        Option.none())))))
+        Model moved = popup.flatMap(open -> lastLine(open.target())
+                        .map(line -> closed.withScrolled(closed.scrolled()
+                                .put(
+                                        open.area(),
+                                        new Scrolled(
+                                                open.at().content(),
+                                                open.at().row(),
+                                                open.at().column(),
+                                                Option.of(line),
+                                                Option.none())))))
                 .getOrElse(closed);
         return new Next(moved, done.cmds().append(new LoadReviewRemarks(cmd.number())));
     }
 
     /**
-     * The last line a thread to start is on, which the cursor goes to while it is not read yet.
+     * The last line a thread to start is on.
      */
     private static Option<Anchor.OnLine> lastLine(Target target) {
         return target instanceof Target.Start(var ignored, String path, Option<NewReviewThread.Lines> lines)

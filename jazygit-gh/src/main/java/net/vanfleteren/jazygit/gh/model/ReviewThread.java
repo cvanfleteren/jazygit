@@ -76,8 +76,9 @@ public record ReviewThread(
      * @param body   its text, in Markdown
      * @param hidden why GitHub hides it (outdated, resolved, off-topic, spam…), if it does
      * @param id     its node id, which editing or deleting it will take (ADR 60)
+     * @param restId its id as REST numbers it, which a reply to the thread it starts is sent to (ADR 60)
      */
-    public record Comment(String author, Instant at, String body, Option<String> hidden, String id) {}
+    public record Comment(String author, Instant at, String body, Option<String> hidden, String id, String restId) {}
 
     /**
      * What the viewer may do with a thread, as GitHub says (ADR 60).

@@ -43,11 +43,11 @@ final class ReviewThreadsQuery {
      */
     static final String QUERY = """
             query($owner: String!, $name: String!, $number: Int!, $endCursor: String) { \
-            repository(owner: $owner, name: $name) { pullRequest(number: $number) { id state headRefOid baseRefOid \
+            repository(owner: $owner, name: $name) { pullRequest(number: $number) { state headRefOid baseRefOid \
             reviewThreads(first: 100, after: $endCursor) { pageInfo { hasNextPage endCursor } \
             nodes { id path diffSide line startLine startDiffSide originalLine isResolved isOutdated subjectType \
             viewerCanReply viewerCanResolve viewerCanUnresolve \
-            comments(first: %d) { totalCount nodes { id author { login } createdAt body state isMinimized \
+            comments(first: %d) { totalCount nodes { id fullDatabaseId author { login } createdAt body state isMinimized \
             minimizedReason } } } } } } }""".formatted(COMMENTS);
 
     // Who wrote it; empty when GitHub does not say, as for a deleted account.
@@ -59,15 +59,16 @@ final class ReviewThreadsQuery {
             map3(AUTHOR, field("createdAt", instant()), field("body", string()), Tuple::of),
             field("state", string()),
             map2(field("isMinimized", bool()), field("minimizedReason", nullable(string())), Tuple::of),
-            field("id", string()),
-            (written, state, hidden, id) -> Option.when(
+            map2(field("id", string()), field("fullDatabaseId", string()), Tuple::of),
+            (written, state, hidden, ids) -> Option.when(
                     !state.equals("PENDING"),
                     () -> new Comment(
                             written._1(),
                             written._2(),
                             written._3(),
                             Option.when(hidden._1(), () -> hidden._2().getOrElse("")),
-                            id)));
+                            ids._1(),
+                            ids._2())));
 
     // What the viewer may do with a thread.
     static final Decoder<ReviewThread.Rights> RIGHTS = map3(
@@ -121,24 +122,19 @@ final class ReviewThreadsQuery {
     // One page: its state, the commits, and its threads.
     static final Decoder<ReviewRemarks> PAGE = at(
             "data.repository.pullRequest",
-            map5(
+            map4(
                     field("state", enumOf(PullRequestDetails.State.class)),
                     field("headRefOid", nullable(string())).map(oid -> oid.flatMap(GhCommit::parse)),
                     field("baseRefOid", nullable(string())).map(oid -> oid.flatMap(GhCommit::parse)),
                     at("reviewThreads.nodes", list(THREAD)),
-                    field("id", string()),
-                    (state, head, base, threads, id) ->
-                            new ReviewRemarks(state, head, base, threads.flatMap(thread -> thread), id)));
+                    (state, head, base, threads) ->
+                            new ReviewRemarks(state, head, base, threads.flatMap(thread -> thread))));
 
     // All pages, as one array: the state and the commits as the first page has them, and the threads of all.
     static final Decoder<ReviewRemarks> DECODER = list(PAGE)
             .map(pages -> pages.headOption()
                     .map(first -> new ReviewRemarks(
-                            first.state(),
-                            first.head(),
-                            first.base(),
-                            pages.flatMap(ReviewRemarks::threads),
-                            first.id()))
+                            first.state(), first.head(), first.base(), pages.flatMap(ReviewRemarks::threads)))
                     .getOrElse(ReviewRemarks::none));
 
     private ReviewThreadsQuery() {}

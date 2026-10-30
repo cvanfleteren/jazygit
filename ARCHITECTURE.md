@@ -437,7 +437,8 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
   keys are those of `Scopes.PULL_REQUEST_DIFF`, whose selection is the cursor (`DiffCursorAt`, with where `n`, `N` and
   `v` take it). `feature.github.review` starts a thread on a line, a range or a file and replies to one from a
   `ReviewPopup`, drawn by `ReviewDialog` with the `ui.CommentComposer` the comment on a pull request shares, and
-  resolves one at once; `ReviewThreadMutations` sends them with `gh api graphql`. Each needs the threads read at the
+  resolves one at once; `ReviewThreadMutations` sends a thread and a reply as REST review comments, published at once
+  (GraphQL would leave them pending), and a resolve with `gh api graphql`. Each needs the threads read at the
   commits of the files and a pull request that is not merged, else it says why (`AppError.CannotReview`); the ids of
   the threads something is sent for (`CommitFilesView.sending`) take no other key until the threads are read again.
   `Space` opens or closes one thread against `t` (`CommitFilesView.toggled`).

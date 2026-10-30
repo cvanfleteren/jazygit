@@ -21,12 +21,14 @@ A whole commit shows its header, its message and git's `--stat` before its first
 than the panel. A thread can be too, with a long comment or many replies. A conflicted file is drawn from a combined
 diff whose lines are dimmed notes, with no side and no number (ADR 47).
 
-`ReviewThread` has no id, nor have its comments, and the node id of a pull request is not read: GitHub's
-mutations need them. `addPullRequestReviewThread` takes the pull request's id, a path, a line and a side, and a start
-line and start side for one on several lines, or a `subjectType` of `FILE`; GitHub refuses a thread whose first and
-last lines are in different hunks. `addPullRequestReviewThreadReply` takes the thread's id, `resolveReviewThread` and
-`unresolveReviewThread` too. A thread says whether the viewer may reply to it, resolve it or unresolve it
-(`viewerCanReply`, `viewerCanResolve`, `viewerCanUnresolve`).
+`ReviewThread` has no id, nor have its comments. GraphQL's `addPullRequestReviewThread` and
+`addPullRequestReviewThreadReply` add a comment to the viewer's pending review, which only they see until it is
+submitted; REST's review comments are published at once, as GitHub's own "Add single comment": `POST
+pulls/<n>/comments` with the head commit, a path, a line and a side, and a start line and start side for one on
+several lines, or a `subject_type` of `file`, and `POST pulls/<n>/comments/<id>/replies` with the REST id of the first
+comment of the thread. GitHub refuses a thread whose first and last lines are in different hunks. Resolving a thread
+is GraphQL's only, `resolveReviewThread` and `unresolveReviewThread`, which take its node id. A thread says whether the
+viewer may reply to it, resolve it or unresolve it (`viewerCanReply`, `viewerCanResolve`, `viewerCanUnresolve`).
 
 The popup that comments on a pull request (`CommentDialog`, ADR 5) is a text area: Enter adds a line, Ctrl+S sends,
 Ctrl+O opens it in the editor, Escape goes back; a failed send says why under the comment.
@@ -125,17 +127,20 @@ Ctrl+O opens it in the editor, Escape goes back; a failed send says why under th
   Escape goes back, and a failed send says why under the comment. Its title says where the comment goes,
   `src/Foo.java · lines 40–45`, or the file; above the text, it shows the lines of the range, or the last comment of
   the thread replied to. What both popups have alike is shared, not copied.
-- Each comment is sent on its own, as soon as it is: a thread with `addPullRequestReviewThread`, a reply with
-  `addPullRequestReviewThreadReply`. Not: a pending review, gathering comments to submit them with an approval or a
-  request for changes, which would show one's own pending comments, left out on purpose (ADR 55) (`wanted.md`).
+- Each comment is sent on its own, and published as soon as it is: a thread and a reply with REST's review comments,
+  a thread at the head commit of the tree, a reply to the first comment of its thread. Not: GraphQL's
+  `addPullRequestReviewThread` and `addPullRequestReviewThreadReply`, which leave the comment pending in the viewer's
+  review. Not: a pending review, gathering comments to submit them with an approval or a request for changes, which
+  would show one's own pending comments, left out on purpose (ADR 55) (`wanted.md`).
 - `x` resolves or unresolves at once, with `resolveReviewThread` or `unresolveReviewThread`, without asking: `x` again
   undoes it. The thread says `resolving…` while it is sent; a failure is told as that of any other command.
 - While something is sent for a thread, a reply or its resolving, `x`, `r` and `Space` on it say it is being sent,
   and do nothing else: the ids of the threads being sent are kept in the model, until the remarks are read again or
   the send failed. Not: a second `x`, which would send the same again on what was read before, or race an unresolve
   against the resolve.
-- Once GitHub took it, the popup closes, and the remarks are read again as `R` reads them; the cursor then goes to the
-  thread made or changed, by its id. While they are read, the cursor stays where it is.
+- Once GitHub took it, the popup closes, and the remarks are read again as `R` reads them. The cursor stays on the
+  thread replied to or resolved; after a thread is started, it goes to its last line, which the thread is drawn right
+  after: REST does not say which thread a comment started.
 
 ### One thread open or closed
 
@@ -145,11 +150,10 @@ Ctrl+O opens it in the editor, Escape goes back; a failed send says why under th
 
 ### Reading
 
-- `ReviewThreadsQuery` reads the `id` of each thread and of each of its comments, and the thread's `viewerCanReply`,
-  `viewerCanResolve` and `viewerCanUnresolve`. The ids of the comments are not used yet, but editing and deleting a
-  comment will need them, and reading them costs a field of a query that is made anyway.
-- It reads the node `id` of the pull request too, next to its state and commits: starting a thread needs the remarks
-  read at the tree's commits anyway. Not: in the details of the pull request, which the tree does not keep.
+- `ReviewThreadsQuery` reads the `id` of each thread and of each of its comments, the REST id of each comment
+  (`fullDatabaseId`), which a reply is sent to, and the thread's `viewerCanReply`, `viewerCanResolve` and
+  `viewerCanUnresolve`. The node ids of the comments are not used yet, but editing and deleting a comment will need
+  them, and reading them costs a field of a query that is made anyway.
 - Editing and deleting a comment are for later (`wanted.md`).
 
 ### Delivery
@@ -159,7 +163,7 @@ Ctrl+O opens it in the editor, Escape goes back; a failed send says why under th
    move it, through stops higher than the panel too, the wheel, the anchor in `Scrolled`, put back on its anchor or
    the nearest stop, and `diff-cursor` in every theme, laid over the styled text, each tested on its own, with a test
    that moving the cursor does not style the diff again, and an acceptance test.
-3. The ids and rights in `ReviewThreadsQuery`, and the pull request's id; `Scopes.PULL_REQUEST_DIFF`
+3. The ids and rights in `ReviewThreadsQuery`; `Scopes.PULL_REQUEST_DIFF`
    with replying, resolving, `Space`, `n`, `N` and `R`, the threads being sent, and the guard on when it can comment,
    with an acceptance test against a fake gh that presses `x` twice.
 4. Ranges, `c` on a line, a range and a file, and the popup shared with `CommentDialog`, with an acceptance test

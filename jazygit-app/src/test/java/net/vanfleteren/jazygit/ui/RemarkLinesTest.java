@@ -62,7 +62,7 @@ class RemarkLinesTest {
                 resolved,
                 false,
                 Subject.LINE,
-                List.of(bodies).map(body -> new Comment("bob", NOW.minusSeconds(7200), body, Option.none(), "C")),
+                List.of(bodies).map(body -> new Comment("bob", NOW.minusSeconds(7200), body, Option.none(), "C", "1")),
                 0,
                 path + line + String.join("", bodies),
                 ReviewThread.Rights.ALL);
@@ -200,7 +200,7 @@ class RemarkLinesTest {
                 false,
                 false,
                 Subject.LINE,
-                List.of(new Comment("", NOW, "All of it", Option.none(), "C")),
+                List.of(new Comment("", NOW, "All of it", Option.none(), "C", "1")),
                 2,
                 "T",
                 ReviewThread.Rights.ALL);
@@ -214,7 +214,7 @@ class RemarkLinesTest {
                 false,
                 true,
                 Subject.LINE,
-                List.of(new Comment("carol", NOW, "Old", Option.of("OUTDATED"), "C")),
+                List.of(new Comment("carol", NOW, "Old", Option.of("OUTDATED"), "C", "1")),
                 0,
                 "T",
                 ReviewThread.Rights.ALL);
@@ -306,7 +306,7 @@ class RemarkLinesTest {
                 false,
                 false,
                 Subject.FILE,
-                List.of(new Comment("bob", NOW.minusSeconds(7200), "Split this file", Option.none(), "C")),
+                List.of(new Comment("bob", NOW.minusSeconds(7200), "Split this file", Option.none(), "C", "1")),
                 0,
                 "T",
                 ReviewThread.Rights.ALL);
@@ -331,7 +331,7 @@ class RemarkLinesTest {
                 false,
                 false,
                 Subject.LINE,
-                List.of(new Comment("carol", NOW, "Off topic", Option.of("OFF_TOPIC"), "C")),
+                List.of(new Comment("carol", NOW, "Off topic", Option.of("OFF_TOPIC"), "C", "1")),
                 0,
                 "T",
                 ReviewThread.Rights.ALL);

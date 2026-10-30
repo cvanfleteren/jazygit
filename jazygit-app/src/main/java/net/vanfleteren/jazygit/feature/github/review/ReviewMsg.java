@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.feature.github.review;
 
 import io.vavr.collection.List;
-import io.vavr.control.Option;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.DiffCursorAt;
@@ -71,9 +70,9 @@ public sealed interface ReviewMsg extends Msg {
     record EditorFailed(Failure failure) implements ReviewMsg {}
 
     /**
-     * The comment was sent by running {@code commands}: a reply, or a thread started, whose id is {@code started}.
+     * The comment was sent by running {@code commands}: a reply, or a thread started.
      */
-    record Sent(ReviewCmd.Send cmd, Option<String> started, List<ExecutedCommand> commands) implements ReviewMsg {}
+    record Sent(ReviewCmd.Send cmd, List<ExecutedCommand> commands) implements ReviewMsg {}
 
     /**
      * Sending the comment failed.

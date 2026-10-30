@@ -96,10 +96,10 @@ def threads(head: str, base: str) -> list:
                 "originalLine": 1, "isResolved": resolved, "isOutdated": False, "subjectType": "LINE",
                 "viewerCanReply": True, "viewerCanResolve": not resolved, "viewerCanUnresolve": resolved,
                 "comments": {"totalCount": 1, "nodes": [
-                    {"id": f"IC_{body}", "author": {"login": "reviewer"}, "createdAt": DATE, "body": body, "state": "SUBMITTED",
+                    {"id": f"IC_{body}", "fullDatabaseId": str(len(body)), "author": {"login": "reviewer"}, "createdAt": DATE, "body": body, "state": "SUBMITTED",
                      "isMinimized": False, "minimizedReason": None}]}}
     return [{"data": {"repository": {"pullRequest": {
-        "id": "PR_1", "state": "OPEN", "headRefOid": head, "baseRefOid": base,
+        "state": "OPEN", "headRefOid": head, "baseRefOid": base,
         "reviewThreads": {"pageInfo": {"hasNextPage": False, "endCursor": None},
                           "nodes": [thread(False, "Why **b**?"), thread(True, "Settled already")]},
     }}}}]
@@ -164,14 +164,15 @@ def test_only_the_files_of_a_pull_request_with_remarks_can_be_listed(repo, origi
     assert "· with remarks" not in ui.app.text()
 
 
-REPLY = "addPullRequestReviewThreadReply"
-START = "addPullRequestReviewThread("
+# A thread is started and replied to with REST, which publishes the comment at once.
+REPLY = "/replies"
+START = "pulls/1/comments"
 RESOLVE = "resolveReviewThread("
 
 
-def calls_with(gh, text: str) -> list:
-    """The calls of gh whose arguments contain text."""
-    return [call for call in gh.calls() if text in " ".join(call)]
+def calls_with(gh, text: str, without: str = "\0") -> list:
+    """The calls of gh whose arguments contain text, and not without."""
+    return [call for call in gh.calls() if text in " ".join(call) and without not in " ".join(call)]
 
 
 def reversed_at(app, text: str) -> bool:
@@ -191,8 +192,8 @@ def test_the_remarks_of_a_pull_request_are_resolved_replied_to_and_started_from_
     head = origin("rev-parse", "refs/pull/1/head").strip()
     gh.answer(
         (THREADS, threads(head, repo("rev-parse", "main").strip())),
-        (REPLY, {"data": {"addPullRequestReviewThreadReply": {"comment": {"id": "IC_reply"}}}}),
-        (START, {"data": {"addPullRequestReviewThread": {"thread": {"id": "PRRT_new"}}}}),
+        (REPLY, {"id": 7, "node_id": "IC_reply"}),
+        (START, {"id": 8, "node_id": "IC_new"}),
         # Slow enough for a second x to come while it is sent.
         (RESOLVE, {"data": {"resolveReviewThread": {"thread": {"id": "PRRT_Why **b**?"}}}}, 2))
     ui = jazygit()
@@ -226,6 +227,8 @@ def test_the_remarks_of_a_pull_request_are_resolved_replied_to_and_started_from_
     ui.app.press("ctrl+s")
 
     ui.app.eventually(lambda: calls_with(gh, REPLY), "the reply sent")
+    # To the first comment of the thread, "Why **b**?", whose REST id the fake made its length.
+    assert "repos/{owner}/{repo}/pulls/1/comments/10/replies" in calls_with(gh, REPLY)[0]
     assert "body=Because" in calls_with(gh, REPLY)[0]
     ui.app.eventually(lambda: "Reply on b.txt" not in ui.app.text(), "the popup closed")
     ui.app.eventually(lambda: reversed_at(ui.app, "┏━ reviewer"), "the focus back on the thread")
@@ -237,6 +240,7 @@ def test_the_remarks_of_a_pull_request_are_resolved_replied_to_and_started_from_
     ui.app.type("Hm")
     ui.app.press("ctrl+s")
 
-    ui.app.eventually(lambda: calls_with(gh, START), "the thread started")
-    started = calls_with(gh, START)[0]
+    ui.app.eventually(lambda: calls_with(gh, START, REPLY), "the thread started")
+    started = calls_with(gh, START, REPLY)[0]
     assert "line=1" in started and "side=RIGHT" in started and "body=Hm" in started and "path=b.txt" in started
+    assert f"commit_id={head}" in started

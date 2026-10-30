@@ -70,7 +70,7 @@ class ReviewUpdateTest {
                 resolved,
                 false,
                 ReviewThread.Subject.LINE,
-                List.of(new Comment("bob", Instant.EPOCH, "Why?\nReally?", Option.none(), "C")),
+                List.of(new Comment("bob", Instant.EPOCH, "Why?\nReally?", Option.none(), "C", "1")),
                 0,
                 id,
                 rights);
@@ -89,11 +89,7 @@ class ReviewUpdateTest {
                         new CommitFilesMsg.RemarksLoaded(
                                 7,
                                 new ReviewRemarks(
-                                        state,
-                                        GhCommit.parse(head),
-                                        GhCommit.parse(BASE),
-                                        List.of(OPEN, SETTLED),
-                                        "PR_1")))
+                                        state, GhCommit.parse(head), GhCommit.parse(BASE), List.of(OPEN, SETTLED))))
                 .model();
         return read.mapRepoView(repoView -> repoView.withCommitFiles(repoView.commitFiles()
                 .map(view -> view.withDiff(Option.of(new Preview<>(List.of(A), new Loadable.Loaded<>(DIFF)))))));
@@ -157,8 +153,7 @@ class ReviewUpdateTest {
                                         PullRequestDetails.State.OPEN,
                                         GhCommit.parse(HEAD),
                                         GhCommit.parse(BASE),
-                                        List.of(OPEN, SETTLED),
-                                        "PR_1")))
+                                        List.of(OPEN, SETTLED))))
                 .model();
         assertEquals(HashSet.empty(), view(read).sending());
     }
@@ -228,18 +223,18 @@ class ReviewUpdateTest {
         Model asked = Update.update(files(), new ReviewMsg.ReplyAsked(at(onThread("T1"))))
                 .model();
         ReviewPopup popup = asked.popup(ReviewPopup.class).get();
-        assertEquals(new Target.Reply("T1"), popup.target());
+        assertEquals(new Target.Reply("T1", "1"), popup.target());
         assertEquals(List.of("bob:", "Why?", "Really?"), popup.quoted());
 
         Model typed = Update.update(asked, new ReviewMsg.Edited("Because")).model();
         Next sending = Update.update(typed, new ReviewMsg.Confirmed());
 
-        ReviewCmd.Send send = new ReviewCmd.Send(7, new Target.Reply("T1"), "Because");
+        ReviewCmd.Send send = new ReviewCmd.Send(7, new Target.Reply("T1", "1"), "Because");
         assertEquals(List.of(send), sending.cmds());
         assertTrue(sending.model().popup(ReviewPopup.class).get().sending());
         assertEquals(HashSet.of("T1"), view(sending.model()).sending());
 
-        Next sent = Update.update(sending.model(), new ReviewMsg.Sent(send, Option.none(), List.empty()));
+        Next sent = Update.update(sending.model(), new ReviewMsg.Sent(send, List.empty()));
         assertEquals(Option.none(), sent.model().popup(ReviewPopup.class));
         assertTrue(sent.cmds().contains(new CommitFilesCmd.LoadReviewRemarks(7)));
     }
@@ -255,7 +250,7 @@ class ReviewUpdateTest {
         Model failed = Update.update(
                         sending,
                         new ReviewMsg.SendFailed(
-                                new ReviewCmd.Send(7, new Target.Reply("T1"), "Because"),
+                                new ReviewCmd.Send(7, new Target.Reply("T1", "1"), "Because"),
                                 new Failure.Bug(new RuntimeException("offline"))))
                 .model();
 
@@ -265,14 +260,14 @@ class ReviewUpdateTest {
     }
 
     @Test
-    void aThreadIsStartedOnARangeFromTheLineTheDiffShowsFirstAndTheCursorGoesToIt() {
+    void aThreadIsStartedOnARangeFromTheLineTheDiffShowsFirstAndTheCursorGoesToItsLastLine() {
         Model asked = Update.update(
                         files(), new ReviewMsg.StartAsked(at(line(Side.LEFT, 2), Option.of(line(Side.RIGHT, 3)))))
                 .model();
 
         ReviewPopup popup = asked.popup(ReviewPopup.class).get();
         Target.Start start =
-                new Target.Start("PR_1", "a.txt", Option.of(new NewReviewThread.Lines(Side.LEFT, 2, Side.RIGHT, 3)));
+                new Target.Start(HEAD, "a.txt", Option.of(new NewReviewThread.Lines(Side.LEFT, 2, Side.RIGHT, 3)));
         assertEquals(start, popup.target());
         assertEquals(List.of("-two", "+TWO", " three"), popup.quoted());
         assertEquals(Option.of(new ReviewPopup.Lines(2, 3)), popup.where().lines());
@@ -281,16 +276,11 @@ class ReviewUpdateTest {
                         Update.update(asked, new ReviewMsg.Edited("Rename")).model(), new ReviewMsg.Confirmed())
                 .model();
         ReviewCmd.Send send = new ReviewCmd.Send(7, start, "Rename");
-        Next sent = Update.update(sending, new ReviewMsg.Sent(send, Option.of("PRRT_new"), List.empty()));
+        Next sent = Update.update(sending, new ReviewMsg.Sent(send, List.empty()));
 
         assertEquals(Option.none(), sent.model().popup(ReviewPopup.class));
         assertEquals(
-                new Scrolled(
-                        CONTENT,
-                        3,
-                        0,
-                        Option.of(new Anchor.Thread("PRRT_new", Option.of(line(Side.RIGHT, 3)))),
-                        Option.none()),
+                new Scrolled(CONTENT, 3, 0, Option.of(line(Side.RIGHT, 3)), Option.none()),
                 sent.model().scrolled(AREA, CONTENT));
     }
 
@@ -300,7 +290,7 @@ class ReviewUpdateTest {
                 .model();
 
         assertEquals(
-                new Target.Start("PR_1", "a.txt", Option.none()),
+                new Target.Start(HEAD, "a.txt", Option.none()),
                 asked.popup(ReviewPopup.class).get().target());
     }
 

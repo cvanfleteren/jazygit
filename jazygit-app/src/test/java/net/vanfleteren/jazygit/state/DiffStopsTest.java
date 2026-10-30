@@ -55,7 +55,7 @@ class DiffStopsTest {
                 false,
                 false,
                 subject,
-                List.of(new Comment("bob", Instant.EPOCH, "Hm", Option.none(), "C")),
+                List.of(new Comment("bob", Instant.EPOCH, "Hm", Option.none(), "C", "1")),
                 0,
                 id,
                 ReviewThread.Rights.ALL);

@@ -12,20 +12,14 @@ import io.vavr.control.Option;
  *                read
  * @param base    the commit its base branch is at
  * @param threads its review threads, those of a review not submitted yet left out
- * @param id      the node id of the pull request, which starting a thread on it takes (ADR 60); empty when it is not
- *                known
  */
 public record ReviewRemarks(
-        PullRequestDetails.State state,
-        Option<GhCommit> head,
-        Option<GhCommit> base,
-        List<ReviewThread> threads,
-        String id) {
+        PullRequestDetails.State state, Option<GhCommit> head, Option<GhCommit> base, List<ReviewThread> threads) {
 
     /**
      * No threads, of an open pull request whose commits are not known.
      */
     public static ReviewRemarks none() {
-        return new ReviewRemarks(PullRequestDetails.State.OPEN, Option.none(), Option.none(), List.empty(), "");
+        return new ReviewRemarks(PullRequestDetails.State.OPEN, Option.none(), Option.none(), List.empty());
     }
 }
