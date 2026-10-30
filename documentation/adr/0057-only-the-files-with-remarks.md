@@ -38,8 +38,10 @@ thread is shown open, `t`, is kept in `CommitFilesView`, not in the settings.
   while they are read; and why the read failed when it did and none were read before. Not: refusing to switch, which a slow read of the remarks would make look
   like a lost key.
 - The files kept are those of the threads read last: after `R`, a file whose last unresolved thread was resolved
-  leaves the tree of unresolved remarks. The highlight stays on its file while it is listed, else it moves to the next
-  file listed, or to the one before at the end.
+  leaves the tree of unresolved remarks. The highlight stays on its node while it is listed, else it moves to the
+  nearest row still listed, the one below before the one above, which may be a directory: as in the files of the
+  working tree. Not: the next file listed, which the tree would need a rule of its own for. While the remarks are read
+  after `c`, nothing is listed: once they are, the tree opens on its first directory that holds files again.
 
 ### Marks
 

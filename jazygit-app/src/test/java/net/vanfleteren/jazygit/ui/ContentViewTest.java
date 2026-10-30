@@ -9,8 +9,10 @@ import net.vanfleteren.jazygit.feature.branch.commits.BranchCommitsMsg;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.feature.help.HelpPopup;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
+import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.settings.DiffLook;
@@ -252,6 +254,51 @@ class ContentViewTest {
         assertEquals(
                 new Shown.Message("Files of aaaa", Placeholders.loading(), Tone.DIM),
                 ContentView.of(open, FilesPanel.ID));
+    }
+
+    @Test
+    void whenOnlyTheFilesOfAPullRequestWithRemarksAreListedAndNoneIsTheDiffShownBeforeIsNot() {
+        CommitFilesView.Changes of = new CommitFilesView.Changes.OfPullRequest(
+                new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
+        CommitFile file = new CommitFile("src/a.txt", ChangeType.MODIFIED);
+        Model open = Update.update(
+                        Update.update(TestModels.loaded(), new CommitFilesMsg.Opened(of, BranchesPanel.ID))
+                                .model(),
+                        new LoadMsg.CommitFilesLoaded(of, List.of(file)))
+                .model();
+        Model selected = Update.update(
+                        Update.update(open, new SelectionMsg.CommitFilesSelected(List.of(file)))
+                                .model(),
+                        new LoadMsg.CommitFileDiffLoaded(
+                                of, List.of(file), open.preferences().diffOptions(), DiffText.of("+a\n")))
+                .model();
+        Model unresolved =
+                Update.update(selected, new CommitFilesMsg.ListedCycled()).model();
+        assertInstanceOf(Shown.Area.class, ContentView.of(selected, FilesPanel.ID));
+
+        // While the remarks are read.
+        assertEquals(loading("Files of #7"), ContentView.of(unresolved, FilesPanel.ID));
+
+        Model none = Update.update(
+                        unresolved,
+                        new CommitFilesMsg.RemarksLoaded(
+                                7,
+                                new ReviewRemarks(
+                                        PullRequestDetails.State.OPEN, Option.none(), Option.none(), List.empty())))
+                .model();
+        assertEquals(dim("Files of #7", "No file has unresolved remarks"), ContentView.of(none, FilesPanel.ID));
+        assertEquals(
+                dim("Files of #7", "No file has remarks"),
+                ContentView.of(
+                        Update.update(none, new CommitFilesMsg.ListedCycled()).model(), FilesPanel.ID));
+
+        Failure failure = new Failure.Bug(new Exception("no network"));
+        assertEquals(
+                new Shown.Message("Files of #7", Placeholders.error(failure), Tone.ERROR),
+                ContentView.of(
+                        Update.update(unresolved, new CommitFilesMsg.RemarksFailed(7, failure))
+                                .model(),
+                        FilesPanel.ID));
     }
 
     @Test

@@ -412,7 +412,9 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
   the title (`CommitFilesView.ended`); threads read at other commits than the files are then not placed on lines
   (`CommitFilesView.remarksAtItsCommits`). `ui.RichDiff` draws them after their lines as `ui.RemarkLines` blocks,
   their Markdown drawn by tamboui's `MarkdownView` into a buffer off the screen and read back as lines, styled as the
-  theme styles `MarkdownElement` (`Theme.SpanStyles.markdown`).
+  theme styles `MarkdownElement` (`Theme.SpanStyles.markdown`). `c` lists only the files with an unresolved thread,
+  or with any, and every file again (`CommitFilesView.listed`, ADR 57): the files pane draws `listedFiles()`, the
+  files kept, and says why none is with a `FileTreeList.Placeholder`, as the content panel does then.
 - **Their focus:** `FocusKeeper` moves the focus into the files pane when they open, and back to the pane they were
   opened from when Escape closes them. `Model.withShownPane` closes them when another pane gets the focus, and
   `LoadUpdate` when the stash they are of is dropped.
