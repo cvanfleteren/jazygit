@@ -238,6 +238,23 @@ class UnifiedDiffTest {
     }
 
     @Test
+    void aQuotedPathReadsItsCEscapes() {
+        assertEquals("a\tb\nc\"d\\e", UnifiedDiff.path("\"a\\tb\\nc\\\"d\\\\e\""));
+        assertEquals("\u0007\b\u000b\f\r", UnifiedDiff.path("\"\\a\\b\\v\\f\\r\""));
+    }
+
+    @Test
+    void aQuotedPathKeepsItsPlainCharacters() {
+        assertEquals("dir/foo bar.txt", UnifiedDiff.path("\"dir/foo bar.txt\""));
+        assertEquals("föo-日本.txt", UnifiedDiff.path("\"föo-日本.txt\""));
+    }
+
+    @Test
+    void aQuotedPathKeepsACharacterOutsideTheBmpWrittenUnescaped() {
+        assertEquals("a-😀.txt", UnifiedDiff.path("\"a-😀.txt\""));
+    }
+
+    @Test
     void aBinaryConflictHasNoLines() {
         FileDiff file = UnifiedDiff.parse("""
                 diff --cc bin.dat
