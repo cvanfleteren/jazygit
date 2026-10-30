@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.ui;
 
 import io.vavr.control.Option;
+import java.util.Locale;
 import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.model.BranchName;
@@ -95,6 +96,8 @@ public final class ErrorText {
             case AppError.PullRequestsNotRead() -> Messages.get("error.pullRequest.notRead");
             case AppError.PullRequestsUnavailable(Failure failure) ->
                 Messages.get("error.pullRequest.unavailable", of(failure));
+            case AppError.CannotReview(AppError.CannotReview.Why why) ->
+                Messages.get("error.review." + why.name().toLowerCase(Locale.ROOT));
             case AppError.SettingsNotLoaded(SettingsProblem problem) -> of(problem);
             case AppError.SettingsNotSaved(Failure failure) -> Messages.get("error.settings.notSaved", of(failure));
             case AppError.RepositoryNotOpened(String directory, Failure failure) ->

@@ -23,6 +23,7 @@ import net.vanfleteren.jazygit.git.model.UnifiedDiff.Hunk;
 import net.vanfleteren.jazygit.git.model.WordDiff.Segment;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Anchor;
+import net.vanfleteren.jazygit.state.DiffStops;
 import net.vanfleteren.jazygit.state.PlacedRemarks;
 import net.vanfleteren.jazygit.state.PlacedRemarks.FileRemarks;
 import net.vanfleteren.jazygit.state.PlacedRemarks.LineRemarks;
@@ -73,12 +74,14 @@ final class RichDiff {
                                 .map(Option::some)
                                 .toVector())
                 .getOrElse(() -> Vector.fill(parsed.files().size(), Option::none));
-        RemarkLines.RemarkStyle style = remarks.map(shown -> new RemarkLines.RemarkStyle(shown.opened(), shown.now()))
+        RemarkLines.RemarkStyle style = remarks.map(shown ->
+                        new RemarkLines.RemarkStyle(shown.opened(), shown.toggled(), shown.sending(), shown.now()))
                 .getOrElse(() -> new RemarkLines.RemarkStyle(false, Instant.EPOCH));
         // Each file is measured on a thread of its own, and then each of its lines is drawn on one, so that a diff of
         // many files and one of a long file both hold up the render thread for less.
         List<Pending> pending = inParallel(
-                        diff.files().zip(placed), file -> file.apply((its, on) -> file(its, on, syntax, style, styles)))
+                        diff.files().zip(placed).zipWithIndex(),
+                        file -> file(file._1()._1(), file._1()._2(), file._2(), syntax, style, styles))
                 .intersperse(List.of(BLANK))
                 .flatMap(file -> file);
         return Drawn.of(parsed.preamble()
@@ -115,6 +118,7 @@ final class RichDiff {
     private static List<Pending> file(
             ParsedFile parsed,
             Option<FileRemarks> remarks,
+            int index,
             boolean syntax,
             RemarkLines.RemarkStyle style,
             Theme.SpanStyles styles) {
@@ -133,7 +137,7 @@ final class RichDiff {
         int width = Math.max(
                 width(bar), gutter + measured.map(text -> text + 1).max().getOrElse(0));
         Blocks blocks = new Blocks(gutter + 2, RemarkLines.blockWidth(width), style);
-        Layout layout = new Layout(file.path(), digits, width - gutter, width, blocks, syntax, styles);
+        Layout layout = new Layout(file.path(), index, digits, width - gutter, width, blocks, syntax, styles);
         Vector<LineRemarks> onLines = remarks.map(
                         placed -> placed.lines().flatMap(hunk -> hunk).toVector())
                 .getOrElse(() -> Vector.fill(lines.size(), () -> NO_REMARKS));
@@ -145,14 +149,14 @@ final class RichDiff {
                 cut(rows, parsed.hunks().map(hunk -> hunk.lines().size()));
         return List.<Pending>of(() -> List.of(new Marked(
                                 Line.from(styled(padded(bar, width), Theme.Classes.DIFF_FILE_HEADER, styles)),
-                                Option.of(new Mark(new Anchor.File(file.path()), 1, width))))
+                                Option.of(new Mark(new Anchor.File(file.path()), 1, width, Option.none()))))
                         .appendAll(note(file)
                                 .map(text -> Marked.plain(Line.from(styled(text, Theme.Classes.DIM, styles))))))
                 .appendAll(remarks.toList()
                         .<Pending>map(placed -> () -> blocks.threads(
                                 placed.onFile(), Option.none(), !file.hunks().isEmpty() || unplaced, styles)))
                 .appendAll(parsed.hunks()
-                        .zipWithIndex((hunk, at) -> hunk(hunk.hunk(), byHunk.get(at), at == 0, layout))
+                        .zipWithIndex((hunk, at) -> hunk(hunk.hunk(), byHunk.get(at), at, layout))
                         .flatMap(hunk -> hunk))
                 .appendAll(remarks.toList().<Pending>map(placed -> () -> blocks.unplaced(placed.unplaced(), styles)));
     }
@@ -192,10 +196,11 @@ final class RichDiff {
      * marks where it starts unless it has no header. The rule stands in for git's {@code @@ -a,b +c,d @@}, whose
      * numbers the gutter shows already. Not the section heading git gives after them: it is a line from above the
      * hunk, which reads as one of its own. A header whose numbers cannot be read, whose lines are not numbered,
-     * follows the rule as git printed it. The {@code first} hunk of a file has no rule, as the bar of the file marks
-     * where it starts, unless its header has to be shown.
+     * follows the rule as git printed it. The first hunk of a file, at {@code index} 0, has no rule, as the bar of the
+     * file marks where it starts, unless its header has to be shown.
      */
-    private static List<Pending> hunk(Hunk hunk, Vector<Row> rows, boolean first, Layout layout) {
+    private static List<Pending> hunk(Hunk hunk, Vector<Row> rows, int index, Layout layout) {
+        boolean first = index == 0;
         Theme.SpanStyles styles = layout.styles();
         Span rule = styled("┄".repeat(2 * layout.digits() + 1) + GUTTER_END, Theme.Classes.DIFF_LINE_NUMBER, styles);
         List<Pending> header = hunk.header().isEmpty() || (first && hunk.numbered())
@@ -208,7 +213,13 @@ final class RichDiff {
             Option<Anchor.OnLine> anchor = Anchor.of(layout.path(), row.parsed().line());
             return layout.blocks()
                     .threads(row.remarks().threads(), anchor, row.followed(), styles)
-                    .prepend(new Marked(line(row, layout), anchor.map(on -> new Mark(on, 1, layout.fileWidth()))));
+                    .prepend(new Marked(
+                            line(row, layout),
+                            anchor.map(on -> new Mark(
+                                    on,
+                                    1,
+                                    layout.fileWidth(),
+                                    Option.of(new DiffStops.HunkAt(layout.file(), index))))));
         }));
     }
 
@@ -420,8 +431,9 @@ final class RichDiff {
      * @param anchor what it is
      * @param lines  how many lines it has itself
      * @param width  how many columns its tint covers: the width of its file
+     * @param hunk   the hunk of a line, which a range stays in; none for what is not a line
      */
-    record Mark(Anchor anchor, int lines, int width) {}
+    record Mark(Anchor anchor, int lines, int width, Option<DiffStops.HunkAt> hunk) {}
 
     /**
      * Where a stop of the cursor starts.
@@ -463,8 +475,9 @@ final class RichDiff {
         Drawn withLead() {
             return stops.headOption()
                     .filter(first -> first.row() > 0)
-                    .map(first ->
-                            new Drawn(lines, stops.prepend(new Stop(new Mark(new Anchor.Lead(), first.row(), 0), 0))))
+                    .map(first -> new Drawn(
+                            lines,
+                            stops.prepend(new Stop(new Mark(new Anchor.Lead(), first.row(), 0, Option.none()), 0))))
                     .getOrElse(this);
         }
     }
@@ -476,6 +489,7 @@ final class RichDiff {
      */
     private record Layout(
             String path,
+            int file,
             int digits,
             int width,
             int fileWidth,
@@ -540,7 +554,8 @@ final class RichDiff {
                                             () -> new Mark(
                                                     new Anchor.Thread(block._1().id(), line),
                                                     block._2().size(),
-                                                    indent + width)))))
+                                                    indent + width,
+                                                    Option.none())))))
                     .intersperse(List.of(Marked.plain(Line.from(""))))
                     .flatMap(Function.identity());
         }

@@ -12,6 +12,7 @@ import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.state.Anchor;
+import net.vanfleteren.jazygit.state.DiffStops;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -29,19 +30,19 @@ class DiffCursorTest {
     // 20 lines shown 5 at a time: a lead of 3 lines, a bar, line 1, a thread of 10 lines, line 2, and line 3 with the
     // 3 lines after it that are no stop.
     private static final Vector<RichDiff.Stop> STOPS = Vector.of(
-            stop(LEAD, 3, 0),
-            stop(FILE, 1, 3),
-            stop(ONE, 1, 4),
-            stop(THREAD, 10, 5),
-            stop(TWO, 1, 15),
-            stop(THREE, 1, 16));
+            stop(LEAD, 3, 0), stop(FILE, 1, 3), line(ONE, 4), stop(THREAD, 10, 5), line(TWO, 15), line(THREE, 16));
 
     private static RichDiff.Stop stop(Anchor anchor, int lines, int row) {
-        return new RichDiff.Stop(new RichDiff.Mark(anchor, lines, 8), row);
+        return new RichDiff.Stop(new RichDiff.Mark(anchor, lines, 8, Option.none()), row);
+    }
+
+    private static RichDiff.Stop line(Anchor anchor, int row) {
+        return new RichDiff.Stop(new RichDiff.Mark(anchor, 1, 8, Option.of(new DiffStops.HunkAt(0, 0))), row);
     }
 
     private static DiffCursor on(Anchor anchor, int row) {
-        return DiffCursor.of(STOPS, 20, 5, row, Option.of(anchor)).get();
+        return DiffCursor.of(STOPS, 20, 5, row, Option.of(anchor), Option.none())
+                .get();
     }
 
     private static void assertAt(Anchor anchor, int row, DiffCursor cursor) {
@@ -51,8 +52,11 @@ class DiffCursorTest {
 
     @Test
     void itStartsOnTheFirstStopAndADiffWithoutStopsHasNone() {
-        assertAt(LEAD, 0, DiffCursor.of(STOPS, 20, 5, 0, Option.none()).get());
-        assertEquals(Option.none(), DiffCursor.of(Vector.empty(), 20, 5, 0, Option.none()));
+        assertAt(
+                LEAD,
+                0,
+                DiffCursor.of(STOPS, 20, 5, 0, Option.none(), Option.none()).get());
+        assertEquals(Option.none(), DiffCursor.of(Vector.empty(), 20, 5, 0, Option.none(), Option.none()));
     }
 
     @Test
@@ -124,6 +128,56 @@ class DiffCursorTest {
         assertAt(FILE, 3, on(LEAD, 0).scrolled(3));
         assertAt(THREAD, 5, on(LEAD, 0).pageDown());
         assertAt(THREAD, 10, on(THREE, 15).pageUp());
+    }
+
+    @Test
+    void aRangeStartsOnALineAndMovesOverTheLinesOfItsHunkOnly() {
+        assertEquals(Option.none(), on(FILE, 0).marked());
+        DiffCursor range = on(TWO, 11).marked().get();
+        assertEquals(Option.of(TWO), range.markAnchor());
+
+        assertAt(THREE, 15, range.down());
+        assertEquals(THREE, range.down().down().anchor());
+        // Over the thread between two lines, and no further than the first line of the hunk.
+        assertAt(ONE, 4, range.up());
+        assertEquals(ONE, range.up().up().anchor());
+        assertEquals(Option.none(), range.nextThread());
+        assertEquals(TWO, range.home().anchor());
+
+        assertEquals(Option.none(), range.marked().get().markAnchor());
+    }
+
+    @Test
+    void theNextAndThePreviousThread() {
+        assertAt(THREAD, 5, on(LEAD, 0).nextThread().get());
+        assertAt(THREAD, 10, on(THREE, 15).previousThread().get());
+        assertEquals(Option.none(), on(TWO, 11).nextThread());
+    }
+
+    @Test
+    void aMarkThatIsNotALineOfTheHunkOfTheCursorIsDropped() {
+        assertEquals(
+                Option.none(),
+                DiffCursor.of(STOPS, 20, 5, 0, Option.of(TWO), Option.of(FILE))
+                        .get()
+                        .markAnchor());
+        assertEquals(
+                Option.of(ONE),
+                DiffCursor.of(STOPS, 20, 5, 0, Option.of(TWO), Option.of(ONE))
+                        .get()
+                        .markAnchor());
+    }
+
+    @Test
+    void theLinesOfARangeAreTintedAndMarkedInTheGutter() {
+        Text text = Text.from(List.range(0, 20)
+                .map(row -> Line.from(Span.raw(" 1  1 │ "), Span.raw("x" + row)))
+                .toJavaList());
+        Text tinted = on(TWO, 11).marked().get().up().tinted(text, Style.EMPTY.reversed());
+
+        assertEquals(" 1  1 ┃ x4", tinted.lines().get(4).rawContent());
+        assertEquals(" 1  1 ┃ x15", tinted.lines().get(15).rawContent());
+        assertEquals(" 1  1 │ x5", tinted.lines().get(5).rawContent());
     }
 
     @Test

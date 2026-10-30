@@ -257,6 +257,59 @@ public sealed interface AppError {
     record PullRequestsUnavailable(Failure failure) implements AppError {}
 
     /**
+     * A key of the diff of a pull request was pressed that the cursor, the pull request or the viewer does not allow
+     * (ADR 60).
+     */
+    record CannotReview(Why why) implements AppError {
+
+        /**
+         * Why it cannot be done.
+         */
+        public enum Why {
+            /**
+             * Replying, resolving and opening a thread need the cursor on one.
+             */
+            NOT_ON_THREAD,
+            /**
+             * A range starts on a line, and a thread starts on a line, a range or the bar of a file.
+             */
+            NOT_ON_LINE,
+            /**
+             * The pull request moved on since its files were read: its lines number other lines now.
+             */
+            MOVED_ON,
+            /**
+             * The pull request is merged.
+             */
+            MERGED,
+            /**
+             * Its review threads are not read yet, or could not be.
+             */
+            NOT_READ,
+            /**
+             * GitHub does not let the viewer reply to the thread.
+             */
+            NO_REPLY,
+            /**
+             * GitHub does not let the viewer resolve the thread.
+             */
+            NO_RESOLVE,
+            /**
+             * GitHub does not let the viewer unresolve the thread.
+             */
+            NO_UNRESOLVE,
+            /**
+             * Something is being sent for the thread.
+             */
+            SENDING,
+            /**
+             * A thread is not started on a line the diff does not number, nor across hunks.
+             */
+            NOT_ONE_HUNK
+        }
+    }
+
+    /**
      * The settings could not be read, or not all of them; the defaults are used instead.
      */
     record SettingsNotLoaded(SettingsProblem problem) implements AppError {}

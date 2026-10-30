@@ -10,7 +10,9 @@ import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
+import io.vavr.collection.Set;
 import io.vavr.collection.Vector;
 import java.time.Duration;
 import java.time.Instant;
@@ -129,20 +131,27 @@ final class RemarkLines {
         Span margin = Span.raw(" ".repeat(indent));
         List<Span> rule = List.of(margin, styled(RULE, Theme.Classes.DIFF_THREAD, styles));
         int text = text(indent, width);
-        if (thread.resolved() && !style.opened()) {
+        boolean open = style.opens(thread);
+        // While a reply or its resolving is sent, it says so (ADR 60).
+        List<Span> sending = style.sends(thread)
+                ? List.of(styled(" · " + Messages.get("content.remarks.sending"), Theme.Classes.DIM, styles))
+                : List.empty();
+        if (thread.resolved() && !open) {
             String first =
                     thread.comments().headOption().map(RemarkLines::firstLine).getOrElse("");
             String author = thread.comments()
                     .headOption()
                     .map(comment -> author(comment.author()))
                     .getOrElse("");
-            return List.of(Line.from(
-                    margin,
-                    styled((top ? ALONE : BOTTOM) + " ", Theme.Classes.DIFF_THREAD, styles),
-                    styled(
-                            cut(Messages.get("content.remarks.resolved", author, first), text),
-                            Theme.Classes.DIM,
-                            styles)));
+            return List.of(Line.from(List.of(
+                            margin,
+                            styled((top ? ALONE : BOTTOM) + " ", Theme.Classes.DIFF_THREAD, styles),
+                            styled(
+                                    cut(Messages.get("content.remarks.resolved", author, first), text),
+                                    Theme.Classes.DIM,
+                                    styles))
+                    .appendAll(sending)
+                    .toJavaList()));
         }
         // A line of only the rule between two comments, to show where the next one starts.
         return thread.comments()
@@ -154,7 +163,8 @@ final class RemarkLines {
                                 styled(top && comment._2 == 0 ? TOP : BRANCH, Theme.Classes.DIFF_THREAD, styles)),
                         rule,
                         text,
-                        style,
+                        open,
+                        style.now(),
                         styles))
                 .intersperse(List.of(Line.from(margin, styled(RULE.strip(), Theme.Classes.DIFF_THREAD, styles))))
                 .flatMap(Function.identity())
@@ -166,18 +176,30 @@ final class RemarkLines {
                                                 styles))
                                         .toJavaList()))
                                 : List.empty())
+                .appendAll(
+                        sending.isEmpty()
+                                ? List.empty()
+                                : List.of(Line.from(rule.append(styled(
+                                                Messages.get("content.remarks.sending"), Theme.Classes.DIM, styles))
+                                        .toJavaList())))
                 .append(Line.from(margin, styled(BOTTOM, Theme.Classes.DIFF_THREAD, styles)));
     }
 
     /**
      * A comment: a header after {@code branch} that says who wrote it and how long ago, on the background of
-     * {@link Theme.Classes#DIFF_THREAD_HEADER} to the end of the block, then its text, or why it is hidden while it is
-     * closed.
+     * {@link Theme.Classes#DIFF_THREAD_HEADER} to the end of the block, then its text, or why it is hidden while its
+     * thread is not {@code open}; how long ago it was written, at {@code now}.
      */
     private static List<Line> comment(
-            Comment comment, List<Span> branch, List<Span> rule, int text, RemarkStyle style, Theme.SpanStyles styles) {
+            Comment comment,
+            List<Span> branch,
+            List<Span> rule,
+            int text,
+            boolean open,
+            Instant now,
+            Theme.SpanStyles styles) {
         String author = author(comment.author());
-        String ago = Messages.get("content.remarks.ago", TimeText.ago(Duration.between(comment.at(), style.now())));
+        String ago = Messages.get("content.remarks.ago", TimeText.ago(Duration.between(comment.at(), now)));
         Line header = header(
                 branch,
                 List.of(
@@ -186,7 +208,7 @@ final class RemarkLines {
                 text,
                 styles);
         List<Line> body = comment.hidden()
-                .filter(hidden -> !style.opened())
+                .filter(hidden -> !open)
                 .map(reason -> List.of(Line.from(rule.append(styled(
                                 cut(
                                         Messages.get(
@@ -290,6 +312,30 @@ final class RemarkLines {
 
     /**
      * How the threads are drawn: open or not, and the time it is, to tell how long ago a comment was written.
+     *
+     * @param opened  whether every thread is open
+     * @param toggled the ids of the threads opened or closed against {@code opened} (ADR 60)
+     * @param sending the ids of the threads a reply or a resolving is sent for (ADR 60)
+     * @param now     the time it is
      */
-    record RemarkStyle(boolean opened, Instant now) {}
+    record RemarkStyle(boolean opened, Set<String> toggled, Set<String> sending, Instant now) {
+
+        RemarkStyle(boolean opened, Instant now) {
+            this(opened, HashSet.empty(), HashSet.empty(), now);
+        }
+
+        /**
+         * Whether {@code thread} is shown open: its resolved state and its hidden comments too.
+         */
+        boolean opens(ReviewThread thread) {
+            return opened != toggled.contains(thread.id());
+        }
+
+        /**
+         * Whether something is sent for {@code thread}.
+         */
+        boolean sends(ReviewThread thread) {
+            return sending.contains(thread.id());
+        }
+    }
 }

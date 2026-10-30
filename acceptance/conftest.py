@@ -185,10 +185,11 @@ class FakeGh:
         env["FAKE_GH_LOG"] = str(self.log_file)
 
     def answer(self, *pairs):
-        """Answers each call that contains the text of a pair with its answer, a string or what json makes of it;
-        the pairs given before go after these."""
+        """Answers each call that contains the text of a pair with its answer, a string or what json makes of it,
+        after the seconds a third element of the pair says, if it has one; the pairs given before go after these."""
         given = json.loads(self.answers_file.read_text())
-        added = [[text, answer if isinstance(answer, str) else json.dumps(answer)] for text, answer in pairs]
+        added = [[text, answer if isinstance(answer, str) else json.dumps(answer), *wait]
+                 for text, answer, *wait in pairs]
         self.answers_file.write_text(json.dumps(added + given))
 
     def calls(self) -> list:

@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.keys;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.keys.Keymap.Scope;
+import net.vanfleteren.jazygit.state.DiffCursorAt;
 
 /**
  * The panels with keys of their own, and what is selected in each, which its keys act on.
@@ -19,6 +20,11 @@ public final class Scopes {
      */
     public static final Scope<FileTree<CommitFile>> COMMIT_FILES =
             new Scope<>("commitFiles", "panel.commitFiles.title");
+    /**
+     * The cursor of the diff of a pull request's files, while the content panel has the focus on it (ADR 60).
+     */
+    public static final Scope<DiffCursorAt> PULL_REQUEST_DIFF =
+            new Scope<>("pullRequestDiff", "panel.pullRequestDiff.title");
     /**
      * The name of the selected branch.
      */

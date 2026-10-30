@@ -10,6 +10,19 @@ import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
 public sealed interface Anchor {
 
     /**
+     * The anchor of {@code line} of the file with the path {@code path}, if it is a stop: a removed line by its number
+     * in the old file, an added or a context line by its number in the new one, as GitHub takes a context line; none
+     * for a note, or a line without that number.
+     */
+    static Option<OnLine> of(String path, DiffLine line) {
+        return switch (line.kind()) {
+            case REMOVED -> line.oldNumber().map(number -> new OnLine(path, Side.LEFT, number));
+            case ADDED, CONTEXT -> line.newNumber().map(number -> new OnLine(path, Side.RIGHT, number));
+            case NOTE -> Option.none();
+        };
+    }
+
+    /**
      * What comes before the first file: the preamble, or the header, message and {@code --stat} of a whole commit.
      */
     record Lead() implements Anchor {}
@@ -30,17 +43,4 @@ public sealed interface Anchor {
      * ({@link DiffStops#nearest}).
      */
     record Thread(String id, Option<OnLine> line) implements Anchor {}
-
-    /**
-     * The anchor of {@code line} of the file with the path {@code path}, if it is a stop: a removed line by its number
-     * in the old file, an added or a context line by its number in the new one, as GitHub takes a context line; none
-     * for a note, or a line without that number.
-     */
-    static Option<OnLine> of(String path, DiffLine line) {
-        return switch (line.kind()) {
-            case REMOVED -> line.oldNumber().map(number -> new OnLine(path, Side.LEFT, number));
-            case ADDED, CONTEXT -> line.newNumber().map(number -> new OnLine(path, Side.RIGHT, number));
-            case NOTE -> Option.none();
-        };
-    }
 }

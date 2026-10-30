@@ -7,6 +7,7 @@ import dev.tamboui.style.Style;
 import dev.tamboui.style.StylePropertyResolver;
 import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
@@ -68,7 +69,14 @@ class RemarkLinesTest {
     }
 
     private static ShownRemarks shown(boolean opened, ReviewThread... threads) {
-        return new ShownRemarks(List.of(threads), opened, NOW, Option.none(), true);
+        return new ShownRemarks(
+                List.of(threads),
+                opened,
+                NOW,
+                Option.none(),
+                true,
+                io.vavr.collection.HashSet.empty(),
+                io.vavr.collection.HashSet.empty());
     }
 
     private static List<String> rich(ShownRemarks remarks) {
@@ -123,6 +131,43 @@ class RemarkLinesTest {
         assertTrue(band.forAll(span -> span.style().bg().equals(Optional.of(Color.BLUE))), header.toString());
         assertTrue(band.exists(
                 span -> span.content().equals("bob") && span.style().fg().equals(Optional.of(Color.CYAN))));
+    }
+
+    @Test
+    void oneThreadIsOpenedOrClosedAgainstTheOthersAndSaysWhenSomethingIsSentForIt() {
+        ReviewThread resolved = thread(3, true, "Done");
+        ReviewThread open = thread(2, false, "Why?");
+        String id = resolved.id();
+
+        List<String> opened = text(RemarkLines.threads(
+                List.of(resolved),
+                8,
+                RemarkLines.MIN_WIDTH,
+                new RemarkLines.RemarkStyle(false, HashSet.of(id), HashSet.empty(), NOW),
+                Theme.SpanStyles.NONE));
+        assertTrue(opened.exists(line -> line.contains("┃  Done")), opened.mkString("\n"));
+        List<String> closed = text(RemarkLines.threads(
+                List.of(resolved),
+                8,
+                RemarkLines.MIN_WIDTH,
+                new RemarkLines.RemarkStyle(true, HashSet.of(id), HashSet.empty(), NOW),
+                Theme.SpanStyles.NONE));
+        assertEquals(List.of(" ".repeat(8) + "━━ ✓ resolved · bob: Done"), closed);
+
+        List<String> resolving = text(RemarkLines.threads(
+                List.of(resolved),
+                8,
+                RemarkLines.MIN_WIDTH,
+                new RemarkLines.RemarkStyle(false, HashSet.empty(), HashSet.of(id), NOW),
+                Theme.SpanStyles.NONE));
+        assertEquals(List.of(" ".repeat(8) + "━━ ✓ resolved · bob: Done · sending…"), resolving);
+        List<String> replying = text(RemarkLines.threads(
+                List.of(open),
+                8,
+                RemarkLines.MIN_WIDTH,
+                new RemarkLines.RemarkStyle(false, HashSet.empty(), HashSet.of(open.id()), NOW),
+                Theme.SpanStyles.NONE));
+        assertEquals(" ".repeat(8) + "┃  sending…", replying.get(replying.size() - 2));
     }
 
     @Test
@@ -298,8 +343,14 @@ class RemarkLinesTest {
 
     @Test
     void threadsReadAtOtherCommitsThanTheDiffAreListedAtTheEndOfTheirFile() {
-        ShownRemarks elsewhere =
-                new ShownRemarks(List.of(thread(2, false, "Moved on")), false, NOW, Option.none(), false);
+        ShownRemarks elsewhere = new ShownRemarks(
+                List.of(thread(2, false, "Moved on")),
+                false,
+                NOW,
+                Option.none(),
+                false,
+                io.vavr.collection.HashSet.empty(),
+                io.vavr.collection.HashSet.empty());
 
         List<String> lines = rich(elsewhere);
 
@@ -387,7 +438,13 @@ class RemarkLinesTest {
                 new ShownDiff(DiffText.of(DIFF), Option.none()),
                 new DiffLook(DiffStyle.RICH, true),
                 Option.of(new ShownRemarks(
-                        List.empty(), false, NOW, Option.of(new Failure.Bug(new RuntimeException("offline"))), true)),
+                        List.empty(),
+                        false,
+                        NOW,
+                        Option.of(new Failure.Bug(new RuntimeException("offline"))),
+                        true,
+                        io.vavr.collection.HashSet.empty(),
+                        io.vavr.collection.HashSet.empty())),
                 Theme.SpanStyles.NONE));
 
         assertTrue(

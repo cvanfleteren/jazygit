@@ -423,6 +423,24 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
 - **Their focus:** `FocusKeeper` moves the focus into the files pane when they open, and back to the pane they were
   opened from when Escape closes them. `Model.withShownPane` closes them when another pane gets the focus, and
   `LoadUpdate` when the stash they are of is dropped.
+- **The cursor of the rich view** (ADR 60): `state.DiffStops`, pure, works out where it stops from a parsed diff and
+  the threads placed in it (`Anchor`: the lead, a file's bar, a line by its side and number, a thread by its id), and
+  where it goes when its stop is gone (`DiffStops.nearest`). `RichDiff.drawn` marks the row each stop starts on
+  (`RichDiff.Drawn`), and `ui.DiffCursor` moves it: `j`/`k` and the arrows, through a stop higher than the view before
+  the next one, the pages and the wheel pulling it along, a range of one hunk with `v`, the next thread with `n`. The
+  area sends where it moved it and the view in one `Msg.ContentScrolled`: `Scrolled` holds the anchor of the cursor and
+  of the other end of its range, and keeps the cursor when the same changes are read again
+  (`ScrolledContent.sameChanges`). Until the model has it, the area draws where it told it, so a key right after
+  another acts on where that one took the cursor. Its tint, `diff-cursor`, is laid over the text the area keeps
+  styled, so moving it styles nothing again.
+- **Commenting on a pull request's diff** (ADR 60): while the content panel shows the files of a pull request, its
+  keys are those of `Scopes.PULL_REQUEST_DIFF`, whose selection is the cursor (`DiffCursorAt`, with where `n`, `N` and
+  `v` take it). `feature.github.review` starts a thread on a line, a range or a file and replies to one from a
+  `ReviewPopup`, drawn by `ReviewDialog` with the `ui.CommentComposer` the comment on a pull request shares, and
+  resolves one at once; `ReviewThreadMutations` sends them with `gh api graphql`. Each needs the threads read at the
+  commits of the files and a pull request that is not merged, else it says why (`AppError.CannotReview`); the ids of
+  the threads something is sent for (`CommitFilesView.sending`) take no other key until the threads are read again.
+  `Space` opens or closes one thread against `t` (`CommitFilesView.toggled`).
 
 ## The editor
 

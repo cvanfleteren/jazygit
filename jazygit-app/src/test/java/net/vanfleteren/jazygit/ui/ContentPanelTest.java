@@ -108,7 +108,9 @@ class ContentPanelTest {
 
         // Where the model has it scrolled to is what shows, whatever was scrolled in the element before.
         Model scrolled = selected.withScrolled(io.vavr.collection.HashMap.of(
-                area, new Scrolled(down.to().content(), 20, 0, io.vavr.control.Option.none())));
+                area,
+                new Scrolled(
+                        down.to().content(), 20, 0, io.vavr.control.Option.none(), io.vavr.control.Option.none())));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> scrolling.render(scrolled, area))) {
             String screen = RenderedText.ofLarge(testRunner, () -> scrolling.render(scrolled, area));
             assertFalse(screen.contains("commit aaaa"), screen);
@@ -154,7 +156,9 @@ class ContentPanelTest {
                 List.ofAll(global).map(KeyEvent::character).toJavaList());
         assertEquals(1, leaves.get());
         Msg.ContentScrolled right = (Msg.ContentScrolled) dispatched.getLast();
-        assertEquals(new Scrolled(right.to().content(), 0, 1, io.vavr.control.Option.none()), right.to());
+        assertEquals(
+                new Scrolled(right.to().content(), 0, 1, io.vavr.control.Option.none(), io.vavr.control.Option.none()),
+                right.to());
     }
 
     @Test
@@ -234,8 +238,8 @@ class ContentPanelTest {
                 ((Msg.ContentScrolled) dispatched.getLast()).to().content();
 
         // TamboUI does not draw the columns scrolled past, so the next scroll tells where the area was.
-        Model scrolled = selected.withScrolled(
-                io.vavr.collection.HashMap.of(area, new Scrolled(shown, 0, 11, io.vavr.control.Option.none())));
+        Model scrolled = selected.withScrolled(io.vavr.collection.HashMap.of(
+                area, new Scrolled(shown, 0, 11, io.vavr.control.Option.none(), io.vavr.control.Option.none())));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> scrolling.render(scrolled, area))) {
             SettledPilot.focus(testRunner, area);
             RenderedText.ofLarge(testRunner, () -> scrolling.render(scrolled, area));
@@ -243,7 +247,7 @@ class ContentPanelTest {
             SettledPilot.of(testRunner).pause();
         }
         assertEquals(
-                new Scrolled(shown, 1, 11, io.vavr.control.Option.none()),
+                new Scrolled(shown, 1, 11, io.vavr.control.Option.none(), io.vavr.control.Option.none()),
                 ((Msg.ContentScrolled) dispatched.getLast()).to());
     }
 
@@ -393,6 +397,101 @@ class ContentPanelTest {
             Model moved = Update.update(model, down).model();
             RenderedText.ofLarge(testRunner, () -> counting.render(moved, area));
             assertEquals(once, styled.get());
+        }
+    }
+
+    @Test
+    void theKeysOfTheDiffOfAPullRequestActOnItsCursor() throws Exception {
+        java.util.List<Msg> dispatched = new java.util.ArrayList<>();
+        ContentPanel reviewing = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, dispatched::add);
+        CommitFilesView.Changes of = new CommitFilesView.Changes.OfPullRequest(
+                new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
+        CommitFile file = new CommitFile("a.txt", ChangeType.MODIFIED);
+        net.vanfleteren.jazygit.gh.model.ReviewThread thread = new net.vanfleteren.jazygit.gh.model.ReviewThread(
+                "a.txt",
+                net.vanfleteren.jazygit.gh.model.ReviewThread.Side.RIGHT,
+                Option.of(1),
+                Option.none(),
+                net.vanfleteren.jazygit.gh.model.ReviewThread.Side.RIGHT,
+                Option.of(1),
+                false,
+                false,
+                net.vanfleteren.jazygit.gh.model.ReviewThread.Subject.LINE,
+                List.of(new net.vanfleteren.jazygit.gh.model.ReviewThread.Comment(
+                        "bob", Instant.EPOCH, "Why?", Option.none(), "C")),
+                0,
+                "T1",
+                net.vanfleteren.jazygit.gh.model.ReviewThread.Rights.ALL);
+        Model rich = TestModels.loaded()
+                .mapPreferences(preferences ->
+                        preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
+        Model open = Update.update(
+                        Update.update(
+                                        Update.update(
+                                                        rich,
+                                                        new net.vanfleteren.jazygit.feature.diff.CommitFilesMsg.Opened(
+                                                                of, BranchesPanel.ID))
+                                                .model(),
+                                        new LoadMsg.CommitFilesLoaded(of, List.of(file)))
+                                .model(),
+                        new net.vanfleteren.jazygit.feature.diff.CommitFilesMsg.RemarksLoaded(
+                                7,
+                                new net.vanfleteren.jazygit.gh.model.ReviewRemarks(
+                                        net.vanfleteren.jazygit.gh.model.PullRequestDetails.State.OPEN,
+                                        net.vanfleteren.jazygit.gh.model.GhCommit.parse("a".repeat(40)),
+                                        net.vanfleteren.jazygit.gh.model.GhCommit.parse("b".repeat(40)),
+                                        List.of(thread),
+                                        "PR_1")))
+                .model();
+        Model model = Update.update(
+                        Update.update(open, new SelectionMsg.CommitFilesSelected(List.of(file)))
+                                .model(),
+                        new LoadMsg.CommitFileDiffLoaded(
+                                of, List.of(file), rich.preferences().diffOptions(), DiffText.of("""
+                                diff --git a/a.txt b/a.txt
+                                --- a/a.txt
+                                +++ b/a.txt
+                                @@ -0,0 +1 @@
+                                +a
+                                """)))
+                .model();
+        String area = reviewing.areaOfPane(model, FilesPanel.ID).get();
+
+        // The model the app draws, which only knows where the cursor is once it handled the message that says so.
+        java.util.concurrent.atomic.AtomicReference<Model> drawn =
+                new java.util.concurrent.atomic.AtomicReference<>(model);
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> reviewing.render(drawn.get(), area))) {
+            SettledPilot.focus(testRunner, area);
+            RenderedText.ofLarge(testRunner, () -> reviewing.render(drawn.get(), area));
+            SettledPilot.of(testRunner).press('n');
+            SettledPilot.of(testRunner).pause();
+            Msg.ContentScrolled next = (Msg.ContentScrolled) dispatched.getLast();
+            Anchor onThread = new Anchor.Thread(
+                    "T1",
+                    Option.of(new Anchor.OnLine("a.txt", net.vanfleteren.jazygit.gh.model.ReviewThread.Side.RIGHT, 1)));
+            assertEquals(Option.of(onThread), next.to().cursor());
+
+            drawn.set(Update.update(model, next).model());
+            RenderedText.ofLarge(testRunner, () -> reviewing.render(drawn.get(), area));
+            SettledPilot.of(testRunner).press('x');
+            SettledPilot.of(testRunner).pause();
+            assertEquals(
+                    onThread,
+                    ((net.vanfleteren.jazygit.feature.github.review.ReviewMsg.ResolveAsked) dispatched.getLast())
+                            .at()
+                            .cursor());
+
+            // Up to its line, and a thread started there, before the model knows the cursor moved.
+            SettledPilot.of(testRunner).press('k');
+            SettledPilot.of(testRunner).pause();
+            RenderedText.ofLarge(testRunner, () -> reviewing.render(drawn.get(), area));
+            SettledPilot.of(testRunner).press('c');
+            SettledPilot.of(testRunner).pause();
+            assertEquals(
+                    new Anchor.OnLine("a.txt", net.vanfleteren.jazygit.gh.model.ReviewThread.Side.RIGHT, 1),
+                    ((net.vanfleteren.jazygit.feature.github.review.ReviewMsg.StartAsked) dispatched.getLast())
+                            .at()
+                            .cursor());
         }
     }
 

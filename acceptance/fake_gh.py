@@ -1,6 +1,7 @@
 """A stand-in for gh that answers what a test told it to, so that the app talks to no GitHub.
 
-The test writes its answers to the JSON file FAKE_GH_ANSWERS names: a list of [text, answer] pairs. A call whose
+The test writes its answers to the JSON file FAKE_GH_ANSWERS names: a list of [text, answer] pairs, or of
+[text, answer, seconds] to answer that much later. A call whose
 arguments, joined by spaces, contain the text of a pair prints that pair's answer, the first that matches; any other
 call fails, as gh does outside a GitHub repository. Each call is logged, as its arguments, one JSON list per line, to
 the file FAKE_GH_LOG names."""
@@ -8,6 +9,7 @@ the file FAKE_GH_LOG names."""
 import json
 import os
 import sys
+import time
 
 
 def main(args: list) -> int:
@@ -19,8 +21,9 @@ def main(args: list) -> int:
     with open(os.environ["FAKE_GH_ANSWERS"]) as file:
         answers = json.load(file)
     joined = " ".join(args)
-    for text, answer in answers:
+    for text, answer, *wait in answers:
         if text in joined:
+            time.sleep(wait[0] if wait else 0)
             print(answer)
             return 0
     print("none of the git remotes configured for this repository point to a known GitHub host", file=sys.stderr)

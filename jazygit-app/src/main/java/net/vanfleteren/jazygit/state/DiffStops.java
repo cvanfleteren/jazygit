@@ -29,11 +29,11 @@ public record DiffStops(List<Stop> stops) {
                 .zip(placed.files())
                 .zipWithIndex()
                 .flatMap(file -> file(file._1()._1(), file._1()._2(), file._2()))
-                .prepend(new Stop(new Anchor.Lead(), Option.none())));
+                .prepend(new Stop(new Anchor.Lead(), Option.none(), Option.none())));
     }
 
     private static List<Stop> file(FileDiff file, FileRemarks remarks, int index) {
-        return List.of(new Stop(new Anchor.File(file.path()), Option.none()))
+        return List.of(new Stop(new Anchor.File(file.path()), Option.none(), Option.none()))
                 .appendAll(threads(remarks.onFile(), Option.none()))
                 .appendAll(file.hunks()
                         .zip(remarks.lines())
@@ -49,11 +49,13 @@ public record DiffStops(List<Stop> stops) {
 
     private static List<Stop> line(String path, UnifiedDiff.DiffLine line, LineRemarks remarks, HunkAt hunk) {
         Option<Anchor.OnLine> anchor = Anchor.of(path, line);
-        return anchor.map(on -> new Stop(on, Option.of(hunk))).toList().appendAll(threads(remarks.threads(), anchor));
+        return anchor.map(on -> new Stop(on, Option.of(hunk), Option.of(line)))
+                .toList()
+                .appendAll(threads(remarks.threads(), anchor));
     }
 
     private static List<Stop> threads(List<ReviewThread> threads, Option<Anchor.OnLine> line) {
-        return threads.map(thread -> new Stop(new Anchor.Thread(thread.id(), line), Option.none()));
+        return threads.map(thread -> new Stop(new Anchor.Thread(thread.id(), line), Option.none(), Option.none()));
     }
 
     /**
@@ -100,8 +102,9 @@ public record DiffStops(List<Stop> stops) {
      *
      * @param anchor what it is
      * @param hunk   the hunk of a line, which a range of lines stays in; none for what is not a line
+     * @param line   the line of the diff it is, if it is one
      */
-    public record Stop(Anchor anchor, Option<HunkAt> hunk) {}
+    public record Stop(Anchor anchor, Option<HunkAt> hunk, Option<UnifiedDiff.DiffLine> line) {}
 
     /**
      * A hunk of a diff: the index of its file, and its index in that file.

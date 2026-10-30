@@ -16,6 +16,7 @@ import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.MouseEvent;
 import dev.tamboui.tui.event.MouseEventKind;
 import io.vavr.Tuple;
+import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.collection.Vector;
@@ -32,8 +33,11 @@ import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.keys.Keymap;
+import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.settings.DiffLook;
 import net.vanfleteren.jazygit.settings.ThemeName;
+import net.vanfleteren.jazygit.state.DiffCursorAt;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Scrolled;
@@ -372,7 +376,7 @@ public final class ContentPanel {
      * until the focus is given back.
      */
     public StyledElement<?> render(Model model, String focusedId) {
-        tabbableWhileIn(focusedId);
+        tabbableWhileIn(focusedId, model);
         return element(ContentView.of(model, focusedId), model, focusedId);
     }
 
@@ -417,10 +421,12 @@ public final class ContentPanel {
     }
 
     /**
-     * Lets Tab move between the focusable areas only while one of them, {@code focusedId}, has the focus.
+     * Lets Tab move between the focusable areas only while one of them, {@code focusedId}, has the focus, or had it
+     * before a popup took it: the area then takes the focus back when the popup closes, as from the popup of a review
+     * comment (ADR 60).
      */
-    private void tabbableWhileIn(String focusedId) {
-        boolean inContent = isArea(focusedId);
+    private void tabbableWhileIn(String focusedId, Model model) {
+        boolean inContent = isArea(focusedId) || model.shownPane().exists(ContentPanel::isArea);
         areas.values().forEach(area -> area.tabbable(inContent));
     }
 
@@ -473,6 +479,11 @@ public final class ContentPanel {
     private static final class ScrollArea {
 
         private static final int WHEEL_LINES = 3;
+        // The keys that move the cursor of a rich diff by a stop besides the arrows, as the lists of the panes are
+        // moved (ADR 60).
+        private static final char UP = 'k';
+        private static final char DOWN = 'j';
+        private static final Keymap KEYMAP = Keymap.standard();
 
         private final ContentArea area;
         private final String id;
@@ -485,6 +496,13 @@ public final class ContentPanel {
         private Option<Styled> styled = Option.none();
         // The cursor of the rich diff shown, as last drawn: what the keys and the wheel move (ADR 60).
         private Option<DiffCursor> cursor = Option.none();
+        // Where the model had the area when it was last shown, and where the area told it it went from there: until
+        // the model has it, a frame drawn meanwhile shows the latter, so a key pressed right after another acts on
+        // where that one took the cursor (ADR 60).
+        private Scrolled shownAt = Scrolled.top(new ScrolledContent.Diff(DiffText.of("")));
+        private Option<Tuple2<Scrolled, Scrolled>> sent = Option.none();
+        // Whether it shows the diff of a pull request's files, whose keys comment on it (ADR 60).
+        private boolean review = false;
 
         ScrollArea(ContentArea area, BooleanSupplier leaveScrollArea, Consumer<String> focus, Consumer<Msg> dispatch) {
             this.area = area;
@@ -517,10 +535,14 @@ public final class ContentPanel {
                     .getOrElse(() -> Styled.of(shown.body(), theme, style.apply(shown.body())));
             styled = Option.of(current);
             ScrolledContent content = shown.content();
-            Scrolled at = model.scrolled(id, content);
+            Scrolled known = model.scrolled(id, content);
+            sent = sent.filter(told -> told._1().equals(known));
+            Scrolled at = sent.map(Tuple2::_2).getOrElse(known);
+            shownAt = known;
             RichTextState state = element.state();
             cursor = DiffCursor.of(
-                    current.stops(), current.text().height(), state.viewportHeight(), at.row(), at.cursor());
+                    current.stops(), current.text().height(), state.viewportHeight(), at.row(), at.cursor(), at.mark());
+            review = shown.body() instanceof Body.Diff(var diff, var look, var remarks) && remarks.isDefined();
             boolean focused = id.equals(focusedId);
             element.text(cursor.filter(ignored -> focused)
                             .map(on -> on.tinted(current.text(), styles.of(Theme.Classes.DIFF_CURSOR)))
@@ -534,6 +556,11 @@ public final class ContentPanel {
         }
 
         private EventResult keys(KeyEvent event, boolean focused, ScrolledContent content) {
+            // Escape drops a range that is open before it leaves the area (ADR 60).
+            Option<DiffCursor> ranged = cursor.filter(on -> focused && on.mark().isDefined());
+            if (event.code() == KeyCode.ESCAPE && ranged.isDefined()) {
+                return moved(ranged.get().marked().get(), content);
+            }
             // Key handlers also see keys typed elsewhere; the callback checks that an area has focus.
             if (event.code() == KeyCode.ESCAPE && leaveScrollArea.getAsBoolean()) {
                 return EventResult.HANDLED;
@@ -545,7 +572,43 @@ public final class ContentPanel {
             if (moved.isDefined()) {
                 return moved(moved.get(), content);
             }
+            Option<Msg> reviewed = cursor.filter(ignored -> review)
+                    .flatMap(on -> KEYMAP.handle(Scopes.PULL_REQUEST_DIFF, event, Option.of(at(on, content))));
+            if (reviewed.isDefined()) {
+                if (reviewed.get() instanceof Msg.ContentScrolled(var ignored, Scrolled to)) {
+                    told(to);
+                }
+                dispatch.accept(reviewed.get());
+                return EventResult.HANDLED;
+            }
             return scroll(element.state(), event) ? scrolled(content) : EventResult.UNHANDLED;
+        }
+
+        /**
+         * Where {@code cursor} is, as the keys of the diff of a pull request act on it, with where the keys that move
+         * it take it.
+         */
+        private DiffCursorAt at(DiffCursor cursor, ScrolledContent content) {
+            return new DiffCursorAt(
+                    id,
+                    scrolledTo(cursor, content),
+                    cursor.anchor(),
+                    cursor.nextThread().map(next -> movedTo(next, content)),
+                    cursor.previousThread().map(previous -> movedTo(previous, content)),
+                    cursor.marked().map(marked -> movedTo(marked, content)));
+        }
+
+        private Msg movedTo(DiffCursor cursor, ScrolledContent content) {
+            return new Msg.ContentScrolled(id, scrolledTo(cursor, content));
+        }
+
+        private Scrolled scrolledTo(DiffCursor cursor, ScrolledContent content) {
+            return new Scrolled(
+                    content,
+                    cursor.row(),
+                    element.state().scrollCol(),
+                    Option.of(cursor.anchor()),
+                    cursor.markAnchor());
         }
 
         /**
@@ -553,8 +616,8 @@ public final class ContentPanel {
          */
         private static Option<DiffCursor> move(DiffCursor cursor, KeyEvent event) {
             return Option.<DiffCursor>none()
-                    .orElse(Option.when(event.matches(Actions.MOVE_UP), cursor::up))
-                    .orElse(Option.when(event.matches(Actions.MOVE_DOWN), cursor::down))
+                    .orElse(Option.when(event.matches(Actions.MOVE_UP) || event.isChar(UP), cursor::up))
+                    .orElse(Option.when(event.matches(Actions.MOVE_DOWN) || event.isChar(DOWN), cursor::down))
                     .orElse(Option.when(event.matches(Actions.PAGE_UP), cursor::pageUp))
                     .orElse(Option.when(event.matches(Actions.PAGE_DOWN), cursor::pageDown))
                     .orElse(Option.when(event.matches(Actions.HOME), cursor::home))
@@ -621,9 +684,22 @@ public final class ContentPanel {
          */
         private EventResult scrolled(ScrolledContent content) {
             RichTextState state = element.state();
-            dispatch.accept(new Msg.ContentScrolled(
-                    id, new Scrolled(content, state.scrollRow(), state.scrollCol(), cursor.map(DiffCursor::anchor))));
+            Scrolled to = new Scrolled(
+                    content,
+                    state.scrollRow(),
+                    state.scrollCol(),
+                    cursor.map(DiffCursor::anchor),
+                    cursor.flatMap(DiffCursor::markAnchor));
+            told(to);
+            dispatch.accept(new Msg.ContentScrolled(id, to));
             return EventResult.HANDLED;
+        }
+
+        /**
+         * Remembers that the model was told the area is now at {@code to}.
+         */
+        private void told(Scrolled to) {
+            sent = Option.of(Tuple.of(sent.map(Tuple2::_1).getOrElse(shownAt), to));
         }
 
         /**
