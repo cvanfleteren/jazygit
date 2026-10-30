@@ -1,7 +1,7 @@
 /* The palette of the GitHub scheme for the macOS Terminal: blue, pink and orange on light grey. */
 $fg: #3e3e3e;
 $bg: #f4f4f4;
-$border: #a9c1e2;
+$border: #6c88b3;
 $accent: #2e6cba;
 $muted: #666666;
 $selection: #d4e0f1;
