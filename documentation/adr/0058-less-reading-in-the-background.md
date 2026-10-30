@@ -47,7 +47,8 @@ of them the status of ADR 52, and 3 to 4 gh processes; several of them read what
    both sides of each entry, and the index. After a status, `CheckFileDiff` stamps them again, without git, and the
    diff is read again only when the two differ, or when the stamp tells nothing, as within 2s of a change (ADR 15).
    A status that says HEAD moved reads the diff at once, as the staged changes are compared with HEAD, which neither
-   stamp holds.
+   stamp holds. A submodule has no stamp, and its diff is read with every status, as before: its diff is the commit
+   it is at, which a commit in it moves without changing its directory or its status.
 4. **The timers read nothing while the terminal does not have the focus.** On its alternate screen, the app asks the
    terminal to report the focus (`ESC [?1004h`). TamboUI reads the reports, `ESC [ I` and `ESC [ O`, as one unknown
    key, so `HandOverBackend`, which every key is read through, takes them out before it does and tells the app,

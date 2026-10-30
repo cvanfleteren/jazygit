@@ -93,14 +93,16 @@ final class CliMetadata {
      * The stamp of what the diff of {@code files} in the working tree {@code worktree} is read from, looked at
      * {@code now}: the files on both sides of each, and the index. A file whose status stays the same can still
      * change, so the status alone does not tell (ADR 58). HEAD is not among them: the status tells when it moves.
+     * None when one of them is a directory: a submodule, whose diff is the commit it is at, which a commit in it
+     * moves without changing its directory or its status.
      */
     static Option<MetadataStamp> diff(Locations at, Path worktree, List<FileEntry> files, Instant now) {
-        return settled(
-                stamp(files.flatMap(file -> file.paths(true).appendAll(file.paths(false)))
-                        .distinct()
-                        .map(worktree::resolve)
-                        .append(at.gitDir().resolve("index"))),
-                now);
+        List<Path> paths = files.flatMap(file -> file.paths(true).appendAll(file.paths(false)))
+                .distinct()
+                .map(worktree::resolve);
+        return paths.exists(Files::isDirectory)
+                ? Option.none()
+                : settled(stamp(paths.append(at.gitDir().resolve("index"))), now);
     }
 
     /**

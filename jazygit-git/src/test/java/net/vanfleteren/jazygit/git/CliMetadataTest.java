@@ -133,6 +133,18 @@ class CliMetadataTest {
         assertNotEquals(edited, diffStamp(files));
     }
 
+    @Test
+    void theDiffOfASubmoduleHasNoStampAsACommitInItChangesNoFileTheStampHolds() throws Exception {
+        Path library = Files.createDirectories(dir.resolve("library")).toRealPath();
+        git(library, "init", "--initial-branch=main");
+        commit(library, "lib.txt");
+        git(main, "-c", "protocol.file.allow=always", "submodule", "add", "-q", library.toString(), "lib");
+        git(main, "commit", "-m", "lib");
+        commit(main.resolve("lib"), "more.txt");
+
+        assertEquals(Option.none(), diffStamp(List.of(new FileEntry("lib", ChangeType.MODIFIED, false, true))));
+    }
+
     private Option<MetadataStamp> diffStamp(List<FileEntry> files) {
         return CliMetadata.diff(
                 CliMetadata.locate(main).get(),
