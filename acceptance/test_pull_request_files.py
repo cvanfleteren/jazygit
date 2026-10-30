@@ -121,6 +121,6 @@ def test_the_review_remarks_of_a_pull_request_show_next_to_their_lines(repo, ori
 
     ui.app.press("t")
 
-    ui.app.wait_for("┃ Settled already")
+    ui.app.wait_for("┃  Settled already")
     assert "✓ resolved" not in ui.app.text()
     assert any(THREADS in " ".join(call) for call in gh.calls())
