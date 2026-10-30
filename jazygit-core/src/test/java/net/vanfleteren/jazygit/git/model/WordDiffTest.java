@@ -27,6 +27,34 @@ class WordDiffTest {
     }
 
     @Test
+    void highlightsChangedWordsWithOnlyWhitespaceBetweenThemAsOne() {
+        assertEquals(
+                Tuple.of(
+                        List.of(changed(false, "the "), changed(true, "quick  brown"), changed(false, " fox jumps")),
+                        List.of(changed(false, "the "), changed(true, "slow  red"), changed(false, " fox jumps"))),
+                WordDiff.compared("the quick  brown fox jumps", "the slow  red fox jumps"));
+    }
+
+    @Test
+    void highlightsChangedWordsWithMoreThanWhitespaceBetweenThemApart() {
+        assertEquals(
+                Tuple.of(
+                        List.of(
+                                changed(false, "the "),
+                                changed(true, "quick"),
+                                changed(false, ", "),
+                                changed(true, "brown"),
+                                changed(false, " fox jumps")),
+                        List.of(
+                                changed(false, "the "),
+                                changed(true, "slow"),
+                                changed(false, ", "),
+                                changed(true, "red"),
+                                changed(false, " fox jumps"))),
+                WordDiff.compared("the quick, brown fox jumps", "the slow, red fox jumps"));
+    }
+
+    @Test
     void highlightsNothingInALineThatWasRewritten() {
         assertEquals(
                 Tuple.of(List.of(changed(false, "alpha beta")), List.of(changed(false, "gamma delta"))),

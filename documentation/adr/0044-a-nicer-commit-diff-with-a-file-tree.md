@@ -117,3 +117,5 @@ Amended by ADR 50: a diff is parsed and its words compared where it is read, not
 
 Amended by ADR 51: a pair that could not keep enough to be highlighted, whatever the order of its words, is drawn
 whole and spends none of the budget.
+
+Amended by ADR 54: whitespace between two changed words is highlighted with them.
