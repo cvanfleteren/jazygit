@@ -60,6 +60,17 @@ class ThemeDialogTest {
         assertEquals(
                 List.of(new ThemeMsg.Chosen(ThemeName.EMBER)),
                 pressing(r -> SettledPilot.of(r).press('e')));
+        dispatched.clear();
+        assertEquals(
+                List.of(new ThemeMsg.Chosen(ThemeName.SYMFONIC)),
+                pressing(r -> SettledPilot.of(r).press('s')));
+    }
+
+    @Test
+    void everyThemeCanBeChosen() {
+        assertEquals(
+                List.of(ThemeName.values()).map(ThemeMsg.Chosen::new).toSet(),
+                ThemeDialog.SPEC.choices().map(choice -> choice.msg().get()).toSet());
     }
 
     @Test
@@ -122,6 +133,7 @@ class ThemeDialogTest {
             assertTrue(screen.contains("(l) light"), screen);
             assertTrue(screen.contains("(a) darcula"), screen);
             assertTrue(screen.contains("(b) dark, colour-blind friendly"), screen);
+            assertTrue(screen.contains("(s) symfonic, orange and blue on black"), screen);
         }
     }
 
