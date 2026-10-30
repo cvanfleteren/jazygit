@@ -15,8 +15,10 @@ import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.MouseEvent;
 import dev.tamboui.tui.event.MouseEventKind;
+import io.vavr.Tuple;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
+import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -27,6 +29,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
+import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.settings.DiffLook;
@@ -38,6 +41,7 @@ import net.vanfleteren.jazygit.state.ScrolledContent;
 import net.vanfleteren.jazygit.ui.ContentView.Body;
 import net.vanfleteren.jazygit.ui.ContentView.Shown;
 import net.vanfleteren.jazygit.ui.ContentView.ShownDiff;
+import net.vanfleteren.jazygit.ui.ContentView.ShownRemarks;
 import net.vanfleteren.jazygit.ui.ContentView.Tone;
 
 /**
@@ -96,7 +100,58 @@ public final class ContentPanel {
      * the diff is.
      */
     static Text diffText(ShownDiff diff, DiffLook look, Theme.SpanStyles styles) {
-        return styledText(changeLines(diff, look, styles));
+        return diffText(diff, look, Option.none(), styles);
+    }
+
+    /**
+     * The unified diff drawn as {@code look} says, with the review threads of a pull request, {@code remarks}, if it
+     * has them (ADR 55): next to their lines in the rich view, counted at the start of each file in the plain one. Why
+     * they could not be read comes first.
+     */
+    static Text diffText(ShownDiff diff, DiffLook look, Option<ShownRemarks> remarks, Theme.SpanStyles styles) {
+        List<Line> failed = remarks.flatMap(ShownRemarks::failed)
+                .map(failure -> Line.from(styled(
+                        Messages.get("content.remarks.failed", Placeholders.error(failure)),
+                        Theme.Classes.ERROR,
+                        styles)))
+                .toList();
+        List<Line> lines = switch (look.style()) {
+            case PLAIN ->
+                remarks.filter(shown -> !shown.threads().isEmpty())
+                        .map(shown -> counted(diff, shown.threads(), styles))
+                        .getOrElse(() -> changeLines(diff, look, styles));
+            case RICH -> RichDiff.lines(diff.parsed(), look.syntax(), remarks, styles);
+        };
+        return styledText(failed.appendAll(lines));
+    }
+
+    /**
+     * The plain diff, each line that starts a file followed by how many of {@code threads} are on that file, if any
+     * are, and that the rich view shows them.
+     */
+    private static List<Line> counted(ShownDiff diff, List<ReviewThread> threads, Theme.SpanStyles styles) {
+        Vector<Integer> counts = diff.parsed()
+                .diff()
+                .files()
+                .map(file -> threads.count(thread ->
+                        file.path().equals(thread.path()) || file.origin().contains(thread.path())))
+                .toVector();
+        return lines(diff.text())
+                .foldLeft(Tuple.of(List.<Line>empty(), 0), (done, line) -> {
+                    boolean starts = UnifiedDiff.startsFile(line);
+                    int file = done._2() + (starts ? 1 : 0);
+                    Line drawn = starts && file <= counts.size() && counts.get(file - 1) > 0
+                            ? Line.from(
+                                    styled(line, Theme.Classes.DIFF_HEADER, styles),
+                                    styled(
+                                            Messages.get("content.remarks.count", counts.get(file - 1)),
+                                            Theme.Classes.DIFF_THREAD,
+                                            styles))
+                            : diffLine(line, styles);
+                    return Tuple.of(done._1().prepend(drawn), file);
+                })
+                ._1()
+                .reverse();
     }
 
     /**
@@ -305,7 +360,7 @@ public final class ContentPanel {
      */
     private Text bodyText(Body body) {
         return switch (body) {
-            case Body.Diff(ShownDiff diff, DiffLook look) -> diffText(diff, look, styles);
+            case Body.Diff(ShownDiff diff, DiffLook look, var remarks) -> diffText(diff, look, remarks, styles);
             case Body.BranchLog(List<Commit> commits, AheadView ahead) ->
                 logText(commits, ZoneId.systemDefault(), ahead, styles);
             case Body.CommitChanges(Commit commit, ShownDiff changes, DiffLook look) ->

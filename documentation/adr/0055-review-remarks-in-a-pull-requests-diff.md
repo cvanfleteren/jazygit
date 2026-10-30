@@ -76,7 +76,7 @@ internal, and a code block or a table is laid out as a widget, not as lines.
   and base commits of the pull request too.
 - A comment of a review that is not submitted yet, pending, is left out, as only its author sees it (ADR 6); a thread
   of only those is left out.
-- They are read when the tree opens, and again with `R` in the tree or its diff. When the head or the base commit
+- They are read when the tree opens, and again with `R` in the tree. When the head or the base commit
   changed, the files and the diff are read again too, at the new commits. Not: read every so often, which costs a
   GitHub request each time for what changes seldom.
 - The remarks are read with the state of the pull request, and the title of the tree follows it:
@@ -128,6 +128,9 @@ internal, and a code block or a table is laid out as a widget, not as lines.
   the tree, and not in the settings.
 - The files pane shows `💬2` after a file with unresolved threads, their count. A directory does not add up those of
   its files.
+- How long ago a comment was written is told to the minute (`2h ago`), so the diff is styled again once a minute at
+  most. When reading the threads fails and none were read before, the diff says why above its first line; a failed
+  read again keeps the threads read before.
 
 ### Not now
 

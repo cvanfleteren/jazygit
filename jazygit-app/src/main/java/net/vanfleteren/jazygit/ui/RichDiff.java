@@ -9,6 +9,8 @@ import io.vavr.collection.Iterator;
 import io.vavr.collection.List;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
+import java.time.Instant;
+import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.ParsedDiff;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff;
@@ -17,6 +19,9 @@ import net.vanfleteren.jazygit.git.model.UnifiedDiff.FileDiff;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.Hunk;
 import net.vanfleteren.jazygit.git.model.WordDiff.Segment;
 import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.state.PlacedRemarks;
+import net.vanfleteren.jazygit.state.PlacedRemarks.FileRemarks;
+import net.vanfleteren.jazygit.state.PlacedRemarks.LineRemarks;
 import net.vanfleteren.jazygit.syntax.Token;
 
 /**
@@ -27,6 +32,7 @@ import net.vanfleteren.jazygit.syntax.Token;
 final class RichDiff {
 
     private static final String GUTTER_END = " │ ";
+    private static final LineRemarks NO_REMARKS = new LineRemarks(List.empty(), false);
 
     private RichDiff() {}
 
@@ -35,7 +41,24 @@ final class RichDiff {
      * its words compared and its code lexed when it was read (ADR 50), so drawing it only styles it.
      */
     static List<Line> lines(ParsedDiff diff, boolean syntax, Theme.SpanStyles styles) {
+        return lines(diff, syntax, Option.none(), styles);
+    }
+
+    /**
+     * The lines of {@code diff}, as {@link #lines(ParsedDiff, boolean, Theme.SpanStyles)} draws them, with the review
+     * threads of a pull request, {@code remarks}, if it has them (ADR 55): each after its line, which the gutter marks,
+     * one about a whole file under its bar, and the ones that cannot be placed at the end of their file.
+     */
+    static List<Line> lines(
+            ParsedDiff diff, boolean syntax, Option<ContentView.ShownRemarks> remarks, Theme.SpanStyles styles) {
         UnifiedDiff parsed = diff.diff();
+        Vector<Option<FileRemarks>> placed = remarks.map(shown -> PlacedRemarks.place(parsed, shown.threads())
+                        .files()
+                        .map(Option::some)
+                        .toVector())
+                .getOrElse(() -> Vector.fill(parsed.files().size(), Option::none));
+        RemarkLines.RemarkStyle style = remarks.map(shown -> new RemarkLines.RemarkStyle(shown.opened(), shown.now()))
+                .getOrElse(() -> new RemarkLines.RemarkStyle(false, Instant.EPOCH));
         Vector<Marks> marks = diff.words()
                 .zip(diff.tokens())
                 .map(hunk -> new Marks(hunk._1, syntax ? hunk._2 : hunk._2.map(line -> Option.none())))
@@ -54,14 +77,20 @@ final class RichDiff {
         return parsed.preamble()
                 .map(line -> Line.from(Span.raw(line)))
                 .appendAll(files.zipWithIndex()
-                        .flatMap(file -> file(file._1._1, file._1._2, styles)
+                        .flatMap(file -> file(file._1._1, file._1._2, placed.get(file._2), style, styles)
                                 .prependAll(file._2 > 0 ? List.of(Line.from("")) : List.empty())));
     }
 
     /**
-     * The lines of {@code file}, whose hunks have the segments and the tokens {@code marks}.
+     * The lines of {@code file}, whose hunks have the segments and the tokens {@code marks}, with the review threads
+     * {@code remarks} on it, drawn as {@code style} says.
      */
-    private static List<Line> file(FileDiff file, Vector<Marks> marks, Theme.SpanStyles styles) {
+    private static List<Line> file(
+            FileDiff file,
+            Vector<Marks> marks,
+            Option<FileRemarks> remarks,
+            RemarkLines.RemarkStyle style,
+            Theme.SpanStyles styles) {
         int digits = file.hunks()
                 .flatMap(Hunk::lines)
                 .flatMap(line -> line.oldNumber().toList().appendAll(line.newNumber()))
@@ -78,12 +107,28 @@ final class RichDiff {
                                 .map(line -> width(line.text()) + 1)
                                 .max()
                                 .getOrElse(0));
+        Blocks blocks = new Blocks(gutter + 2, RemarkLines.blockWidth(width), style);
+        Vector<List<LineRemarks>> onLines = remarks.map(FileRemarks::lines)
+                .getOrElse(() -> file.hunks().map(hunk -> hunk.lines().map(line -> NO_REMARKS)))
+                .toVector();
         return List.of(Line.from(styled(padded(bar, width), Theme.Classes.DIFF_FILE_HEADER, styles)))
                 .appendAll(note(file).map(text -> Line.from(styled(text, Theme.Classes.DIM, styles))))
+                .appendAll(remarks.toList().flatMap(placed -> blocks.threads(placed.onFile(), styles)))
                 .appendAll(file.hunks()
                         .zip(marks)
                         .zipWithIndex()
-                        .flatMap(hunk -> hunk(hunk._1._1, hunk._1._2, hunk._2 == 0, digits, width - gutter, styles)));
+                        .flatMap(hunk -> hunk(
+                                hunk._1._1,
+                                hunk._1._2,
+                                onLines.get(hunk._2),
+                                blocks,
+                                hunk._2 == 0,
+                                digits,
+                                width - gutter,
+                                styles)))
+                .appendAll(remarks.toList()
+                        .flatMap(placed -> RemarkLines.unplaced(
+                                placed.unplaced(), blocks.indent(), blocks.width(), style, styles)));
     }
 
     /**
@@ -126,7 +171,14 @@ final class RichDiff {
      * be shown. A line that was lexed is coloured by its syntax, one that was not is drawn as before.
      */
     private static List<Line> hunk(
-            Hunk hunk, Marks marks, boolean first, int digits, int width, Theme.SpanStyles styles) {
+            Hunk hunk,
+            Marks marks,
+            List<LineRemarks> remarks,
+            Blocks blocks,
+            boolean first,
+            int digits,
+            int width,
+            Theme.SpanStyles styles) {
         Span rule = styled("┄".repeat(2 * digits + 1) + GUTTER_END, Theme.Classes.DIFF_LINE_NUMBER, styles);
         List<Line> header = hunk.header().isEmpty() || (first && hunk.numbered())
                 ? List.empty()
@@ -136,32 +188,53 @@ final class RichDiff {
                                 : Line.from(rule, styled(hunk.header(), Theme.Classes.DIFF_HUNK, styles)));
         return header.appendAll(hunk.lines()
                 .zip(marks.words().zip(marks.tokens()))
-                .map(line -> line(line._1, line._2._1, line._2._2, digits, width, styles)));
+                .zip(remarks)
+                .flatMap(line -> blocks.threads(line._2.threads(), styles)
+                        .prepend(line(
+                                line._1._1,
+                                line._1._2._1,
+                                line._1._2._2,
+                                gutter(line._1._1, line._2, digits, styles),
+                                width,
+                                styles))));
     }
 
     /**
-     * {@code line}, with its {@code segments}, and its {@code tokens} if its hunk was lexed.
+     * The gutter of {@code line}: its numbers in the old and the new file, and where a review thread ends on it, or
+     * covers it, a mark in {@link Theme.Classes#DIFF_THREAD} in place of the rule (ADR 55).
+     */
+    private static List<Span> gutter(DiffLine line, LineRemarks remarks, int digits, Theme.SpanStyles styles) {
+        String numbers = number(line.oldNumber(), digits) + " " + number(line.newNumber(), digits);
+        return !remarks.threads().isEmpty() || remarks.covered()
+                ? List.of(
+                        styled(numbers + " ", Theme.Classes.DIFF_LINE_NUMBER, styles),
+                        styled(remarks.threads().isEmpty() ? "┃" : "●", Theme.Classes.DIFF_THREAD, styles),
+                        styled(" ", Theme.Classes.DIFF_LINE_NUMBER, styles))
+                : List.of(styled(numbers + GUTTER_END, Theme.Classes.DIFF_LINE_NUMBER, styles));
+    }
+
+    /**
+     * {@code line}, with its {@code segments}, and its {@code tokens} if its hunk was lexed, after its {@code gutter}.
      */
     private static Line line(
             DiffLine line,
             List<Segment> segments,
             Option<List<Token>> tokens,
-            int digits,
+            List<Span> gutter,
             int width,
             Theme.SpanStyles styles) {
-        Span gutter = styled(
-                number(line.oldNumber(), digits) + " " + number(line.newNumber(), digits) + GUTTER_END,
-                Theme.Classes.DIFF_LINE_NUMBER,
-                styles);
         return switch (line.kind()) {
             case CONTEXT ->
                 tokens.map(lexed -> Line.from(pieces(segments, lexed)
                                 .map(piece -> context(piece, styles))
                                 .prepend(Span.raw(" "))
-                                .prepend(gutter)
+                                .prependAll(gutter)
                                 .toJavaList()))
-                        .getOrElse(() -> Line.from(gutter, Span.raw(" " + line.text())));
-            case NOTE -> Line.from(gutter, styled(line.text(), Theme.Classes.DIM, styles));
+                        .getOrElse(() -> Line.from(
+                                gutter.append(Span.raw(" " + line.text())).toJavaList()));
+            case NOTE ->
+                Line.from(gutter.append(styled(line.text(), Theme.Classes.DIM, styles))
+                        .toJavaList());
             case ADDED ->
                 changed(
                         gutter,
@@ -192,7 +265,7 @@ final class RichDiff {
      * would look like context.
      */
     private static Line changed(
-            Span gutter,
+            List<Span> gutter,
             String marker,
             List<Segment> segments,
             Option<List<Token>> tokens,
@@ -209,7 +282,7 @@ final class RichDiff {
                         : styled(piece.text(), piece.changed() ? wordClass : lineClass, styles))
                 .prepend(styled(marker, lineClass, styles))
                 .append(styled(" ".repeat(Math.max(0, width - used)), lineClass, styles))
-                .prepend(gutter);
+                .prependAll(gutter);
         return Line.from(spans.toJavaList());
     }
 
@@ -327,4 +400,15 @@ final class RichDiff {
      * The segments of the lines of a hunk, and the tokens of each that was lexed.
      */
     private record Marks(List<List<Segment>> words, List<Option<List<Token>>> tokens) {}
+
+    /**
+     * How the review threads of a file are drawn: as blocks that start {@code indent} columns in, two after the
+     * gutter, and are {@code width} columns wide, as {@code style} says.
+     */
+    private record Blocks(int indent, int width, RemarkLines.RemarkStyle style) {
+
+        List<Line> threads(List<ReviewThread> threads, Theme.SpanStyles styles) {
+            return RemarkLines.threads(threads, indent, width, style, styles);
+        }
+    }
 }

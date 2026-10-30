@@ -6,10 +6,14 @@ import static org.junit.jupiter.api.Assertions.*;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.gh.model.GhCommit;
+import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
+import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.DiffText;
+import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.keys.Scopes;
@@ -17,6 +21,7 @@ import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.CommitFilesView;
 import net.vanfleteren.jazygit.state.CommitFilesView.Changes;
+import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Loadable.Loading;
@@ -143,6 +148,91 @@ class CommitFilesUpdateTest {
         assertEquals(
                 new Loaded<>(DiffText.of("+a")),
                 next.model().repoView().commitFiles().get().diff().get().shown().value());
+    }
+
+    private static final PullRequestCommits COMMITS =
+            new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40)));
+    private static final Changes PULL_REQUEST = new Changes.OfPullRequest(COMMITS);
+    private static final ReviewThread THREAD = new ReviewThread(
+            "a.txt",
+            ReviewThread.Side.RIGHT,
+            Option.of(1),
+            Option.none(),
+            ReviewThread.Side.RIGHT,
+            Option.of(1),
+            false,
+            false,
+            ReviewThread.Subject.LINE,
+            List.empty(),
+            0);
+
+    private static ReviewRemarks remarks(String head, String base) {
+        return new ReviewRemarks(GhCommit.parse(head), GhCommit.parse(base), List.of(THREAD));
+    }
+
+    private static Model openedPullRequest() {
+        return Update.update(loaded(), new CommitFilesMsg.Opened(PULL_REQUEST, Scopes.BRANCHES.id()))
+                .model();
+    }
+
+    @Test
+    void theFilesOfAPullRequestComeWithItsReviewThreadsWhichCanBeOpenedAndReadAgain() {
+        Next opened = Update.update(loaded(), new CommitFilesMsg.Opened(PULL_REQUEST, Scopes.BRANCHES.id()));
+        assertEquals(
+                List.of(new Cmd.LoadCommitFiles(PULL_REQUEST), new CommitFilesCmd.LoadReviewRemarks(7)), opened.cmds());
+        assertEquals(
+                Option.of(new Loading<>()),
+                opened.model().repoView().commitFiles().get().remarks());
+
+        Model read = Update.update(
+                        opened.model(), new CommitFilesMsg.RemarksLoaded(7, remarks("a".repeat(40), "b".repeat(40))))
+                .model();
+        CommitFilesView view = read.repoView().commitFiles().get();
+        assertEquals(List.of(THREAD), view.threads());
+        assertEquals(PULL_REQUEST, view.of());
+
+        Model toggled = Update.update(read, new CommitFilesMsg.RemarksToggled()).model();
+        assertTrue(toggled.repoView().commitFiles().get().opened());
+        assertEquals(
+                List.of(new CommitFilesCmd.LoadReviewRemarks(7)),
+                Update.update(toggled, new CommitFilesMsg.RemarksRefreshed()).cmds());
+
+        // A failed read again keeps the threads read before.
+        Model failed = Update.update(toggled, new CommitFilesMsg.RemarksFailed(7, new Failure.Bug(new Exception())))
+                .model();
+        assertEquals(List.of(THREAD), failed.repoView().commitFiles().get().threads());
+    }
+
+    @Test
+    void whenThePullRequestMovedOnItsFilesAreReadAgainAtItsNewCommits() {
+        Next moved = Update.update(
+                withFiles(openedPullRequest()),
+                new CommitFilesMsg.RemarksLoaded(7, remarks("c".repeat(40), "b".repeat(40))));
+
+        Changes now = new Changes.OfPullRequest(
+                new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("c".repeat(40))));
+        CommitFilesView view = moved.model().repoView().commitFiles().get();
+        assertEquals(now, view.of());
+        assertEquals(new Loading<>(), view.files());
+        assertEquals(List.of(THREAD), view.threads());
+        assertEquals(List.of(new Cmd.LoadCommitFiles(now)), moved.cmds());
+    }
+
+    @Test
+    void theThreadsOfAnotherPullRequestAndTheKeysOfACommitDoNothing() {
+        Model other = openedPullRequest();
+        assertEquals(
+                other,
+                Update.update(other, new CommitFilesMsg.RemarksLoaded(8, remarks("a".repeat(40), "b".repeat(40))))
+                        .model());
+
+        Model commit = opened();
+        assertEquals(
+                commit,
+                Update.update(commit, new CommitFilesMsg.RemarksToggled()).model());
+        assertEquals(
+                List.empty(),
+                Update.update(commit, new CommitFilesMsg.RemarksRefreshed()).cmds());
     }
 
     private static Model opened() {

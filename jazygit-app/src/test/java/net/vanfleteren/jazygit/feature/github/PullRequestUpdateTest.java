@@ -15,6 +15,7 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.feature.branch.checkout.SwitchWorktreePopup;
 import net.vanfleteren.jazygit.feature.branch.push.PushCmd.Push;
 import net.vanfleteren.jazygit.feature.branch.push.PushCmd.PushSettingUpstream;
+import net.vanfleteren.jazygit.feature.diff.CommitFilesCmd;
 import net.vanfleteren.jazygit.feature.fetch.FetchCmd;
 import net.vanfleteren.jazygit.feature.github.browse.BrowsePullRequestCmd;
 import net.vanfleteren.jazygit.feature.github.checkout.CheckoutPullRequestCmd;
@@ -1359,7 +1360,7 @@ class PullRequestUpdateTest {
             assertEquals(
                     Option.of(CommitFilesView.of(of, "branches", "files")),
                     opened.model().repoView().commitFiles());
-            assertEquals(List.of(new Cmd.LoadCommitFiles(of)), opened.cmds());
+            assertEquals(List.of(new Cmd.LoadCommitFiles(of), new CommitFilesCmd.LoadReviewRemarks(42)), opened.cmds());
             assertTrue(opened.cmds().head().background());
         }
     }

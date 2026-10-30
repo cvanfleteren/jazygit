@@ -42,7 +42,14 @@ public final class CommitFilesAction {
                             stash -> new CommitFilesMsg.Opened(new Changes.OfStash(stash.sha()), Scopes.STASH.id())))
             .add(
                     Scopes.COMMIT_FILES,
-                    Binding.always(Keymap.ESCAPE, "help.commitFiles.close", CommitFilesMsg.Closed::new)));
+                    Binding.always(Keymap.ESCAPE, "help.commitFiles.close", CommitFilesMsg.Closed::new))
+            // The review threads of a pull request (ADR 55); nothing for a commit or a stash.
+            .add(
+                    Scopes.COMMIT_FILES,
+                    Binding.always("t", "help.commitFiles.remarks", CommitFilesMsg.RemarksToggled::new))
+            .add(
+                    Scopes.COMMIT_FILES,
+                    Binding.always("R", "help.commitFiles.refresh", CommitFilesMsg.RemarksRefreshed::new)));
 
     private CommitFilesAction() {}
 }

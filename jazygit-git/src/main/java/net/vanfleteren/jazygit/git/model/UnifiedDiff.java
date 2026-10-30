@@ -49,7 +49,10 @@ public record UnifiedDiff(List<String> preamble, List<FileDiff> files) {
         return files(rest.drop(own.size()), parsed.prepend(file));
     }
 
-    private static boolean startsFile(String line) {
+    /**
+     * Whether {@code line} of a diff starts a file of it.
+     */
+    public static boolean startsFile(String line) {
         return line.startsWith(FILE_START) || line.startsWith(COMBINED_START) || line.startsWith(UNMERGED_START);
     }
 

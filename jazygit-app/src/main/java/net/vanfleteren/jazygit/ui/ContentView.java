@@ -3,9 +3,13 @@ package net.vanfleteren.jazygit.ui;
 import io.vavr.Tuple;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.function.Function;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
+import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
+import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
@@ -294,11 +298,27 @@ final class ContentView {
                                                 view.of().sha(), diff.key(), changes),
                                         new Body.Diff(
                                                 shownChanges(changes, options),
-                                                model.preferences().diffLook()))))
+                                                model.preferences().diffLook(),
+                                                remarks(model, view)))))
                 .getOrElse(() -> whenLoaded(
                         title,
                         view.files(),
                         files -> files.isEmpty() ? dim(title, Messages.get("content.noChanges")) : loading(title)));
+    }
+
+    /**
+     * The review threads of the pull request {@code view} lists the files of, as they are shown with its diff; none for
+     * a commit or a stash, and while they are first read.
+     */
+    private static Option<ShownRemarks> remarks(Model model, CommitFilesView view) {
+        return view.remarks().flatMap(remarks -> switch (remarks) {
+            case Loadable.Loaded<ReviewRemarks>(ReviewRemarks read) ->
+                Option.of(new ShownRemarks(
+                        read.threads(), view.opened(), model.now().truncatedTo(ChronoUnit.MINUTES), Option.none()));
+            case Loadable.Failed<ReviewRemarks>(Failure failure) ->
+                Option.of(new ShownRemarks(List.empty(), view.opened(), Instant.EPOCH, Option.of(failure)));
+            case Loadable.Loading<ReviewRemarks>() -> Option.none();
+        });
     }
 
     /**
@@ -406,9 +426,18 @@ final class ContentView {
 
         /**
          * A unified diff, drawn as {@code look} says: the staged or the unstaged changes of the working tree, or what a
-         * commit or a stash changed in some of its files.
+         * commit, a stash or a pull request changed in some of its files, with the review threads of a pull request
+         * (ADR 55).
          */
-        record Diff(ShownDiff diff, DiffLook look) implements Body {}
+        record Diff(ShownDiff diff, DiffLook look, Option<ShownRemarks> remarks) implements Body {
+
+            /**
+             * A diff without review threads.
+             */
+            Diff(ShownDiff diff, DiffLook look) {
+                this(diff, look, Option.none());
+            }
+        }
 
         /**
          * The log of a branch, as far as {@code ahead} shows it.
@@ -430,6 +459,17 @@ final class ContentView {
          */
         record PullRequest(PullRequestSummary pullRequest, PullRequestPreview preview) implements Body {}
     }
+
+    /**
+     * The review threads of a pull request as they are shown with a diff of some of its files (ADR 55).
+     *
+     * @param threads the threads read
+     * @param opened  whether every thread is shown open, the resolved ones and the hidden comments too
+     * @param now     the time it is, to the minute, to tell how long ago a comment was written: the diff is only
+     *                styled again once a minute for it
+     * @param failed  why reading them failed, when it did and none were read before
+     */
+    record ShownRemarks(List<ReviewThread> threads, boolean opened, Instant now, Option<Failure> failed) {}
 
     /**
      * A diff as it is shown: {@code diff}, then the line {@code note}, which git did not print, if there is one.

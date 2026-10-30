@@ -5,6 +5,7 @@ import dev.tamboui.css.engine.StyleEngine;
 import dev.tamboui.style.Color;
 import dev.tamboui.style.Modifier;
 import dev.tamboui.style.Style;
+import dev.tamboui.style.StylePropertyResolver;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
@@ -53,7 +54,17 @@ public final class Theme {
      * element of its own.
      */
     public static SpanStyles spanStyles(StyleEngine engine) {
-        return cssClass -> engine.resolve(new Node("Span", Set.of(cssClass))).toStyle();
+        return new SpanStyles() {
+            @Override
+            public Style of(String cssClass) {
+                return engine.resolve(new Node("Span", Set.of(cssClass))).toStyle();
+            }
+
+            @Override
+            public StylePropertyResolver markdown() {
+                return engine.resolve(new Node("MarkdownElement", Set.of()));
+            }
+        };
     }
 
     /**
@@ -136,6 +147,14 @@ public final class Theme {
         SpanStyles NONE = cssClass -> Style.EMPTY;
 
         Style of(String cssClass);
+
+        /**
+         * How Markdown that is drawn as text is styled: as the theme styles {@code MarkdownElement}, the comments of a
+         * pull request; not at all, e.g. before a theme is known.
+         */
+        default StylePropertyResolver markdown() {
+            return StylePropertyResolver.empty();
+        }
     }
 
     /**
@@ -168,6 +187,7 @@ public final class Theme {
         // The rich view of a diff (ADR 44).
         public static final String DIFF_FILE_HEADER = "diff-file-header";
         public static final String DIFF_LINE_NUMBER = "diff-line-number";
+        public static final String DIFF_THREAD = "diff-thread";
         public static final String DIFF_ADDED_LINE = "diff-added-line";
         public static final String DIFF_ADDED_WORD = "diff-added-word";
         public static final String DIFF_REMOVED_LINE = "diff-removed-line";

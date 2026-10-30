@@ -18,3 +18,6 @@ Panel.focused, TextInputElement:focus, TextAreaElement:focus {
 Span.diff-file-header { text-style: reversed; }
 Span.diff-added-word { text-style: reversed; }
 Span.diff-removed-word { text-style: reversed; }
+
+/* The review remarks of a pull request in its diff (ADR 55): their rule and their marks in the gutter, in bold. */
+Span.diff-thread { text-style: bold; }

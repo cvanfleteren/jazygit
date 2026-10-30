@@ -45,6 +45,11 @@
             <groupId>dev.tamboui</groupId>
             <artifactId>tamboui-toolkit-markdown</artifactId>
         </dependency>
+        <!-- Renders the review remarks in the diff of a pull request, as lines of text. -->
+        <dependency>
+            <groupId>dev.tamboui</groupId>
+            <artifactId>tamboui-markdown</artifactId>
+        </dependency>
         <dependency>
             <groupId>dev.tamboui</groupId>
             <artifactId>tamboui-jline3-backend</artifactId>
