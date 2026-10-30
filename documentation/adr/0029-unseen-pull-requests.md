@@ -72,3 +72,6 @@ It shows how many pull requests of the open repository were opened and not seen 
 - Tested by unit tests of the update (new above the highest number, the first read, seen on highlight, closed ones
   leaving, a reopened one not new, the user's own left out, the tick while hidden), of the state file, of the
   title and the rows. The acceptance tests run without GitHub, so none shows the count.
+
+Amended by ADR 58: the new pull requests are read with the open pull requests the branches show, after every fetch,
+rather than by a tick of their own while the screen is hidden or 3 seconds after a repository opens.

@@ -117,7 +117,10 @@ of them the status of ADR 52, and 3 to 4 gh processes; several of them read what
   branches did already.
 - What is shown of a repository can be up to a fetch older when the terminal was away: it is read once the focus is
   back.
+- The stamp of the branches looks at every loose ref under `refs/remotes` on each tick, a `stat` each, rather than
+  at their directories. Git packs refs when it collects garbage, so there are few; a repository with thousands of
+  loose remote-tracking refs pays a `stat` for each, every second.
 
-Amends ADR 56 (`0056-fewer-git-processes-after-a-commit.md`), ADR 29 (the pull requests screen no longer reads its
-new pull requests while hidden: the read after each fetch does) and ADR 42 (how far a pull request is behind its
-base is asked with its details).
+Amends ADR 56 (`0056-fewer-git-processes-after-a-commit.md`) and ADR 29 (the pull requests screen no longer reads
+its new pull requests while hidden: the read after each fetch does). It also changes what the code calls ADR 42, the
+second query for how far a pull request is behind its base, of which there is no file to refer from.

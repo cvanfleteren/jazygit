@@ -228,11 +228,13 @@ one and one whose directory is gone.
 
 A local branch shows how many commits it has that its base does not, and how many of its base it does not have,
 `⇡1 ⇣58`, the base being that of ADR 20: its parent, else the main branch, from `origin` when it is there.
-A branch whose base is its upstream shows only `↑`/`↓`. Every read of the branches asks for `Cmd.LoadBaseDistance`,
-which runs `GitInfoProvider.baseDistance` (`CliBaseDistance`: one `git config --get-regexp` for the parents, one
-`for-each-ref` for the refs, then one `for-each-ref --format=%(ahead-behind:<base>)` per base) and keeps a
-`BaseDistance` per branch in `Repo.baseDistance`. A read that fails, or one that has not come in yet, leaves the
-counts read before. The title of the log of a branch takes both counts from there, once they are read against the
+A branch whose base is its upstream shows only `↑`/`↓`. Every read of the branches (`Cmd.LoadBranches`) reads the
+parents with them (`GitInfoProvider.parents`, one `git config --get-regexp`) and counts the distances against the tips
+and the main branch it just read (`GitInfoProvider.baseDistance`, `CliBaseDistance`: one
+`for-each-ref --format=%(ahead-behind:<commit>)` for every base at once), and comes back with all three in
+`LoadMsg.BranchesLoaded`, which keeps the parents in `Repo.parents` and a `BaseDistance` per branch in
+`Repo.baseDistance` (ADR 49, 58). Parents that cannot be read, or a read that fails, leave the parents and counts read
+before. The title of the log of a branch takes both counts from there, once they are read against the
 base its log was compared with and at the tip it was read from; until then, from the commits read. ADR 46
 counted only those behind; the count of those ahead came later, from the same `%(ahead-behind:)`.
 
@@ -305,15 +307,18 @@ request. The design and the steps still to come are in `prs.md`.
   **My PRs** list the open pull requests that ask for the user's review and the ones they opened, in any repository:
   one `gh api graphql` with two searches (`review-requested:@me`, `author:@me`), at most 50 each; the title says how
   many match when there are more. **This repo** lists the open pull requests of the repository, forks included, at
-  most 100: another `gh api graphql`, apart from the read for the branches pane, which also tells which repository
-  it is (`PrOverview.repositoryName`). The three share one fragment and one parser
-  (`CliGitHub.parseLists`), with the checks of the last commit of each.
+  all pages of them: the same read the branches pane shows, which also tells which repository it is
+  (`PrOverview.repositoryName`). The three share one fragment and its decoder (`SummaryFragment`), with the
+  checks of the last commit of each.
 - They are read when the screen is shown, every minute while it is shown (`PrOverviewMsg.Tick`, from `Timers`),
   with `r`, and after a pull request was merged, closed or turned into a draft. Failing to read them again keeps the
   ones read; `PrOverview.freshness` keeps when they were last read and which read failed since, which the line at the
   bottom says on this screen ("read 2m ago · last read failed"). gh runs as the account of the repository, so the lists are that account's.
-- **This repo** is also read while the screen is hidden: on the tick, and 3 seconds after a repository opens. The
-  pull requests opened since, but not by the user, are unseen until their row is highlighted; the name of the screen
+- **This repo** is the read of the pull requests the branches show too (`LoadRepositoryPullRequests`, all pages):
+  the branches take those that are not from a fork (`RepositoryPullRequests.ofBranches`, ADR 58). So it is read at
+  the start, after every fetch, push or change on GitHub, also while the screen is hidden; a tick of the screen only
+  reads the user's own pull requests, while it is shown. The pull requests opened since, but not by the user, are
+  unseen until their row is highlighted; the name of the screen
   counts them (`PRs ●2`) and their rows are marked (ADR 29). `PrOverview.unseen` holds them, with the highest number
   read, and `SaveUnseenPullRequests` keeps them in `state.toml`.
 - `o` shows the pull request dialog, as for a branch, for a pull request of the repository, wherever it is listed;
@@ -544,12 +549,20 @@ no message from a user's event did.
 Every `jazygit.refreshInterval` (1 s by default, ADR 52) a `Msg.Tick` triggers `Update.tick`, which re-reads the status,
 and checks the files of the git directory that the local and remote branches (one load, `LoadBranches`), the stashes
 and the worktrees are read from (`Cmd.CheckMetadata`). That check runs no git: it stamps the HEADs, the config,
-`packed-refs`, the directories of the loose refs, the stash reflog and the worktrees' admin files (`GitMetadata`).
-Only a load whose stamp differs from the one it was last started with (`Jobs.readAt`) runs again, so an idle app
-runs one git process per tick instead of four. An operation that is done reads all of them at once
+`packed-refs`, the directories of the local refs, the files of the remote-tracking refs, the stash reflog, the
+worktrees' admin files, and in a reftable repository its tables (`GitMetadata`). Only a load whose stamp differs from
+the one it was last started with (`Jobs.readAt`) runs again, so an idle app runs one git process per tick instead of
+four. The highlighted diff is guarded the same way after each status (`Cmd.CheckFileDiff`, which stamps its files and
+the index), as a file can change without its status changing (ADR 58). An operation that is done reads all of them at once
 (`Update.refresh`), without waiting for the files to tell. That keeps the screen in sync with changes made outside
 the app. A periodic load is skipped while an equal one is still running (`Jobs.runs`). See
 `documentation/adr/0015-check-metadata-before-loading.md`.
+
+While the terminal does not have the focus, the messages of the timers that read something (`Msg.Periodic`: the
+tick, the fetch, the pull requests screen and the dialogs of checks) are kept in `Jobs.missed` instead of handled,
+and each is handled once when it has the focus again (`Msg.TerminalFocused`). The app asks the terminal to report
+the focus; `HandOverBackend` takes the reports out of the keys, which TamboUI reads as an unknown key, and a key read
+while away counts as the focus being back. See `documentation/adr/0058-less-reading-in-the-background.md`.
 
 A read that failed is tried again on a tick only once it waited 1, 2, 4… up to 64 ticks after each failure in a row
 (`Jobs.retries`, `Jobs.retryDue`); `Update.refresh` tries it at once. The previews (a branch's log, a commit's or a
@@ -587,17 +600,19 @@ runs or a label lingers. See `documentation/adr/0033-show-that-work-is-being-don
 
 Every minute a `FetchMsg.Tick` fetches from the remotes in the background, unless the previous fetch is
 still running. `FetchUpdate` lists the remotes (those `git fetch --all` would fetch) and fetches them one after
-the other with `git fetch --prune <remote>`, so branches deleted on the remote show as gone, whatever
-`fetch.prune` says. Each `FetchCmd.Fetch` carries the remotes still to fetch from after it, and its
+the other with `git fetch --porcelain --prune <remote>`, so branches deleted on the remote show as gone, whatever
+`fetch.prune` says; `--porcelain` tells whether a remote-tracking branch changed (`Jobs.fetchChanged`). Each `FetchCmd.Fetch` carries the remotes still to fetch from after it, and its
 message hands them back; the one that runs shows at the bottom of the screen as its label. When none are left, the
-branches reload.
+repository is read again, if the fetch changed a remote-tracking branch (ADR 58).
 `Model.lastFetch` (a `Freshness`) holds when a remote was last fetched from, as `FetchCmd.Fetch` timed it, and the
 remotes that failed the last time; the right of the line at the bottom says it, as "fetched 2m ago", with "last fetch
 failed" when one did.
 Neither the commands nor the failures are shown, since fetching also runs while offline, and a failing remote
 doesn't stop the others. Once the fetch is done, the open pull requests are read again with `gh` (also once at
-startup), into `Model.pullRequests`, which is none until they were read once. That read lives in `state` (`PullRequestsUpdate`, `LoadPullRequests`),
-next to the other periodic reads, so the fetch does not depend on the GitHub feature. While it runs, the line
+startup), into `Model.pullRequests`, which is none until they were read once. That read is the one of the pull
+requests screen (`LoadRepositoryPullRequests`, ADR 58); `PullRequestsUpdate` starts it, next to the other periodic
+reads, so the fetch does not depend on the GitHub feature. A read from GitHub that keeps failing, as without a
+remote on GitHub, is started by the timers less and less often (`FailingRead`). While it runs, the line
 at the bottom says so, and another read does not start (`GitHubReads`); a failure there is
 not shown either, as gh may be missing or logged out.
 
@@ -858,8 +873,8 @@ the GitHub repository from the git remotes itself. It mirrors the git layer with
 
 - **Reading:** gh prints the JSON GitHub answers, without `--jq`, and `GhProcess.readJson` decodes it with a
   `Decoder` of `jazygit-json` (ADR 42). Each read is a class of its own, with its command, its GraphQL and its
-  decoder: `PullRequestsQuery`, `RepositoryPullRequestsQuery`, `MyPullRequestsQuery`, `DetailsQuery`,
-  `BranchesQuery`, `BranchCheckRunsQuery`, `RecentChecksQuery`, `BehindQuery`, `CommentsQuery`,
+  decoder: `RepositoryPullRequestsQuery`, `MyPullRequestsQuery`, `DetailsQuery` (which also tells how far a pull
+  request is behind its base, ADR 58), `BranchesQuery`, `BranchCheckRunsQuery`, `RecentChecksQuery`, `CommentsQuery`,
   `ReviewThreadsQuery`, `PreviewQuery`, `LoginsQuery` and `MergeQuery`. What several share is a fragment, its GraphQL next to its decoder:
   `CheckFragment` (a check, and how the states of checks fold into one: failing, else pending, else passing),
   `SuiteFragment` (the workflow runs that wait to start, ADR 35), `StackFragment` and `SummaryFragment`. A node of
