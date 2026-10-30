@@ -235,10 +235,11 @@ public interface Cmd {
     }
 
     /**
-     * Reads how far each local branch is from its base, {@code main} being the base of those without a parent
-     * (ADR 46), the branches and their bases at the commits {@code tips} has them at (ADR 49).
+     * Reads how far each local branch is from its base, {@code main} being the base of those without one of
+     * {@code parents} (ADR 46), the branches and their bases at the commits {@code tips} has them at (ADR 49).
      */
-    record LoadBaseDistance(Option<BranchName> main, Map<BranchRef, Sha> tips) implements Load {
+    record LoadBaseDistance(Option<BranchName> main, Map<BranchRef, Sha> tips, Map<BranchName, BranchName> parents)
+            implements Load {
 
         @Override
         public Option<Label> label() {
@@ -247,25 +248,38 @@ public interface Cmd {
 
         @Override
         public Msg run(Env env) {
-            return env.git()
-                    .parents()
-                    .fold(
-                            this::failedWith,
-                            parents -> new LoadMsg.BaseDistanceLoaded(
-                                    this, parents, env.git().baseDistance(tips, parents, main)));
+            return new LoadMsg.BaseDistanceLoaded(this, env.git().baseDistance(tips, parents, main));
         }
     }
 
     /**
-     * Looks at the files that the branches, the stashes and the worktrees are read from, so that a tick only reads
-     * again those that changed: that takes a git process each, this none.
+     * Reads the branch each branch was made from, of those that have one recorded, from the configuration
+     * (ADR 56).
+     */
+    record LoadParents() implements Load {
+
+        @Override
+        public Option<Label> label() {
+            return Option.of(Label.of("work.parents"));
+        }
+
+        @Override
+        public Msg run(Env env) {
+            return env.git().parents().fold(this::failedWith, LoadMsg.ParentsLoaded::new);
+        }
+    }
+
+    /**
+     * Looks at the files that the branches, the stashes, the worktrees and the parents of the branches are read from,
+     * so that a tick only reads again those that changed: that takes a git process each, this none.
      */
     record CheckMetadata() implements Load {
 
         /**
          * The loads that a stamp of {@link GitMetadata} tells to run again.
          */
-        static final List<Load> GUARDED = List.of(new LoadBranches(), new LoadStashes(), new LoadWorktrees());
+        static final List<Load> GUARDED =
+                List.of(new LoadBranches(), new LoadStashes(), new LoadWorktrees(), new LoadParents());
 
         @Override
         public Option<Label> label() {
@@ -278,7 +292,8 @@ public interface Cmd {
             return new LoadMsg.MetadataChecked(List.of(
                     Tuple.of((Load) new LoadBranches(), metadata.flatMap(GitMetadata::branches)),
                     Tuple.of(new LoadStashes(), metadata.flatMap(GitMetadata::stashes)),
-                    Tuple.of(new LoadWorktrees(), metadata.flatMap(GitMetadata::worktrees))));
+                    Tuple.of(new LoadWorktrees(), metadata.flatMap(GitMetadata::worktrees)),
+                    Tuple.of(new LoadParents(), metadata.flatMap(GitMetadata::config))));
         }
     }
 

@@ -64,7 +64,8 @@ class UpdateTest {
                         new LoadStatus(),
                         new LoadBranches(),
                         new net.vanfleteren.jazygit.state.Cmd.LoadStashes(),
-                        new net.vanfleteren.jazygit.state.Cmd.LoadWorktrees()),
+                        new net.vanfleteren.jazygit.state.Cmd.LoadWorktrees(),
+                        new net.vanfleteren.jazygit.state.Cmd.LoadParents()),
                 next.cmds());
     }
 

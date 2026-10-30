@@ -71,13 +71,16 @@ final class CliMetadata {
                 common.resolve("logs/refs/stash"),
                 common.resolve("packed-refs"),
                 common.resolve("reftable/tables.list")));
-        // What a worktree has checked out moves with its branch.
-        MetadataStamp worktreeList = new MetadataStamp(branches.entries()
-                .appendAll(stamp(List.of(common.resolve("worktrees"))
-                                .appendAll(worktrees.flatMap(
-                                        worktree -> List.of(worktree.resolve("gitdir"), worktree.resolve("locked")))))
-                        .entries()));
-        return new GitMetadata(settled(branches, now), settled(stashes, now), settled(worktreeList, now));
+        // What a worktree has checked out is in its HEAD; a commit on its branch moves the branch, not the HEAD, and
+        // the commit it moved to is not shown with the worktree (ADR 56).
+        MetadataStamp worktreeList = stamp(List.of(at.gitDir().resolve("HEAD"), common.resolve("HEAD"))
+                .append(common.resolve("worktrees"))
+                .appendAll(worktrees.flatMap(worktree ->
+                        List.of(worktree.resolve("HEAD"), worktree.resolve("gitdir"), worktree.resolve("locked")))));
+        // The parents of the branches are in the config (ADR 49).
+        MetadataStamp config = stamp(List.of(common.resolve("config")));
+        return new GitMetadata(
+                settled(branches, now), settled(stashes, now), settled(worktreeList, now), settled(config, now));
     }
 
     /**

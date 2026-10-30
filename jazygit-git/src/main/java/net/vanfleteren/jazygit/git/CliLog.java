@@ -26,6 +26,9 @@ final class CliLog {
     private static final List<String> FIELDS = List.of("%H", "%P", "%an", "%ae", "%at", "%s", "%D", "%B");
     private static final String TAG_PREFIX = "tag: ";
     private static final String FORMAT = FIELDS.mkString(GitOutput.PRETTY_FIELD_SEPARATOR);
+    // The mark %m prints for a boundary commit of git log --boundary.
+    private static final String BOUNDARY = "-";
+    private static final String MARKED_FORMAT = "%m" + GitOutput.PRETTY_FIELD_SEPARATOR + FORMAT;
 
     private CliLog() {}
 
@@ -139,17 +142,34 @@ final class CliLog {
 
     /**
      * The commits from {@code tip} that are not on {@code base}, whose tip is {@code baseTip}, at most {@code max}, and
-     * the commit they forked from. They are only counted when there are that many, to tell whether there are more.
+     * the commit they forked from, read in one {@code git log --boundary} where it can (ADR 56): one more commit than
+     * {@code max} tells whether there are more.
      */
     static Either<ProcessError, Ahead> ahead(Path worktree, Sha tip, BranchRef base, Sha baseTip, int max) {
-        List<String> revisions = List.of(tip.value(), "^" + baseTip.value());
-        return selected(worktree, revisions, max)
-                .flatMap(commits -> (commits.size() < max
-                                ? Either.<ProcessError, Boolean>right(false)
-                                : count(worktree, revisions.prepend("--max-count=" + (max + 1)))
-                                        .map(count -> count > max))
-                        .flatMap(more -> forkPoint(worktree, tip, baseTip)
-                                .map(fork -> new Ahead(tip, base, commits, more, fork))));
+        return walk(worktree, tip, baseTip, max + 1).flatMap(walk -> {
+            boolean more = walk.commits().size() > max;
+            List<Commit> commits = CommitGraph.arrange(walk.commits().take(max));
+            return forkPoint(worktree, tip, baseTip, walk, more).map(fork -> new Ahead(tip, base, commits, more, fork));
+        });
+    }
+
+    /**
+     * The commit {@code tip} forked from {@code baseTip} at, from what {@code walk} found where that tells: every
+     * merge-base is a boundary commit of a walk that was not cut short, as the commits after it on a path from the tip
+     * are not on the base. So one boundary commit is the fork point; none, with commits walked, means the histories
+     * never met; and without commits walked, the tip is on the base, and is the fork point itself. Several boundary
+     * commits, or a walk cut short, are asked of {@code git merge-base}.
+     */
+    private static Either<ProcessError, Option<Commit>> forkPoint(
+            Path worktree, Sha tip, Sha baseTip, Walk walk, boolean more) {
+        if (more || walk.boundary().size() > 1) {
+            return forkPoint(worktree, tip, baseTip);
+        } else if (walk.commits().isEmpty()) {
+            return read(worktree, List.of("--no-walk", tip.value()), List.empty(), 1)
+                    .map(List::headOption);
+        } else {
+            return Either.right(walk.boundary().headOption());
+        }
     }
 
     /**
@@ -319,6 +339,43 @@ final class CliLog {
     }
 
     /**
+     * The newest commits from {@code tip} that are not on {@code baseTip}, at most {@code max}, as {@code git log}
+     * lists them, and the boundary commits it stopped at: the commits on the base whose child it listed, and, when
+     * {@code max} cut it short, those it would have listed next.
+     */
+    private static Either<ProcessError, Walk> walk(Path worktree, Sha tip, Sha baseTip, int max) {
+        return GitProcess.read(
+                worktree,
+                GitCommand.reading(List.of(
+                        "log",
+                        "--no-color",
+                        "--no-show-signature",
+                        "-z",
+                        "--boundary",
+                        "--max-count=" + max,
+                        "--format=" + MARKED_FORMAT,
+                        tip.value(),
+                        "^" + baseTip.value(),
+                        "--")),
+                CliLog::parseWalk);
+    }
+
+    /**
+     * Parses {@code git log --boundary -z} output in the format of {@link #MARKED_FORMAT}: each commit after its
+     * mark, {@code -} for a boundary commit.
+     */
+    static Either<UnexpectedOutput, Walk> parseWalk(String raw) {
+        return Either.sequenceRight(GitOutput.records(raw)
+                        .map(record -> GitOutput.fields(record, 2)
+                                .flatMap(marked -> commit(marked.get(1))
+                                        .map(commit -> Tuple.of(marked.get(0).equals(BOUNDARY), commit)))))
+                .map(Seq::toList)
+                .map(marked -> new Walk(
+                        marked.filter(commit -> !commit._1).map(Tuple2::_2),
+                        marked.filter(Tuple2::_1).map(Tuple2::_2)));
+    }
+
+    /**
      * Parses {@code git log -z} output in the format of {@link #FIELDS}.
      */
     static Either<UnexpectedOutput, List<Commit>> parse(String raw) {
@@ -360,4 +417,12 @@ final class CliLog {
                 .map(String::strip)
                 .getOrElse("");
     }
+
+    /**
+     * What {@code git log --boundary} listed.
+     *
+     * @param commits  the commits it walked, newest first
+     * @param boundary the commits it stopped at
+     */
+    record Walk(List<Commit> commits, List<Commit> boundary) {}
 }

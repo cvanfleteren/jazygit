@@ -452,6 +452,38 @@ class CliGitInfoProviderTest {
         assertTrue(two.more());
         assertEquals(List.of("Side three", "Side two"), two.commits().map(Commit::message));
         assertEquals(provider.status().get().headCommit().get(), two.tip());
+        // The walk cut short stops at Side one too, so the fork point is asked of git merge-base.
+        assertEquals(three.forkPoint(), two.forkPoint());
+        assertEquals(Option.of(tip("main")), two.forkPoint().map(Commit::sha));
+    }
+
+    @Test
+    void theForkPointOfABranchMadeFromItsBaseIsTheCommitItWasMadeFrom() throws Exception {
+        Sha fork = tip("main");
+        git("checkout", "-q", "-b", "side");
+        git("commit", "-q", "--allow-empty", "-m", "Side one");
+        git("checkout", "-q", "main");
+        git("commit", "-q", "--allow-empty", "-m", "Main one");
+        BranchRef main = new BranchRef.Local(new BranchName("main"));
+
+        Ahead ahead = provider.ahead(tip("side"), main, tip("main")).get();
+
+        assertEquals(List.of("Side one"), ahead.commits().map(Commit::message));
+        assertEquals(Option.of(fork), ahead.forkPoint().map(Commit::sha));
+    }
+
+    @Test
+    void aBranchWithNothingAheadOfItsBaseForksAtItsOwnTip() throws Exception {
+        Sha fork = tip("main");
+        git("branch", "side");
+        git("commit", "-q", "--allow-empty", "-m", "Main one");
+        BranchRef main = new BranchRef.Local(new BranchName("main"));
+
+        Ahead ahead = provider.ahead(fork, main, tip("main")).get();
+
+        assertEquals(List.empty(), ahead.commits());
+        assertFalse(ahead.more());
+        assertEquals(Option.of(fork), ahead.forkPoint().map(Commit::sha));
     }
 
     @Test
