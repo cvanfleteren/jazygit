@@ -9,7 +9,8 @@ on:
 permissions:
   contents: read
 
-# The Maven tests and checks run side by side with the acceptance tests, which run the jar built without tests.
+# The Maven tests and checks run side by side with the acceptance tests, which run the jar built without tests, a
+# share of them on each of four machines.
 # verify doesn't wait for that jar: Maven can't take up a build from another job (the resources it copies again
 # make it compile the modules after them again), so it would only start later and build all the same.
 jobs:
@@ -55,6 +56,11 @@ jobs:
 
   acceptance:
     needs: package
+    name: acceptance (${{ matrix.shard }}/4)
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -82,4 +88,4 @@ jobs:
       - name: Acceptance tests
         run: |
           pip install -r acceptance/requirements.txt
-          python -m pytest acceptance -v --jar "$(ls jar/jazygit-*-fat.jar)"
+          python -m pytest acceptance -v --jar "$(ls jar/jazygit-*-fat.jar)" --shard ${{ matrix.shard }}/4

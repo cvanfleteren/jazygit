@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 def pytest_addoption(parser):
     parser.addoption("--jar", help="the jazygit fat jar to test; defaults to the newest in jazygit-app/target")
+    parser.addoption("--shard", help="I/N: runs only the I-th of N shares of the tests, so that N machines share them")
 
 
 # Last, after -k and -m have deselected, so that the slices are those of the tests that run.
@@ -25,7 +26,16 @@ def pytest_collection_modifyitems(config, items):
     the run going long after the others are done.
 
     worksteal hands each worker an even, contiguous slice of the tests, and an idle worker steals from the end of
-    another's slice, so a slow test at the head of a slice runs first and the rest of the slice moves elsewhere."""
+    another's slice, so a slow test at the head of a slice runs first and the rest of the slice moves elsewhere.
+
+    A shard takes every N-th test, so that the tests of a file, and the slow ones next to each other, spread over
+    the shards."""
+    shard = config.getoption("--shard")
+    if shard:
+        index, count = (int(part) for part in shard.split("/"))
+        kept = items[index - 1::count]
+        config.hook.pytest_deselected(items=[item for i, item in enumerate(items) if i % count != index - 1])
+        items[:] = kept
     workers = getattr(config, "workerinput", {}).get("workercount", 1)
     slow = [item for item in items if item.get_closest_marker("slow")]
     rest = [item for item in items if not item.get_closest_marker("slow")]
