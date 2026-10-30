@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.git.model;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.syntax.Token;
 import org.junit.jupiter.api.Test;
 
@@ -32,6 +33,27 @@ class ParsedDiffTest {
                  int same;
                 -/* old
                 +/* new
+                """,
+                // Cut off in the header of a file whose code is lexed, after another one.
+                """
+                diff --git a/A.java b/A.java
+                --- a/A.java
+                +++ b/A.java
+                @@ -1 +1 @@
+                -int a;
+                +long a;
+                diff --git a/B.java b/B.java
+                index 1234567..89abcde 100644
+                """,
+                // Cut off in a string over lines of a file whose language its shebang tells.
+                """
+                diff --git a/bin/tool b/bin/tool
+                new file mode 100755
+                --- /dev/null
+                +++ b/bin/tool
+                @@ -0,0 +1,2 @@
+                +#!/usr/bin/env python3
+                +s = \"""starts
                 """,
                 // Cut off after removed lines, before the added ones they would be paired with.
                 """
@@ -70,6 +92,14 @@ class ParsedDiffTest {
 
         diffs.forEach(diff -> assertEquals(
                 ParsedDiff.of(diff + NOTE + "\n"), ParsedDiff.of(diff).withNote(NOTE), diff));
+        // Drawing a diff takes the words and the tokens of a line together.
+        diffs.flatMap(diff -> List.of(ParsedDiff.of(diff), ParsedDiff.of(diff).withNote(NOTE)))
+                .forEach(parsed -> assertEquals(
+                        parsed.words().map(List::size),
+                        parsed.tokens()
+                                .zip(parsed.words())
+                                .map(hunk -> hunk._1.map(List::size).getOrElse(hunk._2.size())),
+                        parsed.diff().toString()));
     }
 
     @Test
@@ -91,10 +121,10 @@ class ParsedDiffTest {
 
         assertEquals(
                 List.of(
-                        List.of(
+                        Option.of(List.of(
                                 List.of(new Token(0, 3, Token.Kind.KEYWORD)),
-                                List.of(new Token(0, 4, Token.Kind.KEYWORD))),
-                        List.of(List.<Token>empty(), List.<Token>empty())),
+                                List.of(new Token(0, 4, Token.Kind.KEYWORD)))),
+                        Option.none()),
                 diff.tokens());
     }
 

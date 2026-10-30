@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.git.model;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.FileDiff;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.Hunk;
@@ -17,9 +18,9 @@ import net.vanfleteren.jazygit.git.model.syntax.Token;
  * @param diff   the diff parsed
  * @param words  the segments of the lines of each hunk of its files, in order, as {@link WordDiff#segments} has them
  * @param tokens the tokens of the lines of each hunk of its files, in the same order, as the {@link Highlighter} found
- *               them
+ *               them; none for a hunk that was not lexed
  */
-public record ParsedDiff(UnifiedDiff diff, List<List<List<Segment>>> words, List<List<List<Token>>> tokens) {
+public record ParsedDiff(UnifiedDiff diff, List<List<List<Segment>>> words, List<Option<List<List<Token>>>> tokens) {
 
     private static final Highlighter HIGHLIGHTER = new Lexer();
 
@@ -65,7 +66,7 @@ public record ParsedDiff(UnifiedDiff diff, List<List<List<Segment>>> words, List
                         ? words.append(List.of(whole))
                         : words.init().append(words.last().append(whole)),
                 last.hunks().isEmpty()
-                        ? tokens.append(List.of(none))
-                        : tokens.init().append(tokens.last().append(none)));
+                        ? tokens.append(Option.none())
+                        : tokens.init().append(tokens.last().map(lines -> lines.append(none))));
     }
 }
