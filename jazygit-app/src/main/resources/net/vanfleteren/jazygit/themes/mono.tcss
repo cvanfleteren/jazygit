@@ -92,6 +92,7 @@ Span.diff-line-number { color: $muted; }
 Span.diff-thread { color: $bright; }
 Span.diff-thread-header { background: #1c1c1c; }
 Span.diff-thread-author { color: $bright; text-style: bold; }
+Span.diff-cursor { text-style: reversed; }
 Span.diff-added-line { color: $good; }
 Span.diff-added-word { color: $good; text-style: reversed; }
 Span.diff-removed-line { color: $bad; }

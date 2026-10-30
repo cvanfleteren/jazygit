@@ -18,8 +18,11 @@ import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Subject;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.ParsedDiff;
+import net.vanfleteren.jazygit.git.model.UnifiedDiff;
 import net.vanfleteren.jazygit.settings.DiffLook;
 import net.vanfleteren.jazygit.settings.DiffStyle;
+import net.vanfleteren.jazygit.state.Anchor;
+import net.vanfleteren.jazygit.state.DiffStops;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.ui.ContentView.ShownDiff;
 import net.vanfleteren.jazygit.ui.ContentView.ShownRemarks;
@@ -60,7 +63,7 @@ class RemarkLinesTest {
                 Subject.LINE,
                 List.of(bodies).map(body -> new Comment("bob", NOW.minusSeconds(7200), body, Option.none(), "C")),
                 0,
-                "T",
+                path + line + String.join("", bodies),
                 ReviewThread.Rights.ALL);
     }
 
@@ -390,6 +393,48 @@ class RemarkLinesTest {
         assertTrue(
                 text.lines().head().startsWith("The review remarks could not be read"),
                 text.lines().head());
+    }
+
+    @Test
+    void theCursorStopsWhereDiffStopsSaysInTheOrderTheyAreDrawn() {
+        ReviewThread first = thread(2, false, "a");
+        ReviewThread second = thread(2, false, "b");
+        ReviewThread outdated = thread("a.txt", 40, false, "old");
+        ShownRemarks remarks = shown(false, first, second, outdated);
+
+        RichDiff.Drawn drawn = RichDiff.drawn(ParsedDiff.of(DIFF), true, Option.of(remarks), Theme.SpanStyles.NONE);
+
+        // Nothing comes before the file, so there is no lead.
+        assertEquals(
+                DiffStops.of(UnifiedDiff.parse(DIFF), remarks.threads(), true)
+                        .anchors()
+                        .tail(),
+                drawn.stops().map(stop -> stop.mark().anchor()));
+        List<String> lines = text(drawn.lines());
+        List<Integer> rows = drawn.stops().map(RichDiff.Stop::row);
+        assertEquals(rows.sorted().distinct(), rows);
+        // Each thread starts on its own first line, and has as many lines as it is drawn with.
+        List<RichDiff.Stop> threads = drawn.stops().filter(stop -> stop.mark().anchor() instanceof Anchor.Thread);
+        assertEquals(3, threads.size());
+        assertTrue(threads.forAll(stop -> lines.get(stop.row()).contains("┏━")), lines.mkString("\n"));
+        assertTrue(lines.get(threads.head().row() + threads.head().mark().lines() - 1)
+                .contains("┗━"));
+        assertTrue(
+                lines.get(threads.head().row() + threads.head().mark().lines()).isBlank());
+    }
+
+    @Test
+    void theLeadIsWhatComesBeforeTheFirstStop() {
+        RichDiff.Drawn drawn = RichDiff.Drawn.plain(List.of(Line.from("commit"), Line.from("---")))
+                .withLead();
+        assertEquals(List.empty(), drawn.stops());
+
+        RichDiff.Drawn lead = RichDiff.drawn(ParsedDiff.of(DIFF), true, Option.none(), Theme.SpanStyles.NONE)
+                .after(List.of(Line.from("commit"), Line.from("---")))
+                .withLead();
+        assertEquals(new Anchor.Lead(), lead.stops().head().mark().anchor());
+        assertEquals(new Anchor.File("a.txt"), lead.stops().get(1).mark().anchor());
+        assertEquals(2, lead.stops().get(1).row());
     }
 
     /**

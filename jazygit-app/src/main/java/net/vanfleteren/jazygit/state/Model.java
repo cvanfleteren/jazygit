@@ -92,10 +92,15 @@ public record Model(
 
     /**
      * Where the content area {@code area} is scrolled to while it shows {@code content}: where the user scrolled it
-     * to, unless it showed something else then.
+     * to, unless it showed something else then. When it showed the same changes read again, its cursor stays on its
+     * stop, from the top (ADR 60).
      */
     public Scrolled scrolled(String area, ScrolledContent content) {
-        return scrolled.get(area).filter(at -> at.content().equals(content)).getOrElse(() -> Scrolled.top(content));
+        Option<Scrolled> last = scrolled.get(area);
+        return last.filter(at -> at.content().equals(content))
+                .orElse(() -> last.filter(at -> at.content().sameChanges(content))
+                        .map(at -> new Scrolled(content, 0, 0, at.cursor())))
+                .getOrElse(() -> Scrolled.top(content));
     }
 
     /**

@@ -56,9 +56,18 @@ final class RemarkLines {
      */
     static List<Line> threads(
             List<ReviewThread> threads, int indent, int width, RemarkStyle style, Theme.SpanStyles styles) {
-        return threads.map(thread -> thread(thread, indent, width, true, style, styles))
+        return blocks(threads, indent, width, style, styles)
                 .intersperse(List.of(Line.from("")))
                 .flatMap(Function.identity());
+    }
+
+    /**
+     * The lines of each of {@code threads}, as {@link #threads} draws them, without the blank lines between them: each
+     * is a stop of the cursor (ADR 60).
+     */
+    static List<List<Line>> blocks(
+            List<ReviewThread> threads, int indent, int width, RemarkStyle style, Theme.SpanStyles styles) {
+        return threads.map(thread -> thread(thread, indent, width, true, style, styles));
     }
 
     /**
@@ -67,20 +76,36 @@ final class RemarkLines {
      */
     static List<Line> unplaced(
             List<ReviewThread> threads, int indent, int width, RemarkStyle style, Theme.SpanStyles styles) {
-        Span margin = Span.raw(" ".repeat(indent));
         return threads.isEmpty()
                 ? List.empty()
-                : threads.map(thread -> thread(thread, indent, width, false, style, styles)
-                                .prepend(header(
-                                        List.of(margin, styled(TOP, Theme.Classes.DIFF_THREAD, styles)),
-                                        List.of(styled(madeOn(thread), Theme.Classes.DIM, styles)),
-                                        text(indent, width),
-                                        styles)))
+                : unplacedBlocks(threads, indent, width, style, styles)
                         .intersperse(List.of(Line.from("")))
                         .flatMap(Function.identity())
-                        .prepend(Line.from(
-                                Span.raw(" ".repeat(indent)),
-                                styled(Messages.get("content.remarks.unplaced"), Theme.Classes.DIM, styles)));
+                        .prepend(unplacedHeading(indent, styles));
+    }
+
+    /**
+     * The line that says the threads under it cannot be placed.
+     */
+    static Line unplacedHeading(int indent, Theme.SpanStyles styles) {
+        return Line.from(
+                Span.raw(" ".repeat(indent)),
+                styled(Messages.get("content.remarks.unplaced"), Theme.Classes.DIM, styles));
+    }
+
+    /**
+     * The lines of each of {@code threads}, which cannot be placed, as {@link #unplaced} draws them under its heading,
+     * without the blank lines between them: each is a stop of the cursor (ADR 60).
+     */
+    static List<List<Line>> unplacedBlocks(
+            List<ReviewThread> threads, int indent, int width, RemarkStyle style, Theme.SpanStyles styles) {
+        Span margin = Span.raw(" ".repeat(indent));
+        return threads.map(thread -> thread(thread, indent, width, false, style, styles)
+                .prepend(header(
+                        List.of(margin, styled(TOP, Theme.Classes.DIFF_THREAD, styles)),
+                        List.of(styled(madeOn(thread), Theme.Classes.DIM, styles)),
+                        text(indent, width),
+                        styles)));
     }
 
     /**

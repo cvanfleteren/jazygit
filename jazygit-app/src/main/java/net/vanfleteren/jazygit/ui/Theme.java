@@ -190,6 +190,8 @@ public final class Theme {
         public static final String DIFF_THREAD = "diff-thread";
         public static final String DIFF_THREAD_HEADER = "diff-thread-header";
         public static final String DIFF_THREAD_AUTHOR = "diff-thread-author";
+        // The cursor of the rich view (ADR 60).
+        public static final String DIFF_CURSOR = "diff-cursor";
         public static final String DIFF_ADDED_LINE = "diff-added-line";
         public static final String DIFF_ADDED_WORD = "diff-added-word";
         public static final String DIFF_REMOVED_LINE = "diff-removed-line";

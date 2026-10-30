@@ -107,8 +107,8 @@ class ContentPanelTest {
         assertEquals(1, down.to().row());
 
         // Where the model has it scrolled to is what shows, whatever was scrolled in the element before.
-        Model scrolled = selected.withScrolled(
-                io.vavr.collection.HashMap.of(area, new Scrolled(down.to().content(), 20, 0)));
+        Model scrolled = selected.withScrolled(io.vavr.collection.HashMap.of(
+                area, new Scrolled(down.to().content(), 20, 0, io.vavr.control.Option.none())));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> scrolling.render(scrolled, area))) {
             String screen = RenderedText.ofLarge(testRunner, () -> scrolling.render(scrolled, area));
             assertFalse(screen.contains("commit aaaa"), screen);
@@ -154,7 +154,7 @@ class ContentPanelTest {
                 List.ofAll(global).map(KeyEvent::character).toJavaList());
         assertEquals(1, leaves.get());
         Msg.ContentScrolled right = (Msg.ContentScrolled) dispatched.getLast();
-        assertEquals(new Scrolled(right.to().content(), 0, 1), right.to());
+        assertEquals(new Scrolled(right.to().content(), 0, 1, io.vavr.control.Option.none()), right.to());
     }
 
     @Test
@@ -234,14 +234,17 @@ class ContentPanelTest {
                 ((Msg.ContentScrolled) dispatched.getLast()).to().content();
 
         // TamboUI does not draw the columns scrolled past, so the next scroll tells where the area was.
-        Model scrolled = selected.withScrolled(io.vavr.collection.HashMap.of(area, new Scrolled(shown, 0, 11)));
+        Model scrolled = selected.withScrolled(
+                io.vavr.collection.HashMap.of(area, new Scrolled(shown, 0, 11, io.vavr.control.Option.none())));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> scrolling.render(scrolled, area))) {
             SettledPilot.focus(testRunner, area);
             RenderedText.ofLarge(testRunner, () -> scrolling.render(scrolled, area));
             SettledPilot.of(testRunner).press(KeyCode.DOWN);
             SettledPilot.of(testRunner).pause();
         }
-        assertEquals(new Scrolled(shown, 1, 11), ((Msg.ContentScrolled) dispatched.getLast()).to());
+        assertEquals(
+                new Scrolled(shown, 1, 11, io.vavr.control.Option.none()),
+                ((Msg.ContentScrolled) dispatched.getLast()).to());
     }
 
     @Test
@@ -342,6 +345,55 @@ class ContentPanelTest {
         int inLight = styled.get();
         counting.render(other, CommitsPanel.ID);
         assertTrue(styled.get() > inLight, "restyled for another body");
+    }
+
+    @Test
+    void inTheRichViewTheKeysMoveTheCursorWithoutStylingTheDiffAgain() throws Exception {
+        java.util.concurrent.atomic.AtomicInteger styled = new java.util.concurrent.atomic.AtomicInteger();
+        java.util.List<Msg> dispatched = new java.util.ArrayList<>();
+        ContentPanel counting = new ContentPanel(
+                cssClass -> {
+                    if (!cssClass.equals(Theme.Classes.DIFF_CURSOR)) {
+                        styled.incrementAndGet();
+                    }
+                    return dev.tamboui.style.Style.EMPTY;
+                },
+                () -> false,
+                id -> {},
+                dispatched::add);
+        Model rich = TestModels.loaded()
+                .mapPreferences(preferences ->
+                        preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
+        Model model = Update.update(
+                        Update.update(rich, new SelectionMsg.CommitSelected(new Sha("aaaa")))
+                                .model(),
+                        new LoadMsg.CommitDetailLoaded(
+                                new Sha("aaaa"), rich.preferences().diffOptions(), DiffText.of("""
+                                diff --git a/a.txt b/a.txt
+                                --- a/a.txt
+                                +++ b/a.txt
+                                @@ -1 +1 @@
+                                -a
+                                +b
+                                """)))
+                .model();
+        String area = counting.areaOfPane(model, CommitsPanel.ID).get();
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> counting.render(model, area))) {
+            SettledPilot.focus(testRunner, area);
+            RenderedText.ofLarge(testRunner, () -> counting.render(model, area));
+            int once = styled.get();
+            SettledPilot.of(testRunner).press(KeyCode.DOWN);
+            SettledPilot.of(testRunner).pause();
+
+            // From the header of the commit, its lead, to the bar of its file.
+            Msg.ContentScrolled down = (Msg.ContentScrolled) dispatched.getLast();
+            assertEquals(Option.of(new Anchor.File("a.txt")), down.to().cursor());
+            assertEquals(0, down.to().row());
+            Model moved = Update.update(model, down).model();
+            RenderedText.ofLarge(testRunner, () -> counting.render(moved, area));
+            assertEquals(once, styled.get());
+        }
     }
 
     @Test

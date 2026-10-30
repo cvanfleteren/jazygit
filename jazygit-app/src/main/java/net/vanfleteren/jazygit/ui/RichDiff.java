@@ -22,6 +22,7 @@ import net.vanfleteren.jazygit.git.model.UnifiedDiff.FileDiff;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.Hunk;
 import net.vanfleteren.jazygit.git.model.WordDiff.Segment;
 import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.state.Anchor;
 import net.vanfleteren.jazygit.state.PlacedRemarks;
 import net.vanfleteren.jazygit.state.PlacedRemarks.FileRemarks;
 import net.vanfleteren.jazygit.state.PlacedRemarks.LineRemarks;
@@ -36,7 +37,7 @@ final class RichDiff {
 
     private static final String GUTTER_END = " │ ";
     private static final LineRemarks NO_REMARKS = new LineRemarks(List.empty(), false);
-    private static final Pending BLANK = () -> List.of(Line.from(""));
+    private static final Pending BLANK = () -> List.of(Marked.plain(Line.from("")));
 
     private RichDiff() {}
 
@@ -55,6 +56,16 @@ final class RichDiff {
      */
     static List<Line> lines(
             ParsedDiff diff, boolean syntax, Option<ContentView.ShownRemarks> remarks, Theme.SpanStyles styles) {
+        return drawn(diff, syntax, remarks, styles).lines();
+    }
+
+    /**
+     * The lines of {@code diff}, as {@link #lines(ParsedDiff, boolean, Option, Theme.SpanStyles)} draws them, with
+     * where each stop of the cursor starts in them (ADR 60): the bar of each file, each line that has a side and a
+     * number, and each thread.
+     */
+    static Drawn drawn(
+            ParsedDiff diff, boolean syntax, Option<ContentView.ShownRemarks> remarks, Theme.SpanStyles styles) {
         UnifiedDiff parsed = diff.diff();
         Vector<Option<FileRemarks>> placed = remarks.map(
                         shown -> PlacedRemarks.place(parsed, shown.threads(), shown.onLines())
@@ -70,9 +81,9 @@ final class RichDiff {
                         diff.files().zip(placed), file -> file.apply((its, on) -> file(its, on, syntax, style, styles)))
                 .intersperse(List.of(BLANK))
                 .flatMap(file -> file);
-        return parsed.preamble()
-                .map(line -> Line.from(Span.raw(line)))
-                .appendAll(inParallel(pending, Pending::draw).flatMap(lines -> lines));
+        return Drawn.of(parsed.preamble()
+                .map(line -> Marked.plain(Line.from(Span.raw(line))))
+                .appendAll(inParallel(pending, Pending::draw).flatMap(lines -> lines)));
     }
 
     /**
@@ -122,7 +133,7 @@ final class RichDiff {
         int width = Math.max(
                 width(bar), gutter + measured.map(text -> text + 1).max().getOrElse(0));
         Blocks blocks = new Blocks(gutter + 2, RemarkLines.blockWidth(width), style);
-        Layout layout = new Layout(digits, width - gutter, blocks, syntax, styles);
+        Layout layout = new Layout(file.path(), digits, width - gutter, width, blocks, syntax, styles);
         Vector<LineRemarks> onLines = remarks.map(
                         placed -> placed.lines().flatMap(hunk -> hunk).toVector())
                 .getOrElse(() -> Vector.fill(lines.size(), () -> NO_REMARKS));
@@ -132,18 +143,18 @@ final class RichDiff {
                         new Row(lines.get(at), measured.get(at), onLines.get(at), unplaced || at < lines.size() - 1));
         Vector<Vector<Row>> byHunk =
                 cut(rows, parsed.hunks().map(hunk -> hunk.lines().size()));
-        return List.<Pending>of(() -> List.of(
-                                Line.from(styled(padded(bar, width), Theme.Classes.DIFF_FILE_HEADER, styles)))
-                        .appendAll(note(file).map(text -> Line.from(styled(text, Theme.Classes.DIM, styles)))))
+        return List.<Pending>of(() -> List.of(new Marked(
+                                Line.from(styled(padded(bar, width), Theme.Classes.DIFF_FILE_HEADER, styles)),
+                                Option.of(new Mark(new Anchor.File(file.path()), 1, width))))
+                        .appendAll(note(file)
+                                .map(text -> Marked.plain(Line.from(styled(text, Theme.Classes.DIM, styles))))))
                 .appendAll(remarks.toList()
-                        .<Pending>map(placed -> () ->
-                                blocks.threads(placed.onFile(), !file.hunks().isEmpty() || unplaced, styles)))
+                        .<Pending>map(placed -> () -> blocks.threads(
+                                placed.onFile(), Option.none(), !file.hunks().isEmpty() || unplaced, styles)))
                 .appendAll(parsed.hunks()
                         .zipWithIndex((hunk, at) -> hunk(hunk.hunk(), byHunk.get(at), at == 0, layout))
                         .flatMap(hunk -> hunk))
-                .appendAll(remarks.toList()
-                        .<Pending>map(placed -> () -> RemarkLines.unplaced(
-                                placed.unplaced(), blocks.indent(), blocks.width(), style, styles)));
+                .appendAll(remarks.toList().<Pending>map(placed -> () -> blocks.unplaced(placed.unplaced(), styles)));
     }
 
     /**
@@ -189,13 +200,16 @@ final class RichDiff {
         Span rule = styled("┄".repeat(2 * layout.digits() + 1) + GUTTER_END, Theme.Classes.DIFF_LINE_NUMBER, styles);
         List<Pending> header = hunk.header().isEmpty() || (first && hunk.numbered())
                 ? List.empty()
-                : List.of(() -> List.of(
+                : List.of(() -> List.of(Marked.plain(
                         hunk.numbered()
                                 ? Line.from(rule)
-                                : Line.from(rule, styled(hunk.header(), Theme.Classes.DIFF_HUNK, styles))));
-        return header.appendAll(rows.<Pending>map(row -> () -> layout.blocks()
-                .threads(row.remarks().threads(), row.followed(), styles)
-                .prepend(line(row, layout))));
+                                : Line.from(rule, styled(hunk.header(), Theme.Classes.DIFF_HUNK, styles)))));
+        return header.appendAll(rows.<Pending>map(row -> () -> {
+            Option<Anchor.OnLine> anchor = Anchor.of(layout.path(), row.parsed().line());
+            return layout.blocks()
+                    .threads(row.remarks().threads(), anchor, row.followed(), styles)
+                    .prepend(new Marked(line(row, layout), anchor.map(on -> new Mark(on, 1, layout.fileWidth()))));
+        }));
     }
 
     /**
@@ -386,7 +400,73 @@ final class RichDiff {
     @FunctionalInterface
     private interface Pending {
 
-        List<Line> draw();
+        List<Marked> draw();
+    }
+
+    /**
+     * A line drawn, and the stop of the cursor that starts on it, if one does.
+     */
+    private record Marked(Line line, Option<Mark> mark) {
+
+        static Marked plain(Line line) {
+            return new Marked(line, Option.none());
+        }
+    }
+
+    /**
+     * A stop of the cursor (ADR 60): what it is, how many lines it has itself, after which the lines that are no stop
+     * are part of it too, and how many columns the cursor is tinted on.
+     *
+     * @param anchor what it is
+     * @param lines  how many lines it has itself
+     * @param width  how many columns its tint covers: the width of its file
+     */
+    record Mark(Anchor anchor, int lines, int width) {}
+
+    /**
+     * Where a stop of the cursor starts.
+     *
+     * @param mark the stop
+     * @param row  the line it starts on
+     */
+    record Stop(Mark mark, int row) {}
+
+    /**
+     * The lines of a diff, and where each stop of the cursor in them starts, in order.
+     */
+    record Drawn(List<Line> lines, List<Stop> stops) {
+
+        private static Drawn of(List<Marked> marked) {
+            return new Drawn(
+                    marked.map(Marked::line),
+                    marked.zipWithIndex().flatMap(line -> line._1().mark().map(mark -> new Stop(mark, line._2()))));
+        }
+
+        /**
+         * {@code lines}, without a stop: what has no cursor.
+         */
+        static Drawn plain(List<Line> lines) {
+            return new Drawn(lines, List.empty());
+        }
+
+        /**
+         * These lines after {@code before}, their stops moved down by as many lines.
+         */
+        Drawn after(List<Line> before) {
+            return new Drawn(
+                    lines.prependAll(before), stops.map(stop -> new Stop(stop.mark(), stop.row() + before.size())));
+        }
+
+        /**
+         * These lines with what comes before their first stop as a stop of its own, the lead, if anything does.
+         */
+        Drawn withLead() {
+            return stops.headOption()
+                    .filter(first -> first.row() > 0)
+                    .map(first ->
+                            new Drawn(lines, stops.prepend(new Stop(new Mark(new Anchor.Lead(), first.row(), 0), 0))))
+                    .getOrElse(this);
+        }
     }
 
     /**
@@ -394,7 +474,14 @@ final class RichDiff {
      * columns after the gutter its changed lines are padded to, its {@code width}, how the threads on its lines are
      * drawn, whether its code is coloured by its syntax, and the styles of the theme.
      */
-    private record Layout(int digits, int width, Blocks blocks, boolean syntax, Theme.SpanStyles styles) {}
+    private record Layout(
+            String path,
+            int digits,
+            int width,
+            int fileWidth,
+            Blocks blocks,
+            boolean syntax,
+            Theme.SpanStyles styles) {}
 
     /**
      * A line of a file with what drawing it takes besides the layout of its file: how many columns its text was
@@ -419,12 +506,43 @@ final class RichDiff {
     private record Blocks(int indent, int width, RemarkLines.RemarkStyle style) {
 
         /**
-         * The lines of {@code threads}, then a blank line that sets them apart from what follows them in their file,
-         * if they are {@code followed} by anything.
+         * The lines of {@code threads}, after {@code line} if they are, each a stop of the cursor, then a blank line
+         * that sets them apart from what follows them in their file, if they are {@code followed} by anything.
          */
-        List<Line> threads(List<ReviewThread> threads, boolean followed, Theme.SpanStyles styles) {
-            return RemarkLines.threads(threads, indent, width, style, styles)
-                    .appendAll(followed && !threads.isEmpty() ? List.of(Line.from("")) : List.empty());
+        List<Marked> threads(
+                List<ReviewThread> threads, Option<Anchor.OnLine> line, boolean followed, Theme.SpanStyles styles) {
+            return marked(threads, line, RemarkLines.blocks(threads, indent, width, style, styles))
+                    .appendAll(followed && !threads.isEmpty() ? List.of(Marked.plain(Line.from(""))) : List.empty());
+        }
+
+        /**
+         * The lines of {@code threads}, which cannot be placed, under a line that says so, each a stop of the cursor.
+         */
+        List<Marked> unplaced(List<ReviewThread> threads, Theme.SpanStyles styles) {
+            return threads.isEmpty()
+                    ? List.empty()
+                    : marked(threads, Option.none(), RemarkLines.unplacedBlocks(threads, indent, width, style, styles))
+                            .prepend(Marked.plain(RemarkLines.unplacedHeading(indent, styles)));
+        }
+
+        /**
+         * The {@code blocks} of {@code threads}, with a blank line between two of them, the first line of each the
+         * start of its stop.
+         */
+        private List<Marked> marked(List<ReviewThread> threads, Option<Anchor.OnLine> line, List<List<Line>> blocks) {
+            return threads.zip(blocks)
+                    .map(block -> block._2()
+                            .zipWithIndex()
+                            .map(drawn -> new Marked(
+                                    drawn._1(),
+                                    Option.when(
+                                            drawn._2() == 0,
+                                            () -> new Mark(
+                                                    new Anchor.Thread(block._1().id(), line),
+                                                    block._2().size(),
+                                                    indent + width)))))
+                    .intersperse(List.of(Marked.plain(Line.from(""))))
+                    .flatMap(Function.identity());
         }
     }
 }

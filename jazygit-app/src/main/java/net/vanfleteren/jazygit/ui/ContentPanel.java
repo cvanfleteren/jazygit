@@ -109,20 +109,29 @@ public final class ContentPanel {
      * they could not be read comes first.
      */
     static Text diffText(ShownDiff diff, DiffLook look, Option<ShownRemarks> remarks, Theme.SpanStyles styles) {
+        return styledText(diffDrawn(diff, look, remarks, styles).lines());
+    }
+
+    /**
+     * The lines of {@link #diffText(ShownDiff, DiffLook, Option, Theme.SpanStyles)}, with the stops of the cursor in
+     * the rich view (ADR 60).
+     */
+    static RichDiff.Drawn diffDrawn(
+            ShownDiff diff, DiffLook look, Option<ShownRemarks> remarks, Theme.SpanStyles styles) {
         List<Line> failed = remarks.flatMap(ShownRemarks::failed)
                 .map(failure -> Line.from(styled(
                         Messages.get("content.remarks.failed", Placeholders.error(failure)),
                         Theme.Classes.ERROR,
                         styles)))
                 .toList();
-        List<Line> lines = switch (look.style()) {
+        RichDiff.Drawn drawn = switch (look.style()) {
             case PLAIN ->
-                remarks.filter(shown -> !shown.threads().isEmpty())
+                RichDiff.Drawn.plain(remarks.filter(shown -> !shown.threads().isEmpty())
                         .map(shown -> counted(diff, shown.threads(), styles))
-                        .getOrElse(() -> changeLines(diff, look, styles));
-            case RICH -> RichDiff.lines(diff.parsed(), look.syntax(), remarks, styles);
+                        .getOrElse(() -> changeLines(diff, look, styles)));
+            case RICH -> RichDiff.drawn(diff.parsed(), look.syntax(), remarks, styles);
         };
-        return styledText(failed.appendAll(lines));
+        return drawn.after(failed).withLead();
     }
 
     /**
@@ -256,17 +265,31 @@ public final class ContentPanel {
      * Like {@code git show}: the commit's header, its indented message, a {@code ---} line and then the changes.
      */
     static Text commitText(Commit commit, ShownDiff changes, DiffLook look, Theme.SpanStyles styles) {
+        return styledText(commitDrawn(commit, changes, look, styles).lines());
+    }
+
+    /**
+     * The lines of {@link #commitText}, with the stops of the cursor in the rich view (ADR 60).
+     */
+    static RichDiff.Drawn commitDrawn(Commit commit, ShownDiff changes, DiffLook look, Theme.SpanStyles styles) {
         List<String> message = messageLines(commit);
-        return styledText(List.of(
-                        styled(Messages.get("content.commitSha", commit.sha().value()), Theme.Classes.SHA, styles),
-                        Span.raw(Messages.get("content.commitAuthor", commit.authorName(), commit.authorEmail())),
-                        dateLine(commit.authorTime()),
-                        Span.raw(""),
-                        styled(message.head(), Theme.Classes.BOLD, styles))
-                .map(Line::from)
-                .appendAll(message.tail().map(line -> Line.from(Span.raw(line))))
-                .append(Line.from(Span.raw("---")))
-                .appendAll(changeLines(changes, look, styles)));
+        return changeDrawn(changes, look, styles)
+                .after(List.of(
+                                styled(
+                                        Messages.get(
+                                                "content.commitSha",
+                                                commit.sha().value()),
+                                        Theme.Classes.SHA,
+                                        styles),
+                                Span.raw(Messages.get(
+                                        "content.commitAuthor", commit.authorName(), commit.authorEmail())),
+                                dateLine(commit.authorTime()),
+                                Span.raw(""),
+                                styled(message.head(), Theme.Classes.BOLD, styles))
+                        .map(Line::from)
+                        .appendAll(message.tail().map(line -> Line.from(Span.raw(line))))
+                        .append(Line.from(Span.raw("---"))))
+                .withLead();
     }
 
     /**
@@ -274,22 +297,40 @@ public final class ContentPanel {
      * it was stashed, a {@code ---} line and then the changes.
      */
     static Text stashText(Stash stash, ShownDiff changes, DiffLook look, Theme.SpanStyles styles) {
-        return styledText(List.of(styled(
-                        Messages.get("content.stashHeader", stash.ref(), stash.message()), Theme.Classes.SHA, styles))
-                .appendAll(stash.branch().map(branch -> Span.raw(Messages.get("content.stashBranch", branch.value()))))
-                .append(dateLine(stash.time()))
-                .map(Line::from)
-                .append(Line.from(Span.raw("---")))
-                .appendAll(changeLines(changes, look, styles)));
+        return styledText(stashDrawn(stash, changes, look, styles).lines());
+    }
+
+    /**
+     * The lines of {@link #stashText}, with the stops of the cursor in the rich view (ADR 60).
+     */
+    static RichDiff.Drawn stashDrawn(Stash stash, ShownDiff changes, DiffLook look, Theme.SpanStyles styles) {
+        return changeDrawn(changes, look, styles)
+                .after(List.of(styled(
+                                Messages.get("content.stashHeader", stash.ref(), stash.message()),
+                                Theme.Classes.SHA,
+                                styles))
+                        .appendAll(stash.branch()
+                                .map(branch -> Span.raw(Messages.get("content.stashBranch", branch.value()))))
+                        .append(dateLine(stash.time()))
+                        .map(Line::from)
+                        .append(Line.from(Span.raw("---"))))
+                .withLead();
     }
 
     /**
      * A unified diff, drawn as {@code look} says.
      */
     static List<Line> changeLines(ShownDiff changes, DiffLook look, Theme.SpanStyles styles) {
+        return changeDrawn(changes, look, styles).lines();
+    }
+
+    /**
+     * A unified diff, drawn as {@code look} says, with the stops of the cursor in the rich view (ADR 60).
+     */
+    private static RichDiff.Drawn changeDrawn(ShownDiff changes, DiffLook look, Theme.SpanStyles styles) {
         return switch (look.style()) {
-            case PLAIN -> lines(changes.text()).map(line -> diffLine(line, styles));
-            case RICH -> RichDiff.lines(changes.parsed(), look.syntax(), styles);
+            case PLAIN -> RichDiff.Drawn.plain(lines(changes.text()).map(line -> diffLine(line, styles)));
+            case RICH -> RichDiff.drawn(changes.parsed(), look.syntax(), Option.none(), styles);
         };
     }
 
@@ -347,7 +388,7 @@ public final class ContentPanel {
                             case DIM -> text(content).addClass(Theme.Classes.DIM);
                             case ERROR -> text(content).addClass(Theme.Classes.ERROR);
                         });
-            case Shown.Area area -> area(area.area()).show(model, focusedId, area, this::bodyText);
+            case Shown.Area area -> area(area.area()).show(model, focusedId, area, this::bodyDrawn, styles);
             case Shown.Stacked(List<Shown.Area> stacked) ->
                 column(stacked.<Element>map(area -> element(area, model, focusedId))
                         .toJavaArray(Element[]::new));
@@ -355,20 +396,24 @@ public final class ContentPanel {
     }
 
     /**
-     * {@code body}, styled.
+     * {@code body}, styled, with the stops of the cursor of a rich diff (ADR 60).
      */
-    private Text bodyText(Body body) {
+    private RichDiff.Drawn bodyDrawn(Body body) {
         return switch (body) {
-            case Body.Diff(ShownDiff diff, DiffLook look, var remarks) -> diffText(diff, look, remarks, styles);
+            case Body.Diff(ShownDiff diff, DiffLook look, var remarks) -> diffDrawn(diff, look, remarks, styles);
             case Body.BranchLog(List<Commit> commits, AheadView ahead) ->
-                logText(commits, ZoneId.systemDefault(), ahead, styles);
+                plain(logText(commits, ZoneId.systemDefault(), ahead, styles));
             case Body.CommitChanges(Commit commit, ShownDiff changes, DiffLook look) ->
-                commitText(commit, changes, look, styles);
+                commitDrawn(commit, changes, look, styles);
             case Body.StashChanges(Stash stash, ShownDiff changes, DiffLook look) ->
-                stashText(stash, changes, look, styles);
+                stashDrawn(stash, changes, look, styles);
             case Body.PullRequest(PullRequestSummary pullRequest, PullRequestPreview preview) ->
-                pullRequestText(pullRequest, preview, styles);
+                plain(pullRequestText(pullRequest, preview, styles));
         };
+    }
+
+    private static RichDiff.Drawn plain(Text text) {
+        return RichDiff.Drawn.plain(List.ofAll(text.lines()));
     }
 
     /**
@@ -436,8 +481,10 @@ public final class ContentPanel {
         private final Consumer<String> focus;
         private final Consumer<Msg> dispatch;
         // The body last shown, the theme it was styled in and its text: a frame that shows the same, like one drawn
-        // only to turn a spinner, does not style it again.
+        // only to turn a spinner, or a move of the cursor, does not style it again.
         private Option<Styled> styled = Option.none();
+        // The cursor of the rich diff shown, as last drawn: what the keys and the wheel move (ADR 60).
+        private Option<DiffCursor> cursor = Option.none();
 
         ScrollArea(ContentArea area, BooleanSupplier leaveScrollArea, Consumer<String> focus, Consumer<Msg> dispatch) {
             this.area = area;
@@ -459,19 +506,29 @@ public final class ContentPanel {
         /**
          * The area as {@code shown}, its body as {@code style} styles it, where the model has it scrolled to.
          */
-        RichTextAreaElement show(Model model, String focusedId, Shown.Area shown, Function<Body, Text> style) {
+        RichTextAreaElement show(
+                Model model,
+                String focusedId,
+                Shown.Area shown,
+                Function<Body, RichDiff.Drawn> style,
+                Theme.SpanStyles styles) {
             ThemeName theme = model.preferences().theme();
             Styled current = styled.filter(last -> last.body().equals(shown.body()) && last.theme() == theme)
-                    .getOrElse(() -> new Styled(shown.body(), theme, style.apply(shown.body())));
+                    .getOrElse(() -> Styled.of(shown.body(), theme, style.apply(shown.body())));
             styled = Option.of(current);
             ScrolledContent content = shown.content();
             Scrolled at = model.scrolled(id, content);
-            RichTextState state =
-                    element.text(current.text()).title(shown.title()).state();
-            state.scrollToTop();
-            state.scrollDown(at.row());
-            state.scrollRight(at.column());
+            RichTextState state = element.state();
+            cursor = DiffCursor.of(
+                    current.stops(), current.text().height(), state.viewportHeight(), at.row(), at.cursor());
             boolean focused = id.equals(focusedId);
+            element.text(cursor.filter(ignored -> focused)
+                            .map(on -> on.tinted(current.text(), styles.of(Theme.Classes.DIFF_CURSOR)))
+                            .getOrElse(current.text()))
+                    .title(shown.title());
+            state.scrollToTop();
+            state.scrollDown(cursor.map(DiffCursor::row).getOrElse(at.row()));
+            state.scrollRight(at.column());
             return element.onKeyEvent(event -> keys(event, focused, content))
                     .onMouseEvent(event -> mouse(event, content));
         }
@@ -481,7 +538,39 @@ public final class ContentPanel {
             if (event.code() == KeyCode.ESCAPE && leaveScrollArea.getAsBoolean()) {
                 return EventResult.HANDLED;
             }
-            return focused && scroll(element.state(), event) ? scrolled(content) : EventResult.UNHANDLED;
+            if (!focused) {
+                return EventResult.UNHANDLED;
+            }
+            Option<DiffCursor> moved = cursor.flatMap(on -> move(on, event));
+            if (moved.isDefined()) {
+                return moved(moved.get(), content);
+            }
+            return scroll(element.state(), event) ? scrolled(content) : EventResult.UNHANDLED;
+        }
+
+        /**
+         * Where the keys that move the cursor of a rich diff take it, if {@code event} is one of them.
+         */
+        private static Option<DiffCursor> move(DiffCursor cursor, KeyEvent event) {
+            return Option.<DiffCursor>none()
+                    .orElse(Option.when(event.matches(Actions.MOVE_UP), cursor::up))
+                    .orElse(Option.when(event.matches(Actions.MOVE_DOWN), cursor::down))
+                    .orElse(Option.when(event.matches(Actions.PAGE_UP), cursor::pageUp))
+                    .orElse(Option.when(event.matches(Actions.PAGE_DOWN), cursor::pageDown))
+                    .orElse(Option.when(event.matches(Actions.HOME), cursor::home))
+                    .orElse(Option.when(event.matches(Actions.END), cursor::end));
+        }
+
+        /**
+         * Shows the cursor {@code moved}, and tells the model where it is and where the area is scrolled to, in one
+         * message, so the model never has the cursor off the screen.
+         */
+        private EventResult moved(DiffCursor moved, ScrolledContent content) {
+            cursor = Option.of(moved);
+            RichTextState state = element.state();
+            state.scrollToTop();
+            state.scrollDown(moved.row());
+            return scrolled(content);
         }
 
         /**
@@ -494,12 +583,18 @@ public final class ContentPanel {
                 return EventResult.HANDLED;
             }
             if (event.kind() == MouseEventKind.SCROLL_UP) {
-                state.scrollUp(WHEEL_LINES);
-                return scrolled(content);
+                return cursor.map(on -> moved(on.scrolled(-WHEEL_LINES), content))
+                        .getOrElse(() -> {
+                            state.scrollUp(WHEEL_LINES);
+                            return scrolled(content);
+                        });
             }
             if (event.kind() == MouseEventKind.SCROLL_DOWN) {
-                state.scrollDown(WHEEL_LINES);
-                return scrolled(content);
+                return cursor.map(on -> moved(on.scrolled(WHEEL_LINES), content))
+                        .getOrElse(() -> {
+                            state.scrollDown(WHEEL_LINES);
+                            return scrolled(content);
+                        });
             }
             return EventResult.UNHANDLED;
         }
@@ -526,13 +621,21 @@ public final class ContentPanel {
          */
         private EventResult scrolled(ScrolledContent content) {
             RichTextState state = element.state();
-            dispatch.accept(new Msg.ContentScrolled(id, new Scrolled(content, state.scrollRow(), state.scrollCol())));
+            dispatch.accept(new Msg.ContentScrolled(
+                    id, new Scrolled(content, state.scrollRow(), state.scrollCol(), cursor.map(DiffCursor::anchor))));
             return EventResult.HANDLED;
         }
 
         /**
-         * {@code body}, styled in {@code theme} as {@code text}.
+         * {@code body}, styled in {@code theme} as {@code text}, with where the stops of its cursor start, if it has
+         * one.
          */
-        private record Styled(Body body, ThemeName theme, Text text) {}
+        private record Styled(Body body, ThemeName theme, Text text, Vector<RichDiff.Stop> stops) {
+
+            static Styled of(Body body, ThemeName theme, RichDiff.Drawn drawn) {
+                return new Styled(
+                        body, theme, styledText(drawn.lines()), drawn.stops().toVector());
+            }
+        }
     }
 }
