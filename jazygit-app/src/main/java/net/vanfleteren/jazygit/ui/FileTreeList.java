@@ -48,6 +48,8 @@ final class FileTreeList<T extends Pathed> {
     // What the files are of, and the files, that the tree was built for.
     private Option<Object> shownOf = Option.none();
     private Option<Loadable<List<T>>> shown = Option.none();
+    // What the tree says while the files are read, and when there are none, that it was built for.
+    private Placeholder placeholder = Placeholder.DEFAULT;
     // Whether the files have not been read since they were last loading, so the start highlight is still to place.
     private boolean unread;
     // The nodes drawn for the frame being rendered, with what they were drawn as, to find the one clicked on.
@@ -92,18 +94,30 @@ final class FileTreeList<T extends Pathed> {
      * @param active whether the pane is in use, which shows the highlighted node
      */
     TreeElement<FileTree<T>> render(Object of, Loadable<List<T>> files, boolean active) {
+        return render(of, files, active, Placeholder.DEFAULT);
+    }
+
+    /**
+     * The tree of {@code files}, which are those of {@code of}, rebuilt when they are not the ones it was built for,
+     * saying what {@code placeholder} says while they are read or when there are none.
+     *
+     * @param active whether the pane is in use, which shows the highlighted node
+     */
+    TreeElement<FileTree<T>> render(Object of, Loadable<List<T>> files, boolean active, Placeholder placeholder) {
         drawn = List.of();
         tree.highlightStyle(highlights.of(active))
                 .highlightSymbol(active ? HIGHLIGHT_SYMBOL : " ".repeat(HIGHLIGHT_SYMBOL.length()));
         if (!shownOf.contains(of)) {
             shownOf = Option.of(of);
             shown = Option.of(files);
+            this.placeholder = placeholder;
             roots = List.of();
             rebuild(files);
             tree.selected(0);
             unread = true;
-        } else if (!shown.contains(files)) {
+        } else if (!shown.contains(files) || !this.placeholder.equals(placeholder)) {
             shown = Option.of(files);
+            this.placeholder = placeholder;
             rebuild(files);
         }
         // A load already lost the highlight, so it is placed afresh once the files are read again.
@@ -139,7 +153,7 @@ final class FileTreeList<T extends Pathed> {
      * a rebuild.
      */
     Option<Integer> count(Loadable<List<T>> files) {
-        return files.toOption().map(read -> visible(roots).size());
+        return files.toOption().map(read -> read.isEmpty() ? 0 : visible(roots).size());
     }
 
     /**
@@ -245,10 +259,15 @@ final class FileTreeList<T extends Pathed> {
     private List<TreeNode<FileTree<T>>> roots(Loadable<List<T>> files, Set<String> collapsed) {
         return switch (files) {
             case Loadable.Loading<List<T>>() ->
-                List.of(TreeNode.<FileTree<T>>of(Placeholders.loading()).leaf());
+                List.of(TreeNode.<FileTree<T>>of(placeholder.loading()).leaf());
             case Loadable.Failed<List<T>>(Failure failure) ->
                 List.of(TreeNode.<FileTree<T>>of(Placeholders.error(failure)).leaf());
-            case Loadable.Loaded<List<T>>(List<T> value) when value.isEmpty() -> List.of();
+            case Loadable.Loaded<List<T>>(List<T> value)
+            when value.isEmpty() ->
+                placeholder
+                        .empty()
+                        .map(empty -> TreeNode.<FileTree<T>>of(empty).leaf())
+                        .toList();
             case Loadable.Loaded<List<T>>(List<T> value) ->
                 List.of(node(new FileTree.Dir<>(ROOT_NAME, "", FileTree.of(value)), collapsed));
         };
@@ -292,6 +311,17 @@ final class FileTreeList<T extends Pathed> {
      */
     private static int clamp(int index, int size) {
         return Math.max(0, Math.min(index, size - 1));
+    }
+
+    /**
+     * What a tree says in place of its files.
+     *
+     * @param loading what it says while they are read
+     * @param empty   what it says when there are none; nothing when it shows nothing then
+     */
+    record Placeholder(String loading, Option<String> empty) {
+
+        static final Placeholder DEFAULT = new Placeholder(Placeholders.loading(), Option.none());
     }
 
     /**

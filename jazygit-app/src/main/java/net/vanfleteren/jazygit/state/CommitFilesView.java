@@ -24,6 +24,7 @@ import net.vanfleteren.jazygit.git.model.Sha;
  *                 highlighted
  * @param remarks  the review threads of a pull request, as they are read; none for a commit or a stash (ADR 55)
  * @param opened   whether every review thread is shown open, the resolved ones and the hidden comments too
+ * @param listed   which of the files are listed: all of them, or only those with review threads (ADR 57)
  */
 @With
 public record CommitFilesView(
@@ -33,7 +34,8 @@ public record CommitFilesView(
         Loadable<List<CommitFile>> files,
         Option<Preview<List<CommitFile>, DiffText>> diff,
         Option<Loadable<ReviewRemarks>> remarks,
-        boolean opened) {
+        boolean opened,
+        Listed listed) {
 
     /**
      * The view of the files of {@code of}, opened from the pane {@code pane} and listed in {@code listedIn}, while
@@ -47,7 +49,21 @@ public record CommitFilesView(
                 Loadable.loading(),
                 Option.none(),
                 Option.when(of instanceof Changes.OfPullRequest, Loadable::loading),
-                false);
+                false,
+                Listed.ALL);
+    }
+
+    /**
+     * The files the tree lists, of those read: all of them, or those with the review threads {@link #listed} keeps,
+     * once those are read too (ADR 57).
+     */
+    public Loadable<List<CommitFile>> listedFiles() {
+        if (listed == Listed.ALL || !(files instanceof Loadable.Loaded<List<CommitFile>>(List<CommitFile> read))) {
+            return files;
+        }
+        return remarks.<Loadable<List<ReviewThread>>>map(loaded -> loaded.map(ReviewRemarks::threads))
+                .getOrElse(() -> new Loadable.Loaded<>(List.empty()))
+                .map(threads -> read.filter(file -> listed.keeps(file, threads)));
     }
 
     /**
@@ -104,6 +120,40 @@ public record CommitFilesView(
      */
     public Cmd.LoadCommitFileDiff diffLoad(List<CommitFile> files, DiffOptions options) {
         return new Cmd.LoadCommitFileDiff(of, files, options);
+    }
+
+    /**
+     * Which of the files the tree lists (ADR 57).
+     */
+    public enum Listed {
+        /**
+         * Every file.
+         */
+        ALL,
+        /**
+         * The files with a review thread that is not resolved.
+         */
+        UNRESOLVED,
+        /**
+         * The files with a review thread, resolved or not.
+         */
+        REMARKED;
+
+        /**
+         * What is listed after this, as {@code c} cycles through them.
+         */
+        public Listed next() {
+            return values()[(ordinal() + 1) % values().length];
+        }
+
+        /**
+         * Whether {@code file} is listed, with {@code threads} the review threads of the pull request.
+         */
+        public boolean keeps(CommitFile file, List<ReviewThread> threads) {
+            return this == ALL
+                    || threads.exists(thread ->
+                            (this == REMARKED || !thread.resolved()) && thread.isOn(file.path(), file.origin()));
+        }
     }
 
     /**

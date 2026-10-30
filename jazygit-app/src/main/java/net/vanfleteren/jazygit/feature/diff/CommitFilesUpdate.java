@@ -20,7 +20,8 @@ import net.vanfleteren.jazygit.state.Update.Next;
  * Listing the files a commit, a stash or a pull request changed in the files pane, in place of the changed files of
  * the working tree, and going back to those (ADR 44). The view moves the focus: into the files pane when they are
  * listed, and back to the pane they were opened from when they are closed. The files of a pull request come with its
- * review threads, which are read again when asked, and shown open or not (ADR 55).
+ * review threads, which are read again when asked, and shown open or not (ADR 55), and can list only the files that
+ * have some (ADR 57).
  */
 public final class CommitFilesUpdate {
 
@@ -48,6 +49,11 @@ public final class CommitFilesUpdate {
             case CommitFilesMsg.RemarksToggled() ->
                 Next.of(model.mapRepoView(repoView -> repoView.withCommitFiles(repoView.commitFiles()
                         .map(view -> view.remarks().isDefined() ? view.withOpened(!view.opened()) : view))));
+            case CommitFilesMsg.ListedCycled() ->
+                Next.of(model.mapRepoView(repoView -> repoView.withCommitFiles(repoView.commitFiles()
+                        .map(view -> view.remarks().isDefined()
+                                ? view.withListed(view.listed().next())
+                                : view))));
             case CommitFilesMsg.RemarksRefreshed() ->
                 new Next(
                         model,
@@ -78,7 +84,8 @@ public final class CommitFilesUpdate {
                                 CommitFilesView again = CommitFilesView.of(
                                                 new Changes.OfPullRequest(commits), view.pane(), view.listedIn())
                                         .withRemarks(read.remarks())
-                                        .withOpened(view.opened());
+                                        .withOpened(view.opened())
+                                        .withListed(view.listed());
                                 return Next.of(
                                         model.mapRepoView(repoView -> repoView.withCommitFiles(Option.of(again))),
                                         again.load());

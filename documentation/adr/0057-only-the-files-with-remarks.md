@@ -33,9 +33,9 @@ thread is shown open, `t`, is kept in `CommitFilesView`, not in the settings.
 - The title says what is listed: `Files of #123 · unresolved remarks` or `Files of #123 · with remarks`, after
   `· merged` or `· closed` when the pull request is: `Files of #123 · merged · with remarks`. The count in the border
   counts the files kept.
-- When none is kept, the pane says why in place of the tree, and the content panel shows nothing: `No file has
-  unresolved remarks`, or `No file has remarks`; `Reading the remarks…` while they are read; and why the read failed
-  when it did and none were read before. Not: refusing to switch, which a slow read of the remarks would make look
+- When none is kept, the pane says why in place of the tree, and the content panel says it too, in place of the diff
+  of a node no longer highlighted: `No file has unresolved remarks`, or `No file has remarks`; `Reading the remarks…`
+  while they are read; and why the read failed when it did and none were read before. Not: refusing to switch, which a slow read of the remarks would make look
   like a lost key.
 - The files kept are those of the threads read last: after `R`, a file whose last unresolved thread was resolved
   leaves the tree of unresolved remarks. The highlight stays on its file while it is listed, else it moves to the next
