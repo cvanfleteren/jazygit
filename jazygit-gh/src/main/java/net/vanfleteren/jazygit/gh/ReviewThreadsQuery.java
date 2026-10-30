@@ -11,6 +11,7 @@ import static net.vanfleteren.jazygit.json.Decoder.list;
 import static net.vanfleteren.jazygit.json.Decoder.map2;
 import static net.vanfleteren.jazygit.json.Decoder.map3;
 import static net.vanfleteren.jazygit.json.Decoder.map4;
+import static net.vanfleteren.jazygit.json.Decoder.map5;
 import static net.vanfleteren.jazygit.json.Decoder.map8;
 import static net.vanfleteren.jazygit.json.Decoder.nullable;
 import static net.vanfleteren.jazygit.json.Decoder.string;
@@ -42,10 +43,11 @@ final class ReviewThreadsQuery {
      */
     static final String QUERY = """
             query($owner: String!, $name: String!, $number: Int!, $endCursor: String) { \
-            repository(owner: $owner, name: $name) { pullRequest(number: $number) { state headRefOid baseRefOid \
+            repository(owner: $owner, name: $name) { pullRequest(number: $number) { id state headRefOid baseRefOid \
             reviewThreads(first: 100, after: $endCursor) { pageInfo { hasNextPage endCursor } \
-            nodes { path diffSide line startLine startDiffSide originalLine isResolved isOutdated subjectType \
-            comments(first: %d) { totalCount nodes { author { login } createdAt body state isMinimized \
+            nodes { id path diffSide line startLine startDiffSide originalLine isResolved isOutdated subjectType \
+            viewerCanReply viewerCanResolve viewerCanUnresolve \
+            comments(first: %d) { totalCount nodes { id author { login } createdAt body state isMinimized \
             minimizedReason } } } } } } }""".formatted(COMMENTS);
 
     // Who wrote it; empty when GitHub does not say, as for a deleted account.
@@ -53,17 +55,26 @@ final class ReviewThreadsQuery {
             .map(author -> author.flatMap(login -> login).getOrElse(""));
 
     // A comment; none for one of a review that is not submitted yet, which only its author sees.
-    static final Decoder<Option<Comment>> COMMENT = map3(
+    static final Decoder<Option<Comment>> COMMENT = map4(
             map3(AUTHOR, field("createdAt", instant()), field("body", string()), Tuple::of),
             field("state", string()),
             map2(field("isMinimized", bool()), field("minimizedReason", nullable(string())), Tuple::of),
-            (written, state, hidden) -> Option.when(
+            field("id", string()),
+            (written, state, hidden, id) -> Option.when(
                     !state.equals("PENDING"),
                     () -> new Comment(
                             written._1(),
                             written._2(),
                             written._3(),
-                            Option.when(hidden._1(), () -> hidden._2().getOrElse("")))));
+                            Option.when(hidden._1(), () -> hidden._2().getOrElse("")),
+                            id)));
+
+    // What the viewer may do with a thread.
+    static final Decoder<ReviewThread.Rights> RIGHTS = map3(
+            field("viewerCanReply", bool()),
+            field("viewerCanResolve", bool()),
+            field("viewerCanUnresolve", bool()),
+            ReviewThread.Rights::new);
 
     // The comments read of a thread, and how many more it has.
     static final Decoder<Tuple2<List<Comment>, Integer>> COMMENTS_READ = field(
@@ -74,7 +85,7 @@ final class ReviewThreadsQuery {
                     (total, nodes) -> Tuple.of(nodes.flatMap(comment -> comment), Math.max(0, total - nodes.size()))));
 
     // A thread; none for one with only comments of a review that is not submitted yet.
-    static final Decoder<Option<ReviewThread>> THREAD = map3(
+    static final Decoder<Option<ReviewThread>> THREAD = map5(
             map8(
                     field("path", string()),
                     field("diffSide", enumOf(Side.class)),
@@ -88,7 +99,9 @@ final class ReviewThreadsQuery {
             // The side of its first line, none when it is on one line; it is then that of its line.
             field("startDiffSide", nullable(enumOf(Side.class))),
             COMMENTS_READ,
-            (thread, startSide, comments) -> Option.when(
+            field("id", string()),
+            RIGHTS,
+            (thread, startSide, comments, id, rights) -> Option.when(
                     !comments._1().isEmpty(),
                     () -> new ReviewThread(
                             thread._1(),
@@ -101,24 +114,31 @@ final class ReviewThreadsQuery {
                             thread._7(),
                             thread._8(),
                             comments._1(),
-                            comments._2())));
+                            comments._2(),
+                            id,
+                            rights)));
 
     // One page: its state, the commits, and its threads.
     static final Decoder<ReviewRemarks> PAGE = at(
             "data.repository.pullRequest",
-            map4(
+            map5(
                     field("state", enumOf(PullRequestDetails.State.class)),
                     field("headRefOid", nullable(string())).map(oid -> oid.flatMap(GhCommit::parse)),
                     field("baseRefOid", nullable(string())).map(oid -> oid.flatMap(GhCommit::parse)),
                     at("reviewThreads.nodes", list(THREAD)),
-                    (state, head, base, threads) ->
-                            new ReviewRemarks(state, head, base, threads.flatMap(thread -> thread))));
+                    field("id", string()),
+                    (state, head, base, threads, id) ->
+                            new ReviewRemarks(state, head, base, threads.flatMap(thread -> thread), id)));
 
     // All pages, as one array: the state and the commits as the first page has them, and the threads of all.
     static final Decoder<ReviewRemarks> DECODER = list(PAGE)
             .map(pages -> pages.headOption()
                     .map(first -> new ReviewRemarks(
-                            first.state(), first.head(), first.base(), pages.flatMap(ReviewRemarks::threads)))
+                            first.state(),
+                            first.head(),
+                            first.base(),
+                            pages.flatMap(ReviewRemarks::threads),
+                            first.id()))
                     .getOrElse(ReviewRemarks::none));
 
     private ReviewThreadsQuery() {}

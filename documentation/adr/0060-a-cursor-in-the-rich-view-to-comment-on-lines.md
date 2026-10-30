@@ -21,7 +21,7 @@ A whole commit shows its header, its message and git's `--stat` before its first
 than the panel. A thread can be too, with a long comment or many replies. A conflicted file is drawn from a combined
 diff whose lines are dimmed notes, with no side and no number (ADR 47).
 
-`ReviewThread` has no id, nor have its comments, and the details of a pull request do not read its node id: GitHub's
+`ReviewThread` has no id, nor have its comments, and the node id of a pull request is not read: GitHub's
 mutations need them. `addPullRequestReviewThread` takes the pull request's id, a path, a line and a side, and a start
 line and start side for one on several lines, or a `subjectType` of `FILE`; GitHub refuses a thread whose first and
 last lines are in different hunks. `addPullRequestReviewThreadReply` takes the thread's id, `resolveReviewThread` and
@@ -148,7 +148,8 @@ Ctrl+O opens it in the editor, Escape goes back; a failed send says why under th
 - `ReviewThreadsQuery` reads the `id` of each thread and of each of its comments, and the thread's `viewerCanReply`,
   `viewerCanResolve` and `viewerCanUnresolve`. The ids of the comments are not used yet, but editing and deleting a
   comment will need them, and reading them costs a field of a query that is made anyway.
-- The details of a pull request read its node `id` too, next to `baseRefOid` and `headRefOid`.
+- It reads the node `id` of the pull request too, next to its state and commits: starting a thread needs the remarks
+  read at the tree's commits anyway. Not: in the details of the pull request, which the tree does not keep.
 - Editing and deleting a comment are for later (`wanted.md`).
 
 ### Delivery
@@ -158,7 +159,7 @@ Ctrl+O opens it in the editor, Escape goes back; a failed send says why under th
    move it, through stops higher than the panel too, the wheel, the anchor in `Scrolled`, put back on its anchor or
    the nearest stop, and `diff-cursor` in every theme, laid over the styled text, each tested on its own, with a test
    that moving the cursor does not style the diff again, and an acceptance test.
-3. The ids and rights in `ReviewThreadsQuery` and the pull request's id in its details; `Scopes.PULL_REQUEST_DIFF`
+3. The ids and rights in `ReviewThreadsQuery`, and the pull request's id; `Scopes.PULL_REQUEST_DIFF`
    with replying, resolving, `Space`, `n`, `N` and `R`, the threads being sent, and the guard on when it can comment,
    with an acceptance test against a fake gh that presses `x` twice.
 4. Ranges, `c` on a line, a range and a file, and the popup shared with `CommentDialog`, with an acceptance test

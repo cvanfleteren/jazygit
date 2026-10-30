@@ -165,14 +165,16 @@ class CommitFilesUpdateTest {
             false,
             ReviewThread.Subject.LINE,
             List.empty(),
-            0);
+            0,
+            "T",
+            ReviewThread.Rights.ALL);
 
     private static ReviewRemarks remarks(String head, String base) {
         return remarks(PullRequestDetails.State.OPEN, head, base);
     }
 
     private static ReviewRemarks remarks(PullRequestDetails.State state, String head, String base) {
-        return new ReviewRemarks(state, GhCommit.parse(head), GhCommit.parse(base), List.of(THREAD));
+        return new ReviewRemarks(state, GhCommit.parse(head), GhCommit.parse(base), List.of(THREAD), "");
     }
 
     private static Model openedPullRequest() {

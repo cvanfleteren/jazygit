@@ -284,7 +284,7 @@ class ContentViewTest {
                         new CommitFilesMsg.RemarksLoaded(
                                 7,
                                 new ReviewRemarks(
-                                        PullRequestDetails.State.OPEN, Option.none(), Option.none(), List.empty())))
+                                        PullRequestDetails.State.OPEN, Option.none(), Option.none(), List.empty(), "")))
                 .model();
         assertEquals(dim("Files of #7", "No file has unresolved remarks"), ContentView.of(none, FilesPanel.ID));
         assertEquals(

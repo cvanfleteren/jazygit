@@ -92,13 +92,14 @@ THREADS = "reviewThreads(first: 100"
 def threads(head: str, base: str) -> list:
     """The review threads of pull request 1: one open on line 1 of b.txt, one resolved on the same line."""
     def thread(resolved: bool, body: str) -> dict:
-        return {"path": "b.txt", "diffSide": "RIGHT", "line": 1, "startLine": None, "startDiffSide": None,
+        return {"id": f"PRRT_{body}", "path": "b.txt", "diffSide": "RIGHT", "line": 1, "startLine": None, "startDiffSide": None,
                 "originalLine": 1, "isResolved": resolved, "isOutdated": False, "subjectType": "LINE",
+                "viewerCanReply": True, "viewerCanResolve": not resolved, "viewerCanUnresolve": resolved,
                 "comments": {"totalCount": 1, "nodes": [
-                    {"author": {"login": "reviewer"}, "createdAt": DATE, "body": body, "state": "SUBMITTED",
+                    {"id": f"IC_{body}", "author": {"login": "reviewer"}, "createdAt": DATE, "body": body, "state": "SUBMITTED",
                      "isMinimized": False, "minimizedReason": None}]}}
     return [{"data": {"repository": {"pullRequest": {
-        "state": "OPEN", "headRefOid": head, "baseRefOid": base,
+        "id": "PR_1", "state": "OPEN", "headRefOid": head, "baseRefOid": base,
         "reviewThreads": {"pageInfo": {"hasNextPage": False, "endCursor": None},
                           "nodes": [thread(False, "Why **b**?"), thread(True, "Settled already")]},
     }}}}]

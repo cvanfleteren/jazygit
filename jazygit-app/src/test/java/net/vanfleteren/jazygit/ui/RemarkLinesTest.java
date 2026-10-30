@@ -58,8 +58,10 @@ class RemarkLinesTest {
                 resolved,
                 false,
                 Subject.LINE,
-                List.of(bodies).map(body -> new Comment("bob", NOW.minusSeconds(7200), body, Option.none())),
-                0);
+                List.of(bodies).map(body -> new Comment("bob", NOW.minusSeconds(7200), body, Option.none(), "C")),
+                0,
+                "T",
+                ReviewThread.Rights.ALL);
     }
 
     private static ShownRemarks shown(boolean opened, ReviewThread... threads) {
@@ -150,8 +152,10 @@ class RemarkLinesTest {
                 false,
                 false,
                 Subject.LINE,
-                List.of(new Comment("", NOW, "All of it", Option.none())),
-                2);
+                List.of(new Comment("", NOW, "All of it", Option.none(), "C")),
+                2,
+                "T",
+                ReviewThread.Rights.ALL);
         ReviewThread outdated = new ReviewThread(
                 "a.txt",
                 Side.RIGHT,
@@ -162,8 +166,10 @@ class RemarkLinesTest {
                 false,
                 true,
                 Subject.LINE,
-                List.of(new Comment("carol", NOW, "Old", Option.of("OUTDATED"))),
-                0);
+                List.of(new Comment("carol", NOW, "Old", Option.of("OUTDATED"), "C")),
+                0,
+                "T",
+                ReviewThread.Rights.ALL);
 
         List<String> lines = rich(shown(false, several, outdated));
 
@@ -252,8 +258,10 @@ class RemarkLinesTest {
                 false,
                 false,
                 Subject.FILE,
-                List.of(new Comment("bob", NOW.minusSeconds(7200), "Split this file", Option.none())),
-                0);
+                List.of(new Comment("bob", NOW.minusSeconds(7200), "Split this file", Option.none(), "C")),
+                0,
+                "T",
+                ReviewThread.Rights.ALL);
 
         List<String> lines = rich(shown(false, onFile));
 
@@ -275,8 +283,10 @@ class RemarkLinesTest {
                 false,
                 false,
                 Subject.LINE,
-                List.of(new Comment("carol", NOW, "Off topic", Option.of("OFF_TOPIC"))),
-                0);
+                List.of(new Comment("carol", NOW, "Off topic", Option.of("OFF_TOPIC"), "C")),
+                0,
+                "T",
+                ReviewThread.Rights.ALL);
 
         assertTrue(rich(shown(false, hidden)).contains(" ".repeat(8) + "┃  hidden · off-topic"));
         assertFalse(rich(shown(false, hidden)).contains(" ".repeat(8) + "┃  Off topic"));

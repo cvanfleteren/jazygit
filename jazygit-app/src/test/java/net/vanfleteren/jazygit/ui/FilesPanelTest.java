@@ -329,7 +329,8 @@ class FilesPanelTest {
                                         List.of(
                                                 remark("old.txt", ReviewThread.Side.LEFT, false),
                                                 remark("new.txt", ReviewThread.Side.RIGHT, false),
-                                                remark("b.txt", ReviewThread.Side.RIGHT, true)))))
+                                                remark("b.txt", ReviewThread.Side.RIGHT, true)),
+                                        "")))
                 .model();
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(read, FilesPanel.ID))) {
@@ -368,7 +369,8 @@ class FilesPanelTest {
                                                         Option.none(),
                                                         List.of(
                                                                 remark("dir/open.txt", ReviewThread.Side.RIGHT, false),
-                                                                remark("done.txt", ReviewThread.Side.RIGHT, true)))))
+                                                                remark("done.txt", ReviewThread.Side.RIGHT, true)),
+                                                        "")))
                                 .model(),
                         new CommitFilesMsg.ListedCycled())
                 .model();
@@ -382,7 +384,8 @@ class FilesPanelTest {
                                         PullRequestDetails.State.OPEN,
                                         Option.none(),
                                         Option.none(),
-                                        List.of(remark("done.txt", ReviewThread.Side.RIGHT, true)))))
+                                        List.of(remark("done.txt", ReviewThread.Side.RIGHT, true)),
+                                        "")))
                 .model();
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(unresolved, FilesPanel.ID))) {
@@ -430,7 +433,8 @@ class FilesPanelTest {
                                         Option.none(),
                                         List.of(
                                                 remark("dir/a.txt", ReviewThread.Side.RIGHT, false),
-                                                remark("dir/d.txt", ReviewThread.Side.RIGHT, false)))))
+                                                remark("dir/d.txt", ReviewThread.Side.RIGHT, false)),
+                                        "")))
                 .model();
         Model unresolved =
                 Update.update(read, new CommitFilesMsg.ListedCycled()).model();
@@ -464,8 +468,10 @@ class FilesPanelTest {
                 resolved,
                 false,
                 ReviewThread.Subject.LINE,
-                List.of(new ReviewThread.Comment("bob", java.time.Instant.EPOCH, "Hm", Option.none())),
-                0);
+                List.of(new ReviewThread.Comment("bob", java.time.Instant.EPOCH, "Hm", Option.none(), "C")),
+                0,
+                "T",
+                ReviewThread.Rights.ALL);
     }
 
     @Test

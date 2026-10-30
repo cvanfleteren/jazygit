@@ -185,4 +185,22 @@ public interface StubGitHub extends GitHub {
     default Either<GhFailure, List<ExecutedCommand>> commentOnPullRequest(int number, String body) {
         return Either.right(List.of(CliGitHub.commentCommand(number, body).executed()));
     }
+
+    @Override
+    default Either<GhFailure, Started> startReviewThread(String pullRequest, NewReviewThread thread) {
+        return Either.right(new Started(
+                "PRRT_new",
+                List.of(ReviewThreadMutations.start(pullRequest, thread).executed())));
+    }
+
+    @Override
+    default Either<GhFailure, List<ExecutedCommand>> replyToReviewThread(String thread, String body) {
+        return Either.right(List.of(ReviewThreadMutations.reply(thread, body).executed()));
+    }
+
+    @Override
+    default Either<GhFailure, List<ExecutedCommand>> resolveReviewThread(String thread, boolean resolved) {
+        return Either.right(
+                List.of(ReviewThreadMutations.resolve(thread, resolved).executed()));
+    }
 }
