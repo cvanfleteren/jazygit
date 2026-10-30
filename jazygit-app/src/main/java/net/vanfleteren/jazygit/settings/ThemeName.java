@@ -35,6 +35,10 @@ public enum ThemeName {
      */
     LIANTIS_DARK("liantis-dark"),
     /**
+     * The orange, blue, magenta and lavender of the Symfonic scheme for the macOS Terminal on black.
+     */
+    SYMFONIC("symfonic"),
+    /**
      * No styling at all: the terminal's own colours, as the UI is drawn without a theme.
      */
     NONE("none");
