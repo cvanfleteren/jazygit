@@ -15,10 +15,16 @@ import lombok.With;
  * @param repositoryWidth   the share of the width the left column takes on the repository screen, in percent
  * @param pullRequestsWidth the share of the width the left column takes on the pull requests screen, in percent
  * @param diffStyle         how the diffs of the working tree, of a commit and of a stash are drawn
+ * @param diffSyntax        whether the rich view colours the code of a diff by its syntax (ADR 53)
  */
 @With
 public record Settings(
-        ThemeName theme, Option<String> ghExecutable, int repositoryWidth, int pullRequestsWidth, DiffStyle diffStyle) {
+        ThemeName theme,
+        Option<String> ghExecutable,
+        int repositoryWidth,
+        int pullRequestsWidth,
+        DiffStyle diffStyle,
+        boolean diffSyntax) {
 
     /**
      * The narrowest the left column may get, in percent of the width.
@@ -37,7 +43,7 @@ public record Settings(
      * The settings of a first session.
      */
     public static final Settings DEFAULT =
-            new Settings(ThemeName.DARK, Option.none(), DEFAULT_WIDTH, DEFAULT_WIDTH, DiffStyle.PLAIN);
+            new Settings(ThemeName.DARK, Option.none(), DEFAULT_WIDTH, DEFAULT_WIDTH, DiffStyle.PLAIN, true);
 
     /**
      * The key of the theme in the settings file.
@@ -59,6 +65,10 @@ public record Settings(
      * The key of the diff style in the settings file.
      */
     static final String DIFF_STYLE = "ui.diff-style";
+    /**
+     * The key of whether the rich view colours code by its syntax in the settings file.
+     */
+    static final String DIFF_SYNTAX = "ui.diff-syntax";
 
     /**
      * {@code width} brought within the widths the left column may have.
@@ -87,13 +97,17 @@ public record Settings(
                 .filter(String.class::isInstance)
                 .map(String.class::cast)
                 .flatMap(DiffStyle::of);
+        Option<Object> diffSyntax = value.apply(DIFF_SYNTAX);
+        Option<Boolean> validDiffSyntax =
+                diffSyntax.filter(Boolean.class::isInstance).map(Boolean.class::cast);
         return new Read(
                 new Settings(
                         validTheme.getOrElse(DEFAULT.theme),
                         validGh,
                         validRepositoryWidth.getOrElse(DEFAULT_WIDTH),
                         validPullRequestsWidth.getOrElse(DEFAULT_WIDTH),
-                        validDiffStyle.getOrElse(DEFAULT.diffStyle)),
+                        validDiffStyle.getOrElse(DEFAULT.diffStyle),
+                        validDiffSyntax.getOrElse(DEFAULT.diffSyntax)),
                 Option.when(theme.isDefined() && validTheme.isEmpty(), THEME)
                         .toList()
                         .appendAll(Option.when(gh.isDefined() && validGh.isEmpty(), GH_EXECUTABLE))
@@ -101,7 +115,8 @@ public record Settings(
                                 repositoryWidth.isDefined() && validRepositoryWidth.isEmpty(), REPOSITORY_WIDTH))
                         .appendAll(Option.when(
                                 pullRequestsWidth.isDefined() && validPullRequestsWidth.isEmpty(), PULL_REQUESTS_WIDTH))
-                        .appendAll(Option.when(diffStyle.isDefined() && validDiffStyle.isEmpty(), DIFF_STYLE)));
+                        .appendAll(Option.when(diffStyle.isDefined() && validDiffStyle.isEmpty(), DIFF_STYLE))
+                        .appendAll(Option.when(diffSyntax.isDefined() && validDiffSyntax.isEmpty(), DIFF_SYNTAX)));
     }
 
     /**
@@ -136,7 +151,11 @@ public record Settings(
                 .merge(
                         diffStyle == DEFAULT.diffStyle
                                 ? LinkedHashMap.empty()
-                                : LinkedHashMap.of(DIFF_STYLE, diffStyle.id()));
+                                : LinkedHashMap.of(DIFF_STYLE, diffStyle.id()))
+                .merge(
+                        diffSyntax == DEFAULT.diffSyntax
+                                ? LinkedHashMap.empty()
+                                : LinkedHashMap.of(DIFF_SYNTAX, diffSyntax));
     }
 
     private static Map<String, Object> widthEntry(String key, int width) {

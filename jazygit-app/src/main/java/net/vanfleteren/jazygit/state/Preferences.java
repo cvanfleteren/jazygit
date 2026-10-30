@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.state;
 import io.vavr.control.Option;
 import lombok.With;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
+import net.vanfleteren.jazygit.settings.DiffLook;
 import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.settings.Settings;
 import net.vanfleteren.jazygit.settings.ThemeName;
@@ -35,6 +36,14 @@ public record Preferences(
      */
     public DiffStyle diffStyle() {
         return settings.diffStyle();
+    }
+
+    /**
+     * How the diffs of the working tree, of a commit and of a stash are drawn, and whether the rich view colours their
+     * code by its syntax (ADR 53).
+     */
+    public DiffLook diffLook() {
+        return new DiffLook(settings.diffStyle(), settings.diffSyntax());
     }
 
     /**

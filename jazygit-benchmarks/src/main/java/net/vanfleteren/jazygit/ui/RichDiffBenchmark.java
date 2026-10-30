@@ -57,6 +57,6 @@ public class RichDiffBenchmark {
      */
     @Benchmark
     public List<Line> draw() {
-        return RichDiff.lines(parsed, Theme.SpanStyles.NONE);
+        return RichDiff.lines(parsed, true, Theme.SpanStyles.NONE);
     }
 }
