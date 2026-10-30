@@ -1,5 +1,7 @@
 """Staging and discarding the changed files, one file, a directory or all of them."""
 
+import pytest
+
 from pages import FilesPane
 
 ALL = FilesPane.ALL
@@ -195,3 +197,36 @@ def test_discard_all_changes(repo, jazygit):
     assert repo.status() == {}
     assert repo.read("top.txt") == "top\n"
     assert repo.read("new.txt") is None
+
+
+def test_files_with_quotes_or_a_leading_dash_in_their_name(repo, jazygit):
+    repo.commit("Add one", **{"one.txt": "one\n", "-dash.txt": "dash\n"})
+    repo.write('say "hi".txt', "hi\n")
+    repo.write("-dash.txt", "dash\nchanged\n")
+    repo.write("-new.txt", "new\n")
+    ui = jazygit()
+
+    ui.files.stage('say "hi".txt')
+    ui.files.stage("-new.txt")
+    ui.files.discard("-dash.txt")
+
+    assert repo.status() == {'say "hi".txt': "A ", "-new.txt": "A "}
+    assert repo.read("-dash.txt") == "dash\n"
+
+    ui.files.unstage("-new.txt")
+
+    assert repo.status() == {'say "hi".txt': "A ", "-new.txt": "??"}
+
+
+@pytest.mark.xfail(strict=True, reason="the files pane shows 'two\\nlines.txt' cut short, as 'two line', and the "
+                                       "rows after it go missing: the newline in the name reaches the screen as it is")
+def test_a_file_with_a_newline_in_its_name_is_staged_and_committed(repo, jazygit):
+    repo.commit("Add one", **{"one.txt": "one\n"})
+    repo.write("two\nlines.txt", "two\n")
+    ui = jazygit()
+
+    ui.files.stage(ALL)
+    ui.files.commit("Add two lines")
+
+    assert repo("show", "--format=", "--name-only", "-z", "HEAD").strip("\0") == "two\nlines.txt"
+    assert repo.status() == {}

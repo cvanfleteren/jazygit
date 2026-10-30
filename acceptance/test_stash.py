@@ -167,3 +167,65 @@ def test_checkout_brings_the_changes_across_through_a_stash(repo, jazygit):
     assert repo.read("one.txt") == "1\n2\n3\n4\nstaged\n"
     assert repo.status() == {"one.txt": "M ", "two.txt": " M"}
     assert repo.stashes() == []
+
+
+def test_a_pop_that_conflicts_keeps_the_stash_and_leaves_the_conflicts_to_resolve(repo, jazygit):
+    repo.commit("Add one", **{"one.txt": "one\n"})
+    repo.write("one.txt", "stashed\n")
+    repo("stash", "push", "--message", "work")
+    repo.commit("Change one", **{"one.txt": "committed\n"})
+    ui = jazygit()
+
+    ui.stash.try_to_pop("work")
+
+    ui.app.wait_for("Unstash failed: CONFLICT")
+    ui.app.press("enter")
+    ui.app.wait_gone("╭Error")
+    ui.caught_up()
+    assert repo.stashes() == ["work"]
+    assert repo.conflicts() == ["one.txt"]
+    assert "CONFLICTS (1)" in ui.app.pane_text("Repo")
+    assert "UU one.txt" in ui.app.pane_text("Files")
+    assert repo.subjects() == ["Change one", "Add one"]
+
+
+def test_stash_with_nothing_to_stash_is_refused(repo, jazygit):
+    repo.commit("Add one", **{"one.txt": "one\n"})
+    ui = jazygit()
+
+    ui.files.focus()
+    ui.app.press("s")
+
+    ui.app.wait_for("No changes to stash")
+    assert repo.stashes() == []
+
+
+def test_stash_only_untracked_files(repo, jazygit):
+    repo.commit("Add one", **{"one.txt": "one\n"})
+    repo.write("new.txt", "brand new\n")
+    ui = jazygit()
+
+    ui.files.stash("untracked")
+
+    assert repo.stashes() == ["untracked"]
+    assert repo.status() == {}
+    assert repo.read("new.txt") is None
+
+    ui.stash.pop("untracked")
+
+    assert repo.stashes() == []
+    assert repo.status() == {"new.txt": "??"}
+    assert repo.read("new.txt") == "brand new\n"
+
+
+def test_stash_before_the_first_commit_is_refused(repo, jazygit):
+    repo.write("new.txt", "brand new\n")
+    ui = jazygit()
+
+    ui.files.focus()
+    ui.app.press("s")
+    ui.confirm("name (optional)")
+
+    ui.app.wait_for("Stash failed: You do not have the initial commit yet")
+    assert repo.stashes() == []
+    assert repo.status() == {"new.txt": "??"}

@@ -16,6 +16,8 @@ def test_new_branch_from_the_checked_out_branch(repo, jazygit):
     assert repo.current_branch() == "feature"
     assert repo.branches() == ["feature", "main"]
     assert repo("rev-parse", "feature") == repo("rev-parse", "main")
+    # Recorded as the branch it came from, which how far it is from its base is counted against.
+    assert repo.parent("feature") == "main"
 
 
 def test_checkout_a_branch(repo, jazygit):
@@ -85,6 +87,8 @@ def test_new_branch_from_an_older_commit(repo, jazygit):
     assert repo.current_branch() == "from-two"
     assert repo.subjects() == ["Add two", "Add one"]
     assert repo.subjects("main") == ["Add three", "Add two", "Add one"]
+    # A commit is no branch to come from.
+    assert repo.parent("from-two") == ""
 
 
 def test_move_commits_to_a_new_branch(repo, jazygit):
@@ -98,6 +102,7 @@ def test_move_commits_to_a_new_branch(repo, jazygit):
     assert repo.subjects() == ["Add four", "Add three", "Add two", "Add one"]
     assert repo.subjects("main") == ["Add two", "Add one"]
     assert repo("status", "--porcelain") == ""
+    assert repo.parent("wrong-branch") == "main"
 
 
 def test_move_commits_onto_an_existing_branch(repo, jazygit):
@@ -131,3 +136,50 @@ def test_a_branch_says_how_far_it_is_from_its_base(repo, jazygit):
     assert ui.branches.behind("stacked") is None
     assert ui.branches.ahead("main") is None
     assert ui.branches.behind("main") is None
+
+
+def test_move_commits_to_a_new_branch_that_starts_on_main(repo, jazygit):
+    three_commits(repo)
+    repo("switch", "--create", "feature")
+    repo.commit("Add four", **{"four.txt": "four\n"})
+    repo.commit("Add five", **{"five.txt": "five\n"})
+    repo("switch", "main")
+    repo.commit("Add main", **{"main.txt": "main\n"})
+    repo("switch", "feature")
+    ui = jazygit()
+
+    ui.commits.move_to_new_branch("Add five", "fix", start="main")
+
+    assert repo.current_branch() == "fix"
+    assert repo.subjects() == ["Add five", "Add main", "Add three", "Add two", "Add one"]
+    assert repo.subjects("feature") == ["Add four", "Add three", "Add two", "Add one"]
+    assert repo.parent("fix") == "main"
+    assert repo("status", "--porcelain") == ""
+
+
+def test_branches_with_a_slash_or_an_accent_in_their_name(repo, jazygit):
+    three_commits(repo)
+    ui = jazygit()
+
+    ui.branches.new("feature/parser")
+    ui.branches.new("café", start="main")
+    ui.branches.checkout("feature/parser")
+    ui.branches.rename("feature/parser", "feature/lexer")
+    ui.branches.delete("café")
+
+    assert repo.branches() == ["feature/lexer", "main"]
+    assert repo.current_branch() == "feature/lexer"
+    assert repo.parent("feature/lexer") == "main"
+
+
+def test_a_branch_name_git_does_not_take_is_refused(repo, jazygit):
+    three_commits(repo)
+    ui = jazygit()
+    ui.branches.select("main")
+
+    ui.app.press("n")
+    ui.enter_text("New branch from main", ".hidden")
+
+    ui.app.wait_for("Creating branch .hidden failed")
+    assert repo.branches() == ["main"]
+    assert repo.current_branch() == "main"

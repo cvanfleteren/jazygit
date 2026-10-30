@@ -53,6 +53,7 @@ def test_new_branch_in_a_new_worktree(repo, tmp_path, jazygit):
     assert repo("rev-parse", "feature/login") == repo("rev-parse", "base")
     assert repo.branches() == ["base", "feature/login", "main"]
     assert repo.current_branch() == "main"
+    assert repo.parent("feature/login") == "base"
 
 
 def test_new_worktree_for_the_checked_out_branch_makes_a_new_branch(repo, tmp_path, jazygit):
@@ -292,7 +293,8 @@ def test_a_locked_worktree_is_not_removed(repo, tmp_path, jazygit):
 
     ui.worktrees.try_to_remove("repo-feature")
 
-    ui.app.wait_for("is locked")
+    # With the reason it was locked for.
+    ui.app.wait_for("Worktree repo-feature is locked, which keeps it from being removed: on a stick")
     assert repo.worktrees() == {repo.path: "main", tmp_path / "repo-feature": "feature"}
     assert (tmp_path / "repo-feature" / "one.txt").exists()
 
@@ -311,6 +313,56 @@ def test_prune_forgets_the_worktrees_whose_directory_is_gone(repo, tmp_path, jaz
     assert repo.worktrees() == {repo.path: "main", tmp_path / "repo-kept": "kept"}
     # Its branch stays, and can be checked out again.
     assert repo.branches() == ["kept", "lost", "main"]
+
+
+def test_prune_keeps_a_locked_worktree_whose_directory_is_gone(repo, tmp_path, jazygit):
+    two_commits(repo)
+    repo("branch", "lost")
+    repo("branch", "unplugged")
+    worktree(repo, tmp_path, "lost")
+    worktree(repo, tmp_path, "unplugged")
+    repo("worktree", "lock", "--reason", "on a stick", str(tmp_path / "repo-unplugged"))
+    shutil.rmtree(tmp_path / "repo-lost")
+    shutil.rmtree(tmp_path / "repo-unplugged")
+    ui = jazygit()
+
+    ui.worktrees.prune()
+
+    assert repo.worktrees() == {repo.path: "main", tmp_path / "repo-unplugged": "unplugged"}
+    assert repo.locked_worktrees() == {tmp_path / "repo-unplugged": "on a stick"}
+
+
+def test_the_worktree_shown_is_not_removed(repo, tmp_path, jazygit):
+    two_commits(repo)
+    repo("branch", "feature")
+    worktree(repo, tmp_path, "feature")
+    ui = jazygit()
+    there = ui.worktrees.switch_to("repo-feature")
+
+    there.worktrees.try_to_remove("repo-feature")
+
+    there.app.wait_for("Worktree repo-feature is the one shown; switch to another one to remove it")
+    assert repo.worktrees() == {repo.path: "main", tmp_path / "repo-feature": "feature"}
+    assert (tmp_path / "repo-feature" / "one.txt").exists()
+
+
+def test_new_branch_in_a_new_worktree_following_a_remote_branch_under_another_name(repo, origin, clone, tmp_path,
+                                                                                   jazygit):
+    two_commits(repo)
+    repo("push", "--set-upstream", "origin", "main")
+    teammate = clone()
+    teammate("switch", "--create", "theirs")
+    teammate.commit("Add theirs", **{"theirs.txt": "theirs\n"})
+    teammate("push", "--set-upstream", "origin", "theirs")
+    repo("fetch")
+    ui = jazygit()
+
+    ui.branches.new_branch_worktree_from_remote("origin/theirs", name="mine")
+
+    assert repo.worktrees() == {repo.path: "main", tmp_path / "repo-mine": "mine"}
+    assert repo.upstream("mine") == "origin/theirs"
+    assert repo.subjects("mine") == ["Add theirs", "Add two", "Add one"]
+    assert repo.branches() == ["main", "mine"]
 
 
 def test_delete_a_branch_checked_out_in_another_worktree_with_that_worktree(repo, tmp_path, jazygit):
