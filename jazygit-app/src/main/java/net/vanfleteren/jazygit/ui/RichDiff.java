@@ -90,8 +90,7 @@ final class RichDiff {
      * Drawing is pure, and the render thread waits for it, so nothing changes the theme while it runs.
      */
     private static <T, R> List<R> inParallel(List<T> items, Function<T, List<R>> draw) {
-        return List.ofAll(items.toJavaList().parallelStream().map(draw).toList())
-                .flatMap(drawn -> drawn);
+        return items.toJavaParallelStream().map(draw).collect(List.collector()).flatMap(drawn -> drawn);
     }
 
     /**
