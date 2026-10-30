@@ -230,6 +230,11 @@ class FilesPane:
         self.focus()
         self.app.move_cursor("Files", path.split("/")[-1] if path != self.ALL else path)
 
+    def edit(self, path: str):
+        """Opens the file at path in git's editor, which the app hands the terminal over to until it is closed."""
+        self.select(path)
+        self.app.press("e")
+
     def stage(self, path: str):
         """Stages the changes to the file or directory at path, or to ALL files, when some are not staged."""
         self.select(path)

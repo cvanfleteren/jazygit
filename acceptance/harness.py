@@ -291,6 +291,11 @@ class App:
         except AssertionError as e:
             raise AssertionError(f"{e}\n--- screen ---\n{self.text()}") from None
 
+    def title(self) -> str:
+        """The title of the terminal's window, as the app or a program it handed the terminal over to set it."""
+        self.pump()
+        return self.screen.title
+
     def text(self) -> str:
         self.pump()
         return "\n".join(line.rstrip() for line in self.screen.display)
