@@ -99,6 +99,51 @@ class LayoutUpdateTest {
     }
 
     @Test
+    void aDraggedPaneShowsWithThePaneUnderItAndIsOnlyKeptWhenLetGo() {
+        Next dragged = Update.update(model, new LayoutMsg.PaneResized(Screen.REPOSITORY, 0, 35));
+
+        assertEquals(List.of(35, 10, 30), dragged.model().preferences().leftHeights(Screen.REPOSITORY));
+        assertEquals(Settings.DEFAULT, dragged.model().preferences().settings());
+        assertEquals(List.of(), dragged.cmds());
+
+        Next settled = Update.update(dragged.model(), new LayoutMsg.PaneSettled(Screen.REPOSITORY));
+
+        Settings kept = Settings.DEFAULT.withRepositoryHeights(List.of(35, 10, 30));
+        assertEquals(kept, settled.model().preferences().settings());
+        assertEquals(Option.none(), settled.model().preferences().draggedHeights());
+        assertEquals(List.of(new Cmd.SaveSettings(Settings.DEFAULT, kept)), settled.cmds());
+    }
+
+    @Test
+    void eachPaneAndThePaneUnderItKeepTheirLeastHeight() {
+        Next taller = Update.update(model, new LayoutMsg.PaneResized(Screen.REPOSITORY, 1, 90));
+        Next shorter = Update.update(model, new LayoutMsg.PaneResized(Screen.REPOSITORY, 1, -5));
+        // The stash under the commits has no height of its own: it takes what the others leave.
+        Next commits = Update.update(model, new LayoutMsg.PaneResized(Screen.REPOSITORY, 2, 90));
+
+        assertEquals(List.of(25, 40, 10), taller.model().preferences().leftHeights(Screen.REPOSITORY));
+        assertEquals(List.of(25, 10, 40), shorter.model().preferences().leftHeights(Screen.REPOSITORY));
+        assertEquals(List.of(25, 20, 45), commits.model().preferences().leftHeights(Screen.REPOSITORY));
+    }
+
+    @Test
+    void eachScreenHasItsOwnHeights() {
+        Model dragged = Update.update(model, new LayoutMsg.PaneResized(Screen.PULL_REQUESTS, 1, 50))
+                .model();
+
+        assertEquals(List.of(32, 50), dragged.preferences().leftHeights(Screen.PULL_REQUESTS));
+        assertEquals(Settings.DEFAULT_REPOSITORY_HEIGHTS, dragged.preferences().leftHeights(Screen.REPOSITORY));
+        assertEquals(Next.of(dragged), Update.update(dragged, new LayoutMsg.PaneSettled(Screen.REPOSITORY)));
+    }
+
+    @Test
+    void aPaneIsNotDraggedWhileAPopupIsOpen() {
+        Model open = model.openPopup(new ThemePopup(ThemeName.DARK, Option.none()));
+
+        assertEquals(Next.of(open), Update.update(open, new LayoutMsg.PaneResized(Screen.REPOSITORY, 0, 50)));
+    }
+
+    @Test
     void lettingGoOfAnotherScreenOrOfNoDragDoesNothing() {
         Model dragged = Update.update(model, new LayoutMsg.Resized(Screen.REPOSITORY, 50))
                 .model();

@@ -27,8 +27,12 @@ class BorderDragTest {
 
     // Panes from column 0, 100 wide, so a column is a percent; the left column is their first 30 columns, its
     // border at columns 29 and 30.
-    private static final Rect PANES = new Rect(0, 0, 100, 20);
-    private static final Rect LEFT = new Rect(0, 0, 30, 20);
+    private static final Rect PANES = new Rect(0, 0, 100, 100);
+    private static final Rect LEFT = new Rect(0, 0, 30, 100);
+    // The panes of the left column, 100 rows tall so a row is a percent, under a status of 3 rows: the files take 25,
+    // the branches 20, the commits 30 and the stash the rest. The bottom border of the files is at row 27.
+    private static final List<Rect> LEFT_PANES =
+            List.of(new Rect(0, 3, 30, 25), new Rect(0, 28, 30, 20), new Rect(0, 48, 30, 30), new Rect(0, 78, 30, 22));
 
     private final Model model = TestModels.loaded();
     private final java.util.List<Msg> sent = new ArrayList<>();
@@ -36,7 +40,7 @@ class BorderDragTest {
 
     @BeforeEach
     void drawFrame() {
-        drag.shown(drawnAt(PANES), drawnAt(LEFT));
+        drag.shown(drawnAt(PANES), drawnAt(LEFT), LEFT_PANES.map(BorderDragTest::drawnAt));
     }
 
     @Test
@@ -118,10 +122,64 @@ class BorderDragTest {
     }
 
     @Test
+    void draggingTheBottomBorderOfAPaneResizesItAndTheReleaseLetsGo() {
+        assertEquals(EventResult.HANDLED, drag.handle(MouseEvent.press(MouseButton.LEFT, 10, 27), model));
+
+        assertEquals(EventResult.UNHANDLED, drag.handle(MouseEvent.drag(MouseButton.LEFT, 10, 32), model));
+        assertEquals(EventResult.HANDLED, drag.handle(MouseEvent.release(MouseButton.LEFT, 12, 22), model));
+
+        assertEquals(
+                List.of(
+                        new LayoutMsg.PaneResized(Screen.REPOSITORY, 0, 30),
+                        new LayoutMsg.PaneResized(Screen.REPOSITORY, 0, 20),
+                        new LayoutMsg.PaneSettled(Screen.REPOSITORY)),
+                sent());
+    }
+
+    @Test
+    void eachPaneButTheLastHasABottomBorderToDrag() {
+        drag.handle(MouseEvent.press(MouseButton.LEFT, 10, 77), model);
+        drag.handle(MouseEvent.release(MouseButton.LEFT, 10, 87), model);
+
+        assertEquals(
+                List.of(
+                        new LayoutMsg.PaneResized(Screen.REPOSITORY, 2, 40),
+                        new LayoutMsg.PaneSettled(Screen.REPOSITORY)),
+                sent());
+        assertEquals(EventResult.UNHANDLED, drag.handle(MouseEvent.press(MouseButton.LEFT, 10, 99), model));
+    }
+
+    @Test
+    void theTopBorderOfAPaneWithItsTitleIsNoBorderToDrag() {
+        assertEquals(EventResult.UNHANDLED, drag.handle(MouseEvent.press(MouseButton.LEFT, 10, 28), model));
+        assertEquals(List.of(), sent());
+    }
+
+    @Test
+    void aHeightThatDoesNotChangeIsNotSent() {
+        drag.handle(MouseEvent.press(MouseButton.LEFT, 10, 27), model);
+
+        drag.handle(MouseEvent.drag(MouseButton.LEFT, 10, 27), model);
+
+        assertEquals(List.of(), sent());
+    }
+
+    @Test
+    void whereTheBordersMeetTheBorderOfTheLeftColumnIsDragged() {
+        drag.handle(MouseEvent.press(MouseButton.LEFT, 29, 27), model);
+        drag.handle(MouseEvent.release(MouseButton.LEFT, 49, 37), model);
+
+        assertEquals(
+                List.of(new LayoutMsg.Resized(Screen.REPOSITORY, 50), new LayoutMsg.Settled(Screen.REPOSITORY)),
+                sent());
+    }
+
+    @Test
     void beforeAFrameIsDrawnThereIsNoBorder() {
         BorderDrag undrawn = new BorderDrag(sent::add);
 
         assertEquals(EventResult.UNHANDLED, undrawn.handle(MouseEvent.press(MouseButton.LEFT, 29, 5), model));
+        assertEquals(EventResult.UNHANDLED, undrawn.handle(MouseEvent.press(MouseButton.LEFT, 10, 27), model));
     }
 
     private List<Msg> sent() {

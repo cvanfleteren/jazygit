@@ -27,4 +27,15 @@ public sealed interface LayoutMsg extends Msg {
      * The user let go of the border of the left column of {@code screen}.
      */
     record Settled(Screen screen) implements LayoutMsg {}
+
+    /**
+     * The user dragged the bottom border of pane {@code pane} of the left column of {@code screen}, counted from the
+     * first under the status, to make it {@code height} percent of the height of the column tall.
+     */
+    record PaneResized(Screen screen, int pane, int height) implements LayoutMsg {}
+
+    /**
+     * The user let go of the bottom border of a pane of the left column of {@code screen}.
+     */
+    record PaneSettled(Screen screen) implements LayoutMsg {}
 }
