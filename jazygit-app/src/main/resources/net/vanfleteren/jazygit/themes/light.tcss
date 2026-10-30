@@ -1,13 +1,14 @@
-$fg: #1f2328;
-$bg: #ffffff;
-$border: #d0d7de;
-$accent: #0969da;
-$muted: #6e7781;
-$selection: #ddf4ff;
-$added: #1a7f37;
-$removed: #cf222e;
-$warn: #9a6700;
-$hunk: #0969da;
+/* The palette of the GitHub scheme for the macOS Terminal: blue, pink and orange on light grey. */
+$fg: #3e3e3e;
+$bg: #f4f4f4;
+$border: #6c88b3;
+$accent: #2e6cba;
+$muted: #666666;
+$selection: #d4e0f1;
+$added: #07962a;
+$removed: #970b16;
+$warn: #c95500;
+$hunk: #e94691;
 
 * {
     color: $fg;
@@ -44,7 +45,7 @@ ListElement-item:selected, TreeElement-node:selected, .selection {
  * Behind an open popup, text in the plain colour takes this one; the rest is dimmed by the terminal, which
  * not every terminal does for its default colour.
  */
-.backdrop { color: #8c959f; }
+.backdrop { color: #a8a8a8; }
 
 .bold { text-style: bold; }
 .dim { color: $muted; }
@@ -54,7 +55,7 @@ ListElement-item:selected, TreeElement-node:selected, .selection {
 .disabled { color: $muted; text-style: crossed-out; }
 .staged { color: $added; }
 .unstaged { color: $removed; }
-.spinner { color: $warn; }
+.spinner { color: $hunk; }
 .ahead { color: $added; }
 .behind { color: $removed; }
 .gone { color: $removed; }
@@ -66,7 +67,7 @@ ListElement-item:selected, TreeElement-node:selected, .selection {
 .review-approved { color: $added; }
 .review-changes { color: $removed; }
 .repo-branch { color: $accent; }
-.repo-location { color: #8250df; }
+.repo-location { color: $hunk; }
 .current { color: $warn; text-style: bold; }
 
 Span.diff-header { text-style: bold; }
@@ -74,15 +75,15 @@ Span.diff-added { color: $added; }
 Span.diff-removed { color: $removed; }
 Span.diff-hunk { color: $hunk; }
 /* The rich view of a diff (ADR 44): a bar for each file, the line numbers, and the changed lines and words. */
-Span.diff-file-header { text-style: reversed; }
+Span.diff-file-header { color: #003e8a; text-style: reversed; }
 Span.diff-line-number { color: $muted; }
-Span.diff-added-line { color: $added; background: #e6ffec; }
-Span.diff-added-word { color: $added; background: #abf2bc; }
-Span.diff-removed-line { color: $removed; background: #ffebe9; }
-Span.diff-removed-word { color: $removed; background: #ffc1c0; }
-Span.current-branch { color: $warn; }
+Span.diff-added-line { color: $added; background: #def2e3; }
+Span.diff-added-word { color: $added; background: #a8e0b6; }
+Span.diff-removed-line { color: $removed; background: #f6e1e2; }
+Span.diff-removed-word { color: $removed; background: #ffc9c7; }
+Span.current-branch { color: $warn; text-style: bold; }
 Span.sha { color: $warn; }
-Span.tag { color: green; }
+Span.tag { color: $added; }
 Span.copied { color: $accent; text-style: bold; }
 Span.bold { text-style: bold; }
 
@@ -93,13 +94,13 @@ Span.bold { text-style: bold; }
 MarkdownElement {
     heading-1-color: $accent;
     heading-1-text-style: bold;
-    heading-2-color: $accent;
+    heading-2-color: $hunk;
     heading-2-text-style: bold;
     heading-3-text-style: bold;
     heading-4-text-style: bold;
     heading-5-text-style: bold;
     heading-6-text-style: bold;
-    link-color: $hunk;
+    link-color: $accent;
     link-text-style: underlined;
     inline-code-color: $warn;
     code-block-color: $border;
