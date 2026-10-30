@@ -4,6 +4,7 @@ import io.vavr.Tuple;
 import io.vavr.collection.Iterator;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.util.function.IntPredicate;
 import java.util.stream.IntStream;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
@@ -19,6 +20,26 @@ import net.vanfleteren.jazygit.git.model.syntax.Token.Kind;
  * left the scanner; each hunk starts outside of everything.
  */
 public record Lexer() implements Highlighter {
+
+    /**
+     * The first characters of the comments and the strings of every language: only at one of them can one start.
+     */
+    private static final String OPENINGS = List.of(Language.values())
+            .map(Language::grammar)
+            .flatMap(grammar -> grammar.lineComments()
+                    .appendAll(grammar.blockComments().map(Delimited::open))
+                    .appendAll(grammar.strings().map(Delimited::open)))
+            .map(open -> open.substring(0, 1))
+            .distinct()
+            .mkString();
+    /**
+     * How long the longest keyword of every language is: a longer word is none.
+     */
+    private static final int LONGEST_KEYWORD = List.of(Language.values())
+            .flatMap(language -> language.grammar().keywords())
+            .map(String::length)
+            .max()
+            .getOrElse(0);
 
     @Override
     public List<List<List<Token>>> tokens(FileDiff file) {
@@ -64,8 +85,9 @@ public record Lexer() implements Highlighter {
                                 yield Tuple.of(done._1.prepend(now.tokens()), done._2, now.state());
                             }
                             case CONTEXT -> {
-                                Lexed old = line(grammar, done._2, line.text());
                                 Lexed now = line(grammar, done._3, line.text());
+                                // Most often both texts are outside of everything, and lexing it once is enough.
+                                Lexed old = done._2.equals(done._3) ? now : line(grammar, done._2, line.text());
                                 yield Tuple.of(done._1.prepend(now.tokens()), old.state(), now.state());
                             }
                         })
@@ -108,28 +130,27 @@ public record Lexer() implements Highlighter {
         String line = scan.line();
         int at = scan.at();
         char c = line.charAt(at);
-        Option<String> lineComment = grammar.lineComments().find(open -> scan.opens(open));
-        if (lineComment.isDefined()) {
-            return scan.token(at, line.length(), Kind.COMMENT);
+        if (OPENINGS.indexOf(c) >= 0) {
+            Option<String> lineComment = grammar.lineComments().find(open -> scan.opens(open));
+            if (lineComment.isDefined()) {
+                return scan.token(at, line.length(), Kind.COMMENT);
+            }
+            Option<Scan> delimited = scan.delimited(grammar.blockComments(), Kind.COMMENT)
+                    .orElse(() -> scan.delimited(grammar.strings(), Kind.STRING));
+            if (delimited.isDefined()) {
+                return delimited.get();
+            }
         }
-        Option<Scan> delimited = scan.delimited(grammar.blockComments(), Kind.COMMENT)
-                .orElse(() -> scan.delimited(grammar.strings(), Kind.STRING));
-        if (delimited.isDefined()) {
-            return delimited.get();
-        } else if (Character.isDigit(c) && !scan.afterWord()) {
+        if (Character.isDigit(c) && !scan.afterWord()) {
             return scan.token(at, numberEnd(line, at), Kind.NUMBER);
         } else if (Character.isLetter(c) || c == '_') {
-            int end = wordEnd(line, at);
-            return grammar.keyword(line.substring(at, end)) ? scan.token(at, end, Kind.KEYWORD) : scan.to(end);
+            int end = first(line, at, i -> !wordPart(line.charAt(i)));
+            return end - at <= LONGEST_KEYWORD && grammar.keyword(line.substring(at, end))
+                    ? scan.token(at, end, Kind.KEYWORD)
+                    : scan.to(end);
         }
-        return scan.to(at + Character.charCount(line.codePointAt(at)));
-    }
-
-    private static int wordEnd(String line, int from) {
-        return IntStream.range(from, line.length())
-                .filter(i -> !wordPart(line.charAt(i)))
-                .findFirst()
-                .orElse(line.length());
+        // Past what can start nothing in one step, as most of a line is spaces and punctuation.
+        return scan.to(first(line, at + 1, i -> wordPart(line.charAt(i)) || OPENINGS.indexOf(line.charAt(i)) >= 0));
     }
 
     /**
@@ -137,11 +158,31 @@ public record Lexer() implements Highlighter {
      * {@code 1_000L}, and a point followed by a digit.
      */
     private static int numberEnd(String line, int from) {
-        return IntStream.range(from, line.length())
-                .filter(i -> !wordPart(line.charAt(i))
-                        && !(line.charAt(i) == '.' && i + 1 < line.length() && Character.isDigit(line.charAt(i + 1))))
-                .findFirst()
-                .orElse(line.length());
+        return first(
+                line,
+                from,
+                i -> !wordPart(line.charAt(i))
+                        && !(line.charAt(i) == '.' && i + 1 < line.length() && Character.isDigit(line.charAt(i + 1))));
+    }
+
+    /**
+     * Where the first of {@code chars} is in {@code line} from {@code from} on, or its end.
+     */
+    private static int next(String line, int from, String chars) {
+        return first(line, from, i -> chars.indexOf(line.charAt(i)) >= 0);
+    }
+
+    /**
+     * The first index of {@code line} from {@code from} on that {@code found} holds for, or its end. A loop rather
+     * than a stream, as it runs for each piece of each line of a diff, where a stream costs a third of the lexing.
+     */
+    private static int first(String line, int from, IntPredicate found) {
+        for (int i = from; i < line.length(); i++) {
+            if (found.test(i)) {
+                return i;
+            }
+        }
+        return line.length();
     }
 
     static boolean wordPart(char c) {
@@ -246,11 +287,14 @@ public record Lexer() implements Highlighter {
          */
         Scan inside(int start, int from, Inside inside) {
             Delimited delimited = inside.delimited();
-            Option<Integer> end = Iterator.iterate(
-                            from, i -> delimited.escapes() && line.charAt(i) == '\\' ? i + 2 : i + 1)
-                    .takeWhile(i -> i < line.length())
-                    .find(i -> line.startsWith(delimited.close(), i))
-                    .map(i -> i + delimited.close().length());
+            // From each escape on to the next, until there is no escape before the first close.
+            Option<Integer> end = Iterator.iterate(from, i -> line.indexOf('\\', i) + 2)
+                    .map(i -> Tuple.of(
+                            line.indexOf(delimited.close(), i), delimited.escapes() ? line.indexOf('\\', i) : -1))
+                    .find(found -> found._1 < 0 || found._2 < 0 || found._2 > found._1)
+                    .map(found -> found._1)
+                    .filter(close -> close >= 0)
+                    .map(close -> close + delimited.close().length());
             return end.map(close -> in(inside.after()).token(start, close, inside.kind()))
                     .getOrElse(() -> in(inside).token(start, line.length(), inside.kind()));
         }
@@ -273,7 +317,7 @@ public record Lexer() implements Highlighter {
             if (comment.isDefined()) {
                 return comment.get();
             } else if (line.charAt(at) != '<') {
-                return scan.to(at + 1);
+                return scan.to(next(line, at + 1, "<"));
             }
             int name = at + 1 < line.length() && "/?!".indexOf(line.charAt(at + 1)) >= 0 ? at + 2 : at + 1;
             int end = IntStream.range(name, line.length())
@@ -282,7 +326,7 @@ public record Lexer() implements Highlighter {
                     .orElse(line.length());
             return end > name && Character.isLetter(line.charAt(name))
                     ? scan.in(new InTag()).token(name, end, Kind.KEYWORD)
-                    : scan.to(at + 1);
+                    : scan.to(next(line, at + 1, "<"));
         }
 
         /**
@@ -292,7 +336,8 @@ public record Lexer() implements Highlighter {
             if (scan.line().charAt(scan.at()) == '>') {
                 return scan.in(new Outside()).to(scan.at() + 1);
             }
-            return scan.delimited(grammar.strings(), Kind.STRING).getOrElse(() -> scan.to(scan.at() + 1));
+            return scan.delimited(grammar.strings(), Kind.STRING)
+                    .getOrElse(() -> scan.to(next(scan.line(), scan.at() + 1, ">\"'")));
         }
     }
 
@@ -389,7 +434,7 @@ public record Lexer() implements Highlighter {
             if (comment.isDefined()) {
                 return comment.get();
             } else if (line.charAt(at) != '`') {
-                return scan.to(at + 1);
+                return scan.to(next(line, at + 1, "`<"));
             }
             int run = IntStream.range(at, line.length())
                     .filter(i -> line.charAt(i) != '`')

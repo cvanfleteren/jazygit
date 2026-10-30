@@ -26,6 +26,11 @@ class LexerTest {
     }
 
     @Test
+    void anEscapedBackslashDoesNotEscapeTheQuoteAfterIt() {
+        assertEquals(List.of("STRING \"\\\\\"", "KEYWORD this"), tokens(Language.JAVA, "s = \"\\\\\" + this;"));
+    }
+
+    @Test
     void aWordThatStartsWithAKeywordIsNoKeyword() {
         assertEquals(List.of(), tokens(Language.JAVA, "format(interval, newer);"));
     }
