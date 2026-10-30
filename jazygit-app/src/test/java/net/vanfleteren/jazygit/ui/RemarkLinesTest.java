@@ -2,12 +2,15 @@ package net.vanfleteren.jazygit.ui;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import dev.tamboui.style.Color;
+import dev.tamboui.style.Style;
 import dev.tamboui.style.StylePropertyResolver;
 import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Comment;
@@ -83,22 +86,45 @@ class RemarkLinesTest {
                         "1 1 │  one",
                         "2   │ -two",
                         "  2 ● +TWO",
-                        indent + "┃ bob · 2h ago",
-                        indent + "┃ Why upper case?",
+                        indent + "┏━ bob · 2h ago",
+                        indent + "┃  Why upper case?",
                         indent + "┃",
-                        indent + "┃ bob · 2h ago",
-                        indent + "┃ Shouting.",
+                        indent + "┣━ bob · 2h ago",
+                        indent + "┃  Shouting.",
                         "",
                         "3 3 │  three"),
                 lines);
     }
 
     @Test
+    void theHeaderOfACommentIsOnTheBandOfTheThemeToTheEndOfTheBlock() {
+        Theme.SpanStyles styles = cssClass -> switch (cssClass) {
+            case Theme.Classes.DIFF_THREAD_HEADER -> Style.EMPTY.bg(Color.BLUE);
+            case Theme.Classes.DIFF_THREAD_AUTHOR -> Style.EMPTY.fg(Color.CYAN);
+            default -> Style.EMPTY;
+        };
+
+        Line header = RemarkLines.threads(
+                        List.of(thread(2, false, "Why?")),
+                        8,
+                        RemarkLines.MIN_WIDTH,
+                        new RemarkLines.RemarkStyle(false, NOW),
+                        styles)
+                .head();
+
+        List<Span> band = List.ofAll(header.spans()).drop(2);
+        assertEquals(RemarkLines.MIN_WIDTH, header.width());
+        assertTrue(band.forAll(span -> span.style().bg().equals(Optional.of(Color.BLUE))), header.toString());
+        assertTrue(band.exists(
+                span -> span.content().equals("bob") && span.style().fg().equals(Optional.of(Color.CYAN))));
+    }
+
+    @Test
     void aResolvedThreadIsOneLineUntilTheThreadsAreOpened() {
         ReviewThread resolved = thread(3, true, "Done\n\nmore");
 
-        assertTrue(rich(shown(false, resolved)).contains(" ".repeat(8) + "┃ ✓ resolved · bob: Done"));
-        assertTrue(rich(shown(true, resolved)).contains(" ".repeat(8) + "┃ Done"));
+        assertTrue(rich(shown(false, resolved)).contains(" ".repeat(8) + "┃  ✓ resolved · bob: Done"));
+        assertTrue(rich(shown(true, resolved)).contains(" ".repeat(8) + "┃  Done"));
     }
 
     @Test
@@ -132,17 +158,17 @@ class RemarkLinesTest {
 
         assertTrue(lines.contains("1 1 ┃  one"), lines.mkString("\n"));
         assertTrue(lines.contains("3 3 ●  three"), lines.mkString("\n"));
-        assertTrue(lines.contains(" ".repeat(8) + "┃ ghost · just now"), lines.mkString("\n"));
-        assertTrue(lines.contains(" ".repeat(8) + "┃ 2 more on GitHub"), lines.mkString("\n"));
+        assertTrue(lines.contains(" ".repeat(8) + "┏━ ghost · just now"), lines.mkString("\n"));
+        assertTrue(lines.contains(" ".repeat(8) + "┃  2 more on GitHub"), lines.mkString("\n"));
         assertEquals(
                 List.of(
                         " ".repeat(8) + "Not on a line of this diff",
-                        " ".repeat(8) + "┃ on line 40, outdated",
-                        " ".repeat(8) + "┃ carol · just now",
-                        " ".repeat(8) + "┃ hidden · outdated"),
+                        " ".repeat(8) + "┏━ on line 40, outdated",
+                        " ".repeat(8) + "┣━ carol · just now",
+                        " ".repeat(8) + "┃  hidden · outdated"),
                 lines.takeRight(4));
         assertEquals(
-                List.of(" ".repeat(8) + "┃ 2 more on GitHub", "", " ".repeat(8) + "Not on a line of this diff"),
+                List.of(" ".repeat(8) + "┃  2 more on GitHub", "", " ".repeat(8) + "Not on a line of this diff"),
                 lines.dropRight(3).takeRight(3));
     }
 
@@ -154,11 +180,11 @@ class RemarkLinesTest {
         assertEquals(
                 List.of(
                         "  2 ● +TWO",
-                        indent + "┃ bob · 2h ago",
-                        indent + "┃ One",
+                        indent + "┏━ bob · 2h ago",
+                        indent + "┃  One",
                         "",
-                        indent + "┃ bob · 2h ago",
-                        indent + "┃ Two",
+                        indent + "┏━ bob · 2h ago",
+                        indent + "┃  Two",
                         "",
                         "3 3 │  three"),
                 lines.drop(3));
@@ -183,14 +209,14 @@ class RemarkLinesTest {
         assertEquals(
                 List.of(
                         "3 3 ●  three",
-                        indent + "┃ bob · 2h ago",
-                        indent + "┃ End of a",
+                        indent + "┏━ bob · 2h ago",
+                        indent + "┃  End of a",
                         "",
                         " modified  b.txt",
                         "1   │ -x",
                         "  1 ● +y",
-                        indent + "┃ bob · 2h ago",
-                        indent + "┃ End of b"),
+                        indent + "┏━ bob · 2h ago",
+                        indent + "┃  End of b"),
                 lines.drop(4));
     }
 
@@ -212,7 +238,7 @@ class RemarkLinesTest {
         List<String> lines = rich(shown(false, onFile));
 
         assertEquals(
-                List.of(" modified  a.txt", " ".repeat(8) + "┃ bob · 2h ago", " ".repeat(8) + "┃ Split this file"),
+                List.of(" modified  a.txt", " ".repeat(8) + "┏━ bob · 2h ago", " ".repeat(8) + "┃  Split this file"),
                 lines.take(3));
         assertEquals(List.of("", "1 1 │  one"), lines.slice(3, 5));
     }
@@ -232,9 +258,9 @@ class RemarkLinesTest {
                 List.of(new Comment("carol", NOW, "Off topic", Option.of("OFF_TOPIC"))),
                 0);
 
-        assertTrue(rich(shown(false, hidden)).contains(" ".repeat(8) + "┃ hidden · off-topic"));
-        assertFalse(rich(shown(false, hidden)).contains(" ".repeat(8) + "┃ Off topic"));
-        assertTrue(rich(shown(true, hidden)).contains(" ".repeat(8) + "┃ Off topic"));
+        assertTrue(rich(shown(false, hidden)).contains(" ".repeat(8) + "┃  hidden · off-topic"));
+        assertFalse(rich(shown(false, hidden)).contains(" ".repeat(8) + "┃  Off topic"));
+        assertTrue(rich(shown(true, hidden)).contains(" ".repeat(8) + "┃  Off topic"));
     }
 
     @Test
@@ -249,7 +275,7 @@ class RemarkLinesTest {
         assertEquals(
                 " ".repeat(8) + "Not on a line of this diff",
                 lines.dropWhile(line -> !line.contains("three")).get(1));
-        assertTrue(lines.contains(" ".repeat(8) + "┃ Moved on"), lines.mkString("\n"));
+        assertTrue(lines.contains(" ".repeat(8) + "┃  Moved on"), lines.mkString("\n"));
     }
 
     @Test

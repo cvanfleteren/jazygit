@@ -67,8 +67,13 @@ Span.diff-hunk { color: cyan; }
 /* The rich view of a diff (ADR 44): a bar for each file, the line numbers, and the changed lines and words. */
 Span.diff-file-header { text-style: reversed; }
 Span.diff-line-number { color: dark-gray; }
-/* The review remarks of a pull request in its diff (ADR 55): their rule and their marks in the gutter. */
+/*
+ * The review remarks of a pull request in its diff (ADR 55): their rule and their marks in the gutter, and
+ * the header of each comment: a band behind it, and its author.
+ */
 Span.diff-thread { color: yellow; }
+Span.diff-thread-header { background: #262626; }
+Span.diff-thread-author { color: cyan; text-style: bold; }
 Span.diff-added-line { color: green; background: #0f2a14; }
 Span.diff-added-word { color: green; background: #1d5c2a; }
 Span.diff-removed-line { color: red; background: #2e1013; }

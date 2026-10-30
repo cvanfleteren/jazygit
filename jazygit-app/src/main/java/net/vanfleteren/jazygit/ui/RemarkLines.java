@@ -23,8 +23,8 @@ import net.vanfleteren.jazygit.ui.widgets.MarkdownScroll;
 
 /**
  * The review threads of a pull request drawn as lines of its rich diff (ADR 55): each a block that starts some
- * columns in, with a rule down its left, and its comments under a line that says who wrote them and when, their
- * Markdown drawn as the theme styles it.
+ * columns in, with a rule down its left, and its comments under a header that says who wrote them and when, which
+ * the rule branches into and the theme sets apart, their Markdown drawn as the theme styles it.
  */
 final class RemarkLines {
 
@@ -33,7 +33,10 @@ final class RemarkLines {
     static final int MAX_WIDTH = 100;
     // The narrowest the text of a block gets, past a wide gutter.
     private static final int MIN_TEXT = 20;
-    private static final String RULE = "┃ ";
+    // The rule down the left of a block, which branches into the line that starts it and into each header.
+    private static final String RULE = "┃  ";
+    private static final String TOP = "┏━";
+    private static final String BRANCH = "┣━";
 
     private RemarkLines() {}
 
@@ -50,7 +53,7 @@ final class RemarkLines {
      */
     static List<Line> threads(
             List<ReviewThread> threads, int indent, int width, RemarkStyle style, Theme.SpanStyles styles) {
-        return threads.map(thread -> thread(thread, indent, width, style, styles))
+        return threads.map(thread -> thread(thread, indent, width, true, style, styles))
                 .intersperse(List.of(Line.from("")))
                 .flatMap(Function.identity());
     }
@@ -63,10 +66,10 @@ final class RemarkLines {
             List<ReviewThread> threads, int indent, int width, RemarkStyle style, Theme.SpanStyles styles) {
         return threads.isEmpty()
                 ? List.empty()
-                : threads.flatMap(thread -> thread(thread, indent, width, style, styles)
+                : threads.flatMap(thread -> thread(thread, indent, width, false, style, styles)
                                 .prepend(Line.from(
                                         Span.raw(" ".repeat(indent)),
-                                        styled(RULE, Theme.Classes.DIFF_THREAD, styles),
+                                        styled(TOP + " ", Theme.Classes.DIFF_THREAD, styles),
                                         styled(madeOn(thread), Theme.Classes.DIM, styles))))
                         .prepend(Line.from(
                                 Span.raw(" ".repeat(indent)),
@@ -84,9 +87,13 @@ final class RemarkLines {
         return thread.outdated() ? Messages.get("content.remarks.outdated", line) : line;
     }
 
+    /**
+     * The lines of {@code thread}, its first header the {@code top} of its block, or under a line above it.
+     */
     private static List<Line> thread(
-            ReviewThread thread, int indent, int width, RemarkStyle style, Theme.SpanStyles styles) {
-        List<Span> rule = List.of(Span.raw(" ".repeat(indent)), styled(RULE, Theme.Classes.DIFF_THREAD, styles));
+            ReviewThread thread, int indent, int width, boolean top, RemarkStyle style, Theme.SpanStyles styles) {
+        Span margin = Span.raw(" ".repeat(indent));
+        List<Span> rule = List.of(margin, styled(RULE, Theme.Classes.DIFF_THREAD, styles));
         int text = Math.max(MIN_TEXT, width - indent - RULE.length());
         if (thread.resolved() && !style.opened()) {
             String first =
@@ -103,8 +110,17 @@ final class RemarkLines {
         }
         // A line of only the rule between two comments, to show where the next one starts.
         return thread.comments()
-                .map(comment -> comment(comment, rule, text, style, styles))
-                .intersperse(List.of(Line.from(rule.toJavaList())))
+                .zipWithIndex()
+                .map(comment -> comment(
+                        comment._1,
+                        List.of(
+                                margin,
+                                styled(top && comment._2 == 0 ? TOP : BRANCH, Theme.Classes.DIFF_THREAD, styles)),
+                        rule,
+                        text,
+                        style,
+                        styles))
+                .intersperse(List.of(Line.from(margin, styled(RULE.strip(), Theme.Classes.DIFF_THREAD, styles))))
                 .flatMap(Function.identity())
                 .appendAll(
                         thread.more() > 0
@@ -117,18 +133,20 @@ final class RemarkLines {
     }
 
     /**
-     * A comment: who wrote it and how long ago, then its text, or why it is hidden while it is closed.
+     * A comment: a header after {@code branch} that says who wrote it and how long ago, on the background of
+     * {@link Theme.Classes#DIFF_THREAD_HEADER} to the end of the block, then its text, or why it is hidden while it is
+     * closed.
      */
     private static List<Line> comment(
-            Comment comment, List<Span> rule, int text, RemarkStyle style, Theme.SpanStyles styles) {
-        Line header = Line.from(rule.appendAll(List.of(
-                        styled(author(comment.author()), Theme.Classes.BOLD, styles),
-                        styled(
-                                Messages.get(
-                                        "content.remarks.ago",
-                                        TimeText.ago(Duration.between(comment.at(), style.now()))),
-                                Theme.Classes.DIM,
-                                styles)))
+            Comment comment, List<Span> branch, List<Span> rule, int text, RemarkStyle style, Theme.SpanStyles styles) {
+        String author = author(comment.author());
+        String ago = Messages.get("content.remarks.ago", TimeText.ago(Duration.between(comment.at(), style.now())));
+        Style band = styles.of(Theme.Classes.DIFF_THREAD_HEADER);
+        Line header = Line.from(branch.appendAll(List.of(
+                        Span.styled(" ", band),
+                        Span.styled(author, onBand(styles.of(Theme.Classes.DIFF_THREAD_AUTHOR), band)),
+                        Span.styled(ago, onBand(styles.of(Theme.Classes.DIM), band)),
+                        Span.styled(" ".repeat(Math.max(0, text - TextWidth.of(author + ago))), band)))
                 .toJavaList());
         List<Line> body = comment.hidden()
                 .filter(hidden -> !style.opened())
@@ -189,6 +207,13 @@ final class RemarkLines {
                 .map(String::strip)
                 .find(line -> !line.isEmpty())
                 .getOrElse("");
+    }
+
+    /**
+     * {@code style} on the background of {@code band}, if it has one.
+     */
+    private static Style onBand(Style style, Style band) {
+        return band.bg().map(style::bg).orElse(style);
     }
 
     private static String author(String login) {
