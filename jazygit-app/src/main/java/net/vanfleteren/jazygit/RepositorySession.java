@@ -6,7 +6,6 @@ import io.vavr.control.Option;
 import io.vavr.control.Try;
 import java.nio.file.Path;
 import java.time.Clock;
-import java.time.Duration;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -18,7 +17,6 @@ import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.*;
-import net.vanfleteren.jazygit.state.prs.PrOverviewMsg;
 
 /**
  * What runs for the repository shown: the {@link Program} and the threads it runs git on, from the start of the app
@@ -26,8 +24,6 @@ import net.vanfleteren.jazygit.state.prs.PrOverviewMsg;
  */
 final class RepositorySession {
 
-    // How long after a repository opens its pull requests are first read, for the new ones (ADR 29).
-    static final Duration FIRST_PULL_REQUESTS_TICK = Duration.ofSeconds(3);
     // How many background commands run at once: a fetch, the pull requests and a preview, but not so many git or
     // gh processes that a burst of them slows the machine down or eats into GitHub's rate limit.
     private static final int BACKGROUND_THREADS = 4;
@@ -152,16 +148,10 @@ final class RepositorySession {
                 clock);
         runtime = Option.of(new Runtime(io, background, program));
         started.accept(program.model());
-        // The first tick of the fetch is a while off, so it fetches now; the pull requests show from the start, not
-        // only once the fetch is done.
+        // The first tick of the fetch is a while off, so it fetches now; the pull requests, and the new ones among
+        // them (ADR 29), show from the start, not only once the fetch is done (ADR 58).
         program.dispatch(new FetchMsg.Tick());
         program.dispatch(new PullRequestsMsg.Refresh());
-        // The new pull requests show soon after the repository opens, not a minute later, but after the first reads
-        // (ADR 29); not to a repository switched away from meanwhile.
-        runner.schedule(
-                () -> runner.runOnRenderThread(() -> runtime.filter(running -> running.program() == program)
-                        .forEach(running -> program.dispatch(new PrOverviewMsg.Tick()))),
-                FIRST_PULL_REQUESTS_TICK);
     }
 
     /**
