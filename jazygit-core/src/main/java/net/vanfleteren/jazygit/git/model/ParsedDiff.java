@@ -17,10 +17,10 @@ import net.vanfleteren.jazygit.git.model.syntax.Token;
  *
  * @param diff   the diff parsed
  * @param words  the segments of the lines of each hunk of its files, in order, as {@link WordDiff#segments} has them
- * @param tokens the tokens of the lines of each hunk of its files, in the same order, as the {@link Highlighter} found
- *               them; none for a hunk that was not lexed
+ * @param tokens the tokens of the lines of each hunk of its files, in the shape of {@code words}, as the
+ *               {@link Highlighter} found them; none for a line that was not lexed
  */
-public record ParsedDiff(UnifiedDiff diff, List<List<List<Segment>>> words, List<Option<List<List<Token>>>> tokens) {
+public record ParsedDiff(UnifiedDiff diff, List<List<List<Segment>>> words, List<List<Option<List<Token>>>> tokens) {
 
     private static final Highlighter HIGHLIGHTER = new Lexer();
 
@@ -46,7 +46,7 @@ public record ParsedDiff(UnifiedDiff diff, List<List<List<Segment>>> words, List
         }
         FileDiff last = diff.files().last();
         List<Segment> whole = List.of(new Segment(note, false));
-        List<Token> none = List.empty();
+        Option<List<Token>> unlexed = Option.none();
         FileDiff noted = new FileDiff(
                 last.type(),
                 last.path(),
@@ -66,7 +66,7 @@ public record ParsedDiff(UnifiedDiff diff, List<List<List<Segment>>> words, List
                         ? words.append(List.of(whole))
                         : words.init().append(words.last().append(whole)),
                 last.hunks().isEmpty()
-                        ? tokens.append(Option.none())
-                        : tokens.init().append(tokens.last().map(lines -> lines.append(none))));
+                        ? tokens.append(List.of(unlexed))
+                        : tokens.init().append(tokens.last().append(unlexed)));
     }
 }

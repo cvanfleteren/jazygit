@@ -96,9 +96,7 @@ class ParsedDiffTest {
         diffs.flatMap(diff -> List.of(ParsedDiff.of(diff), ParsedDiff.of(diff).withNote(NOTE)))
                 .forEach(parsed -> assertEquals(
                         parsed.words().map(List::size),
-                        parsed.tokens()
-                                .zip(parsed.words())
-                                .map(hunk -> hunk._1.map(List::size).getOrElse(hunk._2.size())),
+                        parsed.tokens().map(List::size),
                         parsed.diff().toString()));
     }
 
@@ -121,10 +119,10 @@ class ParsedDiffTest {
 
         assertEquals(
                 List.of(
-                        Option.of(List.of(
-                                List.of(new Token(0, 3, Token.Kind.KEYWORD)),
-                                List.of(new Token(0, 4, Token.Kind.KEYWORD)))),
-                        Option.none()),
+                        List.of(
+                                Option.of(List.of(new Token(0, 3, Token.Kind.KEYWORD))),
+                                Option.of(List.of(new Token(0, 4, Token.Kind.KEYWORD)))),
+                        List.of(Option.<List<Token>>none(), Option.<List<Token>>none())),
                 diff.tokens());
     }
 
