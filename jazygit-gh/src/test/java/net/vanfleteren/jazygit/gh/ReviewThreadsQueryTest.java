@@ -40,7 +40,8 @@ class ReviewThreadsQueryTest {
 
     private static String onLine(int line) {
         return """
-                "diffSide": "RIGHT", "line": %d, "startLine": null, "subjectType": "LINE\"""".formatted(line);
+                "diffSide": "RIGHT", "line": %d, "startLine": null, "startDiffSide": null,
+                "subjectType": "LINE\"""".formatted(line);
     }
 
     private static String comment(String author, String state, String minimized, String body) {
@@ -55,6 +56,7 @@ class ReviewThreadsQueryTest {
                 Side.RIGHT,
                 Option.of(12),
                 Option.none(),
+                Side.RIGHT,
                 Option.of(12),
                 false,
                 false,
@@ -132,9 +134,9 @@ class ReviewThreadsQueryTest {
     @Test
     void anOutdatedThreadOnSeveralLinesOfTheOldFileAndOneOnAWholeFile() {
         String outdated = """
-                "diffSide": "LEFT", "line": null, "startLine": 10, "subjectType": "LINE\"""";
+                "diffSide": "LEFT", "line": null, "startLine": 10, "startDiffSide": "RIGHT", "subjectType": "LINE\"""";
         String onFile = """
-                "diffSide": "RIGHT", "line": null, "startLine": null, "subjectType": "FILE\"""";
+                "diffSide": "RIGHT", "line": null, "startLine": null, "startDiffSide": null, "subjectType": "FILE\"""";
         String bob = comment("{ \"login\": \"bob\" }", "SUBMITTED", "null", "Hm");
 
         List<ReviewThread> threads = read(page("null", thread(outdated, 1, bob) + ", " + thread(onFile, 1, bob)))
@@ -144,6 +146,9 @@ class ReviewThreadsQueryTest {
         assertEquals(Side.LEFT, threads.head().side());
         assertEquals(Option.none(), threads.head().line());
         assertEquals(Option.of(10), threads.head().startLine());
+        // Its first line on the other side than its last.
+        assertEquals(Side.RIGHT, threads.head().startSide());
+        assertEquals(Side.RIGHT, threads.last().startSide());
         assertEquals(Subject.FILE, threads.last().subject());
     }
 

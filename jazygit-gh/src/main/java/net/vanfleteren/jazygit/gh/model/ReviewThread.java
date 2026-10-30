@@ -12,6 +12,7 @@ import java.time.Instant;
  * @param line         the number of its line, its last when it is about several; none when it is outdated, or about
  *                     a whole file
  * @param startLine    the number of its first line when it is about several
+ * @param startSide    on which side of the diff its first line is, which may be the other one than that of its last
  * @param originalLine the number its line had when the thread was made, in the commit it was made on
  * @param resolved     whether it is resolved
  * @param outdated     whether its line changed since it was made
@@ -24,6 +25,7 @@ public record ReviewThread(
         Side side,
         Option<Integer> line,
         Option<Integer> startLine,
+        Side startSide,
         Option<Integer> originalLine,
         boolean resolved,
         boolean outdated,

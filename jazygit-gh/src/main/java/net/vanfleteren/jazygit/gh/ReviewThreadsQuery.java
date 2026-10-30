@@ -42,7 +42,7 @@ final class ReviewThreadsQuery {
             query($owner: String!, $name: String!, $number: Int!, $endCursor: String) { \
             repository(owner: $owner, name: $name) { pullRequest(number: $number) { headRefOid baseRefOid \
             reviewThreads(first: 100, after: $endCursor) { pageInfo { hasNextPage endCursor } \
-            nodes { path diffSide line startLine originalLine isResolved isOutdated subjectType \
+            nodes { path diffSide line startLine startDiffSide originalLine isResolved isOutdated subjectType \
             comments(first: %d) { totalCount nodes { author { login } createdAt body state isMinimized \
             minimizedReason } } } } } } }""".formatted(COMMENTS);
 
@@ -72,7 +72,7 @@ final class ReviewThreadsQuery {
                     (total, nodes) -> Tuple.of(nodes.flatMap(comment -> comment), Math.max(0, total - nodes.size()))));
 
     // A thread; none for one with only comments of a review that is not submitted yet.
-    static final Decoder<Option<ReviewThread>> THREAD = map2(
+    static final Decoder<Option<ReviewThread>> THREAD = map3(
             map8(
                     field("path", string()),
                     field("diffSide", enumOf(Side.class)),
@@ -83,14 +83,17 @@ final class ReviewThreadsQuery {
                     field("isOutdated", bool()),
                     field("subjectType", enumOf(Subject.class)),
                     Tuple::of),
+            // The side of its first line, none when it is on one line; it is then that of its line.
+            field("startDiffSide", nullable(enumOf(Side.class))),
             COMMENTS_READ,
-            (thread, comments) -> Option.when(
+            (thread, startSide, comments) -> Option.when(
                     !comments._1().isEmpty(),
                     () -> new ReviewThread(
                             thread._1(),
                             thread._2(),
                             thread._3(),
                             thread._4(),
+                            startSide.getOrElse(thread._2()),
                             thread._5(),
                             thread._6(),
                             thread._7(),

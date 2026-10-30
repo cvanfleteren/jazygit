@@ -33,11 +33,17 @@ class PlacedRemarksTest {
             """);
 
     private static ReviewThread thread(String path, Side side, Option<Integer> line, Option<Integer> start) {
+        return thread(path, side, line, start, side);
+    }
+
+    private static ReviewThread thread(
+            String path, Side side, Option<Integer> line, Option<Integer> start, Side startSide) {
         return new ReviewThread(
                 path,
                 side,
                 line,
                 start,
+                startSide,
                 line,
                 false,
                 line.isEmpty(),
@@ -74,10 +80,32 @@ class PlacedRemarksTest {
         PlacedRemarks placed = PlacedRemarks.place(DIFF, List.of(several));
 
         assertEquals(List.of(List.empty(), List.empty(), List.empty(), List.of(several)), afterEachLine(placed));
-        // The removed line has no number in the new file, so it is not covered.
+        // The removed line among them is covered too, as GitHub highlights it.
         assertEquals(
-                List.of(true, false, true, false),
+                List.of(true, true, true, false),
                 placed.files().head().lines().head().map(LineRemarks::covered));
+    }
+
+    @Test
+    void aThreadThatStartsOnTheOtherSideCoversFromThere() {
+        // From the removed line two of the old file to line three of the new one.
+        ReviewThread across = thread("a.txt", Side.RIGHT, Option.of(3), Option.of(2), Side.LEFT);
+
+        PlacedRemarks placed = PlacedRemarks.place(DIFF, List.of(across));
+
+        assertEquals(
+                List.of(false, true, true, false),
+                placed.files().head().lines().head().map(LineRemarks::covered));
+    }
+
+    @Test
+    void aThreadOnSeveralLinesThatCannotBePlacedCoversNothing() {
+        ReviewThread beyond = thread("a.txt", Side.RIGHT, Option.of(40), Option.of(1));
+
+        FileRemarks file = PlacedRemarks.place(DIFF, List.of(beyond)).files().head();
+
+        assertEquals(List.of(beyond), file.unplaced());
+        assertTrue(file.lines().head().forAll(line -> !line.covered()));
     }
 
     @Test
@@ -99,6 +127,7 @@ class PlacedRemarksTest {
                 Side.RIGHT,
                 Option.none(),
                 Option.none(),
+                Side.RIGHT,
                 Option.none(),
                 false,
                 false,
