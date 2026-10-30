@@ -16,8 +16,8 @@ import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.FileDiff;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.Hunk;
 import net.vanfleteren.jazygit.git.model.WordDiff.Segment;
-import net.vanfleteren.jazygit.git.model.syntax.Token;
 import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.syntax.Token;
 
 /**
  * A unified diff drawn rich (ADR 44): what comes before its first file as it is, then each file under a bar that

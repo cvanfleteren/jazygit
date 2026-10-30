@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.git.model.syntax;
+package net.vanfleteren.jazygit.syntax;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 

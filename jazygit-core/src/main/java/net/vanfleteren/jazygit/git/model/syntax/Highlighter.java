@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.git.model.syntax;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.FileDiff;
+import net.vanfleteren.jazygit.syntax.Token;
 
 /**
  * What colours the code of a diff by its syntax (ADR 53).

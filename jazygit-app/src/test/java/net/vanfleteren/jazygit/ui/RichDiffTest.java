@@ -15,8 +15,8 @@ import java.time.Duration;
 import java.util.stream.Collectors;
 import net.vanfleteren.jazygit.git.model.ParsedDiff;
 import net.vanfleteren.jazygit.git.model.WordDiff.Segment;
-import net.vanfleteren.jazygit.git.model.syntax.Lexer;
-import net.vanfleteren.jazygit.git.model.syntax.Token;
+import net.vanfleteren.jazygit.syntax.Lexer;
+import net.vanfleteren.jazygit.syntax.Token;
 import org.junit.jupiter.api.Test;
 
 class RichDiffTest {

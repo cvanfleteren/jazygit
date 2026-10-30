@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.git.model.syntax;
+package net.vanfleteren.jazygit.syntax;
 
 import io.vavr.Tuple;
 import io.vavr.collection.Iterator;
@@ -6,20 +6,15 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.IntPredicate;
 import java.util.stream.IntStream;
-import net.vanfleteren.jazygit.git.model.ChangeType;
-import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
-import net.vanfleteren.jazygit.git.model.UnifiedDiff.FileDiff;
-import net.vanfleteren.jazygit.git.model.UnifiedDiff.Hunk;
-import net.vanfleteren.jazygit.git.model.syntax.Grammar.Delimited;
-import net.vanfleteren.jazygit.git.model.syntax.Grammar.Mode;
-import net.vanfleteren.jazygit.git.model.syntax.Token.Kind;
+import net.vanfleteren.jazygit.syntax.Grammar.Delimited;
+import net.vanfleteren.jazygit.syntax.Grammar.Mode;
+import net.vanfleteren.jazygit.syntax.Token.Kind;
 
 /**
- * The highlighter of ADR 53: one scanner, set up for each {@link Language} by its {@link Grammar}. A hunk is lexed
- * as two texts, the old one and the new one, each line going on from where the line before it in the same text
- * left the scanner; each hunk starts outside of everything.
+ * The scanner of ADR 53, set up for each {@link Language} by its {@link Grammar}. A text is lexed a line at a time,
+ * each line going on from where the line before it left the scanner, which starts outside of everything.
  */
-public record Lexer() implements Highlighter {
+public final class Lexer {
 
     /**
      * How long a line may be to be lexed, in {@code char}s: a longer one is minified or made by a program, which nobody
@@ -47,74 +42,13 @@ public record Lexer() implements Highlighter {
             .max()
             .getOrElse(0);
 
-    @Override
-    public List<List<Option<List<Token>>>> tokens(FileDiff file) {
-        Option<Grammar> grammar = file.type() == ChangeType.CONFLICTED
-                ? Option.none()
-                : Language.of(file.path(), firstLine(file)).map(Language::grammar);
-        return file.hunks()
-                .map(hunk -> grammar.filter(ignored -> hunk.numbered())
-                        .map(known -> hunk(known, hunk))
-                        .getOrElse(() -> hunk.lines().map(line -> Option.none())));
-    }
+    private Lexer() {}
 
     /**
-     * The first line of the new file, when the diff shows it.
+     * {@code line} of {@code language} lexed from inside {@code state}, unless it is longer than {@link #MAX_LINE}.
      */
-    private static Option<String> firstLine(FileDiff file) {
-        return file.hunks()
-                .headOption()
-                .filter(Hunk::numbered)
-                .flatMap(hunk -> hunk.lines()
-                        .find(line -> line.kind() != DiffLine.Kind.NOTE && line.kind() != DiffLine.Kind.REMOVED))
-                .filter(line -> line.newNumber().contains(1))
-                .map(DiffLine::text);
-    }
-
-    /**
-     * The tokens of the lines of {@code hunk}: a removed line's from the old text, an added or a context line's from
-     * the new one. A note is not lexed, and leaves both where they were. A line longer than {@link #MAX_LINE} is not
-     * lexed either, and the line after it in the same text starts outside of everything, as a hunk does.
-     */
-    static List<Option<List<Token>>> hunk(Grammar grammar, Hunk hunk) {
-        Outside start = new Outside();
-        return hunk.lines()
-                .foldLeft(
-                        Tuple.of(List.<Option<List<Token>>>empty(), (State) start, (State) start),
-                        (done, line) -> switch (line.kind()) {
-                            case NOTE -> done.map1(lines -> lines.prepend(Option.none()));
-                            case REMOVED -> {
-                                Option<Lexed> old = lexed(grammar, done._2, line.text());
-                                yield Tuple.of(done._1.prepend(old.map(Lexed::tokens)), after(old), done._3);
-                            }
-                            case ADDED -> {
-                                Option<Lexed> now = lexed(grammar, done._3, line.text());
-                                yield Tuple.of(done._1.prepend(now.map(Lexed::tokens)), done._2, after(now));
-                            }
-                            case CONTEXT -> {
-                                Option<Lexed> now = lexed(grammar, done._3, line.text());
-                                // Most often both texts are outside of everything, and lexing it once is enough.
-                                Option<Lexed> old =
-                                        done._2.equals(done._3) ? now : lexed(grammar, done._2, line.text());
-                                yield Tuple.of(done._1.prepend(now.map(Lexed::tokens)), after(old), after(now));
-                            }
-                        })
-                ._1
-                .reverse();
-    }
-
-    /**
-     * {@code line} lexed from inside {@code state}, unless it is too long to be.
-     */
-    private static Option<Lexed> lexed(Grammar grammar, State state, String line) {
-        return Option.when(line.length() <= MAX_LINE, () -> line(grammar, state, line));
-    }
-
-    /**
-     * What the scanner is inside of after a line that was {@code lexed}: outside of everything after one that was not.
-     */
-    private static State after(Option<Lexed> lexed) {
-        return lexed.map(Lexed::state).getOrElse(Outside::new);
+    public static Option<Lexed> lexed(Language language, State state, String line) {
+        return Option.when(line.length() <= MAX_LINE, () -> line(language.grammar(), state, line));
     }
 
     /**
@@ -214,12 +148,12 @@ public record Lexer() implements Highlighter {
     /**
      * The tokens of a line, and what the scanner is inside of after it.
      */
-    record Lexed(List<Token> tokens, State state) {}
+    public record Lexed(List<Token> tokens, State state) {}
 
     /**
      * What the scanner is inside of between two pieces of a text.
      */
-    sealed interface State permits Outside, Inside, InTag, InFence {
+    public sealed interface State permits Outside, Inside, InTag, InFence {
 
         /**
          * What it is inside of at the start of the next line: a string that cannot go on over lines ends with its
@@ -235,7 +169,7 @@ public record Lexer() implements Highlighter {
     /**
      * Outside of everything.
      */
-    record Outside() implements State {}
+    public record Outside() implements State {}
 
     /**
      * Inside a string or a comment of {@code kind}, which goes back to {@code after} when it is closed.

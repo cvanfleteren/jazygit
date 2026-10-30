@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.git.model.syntax;
+package net.vanfleteren.jazygit.syntax;
 
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
