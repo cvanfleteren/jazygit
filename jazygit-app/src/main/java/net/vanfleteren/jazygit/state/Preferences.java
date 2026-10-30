@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.state;
 
+import io.vavr.collection.List;
 import io.vavr.control.Option;
 import lombok.With;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
@@ -16,12 +17,19 @@ import net.vanfleteren.jazygit.settings.ThemeName;
  *                      until the user chooses one
  * @param ignoreWhitespace whether the diffs leave out changes to whitespace only, for this session only
  * @param dragged       the width the left column of a screen is dragged to, which is kept once it is let go
+ * @param draggedHeights the heights the panes of the left column of a screen are dragged to, which are kept once
+ *                       they are let go
  */
 @With
 public record Preferences(
-        Settings settings, Option<ThemeName> themeOverride, boolean ignoreWhitespace, Option<Dragged> dragged) {
+        Settings settings,
+        Option<ThemeName> themeOverride,
+        boolean ignoreWhitespace,
+        Option<Dragged> dragged,
+        Option<DraggedHeights> draggedHeights) {
 
-    public static final Preferences DEFAULT = new Preferences(Settings.DEFAULT, Option.none(), false, Option.none());
+    public static final Preferences DEFAULT =
+            new Preferences(Settings.DEFAULT, Option.none(), false, Option.none(), Option.none());
 
     /**
      * How the diffs of the files and the commits are read: a merge against its first parent when changes are drawn
@@ -77,7 +85,44 @@ public record Preferences(
     }
 
     /**
+     * How tall the panes of the left column of {@code screen} under the status are but the last, in percent of its
+     * height: where they are dragged to, else the heights kept.
+     */
+    public List<Integer> leftHeights(Screen screen) {
+        return draggedHeights
+                .filter(drag -> drag.screen() == screen)
+                .map(DraggedHeights::heights)
+                .getOrElse(() -> keptHeights(screen));
+    }
+
+    /**
+     * How tall the panes of the left column of {@code screen} under the status are kept but the last, in percent of
+     * its height.
+     */
+    public List<Integer> keptHeights(Screen screen) {
+        return switch (screen) {
+            case REPOSITORY -> settings.repositoryHeights();
+            case PULL_REQUESTS -> settings.pullRequestsHeights();
+        };
+    }
+
+    /**
+     * The settings with the panes of the left column of {@code screen} kept {@code heights} tall.
+     */
+    public Settings keepingHeights(Screen screen, List<Integer> heights) {
+        return switch (screen) {
+            case REPOSITORY -> settings.withRepositoryHeights(heights);
+            case PULL_REQUESTS -> settings.withPullRequestsHeights(heights);
+        };
+    }
+
+    /**
      * The left column of {@code screen}, dragged to {@code width} percent of the width.
      */
     public record Dragged(Screen screen, int width) {}
+
+    /**
+     * The panes of the left column of {@code screen}, dragged to {@code heights} percent of its height.
+     */
+    public record DraggedHeights(Screen screen, List<Integer> heights) {}
 }

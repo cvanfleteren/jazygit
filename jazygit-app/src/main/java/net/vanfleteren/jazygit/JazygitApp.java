@@ -51,7 +51,7 @@ public class JazygitApp extends ToolkitApp {
     private final ContentPanel contentPanel;
     private final FocusKeeper focus;
     private final LeftColumn leftColumn;
-    // The border between the left column and the content panel, which the user drags.
+    // The borders of the left column and of the panes in it, which the user drags.
     private final BorderDrag borderDrag = new BorderDrag(dispatch);
     // Whether a Redraw is queued that no frame has been drawn since; only touched on the render thread.
     private boolean redrawPending;
@@ -149,7 +149,7 @@ public class JazygitApp extends ToolkitApp {
     }
 
     /**
-     * Drags the border between the columns, or else gives the focus to what a click lands on.
+     * Drags the border between the columns or between the panes of the left column, or else gives the focus to what a click lands on.
      */
     private EventResult handleMouse(Event event) {
         if (!(event instanceof MouseEvent mouse)) {
@@ -203,9 +203,8 @@ public class JazygitApp extends ToolkitApp {
         Option<Integer> leftHeight = Try.of(
                         () -> runner().tuiRunner().backend().size().height() - FetchLine.HEIGHT)
                 .toOption();
-        Column left = leftColumn
-                .render(model, focusedId, activeId, leftHeight)
-                .percent(model.preferences().leftWidth(model.screen()));
+        LeftColumn.Rendered rendered = leftColumn.render(model, focusedId, activeId, leftHeight);
+        Column left = rendered.column().percent(model.preferences().leftWidth(model.screen()));
         var panes = row(
                 left,
                 column(
@@ -216,7 +215,7 @@ public class JazygitApp extends ToolkitApp {
         Element layout = column(
                 panes.fill(),
                 FetchLine.render(model, clock.instant(), screenWidth()).length(FetchLine.HEIGHT));
-        borderDrag.shown(panes, left);
+        borderDrag.shown(panes, left, rendered.panes());
         // The framework knows no focus before the first render.
         Popups.Rendered shown = popups.render(model, Option.of(focusedId));
         report(reports());

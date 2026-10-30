@@ -240,6 +240,51 @@ class SettingsFileTest {
     }
 
     @Test
+    void readsTheHeightsOfThePanesOfTheLeftColumns() throws IOException {
+        write("""
+                [ui]
+                repository-heights = [30, 20, 25]
+                pull-requests-heights = [50, 25]
+                """);
+
+        assertEquals(
+                new Loaded(
+                        Settings.DEFAULT
+                                .withRepositoryHeights(List.of(30, 20, 25))
+                                .withPullRequestsHeights(List.of(50, 25)),
+                        Option.none()),
+                settingsFile().load());
+    }
+
+    @Test
+    void heightsOfTheWrongCountOrTooShortAPaneAreInvalid() throws IOException {
+        write("""
+                [ui]
+                repository-heights = [30, 20]
+                pull-requests-heights = [50, 45]
+                """);
+
+        assertEquals(
+                new Loaded(
+                        Settings.DEFAULT,
+                        Option.of(new SettingsProblem.Invalid(
+                                file(), List.of("ui.repository-heights", "ui.pull-requests-heights")))),
+                settingsFile().load());
+    }
+
+    @Test
+    void savedHeightsAreReadBackAndGoingBackToTheDefaultRemovesThem() throws IOException {
+        Settings tall = Settings.DEFAULT.withRepositoryHeights(List.of(40, 15, 30));
+        settingsFile().save(Settings.DEFAULT, tall);
+
+        assertEquals(new Loaded(tall, Option.none()), settingsFile().load());
+
+        settingsFile().save(tall, Settings.DEFAULT);
+
+        assertFalse(Files.readString(file()).contains("heights"), Files.readString(file()));
+    }
+
+    @Test
     void aWidthOutOfRangeOrNoWholeNumberIsInvalid() throws IOException {
         write("""
                 [ui]

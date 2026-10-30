@@ -22,9 +22,6 @@ import net.vanfleteren.jazygit.state.prs.PrOverviewMsg;
  */
 public final class LeftColumn {
 
-    private static final int FILES_PERCENT = 25;
-    private static final int BRANCHES_PERCENT = 20;
-    private static final int COMMITS_PERCENT = 30;
     // A border around a single blank line.
     private static final int MIN_STASH_HEIGHT = 3;
 
@@ -61,28 +58,43 @@ public final class LeftColumn {
     }
 
     /**
+     * How many rows each pane under the status takes of a column {@code height} rows tall, whose panes but the last
+     * are {@code heights} percent of the column tall: the last takes what they and the status leave. The borders
+     * between the panes are rounded to a row, not the panes, so moving one border leaves the others where they are.
+     */
+    static List<Integer> paneRows(List<Integer> heights, int height) {
+        List<Integer> borders = heights.scanLeft(0, Integer::sum).map(border -> Math.round(height * border / 100f));
+        return borders.tail()
+                .zipWith(borders, (bottom, top) -> bottom - top)
+                .append(Math.max(0, height - StatusPanel.HEIGHT - borders.last()));
+    }
+
+    /**
      * The height of the stash pane: just its rows, but at most the share of the left column that is left once the
      * other panes have theirs, and at least an empty pane (a blank line in a border). Empty when the {@code height}
      * of the column is not known.
      */
     static Option<Integer> stashHeight(Model model, Option<Integer> height) {
         int rows = Math.max(1, model.repo().stashes().getOrElse(List.empty()).size());
-        return height.map(column -> column
-                        - StatusPanel.HEIGHT
-                        - column * (FILES_PERCENT + BRANCHES_PERCENT + COMMITS_PERCENT) / 100)
+        return height.map(column -> paneRows(model.preferences().leftHeights(Screen.REPOSITORY), column)
+                        .last())
                 .map(share -> Math.max(MIN_STASH_HEIGHT, Math.min(rows + 2, share)));
     }
 
     /**
-     * The column for the screen {@code model} shows, {@code height} rows tall if that is known.
+     * The column for the screen {@code model} shows, {@code height} rows tall if that is known, with the panes under
+     * the status, whose bottom borders the user drags.
      *
      * @param focusedId the element with the focus, if any
      * @param activeId  the pane in use, whose highlighted row shows
      */
-    public Column render(Model model, String focusedId, String activeId, Option<Integer> height) {
-        return model.screen() == Screen.PULL_REQUESTS
-                ? pullRequestPanes(model, focusedId, activeId)
+    public Rendered render(Model model, String focusedId, String activeId, Option<Integer> height) {
+        List<Panel> panes = model.screen() == Screen.PULL_REQUESTS
+                ? pullRequestPanes(model, focusedId, activeId, height)
                 : repositoryPanes(model, focusedId, activeId, height);
+        return new Rendered(
+                column(panes.<Element>map(pane -> pane).prepend(status(model)).toJavaArray(Element[]::new)),
+                panes.map(pane -> pane));
     }
 
     /**
@@ -104,32 +116,43 @@ public final class LeftColumn {
     }
 
     /**
-     * The left column of the repository screen: the status, the files, the branches, the commits and the stashes.
+     * The panes of the repository screen under the status: the files, the branches, the commits and the stashes.
      */
-    private Column repositoryPanes(Model model, String focusedId, String activeId, Option<Integer> height) {
-        Panel branches = branchesPanel.render(model, focusedId, activeId);
+    private List<Panel> repositoryPanes(Model model, String focusedId, String activeId, Option<Integer> height) {
+        List<Integer> heights = model.preferences().leftHeights(Screen.REPOSITORY);
         Panel stash = stashPanel.render(model, focusedId, activeId);
+        Panel commits = commitsPanel.render(model, focusedId, activeId);
         Option<Integer> stashHeight = stashHeight(model, height);
-        return column(
-                status(model),
-                filesPanel.render(model, focusedId, activeId).percent(FILES_PERCENT),
-                branches.percent(BRANCHES_PERCENT),
+        return sized(
+                        List.of(
+                                filesPanel.render(model, focusedId, activeId),
+                                branchesPanel.render(model, focusedId, activeId)),
+                        heights.take(2),
+                        height)
                 // With the stash sized to its content, the commits take what is left, which is
                 // their share when the stash is as tall as it may get.
-                stashHeight.isDefined()
-                        ? commitsPanel.render(model, focusedId, activeId).fill()
-                        : commitsPanel.render(model, focusedId, activeId).percent(COMMITS_PERCENT),
-                stashHeight.map(stash::length).getOrElse(stash::fill));
+                .append(stashHeight.isDefined() ? commits.fill() : commits.percent(heights.get(2)))
+                .append(stashHeight.map(stash::length).getOrElse(stash::fill));
     }
 
     /**
-     * The left column of the pull requests screen: the status, the pull requests of the repository, the ones that ask
-     * for the user's review, and the ones they opened, sharing the height.
+     * The panes of the pull requests screen under the status: the pull requests of the repository, the ones that ask
+     * for the user's review, and the ones they opened.
      */
-    private Column pullRequestPanes(Model model, String focusedId, String activeId) {
-        List<Panel> panes = pullRequestsPanels.map(
-                pane -> pane.render(model, focusedId, activeId).fill());
-        return column(panes.<Element>map(pane -> pane).prepend(status(model)).toJavaArray(Element[]::new));
+    private List<Panel> pullRequestPanes(Model model, String focusedId, String activeId, Option<Integer> height) {
+        List<Panel> panes = pullRequestsPanels.map(pane -> pane.render(model, focusedId, activeId));
+        return sized(panes.init(), model.preferences().leftHeights(Screen.PULL_REQUESTS), height)
+                .append(panes.last().fill());
+    }
+
+    /**
+     * The {@code panes} on top of the column, each its height of {@code heights} tall: in rows of a column
+     * {@code height} rows tall, else in percent of the column.
+     */
+    private static List<Panel> sized(List<Panel> panes, List<Integer> heights, Option<Integer> height) {
+        return height.fold(
+                () -> panes.zipWith(heights, Panel::percent),
+                column -> panes.zipWith(paneRows(heights, column), Panel::length));
     }
 
     /**
@@ -139,4 +162,9 @@ public final class LeftColumn {
         return StatusPanel.render(
                 model, Theme.spanStyles(styleEngine), screen -> dispatch.accept(new PrOverviewMsg.Chosen(screen)));
     }
+
+    /**
+     * The left column, and the panes in it under the status.
+     */
+    public record Rendered(Column column, List<Element> panes) {}
 }
