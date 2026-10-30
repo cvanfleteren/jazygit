@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.gh.model;
 
+import io.vavr.collection.List;
 import io.vavr.control.Option;
 
 /**
@@ -18,5 +19,21 @@ public record RepositoryPullRequests(String repository, PullRequestList open, Op
      */
     public RepositoryPullRequests(String repository, PullRequestList open) {
         this(repository, open, Option.none(), 0);
+    }
+
+    /**
+     * The open pull requests from branches of the repository itself, not from forks, as the branches show them: the
+     * same read serves both (ADR 58).
+     */
+    public List<PullRequest> ofBranches() {
+        return open.pullRequests()
+                .filter(summary -> !summary.fromFork())
+                .map(summary -> new PullRequest(
+                        summary.number(),
+                        summary.headBranch(),
+                        summary.draft(),
+                        summary.checks(),
+                        summary.review(),
+                        summary.stack()));
     }
 }

@@ -101,11 +101,6 @@ public final class CliGitHub implements GitHub {
     }
 
     @Override
-    public Either<GhError, List<PullRequest>> pullRequests() {
-        return process.readJson(PullRequestsQuery.COMMAND, PullRequestsQuery.DECODER);
-    }
-
-    @Override
     public Either<GhError, RepositoryPullRequests> repositoryPullRequests() {
         return process.readJson(RepositoryPullRequestsQuery.COMMAND, RepositoryPullRequestsQuery.DECODER);
     }

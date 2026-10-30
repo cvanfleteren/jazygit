@@ -14,6 +14,8 @@ import net.vanfleteren.jazygit.state.Jobs;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Preview;
+import net.vanfleteren.jazygit.state.PullRequestsMsg;
+import net.vanfleteren.jazygit.state.PullRequestsUpdate;
 import net.vanfleteren.jazygit.state.Screen;
 import net.vanfleteren.jazygit.state.Update.Next;
 
@@ -28,9 +30,10 @@ public final class PrOverviewUpdate {
      */
     private static final List<Cmd> LOADS = List.of(new LoadMyPullRequests(), new LoadRepositoryPullRequests());
     /**
-     * The read while the screen is hidden, for the new pull requests of the repository (ADR 29).
+     * The read a tick asks for while the screen is shown: the pull requests of the repository are read after every
+     * fetch, for the branches too, which keeps them, and the new ones of ADR 29, up to date (ADR 58).
      */
-    private static final List<Cmd> HIDDEN_LOADS = List.of(new LoadRepositoryPullRequests());
+    private static final List<Cmd> TICKED = List.of(new LoadMyPullRequests());
 
     // The reads, as the freshness of the pull requests names them.
     private static final String REPOSITORY = "repository";
@@ -47,15 +50,15 @@ public final class PrOverviewUpdate {
                 screen == model.screen() ? Next.of(model) : reloadIfShown(Next.of(model.withScreen(screen)));
             // The reads that keep failing wait longer the more they failed (ADR 58).
             case PrOverviewMsg.Tick() ->
-                loaded(
-                        Next.of(model),
-                        (model.screen() == Screen.PULL_REQUESTS ? LOADS : HIDDEN_LOADS)
-                                .filter(load -> FailingRead.due(model, load)));
-            default -> {
-                Model ran = readTold(model, msg);
-                Step step = update(ran.prOverview(), msg, ran.now(), ran.jobs());
-                yield new Next(ran.withPrOverview(step.overview()), step.cmds());
-            }
+                model.screen() == Screen.PULL_REQUESTS
+                        ? loaded(Next.of(model), TICKED.filter(load -> FailingRead.due(model, load)))
+                        : Next.of(model);
+            // The pull requests of the repository are those of the branches too (ADR 58).
+            case PrOverviewMsg.RepositoryLoaded(var read, var kept) ->
+                withBranches(overview(model, msg), new PullRequestsMsg.Loaded(read.ofBranches()));
+            case PrOverviewMsg.RepositoryLoadFailed(var failure) ->
+                withBranches(overview(model, msg), new PullRequestsMsg.LoadFailed(failure));
+            default -> overview(model, msg);
         };
     }
 
@@ -111,12 +114,28 @@ public final class PrOverviewUpdate {
     }
 
     /**
-     * {@code model} knowing whether the read {@code msg} tells of succeeded, if it tells of one.
+     * What {@code msg} does to the pull requests screen of {@code model}.
+     */
+    private static Next overview(Model model, PrOverviewMsg msg) {
+        Model ran = readTold(model, msg);
+        Step step = update(ran.prOverview(), msg, ran.now(), ran.jobs());
+        return new Next(ran.withPrOverview(step.overview()), step.cmds());
+    }
+
+    /**
+     * {@code next}, with what {@code read} tells of the pull requests of the branches too.
+     */
+    private static Next withBranches(Next next, PullRequestsMsg read) {
+        Next branches = PullRequestsUpdate.update(next.model(), read);
+        return new Next(branches.model(), next.cmds().appendAll(branches.cmds()));
+    }
+
+    /**
+     * {@code model} knowing whether the read of the pull requests the user opened or is asked to review succeeded, if
+     * {@code msg} tells of it; that of those of the repository is told by the branches ({@link PullRequestsUpdate}).
      */
     private static Model readTold(Model model, PrOverviewMsg msg) {
         return switch (msg) {
-            case PrOverviewMsg.RepositoryLoaded _ -> FailingRead.ran(model, new LoadRepositoryPullRequests(), false);
-            case PrOverviewMsg.RepositoryLoadFailed _ -> FailingRead.ran(model, new LoadRepositoryPullRequests(), true);
             case PrOverviewMsg.MineLoaded _ -> FailingRead.ran(model, new LoadMyPullRequests(), false);
             case PrOverviewMsg.MineLoadFailed _ -> FailingRead.ran(model, new LoadMyPullRequests(), true);
             default -> model;

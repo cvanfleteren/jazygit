@@ -40,11 +40,6 @@ public interface StubGitHub extends GitHub {
         return Either.right(List.empty());
     }
 
-    @Override
-    default Either<GhError, List<PullRequest>> pullRequests() {
-        return Either.right(List.empty());
-    }
-
     /**
      * The repository {@code owner/repo} without pull requests.
      */

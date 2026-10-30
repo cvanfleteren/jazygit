@@ -66,6 +66,7 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.state.Loadable.Failed;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
+import net.vanfleteren.jazygit.state.prs.LoadRepositoryPullRequests;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -851,11 +852,11 @@ class ProgramTest {
 
         program.dispatch(new PullRequestsMsg.Refresh());
         settleWithout(background);
-        assertEquals(true, program.model().jobs().runs(new LoadPullRequests()));
+        assertEquals(true, program.model().jobs().runs(new LoadRepositoryPullRequests()));
         assertEquals(true, program.model().jobs().runs(new LoadBranchChecks()));
 
         settleWithout(io);
-        assertEquals(false, program.model().jobs().runs(new LoadPullRequests()));
+        assertEquals(false, program.model().jobs().runs(new LoadRepositoryPullRequests()));
         assertEquals(false, program.model().jobs().runs(new LoadBranchChecks()));
         assertEquals(Option.of(HashMap.empty()), program.model().gitHub().pullRequests());
     }

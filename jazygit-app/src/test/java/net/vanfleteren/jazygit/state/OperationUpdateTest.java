@@ -29,6 +29,7 @@ import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
 import net.vanfleteren.jazygit.state.Cmd.LoadStashes;
 import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.prs.LoadRepositoryPullRequests;
 import org.junit.jupiter.api.Test;
 
 class OperationUpdateTest {
@@ -56,7 +57,7 @@ class OperationUpdateTest {
                         new LoadBranches(),
                         new LoadStashes(),
                         new Cmd.LoadWorktrees(),
-                        new LoadPullRequests(),
+                        new LoadRepositoryPullRequests(),
                         new LoadBranchChecks()),
                 next.cmds());
     }

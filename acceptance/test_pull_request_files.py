@@ -6,16 +6,22 @@ LISTED = "pullRequests(states: OPEN"
 DETAILS = "nameWithOwner url pullRequest(number: $number) { number title"
 
 
-def listed(branch: str) -> dict:
-    """The open pull requests of the repository: number 1, of branch."""
-    return [{"data": {"repository": {"pullRequests": {
-        "pageInfo": {"hasNextPage": False, "endCursor": None},
-        "nodes": [{
-            "number": 1, "headRefName": branch, "isDraft": False, "isCrossRepository": False,
-            "reviewDecision": None, "stackEntry": None, "stack": None,
-            "commits": {"nodes": [{"commit": {"statusCheckRollup": None, "checkSuites": {"nodes": []}}}]},
-        }],
-    }}}}]
+def listed(repository: str, branch: str) -> dict:
+    """The open pull requests of repository, one page of them: number 1, of branch."""
+    return [{"data": {"viewer": {"login": "me"}, "repository": {
+        "nameWithOwner": repository,
+        "latest": {"nodes": [{"number": 1}]},
+        "pullRequests": {
+            "totalCount": 1,
+            "pageInfo": {"hasNextPage": False, "endCursor": None},
+            "nodes": [{
+                "number": 1, "title": "Add b", "url": f"https://github.com/{repository}/pull/1", "updatedAt": DATE,
+                "isDraft": False, "isCrossRepository": False, "headRefName": branch,
+                "author": {"login": "teammate"}, "repository": {"nameWithOwner": repository},
+                "reviewDecision": None, "stackEntry": None, "stack": None,
+                "commits": {"nodes": [{"commit": {"statusCheckRollup": None, "checkSuites": {"nodes": []}}}]},
+            }],
+        }}}}]
 
 
 def details(repository: str, branch: str, head: str, base: str) -> dict:
@@ -23,6 +29,7 @@ def details(repository: str, branch: str, head: str, base: str) -> dict:
     return {"data": {"repository": {"nameWithOwner": repository, "url": f"https://github.com/{repository}", "pullRequest": {
         "number": 1, "title": "Add b", "author": {"login": "teammate"}, "state": "OPEN", "isDraft": False,
         "headRefName": branch, "baseRefName": "main", "headRefOid": head, "baseRefOid": base,
+        "baseRef": {"compare": {"behindBy": 0}},
         "stackEntry": None, "stack": None, "createdAt": DATE, "additions": 2, "deletions": 0, "changedFiles": 2,
         "mergeable": "MERGEABLE", "reviewDecision": None, "comments": {"totalCount": 0},
         "labels": {"nodes": []}, "latestReviews": {"nodes": []}, "reviewRequests": {"nodes": []},
@@ -47,7 +54,7 @@ def pull_request(repo, origin, clone, gh) -> str:
     teammate("push", "--quiet", "origin", "HEAD:refs/pull/1/head")
     repository = f"{origin.path.parent.name}/origin"
     gh.answer(
-        (LISTED, listed("feature")),
+        (LISTED, listed(repository, "feature")),
         (DETAILS, details(repository, "feature", teammate("rev-parse", "HEAD").strip(),
                           repo("rev-parse", "main").strip())))
     return repository

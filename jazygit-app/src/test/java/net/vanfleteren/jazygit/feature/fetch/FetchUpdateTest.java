@@ -13,10 +13,10 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.git.model.RemoteName;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
-import net.vanfleteren.jazygit.state.LoadPullRequests;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.prs.LoadRepositoryPullRequests;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -70,7 +70,7 @@ class FetchUpdateTest {
                 upstream.model(), fromUpstream, new FetchMsg.Fetched(new RemoteName("upstream"), List.empty(), true));
         assertFalse(fetching(done.model()));
         assertTrue(done.cmds().contains(new LoadBranches()));
-        assertTrue(done.cmds().contains(new LoadPullRequests()));
+        assertTrue(done.cmds().contains(new LoadRepositoryPullRequests()));
         // Neither logged nor reported.
         assertEquals(List.of(), done.model().outcome().commandLog());
         assertEquals(Option.none(), done.model().outcome().error());
@@ -149,7 +149,8 @@ class FetchUpdateTest {
 
         assertFalse(nothing.cmds().contains(new LoadBranches()), nothing.cmds().toString());
         assertTrue(
-                nothing.cmds().contains(new LoadPullRequests()), nothing.cmds().toString());
+                nothing.cmds().contains(new LoadRepositoryPullRequests()),
+                nothing.cmds().toString());
         assertTrue(
                 something.cmds().contains(new LoadBranches()), something.cmds().toString());
     }

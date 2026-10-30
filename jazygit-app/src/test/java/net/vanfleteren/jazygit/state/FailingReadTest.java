@@ -25,7 +25,7 @@ class FailingReadTest {
         Model failed =
                 Update.update(loaded(), new PullRequestsMsg.LoadFailed(FAILURE)).model();
 
-        assertTrue(PullRequestsUpdate.poll(Next.of(failed)).cmds().contains(new LoadPullRequests()));
+        assertTrue(PullRequestsUpdate.poll(Next.of(failed)).cmds().contains(new LoadRepositoryPullRequests()));
     }
 
     @Test
@@ -34,15 +34,17 @@ class FailingReadTest {
 
         assertFalse(PullRequestsUpdate.poll(Next.of(failed.withNow(failed.now().plus(Duration.ofMinutes(4)))))
                 .cmds()
-                .contains(new LoadPullRequests()));
+                .contains(new LoadRepositoryPullRequests()));
         assertTrue(PullRequestsUpdate.poll(Next.of(failed.withNow(failed.now().plus(Duration.ofMinutes(5)))))
                 .cmds()
-                .contains(new LoadPullRequests()));
+                .contains(new LoadRepositoryPullRequests()));
     }
 
     @Test
     void whatTheUserDoesReadsItAtOnce() {
-        assertTrue(PullRequestsUpdate.loadAnyway(Next.of(failedTimes(4))).cmds().contains(new LoadPullRequests()));
+        assertTrue(PullRequestsUpdate.loadAnyway(Next.of(failedTimes(4)))
+                .cmds()
+                .contains(new LoadRepositoryPullRequests()));
     }
 
     @Test
@@ -51,11 +53,11 @@ class FailingReadTest {
                 .model();
 
         assertTrue(read.gitHub().failing().isEmpty());
-        assertTrue(PullRequestsUpdate.poll(Next.of(read)).cmds().contains(new LoadPullRequests()));
+        assertTrue(PullRequestsUpdate.poll(Next.of(read)).cmds().contains(new LoadRepositoryPullRequests()));
     }
 
     @Test
-    void theOverviewOfThePullRequestsKeepsFailingToo() {
+    void theReadOfThePullRequestsOfTheRepositoryFailsOnceAsTheOverviewAndTheBranchesShareIt() {
         Model model = loaded();
         for (int i = 0; i < 2; i++) {
             model = Update.update(model, new PrOverviewMsg.RepositoryLoadFailed(FAILURE))
@@ -63,11 +65,16 @@ class FailingReadTest {
         }
 
         assertEquals(
-                List.empty(), Update.update(model, new PrOverviewMsg.Tick()).cmds());
-        assertEquals(
-                List.of(new LoadRepositoryPullRequests()),
-                Update.update(model.withNow(model.now().plus(Duration.ofMinutes(2))), new PrOverviewMsg.Tick())
-                        .cmds());
+                2,
+                model.gitHub()
+                        .failing()
+                        .get(new LoadRepositoryPullRequests())
+                        .get()
+                        .times());
+        assertFalse(PullRequestsUpdate.poll(Next.of(model)).cmds().contains(new LoadRepositoryPullRequests()));
+        assertTrue(PullRequestsUpdate.poll(Next.of(model.withNow(model.now().plus(Duration.ofMinutes(2)))))
+                .cmds()
+                .contains(new LoadRepositoryPullRequests()));
     }
 
     private static Model failedTimes(int times) {

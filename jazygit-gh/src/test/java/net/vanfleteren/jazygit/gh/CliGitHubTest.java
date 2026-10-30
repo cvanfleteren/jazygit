@@ -154,7 +154,6 @@ class CliGitHubTest {
                         BranchesQuery.QUERY,
                         BranchCheckRunsQuery.query(1),
                         DetailsQuery.QUERY,
-                        PullRequestsQuery.QUERY,
                         RepositoryPullRequestsQuery.QUERY,
                         MyPullRequestsQuery.QUERY)
                 .forEach(query -> assertTrue(query.contains("checkSuites(first: 20)"), query));
