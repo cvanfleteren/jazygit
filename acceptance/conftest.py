@@ -1,3 +1,4 @@
+import argparse
 import fcntl
 import hashlib
 import json
@@ -16,7 +17,19 @@ ROOT = Path(__file__).resolve().parent.parent
 
 def pytest_addoption(parser):
     parser.addoption("--jar", help="the jazygit fat jar to test; defaults to the newest in jazygit-app/target")
-    parser.addoption("--shard", help="I/N: runs only the I-th of N shares of the tests, so that N machines share them")
+    parser.addoption("--shard", type=shard, metavar="I/N",
+                     help="runs only the I-th of N shares of the tests, so that N machines share them")
+
+
+def shard(value: str) -> tuple[int, int]:
+    """The I and N of I/N, refused unless 1 <= I <= N: another share would run the wrong tests, or none."""
+    try:
+        index, count = (int(part) for part in value.split("/"))
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{value!r} is not I/N, such as 1/4") from None
+    if not 1 <= index <= count:
+        raise argparse.ArgumentTypeError(f"{value!r} has no share {index} of {count}: I goes from 1 to N")
+    return index, count
 
 
 # Last, after -k and -m have deselected, so that the slices are those of the tests that run.
@@ -32,10 +45,9 @@ def pytest_collection_modifyitems(config, items):
     the shards."""
     shard = config.getoption("--shard")
     if shard:
-        index, count = (int(part) for part in shard.split("/"))
-        kept = items[index - 1::count]
+        index, count = shard
         config.hook.pytest_deselected(items=[item for i, item in enumerate(items) if i % count != index - 1])
-        items[:] = kept
+        items[:] = [item for i, item in enumerate(items) if i % count == index - 1]
     workers = getattr(config, "workerinput", {}).get("workercount", 1)
     slow = [item for item in items if item.get_closest_marker("slow")]
     rest = [item for item in items if not item.get_closest_marker("slow")]
