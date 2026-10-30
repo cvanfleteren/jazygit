@@ -44,11 +44,13 @@ final class RemarkLines {
     }
 
     /**
-     * The lines of {@code threads}, as blocks that start {@code indent} columns in and are {@code width} wide.
+     * The lines of {@code threads}, as blocks that start {@code indent} columns in and are {@code width} wide, each
+     * followed by a blank line, which sets it apart from the line of the diff under it.
      */
     static List<Line> threads(
             List<ReviewThread> threads, int indent, int width, RemarkStyle style, Theme.SpanStyles styles) {
-        return threads.flatMap(thread -> thread(thread, indent, width, style, styles));
+        return threads.flatMap(
+                thread -> thread(thread, indent, width, style, styles).append(Line.from("")));
     }
 
     /**

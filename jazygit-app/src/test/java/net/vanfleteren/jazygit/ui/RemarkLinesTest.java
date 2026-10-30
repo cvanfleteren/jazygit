@@ -79,6 +79,7 @@ class RemarkLinesTest {
                         indent + "┃ Why upper case?",
                         indent + "┃ bob · 2h ago",
                         indent + "┃ Shouting.",
+                        "",
                         "3 3 │  three"),
                 lines);
     }
@@ -153,7 +154,7 @@ class RemarkLinesTest {
         assertEquals(
                 List.of(" modified  a.txt", " ".repeat(8) + "┃ bob · 2h ago", " ".repeat(8) + "┃ Split this file"),
                 lines.take(3));
-        assertEquals("1 1 │  one", lines.get(3));
+        assertEquals(List.of("", "1 1 │  one"), lines.slice(3, 5));
     }
 
     @Test
