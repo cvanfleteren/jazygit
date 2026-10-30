@@ -142,7 +142,7 @@ final class CliLog {
 
     /**
      * The commits from {@code tip} that are not on {@code base}, whose tip is {@code baseTip}, at most {@code max}, and
-     * the commit they forked from, read in one {@code git log --boundary} where it can (ADR 57): one more commit than
+     * the commit they forked from, read in one {@code git log --boundary} where it can (ADR 56): one more commit than
      * {@code max} tells whether there are more.
      */
     static Either<ProcessError, Ahead> ahead(Path worktree, Sha tip, BranchRef base, Sha baseTip, int max) {

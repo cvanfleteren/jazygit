@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * The parents of the branches, and how far each local branch is from its base: read with every read of the
- * branches, from the branches and the parents just read, and kept until a read replaces them (ADR 46, ADR 57).
+ * branches, from the branches and the parents just read, and kept until a read replaces them (ADR 46, ADR 58).
  */
 class BaseDistanceUpdateTest {
 

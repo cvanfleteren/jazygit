@@ -10,7 +10,7 @@ import java.nio.file.Path;
  * @param head     the branch or the commit it has checked out; none when git cannot resolve its HEAD, as while
  *                 {@code git worktree add} sets it up, or when its HEAD file is broken. The commit of a branch is
  *                 where the branch was when the worktrees were listed: a commit on it does not list them again
- *                 (ADR 57)
+ *                 (ADR 56)
  * @param main     whether it is the main worktree, the one the repository lives in, which cannot be removed
  * @param current  whether it is the one the app shows
  * @param locked   why it is locked, which keeps git from removing it, if it is; empty when no reason was given
