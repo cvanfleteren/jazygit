@@ -188,8 +188,11 @@ class DiffCursorTest {
     @Test
     void aBarOrALineIsTintedAsWideAsItsFileAndAThreadHasItsRuleReversed() {
         Text text = Text.from(List.range(0, 20)
-                .map(row ->
-                        row == 5 ? Line.from(Span.raw("  "), Span.raw("┏━"), Span.raw(" bob")) : Line.from("x" + row))
+                .map(row -> switch (row) {
+                    case 5 -> Line.from(Span.raw("  "), Span.raw("┏━"), Span.raw(" bob"));
+                    case 6 -> Line.from(Span.raw("  "), Span.raw("┃ "), Span.raw("me no like"));
+                    default -> Line.from("x" + row);
+                })
                 .toJavaList());
         Style tint = Style.EMPTY.reversed();
 
@@ -201,6 +204,12 @@ class DiffCursorTest {
         Line rule = on(THREAD, 5).tinted(text, tint).lines().get(5);
         assertTrue(rule.spans().get(1).style().addModifiers().contains(Modifier.REVERSED));
         assertFalse(rule.spans().get(0).style().addModifiers().contains(Modifier.REVERSED));
+        // Only the stroke, not the space after it.
+        Line body = on(THREAD, 5).tinted(text, tint).lines().get(6);
+        assertEquals("  ┃ me no like", body.rawContent());
+        assertEquals(
+                List.of(false, true, false, false),
+                List.ofAll(body.spans()).map(span -> span.style().addModifiers().contains(Modifier.REVERSED)));
 
         assertEquals(text, on(LEAD, 0).tinted(text, tint));
     }

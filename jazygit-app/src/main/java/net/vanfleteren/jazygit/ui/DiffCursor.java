@@ -298,12 +298,17 @@ record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int stop, 
     }
 
     /**
-     * {@code line} of a thread, its rule reversed.
+     * {@code line} of a thread, the strokes of its rule reversed, not the spaces around them.
      */
     private static Line ruled(Line line) {
         return Line.from(List.ofAll(line.spans())
-                .map(span -> isRule(span.content()) ? span.reversed() : span)
+                .flatMap(span -> isRule(span.content()) ? strokes(span) : List.of(span))
                 .toJavaList());
+    }
+
+    private static List<Span> strokes(Span rule) {
+        return List.of(rule.content().split("(?<= )(?! )|(?<! )(?= )"))
+                .map(part -> part.isBlank() ? new Span(part, rule.style()) : new Span(part, rule.style()).reversed());
     }
 
     private static boolean isRule(String text) {

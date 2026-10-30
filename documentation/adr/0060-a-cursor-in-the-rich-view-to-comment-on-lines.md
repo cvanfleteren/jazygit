@@ -75,7 +75,7 @@ Ctrl+O opens it in the editor, Escape goes back; a failed send says why under th
   shown again, as when its node of the tree is highlighted again, puts it back on its last anchor while that is still
   in the diff, as its scroll is kept now.
 - The rows of the cursor are tinted as wide as their file, in the colour of the new class `diff-cursor`, which every
-  theme has; `mono` and `none` reverse them. On a thread, the `┃` rule of the thread is reversed. The cursor is drawn
+  theme has; `mono` and `none` reverse them. On a thread, the strokes of the `┃` rule of the thread are reversed, not the spaces beside them. The cursor is drawn
   only while the panel has the focus. The tint is laid over the text `ScrollArea` keeps: only the rows of the cursor
   and of a range are drawn again, the diff is not styled again. Not: the cursor as part of what is styled, which would
   style a whole diff, syntax and threads, on each `j`.
