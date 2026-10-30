@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.ui;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 import dev.tamboui.style.Color;
 import dev.tamboui.style.Style;
@@ -9,8 +10,12 @@ import dev.tamboui.text.Span;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.collection.List;
+import io.vavr.control.Option;
+import java.time.Duration;
 import java.util.stream.Collectors;
 import net.vanfleteren.jazygit.git.model.ParsedDiff;
+import net.vanfleteren.jazygit.git.model.WordDiff.Segment;
+import net.vanfleteren.jazygit.git.model.syntax.Token;
 import org.junit.jupiter.api.Test;
 
 class RichDiffTest {
@@ -201,20 +206,67 @@ class RichDiffTest {
     }
 
     @Test
-    void aChangedLineWithoutABackgroundKeepsItsColourOutsideAToken() {
-        Theme.SpanStyles noBackground =
-                cssClass -> cssClass.startsWith("diff-") ? Style.EMPTY.fg(Color.GREEN) : SYNTAX_STYLES.of(cssClass);
+    void aChangedLineWithoutABackgroundIsDrawnInItsClassesAlone() {
+        Style word = Style.EMPTY.fg(Color.GREEN).reversed();
+        Theme.SpanStyles noBackground = cssClass -> cssClass.endsWith("-word")
+                ? word
+                : cssClass.startsWith("diff-") ? Style.EMPTY.fg(Color.GREEN) : SYNTAX_STYLES.of(cssClass);
 
         List<Line> lines = RichDiff.lines(ParsedDiff.of(STRING_CHANGED), true, noBackground);
 
         assertEquals(
                 List.of(
-                        Tuple.of("String s = ", Style.EMPTY.fg(Color.GREEN)),
-                        Tuple.of("\"", Style.EMPTY.fg(Color.MAGENTA)),
-                        Tuple.of("ac", Style.EMPTY.fg(Color.MAGENTA)),
-                        Tuple.of("\"", Style.EMPTY.fg(Color.MAGENTA)),
-                        Tuple.of(";", Style.EMPTY.fg(Color.GREEN))),
+                        Tuple.of("String s = \"", Style.EMPTY.fg(Color.GREEN)),
+                        Tuple.of("ac", word),
+                        Tuple.of("\";", Style.EMPTY.fg(Color.GREEN))),
                 code(lines.last()));
+    }
+
+    @Test
+    void outsideATokenAChangedLineKeepsTheAttributesOfItsClass() {
+        Style line = Style.EMPTY.fg(Color.GREEN).bg(Color.BLACK).bold();
+        Theme.SpanStyles bold =
+                cssClass -> cssClass.equals(Theme.Classes.DIFF_ADDED_LINE) ? line : SYNTAX_STYLES.of(cssClass);
+
+        List<Line> lines = RichDiff.lines(ParsedDiff.of(STRING_CHANGED), true, bold);
+
+        assertEquals(
+                Tuple.of("String s = ", Style.EMPTY.bg(Color.BLACK).bold()),
+                code(lines.last()).head());
+        assertEquals(
+                Tuple.of("\"", Style.EMPTY.fg(Color.MAGENTA).bg(Color.BLACK).bold()),
+                code(lines.last()).get(1));
+    }
+
+    @Test
+    void aLexedLineWithoutTokensTakesThePlainColourOnItsBackground() {
+        List<Line> lines = RichDiff.lines(ParsedDiff.of("""
+                diff --git a/A.java b/A.java
+                --- a/A.java
+                +++ b/A.java
+                @@ -1 +1 @@
+                -x = foo;
+                +x = bar;
+                """), true, SYNTAX_STYLES);
+
+        assertEquals(
+                List.of(
+                        Tuple.of("x = ", Style.EMPTY.bg(Color.BLACK)),
+                        Tuple.of("bar", Style.EMPTY.bg(Color.WHITE)),
+                        Tuple.of(";", Style.EMPTY.bg(Color.BLACK))),
+                code(lines.last()));
+    }
+
+    @Test
+    void aLineOfManyTokensIsCutQuickly() {
+        int count = 32_000;
+        List<Token> tokens = List.range(0, count).map(i -> new Token(2 * i, 1, Token.Kind.NUMBER));
+
+        List<RichDiff.Piece> pieces = assertTimeoutPreemptively(
+                Duration.ofSeconds(2), () -> RichDiff.pieces(List.of(new Segment("1,".repeat(count), false)), tokens));
+
+        assertEquals(2 * count, pieces.size());
+        assertEquals(new RichDiff.Piece(",", false, Option.none()), pieces.get(1));
     }
 
     private static final String STRING_CHANGED = """

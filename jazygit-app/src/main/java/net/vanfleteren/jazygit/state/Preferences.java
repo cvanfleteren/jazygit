@@ -32,13 +32,6 @@ public record Preferences(
     }
 
     /**
-     * How the diffs of the working tree, of a commit and of a stash are drawn.
-     */
-    public DiffStyle diffStyle() {
-        return settings.diffStyle();
-    }
-
-    /**
      * How the diffs of the working tree, of a commit and of a stash are drawn, and whether the rich view colours their
      * code by its syntax (ADR 53).
      */

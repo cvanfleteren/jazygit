@@ -145,6 +145,21 @@ public class WordDiffBenchmark {
             }
         },
         /**
+         * A minified script changed in one value: a line of 64 KB with thousands of tokens, which the rich view cuts
+         * where each starts and ends (ADR 53).
+         */
+        MINIFIED {
+            @Override
+            public String diff() {
+                String start =
+                        "diff --git a/app.min.js b/app.min.js\n--- a/app.min.js\n+++ b/app.min.js\n@@ -1 +1 @@\n";
+                String code = List.range(0, 4000)
+                        .map(i -> "var a" + i + "=" + i + ";")
+                        .mkString();
+                return start + "-" + code + "x=1;\n+" + code + "x=2;\n";
+            }
+        },
+        /**
          * An added file: nothing to compare, only lines to walk through.
          */
         ADDED {

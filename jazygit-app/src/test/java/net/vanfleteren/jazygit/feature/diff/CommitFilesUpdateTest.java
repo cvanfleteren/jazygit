@@ -133,7 +133,7 @@ class CommitFilesUpdateTest {
         Next next = Update.update(open, new DiffOptionsMsg.StyleToggled());
 
         DiffOptions rich = DiffOptions.DEFAULT.withFirstParent(true);
-        assertEquals(DiffStyle.RICH, next.model().preferences().diffStyle());
+        assertEquals(DiffStyle.RICH, next.model().preferences().diffLook().style());
         assertEquals(rich, next.model().preferences().diffOptions());
         assertTrue(next.cmds().contains(new Cmd.LoadCommitFileDiff(COMMIT, List.of(A), rich)));
         assertTrue(next.cmds()

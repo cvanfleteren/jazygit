@@ -5,6 +5,7 @@ import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
+import io.vavr.collection.Iterator;
 import io.vavr.collection.List;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
@@ -37,7 +38,7 @@ final class RichDiff {
         UnifiedDiff parsed = diff.diff();
         Vector<Marks> marks = diff.words()
                 .zip(diff.tokens())
-                .map(hunk -> new Marks(hunk._1, syntax ? hunk._2 : hunk._2.map(line -> List.<Token>empty())))
+                .map(hunk -> new Marks(hunk._1, syntax ? hunk._2 : Option.none()))
                 .toVector();
         List<Tuple2<FileDiff, Vector<Marks>>> files = parsed.files()
                 .foldLeft(
@@ -58,11 +59,9 @@ final class RichDiff {
     }
 
     /**
-     * The lines of {@code file}, whose hunks have the segments and the tokens {@code marks}. A file none of whose
-     * lines has a token, as its language is not known, is drawn as it was before its code was coloured.
+     * The lines of {@code file}, whose hunks have the segments and the tokens {@code marks}.
      */
     private static List<Line> file(FileDiff file, Vector<Marks> marks, Theme.SpanStyles styles) {
-        boolean coloured = marks.exists(hunk -> hunk.tokens().exists(line -> !line.isEmpty()));
         int digits = file.hunks()
                 .flatMap(Hunk::lines)
                 .flatMap(line -> line.oldNumber().toList().appendAll(line.newNumber()))
@@ -84,8 +83,7 @@ final class RichDiff {
                 .appendAll(file.hunks()
                         .zip(marks)
                         .zipWithIndex()
-                        .flatMap(hunk ->
-                                hunk(hunk._1._1, hunk._1._2, hunk._2 == 0, digits, width - gutter, coloured, styles)));
+                        .flatMap(hunk -> hunk(hunk._1._1, hunk._1._2, hunk._2 == 0, digits, width - gutter, styles)));
     }
 
     /**
@@ -125,10 +123,10 @@ final class RichDiff {
      * section heading git gives after them: it is a line from above the hunk, which reads as one of its own. A header
      * whose numbers cannot be read, whose lines are not numbered, follows the rule as git printed it. The
      * {@code first} hunk of a file has no rule, as the bar of the file marks where it starts, unless its header has to
-     * be shown. Its code is {@code coloured} by its syntax, or drawn as before.
+     * be shown. Its code is coloured by its syntax if it was lexed, or drawn as before.
      */
     private static List<Line> hunk(
-            Hunk hunk, Marks marks, boolean first, int digits, int width, boolean coloured, Theme.SpanStyles styles) {
+            Hunk hunk, Marks marks, boolean first, int digits, int width, Theme.SpanStyles styles) {
         Span rule = styled("┄".repeat(2 * digits + 1) + GUTTER_END, Theme.Classes.DIFF_LINE_NUMBER, styles);
         List<Line> header = hunk.header().isEmpty() || (first && hunk.numbered())
                 ? List.empty()
@@ -136,90 +134,165 @@ final class RichDiff {
                         hunk.numbered()
                                 ? Line.from(rule)
                                 : Line.from(rule, styled(hunk.header(), Theme.Classes.DIFF_HUNK, styles)));
+        List<Option<List<Token>>> tokens = marks.tokens()
+                .map(lines -> lines.map(Option::of))
+                .getOrElse(() -> hunk.lines().map(line -> Option.none()));
         return header.appendAll(hunk.lines()
-                .zip(marks.words().zip(marks.tokens()))
-                .map(line ->
-                        line(line._1, pieces(line._2._1, line._2._2), digits, width, new Painter(coloured, styles))));
+                .zip(marks.words().zip(tokens))
+                .map(line -> line(line._1, line._2._1, line._2._2, digits, width, styles)));
     }
 
-    private static Line line(DiffLine line, List<Piece> pieces, int digits, int width, Painter painter) {
+    /**
+     * {@code line}, with its {@code segments}, and its {@code tokens} if its hunk was lexed.
+     */
+    private static Line line(
+            DiffLine line,
+            List<Segment> segments,
+            Option<List<Token>> tokens,
+            int digits,
+            int width,
+            Theme.SpanStyles styles) {
         Span gutter = styled(
                 number(line.oldNumber(), digits) + " " + number(line.newNumber(), digits) + GUTTER_END,
                 Theme.Classes.DIFF_LINE_NUMBER,
-                painter.styles());
+                styles);
         return switch (line.kind()) {
             case CONTEXT ->
-                painter.coloured()
-                        ? Line.from(pieces.map(painter::context)
+                tokens.map(lexed -> Line.from(pieces(segments, lexed)
+                                .map(piece -> context(piece, styles))
                                 .prepend(Span.raw(" "))
                                 .prepend(gutter)
-                                .toJavaList())
-                        : Line.from(gutter, Span.raw(" " + line.text()));
-            case NOTE -> Line.from(gutter, styled(line.text(), Theme.Classes.DIM, painter.styles()));
+                                .toJavaList()))
+                        .getOrElse(() -> Line.from(gutter, Span.raw(" " + line.text())));
+            case NOTE -> Line.from(gutter, styled(line.text(), Theme.Classes.DIM, styles));
             case ADDED ->
                 changed(
                         gutter,
                         "+",
-                        pieces,
+                        segments,
+                        tokens,
                         width,
                         Theme.Classes.DIFF_ADDED_LINE,
                         Theme.Classes.DIFF_ADDED_WORD,
-                        painter);
+                        styles);
             case REMOVED ->
                 changed(
                         gutter,
                         "-",
-                        pieces,
+                        segments,
+                        tokens,
                         width,
                         Theme.Classes.DIFF_REMOVED_LINE,
                         Theme.Classes.DIFF_REMOVED_WORD,
-                        painter);
+                        styles);
         };
     }
 
     /**
      * A changed line: its marker and its unchanged parts in {@code lineClass}, its changed words in
-     * {@code wordClass}, padded to {@code width}.
+     * {@code wordClass}, padded to {@code width}. Its code is coloured by its {@code tokens} if it was lexed, unless
+     * {@code lineClass} gives it no background: then its colour is what tells it is changed, and a line of tokens only
+     * would look like context.
      */
     private static Line changed(
             Span gutter,
             String marker,
-            List<Piece> pieces,
+            List<Segment> segments,
+            Option<List<Token>> tokens,
             int width,
             String lineClass,
             String wordClass,
-            Painter painter) {
+            Theme.SpanStyles styles) {
+        Option<List<Token>> coloured =
+                tokens.filter(ignored -> styles.of(lineClass).bg().isPresent());
+        List<Piece> pieces = pieces(segments, coloured.getOrElse(List.empty()));
         int used = 1 + pieces.map(piece -> width(piece.text())).sum().intValue();
-        List<Span> spans = pieces.map(piece -> painter.changed(piece, piece.changed() ? wordClass : lineClass))
-                .prepend(styled(marker, lineClass, painter.styles()))
-                .append(styled(" ".repeat(Math.max(0, width - used)), lineClass, painter.styles()))
+        List<Span> spans = pieces.map(piece -> coloured.isDefined()
+                        ? changedCode(piece, piece.changed() ? wordClass : lineClass, styles)
+                        : styled(piece.text(), piece.changed() ? wordClass : lineClass, styles))
+                .prepend(styled(marker, lineClass, styles))
+                .append(styled(" ".repeat(Math.max(0, width - used)), lineClass, styles))
                 .prepend(gutter);
         return Line.from(spans.toJavaList());
     }
 
     /**
+     * A piece of a context line: in the colour of its token, else plain.
+     */
+    private static Span context(Piece piece, Theme.SpanStyles styles) {
+        return piece.kind()
+                .map(kind -> styled(piece.text(), syntaxClass(kind), styles))
+                .getOrElse(() -> Span.raw(piece.text()));
+    }
+
+    /**
+     * A piece of a changed line in {@code diffClass}: with its background, its attributes, and the colour of its
+     * token, or that of {@link Theme.Classes#SYNTAX_TEXT} outside a token, which is the plain colour unless the theme
+     * gives it one.
+     */
+    private static Span changedCode(Piece piece, String diffClass, Theme.SpanStyles styles) {
+        Style diff = styles.of(diffClass);
+        Style text = styles.of(piece.kind().map(RichDiff::syntaxClass).getOrElse(Theme.Classes.SYNTAX_TEXT));
+        return Span.styled(
+                piece.text(), Option.ofOptional(text.fg()).map(diff::fg).getOrElse(() -> withoutFg(diff)));
+    }
+
+    /**
+     * {@code style} without a colour of its own, so its text takes the terminal's.
+     */
+    private static Style withoutFg(Style style) {
+        Style background = style.bg().map(Style.EMPTY::bg).orElse(Style.EMPTY);
+        return List.ofAll(style.subModifiers())
+                .foldLeft(
+                        List.ofAll(style.addModifiers()).foldLeft(background, Style::addModifier),
+                        Style::removeModifier);
+    }
+
+    /**
      * The text of a line in pieces that are each part of one of its {@code segments} and of one of its
-     * {@code tokens} or none: a piece is cut where a segment or a token starts or ends.
+     * {@code tokens} or none: a piece is cut where a segment or a token starts or ends. Both are in order, so the
+     * segment and the token of each piece are found by going on from those of the piece before it: a minified file
+     * has a line of thousands of tokens.
      */
     static List<Piece> pieces(List<Segment> segments, List<Token> tokens) {
         if (tokens.isEmpty()) {
             return segments.map(segment -> new Piece(segment.text(), segment.changed(), Option.none()));
         }
         String text = segments.map(Segment::text).mkString();
-        List<Integer> ends = segments.scanLeft(
+        Vector<Segment> inOrder = segments.toVector();
+        Vector<Integer> ends = segments.scanLeft(
                         0, (end, segment) -> end + segment.text().length())
-                .tail();
-        List<Integer> cuts = ends.prepend(0)
+                .tail()
+                .toVector();
+        Vector<Token> lexed = tokens.toVector();
+        List<Integer> cuts = ends.toList()
+                .prepend(0)
                 .appendAll(tokens.flatMap(token -> List.of(token.start(), token.end())))
                 .filter(cut -> cut <= text.length())
-                .distinct()
-                .sorted();
+                .sorted()
+                .distinct();
         return cuts.zip(cuts.tail())
-                .map(piece -> new Piece(
-                        text.substring(piece._1, piece._2),
-                        segments.get(ends.indexWhere(end -> end > piece._1)).changed(),
-                        tokens.find(token -> token.start() <= piece._1 && piece._1 < token.end())
-                                .map(Token::kind)));
+                .foldLeft(Tuple.of(List.<Piece>empty(), 0, 0), (done, piece) -> {
+                    int segment = Iterator.iterate(done._2, i -> i + 1)
+                            .find(i -> ends.get(i) > piece._1)
+                            .get();
+                    int token = Iterator.iterate(done._3, i -> i + 1)
+                            .find(i -> i >= lexed.size() || lexed.get(i).end() > piece._1)
+                            .get();
+                    Option<Token.Kind> kind = Option.when(
+                                    token < lexed.size() && lexed.get(token).start() <= piece._1,
+                                    () -> lexed.get(token))
+                            .map(Token::kind);
+                    return Tuple.of(
+                            done._1.prepend(new Piece(
+                                    text.substring(piece._1, piece._2),
+                                    inOrder.get(segment).changed(),
+                                    kind)),
+                            segment,
+                            token);
+                })
+                ._1
+                .reverse();
     }
 
     private static String syntaxClass(Token.Kind kind) {
@@ -254,48 +327,7 @@ final class RichDiff {
     record Piece(String text, boolean changed, Option<Token.Kind> kind) {}
 
     /**
-     * The segments and the tokens of the lines of a hunk.
+     * The segments of the lines of a hunk, and their tokens if it was lexed.
      */
-    private record Marks(List<List<Segment>> words, List<List<Token>> tokens) {}
-
-    /**
-     * How the pieces of a line are styled: their code {@code coloured} by its syntax (ADR 53), or as before.
-     */
-    private record Painter(boolean coloured, Theme.SpanStyles styles) {
-
-        /**
-         * A piece of a context line: in the colour of its token, else plain.
-         */
-        Span context(Piece piece) {
-            return piece.kind()
-                    .map(kind -> styled(piece.text(), syntaxClass(kind), styles))
-                    .getOrElse(() -> Span.raw(piece.text()));
-        }
-
-        /**
-         * A piece of a changed line in {@code diffClass}: with its background and the colour of its token, or the
-         * plain colour outside a token. When the class gives the line no background, its colour is what tells it is
-         * changed, so it is kept outside a token.
-         */
-        Span changed(Piece piece, String diffClass) {
-            Style diff = styles.of(diffClass);
-            if (!coloured || (piece.kind().isEmpty() && diff.bg().isEmpty())) {
-                return Span.styled(piece.text(), diff);
-            }
-            Style text = styles.of(piece.kind().map(RichDiff::syntaxClass).getOrElse(Theme.Classes.SYNTAX_TEXT));
-            return Span.styled(
-                    piece.text(), Option.ofOptional(text.fg()).map(diff::fg).getOrElse(() -> withoutFg(diff)));
-        }
-
-        /**
-         * {@code style} without a colour of its own, so its text takes the terminal's.
-         */
-        private static Style withoutFg(Style style) {
-            Style background = style.bg().map(Style.EMPTY::bg).orElse(Style.EMPTY);
-            return List.ofAll(style.subModifiers())
-                    .foldLeft(
-                            List.ofAll(style.addModifiers()).foldLeft(background, Style::addModifier),
-                            Style::removeModifier);
-        }
-    }
+    private record Marks(List<List<Segment>> words, Option<List<List<Token>>> tokens) {}
 }
