@@ -126,3 +126,191 @@ def test_drop_a_commit_keeps_the_uncommitted_changes(repo, jazygit):
     assert not (repo.path / "two.txt").exists()
     assert repo("status", "--porcelain") == "M one.txt"
     assert (repo.path / "one.txt").read_text() == "one, still being worked on\n"
+
+
+def test_amend_the_last_commit_with_nothing_staged_adds_all_changes(repo, jazygit):
+    three_commits(repo)
+    repo.write("three.txt", "three\nand a bit\n")
+    repo.write("new.txt", "new\n")
+    ui = jazygit()
+
+    ui.files.amend_last_commit()
+
+    assert repo.subjects() == ["Add three", "Add two", "Add one"]
+    assert repo("show", "HEAD:three.txt") == "three\nand a bit"
+    assert repo("show", "HEAD:new.txt") == "new"
+    assert repo.status() == {}
+
+
+def test_amend_an_older_commit_with_nothing_staged_adds_all_changes(repo, jazygit):
+    three_commits(repo)
+    repo.write("one.txt", "one, amended\n")
+    ui = jazygit()
+
+    ui.commits.amend("Add one")
+
+    assert repo.subjects() == ["Add three", "Add two", "Add one"]
+    assert repo("show", f"{repo.find('Add one')}:one.txt") == "one, amended"
+    assert repo.status() == {}
+
+
+def test_reword_keeps_the_body_the_author_and_the_date_of_the_commit(repo, jazygit):
+    repo.commit("Add one", **{"one.txt": "one\n"})
+    repo.write("two.txt", "two\n")
+    repo("add", "two.txt")
+    repo("commit", "--author", "Someone Else <else@example.com>", "--date", "2025-06-15T08:30:00Z",
+         "--message", "Add two\n\nBecause one is not enough.")
+    repo.commit("Add three", **{"three.txt": "three\n"})
+    ui = jazygit()
+
+    ui.commits.reword("Add two", "Add the second file")
+
+    reworded = repo.find("Add the second file")
+    assert repo.message(reworded) == "Add the second file\n\nBecause one is not enough."
+    assert repo("log", "-1", "--format=%an <%ae> %aI", reworded) == (
+        "Someone Else <else@example.com> 2025-06-15T08:30:00Z")
+
+
+def test_reword_keeps_the_uncommitted_changes(repo, jazygit):
+    three_commits(repo)
+    repo.write("one.txt", "one, being worked on\n")
+    repo.write("two.txt", "two, staged\n")
+    repo("add", "two.txt")
+    ui = jazygit()
+
+    ui.commits.reword("Add one", "Add the first file")
+
+    assert repo.subjects() == ["Add three", "Add two", "Add the first file"]
+    assert repo.read("one.txt") == "one, being worked on\n"
+    assert repo.read("two.txt") == "two, staged\n"
+    assert repo.stashes() == []
+
+
+def with_a_merge(repo):
+    """Main with a merge of feature in its history, and a commit on top: Add four, the merge, Add three on main
+    and Add two on feature, Add one."""
+    repo.commit("Add one", **{"one.txt": "one\n"})
+    repo("switch", "--create", "feature")
+    repo.commit("Add two", **{"two.txt": "two\n"})
+    repo("switch", "main")
+    repo.commit("Add three", **{"three.txt": "three\n"})
+    repo("merge", "--no-ff", "--no-edit", "feature")
+    repo.commit("Add four", **{"four.txt": "four\n"})
+
+
+def merges(repo) -> list:
+    """The subjects of the merge commits of HEAD, and how many parents each has."""
+    return [(subject, repo.parents(sha)) for sha, subject in
+            (line.split(" ", 1) for line in repo("log", "--merges", "--format=%H %s").splitlines())]
+
+
+def test_reword_a_commit_below_a_merge_keeps_the_merge(repo, jazygit):
+    with_a_merge(repo)
+    ui = jazygit()
+
+    ui.commits.reword("Add three", "Add the third file")
+
+    assert merges(repo) == [("Merge branch 'feature'", 2)]
+    assert repo.subjects("HEAD~1^1") == ["Add the third file", "Add one"]
+    assert repo("rev-parse", "HEAD~1^2") == repo("rev-parse", "feature")
+    assert repo.subjects()[0] == "Add four"
+
+
+def test_drop_a_commit_below_a_merge_keeps_the_merge(repo, jazygit):
+    with_a_merge(repo)
+    ui = jazygit()
+
+    ui.commits.drop("Add three")
+
+    assert merges(repo) == [("Merge branch 'feature'", 2)]
+    assert repo.subjects("HEAD~1^1") == ["Add one"]
+    assert repo("rev-parse", "HEAD~1^2") == repo("rev-parse", "feature")
+    assert repo("ls-tree", "-r", "--name-only", "HEAD").splitlines() == ["four.txt", "one.txt", "two.txt"]
+
+
+def test_amend_a_commit_below_a_merge_keeps_the_merge(repo, jazygit):
+    with_a_merge(repo)
+    repo.write("three.txt", "three, amended\n")
+    repo("add", "three.txt")
+    ui = jazygit()
+
+    ui.commits.amend("Add three")
+
+    assert merges(repo) == [("Merge branch 'feature'", 2)]
+    assert repo("show", "HEAD~1^1:three.txt") == "three, amended"
+    assert repo("rev-parse", "HEAD~1^2") == repo("rev-parse", "feature")
+    assert repo("show", "HEAD:three.txt") == "three, amended"
+    assert repo.status() == {}
+
+
+def test_amend_a_merge_that_is_the_last_commit(repo, jazygit):
+    with_a_merge(repo)
+    repo("reset", "--hard", "HEAD~1")
+    repo.write("three.txt", "three, amended\n")
+    repo("add", "three.txt")
+    ui = jazygit()
+
+    ui.files.amend_last_commit()
+
+    assert merges(repo) == [("Merge branch 'feature'", 2)]
+    assert repo("show", "HEAD:three.txt") == "three, amended"
+
+
+def test_a_merge_that_is_not_the_last_commit_is_not_amended(repo, jazygit):
+    with_a_merge(repo)
+    head = repo("rev-parse", "HEAD")
+    repo.write("three.txt", "three, amended\n")
+    repo("add", "three.txt")
+    ui = jazygit()
+
+    ui.commits.try_to_amend("Merge branch 'feature'")
+
+    ui.app.wait_for("A merge commit cannot be amended")
+    assert repo("rev-parse", "HEAD") == head
+    assert repo.status() == {"three.txt": "M "}
+
+
+def asks_nothing(ui, key: str, title: str):
+    """Presses key on the selected commit, and checks the app asks nothing: keys are handled in turn, so once the
+    focus moved on to another pane, which an open dialog would keep, the dialog called title would show by then."""
+    ui.app.press(key)
+    ui.app.focus("Branches")
+    assert title not in ui.app.text()
+
+
+def test_a_merge_commit_is_not_squashed_or_dropped(repo, jazygit):
+    with_a_merge(repo)
+    head = repo("rev-parse", "HEAD")
+    ui = jazygit()
+
+    ui.commits.select("Merge branch 'feature'")
+    asks_nothing(ui, "s", "Squash commit")
+    ui.commits.select("Merge branch 'feature'")
+    asks_nothing(ui, "d", "Drop commit")
+
+    ui.caught_up()
+    assert repo("rev-parse", "HEAD") == head
+
+
+def test_the_first_commit_is_not_squashed(repo, jazygit):
+    three_commits(repo)
+    head = repo("rev-parse", "HEAD")
+    ui = jazygit()
+
+    ui.commits.select("Add one")
+    asks_nothing(ui, "s", "Squash commit")
+
+    ui.caught_up()
+    assert repo("rev-parse", "HEAD") == head
+
+
+def test_the_only_commit_is_not_dropped(repo, jazygit):
+    repo.commit("Add one", **{"one.txt": "one\n"})
+    head = repo("rev-parse", "HEAD")
+    ui = jazygit()
+
+    ui.commits.select("Add one")
+    asks_nothing(ui, "d", "Drop commit")
+
+    ui.caught_up()
+    assert repo("rev-parse", "HEAD") == head

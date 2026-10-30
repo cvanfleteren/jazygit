@@ -135,7 +135,7 @@ class Git:
         return self("log", "-1", "--format=%B", rev)
 
     def branches(self) -> list:
-        return sorted(self("for-each-ref", "--format=%(refname:short)", "refs/heads").splitlines())
+        return sorted(self("for-each-ref", "--format=%(refname:lstrip=2)", "refs/heads").splitlines())
 
     def current_branch(self) -> str:
         return self("branch", "--show-current")
@@ -143,6 +143,12 @@ class Git:
     def upstream(self, branch: str) -> str:
         """The remote branch that branch tracks, such as "origin/main"; empty when it tracks none."""
         return self("for-each-ref", "--format=%(upstream:short)", f"refs/heads/{branch}")
+
+    def parent(self, branch: str) -> str:
+        """The branch the app recorded branch was made from, in branch.<branch>.gh-merge-base; empty when none."""
+        found = subprocess.run(["git", "config", "--get", f"branch.{branch}.gh-merge-base"], cwd=self.path,
+                               env=self.env, capture_output=True, text=True)
+        return found.stdout.strip()
 
     def unique_commits(self, branch: str, without: str = "") -> int:
         """How many commits only this local branch has: on no other branch, remote-tracking branch or tag.

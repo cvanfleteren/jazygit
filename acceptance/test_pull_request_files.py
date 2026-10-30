@@ -27,7 +27,7 @@ def listed(repository: str, branch: str) -> dict:
 def details(repository: str, branch: str, head: str, base: str) -> dict:
     """Pull request 1 of repository, from branch at commit head into main at commit base."""
     return {"data": {"repository": {"nameWithOwner": repository, "url": f"https://github.com/{repository}", "pullRequest": {
-        "number": 1, "title": "Add b", "author": {"login": "teammate"}, "state": "OPEN", "isDraft": False,
+        "number": 1, "title": "Add b", "body": "", "author": {"login": "teammate"}, "state": "OPEN", "isDraft": False,
         "headRefName": branch, "baseRefName": "main", "headRefOid": head, "baseRefOid": base,
         "baseRef": {"compare": {"behindBy": 0}},
         "stackEntry": None, "stack": None, "createdAt": DATE, "additions": 2, "deletions": 0, "changedFiles": 2,

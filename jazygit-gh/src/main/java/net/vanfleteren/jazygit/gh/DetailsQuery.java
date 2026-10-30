@@ -19,7 +19,7 @@ import static net.vanfleteren.jazygit.json.Decoder.string;
 import static net.vanfleteren.jazygit.json.Decoder.succeed;
 
 import io.vavr.Tuple;
-import io.vavr.Tuple3;
+import io.vavr.Tuple4;
 import io.vavr.Tuple8;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
@@ -54,7 +54,7 @@ final class DetailsQuery {
     static final String TEMPLATE = """
             query($owner: String!, $name: String!, $number: Int!%s) { \
             repository(owner: $owner, name: $name) { \
-            nameWithOwner url pullRequest(number: $number) { number title author { login } state isDraft headRefName \
+            nameWithOwner url pullRequest(number: $number) { number title body author { login } state isDraft headRefName \
             baseRefName headRefOid baseRefOid baseRef { %s } %s createdAt additions deletions changedFiles mergeable reviewDecision \
             comments { totalCount } \
             labels(first: 100) { nodes { name } } latestReviews(first: 100) { nodes { author { login } state } } \
@@ -189,13 +189,14 @@ final class DetailsQuery {
                                             checks.getOrElse(List.empty()).appendAll(waiting)))))
             .map(commits -> commits.headOption().getOrElse(List.empty()));
 
-    // What it is and how it stands, its checks and its stack.
+    // What it is and how it stands, its checks, its stack and its description.
     static final Decoder<
-                    Tuple3<
+                    Tuple4<
                             Tuple8<Integer, String, String, Status, Branches, Activity, Size, Conversation>,
                             List<Check>,
-                            Option<PullRequestStack>>>
-            PULL_REQUEST = map3(
+                            Option<PullRequestStack>,
+                            String>>
+            PULL_REQUEST = map4(
                     map8(
                             field("number", integer()),
                             field("title", string()),
@@ -208,6 +209,7 @@ final class DetailsQuery {
                             Tuple::of),
                     CHECKS,
                     StackFragment.DECODER,
+                    field("body", string()),
                     Tuple::of);
 
     static final Decoder<PullRequestDetails> DECODER = at(
@@ -235,7 +237,8 @@ final class DetailsQuery {
                             read._2(),
                             read._3(),
                             repository,
-                            url)));
+                            url,
+                            read._4())));
 
     private DetailsQuery() {}
 

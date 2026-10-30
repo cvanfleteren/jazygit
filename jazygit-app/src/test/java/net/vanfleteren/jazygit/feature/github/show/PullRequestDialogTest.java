@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.function.UnaryOperator;
 import net.vanfleteren.jazygit.feature.github.comment.CommentMsg;
 import net.vanfleteren.jazygit.feature.github.comments.CommentsMsg;
+import net.vanfleteren.jazygit.feature.github.edit.EditPullRequestMsg;
 import net.vanfleteren.jazygit.gh.model.CheckRun;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
@@ -695,18 +696,21 @@ class PullRequestDialogTest {
     }
 
     @Test
-    void theCommentsAreWrittenAndViewedOnceTheDetailsAreRead() throws Exception {
+    void theCommentsAreWrittenAndViewedAndThePullRequestEditedOnceTheDetailsAreRead() throws Exception {
         PullRequestPopup loading = PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0);
         for (PullRequestPopup popup : List.of(loading, loading.with(Either.right(READY), 0))) {
             try (ToolkitTestRunner runner = start(TestModels.loaded().openPopup(popup))) {
-                for (char key : new char[] {'c', 'v'}) {
+                for (char key : new char[] {'c', 'v', 'e'}) {
                     SettledPilot.of(runner).press(key);
                     SettledPilot.of(runner).pause();
                 }
             }
         }
 
-        assertEquals(java.util.List.of(new CommentMsg.Requested(), new CommentsMsg.Requested()), dispatched);
+        assertEquals(
+                java.util.List.of(
+                        new CommentMsg.Requested(), new CommentsMsg.Requested(), new EditPullRequestMsg.Requested()),
+                dispatched);
     }
 
     @Test

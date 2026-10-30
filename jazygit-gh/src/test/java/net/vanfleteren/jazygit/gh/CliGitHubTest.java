@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.gh.model.NewPullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.*;
+import net.vanfleteren.jazygit.gh.model.PullRequestEdit;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -110,6 +111,23 @@ class CliGitHubTest {
         assertEquals(
                 List.of("gh", "pr", "comment", "12", "--body", "Looks good\n\n- one nit"),
                 CliGitHub.commentCommand(12, "Looks good\n\n- one nit")
+                        .executed()
+                        .commandLine());
+    }
+
+    @Test
+    void anEditOnlyPassesWhatItChanges() {
+        assertEquals(
+                List.of("gh", "pr", "edit", "12", "--body", ""),
+                CliGitHub.editCommand(12, new PullRequestEdit(Option.none(), Option.of(""), Option.none()))
+                        .executed()
+                        .commandLine());
+        assertEquals(
+                List.of("gh", "pr", "edit", "12", "--title", "Add login", "--body", "Why\n", "--base", "release"),
+                CliGitHub.editCommand(
+                                12,
+                                new PullRequestEdit(
+                                        Option.of("Add login"), Option.of("Why\n"), Option.of(new GhBranch("release"))))
                         .executed()
                         .commandLine());
     }

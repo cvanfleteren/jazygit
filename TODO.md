@@ -57,6 +57,15 @@ Refactorings that were left out of the functional/immutable cleanup, and why.
   as a `fixup!` commit and rebases to fold it in. When that stops on the `fixup!` commit, skipping it (M) leaves the
   changes out: once the rebase is done, only the reflog still has them. The rebase is marked as an amend (see
   `CliInProgress.markAmending`), so M could warn before skipping it, or offer to abort instead.
+- [ ] **A force push can overwrite commits the app fetched in the background.** `--force-with-lease` checks the
+  remote against the tracking ref, and the app's own fetch (as it starts, then once a minute) moves that ref. A commit
+  someone pushed before that fetch then passes the lease, and the force push drops it. The diverged-branch dialog asks
+  first, but it does not say that the remote has commits the local branch never had. `--force-if-includes` would
+  refuse that case. `test_a_force_push_does_not_overwrite_what_others_pushed_since_the_last_fetch` only covers a push
+  made after the app's fetch.
+- [ ] **A newline in a file name breaks the files pane.** `two\nlines.txt` shows as `two line`, and the rows after it
+  go missing: the newline reaches the screen as it is. Control characters in names should be shown escaped, as git
+  quotes them. `test_a_file_with_a_newline_in_its_name_is_staged_and_committed` is a strict `xfail` until then.
 - [ ] **Unstage and discard in a repository without commits.** `CliIndex` resets and checks out against `HEAD`
   (`reset --quiet HEAD`, `checkout --quiet HEAD`), which fails on an unborn HEAD, as after init from the startup
   dialog (ADR 28). Add an acceptance test that unstages a file in an empty repository, and use `git rm --cached` /
