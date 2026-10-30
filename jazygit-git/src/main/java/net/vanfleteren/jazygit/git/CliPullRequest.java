@@ -10,7 +10,6 @@ import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.util.Locale;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
-import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.DiffText;
@@ -73,8 +72,10 @@ final class CliPullRequest {
     /**
      * Fetches the head and the base of the pull request when the repository lacks either commit, from the remote of
      * its repository: {@code refs/pull/<n>/head}, which GitHub keeps for every pull request, also from a fork, and
-     * its base branch. It writes no ref, not even {@code FETCH_HEAD}. Without a remote of its repository, nothing is
-     * fetched: reading the diff then fails as git says.
+     * its base commit, by its sha, which the base branch may have moved on from. It writes no ref, not even
+     * {@code FETCH_HEAD}: with {@code --refmap=}, no fetch refspec of the remote applies, so git does not update the
+     * remote-tracking branch of what it fetches by name either, and it needs no guard of the remote refs (ADR 27).
+     * Without a remote of its repository, nothing is fetched: reading the diff then fails as git says.
      */
     private static Either<ProcessError, Boolean> fetched(
             Path worktree, PullRequestCommits commits, Map<String, String> credentials) {
@@ -95,9 +96,10 @@ final class CliPullRequest {
                 "fetch",
                 "--quiet",
                 "--no-write-fetch-head",
+                "--refmap=",
                 GitArgs.remote(remote),
                 "refs/pull/" + commits.number() + "/head",
-                GitArgs.revision(new BranchRef.Local(commits.baseBranch())));
+                commits.base().value());
     }
 
     /**

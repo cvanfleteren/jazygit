@@ -1343,20 +1343,22 @@ class PullRequestUpdateTest {
 
     @Test
     void theFilesOfAPullRequestOpenInTheFilesPaneInPlaceOfTheDialog() {
-        PullRequestCommits commits =
-                new PullRequestCommits(42, "owner/repo", new BranchName("main"), new Sha(BASE_OID), new Sha(HEAD_OID));
-        Model shown = showingCommits(PullRequestDetails.State.OPEN, true).withScreen(Screen.PULL_REQUESTS);
+        PullRequestCommits commits = new PullRequestCommits(42, "owner/repo", new Sha(BASE_OID), new Sha(HEAD_OID));
+        // A pull request closed without being merged shows its changes as it did while it was open.
+        for (PullRequestDetails.State state : List.of(PullRequestDetails.State.OPEN, PullRequestDetails.State.CLOSED)) {
+            Model shown = showingCommits(state, true).withScreen(Screen.PULL_REQUESTS);
 
-        Next opened = Update.update(shown, new PullRequestMsg.FilesChosen());
+            Next opened = Update.update(shown, new PullRequestMsg.FilesChosen());
 
-        CommitFilesView.Changes of = new CommitFilesView.Changes.OfPullRequest(commits);
-        assertEquals(Option.none(), opened.model().popup(PullRequestPopup.class));
-        assertEquals(Screen.REPOSITORY, opened.model().screen());
-        assertEquals(
-                Option.of(CommitFilesView.of(of, "branches", "files")),
-                opened.model().repoView().commitFiles());
-        assertEquals(List.of(new Cmd.LoadCommitFiles(of)), opened.cmds());
-        assertTrue(opened.cmds().head().background());
+            CommitFilesView.Changes of = new CommitFilesView.Changes.OfPullRequest(commits);
+            assertEquals(Option.none(), opened.model().popup(PullRequestPopup.class));
+            assertEquals(Screen.REPOSITORY, opened.model().screen());
+            assertEquals(
+                    Option.of(CommitFilesView.of(of, "branches", "files")),
+                    opened.model().repoView().commitFiles());
+            assertEquals(List.of(new Cmd.LoadCommitFiles(of)), opened.cmds());
+            assertTrue(opened.cmds().head().background());
+        }
     }
 
     @Test

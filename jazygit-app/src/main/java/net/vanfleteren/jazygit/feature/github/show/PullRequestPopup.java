@@ -182,21 +182,19 @@ public record PullRequestPopup(
 
     /**
      * The commits its changes are diffed between, to list the files it changes (ADR 55): only once it is read and
-     * known to be open, a draft too, at commits that are known. A merged or closed one is not diffed: its base took
-     * its head in.
+     * known not to be merged, a draft or a closed one too, at commits that are known. A merged one is not diffed:
+     * {@code base...head} no longer shows what GitHub kept of it.
      */
     public Option<PullRequestCommits> commits() {
         return readDetails()
-                .filter(read -> read.status().state() == PullRequestDetails.State.OPEN)
-                .flatMap(read -> BranchName.parse(read.branches().base())
-                        .flatMap(branch -> read.branches()
-                                .baseCommit()
-                                .flatMap(base -> Sha.parse(base.oid()))
-                                .flatMap(base -> read.branches()
-                                        .headCommit()
-                                        .flatMap(head -> Sha.parse(head.oid()))
-                                        .map(head -> new PullRequestCommits(
-                                                read.number(), read.repository(), branch, base, head)))));
+                .filter(read -> read.status().state() != PullRequestDetails.State.MERGED)
+                .flatMap(read -> read.branches()
+                        .baseCommit()
+                        .flatMap(base -> Sha.parse(base.oid()))
+                        .flatMap(base -> read.branches()
+                                .headCommit()
+                                .flatMap(head -> Sha.parse(head.oid()))
+                                .map(head -> new PullRequestCommits(read.number(), read.repository(), base, head))));
     }
 
     /**

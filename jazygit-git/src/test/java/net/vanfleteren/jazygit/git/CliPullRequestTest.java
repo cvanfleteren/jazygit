@@ -7,7 +7,6 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
@@ -58,7 +57,7 @@ class CliPullRequestTest {
         git(repo, "checkout", "-q", "main");
         // The base moved on after the branch left it: that is no change of the pull request.
         Sha base = commit(repo, "a.txt", "a\nmore\n", "main moved on");
-        PullRequestCommits commits = new PullRequestCommits(1, "owner/repo", new BranchName("main"), base, head);
+        PullRequestCommits commits = new PullRequestCommits(1, "owner/repo", base, head);
 
         assertEquals(
                 List.of(new CommitFile("b.txt", ChangeType.ADDED)),
@@ -87,7 +86,7 @@ class CliPullRequestTest {
         Sha head = commit(fork, "b.txt", "b\n", "theirs");
         git(fork, "push", "-q", "origin", "HEAD:refs/pull/7/head");
         String refs = git(repo, "for-each-ref");
-        PullRequestCommits commits = new PullRequestCommits(7, "Owner/Repo", new BranchName("main"), base, head);
+        PullRequestCommits commits = new PullRequestCommits(7, "Owner/Repo", base, head);
 
         assertEquals(
                 List.of(new CommitFile("b.txt", ChangeType.ADDED)),
@@ -97,13 +96,43 @@ class CliPullRequestTest {
     }
 
     @Test
+    void aBaseThatMovedOnIsFetchedByItsShaWithoutMovingTheRemoteTrackingBranch() throws Exception {
+        Path origin = dir.resolve("owner").resolve("repo.git");
+        Path repo = dir.resolve("repo");
+        Path other = dir.resolve("other");
+        git(dir, "init", "-q", "--bare", "-b", "main", origin.toString());
+        git(dir, "init", "-q", "-b", "main", repo.toString());
+        git(repo, "remote", "add", "origin", origin.toString());
+        commit(repo, "a.txt", "a\n", "first");
+        git(repo, "push", "-q", "-u", "origin", "main");
+        git(dir, "clone", "-q", origin.toString(), other.toString());
+        // The base the pull request was read at, which the repository has not fetched, and which main then moved on
+        // from: fetching main would not bring it, and would move origin/main.
+        Sha base = commit(other, "a.txt", "a\nbase\n", "base");
+        git(other, "push", "-q", "origin", "main");
+        git(other, "checkout", "-q", "-b", "feature");
+        Sha head = commit(other, "b.txt", "b\n", "theirs");
+        git(other, "push", "-q", "origin", "HEAD:refs/pull/7/head");
+        git(other, "checkout", "-q", "main");
+        commit(other, "a.txt", "a\nbase\nlater\n", "later");
+        git(other, "push", "-q", "origin", "main");
+        String refs = git(repo, "for-each-ref");
+        PullRequestCommits commits = new PullRequestCommits(7, "owner/repo", base, head);
+
+        assertEquals(
+                List.of(new CommitFile("b.txt", ChangeType.ADDED)),
+                CliPullRequest.files(repo, commits, HashMap.empty()).get());
+        assertEquals(refs, git(repo, "for-each-ref"));
+    }
+
+    @Test
     void withoutARemoteOfItsRepositoryNothingIsFetchedAndTheReadFails() throws Exception {
         Path repo = dir.resolve("repo");
         git(dir, "init", "-q", "-b", "main", repo.toString());
         git(repo, "remote", "add", "origin", dir.resolve("elsewhere.git").toString());
         Sha base = commit(repo, "a.txt", "a\n", "first");
         Sha missing = new Sha("0123456789012345678901234567890123456789");
-        PullRequestCommits commits = new PullRequestCommits(7, "owner/repo", new BranchName("main"), base, missing);
+        PullRequestCommits commits = new PullRequestCommits(7, "owner/repo", base, missing);
 
         assertTrue(CliPullRequest.files(repo, commits, HashMap.empty()).isLeft());
     }

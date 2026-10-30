@@ -6,8 +6,7 @@ package net.vanfleteren.jazygit.git.model;
  *
  * @param number     its number, which names its head on the remote: {@code refs/pull/<number>/head}
  * @param repository the repository it is of, as {@code owner/name}, which names the remote it is fetched from
- * @param baseBranch the branch it merges into
  * @param base       the commit its base branch is at
  * @param head       the commit its branch is at
  */
-public record PullRequestCommits(int number, String repository, BranchName baseBranch, Sha base, Sha head) {}
+public record PullRequestCommits(int number, String repository, Sha base, Sha head) {}

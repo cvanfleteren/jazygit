@@ -60,7 +60,8 @@ def test_the_files_changed_of_a_pull_request_show_in_the_files_pane_fetched_when
     ui.branches.select("feature")
 
     ui.app.press("o")
-    ui.app.wait_for("(f) Files changed")
+    # The action shows dimmed until the details are read, and does nothing then: wait for them.
+    ui.app.wait_for("in 2 files, 2 commits")
     ui.app.press("f")
 
     ui.app.wait_in("Files", "b.txt")
