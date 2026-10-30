@@ -66,16 +66,7 @@ final class RichDiff {
                 .map(hunk -> new Marks(hunk._1, syntax ? hunk._2 : hunk._2.map(line -> Option.none())))
                 .toVector();
         List<Tuple2<FileDiff, Vector<Marks>>> files = parsed.files()
-                .foldLeft(
-                        Tuple.of(List.<Tuple2<FileDiff, Vector<Marks>>>empty(), 0),
-                        (done, file) -> Tuple.of(
-                                done._1.prepend(Tuple.of(
-                                        file,
-                                        marks.slice(
-                                                done._2, done._2 + file.hunks().size()))),
-                                done._2 + file.hunks().size()))
-                ._1
-                .reverse();
+                .zip(cut(marks, parsed.files().map(file -> file.hunks().size())));
         // Each file is measured on a thread of its own, and then each of its lines is drawn on one, so that a diff of
         // many files and one of a long file both hold up the render thread for less.
         List<Pending> pending = inParallel(
@@ -90,7 +81,18 @@ final class RichDiff {
      * Drawing is pure, and the render thread waits for it, so nothing changes the theme while it runs.
      */
     private static <T, R> List<R> inParallel(List<T> items, Function<T, List<R>> draw) {
-        return items.toJavaParallelStream().map(draw).collect(List.collector()).flatMap(drawn -> drawn);
+        return items.toJavaParallelStream().flatMap(item -> draw.apply(item).toJavaStream()).toList();
+    }
+
+    /**
+     * {@code all} cut, in order, into parts of {@code sizes}.
+     */
+    private static <T> List<Vector<T>> cut(Vector<T> all, List<Integer> sizes) {
+        return sizes.foldLeft(
+                        Tuple.of(List.<Vector<T>>empty(), 0),
+                        (done, size) -> Tuple.of(done._1.prepend(all.slice(done._2, done._2 + size)), done._2 + size))
+                ._1
+                .reverse();
     }
 
     /**
@@ -112,12 +114,13 @@ final class RichDiff {
                 .getOrElse(1);
         int gutter = 2 * digits + 1 + GUTTER_END.length();
         String bar = bar(file);
+        // Each line is measured once, here: its width also tells how far a changed line is padded.
+        Vector<Integer> measured = inParallel(file.hunks().flatMap(Hunk::lines), line -> List.of(width(line.text())))
+                .toVector();
         int width = Math.max(
-                width(bar),
-                gutter
-                        + inParallel(file.hunks().flatMap(Hunk::lines), line -> List.of(width(line.text()) + 1))
-                                .max()
-                                .getOrElse(0));
+                width(bar), gutter + measured.map(text -> text + 1).max().getOrElse(0));
+        List<Vector<Integer>> widths =
+                cut(measured, file.hunks().map(hunk -> hunk.lines().size()));
         Blocks blocks = new Blocks(gutter + 2, RemarkLines.blockWidth(width), style);
         Vector<List<LineRemarks>> onLines = remarks.map(FileRemarks::lines)
                 .getOrElse(() -> file.hunks().map(hunk -> hunk.lines().map(line -> NO_REMARKS)))
@@ -131,9 +134,11 @@ final class RichDiff {
                                 blocks.threads(placed.onFile(), !file.hunks().isEmpty() || unplaced, styles)))
                 .appendAll(file.hunks()
                         .zip(marks)
+                        .zip(widths)
                         .zipWithIndex()
                         .flatMap(hunk -> hunk(
-                                hunk._1._1,
+                                hunk._1._1._1,
+                                hunk._1._1._2,
                                 hunk._1._2,
                                 onLines.get(hunk._2),
                                 blocks,
@@ -186,11 +191,12 @@ final class RichDiff {
      * {@code first} hunk of a file has no rule, as the bar of the file marks where it starts, unless its header has to
      * be shown. A line that was lexed is coloured by its syntax, one that was not is drawn as before. The threads on
      * a line are followed by a blank line, unless they are on the last line of the {@code last} hunk of the file.
-     * Each line is still to be drawn, with the threads after it.
+     * Each line is still to be drawn, with the threads after it, and is as wide as {@code widths} says.
      */
     private static List<Pending> hunk(
             Hunk hunk,
             Marks marks,
+            Vector<Integer> widths,
             List<LineRemarks> remarks,
             Blocks blocks,
             boolean first,
@@ -206,6 +212,7 @@ final class RichDiff {
                                 ? Line.from(rule)
                                 : Line.from(rule, styled(hunk.header(), Theme.Classes.DIFF_HUNK, styles))));
         return header.appendAll(hunk.lines()
+                .zip(widths)
                 .zip(marks.words().zip(marks.tokens()))
                 .zip(remarks)
                 .zipWithIndex()
@@ -214,10 +221,11 @@ final class RichDiff {
                                 !last || line._2 < hunk.lines().size() - 1,
                                 styles)
                         .prepend(line(
-                                line._1._1._1,
+                                line._1._1._1._1,
+                                line._1._1._1._2,
                                 line._1._1._2._1,
                                 line._1._1._2._2,
-                                gutter(line._1._1._1, line._1._2, digits, styles),
+                                gutter(line._1._1._1._1, line._1._2, digits, styles),
                                 width,
                                 styles))));
     }
@@ -237,10 +245,12 @@ final class RichDiff {
     }
 
     /**
-     * {@code line}, with its {@code segments}, and its {@code tokens} if its hunk was lexed, after its {@code gutter}.
+     * {@code line}, {@code measured} columns wide, with its {@code segments}, and its {@code tokens} if its hunk was
+     * lexed, after its {@code gutter}.
      */
     private static Line line(
             DiffLine line,
+            int measured,
             List<Segment> segments,
             Option<List<Token>> tokens,
             List<Span> gutter,
@@ -264,6 +274,7 @@ final class RichDiff {
                         "+",
                         segments,
                         tokens,
+                        measured,
                         width,
                         Theme.Classes.DIFF_ADDED_LINE,
                         Theme.Classes.DIFF_ADDED_WORD,
@@ -274,6 +285,7 @@ final class RichDiff {
                         "-",
                         segments,
                         tokens,
+                        measured,
                         width,
                         Theme.Classes.DIFF_REMOVED_LINE,
                         Theme.Classes.DIFF_REMOVED_WORD,
@@ -283,15 +295,16 @@ final class RichDiff {
 
     /**
      * A changed line: its marker and its unchanged parts in {@code lineClass}, its changed words in
-     * {@code wordClass}, padded to {@code width}. Its code is coloured by its {@code tokens} if it was lexed, unless
-     * {@code lineClass} gives it no background: then its colour is what tells it is changed, and a line of tokens only
-     * would look like context.
+     * {@code wordClass}, padded from the {@code measured} columns of its text to {@code width}. Its code is coloured
+     * by its {@code tokens} if it was lexed, unless {@code lineClass} gives it no background: then its colour is what
+     * tells it is changed, and a line of tokens only would look like context.
      */
     private static Line changed(
             List<Span> gutter,
             String marker,
             List<Segment> segments,
             Option<List<Token>> tokens,
+            int measured,
             int width,
             String lineClass,
             String wordClass,
@@ -299,7 +312,7 @@ final class RichDiff {
         Option<List<Token>> coloured =
                 tokens.filter(ignored -> styles.of(lineClass).bg().isPresent());
         List<Piece> pieces = pieces(segments, coloured.getOrElse(List.empty()));
-        int used = 1 + pieces.map(piece -> width(piece.text())).sum().intValue();
+        int used = 1 + measured;
         List<Span> spans = pieces.map(piece -> coloured.isDefined()
                         ? changedCode(piece, piece.changed() ? wordClass : lineClass, styles)
                         : styled(piece.text(), piece.changed() ? wordClass : lineClass, styles))
