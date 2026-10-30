@@ -85,6 +85,7 @@ class RemarkLinesTest {
                         "  2 ● +TWO",
                         indent + "┃ bob · 2h ago",
                         indent + "┃ Why upper case?",
+                        indent + "┃",
                         indent + "┃ bob · 2h ago",
                         indent + "┃ Shouting.",
                         "",

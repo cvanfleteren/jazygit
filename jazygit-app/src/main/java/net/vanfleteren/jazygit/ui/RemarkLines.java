@@ -101,8 +101,11 @@ final class RemarkLines {
                             styles))
                     .toJavaList()));
         }
+        // A line of only the rule between two comments, to show where the next one starts.
         return thread.comments()
-                .flatMap(comment -> comment(comment, rule, text, style, styles))
+                .map(comment -> comment(comment, rule, text, style, styles))
+                .intersperse(List.of(Line.from(rule.toJavaList())))
+                .flatMap(Function.identity())
                 .appendAll(
                         thread.more() > 0
                                 ? List.of(Line.from(rule.append(styled(
