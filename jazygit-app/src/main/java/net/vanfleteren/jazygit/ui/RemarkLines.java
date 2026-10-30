@@ -126,7 +126,11 @@ final class RemarkLines {
         List<Line> body = comment.hidden()
                 .filter(hidden -> !style.opened())
                 .map(reason -> List.of(Line.from(rule.append(styled(
-                                cut(Messages.get("content.remarks.hidden", reason.toLowerCase(Locale.ROOT)), text),
+                                cut(
+                                        Messages.get(
+                                                "content.remarks.hidden",
+                                                reason.toLowerCase(Locale.ROOT).replace('_', '-')),
+                                        text),
                                 Theme.Classes.DIM,
                                 styles))
                         .toJavaList())))

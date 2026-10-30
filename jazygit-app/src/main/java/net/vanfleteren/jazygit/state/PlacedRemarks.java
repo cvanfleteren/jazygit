@@ -28,7 +28,8 @@ public record PlacedRemarks(List<FileRemarks> files) {
      * of its file. A thread of a file the diff does not have is left out: it is shown with the diff of its own file.
      */
     public static PlacedRemarks place(UnifiedDiff diff, List<ReviewThread> threads) {
-        return new PlacedRemarks(diff.files().map(file -> file(file, threads.filter(thread -> of(file, thread)))));
+        return new PlacedRemarks(diff.files()
+                .map(file -> file(file, threads.filter(thread -> thread.isOn(file.path(), file.origin())))));
     }
 
     /**
@@ -36,10 +37,6 @@ public record PlacedRemarks(List<FileRemarks> files) {
      */
     public boolean isEmpty() {
         return files.forAll(FileRemarks::isEmpty);
-    }
-
-    private static boolean of(FileDiff file, ReviewThread thread) {
-        return file.path().equals(thread.path()) || file.origin().contains(thread.path());
     }
 
     private static FileRemarks file(FileDiff file, List<ReviewThread> threads) {

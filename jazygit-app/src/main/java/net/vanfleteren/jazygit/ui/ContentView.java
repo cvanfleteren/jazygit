@@ -299,7 +299,7 @@ final class ContentView {
                                         new Body.Diff(
                                                 shownChanges(changes, options),
                                                 model.preferences().diffLook(),
-                                                remarks(model, view)))))
+                                                remarks(model, view, diff.key())))))
                 .getOrElse(() -> whenLoaded(
                         title,
                         view.files(),
@@ -307,14 +307,21 @@ final class ContentView {
     }
 
     /**
-     * The review threads of the pull request {@code view} lists the files of, as they are shown with its diff; none for
-     * a commit or a stash, and while they are first read.
+     * The review threads of the pull request {@code view} lists the files of, as they are shown with its diff of
+     * {@code files}; none for a commit or a stash, and while they are first read. The time they are told to have been
+     * written against is only that of the clock when one of them is on those files: it is part of what the content
+     * panel keeps its styled diff by, so it would style a diff without them again every minute.
      */
-    private static Option<ShownRemarks> remarks(Model model, CommitFilesView view) {
+    private static Option<ShownRemarks> remarks(Model model, CommitFilesView view, List<CommitFile> files) {
         return view.remarks().flatMap(remarks -> switch (remarks) {
             case Loadable.Loaded<ReviewRemarks>(ReviewRemarks read) ->
                 Option.of(new ShownRemarks(
-                        read.threads(), view.opened(), model.now().truncatedTo(ChronoUnit.MINUTES), Option.none()));
+                        read.threads(),
+                        view.opened(),
+                        read.threads().exists(thread -> files.exists(file -> thread.isOn(file.path(), file.origin())))
+                                ? model.now().truncatedTo(ChronoUnit.MINUTES)
+                                : Instant.EPOCH,
+                        Option.none()));
             case Loadable.Failed<ReviewRemarks>(Failure failure) ->
                 Option.of(new ShownRemarks(List.empty(), view.opened(), Instant.EPOCH, Option.of(failure)));
             case Loadable.Loading<ReviewRemarks>() -> Option.none();

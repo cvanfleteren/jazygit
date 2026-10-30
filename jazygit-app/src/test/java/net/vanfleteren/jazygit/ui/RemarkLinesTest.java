@@ -134,6 +134,49 @@ class RemarkLinesTest {
     }
 
     @Test
+    void aThreadAboutAWholeFileGoesUnderItsBar() {
+        ReviewThread onFile = new ReviewThread(
+                "a.txt",
+                Side.RIGHT,
+                Option.none(),
+                Option.none(),
+                Side.RIGHT,
+                Option.none(),
+                false,
+                false,
+                Subject.FILE,
+                List.of(new Comment("bob", NOW.minusSeconds(7200), "Split this file", Option.none())),
+                0);
+
+        List<String> lines = rich(shown(false, onFile));
+
+        assertEquals(
+                List.of(" modified  a.txt", " ".repeat(8) + "┃ bob · 2h ago", " ".repeat(8) + "┃ Split this file"),
+                lines.take(3));
+        assertEquals("1 1 │  one", lines.get(3));
+    }
+
+    @Test
+    void aHiddenCommentShowsInFullOnceTheThreadsAreOpened() {
+        ReviewThread hidden = new ReviewThread(
+                "a.txt",
+                Side.RIGHT,
+                Option.of(2),
+                Option.none(),
+                Side.RIGHT,
+                Option.of(2),
+                false,
+                false,
+                Subject.LINE,
+                List.of(new Comment("carol", NOW, "Off topic", Option.of("OFF_TOPIC"))),
+                0);
+
+        assertTrue(rich(shown(false, hidden)).contains(" ".repeat(8) + "┃ hidden · off-topic"));
+        assertFalse(rich(shown(false, hidden)).contains(" ".repeat(8) + "┃ Off topic"));
+        assertTrue(rich(shown(true, hidden)).contains(" ".repeat(8) + "┃ Off topic"));
+    }
+
+    @Test
     void aBlockWrapsAtTheWidthOfItsFileAtLeastSixtyColumns() {
         String words = "word ".repeat(30).strip();
 

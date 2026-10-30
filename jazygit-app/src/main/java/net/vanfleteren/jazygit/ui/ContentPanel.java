@@ -133,8 +133,7 @@ public final class ContentPanel {
         Vector<Integer> counts = diff.parsed()
                 .diff()
                 .files()
-                .map(file -> threads.count(thread ->
-                        file.path().equals(thread.path()) || file.origin().contains(thread.path())))
+                .map(file -> threads.count(thread -> thread.isOn(file.path(), file.origin())))
                 .toVector();
         return lines(diff.text())
                 .foldLeft(Tuple.of(List.<Line>empty(), 0), (done, line) -> {

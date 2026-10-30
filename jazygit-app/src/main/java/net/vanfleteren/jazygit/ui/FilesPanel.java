@@ -5,9 +5,7 @@ import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.elements.TreeElement;
 import dev.tamboui.tui.event.KeyCode;
-import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
-import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
@@ -34,8 +32,8 @@ public class FilesPanel {
     private final Keymap keymap = Keymap.standard();
     // The trees' key handlers also see keys typed in other panes, so they must know whether the pane has focus.
     private boolean focused;
-    // How many unresolved review threads each file of a pull request has, by its path, as last rendered (ADR 55).
-    private Map<String, Integer> unresolved = HashMap.empty();
+    // The unresolved review threads of the pull request whose files are listed, as last rendered (ADR 55).
+    private List<ReviewThread> unresolved = List.empty();
 
     /**
      * @param dispatch receives the messages for the user's actions, on the render thread
@@ -104,20 +102,18 @@ public class FilesPanel {
         return Toolkit.row(List.<StyledElement<?>>of(
                         Toolkit.text(file.entry().type().marker()).addClass(Theme.Classes.STAGED),
                         Toolkit.text(" " + name(file)))
-                .appendAll(unresolved
-                        .get(file.entry().path())
+                .appendAll(Option.of(unresolved.count(thread ->
+                                thread.isOn(file.entry().path(), file.entry().origin())))
+                        .filter(count -> count > 0)
                         .map(count -> Toolkit.text(" 💬" + count).addClass(Theme.Classes.DIFF_THREAD)))
                 .toJavaArray(StyledElement[]::new));
     }
 
     /**
-     * How many unresolved review threads each file has, by its path.
+     * The review threads of {@code view} that are not resolved.
      */
-    private static Map<String, Integer> unresolved(CommitFilesView view) {
-        return view.threads()
-                .filter(thread -> !thread.resolved())
-                .groupBy(ReviewThread::path)
-                .mapValues(List::size);
+    private static List<ReviewThread> unresolved(CommitFilesView view) {
+        return view.threads().filter(thread -> !thread.resolved());
     }
 
     /**
@@ -185,7 +181,7 @@ public class FilesPanel {
     public Panel render(Model model, String focusedId, String activeId) {
         focused = ID.equals(focusedId);
         boolean active = ID.equals(activeId);
-        unresolved = model.repoView().commitFiles().map(FilesPanel::unresolved).getOrElse(HashMap.empty());
+        unresolved = model.repoView().commitFiles().map(FilesPanel::unresolved).getOrElse(List.empty());
         return model.repoView()
                 .commitFiles()
                 .map(view -> Pane.bordered(
