@@ -302,13 +302,15 @@ final class ContentView {
     }
 
     /**
-     * How the commit or the stash {@code of} is named: by its short sha, or by its {@code stash@{n}}.
+     * How the commit, the stash or the pull request {@code of} is named: by its short sha, by its {@code stash@{n}},
+     * or by its {@code #n}.
      */
     static String changesName(Model model, CommitFilesView.Changes of) {
         return switch (of) {
             case CommitFilesView.Changes.OfCommit(Sha sha) -> sha.shortSha();
             case CommitFilesView.Changes.OfStash(Sha sha) ->
                 stash(model, sha).map(Stash::ref).getOrElse(sha::shortSha);
+            case CommitFilesView.Changes.OfPullRequest(var commits) -> "#" + commits.number();
         };
     }
 

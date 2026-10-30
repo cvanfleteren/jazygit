@@ -6,13 +6,14 @@ import lombok.With;
 import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.DiffText;
+import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.Sha;
 
 /**
- * The files a commit or a stash changed, which the files pane lists as a tree in place of the changed files of the
- * working tree while it is open (ADR 44).
+ * The files a commit, a stash or a pull request changed, which the files pane lists as a tree in place of the changed
+ * files of the working tree while it is open (ADR 44, 55).
  *
- * @param of       the commit or the stash
+ * @param of       the commit, the stash or the pull request
  * @param pane     the id of the pane it was opened from, which gets the focus back when it is closed
  * @param listedIn the id of the pane that lists the files: when another pane gets the focus, it closes
  * @param files    the files, as they are read
@@ -65,5 +66,20 @@ public record CommitFilesView(
          * The changes of a stash, its untracked files included.
          */
         record OfStash(Sha sha) implements Changes {}
+
+        /**
+         * The changes of a pull request on GitHub, as GitHub shows them: its head against the merge base of its head
+         * and its base (ADR 55).
+         */
+        record OfPullRequest(PullRequestCommits commits) implements Changes {
+
+            /**
+             * Its head commit.
+             */
+            @Override
+            public Sha sha() {
+                return commits.head();
+            }
+        }
     }
 }

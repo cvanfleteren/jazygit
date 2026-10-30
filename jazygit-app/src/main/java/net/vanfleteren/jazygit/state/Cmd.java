@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.git.model.CommitQuery;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.GitMetadata;
+import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.settings.Settings;
 
@@ -510,7 +511,8 @@ public interface Cmd {
     }
 
     /**
-     * Reads the files a commit or a stash changed, for the tree of them the files pane lists.
+     * Reads the files a commit, a stash or a pull request changed, for the tree of them the files pane lists. Those
+     * of a pull request are read in the background, as its commits may have to be fetched first (ADR 55).
      */
     record LoadCommitFiles(CommitFilesView.Changes of) implements Load {
 
@@ -520,19 +522,27 @@ public interface Cmd {
         }
 
         @Override
+        public boolean background() {
+            return of instanceof CommitFilesView.Changes.OfPullRequest;
+        }
+
+        @Override
         public Msg run(Env env) {
             return (switch (of) {
                         case CommitFilesView.Changes.OfCommit(Sha sha) ->
                             env.git().commitFiles(sha);
                         case CommitFilesView.Changes.OfStash(Sha sha) ->
                             env.git().stashFiles(sha);
+                        case CommitFilesView.Changes.OfPullRequest(PullRequestCommits commits) ->
+                            env.git().pullRequestFiles(commits);
                     })
                     .fold(this::failedWith, files -> new LoadMsg.CommitFilesLoaded(of, files));
         }
     }
 
     /**
-     * Reads what a commit or a stash changed in the files of the node highlighted in the tree of its files.
+     * Reads what a commit, a stash or a pull request changed in the files of the node highlighted in the tree of its
+     * files.
      */
     record LoadCommitFileDiff(CommitFilesView.Changes of, List<CommitFile> files, DiffOptions options)
             implements DiffLoad {
@@ -554,6 +564,8 @@ public interface Cmd {
                             env.git().commitFileChanges(sha, files, options);
                         case CommitFilesView.Changes.OfStash(Sha sha) ->
                             env.git().stashFileChanges(sha, files, options);
+                        case CommitFilesView.Changes.OfPullRequest(PullRequestCommits commits) ->
+                            env.git().pullRequestFileChanges(commits, files, options);
                     })
                     .fold(this::failedWith, diff -> new LoadMsg.CommitFileDiffLoaded(of, files, options, diff));
         }

@@ -49,6 +49,7 @@ class DetailsQueryTest {
             Tuple.of("headRefName", "\"fix\""),
             Tuple.of("baseRefName", "\"main\""),
             Tuple.of("headRefOid", "\"\""),
+            Tuple.of("baseRefOid", "\"\""),
             Tuple.of("stackEntry", "null"),
             Tuple.of("stack", "null"),
             Tuple.of("createdAt", JANUARY),
@@ -254,6 +255,14 @@ class DetailsQueryTest {
         assertEquals(Option.of(stack), details.stack());
         assertEquals(Option.of(stack), details.listed().get().stack());
         assertEquals(0, details.stack().get().below());
+    }
+
+    @Test
+    void theCommitOfTheBaseIsReadToDiffAgainst() {
+        assertEquals(
+                Option.of(new GhCommit("def456")),
+                read(MERGED.put("baseRefOid", "\"def456\"")).get().branches().baseCommit());
+        assertEquals(Option.none(), read(MERGED).get().branches().baseCommit());
     }
 
     @Test

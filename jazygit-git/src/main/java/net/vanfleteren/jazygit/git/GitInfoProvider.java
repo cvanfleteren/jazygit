@@ -327,6 +327,21 @@ public interface GitInfoProvider {
      */
     Either<ProcessError, DiffText> commitFileChanges(Sha sha, List<CommitFile> files, DiffOptions options);
 
+    // What a pull request on GitHub changes, as GitHub shows it (ADR 55).
+
+    /**
+     * The files the pull request of {@code commits} changes: its head against the merge base of its head and its
+     * base. Its commits are fetched first, from the remote of its repository, when the repository lacks either.
+     */
+    Either<ProcessError, List<CommitFile>> pullRequestFiles(PullRequestCommits commits);
+
+    /**
+     * What the pull request of {@code commits} changes in {@code files}, read with {@code options}, as
+     * {@link #pullRequestFiles} reads them, which fetched its commits. Long output is cut off.
+     */
+    Either<ProcessError, DiffText> pullRequestFileChanges(
+            PullRequestCommits commits, List<CommitFile> files, DiffOptions options);
+
     // The changes in the working tree and the index, as git diff shows them.
 
     /**

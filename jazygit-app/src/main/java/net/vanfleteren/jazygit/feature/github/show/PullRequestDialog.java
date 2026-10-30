@@ -98,6 +98,11 @@ public final class PullRequestDialog implements PopupView {
                                 "dialog.pullRequest.viewComments",
                                 CommentsMsg.Requested::new,
                                 (model, popup) -> popup.detailsRead()),
+                        new Choice<>(
+                                'f',
+                                "dialog.pullRequest.files",
+                                PullRequestMsg.FilesChosen::new,
+                                (model, popup) -> popup.commits().isDefined()),
                         // Before merging, which a draft has to wait for.
                         new Choice<>(
                                 'd',

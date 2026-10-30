@@ -128,8 +128,14 @@ public record PullRequestDetails(
      * @param headCommit the commit its branch is at, if known
      * @param behindBase how many commits its base branch has that its branch does not, as the base moved on since its
      *                   branch was made; empty when not known
+     * @param baseCommit the commit its base branch is at, if known, which its changes are diffed against (ADR 55)
      */
-    public record Branches(String head, String base, Option<GhCommit> headCommit, Option<Integer> behindBase) {
+    public record Branches(
+            String head,
+            String base,
+            Option<GhCommit> headCommit,
+            Option<Integer> behindBase,
+            Option<GhCommit> baseCommit) {
 
         /**
          * Branches at a commit that is not known, not known to be apart.
@@ -138,8 +144,15 @@ public record PullRequestDetails(
             this(head, base, Option.none(), Option.none());
         }
 
+        /**
+         * Branches whose base is at a commit that is not known.
+         */
+        public Branches(String head, String base, Option<GhCommit> headCommit, Option<Integer> behindBase) {
+            this(head, base, headCommit, behindBase, Option.none());
+        }
+
         public Branches withBehindBase(int behind) {
-            return new Branches(head, base, headCommit, Option.of(behind));
+            return new Branches(head, base, headCommit, Option.of(behind), baseCommit);
         }
     }
 

@@ -1319,6 +1319,58 @@ class PullRequestUpdateTest {
                 .model();
     }
 
+    private static final String HEAD_OID = "a".repeat(40);
+    private static final String BASE_OID = "b".repeat(40);
+
+    /**
+     * The dialog showing pull request 42 as read, of {@code owner/repo}, at known commits when {@code known}.
+     */
+    private static Model showingCommits(PullRequestDetails.State state, boolean known) {
+        Model shown =
+                Update.update(withPr(), new PullRequestMsg.Requested(FEATURE)).model();
+        PullRequestDetails read = StubGitHub.empty().pullRequestDetails(42).get();
+        PullRequestDetails details = read.withRepository("owner/repo")
+                .withStatus(read.status().withState(state))
+                .withBranches(new PullRequestDetails.Branches(
+                        "feature",
+                        "main",
+                        GhCommit.parse(known ? HEAD_OID : ""),
+                        Option.none(),
+                        GhCommit.parse(BASE_OID)));
+        return Update.update(shown, new PullRequestMsg.DetailsLoaded(42, lastRead(shown), details))
+                .model();
+    }
+
+    @Test
+    void theFilesOfAPullRequestOpenInTheFilesPaneInPlaceOfTheDialog() {
+        PullRequestCommits commits =
+                new PullRequestCommits(42, "owner/repo", new BranchName("main"), new Sha(BASE_OID), new Sha(HEAD_OID));
+        Model shown = showingCommits(PullRequestDetails.State.OPEN, true).withScreen(Screen.PULL_REQUESTS);
+
+        Next opened = Update.update(shown, new PullRequestMsg.FilesChosen());
+
+        CommitFilesView.Changes of = new CommitFilesView.Changes.OfPullRequest(commits);
+        assertEquals(Option.none(), opened.model().popup(PullRequestPopup.class));
+        assertEquals(Screen.REPOSITORY, opened.model().screen());
+        assertEquals(
+                Option.of(CommitFilesView.of(of, "branches", "files")),
+                opened.model().repoView().commitFiles());
+        assertEquals(List.of(new Cmd.LoadCommitFiles(of)), opened.cmds());
+        assertTrue(opened.cmds().head().background());
+    }
+
+    @Test
+    void theFilesOfAPullRequestThatIsMergedOrAtCommitsNotKnownAreNotListed() {
+        for (Model shown : List.of(
+                showingCommits(PullRequestDetails.State.MERGED, true),
+                showingCommits(PullRequestDetails.State.OPEN, false))) {
+            Next chosen = Update.update(shown, new PullRequestMsg.FilesChosen());
+
+            assertEquals(shown, chosen.model());
+            assertEquals(List.empty(), chosen.cmds());
+        }
+    }
+
     @Test
     void refreshingReadsTheDetailsAgainWhileTheyStayShown() {
         Model shown = showingDetails();
