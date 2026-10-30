@@ -313,6 +313,21 @@ class RichDiffTest {
                 drawn);
     }
 
+    @Test
+    void aChangedLineIsPaddedToTheBarWhenAWordIsCutFromItsVariationSelector() {
+        // The emoji and its U+FE0F are cut into pieces of their own, which are narrower together than the whole.
+        List<Line> lines = RichDiff.lines(ParsedDiff.of("""
+                diff --git a/f.txt b/f.txt
+                --- a/f.txt
+                +++ b/f.txt
+                @@ -1 +1 @@
+                -a ❤️
+                +a ✔️
+                """), true, Theme.SpanStyles.NONE);
+
+        assertEquals(List.of(17, 17, 17), lines.map(RichDiffTest::width));
+    }
+
     private static final String STRING_CHANGED = """
             diff --git a/A.java b/A.java
             --- a/A.java
@@ -338,6 +353,13 @@ class RichDiffTest {
      */
     private static List<Tuple2<String, Style>> code(Line line) {
         return List.ofAll(line.spans()).drop(2).dropRight(1).map(span -> Tuple.of(span.content(), span.style()));
+    }
+
+    /**
+     * How many columns {@code line} takes, as each of its spans is drawn by itself.
+     */
+    private static int width(Line line) {
+        return line.spans().stream().mapToInt(Span::width).sum();
     }
 
     private static List<String> text(List<Line> lines) {

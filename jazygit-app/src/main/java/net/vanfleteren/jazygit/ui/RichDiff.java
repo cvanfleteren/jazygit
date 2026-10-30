@@ -299,7 +299,8 @@ final class RichDiff {
 
     /**
      * A changed line: its marker and its unchanged parts in {@code lineClass}, its changed words in
-     * {@code wordClass}, padded from the {@code measured} columns of its text to {@code width}. Its code is coloured
+     * {@code wordClass}, padded to {@code width}, from the {@code measured} columns of its text if it is one piece.
+     * Its code is coloured
      * by its {@code tokens} if it was lexed, unless {@code lineClass} gives it no background: then its colour is what
      * tells it is changed, and a line of tokens only would look like context.
      */
@@ -316,7 +317,12 @@ final class RichDiff {
         Option<List<Token>> coloured =
                 tokens.filter(ignored -> styles.of(lineClass).bg().isPresent());
         List<Piece> pieces = pieces(segments, coloured.getOrElse(List.empty()));
-        int used = 1 + measured;
+        // Each piece is drawn as a span by itself, and pieces cut from a grapheme, like an emoji from its variation
+        // selector, are narrower together than their text: only a line of one piece is as wide as it was measured.
+        int used = 1
+                + (pieces.size() == 1
+                        ? measured
+                        : pieces.map(piece -> width(piece.text())).sum().intValue());
         List<Span> spans = pieces.map(piece -> coloured.isDefined()
                         ? changedCode(piece, piece.changed() ? wordClass : lineClass, styles)
                         : styled(piece.text(), piece.changed() ? wordClass : lineClass, styles))
