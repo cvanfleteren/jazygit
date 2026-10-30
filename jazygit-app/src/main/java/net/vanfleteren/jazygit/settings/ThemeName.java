@@ -35,6 +35,10 @@ public enum ThemeName {
      */
     LIANTIS_DARK("liantis-dark"),
     /**
+     * The blue, pink and orange of the GitHub scheme for the macOS Terminal on light grey.
+     */
+    GITHUB_TERMINAL("github-terminal"),
+    /**
      * No styling at all: the terminal's own colours, as the UI is drawn without a theme.
      */
     NONE("none");

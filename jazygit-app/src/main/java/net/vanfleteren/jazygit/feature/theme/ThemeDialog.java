@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.theme;
 
+import io.vavr.Tuple;
 import io.vavr.collection.LinkedHashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
@@ -17,27 +18,18 @@ import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog.Choice;
 public final class ThemeDialog {
 
     // The themes, by the key that chooses them, in the order they are listed.
-    private static final Map<Character, ThemeName> KEYS = LinkedHashMap.of(
-            'd',
-            ThemeName.DARK,
-            'l',
-            ThemeName.LIGHT,
-            'a',
-            ThemeName.DARCULA,
-            'b',
-            ThemeName.DARK_COLORBLIND,
-            'm',
-            ThemeName.MONO,
-            'e',
-            ThemeName.EMBER,
-            'p',
-            ThemeName.POWERLINE,
-            'i',
-            ThemeName.LIANTIS,
-            'n',
-            ThemeName.LIANTIS_DARK,
-            'o',
-            ThemeName.NONE);
+    private static final Map<Character, ThemeName> KEYS = LinkedHashMap.ofEntries(
+            Tuple.of('d', ThemeName.DARK),
+            Tuple.of('l', ThemeName.LIGHT),
+            Tuple.of('a', ThemeName.DARCULA),
+            Tuple.of('b', ThemeName.DARK_COLORBLIND),
+            Tuple.of('m', ThemeName.MONO),
+            Tuple.of('e', ThemeName.EMBER),
+            Tuple.of('p', ThemeName.POWERLINE),
+            Tuple.of('i', ThemeName.LIANTIS),
+            Tuple.of('n', ThemeName.LIANTIS_DARK),
+            Tuple.of('g', ThemeName.GITHUB_TERMINAL),
+            Tuple.of('o', ThemeName.NONE));
 
     /**
      * The themes, opening at the one in use, so the arrow keys preview the others from there.
