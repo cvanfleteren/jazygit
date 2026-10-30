@@ -19,6 +19,7 @@ import io.vavr.control.Try;
 import java.time.Clock;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.feature.branch.tabs.BranchesTabMsg;
+import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.settings.*;
 import net.vanfleteren.jazygit.state.*;
@@ -75,7 +76,16 @@ public class JazygitApp extends ToolkitApp {
         this.focus = new FocusKeeper(this::runner, this::model, contentPanel, popups, this::requestRedraw);
         this.leftColumn = new LeftColumn(dispatch, styleEngine, clock, focus::openContent, this::showBranchesTab);
         this.session = new RepositorySession(
-                env, terminal, this::runner, clock, this::requestRedraw, this::quit, focus::moveToPaneOf);
+                env, terminal, this::runner, clock, this::requestRedraw, this::quit, this::started);
+    }
+
+    /**
+     * Shows the repository a program was started for, whose first model is {@code model}: the one the app starts in,
+     * or one opened in its place.
+     */
+    private void started(Model model) {
+        focus.moveToPaneOf(model);
+        terminal.title(Messages.get("window.title", model.repositoryName()));
     }
 
     /**

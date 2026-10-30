@@ -7,6 +7,7 @@ import static net.vanfleteren.jazygit.TestApp.onRenderThread;
 import static net.vanfleteren.jazygit.TestApp.tickless;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import dev.tamboui.terminal.TestBackend;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyModifiers;
@@ -52,6 +53,21 @@ class JazygitAppWiringTest {
             SettledPilot.of(testRunner, app.drawnAt::size).press('p', KeyModifiers.CTRL);
 
             awaitModel(testRunner, app, model -> model.screen() == Screen.PULL_REQUESTS);
+        } finally {
+            app.onStop();
+        }
+    }
+
+    @Test
+    void theWindowIsTitledAfterTheRepository() throws Exception {
+        TestApp app = new TestApp();
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {
+            app.start(testRunner);
+
+            TestBackend backend = (TestBackend) testRunner.runner().tuiRunner().backend();
+            await(
+                    () -> onRenderThread(testRunner, backend::rawOutput).contains("\u001b]2;jazygit - jazygit\u0007"),
+                    "the window was titled");
         } finally {
             app.onStop();
         }
