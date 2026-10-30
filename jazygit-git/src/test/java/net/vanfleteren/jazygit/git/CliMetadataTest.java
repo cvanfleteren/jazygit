@@ -99,15 +99,39 @@ class CliMetadataTest {
     }
 
     @Test
-    void aCommitChangesTheBranchesAndTheWorktreesButNotTheStashes() throws Exception {
+    void aCommitChangesTheBranchesButNotTheStashesTheWorktreesOrTheConfig() throws Exception {
         GitMetadata before = metadata(main);
 
         commit(main, "b.txt");
 
         GitMetadata after = metadata(main);
         assertNotEquals(before.branches(), after.branches());
-        assertNotEquals(before.worktrees(), after.worktrees());
+        assertEquals(before.worktrees(), after.worktrees());
         assertEquals(before.stashes(), after.stashes());
+        assertEquals(before.config(), after.config());
+    }
+
+    @Test
+    void checkingOutAnotherBranchOrACommitChangesTheWorktrees() throws Exception {
+        git(main, "branch", "other");
+        GitMetadata before = metadata(main);
+
+        git(main, "checkout", "other");
+        GitMetadata switched = metadata(main);
+        git(main, "checkout", "--detach");
+
+        assertNotEquals(before.worktrees(), switched.worktrees());
+        assertNotEquals(switched.worktrees(), metadata(main).worktrees());
+    }
+
+    @Test
+    void aParentThatIsRecordedChangesTheConfig() throws Exception {
+        git(main, "branch", "feature");
+        GitMetadata before = metadata(main);
+
+        git(main, "config", "branch.feature.gh-merge-base", "main");
+
+        assertNotEquals(before.config(), metadata(main).config());
     }
 
     @Test
@@ -182,7 +206,19 @@ class CliMetadataTest {
 
         assertNotEquals(fromLinked.branches(), metadata(linked).branches());
         assertNotEquals(fromMain.branches(), metadata(main).branches());
-        assertNotEquals(fromMain.worktrees(), metadata(main).worktrees());
+        assertEquals(fromMain.worktrees(), metadata(main).worktrees());
+    }
+
+    @Test
+    void checkingOutInALinkedWorktreeChangesTheWorktreesOfTheMainOne() throws Exception {
+        git(main, "branch", "other");
+        Path linked = dir.resolve("linked");
+        git(main, "worktree", "add", "-b", "feature", linked.toString());
+        GitMetadata before = metadata(main);
+
+        git(linked, "checkout", "other");
+
+        assertNotEquals(before.worktrees(), metadata(main).worktrees());
     }
 
     @Test
@@ -208,7 +244,6 @@ class CliMetadataTest {
         GitMetadata justNow = CliMetadata.read(CliMetadata.locate(main).get(), committed);
 
         assertEquals(Option.none(), justNow.branches());
-        assertEquals(Option.none(), justNow.worktrees());
         assertTrue(metadata(main).branches().isDefined());
     }
 

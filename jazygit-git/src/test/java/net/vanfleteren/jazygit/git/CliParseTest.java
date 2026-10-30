@@ -259,6 +259,17 @@ class CliParseTest {
     }
 
     @Test
+    void aWalkTellsTheCommitsItListedFromThoseItStoppedAt() {
+        String raw = String.join("\u001f", ">", A, B, "Ada", "ada@example.com", "60", "Side", "", "Side\n") + "\0"
+                + String.join("\u001f", "-", B, "", "Bob", "bob@example.com", "0", "Root", "", "Root\n");
+
+        CliLog.Walk walk = CliLog.parseWalk(raw).get();
+
+        assertEquals(List.of(new Sha(A)), walk.commits().map(Commit::sha));
+        assertEquals(List.of(new Sha(B)), walk.boundary().map(Commit::sha));
+    }
+
+    @Test
     void aBranchIsMadeWhenItsOldestReflogEntrySaysGitCreatedIt() {
         String raw = reflog("refs/heads/fresh", 50, "branch: Created from main")
                 + reflog("refs/heads/feature/a@b", 100, "commit: Work")

@@ -1006,7 +1006,8 @@ class BranchUpdateTest {
                         new LoadStatus(),
                         new LoadBranches(),
                         new net.vanfleteren.jazygit.state.Cmd.LoadStashes(),
-                        new net.vanfleteren.jazygit.state.Cmd.LoadWorktrees()),
+                        new net.vanfleteren.jazygit.state.Cmd.LoadWorktrees(),
+                        new net.vanfleteren.jazygit.state.Cmd.LoadParents()),
                 next.cmds());
         assertEquals(Option.none(), next.model().outcome().error());
     }
@@ -1024,7 +1025,8 @@ class BranchUpdateTest {
                         new LoadStatus(),
                         new LoadBranches(),
                         new LoadStashes(),
-                        new net.vanfleteren.jazygit.state.Cmd.LoadWorktrees()),
+                        new net.vanfleteren.jazygit.state.Cmd.LoadWorktrees(),
+                        new net.vanfleteren.jazygit.state.Cmd.LoadParents()),
                 next.cmds());
     }
 

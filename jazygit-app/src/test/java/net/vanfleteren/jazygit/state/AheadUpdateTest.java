@@ -261,14 +261,9 @@ class AheadUpdateTest {
     void theCommitsAheadAreReadAgainWhenTheParentsTellAnotherBase() {
         Model model = featureLogRead();
         BranchName head = model.repo().currentBranch().get().name();
-        Cmd.LoadBaseDistance load = LoadUpdate.baseDistance(model);
 
         Update.Next read = Update.update(
-                model,
-                new LoadMsg.BaseDistanceLoaded(
-                        load,
-                        io.vavr.collection.HashMap.of(head, FEATURE, FEATURE, MAIN),
-                        io.vavr.collection.HashMap.empty()));
+                model, new LoadMsg.ParentsLoaded(io.vavr.collection.HashMap.of(head, FEATURE, FEATURE, MAIN)));
 
         assertEquals(
                 Option.of(new Cmd.LoadAhead.Base(new BranchRef.Local(FEATURE), FEATURE_TIP)),
@@ -284,8 +279,7 @@ class AheadUpdateTest {
                 List.empty(),
                 Update.update(
                                 read.model(),
-                                new LoadMsg.BaseDistanceLoaded(
-                                        load, read.model().repo().parents(), io.vavr.collection.HashMap.empty()))
+                                new LoadMsg.ParentsLoaded(read.model().repo().parents()))
                         .cmds());
     }
 
