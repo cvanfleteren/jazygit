@@ -14,7 +14,11 @@ import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine.Kind;
 import net.vanfleteren.jazygit.git.model.WordDiff.Segment;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ExecutionMode;
 
+// One method at a time: manyLongSimilarLinesAreDrawnQuickly times itself, and the others would share its cores.
+@Execution(ExecutionMode.SAME_THREAD)
 class WordDiffTest {
 
     @Test
@@ -171,7 +175,9 @@ class WordDiffTest {
                 .map(i -> line(Kind.REMOVED, words + " " + i))
                 .appendAll(List.range(0, 2000).map(i -> line(Kind.ADDED, words + " x" + i)));
 
-        assertTimeoutPreemptively(Duration.ofSeconds(2), () -> WordDiff.segments(List.of(hunk)));
+        // Within the budget it takes under a second; without one, hundreds of times as long. The rest is margin for a
+        // busy CI runner, where the other modules' tests run alongside.
+        assertTimeoutPreemptively(Duration.ofSeconds(5), () -> WordDiff.segments(List.of(hunk)));
     }
 
     @Test
