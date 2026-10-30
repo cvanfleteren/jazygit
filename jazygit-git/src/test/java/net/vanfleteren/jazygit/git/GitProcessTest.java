@@ -10,7 +10,6 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.GitError.CommandFailed;
-import net.vanfleteren.jazygit.process.Exec;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -38,26 +37,6 @@ class GitProcessTest {
         assertTrue(failed.says("fatal: not a git repository"), failed.toString());
         assertEquals(128, failed.exitCode());
         assertEquals(List.of("git rev-parse HEAD"), failure.commands().map(ExecutedCommand::line));
-    }
-
-    @Test
-    void theExplanationPrefersTheErrorOutput() {
-        assertEquals(Option.of("error: boom"), Exec.explanation("\n error: boom\nmore", "On branch main"));
-        assertEquals(Option.of("On branch main"), Exec.explanation("", "\nOn branch main\n"));
-        assertEquals(Option.none(), Exec.explanation("", ""));
-    }
-
-    @Test
-    void theExplanationIsTheLineThatSaysWhatWentWrong() {
-        String rejected = """
-                To github.com:o/r.git
-                 ! [rejected]        main -> main (fetch first)
-                error: failed to push some refs to 'github.com:o/r.git'
-                hint: Updates were rejected because the remote contains work that you do not have
-                """;
-
-        assertEquals(
-                Option.of("error: failed to push some refs to 'github.com:o/r.git'"), Exec.explanation(rejected, ""));
     }
 
     @Test

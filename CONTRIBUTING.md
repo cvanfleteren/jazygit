@@ -10,7 +10,7 @@ commands name your paths, branches and commit messages.
 
 To build from source:
 
-- **JDK 25** and **Maven**: `mvn verify` builds and tests both modules, and `./run.sh` builds the jar when needed and
+- **JDK 25** and **Maven**: `mvn verify` builds and tests all modules, and `./run.sh` builds the jar when needed and
   runs it. `mvn test-compile pitest:mutationCoverage` runs the [PIT](https://pitest.org) mutation tests, which take
   minutes and are no part of `verify`; the reports land in each module's `target/pit-reports/index.html`. Add
   `-pl jazygit-git` for one module, `-Dpitest.threads=16` for more threads, or `-DwithHistory` to only analyse what
