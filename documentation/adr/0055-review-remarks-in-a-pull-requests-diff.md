@@ -82,6 +82,9 @@ internal, and a code block or a table is laid out as a widget, not as lines.
 - The remarks are read with the state of the pull request, and the title of the tree follows it:
   `Files of #123 · merged` or `· closed`, from when the tree opens on a closed one, or from the `R` that finds it so.
   One that `R` finds merged or closed stays at the commits its files were read at, though GitHub now gives others.
+  Its remarks are read at those others, so their lines may number other lines than the diff shows: they are only
+  placed on lines when they were read at the commits of the tree, else listed at the end of their file. Not: keeping
+  the remarks read before, which hides those made or resolved since.
   Not: closing the tree, as a dropped stash does (ADR 44): a stash's name then names another stash, while the number
   of a pull request still names it.
 
@@ -96,8 +99,8 @@ internal, and a code block or a table is laid out as a widget, not as lines.
   first (`startLine` on `startDiffSide`, which may be the other side) to its last, in the order of the diff: the
   removed lines among added ones too, as GitHub highlights them. Only a thread that is placed covers lines; when its
   first line is not in the diff, as with whitespace ignored, or hunks cut elsewhere than GitHub's, it covers from the
-  first line of the hunk its last line is in: a hunk shows every line of its range on either side, so its first line
-  is before that hunk.
+  first line the diff shows after it, on its side: a hunk shows every line of its range on either side, so each hunk
+  wholly after that first line and up to its last is inside the thread.
 - A thread that cannot be placed goes in a list at the end of its file, dimmed, each saying the line it was made on:
   an outdated one, one on a line the diff does not show, as its file is cut off after `CliDiff.MAX_LINES` lines, or as
   its line is outside the hunks git made. Not: left out with a count, nor placed on its `originalLine`, which may now
