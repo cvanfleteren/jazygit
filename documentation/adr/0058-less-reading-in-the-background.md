@@ -55,7 +55,9 @@ of them the status of ADR 52, and 3 to 4 gh processes; several of them read what
    remotes or GitHub (`Msg.Periodic`: the tick, the fetch, the pull requests overview and the dialogs of checks) are
    kept instead of handled; once back, each is handled once, so what they would have read is read at once. A merge
    that is being checked on still is, and what the user does is handled as ever. A terminal that does not report the
-   focus, or a tmux without `focus-events`, never says the app is away, and nothing changes there.
+   focus, or a tmux without `focus-events`, never says the app is away, and nothing changes there. A key, a click or
+   a paste only comes from a terminal that has the focus, so one read while away also tells it is back: a report that
+   got lost, split up over a slow link or never sent after a tmux detach, does not leave the app paused for good.
 5. **A read from GitHub that keeps failing waits longer the more it failed.** A repository without a remote on
    GitHub, or gh missing, logged out or offline, made each timer run gh for nothing: 3 failing processes a minute,
    all day. `GitHubState.failing` keeps, per read, how often it failed in a row and when last (`FailingRead`); the

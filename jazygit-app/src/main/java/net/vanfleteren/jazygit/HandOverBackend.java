@@ -54,6 +54,9 @@ final class HandOverBackend implements Backend {
     private final Deque<Integer> unread = new ArrayDeque<>();
     private volatile boolean keysPaused;
     private volatile boolean muted;
+    // Whether the terminal has the focus, as it reported last, or a key read since says. Only the thread that reads
+    // keys touches it.
+    private boolean focused = true;
 
     HandOverBackend(Backend backend, Consumer<Boolean> focus) {
         this.backend = backend;
@@ -142,10 +145,33 @@ final class HandOverBackend implements Backend {
     // come.
 
     /**
-     * The next key within {@code timeoutMs}, leaving out the reports of the focus, which go to {@link #focus}.
+     * The next key within {@code timeoutMs}, leaving out the reports of the focus, which go to {@link #focus}. A key,
+     * a click or a paste only comes from a terminal that has the focus: one read after the terminal said it lost it
+     * tells that it has it again, should the report of that have been lost, split up on its way or never sent.
      */
     @Override
     public int read(int timeoutMs) throws IOException {
+        int key = next(timeoutMs);
+        if (key != NO_KEY && !focused) {
+            reportFocus(true);
+        }
+        return key;
+    }
+
+    /**
+     * Tells {@link #focus} that the terminal got the focus, or lost it, unless it was told so last.
+     */
+    private void reportFocus(boolean in) {
+        if (in != focused) {
+            focused = in;
+            focus.accept(in);
+        }
+    }
+
+    /**
+     * The next key within {@code timeoutMs}, the reports of the focus left out.
+     */
+    private int next(int timeoutMs) throws IOException {
         if (!unread.isEmpty()) {
             return unread.poll();
         }
@@ -164,7 +190,7 @@ final class HandOverBackend implements Backend {
                 }
                 return key;
             }
-            focus.accept(last == FOCUS_IN);
+            reportFocus(last == FOCUS_IN);
             if (System.nanoTime() >= deadline) {
                 return NO_KEY;
             }

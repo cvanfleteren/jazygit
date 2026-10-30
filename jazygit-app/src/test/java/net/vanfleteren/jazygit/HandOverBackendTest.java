@@ -28,6 +28,15 @@ class HandOverBackendTest {
     }
 
     @Test
+    void aKeyAfterTheFocusWasLostTellsItIsBackWhenItsReportGotLost() throws IOException {
+        List<Boolean> focus = new ArrayList<>();
+        HandOverBackend backend = new HandOverBackend(typed("\u001b[Oab"), focus::add);
+
+        assertEquals(List.of((int) 'a', (int) 'b'), keys(backend, 2));
+        assertEquals(List.of(false, true), focus);
+    }
+
+    @Test
     void otherEscapeSequencesAreReadAsTheyCame() throws IOException {
         List<Boolean> focus = new ArrayList<>();
         HandOverBackend backend = new HandOverBackend(typed("\u001b[A\u001b"), focus::add);
