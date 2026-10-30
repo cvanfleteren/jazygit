@@ -81,9 +81,12 @@ tell from the hunk alone.
 - Only the rich view is coloured. The plain view stays git's text.
 - A changed line keeps the background of its class (`diff-added-line`, `diff-removed-word`, …), and takes the colour
   of its text from the class of its token (`syntax-keyword`, `syntax-string`, `syntax-comment`, `syntax-number`), or
-  the theme's default colour outside a token. Its marker, `+` or `-`, keeps the whole style of its class. A context
-  line takes the colour of its tokens and no background. Where a token and a changed word overlap, the span is cut
-  at the bounds of both.
+  of `syntax-text` outside a token, which is the theme's default colour unless the theme gives it one. Its marker,
+  `+` or `-`, keeps the whole style of its class. A context line takes the colour of its tokens and no background.
+  Where a token and a changed word overlap, the span is cut at the bounds of both.
+- A changed line whose class gives it no background, as in the themes `mono` and `none`, keeps the colour of its
+  class outside a token: there, that colour is what tells it is changed.
+- A file none of whose lines has a token, as its language is not known, is drawn as before.
 - The classes of the diff keep their colour in every theme: that is how a changed line is drawn when it is not
   coloured by its syntax, as before. Each theme gets the four classes of the syntax, with colours of its own that
   read on both its added and its removed background; the themes for colour blindness use no red and green for them.
