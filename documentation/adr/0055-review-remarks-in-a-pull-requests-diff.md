@@ -161,4 +161,4 @@ internal, and a code block or a table is laid out as a widget, not as lines.
 Amended by ADR 57: `c` in the tree lists only the files with unresolved remarks, or with any, and a file shows how
 many resolved threads it has too.
 
-Amended by ADR 59: replying to a thread, resolving it and starting one, with a cursor in the rich view.
+Amended by ADR 60: replying to a thread, resolving it and starting one, with a cursor in the rich view.

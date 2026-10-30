@@ -122,4 +122,4 @@ Amended by ADR 54: whitespace between two changed words is highlighted with them
 
 Amended by ADR 55: the tree lists the files a pull request changes too, read with git.
 
-Amended by ADR 59: the rich view has a cursor, which stops on the lines, the bars of the files and the threads.
+Amended by ADR 60: the rich view has a cursor, which stops on the lines, the bars of the files and the threads.
