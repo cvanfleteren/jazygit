@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.state;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
@@ -91,13 +92,16 @@ public final class LoadUpdate {
             case StashDetailLoaded(Sha sha, var options, DiffText changes) ->
                 Next.of(done.mapRepoView(repoView -> repoView.withStashDetail(
                         Preview.updated(repoView.stashDetail(), sha, d -> d.reload(changes)))));
-            // What the files looked like is kept, so that the diff is read again only once they change (ADR 58).
+            // What the files looked like is kept, so that the diff is read again only once they change (ADR 58). Only
+            // the highlighted diff is looked at, so the stamps of the diffs read before go.
             case FileDiffLoaded(var files, var options, var diff, var stamp) ->
                 Next.of(done.mapRepoView(repoView ->
                                 repoView.withFileDiff(Preview.updated(repoView.fileDiff(), files, d -> d.reload(diff))))
-                        .mapJobs(jobs -> jobs.withReadAt(stamp.fold(
-                                () -> jobs.readAt().remove(msg.cmd()),
-                                now -> jobs.readAt().put(msg.cmd(), now)))));
+                        .mapJobs(jobs -> {
+                            Map<Cmd.Load, MetadataStamp> others =
+                                    jobs.readAt().filterKeys(load -> !(load instanceof LoadFileDiff));
+                            return jobs.withReadAt(stamp.fold(() -> others, now -> others.put(msg.cmd(), now)));
+                        }));
             // Only the diff that is still shown, with the options now chosen, is read again.
             case FileDiffChecked(var load, var stamp) ->
                 Update.shownDiff(done).contains(load)

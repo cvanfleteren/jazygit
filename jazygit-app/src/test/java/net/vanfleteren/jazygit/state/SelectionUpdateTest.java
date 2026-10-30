@@ -488,6 +488,26 @@ class SelectionUpdateTest {
     }
 
     @Test
+    void onlyTheStampOfTheDiffReadLastIsKept() {
+        List<FileEntry> other = List.of(Fixtures.fileEntry("b.txt", ChangeType.UNTRACKED));
+        Model model = Update.update(
+                        loaded(),
+                        new LoadMsg.FileDiffLoaded(
+                                DIRTY.files(), DiffOptions.DEFAULT, new Diffs("", "+a"), Option.of(stamp("a"))))
+                .model();
+
+        Model next = Update.update(
+                        model,
+                        new LoadMsg.FileDiffLoaded(
+                                other, DiffOptions.DEFAULT, new Diffs("", "+b"), Option.of(stamp("b"))))
+                .model();
+
+        assertEquals(
+                HashMap.of(new Cmd.LoadFileDiff(other, DiffOptions.DEFAULT), stamp("b")),
+                next.jobs().readAt().filterKeys(load -> load instanceof Cmd.LoadFileDiff));
+    }
+
+    @Test
     void aCheckOfADiffNoLongerShownReadsNothing() {
         Cmd.LoadFileDiff load = new Cmd.LoadFileDiff(DIRTY.files(), DiffOptions.DEFAULT);
 
