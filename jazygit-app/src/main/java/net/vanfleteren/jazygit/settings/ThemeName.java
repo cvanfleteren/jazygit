@@ -27,11 +27,7 @@ public enum ThemeName {
      */
     POWERLINE("powerline"),
     /**
-     * The purples, lavenders and cyan of Liantis on white.
-     */
-    LIANTIS("liantis"),
-    /**
-     * The liantis theme turned over: white and lavender on the deep purple of Liantis.
+     * White and lavender on the deep purple of Liantis.
      */
     LIANTIS_DARK("liantis-dark"),
     /**

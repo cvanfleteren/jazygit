@@ -26,7 +26,6 @@ public final class ThemeDialog {
             Tuple.of('m', ThemeName.MONO),
             Tuple.of('e', ThemeName.EMBER),
             Tuple.of('p', ThemeName.POWERLINE),
-            Tuple.of('i', ThemeName.LIANTIS),
             Tuple.of('n', ThemeName.LIANTIS_DARK),
             Tuple.of('s', ThemeName.SYMFONIC),
             Tuple.of('o', ThemeName.NONE));
