@@ -370,7 +370,9 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
   changed in a pair, with the whitespace between two changed words highlighted with them (ADR 54). All are pure, in `git.model`. A `DiffText` is parsed where it is made, on the thread that read it
   from git (ADR 50), so the render thread only styles it; the line the content panel adds after a diff, that it is
   truncated or that only whitespace changed, is added as a note (`ParsedDiff.withNote`). The content panel styles a
-  body only when it changes, not on every frame. A hunk starts with a dimmed rule in the gutter, not with git's
+  body only when it changes, not on every frame. It styles it in parallel on the common pool, while the render thread
+  waits: each file is measured on a thread of its own, then each of its lines is styled on one, and the lines are put
+  back in order. A hunk starts with a dimmed rule in the gutter, not with git's
   `@@ -a,b +c,d @@` line, whose numbers the gutter shows already, nor the section heading git gives after them, a line
   from above the hunk that reads as one of its own. Only a header whose numbers cannot be read (`Hunk.numbered`) follows
   the rule as git printed it, as its lines have no numbers. The first hunk of a file has no rule otherwise: the bar of

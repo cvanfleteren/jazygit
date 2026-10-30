@@ -10,6 +10,7 @@ import io.vavr.collection.List;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import java.time.Instant;
+import java.util.function.Function;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.ParsedDiff;
@@ -75,18 +76,30 @@ final class RichDiff {
                                 done._2 + file.hunks().size()))
                 ._1
                 .reverse();
-        return parsed.preamble()
-                .map(line -> Line.from(Span.raw(line)))
-                .appendAll(files.zipWithIndex()
-                        .flatMap(file -> file(file._1._1, file._1._2, placed.get(file._2), style, styles)
-                                .prependAll(file._2 > 0 ? List.of(Line.from("")) : List.empty())));
+        // Each file is measured on a thread of its own, and then each of its lines is drawn on one, so that a diff of
+        // many files and one of a long file both hold up the render thread for less.
+        List<Pending> pending = inParallel(
+                files.zipWithIndex(),
+                file -> file(file._1._1, file._1._2, placed.get(file._2), style, styles)
+                        .prependAll(file._2 > 0 ? List.of(() -> List.of(Line.from(""))) : List.empty()));
+        return parsed.preamble().map(line -> Line.from(Span.raw(line))).appendAll(inParallel(pending, Pending::draw));
     }
 
     /**
-     * The lines of {@code file}, whose hunks have the segments and the tokens {@code marks}, with the review threads
-     * {@code remarks} on it, drawn as {@code style} says.
+     * What {@code draw} gives for each of {@code items}, in their order, each drawn on a thread of the common pool.
+     * Drawing is pure, and the render thread waits for it, so nothing changes the theme while it runs.
      */
-    private static List<Line> file(
+    private static <T, R> List<R> inParallel(List<T> items, Function<T, List<R>> draw) {
+        return List.ofAll(items.toJavaList().parallelStream().map(draw).toList())
+                .flatMap(drawn -> drawn);
+    }
+
+    /**
+     * The lines still to be drawn of {@code file}, whose hunks have the segments and the tokens {@code marks}, with
+     * the review threads {@code remarks} on it, drawn as {@code style} says: its bar, the threads on it, and each of
+     * its lines with those after it, once the width of its gutter and its lines is known.
+     */
+    private static List<Pending> file(
             FileDiff file,
             Vector<Marks> marks,
             Option<FileRemarks> remarks,
@@ -103,9 +116,7 @@ final class RichDiff {
         int width = Math.max(
                 width(bar),
                 gutter
-                        + file.hunks()
-                                .flatMap(Hunk::lines)
-                                .map(line -> width(line.text()) + 1)
+                        + inParallel(file.hunks().flatMap(Hunk::lines), line -> List.of(width(line.text()) + 1))
                                 .max()
                                 .getOrElse(0));
         Blocks blocks = new Blocks(gutter + 2, RemarkLines.blockWidth(width), style);
@@ -113,10 +124,11 @@ final class RichDiff {
                 .getOrElse(() -> file.hunks().map(hunk -> hunk.lines().map(line -> NO_REMARKS)))
                 .toVector();
         boolean unplaced = remarks.exists(placed -> !placed.unplaced().isEmpty());
-        return List.of(Line.from(styled(padded(bar, width), Theme.Classes.DIFF_FILE_HEADER, styles)))
-                .appendAll(note(file).map(text -> Line.from(styled(text, Theme.Classes.DIM, styles))))
+        return List.<Pending>of(() -> List.of(
+                                Line.from(styled(padded(bar, width), Theme.Classes.DIFF_FILE_HEADER, styles)))
+                        .appendAll(note(file).map(text -> Line.from(styled(text, Theme.Classes.DIM, styles)))))
                 .appendAll(remarks.toList()
-                        .flatMap(placed ->
+                        .<Pending>map(placed -> () ->
                                 blocks.threads(placed.onFile(), !file.hunks().isEmpty() || unplaced, styles)))
                 .appendAll(file.hunks()
                         .zip(marks)
@@ -132,7 +144,7 @@ final class RichDiff {
                                 width - gutter,
                                 styles)))
                 .appendAll(remarks.toList()
-                        .flatMap(placed -> RemarkLines.unplaced(
+                        .<Pending>map(placed -> () -> RemarkLines.unplaced(
                                 placed.unplaced(), blocks.indent(), blocks.width(), style, styles)));
     }
 
@@ -175,8 +187,9 @@ final class RichDiff {
      * {@code first} hunk of a file has no rule, as the bar of the file marks where it starts, unless its header has to
      * be shown. A line that was lexed is coloured by its syntax, one that was not is drawn as before. The threads on
      * a line are followed by a blank line, unless they are on the last line of the {@code last} hunk of the file.
+     * Each line is still to be drawn, with the threads after it.
      */
-    private static List<Line> hunk(
+    private static List<Pending> hunk(
             Hunk hunk,
             Marks marks,
             List<LineRemarks> remarks,
@@ -187,17 +200,17 @@ final class RichDiff {
             int width,
             Theme.SpanStyles styles) {
         Span rule = styled("┄".repeat(2 * digits + 1) + GUTTER_END, Theme.Classes.DIFF_LINE_NUMBER, styles);
-        List<Line> header = hunk.header().isEmpty() || (first && hunk.numbered())
+        List<Pending> header = hunk.header().isEmpty() || (first && hunk.numbered())
                 ? List.empty()
-                : List.of(
+                : List.of(() -> List.of(
                         hunk.numbered()
                                 ? Line.from(rule)
-                                : Line.from(rule, styled(hunk.header(), Theme.Classes.DIFF_HUNK, styles)));
+                                : Line.from(rule, styled(hunk.header(), Theme.Classes.DIFF_HUNK, styles))));
         return header.appendAll(hunk.lines()
                 .zip(marks.words().zip(marks.tokens()))
                 .zip(remarks)
                 .zipWithIndex()
-                .flatMap(line -> blocks.threads(
+                .<Pending>map(line -> () -> blocks.threads(
                                 line._1._2.threads(),
                                 !last || line._2 < hunk.lines().size() - 1,
                                 styles)
@@ -406,6 +419,15 @@ final class RichDiff {
      * A piece of the text of a line: whether it is part of a changed word, and the kind of token it is part of.
      */
     record Piece(String text, boolean changed, Option<Token.Kind> kind) {}
+
+    /**
+     * Lines still to be drawn: what a file is cut into once it is measured, so that its parts are drawn side by side.
+     */
+    @FunctionalInterface
+    private interface Pending {
+
+        List<Line> draw();
+    }
 
     /**
      * The segments of the lines of a hunk, and the tokens of each that was lexed.

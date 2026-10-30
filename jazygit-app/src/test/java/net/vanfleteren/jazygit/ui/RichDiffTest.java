@@ -288,6 +288,31 @@ class RichDiffTest {
         assertEquals(new RichDiff.Piece(",", false, Option.none()), pieces.get(1));
     }
 
+    @Test
+    void theFilesAndTheLinesOfALongDiffAreDrawnInTheirOrder() {
+        int files = 40;
+        int lines = 300;
+        String diff = List.range(0, files)
+                .flatMap(file -> List.of(
+                                "diff --git a/f%d.txt b/f%d.txt".formatted(file, file),
+                                "--- a/f%d.txt".formatted(file),
+                                "+++ b/f%d.txt".formatted(file),
+                                "@@ -1,%d +1,%d @@".formatted(lines, lines))
+                        .appendAll(List.rangeClosed(1, lines).map(line -> " f%d line %d".formatted(file, line))))
+                .mkString("", "\n", "\n");
+
+        List<String> drawn = text(RichDiff.lines(ParsedDiff.of(diff), true, Theme.SpanStyles.NONE))
+                .map(String::stripTrailing);
+
+        assertEquals(
+                List.range(0, files)
+                        .flatMap(file -> List.of(" modified  f%d.txt".formatted(file))
+                                .appendAll(List.rangeClosed(1, lines)
+                                        .map(line -> "%3d %3d │  f%d line %d".formatted(line, line, file, line)))
+                                .prependAll(file > 0 ? List.of("") : List.empty())),
+                drawn);
+    }
+
     private static final String STRING_CHANGED = """
             diff --git a/A.java b/A.java
             --- a/A.java
