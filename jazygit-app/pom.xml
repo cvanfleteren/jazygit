@@ -192,7 +192,9 @@
     </build>
 
     <profiles>
-        <!-- mvn -Pnative package builds jazygit-app/target/jazygit, a native executable; it needs GraalVM as JAVA_HOME. -->
+        <!-- mvn -T1 -Pnative package builds jazygit-app/target/jazygit, a native executable; it needs GraalVM as JAVA_HOME.
+             -T1 overrides the -T1C of .mvn/maven.config: native-maven-plugin is not marked thread-safe, and a profile
+             cannot turn a parallel build off. -->
         <profile>
             <id>native</id>
             <build>

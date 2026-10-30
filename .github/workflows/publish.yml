@@ -35,7 +35,7 @@ jobs:
       # The verify job already ran the tests and checks.
       - name: Build fat-jar and native image
         run: |
-          ./mvnw --batch-mode --no-transfer-progress -Pnative package -DskipTests
+          ./mvnw --batch-mode --no-transfer-progress -T1 -Pnative package -DskipTests
           version=$(./mvnw --batch-mode --no-transfer-progress -N help:evaluate -Dexpression=project.version -q -DforceStdout)
           mv jazygit-app/target/jazygit "jazygit-app/target/jazygit-$version-linux-x86_64"
 
@@ -74,7 +74,7 @@ jobs:
       # The verify job already ran the tests and checks.
       - name: Build fat-jar and native image
         run: |
-          ./mvnw --batch-mode --no-transfer-progress -Pnative package -DskipTests
+          ./mvnw --batch-mode --no-transfer-progress -T1 -Pnative package -DskipTests
           version=$(./mvnw --batch-mode --no-transfer-progress -N help:evaluate -Dexpression=project.version -q -DforceStdout)
           mv jazygit-app/target/jazygit "jazygit-app/target/jazygit-$version-linux-x86_64"
 

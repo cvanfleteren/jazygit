@@ -39,7 +39,7 @@ not even of a diff: it lexes a line from where the line before it left the scann
 (`SyntaxArchitectureTest`).
 
 `mvn verify` at the root builds and tests all seven. `./run.sh` runs the fat jar from `jazygit-app/target`, and
-`mvn -Pnative package` builds `jazygit-app/target/jazygit`.
+`mvn -T1 -Pnative package` (serial, as native-maven-plugin is not thread-safe) builds `jazygit-app/target/jazygit`.
 
 ## Packages
 

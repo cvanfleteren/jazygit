@@ -16,8 +16,11 @@ import net.vanfleteren.jazygit.git.model.WordDiff.Segment;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
+import org.junit.jupiter.api.parallel.Isolated;
 
-// One method at a time: manyLongSimilarLinesAreDrawnQuickly times itself, and the others would share its cores.
+// Alone in its fork, one method at a time: manyLongSimilarLinesAreDrawnQuickly times itself, and other tests would
+// share its cores.
+@Isolated
 @Execution(ExecutionMode.SAME_THREAD)
 class WordDiffTest {
 
