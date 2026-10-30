@@ -336,8 +336,118 @@ class FilesPanelTest {
             String files = RenderedText.ofLarge(testRunner, () -> panel.render(read, FilesPanel.ID));
             assertTrue(files.contains("Files of #7 · merged"), files);
             assertTrue(files.contains("R old.txt -> new.txt 💬2"), files);
-            assertTrue(files.contains("M b.txt"), files);
+            assertTrue(files.contains("M b.txt ✓1"), files);
             assertFalse(files.contains("b.txt 💬"), files);
+
+            SettledPilot.of(testRunner).quit();
+        }
+    }
+
+    @Test
+    void theFilesOfAPullRequestCanBeListedOnlyWhenTheyHaveRemarks() throws Exception {
+        CommitFilesView.Changes of = new CommitFilesView.Changes.OfPullRequest(
+                new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
+        Model open = Update.update(
+                        Update.update(TestModels.loaded(), new CommitFilesMsg.Opened(of, BranchesPanel.ID))
+                                .model(),
+                        new LoadMsg.CommitFilesLoaded(
+                                of,
+                                List.of(
+                                        new CommitFile("dir/open.txt", ChangeType.MODIFIED),
+                                        new CommitFile("done.txt", ChangeType.MODIFIED),
+                                        new CommitFile("quiet.txt", ChangeType.MODIFIED))))
+                .model();
+        Model unresolved = Update.update(
+                        Update.update(
+                                        open,
+                                        new CommitFilesMsg.RemarksLoaded(
+                                                7,
+                                                new ReviewRemarks(
+                                                        PullRequestDetails.State.OPEN,
+                                                        Option.none(),
+                                                        Option.none(),
+                                                        List.of(
+                                                                remark("dir/open.txt", ReviewThread.Side.RIGHT, false),
+                                                                remark("done.txt", ReviewThread.Side.RIGHT, true)))))
+                                .model(),
+                        new CommitFilesMsg.ListedCycled())
+                .model();
+        Model remarked =
+                Update.update(unresolved, new CommitFilesMsg.ListedCycled()).model();
+        Model none = Update.update(
+                        unresolved,
+                        new CommitFilesMsg.RemarksLoaded(
+                                7,
+                                new ReviewRemarks(
+                                        PullRequestDetails.State.OPEN,
+                                        Option.none(),
+                                        Option.none(),
+                                        List.of(remark("done.txt", ReviewThread.Side.RIGHT, true)))))
+                .model();
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(unresolved, FilesPanel.ID))) {
+            String files = RenderedText.ofLarge(testRunner, () -> panel.render(unresolved, FilesPanel.ID));
+            assertTrue(files.contains("Files of #7 · unresolved remarks"), files);
+            assertTrue(files.contains("dir"), files);
+            assertTrue(files.contains("open.txt 💬1"), files);
+            assertFalse(files.contains("done.txt"), files);
+            assertFalse(files.contains("quiet.txt"), files);
+
+            files = RenderedText.ofLarge(testRunner, () -> panel.render(remarked, FilesPanel.ID));
+            assertTrue(files.contains("Files of #7 · with remarks"), files);
+            assertTrue(files.contains("done.txt ✓1"), files);
+            assertFalse(files.contains("quiet.txt"), files);
+
+            files = RenderedText.ofLarge(testRunner, () -> panel.render(none, FilesPanel.ID));
+            assertTrue(files.contains("No file has unresolved remarks"), files);
+            assertFalse(files.contains("done.txt"), files);
+
+            SettledPilot.of(testRunner).quit();
+        }
+    }
+
+    @Test
+    void aHighlightedFileLeftOutOfTheFilesWithRemarksMovesTheHighlightToTheNearestRowListed() throws Exception {
+        CommitFilesView.Changes of = new CommitFilesView.Changes.OfPullRequest(
+                new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
+        Model opened = Update.update(TestModels.loaded(), new CommitFilesMsg.Opened(of, BranchesPanel.ID))
+                .model();
+        Model loaded = Update.update(
+                        opened,
+                        new LoadMsg.CommitFilesLoaded(
+                                of,
+                                List.of("a", "b", "c", "d")
+                                        .map(name -> new CommitFile("dir/" + name + ".txt", ChangeType.MODIFIED))))
+                .model();
+        Model reading = Update.update(loaded, new CommitFilesMsg.ListedCycled()).model();
+        Model read = Update.update(
+                        loaded,
+                        new CommitFilesMsg.RemarksLoaded(
+                                7,
+                                new ReviewRemarks(
+                                        PullRequestDetails.State.OPEN,
+                                        Option.none(),
+                                        Option.none(),
+                                        List.of(
+                                                remark("dir/a.txt", ReviewThread.Side.RIGHT, false),
+                                                remark("dir/d.txt", ReviewThread.Side.RIGHT, false)))))
+                .model();
+        Model unresolved =
+                Update.update(read, new CommitFilesMsg.ListedCycled()).model();
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(opened, FilesPanel.ID))) {
+            RenderedText.of(testRunner, () -> panel.render(opened, FilesPanel.ID));
+            String files = RenderedText.ofLarge(testRunner, () -> panel.render(reading, FilesPanel.ID));
+            assertTrue(files.contains("Reading the remarks…"), files);
+
+            RenderedText.of(testRunner, () -> panel.render(read, FilesPanel.ID));
+            // The root, dir, then its files: b.txt, between a.txt and d.txt, which have remarks.
+            panel.commitTree().selected(3);
+            RenderedText.of(testRunner, () -> panel.render(read, FilesPanel.ID));
+            assertEquals("dir/b.txt", highlighted(panel));
+
+            RenderedText.of(testRunner, () -> panel.render(unresolved, FilesPanel.ID));
+            assertEquals("dir/a.txt", highlighted(panel));
 
             SettledPilot.of(testRunner).quit();
         }

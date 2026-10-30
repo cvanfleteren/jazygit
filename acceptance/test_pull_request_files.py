@@ -124,3 +124,33 @@ def test_the_review_remarks_of_a_pull_request_show_next_to_their_lines(repo, ori
     ui.app.wait_for("┃  Settled already")
     assert "✓ resolved" not in ui.app.text()
     assert any(THREADS in " ".join(call) for call in gh.calls())
+
+
+def test_only_the_files_of_a_pull_request_with_remarks_can_be_listed(repo, origin, clone, gh, jazygit):
+    pull_request(repo, origin, clone, gh)
+    head = origin("rev-parse", "refs/pull/1/head").strip()
+    gh.answer((THREADS, threads(head, repo("rev-parse", "main").strip())))
+    ui = jazygit()
+    ui.branches.select("feature")
+    ui.app.press("o")
+    # The action shows dimmed until the details are read, and does nothing then: wait for them.
+    ui.app.wait_for("in 2 files, 2 commits")
+    ui.app.press("f")
+    ui.app.wait_in("Files", "b.txt 💬1 ✓1")
+    assert "a.txt" in ui.app.pane_text("Files")
+
+    ui.app.press("c")
+
+    ui.app.wait_for("· unresolved remarks")
+    ui.app.eventually(lambda: "a.txt" not in ui.app.pane_text("Files"), "a.txt left out")
+    assert "b.txt 💬1 ✓1" in ui.app.pane_text("Files")
+
+    ui.app.press("c")
+
+    ui.app.wait_for("· with remarks")
+    assert "a.txt" not in ui.app.pane_text("Files")
+
+    ui.app.press("c")
+
+    ui.app.wait_in("Files", "a.txt")
+    assert "· with remarks" not in ui.app.text()

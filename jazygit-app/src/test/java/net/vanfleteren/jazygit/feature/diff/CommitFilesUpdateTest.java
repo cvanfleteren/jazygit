@@ -210,6 +210,37 @@ class CommitFilesUpdateTest {
     }
 
     @Test
+    void cKeepsCyclingThroughWhichFilesOfAPullRequestAreListedWhenItsFilesAreReadAgain() {
+        Model opened = openedPullRequest();
+        Model unresolved =
+                Update.update(opened, new CommitFilesMsg.ListedCycled()).model();
+        assertEquals(
+                CommitFilesView.Listed.UNRESOLVED,
+                unresolved.repoView().commitFiles().get().listed());
+        Model remarked =
+                Update.update(unresolved, new CommitFilesMsg.ListedCycled()).model();
+        assertEquals(
+                CommitFilesView.Listed.REMARKED,
+                remarked.repoView().commitFiles().get().listed());
+        assertEquals(
+                CommitFilesView.Listed.ALL,
+                Update.update(remarked, new CommitFilesMsg.ListedCycled())
+                        .model()
+                        .repoView()
+                        .commitFiles()
+                        .get()
+                        .listed());
+
+        Model moved = Update.update(
+                        withFiles(remarked),
+                        new CommitFilesMsg.RemarksLoaded(7, remarks("c".repeat(40), "b".repeat(40))))
+                .model();
+        assertEquals(
+                CommitFilesView.Listed.REMARKED,
+                moved.repoView().commitFiles().get().listed());
+    }
+
+    @Test
     void whenThePullRequestMovedOnItsFilesAreReadAgainAtItsNewCommits() {
         Next moved = Update.update(
                 withFiles(openedPullRequest()),
@@ -259,6 +290,8 @@ class CommitFilesUpdateTest {
         assertEquals(
                 commit,
                 Update.update(commit, new CommitFilesMsg.RemarksToggled()).model());
+        assertEquals(
+                commit, Update.update(commit, new CommitFilesMsg.ListedCycled()).model());
         assertEquals(
                 List.empty(),
                 Update.update(commit, new CommitFilesMsg.RemarksRefreshed()).cmds());

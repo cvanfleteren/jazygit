@@ -47,6 +47,7 @@ public final class CommitFilesAction {
             .add(
                     Scopes.COMMIT_FILES,
                     Binding.always("t", "help.commitFiles.remarks", CommitFilesMsg.RemarksToggled::new))
+            .add(Scopes.COMMIT_FILES, Binding.always("c", "help.commitFiles.listed", CommitFilesMsg.ListedCycled::new))
             .add(
                     Scopes.COMMIT_FILES,
                     Binding.always("R", "help.commitFiles.refresh", CommitFilesMsg.RemarksRefreshed::new)));

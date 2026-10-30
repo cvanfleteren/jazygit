@@ -32,8 +32,8 @@ public class FilesPanel {
     private final Keymap keymap = Keymap.standard();
     // The trees' key handlers also see keys typed in other panes, so they must know whether the pane has focus.
     private boolean focused;
-    // The unresolved review threads of the pull request whose files are listed, as last rendered (ADR 55).
-    private List<ReviewThread> unresolved = List.empty();
+    // The review threads of the pull request whose files are listed, as last rendered (ADR 55).
+    private List<ReviewThread> threads = List.empty();
 
     /**
      * @param dispatch receives the messages for the user's actions, on the render thread
@@ -96,24 +96,59 @@ public class FilesPanel {
 
     /**
      * The files of a commit show the letter of their change, in the colour of a staged change; those of a pull
-     * request after that how many unresolved review threads they have, if any (ADR 55).
+     * request after that how many unresolved review threads they have, if any (ADR 55), and how many resolved ones,
+     * dimmed (ADR 57).
      */
     private StyledElement<?> drawCommitFile(FileTree.File<CommitFile> file) {
+        List<ReviewThread> on = threads.filter(
+                thread -> thread.isOn(file.entry().path(), file.entry().origin()));
+        int resolved = on.count(ReviewThread::resolved);
         return Toolkit.row(List.<StyledElement<?>>of(
                         Toolkit.text(file.entry().type().marker()).addClass(Theme.Classes.STAGED),
                         Toolkit.text(" " + name(file)))
-                .appendAll(Option.of(unresolved.count(thread ->
-                                thread.isOn(file.entry().path(), file.entry().origin())))
+                .appendAll(Option.of(on.size() - resolved)
                         .filter(count -> count > 0)
                         .map(count -> Toolkit.text(" 💬" + count).addClass(Theme.Classes.DIFF_THREAD)))
+                .appendAll(Option.of(resolved)
+                        .filter(count -> count > 0)
+                        .map(count -> Toolkit.text(" ✓" + count)
+                                .addClass(Theme.Classes.DIFF_THREAD)
+                                .dim()))
                 .toJavaArray(StyledElement[]::new));
     }
 
     /**
-     * The review threads of {@code view} that are not resolved.
+     * The key of what the title of the files of a pull request says after it when only some of them are listed.
      */
-    private static List<ReviewThread> unresolved(CommitFilesView view) {
-        return view.threads().filter(thread -> !thread.resolved());
+    private static Option<String> listedTitle(CommitFilesView.Listed listed) {
+        return switch (listed) {
+            case ALL -> Option.none();
+            case UNRESOLVED -> Option.of("panel.commitFiles.unresolved");
+            case REMARKED -> Option.of("panel.commitFiles.remarked");
+        };
+    }
+
+    /**
+     * What the tree of {@code view} says while its files are read, and when none is listed: once they are read, only
+     * some are listed while the review threads are read, and it says why none is when only some are (ADR 57).
+     */
+    private static FileTreeList.Placeholder placeholder(CommitFilesView view) {
+        return new FileTreeList.Placeholder(
+                view.files() instanceof Loadable.Loaded<?>
+                        ? Messages.get("panel.commitFiles.readingRemarks")
+                        : Placeholders.loading(),
+                nothingListed(view.listed()));
+    }
+
+    /**
+     * Why none of the files of a pull request is listed, when only some of them are.
+     */
+    static Option<String> nothingListed(CommitFilesView.Listed listed) {
+        return switch (listed) {
+            case ALL -> Option.none();
+            case UNRESOLVED -> Option.of(Messages.get("panel.commitFiles.noneUnresolved"));
+            case REMARKED -> Option.of(Messages.get("panel.commitFiles.noneRemarked"));
+        };
     }
 
     /**
@@ -181,22 +216,24 @@ public class FilesPanel {
     public Panel render(Model model, String focusedId, String activeId) {
         focused = ID.equals(focusedId);
         boolean active = ID.equals(activeId);
-        unresolved = model.repoView().commitFiles().map(FilesPanel::unresolved).getOrElse(List.empty());
+        threads = model.repoView().commitFiles().map(CommitFilesView::threads).getOrElse(List.empty());
         return model.repoView()
                 .commitFiles()
                 .map(view -> Pane.bordered(
                         view.ended()
-                                .map(state -> Messages.get(
-                                        state == PullRequestDetails.State.MERGED
-                                                ? "panel.commitFiles.titleForMerged"
-                                                : "panel.commitFiles.titleForClosed",
-                                        ContentView.changesName(model, view.of())))
-                                .getOrElse(() -> Messages.get(
-                                        "panel.commitFiles.titleFor", ContentView.changesName(model, view.of()))),
-                        commitTree.render(view.of(), view.files(), active),
+                                        .map(state -> Messages.get(
+                                                state == PullRequestDetails.State.MERGED
+                                                        ? "panel.commitFiles.titleForMerged"
+                                                        : "panel.commitFiles.titleForClosed",
+                                                ContentView.changesName(model, view.of())))
+                                        .getOrElse(() -> Messages.get(
+                                                "panel.commitFiles.titleFor",
+                                                ContentView.changesName(model, view.of())))
+                                + listedTitle(view.listed()).map(Messages::get).getOrElse(""),
+                        commitTree.render(view.of(), view.listedFiles(), active, placeholder(view)),
                         focused,
                         commitTree.selectedRow(),
-                        commitTree.count(view.files())))
+                        commitTree.count(view.listedFiles())))
                 .getOrElse(() -> {
                     Loadable<List<FileEntry>> files = model.repo().status().map(RepoStatus::files);
                     return Pane.bordered(

@@ -41,6 +41,12 @@ public sealed interface CommitFilesMsg extends Msg {
     record RemarksToggled() implements CommitFilesMsg {}
 
     /**
+     * The user asked to list the next of the files of a pull request: all of them, those with an unresolved review
+     * thread, or those with any (ADR 57).
+     */
+    record ListedCycled() implements CommitFilesMsg {}
+
+    /**
      * The user asked to read the review threads of the pull request again.
      */
     record RemarksRefreshed() implements CommitFilesMsg {}

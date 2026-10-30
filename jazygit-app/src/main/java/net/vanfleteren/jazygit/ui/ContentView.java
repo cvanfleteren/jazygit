@@ -282,7 +282,11 @@ final class ContentView {
         DiffOptions options = model.preferences().diffOptions();
         String name = changesName(model, view.of());
         String title = titled(Messages.get("panel.commitFiles.titleFor", name), options);
-        return view.diff()
+        // When only the files with review threads are listed and none is, nothing is highlighted (ADR 57).
+        Option<Shown> nothingListed = FilesPanel.nothingListed(view.listed())
+                .filter(nothing -> !view.listedFiles().toOption().exists(List::nonEmpty))
+                .map(nothing -> whenLoaded(title, view.listedFiles(), listed -> dim(title, nothing)));
+        return nothingListed.getOrElse(() -> view.diff()
                 .map(Preview::shown)
                 .map(diff -> whenLoaded(
                         title,
@@ -303,7 +307,7 @@ final class ContentView {
                 .getOrElse(() -> whenLoaded(
                         title,
                         view.files(),
-                        files -> files.isEmpty() ? dim(title, Messages.get("content.noChanges")) : loading(title)));
+                        files -> files.isEmpty() ? dim(title, Messages.get("content.noChanges")) : loading(title))));
     }
 
     /**
