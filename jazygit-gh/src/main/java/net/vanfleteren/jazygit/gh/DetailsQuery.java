@@ -49,13 +49,13 @@ final class DetailsQuery {
 
     /*
      * gh fills in the repository of the working tree for {owner} and {repo}. A requested reviewer and a force push
-     * are of unions, and ask for their __typename.
+     * are of unions, and ask for their __typename. The variables and what is asked of the base branch are filled in.
      */
-    static final String QUERY = """
-            query($owner: String!, $name: String!, $number: Int!, $pullHead: String!) { \
+    static final String TEMPLATE = """
+            query($owner: String!, $name: String!, $number: Int!%s) { \
             repository(owner: $owner, name: $name) { \
             nameWithOwner url pullRequest(number: $number) { number title author { login } state isDraft headRefName \
-            baseRefName headRefOid baseRefOid baseRef { compare(headRef: $pullHead) { behindBy } } %s createdAt additions deletions changedFiles mergeable reviewDecision \
+            baseRefName headRefOid baseRefOid baseRef { %s } %s createdAt additions deletions changedFiles mergeable reviewDecision \
             comments { totalCount } \
             labels(first: 100) { nodes { name } } latestReviews(first: 100) { nodes { author { login } state } } \
             reviewRequests(first: 100) { nodes { requestedReviewer { __typename ... on User { login } \
@@ -64,7 +64,16 @@ final class DetailsQuery {
             ... on HeadRefForcePushedEvent { createdAt } } } \
             commits(last: 1) { totalCount nodes { commit { committedDate \
             statusCheckRollup { contexts(first: 100) { nodes { %s } } } %s } } } \
-            reviewThreads(last: 100) { totalCount nodes { isResolved comments { totalCount } } } } } }""".formatted(StackFragment.FIELDS, CheckFragment.FIELDS, SuiteFragment.FIELDS);
+            reviewThreads(last: 100) { totalCount nodes { isResolved comments { totalCount } } } } } }""";
+
+    // The details, with how far behind its base the pull request is, compared at its head (ADR 58).
+    static final String QUERY = query(", $pullHead: String!", "compare(headRef: $pullHead) { behindBy }");
+
+    /*
+     * The details without how far behind: GitHub answers an error, rather than null, for a comparison it cannot make,
+     * which fails the whole query.
+     */
+    static final String WITHOUT_BEHIND = query("", "name");
 
     static final Decoder<Status> STATUS = map3(
             field("state", enumOf(State.class)),
@@ -244,6 +253,27 @@ final class DetailsQuery {
                 "pullHead=refs/pull/" + number + "/head",
                 "-f",
                 "query=" + QUERY);
+    }
+
+    /**
+     * The command that reads the details of pull request {@code number} without how far behind its base it is.
+     */
+    static GhCommand withoutBehind(int number) {
+        return gh(
+                "api",
+                "graphql",
+                "-F",
+                "owner={owner}",
+                "-F",
+                "name={repo}",
+                "-F",
+                "number=" + number,
+                "-f",
+                "query=" + WITHOUT_BEHIND);
+    }
+
+    private static String query(String variables, String baseRef) {
+        return TEMPLATE.formatted(variables, baseRef, StackFragment.FIELDS, CheckFragment.FIELDS, SuiteFragment.FIELDS);
     }
 
     /**

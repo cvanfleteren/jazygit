@@ -124,7 +124,13 @@ public final class CliGitHub implements GitHub {
 
     @Override
     public Either<GhError, PullRequestDetails> pullRequestDetails(int number) {
-        return process.readJson(DetailsQuery.command(number), DetailsQuery.DECODER);
+        // gh fails the whole query when GitHub cannot compare the base with the head: then the rest is read on its own.
+        return process.readJson(DetailsQuery.command(number), DetailsQuery.DECODER)
+                .fold(
+                        failed -> failed instanceof GhError.CommandFailed
+                                ? process.readJson(DetailsQuery.withoutBehind(number), DetailsQuery.DECODER)
+                                : Either.left(failed),
+                        Either::right);
     }
 
     @Override

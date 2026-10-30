@@ -154,6 +154,7 @@ class CliGitHubTest {
                         BranchesQuery.QUERY,
                         BranchCheckRunsQuery.query(1),
                         DetailsQuery.QUERY,
+                        DetailsQuery.WITHOUT_BEHIND,
                         RepositoryPullRequestsQuery.QUERY,
                         MyPullRequestsQuery.QUERY)
                 .forEach(query -> assertTrue(query.contains("checkSuites(first: 20)"), query));
@@ -184,6 +185,29 @@ class CliGitHubTest {
         assertEquals(
                 Option.none(),
                 detailsFrom(dir, "OPEN", "", BEHIND_BY_2).get().branches().behindBase());
+    }
+
+    @Test
+    void theDetailsAreReadWithoutHowFarBehindWhenGitHubCannotCompare(@TempDir Path dir) throws Exception {
+        assumeTrue(Files.isExecutable(Path.of("/bin/sh")), "no POSIX shell");
+        String answer = DetailsQueryTest.details(95, "OPEN", "abc123")
+                .replace("\"baseRef\": " + BEHIND_BY_2, "\"baseRef\": { \"name\": \"main\" }");
+        // An error for the comparison fails the whole query, as gh exits with 1.
+        Path gh = Files.writeString(
+                dir.resolve("gh"),
+                "#!/bin/sh\n"
+                        + "case \"$*\" in\n"
+                        + "  *pullHead=*) echo '{\"errors\": [{\"message\": \"cannot compare\"}]}'; exit 1 ;;\n"
+                        + "  *) cat <<'EOF'\n" + answer + "\nEOF\n ;;\n"
+                        + "esac\n");
+        gh.toFile().setExecutable(true);
+
+        PullRequestDetails details = new CliGitHub(dir, gh.toString(), GhToken.NONE)
+                .pullRequestDetails(95)
+                .get();
+
+        assertEquals(95, details.number());
+        assertEquals(Option.none(), details.branches().behindBase());
     }
 
     @Test
