@@ -279,6 +279,38 @@ class RemarkLinesTest {
     }
 
     @Test
+    void threadsThatCannotBePlacedHaveABlankLineBetweenThemAndAHeaderOnTheBand() {
+        Theme.SpanStyles styles = cssClass ->
+                cssClass.equals(Theme.Classes.DIFF_THREAD_HEADER) ? Style.EMPTY.bg(Color.BLUE) : Style.EMPTY;
+
+        List<Line> lines = RemarkLines.unplaced(
+                List.of(thread(40, false, "Old"), thread(50, false, "Older")),
+                8,
+                RemarkLines.MIN_WIDTH,
+                new RemarkLines.RemarkStyle(false, NOW),
+                styles);
+
+        String indent = " ".repeat(8);
+        assertEquals(
+                List.of(
+                        indent + "Not on a line of this diff",
+                        indent + "┏━ on line 40",
+                        indent + "┣━ bob · 2h ago",
+                        indent + "┃  Old",
+                        "",
+                        indent + "┏━ on line 50",
+                        indent + "┣━ bob · 2h ago",
+                        indent + "┃  Older"),
+                text(lines).map(String::stripTrailing));
+        assertEquals(RemarkLines.MIN_WIDTH, lines.get(1).width());
+        assertTrue(
+                List.ofAll(lines.get(1).spans())
+                        .drop(2)
+                        .forAll(span -> span.style().bg().equals(Optional.of(Color.BLUE))),
+                lines.get(1).toString());
+    }
+
+    @Test
     void aBlockWrapsAtTheWidthOfItsFileAtLeastSixtyColumns() {
         String words = "word ".repeat(30).strip();
 
