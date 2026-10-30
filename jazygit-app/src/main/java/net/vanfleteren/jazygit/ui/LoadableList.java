@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.ui;
 import static dev.tamboui.toolkit.Toolkit.*;
 
 import dev.tamboui.layout.Rect;
+import dev.tamboui.style.Overflow;
 import dev.tamboui.text.Line;
 import dev.tamboui.toolkit.Toolkit;
 import dev.tamboui.toolkit.element.Element;
@@ -317,7 +318,12 @@ final class LoadableList<T> {
          */
         private static StyledElement<?> line(List<Seg> pieces, Option<String> plain, boolean ellipsis) {
             List<StyledElement<?>> texts = pieces.map(seg -> {
-                TextElement text = ellipsis ? Toolkit.text(seg.text()).ellipsis() : Toolkit.text(seg.text());
+                // Clipped as no style says otherwise, but said so here: TamboUI measures every row of a list on every
+                // frame, the rows scrolled out of sight too, and a text without an overflow of its own looks it up
+                // in the styles each time.
+                TextElement text = ellipsis
+                        ? Toolkit.text(seg.text()).ellipsis()
+                        : Toolkit.text(seg.text()).overflow(Overflow.CLIP);
                 return seg.cssClass()
                         .orElse(plain)
                         .<StyledElement<?>>map(text::addClass)

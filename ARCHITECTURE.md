@@ -502,7 +502,7 @@ widgets. A report can come twice, when a frame is drawn before the first one is 
 leaves a model that already has its value as it is. This is the only way the view tells the model something
 no message from a user's event did.
 
-Every `jazygit.refreshInterval` (750 ms by default) a `Msg.Tick` triggers `Update.tick`, which re-reads the status,
+Every `jazygit.refreshInterval` (1 s by default, ADR 52) a `Msg.Tick` triggers `Update.tick`, which re-reads the status,
 and checks the files of the git directory that the local and remote branches (one load, `LoadBranches`), the stashes
 and the worktrees are read from (`Cmd.CheckMetadata`). That check runs no git: it stamps the HEADs, the config,
 `packed-refs`, the directories of the loose refs, the stash reflog and the worktrees' admin files (`GitMetadata`).

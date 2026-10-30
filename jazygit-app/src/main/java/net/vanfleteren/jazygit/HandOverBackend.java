@@ -27,8 +27,9 @@ final class HandOverBackend implements Backend {
 
     // What a read returns when no key came in time.
     private static final int NO_KEY = -2;
-    // How long a key is read for at a time, which is as long as handing the terminal over waits for a read.
-    private static final int SLICE_MILLIS = 10;
+    // How long a key is read for at a time, which is as long as handing the terminal over waits for a read. As long as
+    // TamboUI reads for: shorter slices only wake the reader more often while nothing is typed.
+    private static final int SLICE_MILLIS = TuiConfig.DEFAULT_POLL_TIMEOUT;
 
     private final Backend backend;
     // Held while a key is read, so none is read once the terminal is handed over. Fair, as the reader takes it again
