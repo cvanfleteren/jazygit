@@ -25,6 +25,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
  * @param stack        where it sits in its stack, if it is stacked
  * @param repository   the repository it is of, as {@code owner/name}; empty when not known
  * @param url          the URL of that repository, which names the host it is on; empty when not known
+ * @param body         its description, which may be empty; read to edit it from (ADR 59), not shown
  */
 @With
 public record PullRequestDetails(
@@ -39,7 +40,27 @@ public record PullRequestDetails(
         List<Check> checks,
         Option<PullRequestStack> stack,
         String repository,
-        String url) {
+        String url,
+        String body) {
+
+    /**
+     * One of the repository {@code repository} at {@code url}, without a description.
+     */
+    public PullRequestDetails(
+            int number,
+            String title,
+            String author,
+            Status status,
+            Branches branches,
+            Activity activity,
+            Size size,
+            Conversation conversation,
+            List<Check> checks,
+            Option<PullRequestStack> stack,
+            String repository,
+            String url) {
+        this(number, title, author, status, branches, activity, size, conversation, checks, stack, repository, url, "");
+    }
 
     /**
      * One of the repository {@code repository}, whose URL is not known.

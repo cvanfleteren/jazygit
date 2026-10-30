@@ -215,7 +215,10 @@ public record PullRequestPopup(
         return dialog;
     }
 
-    private Option<PullRequestDetails> readDetails() {
+    /**
+     * Its details, once they were read.
+     */
+    public Option<PullRequestDetails> readDetails() {
         return details.flatMap(Either::toOption);
     }
 }

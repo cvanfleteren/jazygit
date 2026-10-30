@@ -129,6 +129,11 @@ public interface GitHub {
     Either<GhFailure, List<ExecutedCommand>> setDraft(int number, boolean draft);
 
     /**
+     * Changes what {@code edit} gives of pull request {@code number}: its title, its description and its base.
+     */
+    Either<GhFailure, List<ExecutedCommand>> editPullRequest(int number, PullRequestEdit edit);
+
+    /**
      * Adds a comment saying {@code body} to the conversation of pull request {@code number}.
      */
     Either<GhFailure, List<ExecutedCommand>> commentOnPullRequest(int number, String body);

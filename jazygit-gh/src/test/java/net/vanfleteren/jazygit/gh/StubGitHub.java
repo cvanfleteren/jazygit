@@ -177,6 +177,11 @@ public interface StubGitHub extends GitHub {
     }
 
     @Override
+    default Either<GhFailure, List<ExecutedCommand>> editPullRequest(int number, PullRequestEdit edit) {
+        return Either.right(List.of(CliGitHub.editCommand(number, edit).executed()));
+    }
+
+    @Override
     default Either<GhFailure, List<ExecutedCommand>> commentOnPullRequest(int number, String body) {
         return Either.right(List.of(CliGitHub.commentCommand(number, body).executed()));
     }

@@ -43,6 +43,7 @@ class DetailsQueryTest {
     private static final LinkedHashMap<String, String> MERGED = LinkedHashMap.ofEntries(
             Tuple.of("number", "5"),
             Tuple.of("title", "\"Fix\""),
+            Tuple.of("body", "\"\""),
             Tuple.of("author", "null"),
             Tuple.of("state", "\"MERGED\""),
             Tuple.of("isDraft", "false"),
@@ -130,9 +131,11 @@ class DetailsQueryTest {
                         List.of(new Check("build", Checks.PENDING), new Check("ci/lint", Checks.PASSING)),
                         Option.none(),
                         "cvanfleteren/jazygit",
-                        "https://github.com/cvanfleteren/jazygit")),
+                        "https://github.com/cvanfleteren/jazygit",
+                        "Renames a file.\n\nFixes #7")),
                 read(MERGED.put("number", "42")
                         .put("title", "\"Add\\trename\"")
+                        .put("body", "\"Renames a file.\\n\\nFixes #7\"")
                         .put("author", "{ \"login\": \"cvf\" }")
                         .put("state", "\"OPEN\"")
                         .put("isDraft", "true")

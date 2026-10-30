@@ -14,6 +14,7 @@ import java.time.LocalDate;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.feature.github.comment.CommentMsg;
 import net.vanfleteren.jazygit.feature.github.comments.CommentsMsg;
+import net.vanfleteren.jazygit.feature.github.edit.EditPullRequestMsg;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -41,7 +42,7 @@ import net.vanfleteren.jazygit.ui.widgets.PopupView;
 
 /**
  * Popup showing the pull request of a branch: its title, state, branches, review and checks, as labelled
- * rows, and under them what can be done with it: open it in the browser, comment on it, read its comments, mark it
+ * rows, and under them what can be done with it: open it in the browser, comment on it, edit it, read its comments, mark it
  * ready for review or turn it into a draft, merge it or close it, or read it again. While it is read again, the
  * details stay shown, with a spinner in the title; when that fails, the title says they are stale. Whether it is
  * open lives in the {@link Model}.
@@ -92,6 +93,11 @@ public final class PullRequestDialog implements PopupView {
                                 'c',
                                 "dialog.pullRequest.comment",
                                 CommentMsg.Requested::new,
+                                (model, popup) -> popup.detailsRead()),
+                        new Choice<>(
+                                'e',
+                                "dialog.pullRequest.edit",
+                                EditPullRequestMsg.Requested::new,
                                 (model, popup) -> popup.detailsRead()),
                         new Choice<>(
                                 'v',

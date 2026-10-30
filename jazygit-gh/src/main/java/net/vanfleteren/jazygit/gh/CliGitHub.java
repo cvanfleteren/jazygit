@@ -76,6 +76,14 @@ public final class CliGitHub implements GitHub {
                 .toJavaArray(String[]::new));
     }
 
+    static GhCommand editCommand(int number, PullRequestEdit edit) {
+        return gh(List.of("pr", "edit", String.valueOf(number))
+                .appendAll(edit.title().toList().flatMap(title -> List.of("--title", title)))
+                .appendAll(edit.body().toList().flatMap(body -> List.of("--body", body)))
+                .appendAll(edit.base().toList().flatMap(base -> List.of("--base", base.name())))
+                .toJavaArray(String[]::new));
+    }
+
     static GhCommand browseCommand(GhBranch branch) {
         return gh("browse", "--branch", branch.name());
     }
@@ -209,6 +217,11 @@ public final class CliGitHub implements GitHub {
 
     static GhCommand draftCommand(int number, boolean draft) {
         return draft ? gh("pr", "ready", String.valueOf(number), "--undo") : gh("pr", "ready", String.valueOf(number));
+    }
+
+    @Override
+    public Either<GhFailure, List<ExecutedCommand>> editPullRequest(int number, PullRequestEdit edit) {
+        return process.log(editCommand(number, edit));
     }
 
     @Override
