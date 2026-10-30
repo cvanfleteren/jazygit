@@ -509,11 +509,28 @@ class BranchesPane:
         """Merges the branch into the checked out one: a regular merge that fast-forwards when it can
         ("fast-forward"), or makes a "merge commit" anyway, or a squash merge, left uncommitted ("squash") or
         committed ("squash and commit")."""
-        key = {"fast-forward": "m", "merge commit": "n", "squash": "s", "squash and commit": "S"}[mode]
+        into = self.repo.current_branch()
+        head = self.repo("rev-parse", "HEAD")
+        self.select(branch)
+
+        # A squash merge that is committed takes a git command for the commit, after the one that staged the
+        # changes; one that stops on conflicts commits nothing.
+        def done():
+            return mode != "squash and commit" or self.repo("rev-parse", "HEAD") != head or bool(self.repo.conflicts())
+
+        self.ui.changing_repo(f"{branch} merged into {into}", lambda: self._ask_merge(branch, into, mode), done)
+
+    def try_to_merge(self, branch: str, mode: str = "fast-forward"):
+        """Asks to merge the branch into the checked out one as merge does, for when nothing is to change: it does
+        not wait for the repository to change."""
         into = self.repo.current_branch()
         self.select(branch)
-        self.ui.changing_repo(f"{branch} merged into {into}", lambda: (
-            self.app.press("m"), self.ui.confirm(f"Merge '{branch}' into '{into}'", key=key)))
+        self._ask_merge(branch, into, mode)
+
+    def _ask_merge(self, branch: str, into: str, mode: str):
+        key = {"fast-forward": "m", "merge commit": "n", "squash": "s", "squash and commit": "S"}[mode]
+        self.app.press("m")
+        self.ui.confirm(f"Merge '{branch}' into '{into}'", key=key)
 
     def rebase_onto(self, branch: str):
         """Rebases the checked out branch onto the branch."""
@@ -683,12 +700,32 @@ class CommitsPane:
         self.app.press("C")
         self.app.wait_for(f"Copied {self.repo.short(self.repo.find(subject))} to cherry-pick")
 
+    def try_to_copy(self, subject: str):
+        """Asks to copy the commit with this subject, for when the app is to refuse it: it does not wait for the
+        copy to show."""
+        self.select(subject)
+        self.app.press("C")
+
+    def let_go_of_copy(self):
+        """Lets go of the commit copied to cherry-pick."""
+        self.ui.caught_up()
+        self.app.press("escape")
+        self.app.wait_gone("to cherry-pick")
+
     def cherry_pick(self):
         """Cherry-picks the copied commit onto the checked out branch."""
         self.ui.caught_up()
         self.app.focus("Commits")
         self.ui.changing_repo("the copied commit cherry-picked", lambda: (
             self.app.press("V"), self.ui.confirm("Cherry-pick commit")))
+
+    def try_to_cherry_pick(self):
+        """Asks to cherry-pick the copied commit, for when git is to refuse it: it does not wait for the repository
+        to change."""
+        self.ui.caught_up()
+        self.app.focus("Commits")
+        self.app.press("V")
+        self.ui.confirm("Cherry-pick commit")
 
     def new_branch(self, subject: str, name: str):
         """Creates the branch name at the commit with this subject, and checks it out."""

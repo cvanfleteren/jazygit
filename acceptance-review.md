@@ -41,6 +41,8 @@ Ordered by how much a bug there would cost a user.
 
 Four of the most-used history operations are tested only on their unhappy path.
 
+**Done.** Each of the gaps in this table now has a test: `test_merge_and_rebase.py` covers merge in all four modes and rebase onto, and `test_cherry_pick_and_revert.py` covers cherry-pick and revert. `branches.merge` waits for the commit of `squash and commit`, which also closes that row of the race in point 1 of the API section.
+
 ### High: safety promises with no test
 
 - **Force push uses `--force-with-lease`.** Nothing tests that the lease protects anything. Test it like this: the teammate pushes to `feature` *after* our last fetch, we amend and force-push, and the push must be refused. `origin.subjects("feature")` should still contain the teammate's commit. That is the whole point of the lease, and a regression there destroys other people's work. `review.md` #3 (a force push offered when there is nothing to push) is the same kind of risk, and there is no acceptance test pinning that fix either.
