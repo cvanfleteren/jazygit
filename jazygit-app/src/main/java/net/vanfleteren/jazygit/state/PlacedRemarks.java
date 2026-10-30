@@ -28,8 +28,17 @@ public record PlacedRemarks(List<FileRemarks> files) {
      * of its file. A thread of a file the diff does not have is left out: it is shown with the diff of its own file.
      */
     public static PlacedRemarks place(UnifiedDiff diff, List<ReviewThread> threads) {
+        return place(diff, threads, true);
+    }
+
+    /**
+     * {@code threads} placed in {@code diff} as {@link #place(UnifiedDiff, List)} does, but on lines only when
+     * {@code onLines}: when they were read at other commits than the diff, their lines number other lines, and they
+     * are listed at the end of their file (ADR 55).
+     */
+    public static PlacedRemarks place(UnifiedDiff diff, List<ReviewThread> threads, boolean onLines) {
         return new PlacedRemarks(diff.files()
-                .map(file -> file(file, threads.filter(thread -> thread.isOn(file.path(), file.origin())))));
+                .map(file -> file(file, threads.filter(thread -> thread.isOn(file.path(), file.origin())), onLines)));
     }
 
     /**
@@ -39,10 +48,10 @@ public record PlacedRemarks(List<FileRemarks> files) {
         return files.forAll(FileRemarks::isEmpty);
     }
 
-    private static FileRemarks file(FileDiff file, List<ReviewThread> threads) {
+    private static FileRemarks file(FileDiff file, List<ReviewThread> threads, boolean placeable) {
         List<ReviewThread> onLines = threads.filter(thread -> thread.subject() == Subject.LINE);
-        List<Tuple2<ReviewThread, Option<Tuple2<Integer, Integer>>>> found =
-                onLines.map(thread -> Tuple.of(thread, at(file, thread.line(), thread.side())));
+        List<Tuple2<ReviewThread, Option<Tuple2<Integer, Integer>>>> found = onLines.map(thread -> Tuple.of(
+                thread, placeable ? at(file, thread.line(), thread.side()) : Option.<Tuple2<Integer, Integer>>none()));
         // Where the threads on several lines that are placed start, and end: only those cover lines.
         List<Tuple2<Tuple2<Integer, Integer>, Tuple2<Integer, Integer>>> spans = found.flatMap(placed -> placed._2()
                 .flatMap(last -> placed._1()

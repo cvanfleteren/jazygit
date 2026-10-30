@@ -195,6 +195,7 @@ class CommitFilesUpdateTest {
         CommitFilesView view = read.repoView().commitFiles().get();
         assertEquals(List.of(THREAD), view.threads());
         assertEquals(PULL_REQUEST, view.of());
+        assertTrue(view.remarksAtItsCommits());
 
         Model toggled = Update.update(read, new CommitFilesMsg.RemarksToggled()).model();
         assertTrue(toggled.repoView().commitFiles().get().opened());
@@ -221,6 +222,8 @@ class CommitFilesUpdateTest {
         assertEquals(new Loading<>(), view.files());
         assertEquals(List.of(THREAD), view.threads());
         assertEquals(List.of(new Cmd.LoadCommitFiles(now)), moved.cmds());
+        // The files are read again at the commits the threads were read at.
+        assertTrue(view.remarksAtItsCommits());
     }
 
     @Test
@@ -235,6 +238,8 @@ class CommitFilesUpdateTest {
             assertEquals(PULL_REQUEST, view.of());
             assertEquals(Option.of(state), view.ended());
             assertEquals(List.of(THREAD), view.threads());
+            // Read at other commits than the files: their lines number other lines than the diff shows.
+            assertFalse(view.remarksAtItsCommits());
             assertEquals(List.empty(), read.cmds());
         }
         assertEquals(

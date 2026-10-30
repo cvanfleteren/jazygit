@@ -321,9 +321,10 @@ final class ContentView {
                         read.threads().exists(thread -> files.exists(file -> thread.isOn(file.path(), file.origin())))
                                 ? model.now().truncatedTo(ChronoUnit.MINUTES)
                                 : Instant.EPOCH,
-                        Option.none()));
+                        Option.none(),
+                        view.remarksAtItsCommits()));
             case Loadable.Failed<ReviewRemarks>(Failure failure) ->
-                Option.of(new ShownRemarks(List.empty(), view.opened(), Instant.EPOCH, Option.of(failure)));
+                Option.of(new ShownRemarks(List.empty(), view.opened(), Instant.EPOCH, Option.of(failure), true));
             case Loadable.Loading<ReviewRemarks>() -> Option.none();
         });
     }
@@ -475,8 +476,11 @@ final class ContentView {
      * @param now     the time it is, to the minute, to tell how long ago a comment was written: the diff is only
      *                styled again once a minute for it
      * @param failed  why reading them failed, when it did and none were read before
+     * @param onLines whether they were read at the commits of the diff, so their lines number its lines: else the
+     *                threads on a line are listed at the end of their file
      */
-    record ShownRemarks(List<ReviewThread> threads, boolean opened, Instant now, Option<Failure> failed) {}
+    record ShownRemarks(
+            List<ReviewThread> threads, boolean opened, Instant now, Option<Failure> failed, boolean onLines) {}
 
     /**
      * A diff as it is shown: {@code diff}, then the line {@code note}, which git did not print, if there is one.

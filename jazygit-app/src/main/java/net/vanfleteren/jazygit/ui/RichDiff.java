@@ -52,10 +52,11 @@ final class RichDiff {
     static List<Line> lines(
             ParsedDiff diff, boolean syntax, Option<ContentView.ShownRemarks> remarks, Theme.SpanStyles styles) {
         UnifiedDiff parsed = diff.diff();
-        Vector<Option<FileRemarks>> placed = remarks.map(shown -> PlacedRemarks.place(parsed, shown.threads())
-                        .files()
-                        .map(Option::some)
-                        .toVector())
+        Vector<Option<FileRemarks>> placed = remarks.map(
+                        shown -> PlacedRemarks.place(parsed, shown.threads(), shown.onLines())
+                                .files()
+                                .map(Option::some)
+                                .toVector())
                 .getOrElse(() -> Vector.fill(parsed.files().size(), Option::none));
         RemarkLines.RemarkStyle style = remarks.map(shown -> new RemarkLines.RemarkStyle(shown.opened(), shown.now()))
                 .getOrElse(() -> new RemarkLines.RemarkStyle(false, Instant.EPOCH));

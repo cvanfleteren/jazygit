@@ -56,7 +56,7 @@ class RemarkLinesTest {
     }
 
     private static ShownRemarks shown(boolean opened, ReviewThread... threads) {
-        return new ShownRemarks(List.of(threads), opened, NOW, Option.none());
+        return new ShownRemarks(List.of(threads), opened, NOW, Option.none(), true);
     }
 
     private static List<String> rich(ShownRemarks remarks) {
@@ -177,6 +177,21 @@ class RemarkLinesTest {
     }
 
     @Test
+    void threadsReadAtOtherCommitsThanTheDiffAreListedAtTheEndOfTheirFile() {
+        ShownRemarks elsewhere =
+                new ShownRemarks(List.of(thread(2, false, "Moved on")), false, NOW, Option.none(), false);
+
+        List<String> lines = rich(elsewhere);
+
+        assertTrue(lines.contains("  2   +TWO") || lines.contains("  2 │ +TWO"), lines.mkString("\n"));
+        assertFalse(lines.exists(line -> line.contains("●")), lines.mkString("\n"));
+        assertEquals(
+                " ".repeat(8) + "Not on a line of this diff",
+                lines.dropWhile(line -> !line.contains("three")).get(1));
+        assertTrue(lines.contains(" ".repeat(8) + "┃ Moved on"), lines.mkString("\n"));
+    }
+
+    @Test
     void aBlockWrapsAtTheWidthOfItsFileAtLeastSixtyColumns() {
         String words = "word ".repeat(30).strip();
 
@@ -218,7 +233,7 @@ class RemarkLinesTest {
                 new ShownDiff(DiffText.of(DIFF), Option.none()),
                 new DiffLook(DiffStyle.RICH, true),
                 Option.of(new ShownRemarks(
-                        List.empty(), false, NOW, Option.of(new Failure.Bug(new RuntimeException("offline"))))),
+                        List.empty(), false, NOW, Option.of(new Failure.Bug(new RuntimeException("offline"))), true)),
                 Theme.SpanStyles.NONE));
 
         assertTrue(

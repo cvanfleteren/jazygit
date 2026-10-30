@@ -67,6 +67,22 @@ public record CommitFilesView(
     }
 
     /**
+     * Whether its review threads were read at the commits its files were read at, so that their lines number lines of
+     * the diff it shows. They are not when it is of a pull request found merged or closed at newer commits: its files
+     * stay at those they were read at (ADR 55).
+     */
+    public boolean remarksAtItsCommits() {
+        return of instanceof Changes.OfPullRequest(PullRequestCommits commits)
+                && remarks.flatMap(Loadable::toOption)
+                        .exists(read -> read.head()
+                                        .flatMap(head -> Sha.parse(head.oid()))
+                                        .contains(commits.head())
+                                && read.base()
+                                        .flatMap(base -> Sha.parse(base.oid()))
+                                        .contains(commits.base()));
+    }
+
+    /**
      * Whether the pull request the files are of was merged or closed when its review threads were read last, and
      * which: the tree then stays at the commits it was read at (ADR 55).
      */
