@@ -275,6 +275,37 @@ class SettingsFileTest {
     }
 
     @Test
+    void readsWhetherCodeIsColouredByItsSyntaxAndAnythingButABooleanIsInvalid() throws IOException {
+        write("""
+                [ui]
+                diff-syntax = false
+                """);
+        assertEquals(
+                new Loaded(Settings.DEFAULT.withDiffSyntax(false), Option.none()),
+                settingsFile().load());
+
+        write("""
+                [ui]
+                diff-syntax = "no"
+                """);
+        assertEquals(
+                new Loaded(Settings.DEFAULT, Option.of(new SettingsProblem.Invalid(file(), List.of("ui.diff-syntax")))),
+                settingsFile().load());
+    }
+
+    @Test
+    void savingTheDiffSyntaxAndGoingBackToTheDefaultRemovesIt() throws IOException {
+        Settings plainCode = Settings.DEFAULT.withDiffSyntax(false);
+        settingsFile().save(Settings.DEFAULT, plainCode);
+
+        assertEquals(plainCode, settingsFile().load().settings());
+
+        settingsFile().save(plainCode, Settings.DEFAULT);
+
+        assertFalse(Files.readString(file()).contains("diff-syntax"), Files.readString(file()));
+    }
+
+    @Test
     void savingTheDiffStyleAndGoingBackToTheDefaultRemovesIt() throws IOException {
         Settings rich = Settings.DEFAULT.withDiffStyle(DiffStyle.RICH);
         settingsFile().save(Settings.DEFAULT, rich);

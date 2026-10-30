@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.model.SampleData;
+import net.vanfleteren.jazygit.settings.DiffLook;
 import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.TestModels;
@@ -29,6 +30,8 @@ import org.junit.jupiter.api.Test;
  * be focused and scrolled.
  */
 class ContentPanelTest {
+
+    private static final DiffLook PLAIN_LOOK = new DiffLook(DiffStyle.PLAIN, true);
 
     private final ContentPanel content = new ContentPanel(Theme.SpanStyles.NONE, () -> false);
 
@@ -395,7 +398,7 @@ class ContentPanelTest {
         List<String> lines = ContentPanel.commitText(
                         commit,
                         ContentView.shown(DiffText.of(" a.txt | 1 +\n 1 file changed\n\n+added\n")),
-                        DiffStyle.PLAIN,
+                        PLAIN_LOOK,
                         Theme.SpanStyles.NONE)
                 .lines()
                 .stream()
@@ -460,7 +463,7 @@ class ContentPanelTest {
         List<String> lines = ContentPanel.stashText(
                         stash,
                         ContentView.shown(DiffText.of(" a.txt | 1 +\n\n+added line\n")),
-                        DiffStyle.PLAIN,
+                        PLAIN_LOOK,
                         Theme.SpanStyles.NONE)
                 .lines()
                 .stream()
@@ -479,7 +482,7 @@ class ContentPanelTest {
                 Fixtures.commit(new Sha("a1b2c3d4e5f6"), "Ada", "ada@example.com", Instant.EPOCH, "Subject", "");
 
         List<String> lines = ContentPanel.commitText(
-                        commit, ContentView.shown(DiffText.of("x")), DiffStyle.PLAIN, Theme.SpanStyles.NONE)
+                        commit, ContentView.shown(DiffText.of("x")), PLAIN_LOOK, Theme.SpanStyles.NONE)
                 .lines()
                 .stream()
                 .map(line -> line.spans().stream().map(Span::content).collect(Collectors.joining()))

@@ -29,7 +29,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.i18n.Messages;
-import net.vanfleteren.jazygit.settings.DiffStyle;
+import net.vanfleteren.jazygit.settings.DiffLook;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -92,11 +92,11 @@ public final class ContentPanel {
     }
 
     /**
-     * The unified diff drawn in {@code style}, as one styled text, so it is a single element to lay out however long
+     * The unified diff drawn as {@code look} says, as one styled text, so it is a single element to lay out however long
      * the diff is.
      */
-    static Text diffText(ShownDiff diff, DiffStyle style, Theme.SpanStyles styles) {
-        return styledText(changeLines(diff, style, styles));
+    static Text diffText(ShownDiff diff, DiffLook look, Theme.SpanStyles styles) {
+        return styledText(changeLines(diff, look, styles));
     }
 
     /**
@@ -201,7 +201,7 @@ public final class ContentPanel {
     /**
      * Like {@code git show}: the commit's header, its indented message, a {@code ---} line and then the changes.
      */
-    static Text commitText(Commit commit, ShownDiff changes, DiffStyle style, Theme.SpanStyles styles) {
+    static Text commitText(Commit commit, ShownDiff changes, DiffLook look, Theme.SpanStyles styles) {
         List<String> message = messageLines(commit);
         return styledText(List.of(
                         styled(Messages.get("content.commitSha", commit.sha().value()), Theme.Classes.SHA, styles),
@@ -212,30 +212,30 @@ public final class ContentPanel {
                 .map(Line::from)
                 .appendAll(message.tail().map(line -> Line.from(Span.raw(line))))
                 .append(Line.from(Span.raw("---")))
-                .appendAll(changeLines(changes, style, styles)));
+                .appendAll(changeLines(changes, look, styles)));
     }
 
     /**
      * Like {@link #commitText}: the stash's name and message, the branch it was stashed on if its message says, when
      * it was stashed, a {@code ---} line and then the changes.
      */
-    static Text stashText(Stash stash, ShownDiff changes, DiffStyle style, Theme.SpanStyles styles) {
+    static Text stashText(Stash stash, ShownDiff changes, DiffLook look, Theme.SpanStyles styles) {
         return styledText(List.of(styled(
                         Messages.get("content.stashHeader", stash.ref(), stash.message()), Theme.Classes.SHA, styles))
                 .appendAll(stash.branch().map(branch -> Span.raw(Messages.get("content.stashBranch", branch.value()))))
                 .append(dateLine(stash.time()))
                 .map(Line::from)
                 .append(Line.from(Span.raw("---")))
-                .appendAll(changeLines(changes, style, styles)));
+                .appendAll(changeLines(changes, look, styles)));
     }
 
     /**
-     * A unified diff, drawn in {@code style}.
+     * A unified diff, drawn as {@code look} says.
      */
-    static List<Line> changeLines(ShownDiff changes, DiffStyle style, Theme.SpanStyles styles) {
-        return switch (style) {
+    static List<Line> changeLines(ShownDiff changes, DiffLook look, Theme.SpanStyles styles) {
+        return switch (look.style()) {
             case PLAIN -> lines(changes.text()).map(line -> diffLine(line, styles));
-            case RICH -> RichDiff.lines(changes.parsed(), styles);
+            case RICH -> RichDiff.lines(changes.parsed(), look.syntax(), styles);
         };
     }
 
@@ -305,13 +305,13 @@ public final class ContentPanel {
      */
     private Text bodyText(Body body) {
         return switch (body) {
-            case Body.Diff(ShownDiff diff, DiffStyle style) -> diffText(diff, style, styles);
+            case Body.Diff(ShownDiff diff, DiffLook look) -> diffText(diff, look, styles);
             case Body.BranchLog(List<Commit> commits, AheadView ahead) ->
                 logText(commits, ZoneId.systemDefault(), ahead, styles);
-            case Body.CommitChanges(Commit commit, ShownDiff changes, DiffStyle style) ->
-                commitText(commit, changes, style, styles);
-            case Body.StashChanges(Stash stash, ShownDiff changes, DiffStyle style) ->
-                stashText(stash, changes, style, styles);
+            case Body.CommitChanges(Commit commit, ShownDiff changes, DiffLook look) ->
+                commitText(commit, changes, look, styles);
+            case Body.StashChanges(Stash stash, ShownDiff changes, DiffLook look) ->
+                stashText(stash, changes, look, styles);
             case Body.PullRequest(PullRequestSummary pullRequest, PullRequestPreview preview) ->
                 pullRequestText(pullRequest, preview, styles);
         };

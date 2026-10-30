@@ -172,6 +172,13 @@ public final class Theme {
         public static final String DIFF_ADDED_WORD = "diff-added-word";
         public static final String DIFF_REMOVED_LINE = "diff-removed-line";
         public static final String DIFF_REMOVED_WORD = "diff-removed-word";
+        // The code of the rich view coloured by its syntax (ADR 53): the colour of each kind of token, and of the
+        // code outside a token on a changed line, which takes the plain colour when a theme gives it none.
+        public static final String SYNTAX_KEYWORD = "syntax-keyword";
+        public static final String SYNTAX_STRING = "syntax-string";
+        public static final String SYNTAX_COMMENT = "syntax-comment";
+        public static final String SYNTAX_NUMBER = "syntax-number";
+        public static final String SYNTAX_TEXT = "syntax-text";
         public static final String CURRENT_BRANCH = "current-branch";
         public static final String SHA = "sha";
         public static final String TAG = "tag";

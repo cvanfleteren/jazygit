@@ -310,6 +310,15 @@ class App:
         """Waits until text shows anywhere on the screen."""
         self.eventually(lambda: text in self.text(), f"{text!r} on screen", timeout)
 
+    def colour_at(self, text: str, offset: int = 0):
+        """The colour of the character offset into where text first shows on the screen."""
+        self.pump()
+        for y, line in enumerate(self.screen.display):
+            x = line.find(text)
+            if x >= 0:
+                return self.screen.buffer[y][x + offset].fg
+        raise AssertionError(f"{text!r} not on screen\n--- screen ---\n{self.text()}")
+
     def panes(self) -> dict:
         """The panes of the left column, by the first word of their title, with the colour of their border."""
         self.pump()

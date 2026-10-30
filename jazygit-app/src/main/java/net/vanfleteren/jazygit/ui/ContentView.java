@@ -16,7 +16,7 @@ import net.vanfleteren.jazygit.git.model.ParsedDiff;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.i18n.Messages;
-import net.vanfleteren.jazygit.settings.DiffStyle;
+import net.vanfleteren.jazygit.settings.DiffLook;
 import net.vanfleteren.jazygit.state.AheadUpdate;
 import net.vanfleteren.jazygit.state.BranchesTab;
 import net.vanfleteren.jazygit.state.CommitFilesView;
@@ -160,14 +160,14 @@ final class ContentView {
                         .map(diff -> whenLoaded(
                                 title,
                                 diff.value(),
-                                diffs -> diffAreas(options, model.preferences().diffStyle(), title, diffs)))
+                                diffs -> diffAreas(options, model.preferences().diffLook(), title, diffs)))
                         .getOrElse(() -> loading(title));
     }
 
     /**
-     * The staged and the unstaged changes of {@code diffs}, each drawn in {@code style} on its own (ADR 47).
+     * The staged and the unstaged changes of {@code diffs}, each drawn as {@code look} says on its own (ADR 47).
      */
-    private static Shown diffAreas(DiffOptions options, DiffStyle style, String title, Diffs diffs) {
+    private static Shown diffAreas(DiffOptions options, DiffLook look, String title, Diffs diffs) {
         if (diffs.isEmpty()) {
             return dim(
                     title, Messages.get(options.ignoreWhitespace() ? "content.onlyWhitespace" : "content.noChanges"));
@@ -180,7 +180,7 @@ final class ContentView {
                         area._1,
                         titled(Messages.get(area._2), options),
                         new ScrolledContent.Diff(area._3),
-                        new Body.Diff(shown(area._3), style))));
+                        new Body.Diff(shown(area._3), look))));
     }
 
     /**
@@ -254,19 +254,19 @@ final class ContentView {
                                         found,
                                         changes,
                                         options,
-                                        model.preferences().diffStyle()))
+                                        model.preferences().diffLook()))
                                 .getOrElse(() -> loading(title))))
                 .getOrElse(() -> nothing.map(message -> dim(title, Messages.get(message)))
                         .getOrElse(() -> loading(title)));
     }
 
     private static Shown.Area commitArea(
-            ContentArea area, Commit commit, DiffText changes, DiffOptions options, DiffStyle style) {
+            ContentArea area, Commit commit, DiffText changes, DiffOptions options, DiffLook look) {
         return new Shown.Area(
                 area,
                 titled(Messages.get("panel.commit.titleFor", commit.shortSha()), options),
                 new ScrolledContent.CommitChanges(commit, changes),
-                new Body.CommitChanges(commit, shownChanges(changes, options), style));
+                new Body.CommitChanges(commit, shownChanges(changes, options), look));
     }
 
     /**
@@ -294,7 +294,7 @@ final class ContentView {
                                                 view.of().sha(), diff.key(), changes),
                                         new Body.Diff(
                                                 shownChanges(changes, options),
-                                                model.preferences().diffStyle()))))
+                                                model.preferences().diffLook()))))
                 .getOrElse(() -> whenLoaded(
                         title,
                         view.files(),
@@ -342,7 +342,7 @@ final class ContentView {
                                         new Body.StashChanges(
                                                 stash,
                                                 shownChanges(changes, options),
-                                                model.preferences().diffStyle())))))
+                                                model.preferences().diffLook())))))
                 .getOrElse(() -> whenLoaded(
                         title,
                         model.repo().stashes(),
@@ -403,10 +403,10 @@ final class ContentView {
     sealed interface Body {
 
         /**
-         * A unified diff, drawn in {@code style}: the staged or the unstaged changes of the working tree, or what a
+         * A unified diff, drawn as {@code look} says: the staged or the unstaged changes of the working tree, or what a
          * commit or a stash changed in some of its files.
          */
-        record Diff(ShownDiff diff, DiffStyle style) implements Body {}
+        record Diff(ShownDiff diff, DiffLook look) implements Body {}
 
         /**
          * The log of a branch, as far as {@code ahead} shows it.
@@ -414,14 +414,14 @@ final class ContentView {
         record BranchLog(List<Commit> commits, AheadView ahead) implements Body {}
 
         /**
-         * A commit and what it changed, drawn in {@code style}.
+         * A commit and what it changed, drawn as {@code look} says.
          */
-        record CommitChanges(Commit commit, ShownDiff changes, DiffStyle style) implements Body {}
+        record CommitChanges(Commit commit, ShownDiff changes, DiffLook look) implements Body {}
 
         /**
-         * A stash and what it stashed, drawn in {@code style}.
+         * A stash and what it stashed, drawn as {@code look} says.
          */
-        record StashChanges(Stash stash, ShownDiff changes, DiffStyle style) implements Body {}
+        record StashChanges(Stash stash, ShownDiff changes, DiffLook look) implements Body {}
 
         /**
          * A pull request, and what it says and changes.

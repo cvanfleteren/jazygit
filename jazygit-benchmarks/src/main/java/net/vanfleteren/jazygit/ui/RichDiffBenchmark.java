@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.ui;
 
+import dev.tamboui.style.Color;
+import dev.tamboui.style.Style;
 import dev.tamboui.text.Line;
 import io.vavr.collection.List;
 import java.util.concurrent.TimeUnit;
@@ -32,6 +34,9 @@ import org.openjdk.jmh.annotations.Warmup;
 @Fork(1)
 public class RichDiffBenchmark {
 
+    private static final Theme.SpanStyles STYLES =
+            cssClass -> Style.EMPTY.fg(Color.WHITE).bg(Color.BLACK);
+
     @Param
     public Shape shape;
 
@@ -53,10 +58,11 @@ public class RichDiffBenchmark {
     }
 
     /**
-     * Drawing the diff, on the render thread: styling what was parsed when it was read.
+     * Drawing the diff, on the render thread: styling what was parsed when it was read, in a theme that gives each
+     * class a background, as a changed line without one is not coloured by its syntax (ADR 53).
      */
     @Benchmark
     public List<Line> draw() {
-        return RichDiff.lines(parsed, Theme.SpanStyles.NONE);
+        return RichDiff.lines(parsed, true, STYLES);
     }
 }

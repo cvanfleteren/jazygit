@@ -137,7 +137,8 @@ does that when `~/.config/jazygit` does not exist yet), the lock is in the dotfi
 the setting still holds until jazygit stops.
 
 Ctrl+S shows the settings (`feature.settings`): the gh executable, the theme, and the GitHub account of the
-repository. The keys in `config.toml` are `ui.theme`, `ui.diff-style` (which Ctrl+D switches, ADR 44) and
+repository. The keys in `config.toml` are `ui.theme`, `ui.diff-style` (which Ctrl+D switches, ADR 44),
+`ui.diff-syntax` (`false` draws the code of the rich view in one colour, ADR 53) and
 `github.executable`, the gh to run when it is not the one on the PATH; a new one is only kept once `<executable> --version` runs. Changing the gh executable or the
 account shows the repository again through `Env.repositories()`, as switching to a recent repository does, so a
 new `Env` runs gh as the settings say now.
@@ -366,6 +367,17 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
   from above the hunk that reads as one of its own. Only a header whose numbers cannot be read (`Hunk.numbered`) follows
   the rule as git printed it, as its lines have no numbers. The first hunk of a file has no rule otherwise: the bar of
   the file is right above it.
+- **The syntax of the code** in the rich view is coloured as ADR 53 says. `git.model.syntax.Lexer`, the one
+  `Highlighter`, finds the keywords, strings, comments and numbers (`Token`) of each line, for a file whose
+  `Language` it knows by its name, its extension or its shebang; a `Grammar` says what a language's tokens look like.
+  A hunk is lexed as its old and its new text, each from the start of the hunk on; a line longer than
+  `Lexer.MAX_LINE` (2 000 `char`s) is not, and the line after it starts outside of everything. `ParsedDiff.tokens`
+  holds them in the shape of its words, found where the diff is read, or none for a line that was not lexed.
+  `RichDiff` cuts a line where a word or a token starts or ends, in one pass: a changed line keeps the background of
+  its class and takes the colour of the `syntax-*` class of a token, and of `syntax-text` outside one; a context line
+  takes only the colours of its tokens. A line that was not lexed, a changed line whose class has no background (the
+  themes `mono` and `none`), and every diff while `ui.diff-syntax` is `false` (`settings.DiffLook`), are drawn as
+  before.
 - **The files of a commit or a stash**, which `F` opens from the commits, divergence, branch commits and stash panes
   (`feature.diff.CommitFilesAction`), are a `CommitFilesView` in `RepoView.commitFiles`: whose changes they are, the
   pane they were opened from, the `CommitFile`s read (`Cmd.LoadCommitFiles`), and the diff of the highlighted node

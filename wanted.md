@@ -30,9 +30,13 @@ Features to consider, roughly most valuable first.
 10. **Commit graph.** `CommitGraph` exists in the model; draw the lanes in the commits panel if it doesn't yet.
 11. **Diff options.** Ignoring whitespace is done (Ctrl+W, `DiffOptions`), and so is the rich view of the changes of
     the working tree, of a commit and of a stash, with line numbers and the changed words highlighted (Ctrl+D, ADR 44,
-    ADR 47). Still to do: change the amount of context, and side-by-side, as more fields of `DiffOptions`; the rich
+    ADR 47), and its code coloured by its syntax (ADR 53). Still to do: change the amount of context, and side-by-side, as more fields of `DiffOptions`; the rich
     view for the diff of a pull request. The pull request diff (`gh pr diff`) shows all whitespace; it could be
     filtered, or read with git when the branches are fetched.
+    - **More of the syntax** in the rich view (ADR 53): a table in the settings from paths to languages, for the
+      extensions a team makes up; more languages; the code in a fenced block of Markdown in its own language; Rust's
+      raw strings, nested block comments, shell heredocs, and the expressions in Python's f-strings and Kotlin's
+      templates.
     - **Act on the files of a commit** in the tree `F` opens (ADR 44): check a file out as it was in the commit, open
       it in the editor, or revert the changes of one file.
 12. **Start from git's prepared message.** Fill the commit dialog from `MERGE_MSG` or `SQUASH_MSG` (see TODO.md).

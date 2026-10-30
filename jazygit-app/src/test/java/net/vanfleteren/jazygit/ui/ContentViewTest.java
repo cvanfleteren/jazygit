@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.model.SampleData;
+import net.vanfleteren.jazygit.settings.DiffLook;
 import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.prs.PrOverview;
@@ -25,6 +26,9 @@ import org.junit.jupiter.api.Test;
  * Tests on {@link ContentView}: what the content panel shows in a model, without drawing it.
  */
 class ContentViewTest {
+
+    private static final DiffLook PLAIN_LOOK = new DiffLook(DiffStyle.PLAIN, true);
+    private static final DiffLook RICH_LOOK = new DiffLook(DiffStyle.RICH, true);
 
     private static final PullRequestSummary PULL_REQUEST = new PullRequestSummary(
             "owner/repo",
@@ -215,7 +219,7 @@ class ContentViewTest {
                         ContentArea.COMMIT,
                         "Commit: aaaa",
                         new ScrolledContent.CommitChanges(commit, DiffText.of("+added line\n")),
-                        new Body.CommitChanges(commit, whole("+added line\n"), DiffStyle.PLAIN)),
+                        new Body.CommitChanges(commit, whole("+added line\n"), PLAIN_LOOK)),
                 ContentView.of(selected, CommitsPanel.ID));
     }
 
@@ -243,7 +247,7 @@ class ContentViewTest {
                         ContentArea.COMMIT_FILE,
                         "aaaa · src/a.txt",
                         new ScrolledContent.FileChanges(new Sha("aaaa"), List.of(file), DiffText.of("+a\n")),
-                        new Body.Diff(whole("+a\n"), DiffStyle.RICH)),
+                        new Body.Diff(whole("+a\n"), RICH_LOOK)),
                 ContentView.of(selected, FilesPanel.ID));
         assertEquals(
                 new Shown.Message("Files of aaaa", Placeholders.loading(), Tone.DIM),
@@ -298,17 +302,17 @@ class ContentViewTest {
                 preferences -> preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
 
         assertEquals(
-                List.of(DiffStyle.PLAIN, DiffStyle.PLAIN),
+                List.of(PLAIN_LOOK, PLAIN_LOOK),
                 ContentView.of(selected, FilesPanel.ID)
                         .areas()
                         .map(area ->
-                                assertInstanceOf(Body.Diff.class, area.body()).style()));
+                                assertInstanceOf(Body.Diff.class, area.body()).look()));
         assertEquals(
-                List.of(DiffStyle.RICH, DiffStyle.RICH),
+                List.of(RICH_LOOK, RICH_LOOK),
                 ContentView.of(rich, FilesPanel.ID)
                         .areas()
                         .map(area ->
-                                assertInstanceOf(Body.Diff.class, area.body()).style()));
+                                assertInstanceOf(Body.Diff.class, area.body()).look()));
     }
 
     @Test
@@ -337,7 +341,7 @@ class ContentViewTest {
                         ContentArea.DIVERGENCE,
                         "Commit: cccc",
                         new ScrolledContent.CommitChanges(plain("cccc"), DiffText.of("+added line")),
-                        new Body.CommitChanges(plain("cccc"), whole("+added line"), DiffStyle.PLAIN)),
+                        new Body.CommitChanges(plain("cccc"), whole("+added line"), PLAIN_LOOK)),
                 ContentView.of(selected, BranchesPanel.ID));
     }
 
@@ -417,7 +421,7 @@ class ContentViewTest {
                         ContentArea.STASH,
                         "Stash: stash@{0}",
                         new ScrolledContent.StashChanges(stash.sha(), DiffText.of("+added line\n")),
-                        new Body.StashChanges(stash, whole("+added line\n"), DiffStyle.PLAIN)),
+                        new Body.StashChanges(stash, whole("+added line\n"), PLAIN_LOOK)),
                 ContentView.of(selected, StashPanel.ID));
     }
 

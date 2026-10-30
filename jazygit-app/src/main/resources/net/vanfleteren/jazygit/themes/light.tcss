@@ -81,6 +81,13 @@ Span.diff-added-line { color: $added; background: #def2e3; }
 Span.diff-added-word { color: $added; background: #a8e0b6; }
 Span.diff-removed-line { color: $removed; background: #f6e1e2; }
 Span.diff-removed-word { color: $removed; background: #ffc9c7; }
+
+/* The code of the rich view, by its syntax (ADR 53). */
+Span.syntax-keyword { color: #8250df; }
+Span.syntax-string { color: #0a3069; }
+Span.syntax-comment { color: #6e7781; }
+Span.syntax-number { color: #0550ae; }
+
 Span.current-branch { color: $warn; text-style: bold; }
 Span.sha { color: $warn; }
 Span.tag { color: $added; }
