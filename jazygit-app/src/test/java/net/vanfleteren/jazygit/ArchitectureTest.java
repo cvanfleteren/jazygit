@@ -36,17 +36,19 @@ import net.vanfleteren.jazygit.state.Program;
  */
 @AnalyzeClasses(
         packages = "net.vanfleteren.jazygit",
-        importOptions = {ImportOption.DoNotIncludeTests.class, ArchitectureTest.LeaveOutCoreAndJson.class})
+        importOptions = {ImportOption.DoNotIncludeTests.class, ArchitectureTest.LeaveOutTheOtherModules.class})
 class ArchitectureTest {
 
     /**
-     * jazygit-core and jazygit-json are checked by their own rules; their classes, and the core's test-jar, are left
-     * out here.
+     * jazygit-core, jazygit-json and jazygit-syntax are checked by their own rules; their classes, and the core's
+     * test-jar, are left out here.
      */
-    static final class LeaveOutCoreAndJson implements ImportOption {
+    static final class LeaveOutTheOtherModules implements ImportOption {
         @Override
         public boolean includes(Location location) {
-            return !location.contains("/jazygit-core/") && !location.contains("/jazygit-json/");
+            return !location.contains("/jazygit-core/")
+                    && !location.contains("/jazygit-json/")
+                    && !location.contains("/jazygit-syntax/");
         }
     }
 

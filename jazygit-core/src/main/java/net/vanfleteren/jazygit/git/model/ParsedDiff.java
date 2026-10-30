@@ -6,9 +6,9 @@ import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.FileDiff;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.Hunk;
 import net.vanfleteren.jazygit.git.model.WordDiff.Segment;
+import net.vanfleteren.jazygit.git.model.syntax.DiffLexer;
 import net.vanfleteren.jazygit.git.model.syntax.Highlighter;
-import net.vanfleteren.jazygit.git.model.syntax.Lexer;
-import net.vanfleteren.jazygit.git.model.syntax.Token;
+import net.vanfleteren.jazygit.syntax.Token;
 
 /**
  * A unified diff parsed, with the words of its changed lines compared and its code lexed: what the rich view draws
@@ -22,7 +22,7 @@ import net.vanfleteren.jazygit.git.model.syntax.Token;
  */
 public record ParsedDiff(UnifiedDiff diff, List<List<List<Segment>>> words, List<List<Option<List<Token>>>> tokens) {
 
-    private static final Highlighter HIGHLIGHTER = new Lexer();
+    private static final Highlighter HIGHLIGHTER = new DiffLexer();
 
     /**
      * {@code text} parsed, its words compared and its code lexed.

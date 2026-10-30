@@ -14,12 +14,13 @@ Rendering never talks to git, and update functions never do IO.
 
 ## Modules
 
-The Maven build has three modules under the parent `pom.xml`, and a fourth with `-Pbench`:
+The Maven build has four modules under the parent `pom.xml`, and a fifth with `-Pbench`:
 
 | Module | Holds | Depends on |
 |---|---|---|
 | `jazygit-json` | `json`: JSON as plain values (`Json`), and the decoders that turn it into records (`Decoder`), ADR 42. | vavr, Parsson's streaming parser |
-| `jazygit-core` | `process`, `git`, `git.model`, `gh`, `gh.model`: running git and gh, and what they report as values. | `jazygit-json`, vavr, zt-exec |
+| `jazygit-syntax` | `syntax`: the scanner that finds the keywords, strings, comments and numbers of a line of code (`Lexer`, `Language`, `Token`), ADR 53. | vavr |
+| `jazygit-core` | `process`, `git`, `git.model`, `gh`, `gh.model`: running git and gh, and what they report as values. | `jazygit-json`, `jazygit-syntax`, vavr, zt-exec |
 | `jazygit-app` | Everything else: `JazygitApp`, `cli`, `state`, `feature.*`, `ui`, `keys`, `settings`, `i18n`, and all resources. Builds the fat jar and the native image. | `jazygit-core`, TamboUI, picocli, night-config |
 | `jazygit-benchmarks` | JMH benchmarks of pure parts of the core and the app: `WordDiffBenchmark` times parsing a diff and comparing the words of its changed lines, for the rich view (ADR 44); `RichDiffBenchmark` what reading a diff costs and what drawing it costs the render thread (ADR 50). Only built with `-Pbench`, so no part of `verify` or CI. | `jazygit-core`, `jazygit-app`, JMH |
 
@@ -28,9 +29,11 @@ cannot see the application, TamboUI, picocli or night-config, so the compiler st
 The rules inside the core (git and gh know nothing of each other, the models are pure) are in
 `CoreArchitectureTest`. The core's test-jar shares `StubGitProvider`, `StubGitHub` and `SampleData` with the
 app's tests. `jazygit-json` knows nothing of jazygit; only its `JsonReader` uses Parsson, and the core and the app
-do not use it at all (`JsonArchitectureTest`, `CoreArchitectureTest`, `ArchitectureTest`).
+do not use it at all (`JsonArchitectureTest`, `CoreArchitectureTest`, `ArchitectureTest`). `jazygit-syntax` knows
+nothing of jazygit either, not even of a diff: it lexes a line from where the line before it left the scanner, and
+uses only the JDK and vavr (`SyntaxArchitectureTest`).
 
-`mvn verify` at the root builds and tests all three. `./run.sh` runs the fat jar from `jazygit-app/target`, and
+`mvn verify` at the root builds and tests all four. `./run.sh` runs the fat jar from `jazygit-app/target`, and
 `mvn -Pnative package` builds `jazygit-app/target/jazygit`.
 
 ## Packages
@@ -367,11 +370,12 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
   from above the hunk that reads as one of its own. Only a header whose numbers cannot be read (`Hunk.numbered`) follows
   the rule as git printed it, as its lines have no numbers. The first hunk of a file has no rule otherwise: the bar of
   the file is right above it.
-- **The syntax of the code** in the rich view is coloured as ADR 53 says. `git.model.syntax.Lexer`, the one
+- **The syntax of the code** in the rich view is coloured as ADR 53 says. `git.model.syntax.DiffLexer`, the one
   `Highlighter`, finds the keywords, strings, comments and numbers (`Token`) of each line, for a file whose
-  `Language` it knows by its name, its extension or its shebang; a `Grammar` says what a language's tokens look like.
-  A hunk is lexed as its old and its new text, each from the start of the hunk on; a line longer than
-  `Lexer.MAX_LINE` (2 000 `char`s) is not, and the line after it starts outside of everything. `ParsedDiff.tokens`
+  `Language` it knows by its name, its extension or its shebang, with `syntax.Lexer` of `jazygit-syntax`; a `Grammar`
+  says what a language's tokens look like. A hunk is lexed as its old and its new text, each from the start of the
+  hunk on; a line longer than `Lexer.MAX_LINE` (2 000 `char`s) is not, and the line after it starts outside of
+  everything. `ParsedDiff.tokens`
   holds them in the shape of its words, found where the diff is read, or none for a line that was not lexed.
   `RichDiff` cuts a line where a word or a token starts or ends, in one pass: a changed line keeps the background of
   its class and takes the colour of the `syntax-*` class of a token, and of `syntax-text` outside one; a context line

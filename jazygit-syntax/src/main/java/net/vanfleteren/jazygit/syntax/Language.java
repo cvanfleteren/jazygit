@@ -1,16 +1,16 @@
-package net.vanfleteren.jazygit.git.model.syntax;
+package net.vanfleteren.jazygit.syntax;
 
-import static net.vanfleteren.jazygit.git.model.syntax.Grammar.Delimited.comment;
-import static net.vanfleteren.jazygit.git.model.syntax.Grammar.Delimited.quoted;
-import static net.vanfleteren.jazygit.git.model.syntax.Grammar.Delimited.raw;
+import static net.vanfleteren.jazygit.syntax.Grammar.Delimited.comment;
+import static net.vanfleteren.jazygit.syntax.Grammar.Delimited.quoted;
+import static net.vanfleteren.jazygit.syntax.Grammar.Delimited.raw;
 
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import java.util.Locale;
-import net.vanfleteren.jazygit.git.model.syntax.Grammar.Delimited;
-import net.vanfleteren.jazygit.git.model.syntax.Grammar.Mode;
+import net.vanfleteren.jazygit.syntax.Grammar.Delimited;
+import net.vanfleteren.jazygit.syntax.Grammar.Mode;
 
 /**
  * A language the lexer knows (ADR 53), with what it needs to scan it and how its files are told apart.

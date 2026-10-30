@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.git.model.syntax;
+package net.vanfleteren.jazygit.syntax;
 
 /**
  * A piece of a line of code that is coloured by its syntax (ADR 53).

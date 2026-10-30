@@ -4,7 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.model.syntax.Token;
+import net.vanfleteren.jazygit.syntax.Token;
 import org.junit.jupiter.api.Test;
 
 class ParsedDiffTest {

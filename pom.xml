@@ -12,10 +12,11 @@
     <name>jazygit-parent</name>
     <description>A lazygit-style terminal UI for Git, built with TamboUI</description>
 
-    <!-- json reads JSON as values; core runs git and gh and knows nothing of the application; app is everything on
-         top of it. -->
+    <!-- json reads JSON as values; syntax lexes a line of code; core runs git and gh and knows nothing of the
+         application; app is everything on top of it. -->
     <modules>
         <module>jazygit-json</module>
+        <module>jazygit-syntax</module>
         <module>jazygit-core</module>
         <module>jazygit-app</module>
     </modules>
@@ -61,6 +62,11 @@
             <dependency>
                 <groupId>net.vanfleteren</groupId>
                 <artifactId>jazygit-json</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.vanfleteren</groupId>
+                <artifactId>jazygit-syntax</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

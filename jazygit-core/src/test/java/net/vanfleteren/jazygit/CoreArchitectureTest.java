@@ -28,11 +28,12 @@ import net.vanfleteren.jazygit.git.model.Revision;
  */
 @AnalyzeClasses(
         packages = "net.vanfleteren.jazygit",
-        importOptions = {ImportOption.DoNotIncludeTests.class, CoreArchitectureTest.LeaveOutJson.class})
+        importOptions = {ImportOption.DoNotIncludeTests.class, CoreArchitectureTest.LeaveOutJsonAndSyntax.class})
 class CoreArchitectureTest {
 
     /**
-     * The data read from git and GitHub is plain values, with nothing that runs anything.
+     * The data read from git and GitHub is plain values, with nothing that runs anything. jazygit-syntax, which lexes
+     * the code of a diff, is pure too.
      */
     @ArchTest
     static final ArchRule modelsArePure = classes()
@@ -40,7 +41,13 @@ class CoreArchitectureTest {
             .resideInAnyPackage("..jazygit.git.model..", "..jazygit.gh.model..")
             .should()
             .onlyDependOnClassesThat()
-            .resideInAnyPackage("java..", "io.vavr..", "lombok..", "..jazygit.git.model..", "..jazygit.gh.model..");
+            .resideInAnyPackage(
+                    "java..",
+                    "io.vavr..",
+                    "lombok..",
+                    "..jazygit.git.model..",
+                    "..jazygit.gh.model..",
+                    "net.vanfleteren.jazygit.syntax..");
     /**
      * git and gh are reached each on their own; the features combine them. The process layer runs any program,
      * and knows neither.
@@ -208,12 +215,12 @@ class CoreArchitectureTest {
             .haveRawParameterTypes(anyElementThat(JAVA_UTIL_COLLECTION));
 
     /**
-     * jazygit-json is checked by its own rules; its classes are left out here.
+     * jazygit-json and jazygit-syntax are checked by their own rules; their classes are left out here.
      */
-    static final class LeaveOutJson implements ImportOption {
+    static final class LeaveOutJsonAndSyntax implements ImportOption {
         @Override
         public boolean includes(Location location) {
-            return !location.contains("/jazygit-json/");
+            return !location.contains("/jazygit-json/") && !location.contains("/jazygit-syntax/");
         }
     }
 }
