@@ -395,8 +395,9 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> fetch(RemoteName remote) {
-        return ran();
+    // A fetch changes what the stub has, as far as anything can tell.
+    default Either<GitFailure<ProcessError>, Boolean> fetch(RemoteName remote) {
+        return Either.right(true);
     }
 
     @Override

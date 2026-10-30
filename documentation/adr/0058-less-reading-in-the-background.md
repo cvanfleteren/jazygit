@@ -49,6 +49,15 @@ ADR 56 (`0056-fewer-git-processes-after-a-commit.md`) cut what a commit costs. T
    overview) start a read that failed once at the next tick, one that failed twice after 2 minutes, three times
    after 5, and more after 10. A read that succeeds is no longer failing. What the user does, and what an operation
    on GitHub asks for, reads at once, as before.
+6. **A fetch that changed nothing reads nothing of the repository again.** The fetch runs with `--porcelain`, which
+   prints a line per remote-tracking ref it updated, created or pruned, and nothing when there was none (not with
+   `--quiet`, which silences it too; git 2.41, below the 2.45 jazygit needs). Once all remotes are fetched from, the
+   repository is read again only when one of them changed a ref (`Jobs.fetchChanged`); GitHub is read either way. And
+   since git 2.48, every fetch takes the lock of `refs/remotes/<remote>/HEAD` and lets it go, which changed the
+   directory the stamp of the branches looked at: the branches were read again on the ticks after every fetch, three
+   processes each. The stamp now holds the ref files under `refs/remotes`, but the locks, rather than its
+   directories. Turning `followRemoteHEAD` off instead would stop the fetch from setting the remote's HEAD, by which
+   the main branch is told (ADR 46).
 
 The other chains of loads stay as they are: the commits ahead of HEAD go by the HEAD of the status and the bases of
 the branches, read by loads of their own, and the log of the highlighted branch, the divergence and the operations

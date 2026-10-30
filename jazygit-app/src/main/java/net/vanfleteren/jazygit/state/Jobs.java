@@ -22,6 +22,7 @@ import net.vanfleteren.jazygit.git.model.MetadataStamp;
  *                   them: a tick reads them again, as what is kept may be that of another HEAD
  * @param fetchAgain whether to fetch from the remotes again once the fetch that runs is done, as something changed on
  *                   a remote meanwhile that it may have missed
+ * @param fetchChanged whether the fetch that runs, or ran last, changed a remote-tracking branch so far (ADR 58)
  * @param lastFetch  when a remote was last fetched from, and the remotes that failed the last time
  * @param worktreeChangesRead when reading which worktrees have changes last finished, whatever came of it
  * @param readAt     for each load that {@link Cmd.CheckMetadata} guards, what the files it reads looked like when it
@@ -49,6 +50,7 @@ import net.vanfleteren.jazygit.git.model.MetadataStamp;
 public record Jobs(
         Set<Cmd.Load> failed,
         boolean fetchAgain,
+        boolean fetchChanged,
         Freshness lastFetch,
         Option<Instant> worktreeChangesRead,
         Map<Cmd.Load, MetadataStamp> readAt,
@@ -63,6 +65,7 @@ public record Jobs(
 
     public static final Jobs IDLE = new Jobs(
             HashSet.empty(),
+            false,
             false,
             Freshness.NEVER,
             Option.none(),

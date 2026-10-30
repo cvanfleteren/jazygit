@@ -206,9 +206,10 @@ public interface GitInfoProvider {
     // Fetching from the remotes, as git fetch does.
 
     /**
-     * Fetches from {@code remote}. It never asks for credentials or passphrases: what would need them fails.
+     * Fetches from {@code remote}, and tells whether that changed a remote-tracking branch: one moved, came or went.
+     * It never asks for credentials or passphrases: what would need them fails.
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> fetch(RemoteName remote);
+    Either<GitFailure<ProcessError>, Boolean> fetch(RemoteName remote);
 
     /**
      * Fast-forwards the local branch {@code branch}, which is not checked out, to {@code upstream}, the branch it

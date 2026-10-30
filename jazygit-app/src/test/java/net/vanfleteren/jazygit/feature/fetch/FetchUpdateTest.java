@@ -66,8 +66,8 @@ class FetchUpdateTest {
         assertEquals(List.of(fromUpstream), upstream.cmds());
         assertTrue(fetching(upstream.model()));
 
-        Next done =
-                done(upstream.model(), fromUpstream, new FetchMsg.Fetched(new RemoteName("upstream"), List.empty()));
+        Next done = done(
+                upstream.model(), fromUpstream, new FetchMsg.Fetched(new RemoteName("upstream"), List.empty(), true));
         assertFalse(fetching(done.model()));
         assertTrue(done.cmds().contains(new LoadBranches()));
         assertTrue(done.cmds().contains(new LoadPullRequests()));
@@ -112,7 +112,8 @@ class FetchUpdateTest {
         assertEquals(List.of(), requested.cmds());
         assertTrue(requested.model().jobs().fetchAgain());
 
-        Next done = done(requested.model(), fromOrigin, new FetchMsg.Fetched(new RemoteName("origin"), List.empty()));
+        Next done =
+                done(requested.model(), fromOrigin, new FetchMsg.Fetched(new RemoteName("origin"), List.empty(), true));
         assertTrue(done.cmds().contains(new LoadBranches()));
         assertTrue(done.cmds().contains(LIST), done.cmds().toString());
         assertFalse(done.model().jobs().fetchAgain());
@@ -120,9 +121,37 @@ class FetchUpdateTest {
         // That one is not followed by another.
         Model listed = done(done.model(), LIST, new FetchMsg.RemotesListed(List.of(new RemoteName("origin"))))
                 .model();
-        Next over = done(listed, fromOrigin, new FetchMsg.Fetched(new RemoteName("origin"), List.empty()));
+        Next over = done(listed, fromOrigin, new FetchMsg.Fetched(new RemoteName("origin"), List.empty(), true));
         assertFalse(over.cmds().contains(LIST));
         assertFalse(fetching(over.model()));
+    }
+
+    @Test
+    void aFetchThatChangedNothingReadsGitHubButNotTheRepositoryAgain() {
+        FetchCmd.Fetch fromOrigin = new FetchCmd.Fetch(new RemoteName("origin"), List.of(new RemoteName("upstream")));
+        FetchCmd.Fetch fromUpstream = new FetchCmd.Fetch(new RemoteName("upstream"), List.empty());
+        Model fetching = done(
+                        listing(),
+                        LIST,
+                        new FetchMsg.RemotesListed(List.of(new RemoteName("origin"), new RemoteName("upstream"))))
+                .model();
+        Model origin = done(
+                        fetching, fromOrigin, new FetchMsg.Fetched(new RemoteName("origin"), fromOrigin.rest(), false))
+                .model();
+
+        Next nothing =
+                done(origin, fromUpstream, new FetchMsg.Fetched(new RemoteName("upstream"), List.empty(), false));
+        Next something = done(
+                done(fetching, fromOrigin, new FetchMsg.Fetched(new RemoteName("origin"), fromOrigin.rest(), true))
+                        .model(),
+                fromUpstream,
+                new FetchMsg.Fetched(new RemoteName("upstream"), List.empty(), false));
+
+        assertFalse(nothing.cmds().contains(new LoadBranches()), nothing.cmds().toString());
+        assertTrue(
+                nothing.cmds().contains(new LoadPullRequests()), nothing.cmds().toString());
+        assertTrue(
+                something.cmds().contains(new LoadBranches()), something.cmds().toString());
     }
 
     @Test
@@ -147,7 +176,7 @@ class FetchUpdateTest {
         Model fetched = done(
                         listed.withNow(at),
                         new FetchCmd.Fetch(new RemoteName("origin"), List.of(new RemoteName("upstream"))),
-                        new FetchMsg.Fetched(new RemoteName("origin"), List.of(new RemoteName("upstream"))))
+                        new FetchMsg.Fetched(new RemoteName("origin"), List.of(new RemoteName("upstream")), true))
                 .model();
         assertEquals(Option.of(at), fetched.jobs().lastFetch().read());
         assertFalse(fetched.jobs().lastFetch().stale());

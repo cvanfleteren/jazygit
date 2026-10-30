@@ -37,6 +37,8 @@ final class CliMetadata {
      * file system keeps, as FAT or many network mounts do.
      */
     static final Duration SETTLED = Duration.ofSeconds(2);
+    // What the lock git takes on a ref while it writes it ends with.
+    private static final String LOCK = ".lock";
 
     private CliMetadata() {}
 
@@ -67,7 +69,9 @@ final class CliMetadata {
                         common.resolve("reftable"),
                         common.resolve("reftable/tables.list")))
                 .appendAll(directories(common.resolve("refs/heads")))
-                .appendAll(directories(common.resolve("refs/remotes"))));
+                // Since git 2.48, every fetch takes the lock of the HEAD of the remote and lets it go, which changes
+                // the directory without changing a ref: the refs themselves are looked at instead (ADR 58).
+                .appendAll(refFiles(common.resolve("refs/remotes"))));
         // A stash is read from the reflog of refs/stash.
         MetadataStamp stashes = stamp(List.of(
                 common.resolve("refs/stash"),
@@ -144,6 +148,30 @@ final class CliMetadata {
             @Override
             public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attributes) {
                 found.add(dir);
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult visitFileFailed(Path file, IOException e) {
+                return FileVisitResult.CONTINUE;
+            }
+        }));
+        return List.ofAll(found).sorted();
+    }
+
+    /**
+     * The refs under the directory {@code root}, its files but the locks git takes while it writes one, sorted;
+     * nothing when it is not there. Git replaces a ref it writes by renaming a new file into place, which a stamp of
+     * the file tells, and one that comes or goes changes the list.
+     */
+    private static List<Path> refFiles(Path root) {
+        ArrayList<Path> found = new ArrayList<>();
+        Try.run(() -> Files.walkFileTree(root, new SimpleFileVisitor<>() {
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attributes) {
+                if (!file.getFileName().toString().endsWith(LOCK)) {
+                    found.add(file);
+                }
                 return FileVisitResult.CONTINUE;
             }
 

@@ -57,7 +57,9 @@ public sealed interface FetchCmd extends Cmd {
 
         @Override
         public Msg run(Env env) {
-            return env.git().fetch(remote).fold(this::failedWith, commands -> new FetchMsg.Fetched(remote, rest));
+            return env.git()
+                    .fetch(remote)
+                    .fold(this::failedWith, changed -> new FetchMsg.Fetched(remote, rest, changed));
         }
 
         @Override

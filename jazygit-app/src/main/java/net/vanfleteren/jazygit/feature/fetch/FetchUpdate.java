@@ -32,10 +32,11 @@ public final class FetchUpdate {
                         jobs -> jobs.withLastFetch(jobs.lastFetch().failed(LISTING))));
                 yield model.jobs().fetchAgain() ? start(stopped) : stopped;
             }
-            case FetchMsg.Fetched(RemoteName remote, List<RemoteName> rest) ->
+            case FetchMsg.Fetched(RemoteName remote, List<RemoteName> rest, boolean changed) ->
                 next(
                         model.mapJobs(
-                                jobs -> jobs.withLastFetch(jobs.lastFetch().succeeded(remote.value(), model.now()))),
+                                jobs -> jobs.withLastFetch(jobs.lastFetch().succeeded(remote.value(), model.now()))
+                                        .withFetchChanged(jobs.fetchChanged() || changed)),
                         rest);
             case FetchMsg.FetchFailed(RemoteName remote, List<RemoteName> rest, var failure) ->
                 next(model.mapJobs(jobs -> jobs.withLastFetch(jobs.lastFetch().failed(remote.value()))), rest);
@@ -61,7 +62,7 @@ public final class FetchUpdate {
 
     private static Next start(Next next) {
         return new Next(
-                next.model().mapJobs(jobs -> jobs.withFetchAgain(false)),
+                next.model().mapJobs(jobs -> jobs.withFetchAgain(false).withFetchChanged(false)),
                 next.cmds().append(new FetchCmd.ListRemotes()));
     }
 
@@ -76,10 +77,13 @@ public final class FetchUpdate {
     }
 
     /**
-     * The fetch is done; one that was asked for meanwhile starts right away.
+     * The fetch is done; one that was asked for meanwhile starts right away. The repository is read again at once
+     * only when the fetch changed a remote-tracking branch: else the stamps the tick looks at tell what else changed
+     * meanwhile (ADR 58). GitHub is read again either way, as what it has changes on its own.
      */
     private static Next done(Model model) {
-        Next done = PullRequestsUpdate.poll(Update.refresh(model));
+        Next read = model.jobs().fetchChanged() ? Update.refresh(model) : Next.of(model);
+        Next done = PullRequestsUpdate.poll(read);
         return model.jobs().fetchAgain() ? start(done) : done;
     }
 }

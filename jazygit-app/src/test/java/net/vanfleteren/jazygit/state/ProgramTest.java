@@ -175,9 +175,9 @@ class ProgramTest {
         }
 
         @Override
-        public Either<GitFailure<ProcessError>, List<ExecutedCommand>> fetch(RemoteName remote) {
+        public Either<GitFailure<ProcessError>, Boolean> fetch(RemoteName remote) {
             fetches++;
-            return StubGitProvider.ran("git fetch --quiet --prune " + remote);
+            return Either.right(true);
         }
 
         @Override

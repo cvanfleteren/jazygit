@@ -142,6 +142,33 @@ class CliMetadataTest {
     }
 
     @Test
+    void aFetchThatBringsNothingChangesNoStamp() throws Exception {
+        Path origin = dir.resolve("origin.git");
+        git(dir, "init", "--bare", "--initial-branch=main", origin.toString());
+        git(main, "remote", "add", "origin", origin.toString());
+        git(main, "push", "-u", "origin", "main");
+        git(main, "fetch", "origin");
+        GitMetadata before = metadata(main);
+
+        git(main, "fetch", "--prune", "--no-write-fetch-head", "origin");
+
+        assertEquals(before, metadata(main));
+    }
+
+    @Test
+    void aRemoteTrackingBranchThatComesOrGoesChangesTheBranches() throws Exception {
+        git(main, "update-ref", "refs/remotes/origin/main", "HEAD");
+        GitMetadata before = metadata(main);
+
+        git(main, "update-ref", "refs/remotes/origin/feature/x", "HEAD");
+        GitMetadata added = metadata(main);
+        git(main, "update-ref", "-d", "refs/remotes/origin/feature/x");
+
+        assertNotEquals(before.branches(), added.branches());
+        assertNotEquals(added.branches(), metadata(main).branches());
+    }
+
+    @Test
     void checkingOutAnotherBranchOrACommitChangesTheWorktrees() throws Exception {
         git(main, "branch", "other");
         GitMetadata before = metadata(main);
