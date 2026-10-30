@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.git.model.syntax;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.FileDiff;
@@ -155,7 +156,7 @@ class LexerTest {
                         List.of(new Token(0, 3, Token.Kind.KEYWORD)),
                         List.of(new Token(0, 3, Token.Kind.KEYWORD)),
                         List.of(new Token(3, 3, Token.Kind.KEYWORD)))),
-                new Lexer().tokens(file));
+                lexed(file));
     }
 
     @Test
@@ -171,7 +172,7 @@ class LexerTest {
                 List.of(
                         List.of(List.of(new Token(0, 7, Token.Kind.COMMENT))),
                         List.of(List.of(new Token(0, 3, Token.Kind.KEYWORD)))),
-                new Lexer().tokens(file));
+                lexed(file));
     }
 
     @Test
@@ -188,14 +189,14 @@ class LexerTest {
                         List.of(new Token(0, 3, Token.Kind.KEYWORD)),
                         List.<Token>of(),
                         List.of(new Token(0, 3, Token.Kind.KEYWORD)))),
-                new Lexer().tokens(file));
+                lexed(file));
     }
 
     @Test
     void aFileOfNoLanguageKnownHasNoTokens() {
         FileDiff file = file("notes.txt", "@@ -1 +1 @@\n-int a;\n+int b;\n");
 
-        assertEquals(List.of(List.of(List.<Token>of(), List.<Token>of())), new Lexer().tokens(file));
+        assertEquals(List.of(Option.none()), new Lexer().tokens(file));
     }
 
     @Test
@@ -206,7 +207,7 @@ class LexerTest {
                 List.of(List.of(
                         List.of(new Token(0, 9, Token.Kind.COMMENT)),
                         List.of(new Token(0, 4, Token.Kind.KEYWORD), new Token(5, 1, Token.Kind.NUMBER)))),
-                new Lexer().tokens(file));
+                lexed(file));
     }
 
     @Test
@@ -221,7 +222,64 @@ class LexerTest {
                         """).files().head();
 
         assertEquals(ChangeType.CONFLICTED, file.type());
-        assertEquals(List.of(List.of(List.<Token>of())), new Lexer().tokens(file));
+        assertEquals(List.of(Option.none()), new Lexer().tokens(file));
+    }
+
+    @Test
+    void aHunkWhoseLinesAreNotNumberedIsNotLexed() {
+        FileDiff file = file("A.java", """
+                @@ unreadable @@
+                 int a;
+                @@ -1 +1 @@
+                 int b;
+                """);
+
+        assertEquals(
+                List.of(Option.none(), Option.of(List.of(List.of(new Token(0, 3, Token.Kind.KEYWORD))))),
+                new Lexer().tokens(file));
+    }
+
+    @Test
+    void wordsThatAreKeywordsOnlyInSomePlacesAreNone() {
+        assertEquals(List.of(), tokens(Language.JAVA, "Builder to = with(open, module, requires);"));
+        assertEquals(List.of("KEYWORD val"), tokens(Language.KOTLIN, "val value = data.get(out).set(by)"));
+        assertEquals(List.of(), tokens(Language.PYTHON, "x = type(y) + match(z)"));
+        assertEquals(List.of(), tokens(Language.JAVASCRIPT, "map.get(key).set(type, from, of)"));
+    }
+
+    @Test
+    void pythonKnowsEveryCaseOfItsPrefixes() {
+        assertEquals(
+                List.of("STRING RB\"a\"", "STRING rB'b'", "STRING Rb'c'"),
+                tokens(Language.PYTHON, "x = RB\"a\" + rB'b' + Rb'c'"));
+    }
+
+    @Test
+    void aTokenCountsTheCharsOfItsLine() {
+        String line = "s = \"😀\"; int x;";
+
+        assertEquals(List.of("STRING \"😀\"", "KEYWORD int"), tokens(Language.JAVA, line));
+        assertEquals(
+                List.of(new Token(4, 4, Token.Kind.STRING), new Token(10, 3, Token.Kind.KEYWORD)),
+                line(Language.JAVA, new Outside(), line).tokens());
+    }
+
+    /**
+     * The code in a script of HTML is scanned as text, as ADR 53 leaves it: a {@code <} before a letter is taken for
+     * a tag, which runs on to the next {@code >}, so the closing tag is not coloured.
+     */
+    @Test
+    void theCodeInAScriptIsScannedAsText() {
+        assertEquals(
+                List.of("KEYWORD script", "KEYWORD b", "STRING \"y\""),
+                tokens(Language.XML, "<script>if (a<b) { x = \"y\"; }</script>"));
+    }
+
+    /**
+     * The tokens of each line of each hunk of {@code file}, all of which are lexed.
+     */
+    private static List<List<List<Token>>> lexed(FileDiff file) {
+        return new Lexer().tokens(file).map(Option::get);
     }
 
     private static FileDiff file(String path, String hunks) {

@@ -20,10 +20,10 @@ public enum Language {
             Grammar.code(
                     """
                     abstract assert boolean break byte case catch char class const continue default do double else
-                    enum exports extends final finally float for goto if implements import instanceof int interface
-                    long module native new non-sealed open opens package permits private protected provides public
-                    record requires return sealed short static strictfp super switch synchronized this throw throws
-                    to transient transitive try uses var void volatile when while with yield true false null
+                    enum extends final finally float for goto if implements import instanceof int interface long
+                    native new package permits private protected public record return sealed short static strictfp
+                    super switch synchronized this throw throws transient try var void volatile when while yield true
+                    false null
                     """,
                     List.of("//"),
                     List.of(comment("/*", "*/")),
@@ -34,11 +34,11 @@ public enum Language {
     KOTLIN(
             Grammar.code(
                     """
-                    abstract actual annotation as break by catch class companion const constructor continue crossinline
-                    data do else enum expect external false final finally for fun get if import in infix init inline
-                    inner interface internal is lateinit noinline null object open operator out override package
-                    private protected public reified return sealed set super suspend tailrec this throw true try
-                    typealias typeof val value var vararg when where while
+                    abstract actual annotation as break catch class companion const constructor continue crossinline
+                    do else enum expect external false final finally for fun if import in infix init inline inner
+                    interface internal is lateinit noinline null object open operator override package private
+                    protected public reified return sealed super suspend tailrec this throw true try typealias typeof
+                    val var vararg when where while
                     """,
                     List.of("//"),
                     List.of(comment("/*", "*/")),
@@ -53,10 +53,9 @@ public enum Language {
             Grammar.code(
                     """
                     abstract as async await break case catch class const continue debugger declare default delete do
-                    else enum export extends false finally for from function get if implements import in infer
-                    instanceof interface keyof let namespace new null of package private protected public readonly
-                    return satisfies set static super switch this throw true try type typeof undefined var void while
-                    with yield
+                    else enum export extends false finally for function if implements import in infer instanceof
+                    interface keyof let namespace new null package private protected public readonly return satisfies
+                    static super switch this throw true try typeof undefined var void while with yield
                     """,
                     List.of("//"),
                     List.of(comment("/*", "*/")),
@@ -68,14 +67,14 @@ public enum Language {
             Grammar.code(
                     """
                     False None True and as assert async await break case class continue def del elif else except
-                    finally for from global if import in is lambda match nonlocal not or pass raise return try type
-                    while with yield
+                    finally for from global if import in is lambda nonlocal not or pass raise return try while with
+                    yield
                     """,
                     List.of("#"),
                     List.empty(),
                     prefixed(
                             List.of(quoted("\"\"\"").overLines(), quoted("'''").overLines(), quoted("\""), quoted("'")),
-                            "r b f u R B F U rb br fr rf Rb bR Br BR Fr fR Rf rF FR RF")),
+                            "r b f u R B F U rb rB Rb RB br bR Br BR fr fR Fr FR rf rF Rf RF")),
             "",
             "py pyi pyw",
             "python"),

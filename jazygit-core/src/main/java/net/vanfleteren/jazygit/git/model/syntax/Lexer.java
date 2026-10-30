@@ -42,14 +42,12 @@ public record Lexer() implements Highlighter {
             .getOrElse(0);
 
     @Override
-    public List<List<List<Token>>> tokens(FileDiff file) {
+    public List<Option<List<List<Token>>>> tokens(FileDiff file) {
         Option<Grammar> grammar = file.type() == ChangeType.CONFLICTED
                 ? Option.none()
                 : Language.of(file.path(), firstLine(file)).map(Language::grammar);
         return file.hunks()
-                .map(hunk -> grammar.filter(ignored -> hunk.numbered())
-                        .map(known -> hunk(known, hunk))
-                        .getOrElse(() -> hunk.lines().map(line -> List.<Token>empty())));
+                .map(hunk -> grammar.filter(ignored -> hunk.numbered()).map(known -> hunk(known, hunk)));
     }
 
     /**
