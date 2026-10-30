@@ -90,18 +90,23 @@ public final class EditPullRequestUpdate {
                 yield cmd.changesGitHub() ? PrOverviewUpdate.reloadIfShown(back) : back;
             }
             // The popup stays open, with what was typed, to save it again. When only making it a draft or ready failed,
-            // the rest was saved, which the popup then counts as opened with, and the dialog under it reads again.
+            // the rest was saved, which the popup then counts as opened with, and the dialog under it reads again; a
+            // new
+            // base shows on the branch, so the pull requests are read again too.
             case EditPullRequestMsg.SaveFailed(SavePullRequest cmd, Failure failure, boolean edited) -> {
                 Next failed = OperationUpdate.update(model, new OperationMsg.Failed(cmd, failure));
                 Model reopened = changed(
                         failed.model(),
                         popup -> popup.withSaving(false).withOpened(edited ? saved(popup) : popup.opened()));
-                yield edited
+                Next read = edited
                         ? readUnder(
                                 reopened.mapGitHub(gitHub -> gitHub.withChanged(cmd.number())),
                                 cmd.number(),
                                 failed.cmds())
                         : new Next(reopened, failed.cmds());
+                yield edited && cmd.edit().base().isDefined()
+                        ? PrOverviewUpdate.reloadIfShown(PullRequestsUpdate.loadAnyway(read))
+                        : read;
             }
         };
     }

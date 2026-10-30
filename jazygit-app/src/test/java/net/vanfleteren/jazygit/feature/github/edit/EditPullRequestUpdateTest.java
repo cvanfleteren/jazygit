@@ -77,6 +77,15 @@ class EditPullRequestUpdateTest {
     private static final EditPullRequestPopup EDITING =
             new EditPullRequestPopup(SHOWN, List.of(ORIGIN_MAIN, ORIGIN_RELEASE), OPENED, OPENED, true, true, false);
     private static final ExecutedCommand NVIM = ExecutedCommand.of("nvim", "PR_BODY.md");
+    // GitHub, where making pull request 42 a draft fails.
+    private static final StubGitHub NOT_READY = new StubGitHub() {
+        @Override
+        public Either<GhFailure, List<ExecutedCommand>> setDraft(int number, boolean draft) {
+            return Either.left(new GhFailure(
+                    new GhError.CommandFailed(Option.of("could not convert"), 1),
+                    List.of(ExecutedCommand.of("gh", "pr", "ready", "42", "--undo"))));
+        }
+    };
 
     private static PullRequestPopup shown(PullRequestDetails details) {
         return PullRequestPopup.loading(FEATURE, FEATURE_PR, Instant.EPOCH, 0).with(Either.right(details), 0);
@@ -420,16 +429,8 @@ class EditPullRequestUpdateTest {
                 OPENED.withTitle("New").withBase(ORIGIN_RELEASE).withDraft(true);
         Next saving = saving(typed);
         SavePullRequest cmd = (SavePullRequest) saving.cmds().head();
-        StubGitHub notReady = new StubGitHub() {
-            @Override
-            public Either<GhFailure, List<ExecutedCommand>> setDraft(int number, boolean draft) {
-                return Either.left(new GhFailure(
-                        new GhError.CommandFailed(Option.of("could not convert"), 1),
-                        List.of(ExecutedCommand.of("gh", "pr", "ready", "42", "--undo"))));
-            }
-        };
 
-        Next failed = Update.update(saving.model(), cmd.run(env(notReady)));
+        Next failed = Update.update(saving.model(), cmd.run(env(NOT_READY)));
 
         EditPullRequestPopup popup =
                 failed.model().popup(EditPullRequestPopup.class).get();
@@ -444,6 +445,10 @@ class EditPullRequestUpdateTest {
                 failed.cmds().contains(new LoadPullRequestDetails(42, lastRead(failed.model()))),
                 failed.cmds().toString());
         assertEquals(Reading.BY_ITSELF, popup.from().reading());
+        // The new base shows on the branch.
+        assertTrue(
+                failed.cmds().exists(LoadRepositoryPullRequests.class::isInstance),
+                failed.cmds().toString());
         assertEquals(
                 List.of(new SavePullRequest(
                         FEATURE,
@@ -452,6 +457,21 @@ class EditPullRequestUpdateTest {
                         Option.of(true))),
                 Update.update(failed.model(), new EditPullRequestMsg.Confirmed())
                         .cmds());
+    }
+
+    @Test
+    void whenOnlyTheDraftFailsAfterTheTitleWasSavedThePullRequestsAreNotReadAgain() {
+        Next saving = saving(OPENED.withTitle("New").withDraft(true));
+        SavePullRequest cmd = (SavePullRequest) saving.cmds().head();
+
+        Next failed = Update.update(saving.model(), cmd.run(env(NOT_READY)));
+
+        assertTrue(
+                failed.cmds().contains(new LoadPullRequestDetails(42, lastRead(failed.model()))),
+                failed.cmds().toString());
+        assertFalse(
+                failed.cmds().exists(LoadRepositoryPullRequests.class::isInstance),
+                failed.cmds().toString());
     }
 
     @Test
