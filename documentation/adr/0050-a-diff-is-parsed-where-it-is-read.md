@@ -33,3 +33,5 @@ is parsing and comparing.
 - The budget no longer bounds how long a frame takes, only how long reading a diff takes; it is not raised here.
 
 Amends ADR 44, whose comparisons ran where the diff is drawn.
+
+Amended by ADR 56: a `ParsedDiff` is one tree of files, hunks and lines, each line with its segments.

@@ -4,7 +4,6 @@ import dev.tamboui.style.Style;
 import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
 import io.vavr.Tuple;
-import io.vavr.Tuple2;
 import io.vavr.collection.Iterator;
 import io.vavr.collection.List;
 import io.vavr.collection.Vector;
@@ -14,6 +13,8 @@ import java.util.function.Function;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.ParsedDiff;
+import net.vanfleteren.jazygit.git.model.ParsedDiff.ParsedFile;
+import net.vanfleteren.jazygit.git.model.ParsedDiff.ParsedHunk;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.FileDiff;
@@ -61,17 +62,11 @@ final class RichDiff {
                 .getOrElse(() -> Vector.fill(parsed.files().size(), Option::none));
         RemarkLines.RemarkStyle style = remarks.map(shown -> new RemarkLines.RemarkStyle(shown.opened(), shown.now()))
                 .getOrElse(() -> new RemarkLines.RemarkStyle(false, Instant.EPOCH));
-        Vector<Marks> marks = diff.words()
-                .zip(diff.tokens())
-                .map(hunk -> new Marks(hunk._1, syntax ? hunk._2 : hunk._2.map(line -> Option.none())))
-                .toVector();
-        List<Tuple2<FileDiff, Vector<Marks>>> files = parsed.files()
-                .zip(cut(marks, parsed.files().map(file -> file.hunks().size())));
         // Each file is measured on a thread of its own, and then each of its lines is drawn on one, so that a diff of
         // many files and one of a long file both hold up the render thread for less.
         List<Pending> pending = inParallel(
-                files.zipWithIndex(),
-                file -> file(file._1._1, file._1._2, placed.get(file._2), style, styles)
+                diff.files().zipWithIndex(),
+                file -> file(file._1, syntax, placed.get(file._2), style, styles)
                         .prependAll(file._2 > 0 ? List.of(() -> List.of(Line.from(""))) : List.empty()));
         return parsed.preamble().map(line -> Line.from(Span.raw(line))).appendAll(inParallel(pending, Pending::draw));
     }
@@ -100,16 +95,17 @@ final class RichDiff {
     }
 
     /**
-     * The lines still to be drawn of {@code file}, whose hunks have the segments and the tokens {@code marks}, with
-     * the review threads {@code remarks} on it, drawn as {@code style} says: its bar, the threads on it, and each of
-     * its lines with those after it, once the width of its gutter and its lines is known.
+     * The lines still to be drawn of {@code parsed}, its code coloured by its syntax if {@code syntax}, with the review
+     * threads {@code remarks} on it, drawn as {@code style} says: its bar, the threads on it, and each of its lines
+     * with those after it, once the width of its gutter and its lines is known.
      */
     private static List<Pending> file(
-            FileDiff file,
-            Vector<Marks> marks,
+            ParsedFile parsed,
+            boolean syntax,
             Option<FileRemarks> remarks,
             RemarkLines.RemarkStyle style,
             Theme.SpanStyles styles) {
+        FileDiff file = parsed.file();
         int digits = file.hunks()
                 .flatMap(Hunk::lines)
                 .flatMap(line -> line.oldNumber().toList().appendAll(line.newNumber()))
@@ -136,17 +132,16 @@ final class RichDiff {
                 .appendAll(remarks.toList()
                         .<Pending>map(placed -> () ->
                                 blocks.threads(placed.onFile(), !file.hunks().isEmpty() || unplaced, styles)))
-                .appendAll(file.hunks()
-                        .zip(marks)
+                .appendAll(parsed.hunks()
                         .zip(widths)
                         .zipWithIndex()
                         .flatMap(hunk -> hunk(
-                                hunk._1._1._1,
-                                hunk._1._1._2,
+                                hunk._1._1,
                                 hunk._1._2,
                                 onLines.get(hunk._2),
                                 blocks,
                                 hunk._2 == 0,
+                                syntax,
                                 !unplaced && hunk._2 == file.hunks().size() - 1,
                                 digits,
                                 width - gutter,
@@ -187,27 +182,28 @@ final class RichDiff {
     }
 
     /**
-     * The lines of {@code hunk}, whose lines have the segments and the tokens {@code marks}, under a rule that marks
+     * The lines of {@code parsed}, with their segments and their tokens, under a rule that marks
      * where it starts unless it has no header: changed lines are padded to {@code width}, so their background makes a
      * block. The rule stands in for git's {@code @@ -a,b +c,d @@}, whose numbers the gutter shows already. Not the
      * section heading git gives after them: it is a line from above the hunk, which reads as one of its own. A header
      * whose numbers cannot be read, whose lines are not numbered, follows the rule as git printed it. The
      * {@code first} hunk of a file has no rule, as the bar of the file marks where it starts, unless its header has to
-     * be shown. A line that was lexed is coloured by its syntax, one that was not is drawn as before. The threads on
+     * be shown. A line that was lexed is coloured by its syntax if {@code syntax}, one that was not is drawn as before. The threads on
      * a line are followed by a blank line, unless they are on the last line of the {@code last} hunk of the file.
      * Each line is still to be drawn, with the threads after it, and is as wide as {@code widths} says.
      */
     private static List<Pending> hunk(
-            Hunk hunk,
-            Marks marks,
+            ParsedHunk parsed,
             Vector<Integer> widths,
             List<LineRemarks> remarks,
             Blocks blocks,
             boolean first,
+            boolean syntax,
             boolean last,
             int digits,
             int width,
             Theme.SpanStyles styles) {
+        Hunk hunk = parsed.hunk();
         Span rule = styled("┄".repeat(2 * digits + 1) + GUTTER_END, Theme.Classes.DIFF_LINE_NUMBER, styles);
         List<Pending> header = hunk.header().isEmpty() || (first && hunk.numbered())
                 ? List.empty()
@@ -215,9 +211,8 @@ final class RichDiff {
                         hunk.numbered()
                                 ? Line.from(rule)
                                 : Line.from(rule, styled(hunk.header(), Theme.Classes.DIFF_HUNK, styles))));
-        return header.appendAll(hunk.lines()
+        return header.appendAll(parsed.lines()
                 .zip(widths)
-                .zip(marks.words().zip(marks.tokens()))
                 .zip(remarks)
                 .zipWithIndex()
                 .<Pending>map(line -> () -> blocks.threads(
@@ -225,11 +220,11 @@ final class RichDiff {
                                 !last || line._2 < hunk.lines().size() - 1,
                                 styles)
                         .prepend(line(
-                                line._1._1._1._1,
-                                line._1._1._1._2,
-                                line._1._1._2._1,
-                                line._1._1._2._2,
-                                gutter(line._1._1._1._1, line._1._2, digits, styles),
+                                line._1._1._1.line(),
+                                line._1._1._2,
+                                line._1._1._1.words(),
+                                syntax ? line._1._1._1.tokens() : Option.none(),
+                                gutter(line._1._1._1.line(), line._1._2, digits, styles),
                                 width,
                                 styles))));
     }
@@ -450,11 +445,6 @@ final class RichDiff {
 
         List<Line> draw();
     }
-
-    /**
-     * The segments of the lines of a hunk, and the tokens of each that was lexed.
-     */
-    private record Marks(List<List<Segment>> words, List<Option<List<Token>>> tokens) {}
 
     /**
      * How the review threads of a file are drawn: as blocks that start {@code indent} columns in, two after the
