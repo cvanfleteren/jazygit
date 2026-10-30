@@ -135,7 +135,7 @@ class Git:
         return self("log", "-1", "--format=%B", rev)
 
     def branches(self) -> list:
-        return sorted(self("for-each-ref", "--format=%(refname:short)", "refs/heads").splitlines())
+        return sorted(self("for-each-ref", "--format=%(refname:lstrip=2)", "refs/heads").splitlines())
 
     def current_branch(self) -> str:
         return self("branch", "--show-current")

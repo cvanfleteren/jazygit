@@ -399,6 +399,12 @@ class BranchesPane:
         self.select(branch)
         self.ui.changing_repo(f"{branch} to be checked out", lambda: self.app.press("space"))
 
+    def try_to_checkout(self, branch: str):
+        """Asks to check out the branch, for when the app is to ask first, or git to refuse it: it does not wait
+        for the repository to change."""
+        self.select(branch)
+        self.app.press("space")
+
     def checkout_bringing_changes(self, branch: str):
         """Checks out the branch when it would overwrite the uncommitted changes, which the app stashes and pops
         on it, as it offers to."""
@@ -413,10 +419,30 @@ class BranchesPane:
         self.ui.changing_repo(f"the branch {name}", lambda: (
             self.app.press("n"), self.ui.enter_text(f"New branch from {start}", name)))
 
+    def new_from_remote(self, remote: str, name: str):
+        """Creates the branch name from the remote branch, such as "origin/develop", and checks it out."""
+        self.select_remote(remote)
+        self.ui.changing_repo(f"the branch {name}", lambda: (
+            self.app.press("n"), self.ui.enter_text(f"New branch from {remote}", name)))
+
     def rename(self, branch: str, name: str):
         self.select(branch)
         self.ui.changing_repo(f"{branch} renamed to {name}", lambda: (
             self.app.press("R"), self.ui.enter_text(f"Rename branch {branch}", name)))
+
+    def try_to_rename(self, branch: str, name: str):
+        """Asks to rename the branch to name, for when the app is to refuse it: it does not wait for the repository
+        to change."""
+        self.select(branch)
+        self.app.press("R")
+        self.ui.enter_text(f"Rename branch {branch}", name)
+
+    def try_to_delete(self, branch: str):
+        """Asks to delete the local branch, for when the app is to ask more first: it does not wait for the
+        repository to change."""
+        self.select(branch)
+        self.app.press("d")
+        self.ui.confirm(f"Delete branch {branch}", key="d")
 
     def delete(self, branch: str, where: str = "local"):
         """Deletes the branch, merged or not: the "local" one, the one it tracks on the "remote", or "both"; or,
@@ -493,6 +519,34 @@ class BranchesPane:
         self.select(branch)
         self.ui.changing_repo(f"{branch} to be force pushed", lambda: (
             self.app.press("P"), self.ui.confirm(f"Force push {branch}")))
+
+    def try_to_force_push(self, branch: str):
+        """Asks to force push the branch, for when git is to refuse it: it does not wait for the repository to
+        change."""
+        self.select(branch)
+        self.app.press("P")
+        self.ui.confirm(f"Force push {branch}")
+
+    def try_to_push(self, branch: str):
+        """Asks to push the branch, for when the app is to refuse it: it does not wait for the repository to
+        change."""
+        self.select(branch)
+        self.app.press("P")
+
+    def push_refused_by_push_default(self, branch: str, upstream: str = None):
+        """Pushes the branch whose upstream has another name, which push.default=simple pushes nowhere: the app
+        asks where to push it instead, which it then tracks; to the branch of the same name, as it offers, when
+        upstream, "<remote> <branch>", is not given."""
+        self.select(branch)
+
+        def keys():
+            self.app.press("P")
+            if upstream is None:
+                self.ui.confirm("push.default=")
+            else:
+                self.ui.enter_text("push.default=", upstream)
+
+        self.ui.changing_repo(f"{branch} to be pushed", keys)
 
     def pull(self, branch: str):
         """Pulls the checked out branch from its upstream, or fast-forwards another one to its upstream."""
@@ -734,31 +788,51 @@ class CommitsPane:
             self.app.press("n"),
             self.ui.enter_text(f"New branch from {self.repo.short(self.repo.find(subject))}", name)))
 
-    def move_to_new_branch(self, subject: str, name: str):
-        """Moves the commit with this subject and the ones after it to the new branch name, and checks it out."""
+    def move_to_new_branch(self, subject: str, name: str, start: str = None):
+        """Moves the commit with this subject and the ones after it to the new branch name, and checks it out. The
+        new branch starts where the commits are, or, copying them, at the branch start, as the app offers when there
+        is one to offer."""
         self.select(subject)
+        self.ui.changing_repo(f"the commits moved to {name}", lambda: self._move_to_new_branch(name, start))
 
-        def keys():
-            self.app.press("N")
-            self.app.wait_for("New branch…")
-            self.app.press("enter")
-            self.ui.enter_text("to a new branch", name)
+    def try_to_move_to_new_branch(self, subject: str, name: str, start: str = None):
+        """Asks to move the commits to a new branch as move_to_new_branch does, for when git is to fail: it does not
+        wait for the repository to change."""
+        self.select(subject)
+        self._move_to_new_branch(name, start)
 
-        self.ui.changing_repo(f"the commits moved to {name}", keys)
+    def _move_to_new_branch(self, name: str, start: str):
+        self.app.press("N")
+        self.app.wait_for("New branch…")
+        self.app.press("enter")
+        self.ui.enter_text("to a new branch", name)
+        if start is not None:
+            self.app.wait_for(f"Start {name} from")
+            self._pick(start, "where the commits are now")
 
     def move_to_branch(self, subject: str, branch: str):
         """Moves the commit with this subject and the ones after it onto branch, and checks it out."""
         self.select(subject)
+        self.ui.changing_repo(f"the commits moved onto {branch}", lambda: self._move_to_branch(branch))
 
-        def keys():
-            self.app.press("N")
-            self.app.wait_for("New branch…")
-            self.app.press("/")
-            self.app.type(branch)
-            self.app.wait_gone("New branch…")
-            self.app.press("enter")
+    def try_to_move_to_branch(self, subject: str, branch: str):
+        """Asks to move the commits onto branch as move_to_branch does, for when git is to fail: it does not wait
+        for the repository to change."""
+        self.select(subject)
+        self._move_to_branch(branch)
 
-        self.ui.changing_repo(f"the commits moved onto {branch}", keys)
+    def _move_to_branch(self, branch: str):
+        self.app.press("N")
+        self.app.wait_for("New branch…")
+        self._pick(branch, "New branch…")
+
+    def _pick(self, option: str, gone: str):
+        """Picks the option of the list dialog that shows, by filtering it down to that one: once gone, text of
+        another option, leaves the screen."""
+        self.app.press("/")
+        self.app.type(option)
+        self.app.wait_gone(gone)
+        self.app.press("enter")
 
 
 class StashPane:
