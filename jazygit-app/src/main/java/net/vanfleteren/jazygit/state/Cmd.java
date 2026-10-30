@@ -2,7 +2,6 @@ package net.vanfleteren.jazygit.state;
 
 import io.vavr.Tuple;
 import io.vavr.collection.List;
-import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
@@ -219,7 +218,10 @@ public interface Cmd {
     }
 
     /**
-     * Reads the local and the remote-tracking branches, at once.
+     * Reads the local and the remote-tracking branches, at once, and with them the parents of the branches and how
+     * far each local branch is from its base (ADR 46): those go by the branches and the parents just read, so they
+     * come back with them, in one message (ADR 56). When the parents cannot be read, the branches come back without
+     * them, and the parents and counts read before stay.
      */
     record LoadBranches() implements Load {
 
@@ -230,56 +232,33 @@ public interface Cmd {
 
         @Override
         public Msg run(Env env) {
-            return env.git().allBranches().fold(this::failedWith, LoadMsg.BranchesLoaded::new);
+            return env.git()
+                    .allBranches()
+                    .fold(
+                            this::failedWith,
+                            branches -> new LoadMsg.BranchesLoaded(
+                                    branches,
+                                    env.git()
+                                            .parents()
+                                            .toOption()
+                                            .map(parents -> new LoadMsg.Bases(
+                                                    parents,
+                                                    env.git()
+                                                            .baseDistance(
+                                                                    branches.tips(), parents, branches.main())))));
         }
     }
 
     /**
-     * Reads how far each local branch is from its base, {@code main} being the base of those without one of
-     * {@code parents} (ADR 46), the branches and their bases at the commits {@code tips} has them at (ADR 49).
-     */
-    record LoadBaseDistance(Option<BranchName> main, Map<BranchRef, Sha> tips, Map<BranchName, BranchName> parents)
-            implements Load {
-
-        @Override
-        public Option<Label> label() {
-            return Option.of(Label.of("work.baseDistance"));
-        }
-
-        @Override
-        public Msg run(Env env) {
-            return new LoadMsg.BaseDistanceLoaded(this, env.git().baseDistance(tips, parents, main));
-        }
-    }
-
-    /**
-     * Reads the branch each branch was made from, of those that have one recorded, from the configuration
-     * (ADR 56).
-     */
-    record LoadParents() implements Load {
-
-        @Override
-        public Option<Label> label() {
-            return Option.of(Label.of("work.parents"));
-        }
-
-        @Override
-        public Msg run(Env env) {
-            return env.git().parents().fold(this::failedWith, LoadMsg.ParentsLoaded::new);
-        }
-    }
-
-    /**
-     * Looks at the files that the branches, the stashes, the worktrees and the parents of the branches are read from,
-     * so that a tick only reads again those that changed: that takes a git process each, this none.
+     * Looks at the files that the branches, the stashes and the worktrees are read from, so that a tick only reads
+     * again those that changed: that takes a git process each, this none.
      */
     record CheckMetadata() implements Load {
 
         /**
          * The loads that a stamp of {@link GitMetadata} tells to run again.
          */
-        static final List<Load> GUARDED =
-                List.of(new LoadBranches(), new LoadStashes(), new LoadWorktrees(), new LoadParents());
+        static final List<Load> GUARDED = List.of(new LoadBranches(), new LoadStashes(), new LoadWorktrees());
 
         @Override
         public Option<Label> label() {
@@ -292,8 +271,7 @@ public interface Cmd {
             return new LoadMsg.MetadataChecked(List.of(
                     Tuple.of((Load) new LoadBranches(), metadata.flatMap(GitMetadata::branches)),
                     Tuple.of(new LoadStashes(), metadata.flatMap(GitMetadata::stashes)),
-                    Tuple.of(new LoadWorktrees(), metadata.flatMap(GitMetadata::worktrees)),
-                    Tuple.of(new LoadParents(), metadata.flatMap(GitMetadata::config))));
+                    Tuple.of(new LoadWorktrees(), metadata.flatMap(GitMetadata::worktrees))));
         }
     }
 

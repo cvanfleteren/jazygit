@@ -26,10 +26,15 @@ Some of these read what a commit cannot have changed, or what an earlier process
 - One commit more than are shown tells whether there are more, without a `rev-list --count`.
 - A commit on a branch moves the branch, not the HEAD that points to it, nor the config. Looked at on a commit, in the
   main worktree and in a linked one, the HEAD files, `.git/config` and `.git/logs/refs/heads` keep the time they were
-  modified at.
+  modified at. That holds for the files backend: a reftable repository leaves its HEAD files as stubs git never
+  rewrites, and keeps each HEAD in its tables, the main worktree's in the tables of the branches.
 - `git worktree list` reads what each worktree has checked out from its HEAD; the commit it is at is the one thing
   that moves with a commit, and no view shows that commit of a worktree on a branch.
-- The parents of the branches (ADR 49) are in the config, and are read with every read of the branches.
+- The distances to the bases (ADR 46) go by the branches and by the parents (ADR 49), and are read by a load of their
+  own once the branches arrive. The loads that go by what other loads read come back in any order, so each of their
+  results is checked against the load the model would make now, and dropped when it is outdated. Reading the
+  parents on their own as well, when only the config changed, would make one more such pair: at the start, the
+  branches and the parents would each ask for the distances, and one of the two counts would be thrown away.
 
 ## Decision
 
@@ -46,12 +51,21 @@ A commit reads what it changed, in as few processes as git allows. What jazygit 
    and `log --no-walk` for the fork point, as before.
 2. **The worktrees are listed again when a HEAD changes, not a branch.** Their stamp holds the HEAD of each worktree,
    the directory of the worktrees, and the `gitdir` and `locked` of each, no longer that of the branches. The commit of
-   a worktree on a branch is where that branch was when the worktrees were listed.
-3. **The parents are read when the config changes.** A stamp of the config file guards a new `LoadParents`, like the
-   branches, the stashes and the worktrees (ADR 15). The parents read are kept in the `Repo`; `LoadBaseDistance` is
-   given them, with the tips, and only counts. A read of the parents that changes them counts the distances again,
-   and reads again the commits ahead whose base is another one by them. A parent jazygit records changes the config,
-   so its stamp, which ADR 49 had the read of the branches that follows do.
+   a worktree on a branch is where that branch was when the worktrees were listed. In a reftable repository the stamp
+   holds the tables too, the main ones and those of each linked worktree, as its HEADs are there: there a commit, which
+   writes the tables of the branches, lists the worktrees again.
+3. **The branches, their parents and their distances are read by one load, into one message.** `LoadBranches` reads
+   the branches, then the parents, then counts the distances against the tips and the main branch of the branches it
+   just read, and comes back with all three in `BranchesLoaded`. `LoadBaseDistance` is gone. What the model holds of
+   them was read together, so no result is checked against what the model would ask for now, and the start counts the
+   distances once. When the parents cannot be read, the branches come back without them, and the parents and distances
+   read before stay, as a failed count did (ADR 46). The parents are still read with every read of the branches: a
+   stamp of the config alone would save that process on a commit, but only with the parents read by a load of their
+   own again. The config stays in the stamp of the branches, so a parent jazygit records reads the branches again.
+
+The other chains of loads stay as they are. The commits ahead of HEAD are already read with its log (ADR 49), but go
+by the HEAD of the status and the bases of the branches, which are read by loads of their own; and the log of the
+highlighted branch, the divergence and the operations run when the user asks. Those keep the checks of ADR 49.
 
 ### What a commit costs
 
@@ -60,13 +74,13 @@ A commit reads what it changed, in as few processes as git allows. What jazygit 
 | `LoadStatus` | 1 | 1 |
 | `LoadCommits` | 1 | 1 |
 | its `LoadAhead` | 3–4 | 1; 2–3 when the base was merged into the branch, or more commits are ahead than are shown |
-| `LoadBranches` | 2 | 2 |
-| its `LoadBaseDistance` | 2 | 1 |
-| `LoadWorktrees` | 1 | 0 |
-| **total** | **10–11** | **6** for a branch made from its base |
+| `LoadBranches` | 2 | 4: the reflogs, `for-each-ref`, `config --get-regexp`, `for-each-ref %(ahead-behind:…)` |
+| its `LoadBaseDistance` | 2 | — |
+| `LoadWorktrees` | 1 | 0 in the files backend |
+| **total** | **10–11** | **7** for a branch made from its base |
 
 A file modified less than 2s ago makes its stamp tell nothing (ADR 15). The ticks right after a commit read the
-branches again, and the distances; no longer the worktrees or the parents, whose files the commit left alone.
+branches again, with their parents and distances, but no longer the worktrees, whose files the commit left alone.
 
 ### What stays
 
@@ -82,10 +96,10 @@ branches again, and the distances; no longer the worktrees or the parents, whose
 
 - The fork point of a branch made from its base needs no process of its own. That of a branch the base was merged
   into still takes two.
-- `GitMetadata` has a stamp of the config; `CheckMetadata.GUARDED` holds `LoadParents`, so reading the repository
-  again after an operation reads the parents too.
-- `LoadBaseDistance` holds the parents it counts by: one read with older parents is dropped, as one read for older
-  tips is (ADR 49).
+- `BranchesLoaded` holds the parents and the distances, when they could be read; `LoadBaseDistance`, its message
+  and the check that dropped an outdated count are gone. `AllBranches` tells the tips and the main branch the
+  distances go by.
+- The branches show only once their distances are counted, one `for-each-ref` later than before.
 - `Worktree.head` can name an older commit of its branch than the branch is at.
 
 Amends ADR 49.

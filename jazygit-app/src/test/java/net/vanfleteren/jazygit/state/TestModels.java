@@ -112,12 +112,7 @@ public final class TestModels {
         Model model = started(Update.init("repo")).model();
         model = done(model, new Cmd.LoadStatus(), new LoadMsg.StatusLoaded(CLEAN))
                 .model();
-        model = done(model, new Cmd.LoadBranches(), new LoadMsg.BranchesLoaded(new AllBranches(BRANCHES, List.empty())))
-                .model();
-        Cmd.LoadBaseDistance distance = LoadUpdate.baseDistance(model);
-        model = done(model, distance, new LoadMsg.BaseDistanceLoaded(distance, io.vavr.collection.HashMap.empty()))
-                .model();
-        model = done(model, new Cmd.LoadParents(), new LoadMsg.ParentsLoaded(io.vavr.collection.HashMap.empty()))
+        model = done(model, new Cmd.LoadBranches(), branchesLoaded(new AllBranches(BRANCHES, List.empty())))
                 .model();
         model = done(model, new Cmd.LoadStashes(), new LoadMsg.StashesLoaded(io.vavr.collection.List.of()))
                 .model();
@@ -162,33 +157,30 @@ public final class TestModels {
     }
 
     /**
+     * {@code branches} read, with the parents and the counts the model had before, as when those could not be read.
+     */
+    public static LoadMsg.BranchesLoaded branchesLoaded(AllBranches branches) {
+        return new LoadMsg.BranchesLoaded(branches, Option.none());
+    }
+
+    /**
      * {@code model} after the branches were read again, finding the local branches {@code local} and the
-     * remote-tracking branches it had, for a test about the local ones; without the read of how far they are from their base.
+     * remote-tracking branches it had, for a test about the local ones.
      */
     public static Update.Next localBranchesRead(Model model, List<Branch> local) {
-        return withoutBaseDistance(Update.update(
+        return Update.update(
                 model,
-                new LoadMsg.BranchesLoaded(
-                        new AllBranches(local, model.repo().remoteBranches().getOrElse(List.empty())))));
+                branchesLoaded(
+                        new AllBranches(local, model.repo().remoteBranches().getOrElse(List.empty()))));
     }
 
     /**
      * {@code model} after the branches were read again, finding the local branches it had and the remote-tracking
-     * branches {@code remote}, for a test about the remote ones; without the read of how far they are from their base.
+     * branches {@code remote}, for a test about the remote ones.
      */
     public static Update.Next remoteBranchesRead(Model model, List<RemoteRef> remote) {
-        return withoutBaseDistance(Update.update(
-                model,
-                new LoadMsg.BranchesLoaded(
-                        new AllBranches(model.repo().branches().getOrElse(List.empty()), remote))));
-    }
-
-    /**
-     * {@code next} without the read of how far the branches are from their base, which every read of the branches
-     * asks for (ADR 46): the tests of what else a read of the branches asks for leave it out.
-     */
-    private static Update.Next withoutBaseDistance(Update.Next next) {
-        return new Update.Next(next.model(), next.cmds().filter(cmd -> !(cmd instanceof Cmd.LoadBaseDistance)));
+        return Update.update(
+                model, branchesLoaded(new AllBranches(model.repo().branches().getOrElse(List.empty()), remote)));
     }
 
     /**
