@@ -49,6 +49,19 @@ class PullRequestDetailsTest {
     }
 
     @Test
+    void theHostOfItsRepositoryIsThatOfItsUrl() {
+        PullRequestDetails details = details(State.OPEN, List.empty());
+
+        assertEquals(
+                "github.com", details.withUrl("https://github.com/owner/repo").host());
+        assertEquals(
+                "ghe.example.com",
+                details.withUrl("https://ghe.example.com:8443/owner/repo").host());
+        assertEquals("", details.host());
+        assertEquals("", details.withUrl("not a url").host());
+    }
+
+    @Test
     void howFarBehindItsBaseLeavesItsOwnCommitsAsTheyAre() {
         PullRequestDetails behind = details(State.OPEN, List.empty()).withBehindBase(5);
 

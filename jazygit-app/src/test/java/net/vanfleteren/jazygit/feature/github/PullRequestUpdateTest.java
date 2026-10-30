@@ -1323,13 +1323,15 @@ class PullRequestUpdateTest {
     private static final String BASE_OID = "b".repeat(40);
 
     /**
-     * The dialog showing pull request 42 as read, of {@code owner/repo}, at known commits when {@code known}.
+     * The dialog showing pull request 42 as read, of {@code owner/repo} on github.com, at known commits when
+     * {@code known}.
      */
     private static Model showingCommits(PullRequestDetails.State state, boolean known) {
         Model shown =
                 Update.update(withPr(), new PullRequestMsg.Requested(FEATURE)).model();
         PullRequestDetails read = StubGitHub.empty().pullRequestDetails(42).get();
         PullRequestDetails details = read.withRepository("owner/repo")
+                .withUrl("https://github.com/owner/repo")
                 .withStatus(read.status().withState(state))
                 .withBranches(new PullRequestDetails.Branches(
                         "feature",
@@ -1343,7 +1345,8 @@ class PullRequestUpdateTest {
 
     @Test
     void theFilesOfAPullRequestOpenInTheFilesPaneInPlaceOfTheDialog() {
-        PullRequestCommits commits = new PullRequestCommits(42, "owner/repo", "", new Sha(BASE_OID), new Sha(HEAD_OID));
+        PullRequestCommits commits =
+                new PullRequestCommits(42, "owner/repo", "github.com", new Sha(BASE_OID), new Sha(HEAD_OID));
         // A pull request closed without being merged shows its changes as it did while it was open.
         for (PullRequestDetails.State state : List.of(PullRequestDetails.State.OPEN, PullRequestDetails.State.CLOSED)) {
             Model shown = showingCommits(state, true).withScreen(Screen.PULL_REQUESTS);
