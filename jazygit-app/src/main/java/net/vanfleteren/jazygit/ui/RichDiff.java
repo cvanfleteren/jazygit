@@ -38,7 +38,7 @@ final class RichDiff {
         UnifiedDiff parsed = diff.diff();
         Vector<Marks> marks = diff.words()
                 .zip(diff.tokens())
-                .map(hunk -> new Marks(hunk._1, syntax ? hunk._2 : Option.none()))
+                .map(hunk -> new Marks(hunk._1, syntax ? hunk._2 : hunk._2.map(line -> Option.none())))
                 .toVector();
         List<Tuple2<FileDiff, Vector<Marks>>> files = parsed.files()
                 .foldLeft(
@@ -123,7 +123,7 @@ final class RichDiff {
      * section heading git gives after them: it is a line from above the hunk, which reads as one of its own. A header
      * whose numbers cannot be read, whose lines are not numbered, follows the rule as git printed it. The
      * {@code first} hunk of a file has no rule, as the bar of the file marks where it starts, unless its header has to
-     * be shown. Its code is coloured by its syntax if it was lexed, or drawn as before.
+     * be shown. A line that was lexed is coloured by its syntax, one that was not is drawn as before.
      */
     private static List<Line> hunk(
             Hunk hunk, Marks marks, boolean first, int digits, int width, Theme.SpanStyles styles) {
@@ -134,11 +134,8 @@ final class RichDiff {
                         hunk.numbered()
                                 ? Line.from(rule)
                                 : Line.from(rule, styled(hunk.header(), Theme.Classes.DIFF_HUNK, styles)));
-        List<Option<List<Token>>> tokens = marks.tokens()
-                .map(lines -> lines.map(Option::of))
-                .getOrElse(() -> hunk.lines().map(line -> Option.none()));
         return header.appendAll(hunk.lines()
-                .zip(marks.words().zip(tokens))
+                .zip(marks.words().zip(marks.tokens()))
                 .map(line -> line(line._1, line._2._1, line._2._2, digits, width, styles)));
     }
 
@@ -327,7 +324,7 @@ final class RichDiff {
     record Piece(String text, boolean changed, Option<Token.Kind> kind) {}
 
     /**
-     * The segments of the lines of a hunk, and their tokens if it was lexed.
+     * The segments of the lines of a hunk, and the tokens of each that was lexed.
      */
-    private record Marks(List<List<Segment>> words, Option<List<List<Token>>> tokens) {}
+    private record Marks(List<List<Segment>> words, List<Option<List<Token>>> tokens) {}
 }

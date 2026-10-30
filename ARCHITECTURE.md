@@ -370,12 +370,14 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
 - **The syntax of the code** in the rich view is coloured as ADR 53 says. `git.model.syntax.Lexer`, the one
   `Highlighter`, finds the keywords, strings, comments and numbers (`Token`) of each line, for a file whose
   `Language` it knows by its name, its extension or its shebang; a `Grammar` says what a language's tokens look like.
-  A hunk is lexed as its old and its new text, each from the start of the hunk on. `ParsedDiff.tokens` holds them in
-  the shape of its words, found where the diff is read, or none for a hunk that was not lexed. `RichDiff` cuts a line
-  where a word or a token starts or ends, in one pass: a changed line keeps the background of its class and takes the
-  colour of the `syntax-*` class of a token, and of `syntax-text` outside one; a context line takes only the colours
-  of its tokens. A hunk that was not lexed, a changed line whose class has no background (the themes `mono` and
-  `none`), and every diff while `ui.diff-syntax` is `false` (`settings.DiffLook`), are drawn as before.
+  A hunk is lexed as its old and its new text, each from the start of the hunk on; a line longer than
+  `Lexer.MAX_LINE` (2 000 `char`s) is not, and the line after it starts outside of everything. `ParsedDiff.tokens`
+  holds them in the shape of its words, found where the diff is read, or none for a line that was not lexed.
+  `RichDiff` cuts a line where a word or a token starts or ends, in one pass: a changed line keeps the background of
+  its class and takes the colour of the `syntax-*` class of a token, and of `syntax-text` outside one; a context line
+  takes only the colours of its tokens. A line that was not lexed, a changed line whose class has no background (the
+  themes `mono` and `none`), and every diff while `ui.diff-syntax` is `false` (`settings.DiffLook`), are drawn as
+  before.
 - **The files of a commit or a stash**, which `F` opens from the commits, divergence, branch commits and stash panes
   (`feature.diff.CommitFilesAction`), are a `CommitFilesView` in `RepoView.commitFiles`: whose changes they are, the
   pane they were opened from, the `CommitFile`s read (`Cmd.LoadCommitFiles`), and the diff of the highlighted node

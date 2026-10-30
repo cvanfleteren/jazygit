@@ -15,6 +15,7 @@ import java.time.Duration;
 import java.util.stream.Collectors;
 import net.vanfleteren.jazygit.git.model.ParsedDiff;
 import net.vanfleteren.jazygit.git.model.WordDiff.Segment;
+import net.vanfleteren.jazygit.git.model.syntax.Lexer;
 import net.vanfleteren.jazygit.git.model.syntax.Token;
 import org.junit.jupiter.api.Test;
 
@@ -255,6 +256,24 @@ class RichDiffTest {
                         Tuple.of("bar", Style.EMPTY.bg(Color.WHITE)),
                         Tuple.of(";", Style.EMPTY.bg(Color.BLACK))),
                 code(lines.last()));
+    }
+
+    @Test
+    void aLineTooLongToBeLexedIsDrawnInItsClassesAlone() {
+        String tooLong = "int x = " + "1".repeat(Lexer.MAX_LINE) + ";";
+        List<Line> lines = RichDiff.lines(ParsedDiff.of("""
+                diff --git a/A.java b/A.java
+                --- a/A.java
+                +++ b/A.java
+                @@ -0,0 +1,2 @@
+                +%s
+                +int y;
+                """.formatted(tooLong)), true, SYNTAX_STYLES);
+
+        assertEquals(List.of(Tuple.of(tooLong, Style.EMPTY.fg(Color.GREEN).bg(Color.BLACK))), code(lines.get(1)));
+        assertEquals(
+                Tuple.of("int", Style.EMPTY.fg(Color.BLUE).bg(Color.BLACK)),
+                code(lines.last()).head());
     }
 
     @Test

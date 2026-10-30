@@ -145,8 +145,8 @@ public class WordDiffBenchmark {
             }
         },
         /**
-         * A minified script changed in one value: a line of 64 KB with thousands of tokens, which the rich view cuts
-         * where each starts and ends (ADR 53).
+         * A minified script changed in one value: a line of 64 KB with thousands of tokens, too long to be lexed, so
+         * that it is neither lexed nor cut into its tokens (ADR 53).
          */
         MINIFIED {
             @Override
