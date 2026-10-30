@@ -157,10 +157,12 @@ class Jazygit:
         shown.caught_up()
         return shown
 
-    def adding_worktree(self, description: str, ask, location: Path = None, switch: bool = False) -> "Jazygit":
+    def adding_worktree(self, description: str, ask, location: Path = None, switch: bool = False,
+                        done=None) -> "Jazygit":
         """Runs ask, a function that presses the keys up to the question where the new worktree goes, and answers
         it: location, or where the app offers to put it when not given. Once it is added, the app offers to switch
-        to it, which it does when switch. Returns the app as it shows the worktree it shows then."""
+        to it, which it does when switch. Returns the app as it shows the worktree it shows then. done, as for
+        changing_repo, tells whether the git commands that follow the one that adds it ran too."""
         before = set(self.repo.worktrees())
 
         def keys():
@@ -172,14 +174,21 @@ class Jazygit:
             self.confirm(" added", key="enter" if switch else "escape")
 
         if not switch:
-            self.changing_repo(description, keys)
+            self.changing_repo(description, keys, done)
             return self
         self.caught_up()
         keys()
         added = self.app.eventually(lambda: set(self.repo.worktrees()) - before, description)
+        if done is not None:
+            self.app.eventually(done, description)
         shown = self.in_worktree(added.pop())
         shown.caught_up()
         return shown
+
+    def confirm_stage_all(self, asked: bool):
+        """Answers the question whether to add all changes, which an amend with nothing staged asks, when asked."""
+        if asked:
+            self.confirm("Commit all files?")
 
     def confirm(self, title: str, key="enter"):
         """Waits for the dialog with this title, and answers it with key."""
@@ -293,10 +302,12 @@ class FilesPane:
         return int(self.repo("rev-list", "--count", "HEAD")) if self.repo.has_head() else 0
 
     def amend_last_commit(self):
-        """Adds the staged changes to the last commit."""
+        """Adds the staged changes to the last commit. With nothing staged, it adds all changes, as the app offers
+        to."""
         self.focus()
+        stage_all = self.repo("diff", "--cached", "--name-only") == ""
         self.ui.changing_repo("the last commit amended", lambda: (
-            self.app.press("A"), self.ui.confirm("Amend last commit")))
+            self.app.press("A"), self.ui.confirm("Amend last commit"), self.ui.confirm_stage_all(stage_all)))
 
 
 class BranchesPane:
@@ -416,14 +427,18 @@ class BranchesPane:
         """Creates the branch name from start, the checked out branch if not given, and checks it out."""
         start = start or self.repo.current_branch()
         self.select(start)
+        # Recording the branch it came from is a git command of its own, after the checkout.
         self.ui.changing_repo(f"the branch {name}", lambda: (
-            self.app.press("n"), self.ui.enter_text(f"New branch from {start}", name)))
+            self.app.press("n"), self.ui.enter_text(f"New branch from {start}", name)),
+                              lambda: self.repo.parent(name) == start)
 
     def new_from_remote(self, remote: str, name: str):
         """Creates the branch name from the remote branch, such as "origin/develop", and checks it out."""
         self.select_remote(remote)
+        # It records the branch it came from by the name that has on the remote, after the checkout.
         self.ui.changing_repo(f"the branch {name}", lambda: (
-            self.app.press("n"), self.ui.enter_text(f"New branch from {remote}", name)))
+            self.app.press("n"), self.ui.enter_text(f"New branch from {remote}", name)),
+                              lambda: self.repo.parent(name) == remote.split("/", 1)[1])
 
     def rename(self, branch: str, name: str):
         self.select(branch)
@@ -598,10 +613,17 @@ class BranchesPane:
         (unstaged) or not at all ("hard")."""
         self.select(self.repo.current_branch())
         key = {"soft": "s", "mixed": "m", "hard": "h"}[mode]
-        self.ui.changing_repo(f"{self.repo.current_branch()} reset onto its upstream", lambda: (
-            self.app.press("u"),
-            self.ui.confirm("Upstream options for", key="g"),
-            self.ui.confirm("Reset to", key=key)))
+        # A hard reset that discards uncommitted changes is confirmed once more.
+        discards = mode == "hard" and any(code != "??" for code in self.repo.status().values())
+
+        def keys():
+            self.app.press("u")
+            self.ui.confirm("Upstream options for", key="g")
+            self.ui.confirm("Reset to", key=key)
+            if discards:
+                self.ui.confirm("Hard reset to")
+
+        self.ui.changing_repo(f"{self.repo.current_branch()} reset onto its upstream", keys)
 
     def checkout_remote(self, branch: str, name: str = None):
         """Checks out the local branch that follows the remote branch, such as "origin/feature", creating it when
@@ -644,8 +666,10 @@ class BranchesPane:
         """Creates the branch name from the branch start, and checks it out in a new worktree, as new_worktree
         does."""
         self.select(start)
+        # Recording the branch it came from is a git command of its own, after the worktree is added.
         return self.ui.adding_worktree(f"a worktree for the new branch {name}", lambda: (
-            self.app.press("W"), self.ui.enter_text("in a new worktree", name)), location, switch)
+            self.app.press("W"), self.ui.enter_text("in a new worktree", name)), location, switch,
+                                       lambda: self.repo.parent(name) == start)
 
     def new_branch_worktree_from_remote(self, remote: str, name: str = None, location: Path = None,
                                         switch: bool = False) -> Jazygit:
@@ -696,10 +720,18 @@ class CommitsPane:
         self.app.wait_for(f"Commit: {short}")
 
     def amend(self, subject: str):
-        """Adds the staged changes to the commit with this subject."""
+        """Adds the staged changes to the commit with this subject. With nothing staged, it adds all changes, as
+        the app offers to."""
         self.select(subject)
+        stage_all = self.repo("diff", "--cached", "--name-only") == ""
         self.ui.changing_repo(f"{subject!r} amended", lambda: (
-            self.app.press("A"), self.ui.confirm("Amend commit")))
+            self.app.press("A"), self.ui.confirm("Amend commit"), self.ui.confirm_stage_all(stage_all)))
+
+    def try_to_amend(self, subject: str):
+        """Asks to amend the commit with this subject, for when the app is to refuse it: it does not wait for the
+        repository to change."""
+        self.select(subject)
+        self.app.press("A")
 
     def reword(self, subject: str, summary: str):
         """Replaces the summary of the commit with this subject."""
@@ -793,7 +825,8 @@ class CommitsPane:
         new branch starts where the commits are, or, copying them, at the branch start, as the app offers when there
         is one to offer."""
         self.select(subject)
-        self.ui.changing_repo(f"the commits moved to {name}", lambda: self._move_to_new_branch(name, start))
+        self.ui.changing_repo(f"the commits moved to {name}", lambda: self._move_to_new_branch(name, start),
+                              self._moved_back(subject))
 
     def try_to_move_to_new_branch(self, subject: str, name: str, start: str = None):
         """Asks to move the commits to a new branch as move_to_new_branch does, for when git is to fail: it does not
@@ -813,7 +846,15 @@ class CommitsPane:
     def move_to_branch(self, subject: str, branch: str):
         """Moves the commit with this subject and the ones after it onto branch, and checks it out."""
         self.select(subject)
-        self.ui.changing_repo(f"the commits moved onto {branch}", lambda: self._move_to_branch(branch))
+        self.ui.changing_repo(f"the commits moved onto {branch}", lambda: self._move_to_branch(branch),
+                              self._moved_back(subject))
+
+    def _moved_back(self, subject: str):
+        """Whether the branch the commits are moved from is back at the parent of the oldest of them: the last git
+        command of a move, after the checkout and the copy."""
+        source = self.repo.current_branch()
+        parent = self.repo("rev-parse", f"{self.repo.find(subject)}^")
+        return lambda: self.repo("rev-parse", f"refs/heads/{source}") == parent
 
     def try_to_move_to_branch(self, subject: str, branch: str):
         """Asks to move the commits onto branch as move_to_branch does, for when git is to fail: it does not wait

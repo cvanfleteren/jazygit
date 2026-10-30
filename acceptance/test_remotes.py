@@ -285,3 +285,95 @@ def test_soft_reset_onto_the_upstream_keeps_the_changes_staged(repo, origin, jaz
 
     assert repo.subjects() == ["Add one"]
     assert repo("diff", "--cached", "--name-only") == "two.txt"
+
+
+def test_mixed_reset_onto_the_upstream_keeps_the_changes_unstaged(repo, origin, jazygit):
+    published(repo, origin)
+    repo.commit("Add two", **{"two.txt": "two\n"})
+    repo.commit("Change one", **{"one.txt": "one\nchanged\n"})
+    ui = jazygit()
+
+    ui.branches.reset_onto_upstream("mixed")
+
+    assert repo.subjects() == ["Add one"]
+    assert repo("rev-parse", "main") == repo("rev-parse", "origin/main")
+    assert repo.status() == {"one.txt": " M", "two.txt": "??"}
+    assert repo.read("one.txt") == "one\nchanged\n"
+
+
+def test_hard_reset_onto_the_upstream_discards_the_uncommitted_changes_once_confirmed(repo, origin, jazygit):
+    published(repo, origin)
+    repo.commit("Add two", **{"two.txt": "two\n"})
+    repo.write("one.txt", "one\nuncommitted\n")
+    ui = jazygit()
+
+    # Asks once more, as it discards them.
+    ui.branches.reset_onto_upstream("hard")
+
+    assert repo.subjects() == ["Add one"]
+    assert repo.read("one.txt") == "one\n"
+    assert repo.status() == {}
+
+
+def test_rename_a_branch_keeps_its_upstream(repo, origin, jazygit):
+    published(repo, origin)
+    ui = jazygit()
+
+    ui.branches.rename("feature", "feat")
+
+    assert repo.branches() == ["feat", "main"]
+    assert repo.upstream("feat") == "origin/feature"
+    assert origin.branches() == ["feature", "main"]
+
+
+def test_pull_keeps_the_uncommitted_changes(repo, origin, clone, jazygit):
+    published(repo, origin)
+    teammate = clone()
+    teammate.commit("Add two", **{"two.txt": "two\n"})
+    teammate("push")
+    repo.write("one.txt", "one\nuncommitted\n")
+    repo.write("notes.txt", "untracked\n")
+    ui = jazygit()
+
+    ui.branches.pull("main")
+
+    assert repo.subjects() == ["Add two", "Add one"]
+    assert repo.read("one.txt") == "one\nuncommitted\n"
+    assert repo.status() == {"one.txt": " M", "notes.txt": "??"}
+
+
+def test_pull_of_a_diverged_branch_is_refused_when_only_fast_forwards_are_allowed(repo, origin, clone, jazygit):
+    published(repo, origin)
+    teammate = clone()
+    teammate.commit("Add theirs", **{"theirs.txt": "theirs\n"})
+    teammate("push")
+    repo("config", "pull.ff", "only")
+    repo.commit("Add mine", **{"mine.txt": "mine\n"})
+    main = repo("rev-parse", "main")
+    ui = jazygit()
+
+    ui.branches.try_to_pull("main")
+
+    ui.app.wait_for("Pulling branch main failed")
+    assert repo("rev-parse", "main") == main
+    assert repo.in_progress() is None
+    assert repo.status() == {}
+
+
+def test_pull_a_branch_checked_out_in_another_worktree_is_refused(repo, origin, clone, tmp_path, jazygit):
+    published(repo, origin)
+    repo("worktree", "add", str(tmp_path / "repo-feature"), "feature")
+    teammate = clone()
+    teammate("switch", "feature")
+    teammate.commit("Add theirs", **{"theirs.txt": "theirs\n"})
+    teammate("push")
+    repo("fetch")
+    feature = repo("rev-parse", "feature")
+    ui = jazygit()
+
+    ui.branches.try_to_pull("feature")
+
+    # Fast-forwarding it here would leave that worktree with the commits as changes to undo.
+    ui.app.wait_for("Fast-forwarding branch feature failed: it is checked out")
+    assert repo("rev-parse", "feature") == feature
+    assert not (tmp_path / "repo-feature" / "theirs.txt").exists()

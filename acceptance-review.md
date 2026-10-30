@@ -80,6 +80,8 @@ Four of the most-used history operations are tested only on their unhappy path.
 - **Unborn and detached HEAD.** Only `commit` is tested before the first commit; branch, stash and worktree on an unborn branch are not. Detached HEAD in the main worktree is never shown: commits pane, new branch from it, checkout away from it.
 - **Unusual names:** branch names with `/`, unicode or leading dots, and file names with quotes, newlines or leading dashes. The app passes `--` and `GitArgs.*` everywhere, so tests should pin that.
 
+**Done**, apart from checking out a PR in a worktree, which belongs with the GitHub section. The tests are spread over the files of each area, plus a new `test_unborn_and_detached.py`. The page objects now wait for the last git command of the operations they drive: the parent record after `branches.new`, `new_from_remote` and `new_branch_worktree`, and moving the source branch back after `move_to_new_branch` and `move_to_branch`. That closes those rows of the race in point 1 of the API section. **Found:** a file with a newline in its name shows cut short in the files pane (`two line` for `two\nlines.txt`), and the rows after it go missing. `test_a_file_with_a_newline_in_its_name_is_staged_and_committed` is a strict `xfail` until that is fixed.
+
 ### Low: read-only views whose queries are git logic
 
 These are reads, but the git query is the feature, and a wrong query shows the wrong commits without any error:
