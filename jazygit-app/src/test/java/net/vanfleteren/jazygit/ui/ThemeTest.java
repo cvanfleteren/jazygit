@@ -153,7 +153,8 @@ class ThemeTest {
                 ThemeName.MONO,
                 ThemeName.EMBER,
                 ThemeName.POWERLINE,
-                ThemeName.LIANTIS_DARK)) {
+                ThemeName.LIANTIS_DARK,
+                ThemeName.SYMFONIC)) {
             var engine = Theme.createEngine().get();
             Theme.activate(engine, name);
             Theme.SelectedText selectedText = Theme.selectedText(engine);

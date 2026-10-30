@@ -222,10 +222,9 @@ public class JazygitApp extends ToolkitApp {
         report(reports());
         shown.moveTo().forEach(focus::moveTo);
         focus.redrawIfMoves(focusedId);
-        // What is behind an open popup is dimmed, so the popup stands out.
-        Element screen = shown.dialog()
-                .<Element>map(d -> stack(new Dimmed(layout, Theme.backdrop(styleEngine)), d))
-                .getOrElse(layout);
+        // What is behind an open popup is dimmed, so the popup stands out, unless the popup previews its choices there.
+        Element behind = shown.dimsBehind() ? new Dimmed(layout, Theme.backdrop(styleEngine)) : layout;
+        Element screen = shown.dialog().<Element>map(d -> stack(behind, d)).getOrElse(layout);
         return new SelectedTextColoured(screen, Theme.selectedText(styleEngine));
     }
 

@@ -62,7 +62,7 @@ final class Popups {
      */
     Rendered render(Model model, Option<String> focus) {
         List<Shown> shown = slots.map(slot -> new Shown(
-                slot.view().render(model), slot.view().ids(), slot.returnTo().apply(model)));
+                slot.view().render(model), slot.view().ids(), slot.returnTo().apply(model), slot.dimsBehind()));
         Option<Shown> open = shown.find(p -> p.element().isDefined());
         Option<String> moveTo = open.fold(
                 // A popup that just closed gives the focus back.
@@ -71,19 +71,20 @@ final class Popups {
                 p -> focus.exists(p.ids()::contains)
                         ? Option.<String>none()
                         : p.ids().headOption());
-        return new Rendered(open.flatMap(Shown::element), moveTo);
+        return new Rendered(open.flatMap(Shown::element), open.exists(Shown::dimsBehind), moveTo);
     }
 
     /**
      * The popups as rendered.
      *
      * @param dialog the open popup, if any
+     * @param dimsBehind whether what is behind the open popup is dimmed; never for none
      * @param moveTo where the focus goes, if it moves
      */
-    record Rendered(Option<Element> dialog, Option<String> moveTo) {}
+    record Rendered(Option<Element> dialog, boolean dimsBehind, Option<String> moveTo) {}
 
     /**
      * A popup as rendered: its dialog while it is open.
      */
-    private record Shown(Option<Element> element, List<String> ids, String returnTo) {}
+    private record Shown(Option<Element> element, List<String> ids, String returnTo, boolean dimsBehind) {}
 }
