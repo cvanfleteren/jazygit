@@ -46,10 +46,15 @@ public record PlacedRemarks(List<FileRemarks> files) {
         List<ReviewThread> onLines = threads.filter(thread -> thread.subject() == Subject.LINE);
         List<Tuple2<ReviewThread, Option<Tuple2<Integer, Integer>>>> found =
                 onLines.map(thread -> Tuple.of(thread, at(file, thread.line(), thread.side())));
-        // Where the threads on several lines that are placed start, and end: only those cover lines.
+        // Where the threads on several lines that are placed start, and end: only those cover lines. A first line the
+        // diff does not show, with whitespace ignored or hunks cut elsewhere than GitHub's, is before the hunk of the
+        // last: a hunk shows every line of its range on either side. They then cover from the start of that hunk.
         List<Tuple2<Tuple2<Integer, Integer>, Tuple2<Integer, Integer>>> spans = found.flatMap(placed -> placed._2()
-                .flatMap(last -> at(file, placed._1().startLine(), placed._1().startSide())
-                        .map(first -> Tuple.of(first, last))));
+                .filter(last -> placed._1().startLine().isDefined())
+                .map(last -> Tuple.of(
+                        at(file, placed._1().startLine(), placed._1().startSide())
+                                .getOrElse(() -> Tuple.of(last._1(), 0)),
+                        last)));
         return new FileRemarks(
                 threads.filter(thread -> thread.subject() == Subject.FILE),
                 file.hunks()

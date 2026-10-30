@@ -99,6 +99,44 @@ class PlacedRemarksTest {
     }
 
     @Test
+    void aThreadWhoseFirstLineTheDiffDoesNotShowCoversFromTheStartOfTheHunkOfItsLast() {
+        // As with whitespace ignored: GitHub's selection starts at a line before the hunk git made.
+        UnifiedDiff later = UnifiedDiff.parse("""
+                diff --git a/a.txt b/a.txt
+                index 1111111..2222222 100644
+                --- a/a.txt
+                +++ b/a.txt
+                @@ -15,3 +15,3 @@
+                 fifteen
+                -sixteen
+                +SIXTEEN
+                 seventeen
+                """);
+        ReviewThread fromBefore = thread("a.txt", Side.RIGHT, Option.of(17), Option.of(5));
+        ReviewThread fromBeforeOnTheOtherSide = thread("a.txt", Side.RIGHT, Option.of(17), Option.of(5), Side.LEFT);
+
+        for (ReviewThread thread : List.of(fromBefore, fromBeforeOnTheOtherSide)) {
+            FileRemarks file =
+                    PlacedRemarks.place(later, List.of(thread)).files().head();
+
+            assertEquals(
+                    List.of(List.empty(), List.empty(), List.empty(), List.of(thread)),
+                    file.lines().head().map(LineRemarks::threads));
+            assertEquals(List.of(true, true, true, false), file.lines().head().map(LineRemarks::covered));
+        }
+    }
+
+    @Test
+    void aThreadOnOneLineCoversNothing() {
+        assertTrue(PlacedRemarks.place(DIFF, List.of(onLine(Side.RIGHT, 3)))
+                .files()
+                .head()
+                .lines()
+                .head()
+                .forAll(line -> !line.covered()));
+    }
+
+    @Test
     void aThreadOnSeveralLinesThatCannotBePlacedCoversNothing() {
         ReviewThread beyond = thread("a.txt", Side.RIGHT, Option.of(40), Option.of(1));
 
