@@ -94,7 +94,10 @@ internal, and a code block or a table is laid out as a widget, not as lines.
   under the bar of the file.
 - One on several lines goes after its last line (`line` on `diffSide`), and covers every line of the diff from its
   first (`startLine` on `startDiffSide`, which may be the other side) to its last, in the order of the diff: the
-  removed lines among added ones too, as GitHub highlights them. Only a thread that is placed covers lines.
+  removed lines among added ones too, as GitHub highlights them. Only a thread that is placed covers lines; when its
+  first line is not in the diff, as with whitespace ignored, or hunks cut elsewhere than GitHub's, it covers from the
+  first line of the hunk its last line is in: a hunk shows every line of its range on either side, so its first line
+  is before that hunk.
 - A thread that cannot be placed goes in a list at the end of its file, dimmed, each saying the line it was made on:
   an outdated one, one on a line the diff does not show, as its file is cut off after `CliDiff.MAX_LINES` lines, or as
   its line is outside the hunks git made. Not: left out with a count, nor placed on its `originalLine`, which may now
