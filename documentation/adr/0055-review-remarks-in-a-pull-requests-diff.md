@@ -157,3 +157,6 @@ internal, and a code block or a table is laid out as a widget, not as lines.
   end of its file. So is a `LEFT` remark on a file git pairs with another file than GitHub does, when their rename
   detection differs: it has GitHub's new path, which git's diff does not have.
 - The preview of the pull requests screen keeps its plain diff without remarks.
+
+Amended by ADR 57: `c` in the tree lists only the files with unresolved remarks, or with any, and a file shows how
+many resolved threads it has too.
