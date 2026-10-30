@@ -74,7 +74,7 @@ final class CliMetadata {
                 common.resolve("packed-refs"),
                 common.resolve("reftable/tables.list")));
         // What a worktree has checked out is in its HEAD; a commit on its branch moves the branch, not the HEAD, and
-        // the commit it moved to is not shown with the worktree (ADR 56). The main worktree of a reftable repository
+        // the commit it moved to is not shown with the worktree (ADR 57). The main worktree of a reftable repository
         // has its HEAD in the tables of the branches, so there a commit lists the worktrees again.
         MetadataStamp worktreeList = stamp(heads.append(common.resolve("reftable/tables.list"))
                 .append(common.resolve("worktrees"))

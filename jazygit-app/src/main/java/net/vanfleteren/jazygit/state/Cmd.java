@@ -220,7 +220,7 @@ public interface Cmd {
     /**
      * Reads the local and the remote-tracking branches, at once, and with them the parents of the branches and how
      * far each local branch is from its base (ADR 46): those go by the branches and the parents just read, so they
-     * come back with them, in one message (ADR 56). When the parents cannot be read, the branches come back without
+     * come back with them, in one message (ADR 57). When the parents cannot be read, the branches come back without
      * them, and the parents and counts read before stay.
      */
     record LoadBranches() implements Load {
