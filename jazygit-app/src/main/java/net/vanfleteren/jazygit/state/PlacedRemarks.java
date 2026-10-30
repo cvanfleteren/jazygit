@@ -22,10 +22,10 @@ public record PlacedRemarks(List<FileRemarks> files) {
     /**
      * {@code threads} placed in {@code diff}. A thread goes after the line with its number on its side, in the file
      * with its path: the number in the new file for {@link Side#RIGHT}, in the old one for {@link Side#LEFT}; one on
-     * several lines after its last one, covering every line of the diff from its first, on its own side, to it. One
-     * about a whole file goes under its bar. One
-     * that cannot be placed, outdated or on a line the diff does not show, is listed at the end of its file. A thread
-     * of a file the diff does not have is left out: it is shown with the diff of its own file.
+     * several lines after its last one, covering every line of the diff from its first, on that line's own side, to
+     * it, or from the first line the diff shows after its first, when it does not show that. One about a whole file
+     * goes under its bar. One that cannot be placed, outdated or on a line the diff does not show, is listed at the end
+     * of its file. A thread of a file the diff does not have is left out: it is shown with the diff of its own file.
      */
     public static PlacedRemarks place(UnifiedDiff diff, List<ReviewThread> threads) {
         return new PlacedRemarks(diff.files().map(file -> file(file, threads.filter(thread -> of(file, thread)))));
@@ -46,15 +46,15 @@ public record PlacedRemarks(List<FileRemarks> files) {
         List<ReviewThread> onLines = threads.filter(thread -> thread.subject() == Subject.LINE);
         List<Tuple2<ReviewThread, Option<Tuple2<Integer, Integer>>>> found =
                 onLines.map(thread -> Tuple.of(thread, at(file, thread.line(), thread.side())));
-        // Where the threads on several lines that are placed start, and end: only those cover lines. A first line the
-        // diff does not show, with whitespace ignored or hunks cut elsewhere than GitHub's, is before the hunk of the
-        // last: a hunk shows every line of its range on either side. They then cover from the start of that hunk.
+        // Where the threads on several lines that are placed start, and end: only those cover lines.
         List<Tuple2<Tuple2<Integer, Integer>, Tuple2<Integer, Integer>>> spans = found.flatMap(placed -> placed._2()
-                .filter(last -> placed._1().startLine().isDefined())
-                .map(last -> Tuple.of(
-                        at(file, placed._1().startLine(), placed._1().startSide())
-                                .getOrElse(() -> Tuple.of(last._1(), 0)),
-                        last)));
+                .flatMap(last -> placed._1()
+                        .startLine()
+                        .map(start -> Tuple.of(
+                                at(file, Option.of(start), placed._1().startSide())
+                                        .getOrElse(() -> firstAfter(
+                                                file, start, placed._1().startSide(), last)),
+                                last))));
         return new FileRemarks(
                 threads.filter(thread -> thread.subject() == Subject.FILE),
                 file.hunks()
@@ -82,6 +82,23 @@ public record PlacedRemarks(List<FileRemarks> files) {
                         .filter(shown -> number(shown._1(), side).contains(number))
                         .map(shown -> Tuple.of(hunk._2(), shown._2())))
                 .headOption());
+    }
+
+    /**
+     * Where in {@code file} the first hunk after the line with the number {@code number} on {@code side} starts, which
+     * the diff does not show, as with whitespace ignored, or hunks cut elsewhere than GitHub's: a hunk shows every line
+     * of its range on either side, so each hunk is wholly before or wholly after that line. The start of the hunk of
+     * {@code last} when none is found before it.
+     */
+    private static Tuple2<Integer, Integer> firstAfter(
+            FileDiff file, int number, Side side, Tuple2<Integer, Integer> last) {
+        return file.hunks()
+                .zipWithIndex()
+                .find(hunk ->
+                        hunk._1().lines().exists(line -> number(line, side).exists(shown -> shown > number)))
+                .map(hunk -> Tuple.of(hunk._2(), 0))
+                .filter(first -> first.compareTo(last) <= 0)
+                .getOrElse(() -> Tuple.of(last._1(), 0));
     }
 
     /**

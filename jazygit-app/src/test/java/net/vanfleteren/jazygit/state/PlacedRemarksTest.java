@@ -99,7 +99,7 @@ class PlacedRemarksTest {
     }
 
     @Test
-    void aThreadWhoseFirstLineTheDiffDoesNotShowCoversFromTheStartOfTheHunkOfItsLast() {
+    void aThreadWhoseFirstLineTheDiffDoesNotShowCoversFromTheFirstLineShownAfterIt() {
         // As with whitespace ignored: GitHub's selection starts at a line before the hunk git made.
         UnifiedDiff later = UnifiedDiff.parse("""
                 diff --git a/a.txt b/a.txt
@@ -124,6 +124,37 @@ class PlacedRemarksTest {
                     file.lines().head().map(LineRemarks::threads));
             assertEquals(List.of(true, true, true, false), file.lines().head().map(LineRemarks::covered));
         }
+    }
+
+    @Test
+    void aThreadWhoseFirstLineIsInAGapCoversTheHunksBetweenItAndItsLast() {
+        // Whitespace ignored cut GitHub's one hunk in two, and left out the first line of the thread, ten.
+        UnifiedDiff cut = UnifiedDiff.parse("""
+                diff --git a/a.txt b/a.txt
+                index 1111111..2222222 100644
+                --- a/a.txt
+                +++ b/a.txt
+                @@ -2,2 +2,2 @@
+                 two
+                -three
+                +THREE
+                @@ -15,2 +15,2 @@
+                 fifteen
+                -sixteen
+                +SIXTEEN
+                @@ -35,2 +35,2 @@
+                 thirty-five
+                -thirty-six
+                +THIRTY-SIX
+                """);
+        ReviewThread fromTheGap = thread("a.txt", Side.RIGHT, Option.of(36), Option.of(10));
+
+        FileRemarks file = PlacedRemarks.place(cut, List.of(fromTheGap)).files().head();
+
+        assertEquals(
+                List.of(List.of(false, false, false), List.of(true, true, true), List.of(true, true, false)),
+                file.lines().map(hunk -> hunk.map(LineRemarks::covered)));
+        assertEquals(List.of(fromTheGap), file.lines().last().last().threads());
     }
 
     @Test
