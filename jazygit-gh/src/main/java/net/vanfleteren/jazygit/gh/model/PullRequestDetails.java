@@ -2,6 +2,8 @@ package net.vanfleteren.jazygit.gh.model;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import io.vavr.control.Try;
+import java.net.URI;
 import java.time.Instant;
 import lombok.With;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
@@ -22,6 +24,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
  * @param checks       its CI checks, one by one
  * @param stack        where it sits in its stack, if it is stacked
  * @param repository   the repository it is of, as {@code owner/name}; empty when not known
+ * @param url          the URL of that repository, which names the host it is on; empty when not known
  */
 @With
 public record PullRequestDetails(
@@ -35,7 +38,26 @@ public record PullRequestDetails(
         Conversation conversation,
         List<Check> checks,
         Option<PullRequestStack> stack,
-        String repository) {
+        String repository,
+        String url) {
+
+    /**
+     * One of the repository {@code repository}, whose URL is not known.
+     */
+    public PullRequestDetails(
+            int number,
+            String title,
+            String author,
+            Status status,
+            Branches branches,
+            Activity activity,
+            Size size,
+            Conversation conversation,
+            List<Check> checks,
+            Option<PullRequestStack> stack,
+            String repository) {
+        this(number, title, author, status, branches, activity, size, conversation, checks, stack, repository, "");
+    }
 
     /**
      * One that is not stacked, of a repository that is not known.
@@ -50,7 +72,17 @@ public record PullRequestDetails(
             Size size,
             Conversation conversation,
             List<Check> checks) {
-        this(number, title, author, status, branches, activity, size, conversation, checks, Option.none(), "");
+        this(number, title, author, status, branches, activity, size, conversation, checks, Option.none(), "", "");
+    }
+
+    /**
+     * The host its repository is on, like {@code github.com}; empty when its URL is not known.
+     */
+    public String host() {
+        return Try.of(() -> URI.create(url).getHost())
+                .toOption()
+                .flatMap(Option::of)
+                .getOrElse("");
     }
 
     /**

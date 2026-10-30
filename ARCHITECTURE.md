@@ -397,12 +397,13 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
   changed at the top of the repository.
 - **The files of a pull request** (ADR 55), which `f` in the pull request dialog opens for one that is not merged at
   commits that are known (`PullRequestPopup.commits`), are a `CommitFilesView` of `Changes.OfPullRequest`: its
-  `PullRequestCommits`, the head and base commits GitHub gave with its details (`headRefOid`, `baseRefOid`). git
-  reads them as GitHub shows them, `<base>...<head>` (`CliPullRequest`). Reading its files fetches those commits first
-  when the repository lacks them, `refs/pull/<n>/head` and the base commit by its sha from the remote whose URL names
-  its repository, with `--no-write-fetch-head` and `--refmap=`, so that no ref is written, not even a remote-tracking
-  branch, and it needs no guard of the remote refs (ADR 27). That load runs in the background. The dialog closes and the
-  repository screen shows; Escape gives the focus to the branches pane.
+  `PullRequestCommits`, the head and base commits GitHub gave with its details (`headRefOid`, `baseRefOid`). git reads
+  them as GitHub shows them, `<base>...<head>` (`CliPullRequest`). Reading its files fetches those commits first when
+  the repository lacks them, `refs/pull/<n>/head` and the base commit by its sha from the remote whose URL names its
+  repository, on its host if one is (`CliPullRequest.remoteOf`), with `--no-write-fetch-head` and `--refmap=`, so that
+  no ref is written, not even a remote-tracking branch, and it needs no guard of the remote refs (ADR 27). That load
+  runs in the background. The dialog closes and the repository screen shows; Escape gives the focus to the branches
+  pane.
 - **Their focus:** `FocusKeeper` moves the focus into the files pane when they open, and back to the pane they were
   opened from when Escape closes them. `Model.withShownPane` closes them when another pane gets the focus, and
   `LoadUpdate` when the stash they are of is dropped.

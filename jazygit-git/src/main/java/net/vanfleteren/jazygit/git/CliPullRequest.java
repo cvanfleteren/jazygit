@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.git;
 import static net.vanfleteren.jazygit.git.GitCommand.git;
 import static net.vanfleteren.jazygit.git.GitCommand.reading;
 
+import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Either;
@@ -84,7 +85,7 @@ final class CliPullRequest {
                 .flatMap(both -> both
                         ? Either.right(true)
                         : CliRemote.remoteUrls(worktree)
-                                .flatMap(urls -> remoteOf(urls, commits.repository())
+                                .flatMap(urls -> remoteOf(urls, commits.repository(), commits.host())
                                         .map(remote -> CliRemote.run(worktree, fetch(remote, commits), credentials)
                                                 .<ProcessError>mapLeft(GitFailure::error)
                                                 .map(ran -> true))
@@ -119,15 +120,30 @@ final class CliPullRequest {
     }
 
     /**
-     * The remote whose URL names the repository {@code repository}, {@code owner/name}: whose path ends in it, with or
-     * without {@code .git}, ignoring case, as GitHub does; the first by name when several do.
+     * The remote whose URL names the repository {@code repository}, {@code owner/name}, on {@code host}: whose path
+     * ends in it, with or without {@code .git}, ignoring case, as GitHub does. A mirror of the same name on another
+     * host does not have the pull requests, so one on {@code host} is taken first; when none is, as when an ssh alias
+     * names it, the first whose path names it. The first by name when several do.
      */
-    static Option<RemoteName> remoteOf(Map<String, String> urls, String repository) {
+    static Option<RemoteName> remoteOf(Map<String, String> urls, String repository, String host) {
         String wanted = "/" + repository.toLowerCase(Locale.ROOT);
-        return urls.toList()
+        List<Tuple2<String, String>> named = urls.toList()
                 .sortBy(remote -> remote._1)
-                .find(remote -> path(remote._2).endsWith(wanted))
+                .filter(remote -> path(remote._2).endsWith(wanted));
+        return named.find(remote -> host(remote._2).equals(host.toLowerCase(Locale.ROOT)))
+                .orElse(named::headOption)
                 .map(remote -> new RemoteName(remote._1));
+    }
+
+    /**
+     * The host of the remote URL {@code url}, lower case, without who logs in or the port: that of
+     * {@code scheme://user@host:port/path} or of an scp-like {@code user@host:path}; empty for a path on disk.
+     */
+    private static String host(String url) {
+        String lower = url.strip().toLowerCase(Locale.ROOT);
+        String rest = lower.contains("://") ? lower.substring(lower.indexOf("://") + "://".length()) : lower;
+        String authority = rest.split("[/:]", 2)[0];
+        return authority.substring(authority.lastIndexOf('@') + 1);
     }
 
     /**

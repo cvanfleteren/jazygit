@@ -1343,7 +1343,7 @@ class PullRequestUpdateTest {
 
     @Test
     void theFilesOfAPullRequestOpenInTheFilesPaneInPlaceOfTheDialog() {
-        PullRequestCommits commits = new PullRequestCommits(42, "owner/repo", new Sha(BASE_OID), new Sha(HEAD_OID));
+        PullRequestCommits commits = new PullRequestCommits(42, "owner/repo", "", new Sha(BASE_OID), new Sha(HEAD_OID));
         // A pull request closed without being merged shows its changes as it did while it was open.
         for (PullRequestDetails.State state : List.of(PullRequestDetails.State.OPEN, PullRequestDetails.State.CLOSED)) {
             Model shown = showingCommits(state, true).withScreen(Screen.PULL_REQUESTS);

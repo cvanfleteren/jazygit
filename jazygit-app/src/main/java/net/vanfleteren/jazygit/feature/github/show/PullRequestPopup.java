@@ -194,7 +194,8 @@ public record PullRequestPopup(
                         .flatMap(base -> read.branches()
                                 .headCommit()
                                 .flatMap(head -> Sha.parse(head.oid()))
-                                .map(head -> new PullRequestCommits(read.number(), read.repository(), base, head))));
+                                .map(head -> new PullRequestCommits(
+                                        read.number(), read.repository(), read.host(), base, head))));
     }
 
     /**

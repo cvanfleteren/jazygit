@@ -57,7 +57,7 @@ class CliPullRequestTest {
         git(repo, "checkout", "-q", "main");
         // The base moved on after the branch left it: that is no change of the pull request.
         Sha base = commit(repo, "a.txt", "a\nmore\n", "main moved on");
-        PullRequestCommits commits = new PullRequestCommits(1, "owner/repo", base, head);
+        PullRequestCommits commits = new PullRequestCommits(1, "owner/repo", "", base, head);
 
         assertEquals(
                 List.of(new CommitFile("b.txt", ChangeType.ADDED)),
@@ -79,6 +79,9 @@ class CliPullRequestTest {
         git(dir, "init", "-q", "--bare", "-b", "main", origin.toString());
         git(dir, "init", "-q", "-b", "main", repo.toString());
         git(repo, "remote", "add", "origin", origin.toString());
+        // A common setup: the remote fetches the heads of pull requests too. Without --refmap=, git would write
+        // origin/pr/7 as it fetches refs/pull/7/head.
+        git(repo, "config", "--add", "remote.origin.fetch", "+refs/pull/*/head:refs/remotes/origin/pr/*");
         Sha base = commit(repo, "a.txt", "a\n", "first");
         git(repo, "push", "-q", "origin", "main");
         // Someone else's branch reaches the repository only as the head of the pull request, as from a fork.
@@ -86,7 +89,7 @@ class CliPullRequestTest {
         Sha head = commit(fork, "b.txt", "b\n", "theirs");
         git(fork, "push", "-q", "origin", "HEAD:refs/pull/7/head");
         String refs = git(repo, "for-each-ref");
-        PullRequestCommits commits = new PullRequestCommits(7, "Owner/Repo", base, head);
+        PullRequestCommits commits = new PullRequestCommits(7, "Owner/Repo", "", base, head);
 
         assertEquals(
                 List.of(new CommitFile("b.txt", ChangeType.ADDED)),
@@ -103,6 +106,9 @@ class CliPullRequestTest {
         git(dir, "init", "-q", "--bare", "-b", "main", origin.toString());
         git(dir, "init", "-q", "-b", "main", repo.toString());
         git(repo, "remote", "add", "origin", origin.toString());
+        // A common setup: the remote fetches the heads of pull requests too. Without --refmap=, git would write
+        // origin/pr/7 as it fetches refs/pull/7/head.
+        git(repo, "config", "--add", "remote.origin.fetch", "+refs/pull/*/head:refs/remotes/origin/pr/*");
         commit(repo, "a.txt", "a\n", "first");
         git(repo, "push", "-q", "-u", "origin", "main");
         git(dir, "clone", "-q", origin.toString(), other.toString());
@@ -117,7 +123,7 @@ class CliPullRequestTest {
         commit(other, "a.txt", "a\nbase\nlater\n", "later");
         git(other, "push", "-q", "origin", "main");
         String refs = git(repo, "for-each-ref");
-        PullRequestCommits commits = new PullRequestCommits(7, "owner/repo", base, head);
+        PullRequestCommits commits = new PullRequestCommits(7, "owner/repo", "", base, head);
 
         assertEquals(
                 List.of(new CommitFile("b.txt", ChangeType.ADDED)),
@@ -127,14 +133,22 @@ class CliPullRequestTest {
 
     @Test
     void withoutARemoteOfItsRepositoryNothingIsFetchedAndTheReadFails() throws Exception {
+        // The remote has the head of the pull request, but its URL names another repository.
+        Path elsewhere = dir.resolve("other").resolve("thing.git");
         Path repo = dir.resolve("repo");
+        Path fork = dir.resolve("fork");
+        git(dir, "init", "-q", "--bare", "-b", "main", elsewhere.toString());
         git(dir, "init", "-q", "-b", "main", repo.toString());
-        git(repo, "remote", "add", "origin", dir.resolve("elsewhere.git").toString());
+        git(repo, "remote", "add", "origin", elsewhere.toString());
         Sha base = commit(repo, "a.txt", "a\n", "first");
-        Sha missing = new Sha("0123456789012345678901234567890123456789");
-        PullRequestCommits commits = new PullRequestCommits(7, "owner/repo", base, missing);
+        git(repo, "push", "-q", "origin", "main");
+        git(dir, "clone", "-q", elsewhere.toString(), fork.toString());
+        Sha head = commit(fork, "b.txt", "b\n", "theirs");
+        git(fork, "push", "-q", "origin", "HEAD:refs/pull/7/head");
+        PullRequestCommits commits = new PullRequestCommits(7, "owner/repo", "", base, head);
 
         assertTrue(CliPullRequest.files(repo, commits, HashMap.empty()).isLeft());
+        assertThrows(Exception.class, () -> git(repo, "cat-file", "-e", head.value()));
     }
 
     @Test
@@ -145,10 +159,24 @@ class CliPullRequestTest {
                 "mirror", "ssh://git@github.com/owner/repo/",
                 "other", "https://github.com/owner/repository.git");
 
-        assertEquals(Option.of(new RemoteName("mirror")), CliPullRequest.remoteOf(urls, "owner/repo"));
-        assertEquals(Option.of(new RemoteName("origin")), CliPullRequest.remoteOf(urls, "me/repo"));
-        assertEquals(Option.none(), CliPullRequest.remoteOf(urls, "owner/rep"));
+        assertEquals(Option.of(new RemoteName("mirror")), CliPullRequest.remoteOf(urls, "owner/repo", "github.com"));
+        assertEquals(Option.of(new RemoteName("origin")), CliPullRequest.remoteOf(urls, "me/repo", "github.com"));
+        assertEquals(Option.none(), CliPullRequest.remoteOf(urls, "owner/rep", "github.com"));
         assertEquals(
-                Option.of(new RemoteName("upstream")), CliPullRequest.remoteOf(urls.remove("mirror"), "owner/repo"));
+                Option.of(new RemoteName("upstream")),
+                CliPullRequest.remoteOf(urls.remove("mirror"), "owner/repo", "github.com"));
+    }
+
+    @Test
+    void aRemoteOnTheHostOfTheRepositoryComesBeforeAMirrorElsewhere() {
+        HashMap<String, String> urls = HashMap.of(
+                "backup", "https://gitlab.com/owner/repo.git",
+                "origin", "git@github.com:owner/repo.git",
+                "work", "https://user@ghe.example.com:8443/owner/repo");
+
+        assertEquals(Option.of(new RemoteName("origin")), CliPullRequest.remoteOf(urls, "owner/repo", "github.com"));
+        assertEquals(Option.of(new RemoteName("work")), CliPullRequest.remoteOf(urls, "owner/repo", "GHE.example.com"));
+        // None on the host, as when an ssh alias names it: the first by name whose path names the repository.
+        assertEquals(Option.of(new RemoteName("backup")), CliPullRequest.remoteOf(urls, "owner/repo", "gh-work"));
     }
 }

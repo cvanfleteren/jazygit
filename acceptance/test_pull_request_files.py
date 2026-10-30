@@ -3,7 +3,7 @@
 DATE = "2026-01-01T00:00:00Z"
 # What the calls that read pull requests contain.
 LISTED = "pullRequests(states: OPEN"
-DETAILS = "nameWithOwner pullRequest(number: $number) { number title"
+DETAILS = "nameWithOwner url pullRequest(number: $number) { number title"
 
 
 def listed(branch: str) -> dict:
@@ -20,7 +20,7 @@ def listed(branch: str) -> dict:
 
 def details(repository: str, branch: str, head: str, base: str) -> dict:
     """Pull request 1 of repository, from branch at commit head into main at commit base."""
-    return {"data": {"repository": {"nameWithOwner": repository, "pullRequest": {
+    return {"data": {"repository": {"nameWithOwner": repository, "url": f"https://github.com/{repository}", "pullRequest": {
         "number": 1, "title": "Add b", "author": {"login": "teammate"}, "state": "OPEN", "isDraft": False,
         "headRefName": branch, "baseRefName": "main", "headRefOid": head, "baseRefOid": base,
         "stackEntry": None, "stack": None, "createdAt": DATE, "additions": 2, "deletions": 0, "changedFiles": 2,
