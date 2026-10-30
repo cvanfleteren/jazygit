@@ -33,10 +33,13 @@ final class RemarkLines {
     static final int MAX_WIDTH = 100;
     // The narrowest the text of a block gets, past a wide gutter.
     private static final int MIN_TEXT = 20;
-    // The rule down the left of a block, which branches into the line that starts it and into each header.
+    // The rule down the left of a block, which branches into the line that starts it and into each header, and
+    // turns at its end; a block of one line has a rule of its own.
     private static final String RULE = "┃  ";
     private static final String TOP = "┏━";
     private static final String BRANCH = "┣━";
+    private static final String BOTTOM = "┗━";
+    private static final String ALONE = "━━";
 
     private RemarkLines() {}
 
@@ -92,7 +95,9 @@ final class RemarkLines {
     }
 
     /**
-     * The lines of {@code thread}, its first header the {@code top} of its block, or under a line above it.
+     * The lines of {@code thread}, its first header the {@code top} of its block, or under a line above it, and a line
+     * where its rule turns at the end. A resolved thread while the threads are closed is one line, which ends the
+     * rule of the line above it, or has a rule of its own.
      */
     private static List<Line> thread(
             ReviewThread thread, int indent, int width, boolean top, RemarkStyle style, Theme.SpanStyles styles) {
@@ -106,11 +111,13 @@ final class RemarkLines {
                     .headOption()
                     .map(comment -> author(comment.author()))
                     .getOrElse("");
-            return List.of(Line.from(rule.append(styled(
+            return List.of(Line.from(
+                    margin,
+                    styled((top ? ALONE : BOTTOM) + " ", Theme.Classes.DIFF_THREAD, styles),
+                    styled(
                             cut(Messages.get("content.remarks.resolved", author, first), text),
                             Theme.Classes.DIM,
-                            styles))
-                    .toJavaList()));
+                            styles)));
         }
         // A line of only the rule between two comments, to show where the next one starts.
         return thread.comments()
@@ -133,7 +140,8 @@ final class RemarkLines {
                                                 Theme.Classes.DIM,
                                                 styles))
                                         .toJavaList()))
-                                : List.empty());
+                                : List.empty())
+                .append(Line.from(margin, styled(BOTTOM, Theme.Classes.DIFF_THREAD, styles)));
     }
 
     /**

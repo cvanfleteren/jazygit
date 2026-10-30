@@ -91,6 +91,7 @@ class RemarkLinesTest {
                         indent + "┃",
                         indent + "┣━ bob · 2h ago",
                         indent + "┃  Shouting.",
+                        indent + "┗━",
                         "",
                         "3 3 │  three"),
                 lines);
@@ -123,7 +124,17 @@ class RemarkLinesTest {
     void aResolvedThreadIsOneLineUntilTheThreadsAreOpened() {
         ReviewThread resolved = thread(3, true, "Done\n\nmore");
 
-        assertTrue(rich(shown(false, resolved)).contains(" ".repeat(8) + "┃  ✓ resolved · bob: Done"));
+        assertTrue(rich(shown(false, resolved)).contains(" ".repeat(8) + "━━ ✓ resolved · bob: Done"));
+        assertEquals(
+                List.of(" ".repeat(8) + "┏━ on line 3", " ".repeat(8) + "┗━ ✓ resolved · bob: Done"),
+                text(RemarkLines.unplaced(
+                                List.of(resolved),
+                                8,
+                                RemarkLines.MIN_WIDTH,
+                                new RemarkLines.RemarkStyle(false, NOW),
+                                Theme.SpanStyles.NONE))
+                        .tail()
+                        .map(String::stripTrailing));
         assertTrue(rich(shown(true, resolved)).contains(" ".repeat(8) + "┃  Done"));
     }
 
@@ -165,11 +176,16 @@ class RemarkLinesTest {
                         " ".repeat(8) + "Not on a line of this diff",
                         " ".repeat(8) + "┏━ on line 40, outdated",
                         " ".repeat(8) + "┣━ carol · just now",
-                        " ".repeat(8) + "┃  hidden · outdated"),
-                lines.takeRight(4));
+                        " ".repeat(8) + "┃  hidden · outdated",
+                        " ".repeat(8) + "┗━"),
+                lines.takeRight(5));
         assertEquals(
-                List.of(" ".repeat(8) + "┃  2 more on GitHub", "", " ".repeat(8) + "Not on a line of this diff"),
-                lines.dropRight(3).takeRight(3));
+                List.of(
+                        " ".repeat(8) + "┃  2 more on GitHub",
+                        " ".repeat(8) + "┗━",
+                        "",
+                        " ".repeat(8) + "Not on a line of this diff"),
+                lines.dropRight(4).takeRight(4));
     }
 
     @Test
@@ -182,9 +198,11 @@ class RemarkLinesTest {
                         "  2 ● +TWO",
                         indent + "┏━ bob · 2h ago",
                         indent + "┃  One",
+                        indent + "┗━",
                         "",
                         indent + "┏━ bob · 2h ago",
                         indent + "┃  Two",
+                        indent + "┗━",
                         "",
                         "3 3 │  three"),
                 lines.drop(3));
@@ -211,12 +229,14 @@ class RemarkLinesTest {
                         "3 3 ●  three",
                         indent + "┏━ bob · 2h ago",
                         indent + "┃  End of a",
+                        indent + "┗━",
                         "",
                         " modified  b.txt",
                         "1   │ -x",
                         "  1 ● +y",
                         indent + "┏━ bob · 2h ago",
-                        indent + "┃  End of b"),
+                        indent + "┃  End of b",
+                        indent + "┗━"),
                 lines.drop(4));
     }
 
@@ -240,7 +260,7 @@ class RemarkLinesTest {
         assertEquals(
                 List.of(" modified  a.txt", " ".repeat(8) + "┏━ bob · 2h ago", " ".repeat(8) + "┃  Split this file"),
                 lines.take(3));
-        assertEquals(List.of("", "1 1 │  one"), lines.slice(3, 5));
+        assertEquals(List.of(" ".repeat(8) + "┗━", "", "1 1 │  one"), lines.slice(3, 6));
     }
 
     @Test
@@ -297,10 +317,12 @@ class RemarkLinesTest {
                         indent + "┏━ on line 40",
                         indent + "┣━ bob · 2h ago",
                         indent + "┃  Old",
+                        indent + "┗━",
                         "",
                         indent + "┏━ on line 50",
                         indent + "┣━ bob · 2h ago",
-                        indent + "┃  Older"),
+                        indent + "┃  Older",
+                        indent + "┗━"),
                 text(lines).map(String::stripTrailing));
         assertEquals(RemarkLines.MIN_WIDTH, lines.get(1).width());
         assertTrue(
