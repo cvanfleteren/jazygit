@@ -79,6 +79,7 @@ jobs:
               If the author replied disagreeing, weigh their argument honestly.
             - Review the new commits as thoroughly as a fresh change, but never post a duplicate of an
               existing comment.
+            - If the earlier issue is not fixed, make sure to also resolve the issue by calling `gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments/<id> -X PATCH -f resolved=true`.
 
             ## 3. What to look for, in priority order
             1. Correctness: logic errors, off-by-one, null/empty/edge cases, wrong git semantics
