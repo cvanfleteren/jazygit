@@ -405,9 +405,10 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
   runs in the background. The dialog closes and the repository screen shows; Escape gives the focus to the branches
   pane. Its review threads are read with it (`CommitFilesCmd.LoadReviewRemarks`, again with `R`), kept in
   `CommitFilesView.remarks`, and opened or closed with `t` (`CommitFilesView.opened`); threads read at other commits
-  read the files again at those. `ui.RichDiff` draws them after their lines as `ui.RemarkLines` blocks, their Markdown
-  drawn by tamboui's `MarkdownView` into a buffer off the screen and read back as lines, styled as the theme styles
-  `MarkdownElement` (`Theme.SpanStyles.markdown`).
+  read the files again at those, unless the pull request was found merged or closed, which keeps them and says so in
+  the title (`CommitFilesView.ended`). `ui.RichDiff` draws them after their lines as `ui.RemarkLines` blocks, their
+  Markdown drawn by tamboui's `MarkdownView` into a buffer off the screen and read back as lines, styled as the theme
+  styles `MarkdownElement` (`Theme.SpanStyles.markdown`).
 - **Their focus:** `FocusKeeper` moves the focus into the files pane when they open, and back to the pane they were
   opened from when Escape closes them. `Model.withShownPane` closes them when another pane gets the focus, and
   `LoadUpdate` when the stash they are of is dropped.

@@ -91,7 +91,7 @@ def threads(head: str, base: str) -> list:
                     {"author": {"login": "reviewer"}, "createdAt": DATE, "body": body, "state": "SUBMITTED",
                      "isMinimized": False, "minimizedReason": None}]}}
     return [{"data": {"repository": {"pullRequest": {
-        "headRefOid": head, "baseRefOid": base,
+        "state": "OPEN", "headRefOid": head, "baseRefOid": base,
         "reviewThreads": {"pageInfo": {"hasNextPage": False, "endCursor": None},
                           "nodes": [thread(False, "Why **b**?"), thread(True, "Settled already")]},
     }}}}]
@@ -104,7 +104,8 @@ def test_the_review_remarks_of_a_pull_request_show_next_to_their_lines(repo, ori
     ui = jazygit()
     ui.branches.select("feature")
     ui.app.press("o")
-    ui.app.wait_for("(f) Files changed")
+    # The action shows dimmed until the details are read, and does nothing then: wait for them.
+    ui.app.wait_for("in 2 files, 2 commits")
     ui.app.press("f")
     ui.app.wait_in("Files", "💬1")
     ui.app.move_cursor("Files", "b.txt")

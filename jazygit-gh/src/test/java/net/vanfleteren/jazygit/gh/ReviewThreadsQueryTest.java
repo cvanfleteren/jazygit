@@ -7,6 +7,7 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Comment;
@@ -27,7 +28,7 @@ class ReviewThreadsQueryTest {
 
     private static String page(String head, String threads) {
         return """
-                { "data": { "repository": { "pullRequest": { "headRefOid": %s, "baseRefOid": "def456",
+                { "data": { "repository": { "pullRequest": { "state": "OPEN", "headRefOid": %s, "baseRefOid": "def456",
                   "reviewThreads": { "pageInfo": { "hasNextPage": false, "endCursor": null },
                   "nodes": [ %s ] } } } } }""".formatted(head, threads);
     }
@@ -72,6 +73,7 @@ class ReviewThreadsQueryTest {
 
         assertEquals(
                 Either.right(new ReviewRemarks(
+                        PullRequestDetails.State.OPEN,
                         Option.of(new GhCommit("abc123")),
                         Option.of(new GhCommit("def456")),
                         List.of(onLine12(List.of(bob), 0), onLine12(List.of(carol), 0)))),
@@ -154,7 +156,7 @@ class ReviewThreadsQueryTest {
 
     @Test
     void withoutAPageThereIsNothing() {
-        assertEquals(Either.right(new ReviewRemarks(Option.none(), Option.none(), List.empty())), read());
+        assertEquals(Either.right(ReviewRemarks.none()), read());
     }
 
     @Test

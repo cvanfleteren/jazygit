@@ -4,6 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Function;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -90,10 +91,11 @@ public final class CommitFilesUpdate {
 
     /**
      * The commits of the pull request {@code view} lists the files of, as {@code remarks} were read at, when they are
-     * others than its files were read at.
+     * others than its files were read at, while it is open: a merged or closed one stays at the commits it was read at.
      */
     private static Option<PullRequestCommits> moved(CommitFilesView view, ReviewRemarks remarks) {
-        return view.of() instanceof Changes.OfPullRequest(PullRequestCommits commits)
+        return remarks.state() == PullRequestDetails.State.OPEN
+                        && view.of() instanceof Changes.OfPullRequest(PullRequestCommits commits)
                 ? sha(remarks.base())
                         .flatMap(base -> sha(remarks.head())
                                 .map(head -> new PullRequestCommits(

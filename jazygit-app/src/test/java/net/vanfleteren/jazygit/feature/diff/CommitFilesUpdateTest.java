@@ -7,6 +7,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.model.ChangeType;
@@ -167,7 +168,11 @@ class CommitFilesUpdateTest {
             0);
 
     private static ReviewRemarks remarks(String head, String base) {
-        return new ReviewRemarks(GhCommit.parse(head), GhCommit.parse(base), List.of(THREAD));
+        return remarks(PullRequestDetails.State.OPEN, head, base);
+    }
+
+    private static ReviewRemarks remarks(PullRequestDetails.State state, String head, String base) {
+        return new ReviewRemarks(state, GhCommit.parse(head), GhCommit.parse(base), List.of(THREAD));
     }
 
     private static Model openedPullRequest() {
@@ -216,6 +221,25 @@ class CommitFilesUpdateTest {
         assertEquals(new Loading<>(), view.files());
         assertEquals(List.of(THREAD), view.threads());
         assertEquals(List.of(new Cmd.LoadCommitFiles(now)), moved.cmds());
+    }
+
+    @Test
+    void aPullRequestFoundMergedOrClosedStaysAtTheCommitsItWasReadAtAndSaysSo() {
+        for (PullRequestDetails.State state :
+                List.of(PullRequestDetails.State.MERGED, PullRequestDetails.State.CLOSED)) {
+            Next read = Update.update(
+                    withFiles(openedPullRequest()),
+                    new CommitFilesMsg.RemarksLoaded(7, remarks(state, "c".repeat(40), "b".repeat(40))));
+
+            CommitFilesView view = read.model().repoView().commitFiles().get();
+            assertEquals(PULL_REQUEST, view.of());
+            assertEquals(Option.of(state), view.ended());
+            assertEquals(List.of(THREAD), view.threads());
+            assertEquals(List.empty(), read.cmds());
+        }
+        assertEquals(
+                Option.none(),
+                openedPullRequest().repoView().commitFiles().get().ended());
     }
 
     @Test

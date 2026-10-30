@@ -103,7 +103,7 @@ public interface StubGitHub extends GitHub {
      */
     @Override
     default Either<GhError, ReviewRemarks> reviewRemarks(int number) {
-        return Either.right(new ReviewRemarks(Option.none(), Option.none(), List.empty()));
+        return Either.right(ReviewRemarks.none());
     }
 
     /**

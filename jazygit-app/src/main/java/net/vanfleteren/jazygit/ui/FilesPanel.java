@@ -10,6 +10,7 @@ import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.i18n.Messages;
@@ -188,7 +189,14 @@ public class FilesPanel {
         return model.repoView()
                 .commitFiles()
                 .map(view -> Pane.bordered(
-                        Messages.get("panel.commitFiles.titleFor", ContentView.changesName(model, view.of())),
+                        view.ended()
+                                .map(state -> Messages.get(
+                                        state == PullRequestDetails.State.MERGED
+                                                ? "panel.commitFiles.titleForMerged"
+                                                : "panel.commitFiles.titleForClosed",
+                                        ContentView.changesName(model, view.of())))
+                                .getOrElse(() -> Messages.get(
+                                        "panel.commitFiles.titleFor", ContentView.changesName(model, view.of()))),
                         commitTree.render(view.of(), view.files(), active),
                         focused,
                         commitTree.selectedRow(),

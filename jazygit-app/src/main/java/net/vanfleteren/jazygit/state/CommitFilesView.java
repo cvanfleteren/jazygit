@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.state;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import lombok.With;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.model.CommitFile;
@@ -63,6 +64,16 @@ public record CommitFilesView(
      */
     public List<ReviewThread> threads() {
         return remarks.flatMap(Loadable::toOption).map(ReviewRemarks::threads).getOrElse(List.empty());
+    }
+
+    /**
+     * Whether the pull request the files are of was merged or closed when its review threads were read last, and
+     * which: the tree then stays at the commits it was read at (ADR 55).
+     */
+    public Option<PullRequestDetails.State> ended() {
+        return remarks.flatMap(Loadable::toOption)
+                .map(ReviewRemarks::state)
+                .filter(state -> state != PullRequestDetails.State.OPEN);
     }
 
     /**
