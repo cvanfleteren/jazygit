@@ -129,23 +129,7 @@ public final class CliGitHub implements GitHub {
 
     @Override
     public Either<GhError, PullRequestDetails> pullRequestDetails(int number) {
-        return process.readJson(DetailsQuery.command(number), DetailsQuery.DECODER)
-                .map(details -> details.branches()
-                        .headCommit()
-                        .filter(head -> details.status().state() == PullRequestDetails.State.OPEN)
-                        .flatMap(head -> behindBase(details.branches().base(), head))
-                        .map(details::withBehindBase)
-                        .getOrElse(details));
-    }
-
-    /**
-     * How many commits base branch {@code base} has that commit {@code head} does not; none when that cannot be read,
-     * also when the read fails, as the rest of the details read fine and come back without it.
-     */
-    private Option<Integer> behindBase(String base, GhCommit head) {
-        return process.readJson(BehindQuery.command(base, head), BehindQuery.DECODER)
-                .toOption()
-                .flatMap(behind -> behind);
+        return process.readJson(DetailsQuery.command(number), DetailsQuery.DECODER);
     }
 
     @Override

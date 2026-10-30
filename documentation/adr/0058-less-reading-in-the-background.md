@@ -58,6 +58,13 @@ ADR 56 (`0056-fewer-git-processes-after-a-commit.md`) cut what a commit costs. T
    processes each. The stamp now holds the ref files under `refs/remotes`, but the locks, rather than its
    directories. Turning `followRemoteHEAD` off instead would stop the fetch from setting the remote's HEAD, by which
    the main branch is told (ADR 46).
+7. **The details of a pull request tell how far behind its base it is in the same query.** ADR 42 asked it in a second
+   query, as it needs the commit of the head, which the first one tells. GitHub keeps `refs/pull/<number>/head` at the
+   head of every pull request, in the repository of its base, also for one from a fork; the number is known before,
+   so the details ask `baseRef { compare(headRef: "refs/pull/<number>/head") { behindBy } }` along. The dialog of a
+   pull request reads its details every 10s while a check runs, so that is half the processes, 6 a minute instead of
+   12. It counts only while the pull request is open, at a head that is known, as before, and reads leniently: what
+   cannot be told is none, and the rest of the details read.
 
 The other chains of loads stay as they are: the commits ahead of HEAD go by the HEAD of the status and the bases of
 the branches, read by loads of their own, and the log of the highlighted branch, the divergence and the operations

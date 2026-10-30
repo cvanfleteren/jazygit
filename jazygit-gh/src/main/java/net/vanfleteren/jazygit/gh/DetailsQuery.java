@@ -23,6 +23,7 @@ import io.vavr.Tuple3;
 import io.vavr.Tuple8;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
+import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
@@ -51,9 +52,10 @@ final class DetailsQuery {
      * are of unions, and ask for their __typename.
      */
     static final String QUERY = """
-            query($owner: String!, $name: String!, $number: Int!) { repository(owner: $owner, name: $name) { \
+            query($owner: String!, $name: String!, $number: Int!, $pullHead: String!) { \
+            repository(owner: $owner, name: $name) { \
             nameWithOwner url pullRequest(number: $number) { number title author { login } state isDraft headRefName \
-            baseRefName headRefOid baseRefOid %s createdAt additions deletions changedFiles mergeable reviewDecision \
+            baseRefName headRefOid baseRefOid baseRef { compare(headRef: $pullHead) { behindBy } } %s createdAt additions deletions changedFiles mergeable reviewDecision \
             comments { totalCount } \
             labels(first: 100) { nodes { name } } latestReviews(first: 100) { nodes { author { login } state } } \
             reviewRequests(first: 100) { nodes { requestedReviewer { __typename ... on User { login } \
@@ -70,13 +72,30 @@ final class DetailsQuery {
             field("mergeable", nullable(string())).map(state -> mergeable(state.getOrElse(""))),
             Status::new);
 
-    // Not yet known to be behind its base, which another query asks.
-    static final Decoder<Branches> BRANCHES = map4(
+    /*
+     * How many commits its base has that its head does not, compared at refs/pull/<number>/head, which GitHub keeps at
+     * the head of every pull request in the repository of its base, also one from a fork: none when GitHub cannot
+     * tell, as for a base branch that is gone. It is read leniently, as the rest of the details read fine without it
+     * (ADR 58).
+     */
+    static final Decoder<Option<Option<Option<Integer>>>> COMPARED =
+            nullable(field("compare", nullable(field("behindBy", nullable(integer())))));
+
+    static final Decoder<Option<Integer>> BEHIND = field(
+            "baseRef",
+            json -> Either.right(COMPARED.decode(json)
+                    .toOption()
+                    .flatMap(ref -> ref.flatMap(compare -> compare).flatMap(behind -> behind))));
+
+    // How far behind its base it is only counts while it is open, at a commit that is known.
+    static final Decoder<Branches> BRANCHES = map5(
             field("headRefName", string()),
             field("baseRefName", string()),
             field("headRefOid", nullable(string())).map(oid -> oid.flatMap(GhCommit::parse)),
             field("baseRefOid", nullable(string())).map(oid -> oid.flatMap(GhCommit::parse)),
-            (head, base, commit, baseCommit) -> new Branches(head, base, commit, Option.none(), baseCommit));
+            BEHIND,
+            (head, base, commit, baseCommit, behind) ->
+                    new Branches(head, base, commit, behind.filter(any -> commit.isDefined()), baseCommit));
 
     // When it was last force pushed; none for a node of another type.
     static final Decoder<Option<Instant>> FORCE_PUSH = byField(
@@ -193,7 +212,14 @@ final class DetailsQuery {
                             read._1()._2(),
                             read._1()._3(),
                             read._1()._4(),
-                            read._1()._5(),
+                            read._1()._4().state() == State.OPEN
+                                    ? read._1()._5()
+                                    : new Branches(
+                                            read._1()._5().head(),
+                                            read._1()._5().base(),
+                                            read._1()._5().headCommit(),
+                                            Option.none(),
+                                            read._1()._5().baseCommit()),
                             read._1()._6(),
                             read._1()._7(),
                             read._1()._8(),
@@ -214,6 +240,8 @@ final class DetailsQuery {
                 "name={repo}",
                 "-F",
                 "number=" + number,
+                "-f",
+                "pullHead=refs/pull/" + number + "/head",
                 "-f",
                 "query=" + QUERY);
     }

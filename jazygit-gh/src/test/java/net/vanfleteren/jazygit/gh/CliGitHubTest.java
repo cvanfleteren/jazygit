@@ -21,26 +21,22 @@ import org.junit.jupiter.api.io.TempDir;
 
 class CliGitHubTest {
 
-    // What a gh asked how far behind its base a pull request is prints.
-    private static final String BEHIND_BY_2 =
-            "echo '{\"data\": {\"repository\": {\"ref\": {\"compare\": {\"behindBy\": 2}}}}}'";
-    private static final String BEHIND_BY_MANY =
-            "echo '{\"data\": {\"repository\": {\"ref\": {\"compare\": {\"behindBy\": \"many\"}}}}}'";
+    // How far behind its base GitHub says a pull request is, in its details.
+    private static final String BEHIND_BY_2 = "{ \"compare\": { \"behindBy\": 2 } }";
 
     /*
-     * The details of a pull request in state, at commit head, into main, as read through a gh that runs compare when
-     * asked how far behind its base it is, writing what it was asked with to the file "compared" in dir.
+     * The details of a pull request in state, at commit head, into main, with baseRef as GitHub answers it, as read
+     * through a gh that writes what it was asked with to the file "asked" in dir.
      */
-    private static Either<GhError, PullRequestDetails> detailsFrom(Path dir, String state, String head, String compare)
+    private static Either<GhError, PullRequestDetails> detailsFrom(Path dir, String state, String head, String baseRef)
             throws Exception {
+        String answer = DetailsQueryTest.details(95, state, head)
+                .replace("\"baseRef\": " + BEHIND_BY_2, "\"baseRef\": " + baseRef);
         Path gh = Files.writeString(
                 dir.resolve("gh"),
                 "#!/bin/sh\n"
-                        + "case \"$*\" in\n"
-                        + "  *base=refs/heads/*) echo \" $* \" > '" + dir.resolve("compared") + "'; " + compare
-                        + " ;;\n"
-                        + "  *) cat <<'EOF'\n" + DetailsQueryTest.details(95, state, head) + "\nEOF\n ;;\n"
-                        + "esac\n");
+                        + "echo \" $* \" > '" + dir.resolve("asked") + "'\n"
+                        + "cat <<'EOF'\n" + answer + "\nEOF\n");
         gh.toFile().setExecutable(true);
         return new CliGitHub(dir, gh.toString(), GhToken.NONE).pullRequestDetails(95);
     }
@@ -165,20 +161,19 @@ class CliGitHubTest {
     }
 
     @Test
-    void anOpenPullRequestIsComparedAtItsHeadWithItsBase(@TempDir Path dir) throws Exception {
+    void anOpenPullRequestIsComparedAtItsHeadWithItsBaseInTheSameQuery(@TempDir Path dir) throws Exception {
         assumeTrue(Files.isExecutable(Path.of("/bin/sh")), "no POSIX shell");
 
         PullRequestDetails details =
                 detailsFrom(dir, "OPEN", "abc123", BEHIND_BY_2).get();
 
         assertEquals(Option.of(2), details.branches().behindBase());
-        String asked = Files.readString(dir.resolve("compared"));
-        assertTrue(asked.contains(" base=refs/heads/main "), asked);
-        assertTrue(asked.contains(" head=abc123 "), asked);
+        String asked = Files.readString(dir.resolve("asked"));
+        assertTrue(asked.contains(" pullHead=refs/pull/95/head "), asked);
     }
 
     @Test
-    void aPullRequestThatIsNoLongerOpenOrWithoutAKnownHeadIsNotCompared(@TempDir Path dir) throws Exception {
+    void aPullRequestThatIsNoLongerOpenOrWithoutAKnownHeadIsNotBehind(@TempDir Path dir) throws Exception {
         assumeTrue(Files.isExecutable(Path.of("/bin/sh")), "no POSIX shell");
 
         assertEquals(
@@ -190,19 +185,18 @@ class CliGitHubTest {
         assertEquals(
                 Option.none(),
                 detailsFrom(dir, "OPEN", "", BEHIND_BY_2).get().branches().behindBase());
-        assertFalse(Files.exists(dir.resolve("compared")));
     }
 
     @Test
-    void theDetailsAreReadWhenComparingFails(@TempDir Path dir) throws Exception {
+    void theDetailsAreReadWhenTheyCannotTellHowFarBehind(@TempDir Path dir) throws Exception {
         assumeTrue(Files.isExecutable(Path.of("/bin/sh")), "no POSIX shell");
 
         assertEquals(
                 Option.none(),
-                detailsFrom(dir, "OPEN", "abc123", "exit 1").get().branches().behindBase());
+                detailsFrom(dir, "OPEN", "abc123", "null").get().branches().behindBase());
         assertEquals(
                 Option.none(),
-                detailsFrom(dir, "OPEN", "abc123", BEHIND_BY_MANY)
+                detailsFrom(dir, "OPEN", "abc123", "{ \"compare\": { \"behindBy\": \"many\" } }")
                         .get()
                         .branches()
                         .behindBase());
