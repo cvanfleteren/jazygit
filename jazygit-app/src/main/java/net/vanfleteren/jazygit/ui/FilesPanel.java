@@ -8,6 +8,8 @@ import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
+import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
@@ -30,6 +32,8 @@ public class FilesPanel {
     private final Keymap keymap = Keymap.standard();
     // The trees' key handlers also see keys typed in other panes, so they must know whether the pane has focus.
     private boolean focused;
+    // The unresolved review threads of the pull request whose files are listed, as last rendered (ADR 55).
+    private List<ReviewThread> unresolved = List.empty();
 
     /**
      * @param dispatch receives the messages for the user's actions, on the render thread
@@ -52,7 +56,7 @@ public class FilesPanel {
         commitTree = new FileTreeList<>(
                 ID,
                 file -> file.entry().type().marker() + " " + name(file),
-                FilesPanel::drawCommitFile,
+                this::drawCommitFile,
                 highlights,
                 FileTreeList::firstWithDiff);
         statusTree.onKey(PaneKeys.whileFocused(
@@ -91,12 +95,25 @@ public class FilesPanel {
     }
 
     /**
-     * The files of a commit show the letter of their change, in the colour of a staged change.
+     * The files of a commit show the letter of their change, in the colour of a staged change; those of a pull
+     * request after that how many unresolved review threads they have, if any (ADR 55).
      */
-    private static StyledElement<?> drawCommitFile(FileTree.File<CommitFile> file) {
-        return Toolkit.row(
-                Toolkit.text(file.entry().type().marker()).addClass(Theme.Classes.STAGED),
-                Toolkit.text(" " + name(file)));
+    private StyledElement<?> drawCommitFile(FileTree.File<CommitFile> file) {
+        return Toolkit.row(List.<StyledElement<?>>of(
+                        Toolkit.text(file.entry().type().marker()).addClass(Theme.Classes.STAGED),
+                        Toolkit.text(" " + name(file)))
+                .appendAll(Option.of(unresolved.count(thread ->
+                                thread.isOn(file.entry().path(), file.entry().origin())))
+                        .filter(count -> count > 0)
+                        .map(count -> Toolkit.text(" 💬" + count).addClass(Theme.Classes.DIFF_THREAD)))
+                .toJavaArray(StyledElement[]::new));
+    }
+
+    /**
+     * The review threads of {@code view} that are not resolved.
+     */
+    private static List<ReviewThread> unresolved(CommitFilesView view) {
+        return view.threads().filter(thread -> !thread.resolved());
     }
 
     /**
@@ -164,10 +181,18 @@ public class FilesPanel {
     public Panel render(Model model, String focusedId, String activeId) {
         focused = ID.equals(focusedId);
         boolean active = ID.equals(activeId);
+        unresolved = model.repoView().commitFiles().map(FilesPanel::unresolved).getOrElse(List.empty());
         return model.repoView()
                 .commitFiles()
                 .map(view -> Pane.bordered(
-                        Messages.get("panel.commitFiles.titleFor", ContentView.changesName(model, view.of())),
+                        view.ended()
+                                .map(state -> Messages.get(
+                                        state == PullRequestDetails.State.MERGED
+                                                ? "panel.commitFiles.titleForMerged"
+                                                : "panel.commitFiles.titleForClosed",
+                                        ContentView.changesName(model, view.of())))
+                                .getOrElse(() -> Messages.get(
+                                        "panel.commitFiles.titleFor", ContentView.changesName(model, view.of()))),
                         commitTree.render(view.of(), view.files(), active),
                         focused,
                         commitTree.selectedRow(),

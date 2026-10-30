@@ -1,6 +1,8 @@
 package net.vanfleteren.jazygit.feature.diff;
 
+import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.state.CommitFilesView;
+import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
@@ -21,4 +23,25 @@ public sealed interface CommitFilesMsg extends Msg {
      * The user closed the files of the commit or the stash, to see the files of the working tree again.
      */
     record Closed() implements CommitFilesMsg {}
+
+    /**
+     * The review threads of pull request {@code number} were read (ADR 55).
+     */
+    record RemarksLoaded(int number, ReviewRemarks remarks) implements CommitFilesMsg {}
+
+    /**
+     * Reading the review threads of pull request {@code number} failed.
+     */
+    record RemarksFailed(int number, Failure failure) implements CommitFilesMsg {}
+
+    /**
+     * The user asked to open every review thread, the resolved ones and the hidden comments too, or to close them
+     * again.
+     */
+    record RemarksToggled() implements CommitFilesMsg {}
+
+    /**
+     * The user asked to read the review threads of the pull request again.
+     */
+    record RemarksRefreshed() implements CommitFilesMsg {}
 }

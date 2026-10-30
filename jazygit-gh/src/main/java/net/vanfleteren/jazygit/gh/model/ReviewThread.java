@@ -34,6 +34,15 @@ public record ReviewThread(
         int more) {
 
     /**
+     * Whether it is on the file with the path {@code path}, renamed from {@code origin} if it was: GitHub gives the
+     * new path of a renamed file, but git may pair it with another than GitHub does, and the old path of a deleted
+     * one, which is also its path in git (ADR 55). Wherever a thread is matched to a file, it is matched by this.
+     */
+    public boolean isOn(String path, Option<String> origin) {
+        return path.equals(this.path) || origin.contains(this.path);
+    }
+
+    /**
      * Which file of a diff a line is numbered in.
      */
     public enum Side {

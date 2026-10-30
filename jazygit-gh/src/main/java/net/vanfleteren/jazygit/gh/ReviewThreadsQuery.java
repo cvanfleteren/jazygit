@@ -10,6 +10,7 @@ import static net.vanfleteren.jazygit.json.Decoder.integer;
 import static net.vanfleteren.jazygit.json.Decoder.list;
 import static net.vanfleteren.jazygit.json.Decoder.map2;
 import static net.vanfleteren.jazygit.json.Decoder.map3;
+import static net.vanfleteren.jazygit.json.Decoder.map4;
 import static net.vanfleteren.jazygit.json.Decoder.map8;
 import static net.vanfleteren.jazygit.json.Decoder.nullable;
 import static net.vanfleteren.jazygit.json.Decoder.string;
@@ -19,6 +20,7 @@ import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Comment;
@@ -40,7 +42,7 @@ final class ReviewThreadsQuery {
      */
     static final String QUERY = """
             query($owner: String!, $name: String!, $number: Int!, $endCursor: String) { \
-            repository(owner: $owner, name: $name) { pullRequest(number: $number) { headRefOid baseRefOid \
+            repository(owner: $owner, name: $name) { pullRequest(number: $number) { state headRefOid baseRefOid \
             reviewThreads(first: 100, after: $endCursor) { pageInfo { hasNextPage endCursor } \
             nodes { path diffSide line startLine startDiffSide originalLine isResolved isOutdated subjectType \
             comments(first: %d) { totalCount nodes { author { login } createdAt body state isMinimized \
@@ -101,20 +103,23 @@ final class ReviewThreadsQuery {
                             comments._1(),
                             comments._2())));
 
-    // One page: the commits, and its threads.
+    // One page: its state, the commits, and its threads.
     static final Decoder<ReviewRemarks> PAGE = at(
             "data.repository.pullRequest",
-            map3(
+            map4(
+                    field("state", enumOf(PullRequestDetails.State.class)),
                     field("headRefOid", nullable(string())).map(oid -> oid.flatMap(GhCommit::parse)),
                     field("baseRefOid", nullable(string())).map(oid -> oid.flatMap(GhCommit::parse)),
                     at("reviewThreads.nodes", list(THREAD)),
-                    (head, base, threads) -> new ReviewRemarks(head, base, threads.flatMap(thread -> thread))));
+                    (state, head, base, threads) ->
+                            new ReviewRemarks(state, head, base, threads.flatMap(thread -> thread))));
 
-    // All pages, as one array: the commits as the first page has them, and the threads of all.
+    // All pages, as one array: the state and the commits as the first page has them, and the threads of all.
     static final Decoder<ReviewRemarks> DECODER = list(PAGE)
             .map(pages -> pages.headOption()
-                    .map(first -> new ReviewRemarks(first.head(), first.base(), pages.flatMap(ReviewRemarks::threads)))
-                    .getOrElse(() -> new ReviewRemarks(Option.none(), Option.none(), List.empty())));
+                    .map(first -> new ReviewRemarks(
+                            first.state(), first.head(), first.base(), pages.flatMap(ReviewRemarks::threads)))
+                    .getOrElse(ReviewRemarks::none));
 
     private ReviewThreadsQuery() {}
 

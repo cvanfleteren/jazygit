@@ -11,6 +11,9 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesMsg;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
+import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
+import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.*;
@@ -299,6 +302,60 @@ class FilesPanelTest {
 
             SettledPilot.of(testRunner).quit();
         }
+    }
+
+    @Test
+    void theFilesOfAPullRequestCountTheirUnresolvedRemarksByEitherPathOfARename() throws Exception {
+        CommitFilesView.Changes of = new CommitFilesView.Changes.OfPullRequest(
+                new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
+        Model open = Update.update(
+                        Update.update(TestModels.loaded(), new CommitFilesMsg.Opened(of, BranchesPanel.ID))
+                                .model(),
+                        new LoadMsg.CommitFilesLoaded(
+                                of,
+                                List.of(
+                                        new CommitFile("new.txt", ChangeType.RENAMED, Option.of("old.txt")),
+                                        new CommitFile("b.txt", ChangeType.MODIFIED))))
+                .model();
+        // git sees a rename where GitHub sees a file deleted and one added: a remark on the old file has its path.
+        Model read = Update.update(
+                        open,
+                        new CommitFilesMsg.RemarksLoaded(
+                                7,
+                                new ReviewRemarks(
+                                        PullRequestDetails.State.MERGED,
+                                        Option.none(),
+                                        Option.none(),
+                                        List.of(
+                                                remark("old.txt", ReviewThread.Side.LEFT, false),
+                                                remark("new.txt", ReviewThread.Side.RIGHT, false),
+                                                remark("b.txt", ReviewThread.Side.RIGHT, true)))))
+                .model();
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(read, FilesPanel.ID))) {
+            String files = RenderedText.ofLarge(testRunner, () -> panel.render(read, FilesPanel.ID));
+            assertTrue(files.contains("Files of #7 · merged"), files);
+            assertTrue(files.contains("R old.txt -> new.txt 💬2"), files);
+            assertTrue(files.contains("M b.txt"), files);
+            assertFalse(files.contains("b.txt 💬"), files);
+
+            SettledPilot.of(testRunner).quit();
+        }
+    }
+
+    private static ReviewThread remark(String path, ReviewThread.Side side, boolean resolved) {
+        return new ReviewThread(
+                path,
+                side,
+                Option.of(1),
+                Option.none(),
+                side,
+                Option.of(1),
+                resolved,
+                false,
+                ReviewThread.Subject.LINE,
+                List.of(new ReviewThread.Comment("bob", java.time.Instant.EPOCH, "Hm", Option.none())),
+                0);
     }
 
     @Test

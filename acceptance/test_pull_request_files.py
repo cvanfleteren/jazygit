@@ -77,3 +77,50 @@ def test_the_files_changed_of_a_pull_request_show_in_the_files_pane_fetched_when
     ui.app.press("escape")
 
     ui.app.eventually(lambda: ui.app.focused_pane() == "Branches", "the focus on the branches")
+
+
+THREADS = "reviewThreads(first: 100"
+
+
+def threads(head: str, base: str) -> list:
+    """The review threads of pull request 1: one open on line 1 of b.txt, one resolved on the same line."""
+    def thread(resolved: bool, body: str) -> dict:
+        return {"path": "b.txt", "diffSide": "RIGHT", "line": 1, "startLine": None, "startDiffSide": None,
+                "originalLine": 1, "isResolved": resolved, "isOutdated": False, "subjectType": "LINE",
+                "comments": {"totalCount": 1, "nodes": [
+                    {"author": {"login": "reviewer"}, "createdAt": DATE, "body": body, "state": "SUBMITTED",
+                     "isMinimized": False, "minimizedReason": None}]}}
+    return [{"data": {"repository": {"pullRequest": {
+        "state": "OPEN", "headRefOid": head, "baseRefOid": base,
+        "reviewThreads": {"pageInfo": {"hasNextPage": False, "endCursor": None},
+                          "nodes": [thread(False, "Why **b**?"), thread(True, "Settled already")]},
+    }}}}]
+
+
+def test_the_review_remarks_of_a_pull_request_show_next_to_their_lines(repo, origin, clone, gh, jazygit):
+    pull_request(repo, origin, clone, gh)
+    head = origin("rev-parse", "refs/pull/1/head").strip()
+    gh.answer((THREADS, threads(head, repo("rev-parse", "main").strip())))
+    ui = jazygit()
+    ui.branches.select("feature")
+    ui.app.press("o")
+    # The action shows dimmed until the details are read, and does nothing then: wait for them.
+    ui.app.wait_for("in 2 files, 2 commits")
+    ui.app.press("f")
+    ui.app.wait_in("Files", "💬1")
+    ui.app.move_cursor("Files", "b.txt")
+
+    # The plain view counts them.
+    ui.app.wait_for("2 review remarks, Ctrl+D shows them")
+
+    ui.app.press("ctrl+d")
+
+    ui.app.wait_for("Why b?")
+    assert "● +b" in ui.app.text()
+    assert "✓ resolved · reviewer: Settled already" in ui.app.text()
+
+    ui.app.press("t")
+
+    ui.app.wait_for("┃ Settled already")
+    assert "✓ resolved" not in ui.app.text()
+    assert any(THREADS in " ".join(call) for call in gh.calls())

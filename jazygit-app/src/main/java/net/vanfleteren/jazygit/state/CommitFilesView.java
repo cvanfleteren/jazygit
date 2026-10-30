@@ -3,6 +3,9 @@ package net.vanfleteren.jazygit.state;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import lombok.With;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
+import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
+import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.DiffText;
@@ -19,6 +22,8 @@ import net.vanfleteren.jazygit.git.model.Sha;
  * @param files    the files, as they are read
  * @param diff     what changed in the files of the node highlighted in the tree, keyed by them, once one is
  *                 highlighted
+ * @param remarks  the review threads of a pull request, as they are read; none for a commit or a stash (ADR 55)
+ * @param opened   whether every review thread is shown open, the resolved ones and the hidden comments too
  */
 @With
 public record CommitFilesView(
@@ -26,14 +31,65 @@ public record CommitFilesView(
         String pane,
         String listedIn,
         Loadable<List<CommitFile>> files,
-        Option<Preview<List<CommitFile>, DiffText>> diff) {
+        Option<Preview<List<CommitFile>, DiffText>> diff,
+        Option<Loadable<ReviewRemarks>> remarks,
+        boolean opened) {
 
     /**
      * The view of the files of {@code of}, opened from the pane {@code pane} and listed in {@code listedIn}, while
-     * they are read.
+     * they are read, and the review threads of a pull request.
      */
     public static CommitFilesView of(Changes of, String pane, String listedIn) {
-        return new CommitFilesView(of, pane, listedIn, Loadable.loading(), Option.none());
+        return new CommitFilesView(
+                of,
+                pane,
+                listedIn,
+                Loadable.loading(),
+                Option.none(),
+                Option.when(of instanceof Changes.OfPullRequest, Loadable::loading),
+                false);
+    }
+
+    /**
+     * The number of the pull request the files are of, if they are.
+     */
+    public Option<Integer> pullRequest() {
+        return of instanceof Changes.OfPullRequest(PullRequestCommits commits)
+                ? Option.of(commits.number())
+                : Option.none();
+    }
+
+    /**
+     * The review threads read, once they are; none for a commit or a stash.
+     */
+    public List<ReviewThread> threads() {
+        return remarks.flatMap(Loadable::toOption).map(ReviewRemarks::threads).getOrElse(List.empty());
+    }
+
+    /**
+     * Whether its review threads were read at the commits its files were read at, so that their lines number lines of
+     * the diff it shows. They are not when it is of a pull request found merged or closed at newer commits: its files
+     * stay at those they were read at (ADR 55).
+     */
+    public boolean remarksAtItsCommits() {
+        return of instanceof Changes.OfPullRequest(PullRequestCommits commits)
+                && remarks.flatMap(Loadable::toOption)
+                        .exists(read -> read.head()
+                                        .flatMap(head -> Sha.parse(head.oid()))
+                                        .contains(commits.head())
+                                && read.base()
+                                        .flatMap(base -> Sha.parse(base.oid()))
+                                        .contains(commits.base()));
+    }
+
+    /**
+     * Whether the pull request the files are of was merged or closed when its review threads were read last, and
+     * which: the tree then stays at the commits it was read at (ADR 55).
+     */
+    public Option<PullRequestDetails.State> ended() {
+        return remarks.flatMap(Loadable::toOption)
+                .map(ReviewRemarks::state)
+                .filter(state -> state != PullRequestDetails.State.OPEN);
     }
 
     /**
