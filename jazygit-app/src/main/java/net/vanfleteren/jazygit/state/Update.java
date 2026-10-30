@@ -1,6 +1,8 @@
 package net.vanfleteren.jazygit.state;
 
+import io.vavr.collection.LinkedHashSet;
 import io.vavr.collection.List;
+import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import java.time.Duration;
 import java.time.Instant;
@@ -91,7 +93,25 @@ public final class Update {
     }
 
     public static Next update(Model model, Msg msg) {
-        return msg.apply(model);
+        return model.jobs().away() && msg instanceof Msg.Periodic
+                ? Next.of(model.mapJobs(jobs -> jobs.withMissed(jobs.missed().add(msg))))
+                : msg.apply(model);
+    }
+
+    /**
+     * The terminal got the focus, or lost it. While away, the timers read nothing; once back, what they asked for
+     * meanwhile is read once, as each of their messages is handled once (ADR 58).
+     */
+    static Next focused(Model model, boolean focused) {
+        if (!focused) {
+            return Next.of(model.mapJobs(jobs -> jobs.withAway(true)));
+        }
+        Set<Msg> missed = model.jobs().missed();
+        return missed.foldLeft(
+                Next.of(model.mapJobs(jobs -> jobs.withAway(false).withMissed(LinkedHashSet.empty()))), (next, msg) -> {
+                    Next handled = update(next.model(), msg);
+                    return new Next(handled.model(), next.cmds().appendAll(handled.cmds()));
+                });
     }
 
     /**

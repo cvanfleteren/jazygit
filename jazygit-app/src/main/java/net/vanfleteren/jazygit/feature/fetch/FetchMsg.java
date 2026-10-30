@@ -17,7 +17,7 @@ public sealed interface FetchMsg extends Msg {
     /**
      * Periodic prompt to fetch from the remotes.
      */
-    record Tick() implements FetchMsg {}
+    record Tick() implements FetchMsg, Msg.Periodic {}
 
     /**
      * The remotes to fetch from, in order.

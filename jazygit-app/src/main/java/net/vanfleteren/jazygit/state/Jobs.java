@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.state;
 import io.vavr.Tuple;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.HashSet;
+import io.vavr.collection.LinkedHashSet;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.collection.Set;
@@ -39,6 +40,10 @@ import net.vanfleteren.jazygit.git.model.MetadataStamp;
  * @param nextId     the id the next command that is asked for gets
  * @param lingering  what shows after the commands that showed are done, and until when, so that the indicator does
  *                   not blink out between two commands
+ * @param away       whether the terminal does not have the focus, as one that reports it said last: the timers then
+ *                   read nothing (ADR 58)
+ * @param missed     the messages of the timers that came while away, in the order they first came, to be handled
+ *                   once, when the terminal has the focus again
  */
 @With
 public record Jobs(
@@ -52,7 +57,9 @@ public record Jobs(
         Map<Cmd.Load, Retry> retries,
         Map<Long, Running> running,
         long nextId,
-        Option<Lingering> lingering) {
+        Option<Lingering> lingering,
+        boolean away,
+        Set<Msg> missed) {
 
     public static final Jobs IDLE = new Jobs(
             HashSet.empty(),
@@ -65,7 +72,9 @@ public record Jobs(
             HashMap.empty(),
             HashMap.empty(),
             0,
-            Option.none());
+            Option.none(),
+            false,
+            LinkedHashSet.empty());
 
     /**
      * How long a command runs before it shows: the reads that take a few milliseconds, on every key and every tick,

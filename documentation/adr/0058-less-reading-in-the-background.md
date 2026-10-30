@@ -34,6 +34,14 @@ ADR 56 (`0056-fewer-git-processes-after-a-commit.md`) cut what a commit costs. T
    diff is read again only when the two differ, or when the stamp tells nothing, as within 2s of a change (ADR 15).
    A status that says HEAD moved reads the diff at once, as the staged changes are compared with HEAD, which neither
    stamp holds.
+4. **The timers read nothing while the terminal does not have the focus.** On its alternate screen, the app asks the
+   terminal to report the focus (`ESC [?1004h`). TamboUI reads the reports, `ESC [ I` and `ESC [ O`, as one unknown
+   key, so `HandOverBackend`, which every key is read through, takes them out before it does and tells the app,
+   which dispatches `Msg.TerminalFocused`. While away, the messages of the timers that read the repository, the
+   remotes or GitHub (`Msg.Periodic`: the tick, the fetch, the pull requests overview and the dialogs of checks) are
+   kept instead of handled; once back, each is handled once, so what they would have read is read at once. A merge
+   that is being checked on still is, and what the user does is handled as ever. A terminal that does not report the
+   focus, or a tmux without `focus-events`, never says the app is away, and nothing changes there.
 
 The other chains of loads stay as they are: the commits ahead of HEAD go by the HEAD of the status and the bases of
 the branches, read by loads of their own, and the log of the highlighted branch, the divergence and the operations

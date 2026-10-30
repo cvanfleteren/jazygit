@@ -29,9 +29,26 @@ public interface Msg {
     }
 
     /**
+     * A message a timer sends to read the repository, the remotes or GitHub again. While the terminal does not have
+     * the focus, it is kept instead of handled, and handled once the terminal has it again (ADR 58).
+     */
+    interface Periodic extends Msg {}
+
+    /**
+     * The terminal got the focus, or lost it, as a terminal that reports it says.
+     */
+    record TerminalFocused(boolean focused) implements Msg {
+
+        @Override
+        public Update.Next apply(Model model) {
+            return Update.focused(model, focused);
+        }
+    }
+
+    /**
      * Periodic prompt to check the repository for changes made outside the app.
      */
-    record Tick() implements Msg {
+    record Tick() implements Periodic {
 
         @Override
         public Update.Next apply(Model model) {
