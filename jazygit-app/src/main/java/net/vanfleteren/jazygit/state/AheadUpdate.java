@@ -5,6 +5,7 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.util.function.Predicate;
 import net.vanfleteren.jazygit.git.model.Ahead;
+import net.vanfleteren.jazygit.git.model.AllBranches;
 import net.vanfleteren.jazygit.git.model.BaseDistance;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
@@ -273,11 +274,7 @@ public final class AheadUpdate {
      * The main branch, as the branches read last tell, if they were read and have one.
      */
     static Option<BranchName> main(Model model) {
-        return model.repo()
-                .branches()
-                .toOption()
-                .flatMap(branches -> branches.find(Branch::isDefault))
-                .map(Branch::name);
+        return model.repo().branches().toOption().flatMap(AllBranches::main);
     }
 
     private static BranchName name(BranchRef branch) {

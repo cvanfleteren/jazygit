@@ -30,6 +30,14 @@ public record AllBranches(List<Branch> local, List<RemoteRef> remote) {
      * The main branch, the base of the branches without a parent (ADR 46); none when no local branch is the default.
      */
     public Option<BranchName> main() {
+        return main(local);
+    }
+
+    /**
+     * The main branch among the local branches {@code local}: the one that is the default; none when none is. What
+     * the commits ahead and the distances to the bases go by, so both have the same.
+     */
+    public static Option<BranchName> main(List<Branch> local) {
         return local.find(Branch::isDefault).map(Branch::name);
     }
 }
