@@ -1,7 +1,7 @@
 ## code style
 - prefer modern, functional java, preferring things like recursion, immutable collections and stream processing over things like javabeans and for loops
 
-The ArchUnit tests (`ArchitectureTest`, `GitArchitectureTest`, `GhArchitectureTest`, `ProcessArchitectureTest`, `JsonArchitectureTest`, `SyntaxArchitectureTest`) enforce these rules; a build that breaks one fails.
+The ArchUnit tests (`*ArchitectureTest`) enforce these rules; a build that breaks one fails.
 
 ### The Elm loop
 - Messages, commands and popups are values: records, or enums. Each feature's `XxxMsg` is a sealed interface, so its update switches over every message without a `default`.
@@ -34,3 +34,11 @@ The updates, messages, popups and the model are pure. Pure code:
 - ADR's are immutable once they are in the main branch. They can be amended in a new ADR, but the old one is never changed apart from a reference to a newer one with a sentence like "Amended by ADR XX: this is why bla bla bla"
 - The ADR's are a historical record of the decisions made, and the reasons for them. They are not a design document, and they are not a specification. They are a record of the decisions made, and the reasons for them.
 
+
+## Testing
+
+### Unit Tests
+
+- all functionality needs to be covered by unit tests
+- the acceptance tests are written in python. Their main focus in validating the state of the git repository after a command has been run, and that the output is as expected. They are not meant to be a complete test of the functionality, but rather a sanity check that the core is working as expected.
+- integration tests are written in java, use a Pilot from Tamboui, and test the rendering and interaction of the UI.
