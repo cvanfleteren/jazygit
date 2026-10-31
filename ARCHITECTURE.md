@@ -156,8 +156,13 @@ new `Env` runs gh as the settings say now.
 
 The repositories opened last are state, not settings: jazygit writes them by itself, and they are not meant
 to be edited. They live in `state.toml`, as `recent-repositories`: the roots of their working trees, the
-last one opened first, at most 20. The unseen pull requests of each repository live there too, as
-`unseen-pull-requests` (ADR 29); writing either keeps the other.
+last one opened first, at most 20. What is kept of one GitHub repository is in a directory of its own next to it,
+`repos/<owner>/<name>/`, a file per concern (ADR 63): `unseen-pull-requests.toml` (ADR 29), `check-timings.toml`
+(ADR 32) and `collapsed.toml`, the review threads and comments `Space` collapsed or opened per pull request, kept 30
+days after the last flip of each (`CollapsedFile`, ADR 62). Each id is kept with whether it was collapsed by default
+then, so one whose default changed since, as a thread resolved meanwhile, is as it starts. At startup
+`FormerState` deletes the `check-timings.toml` and the `unseen-pull-requests` of `state.toml` that held them for all
+repositories at once.
 
 - **Linux:** `$XDG_STATE_HOME/jazygit` if that is set to an absolute path, else `~/.local/state/jazygit`.
 - **macOS:** `$XDG_STATE_HOME/jazygit` if that is set, else `~/Library/Application Support/jazygit`.
@@ -321,7 +326,7 @@ request. The design and the steps still to come are in `prs.md`.
   reads the user's own pull requests, while it is shown. The pull requests opened since, but not by the user, are
   unseen until their row is highlighted; the name of the screen
   counts them (`PRs ●2`) and their rows are marked (ADR 29). `PrOverview.unseen` holds them, with the highest number
-  read, and `SaveUnseenPullRequests` keeps them in `state.toml`.
+  read, and `SaveUnseenPullRequests` keeps them in the repository's `unseen-pull-requests.toml`.
 - `o` shows the pull request dialog, as for a branch, for a pull request of the repository, wherever it is listed;
   one of another repository opens in the browser, as `O` does for any (`gh pr view <url> --web`).
 - **The preview**: the content panel shows the pull request highlighted in the pane in use like a commit: a header,

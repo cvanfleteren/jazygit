@@ -1362,7 +1362,12 @@ class PullRequestUpdateTest {
             assertEquals(
                     Option.of(CommitFilesView.of(of, "branches", "files")),
                     opened.model().repoView().commitFiles());
-            assertEquals(List.of(new Cmd.LoadCommitFiles(of), new CommitFilesCmd.LoadReviewRemarks(42)), opened.cmds());
+            assertEquals(
+                    List.of(
+                            new Cmd.LoadCommitFiles(of),
+                            new CommitFilesCmd.LoadReviewRemarks(42),
+                            new CommitFilesCmd.LoadCollapsed("owner/repo", 42)),
+                    opened.cmds());
             assertTrue(opened.cmds().head().background());
         }
     }
@@ -1463,7 +1468,12 @@ class PullRequestUpdateTest {
         assertEquals(
                 Option.of(CommitFilesView.of(of, "branches", "files")),
                 opened.model().repoView().commitFiles());
-        assertEquals(List.of(new Cmd.LoadCommitFiles(of), new CommitFilesCmd.LoadReviewRemarks(42)), opened.cmds());
+        assertEquals(
+                List.of(
+                        new Cmd.LoadCommitFiles(of),
+                        new CommitFilesCmd.LoadReviewRemarks(42),
+                        new CommitFilesCmd.LoadCollapsed("owner/repo", 42)),
+                opened.cmds());
     }
 
     @Test

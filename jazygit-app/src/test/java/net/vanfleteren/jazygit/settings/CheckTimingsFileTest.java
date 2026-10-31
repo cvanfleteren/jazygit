@@ -23,12 +23,16 @@ class CheckTimingsFileTest {
     @TempDir
     Path dir;
 
+    private Path repositories() {
+        return dir.resolve("jazygit").resolve("repos");
+    }
+
     private Path file() {
-        return dir.resolve("jazygit").resolve("check-timings.toml");
+        return repositories().resolve("owner").resolve("repo").resolve("check-timings.toml");
     }
 
     private CheckTimingsFile timings() {
-        return new CheckTimingsFile(file());
+        return new CheckTimingsFile(repositories());
     }
 
     private static Kept of(Run... runs) {
@@ -71,7 +75,7 @@ class CheckTimingsFileTest {
         timings().change("owner/repo", adding(ACCEPTANCE));
 
         // Another jazygit, which did not see the first change.
-        Kept kept = new CheckTimingsFile(file())
+        Kept kept = new CheckTimingsFile(repositories())
                 .change("owner/repo", adding(VERIFY))
                 .get();
 
@@ -79,14 +83,11 @@ class CheckTimingsFileTest {
     }
 
     @Test
-    void theStateFileIsLeftAlone() throws IOException {
-        Path state = file().resolveSibling("state.toml");
-        new RecentRepositoriesFile(state).opened(Path.of("/repos/a"));
-
+    void eachRepositoryHasAFileOfItsOwn() throws IOException {
         timings().change("owner/repo", adding(ACCEPTANCE));
 
-        assertEquals(List.of(Path.of("/repos/a")), new RecentRepositoriesFile(state).load());
         assertTrue(Files.readString(file()).contains("at = 2026-10-24T22:22:37Z"), Files.readString(file()));
+        assertTrue(timings().change("owner/../repo", adding(ACCEPTANCE)).isFailure());
     }
 
     @Test
@@ -101,7 +102,7 @@ class CheckTimingsFileTest {
     @Test
     void aRunThatCannotBeReadIsLeftOut() throws IOException {
         write("""
-                [repo."owner/repo".checks]
+                [checks]
                 "Build/verify" = [{id = 1, duration = 2}, {id = 3, duration = 4, finished = 5, at = "2026-10-24T22:22:37Z"}]
                 """);
 
@@ -122,9 +123,8 @@ class CheckTimingsFileTest {
         assertEquals(new Kept(List.of(ACCEPTANCE, named), Option.of(AT)), kept);
         assertEquals(Option.of(kept), timings().load("owner/repo"));
         String written = Files.readString(file());
-        assertTrue(written.contains("[repo.\"owner/repo\"]"), written);
         assertTrue(written.contains("topped-up = 2026-10-24T22:22:37Z"), written);
-        assertTrue(written.contains("[[repo.\"owner/repo\".checks.topped-up]]"), written);
+        assertTrue(written.contains("[[checks.topped-up]]"), written);
     }
 
     @Test

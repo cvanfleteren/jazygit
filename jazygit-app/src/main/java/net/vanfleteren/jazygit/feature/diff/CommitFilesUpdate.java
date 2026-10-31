@@ -38,7 +38,7 @@ public final class CommitFilesUpdate {
                 CommitFilesView view = CommitFilesView.of(of, pane, Scopes.FILES.id());
                 yield new Next(
                         model.mapRepoView(repoView -> repoView.withCommitFiles(Option.of(view))),
-                        List.<Cmd>of(view.load()).appendAll(remarksLoad(view)));
+                        List.<Cmd>of(view.load()).appendAll(remarksLoad(view)).appendAll(collapsedLoad(view)));
             }
             case CommitFilesMsg.Closed() ->
                 Next.of(model.mapRepoView(repoView -> repoView.withCommitFiles(Option.none())));
@@ -58,6 +58,13 @@ public final class CommitFilesUpdate {
                         .map(view -> view.remarks().isDefined()
                                 ? view.withListed(view.listed().next())
                                 : view))));
+            // Those flipped before the threads are read are as they start until then (ADR 63).
+            case CommitFilesMsg.CollapsedLoaded(int number, var kept) ->
+                Next.of(mapPullRequest(
+                        model,
+                        number,
+                        view -> view.withCollapsed(view.collapsed().with(kept).readAgain(view.threads()))));
+            case CommitFilesMsg.CollapsedKept() -> Next.of(model);
             case CommitFilesMsg.RemarksRefreshed() ->
                 new Next(
                         model,
@@ -91,6 +98,16 @@ public final class CommitFilesUpdate {
     }
 
     /**
+     * The review threads and comments of the pull request whose files are listed, if they are, collapsed or opened in
+     * an earlier session (ADR 63).
+     */
+    private static Option<CommitFilesCmd.LoadCollapsed> collapsedLoad(CommitFilesView view) {
+        return view.of() instanceof Changes.OfPullRequest(PullRequestCommits commits)
+                ? Option.of(new CommitFilesCmd.LoadCollapsed(commits.repository(), commits.number()))
+                : Option.none();
+    }
+
+    /**
      * {@code remarks} read for pull request {@code number}, while its files are listed, after what was sent for the
      * threads {@code settled}. When its head or its base moved on since its files were read, they are read again, at
      * the commits they are at now: the threads are of those.
@@ -105,7 +122,7 @@ public final class CommitFilesUpdate {
                     // or unresolved is then as such a one starts (ADR 62).
                     CommitFilesView read = view.withRemarks(Option.of(new Loadable.Loaded<>(remarks)))
                             .withSending(view.sending().removeAll(settled))
-                            .withCollapsed(view.collapsed().readAgain(view.threads(), remarks.threads()));
+                            .withCollapsed(view.collapsed().readAgain(remarks.threads()));
                     return moved(read, remarks)
                             .map(commits -> {
                                 CommitFilesView again = CommitFilesView.of(

@@ -2,7 +2,6 @@ package net.vanfleteren.jazygit.settings;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import io.vavr.collection.List;
 import io.vavr.collection.TreeSet;
 import io.vavr.control.Option;
 import java.io.IOException;
@@ -18,12 +17,16 @@ class UnseenPullRequestsFileTest {
     @TempDir
     Path dir;
 
+    private Path repositories() {
+        return dir.resolve("jazygit").resolve("repos");
+    }
+
     private Path file() {
-        return dir.resolve("jazygit").resolve("state.toml");
+        return repositories().resolve("owner").resolve("repo").resolve("unseen-pull-requests.toml");
     }
 
     private UnseenPullRequestsFile unseen() {
-        return new UnseenPullRequestsFile(file());
+        return new UnseenPullRequestsFile(repositories());
     }
 
     private void write(String content) throws IOException {
@@ -48,14 +51,19 @@ class UnseenPullRequestsFileTest {
     }
 
     @Test
-    void theRecentRepositoriesAndTheUnseenPullRequestsKeepEachOther() {
-        RecentRepositoriesFile recent = new RecentRepositoriesFile(file());
-        recent.opened(Path.of("/repos/a"));
+    void eachRepositoryHasAFileOfItsOwn() throws IOException {
         unseen().save("owner/repo", UNSEEN);
-        recent.opened(Path.of("/repos/b"));
 
-        assertEquals(Option.of(UNSEEN), unseen().load("owner/repo"));
-        assertEquals(List.of(Path.of("/repos/b"), Path.of("/repos/a")), recent.load());
+        String written = Files.readString(file());
+        assertTrue(written.startsWith("highest = 42"), written);
+    }
+
+    @Test
+    void whatIsNoOwnerAndNameIsNeitherReadNorWritten() {
+        assertTrue(unseen().save("../repo", UNSEEN).isFailure());
+        assertTrue(unseen().save("owner/repo/x", UNSEEN).isFailure());
+        assertEquals(Option.none(), unseen().load("owner"));
+        assertFalse(Files.exists(dir.resolve("jazygit")));
     }
 
     @Test
@@ -70,7 +78,6 @@ class UnseenPullRequestsFileTest {
     @Test
     void numbersThatAreNoNumbersAreLeftOut() throws IOException {
         write("""
-                [unseen-pull-requests."owner/repo"]
                 highest = 42
                 numbers = [40, "x", 42]
                 """);

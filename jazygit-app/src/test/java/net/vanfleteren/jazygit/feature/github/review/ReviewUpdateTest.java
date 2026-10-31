@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.github.review;
 import static net.vanfleteren.jazygit.state.TestModels.loaded;
 import static org.junit.jupiter.api.Assertions.*;
 
+import io.vavr.collection.HashMap;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.collection.Set;
@@ -72,7 +73,10 @@ class ReviewUpdateTest {
                 resolved,
                 false,
                 ReviewThread.Subject.LINE,
-                List.of(new Comment("bob", Instant.EPOCH, "Why?\nReally?", Option.none(), "C", "1")),
+                List.of(
+                        new Comment("bob", Instant.EPOCH, "Why?\nReally?", Option.none(), "C", "1"),
+                        // A reply, R1 on T1.
+                        new Comment("carol", Instant.EPOCH, "Yes", Option.none(), "R" + id.substring(1), "2")),
                 0,
                 id,
                 rights);
@@ -239,7 +243,7 @@ class ReviewUpdateTest {
     void aThreadOrACommentIsCollapsedAndOpenedAgainstItsDefault() {
         Model opened = Update.update(files(), new ReviewMsg.ThreadToggled(at(onThread("T2"))))
                 .model();
-        assertEquals(new Collapsed(HashSet.of("T2")), view(opened).collapsed());
+        assertEquals(new Collapsed(HashMap.of("T2", true)), view(opened).collapsed());
         assertFalse(view(opened).collapsed().thread(SETTLED));
 
         Model closed = Update.update(opened, new ReviewMsg.ThreadToggled(at(onThread("T2"))))
@@ -250,10 +254,10 @@ class ReviewUpdateTest {
         Model collapsed = Update.update(files(), new ReviewMsg.ThreadToggled(at(onThread("T1"))))
                 .model();
         assertTrue(view(collapsed).collapsed().thread(OPEN));
-        Model comment = Update.update(files(), new ReviewMsg.ThreadToggled(at(new Anchor.Comment("R", (Anchor.Thread)
+        Model comment = Update.update(files(), new ReviewMsg.ThreadToggled(at(new Anchor.Comment("R1", (Anchor.Thread)
                         onThread("T1")))))
                 .model();
-        assertEquals(new Collapsed(HashSet.of("R")), view(comment).collapsed());
+        assertEquals(new Collapsed(HashMap.of("R1", false)), view(comment).collapsed());
     }
 
     @Test
@@ -270,6 +274,51 @@ class ReviewUpdateTest {
                         .model());
     }
 
+    @Test
+    void whatIsCollapsedOrOpenedIsKeptForTheNextSession() {
+        Next opened = Update.update(files(), new ReviewMsg.ThreadToggled(at(onThread("T2"))));
+
+        // With whether each was collapsed by default, and when it was flipped (ADR 63).
+        assertEquals(
+                List.of(new CommitFilesCmd.SaveCollapsed(
+                        "owner/repo", 7, HashMap.of("T2", true), opened.model().now())),
+                opened.cmds());
+        assertEquals(
+                List.of(new CommitFilesCmd.SaveCollapsed(
+                        "owner/repo", 7, HashMap.empty(), opened.model().now())),
+                Update.update(opened.model(), new ReviewMsg.ThreadToggled(at(onThread("T2"))))
+                        .cmds());
+    }
+
+    @Test
+    void whatWasCollapsedOrOpenedInAnEarlierSessionIsAsItWasUnlessItsDefaultChangedSince() {
+        // T2 opened while resolved, R1 collapsed, and T1 opened while resolved, which it is no longer.
+        CommitFilesMsg.CollapsedLoaded kept =
+                new CommitFilesMsg.CollapsedLoaded(7, HashMap.of("T2", true, "R1", false, "T1", true));
+        Collapsed expected = new Collapsed(HashMap.of("T2", true, "R1", false));
+
+        Model read = Update.update(files(), kept).model();
+        assertEquals(expected, view(read).collapsed());
+        assertFalse(view(read).collapsed().thread(SETTLED));
+        assertFalse(view(read).collapsed().thread(OPEN));
+
+        // Kept before the threads are read, it is the same once they are.
+        Model opened = Update.update(
+                        loaded(), new CommitFilesMsg.Opened(new Changes.OfPullRequest(COMMITS), Scopes.BRANCHES.id()))
+                .model();
+        Model early = Update.update(opened, kept).model();
+        assertEquals(
+                expected,
+                view(Update.update(early, readAgain(HashSet.empty(), OPEN, SETTLED))
+                                .model())
+                        .collapsed());
+
+        // What was flipped in this session wins.
+        Model collapsed = Update.update(files(), new ReviewMsg.ThreadToggled(at(onThread("T1"))))
+                .model();
+        assertTrue(view(Update.update(collapsed, kept).model()).collapsed().thread(OPEN));
+    }
+
     private static CommitFilesMsg.RemarksLoaded readAgain(Set<String> settled, ReviewThread... threads) {
         return new CommitFilesMsg.RemarksLoaded(
                 7,
@@ -283,7 +332,7 @@ class ReviewUpdateTest {
         Model toggled = Update.update(
                         Update.update(files(), new ReviewMsg.ThreadToggled(at(onThread("T1"))))
                                 .model(),
-                        new ReviewMsg.ThreadToggled(at(new Anchor.Comment("R", (Anchor.Thread) onThread("T1")))))
+                        new ReviewMsg.ThreadToggled(at(new Anchor.Comment("R1", (Anchor.Thread) onThread("T1")))))
                 .model();
         Next resolving = Update.update(toggled, new ReviewMsg.ResolveAsked(at(onThread("T1"))));
         ReviewCmd.Resolve resolve = (ReviewCmd.Resolve) resolving.cmds().head();
@@ -291,14 +340,16 @@ class ReviewUpdateTest {
         // Until the threads are read again, the thread is drawn as it was read: still collapsed (ADR 62).
         Model resolved = Update.update(resolving.model(), new ReviewMsg.Resolved(resolve, List.empty()))
                 .model();
-        assertEquals(new Collapsed(HashSet.of("T1", "R")), view(resolved).collapsed());
+        assertEquals(
+                new Collapsed(HashMap.of("T1", false, "R1", false)),
+                view(resolved).collapsed());
         assertTrue(view(resolved).collapsed().thread(OPEN));
 
         // Read again resolved, it is as a resolved thread starts: collapsed, its flip dropped; its comments stay.
         ReviewThread done = thread("T1", true, ReviewThread.Rights.ALL);
         Model read = Update.update(resolved, readAgain(HashSet.of("T1"), done, SETTLED))
                 .model();
-        assertEquals(new Collapsed(HashSet.of("R")), view(read).collapsed());
+        assertEquals(new Collapsed(HashMap.of("R1", false)), view(read).collapsed());
         assertTrue(view(read).collapsed().thread(done));
 
         // A read again that fails keeps the flip, as the thread is still drawn as it was read.
@@ -307,23 +358,27 @@ class ReviewUpdateTest {
                         new CommitFilesMsg.RemarksFailed(
                                 7, new Failure.Bug(new RuntimeException("offline")), HashSet.of("T1")))
                 .model();
-        assertEquals(new Collapsed(HashSet.of("T1", "R")), view(failed).collapsed());
+        assertEquals(
+                new Collapsed(HashMap.of("T1", false, "R1", false)),
+                view(failed).collapsed());
         Model notSent = Update.update(
                         resolving.model(),
                         new ReviewMsg.ResolveFailed(resolve, new Failure.Bug(new RuntimeException("offline"))))
                 .model();
-        assertEquals(new Collapsed(HashSet.of("T1", "R")), view(notSent).collapsed());
+        assertEquals(
+                new Collapsed(HashMap.of("T1", false, "R1", false)),
+                view(notSent).collapsed());
     }
 
     @Test
     void aThreadResolvedOrUnresolvedElsewhereIsAsItStartsOnceReadAgain() {
         Model opened = Update.update(files(), new ReviewMsg.ThreadToggled(at(onThread("T2"))))
                 .model();
-        assertEquals(new Collapsed(HashSet.of("T2")), view(opened).collapsed());
+        assertEquals(new Collapsed(HashMap.of("T2", true)), view(opened).collapsed());
 
         // Read again as it was, the flip stays.
         assertEquals(
-                new Collapsed(HashSet.of("T2")),
+                new Collapsed(HashMap.of("T2", true)),
                 view(Update.update(opened, readAgain(HashSet.empty(), OPEN, SETTLED))
                                 .model())
                         .collapsed());
@@ -337,7 +392,7 @@ class ReviewUpdateTest {
 
     @Test
     void theKeysOfAThreadWorkOnEachOfItsComments() {
-        Anchor onComment = new Anchor.Comment("R", (Anchor.Thread) onThread("T1"));
+        Anchor onComment = new Anchor.Comment("R1", (Anchor.Thread) onThread("T1"));
 
         assertEquals(
                 new Target.Reply("T1", "1"),
@@ -358,7 +413,7 @@ class ReviewUpdateTest {
                 .model();
         ReviewPopup popup = asked.popup(ReviewPopup.class).get();
         assertEquals(new Target.Reply("T1", "1"), popup.target());
-        assertEquals(List.of("bob:", "Why?", "Really?"), popup.quoted());
+        assertEquals(List.of("carol:", "Yes"), popup.quoted());
 
         Model typed = Update.update(asked, new ReviewMsg.Edited("Because")).model();
         Next sending = Update.update(typed, new ReviewMsg.Confirmed());

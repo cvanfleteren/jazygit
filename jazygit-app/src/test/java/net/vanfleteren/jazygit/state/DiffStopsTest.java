@@ -181,11 +181,21 @@ class DiffStopsTest {
                         .filter(anchor -> anchor instanceof Anchor.Thread || anchor instanceof Anchor.Comment));
         // A resolved thread is collapsed, one stop, until it is opened; an open one is collapsed by hand.
         assertEquals(List.of(thread), DiffStops.anchors(replied("L", true), thread.line(), Collapsed.NONE));
-        assertEquals(threads, DiffStops.anchors(replied("L", true), thread.line(), Collapsed.NONE.flipped("L")));
         assertEquals(
-                List.of(thread), DiffStops.anchors(replied("L", false), thread.line(), Collapsed.NONE.flipped("L")));
+                threads,
+                DiffStops.anchors(
+                        replied("L", true), thread.line(), Collapsed.NONE.flipped("L", List.of(replied("L", true)))));
+        assertEquals(
+                List.of(thread),
+                DiffStops.anchors(
+                        replied("L", false), thread.line(), Collapsed.NONE.flipped("L", List.of(replied("L", false)))));
         // A collapsed comment is still a stop.
-        assertEquals(threads, DiffStops.anchors(replied("L", false), thread.line(), Collapsed.NONE.flipped("R1")));
+        assertEquals(
+                threads,
+                DiffStops.anchors(
+                        replied("L", false),
+                        thread.line(),
+                        Collapsed.NONE.flipped("R1", List.of(replied("L", false)))));
     }
 
     @Test
@@ -193,7 +203,11 @@ class DiffStopsTest {
         Anchor.Thread thread = new Anchor.Thread("L", Option.of(line(Side.RIGHT, 2)));
         List<Anchor> open = DiffStops.of(DIFF, List.of(replied("L", false)), true, Collapsed.NONE)
                 .anchors();
-        List<Anchor> collapsed = DiffStops.of(DIFF, List.of(replied("L", false)), true, Collapsed.NONE.flipped("L"))
+        List<Anchor> collapsed = DiffStops.of(
+                        DIFF,
+                        List.of(replied("L", false)),
+                        true,
+                        Collapsed.NONE.flipped("L", List.of(replied("L", false))))
                 .anchors();
 
         assertEquals(

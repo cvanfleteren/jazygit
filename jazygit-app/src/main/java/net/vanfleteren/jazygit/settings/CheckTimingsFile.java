@@ -14,15 +14,14 @@ import java.time.temporal.TemporalAccessor;
 import java.util.function.UnaryOperator;
 
 /**
- * How long the checks took, in a file of its own next to the state file, as it changes whenever checks are done and
- * grows with the repositories and their checks (ADR 32). A table per repository, with when its checks were last
- * topped up from GitHub, and a sub-table with the runs of each check, so no check can clash with {@code topped-up}:
+ * How long the checks took, in a file of each repository, as it changes whenever checks are done (ADR 32, 63): when
+ * its checks were last topped up from GitHub, and a table with the runs of each check, so no check can clash with
+ * {@code topped-up}:
  *
  * <pre>
- * [repo."owner/name"]
  * topped-up = 2026-10-25T10:00:00Z
  *
- * [repo."owner/name".checks]
+ * [checks]
  * "Build/acceptance" = [{id = 121, duration = 192, finished = 254, event = "pull_request", at = 2026-10-24T22:22:37Z}]
  * </pre>
  *
@@ -31,11 +30,7 @@ import java.util.function.UnaryOperator;
  */
 public final class CheckTimingsFile implements CheckTimingsStore {
 
-    /**
-     * The key of the repositories in the file.
-     */
-    static final String KEY = "repo";
-
+    private static final String FILE = "check-timings.toml";
     private static final String TOPPED_UP = "topped-up";
     private static final String CHECKS = "checks";
 
@@ -45,27 +40,28 @@ public final class CheckTimingsFile implements CheckTimingsStore {
     private static final String EVENT = "event";
     private static final String AT = "at";
 
-    private final Path file;
+    private final Path repositories;
 
-    public CheckTimingsFile(Path file) {
-        this.file = file;
+    /**
+     * How long the checks of each repository took, in its directory in {@code repositories}.
+     */
+    public CheckTimingsFile(Path repositories) {
+        this.repositories = repositories;
     }
 
-    // As a list of keys, as the name of a repository or a check may have a dot in it.
-    private static List<String> path(String repository) {
-        return List.of(KEY, repository);
+    private Try<Path> file(String repository) {
+        return SettingsPaths.repositoryFile(repositories, repository, FILE);
     }
 
-    private static Kept kept(Config config, String repository) {
+    private static Kept kept(Config config) {
         return new Kept(
-                runs(config, repository),
-                Option.ofOptional(config.getOptional(
-                                path(repository).append(TOPPED_UP).toJavaList()))
+                runs(config),
+                Option.ofOptional(config.getOptional(TOPPED_UP))
                         .flatMap(at -> Try.of(() -> instant(at)).toOption()));
     }
 
-    private static List<Run> runs(Config config, String repository) {
-        return config.getOptional(path(repository).append(CHECKS).toJavaList())
+    private static List<Run> runs(Config config) {
+        return config.getOptional(CHECKS)
                 .filter(Config.class::isInstance)
                 .map(found -> List.ofAll(((Config) found).entrySet())
                         .flatMap(entry -> entry.getValue() instanceof java.util.List<?> runs
@@ -91,18 +87,16 @@ public final class CheckTimingsFile implements CheckTimingsStore {
         return at instanceof TemporalAccessor temporal ? Instant.from(temporal) : Instant.parse((String) at);
     }
 
-    private static Config table(CommentedConfig parent, Kept kept) {
-        Config table = parent.createSubConfig();
-        kept.toppedUp()
-                .forEach(
-                        at -> table.set(List.of(TOPPED_UP).toJavaList(), OffsetDateTime.ofInstant(at, ZoneOffset.UTC)));
-        table.set(List.of(CHECKS).toJavaList(), checks(parent, kept.runs()));
-        return table;
+    private static void write(CommentedConfig config, Kept kept) {
+        config.clear();
+        kept.toppedUp().forEach(at -> config.set(TOPPED_UP, OffsetDateTime.ofInstant(at, ZoneOffset.UTC)));
+        config.set(CHECKS, checks(config, kept.runs()));
     }
 
     private static Config checks(CommentedConfig parent, List<Run> runs) {
         Config table = parent.createSubConfig();
         runs.groupBy(Run::check)
+                // As a list of keys, as the name of a check may have a dot in it.
                 .forEach((check, ofCheck) -> table.set(
                         List.of(check).toJavaList(),
                         ofCheck.map(run -> fields(parent, run)).toJavaList()));
@@ -121,20 +115,21 @@ public final class CheckTimingsFile implements CheckTimingsStore {
 
     @Override
     public Option<Kept> load(String repository) {
-        return !Files.exists(file)
-                ? Option.none()
-                : TomlFile.read(file)
-                        .toOption()
-                        .map(config -> kept(config, repository))
-                        .filter(kept -> !kept.equals(Kept.EMPTY));
+        return file(repository)
+                .toOption()
+                .filter(Files::exists)
+                .flatMap(file -> TomlFile.read(file).toOption())
+                .map(CheckTimingsFile::kept)
+                .filter(kept -> !kept.equals(Kept.EMPTY));
     }
 
     @Override
     public Try<Kept> change(String repository, UnaryOperator<Kept> change) {
-        return TomlFile.change(file, config -> {
-            Kept changed = change.apply(kept(config, repository));
-            config.set(path(repository).toJavaList(), table(config, changed));
-            return changed;
-        });
+        return file(repository)
+                .flatMap(file -> TomlFile.change(file, config -> {
+                    Kept changed = change.apply(kept(config));
+                    write(config, changed);
+                    return changed;
+                }));
     }
 }
