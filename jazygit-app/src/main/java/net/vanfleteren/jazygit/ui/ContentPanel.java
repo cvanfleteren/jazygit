@@ -561,23 +561,22 @@ public final class ContentPanel {
          *                is scrolled all the way left: Right in the files pane moves into it
          */
         private EventResult keys(KeyEvent event, boolean focused, boolean ofFiles, ScrolledContent content) {
-            // Escape drops a range that is open before it leaves the area (ADR 60).
+            boolean leaving = event.code() == KeyCode.ESCAPE
+                    || (focused
+                            && ofFiles
+                            && event.matches(Actions.MOVE_LEFT)
+                            && element.state().scrollCol() == 0);
+            // Escape, and Left where it leaves as Escape does, drop an open range before they leave the area (ADR 60).
             Option<DiffCursor> ranged = cursor.filter(on -> focused && on.mark().isDefined());
-            if (event.code() == KeyCode.ESCAPE && ranged.isDefined()) {
+            if (leaving && ranged.isDefined()) {
                 return moved(ranged.get().marked().get(), content);
             }
             // Key handlers also see keys typed elsewhere; the callback checks that an area has focus.
-            if (event.code() == KeyCode.ESCAPE && leaveScrollArea.getAsBoolean()) {
+            if (leaving && leaveScrollArea.getAsBoolean()) {
                 return EventResult.HANDLED;
             }
             if (!focused) {
                 return EventResult.UNHANDLED;
-            }
-            if (ofFiles
-                    && event.matches(Actions.MOVE_LEFT)
-                    && element.state().scrollCol() == 0
-                    && leaveScrollArea.getAsBoolean()) {
-                return EventResult.HANDLED;
             }
             Option<DiffCursor> moved = cursor.flatMap(on -> move(on, event));
             if (moved.isDefined()) {

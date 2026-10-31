@@ -545,56 +545,7 @@ class ContentPanelTest {
     void theKeysOfTheDiffOfAPullRequestActOnItsCursor() throws Exception {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
         ContentPanel reviewing = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, dispatched::add);
-        CommitFilesView.Changes of = new CommitFilesView.Changes.OfPullRequest(
-                new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
-        CommitFile file = new CommitFile("a.txt", ChangeType.MODIFIED);
-        net.vanfleteren.jazygit.gh.model.ReviewThread thread = new net.vanfleteren.jazygit.gh.model.ReviewThread(
-                "a.txt",
-                net.vanfleteren.jazygit.gh.model.ReviewThread.Side.RIGHT,
-                Option.of(1),
-                Option.none(),
-                net.vanfleteren.jazygit.gh.model.ReviewThread.Side.RIGHT,
-                Option.of(1),
-                false,
-                false,
-                net.vanfleteren.jazygit.gh.model.ReviewThread.Subject.LINE,
-                List.of(new net.vanfleteren.jazygit.gh.model.ReviewThread.Comment(
-                        "bob", Instant.EPOCH, "Why?", Option.none(), "C", "1")),
-                0,
-                "T1",
-                net.vanfleteren.jazygit.gh.model.ReviewThread.Rights.ALL);
-        Model rich = TestModels.loaded()
-                .mapPreferences(preferences ->
-                        preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
-        Model open = Update.update(
-                        Update.update(
-                                        Update.update(
-                                                        rich,
-                                                        new net.vanfleteren.jazygit.feature.diff.CommitFilesMsg.Opened(
-                                                                of, BranchesPanel.ID))
-                                                .model(),
-                                        new LoadMsg.CommitFilesLoaded(of, List.of(file)))
-                                .model(),
-                        new net.vanfleteren.jazygit.feature.diff.CommitFilesMsg.RemarksLoaded(
-                                7,
-                                new net.vanfleteren.jazygit.gh.model.ReviewRemarks(
-                                        net.vanfleteren.jazygit.gh.model.PullRequestDetails.State.OPEN,
-                                        net.vanfleteren.jazygit.gh.model.GhCommit.parse("a".repeat(40)),
-                                        net.vanfleteren.jazygit.gh.model.GhCommit.parse("b".repeat(40)),
-                                        List.of(thread))))
-                .model();
-        Model model = Update.update(
-                        Update.update(open, new SelectionMsg.CommitFilesSelected(List.of(file)))
-                                .model(),
-                        new LoadMsg.CommitFileDiffLoaded(
-                                of, List.of(file), rich.preferences().diffOptions(), DiffText.of("""
-                                diff --git a/a.txt b/a.txt
-                                --- a/a.txt
-                                +++ b/a.txt
-                                @@ -0,0 +1 @@
-                                +a
-                                """)))
-                .model();
+        Model model = pullRequestDiff();
         String area = reviewing.areaOfPane(model, FilesPanel.ID).get();
 
         // The model the app draws, which only knows where the cursor is once it handled the message that says so.
@@ -633,6 +584,113 @@ class ContentPanelTest {
                             .at()
                             .cursor());
         }
+    }
+
+    @Test
+    void leftDropsAnOpenRangeBeforeItLeavesTheDiffAsEscapeDoes() throws Exception {
+        java.util.concurrent.atomic.AtomicInteger leaves = new java.util.concurrent.atomic.AtomicInteger();
+        java.util.List<Msg> dispatched = new java.util.ArrayList<>();
+        // The model takes where the area is scrolled to, as the app's does.
+        java.util.concurrent.atomic.AtomicReference<Model> model =
+                new java.util.concurrent.atomic.AtomicReference<>(pullRequestDiff());
+        ContentPanel reviewing = new ContentPanel(
+                Theme.SpanStyles.NONE,
+                () -> {
+                    leaves.incrementAndGet();
+                    return true;
+                },
+                id -> {},
+                msg -> {
+                    dispatched.add(msg);
+                    model.set(Update.update(model.get(), msg).model());
+                });
+        String area = reviewing.areaOfPane(model.get(), FilesPanel.ID).get();
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> reviewing.render(model.get(), area))) {
+            SettledPilot.focus(testRunner, area);
+            RenderedText.ofLarge(testRunner, () -> reviewing.render(model.get(), area));
+            // On to the thread, up to its line, and a range opened there.
+            SettledPilot.of(testRunner).press('n');
+            SettledPilot.of(testRunner).pause();
+            RenderedText.ofLarge(testRunner, () -> reviewing.render(model.get(), area));
+            SettledPilot.of(testRunner).press('k');
+            SettledPilot.of(testRunner).pause();
+            RenderedText.ofLarge(testRunner, () -> reviewing.render(model.get(), area));
+            SettledPilot.of(testRunner).press('v');
+            SettledPilot.of(testRunner).pause();
+            assertTrue(((Msg.ContentScrolled) dispatched.getLast()).to().mark().isDefined());
+
+            RenderedText.ofLarge(testRunner, () -> reviewing.render(model.get(), area));
+            SettledPilot.of(testRunner).press(KeyCode.LEFT);
+            SettledPilot.of(testRunner).pause();
+            assertEquals(0, leaves.get());
+            assertEquals(
+                    Option.none(),
+                    ((Msg.ContentScrolled) dispatched.getLast()).to().mark());
+
+            RenderedText.ofLarge(testRunner, () -> reviewing.render(model.get(), area));
+            SettledPilot.of(testRunner).press(KeyCode.LEFT);
+            SettledPilot.of(testRunner).pause();
+        }
+
+        assertEquals(1, leaves.get());
+    }
+
+    /**
+     * A pull request's files open in the files pane, in the rich view, its one file selected: a diff of one added
+     * line, with a thread on it.
+     */
+    private static Model pullRequestDiff() {
+        CommitFilesView.Changes of = new CommitFilesView.Changes.OfPullRequest(
+                new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
+        CommitFile file = new CommitFile("a.txt", ChangeType.MODIFIED);
+        net.vanfleteren.jazygit.gh.model.ReviewThread thread = new net.vanfleteren.jazygit.gh.model.ReviewThread(
+                "a.txt",
+                net.vanfleteren.jazygit.gh.model.ReviewThread.Side.RIGHT,
+                Option.of(1),
+                Option.none(),
+                net.vanfleteren.jazygit.gh.model.ReviewThread.Side.RIGHT,
+                Option.of(1),
+                false,
+                false,
+                net.vanfleteren.jazygit.gh.model.ReviewThread.Subject.LINE,
+                List.of(new net.vanfleteren.jazygit.gh.model.ReviewThread.Comment(
+                        "bob", Instant.EPOCH, "Why?", Option.none(), "C", "1")),
+                0,
+                "T1",
+                net.vanfleteren.jazygit.gh.model.ReviewThread.Rights.ALL);
+        Model rich = TestModels.loaded()
+                .mapPreferences(preferences ->
+                        preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
+        Model open = Update.update(
+                        Update.update(
+                                        Update.update(
+                                                        rich,
+                                                        new net.vanfleteren.jazygit.feature.diff.CommitFilesMsg.Opened(
+                                                                of, BranchesPanel.ID))
+                                                .model(),
+                                        new LoadMsg.CommitFilesLoaded(of, List.of(file)))
+                                .model(),
+                        new net.vanfleteren.jazygit.feature.diff.CommitFilesMsg.RemarksLoaded(
+                                7,
+                                new net.vanfleteren.jazygit.gh.model.ReviewRemarks(
+                                        net.vanfleteren.jazygit.gh.model.PullRequestDetails.State.OPEN,
+                                        net.vanfleteren.jazygit.gh.model.GhCommit.parse("a".repeat(40)),
+                                        net.vanfleteren.jazygit.gh.model.GhCommit.parse("b".repeat(40)),
+                                        List.of(thread))))
+                .model();
+        return Update.update(
+                        Update.update(open, new SelectionMsg.CommitFilesSelected(List.of(file)))
+                                .model(),
+                        new LoadMsg.CommitFileDiffLoaded(
+                                of, List.of(file), rich.preferences().diffOptions(), DiffText.of("""
+                                diff --git a/a.txt b/a.txt
+                                --- a/a.txt
+                                +++ b/a.txt
+                                @@ -0,0 +1 @@
+                                +a
+                                """)))
+                .model();
     }
 
     @Test
