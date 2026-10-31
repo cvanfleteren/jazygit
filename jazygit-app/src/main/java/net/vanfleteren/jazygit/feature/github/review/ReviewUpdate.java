@@ -21,7 +21,6 @@ import net.vanfleteren.jazygit.feature.github.review.ReviewPopup.Where;
 import net.vanfleteren.jazygit.gh.model.NewReviewThread;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
-import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -212,36 +211,31 @@ public final class ReviewUpdate {
                         new Where(path, Option.none(), false),
                         List.empty()));
             }
-            Anchor from = at.mark().getOrElse(at.cursor());
-            if (!(from instanceof Anchor.OnLine) || !(at.cursor() instanceof Anchor.OnLine)) {
+            if (!(at.mark().getOrElse(at.cursor()) instanceof Anchor.OnLine from)
+                    || !(at.cursor() instanceof Anchor.OnLine cursor)) {
                 return Either.left(Why.NOT_ON_LINE);
             }
-            DiffStops stops = stops(view);
-            int one = stops.indexOf(from);
-            int other = stops.indexOf(at.cursor());
-            if (one < 0
-                    || other < 0
-                    || !stops.stops()
-                            .get(one)
-                            .hunk()
-                            .equals(stops.stops().get(other).hunk())) {
-                return Either.left(Why.NOT_ONE_HUNK);
-            }
-            Vector<DiffStops.Stop> range = stops.stops()
-                    .slice(Math.min(one, other), Math.max(one, other) + 1)
-                    .filter(stop -> stop.line().isDefined());
-            Anchor.OnLine first = (Anchor.OnLine) range.head().anchor();
-            Anchor.OnLine last = (Anchor.OnLine) range.last().anchor();
-            return Either.right(popup(
-                    view,
-                    at,
-                    new Target.Start(
-                            commit,
-                            first.path(),
-                            Option.of(new NewReviewThread.Lines(
-                                    first.side(), first.number(), last.side(), last.number()))),
-                    new Where(first.path(), Option.of(new ReviewPopup.Lines(first.number(), last.number())), false),
-                    range.flatMap(stop -> stop.line().map(ReviewUpdate::quoted)).toList()));
+            return diffLines(view)
+                    .between(from, cursor)
+                    .filter(range -> range.head().hunk().equals(range.last().hunk()))
+                    .toEither(Why.NOT_ONE_HUNK)
+                    .map(range -> {
+                        Anchor.OnLine first = range.head().anchor();
+                        Anchor.OnLine last = range.last().anchor();
+                        return popup(
+                                view,
+                                at,
+                                new Target.Start(
+                                        commit,
+                                        first.path(),
+                                        Option.of(new NewReviewThread.Lines(
+                                                first.side(), first.number(), last.side(), last.number()))),
+                                new Where(
+                                        first.path(),
+                                        Option.of(new ReviewPopup.Lines(first.number(), last.number())),
+                                        false),
+                                quoted(range));
+                    });
         });
     }
 
@@ -317,20 +311,14 @@ public final class ReviewUpdate {
      */
     private static List<String> lines(CommitFilesView view, ReviewThread thread) {
         return thread.line()
-                .map(line -> {
-                    DiffStops stops = stops(view);
-                    int last = stops.indexOf(new Anchor.OnLine(thread.path(), thread.side(), line));
-                    int first = stops.indexOf(new Anchor.OnLine(
-                            thread.path(),
-                            thread.startSide(),
-                            thread.startLine().getOrElse(line)));
-                    return first < 0 || last < 0
-                            ? List.<String>empty()
-                            : stops.stops()
-                                    .slice(Math.min(first, last), Math.max(first, last) + 1)
-                                    .flatMap(stop -> stop.line().map(ReviewUpdate::quoted))
-                                    .toList();
-                })
+                .flatMap(line -> diffLines(view)
+                        .between(
+                                new Anchor.OnLine(
+                                        thread.path(),
+                                        thread.startSide(),
+                                        thread.startLine().getOrElse(line)),
+                                new Anchor.OnLine(thread.path(), thread.side(), line)))
+                .map(ReviewUpdate::quoted)
                 .getOrElse(List.empty());
     }
 
@@ -511,15 +499,21 @@ public final class ReviewUpdate {
     }
 
     /**
-     * The stops of the diff the files of the pull request {@code view} shows, as the content panel draws it.
+     * The lines of {@code range}, as the popup that starts a thread quotes them.
      */
-    private static DiffStops stops(CommitFilesView view) {
+    private static List<String> quoted(Vector<DiffLines.Line> range) {
+        return range.map(line -> quoted(line.line())).toList();
+    }
+
+    /**
+     * The lines the cursor stops on in the diff the files of the pull request {@code view} shows, as the content panel
+     * draws it.
+     */
+    private static DiffLines diffLines(CommitFilesView view) {
         return view.diff()
                 .flatMap(preview -> preview.shown().value().toOption())
-                .map(DiffText::parsed)
-                .map(parsed ->
-                        DiffStops.of(parsed.diff(), view.threads(), view.remarksAtItsCommits(), view.collapsed()))
-                .getOrElse(() -> new DiffStops(Vector.empty()));
+                .map(text -> DiffLines.of(text.parsed().diff()))
+                .getOrElse(() -> new DiffLines(Vector.empty()));
     }
 
     /**

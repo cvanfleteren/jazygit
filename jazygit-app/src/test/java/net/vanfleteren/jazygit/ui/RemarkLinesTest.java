@@ -20,12 +20,10 @@ import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Subject;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.ParsedDiff;
-import net.vanfleteren.jazygit.git.model.UnifiedDiff;
 import net.vanfleteren.jazygit.settings.DiffLook;
 import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.state.Anchor;
 import net.vanfleteren.jazygit.state.Collapsed;
-import net.vanfleteren.jazygit.state.DiffStops;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.ui.ContentView.ShownDiff;
 import net.vanfleteren.jazygit.ui.ContentView.ShownRemarks;
@@ -551,7 +549,7 @@ class RemarkLinesTest {
     }
 
     @Test
-    void theCursorStopsWhereDiffStopsSaysInTheOrderTheyAreDrawn() {
+    void theCursorStopsOnEachBarLineThreadAndCommentInTheOrderTheyAreDrawn() {
         ReviewThread first = thread(2, false, "a");
         ReviewThread second = thread(2, false, "b", "c");
         ReviewThread outdated = thread("a.txt", 40, false, "old");
@@ -560,10 +558,19 @@ class RemarkLinesTest {
         RichDiff.Drawn drawn = drawn(ParsedDiff.of(DIFF), true, Option.of(remarks), Theme.SpanStyles.NONE);
 
         // Nothing comes before the file, so there is no lead.
+        Anchor.OnLine two = new Anchor.OnLine("a.txt", Side.RIGHT, 2);
+        Anchor.Thread replied = new Anchor.Thread(second.id(), Option.of(two));
         assertEquals(
-                DiffStops.of(UnifiedDiff.parse(DIFF), remarks.threads(), true, remarks.collapsed())
-                        .anchors()
-                        .tail(),
+                List.of(
+                        new Anchor.File("a.txt"),
+                        new Anchor.OnLine("a.txt", Side.RIGHT, 1),
+                        new Anchor.OnLine("a.txt", Side.LEFT, 2),
+                        two,
+                        new Anchor.Thread(first.id(), Option.of(two)),
+                        replied,
+                        new Anchor.Comment("C1", replied),
+                        new Anchor.OnLine("a.txt", Side.RIGHT, 3),
+                        new Anchor.Thread(outdated.id(), Option.none())),
                 drawn.stops().map(stop -> stop.mark().anchor()));
         List<String> lines = text(drawn.lines());
         List<Integer> rows = drawn.stops().map(RichDiff.Stop::row);
@@ -589,7 +596,7 @@ class RemarkLinesTest {
     }
 
     @Test
-    void theStopsDrawnAreThoseOfDiffStopsHoweverTheThreadsAndCommentsAreCollapsed() {
+    void theStopsDrawnFollowHowTheThreadsAndCommentsAreCollapsed() {
         String indent = " ".repeat(8);
         ReviewThread replied = thread(2, false, "a", "b", "c");
         ReviewThread collapsed = thread(3, false, "d", "e");
@@ -619,10 +626,25 @@ class RemarkLinesTest {
 
         RichDiff.Drawn drawn = drawn(ParsedDiff.of(DIFF), true, Option.of(remarks), Theme.SpanStyles.NONE);
 
+        Anchor.OnLine one = new Anchor.OnLine("a.txt", Side.RIGHT, 1);
+        Anchor.OnLine two = new Anchor.OnLine("a.txt", Side.RIGHT, 2);
+        Anchor.OnLine three = new Anchor.OnLine("a.txt", Side.RIGHT, 3);
+        Anchor.Thread opened = new Anchor.Thread(hidden.id(), Option.of(one));
+        Anchor.Thread open = new Anchor.Thread(replied.id(), Option.of(two));
         assertEquals(
-                DiffStops.of(UnifiedDiff.parse(DIFF), remarks.threads(), true, flipped)
-                        .anchors()
-                        .tail(),
+                List.of(
+                        new Anchor.File("a.txt"),
+                        one,
+                        opened,
+                        new Anchor.Comment("G", opened),
+                        new Anchor.OnLine("a.txt", Side.LEFT, 2),
+                        two,
+                        open,
+                        new Anchor.Comment("C1", open),
+                        new Anchor.Comment("C2", open),
+                        three,
+                        new Anchor.Thread(collapsed.id(), Option.of(three)),
+                        new Anchor.Thread(resolved.id(), Option.none())),
                 drawn.stops().map(stop -> stop.mark().anchor()));
         assertEquals(
                 3,

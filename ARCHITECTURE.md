@@ -439,10 +439,11 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
 - **Their focus:** `FocusKeeper` moves the focus into the files pane when they open, and back to the pane they were
   opened from when Escape closes them. `Model.withShownPane` closes them when another pane gets the focus, and
   `LoadUpdate` when the stash they are of is dropped.
-- **The cursor of the rich view** (ADR 60): `state.DiffStops`, pure, works out where it stops from a parsed diff and
-  the threads placed in it (`Anchor`: the lead, a file's bar, a line by its side and number, a thread by its id), and
-  where it goes when its stop is gone (`DiffStops.nearest`). `RichDiff.drawn` marks the row each stop starts on
-  (`RichDiff.Drawn`), and `ui.DiffCursor` moves it: `j`/`k` and the arrows, through a stop higher than the view before
+- **The cursor of the rich view** (ADR 60): it stops on an `Anchor` (the lead, a file's bar, a line by its side and
+  number, a thread by its id, a comment of an open thread), and `state.DiffStops`, pure, says where it goes when its
+  stop is gone (`DiffStops.nearest`). `RichDiff.drawn` works out the stops as it draws the diff and marks the row each
+  starts on (`RichDiff.Drawn`); a key of the review needs only the lines among them, which `state.DiffLines` works
+  out from the diff alone, without placing the threads. `ui.DiffCursor` moves it: `j`/`k` and the arrows, through a stop higher than the view before
   the next one, the pages and the wheel pulling it along, a click on a row, a range of one hunk with `v`, the next thread with `n`. The
   area sends where it moved it and the view in one `Msg.ContentScrolled`: `Scrolled` holds the anchor of the cursor and
   of the other end of its range, and keeps the cursor when the same changes are read again
@@ -458,8 +459,8 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
   commits of the files and a pull request that is not merged, else it says why (`AppError.CannotReview`); the ids of
   the threads something is sent for (`CommitFilesView.sending`) take no other key until the threads are read again.
   `Space` collapses or opens the thread or the comment of the cursor against its default (ADR 62): the ids flipped
-  are `CommitFilesView.collapsed` (`state.Collapsed`), which `DiffStops` and `ui.RemarkLines` both read, so each
-  comment of an open thread is a stop of its own (`Anchor.Comment`) in the model as on the screen.
+  are `CommitFilesView.collapsed` (`state.Collapsed`), which `ui.RemarkLines` reads as it draws the threads
+  and their stops (`DiffStops.anchors`), so each comment of an open thread is a stop of its own (`Anchor.Comment`).
 
 ## The editor
 
