@@ -184,3 +184,6 @@ Ctrl+O opens it in the editor, Escape goes back; a failed send says why under th
 - Staging hunks and lines (`wanted.md` 1) can build on the cursor and its ranges.
 
 Amended by ADR 62: each comment of an open thread is a stop, and `Space` collapses or opens it, or its thread, against its own default rather than against `t`, which is gone.
+
+`Space` off a thread or a comment does nothing rather than say why: it toggles what is there, so a press off one is
+noise, not a mistake to explain.
