@@ -35,6 +35,10 @@ public enum ThemeName {
      */
     SYMFONIC("symfonic"),
     /**
+     * The colours of GitHub's dark theme, on its near-black canvas.
+     */
+    GITHUB_DARK("github-dark"),
+    /**
      * No styling at all: the terminal's own colours, as the UI is drawn without a theme.
      */
     NONE("none");

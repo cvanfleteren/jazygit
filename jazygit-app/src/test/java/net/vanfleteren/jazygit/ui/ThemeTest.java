@@ -169,7 +169,8 @@ class ThemeTest {
                 ThemeName.EMBER,
                 ThemeName.POWERLINE,
                 ThemeName.LIANTIS_DARK,
-                ThemeName.SYMFONIC)) {
+                ThemeName.SYMFONIC,
+                ThemeName.GITHUB_DARK)) {
             var engine = Theme.createEngine().get();
             Theme.activate(engine, name);
             Theme.SelectedText selectedText = Theme.selectedText(engine);
