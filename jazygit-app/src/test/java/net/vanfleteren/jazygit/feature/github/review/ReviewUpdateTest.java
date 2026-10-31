@@ -255,10 +255,11 @@ class ReviewUpdateTest {
                 .model();
         assertEquals(new Collapsed(HashSet.of("R")), view(comment).collapsed());
 
+        Model files = files();
         assertEquals(
-                Option.of(new AppError.CannotReview(Why.NOT_ON_THREAD)),
-                error(Update.update(files(), new ReviewMsg.ThreadToggled(at(line(Side.RIGHT, 2))))
-                        .model()));
+                files,
+                Update.update(files, new ReviewMsg.ThreadToggled(at(line(Side.RIGHT, 2))))
+                        .model());
     }
 
     private static CommitFilesMsg.RemarksLoaded readAgain(Set<String> settled, ReviewThread... threads) {

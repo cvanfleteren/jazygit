@@ -55,14 +55,14 @@ public final class ReviewUpdate {
                             return Update.start(sending(model.clearError(), set -> set.add(resolve.thread())), resolve);
                         });
             // Collapsing a thread or a comment needs no more than the thread: a merged pull request's too. The first
-            // comment of a thread is the thread (ADR 62).
+            // comment of a thread is the thread (ADR 62). Off a thread, Space does nothing: there is nothing to refuse.
             case ReviewMsg.ThreadToggled(DiffCursorAt at) ->
                 pullRequestFiles(model)
                         .toEither(Why.NOT_READ)
                         .flatMap(view -> thread(view, at.cursor()))
                         .flatMap(ReviewUpdate::notSending)
                         .fold(
-                                why -> Next.of(refused(model, why)),
+                                why -> Next.of(why == Why.NOT_ON_THREAD ? model : refused(model, why)),
                                 found -> Next.of(mapView(
                                         model,
                                         view -> view.withCollapsed(view.collapsed()
