@@ -194,6 +194,66 @@ class ContentPanelTest {
     }
 
     @Test
+    void leftLeavesADiffOfTheFilesPaneOnceItIsScrolledAllTheWayLeft() throws Exception {
+        java.util.concurrent.atomic.AtomicInteger leaves = new java.util.concurrent.atomic.AtomicInteger();
+        java.util.List<Msg> dispatched = new java.util.ArrayList<>();
+        // The model takes where the area is scrolled to, as the app's does.
+        java.util.concurrent.atomic.AtomicReference<Model> model =
+                new java.util.concurrent.atomic.AtomicReference<>(TestModels.withFilesSelected(
+                        new SampleData(),
+                        List.of(new FileEntry("x".repeat(300) + ".txt", ChangeType.MODIFIED, true, false))));
+        ContentPanel scrolling = new ContentPanel(
+                Theme.SpanStyles.NONE,
+                () -> {
+                    leaves.incrementAndGet();
+                    return true;
+                },
+                id -> {},
+                msg -> {
+                    dispatched.add(msg);
+                    model.set(Update.update(model.get(), msg).model());
+                });
+        String area = scrolling.areaOfPane(model.get(), FilesPanel.ID).get();
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> scrolling.render(model.get(), area))) {
+            SettledPilot.focus(testRunner, area);
+            RenderedText.ofLarge(testRunner, () -> scrolling.render(model.get(), area));
+            SettledPilot.of(testRunner).press(KeyCode.RIGHT);
+            SettledPilot.of(testRunner).press(KeyCode.LEFT);
+            SettledPilot.of(testRunner).pause();
+            assertEquals(0, leaves.get());
+            SettledPilot.of(testRunner).press(KeyCode.LEFT);
+            SettledPilot.of(testRunner).pause();
+        }
+
+        assertEquals(1, leaves.get());
+        assertEquals(
+                List.of(1, 0),
+                List.ofAll(dispatched)
+                        .map(msg -> ((Msg.ContentScrolled) msg).to().column()));
+    }
+
+    @Test
+    void leftDoesNotLeaveTheAreasOfOtherPanes() throws Exception {
+        java.util.concurrent.atomic.AtomicInteger leaves = new java.util.concurrent.atomic.AtomicInteger();
+        ContentPanel scrolling = new ContentPanel(Theme.SpanStyles.NONE, () -> {
+            leaves.incrementAndGet();
+            return true;
+        });
+        Model selected = showingCommit("+" + "x".repeat(300));
+        String area = scrolling.areaOfPane(selected, CommitsPanel.ID).get();
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> scrolling.render(selected, area))) {
+            SettledPilot.focus(testRunner, area);
+            RenderedText.ofLarge(testRunner, () -> scrolling.render(selected, area));
+            SettledPilot.of(testRunner).press(KeyCode.LEFT);
+            SettledPilot.of(testRunner).pause();
+        }
+
+        assertEquals(0, leaves.get());
+    }
+
+    @Test
     void escapeGoesToTheAppWhenTheAreaCannotBeLeft() throws Exception {
         java.util.List<KeyEvent> global = new java.util.ArrayList<>();
         Model selected = showingCommit("+added line");

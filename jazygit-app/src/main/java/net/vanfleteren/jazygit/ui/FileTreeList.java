@@ -171,6 +171,13 @@ final class FileTreeList<T extends Pathed> {
     }
 
     /**
+     * Whether the highlighted node is a collapsed directory.
+     */
+    boolean collapsedSelected() {
+        return Option.of(tree.selectedNode()).exists(node -> node.data() instanceof FileTree.Dir && !node.isExpanded());
+    }
+
+    /**
      * The tree widget, which holds the selection and expansion state.
      */
     TreeElement<FileTree<T>> tree() {
