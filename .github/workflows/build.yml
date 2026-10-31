@@ -32,8 +32,20 @@ jobs:
           java-version: '25'
           cache: maven
 
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+
+      # The git of the flake's nixpkgs rather than the runner image's, so the tests meet the same git whichever image
+      # the runner has; flake.lock pins it.
+      - name: Set up git from the flake
+        run: |
+          nix profile install --inputs-from . nixpkgs#git
+          echo "$HOME/.nix-profile/bin" >> "$GITHUB_PATH"
+
       - name: Build, test and check
-        run: ./mvnw --batch-mode --no-transfer-progress verify
+        run: |
+          git --version
+          ./mvnw --batch-mode --no-transfer-progress verify
 
   package:
     runs-on: ubuntu-latest
@@ -84,6 +96,15 @@ jobs:
           cache: pip
           cache-dependency-path: acceptance/requirements.txt
 
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+
+      # The same git as verify's: the acceptance tests check what git made of the repository.
+      - name: Set up git from the flake
+        run: |
+          nix profile install --inputs-from . nixpkgs#git
+          echo "$HOME/.nix-profile/bin" >> "$GITHUB_PATH"
+
       - name: Download the fat jar
         uses: actions/download-artifact@v8
         with:
@@ -92,5 +113,6 @@ jobs:
 
       - name: Acceptance tests
         run: |
+          git --version
           pip install -r acceptance/requirements.txt
           python -m pytest acceptance -v --jar "$(ls jar/jazygit-*-fat.jar)" --shard ${{ matrix.shard }}/4
