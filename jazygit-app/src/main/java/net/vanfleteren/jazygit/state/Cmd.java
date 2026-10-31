@@ -505,7 +505,7 @@ public interface Cmd {
     }
 
     /**
-     * Reads the files a commit, a stash or a pull request changed, for the tree of them the files pane lists. Those
+     * Reads the files a commit, a stash, a pull request or a branch changed, for the tree of them the files pane lists. Those
      * of a pull request are read in the background, as its commits may have to be fetched first (ADR 55).
      */
     record LoadCommitFiles(CommitFilesView.Changes of) implements Load {
@@ -527,6 +527,8 @@ public interface Cmd {
                             env.git().commitFiles(sha);
                         case CommitFilesView.Changes.OfStash(Sha sha) ->
                             env.git().stashFiles(sha);
+                        case CommitFilesView.Changes.OfBranch(var branch, var base, Sha sha) ->
+                            env.git().rangeFiles(base.tip(), sha);
                         case CommitFilesView.Changes.OfPullRequest(PullRequestCommits commits) ->
                             env.git().pullRequestFiles(commits);
                     })
@@ -558,6 +560,8 @@ public interface Cmd {
                             env.git().commitFileChanges(sha, files, options);
                         case CommitFilesView.Changes.OfStash(Sha sha) ->
                             env.git().stashFileChanges(sha, files, options);
+                        case CommitFilesView.Changes.OfBranch(var branch, var base, Sha sha) ->
+                            env.git().rangeFileChanges(base.tip(), sha, files, options);
                         case CommitFilesView.Changes.OfPullRequest(PullRequestCommits commits) ->
                             env.git().pullRequestFileChanges(commits, files, options);
                     })

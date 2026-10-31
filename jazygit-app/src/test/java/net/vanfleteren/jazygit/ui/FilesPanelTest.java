@@ -17,6 +17,7 @@ import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.*;
+import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.CommitFilesView;
 import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Model;
@@ -327,6 +328,27 @@ class FilesPanelTest {
             assertEquals("f15.txt", ((FileTree.File) panel.tree().selectedNode().data()).name());
 
             pilot.quit();
+        }
+    }
+
+    @Test
+    void theFilesOfABranchNameTheBaseTheyAreComparedWith() throws Exception {
+        CommitFilesView.Changes of = new CommitFilesView.Changes.OfBranch(
+                new BranchName("feature"),
+                new Cmd.LoadAhead.Base(
+                        new BranchRef.Remote(new RemoteBranch("origin", new BranchName("main"))), new Sha("bbbb")),
+                new Sha("aaaa"));
+        Model open = Update.update(
+                        Update.update(TestModels.loaded(), new CommitFilesMsg.Opened(of, BranchesPanel.ID))
+                                .model(),
+                        new LoadMsg.CommitFilesLoaded(of, List.of(new CommitFile("b.txt", ChangeType.ADDED))))
+                .model();
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(open, FilesPanel.ID))) {
+            String files = RenderedText.ofLarge(testRunner, () -> panel.render(open, FilesPanel.ID));
+            assertTrue(files.contains("Files of feature · vs origin/main"), files);
+
+            SettledPilot.of(testRunner).quit();
         }
     }
 

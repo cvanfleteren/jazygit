@@ -8,9 +8,13 @@ import java.util.function.Function;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
+import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.keys.Scopes;
+import net.vanfleteren.jazygit.state.AheadUpdate;
+import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.CommitFilesView;
 import net.vanfleteren.jazygit.state.CommitFilesView.Changes;
@@ -19,7 +23,7 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
- * Listing the files a commit, a stash or a pull request changed in the files pane, in place of the changed files of
+ * Listing the files a commit, a stash, a pull request or a branch changed in the files pane, in place of the changed files of
  * the working tree, and going back to those (ADR 44). The view moves the focus: into the files pane when they are
  * listed, and back to the pane they were opened from when they are closed. The files of a pull request come with its
  * review threads, which are read again when asked, and shown open or not (ADR 55), and can list only the files that
@@ -66,6 +70,24 @@ public final class CommitFilesUpdate {
                         model,
                         List.narrow(model.repoView().commitFiles().toList().flatMap(CommitFilesUpdate::remarksLoad)));
         };
+    }
+
+    /**
+     * Lists the files {@code branch} changes against its base, the base of ADR 20, at the commits the branches read
+     * last have them at (ADR 61). The main branch has no base to be compared with, nor has a branch without one.
+     */
+    public static Next againstBase(Model model, BranchName branch) {
+        Cmd.LoadAhead load = AheadUpdate.of(model, new BranchRef.Local(branch));
+        return AheadUpdate.main(model).contains(branch)
+                ? Next.of(model.fail(new AppError.IsBaseBranch(branch)))
+                : load.base()
+                        .map(base -> load.tip()
+                                .map(tip -> update(
+                                        model,
+                                        new CommitFilesMsg.Opened(
+                                                new Changes.OfBranch(branch, base, tip), Scopes.BRANCHES.id())))
+                                .getOrElse(() -> Next.of(model)))
+                        .getOrElse(() -> Next.of(model.fail(new AppError.NoBaseBranch(branch))));
     }
 
     /**

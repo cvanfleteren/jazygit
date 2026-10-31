@@ -8,6 +8,7 @@ import lombok.With;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.DiffText;
@@ -15,10 +16,10 @@ import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.Sha;
 
 /**
- * The files a commit, a stash or a pull request changed, which the files pane lists as a tree in place of the changed
- * files of the working tree while it is open (ADR 44, 55).
+ * The files a commit, a stash, a pull request or a branch changed, which the files pane lists as a tree in place of
+ * the changed files of the working tree while it is open (ADR 44, 55, 61).
  *
- * @param of       the commit, the stash or the pull request
+ * @param of       the commit, the stash, the pull request or the branch
  * @param pane     the id of the pane it was opened from, which gets the focus back when it is closed
  * @param listedIn the id of the pane that lists the files: when another pane gets the focus, it closes
  * @param files    the files, as they are read
@@ -194,6 +195,16 @@ public record CommitFilesView(
          * The changes of a stash, its untracked files included.
          */
         record OfStash(Sha sha) implements Changes {}
+
+        /**
+         * The changes of a branch against its base, as a pull request of it would show them: its tip against the merge
+         * base of that and the tip of its base (ADR 61).
+         *
+         * @param branch the branch
+         * @param base   the base of ADR 20 it is compared with, and the commit that was at
+         * @param sha    the commit the branch was at
+         */
+        record OfBranch(BranchName branch, Cmd.LoadAhead.Base base, Sha sha) implements Changes {}
 
         /**
          * The changes of a pull request on GitHub, as GitHub shows them: its head against the merge base of its head

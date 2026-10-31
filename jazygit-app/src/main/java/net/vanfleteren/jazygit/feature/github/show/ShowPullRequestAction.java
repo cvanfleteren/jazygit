@@ -17,8 +17,7 @@ public final class ShowPullRequestAction {
                                     Binding.onSelected("o", "help.branches.pullRequest", PullRequestMsg.Requested::new))
                             .add(
                                     Scopes.BRANCHES,
-                                    Binding.onSelected(
-                                            "f", "help.branches.pullRequestFiles", PullRequestMsg.FilesRequested::new)),
+                                    Binding.onSelected("f", "help.branches.files", PullRequestMsg.FilesRequested::new)),
                     (added, scope) -> added.add(
                             scope, Binding.onSelected("o", "help.prs.show", PullRequestMsg.SummaryRequested::new))),
             PullRequestDialogs::popups);

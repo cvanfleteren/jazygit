@@ -17,6 +17,8 @@ import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.PullRequestCommits;
+import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -82,10 +84,7 @@ public final class PullRequestUpdate {
             case PullRequestMsg.FilesChosen() ->
                 model.popup(PullRequestPopup.class)
                         .flatMap(PullRequestPopup::commits)
-                        .map(commits -> CommitFilesUpdate.update(
-                                model.withoutPopup(PullRequestPopup.class).withScreen(Screen.REPOSITORY),
-                                new CommitFilesMsg.Opened(
-                                        new CommitFilesView.Changes.OfPullRequest(commits), Scopes.BRANCHES.id())))
+                        .map(commits -> files(model.withoutPopup(PullRequestPopup.class), commits))
                         .getOrElse(() -> Next.of(model));
             case PullRequestMsg.MergeChosen(MergeMethod method) ->
                 Update.confirm(
@@ -269,17 +268,40 @@ public final class PullRequestUpdate {
     }
 
     /**
-     * Shows the files the pull request of the branch changes, once what there is to know about it is read; till then,
-     * its dialog shows it being read. When they cannot be shown, as it is merged or reading it failed, the dialog
-     * stays, to say so. A branch without one is left alone.
+     * Shows the files the branch changes (ADR 61). With an open pull request, those of the pull request, at the
+     * commits the pull requests were listed with; when those are not known, once its dialog read them, which it shows
+     * meanwhile, and which stays, to say so, when they cannot be shown. Without one, as far as is known, those against
+     * its base.
      */
     private static Next filesRequested(Model model, BranchName branch) {
-        return model.idleBranch(branch)
-                .map(known -> model.gitHub()
-                        .pullRequest(known)
-                        .map(pr -> show(model, branch, pr, true))
-                        .getOrElse(() -> pullRequestsUnknown(model).getOrElse(() -> Next.of(model))))
-                .getOrElse(() -> Next.of(model));
+        return model.repo()
+                .branch(branch)
+                .flatMap(known -> model.gitHub().pullRequest(known))
+                .map(pr -> pr.commits()
+                        .flatMap(listed -> commits(pr.number(), listed))
+                        .map(commits -> files(model, commits))
+                        .getOrElse(() -> show(model, branch, pr, true)))
+                .getOrElse(() -> CommitFilesUpdate.againstBase(model, branch));
+    }
+
+    /**
+     * The files of the pull request at {@code commits}, in the files pane of the repository screen, which the focus
+     * goes to; Escape there gives it to the branches pane (ADR 55).
+     */
+    private static Next files(Model model, PullRequestCommits commits) {
+        return CommitFilesUpdate.update(
+                model.withScreen(Screen.REPOSITORY),
+                new CommitFilesMsg.Opened(new CommitFilesView.Changes.OfPullRequest(commits), Scopes.BRANCHES.id()));
+    }
+
+    /**
+     * The commits pull request {@code number}, listed with {@code commits}, is diffed between; none when GitHub named
+     * one that is no sha.
+     */
+    private static Option<PullRequestCommits> commits(int number, PullRequest.Commits commits) {
+        return Sha.parse(commits.base().oid())
+                .flatMap(base -> Sha.parse(commits.head().oid())
+                        .map(head -> new PullRequestCommits(number, commits.repository(), commits.host(), base, head)));
     }
 
     /**

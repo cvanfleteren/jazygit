@@ -273,7 +273,7 @@ public final class AheadUpdate {
     /**
      * The main branch, as the branches read last tell, if they were read and have one.
      */
-    static Option<BranchName> main(Model model) {
+    public static Option<BranchName> main(Model model) {
         return model.repo().branches().toOption().flatMap(AllBranches::main);
     }
 

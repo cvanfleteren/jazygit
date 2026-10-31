@@ -10,6 +10,8 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.gh.model.GhCommit;
+import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.State;
@@ -113,6 +115,43 @@ class RepositoryPullRequestsQueryTest {
                         .open()
                         .pullRequests()
                         .map(PullRequestSummary::checks));
+    }
+
+    /**
+     * The commits pull request 95 in the list is said to be at, as the branches have them, with the fields of
+     * {@code oids} after its head branch.
+     */
+    private static Option<PullRequest.Commits> commits(String oids) {
+        return read(
+                        "{ \"login\": \"bob\" }",
+                        "",
+                        1,
+                        summary(95, "null", NO_SUITES)
+                                .replace("\"headRefName\": \"b95\"", "\"headRefName\": \"b95\"" + oids))
+                .get()
+                .ofBranches()
+                .head()
+                .commits();
+    }
+
+    @Test
+    void theBranchesHaveTheCommitsTheirPullRequestIsDiffedBetween() {
+        Option<PullRequest.Commits> commits = commits(", \"headRefOid\": \"aaa\", \"baseRefOid\": \"bbb\"");
+
+        assertEquals(
+                Option.of(new PullRequest.Commits(
+                        "owner/repo",
+                        "https://github.com/owner/repo/pull/95",
+                        new GhCommit("bbb"),
+                        new GhCommit("aaa"))),
+                commits);
+        assertEquals("github.com", commits.get().host());
+    }
+
+    @Test
+    void aPullRequestWhoseBranchIsGoneOrWhoseCommitsAreNotSaidHasNone() {
+        assertEquals(Option.none(), commits(", \"headRefOid\": null, \"baseRefOid\": \"bbb\""));
+        assertEquals(Option.none(), commits(""));
     }
 
     @Test

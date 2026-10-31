@@ -100,6 +100,13 @@ public record PullRequestDetails(
      * The host its repository is on, like {@code github.com}; empty when its URL is not known.
      */
     public String host() {
+        return hostOf(url);
+    }
+
+    /**
+     * The host {@code url} names, like {@code github.com}; empty when it names none.
+     */
+    static String hostOf(String url) {
         return Try.of(() -> URI.create(url).getHost())
                 .toOption()
                 .flatMap(Option::of)
@@ -132,7 +139,8 @@ public record PullRequestDetails(
                         status.draft(),
                         Checks.combined(checks.map(Check::state)),
                         conversation.review(),
-                        stack));
+                        stack,
+                        PullRequest.Commits.of(repository, url, branches.baseCommit(), branches.headCommit())));
     }
 
     public enum State {

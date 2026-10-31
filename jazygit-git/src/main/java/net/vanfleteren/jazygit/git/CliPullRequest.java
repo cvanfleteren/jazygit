@@ -22,7 +22,8 @@ import net.vanfleteren.jazygit.git.model.Sha;
 /**
  * Reads what a pull request on GitHub changes through the git command line tool, as GitHub shows it: its head commit
  * against the merge base of that and its base commit, {@code <base>...<head>} (ADR 55). Its commits are fetched
- * first when the repository does not have them.
+ * first when the repository does not have them. A branch is read against its base the same way, without a fetch
+ * (ADR 61).
  */
 final class CliPullRequest {
 
@@ -38,11 +39,17 @@ final class CliPullRequest {
      */
     static Either<ProcessError, List<CommitFile>> files(
             Path worktree, PullRequestCommits commits, Map<String, String> credentials) {
-        return fetched(worktree, commits, credentials)
-                .flatMap(done -> GitProcess.read(
-                        worktree,
-                        reading(List.of("diff", "--name-status", "-z", "-M").append(range(commits))),
-                        CliShow::parseFiles));
+        return fetched(worktree, commits, credentials).flatMap(done -> files(worktree, commits.base(), commits.head()));
+    }
+
+    /**
+     * The files {@code head} changes against the merge base of it and {@code base}, with renames found.
+     */
+    static Either<ProcessError, List<CommitFile>> files(Path worktree, Sha base, Sha head) {
+        return GitProcess.read(
+                worktree,
+                reading(List.of("diff", "--name-status", "-z", "-M").append(range(base, head))),
+                CliShow::parseFiles);
     }
 
     /**
@@ -52,6 +59,15 @@ final class CliPullRequest {
      */
     static Either<ProcessError, DiffText> fileChanges(
             Path worktree, PullRequestCommits commits, List<CommitFile> files, DiffOptions options) {
+        return fileChanges(worktree, commits.base(), commits.head(), files, options);
+    }
+
+    /**
+     * What {@code head} changes in {@code files} against the merge base of it and {@code base}, read with
+     * {@code options}. Long output is cut off; without files, nothing is read.
+     */
+    static Either<ProcessError, DiffText> fileChanges(
+            Path worktree, Sha base, Sha head, List<CommitFile> files, DiffOptions options) {
         if (files.isEmpty()) {
             return Either.right(DiffText.of(""));
         }
@@ -59,15 +75,15 @@ final class CliPullRequest {
                 worktree,
                 reading(DIFF.append("-M")
                                 .appendAll(CliDiff.flags(options))
-                                .append(range(commits))
+                                .append(range(base, head))
                                 .append("--")
                                 .appendAll(files.flatMap(CommitFile::paths)))
                         .withLiteralPaths(),
                 output -> Either.right(CliDiff.truncated(output)));
     }
 
-    private static String range(PullRequestCommits commits) {
-        return GitArgs.symmetric(new Revision.Commit(commits.base()), new Revision.Commit(commits.head()));
+    private static String range(Sha base, Sha head) {
+        return GitArgs.symmetric(new Revision.Commit(base), new Revision.Commit(head));
     }
 
     /**

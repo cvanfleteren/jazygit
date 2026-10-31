@@ -1391,7 +1391,7 @@ class PullRequestUpdateTest {
     }
 
     @Test
-    void fOnABranchShowsTheFilesOfItsPullRequestOnceItIsRead() {
+    void fOnABranchWhosePullRequestIsListedWithoutItsCommitsShowsItsFilesOnceItIsRead() {
         Next requested = Update.update(withPr(), new PullRequestMsg.FilesRequested(FEATURE));
 
         // Its dialog shows it being read meanwhile.
@@ -1438,13 +1438,74 @@ class PullRequestUpdateTest {
     }
 
     @Test
-    void fOnABranchWithoutAPullRequestDoesNothing() {
-        Model model = withPr();
+    void fOnABranchWhosePullRequestIsListedWithItsCommitsShowsItsFilesAtOnce() {
+        PullRequest listed = new PullRequest(
+                42,
+                "feature",
+                false,
+                Checks.PASSING,
+                Review.APPROVED,
+                Option.none(),
+                Option.of(new PullRequest.Commits(
+                        "owner/repo",
+                        "https://github.com/owner/repo/pull/42",
+                        new GhCommit(BASE_OID),
+                        new GhCommit(HEAD_OID))));
+        Model shown = Update.update(model(), new PullRequestsMsg.Loaded(List.of(listed)))
+                .model();
 
-        Next requested = Update.update(model, new PullRequestMsg.FilesRequested(MAIN.name()));
+        Next opened = Update.update(shown, new PullRequestMsg.FilesRequested(FEATURE));
 
-        assertEquals(model, requested.model());
-        assertEquals(List.empty(), requested.cmds());
+        CommitFilesView.Changes of = new CommitFilesView.Changes.OfPullRequest(
+                new PullRequestCommits(42, "owner/repo", "github.com", new Sha(BASE_OID), new Sha(HEAD_OID)));
+        assertEquals(Option.none(), opened.model().popup(PullRequestPopup.class));
+        assertEquals(
+                Option.of(CommitFilesView.of(of, "branches", "files")),
+                opened.model().repoView().commitFiles());
+        assertEquals(List.of(new Cmd.LoadCommitFiles(of), new CommitFilesCmd.LoadReviewRemarks(42)), opened.cmds());
+    }
+
+    @Test
+    void fOnABranchWithoutAPullRequestShowsItsFilesAgainstItsBase() {
+        CommitFilesView.Changes of = new CommitFilesView.Changes.OfBranch(
+                UNPUSHED.name(), new Cmd.LoadAhead.Base(new BranchRef.Local(MAIN.name()), MAIN.tip()), UNPUSHED.tip());
+        // Also when it is not known whether it has one.
+        for (Model shown : List.of(
+                withPr(), localBranchesRead(loaded(), List.of(UNPUSHED, MAIN)).model())) {
+            Next opened = Update.update(shown, new PullRequestMsg.FilesRequested(UNPUSHED.name()));
+
+            assertEquals(
+                    Option.of(CommitFilesView.of(of, "branches", "files")),
+                    opened.model().repoView().commitFiles());
+            assertEquals(List.of(new Cmd.LoadCommitFiles(of)), opened.cmds());
+            assertFalse(opened.cmds().head().background());
+        }
+    }
+
+    @Test
+    void theMainBranchHasNoBaseToShowItsFilesAgainst() {
+        Next opened = Update.update(withPr(), new PullRequestMsg.FilesRequested(MAIN.name()));
+
+        assertEquals(
+                Option.of(new AppError.IsBaseBranch(MAIN.name())),
+                opened.model().outcome().error());
+        assertEquals(Option.none(), opened.model().repoView().commitFiles());
+        assertEquals(List.empty(), opened.cmds());
+    }
+
+    @Test
+    void aBranchWithoutABaseHasNoFilesToShow() {
+        Model alone = Update.update(
+                        localBranchesRead(loaded(), List.of(UNPUSHED)).model(),
+                        new PullRequestsMsg.Loaded(List.empty()))
+                .model();
+
+        Next opened = Update.update(alone, new PullRequestMsg.FilesRequested(UNPUSHED.name()));
+
+        assertEquals(
+                Option.of(new AppError.NoBaseBranch(UNPUSHED.name())),
+                opened.model().outcome().error());
+        assertEquals(List.empty(), opened.cmds());
     }
 
     @Test
