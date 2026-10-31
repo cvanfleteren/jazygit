@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.github.show;
 
 import io.vavr.collection.List;
+import java.time.Duration;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.MergeStatus;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
@@ -111,5 +112,14 @@ public sealed interface PullRequestMsg extends Msg {
     /**
      * Periodic prompt to read the pull request again, while it is shown.
      */
-    record Tick() implements PullRequestMsg, Msg.Periodic {}
+    record Tick() implements PullRequestMsg, Msg.Periodic {
+
+        // Once a minute rather than every 10 s while a check runs.
+        public static final Duration WHILE_AWAY = Duration.ofMinutes(1);
+
+        @Override
+        public Duration whileAway() {
+            return WHILE_AWAY;
+        }
+    }
 }

@@ -43,8 +43,10 @@ import net.vanfleteren.jazygit.git.model.MetadataStamp;
  *                   not blink out between two commands
  * @param away       whether the terminal does not have the focus, as one that reports it said last: the timers then
  *                   read nothing (ADR 58)
- * @param missed     the messages of the timers that came while away, in the order they first came, to be handled
- *                   once, when the terminal has the focus again
+ * @param missed     the messages of the timers that came while away and were kept, in the order they first came, to
+ *                   be handled once, when the terminal has the focus again
+ * @param awayAt     while away, for each message of a timer that came, when it was last handled, or first kept: it is
+ *                   handled again once it waited its {@link Msg.Periodic#whileAway()} since (ADR 67)
  */
 @With
 public record Jobs(
@@ -61,7 +63,8 @@ public record Jobs(
         long nextId,
         Option<Lingering> lingering,
         boolean away,
-        Set<Msg> missed) {
+        Set<Msg> missed,
+        Map<Msg.Periodic, Instant> awayAt) {
 
     public static final Jobs IDLE = new Jobs(
             HashSet.empty(),
@@ -77,7 +80,8 @@ public record Jobs(
             0,
             Option.none(),
             false,
-            LinkedHashSet.empty());
+            LinkedHashSet.empty(),
+            HashMap.empty());
 
     /**
      * How long a command runs before it shows: the reads that take a few milliseconds, on every key and every tick,
@@ -95,6 +99,29 @@ public record Jobs(
      * the default interval.
      */
     private static final int MAX_BACKOFF_SHIFT = 6;
+
+    /**
+     * Whether {@code msg}, which a timer sent at {@code now} while away, is to be handled: once it waited its
+     * {@link Msg.Periodic#whileAway()} since it was last handled, or first kept, while away (ADR 67).
+     */
+    public boolean dueWhileAway(Msg.Periodic msg, Instant now) {
+        return awayAt.get(msg).exists(at -> !now.isBefore(at.plus(msg.whileAway())));
+    }
+
+    /**
+     * These jobs keeping {@code msg}, which a timer sent at {@code now} while away, to be handled once back; the
+     * first one kept starts the wait until it is handled anyway.
+     */
+    public Jobs keptWhileAway(Msg.Periodic msg, Instant now) {
+        return withMissed(missed.add(msg)).withAwayAt(awayAt.containsKey(msg) ? awayAt : awayAt.put(msg, now));
+    }
+
+    /**
+     * These jobs handling {@code msg} at {@code now} while away: it is no longer missed, and waits anew.
+     */
+    public Jobs handledWhileAway(Msg.Periodic msg, Instant now) {
+        return withMissed(missed.remove(msg)).withAwayAt(awayAt.put(msg, now));
+    }
 
     /**
      * These jobs one tick further.

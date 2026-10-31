@@ -598,10 +598,14 @@ the app. A periodic load is skipped while an equal one is still running (`Jobs.r
 `documentation/adr/0015-check-metadata-before-loading.md`.
 
 While the terminal does not have the focus, the messages of the timers that read something (`Msg.Periodic`: the
-tick, the fetch, the pull requests screen and the dialogs of checks) are kept in `Jobs.missed` instead of handled,
-and each is handled once when it has the focus again (`Msg.TerminalFocused`). The app asks the terminal to report
+tick, the fetch, the pull requests screen and the dialogs of checks) are handled only once every
+`Msg.Periodic.whileAway()` (`Jobs.awayAt`: the tick every 15 s, the fetch and the pull requests every 5 minutes, the
+dialogs of checks every minute), and kept in `Jobs.missed` otherwise; each that is kept is handled once when it has
+the focus again (`Msg.TerminalFocused`). The time shown then moves on every 5 s (`Model.AWAY_CLOCK`), so a frame is
+drawn every 5 s rather than every second. The app asks the terminal to report
 the focus; `HandOverBackend` takes the reports out of the keys, which TamboUI reads as an unknown key, and a key read
-while away counts as the focus being back. See `documentation/adr/0058-less-reading-in-the-background.md`.
+while away counts as the focus being back. See `documentation/adr/0058-less-reading-in-the-background.md` and
+`documentation/adr/0067-reading-less-rather-than-nothing-in-the-background.md`.
 
 A read that failed is tried again on a tick only once it waited 1, 2, 4… up to 64 ticks after each failure in a row
 (`Jobs.retries`, `Jobs.retryDue`); `Update.refresh` tries it at once. The previews (a branch's log, a commit's or a
@@ -613,7 +617,7 @@ Every message is handled at the time it is: `Program` hands it to `Update.step(m
 `Model.now` before the message is applied. `Msg.Clock` comes every second, apart from that, only to wake the model up
 when nothing else happens, so the ages move on. The view rounds them: in minutes ("now" under one), and how long ago
 the remotes were fetched, or the pull requests read, in steps of 10 s under a minute. `Model.drawn()` takes the time
-to the second, so an idle app draws a frame a second. See `documentation/adr/0021-a-clock-apart-from-the-refresh.md`,
+to the second, so an idle app draws a frame a second, and every 5 s while the terminal does not have the focus. See `documentation/adr/0021-a-clock-apart-from-the-refresh.md`,
 `documentation/adr/0022-fetched-ago-in-steps-of-10s.md` and `documentation/adr/0033-show-that-work-is-being-done.md`.
 
 `Update.step` also stamps the commands the message asks for: each gets the next id (`Jobs.nextId`) and runs, in

@@ -124,3 +124,6 @@ of them the status of ADR 52, and 3 to 4 gh processes; several of them read what
 Amends ADR 56 (`0056-fewer-git-processes-after-a-commit.md`) and ADR 29 (the pull requests screen no longer reads
 its new pull requests while hidden: the read after each fetch does). It also changes what the code calls ADR 42, the
 second query for how far a pull request is behind its base, of which there is no file to refer from.
+
+Amended by ADR 67 (`0067-reading-less-rather-than-nothing-in-the-background.md`): while away, the timers read less
+rather than nothing, and the time shown moves on every 5 s.
