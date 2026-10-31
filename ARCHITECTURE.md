@@ -146,7 +146,8 @@ the setting still holds until jazygit stops.
 
 Ctrl+S shows the settings (`feature.settings`): the gh executable, the theme, and the GitHub account of the
 repository. The keys in `config.toml` are `ui.theme`, `ui.diff-style` (which Ctrl+D switches, ADR 44),
-`ui.diff-syntax` (`false` draws the code of the rich view in one colour, ADR 53) and
+`ui.diff-syntax` (`false` draws the code of the rich view in one colour, ADR 53), `ui.diff-words` (which Ctrl+E
+switches; `false` draws a changed line of the rich view in its line colour alone, its changed words not highlighted) and
 `github.executable`, the gh to run when it is not the one on the PATH; a new one is only kept once `<executable> --version` runs. Changing the gh executable or the
 account shows the repository again through `Env.repositories()`, as switching to a recent repository does, so a
 new `Env` runs gh as the settings say now.
@@ -369,7 +370,10 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
   `--diff-merges=first-parent`), as the rich view does not draw git's combined diff of a merge. A path left
   unmerged by a conflict still shows as a combined diff (`diff --cc`) in the working tree: `UnifiedDiff` makes it a
   `CONFLICTED` file, whose lines are kept as git printed them. The staged and the unstaged areas are each a
-  `DiffText` of their own, so each is parsed and its words compared on its own.
+  `DiffText` of their own, so each is parsed and its words compared on its own. Ctrl+E
+  (`DiffOptionsMsg.WordsToggled`, kept as `ui.diff-words`) switches whether the rich view highlights the words that
+  changed in a changed line, or draws the line in its line colour alone; it saves it, and only draws the diffs again,
+  as the words were compared when they were read.
 - **The rich view** is drawn by `ui.RichDiff` from a `ParsedDiff`, one tree of files, hunks and lines, each line with
   its words and its tokens (ADR 56): `UnifiedDiff`, the diff parsed into files, hunks and numbered lines, which
   `ParsedDiff.diff()` gives back, and `WordDiff`, which pairs the removed and added lines of a block and finds the words that

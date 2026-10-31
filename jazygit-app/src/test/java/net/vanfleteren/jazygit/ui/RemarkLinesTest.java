@@ -84,7 +84,8 @@ class RemarkLinesTest {
     }
 
     private static List<String> rich(String diff, ShownRemarks remarks) {
-        return text(RichDiff.lines(ParsedDiff.of(diff), false, Option.of(remarks), Theme.SpanStyles.NONE))
+        return text(drawn(ParsedDiff.of(diff), false, Option.of(remarks), Theme.SpanStyles.NONE)
+                        .lines())
                 .map(String::stripTrailing);
     }
 
@@ -459,7 +460,7 @@ class RemarkLinesTest {
         ReviewThread outdated = thread("a.txt", 40, false, "old");
         ShownRemarks remarks = shown(false, first, second, outdated);
 
-        RichDiff.Drawn drawn = RichDiff.drawn(ParsedDiff.of(DIFF), true, Option.of(remarks), Theme.SpanStyles.NONE);
+        RichDiff.Drawn drawn = drawn(ParsedDiff.of(DIFF), true, Option.of(remarks), Theme.SpanStyles.NONE);
 
         // Nothing comes before the file, so there is no lead.
         assertEquals(
@@ -486,7 +487,7 @@ class RemarkLinesTest {
                 .withLead();
         assertEquals(List.empty(), drawn.stops());
 
-        RichDiff.Drawn lead = RichDiff.drawn(ParsedDiff.of(DIFF), true, Option.none(), Theme.SpanStyles.NONE)
+        RichDiff.Drawn lead = drawn(ParsedDiff.of(DIFF), true, Option.none(), Theme.SpanStyles.NONE)
                 .after(List.of(Line.from("commit"), Line.from("---")))
                 .withLead();
         assertEquals(new Anchor.Lead(), lead.stops().head().mark().anchor());
@@ -502,6 +503,14 @@ class RemarkLinesTest {
         List<String> lines() {
             return text(List.ofAll(styled.lines()));
         }
+    }
+
+    /**
+     * {@code diff} drawn with the review threads {@code remarks}, the changed words highlighted.
+     */
+    private static RichDiff.Drawn drawn(
+            ParsedDiff diff, boolean syntax, Option<ShownRemarks> remarks, Theme.SpanStyles styles) {
+        return RichDiff.drawn(diff, syntax, true, remarks, styles);
     }
 
     private static List<String> text(List<Line> lines) {

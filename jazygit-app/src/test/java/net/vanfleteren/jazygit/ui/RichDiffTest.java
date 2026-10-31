@@ -23,7 +23,7 @@ class RichDiffTest {
 
     @Test
     void drawsABarForEachFileAndNumbersItsLines() {
-        List<String> lines = text(RichDiff.lines(ParsedDiff.of("""
+        List<String> lines = text(lines(ParsedDiff.of("""
                  a.txt | 2 +-
                  1 file changed
 
@@ -60,7 +60,7 @@ class RichDiffTest {
 
     @Test
     void aHunkHeaderWhoseNumbersCannotBeReadFollowsTheRuleAsGitPrintedIt() {
-        List<String> lines = text(RichDiff.lines(ParsedDiff.of("""
+        List<String> lines = text(lines(ParsedDiff.of("""
                 diff --git a/a.txt b/a.txt
                 --- a/a.txt
                 +++ b/a.txt
@@ -73,7 +73,7 @@ class RichDiffTest {
 
     @Test
     void aConflictedFileShowsUnderABarOfItsOwnAsGitPrintedIt() {
-        List<String> lines = text(RichDiff.lines(ParsedDiff.of("""
+        List<String> lines = text(lines(ParsedDiff.of("""
                 * Unmerged path g.txt
                 diff --cc f.txt
                 index 189acaa,1ed2302..0000000
@@ -100,7 +100,7 @@ class RichDiffTest {
 
     @Test
     void aHunkAfterTheFirstStartsWithARuleAsWideAsItsLineNumbers() {
-        List<String> lines = text(RichDiff.lines(ParsedDiff.of("""
+        List<String> lines = text(lines(ParsedDiff.of("""
                 diff --git a/a.txt b/a.txt
                 --- a/a.txt
                 +++ b/a.txt
@@ -122,7 +122,7 @@ class RichDiffTest {
         Style word = Style.EMPTY.reversed();
         Theme.SpanStyles styles = cssClass -> cssClass.endsWith("-word") ? word : Style.EMPTY;
 
-        List<Line> lines = RichDiff.lines(ParsedDiff.of("""
+        List<Line> lines = lines(ParsedDiff.of("""
                 diff --git a/a.txt b/a.txt
                 --- a/a.txt
                 +++ b/a.txt
@@ -140,7 +140,7 @@ class RichDiffTest {
 
     @Test
     void coloursTheCodeOfAChangedLineByItsSyntaxOnItsBackground() {
-        List<Line> lines = RichDiff.lines(ParsedDiff.of(STRING_CHANGED), true, SYNTAX_STYLES);
+        List<Line> lines = lines(ParsedDiff.of(STRING_CHANGED), true, SYNTAX_STYLES);
 
         assertEquals(
                 List.of(
@@ -154,7 +154,7 @@ class RichDiffTest {
 
     @Test
     void theMarkerOfAChangedLineKeepsTheStyleOfItsClass() {
-        List<Line> lines = RichDiff.lines(ParsedDiff.of(STRING_CHANGED), true, SYNTAX_STYLES);
+        List<Line> lines = lines(ParsedDiff.of(STRING_CHANGED), true, SYNTAX_STYLES);
 
         assertEquals(
                 Style.EMPTY.fg(Color.GREEN).bg(Color.BLACK),
@@ -163,7 +163,7 @@ class RichDiffTest {
 
     @Test
     void aContextLineTakesTheColoursOfItsTokensOnly() {
-        List<Line> lines = RichDiff.lines(ParsedDiff.of("""
+        List<Line> lines = lines(ParsedDiff.of("""
                 diff --git a/A.java b/A.java
                 --- a/A.java
                 +++ b/A.java
@@ -183,7 +183,7 @@ class RichDiffTest {
 
     @Test
     void withoutSyntaxAChangedLineIsDrawnInItsClassesAlone() {
-        List<Line> lines = RichDiff.lines(ParsedDiff.of(STRING_CHANGED), false, SYNTAX_STYLES);
+        List<Line> lines = lines(ParsedDiff.of(STRING_CHANGED), false, SYNTAX_STYLES);
 
         assertEquals(
                 List.of(
@@ -208,8 +208,7 @@ class RichDiffTest {
 
     @Test
     void aFileOfNoLanguageKnownIsDrawnInItsClassesAlone() {
-        List<Line> lines =
-                RichDiff.lines(ParsedDiff.of(STRING_CHANGED.replace("A.java", "a.txt")), true, SYNTAX_STYLES);
+        List<Line> lines = lines(ParsedDiff.of(STRING_CHANGED.replace("A.java", "a.txt")), true, SYNTAX_STYLES);
 
         assertEquals(
                 List.of(
@@ -226,7 +225,7 @@ class RichDiffTest {
                 ? word
                 : cssClass.startsWith("diff-") ? Style.EMPTY.fg(Color.GREEN) : SYNTAX_STYLES.of(cssClass);
 
-        List<Line> lines = RichDiff.lines(ParsedDiff.of(STRING_CHANGED), true, noBackground);
+        List<Line> lines = lines(ParsedDiff.of(STRING_CHANGED), true, noBackground);
 
         assertEquals(
                 List.of(
@@ -242,7 +241,7 @@ class RichDiffTest {
         Theme.SpanStyles bold =
                 cssClass -> cssClass.equals(Theme.Classes.DIFF_ADDED_LINE) ? line : SYNTAX_STYLES.of(cssClass);
 
-        List<Line> lines = RichDiff.lines(ParsedDiff.of(STRING_CHANGED), true, bold);
+        List<Line> lines = lines(ParsedDiff.of(STRING_CHANGED), true, bold);
 
         assertEquals(
                 Tuple.of("String s = ", Style.EMPTY.bg(Color.BLACK).bold()),
@@ -254,7 +253,7 @@ class RichDiffTest {
 
     @Test
     void aLexedLineWithoutTokensTakesThePlainColourOnItsBackground() {
-        List<Line> lines = RichDiff.lines(ParsedDiff.of("""
+        List<Line> lines = lines(ParsedDiff.of("""
                 diff --git a/A.java b/A.java
                 --- a/A.java
                 +++ b/A.java
@@ -274,7 +273,7 @@ class RichDiffTest {
     @Test
     void aLineTooLongToBeLexedIsDrawnInItsClassesAlone() {
         String tooLong = "int x = " + "1".repeat(Lexer.MAX_LINE) + ";";
-        List<Line> lines = RichDiff.lines(ParsedDiff.of("""
+        List<Line> lines = lines(ParsedDiff.of("""
                 diff --git a/A.java b/A.java
                 --- a/A.java
                 +++ b/A.java
@@ -314,8 +313,8 @@ class RichDiffTest {
                         .appendAll(List.rangeClosed(1, lines).map(line -> " f%d line %d".formatted(file, line))))
                 .mkString("", "\n", "\n");
 
-        List<String> drawn = text(RichDiff.lines(ParsedDiff.of(diff), true, Theme.SpanStyles.NONE))
-                .map(String::stripTrailing);
+        List<String> drawn =
+                text(lines(ParsedDiff.of(diff), true, Theme.SpanStyles.NONE)).map(String::stripTrailing);
 
         assertEquals(
                 List.range(0, files)
@@ -329,7 +328,7 @@ class RichDiffTest {
     @Test
     void aChangedLineIsPaddedToTheBarWhenAWordIsCutFromItsVariationSelector() {
         // The emoji and its U+FE0F are cut into pieces of their own, which are narrower together than the whole.
-        List<Line> lines = RichDiff.lines(ParsedDiff.of("""
+        List<Line> lines = lines(ParsedDiff.of("""
                 diff --git a/f.txt b/f.txt
                 --- a/f.txt
                 +++ b/f.txt
@@ -373,6 +372,13 @@ class RichDiffTest {
      */
     private static int width(Line line) {
         return line.spans().stream().mapToInt(Span::width).sum();
+    }
+
+    /**
+     * The lines of {@code diff}, the changed words highlighted, as the tests of how a line is drawn expect.
+     */
+    private static List<Line> lines(ParsedDiff diff, boolean syntax, Theme.SpanStyles styles) {
+        return RichDiff.drawn(diff, syntax, true, Option.none(), styles).lines();
     }
 
     private static List<String> text(List<Line> lines) {

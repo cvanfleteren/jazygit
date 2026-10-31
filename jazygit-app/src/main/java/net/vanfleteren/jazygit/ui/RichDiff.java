@@ -43,36 +43,13 @@ final class RichDiff {
     private RichDiff() {}
 
     /**
-     * The lines of {@code diff}, styled, its code coloured by its syntax if {@code syntax} (ADR 53). It was parsed,
-     * its words compared and its code lexed when it was read (ADR 50), so drawing it only styles it.
-     */
-    static List<Line> lines(ParsedDiff diff, boolean syntax, Theme.SpanStyles styles) {
-        return lines(diff, syntax, Option.none(), styles);
-    }
-
-    /**
-     * The lines of {@code diff}, as {@link #lines(ParsedDiff, boolean, Theme.SpanStyles)} draws them, with the review
-     * threads of a pull request, {@code remarks}, if it has them (ADR 55): each after its line, which the gutter marks,
-     * one about a whole file under its bar, and the ones that cannot be placed at the end of their file.
-     */
-    static List<Line> lines(
-            ParsedDiff diff, boolean syntax, Option<ContentView.ShownRemarks> remarks, Theme.SpanStyles styles) {
-        return drawn(diff, syntax, remarks, styles).lines();
-    }
-
-    /**
-     * The lines of {@code diff}, as {@link #lines(ParsedDiff, boolean, Option, Theme.SpanStyles)} draws them, with
-     * where each stop of the cursor starts in them (ADR 60): the bar of each file, each line that has a side and a
-     * number, and each thread.
-     */
-    static Drawn drawn(
-            ParsedDiff diff, boolean syntax, Option<ContentView.ShownRemarks> remarks, Theme.SpanStyles styles) {
-        return drawn(diff, syntax, true, remarks, styles);
-    }
-
-    /**
-     * The lines of {@code diff}, as {@link #drawn(ParsedDiff, boolean, Option, Theme.SpanStyles)} draws them, with the
-     * words that changed in a changed line highlighted if {@code words}; else the whole line is in its line class.
+     * The lines of {@code diff}, styled, its code coloured by its syntax if {@code syntax} (ADR 53), and the words
+     * that changed in a changed line highlighted if {@code words}, else the whole line in its line class. It was
+     * parsed, its words compared and its code lexed when it was read (ADR 50), so drawing it only styles it. The
+     * review threads of a pull request, {@code remarks}, are drawn with it if it has them (ADR 55): each after its
+     * line, which the gutter marks, one about a whole file under its bar, and the ones that cannot be placed at the
+     * end of their file. It comes with where each stop of the cursor starts in the lines (ADR 60): the bar of each
+     * file, each line that has a side and a number, and each thread.
      */
     static Drawn drawn(
             ParsedDiff diff,
