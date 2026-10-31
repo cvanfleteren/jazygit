@@ -131,6 +131,48 @@ class JazygitAppPilotTest {
     }
 
     @Test
+    void rightMovesFromTheFilesPaneIntoItsDiffAndLeftGivesTheFocusBack() throws Exception {
+        SampleData data = new SampleData();
+        Model loaded = TestModels.loaded(data);
+        io.vavr.collection.List<FileEntry> files =
+                loaded.repo().status().toOption().get().files();
+        Model model = Update.update(
+                        Update.update(loaded, new SelectionMsg.FilesSelected(files))
+                                .model(),
+                        new LoadMsg.FileDiffLoaded(files, DiffOptions.DEFAULT, new Diffs("+staged\n", "+unstaged\n")))
+                .model();
+        AtomicReference<ToolkitTestRunner> runner = new AtomicReference<>();
+        AtomicReference<FocusKeeper> keeper = new AtomicReference<>();
+        ContentPanel content =
+                new ContentPanel(Theme.SpanStyles.NONE, () -> keeper.get().leaveScrollArea());
+        keeper.set(new FocusKeeper(() -> runner.get().runner(), () -> model, content, new Popups(msg -> {}), () -> {}));
+        FilesPanel filesPanel = new FilesPanel(msg -> {}, () -> keeper.get().openContent(FilesPanel.ID));
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> {
+            String focusedId = runner.get() == null ? null : keeper.get().focusedId();
+            return row(
+                    filesPanel.render(model, focusedId).percent(30),
+                    content.render(model, focusedId).fill());
+        })) {
+            runner.set(testRunner);
+            SettledPilot.focus(testRunner, FilesPanel.ID);
+            Pilot pilot = SettledPilot.of(testRunner);
+            pilot.pause();
+
+            pilot.press(KeyCode.RIGHT);
+            pilot.pause();
+            assertTrue(
+                    ContentPanel.isArea(keeper.get().focusedId()), keeper.get().focusedId());
+
+            pilot.press(KeyCode.LEFT);
+            pilot.pause();
+            assertEquals(FilesPanel.ID, keeper.get().focusedId());
+
+            pilot.quit();
+        }
+    }
+
+    @Test
     void theRemoteBranchesAreOneStopOfTheTabCycleAndTheirKeysWorkThere() throws Exception {
         SampleData data = new SampleData();
         java.util.List<Msg> dispatched = new ArrayList<>();

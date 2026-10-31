@@ -15,6 +15,7 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.stream.Collectors;
 import net.vanfleteren.jazygit.feature.branch.commits.BranchCommitsMsg;
+import net.vanfleteren.jazygit.feature.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
@@ -196,6 +197,99 @@ class ContentPanelTest {
         assertTrue(bottom > 0 && page > 1, at.toString());
         assertEquals(List.of(bottom, bottom - 1, bottom - 1 - page, 0, page, page, page, page), at.map(Scrolled::row));
         assertEquals(List.of(0, 0, 0, 0, 0, 1, 2, 1), at.map(Scrolled::column));
+    }
+
+    @Test
+    void leftLeavesADiffOfTheFilesPaneOnceItIsScrolledAllTheWayLeft() throws Exception {
+        java.util.concurrent.atomic.AtomicInteger leaves = new java.util.concurrent.atomic.AtomicInteger();
+        java.util.List<Msg> dispatched = new java.util.ArrayList<>();
+        // The model takes where the area is scrolled to, as the app's does.
+        java.util.concurrent.atomic.AtomicReference<Model> model =
+                new java.util.concurrent.atomic.AtomicReference<>(TestModels.withFilesSelected(
+                        new SampleData(),
+                        List.of(new FileEntry("x".repeat(300) + ".txt", ChangeType.MODIFIED, true, false))));
+        ContentPanel scrolling = new ContentPanel(
+                Theme.SpanStyles.NONE,
+                () -> {
+                    leaves.incrementAndGet();
+                    return true;
+                },
+                id -> {},
+                msg -> {
+                    dispatched.add(msg);
+                    model.set(Update.update(model.get(), msg).model());
+                });
+        String area = scrolling.areaOfPane(model.get(), FilesPanel.ID).get();
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> scrolling.render(model.get(), area))) {
+            SettledPilot.focus(testRunner, area);
+            RenderedText.ofLarge(testRunner, () -> scrolling.render(model.get(), area));
+            SettledPilot.of(testRunner).press(KeyCode.RIGHT);
+            SettledPilot.of(testRunner).press(KeyCode.LEFT);
+            SettledPilot.of(testRunner).pause();
+            assertEquals(0, leaves.get());
+            SettledPilot.of(testRunner).press(KeyCode.LEFT);
+            SettledPilot.of(testRunner).pause();
+        }
+
+        assertEquals(1, leaves.get());
+        assertEquals(
+                List.of(1, 0),
+                List.ofAll(dispatched)
+                        .map(msg -> ((Msg.ContentScrolled) msg).to().column()));
+    }
+
+    @Test
+    void leftDoesNotLeaveTheAreasOfOtherPanes() throws Exception {
+        java.util.concurrent.atomic.AtomicInteger leaves = new java.util.concurrent.atomic.AtomicInteger();
+        ContentPanel scrolling = new ContentPanel(Theme.SpanStyles.NONE, () -> {
+            leaves.incrementAndGet();
+            return true;
+        });
+        Model selected = showingCommit("+" + "x".repeat(300));
+        String area = scrolling.areaOfPane(selected, CommitsPanel.ID).get();
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> scrolling.render(selected, area))) {
+            SettledPilot.focus(testRunner, area);
+            RenderedText.ofLarge(testRunner, () -> scrolling.render(selected, area));
+            SettledPilot.of(testRunner).press(KeyCode.LEFT);
+            SettledPilot.of(testRunner).pause();
+        }
+
+        assertEquals(0, leaves.get());
+    }
+
+    @Test
+    void leftLeavesTheDiffOfAFileOfACommit() throws Exception {
+        java.util.concurrent.atomic.AtomicInteger leaves = new java.util.concurrent.atomic.AtomicInteger();
+        ContentPanel scrolling = new ContentPanel(Theme.SpanStyles.NONE, () -> {
+            leaves.incrementAndGet();
+            return true;
+        });
+        CommitFilesView.Changes of = new CommitFilesView.Changes.OfCommit(new Sha("aaaa"));
+        CommitFile file = new CommitFile("src/a.txt", ChangeType.MODIFIED);
+        Model open = Update.update(
+                        Update.update(TestModels.loaded(), new CommitFilesMsg.Opened(of, CommitsPanel.ID))
+                                .model(),
+                        new LoadMsg.CommitFilesLoaded(of, List.of(file)))
+                .model();
+        Model selected = Update.update(
+                        Update.update(open, new SelectionMsg.CommitFilesSelected(List.of(file)))
+                                .model(),
+                        new LoadMsg.CommitFileDiffLoaded(
+                                of, List.of(file), DiffOptions.DEFAULT, DiffText.of("+" + "x".repeat(300))))
+                .model();
+        String area = scrolling.areaOfPane(selected, FilesPanel.ID).get();
+        assertEquals(ContentArea.COMMIT_FILE.id(), area);
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> scrolling.render(selected, area))) {
+            SettledPilot.focus(testRunner, area);
+            RenderedText.ofLarge(testRunner, () -> scrolling.render(selected, area));
+            SettledPilot.of(testRunner).press(KeyCode.LEFT);
+            SettledPilot.of(testRunner).pause();
+        }
+
+        assertEquals(1, leaves.get());
     }
 
     @Test

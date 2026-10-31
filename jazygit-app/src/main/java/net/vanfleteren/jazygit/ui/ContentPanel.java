@@ -551,11 +551,16 @@ public final class ContentPanel {
             state.scrollToTop();
             state.scrollDown(cursor.map(DiffCursor::row).getOrElse(at.row()));
             state.scrollRight(at.column());
-            return element.onKeyEvent(event -> keys(event, focused, content))
+            boolean ofFiles = area.pane(model).equals(FilesPanel.ID);
+            return element.onKeyEvent(event -> keys(event, focused, ofFiles, content))
                     .onMouseEvent(event -> mouse(event, content));
         }
 
-        private EventResult keys(KeyEvent event, boolean focused, ScrolledContent content) {
+        /**
+         * @param ofFiles whether the area shows a diff of the files pane, which Left leaves as Escape does, once it
+         *                is scrolled all the way left: Right in the files pane moves into it
+         */
+        private EventResult keys(KeyEvent event, boolean focused, boolean ofFiles, ScrolledContent content) {
             // Escape drops a range that is open before it leaves the area (ADR 60).
             Option<DiffCursor> ranged = cursor.filter(on -> focused && on.mark().isDefined());
             if (event.code() == KeyCode.ESCAPE && ranged.isDefined()) {
@@ -567,6 +572,12 @@ public final class ContentPanel {
             }
             if (!focused) {
                 return EventResult.UNHANDLED;
+            }
+            if (ofFiles
+                    && event.matches(Actions.MOVE_LEFT)
+                    && element.state().scrollCol() == 0
+                    && leaveScrollArea.getAsBoolean()) {
+                return EventResult.HANDLED;
             }
             Option<DiffCursor> moved = cursor.flatMap(on -> move(on, event));
             if (moved.isDefined()) {
