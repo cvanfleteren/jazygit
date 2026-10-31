@@ -79,7 +79,15 @@ jobs:
               If the author replied disagreeing, weigh their argument honestly.
             - Review the new commits as thoroughly as a fresh change, but never post a duplicate of an
               existing comment.
-            - If the earlier issue is not fixed, make sure to also resolve the issue by calling `gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments/<id> -X PATCH -f resolved=true`.
+            - When an earlier finding is fixed, also resolve its thread, after replying to it. Leave the
+              threads of findings that are still open unresolved. A thread can only be resolved through
+              GraphQL: the REST API has no `resolved` field, and a PATCH of it fails with "Not Found".
+              1. List the threads of the PR with their ids:
+                 `gh api graphql -f query='query($owner: String!, $name: String!, $number: Int!) { repository(owner: $owner, name: $name) { pullRequest(number: $number) { reviewThreads(first: 100) { nodes { id isResolved comments(first: 1) { nodes { databaseId } } } } } } }' -f owner=${{ github.repository_owner }} -f name=${{ github.event.repository.name }} -F number=${{ github.event.pull_request.number }}`
+                 The thread of a finding is the one whose first comment's `databaseId` is the `id` of
+                 your finding's comment in the REST listing above.
+              2. Resolve it, if it is not resolved already:
+                 `gh api graphql -f query='mutation($id: ID!) { resolveReviewThread(input: {threadId: $id}) { thread { isResolved } } }' -f id=<thread id>`
 
             ## 3. What to look for, in priority order
             1. Correctness: logic errors, off-by-one, null/empty/edge cases, wrong git semantics
