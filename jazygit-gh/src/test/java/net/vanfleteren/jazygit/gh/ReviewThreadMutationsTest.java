@@ -9,8 +9,8 @@ import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
 import org.junit.jupiter.api.Test;
 
 /**
- * The commands that start a review thread, reply to one, resolve it and delete a comment of it (ADR 60, ADR 64): the
- * first two as REST's review comments, which GitHub publishes at once, not as a pending review.
+ * The commands that start a review thread, reply to one, resolve it, and edit or delete a comment of it (ADR 60,
+ * ADR 64, ADR 65): the first two as REST's review comments, which GitHub publishes at once, not as a pending review.
  */
 class ReviewThreadMutationsTest {
 
@@ -99,5 +99,20 @@ class ReviewThreadMutationsTest {
         assertEquals(List.of("gh", "api", "graphql"), args.take(3));
         assertTrue(args.get(4).contains("deletePullRequestReviewComment"), args.get(4));
         assertEquals(List.of("-f", "comment=PRRC_1"), args.drop(5));
+    }
+
+    @Test
+    void aCommentIsEditedByItsNodeIdWithItsBodyAsTyped() {
+        List<String> args = args(ReviewThreadMutations.edit("PRRC_1", "@all see\n\n- this"));
+
+        assertEquals(List.of("gh", "api", "graphql"), args.take(3));
+        assertTrue(args.get(4).contains("updatePullRequestReviewComment"), args.get(4));
+        assertEquals(List.of("-f", "comment=PRRC_1", "-f", "body=@all see\n\n- this"), args.drop(5));
+    }
+
+    @Test
+    void anEditedCommentGivesTheBodyGitHubHolds() {
+        assertEquals("Fixed", ReviewThreadMutations.EDITED.parse("""
+                                {"data": {"updatePullRequestReviewComment": {"pullRequestReviewComment": {"body": "Fixed"}}}}""").get());
     }
 }

@@ -1,17 +1,20 @@
 package net.vanfleteren.jazygit.gh;
 
 import static net.vanfleteren.jazygit.gh.GhCommand.gh;
+import static net.vanfleteren.jazygit.json.Decoder.at;
+import static net.vanfleteren.jazygit.json.Decoder.string;
 
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.gh.model.NewReviewThread;
+import net.vanfleteren.jazygit.json.Decoder;
 
 /**
- * Starting a review thread on a pull request, replying to one, resolving it and deleting a comment of it (ADR 60,
- * ADR 64). A thread is started and
+ * Starting a review thread on a pull request, replying to one, resolving it, and editing or deleting a comment of it
+ * (ADR 60, ADR 64, ADR 65). A thread is started and
  * replied to with REST's review comments, which GitHub publishes at once, as its "Add single comment" does: GraphQL's
  * {@code addPullRequestReviewThread} and {@code addPullRequestReviewThreadReply} add them to the viewer's pending
  * review instead, which only they see until it is submitted. A thread is resolved with GraphQL, which REST cannot,
- * and a comment deleted with GraphQL too, by the node id it is read with.
+ * and a comment edited or deleted with GraphQL too, by the node id it is read with.
  * The text of a comment and a path are passed as strings ({@code -f}), never as {@code -F}, which reads a value
  * starting with {@code @} from a file. gh fills in the repository of the working tree for {owner} and {repo}.
  */
@@ -25,6 +28,17 @@ final class ReviewThreadMutations {
 
     static final String DELETE = """
             mutation($comment: ID!) { deletePullRequestReviewComment(input: { id: $comment }) { clientMutationId } }""";
+
+    static final String EDIT = """
+            mutation($comment: ID!, $body: String!) {
+              updatePullRequestReviewComment(input: { pullRequestReviewCommentId: $comment, body: $body }) {
+                pullRequestReviewComment { body }
+              }
+            }""";
+
+    // The body of the comment, as GitHub holds it once it is edited.
+    static final Decoder<String> EDITED =
+            at("data.updatePullRequestReviewComment.pullRequestReviewComment.body", string());
 
     private ReviewThreadMutations() {}
 
@@ -73,6 +87,14 @@ final class ReviewThreadMutations {
      */
     static GhCommand delete(String comment) {
         return gh(List.of("api", "graphql", "-f", "query=" + DELETE, "-f", "comment=" + comment)
+                .toJavaArray(String[]::new));
+    }
+
+    /**
+     * The command that changes the comment of a review thread with node id {@code comment} to {@code body}.
+     */
+    static GhCommand edit(String comment, String body) {
+        return gh(List.of("api", "graphql", "-f", "query=" + EDIT, "-f", "comment=" + comment, "-f", "body=" + body)
                 .toJavaArray(String[]::new));
     }
 

@@ -168,6 +168,17 @@ public interface GitHub {
     Either<GhFailure, List<ExecutedCommand>> deletePullRequestComment(String comment);
 
     /**
+     * Changes the comment of a review thread with node id {@code comment} to {@code body} (ADR 65).
+     */
+    Either<GhFailure, Edited> editReviewComment(String comment, String body);
+
+    /**
+     * Changes the comment of the conversation on a pull request with node id {@code comment} to {@code body}
+     * (ADR 65).
+     */
+    Either<GhFailure, Edited> editPullRequestComment(String comment, String body);
+
+    /**
      * A pull request that was created.
      *
      * @param number   its number, if gh said where it is
@@ -182,4 +193,12 @@ public interface GitHub {
      * @param commands the command log
      */
     record Merging(MergeStatus status, List<ExecutedCommand> commands) {}
+
+    /**
+     * A comment that was edited.
+     *
+     * @param body     its body, as GitHub now holds it
+     * @param commands the command log
+     */
+    record Edited(String body, List<ExecutedCommand> commands) {}
 }

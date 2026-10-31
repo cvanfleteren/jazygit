@@ -11,6 +11,7 @@ import java.util.regex.Pattern;
 import net.vanfleteren.jazygit.gh.GhError.UnexpectedOutput;
 import net.vanfleteren.jazygit.gh.model.*;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
+import net.vanfleteren.jazygit.json.Decoder;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
@@ -22,6 +23,16 @@ public final class CliGitHub implements GitHub {
     // Deletes a comment of the conversation by the node id it is read with (ADR 64).
     static final String DELETE_COMMENT = """
             mutation($comment: ID!) { deleteIssueComment(input: { id: $comment }) { clientMutationId } }""";
+
+    // Edits a comment of the conversation by the node id it is read with (ADR 65).
+    static final String EDIT_COMMENT = """
+            mutation($comment: ID!, $body: String!) {
+              updateIssueComment(input: { id: $comment, body: $body }) { issueComment { body } }
+            }""";
+
+    // The body of the comment of the conversation, as GitHub holds it once it is edited.
+    static final Decoder<String> EDITED_COMMENT =
+            Decoder.at("data.updateIssueComment.issueComment.body", Decoder.string());
 
     private static final Pattern CREATED_URL = Pattern.compile("/pull/(\\d{1,9})$");
 
@@ -259,12 +270,34 @@ public final class CliGitHub implements GitHub {
         return delete(deleteCommentCommand(comment));
     }
 
+    @Override
+    public Either<GhFailure, Edited> editReviewComment(String comment, String body) {
+        return edit(ReviewThreadMutations.edit(comment, body), ReviewThreadMutations.EDITED);
+    }
+
+    @Override
+    public Either<GhFailure, Edited> editPullRequestComment(String comment, String body) {
+        return edit(editCommentCommand(comment, body), EDITED_COMMENT);
+    }
+
     static GhCommand commentCommand(int number, String body) {
         return gh("pr", "comment", String.valueOf(number), "--body", body);
     }
 
     static GhCommand deleteCommentCommand(String comment) {
         return gh("api", "graphql", "-f", "query=" + DELETE_COMMENT, "-f", "comment=" + comment);
+    }
+
+    static GhCommand editCommentCommand(String comment, String body) {
+        return gh("api", "graphql", "-f", "query=" + EDIT_COMMENT, "-f", "comment=" + comment, "-f", "body=" + body);
+    }
+
+    // Runs command, which edits a comment, and gives the body GitHub now holds, which decoder reads from what it says.
+    private Either<GhFailure, Edited> edit(GhCommand command, Decoder<String> decoder) {
+        return process.run(command)
+                .flatMap(output -> GhProcess.decoded(output.stdout(), decoder)
+                        .map(body -> new Edited(body, output.log()))
+                        .mapLeft(unexpected -> new GhFailure(unexpected, output.log())));
     }
 
     // Runs command, which deletes a comment: one GitHub no longer has was deleted already, as by someone else.
