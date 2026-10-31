@@ -12,7 +12,7 @@ import net.vanfleteren.jazygit.ui.widgets.ConfirmDialog;
 
 /**
  * Commenting on the lines of the diff of a pull request's files from its cursor (ADR 60): the keys of that diff, the
- * popup that writes a comment, and the one that asks to delete one (ADR 64).
+ * popup that writes or edits a comment (ADR 65), and the one that asks to delete one (ADR 64).
  */
 public final class ReviewAction {
 
@@ -23,6 +23,7 @@ public final class ReviewAction {
                     Binding.onSelected("r", "help.pullRequestDiff.reply", ReviewMsg.ReplyAsked::new),
                     Binding.onSelected("x", "help.pullRequestDiff.resolve", ReviewMsg.ResolveAsked::new),
                     Binding.onSelected(" ", "help.pullRequestDiff.toggle", ReviewMsg.ThreadToggled::new),
+                    Binding.onSelected("e", "help.pullRequestDiff.edit", ReviewMsg.EditAsked::new),
                     Binding.onSelected("d", "help.pullRequestDiff.delete", ReviewMsg.DeleteAsked::new),
                     new Binding<DiffCursorAt>(
                             "v",

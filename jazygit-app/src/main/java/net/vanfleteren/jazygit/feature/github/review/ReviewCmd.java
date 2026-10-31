@@ -14,7 +14,7 @@ import net.vanfleteren.jazygit.state.OperationCmd;
 
 /**
  * Writing a comment on the lines of a pull request in the editor, sending it, resolving a thread (ADR 60), and
- * deleting a comment (ADR 64). None keeps a branch busy: they do not touch one.
+ * editing (ADR 65) or deleting a comment (ADR 64). None keeps a branch busy: they do not touch one.
  */
 public sealed interface ReviewCmd extends Cmd {
 
@@ -26,7 +26,11 @@ public sealed interface ReviewCmd extends Cmd {
 
     Operation UNRESOLVE = Operation.of("log.title.unresolveThread", "error.unresolveThread.failed");
 
+    // Writing a comment in the editor, with Ctrl+O; not saving the edit of one, which UPDATE_COMMENT is.
     Operation EDIT_COMMENT = Operation.of("log.title.editReviewComment", "error.editReviewComment.failed");
+
+    // Saving the edit of a comment with GitHub (ADR 65).
+    Operation UPDATE_COMMENT = Operation.of("log.title.updateReviewComment", "error.updateReviewComment.failed");
 
     Operation DELETE_COMMENT = Operation.of("log.title.deleteReviewComment", "error.deleteReviewComment.failed");
 
@@ -54,13 +58,18 @@ public sealed interface ReviewCmd extends Cmd {
     }
 
     /**
-     * Sends {@code body} to {@code target} of pull request {@code number}: a reply, or a thread started.
+     * Sends {@code body} to {@code target} of pull request {@code number}: a reply, a thread started, or the edit of a
+     * comment, which GitHub answers with the body it holds.
      */
     record Send(int number, Target target, String body) implements ReviewCmd, OperationCmd {
 
         @Override
         public Operation operation() {
-            return target instanceof Target.Reply ? REPLY : START;
+            return switch (target) {
+                case Target.Reply reply -> REPLY;
+                case Target.Start start -> START;
+                case Target.Edit edit -> UPDATE_COMMENT;
+            };
         }
 
         @Override
@@ -77,6 +86,12 @@ public sealed interface ReviewCmd extends Cmd {
                     env.gitHub()
                             .startReviewThread(number, commit, new NewReviewThread(path, lines, body))
                             .fold(this::failedWith, this::succeeded);
+                case Target.Edit(String ignored, String comment, String original) ->
+                    env.gitHub()
+                            .editReviewComment(comment, body)
+                            .fold(
+                                    this::failedWith,
+                                    edited -> new ReviewMsg.CommentEdited(this, edited.body(), edited.commands()));
             };
         }
 

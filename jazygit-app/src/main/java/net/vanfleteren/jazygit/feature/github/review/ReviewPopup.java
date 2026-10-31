@@ -8,13 +8,16 @@ import net.vanfleteren.jazygit.state.Popup;
 import net.vanfleteren.jazygit.state.Scrolled;
 
 /**
- * Asking for a comment on the lines of the diff of a pull request's files, or a reply to one of its threads (ADR 60).
+ * Asking for a comment on the lines of the diff of a pull request's files, a reply to one of its threads (ADR 60), or
+ * the edit of a comment of one (ADR 65).
  *
  * @param number  the number of the pull request
  * @param target  what the comment goes to
  * @param where   where it goes, as the title says it: the path of the file, and the lines
- * @param quoted  the lines the comment is about, or the last comment of the thread replied to
- * @param text    the comment as far as it was typed, or as it came back from the editor
+ * @param quoted  the lines the comment is about, or the last comment of the thread replied to, or the comment before
+ *                the one edited
+ * @param text    the comment as far as it was typed, or as it came back from the editor; an edit starts out from the
+ *                body of the comment
  * @param sending whether it is being sent; it can then not be changed, nor sent again
  * @param area    the id of the area of the content panel the diff is shown in
  * @param at      where that area was scrolled to, and its cursor, when it was asked for
@@ -31,9 +34,10 @@ public record ReviewPopup(
         Scrolled at)
         implements Popup {
 
+    // An edit starts out from a body that is not blank, which does not stop a quit until it is changed (ADR 65).
     @Override
     public boolean holdsInput() {
-        return !text.isBlank();
+        return target instanceof Target.Edit edit ? !text.equals(edit.body()) : !text.isBlank();
     }
 
     /**
@@ -52,6 +56,12 @@ public record ReviewPopup(
          * {@code path}, or on the whole file.
          */
         record Start(String commit, String path, Option<NewReviewThread.Lines> lines) implements Target {}
+
+        /**
+         * The comment with the node id {@code comment} of the thread with the id {@code thread}, edited from
+         * {@code body}, what it said when the popup opened (ADR 65).
+         */
+        record Edit(String thread, String comment, String body) implements Target {}
     }
 
     /**

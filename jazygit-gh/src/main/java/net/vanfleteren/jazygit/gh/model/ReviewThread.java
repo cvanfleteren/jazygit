@@ -86,7 +86,15 @@ public record ReviewThread(
             Option<String> hidden,
             String id,
             String restId,
-            CommentRights rights) {}
+            CommentRights rights) {
+
+        /**
+         * This comment saying {@code body}, as when it was edited (ADR 65).
+         */
+        public Comment withBody(String body) {
+            return new Comment(author, at, body, hidden, id, restId, rights);
+        }
+    }
 
     /**
      * What the viewer may do with a thread, as GitHub says (ADR 60).

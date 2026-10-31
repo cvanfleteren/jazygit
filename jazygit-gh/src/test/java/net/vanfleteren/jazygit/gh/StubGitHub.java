@@ -214,4 +214,16 @@ public interface StubGitHub extends GitHub {
     default Either<GhFailure, List<ExecutedCommand>> deletePullRequestComment(String comment) {
         return Either.right(List.of(CliGitHub.deleteCommentCommand(comment).executed()));
     }
+
+    @Override
+    default Either<GhFailure, Edited> editReviewComment(String comment, String body) {
+        return Either.right(new Edited(
+                body, List.of(ReviewThreadMutations.edit(comment, body).executed())));
+    }
+
+    @Override
+    default Either<GhFailure, Edited> editPullRequestComment(String comment, String body) {
+        return Either.right(new Edited(
+                body, List.of(CliGitHub.editCommentCommand(comment, body).executed())));
+    }
 }

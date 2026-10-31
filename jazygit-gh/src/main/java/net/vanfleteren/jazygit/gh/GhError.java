@@ -59,4 +59,9 @@ public sealed interface GhError {
      *     {@code hosts.github.com[0].state: missing} (ADR 42), or, for what is not read as JSON yet, what gh printed
      */
     record UnexpectedOutput(String output) implements GhError {}
+
+    /**
+     * GitHub has nothing with the id gh was given, as when someone else deleted it meanwhile (ADR 65).
+     */
+    record Gone() implements GhError {}
 }

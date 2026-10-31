@@ -116,11 +116,40 @@ public record CommitFilesView(
                 .getOrElse(this);
     }
 
+    /**
+     * These with the comment with the id {@code comment} saying {@code body}, as GitHub holds it once it is edited
+     * (ADR 65). Changed so, they are of a newer version, which a read started before is older than.
+     */
+    public CommitFilesView withEdited(String comment, String body) {
+        return remarks.flatMap(Loadable::toOption)
+                .filter(read -> read.threads().exists(thread -> has(thread, comment)))
+                .map(read -> withRemarks(Option.of(new Loadable.Loaded<>(new ReviewRemarks(
+                                read.state(),
+                                read.head(),
+                                read.base(),
+                                read.threads()
+                                        .map(thread -> has(thread, comment)
+                                                ? withComments(
+                                                        thread,
+                                                        thread.comments()
+                                                                .map(each -> each.id()
+                                                                                .equals(comment)
+                                                                        ? each.withBody(body)
+                                                                        : each))
+                                                : thread)))))
+                        .withVersion(version + 1))
+                .getOrElse(this);
+    }
+
     private static boolean has(ReviewThread thread, String comment) {
         return thread.comments().exists(each -> each.id().equals(comment));
     }
 
     private static ReviewThread without(ReviewThread thread, String comment) {
+        return withComments(thread, thread.comments().filter(each -> !each.id().equals(comment)));
+    }
+
+    private static ReviewThread withComments(ReviewThread thread, List<ReviewThread.Comment> comments) {
         return new ReviewThread(
                 thread.path(),
                 thread.side(),
@@ -131,7 +160,7 @@ public record CommitFilesView(
                 thread.resolved(),
                 thread.outdated(),
                 thread.subject(),
-                thread.comments().filter(each -> !each.id().equals(comment)),
+                comments,
                 thread.more(),
                 thread.id(),
                 thread.rights());

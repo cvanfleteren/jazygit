@@ -33,7 +33,8 @@ import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
 
 /**
- * Commenting on the lines of the diff of a pull request's files from its cursor (ADR 60).
+ * Commenting on the lines of the diff of a pull request's files from its cursor (ADR 60), and editing (ADR 65) or
+ * deleting (ADR 64) a comment of it.
  */
 class ReviewUpdateTest {
 
@@ -612,10 +613,11 @@ class ReviewUpdateTest {
         assertEquals(Option.of(new AppError.CannotReview(Why.COLLAPSED)), error(refused.model()));
     }
 
-    @Test
-    void aCommentIsDeletedOnlyWithTheRightTo() {
-        Model mine = files();
-        Model theirs = mine.mapRepoView(repoView -> repoView.withCommitFiles(repoView.commitFiles()
+    /**
+     * {@code model} with each comment of its threads giving the viewer {@code rights}.
+     */
+    private static Model withRights(Model model, CommentRights rights) {
+        return model.mapRepoView(repoView -> repoView.withCommitFiles(repoView.commitFiles()
                 .map(view -> view.withRemarks(view.remarks()
                         .map(remarks -> remarks.map(read -> new ReviewRemarks(
                                 read.state(),
@@ -640,10 +642,15 @@ class ReviewUpdateTest {
                                                                 comment.hidden(),
                                                                 comment.id(),
                                                                 comment.restId(),
-                                                                CommentRights.NONE)),
+                                                                rights)),
                                                 thread.more(),
                                                 thread.id(),
                                                 thread.rights())))))))));
+    }
+
+    @Test
+    void aCommentIsDeletedOnlyWithTheRightTo() {
+        Model theirs = withRights(files(), new CommentRights(true, false));
 
         Next refused = Update.update(theirs, new ReviewMsg.DeleteAsked(at(onComment("R1", "T1"))));
 
@@ -848,5 +855,175 @@ class ReviewUpdateTest {
         Next stale = Update.update(rebuilt, new CommitFilesMsg.RemarksLoaded(7, remarks(), HashSet.empty(), 0));
         assertEquals(List.of(new CommitFilesCmd.LoadReviewRemarks(7, HashSet.empty(), 1)), stale.cmds());
         assertEquals(List.of("C1"), comments(stale.model(), "T1"));
+    }
+
+    @Test
+    void anEditIsWrittenInThePopupFromTheBodyOfTheCommentAndTakesTheBodyGitHubHolds() {
+        Model asked = Update.update(files(), new ReviewMsg.EditAsked(at(onComment("R1", "T1"))))
+                .model();
+        ReviewPopup popup = asked.popup(ReviewPopup.class).get();
+        Target.Edit edit = new Target.Edit("T1", "R1", "Yes");
+        assertEquals(edit, popup.target());
+        assertEquals("Yes", popup.text());
+        // Under the comment before it, on the lines of its thread.
+        assertEquals(List.of("bob:", "Why?", "Really?"), popup.quoted());
+        assertEquals(Option.of(new ReviewPopup.Lines(2, 2)), popup.where().lines());
+        // Not changed yet, it does not stop a quit (ADR 65).
+        assertFalse(popup.holdsInput());
+
+        Model typed = Update.update(asked, new ReviewMsg.Edited("Yes, see #3")).model();
+        assertTrue(typed.popup(ReviewPopup.class).get().holdsInput());
+        Next saving = Update.update(typed, new ReviewMsg.Confirmed());
+        ReviewCmd.Send send = new ReviewCmd.Send(7, edit, "Yes, see #3");
+        assertEquals(List.of(send), saving.cmds());
+        assertTrue(saving.model().popup(ReviewPopup.class).get().sending());
+        assertEquals(HashSet.empty(), view(saving.model()).sending());
+
+        Next saved = Update.update(saving.model(), new ReviewMsg.CommentEdited(send, "Yes, see #3.", List.empty()));
+        assertEquals(Option.none(), saved.model().popup(ReviewPopup.class));
+        assertFalse(saved.cmds().exists(cmd -> cmd instanceof CommitFilesCmd.LoadReviewRemarks));
+        assertEquals(
+                List.of("Why?\nReally?", "Yes, see #3."),
+                view(saved.model()).threads().head().comments().map(Comment::body));
+        assertEquals(1, view(saved.model()).version());
+    }
+
+    @Test
+    void aCommentWrittenOnGitHubsSiteIsEditedWithItsLinesEndedAsTheTextAreaEndsThem() {
+        ReviewThread written = new ReviewThread(
+                OPEN.path(),
+                OPEN.side(),
+                OPEN.line(),
+                OPEN.startLine(),
+                OPEN.startSide(),
+                OPEN.originalLine(),
+                OPEN.resolved(),
+                OPEN.outdated(),
+                OPEN.subject(),
+                OPEN.comments().map(comment -> comment.withBody("a\r\nb")),
+                OPEN.more(),
+                OPEN.id(),
+                OPEN.rights());
+        Model asked = Update.update(
+                        files(PullRequestDetails.State.OPEN, HEAD, List.of(written, SETTLED)),
+                        new ReviewMsg.EditAsked(at(onComment("R1", "T1"))))
+                .model();
+
+        ReviewPopup popup = asked.popup(ReviewPopup.class).get();
+        assertEquals("a\nb", popup.text());
+        assertEquals(new Target.Edit("T1", "R1", "a\nb"), popup.target());
+        assertFalse(popup.holdsInput());
+        assertEquals(
+                List.empty(), Update.update(asked, new ReviewMsg.Confirmed()).cmds());
+    }
+
+    @Test
+    void theFirstCommentOfAThreadIsEditedFromItsStopUnderTheLinesOfTheThread() {
+        ReviewPopup popup = Update.update(files(), new ReviewMsg.EditAsked(at(onThread("T1"))))
+                .model()
+                .popup(ReviewPopup.class)
+                .get();
+
+        assertEquals(new Target.Edit("T1", "C1", "Why?\nReally?"), popup.target());
+        assertEquals(List.of("+TWO"), popup.quoted());
+    }
+
+    @Test
+    void anEditThatChangedNothingSendsNothingAndOneThatEmptiesTheCommentSaysToDeleteIt() {
+        Model asked = Update.update(files(), new ReviewMsg.EditAsked(at(onComment("R1", "T1"))))
+                .model();
+
+        Next unchanged = Update.update(asked, new ReviewMsg.Confirmed());
+        assertEquals(List.empty(), unchanged.cmds());
+        assertEquals(Option.none(), unchanged.model().popup(ReviewPopup.class));
+
+        Next emptied =
+                Update.update(Update.update(asked, new ReviewMsg.Edited("  \n")).model(), new ReviewMsg.Confirmed());
+        assertEquals(List.empty(), emptied.cmds());
+        assertFalse(emptied.model().popup(ReviewPopup.class).get().sending());
+        assertEquals(Option.of(new AppError.CannotReview(Why.EMPTY)), error(emptied.model()));
+
+        // A change of whitespace only is a change.
+        assertEquals(
+                List.of(new ReviewCmd.Send(7, new Target.Edit("T1", "R1", "Yes"), "Yes ")),
+                Update.update(Update.update(asked, new ReviewMsg.Edited("Yes ")).model(), new ReviewMsg.Confirmed())
+                        .cmds());
+    }
+
+    @Test
+    void aCommentIsEditedWithTheRightToAndAsADeleteIsWhateverTheCommitsItWasReadAt() {
+        assertEquals(
+                Option.of(new AppError.CannotReview(Why.NO_EDIT)),
+                error(Update.update(
+                                withRights(files(), new CommentRights(false, true)),
+                                new ReviewMsg.EditAsked(at(onComment("R1", "T1"))))
+                        .model()));
+        assertEquals(
+                Option.of(new AppError.CannotReview(Why.COLLAPSED)),
+                error(Update.update(files(), new ReviewMsg.EditAsked(at(onThread("T2"))))
+                        .model()));
+        Model resolving = Update.update(files(), new ReviewMsg.ResolveAsked(at(onThread("T1"))))
+                .model();
+        assertEquals(
+                Option.of(new AppError.CannotReview(Why.SENDING)),
+                error(Update.update(resolving, new ReviewMsg.EditAsked(at(onComment("R1", "T1"))))
+                        .model()));
+        Model deleting = deleting(files(), onComment("R1", "T1")).model();
+        assertEquals(
+                Option.of(new AppError.CannotReview(Why.DELETING)),
+                error(Update.update(deleting, new ReviewMsg.EditAsked(at(onComment("R1", "T1"))))
+                        .model()));
+
+        Model movedOn = files(PullRequestDetails.State.CLOSED, "c".repeat(40));
+        assertTrue(Update.update(movedOn, new ReviewMsg.EditAsked(at(onComment("R1", "T1"))))
+                .model()
+                .popup(ReviewPopup.class)
+                .isDefined());
+    }
+
+    @Test
+    void anEditThatFailedStaysInItsPopupAndLeavesTheComment() {
+        Model asked = Update.update(files(), new ReviewMsg.EditAsked(at(onComment("R1", "T1"))))
+                .model();
+        Model saving = Update.update(
+                        Update.update(asked, new ReviewMsg.Edited("Yes!")).model(), new ReviewMsg.Confirmed())
+                .model();
+
+        Model failed = Update.update(
+                        saving,
+                        new ReviewMsg.SendFailed(
+                                new ReviewCmd.Send(7, new Target.Edit("T1", "R1", "Yes"), "Yes!"),
+                                new Failure.Bug(new RuntimeException("offline"))))
+                .model();
+
+        assertEquals("Yes!", failed.popup(ReviewPopup.class).get().text());
+        assertFalse(failed.popup(ReviewPopup.class).get().sending());
+        assertEquals("Yes", view(failed).threads().head().comments().last().body());
+        assertEquals(0, view(failed).version());
+    }
+
+    @Test
+    void aReadStartedBeforeAnEditIsDroppedAndReadAgain() {
+        Model saving = Update.update(
+                        Update.update(
+                                        Update.update(files(), new ReviewMsg.EditAsked(at(onComment("R1", "T1"))))
+                                                .model(),
+                                        new ReviewMsg.Edited("Yes!"))
+                                .model(),
+                        new ReviewMsg.Confirmed())
+                .model();
+        Model saved = Update.update(
+                        saving,
+                        new ReviewMsg.CommentEdited(
+                                new ReviewCmd.Send(7, new Target.Edit("T1", "R1", "Yes"), "Yes!"),
+                                "Yes!",
+                                List.empty()))
+                .model();
+
+        Next stale = Update.update(saved, new CommitFilesMsg.RemarksLoaded(7, remarks(), HashSet.empty(), 0));
+
+        assertEquals(List.of(new CommitFilesCmd.LoadReviewRemarks(7, HashSet.empty(), 1)), stale.cmds());
+        assertEquals(
+                "Yes!", view(stale.model()).threads().head().comments().last().body());
     }
 }
