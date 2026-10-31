@@ -126,7 +126,7 @@ public final class CheckRows {
             Check check, List<Check> all, Option<CheckTimes> times, Instant now, boolean took) {
         return check.done()
                 ? Option.when(took, () -> took(check)).flatMap(o -> o)
-                : Option.of(CheckTimesText.of(check, eta(check, all, times), learning(times), now));
+                : Option.of(CheckTimesText.lined(check, eta(check, all, times), learning(times), now));
     }
 
     /**
