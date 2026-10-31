@@ -254,11 +254,20 @@ class ReviewUpdateTest {
                         onThread("T1")))))
                 .model();
         assertEquals(new Collapsed(HashSet.of("R")), view(comment).collapsed());
+    }
 
+    @Test
+    void spaceOffAThreadDoesNothing() {
+        Model files = files();
         assertEquals(
-                Option.of(new AppError.CannotReview(Why.NOT_ON_THREAD)),
-                error(Update.update(files(), new ReviewMsg.ThreadToggled(at(line(Side.RIGHT, 2))))
-                        .model()));
+                files,
+                Update.update(files, new ReviewMsg.ThreadToggled(at(line(Side.RIGHT, 2))))
+                        .model());
+        // A thread no longer read, as after the threads are read again, is off a thread too.
+        assertEquals(
+                files,
+                Update.update(files, new ReviewMsg.ThreadToggled(at(onThread("GONE"))))
+                        .model());
     }
 
     private static CommitFilesMsg.RemarksLoaded readAgain(Set<String> settled, ReviewThread... threads) {
