@@ -14,6 +14,7 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.stream.Collectors;
 import net.vanfleteren.jazygit.feature.branch.commits.BranchCommitsMsg;
+import net.vanfleteren.jazygit.feature.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
@@ -251,6 +252,39 @@ class ContentPanelTest {
         }
 
         assertEquals(0, leaves.get());
+    }
+
+    @Test
+    void leftLeavesTheDiffOfAFileOfACommit() throws Exception {
+        java.util.concurrent.atomic.AtomicInteger leaves = new java.util.concurrent.atomic.AtomicInteger();
+        ContentPanel scrolling = new ContentPanel(Theme.SpanStyles.NONE, () -> {
+            leaves.incrementAndGet();
+            return true;
+        });
+        CommitFilesView.Changes of = new CommitFilesView.Changes.OfCommit(new Sha("aaaa"));
+        CommitFile file = new CommitFile("src/a.txt", ChangeType.MODIFIED);
+        Model open = Update.update(
+                        Update.update(TestModels.loaded(), new CommitFilesMsg.Opened(of, CommitsPanel.ID))
+                                .model(),
+                        new LoadMsg.CommitFilesLoaded(of, List.of(file)))
+                .model();
+        Model selected = Update.update(
+                        Update.update(open, new SelectionMsg.CommitFilesSelected(List.of(file)))
+                                .model(),
+                        new LoadMsg.CommitFileDiffLoaded(
+                                of, List.of(file), DiffOptions.DEFAULT, DiffText.of("+" + "x".repeat(300))))
+                .model();
+        String area = scrolling.areaOfPane(selected, FilesPanel.ID).get();
+        assertEquals(ContentArea.COMMIT_FILE.id(), area);
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> scrolling.render(selected, area))) {
+            SettledPilot.focus(testRunner, area);
+            RenderedText.ofLarge(testRunner, () -> scrolling.render(selected, area));
+            SettledPilot.of(testRunner).press(KeyCode.LEFT);
+            SettledPilot.of(testRunner).pause();
+        }
+
+        assertEquals(1, leaves.get());
     }
 
     @Test
