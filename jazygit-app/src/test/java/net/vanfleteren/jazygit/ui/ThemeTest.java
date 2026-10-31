@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.ui;
 import static org.junit.jupiter.api.Assertions.*;
 
 import dev.tamboui.css.Styleable;
+import dev.tamboui.css.cascade.PseudoClassState;
 import dev.tamboui.style.Color;
 import dev.tamboui.style.ColorConverter;
 import dev.tamboui.style.Modifier;
@@ -64,6 +65,20 @@ class ThemeTest {
                             .borderColor(),
                     popup,
                     name.id());
+        }
+    }
+
+    @Test
+    void everyThemeBordersTheFocusedContentAreaLikeTheFocusedPanel() {
+        for (ThemeName name : ThemeName.values()) {
+            var engine = Theme.createEngine().get();
+            Theme.activate(engine, name);
+
+            var focusedPanel = engine.resolve(new Node("Panel", Set.of(Theme.Classes.FOCUSED)));
+            var area = engine.resolve(
+                    new Node("RichTextAreaElement", Set.of()), PseudoClassState.ofFocused(), java.util.List.of());
+            assertEquals(focusedPanel.borderColor(), area.borderColor(), name.id());
+            assertEquals(focusedPanel.borderType(), area.borderType(), name.id());
         }
     }
 

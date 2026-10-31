@@ -4,8 +4,11 @@
  * Only what cannot be told otherwise is styled, by attribute alone.
  */
 
-/* The pane in use, and the field of a popup that has the focus: a double border. */
-Panel.focused, TextInputElement:focus, TextAreaElement:focus {
+/*
+ * The pane in use, the area of the content panel that has the focus, and the field of a popup that has it: a double
+ * border.
+ */
+Panel.focused, RichTextAreaElement:focus, TextInputElement:focus, TextAreaElement:focus {
     border-type: double;
 }
 
