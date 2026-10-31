@@ -487,7 +487,7 @@ final class ContentView {
      * @param failed  why reading them failed, when it did and none were read before
      * @param onLines whether they were read at the commits of the diff, so their lines number its lines: else the
      *                threads on a line are listed at the end of their file
-     * @param collapsed which threads and comments are collapsed (ADR 61)
+     * @param collapsed which threads and comments are collapsed (ADR 62)
      * @param sending the ids of the threads a reply or a resolving is sent for (ADR 60)
      */
     record ShownRemarks(

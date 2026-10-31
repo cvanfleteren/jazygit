@@ -55,7 +55,7 @@ public final class ReviewUpdate {
                             return Update.start(sending(model.clearError(), set -> set.add(resolve.thread())), resolve);
                         });
             // Collapsing a thread or a comment needs no more than the thread: a merged pull request's too. The first
-            // comment of a thread is the thread (ADR 61).
+            // comment of a thread is the thread (ADR 62).
             case ReviewMsg.ThreadToggled(DiffCursorAt at) ->
                 pullRequestFiles(model)
                         .toEither(Why.NOT_READ)
@@ -114,14 +114,11 @@ public final class ReviewUpdate {
                                 : back,
                         failed.cmds());
             }
-            // The thread says it is being sent until the threads are read again after it, which shows it resolved;
-            // it is then collapsed or open as a thread resolved or not starts (ADR 61).
+            // The thread says it is being sent until the threads are read again after it, which shows it resolved.
             case ReviewMsg.Resolved(Resolve cmd, var commands) -> {
                 Next done = OperationUpdate.succeeded(model, cmd, commands);
                 yield new Next(
-                        mapView(
-                                done.model(),
-                                view -> view.withCollapsed(view.collapsed().reset(cmd.thread()))),
+                        done.model(),
                         done.cmds().append(new LoadReviewRemarks(cmd.number(), HashSet.of(cmd.thread()))));
             }
             case ReviewMsg.ResolveFailed(Resolve cmd, Failure failure) -> {

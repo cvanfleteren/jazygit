@@ -45,7 +45,7 @@ public sealed interface Anchor {
     record Thread(String id, Option<OnLine> line) implements Anchor {}
 
     /**
-     * The comment with the id {@code id} of an open thread, but its first, which is the thread (ADR 61). It is found
+     * The comment with the id {@code id} of an open thread, but its first, which is the thread (ADR 62). It is found
      * again by its id; when it is gone, as when its thread is collapsed, the cursor goes to its {@code thread}.
      */
     record Comment(String id, Thread thread) implements Anchor {}

@@ -1,4 +1,4 @@
-# 61. A thread or a comment collapsed or open
+# 62. A thread or a comment collapsed or open
 
 Date: 2026-10-31
 
@@ -56,9 +56,12 @@ The cursor stops on each thread as one stop (ADR 60), so a key on a comment of i
 
 ### Resolving
 
-- Once GitHub resolved or unresolved a thread, its id leaves the set: it shows as a thread resolved or not starts,
-  collapsed once resolved, open once unresolved. Not: the id kept, which would open a thread one collapsed, then
-  resolved, as being flipped means open for a resolved one. The ids of its comments stay.
+- Once the threads read again show a thread resolved or unresolved, its id leaves the set: it shows as a thread
+  resolved or not starts, collapsed once resolved, open once unresolved. So does a comment found hidden, or no longer
+  hidden. Not: the id kept, which would open a thread one collapsed, then resolved, as being flipped means open for a
+  resolved one. Not: the id dropped as soon as GitHub took the resolve, while the thread is still drawn as it was
+  read, which would open it until the threads are read again, and lose the flip when that read fails. The same holds
+  for a thread someone else resolved, read again with `R`. The ids of its comments stay.
 
 ## Consequences
 

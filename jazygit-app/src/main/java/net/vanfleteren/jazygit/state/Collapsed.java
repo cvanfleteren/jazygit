@@ -1,13 +1,16 @@
 package net.vanfleteren.jazygit.state;
 
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.collection.Set;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Comment;
 
 /**
- * Which review threads and comments are collapsed (ADR 61): by default a resolved thread, a thread whose first comment
+ * Which review threads and comments are collapsed (ADR 62): by default a resolved thread, a thread whose first comment
  * is hidden, and a hidden comment; else those {@code toggled} flips against their default. The first comment of a
  * thread is the thread: it is shown whole while the thread is open.
  *
@@ -24,9 +27,12 @@ public record Collapsed(Set<String> toggled) {
      * Whether {@code thread} is collapsed.
      */
     public boolean thread(ReviewThread thread) {
-        boolean byDefault = thread.resolved()
+        return byDefault(thread) != toggled.contains(thread.id());
+    }
+
+    private static boolean byDefault(ReviewThread thread) {
+        return thread.resolved()
                 || thread.comments().headOption().exists(first -> first.hidden().isDefined());
-        return byDefault != toggled.contains(thread.id());
     }
 
     /**
@@ -52,9 +58,26 @@ public record Collapsed(Set<String> toggled) {
     }
 
     /**
-     * These with the thread with the id {@code id} as it is by default.
+     * These once the threads read as {@code before} are read again as {@code after}: a thread or a comment whose
+     * default changed, as a thread resolved or unresolved, or a comment hidden, is as such a one starts, not flipped
+     * against its new default (ADR 62).
      */
-    public Collapsed reset(String id) {
-        return new Collapsed(toggled.remove(id));
+    public Collapsed readAgain(List<ReviewThread> before, List<ReviewThread> after) {
+        Map<String, Boolean> was = defaults(before);
+        Set<String> changed = defaults(after)
+                .filter((id, now) -> was.get(id).exists(then -> !then.equals(now)))
+                .keySet();
+        return new Collapsed(toggled.removeAll(changed));
+    }
+
+    /**
+     * Whether each of {@code threads}, and each of its comments that is a stop of its own, is collapsed by default, by
+     * its id.
+     */
+    private static Map<String, Boolean> defaults(List<ReviewThread> threads) {
+        return threads.flatMap(thread -> replies(thread)
+                        .map(comment -> Tuple.of(comment.id(), comment.hidden().isDefined()))
+                        .prepend(Tuple.of(thread.id(), byDefault(thread))))
+                .toMap(Tuple2::_1, Tuple2::_2);
     }
 }

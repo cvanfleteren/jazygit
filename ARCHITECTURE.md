@@ -452,7 +452,7 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
   (GraphQL would leave them pending), and a resolve with `gh api graphql`. Each needs the threads read at the
   commits of the files and a pull request that is not merged, else it says why (`AppError.CannotReview`); the ids of
   the threads something is sent for (`CommitFilesView.sending`) take no other key until the threads are read again.
-  `Space` collapses or opens the thread or the comment of the cursor against its default (ADR 61): the ids flipped
+  `Space` collapses or opens the thread or the comment of the cursor against its default (ADR 62): the ids flipped
   are `CommitFilesView.collapsed` (`state.Collapsed`), which `DiffStops` and `ui.RemarkLines` both read, so each
   comment of an open thread is a stop of its own (`Anchor.Comment`) in the model as on the screen.
 

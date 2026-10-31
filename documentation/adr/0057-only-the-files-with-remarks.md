@@ -61,4 +61,4 @@ thread is shown open, `t`, is kept in `CommitFilesView`, not in the settings.
 - Every file with resolved threads shows a mark it did not show before.
 - `c` in the tree of a commit or a stash does nothing.
 
-Amended by ADR 61: `t` is gone from the tree.
+Amended by ADR 62: `t` is gone from the tree.

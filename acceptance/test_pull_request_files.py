@@ -127,7 +127,7 @@ def test_the_review_remarks_of_a_pull_request_show_next_to_their_lines(repo, ori
     assert "● +b" in ui.app.text()
     assert "✓ resolved · reviewer: Settled already" in ui.app.text()
 
-    # Space opens the resolved thread, the second (ADR 61).
+    # Space opens the resolved thread, the second (ADR 62).
     ui.app.press("enter")
     ui.app.press("n")
     ui.app.press("n")

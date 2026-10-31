@@ -13,7 +13,7 @@ import net.vanfleteren.jazygit.state.PlacedRemarks.LineRemarks;
  * Where the cursor of a rich diff stops, in the order the diff is drawn (ADR 60): what comes before its first file,
  * then for each file its bar, the threads about it, each line of its hunks that has a side and a number with the
  * threads after it, and the threads that cannot be placed; each comment of an open thread but its first is a stop of
- * its own (ADR 61). A note, a hunk header and a blank line are no stop: they are part of the stop before them.
+ * its own (ADR 62). A note, a hunk header and a blank line are no stop: they are part of the stop before them.
  *
  * @param stops the stops, in order
  */
@@ -21,7 +21,7 @@ public record DiffStops(List<Stop> stops) {
 
     /**
      * The stops of {@code diff} with the review threads {@code threads} placed in it, on lines only when
-     * {@code onLines} (ADR 55), each comment of a thread a stop of its own but while it is {@code collapsed} (ADR 61).
+     * {@code onLines} (ADR 55), each comment of a thread a stop of its own but while it is {@code collapsed} (ADR 62).
      */
     public static DiffStops of(UnifiedDiff diff, List<ReviewThread> threads, boolean onLines, Collapsed collapsed) {
         PlacedRemarks placed = PlacedRemarks.place(diff, threads, onLines);
@@ -66,7 +66,7 @@ public record DiffStops(List<Stop> stops) {
 
     /**
      * The anchors of the stops of {@code thread}, after {@code line} if it is: the thread, then each of its comments
-     * but the first while it is not {@code collapsed} (ADR 61).
+     * but the first while it is not {@code collapsed} (ADR 62).
      */
     public static List<Anchor> anchors(ReviewThread thread, Option<Anchor.OnLine> line, Collapsed collapsed) {
         Anchor.Thread anchor = new Anchor.Thread(thread.id(), line);
@@ -96,7 +96,7 @@ public record DiffStops(List<Stop> stops) {
      * Which of {@code stops} the cursor on {@code at} is on (ADR 60): {@code at} itself if it is one of them, a thread
      * or a comment found by its id wherever it is now. When it is gone: a line goes to the line of the same file and
      * side with the closest number, else to the bar of its file, else to the first stop; a thread to the line it was
-     * after, and from there as a line; a comment to its thread, and from there as a thread (ADR 61); a bar and the
+     * after, and from there as a line; a comment to its thread, and from there as a thread (ADR 62); a bar and the
      * lead to the first stop. None when there is no stop.
      */
     public static Option<Anchor> nearest(Seq<Anchor> stops, Anchor at) {

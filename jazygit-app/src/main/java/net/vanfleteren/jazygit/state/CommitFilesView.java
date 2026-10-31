@@ -27,7 +27,7 @@ import net.vanfleteren.jazygit.git.model.Sha;
  *                 highlighted
  * @param remarks  the review threads of a pull request, as they are read; none for a commit or a stash (ADR 55)
  * @param listed   which of the files are listed: all of them, or only those with review threads (ADR 57)
- * @param collapsed which review threads and comments are collapsed (ADR 61)
+ * @param collapsed which review threads and comments are collapsed (ADR 62)
  * @param sending  the ids of the review threads a reply or a resolving is sent for, until the threads are read again
  *                 after it was sent, or the send failed (ADR 60)
  */

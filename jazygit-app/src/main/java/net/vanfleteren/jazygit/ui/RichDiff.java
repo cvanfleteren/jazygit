@@ -534,7 +534,7 @@ final class RichDiff {
 
         /**
          * The {@code blocks} of {@code threads}, with a blank line between two of them, the first line of each of
-         * their parts the start of its stop, as {@link DiffStops#anchors} gives them (ADR 61).
+         * their parts the start of its stop, as {@link DiffStops#anchors} gives them (ADR 62).
          */
         private List<Marked> marked(
                 List<ReviewThread> threads, Option<Anchor.OnLine> line, List<List<List<Line>>> blocks) {

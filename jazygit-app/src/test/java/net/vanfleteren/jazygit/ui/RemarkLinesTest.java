@@ -156,7 +156,7 @@ class RemarkLinesTest {
                 List.of(indent + "━━ ✓ resolved · bob: Done · sending…"),
                 drawnAlone(resolved, Collapsed.NONE, HashSet.of(resolved.id())));
 
-        // An unresolved thread collapsed says how many comments it has, not dimmed (ADR 61).
+        // An unresolved thread collapsed says how many comments it has, not dimmed (ADR 62).
         Collapsed closed = Collapsed.NONE.flipped(open.id());
         assertEquals(List.of(indent + "━━ ▸ 2 remarks · bob: Why?"), drawnAlone(open, closed, HashSet.empty()));
         assertEquals(
@@ -392,7 +392,7 @@ class RemarkLinesTest {
                 "T",
                 ReviewThread.Rights.ALL);
 
-        // Its first comment hidden, the thread is collapsed, and says why in place of its first line (ADR 61).
+        // Its first comment hidden, the thread is collapsed, and says why in place of its first line (ADR 62).
         List<String> collapsed = rich(shown(Collapsed.NONE, hidden));
         assertTrue(
                 collapsed.contains(" ".repeat(8) + "━━ ▸ 1 remark · carol: hidden · off-topic"),
@@ -536,7 +536,7 @@ class RemarkLinesTest {
                 .contains("┗━"));
         assertTrue(
                 lines.get(threads.head().row() + threads.head().mark().lines()).isBlank());
-        // A comment but the first starts its own stop, which ends its thread after the last (ADR 61).
+        // A comment but the first starts its own stop, which ends its thread after the last (ADR 62).
         RichDiff.Stop comment = drawn.stops()
                 .find(stop -> stop.mark().anchor() instanceof Anchor.Comment)
                 .get();
@@ -546,6 +546,63 @@ class RemarkLinesTest {
                 comment.mark().anchor());
         assertTrue(lines.get(comment.row()).contains("┣━ bob"), lines.mkString("\n"));
         assertTrue(lines.get(comment.row() + comment.mark().lines() - 1).contains("┗━"));
+    }
+
+    @Test
+    void theStopsDrawnAreThoseOfDiffStopsHoweverTheThreadsAndCommentsAreCollapsed() {
+        String indent = " ".repeat(8);
+        ReviewThread replied = thread(2, false, "a", "b", "c");
+        ReviewThread collapsed = thread(3, false, "d", "e");
+        ReviewThread plain = thread(1, false, "f", "g");
+        ReviewThread hidden = new ReviewThread(
+                plain.path(),
+                plain.side(),
+                plain.line(),
+                plain.startLine(),
+                plain.startSide(),
+                plain.originalLine(),
+                false,
+                false,
+                plain.subject(),
+                List.of(
+                        new Comment("carol", NOW, "Spam", Option.of("SPAM"), "H", "1"),
+                        new Comment("bob", NOW, "g", Option.none(), "G", "2")),
+                0,
+                plain.id(),
+                plain.rights());
+        ReviewThread resolved = thread("a.txt", 40, true, "h", "i");
+        // A reply collapsed, an unresolved thread collapsed, a thread whose first comment is hidden opened, and a
+        // resolved one as it starts.
+        Collapsed flipped = new Collapsed(io.vavr.collection.HashSet.of("C1", collapsed.id(), hidden.id()));
+        ShownRemarks remarks = shown(flipped, replied, collapsed, hidden, resolved);
+
+        RichDiff.Drawn drawn = drawn(ParsedDiff.of(DIFF), true, Option.of(remarks), Theme.SpanStyles.NONE);
+
+        assertEquals(
+                DiffStops.of(UnifiedDiff.parse(DIFF), remarks.threads(), true, flipped)
+                        .anchors()
+                        .tail(),
+                drawn.stops().map(stop -> stop.mark().anchor()));
+        assertEquals(
+                3,
+                drawn.stops()
+                        .filter(stop -> stop.mark().anchor() instanceof Anchor.Comment)
+                        .size());
+        // Every line of each thread is drawn, in the stop it starts in.
+        List<String> lines = text(drawn.lines()).map(String::stripTrailing);
+        assertTrue(
+                lines.containsAll(List.of(
+                        indent + "┣━ bob · 2h ago · b",
+                        indent + "┃  c",
+                        indent + "━━ ▸ 2 remarks · bob: d",
+                        indent + "┃  Spam",
+                        indent + "┃  g",
+                        indent + "┗━ ✓ resolved · bob: h")),
+                lines.mkString("\n"));
+        drawn.stops()
+                .zip(drawn.stops().tail())
+                .forEach(pair -> assertTrue(
+                        pair._1().row() + pair._1().mark().lines() <= pair._2().row(), pair.toString()));
     }
 
     @Test

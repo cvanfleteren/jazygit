@@ -67,7 +67,7 @@ final class RemarkLines {
 
     /**
      * The lines of each of {@code threads}, as {@link #threads} draws them, without the blank lines between them, in
-     * parts that are each a stop of the cursor (ADR 60, 61): the thread, then each of its other comments while it is
+     * parts that are each a stop of the cursor (ADR 60, 62): the thread, then each of its other comments while it is
      * open, as {@link net.vanfleteren.jazygit.state.DiffStops#anchors} gives them.
      */
     static List<List<List<Line>>> blocks(
@@ -130,7 +130,7 @@ final class RemarkLines {
     }
 
     /**
-     * The lines of {@code thread} in parts, one for each stop of the cursor it has (ADR 61), its first header the
+     * The lines of {@code thread} in parts, one for each stop of the cursor it has (ADR 62), its first header the
      * {@code top} of its block, or under a line above it, and a line where its rule turns at the end: the thread with
      * its first comment, then each of its other comments with the rule after it. A collapsed thread is one line, which
      * ends the rule of the line above it, or has a rule of its own.
@@ -221,7 +221,7 @@ final class RemarkLines {
     /**
      * A comment: a header after {@code branch} that says who wrote it and how long ago, on the background of
      * {@link Theme.Classes#DIFF_THREAD_HEADER} to the end of the block, then its text; only the header when it is
-     * {@code collapsed}, with its first line, or why it is hidden, dimmed after it (ADR 61). How long ago it was
+     * {@code collapsed}, with its first line, or why it is hidden, dimmed after it (ADR 62). How long ago it was
      * written is told at {@code now}.
      */
     private static List<Line> comment(
@@ -343,7 +343,7 @@ final class RemarkLines {
     /**
      * How the threads are drawn: which are collapsed, and the time it is, to tell how long ago a comment was written.
      *
-     * @param collapsed which threads and comments are collapsed (ADR 61)
+     * @param collapsed which threads and comments are collapsed (ADR 62)
      * @param sending   the ids of the threads a reply or a resolving is sent for (ADR 60)
      * @param now       the time it is
      */
