@@ -47,7 +47,10 @@ time checks are done, by every jazygit running, whatever repository each has ope
   ```
   [42]
   touched = 2026-10-31T10:00:00Z
-  ids = {"PRRT_kwDO…" = true, "IC_kwDO…" = false}
+
+  [42.flipped]
+  "PRRT_kwDO…" = true
+  "IC_kwDO…" = false
   ```
 
 - Each `Space` writes the file at once, as a command; the update does not wait for it. A write that fails is logged,
