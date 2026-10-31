@@ -64,8 +64,8 @@ final class RichDiff {
                                 .map(Option::some)
                                 .toVector())
                 .getOrElse(() -> Vector.fill(parsed.files().size(), Option::none));
-        RemarkLines.RemarkStyle style = remarks.map(
-                        shown -> new RemarkLines.RemarkStyle(shown.collapsed(), shown.sending(), shown.now()))
+        RemarkLines.RemarkStyle style = remarks.map(shown ->
+                        new RemarkLines.RemarkStyle(shown.collapsed(), shown.sending(), shown.deleting(), shown.now()))
                 .getOrElse(() -> new RemarkLines.RemarkStyle(Instant.EPOCH));
         // Each file is measured on a thread of its own, and then each of its lines is drawn on one, so that a diff of
         // many files and one of a long file both hold up the render thread for less.

@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.ui;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
@@ -284,7 +285,9 @@ class ContentViewTest {
                         new CommitFilesMsg.RemarksLoaded(
                                 7,
                                 new ReviewRemarks(
-                                        PullRequestDetails.State.OPEN, Option.none(), Option.none(), List.empty())))
+                                        PullRequestDetails.State.OPEN, Option.none(), Option.none(), List.empty()),
+                                HashSet.empty(),
+                                0))
                 .model();
         assertEquals(dim("Files of #7", "No file has unresolved remarks"), ContentView.of(none, FilesPanel.ID));
         assertEquals(
@@ -296,7 +299,7 @@ class ContentViewTest {
         assertEquals(
                 new Shown.Message("Files of #7", Placeholders.error(failure), Tone.ERROR),
                 ContentView.of(
-                        Update.update(unresolved, new CommitFilesMsg.RemarksFailed(7, failure))
+                        Update.update(unresolved, new CommitFilesMsg.RemarksFailed(7, failure, HashSet.empty(), 0))
                                 .model(),
                         FilesPanel.ID));
     }

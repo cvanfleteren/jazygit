@@ -30,6 +30,9 @@ import net.vanfleteren.jazygit.git.model.Sha;
  * @param collapsed which review threads and comments are collapsed (ADR 62)
  * @param sending  the ids of the review threads a reply or a resolving is sent for, until the threads are read again
  *                 after it was sent, or the send failed (ADR 60)
+ * @param deleting the ids of the comments of review threads being deleted, until GitHub took it or refused (ADR 64)
+ * @param version  how often the review threads were changed here rather than read, as when a comment was deleted: a
+ *                 read started before is older than they are, and is read again (ADR 64)
  */
 @With
 public record CommitFilesView(
@@ -41,7 +44,9 @@ public record CommitFilesView(
         Option<Loadable<ReviewRemarks>> remarks,
         Listed listed,
         Collapsed collapsed,
-        Set<String> sending) {
+        Set<String> sending,
+        Set<String> deleting,
+        int version) {
 
     /**
      * The view of the files of {@code of}, opened from the pane {@code pane} and listed in {@code listedIn}, while
@@ -57,7 +62,9 @@ public record CommitFilesView(
                 Option.when(of instanceof Changes.OfPullRequest, Loadable::loading),
                 Listed.ALL,
                 Collapsed.NONE,
-                HashSet.empty());
+                HashSet.empty(),
+                HashSet.empty(),
+                0);
     }
 
     /**
@@ -87,6 +94,47 @@ public record CommitFilesView(
      */
     public List<ReviewThread> threads() {
         return remarks.flatMap(Loadable::toOption).map(ReviewRemarks::threads).getOrElse(List.empty());
+    }
+
+    /**
+     * These without the comment with the id {@code comment}, which GitHub deleted, as it would read them now (ADR 64):
+     * the next comment of its thread is then its first, and the thread is gone with its last, unless GitHub has more of
+     * it than were read. Changed so, they are of a newer version, which a read started before is older than.
+     */
+    public CommitFilesView withoutComment(String comment) {
+        return remarks.flatMap(Loadable::toOption)
+                .filter(read -> read.threads().exists(thread -> has(thread, comment)))
+                .map(read -> {
+                    List<ReviewThread> threads = read.threads()
+                            .map(thread -> has(thread, comment) ? without(thread, comment) : thread)
+                            .filter(thread -> !thread.comments().isEmpty() || thread.more() > 0);
+                    return withRemarks(Option.of(new Loadable.Loaded<>(
+                                    new ReviewRemarks(read.state(), read.head(), read.base(), threads))))
+                            .withCollapsed(collapsed.readAgain(threads))
+                            .withVersion(version + 1);
+                })
+                .getOrElse(this);
+    }
+
+    private static boolean has(ReviewThread thread, String comment) {
+        return thread.comments().exists(each -> each.id().equals(comment));
+    }
+
+    private static ReviewThread without(ReviewThread thread, String comment) {
+        return new ReviewThread(
+                thread.path(),
+                thread.side(),
+                thread.line(),
+                thread.startLine(),
+                thread.startSide(),
+                thread.originalLine(),
+                thread.resolved(),
+                thread.outdated(),
+                thread.subject(),
+                thread.comments().filter(each -> !each.id().equals(comment)),
+                thread.more(),
+                thread.id(),
+                thread.rights());
     }
 
     /**

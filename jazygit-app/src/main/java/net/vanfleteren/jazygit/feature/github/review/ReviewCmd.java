@@ -13,8 +13,8 @@ import net.vanfleteren.jazygit.state.Operation;
 import net.vanfleteren.jazygit.state.OperationCmd;
 
 /**
- * Writing a comment on the lines of a pull request in the editor, sending it, and resolving a thread (ADR 60). None
- * keeps a branch busy: they do not touch one.
+ * Writing a comment on the lines of a pull request in the editor, sending it, resolving a thread (ADR 60), and
+ * deleting a comment (ADR 64). None keeps a branch busy: they do not touch one.
  */
 public sealed interface ReviewCmd extends Cmd {
 
@@ -27,6 +27,8 @@ public sealed interface ReviewCmd extends Cmd {
     Operation UNRESOLVE = Operation.of("log.title.unresolveThread", "error.unresolveThread.failed");
 
     Operation EDIT_COMMENT = Operation.of("log.title.editReviewComment", "error.editReviewComment.failed");
+
+    Operation DELETE_COMMENT = Operation.of("log.title.deleteReviewComment", "error.deleteReviewComment.failed");
 
     /**
      * The file the comment is written in, in the editor; editors take it for Markdown, as GitHub does.
@@ -118,6 +120,38 @@ public sealed interface ReviewCmd extends Cmd {
         @Override
         public Msg failed(Failure failure) {
             return new ReviewMsg.ResolveFailed(this, failure);
+        }
+    }
+
+    /**
+     * Deletes the comment with the id {@code comment} of the thread with the id {@code thread} of pull request
+     * {@code number} (ADR 64).
+     */
+    record DeleteComment(int number, String thread, String comment) implements ReviewCmd, OperationCmd {
+
+        @Override
+        public Operation operation() {
+            return DELETE_COMMENT;
+        }
+
+        @Override
+        public Option<String> subject() {
+            return Option.of("#" + number);
+        }
+
+        @Override
+        public Msg run(Env env) {
+            return env.gitHub().deleteReviewComment(comment).fold(this::failedWith, this::succeeded);
+        }
+
+        @Override
+        public Msg succeeded(List<ExecutedCommand> commands) {
+            return new ReviewMsg.CommentDeleted(this, commands);
+        }
+
+        @Override
+        public Msg failed(Failure failure) {
+            return new ReviewMsg.DeleteFailed(this, failure);
         }
     }
 }

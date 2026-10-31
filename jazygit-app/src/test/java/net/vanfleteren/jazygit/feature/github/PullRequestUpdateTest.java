@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.HashMap;
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Either;
@@ -1365,7 +1366,7 @@ class PullRequestUpdateTest {
             assertEquals(
                     List.of(
                             new Cmd.LoadCommitFiles(of),
-                            new CommitFilesCmd.LoadReviewRemarks(42),
+                            new CommitFilesCmd.LoadReviewRemarks(42, HashSet.empty(), 0),
                             new CommitFilesCmd.LoadCollapsed("owner/repo", 42)),
                     opened.cmds());
             assertTrue(opened.cmds().head().background());
@@ -1419,7 +1420,8 @@ class PullRequestUpdateTest {
                 Option.of(CommitFilesView.of(of, "branches", "files")),
                 opened.model().repoView().commitFiles());
         assertTrue(opened.cmds()
-                .containsAll(List.of(new Cmd.LoadCommitFiles(of), new CommitFilesCmd.LoadReviewRemarks(42))));
+                .containsAll(List.of(
+                        new Cmd.LoadCommitFiles(of), new CommitFilesCmd.LoadReviewRemarks(42, HashSet.empty(), 0))));
     }
 
     @Test
@@ -1471,7 +1473,7 @@ class PullRequestUpdateTest {
         assertEquals(
                 List.of(
                         new Cmd.LoadCommitFiles(of),
-                        new CommitFilesCmd.LoadReviewRemarks(42),
+                        new CommitFilesCmd.LoadReviewRemarks(42, HashSet.empty(), 0),
                         new CommitFilesCmd.LoadCollapsed("owner/repo", 42)),
                 opened.cmds());
     }

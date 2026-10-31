@@ -7,6 +7,7 @@ import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.MouseButton;
 import dev.tamboui.tui.pilot.Pilot;
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
@@ -407,7 +408,9 @@ class FilesPanelTest {
                                         List.of(
                                                 remark("old.txt", ReviewThread.Side.LEFT, false),
                                                 remark("new.txt", ReviewThread.Side.RIGHT, false),
-                                                remark("b.txt", ReviewThread.Side.RIGHT, true)))))
+                                                remark("b.txt", ReviewThread.Side.RIGHT, true))),
+                                HashSet.empty(),
+                                0))
                 .model();
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(read, FilesPanel.ID))) {
@@ -446,7 +449,9 @@ class FilesPanelTest {
                                                         Option.none(),
                                                         List.of(
                                                                 remark("dir/open.txt", ReviewThread.Side.RIGHT, false),
-                                                                remark("done.txt", ReviewThread.Side.RIGHT, true)))))
+                                                                remark("done.txt", ReviewThread.Side.RIGHT, true))),
+                                                HashSet.empty(),
+                                                0))
                                 .model(),
                         new CommitFilesMsg.ListedCycled())
                 .model();
@@ -460,7 +465,9 @@ class FilesPanelTest {
                                         PullRequestDetails.State.OPEN,
                                         Option.none(),
                                         Option.none(),
-                                        List.of(remark("done.txt", ReviewThread.Side.RIGHT, true)))))
+                                        List.of(remark("done.txt", ReviewThread.Side.RIGHT, true))),
+                                HashSet.empty(),
+                                0))
                 .model();
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(unresolved, FilesPanel.ID))) {
@@ -508,7 +515,9 @@ class FilesPanelTest {
                                         Option.none(),
                                         List.of(
                                                 remark("dir/a.txt", ReviewThread.Side.RIGHT, false),
-                                                remark("dir/d.txt", ReviewThread.Side.RIGHT, false)))))
+                                                remark("dir/d.txt", ReviewThread.Side.RIGHT, false))),
+                                HashSet.empty(),
+                                0))
                 .model();
         Model unresolved =
                 Update.update(read, new CommitFilesMsg.ListedCycled()).model();

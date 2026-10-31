@@ -73,6 +73,35 @@ class CommitFilesViewTest {
         assertEquals(Listed.ALL, Listed.REMARKED.next());
     }
 
+    @Test
+    void aDeletedCommentLeavesItsThreadAndTheThreadGoesWithItsLastUnlessGitHubHasMore() {
+        ReviewThread read = thread("src/Open.java", false);
+        ReviewThread more = new ReviewThread(
+                read.path(),
+                read.side(),
+                read.line(),
+                read.startLine(),
+                read.startSide(),
+                read.originalLine(),
+                false,
+                false,
+                read.subject(),
+                List.of(new ReviewThread.Comment(
+                        "bob", Instant.EPOCH, "Hm", Option.none(), "M", "2", CommentRights.ALL)),
+                3,
+                "TM",
+                ReviewThread.Rights.ALL);
+        CommitFilesView view = read(List.of(read, more));
+
+        CommitFilesView deleted = view.withoutComment("C").withoutComment("M");
+
+        assertEquals(List.of("TM"), deleted.threads().map(ReviewThread::id));
+        assertEquals(List.empty(), deleted.threads().head().comments());
+        assertEquals(2, deleted.version());
+        // One that is gone already changes nothing, not even the version.
+        assertEquals(deleted, deleted.withoutComment("C"));
+    }
+
     private static CommitFilesView read(List<ReviewThread> threads) {
         return CommitFilesView.of(PULL_REQUEST, "branches", "files")
                 .withFiles(new Loadable.Loaded<>(FILES))

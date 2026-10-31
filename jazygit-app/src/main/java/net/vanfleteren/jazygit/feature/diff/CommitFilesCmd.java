@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.feature.diff;
 
-import io.vavr.collection.HashSet;
 import io.vavr.collection.Map;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
@@ -20,13 +19,10 @@ public sealed interface CommitFilesCmd extends Cmd {
     /**
      * Reads the review threads of pull request {@code number}, with the commits its changes are diffed between
      * (ADR 55). It runs in the background, as it talks to GitHub. It is read for the threads {@code settled} too:
-     * those something was sent for, which it is read after (ADR 60).
+     * those something was sent for, which it is read after (ADR 60). It is read at {@code version} of the threads,
+     * which it gives back: one changed since, as by a comment deleted, is newer than what it read (ADR 64).
      */
-    record LoadReviewRemarks(int number, Set<String> settled) implements CommitFilesCmd {
-
-        public LoadReviewRemarks(int number) {
-            this(number, HashSet.empty());
-        }
+    record LoadReviewRemarks(int number, Set<String> settled, int version) implements CommitFilesCmd {
 
         @Override
         public Option<Label> label() {
@@ -42,12 +38,14 @@ public sealed interface CommitFilesCmd extends Cmd {
         public Msg run(Env env) {
             return env.gitHub()
                     .reviewRemarks(number)
-                    .fold(this::failedWith, remarks -> new CommitFilesMsg.RemarksLoaded(number, remarks, settled));
+                    .fold(
+                            this::failedWith,
+                            remarks -> new CommitFilesMsg.RemarksLoaded(number, remarks, settled, version));
         }
 
         @Override
         public Msg failed(Failure failure) {
-            return new CommitFilesMsg.RemarksFailed(number, failure, settled);
+            return new CommitFilesMsg.RemarksFailed(number, failure, settled, version);
         }
     }
 

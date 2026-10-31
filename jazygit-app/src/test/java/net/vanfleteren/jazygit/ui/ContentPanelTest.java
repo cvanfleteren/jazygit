@@ -8,6 +8,7 @@ import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.MouseButton;
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
@@ -683,7 +684,9 @@ class ContentPanelTest {
                                         net.vanfleteren.jazygit.gh.model.PullRequestDetails.State.OPEN,
                                         net.vanfleteren.jazygit.gh.model.GhCommit.parse("a".repeat(40)),
                                         net.vanfleteren.jazygit.gh.model.GhCommit.parse("b".repeat(40)),
-                                        List.of(thread))))
+                                        List.of(thread)),
+                                HashSet.empty(),
+                                0))
                 .model();
         return Update.update(
                         Update.update(open, new SelectionMsg.CommitFilesSelected(List.of(file)))

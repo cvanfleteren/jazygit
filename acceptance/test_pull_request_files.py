@@ -305,3 +305,42 @@ def test_the_remarks_of_a_pull_request_are_resolved_replied_to_and_started_from_
     started = calls_with(gh, START, REPLY)[0]
     assert "line=1" in started and "side=RIGHT" in started and "body=Hm" in started and "path=b.txt" in started
     assert f"commit_id={head}" in started
+
+
+DELETE = "deletePullRequestReviewComment("
+
+
+def test_a_comment_of_a_thread_is_deleted_after_asking_without_reading_the_threads_again(
+        repo, origin, clone, gh, jazygit):
+    pull_request(repo, origin, clone, gh)
+    head = origin("rev-parse", "refs/pull/1/head").strip()
+    gh.answer(
+        (THREADS, replied(head, repo("rev-parse", "main").strip())),
+        (DELETE, {"data": {"deletePullRequestReviewComment": {"clientMutationId": None}}}))
+    ui = jazygit()
+    ui.branches.select("feature")
+    ui.app.press("o")
+    # The action shows dimmed until the details are read, and does nothing then: wait for them.
+    ui.app.wait_for("in 2 files, 2 commits")
+    ui.app.press("f")
+    ui.app.wait_in("Files", "💬1")
+    ui.app.move_cursor("Files", "b.txt")
+    ui.app.press("ctrl+d")
+    ui.app.wait_for("┃  Because")
+    ui.app.press("enter")
+
+    # To the reply, asked about, and deleted.
+    ui.app.press("n")
+    ui.app.eventually(lambda: reversed_at(ui.app, "┏━ reviewer"), "the cursor on the thread")
+    ui.app.press("j")
+    ui.app.press("d")
+    ui.app.wait_for("Delete a comment")
+    assert "Delete the comment reviewer wrote" in ui.app.text()
+    read = len(calls_with(gh, THREADS))
+    ui.app.press("enter")
+
+    ui.app.eventually(lambda: "Because" not in ui.app.text(), "the comment gone")
+    assert "┃  Why b?" in ui.app.text()
+    assert len(calls_with(gh, DELETE)) == 1
+    assert "comment=IC_Because" in calls_with(gh, DELETE)[0]
+    assert len(calls_with(gh, THREADS)) == read
