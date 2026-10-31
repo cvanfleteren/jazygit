@@ -4,6 +4,7 @@ import dev.tamboui.style.Style;
 import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
 import io.vavr.Tuple;
+import io.vavr.Tuple2;
 import io.vavr.collection.Iterator;
 import io.vavr.collection.List;
 import io.vavr.collection.Vector;
@@ -333,39 +334,20 @@ final class RichDiff {
             return segments.map(segment -> new Piece(segment.text(), segment.changed(), Option.none()));
         }
         String text = segments.map(Segment::text).mkString();
-        Vector<Segment> inOrder = segments.toVector();
         Vector<Integer> ends = segments.scanLeft(
                         0, (end, segment) -> end + segment.text().length())
                 .tail()
                 .toVector();
-        Vector<Token> lexed = tokens.toVector();
         List<Integer> cuts = ends.toList()
                 .prepend(0)
                 .appendAll(tokens.flatMap(token -> List.of(token.start(), token.end())))
                 .filter(cut -> cut <= text.length())
                 .sorted()
                 .distinct();
+        Cutter cutter = new Cutter(text, segments.toVector(), ends, tokens.toVector());
         return cuts.zip(cuts.tail())
-                .foldLeft(Tuple.of(List.<Piece>empty(), 0, 0), (done, piece) -> {
-                    int segment = Iterator.iterate(done._2, i -> i + 1)
-                            .find(i -> ends.get(i) > piece._1)
-                            .get();
-                    int token = Iterator.iterate(done._3, i -> i + 1)
-                            .find(i -> i >= lexed.size() || lexed.get(i).end() > piece._1)
-                            .get();
-                    Option<Token.Kind> kind = Option.when(
-                                    token < lexed.size() && lexed.get(token).start() <= piece._1,
-                                    () -> lexed.get(token))
-                            .map(Token::kind);
-                    return Tuple.of(
-                            done._1.prepend(new Piece(
-                                    text.substring(piece._1, piece._2),
-                                    inOrder.get(segment).changed(),
-                                    kind)),
-                            segment,
-                            token);
-                })
-                ._1
+                .foldLeft(new Cursor(List.empty(), 0, 0), cutter::next)
+                .pieces()
                 .reverse();
     }
 
@@ -558,6 +540,37 @@ final class RichDiff {
                                                             Option.none()))))))
                     .intersperse(List.of(Marked.plain(Line.from(""))))
                     .flatMap(Function.identity());
+        }
+    }
+
+    /**
+     * How far cutting a line in pieces got: the pieces cut, the last first, and the index of the segment and of the
+     * token the last is in, or after.
+     */
+    private record Cursor(List<Piece> pieces, int segment, int token) {}
+
+    /**
+     * A line cut in pieces: its text, its segments, where each of those ends, and its tokens.
+     */
+    private record Cutter(String text, Vector<Segment> segments, Vector<Integer> ends, Vector<Token> tokens) {
+
+        /**
+         * {@code at} with the piece from {@code cut._1} to {@code cut._2} cut too: its segment and its token are found
+         * by going on from those of the piece before it.
+         */
+        Cursor next(Cursor at, Tuple2<Integer, Integer> cut) {
+            int segment = Iterator.iterate(at.segment(), i -> i + 1)
+                    .find(i -> ends.get(i) > cut._1)
+                    .get();
+            int token = Iterator.iterate(at.token(), i -> i + 1)
+                    .find(i -> i >= tokens.size() || tokens.get(i).end() > cut._1)
+                    .get();
+            Option<Token.Kind> kind = Option.when(
+                            token < tokens.size() && tokens.get(token).start() <= cut._1, () -> tokens.get(token))
+                    .map(Token::kind);
+            Piece piece = new Piece(
+                    text.substring(cut._1, cut._2), segments.get(segment).changed(), kind);
+            return new Cursor(at.pieces().prepend(piece), segment, token);
         }
     }
 }

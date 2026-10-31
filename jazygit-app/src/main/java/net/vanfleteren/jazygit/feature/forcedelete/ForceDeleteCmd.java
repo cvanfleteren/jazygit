@@ -33,14 +33,22 @@ public record ForceDeleteCmd(BranchName branch) implements GitOperationCmd {
                 ? git.countOnlyOn(branch)
                         .fold(
                                 uncounted -> cmd.failedWith(failure),
-                                lost -> lost == 0
-                                        ? git.forceDeleteLocalBranch(branch)
-                                                .fold(
-                                                        forced -> cmd.failedWith(forced.after(failure.commands())),
-                                                        forced -> cmd.succeeded(failure.commands()
-                                                                .appendAll(forced)))
-                                        : new ForceDeleteMsg.NotFullyMerged(cmd, branch, lost, failure.commands()))
+                                lost -> forceIfNothingLost(cmd, branch, failure, git, lost))
                 : cmd.failedWith(failure);
+    }
+
+    /**
+     * What {@code cmd} reports once git refused to delete {@code branch} with {@code failure}, as {@code lost} commits
+     * are only on it: with none, it is deleted with force; else whether to lose them is asked.
+     */
+    private static Msg forceIfNothingLost(
+            OperationCmd cmd, BranchName branch, GitFailure<?> failure, GitInfoProvider git, int lost) {
+        return lost == 0
+                ? git.forceDeleteLocalBranch(branch)
+                        .fold(
+                                forced -> cmd.failedWith(forced.after(failure.commands())),
+                                forced -> cmd.succeeded(failure.commands().appendAll(forced)))
+                : new ForceDeleteMsg.NotFullyMerged(cmd, branch, lost, failure.commands());
     }
 
     @Override

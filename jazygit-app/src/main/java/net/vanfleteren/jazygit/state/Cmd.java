@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.model.Ahead;
+import net.vanfleteren.jazygit.git.model.AllBranches;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Commit;
@@ -235,18 +236,18 @@ public interface Cmd {
         public Msg run(Env env) {
             return env.git()
                     .allBranches()
-                    .fold(
-                            this::failedWith,
-                            branches -> new LoadMsg.BranchesLoaded(
-                                    branches,
-                                    env.git()
-                                            .parents()
-                                            .toOption()
-                                            .map(parents -> new LoadMsg.Bases(
-                                                    parents,
-                                                    env.git()
-                                                            .baseDistance(
-                                                                    branches.tips(), parents, branches.main())))));
+                    .fold(this::failedWith, branches -> new LoadMsg.BranchesLoaded(branches, bases(env, branches)));
+        }
+
+        /**
+         * The parents of {@code branches} and how far each is from its base, or none when the parents cannot be read.
+         */
+        private static Option<LoadMsg.Bases> bases(Env env, AllBranches branches) {
+            return env.git()
+                    .parents()
+                    .toOption()
+                    .map(parents -> new LoadMsg.Bases(
+                            parents, env.git().baseDistance(branches.tips(), parents, branches.main())));
         }
     }
 

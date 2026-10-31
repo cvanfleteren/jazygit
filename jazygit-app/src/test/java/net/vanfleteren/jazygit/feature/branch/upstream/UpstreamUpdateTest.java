@@ -260,6 +260,39 @@ class UpstreamUpdateTest {
     }
 
     @Test
+    void itClosesQuietlyWhenTheUpstreamIsAnotherBranch() {
+        Branch elsewhere = Fixtures.branch(
+                FEATURE,
+                false,
+                new Sha("ffff"),
+                Instant.EPOCH,
+                true,
+                false,
+                Option.of(
+                        new Upstream(new BranchRef.Remote(new RemoteBranch("origin", new BranchName("other"))), 1, 0)));
+
+        Next next = TestModels.localBranchesRead(viewing(), List.of(TRACKING, elsewhere));
+
+        assertEquals(Option.none(), next.model().repoView().divergence());
+        assertEquals(Option.none(), errorText(next.model()));
+    }
+
+    @Test
+    void aDivergenceFromTheBaseClosesWhenTheBaseBranchIsGone() {
+        Model asking = opened(withRemotes(with(TRACKING, FEATURE_BRANCH), REMOTES), FEATURE);
+        Model open =
+                Update.update(asking, new UpstreamMsg.BaseDivergenceChosen()).model();
+
+        Next next = TestModels.remoteBranchesRead(
+                open, REMOTES.filter(ref -> !ref.branch().equals(ORIGIN_MAIN)));
+
+        assertEquals(Option.none(), next.model().repoView().divergence());
+        assertEquals(
+                Option.of("Branch feature has no base branch to compare with: there is no main or master branch"),
+                errorText(next.model()));
+    }
+
+    @Test
     void itClosesQuietlyWhenTheBranchIsGone() {
         Next next = TestModels.localBranchesRead(viewing(), List.of(TRACKING));
 

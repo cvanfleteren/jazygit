@@ -36,16 +36,14 @@ public record FailingRead(int times, Instant since) {
     public static Model ran(Model model, Cmd read, boolean failed) {
         return model.mapGitHub(gitHub -> gitHub.withFailing(
                 failed
-                        ? gitHub.failing()
-                                .put(
-                                        read,
-                                        new FailingRead(
-                                                gitHub.failing()
-                                                                .get(read)
-                                                                .map(FailingRead::times)
-                                                                .getOrElse(0)
-                                                        + 1,
-                                                model.now()))
+                        ? gitHub.failing().put(read, new FailingRead(1, model.now()), FailingRead::failedAgain)
                         : gitHub.failing().remove(read)));
+    }
+
+    /**
+     * This read having failed once more, just now: at the time of {@code fresh}, the record a first failure would make.
+     */
+    private FailingRead failedAgain(FailingRead fresh) {
+        return new FailingRead(times + 1, fresh.since());
     }
 }

@@ -568,31 +568,28 @@ public final class ContentPanel {
                             && event.matches(Actions.MOVE_LEFT)
                             && element.state().scrollCol() == 0);
             // Escape, and Left where it leaves as Escape does, drop an open range before they leave the area (ADR 60).
-            Option<DiffCursor> ranged = cursor.filter(on -> focused && on.mark().isDefined());
-            if (leaving && ranged.isDefined()) {
-                return moved(ranged.get().marked().get(), content);
+            return cursor.filter(on -> leaving && focused && on.mark().isDefined())
+                    .map(ranged -> moved(ranged.marked().get(), content))
+                    // Key handlers also see keys typed elsewhere; the callback checks that an area has focus.
+                    .orElse(() -> Option.when(leaving && leaveScrollArea.getAsBoolean(), EventResult.HANDLED))
+                    .orElse(() -> Option.when(!focused, EventResult.UNHANDLED))
+                    .orElse(() -> cursor.flatMap(on -> move(on, event)).map(to -> moved(to, content)))
+                    .orElse(() -> cursor.filter(ignored -> review)
+                            .flatMap(on -> KEYMAP.handle(Scopes.PULL_REQUEST_DIFF, event, Option.of(at(on, content))))
+                            .map(this::reviewed))
+                    .getOrElse(() -> scroll(element.state(), event) ? scrolled(content) : EventResult.UNHANDLED);
+        }
+
+        /**
+         * Sends {@code msg}, which a key of the diff of a pull request made, telling the area first where it scrolls
+         * to if it does.
+         */
+        private EventResult reviewed(Msg msg) {
+            if (msg instanceof Msg.ContentScrolled(var ignored, Scrolled to)) {
+                told(to);
             }
-            // Key handlers also see keys typed elsewhere; the callback checks that an area has focus.
-            if (leaving && leaveScrollArea.getAsBoolean()) {
-                return EventResult.HANDLED;
-            }
-            if (!focused) {
-                return EventResult.UNHANDLED;
-            }
-            Option<DiffCursor> moved = cursor.flatMap(on -> move(on, event));
-            if (moved.isDefined()) {
-                return moved(moved.get(), content);
-            }
-            Option<Msg> reviewed = cursor.filter(ignored -> review)
-                    .flatMap(on -> KEYMAP.handle(Scopes.PULL_REQUEST_DIFF, event, Option.of(at(on, content))));
-            if (reviewed.isDefined()) {
-                if (reviewed.get() instanceof Msg.ContentScrolled(var ignored, Scrolled to)) {
-                    told(to);
-                }
-                dispatch.accept(reviewed.get());
-                return EventResult.HANDLED;
-            }
-            return scroll(element.state(), event) ? scrolled(content) : EventResult.UNHANDLED;
+            dispatch.accept(msg);
+            return EventResult.HANDLED;
         }
 
         /**

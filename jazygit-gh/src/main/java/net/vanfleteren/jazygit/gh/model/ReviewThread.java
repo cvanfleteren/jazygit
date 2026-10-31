@@ -48,6 +48,26 @@ public record ReviewThread(
     }
 
     /**
+     * This thread with {@code comments} in place of its own, as when one of them was edited or deleted.
+     */
+    public ReviewThread withComments(List<Comment> comments) {
+        return new ReviewThread(
+                path,
+                side,
+                line,
+                startLine,
+                startSide,
+                originalLine,
+                resolved,
+                outdated,
+                subject,
+                comments,
+                more,
+                id,
+                rights);
+    }
+
+    /**
      * Which file of a diff a line is numbered in.
      */
     public enum Side {
