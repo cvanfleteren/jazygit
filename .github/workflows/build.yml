@@ -1,8 +1,13 @@
 name: Build
 
 # Pushes to main and releases are verified by publish.yml, which calls this workflow before publishing.
+# A pull request that only changes documentation isn't built: no build or test reads it. The review still runs.
 on:
   pull_request:
+    paths-ignore:
+      - '*.md'
+      - 'documentation/**'
+      - 'acceptance/README.md'
   workflow_call:
   workflow_dispatch:
 
