@@ -284,10 +284,13 @@ public final class ReviewUpdate {
                     ReviewThread thread = found._2();
                     ReviewThread.Comment comment = found._3();
                     List<ReviewThread.Comment> before = thread.comments().takeWhile(each -> !each.equals(comment));
+                    // What is written on GitHub's site ends its lines with \r\n, whose \r the text area keeps: an
+                    // edit would send it back where it was not typed. Unchanged is told against the same text.
+                    String body = comment.body().replace("\r\n", "\n");
                     return popup(
                                     found._1(),
                                     at,
-                                    new Target.Edit(thread.id(), comment.id(), comment.body()),
+                                    new Target.Edit(thread.id(), comment.id(), body),
                                     new Where(
                                             thread.path(),
                                             thread.line()
@@ -297,7 +300,7 @@ public final class ReviewUpdate {
                                     before.lastOption()
                                             .map(ReviewUpdate::excerpt)
                                             .getOrElse(() -> lines(found._1(), thread)))
-                            .withText(comment.body());
+                            .withText(body);
                 });
     }
 

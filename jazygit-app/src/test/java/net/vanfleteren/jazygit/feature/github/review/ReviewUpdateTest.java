@@ -889,6 +889,35 @@ class ReviewUpdateTest {
     }
 
     @Test
+    void aCommentWrittenOnGitHubsSiteIsEditedWithItsLinesEndedAsTheTextAreaEndsThem() {
+        ReviewThread written = new ReviewThread(
+                OPEN.path(),
+                OPEN.side(),
+                OPEN.line(),
+                OPEN.startLine(),
+                OPEN.startSide(),
+                OPEN.originalLine(),
+                OPEN.resolved(),
+                OPEN.outdated(),
+                OPEN.subject(),
+                OPEN.comments().map(comment -> comment.withBody("a\r\nb")),
+                OPEN.more(),
+                OPEN.id(),
+                OPEN.rights());
+        Model asked = Update.update(
+                        files(PullRequestDetails.State.OPEN, HEAD, List.of(written, SETTLED)),
+                        new ReviewMsg.EditAsked(at(onComment("R1", "T1"))))
+                .model();
+
+        ReviewPopup popup = asked.popup(ReviewPopup.class).get();
+        assertEquals("a\nb", popup.text());
+        assertEquals(new Target.Edit("T1", "R1", "a\nb"), popup.target());
+        assertFalse(popup.holdsInput());
+        assertEquals(
+                List.empty(), Update.update(asked, new ReviewMsg.Confirmed()).cmds());
+    }
+
+    @Test
     void theFirstCommentOfAThreadIsEditedFromItsStopUnderTheLinesOfTheThread() {
         ReviewPopup popup = Update.update(files(), new ReviewMsg.EditAsked(at(onThread("T1"))))
                 .model()
