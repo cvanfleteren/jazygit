@@ -73,12 +73,12 @@ class DiffStopsTest {
                         line(Side.RIGHT, 3),
                         line(Side.RIGHT, 10),
                         B),
-                DiffStops.of(DIFF, List.empty(), true).anchors());
+                DiffStops.of(DIFF, List.empty(), true, Collapsed.NONE).anchors());
     }
 
     @Test
     void aLineKnowsItsHunk() {
-        DiffStops stops = DiffStops.of(DIFF, List.empty(), true);
+        DiffStops stops = DiffStops.of(DIFF, List.empty(), true, Collapsed.NONE);
 
         assertEquals(Option.of(new HunkAt(0, 0)), stops.find(line(Side.LEFT, 2)).flatMap(DiffStops.Stop::hunk));
         assertEquals(
@@ -105,12 +105,14 @@ class DiffStopsTest {
                         line(Side.RIGHT, 10),
                         new Anchor.Thread("O", Option.none()),
                         B),
-                DiffStops.of(DIFF, List.of(onFile, onTwo, outdated), true).anchors());
+                DiffStops.of(DIFF, List.of(onFile, onTwo, outdated), true, Collapsed.NONE)
+                        .anchors());
     }
 
     @Test
     void anAnchorThatIsAStopIsItsOwnStop() {
-        List<Anchor> stops = DiffStops.of(DIFF, List.empty(), true).anchors();
+        List<Anchor> stops =
+                DiffStops.of(DIFF, List.empty(), true, Collapsed.NONE).anchors();
 
         assertEquals(Option.of(line(Side.LEFT, 2)), DiffStops.nearest(stops, line(Side.LEFT, 2)));
         assertEquals(Option.of(B), DiffStops.nearest(stops, B));
@@ -118,7 +120,8 @@ class DiffStopsTest {
 
     @Test
     void aLineThatIsGoneGoesToTheClosestOfItsSideElseToItsFileElseToTheFirst() {
-        List<Anchor> stops = DiffStops.of(DIFF, List.empty(), true).anchors();
+        List<Anchor> stops =
+                DiffStops.of(DIFF, List.empty(), true, Collapsed.NONE).anchors();
 
         assertEquals(Option.of(line(Side.RIGHT, 10)), DiffStops.nearest(stops, line(Side.RIGHT, 8)));
         assertEquals(Option.of(line(Side.LEFT, 2)), DiffStops.nearest(stops, line(Side.LEFT, 40)));
@@ -129,7 +132,7 @@ class DiffStopsTest {
 
     @Test
     void aThreadIsFoundByItsIdWhereverItIsElseItGoesToItsLine() {
-        List<Anchor> stops = DiffStops.of(DIFF, List.of(thread("L", Subject.LINE, Option.of(3))), true)
+        List<Anchor> stops = DiffStops.of(DIFF, List.of(thread("L", Subject.LINE, Option.of(3))), true, Collapsed.NONE)
                 .anchors();
 
         assertEquals(
@@ -139,6 +142,67 @@ class DiffStopsTest {
                 Option.of(line(Side.RIGHT, 2)),
                 DiffStops.nearest(stops, new Anchor.Thread("gone", Option.of(line(Side.RIGHT, 2)))));
         assertEquals(Option.of(LEAD), DiffStops.nearest(stops, new Anchor.Thread("gone", Option.none())));
+    }
+
+    /**
+     * The thread with the id {@code id} on line 2, with replies {@code R1} and {@code R2}, resolved if {@code resolved}.
+     */
+    private static ReviewThread replied(String id, boolean resolved) {
+        ReviewThread thread = thread(id, Subject.LINE, Option.of(2));
+        Comment first = thread.comments().head();
+        return new ReviewThread(
+                thread.path(),
+                thread.side(),
+                thread.line(),
+                thread.startLine(),
+                thread.startSide(),
+                thread.originalLine(),
+                resolved,
+                false,
+                thread.subject(),
+                List.of(
+                        first,
+                        new Comment("ann", Instant.EPOCH, "Yes", Option.none(), "R1", "2"),
+                        new Comment("bob", Instant.EPOCH, "No", Option.none(), "R2", "3")),
+                0,
+                id,
+                ReviewThread.Rights.ALL);
+    }
+
+    @Test
+    void eachCommentOfAnOpenThreadButItsFirstIsAStopOfItsOwn() {
+        Anchor.Thread thread = new Anchor.Thread("L", Option.of(line(Side.RIGHT, 2)));
+        List<Anchor> threads = List.of(thread, new Anchor.Comment("R1", thread), new Anchor.Comment("R2", thread));
+
+        assertEquals(
+                threads,
+                DiffStops.of(DIFF, List.of(replied("L", false)), true, Collapsed.NONE)
+                        .anchors()
+                        .filter(anchor -> anchor instanceof Anchor.Thread || anchor instanceof Anchor.Comment));
+        // A resolved thread is collapsed, one stop, until it is opened; an open one is collapsed by hand.
+        assertEquals(List.of(thread), DiffStops.anchors(replied("L", true), thread.line(), Collapsed.NONE));
+        assertEquals(threads, DiffStops.anchors(replied("L", true), thread.line(), Collapsed.NONE.flipped("L")));
+        assertEquals(
+                List.of(thread), DiffStops.anchors(replied("L", false), thread.line(), Collapsed.NONE.flipped("L")));
+        // A collapsed comment is still a stop.
+        assertEquals(threads, DiffStops.anchors(replied("L", false), thread.line(), Collapsed.NONE.flipped("R1")));
+    }
+
+    @Test
+    void aCommentIsFoundByItsIdElseItGoesToItsThread() {
+        Anchor.Thread thread = new Anchor.Thread("L", Option.of(line(Side.RIGHT, 2)));
+        List<Anchor> open = DiffStops.of(DIFF, List.of(replied("L", false)), true, Collapsed.NONE)
+                .anchors();
+        List<Anchor> collapsed = DiffStops.of(DIFF, List.of(replied("L", false)), true, Collapsed.NONE.flipped("L"))
+                .anchors();
+
+        assertEquals(
+                Option.of(new Anchor.Comment("R2", thread)),
+                DiffStops.nearest(open, new Anchor.Comment("R2", new Anchor.Thread("L", Option.none()))));
+        assertEquals(Option.of(thread), DiffStops.nearest(collapsed, new Anchor.Comment("R2", thread)));
+        assertEquals(
+                Option.of(line(Side.RIGHT, 2)),
+                DiffStops.nearest(open, new Anchor.Comment("gone", new Anchor.Thread("gone", thread.line()))));
     }
 
     @Test

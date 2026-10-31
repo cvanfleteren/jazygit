@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.feature.diff;
 
-import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
@@ -54,12 +53,6 @@ public final class CommitFilesUpdate {
                                         .filter(remarks -> remarks.toOption().isDefined())
                                         .getOrElse(() -> new Loadable.Failed<>(failure))))
                                 .withSending(view.sending().removeAll(settled))));
-            // The threads opened or closed one by one are all alike again (ADR 60).
-            case CommitFilesMsg.RemarksToggled() ->
-                Next.of(model.mapRepoView(repoView -> repoView.withCommitFiles(repoView.commitFiles()
-                        .map(view -> view.remarks().isDefined()
-                                ? view.withOpened(!view.opened()).withToggled(HashSet.empty())
-                                : view))));
             case CommitFilesMsg.ListedCycled() ->
                 Next.of(model.mapRepoView(repoView -> repoView.withCommitFiles(repoView.commitFiles()
                         .map(view -> view.remarks().isDefined()
@@ -116,9 +109,8 @@ public final class CommitFilesUpdate {
                                 CommitFilesView again = CommitFilesView.of(
                                                 new Changes.OfPullRequest(commits), view.pane(), view.listedIn())
                                         .withRemarks(read.remarks())
-                                        .withOpened(view.opened())
                                         .withListed(view.listed())
-                                        .withToggled(view.toggled())
+                                        .withCollapsed(view.collapsed())
                                         .withSending(read.sending());
                                 return Next.of(
                                         model.mapRepoView(repoView -> repoView.withCommitFiles(Option.of(again))),

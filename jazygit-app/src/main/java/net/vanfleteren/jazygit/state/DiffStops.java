@@ -12,8 +12,8 @@ import net.vanfleteren.jazygit.state.PlacedRemarks.LineRemarks;
 /**
  * Where the cursor of a rich diff stops, in the order the diff is drawn (ADR 60): what comes before its first file,
  * then for each file its bar, the threads about it, each line of its hunks that has a side and a number with the
- * threads after it, and the threads that cannot be placed. A note, a hunk header and a blank line are no stop: they
- * are part of the stop before them.
+ * threads after it, and the threads that cannot be placed; each comment of an open thread but its first is a stop of
+ * its own (ADR 61). A note, a hunk header and a blank line are no stop: they are part of the stop before them.
  *
  * @param stops the stops, in order
  */
@@ -21,20 +21,20 @@ public record DiffStops(List<Stop> stops) {
 
     /**
      * The stops of {@code diff} with the review threads {@code threads} placed in it, on lines only when
-     * {@code onLines} (ADR 55).
+     * {@code onLines} (ADR 55), each comment of a thread a stop of its own but while it is {@code collapsed} (ADR 61).
      */
-    public static DiffStops of(UnifiedDiff diff, List<ReviewThread> threads, boolean onLines) {
+    public static DiffStops of(UnifiedDiff diff, List<ReviewThread> threads, boolean onLines, Collapsed collapsed) {
         PlacedRemarks placed = PlacedRemarks.place(diff, threads, onLines);
         return new DiffStops(diff.files()
                 .zip(placed.files())
                 .zipWithIndex()
-                .flatMap(file -> file(file._1()._1(), file._1()._2(), file._2()))
+                .flatMap(file -> file(file._1()._1(), file._1()._2(), file._2(), collapsed))
                 .prepend(new Stop(new Anchor.Lead(), Option.none(), Option.none())));
     }
 
-    private static List<Stop> file(FileDiff file, FileRemarks remarks, int index) {
+    private static List<Stop> file(FileDiff file, FileRemarks remarks, int index, Collapsed collapsed) {
         return List.of(new Stop(new Anchor.File(file.path()), Option.none(), Option.none()))
-                .appendAll(threads(remarks.onFile(), Option.none()))
+                .appendAll(threads(remarks.onFile(), Option.none(), collapsed))
                 .appendAll(file.hunks()
                         .zip(remarks.lines())
                         .zipWithIndex()
@@ -42,20 +42,39 @@ public record DiffStops(List<Stop> stops) {
                                 ._1()
                                 .lines()
                                 .zip(hunk._1()._2())
-                                .flatMap(
-                                        line -> line(file.path(), line._1(), line._2(), new HunkAt(index, hunk._2())))))
-                .appendAll(threads(remarks.unplaced(), Option.none()));
+                                .flatMap(line -> line(
+                                        file.path(), line._1(), line._2(), new HunkAt(index, hunk._2()), collapsed))))
+                .appendAll(threads(remarks.unplaced(), Option.none(), collapsed));
     }
 
-    private static List<Stop> line(String path, UnifiedDiff.DiffLine line, LineRemarks remarks, HunkAt hunk) {
+    private static List<Stop> line(
+            String path, UnifiedDiff.DiffLine line, LineRemarks remarks, HunkAt hunk, Collapsed collapsed) {
         Option<Anchor.OnLine> anchor = Anchor.of(path, line);
         return anchor.map(on -> new Stop(on, Option.of(hunk), Option.of(line)))
                 .toList()
-                .appendAll(threads(remarks.threads(), anchor));
+                .appendAll(threads(remarks.threads(), anchor, collapsed));
     }
 
-    private static List<Stop> threads(List<ReviewThread> threads, Option<Anchor.OnLine> line) {
-        return threads.map(thread -> new Stop(new Anchor.Thread(thread.id(), line), Option.none(), Option.none()));
+    /**
+     * The stops of {@code threads}, after {@code line} if they are: each thread, then each of its comments but the
+     * first while it is open.
+     */
+    private static List<Stop> threads(List<ReviewThread> threads, Option<Anchor.OnLine> line, Collapsed collapsed) {
+        return threads.flatMap(thread ->
+                anchors(thread, line, collapsed).map(anchor -> new Stop(anchor, Option.none(), Option.none())));
+    }
+
+    /**
+     * The anchors of the stops of {@code thread}, after {@code line} if it is: the thread, then each of its comments
+     * but the first while it is not {@code collapsed} (ADR 61).
+     */
+    public static List<Anchor> anchors(ReviewThread thread, Option<Anchor.OnLine> line, Collapsed collapsed) {
+        Anchor.Thread anchor = new Anchor.Thread(thread.id(), line);
+        return collapsed.thread(thread)
+                ? List.of(anchor)
+                : Collapsed.replies(thread)
+                        .<Anchor>map(comment -> new Anchor.Comment(comment.id(), anchor))
+                        .prepend(anchor);
     }
 
     /**
@@ -75,12 +94,16 @@ public record DiffStops(List<Stop> stops) {
 
     /**
      * Which of {@code stops} the cursor on {@code at} is on (ADR 60): {@code at} itself if it is one of them, a thread
-     * found by its id wherever it is now. When it is gone: a line goes to the line of the same file and side with the
-     * closest number, else to the bar of its file, else to the first stop; a thread to the line it was after, and from
-     * there as a line; a bar and the lead to the first stop. None when there is no stop.
+     * or a comment found by its id wherever it is now. When it is gone: a line goes to the line of the same file and
+     * side with the closest number, else to the bar of its file, else to the first stop; a thread to the line it was
+     * after, and from there as a line; a comment to its thread, and from there as a thread (ADR 61); a bar and the
+     * lead to the first stop. None when there is no stop.
      */
     public static Option<Anchor> nearest(Seq<Anchor> stops, Anchor at) {
         Option<Anchor> found = switch (at) {
+            case Anchor.Comment(String id, Anchor.Thread thread) ->
+                stops.find(stop -> stop instanceof Anchor.Comment(String other, var ignored) && other.equals(id))
+                        .orElse(() -> nearest(stops, thread));
             case Anchor.Thread(String id, Option<Anchor.OnLine> line) ->
                 stops.find(stop -> stop instanceof Anchor.Thread(String other, var ignored) && other.equals(id))
                         .orElse(() -> line.flatMap(on -> nearest(stops, on)));

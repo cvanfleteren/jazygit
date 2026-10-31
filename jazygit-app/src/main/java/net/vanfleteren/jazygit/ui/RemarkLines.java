@@ -21,6 +21,7 @@ import java.util.function.Function;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Comment;
 import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.state.Collapsed;
 import net.vanfleteren.jazygit.ui.widgets.MarkdownScroll;
 
 /**
@@ -59,15 +60,17 @@ final class RemarkLines {
     static List<Line> threads(
             List<ReviewThread> threads, int indent, int width, RemarkStyle style, Theme.SpanStyles styles) {
         return blocks(threads, indent, width, style, styles)
+                .map(parts -> parts.flatMap(Function.identity()))
                 .intersperse(List.of(Line.from("")))
                 .flatMap(Function.identity());
     }
 
     /**
-     * The lines of each of {@code threads}, as {@link #threads} draws them, without the blank lines between them: each
-     * is a stop of the cursor (ADR 60).
+     * The lines of each of {@code threads}, as {@link #threads} draws them, without the blank lines between them, in
+     * parts that are each a stop of the cursor (ADR 60, 61): the thread, then each of its other comments while it is
+     * open, as {@link net.vanfleteren.jazygit.state.DiffStops#anchors} gives them.
      */
-    static List<List<Line>> blocks(
+    static List<List<List<Line>>> blocks(
             List<ReviewThread> threads, int indent, int width, RemarkStyle style, Theme.SpanStyles styles) {
         return threads.map(thread -> thread(thread, indent, width, true, style, styles));
     }
@@ -81,6 +84,7 @@ final class RemarkLines {
         return threads.isEmpty()
                 ? List.empty()
                 : unplacedBlocks(threads, indent, width, style, styles)
+                        .map(parts -> parts.flatMap(Function.identity()))
                         .intersperse(List.of(Line.from("")))
                         .flatMap(Function.identity())
                         .prepend(unplacedHeading(indent, styles));
@@ -97,17 +101,21 @@ final class RemarkLines {
 
     /**
      * The lines of each of {@code threads}, which cannot be placed, as {@link #unplaced} draws them under its heading,
-     * without the blank lines between them: each is a stop of the cursor (ADR 60).
+     * without the blank lines between them, in parts as {@link #blocks} gives them.
      */
-    static List<List<Line>> unplacedBlocks(
+    static List<List<List<Line>>> unplacedBlocks(
             List<ReviewThread> threads, int indent, int width, RemarkStyle style, Theme.SpanStyles styles) {
         Span margin = Span.raw(" ".repeat(indent));
-        return threads.map(thread -> thread(thread, indent, width, false, style, styles)
-                .prepend(header(
-                        List.of(margin, styled(TOP, Theme.Classes.DIFF_THREAD, styles)),
-                        List.of(styled(madeOn(thread), Theme.Classes.DIM, styles)),
-                        text(indent, width),
-                        styles)));
+        return threads.map(thread -> {
+            List<List<Line>> parts = thread(thread, indent, width, false, style, styles);
+            return parts.tail()
+                    .prepend(parts.head()
+                            .prepend(header(
+                                    List.of(margin, styled(TOP, Theme.Classes.DIFF_THREAD, styles)),
+                                    List.of(styled(madeOn(thread), Theme.Classes.DIM, styles)),
+                                    text(indent, width),
+                                    styles)));
+        });
     }
 
     /**
@@ -122,39 +130,32 @@ final class RemarkLines {
     }
 
     /**
-     * The lines of {@code thread}, its first header the {@code top} of its block, or under a line above it, and a line
-     * where its rule turns at the end. A resolved thread while the threads are closed is one line, which ends the
-     * rule of the line above it, or has a rule of its own.
+     * The lines of {@code thread} in parts, one for each stop of the cursor it has (ADR 61), its first header the
+     * {@code top} of its block, or under a line above it, and a line where its rule turns at the end: the thread with
+     * its first comment, then each of its other comments with the rule after it. A collapsed thread is one line, which
+     * ends the rule of the line above it, or has a rule of its own.
      */
-    private static List<Line> thread(
+    private static List<List<Line>> thread(
             ReviewThread thread, int indent, int width, boolean top, RemarkStyle style, Theme.SpanStyles styles) {
         Span margin = Span.raw(" ".repeat(indent));
         List<Span> rule = List.of(margin, styled(RULE, Theme.Classes.DIFF_THREAD, styles));
         int text = text(indent, width);
-        boolean open = style.opens(thread);
         // While a reply or its resolving is sent, it says so (ADR 60).
         List<Span> sending = style.sends(thread)
                 ? List.of(styled(" · " + Messages.get("content.remarks.sending"), Theme.Classes.DIM, styles))
                 : List.empty();
-        if (thread.resolved() && !open) {
-            String first =
-                    thread.comments().headOption().map(RemarkLines::firstLine).getOrElse("");
-            String author = thread.comments()
-                    .headOption()
-                    .map(comment -> author(comment.author()))
-                    .getOrElse("");
-            return List.of(Line.from(List.of(
+        if (style.collapsed().thread(thread)) {
+            return List.of(List.of(Line.from(List.of(
                             margin,
                             styled((top ? ALONE : BOTTOM) + " ", Theme.Classes.DIFF_THREAD, styles),
-                            styled(
-                                    cut(Messages.get("content.remarks.resolved", author, first), text),
-                                    Theme.Classes.DIM,
-                                    styles))
+                            // A resolved thread is dimmed, an unresolved one stands out from it.
+                            thread.resolved()
+                                    ? styled(cut(collapsed(thread), text), Theme.Classes.DIM, styles)
+                                    : Span.raw(cut(collapsed(thread), text)))
                     .appendAll(sending)
-                    .toJavaList()));
+                    .toJavaList())));
         }
-        // A line of only the rule between two comments, to show where the next one starts.
-        return thread.comments()
+        List<List<Line>> comments = thread.comments()
                 .zipWithIndex()
                 .map(comment -> comment(
                         comment._1,
@@ -163,11 +164,11 @@ final class RemarkLines {
                                 styled(top && comment._2 == 0 ? TOP : BRANCH, Theme.Classes.DIFF_THREAD, styles)),
                         rule,
                         text,
-                        open,
+                        comment._2 > 0 && style.collapsed().comment(comment._1),
                         style.now(),
-                        styles))
-                .intersperse(List.of(Line.from(margin, styled(RULE.strip(), Theme.Classes.DIFF_THREAD, styles))))
-                .flatMap(Function.identity())
+                        styles));
+        List<List<Line>> parts = comments.isEmpty() ? List.of(List.empty()) : comments;
+        List<Line> end = List.<Line>empty()
                 .appendAll(
                         thread.more() > 0
                                 ? List.of(Line.from(rule.append(styled(
@@ -183,44 +184,73 @@ final class RemarkLines {
                                                 Messages.get("content.remarks.sending"), Theme.Classes.DIM, styles))
                                         .toJavaList())))
                 .append(Line.from(margin, styled(BOTTOM, Theme.Classes.DIFF_THREAD, styles)));
+        // A line of only the rule between two comments, to show where the next one starts.
+        Line between = Line.from(margin, styled(RULE.strip(), Theme.Classes.DIFF_THREAD, styles));
+        return parts.init()
+                .map(part -> part.append(between))
+                .append(parts.last().appendAll(end));
+    }
+
+    /**
+     * What the one line of a collapsed {@code thread} says: that it is resolved, or how many comments it has, then who
+     * wrote its first comment, and its first line, or why it is hidden.
+     */
+    private static String collapsed(ReviewThread thread) {
+        String first = thread.comments().headOption().map(RemarkLines::shortly).getOrElse("");
+        String author = thread.comments()
+                .headOption()
+                .map(comment -> author(comment.author()))
+                .getOrElse("");
+        return thread.resolved()
+                ? Messages.get("content.remarks.resolved", author, first)
+                : Messages.get("content.remarks.collapsed", thread.comments().size() + thread.more(), author, first);
+    }
+
+    /**
+     * {@code comment} in one line: its first line, or why it is hidden.
+     */
+    private static String shortly(Comment comment) {
+        return comment.hidden().map(RemarkLines::hidden).getOrElse(() -> firstLine(comment));
+    }
+
+    private static String hidden(String reason) {
+        return Messages.get(
+                "content.remarks.hidden", reason.toLowerCase(Locale.ROOT).replace('_', '-'));
     }
 
     /**
      * A comment: a header after {@code branch} that says who wrote it and how long ago, on the background of
-     * {@link Theme.Classes#DIFF_THREAD_HEADER} to the end of the block, then its text, or why it is hidden while its
-     * thread is not {@code open}; how long ago it was written, at {@code now}.
+     * {@link Theme.Classes#DIFF_THREAD_HEADER} to the end of the block, then its text; only the header when it is
+     * {@code collapsed}, with its first line, or why it is hidden, dimmed after it (ADR 61). How long ago it was
+     * written is told at {@code now}.
      */
     private static List<Line> comment(
             Comment comment,
             List<Span> branch,
             List<Span> rule,
             int text,
-            boolean open,
+            boolean collapsed,
             Instant now,
             Theme.SpanStyles styles) {
         String author = author(comment.author());
         String ago = Messages.get("content.remarks.ago", TimeText.ago(Duration.between(comment.at(), now)));
-        Line header = header(
-                branch,
-                List.of(
-                        styled(author, Theme.Classes.DIFF_THREAD_AUTHOR, styles),
-                        styled(ago, Theme.Classes.DIM, styles)),
-                text,
-                styles);
-        List<Line> body = comment.hidden()
-                .filter(hidden -> !open)
-                .map(reason -> List.of(Line.from(rule.append(styled(
-                                cut(
-                                        Messages.get(
-                                                "content.remarks.hidden",
-                                                reason.toLowerCase(Locale.ROOT).replace('_', '-')),
-                                        text),
-                                Theme.Classes.DIM,
-                                styles))
-                        .toJavaList())))
-                .getOrElse(() -> markdown(MarkdownScroll.withoutHtmlComments(comment.body()), text, styles.markdown())
-                        .map(line -> Line.from(rule.appendAll(line.spans()).toJavaList())));
-        return body.prepend(header);
+        List<Span> said = List.of(
+                styled(author, Theme.Classes.DIFF_THREAD_AUTHOR, styles), styled(ago, Theme.Classes.DIM, styles));
+        if (collapsed) {
+            int used = said.map(Span::width).sum().intValue();
+            String line = shortly(comment);
+            return List.of(header(
+                    branch,
+                    line.isEmpty()
+                            ? said
+                            : said.append(
+                                    styled(cut(" · " + line, Math.max(0, text - used)), Theme.Classes.DIM, styles)),
+                    text,
+                    styles));
+        }
+        return markdown(MarkdownScroll.withoutHtmlComments(comment.body()), text, styles.markdown())
+                .map(line -> Line.from(rule.appendAll(line.spans()).toJavaList()))
+                .prepend(header(branch, said, text, styles));
     }
 
     /**
@@ -311,24 +341,16 @@ final class RemarkLines {
     }
 
     /**
-     * How the threads are drawn: open or not, and the time it is, to tell how long ago a comment was written.
+     * How the threads are drawn: which are collapsed, and the time it is, to tell how long ago a comment was written.
      *
-     * @param opened  whether every thread is open
-     * @param toggled the ids of the threads opened or closed against {@code opened} (ADR 60)
-     * @param sending the ids of the threads a reply or a resolving is sent for (ADR 60)
-     * @param now     the time it is
+     * @param collapsed which threads and comments are collapsed (ADR 61)
+     * @param sending   the ids of the threads a reply or a resolving is sent for (ADR 60)
+     * @param now       the time it is
      */
-    record RemarkStyle(boolean opened, Set<String> toggled, Set<String> sending, Instant now) {
+    record RemarkStyle(Collapsed collapsed, Set<String> sending, Instant now) {
 
-        RemarkStyle(boolean opened, Instant now) {
-            this(opened, HashSet.empty(), HashSet.empty(), now);
-        }
-
-        /**
-         * Whether {@code thread} is shown open: its resolved state and its hidden comments too.
-         */
-        boolean opens(ReviewThread thread) {
-            return opened != toggled.contains(thread.id());
+        RemarkStyle(Instant now) {
+            this(Collapsed.NONE, HashSet.empty(), now);
         }
 
         /**

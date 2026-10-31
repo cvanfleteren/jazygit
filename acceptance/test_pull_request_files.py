@@ -127,7 +127,11 @@ def test_the_review_remarks_of_a_pull_request_show_next_to_their_lines(repo, ori
     assert "● +b" in ui.app.text()
     assert "✓ resolved · reviewer: Settled already" in ui.app.text()
 
-    ui.app.press("t")
+    # Space opens the resolved thread, the second (ADR 61).
+    ui.app.press("enter")
+    ui.app.press("n")
+    ui.app.press("n")
+    ui.app.press("space")
 
     ui.app.wait_for("┃  Settled already")
     assert "✓ resolved" not in ui.app.text()
@@ -184,6 +188,62 @@ def reversed_at(app, text: str) -> bool:
         if x >= 0:
             return app.screen.buffer[y][x].reverse
     return False
+
+
+def replied(head: str, base: str) -> list:
+    """The review threads of pull request 1: one open on line 1 of b.txt, with a reply and a hidden comment."""
+    def comment(body: str, hidden: bool) -> dict:
+        return {"id": f"IC_{body}", "fullDatabaseId": str(len(body)), "author": {"login": "reviewer"},
+                "createdAt": DATE, "body": body, "state": "SUBMITTED",
+                "isMinimized": hidden, "minimizedReason": "SPAM" if hidden else None}
+    return [{"data": {"repository": {"pullRequest": {
+        "state": "OPEN", "headRefOid": head, "baseRefOid": base,
+        "reviewThreads": {"pageInfo": {"hasNextPage": False, "endCursor": None}, "nodes": [{
+            "id": "PRRT_1", "path": "b.txt", "diffSide": "RIGHT", "line": 1, "startLine": None,
+            "startDiffSide": None, "originalLine": 1, "isResolved": False, "isOutdated": False, "subjectType": "LINE",
+            "viewerCanReply": True, "viewerCanResolve": True, "viewerCanUnresolve": False,
+            "comments": {"totalCount": 3, "nodes": [
+                comment("Why b?", False), comment("Because", False), comment("Buy now", True)]}}]},
+    }}}}]
+
+
+def test_a_thread_and_each_of_its_comments_are_collapsed_and_opened_with_space(repo, origin, clone, gh, jazygit):
+    pull_request(repo, origin, clone, gh)
+    head = origin("rev-parse", "refs/pull/1/head").strip()
+    gh.answer((THREADS, replied(head, repo("rev-parse", "main").strip())))
+    ui = jazygit()
+    ui.branches.select("feature")
+    ui.app.press("o")
+    # The action shows dimmed until the details are read, and does nothing then: wait for them.
+    ui.app.wait_for("in 2 files, 2 commits")
+    ui.app.press("f")
+    ui.app.wait_in("Files", "💬1")
+    ui.app.move_cursor("Files", "b.txt")
+    ui.app.press("ctrl+d")
+    ui.app.wait_for("┃  Because")
+    # A hidden comment is collapsed to its header.
+    assert "· hidden · spam" in ui.app.text()
+    assert "Buy now" not in ui.app.text()
+    ui.app.press("enter")
+
+    # An unresolved thread collapses to one line, and opens again.
+    ui.app.press("n")
+    ui.app.eventually(lambda: reversed_at(ui.app, "┏━ reviewer"), "the cursor on the thread")
+    ui.app.press("space")
+    ui.app.wait_for("▸ 3 remarks · reviewer: Why b?")
+    assert "Because" not in ui.app.text()
+    ui.app.press("space")
+    ui.app.wait_for("┃  Because")
+
+    # Each comment but the first is a stop: the reply collapses on its own, the hidden comment opens.
+    ui.app.press("j")
+    ui.app.press("space")
+    ui.app.wait_for("· Because")
+    assert "┃  Because" not in ui.app.text()
+    assert "┃  Why b?" in ui.app.text()
+    ui.app.press("j")
+    ui.app.press("space")
+    ui.app.wait_for("┃  Buy now")
 
 
 def test_the_remarks_of_a_pull_request_are_resolved_replied_to_and_started_from_the_cursor_of_its_diff(

@@ -162,3 +162,5 @@ Amended by ADR 57: `c` in the tree lists only the files with unresolved remarks,
 many resolved threads it has too.
 
 Amended by ADR 60: replying to a thread, resolving it and starting one, with a cursor in the rich view.
+
+Amended by ADR 61: `Space` collapses or opens any thread or comment, and `t` is gone.

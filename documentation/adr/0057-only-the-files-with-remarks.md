@@ -60,3 +60,5 @@ thread is shown open, `t`, is kept in `CommitFilesView`, not in the settings.
 - The files of a pull request with remarks, unresolved or all, can be listed on their own, one or two keys away.
 - Every file with resolved threads shows a mark it did not show before.
 - `c` in the tree of a commit or a stash does nothing.
+
+Amended by ADR 61: `t` is gone from the tree.

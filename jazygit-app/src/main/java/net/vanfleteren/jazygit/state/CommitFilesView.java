@@ -26,9 +26,8 @@ import net.vanfleteren.jazygit.git.model.Sha;
  * @param diff     what changed in the files of the node highlighted in the tree, keyed by them, once one is
  *                 highlighted
  * @param remarks  the review threads of a pull request, as they are read; none for a commit or a stash (ADR 55)
- * @param opened   whether every review thread is shown open, the resolved ones and the hidden comments too
  * @param listed   which of the files are listed: all of them, or only those with review threads (ADR 57)
- * @param toggled  the ids of the review threads opened or closed against {@code opened}, one by one (ADR 60)
+ * @param collapsed which review threads and comments are collapsed (ADR 61)
  * @param sending  the ids of the review threads a reply or a resolving is sent for, until the threads are read again
  *                 after it was sent, or the send failed (ADR 60)
  */
@@ -40,9 +39,8 @@ public record CommitFilesView(
         Loadable<List<CommitFile>> files,
         Option<Preview<List<CommitFile>, DiffText>> diff,
         Option<Loadable<ReviewRemarks>> remarks,
-        boolean opened,
         Listed listed,
-        Set<String> toggled,
+        Collapsed collapsed,
         Set<String> sending) {
 
     /**
@@ -57,9 +55,8 @@ public record CommitFilesView(
                 Loadable.loading(),
                 Option.none(),
                 Option.when(of instanceof Changes.OfPullRequest, Loadable::loading),
-                false,
                 Listed.ALL,
-                HashSet.empty(),
+                Collapsed.NONE,
                 HashSet.empty());
     }
 

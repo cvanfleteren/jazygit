@@ -183,7 +183,7 @@ class CommitFilesUpdateTest {
     }
 
     @Test
-    void theFilesOfAPullRequestComeWithItsReviewThreadsWhichCanBeOpenedAndReadAgain() {
+    void theFilesOfAPullRequestComeWithItsReviewThreadsWhichCanBeReadAgain() {
         Next opened = Update.update(loaded(), new CommitFilesMsg.Opened(PULL_REQUEST, Scopes.BRANCHES.id()));
         assertEquals(
                 List.of(new Cmd.LoadCommitFiles(PULL_REQUEST), new CommitFilesCmd.LoadReviewRemarks(7)), opened.cmds());
@@ -199,14 +199,12 @@ class CommitFilesUpdateTest {
         assertEquals(PULL_REQUEST, view.of());
         assertTrue(view.remarksAtItsCommits());
 
-        Model toggled = Update.update(read, new CommitFilesMsg.RemarksToggled()).model();
-        assertTrue(toggled.repoView().commitFiles().get().opened());
         assertEquals(
                 List.of(new CommitFilesCmd.LoadReviewRemarks(7)),
-                Update.update(toggled, new CommitFilesMsg.RemarksRefreshed()).cmds());
+                Update.update(read, new CommitFilesMsg.RemarksRefreshed()).cmds());
 
         // A failed read again keeps the threads read before.
-        Model failed = Update.update(toggled, new CommitFilesMsg.RemarksFailed(7, new Failure.Bug(new Exception())))
+        Model failed = Update.update(read, new CommitFilesMsg.RemarksFailed(7, new Failure.Bug(new Exception())))
                 .model();
         assertEquals(List.of(THREAD), failed.repoView().commitFiles().get().threads());
     }
@@ -289,9 +287,6 @@ class CommitFilesUpdateTest {
                         .model());
 
         Model commit = opened();
-        assertEquals(
-                commit,
-                Update.update(commit, new CommitFilesMsg.RemarksToggled()).model());
         assertEquals(
                 commit, Update.update(commit, new CommitFilesMsg.ListedCycled()).model());
         assertEquals(

@@ -49,12 +49,6 @@ public sealed interface CommitFilesMsg extends Msg {
     }
 
     /**
-     * The user asked to open every review thread, the resolved ones and the hidden comments too, or to close them
-     * again.
-     */
-    record RemarksToggled() implements CommitFilesMsg {}
-
-    /**
      * The user asked to list the next of the files of a pull request: all of them, those with an unresolved review
      * thread, or those with any (ADR 57).
      */

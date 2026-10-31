@@ -416,7 +416,7 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
   no ref is written, not even a remote-tracking branch, and it needs no guard of the remote refs (ADR 27). That load
   runs in the background. The dialog closes and the repository screen shows; Escape gives the focus to the branches
   pane. Its review threads are read with it (`CommitFilesCmd.LoadReviewRemarks`, again with `R`), kept in
-  `CommitFilesView.remarks`, and opened or closed with `t` (`CommitFilesView.opened`); threads read at other commits
+  `CommitFilesView.remarks`; threads read at other commits
   read the files again at those, unless the pull request was found merged or closed, which keeps them and says so in
   the title (`CommitFilesView.ended`); threads read at other commits than the files are then not placed on lines
   (`CommitFilesView.remarksAtItsCommits`). `ui.RichDiff` draws them after their lines as `ui.RemarkLines` blocks,
@@ -452,7 +452,9 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
   (GraphQL would leave them pending), and a resolve with `gh api graphql`. Each needs the threads read at the
   commits of the files and a pull request that is not merged, else it says why (`AppError.CannotReview`); the ids of
   the threads something is sent for (`CommitFilesView.sending`) take no other key until the threads are read again.
-  `Space` opens or closes one thread against `t` (`CommitFilesView.toggled`).
+  `Space` collapses or opens the thread or the comment of the cursor against its default (ADR 61): the ids flipped
+  are `CommitFilesView.collapsed` (`state.Collapsed`), which `DiffStops` and `ui.RemarkLines` both read, so each
+  comment of an open thread is a stop of its own (`Anchor.Comment`) in the model as on the screen.
 
 ## The editor
 
