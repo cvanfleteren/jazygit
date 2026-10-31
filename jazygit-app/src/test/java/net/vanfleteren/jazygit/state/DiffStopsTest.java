@@ -11,32 +11,13 @@ import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Comment;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Subject;
-import net.vanfleteren.jazygit.git.model.UnifiedDiff;
 import net.vanfleteren.jazygit.state.Anchor.OnLine;
-import net.vanfleteren.jazygit.state.DiffStops.HunkAt;
 import org.junit.jupiter.api.Test;
 
 /**
  * Where the cursor of a rich diff stops, and which stop it is on once its own is gone (ADR 60).
  */
 class DiffStopsTest {
-
-    // a.txt, its line 2 changed, in two hunks; then b.txt, binary.
-    private static final UnifiedDiff DIFF = UnifiedDiff.parse("""
-            diff --git a/a.txt b/a.txt
-            --- a/a.txt
-            +++ b/a.txt
-            @@ -1,3 +1,3 @@
-             one
-            -two
-            +TWO
-             three
-            @@ -10,1 +10,1 @@
-             ten
-            \\ No newline at end of file
-            diff --git a/b.png b/b.png
-            Binary files a/b.png and b/b.png differ
-            """);
 
     private static final Anchor LEAD = new Anchor.Lead();
     private static final Anchor A = new Anchor.File("a.txt");
@@ -63,88 +44,36 @@ class DiffStopsTest {
                 ReviewThread.Rights.ALL);
     }
 
-    @Test
-    void theLeadThenEachFileItsBarItsLinesAndNoNote() {
-        assertEquals(
-                List.of(
-                        LEAD,
-                        A,
-                        line(Side.RIGHT, 1),
-                        line(Side.LEFT, 2),
-                        line(Side.RIGHT, 2),
-                        line(Side.RIGHT, 3),
-                        line(Side.RIGHT, 10),
-                        B),
-                DiffStops.of(DIFF, List.empty(), true, Collapsed.NONE).anchors());
-    }
-
-    @Test
-    void aLineKnowsItsHunk() {
-        DiffStops stops = DiffStops.of(DIFF, List.empty(), true, Collapsed.NONE);
-
-        assertEquals(Option.of(new HunkAt(0, 0)), stops.find(line(Side.LEFT, 2)).flatMap(DiffStops.Stop::hunk));
-        assertEquals(
-                Option.of(new HunkAt(0, 1)), stops.find(line(Side.RIGHT, 10)).flatMap(DiffStops.Stop::hunk));
-        assertEquals(Option.none(), stops.find(A).flatMap(DiffStops.Stop::hunk));
-    }
-
-    @Test
-    void aStopIsFoundAmongTheStopsByItsAnchor() {
-        DiffStops stops = DiffStops.of(DIFF, List.empty(), true, Collapsed.NONE);
-
-        assertEquals(0, stops.indexOf(LEAD));
-        assertEquals(3, stops.indexOf(line(Side.LEFT, 2)));
-        assertEquals(-1, stops.indexOf(line(Side.LEFT, 40)));
-    }
-
-    @Test
-    void eachThreadIsAStopWhereItIsDrawn() {
-        ReviewThread onFile = thread("F", Subject.FILE, Option.none());
-        ReviewThread onTwo = thread("L", Subject.LINE, Option.of(2));
-        ReviewThread outdated = thread("O", Subject.LINE, Option.none());
-
-        assertEquals(
-                List.of(
-                        LEAD,
-                        A,
-                        new Anchor.Thread("F", Option.none()),
-                        line(Side.RIGHT, 1),
-                        line(Side.LEFT, 2),
-                        line(Side.RIGHT, 2),
-                        new Anchor.Thread("L", Option.of(line(Side.RIGHT, 2))),
-                        line(Side.RIGHT, 3),
-                        line(Side.RIGHT, 10),
-                        new Anchor.Thread("O", Option.none()),
-                        B),
-                DiffStops.of(DIFF, List.of(onFile, onTwo, outdated), true, Collapsed.NONE)
-                        .anchors());
-    }
+    // The stops of a diff without threads, as the rich view draws them: a.txt, its line 2 changed, in two hunks; then
+    // b.txt, binary.
+    private static final List<Anchor> STOPS = List.of(
+            LEAD,
+            A,
+            line(Side.RIGHT, 1),
+            line(Side.LEFT, 2),
+            line(Side.RIGHT, 2),
+            line(Side.RIGHT, 3),
+            line(Side.RIGHT, 10),
+            B);
 
     @Test
     void anAnchorThatIsAStopIsItsOwnStop() {
-        Seq<Anchor> stops =
-                DiffStops.of(DIFF, List.empty(), true, Collapsed.NONE).anchors();
-
-        assertEquals(Option.of(line(Side.LEFT, 2)), DiffStops.nearest(stops, line(Side.LEFT, 2)));
-        assertEquals(Option.of(B), DiffStops.nearest(stops, B));
+        assertEquals(Option.of(line(Side.LEFT, 2)), DiffStops.nearest(STOPS, line(Side.LEFT, 2)));
+        assertEquals(Option.of(B), DiffStops.nearest(STOPS, B));
     }
 
     @Test
     void aLineThatIsGoneGoesToTheClosestOfItsSideElseToItsFileElseToTheFirst() {
-        Seq<Anchor> stops =
-                DiffStops.of(DIFF, List.empty(), true, Collapsed.NONE).anchors();
-
-        assertEquals(Option.of(line(Side.RIGHT, 10)), DiffStops.nearest(stops, line(Side.RIGHT, 8)));
-        assertEquals(Option.of(line(Side.LEFT, 2)), DiffStops.nearest(stops, line(Side.LEFT, 40)));
-        assertEquals(Option.of(B), DiffStops.nearest(stops, new OnLine("b.png", Side.RIGHT, 1)));
-        assertEquals(Option.of(LEAD), DiffStops.nearest(stops, new OnLine("c.txt", Side.RIGHT, 1)));
-        assertEquals(Option.of(LEAD), DiffStops.nearest(stops, new Anchor.File("c.txt")));
+        assertEquals(Option.of(line(Side.RIGHT, 10)), DiffStops.nearest(STOPS, line(Side.RIGHT, 8)));
+        assertEquals(Option.of(line(Side.LEFT, 2)), DiffStops.nearest(STOPS, line(Side.LEFT, 40)));
+        assertEquals(Option.of(B), DiffStops.nearest(STOPS, new OnLine("b.png", Side.RIGHT, 1)));
+        assertEquals(Option.of(LEAD), DiffStops.nearest(STOPS, new OnLine("c.txt", Side.RIGHT, 1)));
+        assertEquals(Option.of(LEAD), DiffStops.nearest(STOPS, new Anchor.File("c.txt")));
     }
 
     @Test
     void aThreadIsFoundByItsIdWhereverItIsElseItGoesToItsLine() {
-        Seq<Anchor> stops = DiffStops.of(DIFF, List.of(thread("L", Subject.LINE, Option.of(3))), true, Collapsed.NONE)
-                .anchors();
+        Seq<Anchor> stops = STOPS.insert(6, new Anchor.Thread("L", Option.of(line(Side.RIGHT, 3))));
 
         assertEquals(
                 Option.of(new Anchor.Thread("L", Option.of(line(Side.RIGHT, 3)))),
@@ -185,11 +114,7 @@ class DiffStopsTest {
         Anchor.Thread thread = new Anchor.Thread("L", Option.of(line(Side.RIGHT, 2)));
         List<Anchor> threads = List.of(thread, new Anchor.Comment("R1", thread), new Anchor.Comment("R2", thread));
 
-        assertEquals(
-                threads,
-                DiffStops.of(DIFF, List.of(replied("L", false)), true, Collapsed.NONE)
-                        .anchors()
-                        .filter(anchor -> anchor instanceof Anchor.Thread || anchor instanceof Anchor.Comment));
+        assertEquals(threads, DiffStops.anchors(replied("L", false), thread.line(), Collapsed.NONE));
         // A resolved thread is collapsed, one stop, until it is opened; an open one is collapsed by hand.
         assertEquals(List.of(thread), DiffStops.anchors(replied("L", true), thread.line(), Collapsed.NONE));
         assertEquals(
@@ -212,14 +137,9 @@ class DiffStopsTest {
     @Test
     void aCommentIsFoundByItsIdElseItGoesToItsThread() {
         Anchor.Thread thread = new Anchor.Thread("L", Option.of(line(Side.RIGHT, 2)));
-        Seq<Anchor> open = DiffStops.of(DIFF, List.of(replied("L", false)), true, Collapsed.NONE)
-                .anchors();
-        Seq<Anchor> collapsed = DiffStops.of(
-                        DIFF,
-                        List.of(replied("L", false)),
-                        true,
-                        Collapsed.NONE.flipped("L", List.of(replied("L", false))))
-                .anchors();
+        Seq<Anchor> open =
+                STOPS.insertAll(5, List.of(thread, new Anchor.Comment("R1", thread), new Anchor.Comment("R2", thread)));
+        Seq<Anchor> collapsed = STOPS.insert(5, thread);
 
         assertEquals(
                 Option.of(new Anchor.Comment("R2", thread)),

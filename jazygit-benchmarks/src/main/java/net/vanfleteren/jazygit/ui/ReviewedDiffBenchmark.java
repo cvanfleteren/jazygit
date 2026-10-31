@@ -4,6 +4,7 @@ import dev.tamboui.style.Color;
 import dev.tamboui.style.Style;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
+import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import java.time.Instant;
 import java.util.concurrent.TimeUnit;
@@ -16,7 +17,7 @@ import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.ParsedDiff;
 import net.vanfleteren.jazygit.state.Anchor;
 import net.vanfleteren.jazygit.state.Collapsed;
-import net.vanfleteren.jazygit.state.DiffStops;
+import net.vanfleteren.jazygit.state.DiffLines;
 import net.vanfleteren.jazygit.state.PlacedRemarks;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -32,7 +33,7 @@ import org.openjdk.jmh.annotations.Warmup;
 
 /**
  * What the diff of a pull request with review threads costs (ADR 55, 60): placing the threads in it, drawing it, and
- * the stops of the cursor in it, which a key of the review works out again. The diff is {@link Shape#CODE}, 100 files
+ * the lines of the cursor in it, which a key of the review works out again. The diff is {@link Shape#CODE}, 100 files
  * of 4 hunks; the threads are spread over its files and hunks, a third of them on several lines, and some on a whole
  * file or outdated.
  *
@@ -55,7 +56,8 @@ public class ReviewedDiffBenchmark {
 
     private ParsedDiff parsed;
     private ContentView.ShownRemarks remarks;
-    private Anchor last;
+    private Anchor.OnLine first;
+    private Anchor.OnLine last;
 
     @Setup
     public void setUp() {
@@ -63,6 +65,7 @@ public class ReviewedDiffBenchmark {
         List<ReviewThread> all = List.range(0, threads).map(ReviewedDiffBenchmark::thread);
         remarks = new ContentView.ShownRemarks(
                 all, Instant.EPOCH, Option.none(), true, Collapsed.NONE, HashSet.empty(), HashSet.empty());
+        first = new Anchor.OnLine("src/F99.java", Side.RIGHT, 1 + 3 * 40 + 6);
         last = new Anchor.OnLine("src/F99.java", Side.RIGHT, 1 + 3 * 40 + 8);
     }
 
@@ -83,12 +86,11 @@ public class ReviewedDiffBenchmark {
     }
 
     /**
-     * The stops of the diff and the one the cursor is on, as a key of the review works them out.
+     * The lines of the diff and a range of them in its last file, as a key of the review works them out.
      */
     @Benchmark
-    public Option<DiffStops.Stop> stops() {
-        return DiffStops.of(parsed.diff(), remarks.threads(), true, Collapsed.NONE)
-                .find(last);
+    public Option<Vector<DiffLines.Line>> lines() {
+        return DiffLines.of(parsed.diff()).between(first, last);
     }
 
     /**
