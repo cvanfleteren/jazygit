@@ -15,6 +15,8 @@
             packages = [
               jdk
               (pkgs.maven.override { jdk_headless = jdk; })
+              # The same git as CI, so a local run meets the git the tests meet there.
+              pkgs.git
               # For the acceptance tests in acceptance/.
               (pkgs.python3.withPackages (p: [ p.pexpect p.pyte p.pytest p.pytest-xdist ]))
             ];
