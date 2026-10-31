@@ -171,3 +171,5 @@ yet, like a job that `needs` others, while one of its checks is not done.
 
 Amended by ADR 37: the checks popup shows, under its counts, when the checks started, ended and how long they took
 together.
+
+Amended by ADR 63: how long the checks took is kept in a file per repository, `repos/<owner>/<name>/check-timings.toml`.

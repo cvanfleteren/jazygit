@@ -75,3 +75,5 @@ It shows how many pull requests of the open repository were opened and not seen 
 
 Amended by ADR 58: the new pull requests are read with the open pull requests the branches show, after every fetch,
 rather than by a tick of their own while the screen is hidden or 3 seconds after a repository opens.
+
+Amended by ADR 63: the unseen pull requests are kept in a file per repository, `repos/<owner>/<name>/unseen-pull-requests.toml`.
