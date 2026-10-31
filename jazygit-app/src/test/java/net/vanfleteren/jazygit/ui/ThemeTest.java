@@ -169,7 +169,9 @@ class ThemeTest {
                 ThemeName.EMBER,
                 ThemeName.POWERLINE,
                 ThemeName.LIANTIS_DARK,
-                ThemeName.SYMFONIC)) {
+                ThemeName.SYMFONIC,
+                ThemeName.GITHUB_DARK,
+                ThemeName.GITHUB_DARK_COLORBLIND)) {
             var engine = Theme.createEngine().get();
             Theme.activate(engine, name);
             Theme.SelectedText selectedText = Theme.selectedText(engine);
@@ -204,11 +206,14 @@ class ThemeTest {
     }
 
     @Test
-    void theLightThemeKeepsPlainTextOnTheHighlightedRowAsItIs() {
-        var engine = Theme.createEngine().get();
-        Theme.activate(engine, ThemeName.LIGHT);
+    void theLightThemesKeepPlainTextOnTheHighlightedRowAsItIs() {
+        for (ThemeName name :
+                java.util.List.of(ThemeName.LIGHT, ThemeName.GITHUB_LIGHT, ThemeName.GITHUB_LIGHT_COLORBLIND)) {
+            var engine = Theme.createEngine().get();
+            Theme.activate(engine, name);
 
-        assertTrue(Theme.selectedText(engine).fg().isEmpty());
+            assertTrue(Theme.selectedText(engine).fg().isEmpty(), name.id());
+        }
     }
 
     @Test

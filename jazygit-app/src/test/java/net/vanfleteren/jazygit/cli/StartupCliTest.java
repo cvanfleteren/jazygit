@@ -62,7 +62,7 @@ class StartupCliTest {
         assertTrue(
                 err.toString()
                         .contains(
-                                "'purple' is not a theme; expected one of: dark, light, darcula, dark-colorblind, mono, ember, powerline, liantis-dark, symfonic, none"),
+                                "'purple' is not a theme; expected one of: dark, light, darcula, dark-colorblind, mono, ember, powerline, liantis-dark, symfonic, github-dark, github-light, github-dark-colorblind, github-light-colorblind, none"),
                 err.toString());
         assertTrue(err.toString().contains("Usage: jazygit"), err.toString());
         assertEquals("", out.toString());
