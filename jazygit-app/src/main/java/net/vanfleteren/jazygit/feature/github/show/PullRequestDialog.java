@@ -42,7 +42,7 @@ import net.vanfleteren.jazygit.ui.widgets.PopupView;
 
 /**
  * Popup showing the pull request of a branch: its title, state, branches, review and checks, as labelled
- * rows, and under them what can be done with it: open it in the browser, comment on it, edit it, read its comments, mark it
+ * rows, and under them, in two columns (ADR 66), what can be done with it: open it in the browser, comment on it, edit it, read its comments, mark it
  * ready for review or turn it into a draft, merge it or close it, or read it again. While it is read again, the
  * details stay shown, with a spinner in the title; when that fails, the title says they are stale. Whether it is
  * open lives in the {@link Model}.
@@ -85,7 +85,7 @@ public final class PullRequestDialog implements PopupView {
      */
     PullRequestDialog(Consumer<Msg> dispatch, Clock clock) {
         this.clock = clock;
-        this.actions = new ChoiceList<>(
+        this.actions = ChoiceList.inTwoColumns(
                 ID,
                 List.of(
                         new Choice<>('o', "dialog.pullRequest.open", PullRequestMsg.OpenConfirmed::new),
@@ -132,7 +132,8 @@ public final class PullRequestDialog implements PopupView {
                                 PullRequestMsg.RefreshChosen::new,
                                 PullRequestUpdate::refreshChoosable)),
                 () -> new Msg.PopupDismissed(PullRequestPopup.class),
-                dispatch);
+                dispatch,
+                DialogFrame.contentWidth(WIDTH));
     }
 
     /**

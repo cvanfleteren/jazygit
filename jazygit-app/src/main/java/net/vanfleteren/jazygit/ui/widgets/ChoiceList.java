@@ -1,12 +1,16 @@
 package net.vanfleteren.jazygit.ui.widgets;
 
 import static dev.tamboui.toolkit.Toolkit.list;
+import static dev.tamboui.toolkit.Toolkit.row;
 import static dev.tamboui.toolkit.Toolkit.text;
 
+import dev.tamboui.style.Style;
 import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.elements.ListElement;
 import dev.tamboui.toolkit.event.EventResult;
+import dev.tamboui.tui.bindings.Actions;
 import dev.tamboui.tui.event.KeyEvent;
+import dev.tamboui.tui.event.MouseEvent;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
@@ -27,18 +31,23 @@ import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog.Choice;
  * and dimmed, and cannot be chosen; one that makes no sense for the popup is left out. Options can be grouped under headings, which the arrow keys skip. An option
  * can preview what choosing it does, as soon as it is highlighted. A list can be filterable: then {@code /}
  * opens a {@link ListFilter}, and only the options whose text contains it stay shown; while it is open, the
- * letters go into it, and Escape closes it instead of cancelling. The highlighted line and the filter live in the
+ * letters go into it, and Escape closes it instead of cancelling. A list can be in two columns, without headings or a
+ * filter: the options fill the first column down, then the second, the arrows to the sides go to the other column,
+ * and Up and Down go on from one column to the other (ADR 66). The highlighted line and the filter live in the
  * {@link Model}, as its {@link ListCursor}.
  *
  * @param <P> the popup the list is shown in
  */
 public final class ChoiceList<P extends Popup> {
 
+    private final String id;
     private final List<Choice<P>> choices;
     private final Supplier<Msg> onCancel;
     private final Consumer<Msg> dispatch;
     private final ListElement<?> list;
     private final boolean filterable;
+    // The width two columns share, for a list in two columns.
+    private final Option<Integer> columnsWidth;
     private final FilterLine filter = new FilterLine();
 
     /**
@@ -57,6 +66,16 @@ public final class ChoiceList<P extends Popup> {
      */
     public ChoiceList(
             String id, List<Choice<P>> choices, Supplier<Msg> onCancel, Consumer<Msg> dispatch, boolean filterable) {
+        this(id, choices, onCancel, dispatch, filterable, Option.none());
+    }
+
+    private ChoiceList(
+            String id,
+            List<Choice<P>> choices,
+            Supplier<Msg> onCancel,
+            Consumer<Msg> dispatch,
+            boolean filterable,
+            Option<Integer> columnsWidth) {
         List<Character> shared = choices.map(Choice::key)
                 .groupBy(key -> key)
                 .filterValues(keys -> keys.size() > 1)
@@ -66,11 +85,29 @@ public final class ChoiceList<P extends Popup> {
         if (!shared.isEmpty()) {
             throw new IllegalArgumentException("The options of " + id + " share the letters " + shared.mkString(", "));
         }
+        if (columnsWidth.isDefined()
+                && (filterable || choices.exists(choice -> choice.heading().isDefined()))) {
+            throw new IllegalArgumentException(
+                    "The options of " + id + " are in two columns, which have no headings nor a filter");
+        }
+        this.id = id;
         this.choices = choices;
         this.onCancel = onCancel;
         this.dispatch = dispatch;
         this.filterable = filterable;
+        this.columnsWidth = columnsWidth;
         this.list = list().id(id).focusable().highlightSymbol("");
+    }
+
+    /**
+     * A list in two columns that share {@code width}, each half of it; in one column when the widest option does
+     * not fit in half.
+     *
+     * @throws IllegalArgumentException when an option has a heading, or two have the same letter
+     */
+    public static <P extends Popup> ChoiceList<P> inTwoColumns(
+            String id, List<Choice<P>> choices, Supplier<Msg> onCancel, Consumer<Msg> dispatch, int width) {
+        return new ChoiceList<>(id, choices, onCancel, dispatch, false, Option.of(width));
     }
 
     /**
@@ -113,32 +150,80 @@ public final class ChoiceList<P extends Popup> {
     public StyledElement<?> render(Model model, P popup, Option<Character> opensAt) {
         List<Row> rows = rows(model, popup);
         FilteredCursor<Line> view = view(rows, model.listCursor(), opensAt);
-        list.elements(view.lines().map(line -> element(line, rows)).toJavaArray(StyledElement[]::new))
-                .selected(view.selected())
-                .onKeyEvent(event -> handleKey(view, rows, event))
-                .onMouseEvent(event -> ListKeys.wheel(
-                        event, view.selected(), view.size(), view::highlightable, line -> moved(view, view.at(line))));
-        return list.length(height(model, popup));
+        List<StyledElement<?>> elements = view.lines().map(line -> element(line, rows));
+        return down(rows)
+                .<StyledElement<?>>map(first -> columns(view, rows, elements, first))
+                .getOrElse(() -> list.elements(elements.toJavaArray(StyledElement[]::new))
+                        .selected(view.selected())
+                        .onKeyEvent(event -> handleKey(view, rows, Option.none(), event))
+                        .onMouseEvent(event -> wheel(view, event))
+                        .length(height(model, popup)));
+    }
+
+    /**
+     * The options in two columns, the first {@code first} of them on the left, each column half the width. The
+     * column without the highlighted option hides its highlight. Both are drawn anew each time, as neither scrolls.
+     */
+    private StyledElement<?> columns(
+            FilteredCursor<Line> view, List<Row> rows, List<StyledElement<?>> elements, int first) {
+        int width = columnsWidth.get();
+        boolean onLeft = view.selected() < first;
+        ListElement<?> left = list().id(id)
+                .focusable()
+                .highlightSymbol("")
+                .elements(elements.take(first).toJavaArray(StyledElement[]::new))
+                .selected(onLeft ? view.selected() : 0)
+                .onKeyEvent(event -> handleKey(view, rows, Option.of(first), event))
+                .onMouseEvent(event -> wheel(view, event));
+        ListElement<?> right = list().highlightSymbol("")
+                .elements(elements.drop(first).toJavaArray(StyledElement[]::new))
+                .selected(onLeft ? 0 : view.selected() - first)
+                .onMouseEvent(event -> wheel(view, event));
+        return row(
+                        (onLeft ? left : left.highlightStyle(Style.EMPTY)).length(width / 2),
+                        (onLeft ? right.highlightStyle(Style.EMPTY) : right).length(width - width / 2))
+                .length(first);
+    }
+
+    private EventResult wheel(FilteredCursor<Line> view, MouseEvent event) {
+        return ListKeys.wheel(
+                event, view.selected(), view.size(), view::highlightable, line -> moved(view, view.at(line)));
     }
 
     /**
      * How many lines the list takes for {@code popup}: as many as without a filter, so it does not shrink as the
-     * filter grows.
+     * filter grows; in two columns, those of the first.
      */
     public int height(Model model, P popup) {
-        return unfiltered(rows(model, popup)).size();
+        List<Row> rows = rows(model, popup);
+        return down(rows).getOrElse(() -> unfiltered(rows).size());
     }
 
     /**
      * The width of the widest line for {@code popup}, with the letter of an option, whatever the filter.
      */
     public int width(Model model, P popup) {
-        List<Row> rows = rows(model, popup);
+        return width(rows(model, popup));
+    }
+
+    private int width(List<Row> rows) {
         return unfiltered(rows)
                 .map(line -> lineText(line, rows))
                 .map(TextWidth::of)
                 .max()
                 .getOrElse(0);
+    }
+
+    /**
+     * For a list in two columns, how many of the options shown fill the first: half of them, the one more of an odd
+     * number. None when the list is one column: when it is not in two, has no options, or its widest option does
+     * not fit in half the width with a space before the next column.
+     */
+    private Option<Integer> down(List<Row> rows) {
+        int shown = visible(rows, Option.none()).size();
+        return columnsWidth
+                .filter(width -> shown > 0 && width(rows) < width / 2)
+                .map(width -> (shown + 1) / 2);
     }
 
     /**
@@ -228,7 +313,15 @@ public final class ChoiceList<P extends Popup> {
         };
     }
 
-    private EventResult handleKey(FilteredCursor<Line> view, List<Row> rows, KeyEvent event) {
+    /**
+     * @param down in two columns, how many options fill the first
+     */
+    private EventResult handleKey(FilteredCursor<Line> view, List<Row> rows, Option<Integer> down, KeyEvent event) {
+        Option<Integer> aside = down.flatMap(first -> aside(event, view.selected(), view.size(), first));
+        if (aside.isDefined()) {
+            aside.filter(line -> line != view.selected()).forEach(line -> moved(view, view.at(line)));
+            return EventResult.HANDLED;
+        }
         return ListKeys.classify(event, view, filterable, filter)
                 .map(key -> switch (key) {
                     // The list is not left to move the highlight, which would not skip headings, nor say it moved.
@@ -278,6 +371,21 @@ public final class ChoiceList<P extends Popup> {
             }
         });
         return chosen.isDefined() ? EventResult.HANDLED : EventResult.UNHANDLED;
+    }
+
+    /**
+     * The line the highlight moves to from {@code from} on an arrow to the side, among {@code size} options in two
+     * columns of which the first {@code first} are on the left: the same row of the other column, or its last option
+     * when the right one has no such row; {@code from} when there is no column on that side. None for another key.
+     */
+    private static Option<Integer> aside(KeyEvent event, int from, int size, int first) {
+        if (event.matches(Actions.MOVE_LEFT)) {
+            return Option.of(from >= first ? from - first : from);
+        }
+        if (event.matches(Actions.MOVE_RIGHT)) {
+            return Option.of(from < first && size > first ? Math.min(from + first, size - 1) : from);
+        }
+        return Option.none();
     }
 
     private static Option<Integer> index(Line line) {
