@@ -189,3 +189,5 @@ Amended by ADR 62: each comment of an open thread is a stop, and `Space` collaps
 noise, not a mistake to explain.
 
 Amended by ADR 64: `d` deletes a comment of a thread.
+
+Amended by ADR 65: `e` edits a comment of a thread.

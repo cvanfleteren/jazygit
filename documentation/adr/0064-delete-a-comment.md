@@ -125,3 +125,5 @@ repository:
 - What is deleted is not read again: comments written by others meanwhile show after `R`. Only a read that was under
   way while a delete was taken costs a read more.
 - Editing a comment can follow by the same ids, rights and keys' rules.
+
+Followed by ADR 65: `e` edits a comment, from the diff or the comments popup.
