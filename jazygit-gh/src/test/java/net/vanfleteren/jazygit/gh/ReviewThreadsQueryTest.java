@@ -35,7 +35,8 @@ class ReviewThreadsQueryTest {
 
     private static String thread(String place, int total, String comments) {
         return """
-                { "path": "src/Foo.java", %s, "originalLine": 12, "isResolved": false, "isOutdated": false,
+                { "id": "PRRT_1", "path": "src/Foo.java", %s, "originalLine": 12, "isResolved": false, "isOutdated": false,
+                  "viewerCanReply": true, "viewerCanResolve": true, "viewerCanUnresolve": false,
                   "comments": { "totalCount": %d, "nodes": [ %s ] } }""".formatted(place, total, comments);
     }
 
@@ -47,7 +48,7 @@ class ReviewThreadsQueryTest {
 
     private static String comment(String author, String state, String minimized, String body) {
         return """
-                { "author": %s, "createdAt": "%s", "body": "%s", "state": "%s", "isMinimized": %b,
+                { "id": "IC_1", "fullDatabaseId": "101", "author": %s, "createdAt": "%s", "body": "%s", "state": "%s", "isMinimized": %b,
                   "minimizedReason": %s }""".formatted(author, AT, body, state, !minimized.equals("null"), minimized);
     }
 
@@ -63,13 +64,15 @@ class ReviewThreadsQueryTest {
                 false,
                 Subject.LINE,
                 comments,
-                more);
+                more,
+                "PRRT_1",
+                new ReviewThread.Rights(true, true, false));
     }
 
     @Test
     void theThreadsOfAllPagesWithTheCommitsOfTheFirst() {
-        Comment bob = new Comment("bob", Instant.parse(AT), "Rename this?", Option.none());
-        Comment carol = new Comment("carol", Instant.parse(AT), "Agreed", Option.none());
+        Comment bob = new Comment("bob", Instant.parse(AT), "Rename this?", Option.none(), "IC_1", "101");
+        Comment carol = new Comment("carol", Instant.parse(AT), "Agreed", Option.none(), "IC_1", "101");
 
         assertEquals(
                 Either.right(new ReviewRemarks(
@@ -98,7 +101,8 @@ class ReviewThreadsQueryTest {
         String theirs = comment("{ \"login\": \"bob\" }", "SUBMITTED", "null", "Done");
 
         assertEquals(
-                List.of(onLine12(List.of(new Comment("bob", Instant.parse(AT), "Done", Option.none())), 0)),
+                List.of(onLine12(
+                        List.of(new Comment("bob", Instant.parse(AT), "Done", Option.none(), "IC_1", "101")), 0)),
                 read(page(
                                 "\"abc123\"",
                                 thread(onLine(12), 2, theirs + ", " + mine) + ", " + thread(onLine(12), 1, mine)))
@@ -109,7 +113,7 @@ class ReviewThreadsQueryTest {
     @Test
     void aHiddenCommentSaysWhyAndADeletedAuthorHasNoName() {
         assertEquals(
-                List.of(new Comment("", Instant.parse(AT), "spam", Option.of("SPAM"))),
+                List.of(new Comment("", Instant.parse(AT), "spam", Option.of("SPAM"), "IC_1", "101")),
                 read(page("\"abc123\"", thread(onLine(12), 1, comment("null", "SUBMITTED", "\"SPAM\"", "spam"))))
                         .get()
                         .threads()
@@ -167,5 +171,20 @@ class ReviewThreadsQueryTest {
         assertTrue(command.contains("number=7"), command);
         assertTrue(command.contains("reviewThreads(first: 100, after: $endCursor)"), command);
         assertTrue(command.contains("comments(first: 50)"), command);
+    }
+
+    @Test
+    void theIdsAndTheRightsOfTheViewerAreRead() {
+        ReviewRemarks read = read(page(
+                        "\"abc123\"",
+                        thread(onLine(12), 1, comment("{ \"login\": \"bob\" }", "SUBMITTED", "null", "Hm"))))
+                .get();
+
+        assertEquals("PRRT_1", read.threads().head().id());
+        assertEquals(
+                new ReviewThread.Rights(true, true, false),
+                read.threads().head().rights());
+        assertEquals("IC_1", read.threads().head().comments().head().id());
+        assertEquals("101", read.threads().head().comments().head().restId());
     }
 }

@@ -90,7 +90,9 @@ class CommitFilesViewTest {
                 resolved,
                 false,
                 ReviewThread.Subject.LINE,
-                List.of(new ReviewThread.Comment("bob", Instant.EPOCH, "Hm", Option.none())),
-                0);
+                List.of(new ReviewThread.Comment("bob", Instant.EPOCH, "Hm", Option.none(), "C", "1")),
+                0,
+                "T",
+                ReviewThread.Rights.ALL);
     }
 }

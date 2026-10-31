@@ -20,4 +20,9 @@ public sealed interface DiffOptionsMsg extends Msg {
      * The user asked to draw the diffs of the working tree, of a commit and of a stash in the other style.
      */
     record StyleToggled() implements DiffOptionsMsg {}
+
+    /**
+     * The user asked for the rich view to highlight the words that changed in a changed line, or only the line.
+     */
+    record WordsToggled() implements DiffOptionsMsg {}
 }

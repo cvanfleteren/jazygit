@@ -16,6 +16,8 @@ import lombok.With;
  * @param pullRequestsWidth the share of the width the left column takes on the pull requests screen, in percent
  * @param diffStyle         how the diffs of the working tree, of a commit and of a stash are drawn
  * @param diffSyntax        whether the rich view colours the code of a diff by its syntax (ADR 53)
+ * @param diffWords         whether the rich view highlights the words that changed in a changed line, not only the
+ *                          line
  * @param repositoryHeights   the share of the height of the left column of the repository screen each pane under the
  *                            status takes but the last, which takes what is left, in percent
  * @param pullRequestsHeights the share of the height of the left column of the pull requests screen each pane under
@@ -29,6 +31,7 @@ public record Settings(
         int pullRequestsWidth,
         DiffStyle diffStyle,
         boolean diffSyntax,
+        boolean diffWords,
         List<Integer> repositoryHeights,
         List<Integer> pullRequestsHeights) {
 
@@ -69,6 +72,7 @@ public record Settings(
             DEFAULT_WIDTH,
             DiffStyle.PLAIN,
             true,
+            true,
             DEFAULT_REPOSITORY_HEIGHTS,
             DEFAULT_PULL_REQUESTS_HEIGHTS);
 
@@ -96,6 +100,10 @@ public record Settings(
      * The key of whether the rich view colours code by its syntax in the settings file.
      */
     static final String DIFF_SYNTAX = "ui.diff-syntax";
+    /**
+     * The key of whether the rich view highlights the changed words of a line in the settings file.
+     */
+    static final String DIFF_WORDS = "ui.diff-words";
     /**
      * The key of the heights of the panes of the left column of the repository screen in the settings file.
      */
@@ -153,6 +161,9 @@ public record Settings(
         Option<Object> diffSyntax = value.apply(DIFF_SYNTAX);
         Option<Boolean> validDiffSyntax =
                 diffSyntax.filter(Boolean.class::isInstance).map(Boolean.class::cast);
+        Option<Object> diffWords = value.apply(DIFF_WORDS);
+        Option<Boolean> validDiffWords =
+                diffWords.filter(Boolean.class::isInstance).map(Boolean.class::cast);
         Option<Object> repositoryHeights = value.apply(REPOSITORY_HEIGHTS);
         Option<List<Integer>> validRepositoryHeights =
                 repositoryHeights.flatMap(heights -> heights(heights, DEFAULT_REPOSITORY_HEIGHTS.size()));
@@ -167,6 +178,7 @@ public record Settings(
                         validPullRequestsWidth.getOrElse(DEFAULT_WIDTH),
                         validDiffStyle.getOrElse(DEFAULT.diffStyle),
                         validDiffSyntax.getOrElse(DEFAULT.diffSyntax),
+                        validDiffWords.getOrElse(DEFAULT.diffWords),
                         validRepositoryHeights.getOrElse(DEFAULT_REPOSITORY_HEIGHTS),
                         validPullRequestsHeights.getOrElse(DEFAULT_PULL_REQUESTS_HEIGHTS)),
                 Option.when(theme.isDefined() && validTheme.isEmpty(), THEME)
@@ -178,6 +190,7 @@ public record Settings(
                                 pullRequestsWidth.isDefined() && validPullRequestsWidth.isEmpty(), PULL_REQUESTS_WIDTH))
                         .appendAll(Option.when(diffStyle.isDefined() && validDiffStyle.isEmpty(), DIFF_STYLE))
                         .appendAll(Option.when(diffSyntax.isDefined() && validDiffSyntax.isEmpty(), DIFF_SYNTAX))
+                        .appendAll(Option.when(diffWords.isDefined() && validDiffWords.isEmpty(), DIFF_WORDS))
                         .appendAll(Option.when(
                                 repositoryHeights.isDefined() && validRepositoryHeights.isEmpty(), REPOSITORY_HEIGHTS))
                         .appendAll(Option.when(
@@ -238,6 +251,7 @@ public record Settings(
                         diffSyntax == DEFAULT.diffSyntax
                                 ? LinkedHashMap.empty()
                                 : LinkedHashMap.of(DIFF_SYNTAX, diffSyntax))
+                .merge(diffWords == DEFAULT.diffWords ? LinkedHashMap.empty() : LinkedHashMap.of(DIFF_WORDS, diffWords))
                 .merge(heightsEntry(REPOSITORY_HEIGHTS, repositoryHeights, DEFAULT_REPOSITORY_HEIGHTS))
                 .merge(heightsEntry(PULL_REQUESTS_HEIGHTS, pullRequestsHeights, DEFAULT_PULL_REQUESTS_HEIGHTS));
     }

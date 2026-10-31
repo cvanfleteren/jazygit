@@ -22,8 +22,8 @@ Git and your pull requests, their reviews and their CI, in one terminal UI. In t
 - **A pull requests screen** (Ctrl+P): this repository's open pull requests, the ones waiting for your review and
   your own, to read, comment on, merge or check out.
 - **Worktrees:** a branch, or a pull request, in a new worktree in one key. Switch between them, lock and prune them.
-- **A rich diff view** (Ctrl+D) with line numbers and the changed words highlighted, for the working tree, commits
-  and stashes.
+- **A rich diff view** (Ctrl+D) with line numbers and the changed words highlighted (Ctrl+E turns that off), for the
+  working tree, commits and stashes.
 - **One GitHub account per repository,** without switching gh's active account.
 - **Recent repositories** (Ctrl+R), and outside a repository it offers to `git init` it or open another one.
 

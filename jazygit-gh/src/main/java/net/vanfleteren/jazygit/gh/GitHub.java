@@ -139,6 +139,23 @@ public interface GitHub {
     Either<GhFailure, List<ExecutedCommand>> commentOnPullRequest(int number, String body);
 
     /**
+     * Starts {@code thread} on pull request {@code number}, at its head commit {@code commit}, published at once
+     * (ADR 60).
+     */
+    Either<GhFailure, List<ExecutedCommand>> startReviewThread(int number, String commit, NewReviewThread thread);
+
+    /**
+     * Replies {@code body} to the review thread of pull request {@code number} whose first comment has the id
+     * {@code comment}, as REST numbers it, published at once (ADR 60).
+     */
+    Either<GhFailure, List<ExecutedCommand>> replyToReviewThread(int number, String comment, String body);
+
+    /**
+     * Resolves the review thread with node id {@code thread} when {@code resolved}, else unresolves it (ADR 60).
+     */
+    Either<GhFailure, List<ExecutedCommand>> resolveReviewThread(String thread, boolean resolved);
+
+    /**
      * A pull request that was created.
      *
      * @param number   its number, if gh said where it is

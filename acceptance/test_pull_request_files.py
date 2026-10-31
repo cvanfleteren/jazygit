@@ -92,10 +92,11 @@ THREADS = "reviewThreads(first: 100"
 def threads(head: str, base: str) -> list:
     """The review threads of pull request 1: one open on line 1 of b.txt, one resolved on the same line."""
     def thread(resolved: bool, body: str) -> dict:
-        return {"path": "b.txt", "diffSide": "RIGHT", "line": 1, "startLine": None, "startDiffSide": None,
+        return {"id": f"PRRT_{body}", "path": "b.txt", "diffSide": "RIGHT", "line": 1, "startLine": None, "startDiffSide": None,
                 "originalLine": 1, "isResolved": resolved, "isOutdated": False, "subjectType": "LINE",
+                "viewerCanReply": True, "viewerCanResolve": not resolved, "viewerCanUnresolve": resolved,
                 "comments": {"totalCount": 1, "nodes": [
-                    {"author": {"login": "reviewer"}, "createdAt": DATE, "body": body, "state": "SUBMITTED",
+                    {"id": f"IC_{body}", "fullDatabaseId": str(len(body)), "author": {"login": "reviewer"}, "createdAt": DATE, "body": body, "state": "SUBMITTED",
                      "isMinimized": False, "minimizedReason": None}]}}
     return [{"data": {"repository": {"pullRequest": {
         "state": "OPEN", "headRefOid": head, "baseRefOid": base,
@@ -161,3 +162,85 @@ def test_only_the_files_of_a_pull_request_with_remarks_can_be_listed(repo, origi
 
     ui.app.wait_in("Files", "a.txt")
     assert "· with remarks" not in ui.app.text()
+
+
+# A thread is started and replied to with REST, which publishes the comment at once.
+REPLY = "/replies"
+START = "pulls/1/comments"
+RESOLVE = "resolveReviewThread("
+
+
+def calls_with(gh, text: str, without: str = "\0") -> list:
+    """The calls of gh whose arguments contain text, and not without."""
+    return [call for call in gh.calls() if text in " ".join(call) and without not in " ".join(call)]
+
+
+def reversed_at(app, text: str) -> bool:
+    """Whether the first character of where text first shows on the screen is drawn reversed, as the rule of the
+    thread the cursor is on while the diff has the focus."""
+    app.pump()
+    for y, line in enumerate(app.screen.display):
+        x = line.find(text)
+        if x >= 0:
+            return app.screen.buffer[y][x].reverse
+    return False
+
+
+def test_the_remarks_of_a_pull_request_are_resolved_replied_to_and_started_from_the_cursor_of_its_diff(
+        repo, origin, clone, gh, jazygit):
+    pull_request(repo, origin, clone, gh)
+    head = origin("rev-parse", "refs/pull/1/head").strip()
+    gh.answer(
+        (THREADS, threads(head, repo("rev-parse", "main").strip())),
+        (REPLY, {"id": 7, "node_id": "IC_reply"}),
+        (START, {"id": 8, "node_id": "IC_new"}),
+        # Slow enough for a second x to come while it is sent.
+        (RESOLVE, {"data": {"resolveReviewThread": {"thread": {"id": "PRRT_Why **b**?"}}}}, 2))
+    ui = jazygit()
+    ui.branches.select("feature")
+    ui.app.press("o")
+    # The action shows dimmed until the details are read, and does nothing then: wait for them.
+    ui.app.wait_for("in 2 files, 2 commits")
+    ui.app.press("f")
+    ui.app.wait_in("Files", "💬1")
+    ui.app.move_cursor("Files", "b.txt")
+    ui.app.press("ctrl+d")
+    ui.app.wait_for("Why b?")
+    ui.app.press("enter")
+
+    # To the first thread, resolved; a second x while it is sent sends nothing.
+    ui.app.press("n")
+    ui.app.eventually(lambda: reversed_at(ui.app, "┏━ reviewer"), "the cursor on the thread")
+    ui.app.press("x")
+    ui.app.press("x")
+
+    ui.app.wait_for("still being sent")
+    ui.app.press("escape")
+    ui.app.eventually(lambda: "sending…" not in ui.app.text(), "the thread read again")
+    ui.app.eventually(lambda: reversed_at(ui.app, "┏━ reviewer"), "the focus back on the thread")
+    assert len(calls_with(gh, RESOLVE)) == 1
+    assert "thread=PRRT_Why **b**?" in calls_with(gh, RESOLVE)[0]
+
+    ui.app.press("r")
+    ui.app.wait_for("Reply on b.txt")
+    ui.app.type("Because")
+    ui.app.press("ctrl+s")
+
+    ui.app.eventually(lambda: calls_with(gh, REPLY), "the reply sent")
+    # To the first comment of the thread, "Why **b**?", whose REST id the fake made its length.
+    assert "repos/{owner}/{repo}/pulls/1/comments/10/replies" in calls_with(gh, REPLY)[0]
+    assert "body=Because" in calls_with(gh, REPLY)[0]
+    ui.app.eventually(lambda: "Reply on b.txt" not in ui.app.text(), "the popup closed")
+    ui.app.eventually(lambda: reversed_at(ui.app, "┏━ reviewer"), "the focus back on the thread")
+
+    # From the thread up to its line.
+    ui.app.press("k")
+    ui.app.press("c")
+    ui.app.wait_for("Comment on b.txt · line 1")
+    ui.app.type("Hm")
+    ui.app.press("ctrl+s")
+
+    ui.app.eventually(lambda: calls_with(gh, START, REPLY), "the thread started")
+    started = calls_with(gh, START, REPLY)[0]
+    assert "line=1" in started and "side=RIGHT" in started and "body=Hm" in started and "path=b.txt" in started
+    assert f"commit_id={head}" in started

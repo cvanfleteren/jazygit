@@ -93,14 +93,16 @@ def class_archive(java, jar, tmp_path_factory) -> list:
     starting a dozen apps at once, the JVMs are slow to load and verify the classes each for itself.
 
     The first worker to get here makes it, from an app that starts and quits, while the others wait; the apps only
-    ever read a whole archive, since a JVM that writes one while others map it can crash them."""
+    ever read a whole archive, since a JVM that writes one while others map it can crash them. One that could not be
+    made is not tried again by the others, for this jar: on a runner too busy for it, each try waits a whole timeout."""
     java_path = os.path.realpath(shutil.which(java))
     key = hashlib.sha256(f"{java_path} {jar.stat().st_mtime_ns} {jar.stat().st_size}".encode())
     archive = jar.with_name(f"{jar.stem}-{key.hexdigest()[:12]}.jsa")
+    failed = archive.with_suffix(".none")
     with open(jar.with_name(f"{jar.stem}.jsa.lock"), "w") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
-        if not archive.exists():
-            for stale in jar.parent.glob(f"{jar.stem}-*.jsa"):
+        if not archive.exists() and not failed.exists():
+            for stale in [*jar.parent.glob(f"{jar.stem}-*.jsa"), *jar.parent.glob(f"{jar.stem}-*.none")]:
                 stale.unlink()
             made = archive.with_suffix(".partial")
             path = tmp_path_factory.mktemp("archive")
@@ -111,15 +113,26 @@ def class_archive(java, jar, tmp_path_factory) -> list:
             repo.commit("Initial commit", **{"README.md": "# Archive\n"})
             app = App([java, f"-XX:ArchiveClassesAtExit={made}", *JVM_OPTIONS, "-jar", str(jar), str(repo.path)],
                       repo.path, env)
+            written = False
             try:
                 Jazygit(app, repo).caught_up()
                 app.press("q")
                 eventually(lambda: app.pump() or app.exited, "jazygit to quit and write the class data archive")
+                written = True
+            except AssertionError as e:
+                # The archive only makes the apps start sooner: one the JVM did not get to write, as when it started
+                # too slowly on a busy runner, fails no test. The apps run without it, and a test of a slow start
+                # still fails on its own.
+                print(f"no class data archive: {e}", file=sys.stderr)
             finally:
                 app.close()
             # A JDK without an archive of its own (or run with -Xshare:off) writes none, and runs as it is.
-            if made.exists():
+            if written and made.exists():
                 made.replace(archive)
+            else:
+                made.unlink(missing_ok=True)
+                if not written:
+                    failed.touch()
     if not archive.exists():
         return []
     # The JVM tells on stdout, so on the app's screen, where an option differs from the JDK's own archive.
@@ -185,10 +198,11 @@ class FakeGh:
         env["FAKE_GH_LOG"] = str(self.log_file)
 
     def answer(self, *pairs):
-        """Answers each call that contains the text of a pair with its answer, a string or what json makes of it;
-        the pairs given before go after these."""
+        """Answers each call that contains the text of a pair with its answer, a string or what json makes of it,
+        after the seconds a third element of the pair says, if it has one; the pairs given before go after these."""
         given = json.loads(self.answers_file.read_text())
-        added = [[text, answer if isinstance(answer, str) else json.dumps(answer)] for text, answer in pairs]
+        added = [[text, answer if isinstance(answer, str) else json.dumps(answer), *wait]
+                 for text, answer, *wait in pairs]
         self.answers_file.write_text(json.dumps(added + given))
 
     def calls(self) -> list:

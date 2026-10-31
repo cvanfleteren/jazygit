@@ -19,6 +19,8 @@ import java.time.Instant;
  * @param subject      whether it is about a line or a whole file
  * @param comments     its comments, oldest first, as far as they were read, those of a review not submitted yet left out
  * @param more         how many more comments it has than were read
+ * @param id           its node id, which GitHub's mutations of it take (ADR 60)
+ * @param rights       what the viewer may do with it
  */
 public record ReviewThread(
         String path,
@@ -31,7 +33,9 @@ public record ReviewThread(
         boolean outdated,
         Subject subject,
         List<Comment> comments,
-        int more) {
+        int more,
+        String id,
+        Rights rights) {
 
     /**
      * Whether it is on the file with the path {@code path}, renamed from {@code origin} if it was: GitHub gives the
@@ -71,6 +75,23 @@ public record ReviewThread(
      * @param at     when it was written
      * @param body   its text, in Markdown
      * @param hidden why GitHub hides it (outdated, resolved, off-topic, spam…), if it does
+     * @param id     its node id, which editing or deleting it will take (ADR 60)
+     * @param restId its id as REST numbers it, which a reply to the thread it starts is sent to (ADR 60)
      */
-    public record Comment(String author, Instant at, String body, Option<String> hidden) {}
+    public record Comment(String author, Instant at, String body, Option<String> hidden, String id, String restId) {}
+
+    /**
+     * What the viewer may do with a thread, as GitHub says (ADR 60).
+     *
+     * @param reply     whether they may reply to it
+     * @param resolve   whether they may resolve it
+     * @param unresolve whether they may unresolve it
+     */
+    public record Rights(boolean reply, boolean resolve, boolean unresolve) {
+
+        /**
+         * Every right.
+         */
+        public static final Rights ALL = new Rights(true, true, true);
+    }
 }

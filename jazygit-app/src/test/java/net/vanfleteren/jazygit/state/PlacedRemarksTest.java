@@ -48,8 +48,10 @@ class PlacedRemarksTest {
                 false,
                 line.isEmpty(),
                 Subject.LINE,
-                List.of(new Comment("bob", Instant.EPOCH, "Hm", Option.none())),
-                0);
+                List.of(new Comment("bob", Instant.EPOCH, "Hm", Option.none(), "C", "1")),
+                0,
+                "T",
+                ReviewThread.Rights.ALL);
     }
 
     private static ReviewThread onLine(Side side, int line) {
@@ -202,7 +204,9 @@ class PlacedRemarksTest {
                 false,
                 Subject.FILE,
                 List.empty(),
-                0);
+                0,
+                "T",
+                ReviewThread.Rights.ALL);
 
         FileRemarks file = PlacedRemarks.place(DIFF, List.of(onFile)).files().head();
 

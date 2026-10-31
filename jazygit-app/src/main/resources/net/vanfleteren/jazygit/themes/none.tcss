@@ -28,3 +28,4 @@ Span.diff-removed-word { text-style: reversed; }
  */
 Span.diff-thread { text-style: bold; }
 Span.diff-thread-author { text-style: bold; }
+Span.diff-cursor { text-style: reversed; }

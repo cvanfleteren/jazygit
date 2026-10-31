@@ -88,6 +88,7 @@ Span.diff-line-number { color: $muted; }
 Span.diff-thread { color: $warn; }
 Span.diff-thread-header { background: #363a3d; }
 Span.diff-thread-author { color: $accent; text-style: bold; }
+Span.diff-cursor { background: $selection; }
 Span.diff-added-line { color: $added; background: #2f3a29; }
 Span.diff-added-word { color: $added; background: #46603a; }
 Span.diff-removed-line { color: $removed; background: #3d2525; }

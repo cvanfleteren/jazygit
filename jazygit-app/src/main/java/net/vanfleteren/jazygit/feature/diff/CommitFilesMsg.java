@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.feature.diff;
 
+import io.vavr.collection.HashSet;
+import io.vavr.collection.Set;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.state.CommitFilesView;
 import net.vanfleteren.jazygit.state.Failure;
@@ -25,14 +27,26 @@ public sealed interface CommitFilesMsg extends Msg {
     record Closed() implements CommitFilesMsg {}
 
     /**
-     * The review threads of pull request {@code number} were read (ADR 55).
+     * The review threads of pull request {@code number} were read (ADR 55), after what was sent for the threads
+     * {@code settled} (ADR 60).
      */
-    record RemarksLoaded(int number, ReviewRemarks remarks) implements CommitFilesMsg {}
+    record RemarksLoaded(int number, ReviewRemarks remarks, Set<String> settled) implements CommitFilesMsg {
+
+        public RemarksLoaded(int number, ReviewRemarks remarks) {
+            this(number, remarks, HashSet.empty());
+        }
+    }
 
     /**
-     * Reading the review threads of pull request {@code number} failed.
+     * Reading the review threads of pull request {@code number} failed, after what was sent for the threads
+     * {@code settled}.
      */
-    record RemarksFailed(int number, Failure failure) implements CommitFilesMsg {}
+    record RemarksFailed(int number, Failure failure, Set<String> settled) implements CommitFilesMsg {
+
+        public RemarksFailed(int number, Failure failure) {
+            this(number, failure, HashSet.empty());
+        }
+    }
 
     /**
      * The user asked to open every review thread, the resolved ones and the hidden comments too, or to close them

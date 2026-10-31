@@ -146,7 +146,8 @@ the setting still holds until jazygit stops.
 
 Ctrl+S shows the settings (`feature.settings`): the gh executable, the theme, and the GitHub account of the
 repository. The keys in `config.toml` are `ui.theme`, `ui.diff-style` (which Ctrl+D switches, ADR 44),
-`ui.diff-syntax` (`false` draws the code of the rich view in one colour, ADR 53) and
+`ui.diff-syntax` (`false` draws the code of the rich view in one colour, ADR 53), `ui.diff-words` (which Ctrl+E
+switches; `false` draws a changed line of the rich view in its line colour alone, its changed words not highlighted) and
 `github.executable`, the gh to run when it is not the one on the PATH; a new one is only kept once `<executable> --version` runs. Changing the gh executable or the
 account shows the repository again through `Env.repositories()`, as switching to a recent repository does, so a
 new `Env` runs gh as the settings say now.
@@ -369,7 +370,10 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
   `--diff-merges=first-parent`), as the rich view does not draw git's combined diff of a merge. A path left
   unmerged by a conflict still shows as a combined diff (`diff --cc`) in the working tree: `UnifiedDiff` makes it a
   `CONFLICTED` file, whose lines are kept as git printed them. The staged and the unstaged areas are each a
-  `DiffText` of their own, so each is parsed and its words compared on its own.
+  `DiffText` of their own, so each is parsed and its words compared on its own. Ctrl+E
+  (`DiffOptionsMsg.WordsToggled`, kept as `ui.diff-words`) switches whether the rich view highlights the words that
+  changed in a changed line, or draws the line in its line colour alone; it saves it, and only draws the diffs again,
+  as the words were compared when they were read.
 - **The rich view** is drawn by `ui.RichDiff` from a `ParsedDiff`, one tree of files, hunks and lines, each line with
   its words and its tokens (ADR 56): `UnifiedDiff`, the diff parsed into files, hunks and numbered lines, which
   `ParsedDiff.diff()` gives back, and `WordDiff`, which pairs the removed and added lines of a block and finds the words that
@@ -423,6 +427,25 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
 - **Their focus:** `FocusKeeper` moves the focus into the files pane when they open, and back to the pane they were
   opened from when Escape closes them. `Model.withShownPane` closes them when another pane gets the focus, and
   `LoadUpdate` when the stash they are of is dropped.
+- **The cursor of the rich view** (ADR 60): `state.DiffStops`, pure, works out where it stops from a parsed diff and
+  the threads placed in it (`Anchor`: the lead, a file's bar, a line by its side and number, a thread by its id), and
+  where it goes when its stop is gone (`DiffStops.nearest`). `RichDiff.drawn` marks the row each stop starts on
+  (`RichDiff.Drawn`), and `ui.DiffCursor` moves it: `j`/`k` and the arrows, through a stop higher than the view before
+  the next one, the pages and the wheel pulling it along, a click on a row, a range of one hunk with `v`, the next thread with `n`. The
+  area sends where it moved it and the view in one `Msg.ContentScrolled`: `Scrolled` holds the anchor of the cursor and
+  of the other end of its range, and keeps the cursor when the same changes are read again
+  (`ScrolledContent.sameChanges`). Until the model has it, the area draws where it told it, so a key right after
+  another acts on where that one took the cursor. Its tint, `diff-cursor`, is laid over the text the area keeps
+  styled, so moving it styles nothing again.
+- **Commenting on a pull request's diff** (ADR 60): while the content panel shows the files of a pull request, its
+  keys are those of `Scopes.PULL_REQUEST_DIFF`, whose selection is the cursor (`DiffCursorAt`, with where `n`, `N` and
+  `v` take it). `feature.github.review` starts a thread on a line, a range or a file and replies to one from a
+  `ReviewPopup`, drawn by `ReviewDialog` with the `ui.CommentComposer` the comment on a pull request shares, and
+  resolves one at once; `ReviewThreadMutations` sends a thread and a reply as REST review comments, published at once
+  (GraphQL would leave them pending), and a resolve with `gh api graphql`. Each needs the threads read at the
+  commits of the files and a pull request that is not merged, else it says why (`AppError.CannotReview`); the ids of
+  the threads something is sent for (`CommitFilesView.sending`) take no other key until the threads are read again.
+  `Space` opens or closes one thread against `t` (`CommitFilesView.toggled`).
 
 ## The editor
 

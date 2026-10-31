@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.ui;
 
 import io.vavr.Tuple;
 import io.vavr.collection.List;
+import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -298,8 +299,7 @@ final class ContentView {
                                         titled(
                                                 Messages.get("panel.commitFile.titleFor", name, nodePath(diff.key())),
                                                 options),
-                                        new ScrolledContent.FileChanges(
-                                                view.of().sha(), diff.key(), changes),
+                                        new ScrolledContent.FileChanges(view.of(), diff.key(), changes),
                                         new Body.Diff(
                                                 shownChanges(changes, options),
                                                 model.preferences().diffLook(),
@@ -326,9 +326,18 @@ final class ContentView {
                                 ? model.now().truncatedTo(ChronoUnit.MINUTES)
                                 : Instant.EPOCH,
                         Option.none(),
-                        view.remarksAtItsCommits()));
+                        view.remarksAtItsCommits(),
+                        view.toggled(),
+                        view.sending()));
             case Loadable.Failed<ReviewRemarks>(Failure failure) ->
-                Option.of(new ShownRemarks(List.empty(), view.opened(), Instant.EPOCH, Option.of(failure), true));
+                Option.of(new ShownRemarks(
+                        List.empty(),
+                        view.opened(),
+                        Instant.EPOCH,
+                        Option.of(failure),
+                        true,
+                        view.toggled(),
+                        view.sending()));
             case Loadable.Loading<ReviewRemarks>() -> Option.none();
         });
     }
@@ -482,9 +491,17 @@ final class ContentView {
      * @param failed  why reading them failed, when it did and none were read before
      * @param onLines whether they were read at the commits of the diff, so their lines number its lines: else the
      *                threads on a line are listed at the end of their file
+     * @param toggled the ids of the threads opened or closed against {@code opened} (ADR 60)
+     * @param sending the ids of the threads a reply or a resolving is sent for (ADR 60)
      */
     record ShownRemarks(
-            List<ReviewThread> threads, boolean opened, Instant now, Option<Failure> failed, boolean onLines) {}
+            List<ReviewThread> threads,
+            boolean opened,
+            Instant now,
+            Option<Failure> failed,
+            boolean onLines,
+            Set<String> toggled,
+            Set<String> sending) {}
 
     /**
      * A diff as it is shown: {@code diff}, then the line {@code note}, which git did not print, if there is one.

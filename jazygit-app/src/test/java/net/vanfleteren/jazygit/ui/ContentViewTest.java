@@ -29,8 +29,8 @@ import org.junit.jupiter.api.Test;
  */
 class ContentViewTest {
 
-    private static final DiffLook PLAIN_LOOK = new DiffLook(DiffStyle.PLAIN, true);
-    private static final DiffLook RICH_LOOK = new DiffLook(DiffStyle.RICH, true);
+    private static final DiffLook PLAIN_LOOK = new DiffLook(DiffStyle.PLAIN, true, true);
+    private static final DiffLook RICH_LOOK = new DiffLook(DiffStyle.RICH, true, true);
 
     private static final PullRequestSummary PULL_REQUEST = new PullRequestSummary(
             "owner/repo",
@@ -248,7 +248,7 @@ class ContentViewTest {
                 new Shown.Area(
                         ContentArea.COMMIT_FILE,
                         "aaaa · src/a.txt",
-                        new ScrolledContent.FileChanges(new Sha("aaaa"), List.of(file), DiffText.of("+a\n")),
+                        new ScrolledContent.FileChanges(of, List.of(file), DiffText.of("+a\n")),
                         new Body.Diff(whole("+a\n"), RICH_LOOK)),
                 ContentView.of(selected, FilesPanel.ID));
         assertEquals(

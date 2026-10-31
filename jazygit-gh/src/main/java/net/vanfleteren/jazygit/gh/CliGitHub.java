@@ -229,6 +229,22 @@ public final class CliGitHub implements GitHub {
         return process.log(commentCommand(number, body));
     }
 
+    @Override
+    public Either<GhFailure, List<ExecutedCommand>> startReviewThread(
+            int number, String commit, NewReviewThread thread) {
+        return process.log(ReviewThreadMutations.start(number, commit, thread));
+    }
+
+    @Override
+    public Either<GhFailure, List<ExecutedCommand>> replyToReviewThread(int number, String comment, String body) {
+        return process.log(ReviewThreadMutations.reply(number, comment, body));
+    }
+
+    @Override
+    public Either<GhFailure, List<ExecutedCommand>> resolveReviewThread(String thread, boolean resolved) {
+        return process.log(ReviewThreadMutations.resolve(thread, resolved));
+    }
+
     static GhCommand commentCommand(int number, String body) {
         return gh("pr", "comment", String.valueOf(number), "--body", body);
     }

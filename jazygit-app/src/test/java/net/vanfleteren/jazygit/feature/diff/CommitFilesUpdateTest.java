@@ -165,7 +165,9 @@ class CommitFilesUpdateTest {
             false,
             ReviewThread.Subject.LINE,
             List.empty(),
-            0);
+            0,
+            "T",
+            ReviewThread.Rights.ALL);
 
     private static ReviewRemarks remarks(String head, String base) {
         return remarks(PullRequestDetails.State.OPEN, head, base);

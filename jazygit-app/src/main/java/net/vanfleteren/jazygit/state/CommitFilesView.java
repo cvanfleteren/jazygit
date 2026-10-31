@@ -1,6 +1,8 @@
 package net.vanfleteren.jazygit.state;
 
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
+import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import lombok.With;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
@@ -25,6 +27,9 @@ import net.vanfleteren.jazygit.git.model.Sha;
  * @param remarks  the review threads of a pull request, as they are read; none for a commit or a stash (ADR 55)
  * @param opened   whether every review thread is shown open, the resolved ones and the hidden comments too
  * @param listed   which of the files are listed: all of them, or only those with review threads (ADR 57)
+ * @param toggled  the ids of the review threads opened or closed against {@code opened}, one by one (ADR 60)
+ * @param sending  the ids of the review threads a reply or a resolving is sent for, until the threads are read again
+ *                 after it was sent, or the send failed (ADR 60)
  */
 @With
 public record CommitFilesView(
@@ -35,7 +40,9 @@ public record CommitFilesView(
         Option<Preview<List<CommitFile>, DiffText>> diff,
         Option<Loadable<ReviewRemarks>> remarks,
         boolean opened,
-        Listed listed) {
+        Listed listed,
+        Set<String> toggled,
+        Set<String> sending) {
 
     /**
      * The view of the files of {@code of}, opened from the pane {@code pane} and listed in {@code listedIn}, while
@@ -50,7 +57,9 @@ public record CommitFilesView(
                 Option.none(),
                 Option.when(of instanceof Changes.OfPullRequest, Loadable::loading),
                 false,
-                Listed.ALL);
+                Listed.ALL,
+                HashSet.empty(),
+                HashSet.empty());
     }
 
     /**
@@ -162,6 +171,19 @@ public record CommitFilesView(
     public sealed interface Changes {
 
         Sha sha();
+
+        /**
+         * Whether {@code other} are the changes of the same commit, stash or pull request: a pull request stays the
+         * same when its head or its base moved on, as after a force-push (ADR 60).
+         */
+        default boolean sameAs(Changes other) {
+            return this instanceof OfPullRequest(PullRequestCommits commits)
+                    ? other instanceof OfPullRequest(PullRequestCommits those)
+                            && those.number() == commits.number()
+                            && those.repository().equals(commits.repository())
+                            && those.host().equals(commits.host())
+                    : equals(other);
+        }
 
         /**
          * The changes of a commit, of a merge against its first parent.

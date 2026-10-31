@@ -1,6 +1,8 @@
 package net.vanfleteren.jazygit.feature.diff;
 
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
+import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import java.util.function.Function;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
@@ -37,18 +39,23 @@ public final class CommitFilesUpdate {
             }
             case CommitFilesMsg.Closed() ->
                 Next.of(model.mapRepoView(repoView -> repoView.withCommitFiles(Option.none())));
-            case CommitFilesMsg.RemarksLoaded(int number, var remarks) -> remarksRead(model, number, remarks);
-            // The review threads read before stay shown.
-            case CommitFilesMsg.RemarksFailed(int number, var failure) ->
+            case CommitFilesMsg.RemarksLoaded(int number, var remarks, var settled) ->
+                remarksRead(model, number, remarks, settled);
+            // The review threads read before stay shown; what was sent is done with all the same.
+            case CommitFilesMsg.RemarksFailed(int number, var failure, var settled) ->
                 Next.of(mapPullRequest(
                         model,
                         number,
                         view -> view.withRemarks(Option.of(view.remarks()
-                                .filter(remarks -> remarks.toOption().isDefined())
-                                .getOrElse(() -> new Loadable.Failed<>(failure))))));
+                                        .filter(remarks -> remarks.toOption().isDefined())
+                                        .getOrElse(() -> new Loadable.Failed<>(failure))))
+                                .withSending(view.sending().removeAll(settled))));
+            // The threads opened or closed one by one are all alike again (ADR 60).
             case CommitFilesMsg.RemarksToggled() ->
                 Next.of(model.mapRepoView(repoView -> repoView.withCommitFiles(repoView.commitFiles()
-                        .map(view -> view.remarks().isDefined() ? view.withOpened(!view.opened()) : view))));
+                        .map(view -> view.remarks().isDefined()
+                                ? view.withOpened(!view.opened()).withToggled(HashSet.empty())
+                                : view))));
             case CommitFilesMsg.ListedCycled() ->
                 Next.of(model.mapRepoView(repoView -> repoView.withCommitFiles(repoView.commitFiles()
                         .map(view -> view.remarks().isDefined()
@@ -69,23 +76,28 @@ public final class CommitFilesUpdate {
     }
 
     /**
-     * {@code remarks} read for pull request {@code number}, while its files are listed. When its head or its base
-     * moved on since its files were read, they are read again, at the commits they are at now: the threads are of
-     * those.
+     * {@code remarks} read for pull request {@code number}, while its files are listed, after what was sent for the
+     * threads {@code settled}. When its head or its base moved on since its files were read, they are read again, at
+     * the commits they are at now: the threads are of those.
      */
-    private static Next remarksRead(Model model, int number, ReviewRemarks remarks) {
+    private static Next remarksRead(Model model, int number, ReviewRemarks remarks, Set<String> settled) {
         return model.repoView()
                 .commitFiles()
                 .filter(view -> view.pullRequest().contains(number))
                 .map(view -> {
-                    CommitFilesView read = view.withRemarks(Option.of(new Loadable.Loaded<>(remarks)));
+                    // What was sent for a thread shows in what is read after it; a read started before it was
+                    // sent may not show it, so the thread still takes no key until then (ADR 60).
+                    CommitFilesView read = view.withRemarks(Option.of(new Loadable.Loaded<>(remarks)))
+                            .withSending(view.sending().removeAll(settled));
                     return moved(read, remarks)
                             .map(commits -> {
                                 CommitFilesView again = CommitFilesView.of(
                                                 new Changes.OfPullRequest(commits), view.pane(), view.listedIn())
                                         .withRemarks(read.remarks())
                                         .withOpened(view.opened())
-                                        .withListed(view.listed());
+                                        .withListed(view.listed())
+                                        .withToggled(view.toggled())
+                                        .withSending(read.sending());
                                 return Next.of(
                                         model.mapRepoView(repoView -> repoView.withCommitFiles(Option.of(again))),
                                         again.load());
