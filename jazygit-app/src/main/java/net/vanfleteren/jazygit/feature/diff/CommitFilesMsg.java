@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.feature.diff;
 
-import io.vavr.collection.HashSet;
 import io.vavr.collection.Map;
 import io.vavr.collection.Set;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
@@ -32,31 +31,13 @@ public sealed interface CommitFilesMsg extends Msg {
      * {@code settled} (ADR 60), by a read started at {@code version} of them (ADR 64).
      */
     record RemarksLoaded(int number, ReviewRemarks remarks, Set<String> settled, int version)
-            implements CommitFilesMsg {
-
-        public RemarksLoaded(int number, ReviewRemarks remarks) {
-            this(number, remarks, HashSet.empty(), 0);
-        }
-
-        public RemarksLoaded(int number, ReviewRemarks remarks, Set<String> settled) {
-            this(number, remarks, settled, 0);
-        }
-    }
+            implements CommitFilesMsg {}
 
     /**
      * Reading the review threads of pull request {@code number} failed, after what was sent for the threads
      * {@code settled}, by a read started at {@code version} of them (ADR 64).
      */
-    record RemarksFailed(int number, Failure failure, Set<String> settled, int version) implements CommitFilesMsg {
-
-        public RemarksFailed(int number, Failure failure) {
-            this(number, failure, HashSet.empty(), 0);
-        }
-
-        public RemarksFailed(int number, Failure failure, Set<String> settled) {
-            this(number, failure, settled, 0);
-        }
-    }
+    record RemarksFailed(int number, Failure failure, Set<String> settled, int version) implements CommitFilesMsg {}
 
     /**
      * The user asked to list the next of the files of a pull request: all of them, those with an unresolved review

@@ -74,13 +74,7 @@ class RemarkLinesTest {
 
     private static ShownRemarks shown(Collapsed collapsed, ReviewThread... threads) {
         return new ShownRemarks(
-                List.of(threads),
-                NOW,
-                Option.none(),
-                true,
-                collapsed,
-                io.vavr.collection.HashSet.empty(),
-                io.vavr.collection.HashSet.empty());
+                List.of(threads), NOW, Option.none(), true, collapsed, HashSet.empty(), HashSet.empty());
     }
 
     private static List<String> rich(ShownRemarks remarks) {
@@ -453,8 +447,8 @@ class RemarkLinesTest {
                 Option.none(),
                 false,
                 Collapsed.NONE,
-                io.vavr.collection.HashSet.empty(),
-                io.vavr.collection.HashSet.empty());
+                HashSet.empty(),
+                HashSet.empty());
 
         List<String> lines = rich(elsewhere);
 
@@ -547,8 +541,8 @@ class RemarkLinesTest {
                         Option.of(new Failure.Bug(new RuntimeException("offline"))),
                         true,
                         Collapsed.NONE,
-                        io.vavr.collection.HashSet.empty(),
-                        io.vavr.collection.HashSet.empty())),
+                        HashSet.empty(),
+                        HashSet.empty())),
                 Theme.SpanStyles.NONE));
 
         assertTrue(

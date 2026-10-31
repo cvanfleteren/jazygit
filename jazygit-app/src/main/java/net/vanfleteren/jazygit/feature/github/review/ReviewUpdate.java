@@ -144,15 +144,23 @@ public final class ReviewUpdate {
                         .map(popup -> deleteConfirmed(model, popup))
                         .getOrElse(() -> Next.of(model));
             // Not read again: what GitHub did is known (ADR 64). The cursor on it goes to its thread, or its line.
+            // Unless it was the last comment read of a thread GitHub has more of: which of those is its first now, that
+            // a reply goes to, is not known until the threads are read again.
             case ReviewMsg.CommentDeleted(DeleteComment cmd, var commands) -> {
                 Next done = OperationUpdate.succeeded(model, cmd, commands);
+                Model deleted = mapPullRequest(
+                        done.model(),
+                        cmd.number(),
+                        view -> view.withoutComment(cmd.comment())
+                                .withDeleting(view.deleting().remove(cmd.comment())));
+                boolean unread = pullRequestFiles(deleted)
+                        .filter(view -> view.pullRequest().contains(cmd.number()))
+                        .exists(view -> view.threads()
+                                .exists(thread -> thread.id().equals(cmd.thread())
+                                        && thread.comments().isEmpty()));
                 yield new Next(
-                        mapPullRequest(
-                                done.model(),
-                                cmd.number(),
-                                view -> view.withoutComment(cmd.comment())
-                                        .withDeleting(view.deleting().remove(cmd.comment()))),
-                        done.cmds());
+                        deleted,
+                        unread ? done.cmds().append(remarksLoad(deleted, cmd.number(), HashSet.empty())) : done.cmds());
             }
             case ReviewMsg.DeleteFailed(DeleteComment cmd, Failure failure) -> {
                 Next failed = OperationUpdate.update(model, new OperationMsg.Failed(cmd, failure));
@@ -228,11 +236,17 @@ public final class ReviewUpdate {
                 .flatMap(ReviewUpdate::notSending)
                 .flatMap(ReviewUpdate::firstNotDeleted)
                 .filterOrElse(found -> found._2().rights().reply(), found -> Why.NO_REPLY)
+                // A thread whose comments read were all deleted has no first comment to reply to until it is read
+                // again, which it is (ADR 64).
+                .flatMap(found -> found._2()
+                        .comments()
+                        .headOption()
+                        .toEither(Why.NOT_READ)
+                        .map(first -> Tuple.of(found._1(), found._2(), first)))
                 .map(found -> popup(
                         found._1(),
                         at,
-                        new Target.Reply(
-                                found._2().id(), found._2().comments().head().restId()),
+                        new Target.Reply(found._2().id(), found._3().restId()),
                         new Where(found._2().path(), Option.none(), true),
                         found._2()
                                 .comments()

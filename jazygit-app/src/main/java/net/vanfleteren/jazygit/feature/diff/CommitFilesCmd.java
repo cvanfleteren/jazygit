@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.feature.diff;
 
-import io.vavr.collection.HashSet;
 import io.vavr.collection.Map;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
@@ -24,14 +23,6 @@ public sealed interface CommitFilesCmd extends Cmd {
      * which it gives back: one changed since, as by a comment deleted, is newer than what it read (ADR 64).
      */
     record LoadReviewRemarks(int number, Set<String> settled, int version) implements CommitFilesCmd {
-
-        public LoadReviewRemarks(int number) {
-            this(number, HashSet.empty(), 0);
-        }
-
-        public LoadReviewRemarks(int number, Set<String> settled) {
-            this(number, settled, 0);
-        }
 
         @Override
         public Option<Label> label() {

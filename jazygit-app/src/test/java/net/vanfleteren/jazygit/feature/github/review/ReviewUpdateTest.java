@@ -102,6 +102,10 @@ class ReviewUpdateTest {
     }
 
     private static Model files(PullRequestDetails.State state, String head) {
+        return files(state, head, List.of(OPEN, SETTLED));
+    }
+
+    private static Model files(PullRequestDetails.State state, String head, List<ReviewThread> threads) {
         Model opened = Update.update(
                         loaded(), new CommitFilesMsg.Opened(new Changes.OfPullRequest(COMMITS), Scopes.BRANCHES.id()))
                 .model();
@@ -109,8 +113,9 @@ class ReviewUpdateTest {
                         opened,
                         new CommitFilesMsg.RemarksLoaded(
                                 7,
-                                new ReviewRemarks(
-                                        state, GhCommit.parse(head), GhCommit.parse(BASE), List.of(OPEN, SETTLED))))
+                                new ReviewRemarks(state, GhCommit.parse(head), GhCommit.parse(BASE), threads),
+                                HashSet.empty(),
+                                0))
                 .model();
         return read.mapRepoView(repoView -> repoView.withCommitFiles(repoView.commitFiles()
                 .map(view -> view.withDiff(Option.of(new Preview<>(List.of(A), new Loadable.Loaded<>(DIFF)))))));
@@ -163,10 +168,11 @@ class ReviewUpdateTest {
                         .model()));
 
         Next resolved = Update.update(resolving.model(), new ReviewMsg.Resolved(resolve, List.empty()));
-        assertTrue(resolved.cmds().contains(new CommitFilesCmd.LoadReviewRemarks(7, HashSet.of("T1"))));
+        assertTrue(resolved.cmds().contains(new CommitFilesCmd.LoadReviewRemarks(7, HashSet.of("T1"), 0)));
         assertEquals(HashSet.of("T1"), view(resolved.model()).sending());
 
-        Model read = Update.update(resolved.model(), new CommitFilesMsg.RemarksLoaded(7, remarks(), HashSet.of("T1")))
+        Model read = Update.update(
+                        resolved.model(), new CommitFilesMsg.RemarksLoaded(7, remarks(), HashSet.of("T1"), 0))
                 .model();
         assertEquals(HashSet.empty(), view(read).sending());
     }
@@ -176,10 +182,11 @@ class ReviewUpdateTest {
         Model resolving = Update.update(files(), new ReviewMsg.ResolveAsked(at(onThread("T1"))))
                 .model();
         Next refreshed = Update.update(resolving, new CommitFilesMsg.RemarksRefreshed());
-        assertEquals(List.of(new CommitFilesCmd.LoadReviewRemarks(7)), refreshed.cmds());
+        assertEquals(List.of(new CommitFilesCmd.LoadReviewRemarks(7, HashSet.empty(), 0)), refreshed.cmds());
 
         // The read asked with R comes back before GitHub resolved the thread: it still shows it open.
-        Model stale = Update.update(refreshed.model(), new CommitFilesMsg.RemarksLoaded(7, remarks()))
+        Model stale = Update.update(
+                        refreshed.model(), new CommitFilesMsg.RemarksLoaded(7, remarks(), HashSet.empty(), 0))
                 .model();
         assertEquals(HashSet.of("T1"), view(stale).sending());
         Next again = Update.update(stale, new ReviewMsg.ResolveAsked(at(onThread("T1"))));
@@ -198,7 +205,7 @@ class ReviewUpdateTest {
         Model failed = Update.update(
                         resolved,
                         new CommitFilesMsg.RemarksFailed(
-                                7, new Failure.Bug(new RuntimeException("offline")), HashSet.of("T1")))
+                                7, new Failure.Bug(new RuntimeException("offline")), HashSet.of("T1"), 0))
                 .model();
 
         assertEquals(HashSet.empty(), view(failed).sending());
@@ -339,7 +346,8 @@ class ReviewUpdateTest {
                 7,
                 new ReviewRemarks(
                         PullRequestDetails.State.OPEN, GhCommit.parse(HEAD), GhCommit.parse(BASE), List.of(threads)),
-                settled);
+                settled,
+                0);
     }
 
     @Test
@@ -371,7 +379,7 @@ class ReviewUpdateTest {
         Model failed = Update.update(
                         resolved,
                         new CommitFilesMsg.RemarksFailed(
-                                7, new Failure.Bug(new RuntimeException("offline")), HashSet.of("T1")))
+                                7, new Failure.Bug(new RuntimeException("offline")), HashSet.of("T1"), 0))
                 .model();
         assertEquals(
                 new Collapsed(HashMap.of("T1", false, "R1", false)),
@@ -440,7 +448,7 @@ class ReviewUpdateTest {
 
         Next sent = Update.update(sending.model(), new ReviewMsg.Sent(send, List.empty()));
         assertEquals(Option.none(), sent.model().popup(ReviewPopup.class));
-        assertTrue(sent.cmds().contains(new CommitFilesCmd.LoadReviewRemarks(7, HashSet.of("T1"))));
+        assertTrue(sent.cmds().contains(new CommitFilesCmd.LoadReviewRemarks(7, HashSet.of("T1"), 0)));
     }
 
     @Test
@@ -697,7 +705,7 @@ class ReviewUpdateTest {
                 .model();
         ReviewRemarks without =
                 view(asked).withoutComment("R1").remarks().get().toOption().get();
-        Model read = Update.update(asked, new CommitFilesMsg.RemarksLoaded(7, without))
+        Model read = Update.update(asked, new CommitFilesMsg.RemarksLoaded(7, without, HashSet.empty(), 0))
                 .model();
 
         Next confirmed = Update.update(read, new ReviewMsg.DeleteConfirmed());
@@ -744,5 +752,101 @@ class ReviewUpdateTest {
                 .model();
         assertEquals(HashSet.empty(), view(read).sending());
         assertEquals(List.of("C2"), comments(read, "T2"));
+    }
+
+    /**
+     * {@code thread} with only its first comment read, and {@code more} that GitHub has besides.
+     */
+    private static ReviewThread firstOnly(ReviewThread thread, int more) {
+        return new ReviewThread(
+                thread.path(),
+                thread.side(),
+                thread.line(),
+                thread.startLine(),
+                thread.startSide(),
+                thread.originalLine(),
+                thread.resolved(),
+                thread.outdated(),
+                thread.subject(),
+                thread.comments().take(1),
+                more,
+                thread.id(),
+                thread.rights());
+    }
+
+    @Test
+    void aCollapsedThreadOfOneCommentIsDeletedWithItButNotOneGitHubHasMoreCommentsOf() {
+        Model one = files(PullRequestDetails.State.OPEN, HEAD, List.of(OPEN, firstOnly(SETTLED, 0)));
+        Next confirmed = deleting(one, onThread("T2"));
+        assertEquals(List.of(new ReviewCmd.DeleteComment(7, "T2", "C2")), confirmed.cmds());
+        Model deleted = Update.update(
+                        confirmed.model(),
+                        new ReviewMsg.CommentDeleted(new ReviewCmd.DeleteComment(7, "T2", "C2"), List.empty()))
+                .model();
+        assertEquals(List.of("T1"), view(deleted).threads().map(ReviewThread::id));
+
+        Model more = files(PullRequestDetails.State.OPEN, HEAD, List.of(OPEN, firstOnly(SETTLED, 4)));
+        assertEquals(
+                Option.of(new AppError.CannotReview(Why.COLLAPSED)),
+                error(Update.update(more, new ReviewMsg.DeleteAsked(at(onThread("T2"))))
+                        .model()));
+    }
+
+    @Test
+    void aThreadWhoseCommentsReadAreAllDeletedIsReadAgainAndTakesNoReplyUntilThen() {
+        Model more = files(PullRequestDetails.State.OPEN, HEAD, List.of(firstOnly(OPEN, 60), SETTLED));
+        ReviewCmd.DeleteComment delete = new ReviewCmd.DeleteComment(7, "T1", "C1");
+
+        Next deleted = Update.update(
+                deleting(more, onThread("T1")).model(), new ReviewMsg.CommentDeleted(delete, List.empty()));
+
+        assertEquals(List.empty(), comments(deleted.model(), "T1"));
+        assertTrue(deleted.cmds().contains(new CommitFilesCmd.LoadReviewRemarks(7, HashSet.empty(), 1)));
+        Model replying = Update.update(deleted.model(), new ReviewMsg.ReplyAsked(at(onThread("T1"))))
+                .model();
+        assertTrue(replying.popup(ReviewPopup.class).isEmpty());
+        assertEquals(Option.of(new AppError.CannotReview(Why.NOT_READ)), error(replying));
+    }
+
+    @Test
+    void whatIsBeingDeletedAndTheVersionStayWhenTheFilesAreReadAgainAtCommitsThatMovedOn() {
+        Model confirmed = deleting(files(), onComment("R1", "T1")).model();
+
+        // The threads read at a head that moved on, before the delete is taken: the files are read again there.
+        Next moved = Update.update(
+                confirmed,
+                new CommitFilesMsg.RemarksLoaded(
+                        7,
+                        new ReviewRemarks(
+                                PullRequestDetails.State.OPEN,
+                                GhCommit.parse("c".repeat(40)),
+                                GhCommit.parse(BASE),
+                                List.of(OPEN, SETTLED)),
+                        HashSet.empty(),
+                        0));
+        assertNotEquals(view(confirmed).of(), view(moved.model()).of());
+        assertEquals(HashSet.of("R1"), view(moved.model()).deleting());
+
+        Model deleted = Update.update(
+                        moved.model(),
+                        new ReviewMsg.CommentDeleted(new ReviewCmd.DeleteComment(7, "T1", "R1"), List.empty()))
+                .model();
+        Model rebuilt = Update.update(
+                        deleted,
+                        new CommitFilesMsg.RemarksLoaded(
+                                7,
+                                new ReviewRemarks(
+                                        PullRequestDetails.State.OPEN,
+                                        GhCommit.parse("d".repeat(40)),
+                                        GhCommit.parse(BASE),
+                                        view(deleted).threads()),
+                                HashSet.empty(),
+                                1))
+                .model();
+        assertEquals(1, view(rebuilt).version());
+
+        Next stale = Update.update(rebuilt, new CommitFilesMsg.RemarksLoaded(7, remarks(), HashSet.empty(), 0));
+        assertEquals(List.of(new CommitFilesCmd.LoadReviewRemarks(7, HashSet.empty(), 1)), stale.cmds());
+        assertEquals(List.of("C1"), comments(stale.model(), "T1"));
     }
 }
