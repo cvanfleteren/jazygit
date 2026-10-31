@@ -666,6 +666,20 @@ class PullRequestDialogTest {
     }
 
     @Test
+    void theActionsThatReadThePullRequestAreLeftOfThoseThatChangeIt() throws Exception {
+        List<String> lines =
+                List.of(screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                                .with(Either.right(READY), 0))
+                        .split("\n"));
+
+        for (String pair : List.of("(o)|(m)", "(c)|(s)", "(e)|(r)", "(v)|(x)", "(f)|(R)")) {
+            String[] options = pair.split("\\|");
+            String line = lines.find(text -> text.contains(options[0])).getOrElse("");
+            assertTrue(line.indexOf(options[0]) < line.indexOf(options[1]), lines.mkString("\n"));
+        }
+    }
+
+    @Test
     void lettersMergeOrCloseAPullRequestThatIsReady() throws Exception {
         Model model = TestModels.loaded()
                 .openPopup(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
