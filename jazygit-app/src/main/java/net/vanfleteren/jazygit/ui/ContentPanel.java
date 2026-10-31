@@ -445,7 +445,7 @@ public final class ContentPanel {
             this.leaveScrollArea = leaveScrollArea;
             this.focus = focus;
             this.dispatch = dispatch;
-            element = richTextArea().id(id).rounded().scrollbar().fill();
+            element = richTextArea().id(id).scrollbar().fill();
         }
 
         /**

@@ -26,3 +26,18 @@ def test_ctrl_d_draws_the_staged_and_unstaged_changes_rich(repo, jazygit):
     assert "added  new.txt" in text
     assert "  1 │ +brand new" in text
     assert "diff --git" not in text
+
+
+def test_the_diff_with_the_focus_is_bordered_like_the_pane_with_it(repo, jazygit):
+    repo.commit("Add one", **{"one.txt": "one\n"})
+    repo.write("one.txt", "two\n")
+    ui = jazygit()
+    ui.files.select("one.txt")
+    ui.app.wait_for("╭Unstaged changes")
+    focused = ui.app.panes()["Files"]
+    assert ui.app.colour_at("╭Unstaged changes") != focused
+
+    ui.app.press("enter")
+
+    ui.app.eventually(lambda: ui.app.colour_at("╭Unstaged changes") == focused, "the diff to be bordered as focused")
+    assert ui.app.focused_pane() is None
