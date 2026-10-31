@@ -209,7 +209,10 @@ final class HandOverBackend implements Backend {
     private int await(int timeoutMs, Read read) throws IOException {
         long deadline = System.nanoTime() + Math.max(timeoutMs, 0) * 1_000_000L;
         while (true) {
-            int slice = (int) Math.min(SLICE_MILLIS, Math.max((deadline - System.nanoTime()) / 1_000_000L, 0));
+            // Rounded up: rounded down, the last part of a millisecond is read in slices of 0, over and over until the
+            // deadline, at every read that waits in vain.
+            int slice =
+                    (int) Math.min(SLICE_MILLIS, Math.max(Math.ceilDiv(deadline - System.nanoTime(), 1_000_000L), 0));
             reading.lock();
             try {
                 if (!keysPaused) {
