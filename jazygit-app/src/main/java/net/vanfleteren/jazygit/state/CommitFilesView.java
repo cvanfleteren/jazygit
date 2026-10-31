@@ -108,8 +108,7 @@ public record CommitFilesView(
                     List<ReviewThread> threads = read.threads()
                             .map(thread -> has(thread, comment) ? without(thread, comment) : thread)
                             .filter(thread -> !thread.comments().isEmpty() || thread.more() > 0);
-                    return withRemarks(Option.of(new Loadable.Loaded<>(
-                                    new ReviewRemarks(read.state(), read.head(), read.base(), threads))))
+                    return withRemarks(Option.of(new Loadable.Loaded<>(read.withThreads(threads))))
                             .withCollapsed(collapsed.readAgain(threads))
                             .withVersion(version + 1);
                 })
@@ -123,21 +122,12 @@ public record CommitFilesView(
     public CommitFilesView withEdited(String comment, String body) {
         return remarks.flatMap(Loadable::toOption)
                 .filter(read -> read.threads().exists(thread -> has(thread, comment)))
-                .map(read -> withRemarks(Option.of(new Loadable.Loaded<>(new ReviewRemarks(
-                                read.state(),
-                                read.head(),
-                                read.base(),
-                                read.threads()
-                                        .map(thread -> has(thread, comment)
-                                                ? withComments(
-                                                        thread,
-                                                        thread.comments()
-                                                                .map(each -> each.id()
-                                                                                .equals(comment)
-                                                                        ? each.withBody(body)
-                                                                        : each))
-                                                : thread)))))
-                        .withVersion(version + 1))
+                .map(read -> {
+                    List<ReviewThread> threads =
+                            read.threads().map(thread -> has(thread, comment) ? edited(thread, comment, body) : thread);
+                    return withRemarks(Option.of(new Loadable.Loaded<>(read.withThreads(threads))))
+                            .withVersion(version + 1);
+                })
                 .getOrElse(this);
     }
 
@@ -146,24 +136,12 @@ public record CommitFilesView(
     }
 
     private static ReviewThread without(ReviewThread thread, String comment) {
-        return withComments(thread, thread.comments().filter(each -> !each.id().equals(comment)));
+        return thread.withComments(thread.comments().filter(each -> !each.id().equals(comment)));
     }
 
-    private static ReviewThread withComments(ReviewThread thread, List<ReviewThread.Comment> comments) {
-        return new ReviewThread(
-                thread.path(),
-                thread.side(),
-                thread.line(),
-                thread.startLine(),
-                thread.startSide(),
-                thread.originalLine(),
-                thread.resolved(),
-                thread.outdated(),
-                thread.subject(),
-                comments,
-                thread.more(),
-                thread.id(),
-                thread.rights());
+    private static ReviewThread edited(ReviewThread thread, String comment, String body) {
+        return thread.withComments(
+                thread.comments().map(each -> each.id().equals(comment) ? each.withBody(body) : each));
     }
 
     /**

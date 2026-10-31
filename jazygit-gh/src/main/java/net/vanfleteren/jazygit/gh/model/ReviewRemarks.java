@@ -22,4 +22,11 @@ public record ReviewRemarks(
     public static ReviewRemarks none() {
         return new ReviewRemarks(PullRequestDetails.State.OPEN, Option.none(), Option.none(), List.empty());
     }
+
+    /**
+     * These remarks with {@code threads} in place of their own, as when a comment of one was edited or deleted.
+     */
+    public ReviewRemarks withThreads(List<ReviewThread> threads) {
+        return new ReviewRemarks(state, head, base, threads);
+    }
 }

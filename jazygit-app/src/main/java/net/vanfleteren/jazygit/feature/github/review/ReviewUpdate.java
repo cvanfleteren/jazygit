@@ -172,16 +172,20 @@ public final class ReviewUpdate {
      * that deleting it is what empties it, and an edit that changed nothing closes the popup, sending nothing (ADR 65).
      */
     private static Next confirmed(Model model, ReviewPopup popup) {
-        if (popup.target() instanceof Target.Edit(var thread, var comment, String body)) {
-            if (popup.text().equals(body)) {
-                return Next.of(model.clearError().withoutPopup(ReviewPopup.class));
-            }
-            if (popup.text().isBlank()) {
-                return Next.of(refused(model, Why.EMPTY));
-            }
-        } else if (popup.text().isBlank()) {
-            return Next.of(model);
-        }
+        return switch (popup.target()) {
+            case Target.Edit(var _, var _, String body)
+            when popup.text().equals(body) -> Next.of(model.clearError().withoutPopup(ReviewPopup.class));
+            case Target.Edit _ when popup.text().isBlank() -> Next.of(refused(model, Why.EMPTY));
+            case Target.Edit _ -> send(model, popup);
+            case Target _ when popup.text().isBlank() -> Next.of(model);
+            case Target _ -> send(model, popup);
+        };
+    }
+
+    /**
+     * Sending what {@code popup} holds, which is worth sending.
+     */
+    private static Next send(Model model, ReviewPopup popup) {
         // An edit does not mark its thread as being sent, as a reply does: the popup takes every key while it is
         // saved, so nothing else is sent for the thread meanwhile (ADR 65).
         Model sending = model.clearError().openPopup(popup.withSending(true));
@@ -201,42 +205,45 @@ public final class ReviewUpdate {
      * first line of a range is the one the diff shows first, and both are in one hunk.
      */
     private static Either<Why, ReviewPopup> start(Model model, DiffCursorAt at) {
-        return reviewed(model).flatMap(view -> {
-            String commit = view.of().sha().value();
-            if (at.mark().isEmpty() && at.cursor() instanceof Anchor.File(String path)) {
-                return Either.right(popup(
-                        view,
-                        at,
-                        new Target.Start(commit, path, Option.none()),
-                        new Where(path, Option.none(), false),
-                        List.empty()));
-            }
-            if (!(at.mark().getOrElse(at.cursor()) instanceof Anchor.OnLine from)
-                    || !(at.cursor() instanceof Anchor.OnLine cursor)) {
-                return Either.left(Why.NOT_ON_LINE);
-            }
-            return diffLines(view)
-                    .between(from, cursor)
-                    .filter(range -> range.head().hunk().equals(range.last().hunk()))
-                    .toEither(Why.NOT_ONE_HUNK)
-                    .map(range -> {
-                        Anchor.OnLine first = range.head().anchor();
-                        Anchor.OnLine last = range.last().anchor();
-                        return popup(
-                                view,
-                                at,
-                                new Target.Start(
-                                        commit,
-                                        first.path(),
-                                        Option.of(new NewReviewThread.Lines(
-                                                first.side(), first.number(), last.side(), last.number()))),
-                                new Where(
-                                        first.path(),
-                                        Option.of(new ReviewPopup.Lines(first.number(), last.number())),
-                                        false),
-                                quoted(range));
-                    });
-        });
+        return reviewed(model).flatMap(view -> startIn(view, at));
+    }
+
+    private static Either<Why, ReviewPopup> startIn(CommitFilesView view, DiffCursorAt at) {
+        String commit = view.of().sha().value();
+        if (at.mark().isEmpty() && at.cursor() instanceof Anchor.File(String path)) {
+            return Either.right(popup(
+                    view,
+                    at,
+                    new Target.Start(commit, path, Option.none()),
+                    new Where(path, Option.none(), false),
+                    List.empty()));
+        }
+        if (!(at.mark().getOrElse(at.cursor()) instanceof Anchor.OnLine from)
+                || !(at.cursor() instanceof Anchor.OnLine cursor)) {
+            return Either.left(Why.NOT_ON_LINE);
+        }
+        return diffLines(view)
+                .between(from, cursor)
+                .filter(range -> range.head().hunk().equals(range.last().hunk()))
+                .toEither(Why.NOT_ONE_HUNK)
+                .map(range -> startOn(view, at, commit, range));
+    }
+
+    /**
+     * The popup that starts a thread at {@code commit} on {@code range}, lines of one hunk.
+     */
+    private static ReviewPopup startOn(
+            CommitFilesView view, DiffCursorAt at, String commit, Vector<DiffLines.Line> range) {
+        Anchor.OnLine first = range.head().anchor();
+        Anchor.OnLine last = range.last().anchor();
+        Option<NewReviewThread.Lines> lines =
+                Option.of(new NewReviewThread.Lines(first.side(), first.number(), last.side(), last.number()));
+        return popup(
+                view,
+                at,
+                new Target.Start(commit, first.path(), lines),
+                new Where(first.path(), Option.of(new ReviewPopup.Lines(first.number(), last.number())), false),
+                quoted(range));
     }
 
     /**
@@ -331,9 +338,10 @@ public final class ReviewUpdate {
      * {@code thread} if the viewer may resolve it, or unresolve it when it is resolved.
      */
     private static Either<Why, ReviewThread> resolvable(ReviewThread thread) {
-        return thread.resolved()
-                ? thread.rights().unresolve() ? Either.right(thread) : Either.left(Why.NO_UNRESOLVE)
-                : thread.rights().resolve() ? Either.right(thread) : Either.left(Why.NO_RESOLVE);
+        boolean may = thread.resolved()
+                ? thread.rights().unresolve()
+                : thread.rights().resolve();
+        return may ? Either.right(thread) : Either.left(thread.resolved() ? Why.NO_UNRESOLVE : Why.NO_RESOLVE);
     }
 
     /**

@@ -99,26 +99,29 @@ final class CliBaseDistance {
      */
     static Either<UnexpectedOutput, Map<BranchName, BaseDistance>> parseCounts(
             String raw, List<String> commits, Map<BranchName, Base> branches) {
-        return Either.sequenceRight(GitOutput.nonBlankLines(raw)
-                        .map(line -> GitOutput.fields(line, 2 + commits.size())
-                                .flatMap(fields -> GitOutput.after(fields.get(0), HEADS)
-                                        .map(BranchName::new)
-                                        .toEither(() -> new UnexpectedOutput(line))
-                                        .flatMap(name -> branches.get(name)
-                                                .filter(base -> commits.contains(base.commit()))
-                                                .fold(
-                                                        () -> Either
-                                                                .<UnexpectedOutput,
-                                                                        Option<Tuple2<BranchName, BaseDistance>>>
-                                                                        right(Option.none()),
-                                                        base -> distance(
-                                                                        line,
-                                                                        fields.get(1),
-                                                                        fields.get(2 + commits.indexOf(base.commit())),
-                                                                        base.ref())
-                                                                .map(distance ->
-                                                                        Option.of(Tuple.of(name, distance))))))))
+        return Either.sequenceRight(GitOutput.nonBlankLines(raw).map(line -> parseLine(line, commits, branches)))
                 .map(found -> HashMap.ofEntries(found.flatMap(entry -> entry)));
+    }
+
+    /**
+     * The branch on {@code line} and how far it is from its base, or none when the branch is not among
+     * {@code branches} or its base is at none of {@code commits}.
+     */
+    private static Either<UnexpectedOutput, Option<Tuple2<BranchName, BaseDistance>>> parseLine(
+            String line, List<String> commits, Map<BranchName, Base> branches) {
+        return GitOutput.fields(line, 2 + commits.size())
+                .flatMap(fields -> GitOutput.after(fields.get(0), HEADS)
+                        .map(BranchName::new)
+                        .toEither(() -> new UnexpectedOutput(line))
+                        .flatMap(name -> branches.get(name)
+                                .filter(base -> commits.contains(base.commit()))
+                                .map(base -> distance(
+                                                line,
+                                                fields.get(1),
+                                                fields.get(2 + commits.indexOf(base.commit())),
+                                                base.ref())
+                                        .map(distance -> Option.of(Tuple.of(name, distance))))
+                                .getOrElse(() -> Either.right(Option.none()))));
     }
 
     /**

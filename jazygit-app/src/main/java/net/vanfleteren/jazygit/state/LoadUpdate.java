@@ -207,15 +207,15 @@ public final class LoadUpdate {
         Model model = next.model();
         return model.repoView()
                 .divergence()
-                .map(view -> invalid(model, view)
-                        .map(error -> {
-                            Model closed = model.mapRepoView(repoView -> repoView.withDivergence(Option.none()));
-                            return new Next(error.map(closed::fail).getOrElse(closed), next.cmds());
-                        })
-                        .getOrElse(() ->
-                                view.refs().exists(ref -> !tipOf(before, ref).equals(tipOf(model, ref)))
-                                        ? new Next(model, next.cmds().append(view.load()))
-                                        : next))
+                .map(view -> switch (validity(model, view)) {
+                    case Validity.Keep() ->
+                        view.refs().exists(ref -> !tipOf(before, ref).equals(tipOf(model, ref)))
+                                ? new Next(model, next.cmds().append(view.load()))
+                                : next;
+                    case Validity.Close() -> new Next(withoutDivergence(model), next.cmds());
+                    case Validity.CloseWith(AppError error) ->
+                        new Next(withoutDivergence(model).fail(error), next.cmds());
+                })
                 .getOrElse(next);
     }
 
@@ -230,25 +230,32 @@ public final class LoadUpdate {
                 .getOrElse(model);
     }
 
+    private static Model withoutDivergence(Model model) {
+        return model.mapRepoView(repoView -> repoView.withDivergence(Option.none()));
+    }
+
     /**
-     * Why {@code view} cannot be shown anymore, if it cannot: with the error to tell, or none when there is
-     * nothing to tell.
+     * Whether {@code view} can still be shown, and if not, whether there is an error to tell.
      */
-    private static Option<Option<AppError>> invalid(Model model, DivergenceView view) {
+    private static Validity validity(Model model, DivergenceView view) {
         Option<Option<Branch>> branch =
                 model.repo().branches().toOption().map(loaded -> model.repo().branch(view.branch()));
         if (branch.contains(Option.none())) {
-            return Option.of(Option.none());
+            return new Validity.Close();
         }
         Option<Branch> known = branch.flatMap(b -> b);
         return switch (view.against()) {
             case UPSTREAM ->
                 known.filter(b -> !b.upstream().map(Upstream::branch).contains(view.other()))
-                        .map(b -> b.upstream().isDefined() ? Option.none() : Option.of(AppError.noUpstream(b)));
+                        .<Validity>map(b -> b.upstream().isDefined()
+                                ? new Validity.Close()
+                                : new Validity.CloseWith(AppError.noUpstream(b)))
+                        .getOrElse(new Validity.Keep());
             case BASE ->
                 tipOf(model, view.other())
                         .filter(Option::isEmpty)
-                        .map(gone -> Option.of(new AppError.NoBaseBranch(view.branch())));
+                        .<Validity>map(gone -> new Validity.CloseWith(new AppError.NoBaseBranch(view.branch())))
+                        .getOrElse(new Validity.Keep());
         };
     }
 
@@ -356,5 +363,26 @@ public final class LoadUpdate {
                 model.mapRepoView(repoView -> repoView.withBranchLog(
                         Preview.updated(repoView.branchLog(), branch, log -> log.failed(failure))));
         };
+    }
+
+    /**
+     * Whether the divergence that is open can still be shown.
+     */
+    private sealed interface Validity {
+
+        /**
+         * It can, and stays open.
+         */
+        record Keep() implements Validity {}
+
+        /**
+         * It cannot, and closes quietly: there is nothing to tell.
+         */
+        record Close() implements Validity {}
+
+        /**
+         * It cannot, and closes telling {@code error}.
+         */
+        record CloseWith(AppError error) implements Validity {}
     }
 }
