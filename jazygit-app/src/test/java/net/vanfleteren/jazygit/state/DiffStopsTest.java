@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.gh.model.CommentRights;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Comment;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
@@ -55,7 +56,7 @@ class DiffStopsTest {
                 false,
                 false,
                 subject,
-                List.of(new Comment("bob", Instant.EPOCH, "Hm", Option.none(), "C", "1")),
+                List.of(new Comment("bob", Instant.EPOCH, "Hm", Option.none(), "C", "1", CommentRights.ALL)),
                 0,
                 id,
                 ReviewThread.Rights.ALL);
@@ -162,8 +163,8 @@ class DiffStopsTest {
                 thread.subject(),
                 List.of(
                         first,
-                        new Comment("ann", Instant.EPOCH, "Yes", Option.none(), "R1", "2"),
-                        new Comment("bob", Instant.EPOCH, "No", Option.none(), "R2", "3")),
+                        new Comment("ann", Instant.EPOCH, "Yes", Option.none(), "R1", "2", CommentRights.ALL),
+                        new Comment("bob", Instant.EPOCH, "No", Option.none(), "R2", "3", CommentRights.ALL)),
                 0,
                 id,
                 ReviewThread.Rights.ALL);

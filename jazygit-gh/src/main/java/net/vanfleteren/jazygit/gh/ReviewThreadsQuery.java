@@ -20,6 +20,7 @@ import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.gh.model.CommentRights;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
@@ -48,18 +49,22 @@ final class ReviewThreadsQuery {
             nodes { id path diffSide line startLine startDiffSide originalLine isResolved isOutdated subjectType \
             viewerCanReply viewerCanResolve viewerCanUnresolve \
             comments(first: %d) { totalCount nodes { id fullDatabaseId author { login } createdAt body state isMinimized \
-            minimizedReason } } } } } } }""".formatted(COMMENTS);
+            minimizedReason viewerCanUpdate viewerCanDelete } } } } } } }""".formatted(COMMENTS);
 
     // Who wrote it; empty when GitHub does not say, as for a deleted account.
     static final Decoder<String> AUTHOR = field("author", nullable(field("login", nullable(string()))))
             .map(author -> author.flatMap(login -> login).getOrElse(""));
+
+    // What the viewer may do with a comment.
+    static final Decoder<CommentRights> COMMENT_RIGHTS =
+            map2(field("viewerCanUpdate", bool()), field("viewerCanDelete", bool()), CommentRights::new);
 
     // A comment; none for one of a review that is not submitted yet, which only its author sees.
     static final Decoder<Option<Comment>> COMMENT = map4(
             map3(AUTHOR, field("createdAt", instant()), field("body", string()), Tuple::of),
             field("state", string()),
             map2(field("isMinimized", bool()), field("minimizedReason", nullable(string())), Tuple::of),
-            map2(field("id", string()), field("fullDatabaseId", string()), Tuple::of),
+            map3(field("id", string()), field("fullDatabaseId", string()), COMMENT_RIGHTS, Tuple::of),
             (written, state, hidden, ids) -> Option.when(
                     !state.equals("PENDING"),
                     () -> new Comment(
@@ -68,7 +73,8 @@ final class ReviewThreadsQuery {
                             written._3(),
                             Option.when(hidden._1(), () -> hidden._2().getOrElse("")),
                             ids._1(),
-                            ids._2())));
+                            ids._2(),
+                            ids._3())));
 
     // What the viewer may do with a thread.
     static final Decoder<ReviewThread.Rights> RIGHTS = map3(

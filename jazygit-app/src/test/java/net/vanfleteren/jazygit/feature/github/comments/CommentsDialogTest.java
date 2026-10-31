@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import net.vanfleteren.jazygit.feature.github.comment.CommentMsg;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.gh.model.CommentRights;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -61,7 +62,8 @@ class CommentsDialogTest {
     private final CommentsDialog dialog = new CommentsDialog(dispatched::add, Clock.fixed(AT, ZoneOffset.UTC));
 
     private static PullRequestComment comment(String id, Kind kind, String author, String body) {
-        return new PullRequestComment(new PullRequestComment.Id(id), kind, author, AT, body, false, Option.none());
+        return new PullRequestComment(
+                new PullRequestComment.Id(id), kind, author, AT, body, false, Option.none(), CommentRights.ALL);
     }
 
     private static Model reading(List<PullRequestComment> comments) {

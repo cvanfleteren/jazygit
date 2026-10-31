@@ -47,6 +47,15 @@ final class GhProcess {
     }
 
     /**
+     * Whether gh failed as GitHub has no node with the id it was given, as when it was deleted already: GraphQL then
+     * answers {@code NOT_FOUND}, which gh prints as this.
+     */
+    static boolean gone(GhError error) {
+        return error instanceof GhError.CommandFailed(var explanation, int exitCode)
+                && explanation.exists(line -> line.contains("Could not resolve to a node with the global id"));
+    }
+
+    /**
      * Runs {@code command} for its effect, and returns what it printed with the line it was run as.
      */
     Either<GhFailure, Output> run(GhCommand command) {

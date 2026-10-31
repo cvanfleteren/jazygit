@@ -13,9 +13,18 @@ import java.time.Instant;
  * @param body   what it says, as Markdown; empty for a review without text
  * @param edited whether it was changed after it was written
  * @param hidden why GitHub hides it, as GitHub says it (e.g. {@code outdated}), or an empty reason; none when shown
+ * @param rights what the viewer may do with it: with a comment, what they may with what they wrote, as
+ *               {@code gh pr view} says no more; with the description or a review, nothing (ADR 64)
  */
 public record PullRequestComment(
-        Id id, Kind kind, String author, Instant at, String body, boolean edited, Option<String> hidden) {
+        Id id,
+        Kind kind,
+        String author,
+        Instant at,
+        String body,
+        boolean edited,
+        Option<String> hidden,
+        CommentRights rights) {
 
     /**
      * The id of the description, which GitHub gives none.

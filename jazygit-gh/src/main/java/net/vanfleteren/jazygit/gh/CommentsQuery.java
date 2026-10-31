@@ -6,6 +6,7 @@ import static net.vanfleteren.jazygit.json.Decoder.fail;
 import static net.vanfleteren.jazygit.json.Decoder.field;
 import static net.vanfleteren.jazygit.json.Decoder.instant;
 import static net.vanfleteren.jazygit.json.Decoder.list;
+import static net.vanfleteren.jazygit.json.Decoder.map2;
 import static net.vanfleteren.jazygit.json.Decoder.map3;
 import static net.vanfleteren.jazygit.json.Decoder.map5;
 import static net.vanfleteren.jazygit.json.Decoder.map7;
@@ -13,8 +14,10 @@ import static net.vanfleteren.jazygit.json.Decoder.nullable;
 import static net.vanfleteren.jazygit.json.Decoder.string;
 import static net.vanfleteren.jazygit.json.Decoder.succeed;
 
+import io.vavr.Tuple;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.gh.model.CommentRights;
 import net.vanfleteren.jazygit.gh.model.PullRequestComment;
 import net.vanfleteren.jazygit.gh.model.PullRequestComment.Kind;
 import net.vanfleteren.jazygit.json.Decoder;
@@ -37,9 +40,19 @@ final class CommentsQuery {
             (body, author, at) -> Option.when(
                     !body.isEmpty(),
                     () -> new PullRequestComment(
-                            PullRequestComment.DESCRIPTION, Kind.DESCRIPTION, author, at, body, false, Option.none())));
+                            PullRequestComment.DESCRIPTION,
+                            Kind.DESCRIPTION,
+                            author,
+                            at,
+                            body,
+                            false,
+                            Option.none(),
+                            CommentRights.NONE)));
 
-    // A comment, hidden for the reason GitHub gives when it is minimized.
+    /*
+     * A comment, hidden for the reason GitHub gives when it is minimized. gh gives no rights of it, only whether the
+     * viewer wrote it, who may then edit and delete it (ADR 64).
+     */
     static final Decoder<PullRequestComment> COMMENT = map7(
             field("id", string()),
             AUTHOR,
@@ -47,15 +60,16 @@ final class CommentsQuery {
             field("includesCreatedEdit", bool()),
             field("isMinimized", bool()),
             field("minimizedReason", nullable(string())),
-            field("body", string()),
-            (id, author, at, edited, minimized, reason, body) -> new PullRequestComment(
+            map2(field("body", string()), field("viewerDidAuthor", bool()), Tuple::of),
+            (id, author, at, edited, minimized, reason, written) -> new PullRequestComment(
                     new PullRequestComment.Id(id),
                     Kind.COMMENT,
                     author,
                     at,
-                    body,
+                    written._1(),
                     edited,
-                    Option.when(minimized, () -> reason.getOrElse(""))));
+                    Option.when(minimized, () -> reason.getOrElse("")),
+                    new CommentRights(written._2(), written._2())));
 
     /*
      * A review; none for a pending one, which is not submitted yet, and for one that only commented and has no text,
@@ -80,7 +94,8 @@ final class CommentsQuery {
                                                     at,
                                                     body,
                                                     edited,
-                                                    Option.none())))));
+                                                    Option.none(),
+                                                    CommentRights.NONE)))));
 
     static final Decoder<List<PullRequestComment>> DECODER = map3(
             DESCRIPTION,

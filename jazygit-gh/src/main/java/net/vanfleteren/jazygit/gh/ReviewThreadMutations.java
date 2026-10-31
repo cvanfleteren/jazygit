@@ -6,10 +6,12 @@ import io.vavr.collection.List;
 import net.vanfleteren.jazygit.gh.model.NewReviewThread;
 
 /**
- * Starting a review thread on a pull request, replying to one and resolving it (ADR 60). A thread is started and
+ * Starting a review thread on a pull request, replying to one, resolving it and deleting a comment of it (ADR 60,
+ * ADR 64). A thread is started and
  * replied to with REST's review comments, which GitHub publishes at once, as its "Add single comment" does: GraphQL's
  * {@code addPullRequestReviewThread} and {@code addPullRequestReviewThreadReply} add them to the viewer's pending
- * review instead, which only they see until it is submitted. A thread is resolved with GraphQL, which REST cannot.
+ * review instead, which only they see until it is submitted. A thread is resolved with GraphQL, which REST cannot,
+ * and a comment deleted with GraphQL too, by the node id it is read with.
  * The text of a comment and a path are passed as strings ({@code -f}), never as {@code -F}, which reads a value
  * starting with {@code @} from a file. gh fills in the repository of the working tree for {owner} and {repo}.
  */
@@ -20,6 +22,9 @@ final class ReviewThreadMutations {
 
     static final String UNRESOLVE = """
             mutation($thread: ID!) { unresolveReviewThread(input: { threadId: $thread }) { thread { id } } }""";
+
+    static final String DELETE = """
+            mutation($comment: ID!) { deletePullRequestReviewComment(input: { id: $comment }) { clientMutationId } }""";
 
     private ReviewThreadMutations() {}
 
@@ -60,6 +65,14 @@ final class ReviewThreadMutations {
      */
     static GhCommand resolve(String thread, boolean resolved) {
         return gh(List.of("api", "graphql", "-f", "query=" + (resolved ? RESOLVE : UNRESOLVE), "-f", "thread=" + thread)
+                .toJavaArray(String[]::new));
+    }
+
+    /**
+     * The command that deletes the comment of a review thread with node id {@code comment}.
+     */
+    static GhCommand delete(String comment) {
+        return gh(List.of("api", "graphql", "-f", "query=" + DELETE, "-f", "comment=" + comment)
                 .toJavaArray(String[]::new));
     }
 

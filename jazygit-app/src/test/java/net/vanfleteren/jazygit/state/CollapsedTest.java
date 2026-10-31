@@ -6,6 +6,7 @@ import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.gh.model.CommentRights;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Comment;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
@@ -18,7 +19,7 @@ import org.junit.jupiter.api.Test;
 class CollapsedTest {
 
     private static Comment comment(String id, Option<String> hidden) {
-        return new Comment("bob", Instant.EPOCH, id, hidden, id, "1");
+        return new Comment("bob", Instant.EPOCH, id, hidden, id, "1", CommentRights.ALL);
     }
 
     private static ReviewThread thread(boolean resolved, Comment... comments) {

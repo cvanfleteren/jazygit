@@ -13,6 +13,7 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import net.vanfleteren.jazygit.gh.model.CommentRights;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Comment;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
@@ -64,8 +65,8 @@ class RemarkLinesTest {
                 false,
                 Subject.LINE,
                 List.of(bodies)
-                        .zipWithIndex((body, at) ->
-                                new Comment("bob", NOW.minusSeconds(7200), body, Option.none(), "C" + at, "1")),
+                        .zipWithIndex((body, at) -> new Comment(
+                                "bob", NOW.minusSeconds(7200), body, Option.none(), "C" + at, "1", CommentRights.ALL)),
                 0,
                 path + line + String.join("", bodies),
                 ReviewThread.Rights.ALL);
@@ -210,7 +211,14 @@ class RemarkLinesTest {
                 false,
                 thread.subject(),
                 thread.comments()
-                        .append(new Comment("carol", NOW.minusSeconds(7200), "Buy now", Option.of("SPAM"), "H", "2")),
+                        .append(new Comment(
+                                "carol",
+                                NOW.minusSeconds(7200),
+                                "Buy now",
+                                Option.of("SPAM"),
+                                "H",
+                                "2",
+                                CommentRights.ALL)),
                 2,
                 thread.id(),
                 thread.rights());
@@ -258,7 +266,7 @@ class RemarkLinesTest {
                 false,
                 false,
                 Subject.LINE,
-                List.of(new Comment("", NOW, "All of it", Option.none(), "C", "1")),
+                List.of(new Comment("", NOW, "All of it", Option.none(), "C", "1", CommentRights.ALL)),
                 2,
                 "T",
                 ReviewThread.Rights.ALL);
@@ -272,7 +280,7 @@ class RemarkLinesTest {
                 false,
                 true,
                 Subject.LINE,
-                List.of(new Comment("carol", NOW, "Old", Option.of("OUTDATED"), "C", "1")),
+                List.of(new Comment("carol", NOW, "Old", Option.of("OUTDATED"), "C", "1", CommentRights.ALL)),
                 0,
                 "T",
                 ReviewThread.Rights.ALL);
@@ -363,7 +371,8 @@ class RemarkLinesTest {
                 false,
                 false,
                 Subject.FILE,
-                List.of(new Comment("bob", NOW.minusSeconds(7200), "Split this file", Option.none(), "C", "1")),
+                List.of(new Comment(
+                        "bob", NOW.minusSeconds(7200), "Split this file", Option.none(), "C", "1", CommentRights.ALL)),
                 0,
                 "T",
                 ReviewThread.Rights.ALL);
@@ -388,7 +397,7 @@ class RemarkLinesTest {
                 false,
                 false,
                 Subject.LINE,
-                List.of(new Comment("carol", NOW, "Off topic", Option.of("OFF_TOPIC"), "C", "1")),
+                List.of(new Comment("carol", NOW, "Off topic", Option.of("OFF_TOPIC"), "C", "1", CommentRights.ALL)),
                 0,
                 "T",
                 ReviewThread.Rights.ALL);
@@ -567,8 +576,8 @@ class RemarkLinesTest {
                 false,
                 plain.subject(),
                 List.of(
-                        new Comment("carol", NOW, "Spam", Option.of("SPAM"), "H", "1"),
-                        new Comment("bob", NOW, "g", Option.none(), "G", "2")),
+                        new Comment("carol", NOW, "Spam", Option.of("SPAM"), "H", "1", CommentRights.ALL),
+                        new Comment("bob", NOW, "g", Option.none(), "G", "2", CommentRights.ALL)),
                 0,
                 plain.id(),
                 plain.rights());

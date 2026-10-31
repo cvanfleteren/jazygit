@@ -116,6 +116,47 @@ class CliGitHubTest {
     }
 
     @Test
+    void aCommentOfTheConversationIsDeletedByItsNodeId() {
+        List<String> args = CliGitHub.deleteCommentCommand("IC_1").executed().commandLine();
+
+        assertEquals(List.of("gh", "api", "graphql"), args.take(3));
+        assertTrue(args.get(4).contains("deleteIssueComment"), args.get(4));
+        assertEquals(List.of("-f", "comment=IC_1"), args.drop(5));
+    }
+
+    /*
+     * A gh that fails as GitHub answers a mutation on a node it does not have, or, when not gone, as it answers one
+     * the viewer may not make.
+     */
+    private static CliGitHub failing(Path dir, boolean gone) throws Exception {
+        String answer = gone
+                ? "echo '{\"errors\":[{\"type\":\"NOT_FOUND\"}]}'\n"
+                        + "echo \"gh: Could not resolve to a node with the global id of 'IC_1'.\" >&2\n"
+                : "echo 'gh: Resource not accessible by integration' >&2\n";
+        Path gh = Files.writeString(dir.resolve("gh"), "#!/bin/sh\n" + answer + "exit 1\n");
+        gh.toFile().setExecutable(true);
+        return new CliGitHub(dir, gh.toString(), GhToken.NONE);
+    }
+
+    @Test
+    void aCommentThatIsGoneAlreadyCountsAsDeleted(@TempDir Path dir) throws Exception {
+        assumeTrue(Files.isExecutable(Path.of("/bin/sh")), "no POSIX shell");
+        CliGitHub gitHub = failing(dir, true);
+
+        assertTrue(gitHub.deleteReviewComment("PRRC_1").isRight());
+        assertTrue(gitHub.deletePullRequestComment("IC_1").isRight());
+    }
+
+    @Test
+    void aCommentThatCannotBeDeletedSaysWhy(@TempDir Path dir) throws Exception {
+        assumeTrue(Files.isExecutable(Path.of("/bin/sh")), "no POSIX shell");
+
+        assertEquals(
+                new GhError.CommandFailed(Option.of("gh: Resource not accessible by integration"), 1),
+                failing(dir, false).deleteReviewComment("PRRC_1").getLeft().error());
+    }
+
+    @Test
     void anEditOnlyPassesWhatItChanges() {
         assertEquals(
                 List.of("gh", "pr", "edit", "12", "--body", ""),

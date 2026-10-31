@@ -12,6 +12,7 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesCmd;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.feature.github.review.ReviewPopup.Target;
+import net.vanfleteren.jazygit.gh.model.CommentRights;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.NewReviewThread;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
@@ -74,9 +75,16 @@ class ReviewUpdateTest {
                 false,
                 ReviewThread.Subject.LINE,
                 List.of(
-                        new Comment("bob", Instant.EPOCH, "Why?\nReally?", Option.none(), "C", "1"),
+                        new Comment("bob", Instant.EPOCH, "Why?\nReally?", Option.none(), "C", "1", CommentRights.ALL),
                         // A reply, R1 on T1.
-                        new Comment("carol", Instant.EPOCH, "Yes", Option.none(), "R" + id.substring(1), "2")),
+                        new Comment(
+                                "carol",
+                                Instant.EPOCH,
+                                "Yes",
+                                Option.none(),
+                                "R" + id.substring(1),
+                                "2",
+                                CommentRights.ALL)),
                 0,
                 id,
                 rights);

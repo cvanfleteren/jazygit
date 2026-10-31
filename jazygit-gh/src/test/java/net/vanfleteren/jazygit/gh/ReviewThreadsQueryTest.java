@@ -6,6 +6,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.gh.model.CommentRights;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
@@ -47,9 +48,14 @@ class ReviewThreadsQueryTest {
     }
 
     private static String comment(String author, String state, String minimized, String body) {
+        return comment(author, state, minimized, body, "true", "true");
+    }
+
+    private static String comment(
+            String author, String state, String minimized, String body, String update, String delete) {
         return """
                 { "id": "IC_1", "fullDatabaseId": "101", "author": %s, "createdAt": "%s", "body": "%s", "state": "%s", "isMinimized": %b,
-                  "minimizedReason": %s }""".formatted(author, AT, body, state, !minimized.equals("null"), minimized);
+                  "minimizedReason": %s, "viewerCanUpdate": %s, "viewerCanDelete": %s }""".formatted(author, AT, body, state, !minimized.equals("null"), minimized, update, delete);
     }
 
     private static ReviewThread onLine12(List<Comment> comments, int more) {
@@ -71,8 +77,10 @@ class ReviewThreadsQueryTest {
 
     @Test
     void theThreadsOfAllPagesWithTheCommitsOfTheFirst() {
-        Comment bob = new Comment("bob", Instant.parse(AT), "Rename this?", Option.none(), "IC_1", "101");
-        Comment carol = new Comment("carol", Instant.parse(AT), "Agreed", Option.none(), "IC_1", "101");
+        Comment bob =
+                new Comment("bob", Instant.parse(AT), "Rename this?", Option.none(), "IC_1", "101", CommentRights.ALL);
+        Comment carol =
+                new Comment("carol", Instant.parse(AT), "Agreed", Option.none(), "IC_1", "101", CommentRights.ALL);
 
         assertEquals(
                 Either.right(new ReviewRemarks(
@@ -102,7 +110,9 @@ class ReviewThreadsQueryTest {
 
         assertEquals(
                 List.of(onLine12(
-                        List.of(new Comment("bob", Instant.parse(AT), "Done", Option.none(), "IC_1", "101")), 0)),
+                        List.of(new Comment(
+                                "bob", Instant.parse(AT), "Done", Option.none(), "IC_1", "101", CommentRights.ALL)),
+                        0)),
                 read(page(
                                 "\"abc123\"",
                                 thread(onLine(12), 2, theirs + ", " + mine) + ", " + thread(onLine(12), 1, mine)))
@@ -113,7 +123,8 @@ class ReviewThreadsQueryTest {
     @Test
     void aHiddenCommentSaysWhyAndADeletedAuthorHasNoName() {
         assertEquals(
-                List.of(new Comment("", Instant.parse(AT), "spam", Option.of("SPAM"), "IC_1", "101")),
+                List.of(new Comment(
+                        "", Instant.parse(AT), "spam", Option.of("SPAM"), "IC_1", "101", CommentRights.ALL)),
                 read(page("\"abc123\"", thread(onLine(12), 1, comment("null", "SUBMITTED", "\"SPAM\"", "spam"))))
                         .get()
                         .threads()
@@ -186,5 +197,22 @@ class ReviewThreadsQueryTest {
                 read.threads().head().rights());
         assertEquals("IC_1", read.threads().head().comments().head().id());
         assertEquals("101", read.threads().head().comments().head().restId());
+    }
+
+    @Test
+    void whatTheViewerMayDoWithEachCommentIsRead() {
+        ReviewRemarks read = read(page(
+                        "\"abc123\"",
+                        thread(
+                                onLine(12),
+                                2,
+                                comment("{ \"login\": \"bob\" }", "SUBMITTED", "null", "Hm", "false", "false") + ", "
+                                        + comment("{ \"login\": \"me\" }", "SUBMITTED", "null", "Ok", "true", "true"))))
+                .get();
+
+        assertEquals(
+                List.of(CommentRights.NONE, CommentRights.ALL),
+                read.threads().head().comments().map(Comment::rights));
+        assertTrue(ReviewThreadsQuery.QUERY.contains("viewerCanUpdate viewerCanDelete"));
     }
 }

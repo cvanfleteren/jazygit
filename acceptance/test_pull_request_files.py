@@ -97,7 +97,7 @@ def threads(head: str, base: str) -> list:
                 "viewerCanReply": True, "viewerCanResolve": not resolved, "viewerCanUnresolve": resolved,
                 "comments": {"totalCount": 1, "nodes": [
                     {"id": f"IC_{body}", "fullDatabaseId": str(len(body)), "author": {"login": "reviewer"}, "createdAt": DATE, "body": body, "state": "SUBMITTED",
-                     "isMinimized": False, "minimizedReason": None}]}}
+                     "isMinimized": False, "minimizedReason": None, "viewerCanUpdate": True, "viewerCanDelete": True}]}}
     return [{"data": {"repository": {"pullRequest": {
         "state": "OPEN", "headRefOid": head, "baseRefOid": base,
         "reviewThreads": {"pageInfo": {"hasNextPage": False, "endCursor": None},
@@ -195,7 +195,8 @@ def replied(head: str, base: str) -> list:
     def comment(body: str, hidden: bool) -> dict:
         return {"id": f"IC_{body}", "fullDatabaseId": str(len(body)), "author": {"login": "reviewer"},
                 "createdAt": DATE, "body": body, "state": "SUBMITTED",
-                "isMinimized": hidden, "minimizedReason": "SPAM" if hidden else None}
+                "isMinimized": hidden, "minimizedReason": "SPAM" if hidden else None,
+                "viewerCanUpdate": True, "viewerCanDelete": True}
     return [{"data": {"repository": {"pullRequest": {
         "state": "OPEN", "headRefOid": head, "baseRefOid": base,
         "reviewThreads": {"pageInfo": {"hasNextPage": False, "endCursor": None}, "nodes": [{

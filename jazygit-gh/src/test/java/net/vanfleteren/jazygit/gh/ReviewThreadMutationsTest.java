@@ -9,8 +9,8 @@ import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
 import org.junit.jupiter.api.Test;
 
 /**
- * The commands that start a review thread, reply to one and resolve it (ADR 60): the first two as REST's review
- * comments, which GitHub publishes at once, not as a pending review.
+ * The commands that start a review thread, reply to one, resolve it and delete a comment of it (ADR 60, ADR 64): the
+ * first two as REST's review comments, which GitHub publishes at once, not as a pending review.
  */
 class ReviewThreadMutationsTest {
 
@@ -90,5 +90,14 @@ class ReviewThreadMutationsTest {
         assertEquals(
                 List.of("-f", "thread=PRRT_1"),
                 args(ReviewThreadMutations.resolve("PRRT_1", true)).drop(5));
+    }
+
+    @Test
+    void aCommentIsDeletedByItsNodeId() {
+        List<String> args = args(ReviewThreadMutations.delete("PRRC_1"));
+
+        assertEquals(List.of("gh", "api", "graphql"), args.take(3));
+        assertTrue(args.get(4).contains("deletePullRequestReviewComment"), args.get(4));
+        assertEquals(List.of("-f", "comment=PRRC_1"), args.drop(5));
     }
 }
