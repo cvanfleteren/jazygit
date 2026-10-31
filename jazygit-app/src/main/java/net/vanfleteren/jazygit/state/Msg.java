@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
 import io.vavr.control.Option;
+import java.time.Duration;
 
 /**
  * Everything that can happen to the {@link Model}, grouped by feature. A message knows how to
@@ -30,9 +31,16 @@ public interface Msg {
 
     /**
      * A message a timer sends to read the repository, the remotes or GitHub again. While the terminal does not have
-     * the focus, it is kept instead of handled, and handled once the terminal has it again (ADR 58).
+     * the focus, it is handled at most once every {@link #whileAway()}, kept otherwise, and handled once the terminal
+     * has it again (ADR 58, ADR 67).
      */
-    interface Periodic extends Msg {}
+    interface Periodic extends Msg {
+
+        /**
+         * How long this message waits between two times it is handled while the terminal does not have the focus.
+         */
+        Duration whileAway();
+    }
 
     /**
      * The terminal got the focus, or lost it, as a terminal that reports it says.
@@ -50,9 +58,19 @@ public interface Msg {
      */
     record Tick() implements Periodic {
 
+        /**
+         * One status every 15 s rather than every second: 4 git processes a minute instead of 60.
+         */
+        public static final Duration WHILE_AWAY = Duration.ofSeconds(15);
+
         @Override
         public Update.Next apply(Model model) {
             return Update.tick(model);
+        }
+
+        @Override
+        public Duration whileAway() {
+            return WHILE_AWAY;
         }
     }
 

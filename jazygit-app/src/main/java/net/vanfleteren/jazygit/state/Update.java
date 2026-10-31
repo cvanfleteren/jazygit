@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.state;
 
+import io.vavr.collection.HashMap;
 import io.vavr.collection.LinkedHashSet;
 import io.vavr.collection.List;
 import io.vavr.collection.Set;
@@ -93,22 +94,29 @@ public final class Update {
     }
 
     public static Next update(Model model, Msg msg) {
-        return model.jobs().away() && msg instanceof Msg.Periodic
-                ? Next.of(model.mapJobs(jobs -> jobs.withMissed(jobs.missed().add(msg))))
-                : msg.apply(model);
+        if (model.jobs().away() && msg instanceof Msg.Periodic periodic) {
+            return model.jobs().dueWhileAway(periodic, model.now())
+                    ? msg.apply(model.mapJobs(jobs -> jobs.handledWhileAway(periodic, model.now())))
+                    : Next.of(model.mapJobs(jobs -> jobs.keptWhileAway(periodic, model.now())));
+        }
+        return msg.apply(model);
     }
 
     /**
-     * The terminal got the focus, or lost it. While away, the timers read nothing; once back, what they asked for
-     * meanwhile is read once, as each of their messages is handled once (ADR 58).
+     * The terminal got the focus, or lost it. While away, the timers read less: each of their messages is handled
+     * once every {@link Msg.Periodic#whileAway()} (ADR 67); once back, what they asked for since it was last handled
+     * is read once, as each of their messages is handled once (ADR 58).
      */
     static Next focused(Model model, boolean focused) {
         if (!focused) {
-            return Next.of(model.mapJobs(jobs -> jobs.withAway(true)));
+            return Next.of(model.mapJobs(
+                    jobs -> jobs.away() ? jobs : jobs.withAway(true).withAwayAt(HashMap.empty())));
         }
         Set<Msg> missed = model.jobs().missed();
         return missed.foldLeft(
-                Next.of(model.mapJobs(jobs -> jobs.withAway(false).withMissed(LinkedHashSet.empty()))), (next, msg) -> {
+                Next.of(model.mapJobs(jobs ->
+                        jobs.withAway(false).withMissed(LinkedHashSet.empty()).withAwayAt(HashMap.empty()))),
+                (next, msg) -> {
                     Next handled = update(next.model(), msg);
                     return new Next(handled.model(), next.cmds().appendAll(handled.cmds()));
                 });

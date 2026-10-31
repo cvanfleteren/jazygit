@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.github.checks;
 
+import java.time.Duration;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.Failure;
@@ -38,5 +39,14 @@ public sealed interface ChecksMsg extends Msg {
     /**
      * Periodic prompt to read the checks again, while they are shown.
      */
-    record Tick() implements ChecksMsg, Msg.Periodic {}
+    record Tick() implements ChecksMsg, Msg.Periodic {
+
+        // Once a minute rather than every 10 s while a check runs.
+        public static final Duration WHILE_AWAY = Duration.ofMinutes(1);
+
+        @Override
+        public Duration whileAway() {
+            return WHILE_AWAY;
+        }
+    }
 }

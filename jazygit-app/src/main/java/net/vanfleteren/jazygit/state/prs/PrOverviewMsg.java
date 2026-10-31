@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.state.prs;
 
 import io.vavr.control.Option;
+import java.time.Duration;
 import net.vanfleteren.jazygit.gh.model.MyPullRequests;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
@@ -36,7 +37,16 @@ public sealed interface PrOverviewMsg extends Msg {
      * Periodic prompt to read the pull requests again: all of them while they are shown, else the ones of the
      * repository, for the new ones (ADR 29).
      */
-    record Tick() implements PrOverviewMsg, Msg.Periodic {}
+    record Tick() implements PrOverviewMsg, Msg.Periodic {
+
+        // The pull requests every 5 minutes rather than every minute.
+        public static final Duration WHILE_AWAY = Duration.ofMinutes(5);
+
+        @Override
+        public Duration whileAway() {
+            return WHILE_AWAY;
+        }
+    }
 
     /**
      * The user asked to read the pull requests again.

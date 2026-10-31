@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.state;
 
 import io.vavr.collection.*;
 import io.vavr.control.Option;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.function.UnaryOperator;
@@ -41,6 +42,12 @@ public record Model(
         Map<String, Scrolled> scrolled,
         Preferences preferences,
         Instant now) {
+
+    /**
+     * How often the time shown moves on while the terminal does not have the focus: a frame every 5 s rather than
+     * every second (ADR 67).
+     */
+    public static final Duration AWAY_CLOCK = Duration.ofSeconds(5);
 
     public static Model initial(String repositoryName) {
         return new Model(
@@ -152,7 +159,8 @@ public record Model(
      */
     public Model drawn() {
         // A command that runs shows only once it ran a while, which the spinners' frames tell, not a message, but for
-        // the branch it keeps busy, which shows at once; the time shows to the second at most.
+        // the branch it keeps busy, which shows at once; the time shows to the second at most, and while the terminal
+        // does not have the focus, to AWAY_CLOCK (ADR 67). What the timers left for later is not shown.
         return mapJobs(jobs -> jobs.withFailed(HashSet.empty())
                         .withFetchAgain(false)
                         .withWorktreeChangesRead(Option.none())
@@ -162,8 +170,15 @@ public record Model(
                         .withRunning(jobs.running()
                                 .filterValues(command -> command.cmd() instanceof OperationCmd operation
                                         && operation.busyBranch().isDefined()))
-                        .withNextId(0))
-                .withNow(now.truncatedTo(ChronoUnit.SECONDS));
+                        .withNextId(0)
+                        .withMissed(LinkedHashSet.empty())
+                        .withAwayAt(HashMap.empty()))
+                .withNow(jobs.away() ? awayClock(now) : now.truncatedTo(ChronoUnit.SECONDS));
+    }
+
+    private static Instant awayClock(Instant now) {
+        long step = AWAY_CLOCK.toMillis();
+        return Instant.ofEpochMilli(Math.floorDiv(now.toEpochMilli(), step) * step);
     }
 
     /**

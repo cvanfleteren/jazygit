@@ -42,9 +42,11 @@ import net.vanfleteren.jazygit.git.model.MetadataStamp;
  * @param lingering  what shows after the commands that showed are done, and until when, so that the indicator does
  *                   not blink out between two commands
  * @param away       whether the terminal does not have the focus, as one that reports it said last: the timers then
- *                   read nothing (ADR 58)
- * @param missed     the messages of the timers that came while away, in the order they first came, to be handled
- *                   once, when the terminal has the focus again
+ *                   read less (ADR 58, ADR 67)
+ * @param missed     the messages of the timers that came while away and were kept, in the order they first came, to
+ *                   be handled once, when the terminal has the focus again
+ * @param awayAt     while away, for each message of a timer that came, when it was last handled, or first kept: it is
+ *                   handled again once it waited its {@link Msg.Periodic#whileAway()} since (ADR 67)
  */
 @With
 public record Jobs(
@@ -61,7 +63,8 @@ public record Jobs(
         long nextId,
         Option<Lingering> lingering,
         boolean away,
-        Set<Msg> missed) {
+        Set<Msg> missed,
+        Map<Msg.Periodic, Instant> awayAt) {
 
     public static final Jobs IDLE = new Jobs(
             HashSet.empty(),
@@ -77,7 +80,8 @@ public record Jobs(
             0,
             Option.none(),
             false,
-            LinkedHashSet.empty());
+            LinkedHashSet.empty(),
+            HashMap.empty());
 
     /**
      * How long a command runs before it shows: the reads that take a few milliseconds, on every key and every tick,
@@ -91,10 +95,42 @@ public record Jobs(
     public static final Duration LINGER = Duration.ofMillis(300);
 
     /**
+     * How much earlier than its {@link Msg.Periodic#whileAway()} a message of a timer is handled while away: each comes
+     * a little later than its timer fired, by more or less, and one that came a few milliseconds too early would wait
+     * a whole period more. Less than the shortest period of a timer, a second.
+     */
+    private static final Duration AWAY_SLACK = Duration.ofMillis(500);
+
+    /**
      * Caps how long a tick waits before trying a read that failed again at {@code 2^6} = 64 ticks, about a minute at
      * the default interval.
      */
     private static final int MAX_BACKOFF_SHIFT = 6;
+
+    /**
+     * Whether {@code msg}, which a timer sent at {@code now} while away, is to be handled: once it waited its
+     * {@link Msg.Periodic#whileAway()}, give or take {@link #AWAY_SLACK}, since it was last handled, or first kept,
+     * while away (ADR 67).
+     */
+    public boolean dueWhileAway(Msg.Periodic msg, Instant now) {
+        return awayAt.get(msg)
+                .exists(at -> !now.isBefore(at.plus(msg.whileAway()).minus(AWAY_SLACK)));
+    }
+
+    /**
+     * These jobs keeping {@code msg}, which a timer sent at {@code now} while away, to be handled once back; the
+     * first one kept starts the wait until it is handled anyway.
+     */
+    public Jobs keptWhileAway(Msg.Periodic msg, Instant now) {
+        return withMissed(missed.add(msg)).withAwayAt(awayAt.containsKey(msg) ? awayAt : awayAt.put(msg, now));
+    }
+
+    /**
+     * These jobs handling {@code msg} at {@code now} while away: it is no longer missed, and waits anew.
+     */
+    public Jobs handledWhileAway(Msg.Periodic msg, Instant now) {
+        return withMissed(missed.remove(msg)).withAwayAt(awayAt.put(msg, now));
+    }
 
     /**
      * These jobs one tick further.

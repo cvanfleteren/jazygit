@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.fetch;
 
 import io.vavr.collection.List;
+import java.time.Duration;
 import net.vanfleteren.jazygit.git.model.RemoteName;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
@@ -17,7 +18,16 @@ public sealed interface FetchMsg extends Msg {
     /**
      * Periodic prompt to fetch from the remotes.
      */
-    record Tick() implements FetchMsg, Msg.Periodic {}
+    record Tick() implements FetchMsg, Msg.Periodic {
+
+        // A fetch every 5 minutes rather than every minute.
+        public static final Duration WHILE_AWAY = Duration.ofMinutes(5);
+
+        @Override
+        public Duration whileAway() {
+            return WHILE_AWAY;
+        }
+    }
 
     /**
      * The remotes to fetch from, in order.
