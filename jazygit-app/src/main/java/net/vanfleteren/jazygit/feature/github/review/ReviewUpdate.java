@@ -6,6 +6,7 @@ import io.vavr.Tuple3;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.collection.Set;
+import io.vavr.collection.Vector;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.util.function.Function;
@@ -211,14 +212,13 @@ public final class ReviewUpdate {
                         new Where(path, Option.none(), false),
                         List.empty()));
             }
-            DiffStops stops = stops(view);
-            List<Anchor> anchors = stops.anchors();
             Anchor from = at.mark().getOrElse(at.cursor());
             if (!(from instanceof Anchor.OnLine) || !(at.cursor() instanceof Anchor.OnLine)) {
                 return Either.left(Why.NOT_ON_LINE);
             }
-            int one = anchors.indexOf(from);
-            int other = anchors.indexOf(at.cursor());
+            DiffStops stops = stops(view);
+            int one = stops.indexOf(from);
+            int other = stops.indexOf(at.cursor());
             if (one < 0
                     || other < 0
                     || !stops.stops()
@@ -227,7 +227,7 @@ public final class ReviewUpdate {
                             .equals(stops.stops().get(other).hunk())) {
                 return Either.left(Why.NOT_ONE_HUNK);
             }
-            List<DiffStops.Stop> range = stops.stops()
+            Vector<DiffStops.Stop> range = stops.stops()
                     .slice(Math.min(one, other), Math.max(one, other) + 1)
                     .filter(stop -> stop.line().isDefined());
             Anchor.OnLine first = (Anchor.OnLine) range.head().anchor();
@@ -241,7 +241,7 @@ public final class ReviewUpdate {
                             Option.of(new NewReviewThread.Lines(
                                     first.side(), first.number(), last.side(), last.number()))),
                     new Where(first.path(), Option.of(new ReviewPopup.Lines(first.number(), last.number())), false),
-                    range.flatMap(stop -> stop.line().map(ReviewUpdate::quoted))));
+                    range.flatMap(stop -> stop.line().map(ReviewUpdate::quoted)).toList()));
         });
     }
 
@@ -319,17 +319,17 @@ public final class ReviewUpdate {
         return thread.line()
                 .map(line -> {
                     DiffStops stops = stops(view);
-                    int last = stops.anchors().indexOf(new Anchor.OnLine(thread.path(), thread.side(), line));
-                    int first = stops.anchors()
-                            .indexOf(new Anchor.OnLine(
-                                    thread.path(),
-                                    thread.startSide(),
-                                    thread.startLine().getOrElse(line)));
+                    int last = stops.indexOf(new Anchor.OnLine(thread.path(), thread.side(), line));
+                    int first = stops.indexOf(new Anchor.OnLine(
+                            thread.path(),
+                            thread.startSide(),
+                            thread.startLine().getOrElse(line)));
                     return first < 0 || last < 0
                             ? List.<String>empty()
                             : stops.stops()
                                     .slice(Math.min(first, last), Math.max(first, last) + 1)
-                                    .flatMap(stop -> stop.line().map(ReviewUpdate::quoted));
+                                    .flatMap(stop -> stop.line().map(ReviewUpdate::quoted))
+                                    .toList();
                 })
                 .getOrElse(List.empty());
     }
@@ -519,7 +519,7 @@ public final class ReviewUpdate {
                 .map(DiffText::parsed)
                 .map(parsed ->
                         DiffStops.of(parsed.diff(), view.threads(), view.remarksAtItsCommits(), view.collapsed()))
-                .getOrElse(() -> new DiffStops(List.empty()));
+                .getOrElse(() -> new DiffStops(Vector.empty()));
     }
 
     /**

@@ -7,7 +7,9 @@ import dev.tamboui.toolkit.elements.TreeElement;
 import dev.tamboui.tui.bindings.Actions;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
+import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
@@ -34,8 +36,8 @@ public class FilesPanel {
     private final Keymap keymap = Keymap.standard();
     // The trees' key handlers also see keys typed in other panes, so they must know whether the pane has focus.
     private boolean focused;
-    // The review threads of the pull request whose files are listed, as last rendered (ADR 55).
-    private List<ReviewThread> threads = List.empty();
+    // The review threads of the pull request whose files are listed, by their path, as last rendered (ADR 55).
+    private Map<String, List<ReviewThread>> threads = HashMap.empty();
 
     /**
      * @param dispatch receives the messages for the user's actions, on the render thread
@@ -111,8 +113,11 @@ public class FilesPanel {
      * dimmed (ADR 57).
      */
     private StyledElement<?> drawCommitFile(FileTree.File<CommitFile> file) {
-        List<ReviewThread> on = threads.filter(
-                thread -> thread.isOn(file.entry().path(), file.entry().origin()));
+        List<ReviewThread> on = List.of(file.entry().path())
+                .appendAll(file.entry()
+                        .origin()
+                        .filter(origin -> !origin.equals(file.entry().path())))
+                .flatMap(path -> threads.get(path).getOrElse(List.empty()));
         int resolved = on.count(ReviewThread::resolved);
         return Toolkit.row(List.<StyledElement<?>>of(
                         Toolkit.text(file.entry().type().marker()).addClass(Theme.Classes.STAGED),
@@ -227,7 +232,11 @@ public class FilesPanel {
     public Panel render(Model model, String focusedId, String activeId) {
         focused = ID.equals(focusedId);
         boolean active = ID.equals(activeId);
-        threads = model.repoView().commitFiles().map(CommitFilesView::threads).getOrElse(List.empty());
+        threads = model.repoView()
+                .commitFiles()
+                .map(CommitFilesView::threads)
+                .getOrElse(List.empty())
+                .groupBy(ReviewThread::path);
         return model.repoView()
                 .commitFiles()
                 .map(view -> Pane.bordered(
