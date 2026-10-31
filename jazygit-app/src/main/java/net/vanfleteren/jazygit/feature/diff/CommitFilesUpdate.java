@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.diff;
 
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
@@ -42,10 +43,11 @@ public final class CommitFilesUpdate {
             }
             case CommitFilesMsg.Closed() ->
                 Next.of(model.mapRepoView(repoView -> repoView.withCommitFiles(Option.none())));
-            case CommitFilesMsg.RemarksLoaded(int number, var remarks, var settled) ->
-                remarksRead(model, number, remarks, settled);
-            // The review threads read before stay shown; what was sent is done with all the same.
-            case CommitFilesMsg.RemarksFailed(int number, var failure, var settled) ->
+            case CommitFilesMsg.RemarksLoaded(int number, var remarks, var settled, int version) ->
+                remarksRead(model, number, remarks, settled, version);
+            // The review threads read before stay shown; what was sent is done with all the same. A failed read
+            // older than they are changes nothing they show either (ADR 64).
+            case CommitFilesMsg.RemarksFailed(int number, var failure, var settled, int version) ->
                 Next.of(mapPullRequest(
                         model,
                         number,
@@ -91,10 +93,11 @@ public final class CommitFilesUpdate {
     }
 
     /**
-     * The review threads of the pull request whose files are listed, if they are.
+     * The review threads of the pull request whose files are listed, if they are, read at the version they are at.
      */
     private static Option<CommitFilesCmd.LoadReviewRemarks> remarksLoad(CommitFilesView view) {
-        return view.pullRequest().map(CommitFilesCmd.LoadReviewRemarks::new);
+        return view.pullRequest()
+                .map(number -> new CommitFilesCmd.LoadReviewRemarks(number, HashSet.empty(), view.version()));
     }
 
     /**
@@ -110,13 +113,17 @@ public final class CommitFilesUpdate {
     /**
      * {@code remarks} read for pull request {@code number}, while its files are listed, after what was sent for the
      * threads {@code settled}. When its head or its base moved on since its files were read, they are read again, at
-     * the commits they are at now: the threads are of those.
+     * the commits they are at now: the threads are of those. Read at an older {@code version} than they are at now, as
+     * before a comment was deleted, they are dropped, and read again for the threads {@code settled} (ADR 64).
      */
-    private static Next remarksRead(Model model, int number, ReviewRemarks remarks, Set<String> settled) {
+    private static Next remarksRead(Model model, int number, ReviewRemarks remarks, Set<String> settled, int version) {
         return model.repoView()
                 .commitFiles()
                 .filter(view -> view.pullRequest().contains(number))
                 .map(view -> {
+                    if (version < view.version()) {
+                        return Next.of(model, new CommitFilesCmd.LoadReviewRemarks(number, settled, view.version()));
+                    }
                     // What was sent for a thread shows in what is read after it; a read started before it was
                     // sent may not show it, so the thread still takes no key until then (ADR 60). A thread resolved
                     // or unresolved is then as such a one starts (ADR 62).
@@ -130,7 +137,9 @@ public final class CommitFilesUpdate {
                                         .withRemarks(read.remarks())
                                         .withListed(view.listed())
                                         .withCollapsed(read.collapsed())
-                                        .withSending(read.sending());
+                                        .withSending(read.sending())
+                                        .withDeleting(read.deleting())
+                                        .withVersion(read.version());
                                 return Next.of(
                                         model.mapRepoView(repoView -> repoView.withCommitFiles(Option.of(again))),
                                         again.load());

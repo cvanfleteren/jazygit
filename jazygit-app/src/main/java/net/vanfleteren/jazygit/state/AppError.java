@@ -305,7 +305,19 @@ public sealed interface AppError {
             /**
              * A thread is not started on a line the diff does not number, nor across hunks.
              */
-            NOT_ONE_HUNK
+            NOT_ONE_HUNK,
+            /**
+             * GitHub does not let the viewer delete the comment (ADR 64).
+             */
+            NO_DELETE,
+            /**
+             * The comment is being deleted, or the first comment of the thread, which a reply goes to (ADR 64).
+             */
+            DELETING,
+            /**
+             * A collapsed thread of several comments does not say which of them to delete (ADR 64).
+             */
+            COLLAPSED
         }
     }
 

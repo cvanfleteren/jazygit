@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.feature.github.review;
 
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
+import io.vavr.Tuple3;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.collection.Set;
@@ -10,6 +11,7 @@ import io.vavr.control.Option;
 import java.util.function.Function;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesCmd;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesCmd.LoadReviewRemarks;
+import net.vanfleteren.jazygit.feature.github.review.ReviewCmd.DeleteComment;
 import net.vanfleteren.jazygit.feature.github.review.ReviewCmd.EditComment;
 import net.vanfleteren.jazygit.feature.github.review.ReviewCmd.Resolve;
 import net.vanfleteren.jazygit.feature.github.review.ReviewCmd.Send;
@@ -32,7 +34,8 @@ import net.vanfleteren.jazygit.state.Update.Next;
  * replied to, from a popup that stays open until the comment is sent, so one that fails to send is not lost; a thread
  * is resolved at once. Each is sent on its own, and the review threads are read again once it is, the cursor then on
  * the thread started. Nothing is sent for a pull request whose threads were read at other commits than its files, nor
- * for a merged one; nor twice for a thread while something is sent for it.
+ * for a merged one; nor twice for a thread while something is sent for it. A comment is deleted after asking, at any
+ * commits, and taken out of the threads once GitHub took it, without reading them again (ADR 64).
  */
 public final class ReviewUpdate {
 
@@ -49,6 +52,7 @@ public final class ReviewUpdate {
                 reviewed(model)
                         .flatMap(view -> thread(view, at.cursor()))
                         .flatMap(ReviewUpdate::notSending)
+                        .flatMap(ReviewUpdate::firstNotDeleted)
                         .flatMap(found -> resolvable(found._2()).map(thread -> found))
                         .fold(why -> Next.of(refused(model, why)), found -> {
                             Resolve resolve = new Resolve(
@@ -64,6 +68,11 @@ public final class ReviewUpdate {
                         .toEither(Why.NOT_READ)
                         .flatMap(view -> thread(view, at.cursor()))
                         .flatMap(ReviewUpdate::notSending)
+                        .flatMap(found -> comment(found._2(), at.cursor())
+                                .filter(comment -> found._1().deleting().contains(comment.id()))
+                                .fold(
+                                        () -> Either.<Why, Tuple2<CommitFilesView, ReviewThread>>right(found),
+                                        comment -> Either.left(Why.DELETING)))
                         .fold(
                                 why -> Next.of(why == Why.NOT_ON_THREAD ? model : refused(model, why)),
                                 found -> toggled(model, found, at.cursor()));
@@ -116,11 +125,43 @@ public final class ReviewUpdate {
                 Next done = OperationUpdate.succeeded(model, cmd, commands);
                 yield new Next(
                         done.model(),
-                        done.cmds().append(new LoadReviewRemarks(cmd.number(), HashSet.of(cmd.thread()))));
+                        done.cmds().append(remarksLoad(done.model(), cmd.number(), HashSet.of(cmd.thread()))));
             }
             case ReviewMsg.ResolveFailed(Resolve cmd, Failure failure) -> {
                 Next failed = OperationUpdate.update(model, new OperationMsg.Failed(cmd, failure));
                 yield new Next(sending(failed.model(), set -> set.remove(cmd.thread())), failed.cmds());
+            }
+            case ReviewMsg.DeleteAsked(DiffCursorAt at) ->
+                deletable(model, at.cursor())
+                        .fold(
+                                why -> Next.of(refused(model, why)),
+                                found -> Update.ask(
+                                        model,
+                                        new DeleteCommentPopup(
+                                                number(found._1()), found._2().id(), found._3(), model.now())));
+            case ReviewMsg.DeleteConfirmed() ->
+                model.popup(DeleteCommentPopup.class)
+                        .map(popup -> deleteConfirmed(model, popup))
+                        .getOrElse(() -> Next.of(model));
+            // Not read again: what GitHub did is known (ADR 64). The cursor on it goes to its thread, or its line.
+            case ReviewMsg.CommentDeleted(DeleteComment cmd, var commands) -> {
+                Next done = OperationUpdate.succeeded(model, cmd, commands);
+                yield new Next(
+                        mapPullRequest(
+                                done.model(),
+                                cmd.number(),
+                                view -> view.withoutComment(cmd.comment())
+                                        .withDeleting(view.deleting().remove(cmd.comment()))),
+                        done.cmds());
+            }
+            case ReviewMsg.DeleteFailed(DeleteComment cmd, Failure failure) -> {
+                Next failed = OperationUpdate.update(model, new OperationMsg.Failed(cmd, failure));
+                yield new Next(
+                        mapPullRequest(
+                                failed.model(),
+                                cmd.number(),
+                                view -> view.withDeleting(view.deleting().remove(cmd.comment()))),
+                        failed.cmds());
             }
         };
     }
@@ -185,6 +226,7 @@ public final class ReviewUpdate {
         return reviewed(model)
                 .flatMap(view -> thread(view, at.cursor()))
                 .flatMap(ReviewUpdate::notSending)
+                .flatMap(ReviewUpdate::firstNotDeleted)
                 .filterOrElse(found -> found._2().rights().reply(), found -> Why.NO_REPLY)
                 .map(found -> popup(
                         found._1(),
@@ -239,7 +281,94 @@ public final class ReviewUpdate {
                 .getOrElse(closed);
         Set<String> settled =
                 cmd.target() instanceof Target.Reply(String thread, var comment) ? HashSet.of(thread) : HashSet.empty();
-        return new Next(moved, done.cmds().append(new LoadReviewRemarks(cmd.number(), settled)));
+        return new Next(moved, done.cmds().append(remarksLoad(moved, cmd.number(), settled)));
+    }
+
+    /**
+     * The read of the review threads of pull request {@code number} after what was sent for the threads
+     * {@code settled}, at the version they are at (ADR 64).
+     */
+    private static LoadReviewRemarks remarksLoad(Model model, int number, Set<String> settled) {
+        return new LoadReviewRemarks(
+                number,
+                settled,
+                pullRequestFiles(model)
+                        .filter(view -> view.pullRequest().contains(number))
+                        .map(CommitFilesView::version)
+                        .getOrElse(0));
+    }
+
+    /**
+     * The comment the cursor {@code on} is on, of the files listed, with its thread and those files, if the viewer may
+     * delete it now (ADR 64): the comment of the cursor, or the first of a thread, which its stop is; on a collapsed
+     * thread only when it has no other, as which to delete is not shown. Not one being deleted, nor of a thread
+     * something is sent for, as a reply to its first comment, whatever the commits it was read at.
+     */
+    private static Either<Why, Tuple3<CommitFilesView, ReviewThread, ReviewThread.Comment>> deletable(
+            Model model, Anchor on) {
+        return pullRequestFiles(model)
+                .filter(view ->
+                        view.remarks().exists(remarks -> remarks.toOption().isDefined()))
+                .toEither(Why.NOT_READ)
+                .flatMap(view -> thread(view, on))
+                .flatMap(ReviewUpdate::notSending)
+                .filterOrElse(
+                        found -> on instanceof Anchor.Comment
+                                || !found._1().collapsed().thread(found._2())
+                                || found._2().comments().size() + found._2().more() == 1,
+                        found -> Why.COLLAPSED)
+                .flatMap(found -> comment(found._2(), on)
+                        .toEither(Why.NOT_ON_THREAD)
+                        .map(comment -> Tuple.of(found._1(), found._2(), comment)))
+                .filterOrElse(
+                        found -> !found._1().deleting().contains(found._3().id()), found -> Why.DELETING)
+                .filterOrElse(found -> found._3().rights().delete(), found -> Why.NO_DELETE);
+    }
+
+    /**
+     * Deleting the comment {@code popup} asks about, confirmed: asked again as it is now, as the comment may have gone,
+     * or something be sent for its thread, meanwhile. It says it is being deleted until GitHub answers.
+     */
+    private static Next deleteConfirmed(Model model, DeleteCommentPopup popup) {
+        Anchor on = new Anchor.Comment(popup.comment().id(), new Anchor.Thread(popup.thread(), Option.none()));
+        return deletable(model, on)
+                .filterOrElse(found -> found._1().pullRequest().contains(popup.number()), found -> Why.NOT_READ)
+                .fold(why -> Next.of(refused(model.withoutPopup(DeleteCommentPopup.class), why)), found -> {
+                    Next started = Update.confirm(
+                            model,
+                            DeleteCommentPopup.class,
+                            open -> Option.of(new DeleteComment(
+                                    open.number(), open.thread(), open.comment().id())));
+                    return new Next(
+                            mapPullRequest(
+                                    started.model(),
+                                    popup.number(),
+                                    view -> view.withDeleting(
+                                            view.deleting().add(found._3().id()))),
+                            started.cmds());
+                });
+    }
+
+    /**
+     * The comment of {@code thread} the cursor {@code on} is on: the one it names, or its first, which its stop is.
+     */
+    private static Option<ReviewThread.Comment> comment(ReviewThread thread, Anchor on) {
+        return on instanceof Anchor.Comment(String id, var _)
+                ? thread.comments().find(comment -> comment.id().equals(id))
+                : thread.comments().headOption();
+    }
+
+    /**
+     * {@code found}, unless the first comment of its thread is being deleted, which a reply goes to (ADR 64).
+     */
+    private static Either<Why, Tuple2<CommitFilesView, ReviewThread>> firstNotDeleted(
+            Tuple2<CommitFilesView, ReviewThread> found) {
+        return found._2()
+                        .comments()
+                        .headOption()
+                        .exists(first -> found._1().deleting().contains(first.id()))
+                ? Either.left(Why.DELETING)
+                : Either.right(found);
     }
 
     /**
@@ -345,6 +474,13 @@ public final class ReviewUpdate {
     private static Model mapView(Model model, Function<CommitFilesView, CommitFilesView> f) {
         return model.mapRepoView(repoView -> repoView.withCommitFiles(
                 repoView.commitFiles().map(view -> view.pullRequest().isDefined() ? f.apply(view) : view)));
+    }
+
+    /**
+     * {@code model} with the files of pull request {@code number} as {@code f} makes them, while they are listed.
+     */
+    private static Model mapPullRequest(Model model, int number, Function<CommitFilesView, CommitFilesView> f) {
+        return mapView(model, view -> view.pullRequest().contains(number) ? f.apply(view) : view);
     }
 
     private static Model sending(Model model, Function<Set<String>, Set<String>> f) {

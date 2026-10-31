@@ -20,12 +20,17 @@ public sealed interface CommitFilesCmd extends Cmd {
     /**
      * Reads the review threads of pull request {@code number}, with the commits its changes are diffed between
      * (ADR 55). It runs in the background, as it talks to GitHub. It is read for the threads {@code settled} too:
-     * those something was sent for, which it is read after (ADR 60).
+     * those something was sent for, which it is read after (ADR 60). It is read at {@code version} of the threads,
+     * which it gives back: one changed since, as by a comment deleted, is newer than what it read (ADR 64).
      */
-    record LoadReviewRemarks(int number, Set<String> settled) implements CommitFilesCmd {
+    record LoadReviewRemarks(int number, Set<String> settled, int version) implements CommitFilesCmd {
 
         public LoadReviewRemarks(int number) {
-            this(number, HashSet.empty());
+            this(number, HashSet.empty(), 0);
+        }
+
+        public LoadReviewRemarks(int number, Set<String> settled) {
+            this(number, settled, 0);
         }
 
         @Override
@@ -42,12 +47,14 @@ public sealed interface CommitFilesCmd extends Cmd {
         public Msg run(Env env) {
             return env.gitHub()
                     .reviewRemarks(number)
-                    .fold(this::failedWith, remarks -> new CommitFilesMsg.RemarksLoaded(number, remarks, settled));
+                    .fold(
+                            this::failedWith,
+                            remarks -> new CommitFilesMsg.RemarksLoaded(number, remarks, settled, version));
         }
 
         @Override
         public Msg failed(Failure failure) {
-            return new CommitFilesMsg.RemarksFailed(number, failure, settled);
+            return new CommitFilesMsg.RemarksFailed(number, failure, settled, version);
         }
     }
 

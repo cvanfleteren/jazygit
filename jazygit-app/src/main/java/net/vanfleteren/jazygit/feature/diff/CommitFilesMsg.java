@@ -29,23 +29,32 @@ public sealed interface CommitFilesMsg extends Msg {
 
     /**
      * The review threads of pull request {@code number} were read (ADR 55), after what was sent for the threads
-     * {@code settled} (ADR 60).
+     * {@code settled} (ADR 60), by a read started at {@code version} of them (ADR 64).
      */
-    record RemarksLoaded(int number, ReviewRemarks remarks, Set<String> settled) implements CommitFilesMsg {
+    record RemarksLoaded(int number, ReviewRemarks remarks, Set<String> settled, int version)
+            implements CommitFilesMsg {
 
         public RemarksLoaded(int number, ReviewRemarks remarks) {
-            this(number, remarks, HashSet.empty());
+            this(number, remarks, HashSet.empty(), 0);
+        }
+
+        public RemarksLoaded(int number, ReviewRemarks remarks, Set<String> settled) {
+            this(number, remarks, settled, 0);
         }
     }
 
     /**
      * Reading the review threads of pull request {@code number} failed, after what was sent for the threads
-     * {@code settled}.
+     * {@code settled}, by a read started at {@code version} of them (ADR 64).
      */
-    record RemarksFailed(int number, Failure failure, Set<String> settled) implements CommitFilesMsg {
+    record RemarksFailed(int number, Failure failure, Set<String> settled, int version) implements CommitFilesMsg {
 
         public RemarksFailed(int number, Failure failure) {
-            this(number, failure, HashSet.empty());
+            this(number, failure, HashSet.empty(), 0);
+        }
+
+        public RemarksFailed(int number, Failure failure, Set<String> settled) {
+            this(number, failure, settled, 0);
         }
     }
 

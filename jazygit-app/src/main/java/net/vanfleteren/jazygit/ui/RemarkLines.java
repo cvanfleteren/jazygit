@@ -145,6 +145,9 @@ final class RemarkLines {
                 ? List.of(styled(" · " + Messages.get("content.remarks.sending"), Theme.Classes.DIM, styles))
                 : List.empty();
         if (style.collapsed().thread(thread)) {
+            // Collapsed, it is its first comment, which may be being deleted (ADR 64).
+            List<Span> deleting =
+                    thread.comments().headOption().exists(style::deletes) ? List.of(deleting(styles)) : List.empty();
             return List.of(List.of(Line.from(List.of(
                             margin,
                             styled((top ? ALONE : BOTTOM) + " ", Theme.Classes.DIFF_THREAD, styles),
@@ -153,6 +156,7 @@ final class RemarkLines {
                                     ? styled(cut(collapsed(thread), text), Theme.Classes.DIM, styles)
                                     : Span.raw(cut(collapsed(thread), text)))
                     .appendAll(sending)
+                    .appendAll(deleting)
                     .toJavaList())));
         }
         List<List<Line>> comments = thread.comments()
@@ -165,7 +169,7 @@ final class RemarkLines {
                         rule,
                         text,
                         comment._2 > 0 && style.collapsed().comment(comment._1),
-                        style.now(),
+                        style,
                         styles));
         List<List<Line>> parts = comments.isEmpty() ? List.of(List.empty()) : comments;
         List<Line> end = List.<Line>empty()
@@ -222,7 +226,7 @@ final class RemarkLines {
      * A comment: a header after {@code branch} that says who wrote it and how long ago, on the background of
      * {@link Theme.Classes#DIFF_THREAD_HEADER} to the end of the block, then its text; only the header when it is
      * {@code collapsed}, with its first line, or why it is hidden, dimmed after it (ADR 62). How long ago it was
-     * written is told at {@code now}.
+     * written is told at the time of {@code style}, and that it is being deleted after it (ADR 64).
      */
     private static List<Line> comment(
             Comment comment,
@@ -230,12 +234,14 @@ final class RemarkLines {
             List<Span> rule,
             int text,
             boolean collapsed,
-            Instant now,
+            RemarkStyle style,
             Theme.SpanStyles styles) {
         String author = author(comment.author());
-        String ago = Messages.get("content.remarks.ago", TimeText.ago(Duration.between(comment.at(), now)));
+        String ago = Messages.get("content.remarks.ago", TimeText.ago(Duration.between(comment.at(), style.now())));
         List<Span> said = List.of(
-                styled(author, Theme.Classes.DIFF_THREAD_AUTHOR, styles), styled(ago, Theme.Classes.DIM, styles));
+                        styled(author, Theme.Classes.DIFF_THREAD_AUTHOR, styles),
+                        styled(ago, Theme.Classes.DIM, styles))
+                .appendAll(style.deletes(comment) ? List.of(deleting(styles)) : List.empty());
         if (collapsed) {
             int used = said.map(Span::width).sum().intValue();
             String line = shortly(comment);
@@ -341,16 +347,25 @@ final class RemarkLines {
     }
 
     /**
-     * How the threads are drawn: which are collapsed, and the time it is, to tell how long ago a comment was written.
+     * What follows a comment while it is being deleted (ADR 64).
+     */
+    private static Span deleting(Theme.SpanStyles styles) {
+        return styled(" · " + Messages.get("content.remarks.deleting"), Theme.Classes.DIM, styles);
+    }
+
+    /**
+     * How the threads are drawn: which are collapsed, what is being sent or deleted, and the time it is, to tell how
+     * long ago a comment was written.
      *
      * @param collapsed which threads and comments are collapsed (ADR 62)
      * @param sending   the ids of the threads a reply or a resolving is sent for (ADR 60)
+     * @param deleting  the ids of the comments being deleted (ADR 64)
      * @param now       the time it is
      */
-    record RemarkStyle(Collapsed collapsed, Set<String> sending, Instant now) {
+    record RemarkStyle(Collapsed collapsed, Set<String> sending, Set<String> deleting, Instant now) {
 
         RemarkStyle(Instant now) {
-            this(Collapsed.NONE, HashSet.empty(), now);
+            this(Collapsed.NONE, HashSet.empty(), HashSet.empty(), now);
         }
 
         /**
@@ -358,6 +373,13 @@ final class RemarkLines {
          */
         boolean sends(ReviewThread thread) {
             return sending.contains(thread.id());
+        }
+
+        /**
+         * Whether {@code comment} is being deleted.
+         */
+        boolean deletes(Comment comment) {
+            return deleting.contains(comment.id());
         }
     }
 }

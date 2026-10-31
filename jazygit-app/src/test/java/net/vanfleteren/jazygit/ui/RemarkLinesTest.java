@@ -74,7 +74,13 @@ class RemarkLinesTest {
 
     private static ShownRemarks shown(Collapsed collapsed, ReviewThread... threads) {
         return new ShownRemarks(
-                List.of(threads), NOW, Option.none(), true, collapsed, io.vavr.collection.HashSet.empty());
+                List.of(threads),
+                NOW,
+                Option.none(),
+                true,
+                collapsed,
+                io.vavr.collection.HashSet.empty(),
+                io.vavr.collection.HashSet.empty());
     }
 
     private static List<String> rich(ShownRemarks remarks) {
@@ -138,7 +144,7 @@ class RemarkLinesTest {
                         List.of(thread),
                         8,
                         RemarkLines.MIN_WIDTH,
-                        new RemarkLines.RemarkStyle(collapsed, sending, NOW),
+                        new RemarkLines.RemarkStyle(collapsed, sending, HashSet.empty(), NOW),
                         Theme.SpanStyles.NONE))
                 .map(String::stripTrailing);
     }
@@ -169,13 +175,40 @@ class RemarkLinesTest {
                         List.of(open),
                         8,
                         RemarkLines.MIN_WIDTH,
-                        new RemarkLines.RemarkStyle(closed, HashSet.empty(), NOW),
+                        new RemarkLines.RemarkStyle(closed, HashSet.empty(), HashSet.empty(), NOW),
                         dim)
                 .head();
         assertTrue(List.ofAll(line.spans()).forAll(span -> span.style().equals(Style.EMPTY)), line.toString());
 
         List<String> replying = drawnAlone(open, Collapsed.NONE, HashSet.of(open.id()));
         assertEquals(indent + "┃  sending…", replying.get(replying.size() - 2));
+    }
+
+    @Test
+    void aCommentBeingDeletedSaysSoAfterItsHeaderAndACollapsedThreadAfterItsLineWhenItIsItsFirst() {
+        ReviewThread open = thread(2, false, "Why?", "Because");
+        String indent = " ".repeat(8);
+        Collapsed closed = Collapsed.NONE.flipped(open.id(), List.of(open));
+
+        List<String> deleting = text(RemarkLines.threads(
+                        List.of(open),
+                        8,
+                        RemarkLines.MIN_WIDTH,
+                        new RemarkLines.RemarkStyle(Collapsed.NONE, HashSet.empty(), HashSet.of("C1"), NOW),
+                        Theme.SpanStyles.NONE))
+                .map(String::stripTrailing);
+        assertTrue(deleting.contains(indent + "┣━ bob · 2h ago · deleting…"), deleting.toString());
+        assertTrue(deleting.contains(indent + "┏━ bob · 2h ago"), deleting.toString());
+
+        assertEquals(
+                List.of(indent + "━━ ▸ 2 remarks · bob: Why? · deleting…"),
+                text(RemarkLines.threads(
+                                List.of(open),
+                                8,
+                                RemarkLines.MIN_WIDTH,
+                                new RemarkLines.RemarkStyle(closed, HashSet.empty(), HashSet.of("C0"), NOW),
+                                Theme.SpanStyles.NONE))
+                        .map(String::stripTrailing));
     }
 
     @Test
@@ -420,6 +453,7 @@ class RemarkLinesTest {
                 Option.none(),
                 false,
                 Collapsed.NONE,
+                io.vavr.collection.HashSet.empty(),
                 io.vavr.collection.HashSet.empty());
 
         List<String> lines = rich(elsewhere);
@@ -513,6 +547,7 @@ class RemarkLinesTest {
                         Option.of(new Failure.Bug(new RuntimeException("offline"))),
                         true,
                         Collapsed.NONE,
+                        io.vavr.collection.HashSet.empty(),
                         io.vavr.collection.HashSet.empty())),
                 Theme.SpanStyles.NONE));
 

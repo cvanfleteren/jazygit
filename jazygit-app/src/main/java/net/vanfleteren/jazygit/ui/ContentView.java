@@ -328,10 +328,17 @@ final class ContentView {
                         Option.none(),
                         view.remarksAtItsCommits(),
                         view.collapsed(),
-                        view.sending()));
+                        view.sending(),
+                        view.deleting()));
             case Loadable.Failed<ReviewRemarks>(Failure failure) ->
                 Option.of(new ShownRemarks(
-                        List.empty(), Instant.EPOCH, Option.of(failure), true, view.collapsed(), view.sending()));
+                        List.empty(),
+                        Instant.EPOCH,
+                        Option.of(failure),
+                        true,
+                        view.collapsed(),
+                        view.sending(),
+                        view.deleting()));
             case Loadable.Loading<ReviewRemarks>() -> Option.none();
         });
     }
@@ -489,6 +496,7 @@ final class ContentView {
      *                threads on a line are listed at the end of their file
      * @param collapsed which threads and comments are collapsed (ADR 62)
      * @param sending the ids of the threads a reply or a resolving is sent for (ADR 60)
+     * @param deleting the ids of the comments being deleted (ADR 64)
      */
     record ShownRemarks(
             List<ReviewThread> threads,
@@ -496,7 +504,8 @@ final class ContentView {
             Option<Failure> failed,
             boolean onLines,
             Collapsed collapsed,
-            Set<String> sending) {}
+            Set<String> sending,
+            Set<String> deleting) {}
 
     /**
      * A diff as it is shown: {@code diff}, then the line {@code note}, which git did not print, if there is one.
