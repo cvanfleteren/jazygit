@@ -43,6 +43,14 @@ public enum ThemeName {
      */
     GITHUB_LIGHT("github-light"),
     /**
+     * GitHub's dark theme for protanopia and deuteranopia, with blue and orange for green and red.
+     */
+    GITHUB_DARK_COLORBLIND("github-dark-colorblind"),
+    /**
+     * GitHub's light theme for protanopia and deuteranopia, with blue and orange for green and red.
+     */
+    GITHUB_LIGHT_COLORBLIND("github-light-colorblind"),
+    /**
      * No styling at all: the terminal's own colours, as the UI is drawn without a theme.
      */
     NONE("none");

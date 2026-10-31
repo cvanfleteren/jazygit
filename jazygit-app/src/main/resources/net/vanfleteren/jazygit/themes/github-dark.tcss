@@ -9,7 +9,7 @@ $subtle: #161b22;
 $border: #6e7681;
 $accent: #2f81f7;
 $link: #58a6ff;
-$muted: #7d8590;
+$muted: #848d97;
 $selection: #1e4273;
 $added: #3fb950;
 $removed: #f85149;
@@ -96,7 +96,7 @@ Span.diff-thread-author { color: $fg; text-style: bold; }
 Span.diff-cursor { background: $selection; }
 Span.diff-added-line { color: $fg; background: #12261e; }
 Span.diff-added-word { color: $fg; background: #1a4a29; }
-Span.diff-removed-line { color: $fg; background: #301b1f; }
+Span.diff-removed-line { color: $fg; background: #24171c; }
 Span.diff-removed-word { color: $fg; background: #6b2b2b; }
 
 /* The code of the rich view, by its syntax (ADR 53), in the colours of GitHub's code view. */

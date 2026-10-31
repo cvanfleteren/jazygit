@@ -72,6 +72,14 @@ class ThemeDialogTest {
         assertEquals(
                 List.of(new ThemeMsg.Chosen(ThemeName.GITHUB_LIGHT)),
                 pressing(r -> SettledPilot.of(r).press('h')));
+        dispatched.clear();
+        assertEquals(
+                List.of(new ThemeMsg.Chosen(ThemeName.GITHUB_DARK_COLORBLIND)),
+                pressing(r -> SettledPilot.of(r).press('i')));
+        dispatched.clear();
+        assertEquals(
+                List.of(new ThemeMsg.Chosen(ThemeName.GITHUB_LIGHT_COLORBLIND)),
+                pressing(r -> SettledPilot.of(r).press('j')));
     }
 
     @Test
@@ -144,6 +152,8 @@ class ThemeDialogTest {
             assertTrue(screen.contains("(s) symfonic, orange and blue on black"), screen);
             assertTrue(screen.contains("(g) github (dark)"), screen);
             assertTrue(screen.contains("(h) github (light)"), screen);
+            assertTrue(screen.contains("(i) github (dark protanopia and deuteranopia)"), screen);
+            assertTrue(screen.contains("(j) github (light protanopia and deuteranopia)"), screen);
         }
     }
 
