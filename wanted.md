@@ -47,8 +47,8 @@ Features to consider, roughly most valuable first.
 14. **Check out someone else's PR** (`gh pr checkout`), possibly into a new worktree.
 15. **CI check details and logs** for a failing check, and a rerun action.
     - **More of the review remarks** in the diff of a pull request (ADR 55, ADR 60): a pending review, gathering
-      comments to submit them with an approval or a request for changes; editing and deleting a comment, by the ids
-      already read; the diff, and its remarks, of a merged
+      comments to submit them with an approval or a request for changes; editing a comment, by the ids and rights
+      already read (ADR 64); deleting the comments of others as an admin, from the comments popup (ADR 64); the diff, and its remarks, of a merged
       pull request, read against the commit it was merged with; the remarks in the preview of the pull requests
       screen, for a pull request of another repository.
 

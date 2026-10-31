@@ -95,3 +95,5 @@ changes the one the comments popup goes back to, also when the comment popup is 
 
 Amended by ADR 55: the review threads, inline comments on the diff, show next to their lines in the diff of a pull
 request.
+
+Amended by ADR 64: `d` deletes a comment of the conversation.

@@ -187,3 +187,5 @@ Amended by ADR 62: each comment of an open thread is a stop, and `Space` collaps
 
 `Space` off a thread or a comment does nothing rather than say why: it toggles what is there, so a press off one is
 noise, not a mistake to explain.
+
+Amended by ADR 64: `d` deletes a comment of a thread.
