@@ -115,9 +115,8 @@ final class RichDiff {
             Theme.SpanStyles styles) {
         FileDiff file = parsed.file();
         Vector<ParsedLine> lines = parsed.hunks().flatMap(ParsedHunk::lines).toVector();
-        int digits = lines.iterator()
-                .flatMap(line ->
-                        Iterator.concat(line.line().oldNumber(), line.line().newNumber()))
+        int digits = lines.flatMap(line ->
+                        line.line().oldNumber().toList().appendAll(line.line().newNumber()))
                 .max()
                 .map(number -> String.valueOf(number).length())
                 .getOrElse(1);
@@ -130,8 +129,8 @@ final class RichDiff {
                 width(bar), gutter + measured.max().map(text -> text + 1).getOrElse(0));
         Blocks blocks = new Blocks(gutter + 2, RemarkLines.blockWidth(width), style);
         Layout layout = new Layout(file.path(), index, digits, width - gutter, width, blocks, syntax, words, styles);
-        Vector<LineRemarks> onLines = remarks.map(placed ->
-                        placed.lines().iterator().flatMap(hunk -> hunk).toVector())
+        Vector<LineRemarks> onLines = remarks.map(
+                        placed -> placed.lines().flatMap(hunk -> hunk).toVector())
                 .getOrElse(() -> Vector.fill(lines.size(), () -> NO_REMARKS));
         boolean unplaced = remarks.exists(placed -> !placed.unplaced().isEmpty());
         Vector<Row> rows = Vector.range(0, lines.size())
@@ -447,10 +446,7 @@ final class RichDiff {
         private static Drawn of(List<Marked> marked) {
             return new Drawn(
                     marked.map(Marked::line),
-                    marked.iterator()
-                            .zipWithIndex()
-                            .flatMap(line -> line._1().mark().map(mark -> new Stop(mark, line._2())))
-                            .toList());
+                    marked.zipWithIndex().flatMap(line -> line._1().mark().map(mark -> new Stop(mark, line._2()))));
         }
 
         /**
