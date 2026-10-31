@@ -115,8 +115,9 @@ final class RichDiff {
             Theme.SpanStyles styles) {
         FileDiff file = parsed.file();
         Vector<ParsedLine> lines = parsed.hunks().flatMap(ParsedHunk::lines).toVector();
-        int digits = lines.flatMap(line ->
-                        line.line().oldNumber().toList().appendAll(line.line().newNumber()))
+        int digits = lines.iterator()
+                .flatMap(line ->
+                        Iterator.concat(line.line().oldNumber(), line.line().newNumber()))
                 .max()
                 .map(number -> String.valueOf(number).length())
                 .getOrElse(1);
@@ -126,11 +127,11 @@ final class RichDiff {
         Vector<Integer> measured =
                 inParallel(lines.toList(), line -> width(line.line().text())).toVector();
         int width = Math.max(
-                width(bar), gutter + measured.map(text -> text + 1).max().getOrElse(0));
+                width(bar), gutter + measured.max().map(text -> text + 1).getOrElse(0));
         Blocks blocks = new Blocks(gutter + 2, RemarkLines.blockWidth(width), style);
         Layout layout = new Layout(file.path(), index, digits, width - gutter, width, blocks, syntax, words, styles);
-        Vector<LineRemarks> onLines = remarks.map(
-                        placed -> placed.lines().flatMap(hunk -> hunk).toVector())
+        Vector<LineRemarks> onLines = remarks.map(placed ->
+                        placed.lines().iterator().flatMap(hunk -> hunk).toVector())
                 .getOrElse(() -> Vector.fill(lines.size(), () -> NO_REMARKS));
         boolean unplaced = remarks.exists(placed -> !placed.unplaced().isEmpty());
         Vector<Row> rows = Vector.range(0, lines.size())
@@ -242,15 +243,17 @@ final class RichDiff {
         Option<List<Token>> tokens = layout.syntax() ? row.parsed().tokens() : Option.none();
         return switch (line.kind()) {
             case CONTEXT ->
-                tokens.map(lexed -> Line.from(pieces(row.parsed().words(), lexed)
-                                .map(piece -> context(piece, layout.styles()))
-                                .prepend(Span.raw(" "))
-                                .prependAll(gutter)
+                tokens.map(lexed -> Line.from(Iterator.concat(
+                                        gutter,
+                                        List.of(Span.raw(" ")),
+                                        pieces(row.parsed().words(), lexed)
+                                                .iterator()
+                                                .map(piece -> context(piece, layout.styles())))
                                 .toJavaList()))
-                        .getOrElse(() -> Line.from(
-                                gutter.append(Span.raw(" " + line.text())).toJavaList()));
+                        .getOrElse(() -> Line.from(Iterator.concat(gutter, List.of(Span.raw(" " + line.text())))
+                                .toJavaList()));
             case NOTE ->
-                Line.from(gutter.append(styled(line.text(), Theme.Classes.DIM, layout.styles()))
+                Line.from(Iterator.concat(gutter, List.of(styled(line.text(), Theme.Classes.DIM, layout.styles())))
                         .toJavaList());
             case ADDED -> changed(row, gutter, tokens, Change.ADDED, layout);
             case REMOVED -> changed(row, gutter, tokens, Change.REMOVED, layout);
@@ -274,16 +277,18 @@ final class RichDiff {
                 + (pieces.size() == 1
                         ? row.measured()
                         : pieces.map(piece -> width(piece.text())).sum().intValue());
-        List<Span> spans = pieces.map(piece -> {
-                    String cssClass = piece.changed() && layout.words() ? change.wordClass() : change.lineClass();
-                    return coloured.isDefined()
-                            ? changedCode(piece, cssClass, styles)
-                            : styled(piece.text(), cssClass, styles);
-                })
-                .prepend(styled(change.marker(), change.lineClass(), styles))
-                .append(styled(" ".repeat(Math.max(0, layout.width() - used)), change.lineClass(), styles))
-                .prependAll(gutter);
-        return Line.from(spans.toJavaList());
+        return Line.from(Iterator.concat(
+                        gutter,
+                        List.of(styled(change.marker(), change.lineClass(), styles)),
+                        pieces.iterator().map(piece -> {
+                            String cssClass =
+                                    piece.changed() && layout.words() ? change.wordClass() : change.lineClass();
+                            return coloured.isDefined()
+                                    ? changedCode(piece, cssClass, styles)
+                                    : styled(piece.text(), cssClass, styles);
+                        }),
+                        List.of(styled(" ".repeat(Math.max(0, layout.width() - used)), change.lineClass(), styles)))
+                .toJavaList());
     }
 
     /**
@@ -442,7 +447,10 @@ final class RichDiff {
         private static Drawn of(List<Marked> marked) {
             return new Drawn(
                     marked.map(Marked::line),
-                    marked.zipWithIndex().flatMap(line -> line._1().mark().map(mark -> new Stop(mark, line._2()))));
+                    marked.iterator()
+                            .zipWithIndex()
+                            .flatMap(line -> line._1().mark().map(mark -> new Stop(mark, line._2())))
+                            .toList());
         }
 
         /**

@@ -3,6 +3,8 @@ package net.vanfleteren.jazygit.state;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
+import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
@@ -10,6 +12,7 @@ import net.vanfleteren.jazygit.gh.model.ReviewThread.Subject;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.FileDiff;
+import net.vanfleteren.jazygit.git.model.UnifiedDiff.Hunk;
 
 /**
  * The review threads of a pull request placed in a parsed diff of some of the files it changes (ADR 55): each after
@@ -18,6 +21,8 @@ import net.vanfleteren.jazygit.git.model.UnifiedDiff.FileDiff;
  * @param files for each file of the diff, in its order, the threads on it
  */
 public record PlacedRemarks(List<FileRemarks> files) {
+
+    private static final LineRemarks NONE = new LineRemarks(List.empty(), false);
 
     /**
      * {@code threads} placed in {@code diff}. A thread goes after the line with its number on its side, in the file
@@ -37,8 +42,10 @@ public record PlacedRemarks(List<FileRemarks> files) {
      * are listed at the end of their file (ADR 55).
      */
     public static PlacedRemarks place(UnifiedDiff diff, List<ReviewThread> threads, boolean onLines) {
-        return new PlacedRemarks(diff.files()
-                .map(file -> file(file, threads.filter(thread -> thread.isOn(file.path(), file.origin())), onLines)));
+        // Each thread found by its path once, with where it is among the threads, which those of a file keep.
+        Map<String, List<Tuple2<ReviewThread, Integer>>> byPath =
+                threads.zipWithIndex().groupBy(thread -> thread._1().path());
+        return new PlacedRemarks(diff.files().map(file -> file(file, on(byPath, file), onLines)));
     }
 
     /**
@@ -48,72 +55,106 @@ public record PlacedRemarks(List<FileRemarks> files) {
         return files.forAll(FileRemarks::isEmpty);
     }
 
+    /**
+     * The threads of {@code byPath} on {@code file}, by its path or the one it had ({@link ReviewThread#isOn}), in
+     * their order.
+     */
+    private static List<ReviewThread> on(Map<String, List<Tuple2<ReviewThread, Integer>>> byPath, FileDiff file) {
+        Option<String> origin = file.origin().filter(other -> !other.equals(file.path()));
+        return origin.isEmpty()
+                ? byPath.get(file.path()).map(on -> on.map(Tuple2::_1)).getOrElse(List.empty())
+                : List.of(file.path())
+                        .appendAll(origin)
+                        .flatMap(path -> byPath.get(path).getOrElse(List.empty()))
+                        .sortBy(Tuple2::_2)
+                        .map(Tuple2::_1);
+    }
+
     private static FileRemarks file(FileDiff file, List<ReviewThread> threads, boolean placeable) {
+        // Most files of a diff have no thread: those need nothing worked out for their lines.
+        if (threads.isEmpty()) {
+            return new FileRemarks(
+                    List.empty(), file.hunks().map(hunk -> hunk.lines().map(ignored -> NONE)), List.empty());
+        }
+        // The lines of the file in the order of the diff: a line is found by its index among them.
+        Vector<DiffLine> lines = file.hunks().flatMap(Hunk::lines).toVector();
+        Vector<Integer> starts = file.hunks()
+                .scanLeft(0, (start, hunk) -> start + hunk.lines().size())
+                .init()
+                .toVector();
         List<ReviewThread> onLines = threads.filter(thread -> thread.subject() == Subject.LINE);
-        List<Tuple2<ReviewThread, Option<Tuple2<Integer, Integer>>>> found = onLines.map(thread -> Tuple.of(
-                thread, placeable ? at(file, thread.line(), thread.side()) : Option.<Tuple2<Integer, Integer>>none()));
+        List<Tuple2<ReviewThread, Option<Integer>>> found = onLines.map(thread ->
+                Tuple.of(thread, placeable ? at(lines, thread.line(), thread.side()) : Option.<Integer>none()));
+        Map<Integer, List<ReviewThread>> after = found.flatMap(
+                        placed -> placed._2().map(at -> Tuple.of(at, placed._1())))
+                .groupBy(Tuple2::_1)
+                .mapValues(placed -> placed.map(Tuple2::_2));
         // Where the threads on several lines that are placed start, and end: only those cover lines.
-        List<Tuple2<Tuple2<Integer, Integer>, Tuple2<Integer, Integer>>> spans = found.flatMap(placed -> placed._2()
+        List<Tuple2<Integer, Integer>> spans = found.flatMap(placed -> placed._2()
                 .flatMap(last -> placed._1()
                         .startLine()
                         .map(start -> Tuple.of(
-                                at(file, Option.of(start), placed._1().startSide())
+                                at(lines, Option.of(start), placed._1().startSide())
                                         .getOrElse(() -> firstAfter(
-                                                file, start, placed._1().startSide(), last)),
+                                                file, starts, start, placed._1().startSide(), last)),
                                 last))));
+        Vector<Boolean> covered = spans.isEmpty() ? Vector.empty() : covered(spans, lines.size());
         return new FileRemarks(
                 threads.filter(thread -> thread.subject() == Subject.FILE),
                 file.hunks()
-                        .zipWithIndex()
-                        .map(hunk -> hunk._1()
-                                .lines()
-                                .zipWithIndex()
-                                .map(line -> new LineRemarks(
-                                        found.filter(placed -> placed._2().contains(Tuple.of(hunk._2(), line._2())))
-                                                .map(Tuple2::_1),
-                                        covered(spans, Tuple.of(hunk._2(), line._2()))))),
+                        .zip(starts)
+                        .map(hunk -> List.range(
+                                        hunk._2(), hunk._2() + hunk._1().lines().size())
+                                .map(line -> remarks(
+                                        after.get(line).getOrElse(List.empty()),
+                                        !covered.isEmpty() && covered.get(line)))),
                 found.filter(placed -> placed._2().isEmpty()).map(Tuple2::_1));
     }
 
     /**
-     * Where in {@code file} the line with the number {@code line} on {@code side} is: the index of its hunk, and of the
-     * line in it; none when the diff does not show it, or there is no line, as for an outdated thread.
+     * Where among {@code lines}, the lines of a file in the order of the diff, the first line with the number
+     * {@code line} on {@code side} is; none when the diff does not show it, or there is no line, as for an outdated
+     * thread.
      */
-    private static Option<Tuple2<Integer, Integer>> at(FileDiff file, Option<Integer> line, Side side) {
-        return line.flatMap(number -> file.hunks()
-                .zipWithIndex()
-                .flatMap(hunk -> hunk._1()
-                        .lines()
-                        .zipWithIndex()
-                        .filter(shown -> number(shown._1(), side).contains(number))
-                        .map(shown -> Tuple.of(hunk._2(), shown._2())))
-                .headOption());
+    private static Option<Integer> at(Vector<DiffLine> lines, Option<Integer> line, Side side) {
+        return line.map(number -> lines.indexWhere(shown -> number(shown, side).contains(number)))
+                .filter(index -> index >= 0);
     }
 
     /**
-     * Where in {@code file} the first hunk after the line with the number {@code number} on {@code side} starts, which
-     * the diff does not show, as with whitespace ignored, or hunks cut elsewhere than GitHub's: a hunk shows every line
-     * of its range on either side, so each hunk is wholly before or wholly after that line. The start of the hunk of
-     * {@code last} when none is found before it.
+     * Where in {@code file}, whose hunks start among its lines at {@code starts}, the first hunk after the line with
+     * the number {@code number} on {@code side} starts, which the diff does not show, as with whitespace ignored, or
+     * hunks cut elsewhere than GitHub's: a hunk shows every line of its range on either side, so each hunk is wholly
+     * before or wholly after that line. The start of the hunk of {@code last} when none is found before it.
      */
-    private static Tuple2<Integer, Integer> firstAfter(
-            FileDiff file, int number, Side side, Tuple2<Integer, Integer> last) {
+    private static int firstAfter(FileDiff file, Vector<Integer> starts, int number, Side side, int last) {
         return file.hunks()
-                .zipWithIndex()
+                .zip(starts)
                 .find(hunk ->
                         hunk._1().lines().exists(line -> number(line, side).exists(shown -> shown > number)))
-                .map(hunk -> Tuple.of(hunk._2(), 0))
-                .filter(first -> first.compareTo(last) <= 0)
-                .getOrElse(() -> Tuple.of(last._1(), 0));
+                .map(Tuple2::_2)
+                .filter(first -> first <= last)
+                .getOrElse(() -> starts.findLast(start -> start <= last).getOrElse(0));
     }
 
     /**
-     * Whether the line at {@code position} is covered by one of {@code spans}, from its first line to before its last,
-     * in the order of the diff: a removed line among added ones too, as GitHub highlights it.
+     * For each of {@code count} lines, whether one of {@code spans} covers it, from its first line to before its last,
+     * in the order of the diff: a removed line among added ones too, as GitHub highlights it. Each span opens where it
+     * starts and closes where it ends, so a line is covered while more are open than closed.
      */
-    private static boolean covered(
-            List<Tuple2<Tuple2<Integer, Integer>, Tuple2<Integer, Integer>>> spans, Tuple2<Integer, Integer> position) {
-        return spans.exists(span -> span._1().compareTo(position) <= 0 && position.compareTo(span._2()) < 0);
+    private static Vector<Boolean> covered(List<Tuple2<Integer, Integer>> spans, int count) {
+        Map<Integer, Integer> edges = spans.filter(span -> span._1() < span._2())
+                .flatMap(span -> List.of(Tuple.of(span._1(), 1), Tuple.of(span._2(), -1)))
+                .groupBy(Tuple2::_1)
+                .mapValues(at -> at.map(Tuple2::_2).sum().intValue());
+        return Vector.range(0, count)
+                .scanLeft(0, (open, line) -> open + edges.get(line).getOrElse(0))
+                .tail()
+                .map(open -> open > 0);
+    }
+
+    private static LineRemarks remarks(List<ReviewThread> threads, boolean covered) {
+        return threads.isEmpty() && !covered ? NONE : new LineRemarks(threads, covered);
     }
 
     private static Option<Integer> number(DiffLine line, Side side) {

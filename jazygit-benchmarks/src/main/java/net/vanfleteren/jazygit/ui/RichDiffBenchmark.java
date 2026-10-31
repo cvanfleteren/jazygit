@@ -4,6 +4,7 @@ import dev.tamboui.style.Color;
 import dev.tamboui.style.Style;
 import dev.tamboui.text.Line;
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import java.util.concurrent.TimeUnit;
 import net.vanfleteren.jazygit.bench.WordDiffBenchmark.Shape;
 import net.vanfleteren.jazygit.git.model.DiffText;
@@ -63,6 +64,6 @@ public class RichDiffBenchmark {
      */
     @Benchmark
     public List<Line> draw() {
-        return RichDiff.lines(parsed, true, STYLES);
+        return RichDiff.drawn(parsed, true, true, Option.none(), STYLES).lines();
     }
 }
