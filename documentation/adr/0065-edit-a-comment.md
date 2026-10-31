@@ -50,14 +50,23 @@ As `d` may (ADR 64), and else `e` says why, without asking GitHub:
 
 ### The popup
 
-- The popup of ADR 60, shared, opened on the body of the comment. Its title says it edits, and where:
-  `edit · src/Foo.java · line 40` in the diff, `edit comment` from the comments popup. Above the text, in the diff, the
-  lines of the thread, as `c` shows them, and for a reply the comment before it, as `r` shows the one it replies to.
+- The popups that write a comment, opened on the body of the comment, each where it writes one now, so that each goes
+  back where it came from:
+  - In the diff, `ReviewPopup` (ADR 60), with a target `Edit`, of the comment and the body it opened with, beside
+    `Start` and `Reply`. It keeps the scroll of the content panel, as for a reply, to go back to.
+  - In the comments popup, `CommentPopup` (ADR 5), with the comment it edits and the body it opened with, beside the
+    popup it came `from`: it goes back to the comments popup, on Escape and once saved, with the edited comment still
+    highlighted. Not: `ReviewPopup` there, which has no popup to go back to: the comments popup would be lost.
+- Its title says it edits, and where: `edit · src/Foo.java · line 40` in the diff, `edit comment` from the comments
+  popup. Above the text, in the diff, the lines of the thread, as `c` shows them, and for a reply the comment before
+  it, as `r` shows the one it replies to.
 - Enter adds a line, Ctrl+O opens it in the editor, Escape drops what was changed without asking, as ADR 5 and ADR 59
-  do.
+  do. It holds input, which stops a quit, only once its text differs from the body it opened with. Not: once it is not
+  blank, as a new comment holds it, which an edit always is, from the start.
 - Ctrl+S with nothing changed against the body the popup opened with closes it, and nothing runs, as ADR 59.
 - Ctrl+S on a text that is empty or only blanks says, in the popup, that a comment cannot be empty and that `d`
-  deletes it, without asking GitHub.
+  deletes it, without asking GitHub. Not: doing nothing, as Ctrl+S on a blank new comment does (ADR 5, ADR 60): an
+  edit emptied is a delete, which `d` does. A new comment keeps doing nothing.
 
 ### Saving
 
