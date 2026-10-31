@@ -192,14 +192,16 @@ class CliGitHubTest {
     }
 
     @Test
-    void anEditOfACommentThatIsGoneFails(@TempDir Path dir) throws Exception {
+    void anEditOfACommentThatIsGoneFailsAsGone(@TempDir Path dir) throws Exception {
         assumeTrue(Files.isExecutable(Path.of("/bin/sh")), "no POSIX shell");
         CliGitHub gitHub = failing(dir, true);
 
-        assertTrue(GhProcess.gone(
-                gitHub.editReviewComment("PRRC_1", "Fixed").getLeft().error()));
-        assertTrue(GhProcess.gone(
-                gitHub.editPullRequestComment("IC_1", "Fixed").getLeft().error()));
+        assertEquals(
+                new GhError.Gone(),
+                gitHub.editReviewComment("PRRC_1", "Fixed").getLeft().error());
+        assertEquals(
+                new GhError.Gone(),
+                gitHub.editPullRequestComment("IC_1", "Fixed").getLeft().error());
     }
 
     @Test

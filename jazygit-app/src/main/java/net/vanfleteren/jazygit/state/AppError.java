@@ -315,9 +315,17 @@ public sealed interface AppError {
              */
             DELETING,
             /**
-             * A collapsed thread of several comments does not say which of them to delete (ADR 64).
+             * A collapsed thread of several comments does not say which of them to delete (ADR 64), or edit (ADR 65).
              */
-            COLLAPSED
+            COLLAPSED,
+            /**
+             * GitHub does not let the viewer edit the comment (ADR 65).
+             */
+            NO_EDIT,
+            /**
+             * An edit does not empty a comment: deleting it does (ADR 65).
+             */
+            EMPTY
         }
     }
 

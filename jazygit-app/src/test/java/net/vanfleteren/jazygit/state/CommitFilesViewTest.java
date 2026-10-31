@@ -102,6 +102,18 @@ class CommitFilesViewTest {
         assertEquals(deleted, deleted.withoutComment("C"));
     }
 
+    @Test
+    void aCommentEditedSaysWhatGitHubHoldsAtANewerVersion() {
+        CommitFilesView view = read(List.of(thread("a.txt", false)));
+
+        CommitFilesView edited = view.withEdited("C", "Hm?");
+
+        assertEquals(List.of("Hm?"), edited.threads().head().comments().map(ReviewThread.Comment::body));
+        assertEquals(1, edited.version());
+        // One that is gone changes nothing, not even the version.
+        assertEquals(edited, edited.withEdited("X", "Hm!"));
+    }
+
     private static CommitFilesView read(List<ReviewThread> threads) {
         return CommitFilesView.of(PULL_REQUEST, "branches", "files")
                 .withFiles(new Loadable.Loaded<>(FILES))

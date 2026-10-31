@@ -293,8 +293,12 @@ public final class CliGitHub implements GitHub {
     }
 
     // Runs command, which edits a comment, and gives the body GitHub now holds, which decoder reads from what it says.
+    // A comment GitHub no longer has is gone: unlike a delete, its edit is not done.
     private Either<GhFailure, Edited> edit(GhCommand command, Decoder<String> decoder) {
         return process.run(command)
+                .mapLeft(failure -> GhProcess.gone(failure.error())
+                        ? new GhFailure(new GhError.Gone(), failure.commands())
+                        : failure)
                 .flatMap(output -> GhProcess.decoded(output.stdout(), decoder)
                         .map(body -> new Edited(body, output.log()))
                         .mapLeft(unexpected -> new GhFailure(unexpected, output.log())));

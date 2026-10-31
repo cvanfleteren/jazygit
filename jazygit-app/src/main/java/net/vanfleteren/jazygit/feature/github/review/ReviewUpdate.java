@@ -35,7 +35,9 @@ import net.vanfleteren.jazygit.state.Update.Next;
  * is resolved at once. Each is sent on its own, and the review threads are read again once it is, the cursor then on
  * the thread started. Nothing is sent for a pull request whose threads were read at other commits than its files, nor
  * for a merged one; nor twice for a thread while something is sent for it. A comment is deleted after asking, at any
- * commits, and taken out of the threads once GitHub took it, without reading them again (ADR 64).
+ * commits, and taken out of the threads once GitHub took it, without reading them again (ADR 64); one is edited in the
+ * same popup as a reply, at any commits too, and takes what GitHub holds once it is saved, without reading again either
+ * (ADR 65).
  */
 public final class ReviewUpdate {
 
@@ -48,6 +50,7 @@ public final class ReviewUpdate {
         return switch (msg) {
             case ReviewMsg.StartAsked(DiffCursorAt at) -> asked(model, start(model, at));
             case ReviewMsg.ReplyAsked(DiffCursorAt at) -> asked(model, reply(model, at));
+            case ReviewMsg.EditAsked(DiffCursorAt at) -> asked(model, edit(model, at));
             case ReviewMsg.ResolveAsked(DiffCursorAt at) ->
                 reviewed(model)
                         .flatMap(view -> thread(view, at.cursor()))
@@ -79,19 +82,8 @@ public final class ReviewUpdate {
             case ReviewMsg.Refused(Why why) -> Next.of(refused(model, why));
             // While it is being sent, the comment stays as it is sent.
             case ReviewMsg.Edited(String text) -> Next.of(changed(model, popup -> popup.withText(text), true));
-            // A blank comment is not sent, as GitHub refuses it.
             case ReviewMsg.Confirmed() ->
-                editable(model)
-                        .filter(popup -> !popup.text().isBlank())
-                        .map(popup -> {
-                            Model sending = model.clearError().openPopup(popup.withSending(true));
-                            return Update.start(
-                                    popup.target() instanceof Target.Reply(String thread, var comment)
-                                            ? sending(sending, set -> set.add(thread))
-                                            : sending,
-                                    new Send(popup.number(), popup.target(), popup.text()));
-                        })
-                        .getOrElse(() -> Next.of(model));
+                editable(model).map(popup -> confirmed(model, popup)).getOrElse(() -> Next.of(model));
             case ReviewMsg.Cancelled() ->
                 Next.of(editable(model)
                         .map(popup -> model.withoutPopup(ReviewPopup.class))
@@ -110,6 +102,7 @@ public final class ReviewUpdate {
                 Next.of(CommandLog.append(model, ReviewCmd.EDIT_COMMENT, failure.commands())
                         .fail(new AppError.OperationFailed(ReviewCmd.EDIT_COMMENT, Option.none(), failure)));
             case ReviewMsg.Sent(Send cmd, var commands) -> sent(model, cmd, commands);
+            case ReviewMsg.CommentEdited(Send cmd, String body, var commands) -> edited(model, cmd, body, commands);
             // The popup stays open, with the comment, to send it again or to copy it.
             case ReviewMsg.SendFailed(Send cmd, Failure failure) -> {
                 Next failed = OperationUpdate.update(model, new OperationMsg.Failed(cmd, failure));
@@ -172,6 +165,29 @@ public final class ReviewUpdate {
                         failed.cmds());
             }
         };
+    }
+
+    /**
+     * Sending what {@code popup} holds, asked for. A blank comment is not sent, as GitHub refuses it; a blank edit says
+     * that deleting it is what empties it, and an edit that changed nothing closes the popup, sending nothing (ADR 65).
+     */
+    private static Next confirmed(Model model, ReviewPopup popup) {
+        if (popup.target() instanceof Target.Edit(var thread, var comment, String body)) {
+            if (popup.text().equals(body)) {
+                return Next.of(model.clearError().withoutPopup(ReviewPopup.class));
+            }
+            if (popup.text().isBlank()) {
+                return Next.of(refused(model, Why.EMPTY));
+            }
+        } else if (popup.text().isBlank()) {
+            return Next.of(model);
+        }
+        Model sending = model.clearError().openPopup(popup.withSending(true));
+        return Update.start(
+                popup.target() instanceof Target.Reply(String thread, var comment)
+                        ? sending(sending, set -> set.add(thread))
+                        : sending,
+                new Send(popup.number(), popup.target(), popup.text()));
     }
 
     private static Next asked(Model model, Either<Why, ReviewPopup> popup) {
@@ -251,10 +267,66 @@ public final class ReviewUpdate {
                         found._2()
                                 .comments()
                                 .lastOption()
-                                .map(comment -> List.ofAll(comment.body().lines())
-                                        .take(QUOTED)
-                                        .prepend(comment.author() + ":"))
+                                .map(ReviewUpdate::excerpt)
                                 .getOrElse(List.empty())));
+    }
+
+    /**
+     * The popup that edits the comment of the cursor {@code at}, opened on its body (ADR 65): under the lines of its
+     * thread, as starting it showed them, or under the comment before it.
+     */
+    private static Either<Why, ReviewPopup> edit(Model model, DiffCursorAt at) {
+        return chosen(model, at.cursor())
+                .filterOrElse(found -> found._3().rights().edit(), found -> Why.NO_EDIT)
+                .map(found -> {
+                    ReviewThread thread = found._2();
+                    ReviewThread.Comment comment = found._3();
+                    List<ReviewThread.Comment> before = thread.comments().takeWhile(each -> !each.equals(comment));
+                    return popup(
+                                    found._1(),
+                                    at,
+                                    new Target.Edit(thread.id(), comment.id(), comment.body()),
+                                    new Where(
+                                            thread.path(),
+                                            thread.line()
+                                                    .map(line -> new ReviewPopup.Lines(
+                                                            thread.startLine().getOrElse(line), line)),
+                                            false),
+                                    before.lastOption()
+                                            .map(ReviewUpdate::excerpt)
+                                            .getOrElse(() -> lines(found._1(), thread)))
+                            .withText(comment.body());
+                });
+    }
+
+    /**
+     * {@code comment} as the popup shows it above another: who wrote it, and its first lines.
+     */
+    private static List<String> excerpt(ReviewThread.Comment comment) {
+        return List.ofAll(comment.body().lines()).take(QUOTED).prepend(comment.author() + ":");
+    }
+
+    /**
+     * The lines of the diff {@code thread} is on, as the popup that starts one shows them; none when the diff does not
+     * show them, as for an outdated thread, or one on a whole file.
+     */
+    private static List<String> lines(CommitFilesView view, ReviewThread thread) {
+        return thread.line()
+                .map(line -> {
+                    DiffStops stops = stops(view);
+                    int last = stops.anchors().indexOf(new Anchor.OnLine(thread.path(), thread.side(), line));
+                    int first = stops.anchors()
+                            .indexOf(new Anchor.OnLine(
+                                    thread.path(),
+                                    thread.startSide(),
+                                    thread.startLine().getOrElse(line)));
+                    return first < 0 || last < 0
+                            ? List.<String>empty()
+                            : stops.stops()
+                                    .slice(Math.min(first, last), Math.max(first, last) + 1)
+                                    .flatMap(stop -> stop.line().map(ReviewUpdate::quoted));
+                })
+                .getOrElse(List.empty());
     }
 
     private static ReviewPopup popup(
@@ -299,6 +371,24 @@ public final class ReviewUpdate {
     }
 
     /**
+     * The edit {@code cmd} saved, as GitHub holds it, {@code body}: the popup closes, and the comment says it, at a
+     * newer version, without the threads read again (ADR 65). The cursor stays on it.
+     */
+    private static Next edited(Model model, Send cmd, String body, List<ExecutedCommand> commands) {
+        Next done = OperationUpdate.succeeded(model, cmd, commands);
+        Model closed = done.model()
+                .popup(ReviewPopup.class)
+                .filter(open -> open.sending() && open.number() == cmd.number())
+                .map(open -> done.model().withoutPopup(ReviewPopup.class))
+                .getOrElse(done.model());
+        return new Next(
+                cmd.target() instanceof Target.Edit(var thread, String comment, var original)
+                        ? mapPullRequest(closed, cmd.number(), view -> view.withEdited(comment, body))
+                        : closed,
+                done.cmds());
+    }
+
+    /**
      * The read of the review threads of pull request {@code number} after what was sent for the threads
      * {@code settled}, at the version they are at (ADR 64).
      */
@@ -314,11 +404,21 @@ public final class ReviewUpdate {
 
     /**
      * The comment the cursor {@code on} is on, of the files listed, with its thread and those files, if the viewer may
-     * delete it now (ADR 64): the comment of the cursor, or the first of a thread, which its stop is; on a collapsed
-     * thread only when it has no other, as which to delete is not shown. Not one being deleted, nor of a thread
-     * something is sent for, as a reply to its first comment, whatever the commits it was read at.
+     * delete it now (ADR 64).
      */
     private static Either<Why, Tuple3<CommitFilesView, ReviewThread, ReviewThread.Comment>> deletable(
+            Model model, Anchor on) {
+        return chosen(model, on).filterOrElse(found -> found._3().rights().delete(), found -> Why.NO_DELETE);
+    }
+
+    /**
+     * The comment the cursor {@code on} is on, of the files listed, with its thread and those files, if it may be
+     * deleted or edited now, as the viewer's rights allow (ADR 64, ADR 65): the comment of the cursor, or the first of
+     * a thread, which its stop is; on a collapsed thread only when it has no other, as which is meant is not shown. Not
+     * one being deleted, nor of a thread something is sent for, as a reply to its first comment, whatever the commits
+     * it was read at.
+     */
+    private static Either<Why, Tuple3<CommitFilesView, ReviewThread, ReviewThread.Comment>> chosen(
             Model model, Anchor on) {
         return pullRequestFiles(model)
                 .filter(view ->
@@ -335,8 +435,7 @@ public final class ReviewUpdate {
                         .toEither(Why.NOT_ON_THREAD)
                         .map(comment -> Tuple.of(found._1(), found._2(), comment)))
                 .filterOrElse(
-                        found -> !found._1().deleting().contains(found._3().id()), found -> Why.DELETING)
-                .filterOrElse(found -> found._3().rights().delete(), found -> Why.NO_DELETE);
+                        found -> !found._1().deleting().contains(found._3().id()), found -> Why.DELETING);
     }
 
     /**

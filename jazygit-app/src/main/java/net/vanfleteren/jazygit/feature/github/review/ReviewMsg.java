@@ -11,7 +11,7 @@ import net.vanfleteren.jazygit.state.Update;
 
 /**
  * Commenting on the lines of the diff of a pull request's files, from its cursor (ADR 60): starting a review thread,
- * replying to one, resolving it, opening or closing it, and deleting a comment of it (ADR 64).
+ * replying to one, resolving it, opening or closing it, and editing (ADR 65) or deleting a comment of it (ADR 64).
  */
 public sealed interface ReviewMsg extends Msg {
 
@@ -75,7 +75,12 @@ public sealed interface ReviewMsg extends Msg {
     record Sent(ReviewCmd.Send cmd, List<ExecutedCommand> commands) implements ReviewMsg {}
 
     /**
-     * Sending the comment failed.
+     * The edit of a comment was saved by running {@code commands}, and GitHub holds it as {@code body} (ADR 65).
+     */
+    record CommentEdited(ReviewCmd.Send cmd, String body, List<ExecutedCommand> commands) implements ReviewMsg {}
+
+    /**
+     * Sending the comment, or saving its edit, failed.
      */
     record SendFailed(ReviewCmd.Send cmd, Failure failure) implements ReviewMsg {}
 
@@ -88,6 +93,11 @@ public sealed interface ReviewMsg extends Msg {
      * Resolving or unresolving the thread failed.
      */
     record ResolveFailed(ReviewCmd.Resolve cmd, Failure failure) implements ReviewMsg {}
+
+    /**
+     * The user asked to edit the comment of the cursor {@code at} (ADR 65).
+     */
+    record EditAsked(DiffCursorAt at) implements ReviewMsg {}
 
     /**
      * The user asked to delete the comment of the cursor {@code at} (ADR 64).

@@ -344,3 +344,44 @@ def test_a_comment_of_a_thread_is_deleted_after_asking_without_reading_the_threa
     assert len(calls_with(gh, DELETE)) == 1
     assert "comment=IC_Because" in calls_with(gh, DELETE)[0]
     assert len(calls_with(gh, THREADS)) == read
+
+
+EDIT = "updatePullRequestReviewComment("
+
+
+def test_a_comment_of_a_thread_is_edited_from_its_body_and_shows_what_github_holds_without_reading_the_threads_again(
+        repo, origin, clone, gh, jazygit):
+    pull_request(repo, origin, clone, gh)
+    head = origin("rev-parse", "refs/pull/1/head").strip()
+    gh.answer(
+        (THREADS, replied(head, repo("rev-parse", "main").strip())),
+        # GitHub holds the body as it takes it: here with a trailing space dropped.
+        (EDIT, {"data": {"updatePullRequestReviewComment": {"pullRequestReviewComment": {"body": "Because of a"}}}}))
+    ui = jazygit()
+    ui.branches.select("feature")
+    ui.app.press("o")
+    # The action shows dimmed until the details are read, and does nothing then: wait for them.
+    ui.app.wait_for("in 2 files, 2 commits")
+    ui.app.press("f")
+    ui.app.wait_in("Files", "💬1")
+    ui.app.move_cursor("Files", "b.txt")
+    ui.app.press("ctrl+d")
+    ui.app.wait_for("┃  Because")
+    ui.app.press("enter")
+
+    # To the reply, edited from its body.
+    ui.app.press("n")
+    ui.app.eventually(lambda: reversed_at(ui.app, "┏━ reviewer"), "the cursor on the thread")
+    ui.app.press("j")
+    ui.app.press("e")
+    ui.app.wait_for("Edit comment on b.txt · line 1")
+    read = len(calls_with(gh, THREADS))
+    ui.app.type(" of a ")
+    ui.app.press("ctrl+s")
+
+    ui.app.eventually(lambda: "Edit comment on b.txt" not in ui.app.text(), "the popup closed")
+    ui.app.wait_for("┃  Because of a")
+    assert len(calls_with(gh, EDIT)) == 1
+    assert "comment=IC_Because" in calls_with(gh, EDIT)[0]
+    assert "body=Because of a " in calls_with(gh, EDIT)[0]
+    assert len(calls_with(gh, THREADS)) == read
