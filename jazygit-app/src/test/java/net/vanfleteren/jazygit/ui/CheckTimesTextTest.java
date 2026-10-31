@@ -83,16 +83,18 @@ class CheckTimesTextTest {
         Check running = check(Option.of(NOW.minusSeconds(90)));
 
         assertEquals(
-                "running 1m 30s · ~5s left",
-                CheckTimesText.of(running, new Eta.Expected(NOW.plusSeconds(3)), false, NOW));
+                "running 1m 30s  ·     ~5s left",
+                CheckTimesText.lined(running, new Eta.Expected(NOW.plusSeconds(3)), false, NOW));
         assertEquals(
-                "running 1m 30s · due", CheckTimesText.of(running, new Eta.Expected(NOW.plusSeconds(2)), false, NOW));
+                "running 1m 30s  ·          due",
+                CheckTimesText.lined(running, new Eta.Expected(NOW.plusSeconds(2)), false, NOW));
         // Still due within the grace of a minute, overdue after it.
         assertEquals(
-                "running 1m 30s · due", CheckTimesText.of(running, new Eta.Expected(NOW.minusSeconds(60)), false, NOW));
+                "running 1m 30s  ·          due",
+                CheckTimesText.lined(running, new Eta.Expected(NOW.minusSeconds(60)), false, NOW));
         assertEquals(
-                "running 1m 30s · overdue",
-                CheckTimesText.of(running, new Eta.Expected(NOW.minusSeconds(61)), false, NOW));
+                "running 1m 30s  ·      overdue",
+                CheckTimesText.lined(running, new Eta.Expected(NOW.minusSeconds(61)), false, NOW));
     }
 
     @Test
@@ -117,8 +119,8 @@ class CheckTimesTextTest {
     @Test
     void aQueuedCheckCanBeDue() {
         assertEquals(
-                "queued 2m · due",
-                CheckTimesText.of(check(Option.none()), new Eta.Expected(NOW.minusSeconds(10)), false, NOW));
+                "queued 2m       ·          due",
+                CheckTimesText.lined(check(Option.none()), new Eta.Expected(NOW.minusSeconds(10)), false, NOW));
     }
 
     @Test
@@ -129,8 +131,10 @@ class CheckTimesTextTest {
                 Option.of(new CheckRun(
                         1, "Build", "", Option.none(), Option.none(), 1, NOW.minusSeconds(200), 2, "push")));
 
-        assertEquals("queued 2m · ? left", CheckTimesText.of(check(Option.none()), new Eta.Unknown(), false, NOW));
-        assertEquals("queued · ? left", CheckTimesText.of(rerun, new Eta.Unknown(), false, NOW));
+        assertEquals(
+                "queued 2m       ·       ? left",
+                CheckTimesText.lined(check(Option.none()), new Eta.Unknown(), false, NOW));
+        assertEquals("queued          ·       ? left", CheckTimesText.lined(rerun, new Eta.Unknown(), false, NOW));
     }
 
     /**

@@ -158,19 +158,11 @@ public final class CheckTimesText {
     }
 
     /**
-     * How {@code check}, which is not done, is doing at {@code now}, with {@code eta}: "running 2m · ~2m 5s left",
-     * "queued 1m 30s · ~4m left", "running 2m 30s · due", "running 3m · overdue"; only "running" for a commit status, which
-     * is not timed.
-     */
-    public static String of(Check check, Eta eta, boolean learning, Instant now) {
-        return state(check, now)
-                + remaining(check, eta, learning, now).map(left -> " · " + left).getOrElse("");
-    }
-
-    /**
-     * Like {@link #of}, in two columns as wide as those of a check that runs can get, so those of checks under each
-     * other line up and keep their place as the seconds move on: how long it runs on the left, how long it takes still
-     * on the right, {@code running 45s     ·     ~1m left}. Wider only when one is wider still, as one of hours.
+     * How {@code check}, which is not done, is doing at {@code now}, with {@code eta}, in two columns as wide as those
+     * of a check that runs can get, so those of checks under each other line up and keep their place as the seconds
+     * move on: how long it runs or is queued on the left, how long it takes still on the right,
+     * {@code running 45s     ·     ~1m left}, {@code queued 2m       ·          due}; only {@code running} for a commit
+     * status, which is not timed. Wider only when one is wider still, as one of hours.
      */
     public static String lined(Check check, Eta eta, boolean learning, Instant now) {
         String state = state(check, now);
