@@ -212,7 +212,7 @@ final class HandOverBackend implements Backend {
             // Rounded up: rounded down, the last part of a millisecond is read in slices of 0, over and over until the
             // deadline, at every read that waits in vain.
             int slice =
-                    (int) Math.min(SLICE_MILLIS, Math.max((deadline - System.nanoTime() + 999_999L) / 1_000_000L, 0));
+                    (int) Math.min(SLICE_MILLIS, Math.max(Math.ceilDiv(deadline - System.nanoTime(), 1_000_000L), 0));
             reading.lock();
             try {
                 if (!keysPaused) {
