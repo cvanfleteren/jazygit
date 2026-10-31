@@ -241,6 +241,31 @@ class PlacedRemarksTest {
     }
 
     @Test
+    void theThreadsOfARenamedFileByEitherPathKeepTheirOrder() {
+        UnifiedDiff renamed = UnifiedDiff.parse("""
+                diff --git a/old.txt b/new.txt
+                similarity index 80%
+                rename from old.txt
+                rename to new.txt
+                --- a/old.txt
+                +++ b/new.txt
+                @@ -1 +1 @@
+                -x
+                +y
+                """);
+        // Outdated, so all three are listed at the end of the file, where they share one list.
+        ReviewThread firstByOld = thread("old.txt", Side.LEFT, Option.none(), Option.none());
+        ReviewThread byNew = thread("new.txt", Side.RIGHT, Option.none(), Option.none());
+        ReviewThread secondByOld = thread("old.txt", Side.RIGHT, Option.none(), Option.none());
+
+        FileRemarks file = PlacedRemarks.place(renamed, List.of(firstByOld, byNew, secondByOld))
+                .files()
+                .head();
+
+        assertEquals(List.of(firstByOld, byNew, secondByOld), file.unplaced());
+    }
+
+    @Test
     void aThreadOnARenamedFileHasItsNewPathOnEitherSideAsGitHubGivesIt() {
         UnifiedDiff renamed = UnifiedDiff.parse("""
                 diff --git a/old.txt b/new.txt

@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.state;
 import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.List;
+import io.vavr.collection.Seq;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.CommentRights;
@@ -88,6 +89,15 @@ class DiffStopsTest {
     }
 
     @Test
+    void aStopIsFoundAmongTheStopsByItsAnchor() {
+        DiffStops stops = DiffStops.of(DIFF, List.empty(), true, Collapsed.NONE);
+
+        assertEquals(0, stops.indexOf(LEAD));
+        assertEquals(3, stops.indexOf(line(Side.LEFT, 2)));
+        assertEquals(-1, stops.indexOf(line(Side.LEFT, 40)));
+    }
+
+    @Test
     void eachThreadIsAStopWhereItIsDrawn() {
         ReviewThread onFile = thread("F", Subject.FILE, Option.none());
         ReviewThread onTwo = thread("L", Subject.LINE, Option.of(2));
@@ -112,7 +122,7 @@ class DiffStopsTest {
 
     @Test
     void anAnchorThatIsAStopIsItsOwnStop() {
-        List<Anchor> stops =
+        Seq<Anchor> stops =
                 DiffStops.of(DIFF, List.empty(), true, Collapsed.NONE).anchors();
 
         assertEquals(Option.of(line(Side.LEFT, 2)), DiffStops.nearest(stops, line(Side.LEFT, 2)));
@@ -121,7 +131,7 @@ class DiffStopsTest {
 
     @Test
     void aLineThatIsGoneGoesToTheClosestOfItsSideElseToItsFileElseToTheFirst() {
-        List<Anchor> stops =
+        Seq<Anchor> stops =
                 DiffStops.of(DIFF, List.empty(), true, Collapsed.NONE).anchors();
 
         assertEquals(Option.of(line(Side.RIGHT, 10)), DiffStops.nearest(stops, line(Side.RIGHT, 8)));
@@ -133,7 +143,7 @@ class DiffStopsTest {
 
     @Test
     void aThreadIsFoundByItsIdWhereverItIsElseItGoesToItsLine() {
-        List<Anchor> stops = DiffStops.of(DIFF, List.of(thread("L", Subject.LINE, Option.of(3))), true, Collapsed.NONE)
+        Seq<Anchor> stops = DiffStops.of(DIFF, List.of(thread("L", Subject.LINE, Option.of(3))), true, Collapsed.NONE)
                 .anchors();
 
         assertEquals(
@@ -202,9 +212,9 @@ class DiffStopsTest {
     @Test
     void aCommentIsFoundByItsIdElseItGoesToItsThread() {
         Anchor.Thread thread = new Anchor.Thread("L", Option.of(line(Side.RIGHT, 2)));
-        List<Anchor> open = DiffStops.of(DIFF, List.of(replied("L", false)), true, Collapsed.NONE)
+        Seq<Anchor> open = DiffStops.of(DIFF, List.of(replied("L", false)), true, Collapsed.NONE)
                 .anchors();
-        List<Anchor> collapsed = DiffStops.of(
+        Seq<Anchor> collapsed = DiffStops.of(
                         DIFF,
                         List.of(replied("L", false)),
                         true,

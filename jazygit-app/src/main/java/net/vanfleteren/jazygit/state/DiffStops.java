@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.state;
 
 import io.vavr.collection.List;
 import io.vavr.collection.Seq;
+import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff;
@@ -17,7 +18,7 @@ import net.vanfleteren.jazygit.state.PlacedRemarks.LineRemarks;
  *
  * @param stops the stops, in order
  */
-public record DiffStops(List<Stop> stops) {
+public record DiffStops(Vector<Stop> stops) {
 
     /**
      * The stops of {@code diff} with the review threads {@code threads} placed in it, on lines only when
@@ -29,7 +30,8 @@ public record DiffStops(List<Stop> stops) {
                 .zip(placed.files())
                 .zipWithIndex()
                 .flatMap(file -> file(file._1()._1(), file._1()._2(), file._2(), collapsed))
-                .prepend(new Stop(new Anchor.Lead(), Option.none(), Option.none())));
+                .prepend(new Stop(new Anchor.Lead(), Option.none(), Option.none()))
+                .toVector());
     }
 
     private static List<Stop> file(FileDiff file, FileRemarks remarks, int index, Collapsed collapsed) {
@@ -80,16 +82,23 @@ public record DiffStops(List<Stop> stops) {
     /**
      * The anchors of the stops, in order.
      */
-    public List<Anchor> anchors() {
+    public Vector<Anchor> anchors() {
         return stops.map(Stop::anchor);
+    }
+
+    /**
+     * Where among these stops the one that is {@code anchor} is; -1 when none is.
+     */
+    public int indexOf(Anchor anchor) {
+        return stops.indexWhere(stop -> stop.anchor().equals(anchor));
     }
 
     /**
      * The stop {@code at} is on now, if any: as {@link #nearest} finds it among these stops.
      */
     public Option<Stop> find(Anchor at) {
-        return nearest(anchors(), at)
-                .flatMap(found -> stops.find(stop -> stop.anchor().equals(found)));
+        Vector<Anchor> anchors = anchors();
+        return nearest(anchors, at).map(found -> stops.get(anchors.indexOf(found)));
     }
 
     /**

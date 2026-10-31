@@ -12,6 +12,7 @@ import io.vavr.control.Option;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
+import net.vanfleteren.jazygit.gh.model.ThreadsByPath;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
@@ -34,8 +35,8 @@ public class FilesPanel {
     private final Keymap keymap = Keymap.standard();
     // The trees' key handlers also see keys typed in other panes, so they must know whether the pane has focus.
     private boolean focused;
-    // The review threads of the pull request whose files are listed, as last rendered (ADR 55).
-    private List<ReviewThread> threads = List.empty();
+    // The review threads of the pull request whose files are listed, by their path, as last rendered (ADR 55).
+    private ThreadsByPath threads = ThreadsByPath.of(List.empty());
 
     /**
      * @param dispatch receives the messages for the user's actions, on the render thread
@@ -111,8 +112,7 @@ public class FilesPanel {
      * dimmed (ADR 57).
      */
     private StyledElement<?> drawCommitFile(FileTree.File<CommitFile> file) {
-        List<ReviewThread> on = threads.filter(
-                thread -> thread.isOn(file.entry().path(), file.entry().origin()));
+        List<ReviewThread> on = threads.on(file.entry().path(), file.entry().origin());
         int resolved = on.count(ReviewThread::resolved);
         return Toolkit.row(List.<StyledElement<?>>of(
                         Toolkit.text(file.entry().type().marker()).addClass(Theme.Classes.STAGED),
@@ -227,7 +227,8 @@ public class FilesPanel {
     public Panel render(Model model, String focusedId, String activeId) {
         focused = ID.equals(focusedId);
         boolean active = ID.equals(activeId);
-        threads = model.repoView().commitFiles().map(CommitFilesView::threads).getOrElse(List.empty());
+        threads = ThreadsByPath.of(
+                model.repoView().commitFiles().map(CommitFilesView::threads).getOrElse(List.empty()));
         return model.repoView()
                 .commitFiles()
                 .map(view -> Pane.bordered(
