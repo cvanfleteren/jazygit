@@ -97,3 +97,5 @@ Amended by ADR 55: the review threads, inline comments on the diff, show next to
 request.
 
 Amended by ADR 64: `d` deletes a comment of the conversation.
+
+Amended by ADR 65: `e` edits a comment of the conversation.
