@@ -5,10 +5,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.tamboui.terminal.TestBackend;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -60,6 +62,28 @@ class HandOverBackendTest {
                 terminal.rawOutput().indexOf("\u001b[?1004l")
                         > terminal.rawOutput().indexOf("\u001b[?1004h"),
                 terminal.rawOutput());
+    }
+
+    @Test
+    void aReadInWhichNoKeyComesWaitsForItOnce() throws IOException {
+        AtomicInteger reads = new AtomicInteger();
+        HandOverBackend backend = new HandOverBackend(
+                new TestBackend(80, 24) {
+                    @Override
+                    public int read(int timeoutMs) throws IOException {
+                        reads.incrementAndGet();
+                        try {
+                            Thread.sleep(timeoutMs);
+                        } catch (InterruptedException e) {
+                            throw new InterruptedIOException();
+                        }
+                        return NO_KEY;
+                    }
+                },
+                focused -> {});
+
+        assertEquals(NO_KEY, backend.read(40));
+        assertEquals(1, reads.get());
     }
 
     private static List<Integer> keys(HandOverBackend backend, int count) throws IOException {
