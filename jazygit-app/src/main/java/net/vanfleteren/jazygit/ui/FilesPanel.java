@@ -4,7 +4,9 @@ import dev.tamboui.toolkit.Toolkit;
 import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.elements.TreeElement;
+import dev.tamboui.tui.bindings.Actions;
 import dev.tamboui.tui.event.KeyCode;
+import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
@@ -37,7 +39,7 @@ public class FilesPanel {
 
     /**
      * @param dispatch receives the messages for the user's actions, on the render thread
-     * @param openDiff called when Enter is pressed on a file or directory, to move focus to its diff
+     * @param openDiff called when Enter or Right is pressed on a file or directory, to move focus to its diff
      */
     public FilesPanel(Consumer<Msg> dispatch, Runnable openDiff) {
         this(dispatch, openDiff, Theme.Highlights.DEFAULT);
@@ -61,15 +63,24 @@ public class FilesPanel {
                 FileTreeList::firstWithDiff);
         statusTree.onKey(PaneKeys.whileFocused(
                 () -> focused,
-                event -> event.code() == KeyCode.ENTER && statusTree.selected().isDefined()
+                event -> opensDiff(event, statusTree)
                         ? Option.of(openDiff)
                         : PaneKeys.sending(keymap.handle(Scopes.FILES, event, statusTree.selected()), dispatch)));
         commitTree.onKey(PaneKeys.whileFocused(
                 () -> focused,
-                event -> event.code() == KeyCode.ENTER && commitTree.selected().isDefined()
+                event -> opensDiff(event, commitTree)
                         ? Option.of(openDiff)
                         : PaneKeys.sending(
                                 keymap.handle(Scopes.COMMIT_FILES, event, commitTree.selected()), dispatch)));
+    }
+
+    /**
+     * Whether {@code event} moves the focus to the diff of what {@code tree} has highlighted: Enter does, and so does
+     * Right, except on a collapsed directory, which it expands as in any tree.
+     */
+    private static boolean opensDiff(KeyEvent event, FileTreeList<?> tree) {
+        return tree.selected().isDefined()
+                && (event.code() == KeyCode.ENTER || (event.matches(Actions.MOVE_RIGHT) && !tree.collapsedSelected()));
     }
 
     /**

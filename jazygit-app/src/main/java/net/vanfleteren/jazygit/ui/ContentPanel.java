@@ -472,13 +472,25 @@ public final class ContentPanel {
             state.scrollDown(at.row());
             state.scrollRight(at.column());
             boolean focused = id.equals(focusedId);
-            return element.onKeyEvent(event -> keys(event, focused, content))
+            boolean ofFiles = area.pane(model).equals(FilesPanel.ID);
+            return element.onKeyEvent(event -> keys(event, focused, ofFiles, content))
                     .onMouseEvent(event -> mouse(event, content));
         }
 
-        private EventResult keys(KeyEvent event, boolean focused, ScrolledContent content) {
+        /**
+         * @param ofFiles whether the area shows a diff of the files pane, which Left leaves as Escape does, once it
+         *                is scrolled all the way left: Right in the files pane moves into it
+         */
+        private EventResult keys(KeyEvent event, boolean focused, boolean ofFiles, ScrolledContent content) {
             // Key handlers also see keys typed elsewhere; the callback checks that an area has focus.
             if (event.code() == KeyCode.ESCAPE && leaveScrollArea.getAsBoolean()) {
+                return EventResult.HANDLED;
+            }
+            if (focused
+                    && ofFiles
+                    && event.matches(Actions.MOVE_LEFT)
+                    && element.state().scrollCol() == 0
+                    && leaveScrollArea.getAsBoolean()) {
                 return EventResult.HANDLED;
             }
             return focused && scroll(element.state(), event) ? scrolled(content) : EventResult.UNHANDLED;

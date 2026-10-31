@@ -182,6 +182,61 @@ class FilesPanelTest {
     }
 
     @Test
+    void rightMovesIntoTheDiffAsEnterDoesButFirstExpandsACollapsedDirectory() throws Exception {
+        java.util.concurrent.atomic.AtomicInteger opened = new java.util.concurrent.atomic.AtomicInteger();
+        FilesPanel opening = new FilesPanel(msg -> {}, opened::incrementAndGet);
+        Model model = TestModels.loaded(new FixedProvider(List.of(
+                Fixtures.fileEntry("net/vanfleteren/A.java", ChangeType.MODIFIED),
+                Fixtures.fileEntry("net/vanfleteren/B.java", ChangeType.MODIFIED))));
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> opening.render(model, FilesPanel.ID))) {
+            SettledPilot.focus(testRunner, FilesPanel.ID);
+            RenderedText.of(testRunner, () -> opening.tree().selected(1));
+            SettledPilot.of(testRunner).press(KeyCode.LEFT);
+            SettledPilot.of(testRunner).press(KeyCode.RIGHT);
+            SettledPilot.of(testRunner).pause();
+            assertTrue(opening.tree().selectedNode().isExpanded());
+            assertEquals(0, opened.get());
+
+            SettledPilot.of(testRunner).press(KeyCode.RIGHT);
+            SettledPilot.of(testRunner).press(KeyCode.DOWN);
+            SettledPilot.of(testRunner).press(KeyCode.RIGHT);
+            SettledPilot.of(testRunner).press(KeyCode.ENTER);
+            SettledPilot.of(testRunner).pause();
+            assertEquals(3, opened.get());
+
+            SettledPilot.of(testRunner).quit();
+        }
+    }
+
+    @Test
+    void rightMovesIntoTheDiffOfAFileOfACommitAsEnterDoesButFirstExpandsACollapsedDirectory() throws Exception {
+        java.util.concurrent.atomic.AtomicInteger opened = new java.util.concurrent.atomic.AtomicInteger();
+        FilesPanel opening = new FilesPanel(msg -> {}, opened::incrementAndGet);
+        Model loaded = loaded(opened(TestModels.loaded(new FixedProvider(List.of()))), MODEL_AND_TEST);
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> opening.render(loaded, FilesPanel.ID))) {
+            SettledPilot.focus(testRunner, FilesPanel.ID);
+            RenderedText.of(testRunner, () -> opening.render(loaded, FilesPanel.ID));
+            RenderedText.of(testRunner, () -> opening.commitTree().selected(0));
+            SettledPilot.of(testRunner).press(KeyCode.LEFT);
+            SettledPilot.of(testRunner).press(KeyCode.RIGHT);
+            SettledPilot.of(testRunner).pause();
+            assertTrue(opening.commitTree().selectedNode().isExpanded());
+            assertEquals(0, opened.get());
+
+            SettledPilot.of(testRunner).press(KeyCode.RIGHT);
+            SettledPilot.of(testRunner).press(KeyCode.DOWN);
+            SettledPilot.of(testRunner).press(KeyCode.RIGHT);
+            SettledPilot.of(testRunner).press(KeyCode.ENTER);
+            SettledPilot.of(testRunner).pause();
+            assertEquals(3, opened.get());
+
+            SettledPilot.of(testRunner).quit();
+        }
+    }
+
+    @Test
     void whenTheSelectedFileIsGoneTheNextOneIsSelected() throws Exception {
         assertEquals("c.txt", selectedAfter("b.txt", List.of("a.txt", "b.txt", "c.txt"), List.of("a.txt", "c.txt")));
     }
