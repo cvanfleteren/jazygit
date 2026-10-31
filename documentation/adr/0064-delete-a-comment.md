@@ -92,9 +92,11 @@ repository:
 - So the remarks of the tree have a version, and so have the comments of the popup, which goes up each time jazygit
   changes them itself: once a delete is taken, and later an edit. A read holds the version it started at, and gives
   it back with what it read (`LoadReviewRemarks` and `RemarksLoaded`, `LoadComments` and `Loaded`). One with an older
-  version than the model is dropped, and read again at the version now, unless such a read runs already, as ADR 49 and
-  ADR 56 do with the commits ahead and the distances to the bases. The read again settles the threads the dropped one
-  was to settle too (ADR 60), so that what was sent for them does not stay `· sending…`.
+  version than the model is dropped, and always read again at the version now. The read again settles the threads the
+  dropped one was to settle too (ADR 60), so that what was sent for them does not stay `· sending…`.
+- Not: read again only when no read at the version now runs already, as ADR 49 and ADR 56 do with the commits ahead
+  and the distances to the bases. Their reads carry nothing of their own; these carry the threads they settle, which
+  only they hold: a dropped read not read again would lose them, and the model does not know which reads run.
 - Not: the ids deleted kept as long as the tree is open, and taken out of each read: an edit would need what it
   changed kept as well. Not: reading again after each delete: only a read that met one is read again.
 
@@ -118,7 +120,8 @@ repository:
 
 - A comment can be deleted without the browser, from the diff or the conversation.
 - Nothing deletes a whole thread at once: one comment at a time.
-- An admin deletes the comments of others in the browser only.
+- An admin deletes the comments of others in the browser only. And in the comments popup, `d` is offered on what the
+  viewer wrote, though GitHub may refuse it, as on a locked conversation: its refusal is then shown.
 - What is deleted is not read again: comments written by others meanwhile show after `R`. Only a read that was under
   way while a delete was taken costs a read more.
 - Editing a comment can follow by the same ids, rights and keys' rules.
