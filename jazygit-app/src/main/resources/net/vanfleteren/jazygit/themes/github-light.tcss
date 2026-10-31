@@ -1,0 +1,132 @@
+/*
+ * The palette of GitHub's light theme (Primer's "light default"). Its translucent backgrounds, such as that
+ * of a selection, are laid over the canvas here, as a terminal has no transparency.
+ */
+$fg: #1f2328;
+$bg: #ffffff;
+$subtle: #f6f8fa;
+$border: #d0d7de;
+$accent: #0969da;
+$muted: #656d76;
+$selection: #bbdfff;
+$added: #1a7f37;
+$removed: #d1242f;
+$attention: #9a6700;
+$done: #8250df;
+
+* {
+    color: $fg;
+    background: $bg;
+}
+
+Panel, TextInputElement, TextAreaElement, RichTextAreaElement {
+    border-type: rounded;
+    border-color: $border;
+}
+
+/* The pane in use, the area of the content panel that has the focus, and the field of a popup that has it. */
+Panel.focused, RichTextAreaElement:focus, TextInputElement:focus, TextAreaElement:focus {
+    border-color: $accent;
+}
+
+/* Popups, which otherwise take the terminal's own colour. */
+DialogElement {
+    border-color: $accent;
+}
+
+/*
+ * The highlighted row: in the left pane in use, and in popups; in the other left panes it is hidden, as the
+ * empty rule says. Only what these rules declare themselves is laid over the row.
+ */
+ListElement-item:selected, TreeElement-node:selected, .selection {
+    background: $selection;
+}
+
+.inactive-selection {
+}
+
+/*
+ * Behind an open popup, text in the plain colour takes this one; the rest is dimmed by the terminal, which
+ * not every terminal does for its default colour.
+ */
+.backdrop { color: #8c959f; }
+
+.bold { text-style: bold; }
+.dim { color: $muted; }
+.error { color: $removed; }
+.notice { color: $attention; }
+.in-progress { color: $removed; text-style: bold; }
+.disabled { color: $muted; text-style: crossed-out; }
+.staged { color: $added; }
+.unstaged { color: $removed; }
+.spinner { color: $done; }
+.ahead { color: $added; }
+.behind { color: $removed; }
+.gone { color: $removed; }
+.pull-request { color: $accent; }
+.unseen { color: $attention; text-style: bold; }
+.checks-passed { color: $added; }
+.checks-failed { color: $removed; }
+.checks-running { color: $attention; }
+.review-approved { color: $added; }
+.review-changes { color: $removed; }
+.repo-branch { color: $accent; }
+.repo-location { color: $done; }
+.current { color: $attention; text-style: bold; }
+
+Span.diff-header { color: $fg; text-style: bold; }
+Span.diff-added { color: $added; }
+Span.diff-removed { color: $removed; }
+Span.diff-hunk { color: $muted; background: #ddf4ff; }
+/* The rich view of a diff (ADR 44): a bar for each file, the line numbers, and the changed lines and words. */
+Span.diff-file-header { color: $fg; background: $subtle; text-style: bold; }
+Span.diff-line-number { color: $muted; }
+/*
+ * The review remarks of a pull request in its diff (ADR 55): their rule and their marks in the gutter, and
+ * the header of each comment: a band behind it, and its author.
+ */
+Span.diff-thread { color: $attention; }
+Span.diff-thread-header { background: $subtle; }
+Span.diff-thread-author { color: $fg; text-style: bold; }
+Span.diff-cursor { background: $selection; }
+Span.diff-added-line { color: $fg; background: #e6ffec; }
+Span.diff-added-word { color: $fg; background: #abf2bc; }
+Span.diff-removed-line { color: $fg; background: #ffebe9; }
+Span.diff-removed-word { color: $fg; background: #ffcdcd; }
+
+/* The code of the rich view, by its syntax (ADR 53), in the colours of GitHub's code view. */
+Span.syntax-keyword { color: #cf222e; }
+Span.syntax-string { color: #0a3069; }
+Span.syntax-comment { color: #6e7781; }
+Span.syntax-number { color: #0550ae; }
+
+Span.current-branch { color: $attention; text-style: bold; }
+Span.sha { color: $accent; }
+Span.tag { color: $added; }
+Span.copied { color: $accent; text-style: bold; }
+Span.bold { text-style: bold; }
+
+/* The draft box of a new pull request, when it has the focus: reversed, as a cursor. */
+.checkbox:focus { text-style: reversed; }
+
+/* The comments on a pull request, written in Markdown. */
+MarkdownElement {
+    heading-1-color: $fg;
+    heading-1-text-style: bold;
+    heading-2-color: $fg;
+    heading-2-text-style: bold;
+    heading-3-text-style: bold;
+    heading-4-text-style: bold;
+    heading-5-text-style: bold;
+    heading-6-text-style: bold;
+    link-color: $accent;
+    link-text-style: underlined;
+    inline-code-color: #0a3069;
+    code-block-color: $fg;
+    blockquote-color: $muted;
+    blockquote-text-style: italic;
+    list-marker-color: $muted;
+    horizontal-rule-color: $border;
+    task-checked-color: $added;
+    html-color: $muted;
+}

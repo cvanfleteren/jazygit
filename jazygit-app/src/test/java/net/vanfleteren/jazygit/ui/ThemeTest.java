@@ -205,11 +205,13 @@ class ThemeTest {
     }
 
     @Test
-    void theLightThemeKeepsPlainTextOnTheHighlightedRowAsItIs() {
-        var engine = Theme.createEngine().get();
-        Theme.activate(engine, ThemeName.LIGHT);
+    void theLightThemesKeepPlainTextOnTheHighlightedRowAsItIs() {
+        for (ThemeName name : java.util.List.of(ThemeName.LIGHT, ThemeName.GITHUB_LIGHT)) {
+            var engine = Theme.createEngine().get();
+            Theme.activate(engine, name);
 
-        assertTrue(Theme.selectedText(engine).fg().isEmpty());
+            assertTrue(Theme.selectedText(engine).fg().isEmpty(), name.id());
+        }
     }
 
     @Test

@@ -39,6 +39,10 @@ public enum ThemeName {
      */
     GITHUB_DARK("github-dark"),
     /**
+     * The colours of GitHub's light theme, on white.
+     */
+    GITHUB_LIGHT("github-light"),
+    /**
      * No styling at all: the terminal's own colours, as the UI is drawn without a theme.
      */
     NONE("none");
