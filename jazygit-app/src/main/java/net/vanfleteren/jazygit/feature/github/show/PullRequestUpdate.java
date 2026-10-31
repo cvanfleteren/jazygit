@@ -54,8 +54,6 @@ public final class PullRequestUpdate {
             case PullRequestMsg.DetailsLoaded(int number, long read, var details) ->
                 filesIfWanted(
                         model,
-                        number,
-                        read,
                         CheckTimesUpdate.read(
                                 Next.of(shown(
                                         model.mapGitHub(gitHub ->
@@ -262,8 +260,14 @@ public final class PullRequestUpdate {
                 .map(known -> model.gitHub()
                         .pullRequest(known)
                         .map(pr -> show(model, branch, pr, false))
-                        .getOrElse(() -> pullRequestsUnknown(model)
-                                .getOrElse(() -> CreatePullRequestUpdate.askPushed(model, known))))
+                        // Without the pull requests it is unknown whether there is one to open.
+                        .getOrElse(() -> model.gitHub().pullRequestsFailure().isDefined()
+                                        || model.gitHub().pullRequests().isEmpty()
+                                ? Next.of(model.fail(model.gitHub()
+                                        .pullRequestsFailure()
+                                        .<AppError>map(AppError.PullRequestsUnavailable::new)
+                                        .getOrElse(AppError.PullRequestsNotRead::new)))
+                                : CreatePullRequestUpdate.askPushed(model, known)))
                 .getOrElse(() -> Next.of(model));
     }
 
@@ -271,17 +275,18 @@ public final class PullRequestUpdate {
      * Shows the files the branch changes (ADR 61). With an open pull request, those of the pull request, at the
      * commits the pull requests were listed with; when those are not known, once its dialog read them, which it shows
      * meanwhile, and which stays, to say so, when they cannot be shown. Without one, as far as is known, those against
-     * its base.
+     * its base. An error shown before goes, as the files are asked for anew.
      */
     private static Next filesRequested(Model model, BranchName branch) {
-        return model.repo()
+        Model cleared = model.clearError();
+        return cleared.repo()
                 .branch(branch)
-                .flatMap(known -> model.gitHub().pullRequest(known))
+                .flatMap(known -> cleared.gitHub().pullRequest(known))
                 .map(pr -> pr.commits()
                         .flatMap(listed -> commits(pr.number(), listed))
-                        .map(commits -> files(model, commits))
-                        .getOrElse(() -> show(model, branch, pr, true)))
-                .getOrElse(() -> CommitFilesUpdate.againstBase(model, branch));
+                        .map(commits -> files(cleared, commits))
+                        .getOrElse(() -> show(cleared, branch, pr, true)))
+                .getOrElse(() -> CommitFilesUpdate.againstBase(cleared, branch));
     }
 
     /**
@@ -305,26 +310,14 @@ public final class PullRequestUpdate {
     }
 
     /**
-     * Without the pull requests it is unknown whether a branch has one: the error that says so, when they are not
-     * known.
+     * {@code shown} going on to the files of the pull request when its dialog in {@code before} waited to show them,
+     * as f on its branch asked. Only the read it waits for gives it its details, and so the commits to list them at,
+     * and taking that read ends the waiting: a read of another pull request, or another read of it, finds no commits,
+     * and lists nothing.
      */
-    private static Option<Next> pullRequestsUnknown(Model model) {
-        return Option.when(
-                model.gitHub().pullRequestsFailure().isDefined()
-                        || model.gitHub().pullRequests().isEmpty(),
-                () -> Next.of(model.fail(model.gitHub()
-                        .pullRequestsFailure()
-                        .<AppError>map(AppError.PullRequestsUnavailable::new)
-                        .getOrElse(AppError.PullRequestsNotRead::new))));
-    }
-
-    /**
-     * {@code shown} going on to the files of pull request {@code number} when its dialog in {@code before} waited for
-     * read {@code read} to show them, as f on its branch asked.
-     */
-    private static Next filesIfWanted(Model before, int number, long read, Next shown) {
+    private static Next filesIfWanted(Model before, Next shown) {
         return before.popup(PullRequestPopup.class)
-                .filter(popup -> popup.filesWanted() && popup.number() == number && popup.read() == read)
+                .filter(PullRequestPopup::filesWanted)
                 .map(popup -> {
                     Next files = update(shown.model(), new PullRequestMsg.FilesChosen());
                     return new Next(files.model(), shown.cmds().appendAll(files.cmds()));

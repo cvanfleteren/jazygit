@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.feature.branch.checkout.SwitchWorktreePopup;
 import net.vanfleteren.jazygit.feature.branch.push.PushCmd.Push;
 import net.vanfleteren.jazygit.feature.branch.push.PushCmd.PushSettingUpstream;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesCmd;
+import net.vanfleteren.jazygit.feature.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.feature.fetch.FetchCmd;
 import net.vanfleteren.jazygit.feature.github.browse.BrowsePullRequestCmd;
 import net.vanfleteren.jazygit.feature.github.checkout.CheckoutPullRequestCmd;
@@ -1469,9 +1470,12 @@ class PullRequestUpdateTest {
     void fOnABranchWithoutAPullRequestShowsItsFilesAgainstItsBase() {
         CommitFilesView.Changes of = new CommitFilesView.Changes.OfBranch(
                 UNPUSHED.name(), new Cmd.LoadAhead.Base(new BranchRef.Local(MAIN.name()), MAIN.tip()), UNPUSHED.tip());
-        // Also when it is not known whether it has one.
+        // Also when it is not known whether it has one: the pull requests are not read yet, or reading them failed.
         for (Model shown : List.of(
-                withPr(), localBranchesRead(loaded(), List.of(UNPUSHED, MAIN)).model())) {
+                withPr(),
+                localBranchesRead(loaded(), List.of(UNPUSHED, MAIN)).model(),
+                Update.update(model(), new PullRequestsMsg.LoadFailed(refused("gh: offline")))
+                        .model())) {
             Next opened = Update.update(shown, new PullRequestMsg.FilesRequested(UNPUSHED.name()));
 
             assertEquals(
@@ -1491,6 +1495,102 @@ class PullRequestUpdateTest {
                 opened.model().outcome().error());
         assertEquals(Option.none(), opened.model().repoView().commitFiles());
         assertEquals(List.empty(), opened.cmds());
+    }
+
+    @Test
+    void theFilesOfABranchShownTakeTheErrorBeforeAway() {
+        Model failed = Update.update(withPr(), new PullRequestMsg.FilesRequested(MAIN.name()))
+                .model();
+
+        Next opened = Update.update(failed, new PullRequestMsg.FilesRequested(UNPUSHED.name()));
+
+        assertEquals(Option.none(), opened.model().outcome().error());
+        assertTrue(opened.model().repoView().commitFiles().isDefined());
+    }
+
+    /**
+     * {@code model} once the details of pull request 42 come back from read {@code read}, open at known commits.
+     */
+    private static Next readAt(Model model, long read) {
+        return Update.update(
+                model, new PullRequestMsg.DetailsLoaded(42, read, readAtCommits(PullRequestDetails.State.OPEN)));
+    }
+
+    @Test
+    void theFilesAreNotShownWhenTheDialogWasClosedBeforeItWasRead() {
+        Model requested = Update.update(withPr(), new PullRequestMsg.FilesRequested(FEATURE))
+                .model();
+        Model closed = Update.update(requested, new Msg.PopupDismissed(PullRequestPopup.class))
+                .model();
+
+        Next read = readAt(closed, lastRead(requested));
+
+        assertEquals(Option.none(), read.model().repoView().commitFiles());
+        assertEquals(Option.none(), read.model().popup(PullRequestPopup.class));
+        assertFalse(read.cmds().exists(cmd -> cmd instanceof Cmd.LoadCommitFiles));
+    }
+
+    @Test
+    void theFilesAreNotShownWhenTheDialogOfAnotherPullRequestWasOpenedMeanwhile() {
+        Model both = Update.update(
+                        model(),
+                        new PullRequestsMsg.Loaded(
+                                List.of(FEATURE_PR, new PullRequest(43, "ahead", false, Checks.PASSING, Review.NONE))))
+                .model();
+        Model requested =
+                Update.update(both, new PullRequestMsg.FilesRequested(FEATURE)).model();
+        // Its files are asked for too, and wait for its own details.
+        Model other = Update.update(requested, new PullRequestMsg.FilesRequested(AHEAD.name()))
+                .model();
+
+        Next read = readAt(other, lastRead(requested));
+
+        assertEquals(Option.none(), read.model().repoView().commitFiles());
+        PullRequestPopup shown = read.model().popup(PullRequestPopup.class).get();
+        assertEquals(43, shown.number());
+        assertTrue(shown.filesWanted());
+    }
+
+    @Test
+    void theFilesAreShownOnlyOnceTheReadTheDialogWaitsForIsBack() {
+        Model first = Update.update(withPr(), new PullRequestMsg.FilesRequested(FEATURE))
+                .model();
+        // Closed and asked for again: a newer read of the same pull request is waited for.
+        Model again = Update.update(
+                        Update.update(first, new Msg.PopupDismissed(PullRequestPopup.class))
+                                .model(),
+                        new PullRequestMsg.FilesRequested(FEATURE))
+                .model();
+
+        Next older = readAt(again, lastRead(first));
+
+        assertEquals(Option.none(), older.model().repoView().commitFiles());
+        assertTrue(older.model().popup(PullRequestPopup.class).get().filesWanted());
+
+        Next newer = readAt(older.model(), lastRead(again));
+
+        assertTrue(newer.model().repoView().commitFiles().isDefined());
+        assertEquals(Option.none(), newer.model().popup(PullRequestPopup.class));
+    }
+
+    @Test
+    void onceItsDetailsWereReadThePullRequestOfABranchShowsItsFilesAtOnce() {
+        Model requested = Update.update(withPr(), new PullRequestMsg.FilesRequested(FEATURE))
+                .model();
+        Model shown = readAt(requested, lastRead(requested)).model();
+        Model closed = Update.update(shown, new CommitFilesMsg.Closed()).model();
+
+        Next again = Update.update(closed, new PullRequestMsg.FilesRequested(FEATURE));
+
+        assertEquals(Option.none(), again.model().popup(PullRequestPopup.class));
+        assertEquals(
+                Option.of(CommitFilesView.of(
+                        new CommitFilesView.Changes.OfPullRequest(new PullRequestCommits(
+                                42, "owner/repo", "github.com", new Sha(BASE_OID), new Sha(HEAD_OID))),
+                        "branches",
+                        "files")),
+                again.model().repoView().commitFiles());
+        assertFalse(again.cmds().exists(cmd -> cmd instanceof LoadPullRequestDetails));
     }
 
     @Test
