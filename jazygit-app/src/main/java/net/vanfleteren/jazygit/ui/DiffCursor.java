@@ -277,7 +277,7 @@ record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int stop, 
                 })
                 : switch (on.mark().anchor()) {
                     case Anchor.Lead ignored -> lines;
-                    case Anchor.Thread ignored ->
+                    case Anchor.Thread _, Anchor.Comment _ ->
                         List.range(
                                         first,
                                         Math.min(lines.size(), first + on.mark().lines()))

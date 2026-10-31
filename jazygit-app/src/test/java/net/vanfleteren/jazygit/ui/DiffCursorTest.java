@@ -174,6 +174,28 @@ class DiffCursorTest {
         assertEquals(FIRST, onTwoThreads(TWO).previousThread().get().anchor());
     }
 
+    @Test
+    void aCommentIsAStopThatTheNextAndThePreviousThreadGoFrom() {
+        Anchor reply = new Anchor.Comment("R", (Anchor.Thread) FIRST);
+        Vector<RichDiff.Stop> stops = Vector.of(
+                stop(FILE, 1, 0),
+                line(ONE, 1),
+                stop(FIRST, 1, 2),
+                stop(reply, 1, 3),
+                line(TWO, 4),
+                stop(LAST, 1, 5),
+                line(THREE, 6));
+        DiffCursor onReply =
+                DiffCursor.of(stops, 7, 20, 0, Option.of(reply), Option.none()).get();
+
+        // n and N go from thread to thread, not from comment to comment (ADR 62).
+        assertEquals(LAST, onReply.nextThread().get().anchor());
+        assertEquals(FIRST, onReply.previousThread().get().anchor());
+        assertEquals(reply, onReply.up().down().anchor());
+        assertEquals(TWO, onReply.down().anchor());
+        assertEquals(FIRST, onReply.up().anchor());
+    }
+
     private static DiffCursor onTwoThreads(Anchor anchor) {
         return DiffCursor.of(TWO_THREADS, 6, 20, 0, Option.of(anchor), Option.none())
                 .get();

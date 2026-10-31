@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
+import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesCmd;
@@ -235,18 +236,111 @@ class ReviewUpdateTest {
     }
 
     @Test
-    void oneThreadIsOpenedAndClosedAgainstWhatTIsForAllUntilTIsPressed() {
+    void aThreadOrACommentIsCollapsedAndOpenedAgainstItsDefault() {
         Model opened = Update.update(files(), new ReviewMsg.ThreadToggled(at(onThread("T2"))))
                 .model();
-        assertEquals(HashSet.of("T2"), view(opened).toggled());
+        assertEquals(new Collapsed(HashSet.of("T2")), view(opened).collapsed());
+        assertFalse(view(opened).collapsed().thread(SETTLED));
 
         Model closed = Update.update(opened, new ReviewMsg.ThreadToggled(at(onThread("T2"))))
                 .model();
-        assertEquals(HashSet.empty(), view(closed).toggled());
+        assertEquals(Collapsed.NONE, view(closed).collapsed());
 
-        Model all = Update.update(opened, new CommitFilesMsg.RemarksToggled()).model();
-        assertEquals(HashSet.empty(), view(all).toggled());
-        assertTrue(view(all).opened());
+        // An unresolved thread is collapsed too, and a comment on its own, by its id (ADR 62).
+        Model collapsed = Update.update(files(), new ReviewMsg.ThreadToggled(at(onThread("T1"))))
+                .model();
+        assertTrue(view(collapsed).collapsed().thread(OPEN));
+        Model comment = Update.update(files(), new ReviewMsg.ThreadToggled(at(new Anchor.Comment("R", (Anchor.Thread)
+                        onThread("T1")))))
+                .model();
+        assertEquals(new Collapsed(HashSet.of("R")), view(comment).collapsed());
+
+        assertEquals(
+                Option.of(new AppError.CannotReview(Why.NOT_ON_THREAD)),
+                error(Update.update(files(), new ReviewMsg.ThreadToggled(at(line(Side.RIGHT, 2))))
+                        .model()));
+    }
+
+    private static CommitFilesMsg.RemarksLoaded readAgain(Set<String> settled, ReviewThread... threads) {
+        return new CommitFilesMsg.RemarksLoaded(
+                7,
+                new ReviewRemarks(
+                        PullRequestDetails.State.OPEN, GhCommit.parse(HEAD), GhCommit.parse(BASE), List.of(threads)),
+                settled);
+    }
+
+    @Test
+    void aThreadResolvedIsAsItWasReadUntilTheThreadsReadAgainShowItResolved() {
+        Model toggled = Update.update(
+                        Update.update(files(), new ReviewMsg.ThreadToggled(at(onThread("T1"))))
+                                .model(),
+                        new ReviewMsg.ThreadToggled(at(new Anchor.Comment("R", (Anchor.Thread) onThread("T1")))))
+                .model();
+        Next resolving = Update.update(toggled, new ReviewMsg.ResolveAsked(at(onThread("T1"))));
+        ReviewCmd.Resolve resolve = (ReviewCmd.Resolve) resolving.cmds().head();
+
+        // Until the threads are read again, the thread is drawn as it was read: still collapsed (ADR 62).
+        Model resolved = Update.update(resolving.model(), new ReviewMsg.Resolved(resolve, List.empty()))
+                .model();
+        assertEquals(new Collapsed(HashSet.of("T1", "R")), view(resolved).collapsed());
+        assertTrue(view(resolved).collapsed().thread(OPEN));
+
+        // Read again resolved, it is as a resolved thread starts: collapsed, its flip dropped; its comments stay.
+        ReviewThread done = thread("T1", true, ReviewThread.Rights.ALL);
+        Model read = Update.update(resolved, readAgain(HashSet.of("T1"), done, SETTLED))
+                .model();
+        assertEquals(new Collapsed(HashSet.of("R")), view(read).collapsed());
+        assertTrue(view(read).collapsed().thread(done));
+
+        // A read again that fails keeps the flip, as the thread is still drawn as it was read.
+        Model failed = Update.update(
+                        resolved,
+                        new CommitFilesMsg.RemarksFailed(
+                                7, new Failure.Bug(new RuntimeException("offline")), HashSet.of("T1")))
+                .model();
+        assertEquals(new Collapsed(HashSet.of("T1", "R")), view(failed).collapsed());
+        Model notSent = Update.update(
+                        resolving.model(),
+                        new ReviewMsg.ResolveFailed(resolve, new Failure.Bug(new RuntimeException("offline"))))
+                .model();
+        assertEquals(new Collapsed(HashSet.of("T1", "R")), view(notSent).collapsed());
+    }
+
+    @Test
+    void aThreadResolvedOrUnresolvedElsewhereIsAsItStartsOnceReadAgain() {
+        Model opened = Update.update(files(), new ReviewMsg.ThreadToggled(at(onThread("T2"))))
+                .model();
+        assertEquals(new Collapsed(HashSet.of("T2")), view(opened).collapsed());
+
+        // Read again as it was, the flip stays.
+        assertEquals(
+                new Collapsed(HashSet.of("T2")),
+                view(Update.update(opened, readAgain(HashSet.empty(), OPEN, SETTLED))
+                                .model())
+                        .collapsed());
+        // Unresolved by someone else and read again with R, it is open as an unresolved thread starts.
+        ReviewThread unresolved = thread("T2", false, ReviewThread.Rights.ALL);
+        Model read = Update.update(opened, readAgain(HashSet.empty(), OPEN, unresolved))
+                .model();
+        assertEquals(Collapsed.NONE, view(read).collapsed());
+        assertFalse(view(read).collapsed().thread(unresolved));
+    }
+
+    @Test
+    void theKeysOfAThreadWorkOnEachOfItsComments() {
+        Anchor onComment = new Anchor.Comment("R", (Anchor.Thread) onThread("T1"));
+
+        assertEquals(
+                new Target.Reply("T1", "1"),
+                Update.update(files(), new ReviewMsg.ReplyAsked(at(onComment)))
+                        .model()
+                        .popup(ReviewPopup.class)
+                        .get()
+                        .target());
+        assertEquals(
+                List.of(new ReviewCmd.Resolve(7, "T1", true)),
+                Update.update(files(), new ReviewMsg.ResolveAsked(at(onComment)))
+                        .cmds());
     }
 
     @Test

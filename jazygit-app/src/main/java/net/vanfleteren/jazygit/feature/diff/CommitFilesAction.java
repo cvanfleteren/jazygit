@@ -44,9 +44,6 @@ public final class CommitFilesAction {
                     Scopes.COMMIT_FILES,
                     Binding.always(Keymap.ESCAPE, "help.commitFiles.close", CommitFilesMsg.Closed::new))
             // The review threads of a pull request (ADR 55); nothing for a commit or a stash.
-            .add(
-                    Scopes.COMMIT_FILES,
-                    Binding.always("t", "help.commitFiles.remarks", CommitFilesMsg.RemarksToggled::new))
             .add(Scopes.COMMIT_FILES, Binding.always("c", "help.commitFiles.listed", CommitFilesMsg.ListedCycled::new))
             .add(
                     Scopes.COMMIT_FILES,

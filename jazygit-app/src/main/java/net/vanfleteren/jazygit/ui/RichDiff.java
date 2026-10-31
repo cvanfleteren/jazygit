@@ -49,7 +49,7 @@ final class RichDiff {
      * review threads of a pull request, {@code remarks}, are drawn with it if it has them (ADR 55): each after its
      * line, which the gutter marks, one about a whole file under its bar, and the ones that cannot be placed at the
      * end of their file. It comes with where each stop of the cursor starts in the lines (ADR 60): the bar of each
-     * file, each line that has a side and a number, and each thread.
+     * file, each line that has a side and a number, each thread, and each comment of an open thread but its first.
      */
     static Drawn drawn(
             ParsedDiff diff,
@@ -64,9 +64,9 @@ final class RichDiff {
                                 .map(Option::some)
                                 .toVector())
                 .getOrElse(() -> Vector.fill(parsed.files().size(), Option::none));
-        RemarkLines.RemarkStyle style = remarks.map(shown ->
-                        new RemarkLines.RemarkStyle(shown.opened(), shown.toggled(), shown.sending(), shown.now()))
-                .getOrElse(() -> new RemarkLines.RemarkStyle(false, Instant.EPOCH));
+        RemarkLines.RemarkStyle style = remarks.map(
+                        shown -> new RemarkLines.RemarkStyle(shown.collapsed(), shown.sending(), shown.now()))
+                .getOrElse(() -> new RemarkLines.RemarkStyle(Instant.EPOCH));
         // Each file is measured on a thread of its own, and then each of its lines is drawn on one, so that a diff of
         // many files and one of a long file both hold up the render thread for less.
         List<Pending> pending = inParallel(
@@ -533,22 +533,25 @@ final class RichDiff {
         }
 
         /**
-         * The {@code blocks} of {@code threads}, with a blank line between two of them, the first line of each the
-         * start of its stop.
+         * The {@code blocks} of {@code threads}, with a blank line between two of them, the first line of each of
+         * their parts the start of its stop, as {@link DiffStops#anchors} gives them (ADR 62).
          */
-        private List<Marked> marked(List<ReviewThread> threads, Option<Anchor.OnLine> line, List<List<Line>> blocks) {
+        private List<Marked> marked(
+                List<ReviewThread> threads, Option<Anchor.OnLine> line, List<List<List<Line>>> blocks) {
             return threads.zip(blocks)
-                    .map(block -> block._2()
-                            .zipWithIndex()
-                            .map(drawn -> new Marked(
-                                    drawn._1(),
-                                    Option.when(
-                                            drawn._2() == 0,
-                                            () -> new Mark(
-                                                    new Anchor.Thread(block._1().id(), line),
-                                                    block._2().size(),
-                                                    indent + width,
-                                                    Option.none())))))
+                    .map(block -> DiffStops.anchors(block._1(), line, style.collapsed())
+                            .zip(block._2())
+                            .flatMap(part -> part._2()
+                                    .zipWithIndex()
+                                    .map(drawn -> new Marked(
+                                            drawn._1(),
+                                            Option.when(
+                                                    drawn._2() == 0,
+                                                    () -> new Mark(
+                                                            part._1(),
+                                                            part._2().size(),
+                                                            indent + width,
+                                                            Option.none()))))))
                     .intersperse(List.of(Marked.plain(Line.from(""))))
                     .flatMap(Function.identity());
         }

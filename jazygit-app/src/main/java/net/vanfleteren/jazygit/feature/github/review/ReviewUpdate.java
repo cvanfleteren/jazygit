@@ -54,7 +54,8 @@ public final class ReviewUpdate {
                                     !found._2().resolved());
                             return Update.start(sending(model.clearError(), set -> set.add(resolve.thread())), resolve);
                         });
-            // Opening one thread needs no more than the thread: a merged pull request's too.
+            // Collapsing a thread or a comment needs no more than the thread: a merged pull request's too. The first
+            // comment of a thread is the thread (ADR 62).
             case ReviewMsg.ThreadToggled(DiffCursorAt at) ->
                 pullRequestFiles(model)
                         .toEither(Why.NOT_READ)
@@ -62,13 +63,13 @@ public final class ReviewUpdate {
                         .flatMap(ReviewUpdate::notSending)
                         .fold(
                                 why -> Next.of(refused(model, why)),
-                                found -> Next.of(mapView(model, view -> {
-                                    String id = found._2().id();
-                                    return view.withToggled(
-                                            view.toggled().contains(id)
-                                                    ? view.toggled().remove(id)
-                                                    : view.toggled().add(id));
-                                })));
+                                found -> Next.of(mapView(
+                                        model,
+                                        view -> view.withCollapsed(view.collapsed()
+                                                .flipped(
+                                                        at.cursor() instanceof Anchor.Comment(String id, var _)
+                                                                ? id
+                                                                : found._2().id())))));
             case ReviewMsg.Refused(Why why) -> Next.of(refused(model, why));
             // While it is being sent, the comment stays as it is sent.
             case ReviewMsg.Edited(String text) -> Next.of(changed(model, popup -> popup.withText(text), true));
@@ -272,7 +273,8 @@ public final class ReviewUpdate {
         return view.diff()
                 .flatMap(preview -> preview.shown().value().toOption())
                 .map(DiffText::parsed)
-                .map(parsed -> DiffStops.of(parsed.diff(), view.threads(), view.remarksAtItsCommits()))
+                .map(parsed ->
+                        DiffStops.of(parsed.diff(), view.threads(), view.remarksAtItsCommits(), view.collapsed()))
                 .getOrElse(() -> new DiffStops(List.empty()));
     }
 
@@ -294,12 +296,15 @@ public final class ReviewUpdate {
     }
 
     /**
-     * The thread the cursor {@code on} is on, with the files it is of.
+     * The thread the cursor {@code on} is on, or on a comment of, with the files it is of.
      */
     private static Either<Why, Tuple2<CommitFilesView, ReviewThread>> thread(CommitFilesView view, Anchor on) {
-        return (on instanceof Anchor.Thread(String id, var ignored)
-                        ? view.threads().find(thread -> thread.id().equals(id))
-                        : Option.<ReviewThread>none())
+        Option<String> id = switch (on) {
+            case Anchor.Thread thread -> Option.of(thread.id());
+            case Anchor.Comment(var _, Anchor.Thread thread) -> Option.of(thread.id());
+            default -> Option.none();
+        };
+        return id.flatMap(found -> view.threads().find(thread -> thread.id().equals(found)))
                 .toEither(Why.NOT_ON_THREAD)
                 .map(thread -> Tuple.of(view, thread));
     }

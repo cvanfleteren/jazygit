@@ -24,6 +24,7 @@ import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.settings.DiffLook;
 import net.vanfleteren.jazygit.state.AheadUpdate;
 import net.vanfleteren.jazygit.state.BranchesTab;
+import net.vanfleteren.jazygit.state.Collapsed;
 import net.vanfleteren.jazygit.state.CommitFilesView;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
@@ -321,23 +322,16 @@ final class ContentView {
             case Loadable.Loaded<ReviewRemarks>(ReviewRemarks read) ->
                 Option.of(new ShownRemarks(
                         read.threads(),
-                        view.opened(),
                         read.threads().exists(thread -> files.exists(file -> thread.isOn(file.path(), file.origin())))
                                 ? model.now().truncatedTo(ChronoUnit.MINUTES)
                                 : Instant.EPOCH,
                         Option.none(),
                         view.remarksAtItsCommits(),
-                        view.toggled(),
+                        view.collapsed(),
                         view.sending()));
             case Loadable.Failed<ReviewRemarks>(Failure failure) ->
                 Option.of(new ShownRemarks(
-                        List.empty(),
-                        view.opened(),
-                        Instant.EPOCH,
-                        Option.of(failure),
-                        true,
-                        view.toggled(),
-                        view.sending()));
+                        List.empty(), Instant.EPOCH, Option.of(failure), true, view.collapsed(), view.sending()));
             case Loadable.Loading<ReviewRemarks>() -> Option.none();
         });
     }
@@ -488,22 +482,20 @@ final class ContentView {
      * The review threads of a pull request as they are shown with a diff of some of its files (ADR 55).
      *
      * @param threads the threads read
-     * @param opened  whether every thread is shown open, the resolved ones and the hidden comments too
      * @param now     the time it is, to the minute, to tell how long ago a comment was written: the diff is only
      *                styled again once a minute for it
      * @param failed  why reading them failed, when it did and none were read before
      * @param onLines whether they were read at the commits of the diff, so their lines number its lines: else the
      *                threads on a line are listed at the end of their file
-     * @param toggled the ids of the threads opened or closed against {@code opened} (ADR 60)
+     * @param collapsed which threads and comments are collapsed (ADR 62)
      * @param sending the ids of the threads a reply or a resolving is sent for (ADR 60)
      */
     record ShownRemarks(
             List<ReviewThread> threads,
-            boolean opened,
             Instant now,
             Option<Failure> failed,
             boolean onLines,
-            Set<String> toggled,
+            Collapsed collapsed,
             Set<String> sending) {}
 
     /**
