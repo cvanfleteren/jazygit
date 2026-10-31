@@ -54,11 +54,16 @@ import net.vanfleteren.jazygit.ui.ContentView.Tone;
  */
 public final class ContentPanel {
 
+    private static final DateTimeFormatter COMMIT_DATE = DateTimeFormatter.ofPattern(Messages.get("content.commitDatePattern"), Locale.ENGLISH);
+    private static final DateTimeFormatter DATE_TIME_PATTERN = DateTimeFormatter.ofPattern(Messages.get("content.dateTimePattern"));
+
     private static final String MESSAGE_INDENT = "    ";
     /**
      * How the header lines of a diff start, before its first hunk.
      */
     private static final List<String> DIFF_HEADER_PREFIXES = List.of("+++", "---", "diff ", "index ");
+
+
 
     private final Theme.SpanStyles styles;
     // The scrollable areas for the diffs, the branch log and the commit. Where they are scrolled to lives in the
@@ -240,8 +245,7 @@ public final class ContentPanel {
      * How the log shows when a commit was made, in {@code zone}.
      */
     private static DateTimeFormatter dateTime(ZoneId zone) {
-        return DateTimeFormatter.ofPattern(Messages.get("content.dateTimePattern"))
-                .withZone(zone);
+        return DATE_TIME_PATTERN.withZone(zone);
     }
 
     /**
@@ -261,8 +265,7 @@ public final class ContentPanel {
      * The {@code Date:} line of a commit or a stash, as {@code git show} has it.
      */
     private static Span dateLine(Instant time) {
-        DateTimeFormatter date = DateTimeFormatter.ofPattern(Messages.get("content.commitDatePattern"), Locale.ENGLISH);
-        return Span.raw(Messages.get("content.commitDate", date.format(time.atZone(ZoneId.systemDefault()))));
+        return Span.raw(Messages.get("content.commitDate", COMMIT_DATE.format(time.atZone(ZoneId.systemDefault()))));
     }
 
     /**
@@ -439,8 +442,6 @@ public final class ContentPanel {
      * then its indented title and description, a {@code ---} line, and what it changes.
      */
     static Text pullRequestText(PullRequestSummary pr, PullRequestPreview preview, Theme.SpanStyles styles) {
-        DateTimeFormatter updated =
-                DateTimeFormatter.ofPattern(Messages.get("content.commitDatePattern"), Locale.ENGLISH);
         List<String> body = lines(preview.body());
         return styledText(List.of(
                         styled(
@@ -455,7 +456,7 @@ public final class ContentPanel {
                                 preview.base())),
                         Span.raw(Messages.get(
                                 "content.pullRequest.updated",
-                                updated.format(pr.updatedAt().atZone(ZoneId.systemDefault())))),
+                                COMMIT_DATE.format(pr.updatedAt().atZone(ZoneId.systemDefault())))),
                         Span.raw(""),
                         styled(MESSAGE_INDENT + pr.title(), Theme.Classes.BOLD, styles))
                 .map(Line::from)
