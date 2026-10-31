@@ -158,7 +158,9 @@ class ChecksDialogTest {
         assertTrue(screen.contains("✗ 1 failed · ● 1 running · ✓ 2 passed · done in ?"), screen);
         // The names on the left, how each is doing or how long it took on the right.
         assertTrue(screen.contains("✗ lint" + " ".repeat(53) + "failed after 1m 30s│"), screen);
-        assertTrue(screen.contains("● verify" + " ".repeat(47) + "running 2m 30s · ? left│"), screen);
+        assertTrue(
+                screen.contains("● verify" + " ".repeat(40) + "running 2m 30s  · " + " ".repeat(6) + "? left│"),
+                screen);
         assertTrue(screen.contains("✓ package" + " ".repeat(67) + "1m│"), screen);
         assertTrue(screen.contains("✓ ci/status"), screen);
         // Failed, running, then passed.

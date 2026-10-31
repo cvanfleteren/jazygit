@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.ui;
 
+import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Duration;
 import java.time.Instant;
@@ -96,9 +97,35 @@ public final class CheckTimesText {
      * of them can keep its width while their seconds move on.
      */
     public static String widestRunning() {
-        return Messages.get("checks.runningFor", duration(Duration.ofSeconds(3599)))
-                + " · "
-                + Messages.get("checks.left", left(Duration.ofSeconds(297)));
+        return widestState() + " · " + widestLeft();
+    }
+
+    /**
+     * How long a check that is not done runs or is queued at its widest: {@code running 59m 59s}.
+     */
+    private static String widestState() {
+        String widest = duration(Duration.ofSeconds(3599));
+        return widest(List.of(
+                Messages.get("checks.runningFor", widest),
+                Messages.get("checks.queuedFor", widest),
+                Messages.get("checks.running"),
+                Messages.get("checks.queued")));
+    }
+
+    /**
+     * How long a check that is not done is expected to take still at its widest: {@code ~4m 55s left}.
+     */
+    private static String widestLeft() {
+        return widest(List.of(
+                Messages.get("checks.left", left(Duration.ofSeconds(297))),
+                Messages.get("checks.left", unknown(false)),
+                Messages.get("checks.left", unknown(true)),
+                Messages.get("checks.due"),
+                Messages.get("checks.overdue")));
+    }
+
+    private static String widest(List<String> texts) {
+        return texts.maxBy(TextWidth::of).get();
     }
 
     /**
@@ -136,23 +163,56 @@ public final class CheckTimesText {
      * is not timed.
      */
     public static String of(Check check, Eta eta, boolean learning, Instant now) {
+        return state(check, now)
+                + remaining(check, eta, learning, now).map(left -> " · " + left).getOrElse("");
+    }
+
+    /**
+     * Like {@link #of}, in two columns as wide as those of a check that runs can get, so those of checks under each
+     * other line up and keep their place as the seconds move on: how long it runs on the left, how long it takes still
+     * on the right, {@code running 45s     ·     ~1m left}. Wider only when one is wider still, as one of hours.
+     */
+    public static String lined(Check check, Eta eta, boolean learning, Instant now) {
+        String state = state(check, now);
+        int leftWidth = TextWidth.of(widestLeft());
+        return state
+                + " ".repeat(Math.max(0, TextWidth.of(widestState()) - TextWidth.of(state)))
+                + remaining(check, eta, learning, now)
+                        .map(left -> " · " + TextWidth.alignRight(left, leftWidth))
+                        .getOrElse(() -> " ".repeat(TextWidth.of(" · ") + leftWidth));
+    }
+
+    /**
+     * How long {@code check}, which is not done, runs or is queued at {@code now}: "running 2m", "queued 1m 30s";
+     * only "running" for a commit status, which is not timed.
+     */
+    private static String state(Check check, Instant now) {
         if (check.run().isEmpty()) {
             return Messages.get("checks.running");
         }
-        String state = check.queued()
+        return check.queued()
                 ? queued(check, now)
                 : check.run()
                         .flatMap(CheckRun::startedAt)
                         .map(started -> Messages.get("checks.runningFor", duration(Duration.between(started, now))))
                         .getOrElse(() -> Messages.get("checks.running"));
-        String left = switch (eta) {
-            case Eta.Expected expected when expected.overdue(now) -> Messages.get("checks.overdue");
-            case Eta.Expected expected when due(expected.left(now)) -> Messages.get("checks.due");
-            case Eta.Expected expected -> Messages.get("checks.left", left(expected.left(now)));
-            case Eta.Unknown u -> Messages.get("checks.left", unknown(learning));
-            case Eta.Done done -> "";
+    }
+
+    /**
+     * How long {@code check}, which is not done, is expected to take still at {@code now}, with {@code eta}:
+     * "~2m 5s left", "due", "overdue"; nothing for a commit status, which is not timed.
+     */
+    private static Option<String> remaining(Check check, Eta eta, boolean learning, Instant now) {
+        if (check.run().isEmpty()) {
+            return Option.none();
+        }
+        return switch (eta) {
+            case Eta.Expected expected when expected.overdue(now) -> Option.of(Messages.get("checks.overdue"));
+            case Eta.Expected expected when due(expected.left(now)) -> Option.of(Messages.get("checks.due"));
+            case Eta.Expected expected -> Option.of(Messages.get("checks.left", left(expected.left(now))));
+            case Eta.Unknown u -> Option.of(Messages.get("checks.left", unknown(learning)));
+            case Eta.Done done -> Option.none();
         };
-        return left.isEmpty() ? state : state + " · " + left;
     }
 
     /**

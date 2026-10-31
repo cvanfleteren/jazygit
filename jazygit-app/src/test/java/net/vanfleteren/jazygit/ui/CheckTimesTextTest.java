@@ -96,6 +96,18 @@ class CheckTimesTextTest {
     }
 
     @Test
+    void howChecksUnderEachOtherAreDoingLinesUpInColumnsAsWideAsTheyGet() {
+        String shortest = CheckTimesText.lined(
+                check(Option.of(NOW.minusSeconds(45))), new Eta.Expected(NOW.plusSeconds(60)), false, NOW);
+        String longer = CheckTimesText.lined(
+                check(Option.of(NOW.minusSeconds(111))), new Eta.Expected(NOW.plusSeconds(70)), false, NOW);
+
+        assertEquals("running 45s     ·     ~1m left", shortest);
+        assertEquals("running 1m 51s  · ~1m 10s left", longer);
+        assertEquals(TextWidth.of(CheckTimesText.widestRunning()), TextWidth.of(shortest));
+    }
+
+    @Test
     void howLongChecksWaitedInTheBranchesPaneInWholeMinutes() {
         assertEquals("<1m", CheckTimesText.waited(Duration.ofSeconds(59)));
         assertEquals("3m", CheckTimesText.waited(Duration.ofSeconds(3 * 60 + 59)));
