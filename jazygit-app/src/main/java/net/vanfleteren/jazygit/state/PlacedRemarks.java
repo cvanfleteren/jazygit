@@ -9,6 +9,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Subject;
+import net.vanfleteren.jazygit.gh.model.ThreadsByPath;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.FileDiff;
@@ -42,10 +43,8 @@ public record PlacedRemarks(List<FileRemarks> files) {
      * are listed at the end of their file (ADR 55).
      */
     public static PlacedRemarks place(UnifiedDiff diff, List<ReviewThread> threads, boolean onLines) {
-        // Each thread found by its path once, with where it is among the threads, which those of a file keep.
-        Map<String, List<Tuple2<ReviewThread, Integer>>> byPath =
-                threads.zipWithIndex().groupBy(thread -> thread._1().path());
-        return new PlacedRemarks(diff.files().map(file -> file(file, on(byPath, file), onLines)));
+        ThreadsByPath byPath = ThreadsByPath.of(threads);
+        return new PlacedRemarks(diff.files().map(file -> file(file, byPath.on(file.path(), file.origin()), onLines)));
     }
 
     /**
@@ -53,21 +52,6 @@ public record PlacedRemarks(List<FileRemarks> files) {
      */
     public boolean isEmpty() {
         return files.forAll(FileRemarks::isEmpty);
-    }
-
-    /**
-     * The threads of {@code byPath} on {@code file}, by its path or the one it had ({@link ReviewThread#isOn}), in
-     * their order.
-     */
-    private static List<ReviewThread> on(Map<String, List<Tuple2<ReviewThread, Integer>>> byPath, FileDiff file) {
-        Option<String> origin = file.origin().filter(other -> !other.equals(file.path()));
-        return origin.isEmpty()
-                ? byPath.get(file.path()).map(on -> on.map(Tuple2::_1)).getOrElse(List.empty())
-                : List.of(file.path())
-                        .appendAll(origin)
-                        .flatMap(path -> byPath.get(path).getOrElse(List.empty()))
-                        .sortBy(Tuple2::_2)
-                        .map(Tuple2::_1);
     }
 
     private static FileRemarks file(FileDiff file, List<ReviewThread> threads, boolean placeable) {
