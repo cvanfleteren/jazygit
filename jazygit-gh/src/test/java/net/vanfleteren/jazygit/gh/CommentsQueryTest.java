@@ -6,6 +6,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.gh.model.CommentRights;
 import net.vanfleteren.jazygit.gh.model.PullRequestComment;
 import net.vanfleteren.jazygit.gh.model.PullRequestComment.Kind;
 import org.junit.jupiter.api.Test;
@@ -24,9 +25,14 @@ class CommentsQueryTest {
     }
 
     private static String comment(String id, String author, String at, boolean edited, String minimized, String body) {
+        return comment(id, author, at, edited, minimized, body, false);
+    }
+
+    private static String comment(
+            String id, String author, String at, boolean edited, String minimized, String body, boolean mine) {
         return """
                 { "id": "%s", "author": %s, "createdAt": "%s", "includesCreatedEdit": %b,
-                  "isMinimized": %b, "minimizedReason": %s, "body": %s }""".formatted(id, author, at, edited, !minimized.equals("null"), minimized, body);
+                  "isMinimized": %b, "minimizedReason": %s, "body": %s, "viewerDidAuthor": %b }""".formatted(id, author, at, edited, !minimized.equals("null"), minimized, body, mine);
     }
 
     private static String review(String id, String state, String at, String body) {
@@ -46,7 +52,8 @@ class CommentsQueryTest {
                                 Instant.parse("2026-10-10T08:00:00Z"),
                                 "Adds\n**rename**",
                                 false,
-                                Option.none()),
+                                Option.none(),
+                                CommentRights.NONE),
                         new PullRequestComment(
                                 new PullRequestComment.Id("IC_1"),
                                 Kind.COMMENT,
@@ -54,7 +61,8 @@ class CommentsQueryTest {
                                 Instant.parse("2026-10-10T09:00:00Z"),
                                 "Looks\tgood",
                                 true,
-                                Option.none()),
+                                Option.none(),
+                                CommentRights.ALL),
                         new PullRequestComment(
                                 new PullRequestComment.Id("PRR_1"),
                                 Kind.CHANGES_REQUESTED,
@@ -62,7 +70,8 @@ class CommentsQueryTest {
                                 Instant.parse("2026-10-10T10:00:00Z"),
                                 "Not yet",
                                 false,
-                                Option.none()),
+                                Option.none(),
+                                CommentRights.NONE),
                         new PullRequestComment(
                                 new PullRequestComment.Id("IC_2"),
                                 Kind.COMMENT,
@@ -70,7 +79,8 @@ class CommentsQueryTest {
                                 Instant.parse("2026-10-10T11:00:00Z"),
                                 "Old",
                                 false,
-                                Option.of("outdated")),
+                                Option.of("outdated"),
+                                CommentRights.NONE),
                         new PullRequestComment(
                                 new PullRequestComment.Id("PRR_2"),
                                 Kind.APPROVED,
@@ -78,10 +88,11 @@ class CommentsQueryTest {
                                 Instant.parse("2026-10-10T12:00:00Z"),
                                 "",
                                 false,
-                                Option.none()))),
+                                Option.none(),
+                                CommentRights.NONE))),
                 conversation(
                         "\"Adds\\n**rename**\"",
-                        comment("IC_2", "null", "2026-10-10T11:00:00Z", false, "\"outdated\"", "\"Old\"")
+                        comment("IC_2", "null", "2026-10-10T11:00:00Z", false, "\"outdated\"", "\"Old\"", false)
                                 + ", "
                                 + comment(
                                         "IC_1",
@@ -89,7 +100,8 @@ class CommentsQueryTest {
                                         "2026-10-10T09:00:00Z",
                                         true,
                                         "null",
-                                        "\"Looks\\tgood\""),
+                                        "\"Looks\\tgood\"",
+                                        true),
                         review("PRR_2", "APPROVED", "\"2026-10-10T12:00:00Z\"", "") + ", "
                                 + review("PRR_1", "CHANGES_REQUESTED", "\"2026-10-10T10:00:00Z\"", "Not yet")));
     }
@@ -104,7 +116,8 @@ class CommentsQueryTest {
                         Instant.parse("2026-10-10T12:00:00Z"),
                         "Nit",
                         false,
-                        Option.none()))),
+                        Option.none(),
+                        CommentRights.NONE))),
                 conversation(
                         "\"\"",
                         "",
@@ -156,7 +169,7 @@ class CommentsQueryTest {
                 conversation("\"\"", """
                                 { "id": "IC_1", "author": { "login": "bob" }, "createdAt": "2026-10-10T09:00:00Z",
                                   "includesCreatedEdit": false, "isMinimized": true, "minimizedReason": null,
-                                  "body": "Spam" }""", "").map(comments -> comments.map(PullRequestComment::hidden)));
+                                  "body": "Spam", "viewerDidAuthor": false }""", "").map(comments -> comments.map(PullRequestComment::hidden)));
     }
 
     @Test

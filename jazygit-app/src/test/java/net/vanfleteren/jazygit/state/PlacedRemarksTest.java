@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.gh.model.CommentRights;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Comment;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
@@ -48,7 +49,7 @@ class PlacedRemarksTest {
                 false,
                 line.isEmpty(),
                 Subject.LINE,
-                List.of(new Comment("bob", Instant.EPOCH, "Hm", Option.none(), "C", "1")),
+                List.of(new Comment("bob", Instant.EPOCH, "Hm", Option.none(), "C", "1", CommentRights.ALL)),
                 0,
                 "T",
                 ReviewThread.Rights.ALL);

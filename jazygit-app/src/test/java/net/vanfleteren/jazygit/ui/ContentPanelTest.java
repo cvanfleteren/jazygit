@@ -655,7 +655,13 @@ class ContentPanelTest {
                 false,
                 net.vanfleteren.jazygit.gh.model.ReviewThread.Subject.LINE,
                 List.of(new net.vanfleteren.jazygit.gh.model.ReviewThread.Comment(
-                        "bob", Instant.EPOCH, "Why?", Option.none(), "C", "1")),
+                        "bob",
+                        Instant.EPOCH,
+                        "Why?",
+                        Option.none(),
+                        "C",
+                        "1",
+                        net.vanfleteren.jazygit.gh.model.CommentRights.ALL)),
                 0,
                 "T1",
                 net.vanfleteren.jazygit.gh.model.ReviewThread.Rights.ALL);

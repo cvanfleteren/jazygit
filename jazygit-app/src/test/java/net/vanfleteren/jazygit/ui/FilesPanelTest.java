@@ -11,6 +11,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesMsg;
+import net.vanfleteren.jazygit.gh.model.CommentRights;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
@@ -541,7 +542,8 @@ class FilesPanelTest {
                 resolved,
                 false,
                 ReviewThread.Subject.LINE,
-                List.of(new ReviewThread.Comment("bob", java.time.Instant.EPOCH, "Hm", Option.none(), "C", "1")),
+                List.of(new ReviewThread.Comment(
+                        "bob", java.time.Instant.EPOCH, "Hm", Option.none(), "C", "1", CommentRights.ALL)),
                 0,
                 "T",
                 ReviewThread.Rights.ALL);

@@ -156,6 +156,18 @@ public interface GitHub {
     Either<GhFailure, List<ExecutedCommand>> resolveReviewThread(String thread, boolean resolved);
 
     /**
+     * Deletes the comment of a review thread with node id {@code comment}; one that is gone already counts as deleted
+     * (ADR 64).
+     */
+    Either<GhFailure, List<ExecutedCommand>> deleteReviewComment(String comment);
+
+    /**
+     * Deletes the comment of the conversation on a pull request with node id {@code comment}; one that is gone already
+     * counts as deleted (ADR 64).
+     */
+    Either<GhFailure, List<ExecutedCommand>> deletePullRequestComment(String comment);
+
+    /**
      * A pull request that was created.
      *
      * @param number   its number, if gh said where it is

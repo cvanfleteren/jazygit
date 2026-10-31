@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.feature.github.show.PullRequestCmd.OpenPullReques
 import net.vanfleteren.jazygit.feature.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.gh.model.CommentRights;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -54,7 +55,8 @@ class CommentsUpdateTest {
                 Instant.parse("2026-10-10T08:00:00Z"),
                 body,
                 false,
-                Option.none());
+                Option.none(),
+                CommentRights.ALL);
     }
 
     private static Model reading(List<PullRequestComment> comments) {

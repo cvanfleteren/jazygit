@@ -19,6 +19,10 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
  */
 public final class CliGitHub implements GitHub {
 
+    // Deletes a comment of the conversation by the node id it is read with (ADR 64).
+    static final String DELETE_COMMENT = """
+            mutation($comment: ID!) { deleteIssueComment(input: { id: $comment }) { clientMutationId } }""";
+
     private static final Pattern CREATED_URL = Pattern.compile("/pull/(\\d{1,9})$");
 
     private final Path worktree;
@@ -245,7 +249,31 @@ public final class CliGitHub implements GitHub {
         return process.log(ReviewThreadMutations.resolve(thread, resolved));
     }
 
+    @Override
+    public Either<GhFailure, List<ExecutedCommand>> deleteReviewComment(String comment) {
+        return delete(ReviewThreadMutations.delete(comment));
+    }
+
+    @Override
+    public Either<GhFailure, List<ExecutedCommand>> deletePullRequestComment(String comment) {
+        return delete(deleteCommentCommand(comment));
+    }
+
     static GhCommand commentCommand(int number, String body) {
         return gh("pr", "comment", String.valueOf(number), "--body", body);
+    }
+
+    static GhCommand deleteCommentCommand(String comment) {
+        return gh("api", "graphql", "-f", "query=" + DELETE_COMMENT, "-f", "comment=" + comment);
+    }
+
+    // Runs command, which deletes a comment: one GitHub no longer has was deleted already, as by someone else.
+    private Either<GhFailure, List<ExecutedCommand>> delete(GhCommand command) {
+        return process.log(command)
+                .fold(
+                        failure -> GhProcess.gone(failure.error())
+                                ? Either.right(failure.commands())
+                                : Either.left(failure),
+                        Either::right);
     }
 }

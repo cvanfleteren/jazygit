@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.gh.model.CommentRights;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
@@ -90,7 +91,8 @@ class CommitFilesViewTest {
                 resolved,
                 false,
                 ReviewThread.Subject.LINE,
-                List.of(new ReviewThread.Comment("bob", Instant.EPOCH, "Hm", Option.none(), "C", "1")),
+                List.of(new ReviewThread.Comment(
+                        "bob", Instant.EPOCH, "Hm", Option.none(), "C", "1", CommentRights.ALL)),
                 0,
                 "T",
                 ReviewThread.Rights.ALL);
