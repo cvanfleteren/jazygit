@@ -26,8 +26,10 @@ public sealed interface ReviewCmd extends Cmd {
 
     Operation UNRESOLVE = Operation.of("log.title.unresolveThread", "error.unresolveThread.failed");
 
+    // Writing a comment in the editor, with Ctrl+O; not saving the edit of one, which UPDATE_COMMENT is.
     Operation EDIT_COMMENT = Operation.of("log.title.editReviewComment", "error.editReviewComment.failed");
 
+    // Saving the edit of a comment with GitHub (ADR 65).
     Operation UPDATE_COMMENT = Operation.of("log.title.updateReviewComment", "error.updateReviewComment.failed");
 
     Operation DELETE_COMMENT = Operation.of("log.title.deleteReviewComment", "error.deleteReviewComment.failed");

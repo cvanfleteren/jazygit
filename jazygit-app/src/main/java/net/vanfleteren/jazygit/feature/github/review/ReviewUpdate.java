@@ -182,6 +182,8 @@ public final class ReviewUpdate {
         } else if (popup.text().isBlank()) {
             return Next.of(model);
         }
+        // An edit does not mark its thread as being sent, as a reply does: the popup takes every key while it is
+        // saved, so nothing else is sent for the thread meanwhile (ADR 65).
         Model sending = model.clearError().openPopup(popup.withSending(true));
         return Update.start(
                 popup.target() instanceof Target.Reply(String thread, var comment)

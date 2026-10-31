@@ -14,7 +14,8 @@ import net.vanfleteren.jazygit.ui.widgets.PopupView;
 /**
  * Popup asking for a comment on the lines of the diff of a pull request's files, for a reply to one of its threads
  * (ADR 60), or for the edit of a comment of one (ADR 65), as a {@link CommentComposer}: titled with where it goes,
- * under the lines it is about, the last comment of the thread, or the comment before the one edited. The comment lives in the {@link Model}, as a {@link ReviewPopup}.
+ * under the lines it is about, the last comment of the thread, or the comment before the one edited. The comment
+ * lives in the {@link Model}, as a {@link ReviewPopup}.
  */
 public final class ReviewDialog implements PopupView {
 

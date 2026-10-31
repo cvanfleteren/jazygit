@@ -913,6 +913,12 @@ class ReviewUpdateTest {
         assertEquals(List.empty(), emptied.cmds());
         assertFalse(emptied.model().popup(ReviewPopup.class).get().sending());
         assertEquals(Option.of(new AppError.CannotReview(Why.EMPTY)), error(emptied.model()));
+
+        // A change of whitespace only is a change.
+        assertEquals(
+                List.of(new ReviewCmd.Send(7, new Target.Edit("T1", "R1", "Yes"), "Yes ")),
+                Update.update(Update.update(asked, new ReviewMsg.Edited("Yes ")).model(), new ReviewMsg.Confirmed())
+                        .cmds());
     }
 
     @Test
