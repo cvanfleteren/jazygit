@@ -1378,6 +1378,75 @@ class PullRequestUpdateTest {
         }
     }
 
+    /**
+     * The details of pull request 42 as read, of {@code owner/repo} on github.com, at known commits.
+     */
+    private static PullRequestDetails readAtCommits(PullRequestDetails.State state) {
+        PullRequestDetails read = StubGitHub.empty().pullRequestDetails(42).get();
+        return read.withRepository("owner/repo")
+                .withUrl("https://github.com/owner/repo")
+                .withStatus(read.status().withState(state))
+                .withBranches(new PullRequestDetails.Branches(
+                        "feature", "main", GhCommit.parse(HEAD_OID), Option.none(), GhCommit.parse(BASE_OID)));
+    }
+
+    @Test
+    void fOnABranchShowsTheFilesOfItsPullRequestOnceItIsRead() {
+        Next requested = Update.update(withPr(), new PullRequestMsg.FilesRequested(FEATURE));
+
+        // Its dialog shows it being read meanwhile.
+        PullRequestPopup loading =
+                requested.model().popup(PullRequestPopup.class).get();
+        assertTrue(loading.filesWanted());
+        assertEquals(List.of(new LoadPullRequestDetails(42, lastRead(requested.model()))), requested.cmds());
+
+        Next opened = Update.update(
+                requested.model(),
+                new PullRequestMsg.DetailsLoaded(
+                        42, lastRead(requested.model()), readAtCommits(PullRequestDetails.State.OPEN)));
+
+        CommitFilesView.Changes of = new CommitFilesView.Changes.OfPullRequest(
+                new PullRequestCommits(42, "owner/repo", "github.com", new Sha(BASE_OID), new Sha(HEAD_OID)));
+        assertEquals(Option.none(), opened.model().popup(PullRequestPopup.class));
+        assertEquals(Screen.REPOSITORY, opened.model().screen());
+        assertEquals(
+                Option.of(CommitFilesView.of(of, "branches", "files")),
+                opened.model().repoView().commitFiles());
+        assertTrue(opened.cmds()
+                .containsAll(List.of(new Cmd.LoadCommitFiles(of), new CommitFilesCmd.LoadReviewRemarks(42))));
+    }
+
+    @Test
+    void aPullRequestWhoseFilesCannotBeShownStaysShownInItsDialog() {
+        Model requested = Update.update(withPr(), new PullRequestMsg.FilesRequested(FEATURE))
+                .model();
+        Model merged = Update.update(
+                        requested,
+                        new PullRequestMsg.DetailsLoaded(
+                                42, lastRead(requested), readAtCommits(PullRequestDetails.State.MERGED)))
+                .model();
+        Model failed = Update.update(
+                        requested, new PullRequestMsg.DetailsFailed(42, lastRead(requested), refused("gh: offline")))
+                .model();
+
+        for (Model shown : List.of(merged, failed)) {
+            PullRequestPopup popup = shown.popup(PullRequestPopup.class).get();
+            assertTrue(popup.details().isDefined());
+            // A read later, like the one R asks for, does not go on to the files.
+            assertFalse(popup.filesWanted());
+        }
+    }
+
+    @Test
+    void fOnABranchWithoutAPullRequestDoesNothing() {
+        Model model = withPr();
+
+        Next requested = Update.update(model, new PullRequestMsg.FilesRequested(MAIN.name()));
+
+        assertEquals(model, requested.model());
+        assertEquals(List.empty(), requested.cmds());
+    }
+
     @Test
     void refreshingReadsTheDetailsAgainWhileTheyStayShown() {
         Model shown = showingDetails();
