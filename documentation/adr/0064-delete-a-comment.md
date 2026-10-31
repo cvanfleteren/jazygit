@@ -45,8 +45,9 @@ repository:
 - `d`, in `Scopes.PULL_REQUEST_DIFF` and in the comments popup, deletes the comment of the cursor or the one
   highlighted.
 - In the diff, it deletes the one comment the stop is: a comment, or the first comment of an open thread, whose stop
-  is the thread. On a collapsed thread, only when it has one comment, which deletes the thread; else it says to open
-  the thread to choose a comment. Not: `d` on a thread deleting all its comments, more than what is seen.
+  is the thread. On a collapsed thread, only when it has one comment and GitHub none more than were read (ADR 55),
+  which deletes the thread; else it says to open the thread to choose a comment. Not: `d` on a thread deleting all
+  its comments, more than what is seen.
 - It asks first, always, in a popup that says who wrote the comment, when, and its first line: Enter or `y` deletes,
   Escape goes back. Not: an undo after it, which GitHub does not have, nor `d` pressed twice.
 
@@ -60,6 +61,9 @@ repository:
   (ADR 60), deleting does not number a line.
 - Not while the comment is being deleted: then `d` and `Space` on it, and `r` and `x` on its thread when it is its
   first comment, say it is being deleted.
+- Not on a comment of a thread that is being sent to, a reply or a resolve: `d` says it is being sent, as `r` and `x`
+  do then (ADR 60). A reply goes to the first comment of its thread, which a delete landing first would take away:
+  GitHub then refuses the reply.
 
 ### Reading
 
@@ -73,12 +77,26 @@ repository:
 - With GraphQL, by the node id: `deletePullRequestReviewComment` in `ReviewThreadMutations`, `deleteIssueComment` for
   the conversation. Not: REST, by the other id.
 - While it is sent, the comment says `· deleting…`, as a thread being sent to does (ADR 62).
-- Once GitHub took it, the comment leaves the model: from its thread, and the thread with it when it was the last; from
-  the comments of the popup. The first comment taken from a thread makes the next one its first, as GitHub does, so
-  `r` replies to that one. Not: read again, which only the ids of what was sent need: what GitHub did is known.
-  Others' changes come with `R`, or when the popup opens again.
+- Once GitHub took it, the comment leaves the model: from its thread, and the thread with it when it was the last and
+  GitHub has none more than were read; from the comments of the popup. The first comment taken from a thread makes
+  the next one its first, as GitHub does, so `r` replies to that one. Not: read again, which only the ids of what was
+  sent need: what GitHub did is known. Others' changes come with `R`, or when the popup opens again.
 - A `NOT_FOUND`, as when someone else deleted it first, is taken as deleted. Any other failure says why, and the
   comment stays.
+
+### A read older than what was deleted
+
+- A read of the remarks can be under way while a comment is deleted: one after a reply or a resolve on another thread
+  (ADR 60), one of `R`, or one after the head moved; and in the comments popup, one after a comment was sent (ADR 6).
+  It replaces what is shown, so one that started before GitHub took the delete would put the comment back.
+- So the remarks of the tree have a version, and so have the comments of the popup, which goes up each time jazygit
+  changes them itself: once a delete is taken, and later an edit. A read holds the version it started at, and gives
+  it back with what it read (`LoadReviewRemarks` and `RemarksLoaded`, `LoadComments` and `Loaded`). One with an older
+  version than the model is dropped, and read again at the version now, unless such a read runs already, as ADR 49 and
+  ADR 56 do with the commits ahead and the distances to the bases. The read again settles the threads the dropped one
+  was to settle too (ADR 60), so that what was sent for them does not stay `· sending…`.
+- Not: the ids deleted kept as long as the tree is open, and taken out of each read: an edit would need what it
+  changed kept as well. Not: reading again after each delete: only a read that met one is read again.
 
 ### The cursor
 
@@ -91,14 +109,16 @@ repository:
 1. This ADR.
 2. In `jazygit-gh`: the two mutations, the rights of a comment in `ReviewThreadsQuery` and `CommentsQuery`, each tested
    on its own.
-3. `d` in the diff: the popup that asks, `· deleting…`, what refuses it, the comment taken from the model and where the
-   cursor goes, with an acceptance test against a fake gh.
-4. `d` in the comments popup, with an acceptance test against a fake gh.
+3. `d` in the diff: the popup that asks, `· deleting…`, what refuses it, the comment taken from the model, the version
+   of the remarks and a read older than it dropped, and where the cursor goes, with an acceptance test against a fake
+   gh.
+4. `d` in the comments popup, with the version of its comments, and an acceptance test against a fake gh.
 
 ## Consequences
 
 - A comment can be deleted without the browser, from the diff or the conversation.
 - Nothing deletes a whole thread at once: one comment at a time.
 - An admin deletes the comments of others in the browser only.
-- What is deleted is not read again: comments written by others meanwhile show after `R`.
+- What is deleted is not read again: comments written by others meanwhile show after `R`. Only a read that was under
+  way while a delete was taken costs a read more.
 - Editing a comment can follow by the same ids, rights and keys' rules.
