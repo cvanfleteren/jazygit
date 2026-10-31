@@ -1,9 +1,12 @@
 package net.vanfleteren.jazygit.settings;
 
+import io.vavr.collection.List;
 import io.vavr.control.Option;
+import io.vavr.control.Try;
 import java.nio.file.Path;
 import java.util.Locale;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 
 /**
  * Where the settings file is, and the state file: each in the directory that is the standard for it on the OS.
@@ -24,6 +27,8 @@ public final class SettingsPaths {
     private static final String STATE_FILE = "state.toml";
     private static final String DEBUG_LOG = "debug.log";
     private static final String CHECK_TIMINGS = "check-timings.toml";
+    private static final String REPOSITORIES = "repos";
+    private static final Pattern NAME = Pattern.compile("[A-Za-z0-9._-]+");
 
     private SettingsPaths() {}
 
@@ -85,18 +90,48 @@ public final class SettingsPaths {
     }
 
     /**
-     * How long the checks took, of the user running this (ADR 32).
+     * Where how long the checks took was kept, of the user running this, before it was kept per repository (ADR 32,
+     * 63): it is only deleted.
      */
-    public static Path checkTimingsFile() {
-        return checkTimingsFile(stateFile());
+    public static Path formerCheckTimingsFile() {
+        return formerCheckTimingsFile(stateFile());
     }
 
     /**
-     * How long the checks took, that goes with the state file {@code stateFile}: next to it, as jazygit keeps it by
-     * itself too.
+     * Where how long the checks took was kept before it was kept per repository, that goes with the state file
+     * {@code stateFile}: next to it.
      */
-    public static Path checkTimingsFile(Path stateFile) {
+    public static Path formerCheckTimingsFile(Path stateFile) {
         return stateFile.resolveSibling(CHECK_TIMINGS);
+    }
+
+    /**
+     * The directory with a directory per repository, of the user running this (ADR 63).
+     */
+    public static Path repositories() {
+        return repositories(stateFile());
+    }
+
+    /**
+     * The directory with a directory per repository, of what jazygit keeps by itself of each, that goes with the state
+     * file {@code stateFile}: next to it.
+     */
+    public static Path repositories(Path stateFile) {
+        return stateFile.resolveSibling(REPOSITORIES);
+    }
+
+    /**
+     * The file {@code name} of {@code repository}, as {@code owner/name}, in {@code repositories}:
+     * {@code <owner>/<name>/<file>}. It fails for what is no owner and name of the letters, digits, {@code .},
+     * {@code -} and {@code _} GitHub allows in them, so that no file is ever outside it.
+     */
+    static Try<Path> repositoryFile(Path repositories, String repository, String name) {
+        List<String> parts = List.of(repository.split("/", -1));
+        return parts.size() == 2
+                        && parts.forAll(part -> NAME.matcher(part).matches() && !part.equals(".") && !part.equals(".."))
+                ? Try.success(
+                        repositories.resolve(parts.get(0)).resolve(parts.get(1)).resolve(name))
+                : Try.failure(new IllegalArgumentException("No owner/name: " + repository));
     }
 
     /**

@@ -2,10 +2,9 @@ package net.vanfleteren.jazygit.state;
 
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
-import io.vavr.collection.HashSet;
+import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
-import io.vavr.collection.Set;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Comment;
 
@@ -14,20 +13,22 @@ import net.vanfleteren.jazygit.gh.model.ReviewThread.Comment;
  * is hidden, and a hidden comment; else those {@code toggled} flips against their default. The first comment of a
  * thread is the thread: it is shown whole while the thread is open.
  *
- * @param toggled the ids of the threads and the comments collapsed or opened against their default
+ * @param toggled the ids of the threads and the comments collapsed or opened against their default, each with whether
+ *                that default was collapsed when it was flipped: one whose default is no longer that is as it starts,
+ *                as one kept from an earlier session, of a thread resolved since (ADR 63)
  */
-public record Collapsed(Set<String> toggled) {
+public record Collapsed(Map<String, Boolean> toggled) {
 
     /**
      * Each thread and comment as it is by default.
      */
-    public static final Collapsed NONE = new Collapsed(HashSet.empty());
+    public static final Collapsed NONE = new Collapsed(HashMap.empty());
 
     /**
      * Whether {@code thread} is collapsed.
      */
     public boolean thread(ReviewThread thread) {
-        return byDefault(thread) != toggled.contains(thread.id());
+        return byDefault(thread) != isFlipped(thread.id(), byDefault(thread));
     }
 
     private static boolean byDefault(ReviewThread thread) {
@@ -39,7 +40,12 @@ public record Collapsed(Set<String> toggled) {
      * Whether {@code comment}, one of an open thread but its first, is collapsed.
      */
     public boolean comment(Comment comment) {
-        return comment.hidden().isDefined() != toggled.contains(comment.id());
+        return comment.hidden().isDefined()
+                != isFlipped(comment.id(), comment.hidden().isDefined());
+    }
+
+    private boolean isFlipped(String id, boolean byDefault) {
+        return toggled.get(id).contains(byDefault);
     }
 
     /**
@@ -51,23 +57,32 @@ public record Collapsed(Set<String> toggled) {
     }
 
     /**
-     * These with the thread or the comment with the id {@code id} flipped.
+     * These with the thread or the comment with the id {@code id}, one of {@code threads}, flipped; as they are when
+     * it is none of them.
      */
-    public Collapsed flipped(String id) {
-        return new Collapsed(toggled.contains(id) ? toggled.remove(id) : toggled.add(id));
+    public Collapsed flipped(String id, List<ReviewThread> threads) {
+        return defaults(threads)
+                .get(id)
+                .map(byDefault ->
+                        new Collapsed(isFlipped(id, byDefault) ? toggled.remove(id) : toggled.put(id, byDefault)))
+                .getOrElse(this);
     }
 
     /**
-     * These once the threads read as {@code before} are read again as {@code after}: a thread or a comment whose
-     * default changed, as a thread resolved or unresolved, or a comment hidden, is as such a one starts, not flipped
-     * against its new default (ADR 62).
+     * These once the threads are read again as {@code threads}: a thread or a comment whose default changed since it
+     * was flipped, as a thread resolved or unresolved, or a comment hidden, is as such a one starts, not flipped
+     * against its new default (ADR 62). One not read stays.
      */
-    public Collapsed readAgain(List<ReviewThread> before, List<ReviewThread> after) {
-        Map<String, Boolean> was = defaults(before);
-        Set<String> changed = defaults(after)
-                .filter((id, now) -> was.get(id).exists(then -> !then.equals(now)))
-                .keySet();
-        return new Collapsed(toggled.removeAll(changed));
+    public Collapsed readAgain(List<ReviewThread> threads) {
+        Map<String, Boolean> now = defaults(threads);
+        return new Collapsed(toggled.filter((id, then) -> now.get(id).forAll(then::equals)));
+    }
+
+    /**
+     * These with {@code kept} too, those kept from an earlier session (ADR 63): what was flipped in this one wins.
+     */
+    public Collapsed with(Map<String, Boolean> kept) {
+        return new Collapsed(kept.merge(toggled, (before, now) -> now));
     }
 
     /**

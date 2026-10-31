@@ -1,8 +1,10 @@
 package net.vanfleteren.jazygit.settings;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.HashMap;
+import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
@@ -120,5 +122,39 @@ class SettingsPathsTest {
         assertEquals(Path.of("/mine/state.toml"), stateFile("Linux", env));
         assertEquals(Path.of("/mine/state.toml"), stateFile("Mac OS X", env));
         assertEquals(Path.of("/mine/state.toml"), stateFile("Windows 11", env));
+    }
+
+    @Test
+    void eachRepositoryHasADirectoryNextToTheState() {
+        Path state = Path.of("/xdg-state/jazygit/state.toml");
+
+        assertEquals(Path.of("/xdg-state/jazygit/repos"), SettingsPaths.repositories(state));
+        assertEquals(
+                Path.of("/xdg-state/jazygit/repos/owner/my.repo-1_x/a.toml"),
+                SettingsPaths.repositoryFile(SettingsPaths.repositories(state), "owner/my.repo-1_x", "a.toml")
+                        .get());
+        assertEquals(Path.of("/xdg-state/jazygit/check-timings.toml"), SettingsPaths.formerCheckTimingsFile(state));
+    }
+
+    @Test
+    void whatIsNoOwnerAndNameHasNoFile() {
+        Path repositories = Path.of("/repos");
+
+        for (String repository : List.of(
+                "owner",
+                "owner/",
+                "/name",
+                "owner/name/x",
+                "../name",
+                "owner/..",
+                "owner/.",
+                "owner/na me",
+                "owner\\x/name",
+                "")) {
+            assertTrue(
+                    SettingsPaths.repositoryFile(repositories, repository, "a.toml")
+                            .isFailure(),
+                    repository);
+        }
     }
 }

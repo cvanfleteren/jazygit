@@ -5,6 +5,7 @@ import net.vanfleteren.jazygit.gh.CliGitHub;
 import net.vanfleteren.jazygit.gh.GhToken;
 import net.vanfleteren.jazygit.git.CliGitInfoProvider;
 import net.vanfleteren.jazygit.settings.CheckTimingsStore;
+import net.vanfleteren.jazygit.settings.CollapsedStore;
 import net.vanfleteren.jazygit.settings.RecentRepositories;
 import net.vanfleteren.jazygit.settings.Settings;
 import net.vanfleteren.jazygit.settings.SettingsStore;
@@ -32,6 +33,7 @@ final class RepositoryEnv {
             RecentRepositories recent,
             UnseenPullRequestsStore unseen,
             CheckTimingsStore checkTimings,
+            CollapsedStore collapsed,
             Repositories repositories,
             Terminal terminal) {
         GhToken token = new GhToken(git.worktree(), settings.gh(), () -> GitHubAccount.configured(git));
@@ -43,6 +45,7 @@ final class RepositoryEnv {
                 recent,
                 unseen,
                 checkTimings,
+                collapsed,
                 repositories,
                 terminal);
     }
@@ -58,6 +61,7 @@ final class RepositoryEnv {
                 env.recent(),
                 env.unseen(),
                 env.checkTimings(),
+                env.collapsed(),
                 env.repositories(),
                 env.terminal());
     }

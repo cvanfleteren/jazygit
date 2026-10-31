@@ -148,7 +148,7 @@ class RemarkLinesTest {
         ReviewThread open = thread(2, false, "Why?", "Because");
         String indent = " ".repeat(8);
 
-        assertTrue(drawnAlone(resolved, Collapsed.NONE.flipped(resolved.id()), HashSet.empty())
+        assertTrue(drawnAlone(resolved, Collapsed.NONE.flipped(resolved.id(), List.of(resolved)), HashSet.empty())
                 .contains(indent + "┃  Done"));
         assertEquals(
                 List.of(indent + "━━ ✓ resolved · bob: Done"), drawnAlone(resolved, Collapsed.NONE, HashSet.empty()));
@@ -157,7 +157,7 @@ class RemarkLinesTest {
                 drawnAlone(resolved, Collapsed.NONE, HashSet.of(resolved.id())));
 
         // An unresolved thread collapsed says how many comments it has, not dimmed (ADR 62).
-        Collapsed closed = Collapsed.NONE.flipped(open.id());
+        Collapsed closed = Collapsed.NONE.flipped(open.id(), List.of(open));
         assertEquals(List.of(indent + "━━ ▸ 2 remarks · bob: Why?"), drawnAlone(open, closed, HashSet.empty()));
         assertEquals(
                 List.of(indent + "━━ ▸ 2 remarks · bob: Why? · sending…"),
@@ -189,11 +189,11 @@ class RemarkLinesTest {
                         indent + "┃",
                         indent + "┣━ bob · 2h ago · Because",
                         indent + "┗━"),
-                drawnAlone(open, Collapsed.NONE.flipped("C1"), HashSet.empty()));
+                drawnAlone(open, Collapsed.NONE.flipped("C1", List.of(open)), HashSet.empty()));
         // The first comment is the thread: flipping its id does nothing.
         assertEquals(
                 drawnAlone(open, Collapsed.NONE, HashSet.empty()),
-                drawnAlone(open, Collapsed.NONE.flipped("C0"), HashSet.empty()));
+                drawnAlone(open, Collapsed.NONE.flipped("C0", List.of(open)), HashSet.empty()));
     }
 
     @Test
@@ -219,12 +219,12 @@ class RemarkLinesTest {
         List<String> collapsed = drawnAlone(hidden, Collapsed.NONE, HashSet.empty());
         assertTrue(collapsed.contains(indent + "┣━ carol · 2h ago · hidden · spam"), collapsed.mkString("\n"));
         assertFalse(collapsed.exists(line -> line.contains("Buy now")));
-        assertTrue(
-                drawnAlone(hidden, Collapsed.NONE.flipped("H"), HashSet.empty()).contains(indent + "┃  Buy now"));
+        assertTrue(drawnAlone(hidden, Collapsed.NONE.flipped("H", List.of(hidden)), HashSet.empty())
+                .contains(indent + "┃  Buy now"));
         // The count of a collapsed thread is of the comments GitHub has more of too.
         assertEquals(
                 List.of(indent + "━━ ▸ 4 remarks · bob: Why?"),
-                drawnAlone(hidden, Collapsed.NONE.flipped(hidden.id()), HashSet.empty()));
+                drawnAlone(hidden, Collapsed.NONE.flipped(hidden.id(), List.of(hidden)), HashSet.empty()));
     }
 
     @Test
@@ -242,7 +242,8 @@ class RemarkLinesTest {
                                 Theme.SpanStyles.NONE))
                         .tail()
                         .map(String::stripTrailing));
-        assertTrue(rich(shown(Collapsed.NONE.flipped(resolved.id()), resolved)).contains(" ".repeat(8) + "┃  Done"));
+        assertTrue(rich(shown(Collapsed.NONE.flipped(resolved.id(), List.of(resolved)), resolved))
+                .contains(" ".repeat(8) + "┃  Done"));
     }
 
     @Test
@@ -398,7 +399,8 @@ class RemarkLinesTest {
                 collapsed.contains(" ".repeat(8) + "━━ ▸ 1 remark · carol: hidden · off-topic"),
                 collapsed.mkString("\n"));
         assertFalse(collapsed.exists(line -> line.contains("Off topic")));
-        assertTrue(rich(shown(Collapsed.NONE.flipped("T"), hidden)).contains(" ".repeat(8) + "┃  Off topic"));
+        assertTrue(rich(shown(Collapsed.NONE.flipped("T", List.of(hidden)), hidden))
+                .contains(" ".repeat(8) + "┃  Off topic"));
     }
 
     @Test
@@ -573,7 +575,8 @@ class RemarkLinesTest {
         ReviewThread resolved = thread("a.txt", 40, true, "h", "i");
         // A reply collapsed, an unresolved thread collapsed, a thread whose first comment is hidden opened, and a
         // resolved one as it starts.
-        Collapsed flipped = new Collapsed(io.vavr.collection.HashSet.of("C1", collapsed.id(), hidden.id()));
+        Collapsed flipped =
+                new Collapsed(io.vavr.collection.HashMap.of("C1", false, collapsed.id(), false, hidden.id(), true));
         ShownRemarks remarks = shown(flipped, replied, collapsed, hidden, resolved);
 
         RichDiff.Drawn drawn = drawn(ParsedDiff.of(DIFF), true, Option.of(remarks), Theme.SpanStyles.NONE);

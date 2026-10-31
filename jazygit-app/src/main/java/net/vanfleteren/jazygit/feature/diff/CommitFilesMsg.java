@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.diff;
 
 import io.vavr.collection.HashSet;
+import io.vavr.collection.Map;
 import io.vavr.collection.Set;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.state.CommitFilesView;
@@ -58,4 +59,16 @@ public sealed interface CommitFilesMsg extends Msg {
      * The user asked to read the review threads of the pull request again.
      */
     record RemarksRefreshed() implements CommitFilesMsg {}
+
+    /**
+     * The review threads and comments of pull request {@code number} collapsed or opened against their default in an
+     * earlier session were read, each with whether it was collapsed by default then (ADR 63).
+     */
+    record CollapsedLoaded(int number, Map<String, Boolean> kept) implements CommitFilesMsg {}
+
+    /**
+     * The review threads and comments collapsed or opened were kept for the next session, or that failed: nothing
+     * changes.
+     */
+    record CollapsedKept() implements CommitFilesMsg {}
 }

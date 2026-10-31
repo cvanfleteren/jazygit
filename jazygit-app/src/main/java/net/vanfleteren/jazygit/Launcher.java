@@ -17,6 +17,7 @@ import net.vanfleteren.jazygit.settings.*;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.ui.ErrorText;
 import net.vanfleteren.jazygit.ui.Theme;
+import org.slf4j.LoggerFactory;
 
 /**
  * Starts jazygit: reads the command line, opens the repository to show, and runs {@link JazygitApp} on it.
@@ -49,6 +50,9 @@ final class Launcher {
                             directory -> RepositoryIdentity.read(directory).map(RepositoryIdentity::commonDir));
                     SettingsStore settings = new SettingsFile(SettingsPaths.configFile());
                     SettingsStore.Loaded loaded = settings.load();
+                    FormerState.forget(SettingsPaths.stateFile())
+                            .onFailure(failed -> LoggerFactory.getLogger(Launcher.class)
+                                    .debug("What was kept for all repositories at once could not be deleted", failed));
                     return open(start, recent, loaded, options.theme(), engine)
                             .map(opened -> opened.map(provider -> {
                                 recent.opened(provider.worktree()).onFailure(BugLog::log);
@@ -57,8 +61,9 @@ final class Launcher {
                                         loaded.settings(),
                                         settings,
                                         recent,
-                                        new UnseenPullRequestsFile(SettingsPaths.stateFile()),
-                                        new CheckTimingsFile(SettingsPaths.checkTimingsFile()),
+                                        new UnseenPullRequestsFile(SettingsPaths.repositories()),
+                                        new CheckTimingsFile(SettingsPaths.repositories()),
+                                        new CollapsedFile(SettingsPaths.repositories()),
                                         Repositories.NONE,
                                         Terminal.NONE);
                                 return new JazygitApp(env, loaded, options.theme(), engine);

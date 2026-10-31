@@ -8,6 +8,7 @@ import io.vavr.collection.Set;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.util.function.Function;
+import net.vanfleteren.jazygit.feature.diff.CommitFilesCmd;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesCmd.LoadReviewRemarks;
 import net.vanfleteren.jazygit.feature.github.review.ReviewCmd.EditComment;
 import net.vanfleteren.jazygit.feature.github.review.ReviewCmd.Resolve;
@@ -18,10 +19,12 @@ import net.vanfleteren.jazygit.gh.model.NewReviewThread;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.model.DiffText;
+import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.AppError.CannotReview.Why;
+import net.vanfleteren.jazygit.state.CommitFilesView.Changes;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
@@ -63,13 +66,7 @@ public final class ReviewUpdate {
                         .flatMap(ReviewUpdate::notSending)
                         .fold(
                                 why -> Next.of(why == Why.NOT_ON_THREAD ? model : refused(model, why)),
-                                found -> Next.of(mapView(
-                                        model,
-                                        view -> view.withCollapsed(view.collapsed()
-                                                .flipped(
-                                                        at.cursor() instanceof Anchor.Comment(String id, var _)
-                                                                ? id
-                                                                : found._2().id())))));
+                                found -> toggled(model, found, at.cursor()));
             case ReviewMsg.Refused(Why why) -> Next.of(refused(model, why));
             // While it is being sent, the comment stays as it is sent.
             case ReviewMsg.Edited(String text) -> Next.of(changed(model, popup -> popup.withText(text), true));
@@ -289,6 +286,26 @@ public final class ReviewUpdate {
                 .toEither(Why.NOT_READ)
                 .filterOrElse(view -> !view.ended().contains(PullRequestDetails.State.MERGED), view -> Why.MERGED)
                 .filterOrElse(CommitFilesView::remarksAtItsCommits, view -> Why.MOVED_ON);
+    }
+
+    /**
+     * {@code found} with the thread, or the comment of it the cursor is {@code on}, collapsed or opened, which is kept
+     * for the next session (ADR 63).
+     */
+    private static Next toggled(Model model, Tuple2<CommitFilesView, ReviewThread> found, Anchor on) {
+        CommitFilesView view = found._1();
+        Collapsed collapsed = view.collapsed()
+                .flipped(
+                        on instanceof Anchor.Comment(String id, var _)
+                                ? id
+                                : found._2().id(),
+                        view.threads());
+        return new Next(
+                mapView(model, files -> files.withCollapsed(collapsed)),
+                view.of() instanceof Changes.OfPullRequest(PullRequestCommits commits)
+                        ? List.of(new CommitFilesCmd.SaveCollapsed(
+                                commits.repository(), commits.number(), collapsed.toggled(), model.now()))
+                        : List.empty());
     }
 
     private static Option<CommitFilesView> pullRequestFiles(Model model) {

@@ -71,3 +71,5 @@ The cursor stops on each thread as one stop (ADR 60), so a key on a comment of i
 - The cursor stops on each comment, so a thread of many comments takes as many `j`.
 - Amends ADR 55, whose `t` and default states this replaces, ADR 57, whose `t` this removes, and ADR 60, whose thread
   of one stop and `Space` against `t` this replaces.
+
+Amended by ADR 63: the ids flipped are kept per pull request in a file of the repository, for 30 days, not only as long as the tree is open.

@@ -186,7 +186,11 @@ class CommitFilesUpdateTest {
     void theFilesOfAPullRequestComeWithItsReviewThreadsWhichCanBeReadAgain() {
         Next opened = Update.update(loaded(), new CommitFilesMsg.Opened(PULL_REQUEST, Scopes.BRANCHES.id()));
         assertEquals(
-                List.of(new Cmd.LoadCommitFiles(PULL_REQUEST), new CommitFilesCmd.LoadReviewRemarks(7)), opened.cmds());
+                List.of(
+                        new Cmd.LoadCommitFiles(PULL_REQUEST),
+                        new CommitFilesCmd.LoadReviewRemarks(7),
+                        new CommitFilesCmd.LoadCollapsed("owner/repo", 7)),
+                opened.cmds());
         assertEquals(
                 Option.of(new Loading<>()),
                 opened.model().repoView().commitFiles().get().remarks());

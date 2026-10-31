@@ -9,10 +9,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 /**
- * The unseen pull requests in the state file, which only jazygit writes, in a table per repository:
+ * The unseen pull requests, which only jazygit writes, in a file of each repository (ADR 63):
  *
  * <pre>
- * [unseen-pull-requests."owner/name"]
  * highest = 42
  * numbers = [40, 42]
  * </pre>
@@ -23,31 +22,34 @@ import java.nio.file.Path;
 public final class UnseenPullRequestsFile implements UnseenPullRequestsStore {
 
     /**
-     * The key of the unseen pull requests in the state file.
+     * The key of the unseen pull requests in the state file, where they were kept before they were kept per
+     * repository (ADR 63).
      */
-    static final String KEY = "unseen-pull-requests";
+    static final String FORMER_KEY = "unseen-pull-requests";
 
+    private static final String FILE = "unseen-pull-requests.toml";
     private static final String HIGHEST = "highest";
     private static final String NUMBERS = "numbers";
 
-    private final Path file;
+    private final Path repositories;
 
-    public UnseenPullRequestsFile(Path file) {
-        this.file = file;
+    /**
+     * The unseen pull requests of each repository, in its directory in {@code repositories}.
+     */
+    public UnseenPullRequestsFile(Path repositories) {
+        this.repositories = repositories;
     }
 
-    // As a list of keys, as a repository's name may have a dot in it.
-    private static List<String> path(String repository, String key) {
-        return List.of(KEY, repository, key);
+    private Try<Path> file(String repository) {
+        return SettingsPaths.repositoryFile(repositories, repository, FILE);
     }
 
-    private static Option<UnseenPullRequests> unseen(Config config, String repository) {
-        return config.getOptional(path(repository, HIGHEST).toJavaList())
+    private static Option<UnseenPullRequests> unseen(Config config) {
+        return config.getOptional(HIGHEST)
                 .filter(Number.class::isInstance)
                 .map(highest -> new UnseenPullRequests(
                         ((Number) highest).intValue(),
-                        TreeSet.ofAll(config.getOptional(
-                                        path(repository, NUMBERS).toJavaList())
+                        TreeSet.ofAll(config.getOptional(NUMBERS)
                                 .filter(java.util.List.class::isInstance)
                                 .map(found -> List.ofAll((java.util.List<?>) found)
                                         .filter(Number.class::isInstance)
@@ -59,17 +61,20 @@ public final class UnseenPullRequestsFile implements UnseenPullRequestsStore {
 
     @Override
     public Option<UnseenPullRequests> load(String repository) {
-        return !Files.exists(file)
-                ? Option.none()
-                : TomlFile.read(file).toOption().flatMap(config -> unseen(config, repository));
+        return file(repository)
+                .toOption()
+                .filter(Files::exists)
+                .flatMap(file -> TomlFile.read(file).toOption())
+                .flatMap(UnseenPullRequestsFile::unseen);
     }
 
     @Override
     public Try<UnseenPullRequests> save(String repository, UnseenPullRequests unseen) {
-        return TomlFile.change(file, config -> {
-            config.set(path(repository, HIGHEST).toJavaList(), unseen.highest());
-            config.set(path(repository, NUMBERS).toJavaList(), unseen.numbers().toJavaList());
-            return unseen;
-        });
+        return file(repository)
+                .flatMap(file -> TomlFile.change(file, config -> {
+                    config.set(HIGHEST, unseen.highest());
+                    config.set(NUMBERS, unseen.numbers().toJavaList());
+                    return unseen;
+                }));
     }
 }
