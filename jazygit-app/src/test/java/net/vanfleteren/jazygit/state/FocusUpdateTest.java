@@ -94,15 +94,33 @@ class FocusUpdateTest {
     }
 
     @Test
-    void awayAFetchWaitsLongerThanATick() {
+    void awayAFetchWaitsItsOwnWhile() {
         Model away = Update.update(loaded().withNow(AWAY_AT), new Msg.TerminalFocused(false))
                 .model();
         away = Update.update(away, new FetchMsg.Tick()).model();
 
-        Next fetched = Update.update(at(away, Msg.Tick.WHILE_AWAY), new FetchMsg.Tick());
+        assertEquals(
+                List.empty(),
+                Update.update(at(away, Msg.Tick.WHILE_AWAY), new FetchMsg.Tick())
+                        .cmds());
+        Next fetched = Update.update(at(away, FetchMsg.Tick.WHILE_AWAY), new FetchMsg.Tick());
+        assertEquals(
+                Update.update(at(loaded().withNow(AWAY_AT), FetchMsg.Tick.WHILE_AWAY), new FetchMsg.Tick())
+                        .cmds(),
+                fetched.cmds());
+        assertFalse(fetched.cmds().isEmpty());
+        assertFalse(fetched.model().jobs().missed().contains(new FetchMsg.Tick()));
+    }
 
-        assertEquals(List.empty(), fetched.cmds());
-        assertTrue(FetchMsg.Tick.WHILE_AWAY.compareTo(Msg.Tick.WHILE_AWAY) > 0);
+    @Test
+    void awayATickThatComesAFewMillisecondsEarlyIsHandled() {
+        Model away = Update.update(loaded().withNow(AWAY_AT), new Msg.TerminalFocused(false))
+                .model();
+        away = Update.update(away, new Msg.Tick()).model();
+
+        assertFalse(Update.update(at(away, Msg.Tick.WHILE_AWAY.minusMillis(20)), new Msg.Tick())
+                .cmds()
+                .isEmpty());
     }
 
     @Test

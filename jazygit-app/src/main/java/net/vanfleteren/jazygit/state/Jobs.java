@@ -42,7 +42,7 @@ import net.vanfleteren.jazygit.git.model.MetadataStamp;
  * @param lingering  what shows after the commands that showed are done, and until when, so that the indicator does
  *                   not blink out between two commands
  * @param away       whether the terminal does not have the focus, as one that reports it said last: the timers then
- *                   read nothing (ADR 58)
+ *                   read less (ADR 58, ADR 67)
  * @param missed     the messages of the timers that came while away and were kept, in the order they first came, to
  *                   be handled once, when the terminal has the focus again
  * @param awayAt     while away, for each message of a timer that came, when it was last handled, or first kept: it is
@@ -95,6 +95,13 @@ public record Jobs(
     public static final Duration LINGER = Duration.ofMillis(300);
 
     /**
+     * How much earlier than its {@link Msg.Periodic#whileAway()} a message of a timer is handled while away: each comes
+     * a little later than its timer fired, by more or less, and one that came a few milliseconds too early would wait
+     * a whole period more. Less than the shortest period of a timer, a second.
+     */
+    private static final Duration AWAY_SLACK = Duration.ofMillis(500);
+
+    /**
      * Caps how long a tick waits before trying a read that failed again at {@code 2^6} = 64 ticks, about a minute at
      * the default interval.
      */
@@ -102,10 +109,12 @@ public record Jobs(
 
     /**
      * Whether {@code msg}, which a timer sent at {@code now} while away, is to be handled: once it waited its
-     * {@link Msg.Periodic#whileAway()} since it was last handled, or first kept, while away (ADR 67).
+     * {@link Msg.Periodic#whileAway()}, give or take {@link #AWAY_SLACK}, since it was last handled, or first kept,
+     * while away (ADR 67).
      */
     public boolean dueWhileAway(Msg.Periodic msg, Instant now) {
-        return awayAt.get(msg).exists(at -> !now.isBefore(at.plus(msg.whileAway())));
+        return awayAt.get(msg)
+                .exists(at -> !now.isBefore(at.plus(msg.whileAway()).minus(AWAY_SLACK)));
     }
 
     /**
