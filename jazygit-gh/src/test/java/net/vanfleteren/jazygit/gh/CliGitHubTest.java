@@ -157,6 +157,52 @@ class CliGitHubTest {
     }
 
     @Test
+    void aCommentOfTheConversationIsEditedByItsNodeIdWithItsBodyAsTyped() {
+        List<String> args =
+                CliGitHub.editCommentCommand("IC_1", "@all see").executed().commandLine();
+
+        assertEquals(List.of("gh", "api", "graphql"), args.take(3));
+        assertTrue(args.get(4).contains("updateIssueComment"), args.get(4));
+        assertEquals(List.of("-f", "comment=IC_1", "-f", "body=@all see"), args.drop(5));
+    }
+
+    // A gh that answers an edit with answer.
+    private static CliGitHub answering(Path dir, String answer) throws Exception {
+        Path gh = Files.writeString(dir.resolve("gh"), "#!/bin/sh\ncat <<'EOF'\n" + answer + "\nEOF\n");
+        gh.toFile().setExecutable(true);
+        return new CliGitHub(dir, gh.toString(), GhToken.NONE);
+    }
+
+    @Test
+    void anEditedCommentGivesTheBodyGitHubHolds(@TempDir Path dir) throws Exception {
+        assumeTrue(Files.isExecutable(Path.of("/bin/sh")), "no POSIX shell");
+
+        assertEquals(
+                "Fixed",
+                answering(dir, """
+                                {"data": {"updateIssueComment": {"issueComment": {"body": "Fixed"}}}}""")
+                        .editPullRequestComment("IC_1", "Fixed ")
+                        .get()
+                        .body());
+        assertEquals(
+                "Fixed",
+                answering(dir, """
+                                {"data": {"updatePullRequestReviewComment": \
+                                {"pullRequestReviewComment": {"body": "Fixed"}}}}""").editReviewComment("PRRC_1", "Fixed ").get().body());
+    }
+
+    @Test
+    void anEditOfACommentThatIsGoneFails(@TempDir Path dir) throws Exception {
+        assumeTrue(Files.isExecutable(Path.of("/bin/sh")), "no POSIX shell");
+        CliGitHub gitHub = failing(dir, true);
+
+        assertTrue(GhProcess.gone(
+                gitHub.editReviewComment("PRRC_1", "Fixed").getLeft().error()));
+        assertTrue(GhProcess.gone(
+                gitHub.editPullRequestComment("IC_1", "Fixed").getLeft().error()));
+    }
+
+    @Test
     void anEditOnlyPassesWhatItChanges() {
         assertEquals(
                 List.of("gh", "pr", "edit", "12", "--body", ""),
