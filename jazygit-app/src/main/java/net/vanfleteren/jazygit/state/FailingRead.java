@@ -41,7 +41,7 @@ public record FailingRead(int times, Instant since) {
     }
 
     /**
-     * This read having failed once more, at the time {@code fresh}, its first failure, says.
+     * This read having failed once more, just now: at the time of {@code fresh}, the record a first failure would make.
      */
     private FailingRead failedAgain(FailingRead fresh) {
         return new FailingRead(times + 1, fresh.since());
