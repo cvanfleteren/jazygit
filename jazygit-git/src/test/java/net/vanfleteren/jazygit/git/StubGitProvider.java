@@ -291,6 +291,17 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
+    default Either<ProcessError, List<CommitFile>> rangeFiles(Sha base, Sha tip) {
+        return Either.right(List.empty());
+    }
+
+    @Override
+    default Either<ProcessError, DiffText> rangeFileChanges(
+            Sha base, Sha tip, List<CommitFile> files, DiffOptions options) {
+        return Either.right(DiffText.of(""));
+    }
+
+    @Override
     default Either<GitError, Diffs> diff(List<FileEntry> files, DiffOptions options) {
         return Either.right(new Diffs("", ""));
     }

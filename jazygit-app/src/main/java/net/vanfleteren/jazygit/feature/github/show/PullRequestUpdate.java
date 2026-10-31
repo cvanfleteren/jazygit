@@ -17,6 +17,8 @@ import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.PullRequestCommits;
+import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -33,11 +35,12 @@ public final class PullRequestUpdate {
     public static Next update(Model model, PullRequestMsg msg) {
         return switch (msg) {
             case PullRequestMsg.Requested(BranchName branch) -> requested(model, branch);
+            case PullRequestMsg.FilesRequested(BranchName branch) -> filesRequested(model, branch);
             // A pull request of another repository is opened in the browser, as gh acts on this one; so is one
             // while it is not known yet which repository this is, which does no harm.
             case PullRequestMsg.SummaryRequested(var pullRequest)
             when model.prOverview().ofThisRepository(pullRequest).getOrElse(false) ->
-                show(model, new BranchName(pullRequest.headBranch()), pullRequest.pullRequest());
+                show(model, new BranchName(pullRequest.headBranch()), pullRequest.pullRequest(), false);
             case PullRequestMsg.SummaryRequested(var pullRequest) ->
                 Update.start(model.clearError(), new BrowsePullRequestCmd(pullRequest));
             // The branches pane shows the pull request as it was just read too, also when the dialog is closed.
@@ -49,15 +52,17 @@ public final class PullRequestUpdate {
             case PullRequestMsg.DetailsFailed(int number, long read, var failure)
             when !model.gitHub().current(number, read) -> Next.of(notTaken(model, number, read));
             case PullRequestMsg.DetailsLoaded(int number, long read, var details) ->
-                CheckTimesUpdate.read(
-                        Next.of(shown(
-                                model.mapGitHub(
-                                        gitHub -> gitHub.withRead(details).withReadTaken(number, read)),
-                                number,
-                                read,
-                                Either.right(details))),
-                        details.repository(),
-                        details.checks());
+                filesIfWanted(
+                        model,
+                        CheckTimesUpdate.read(
+                                Next.of(shown(
+                                        model.mapGitHub(gitHub ->
+                                                gitHub.withRead(details).withReadTaken(number, read)),
+                                        number,
+                                        read,
+                                        Either.right(details))),
+                                details.repository(),
+                                details.checks()));
             case PullRequestMsg.DetailsFailed(int number, long read, var failure) ->
                 Next.of(shown(
                         model.mapGitHub(gitHub -> gitHub.withReadTaken(number, read)),
@@ -77,10 +82,7 @@ public final class PullRequestUpdate {
             case PullRequestMsg.FilesChosen() ->
                 model.popup(PullRequestPopup.class)
                         .flatMap(PullRequestPopup::commits)
-                        .map(commits -> CommitFilesUpdate.update(
-                                model.withoutPopup(PullRequestPopup.class).withScreen(Screen.REPOSITORY),
-                                new CommitFilesMsg.Opened(
-                                        new CommitFilesView.Changes.OfPullRequest(commits), Scopes.BRANCHES.id())))
+                        .map(commits -> files(model.withoutPopup(PullRequestPopup.class), commits))
                         .getOrElse(() -> Next.of(model));
             case PullRequestMsg.MergeChosen(MergeMethod method) ->
                 Update.confirm(
@@ -257,7 +259,7 @@ public final class PullRequestUpdate {
         return model.idleBranch(branch)
                 .map(known -> model.gitHub()
                         .pullRequest(known)
-                        .map(pr -> show(model, branch, pr))
+                        .map(pr -> show(model, branch, pr, false))
                         // Without the pull requests it is unknown whether there is one to open.
                         .getOrElse(() -> model.gitHub().pullRequestsFailure().isDefined()
                                         || model.gitHub().pullRequests().isEmpty()
@@ -270,13 +272,68 @@ public final class PullRequestUpdate {
     }
 
     /**
-     * Shows {@code pullRequest}, from {@code branch}, reading what there is to know about it.
+     * Shows the files the branch changes (ADR 61). With an open pull request, those of the pull request, at the
+     * commits the pull requests were listed with; when those are not known, once its dialog read them, which it shows
+     * meanwhile, and which stays, to say so, when they cannot be shown. Without one, as far as is known, those against
+     * its base. An error shown before goes, as the files are asked for anew.
      */
-    private static Next show(Model model, BranchName branch, PullRequest pullRequest) {
-        return read(model, pullRequest.number())
-                .apply((given, load) -> Next.of(
-                        Update.ask(given, PullRequestPopup.loading(branch, pullRequest, model.now(), load.read()))
-                                .model(),
-                        load));
+    private static Next filesRequested(Model model, BranchName branch) {
+        Model cleared = model.clearError();
+        return cleared.repo()
+                .branch(branch)
+                .flatMap(known -> cleared.gitHub().pullRequest(known))
+                .map(pr -> pr.commits()
+                        .flatMap(listed -> commits(pr.number(), listed))
+                        .map(commits -> files(cleared, commits))
+                        .getOrElse(() -> show(cleared, branch, pr, true)))
+                .getOrElse(() -> CommitFilesUpdate.againstBase(cleared, branch));
+    }
+
+    /**
+     * The files of the pull request at {@code commits}, in the files pane of the repository screen, which the focus
+     * goes to; Escape there gives it to the branches pane (ADR 55).
+     */
+    private static Next files(Model model, PullRequestCommits commits) {
+        return CommitFilesUpdate.update(
+                model.withScreen(Screen.REPOSITORY),
+                new CommitFilesMsg.Opened(new CommitFilesView.Changes.OfPullRequest(commits), Scopes.BRANCHES.id()));
+    }
+
+    /**
+     * The commits pull request {@code number}, listed with {@code commits}, is diffed between; none when GitHub named
+     * one that is no sha.
+     */
+    private static Option<PullRequestCommits> commits(int number, PullRequest.Commits commits) {
+        return Sha.parse(commits.base().oid())
+                .flatMap(base -> Sha.parse(commits.head().oid())
+                        .map(head -> new PullRequestCommits(number, commits.repository(), commits.host(), base, head)));
+    }
+
+    /**
+     * {@code shown} going on to the files of the pull request when its dialog in {@code before} waited to show them,
+     * as f on its branch asked. Only the read it waits for gives it its details, and so the commits to list them at,
+     * and taking that read ends the waiting: a read of another pull request, or another read of it, finds no commits,
+     * and lists nothing.
+     */
+    private static Next filesIfWanted(Model before, Next shown) {
+        return before.popup(PullRequestPopup.class)
+                .filter(PullRequestPopup::filesWanted)
+                .map(popup -> {
+                    Next files = update(shown.model(), new PullRequestMsg.FilesChosen());
+                    return new Next(files.model(), shown.cmds().appendAll(files.cmds()));
+                })
+                .getOrElse(shown);
+    }
+
+    /**
+     * Shows {@code pullRequest}, from {@code branch}, reading what there is to know about it; then the files it
+     * changes in its place when {@code files}.
+     */
+    private static Next show(Model model, BranchName branch, PullRequest pullRequest, boolean files) {
+        return read(model, pullRequest.number()).apply((given, load) -> {
+            PullRequestPopup loading = PullRequestPopup.loading(branch, pullRequest, model.now(), load.read());
+            return Next.of(
+                    Update.ask(given, files ? loading.wantingFiles() : loading).model(), load);
+        });
     }
 }

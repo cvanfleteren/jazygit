@@ -72,6 +72,27 @@ class CliPullRequestTest {
     }
 
     @Test
+    void aBranchIsReadAgainstItsBaseAsAPullRequestOfItWouldBeWithoutARemote() throws Exception {
+        Path repo = dir.resolve("repo");
+        git(dir, "init", "-q", "-b", "main", repo.toString());
+        commit(repo, "a.txt", "a\n", "first");
+        git(repo, "checkout", "-q", "-b", "feature");
+        Sha tip = commit(repo, "b.txt", "b\n", "feature");
+        git(repo, "checkout", "-q", "main");
+        Sha base = commit(repo, "a.txt", "a\nmore\n", "main moved on");
+
+        assertEquals(
+                List.of(new CommitFile("b.txt", ChangeType.ADDED)),
+                CliPullRequest.files(repo, base, tip).get());
+        String diff = CliPullRequest.fileChanges(
+                        repo, base, tip, List.of(new CommitFile("b.txt", ChangeType.ADDED)), DiffOptions.DEFAULT)
+                .get()
+                .text();
+        assertTrue(diff.contains("+b"), diff);
+        assertFalse(diff.contains("more"), diff);
+    }
+
+    @Test
     void theCommitsOfAPullRequestAreFetchedFromTheRemoteOfItsRepositoryWithoutARef() throws Exception {
         Path origin = dir.resolve("owner").resolve("repo.git");
         Path repo = dir.resolve("repo");

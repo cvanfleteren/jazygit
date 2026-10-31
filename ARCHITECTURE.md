@@ -424,6 +424,13 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
   theme styles `MarkdownElement` (`Theme.SpanStyles.markdown`). `c` lists only the files with an unresolved thread,
   or with any, and every file again (`CommitFilesView.listed`, ADR 57): the files pane draws `listedFiles()`, the
   files kept, and says why none is with a `FileTreeList.Placeholder`, as the content panel does then.
+- **The files of a branch** (ADR 61): `f` in the branches pane (`PullRequestMsg.FilesRequested`) opens those of its
+  open pull request at once when the pull requests were listed with its commits (`PullRequest.commits`, read with
+  `SummaryFragment`); else it opens the dialog, which goes on to them once its details are read
+  (`PullRequestPopup.filesWanted`). Without an open pull request, as far as is known, `CommitFilesUpdate.againstBase`
+  lists those of `Changes.OfBranch`: the branch against its base of ADR 20, as `AheadUpdate.of` finds it, at the tips
+  the branches read last have, diffed as a pull request is but with nothing fetched (`GitInfoProvider.rangeFiles`).
+  It has no review threads.
 - **Their focus:** `FocusKeeper` moves the focus into the files pane when they open, and back to the pane they were
   opened from when Escape closes them. `Model.withShownPane` closes them when another pane gets the focus, and
   `LoadUpdate` when the stash they are of is dropped.

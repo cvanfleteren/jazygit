@@ -8,19 +8,22 @@ import static net.vanfleteren.jazygit.json.Decoder.instant;
 import static net.vanfleteren.jazygit.json.Decoder.integer;
 import static net.vanfleteren.jazygit.json.Decoder.list;
 import static net.vanfleteren.jazygit.json.Decoder.map2;
-import static net.vanfleteren.jazygit.json.Decoder.map3;
+import static net.vanfleteren.jazygit.json.Decoder.map4;
 import static net.vanfleteren.jazygit.json.Decoder.map5;
 import static net.vanfleteren.jazygit.json.Decoder.map6;
 import static net.vanfleteren.jazygit.json.Decoder.nullable;
+import static net.vanfleteren.jazygit.json.Decoder.optionalField;
 import static net.vanfleteren.jazygit.json.Decoder.string;
 import static net.vanfleteren.jazygit.json.Decoder.succeed;
 
 import io.vavr.Tuple;
+import io.vavr.Tuple2;
 import io.vavr.Tuple5;
 import io.vavr.Tuple6;
 import io.vavr.collection.HashMap;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestList;
@@ -34,7 +37,7 @@ import net.vanfleteren.jazygit.json.Decoder;
 final class SummaryFragment {
 
     static final String FRAGMENT = """
-            fragment summary on PullRequest { number title url updatedAt isDraft isCrossRepository headRefName \
+            fragment summary on PullRequest { number title url updatedAt isDraft isCrossRepository headRefName headRefOid baseRefOid \
             author { login } repository { nameWithOwner } reviewDecision %s \
             commits(last: 1) { nodes { commit { statusCheckRollup { state } %s } } } }""".formatted(StackFragment.FIELDS, SuiteFragment.FIELDS);
 
@@ -68,11 +71,17 @@ final class SummaryFragment {
             field("updatedAt", instant()),
             Tuple::of);
 
-    static final Decoder<PullRequestSummary> SUMMARY = map3(
+    // The commits its base and its branch are at, which its changes are diffed between (ADR 61); none for a branch
+    // that is gone.
+    static final Decoder<Tuple2<Option<GhCommit>, Option<GhCommit>>> COMMITS =
+            map2(commit("baseRefOid"), commit("headRefOid"), Tuple::of);
+
+    static final Decoder<PullRequestSummary> SUMMARY = map4(
             NAMED,
             STATE,
             StackFragment.DECODER,
-            (named, state, stack) -> new PullRequestSummary(
+            COMMITS,
+            (named, state, stack, commits) -> new PullRequestSummary(
                     named._1(),
                     named._2(),
                     named._3(),
@@ -84,7 +93,9 @@ final class SummaryFragment {
                     state._3(),
                     state._5(),
                     named._6(),
-                    stack));
+                    stack,
+                    commits._1(),
+                    commits._2()));
 
     /**
      * A hit of a search of issues: a pull request, or none for an issue, which answers only its {@code __typename}.
@@ -95,6 +106,10 @@ final class SummaryFragment {
             succeed(Option.<PullRequestSummary>none()));
 
     private SummaryFragment() {}
+
+    private static Decoder<Option<GhCommit>> commit(String name) {
+        return optionalField(name, nullable(string())).map(oid -> oid.flatMap(read -> read.flatMap(GhCommit::parse)));
+    }
 
     /**
      * A list of {@code nodes} that {@code node} decodes, of which {@code total} match in all.

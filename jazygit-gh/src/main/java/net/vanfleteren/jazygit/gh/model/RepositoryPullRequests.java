@@ -26,14 +26,6 @@ public record RepositoryPullRequests(String repository, PullRequestList open, Op
      * same read serves both (ADR 58).
      */
     public List<PullRequest> ofBranches() {
-        return open.pullRequests()
-                .filter(summary -> !summary.fromFork())
-                .map(summary -> new PullRequest(
-                        summary.number(),
-                        summary.headBranch(),
-                        summary.draft(),
-                        summary.checks(),
-                        summary.review(),
-                        summary.stack()));
+        return open.pullRequests().filter(summary -> !summary.fromFork()).map(PullRequestSummary::pullRequest);
     }
 }

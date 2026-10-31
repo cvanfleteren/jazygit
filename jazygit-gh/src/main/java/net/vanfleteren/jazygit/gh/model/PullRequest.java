@@ -12,15 +12,60 @@ import io.vavr.control.Option;
  * @param checks     how its CI checks are doing
  * @param review     where its review stands
  * @param stack      where it sits in its stack, if it is stacked
+ * @param commits    the commits its changes are diffed between, when GitHub said (ADR 61)
  */
 public record PullRequest(
-        int number, String headBranch, boolean draft, Checks checks, Review review, Option<PullRequestStack> stack) {
+        int number,
+        String headBranch,
+        boolean draft,
+        Checks checks,
+        Review review,
+        Option<PullRequestStack> stack,
+        Option<Commits> commits) {
+
+    /**
+     * One whose commits are not known.
+     */
+    public PullRequest(
+            int number,
+            String headBranch,
+            boolean draft,
+            Checks checks,
+            Review review,
+            Option<PullRequestStack> stack) {
+        this(number, headBranch, draft, checks, review, stack, Option.none());
+    }
 
     /**
      * One that is not stacked.
      */
     public PullRequest(int number, String headBranch, boolean draft, Checks checks, Review review) {
         this(number, headBranch, draft, checks, review, Option.none());
+    }
+
+    /**
+     * The commits a pull request is diffed between, as GitHub shows its changes (ADR 55, 61).
+     *
+     * @param repository the repository it is of, as {@code owner/name}
+     * @param url        its URL, which names the host its repository is on
+     * @param base       the commit its base branch is at
+     * @param head       the commit its branch is at
+     */
+    public record Commits(String repository, String url, GhCommit base, GhCommit head) {
+
+        /**
+         * Its commits, when GitHub said both.
+         */
+        public static Option<Commits> of(String repository, String url, Option<GhCommit> base, Option<GhCommit> head) {
+            return base.flatMap(at -> head.map(tip -> new Commits(repository, url, at, tip)));
+        }
+
+        /**
+         * The host its repository is on, like {@code github.com}; empty when its URL does not say.
+         */
+        public String host() {
+            return PullRequestDetails.hostOf(url);
+        }
     }
 
     /**

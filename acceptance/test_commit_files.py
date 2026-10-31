@@ -1,4 +1,4 @@
-"""The files of a commit or a stash as a tree in the files pane, and the rich view of a diff (ADR 44)."""
+"""The files of a commit, a stash or a branch as a tree in the files pane, and the rich view of a diff (ADR 44, 61)."""
 
 from harness import eventually
 
@@ -64,3 +64,25 @@ def test_ctrl_d_draws_the_changes_of_a_commit_rich_and_keeps_that(repo, jazygit)
     again = jazygit()
     again.commits.select("Change one")
     again.app.wait_for("modified  one.txt")
+
+
+def test_f_on_a_branch_without_a_pull_request_shows_its_files_against_its_base(repo, jazygit):
+    repo.commit("Add one", **{"one.txt": "one\n"})
+    repo("checkout", "-q", "-b", "feature")
+    repo.commit("Add two", **{"two.txt": "two\n"})
+    repo("checkout", "-q", "main")
+    # The base moved on after the branch left it: that is no change of the branch (ADR 61).
+    repo.commit("Change one", **{"one.txt": "one\nmore\n"})
+    ui = jazygit()
+    ui.branches.select("feature")
+
+    ui.app.press("f")
+
+    ui.app.wait_in("Files", "two.txt")
+    assert "Files of feature · vs main" in ui.app.text()
+    assert "one.txt" not in ui.app.pane_text("Files")
+    assert ui.app.focused_pane() == "Files"
+
+    ui.app.press("escape")
+
+    ui.app.eventually(lambda: ui.app.focused_pane() == "Branches", "the focus back on the branches")

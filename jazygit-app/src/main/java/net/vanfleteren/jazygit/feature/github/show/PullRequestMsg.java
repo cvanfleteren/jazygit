@@ -52,6 +52,12 @@ public sealed interface PullRequestMsg extends Msg {
     record FilesChosen() implements PullRequestMsg {}
 
     /**
+     * The user asked for the files the pull request of a branch changes, straight from the branch, as choosing them
+     * in its dialog does.
+     */
+    record FilesRequested(BranchName branch) implements PullRequestMsg {}
+
+    /**
      * The user asked to merge the pull request that is shown, as {@code method} says.
      */
     record MergeChosen(MergeMethod method) implements PullRequestMsg {}

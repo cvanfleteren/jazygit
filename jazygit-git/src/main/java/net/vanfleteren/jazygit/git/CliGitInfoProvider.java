@@ -506,6 +506,17 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
+    public Either<ProcessError, List<CommitFile>> rangeFiles(Sha base, Sha tip) {
+        return CliPullRequest.files(worktree, base, tip);
+    }
+
+    @Override
+    public Either<ProcessError, DiffText> rangeFileChanges(
+            Sha base, Sha tip, List<CommitFile> files, DiffOptions options) {
+        return CliPullRequest.fileChanges(worktree, base, tip, files, options);
+    }
+
+    @Override
     public Either<GitError, Diffs> diff(List<FileEntry> files, DiffOptions options) {
         return CliDiff.diff(worktree, files, options);
     }

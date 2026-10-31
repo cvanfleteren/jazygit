@@ -24,6 +24,8 @@ import net.vanfleteren.jazygit.state.Reading;
  *                      read succeeds
  * @param readAt        when the last read of it started
  * @param read          the id of the last read of it that it started, which it waits for while it reads (ADR 34)
+ * @param filesWanted   whether the files it changes are shown in its place once its details are read, as f on its
+ *                      branch asks; the read it waits for, taken or not, ends that
  */
 public record PullRequestPopup(
         BranchName branch,
@@ -32,14 +34,22 @@ public record PullRequestPopup(
         Reading reading,
         Option<Failure> refreshFailed,
         Instant readAt,
-        long read)
+        long read,
+        boolean filesWanted)
         implements ShowsPullRequest {
 
     /**
      * The popup while its details are being read, from {@code now}, by read {@code read}.
      */
     public static PullRequestPopup loading(BranchName branch, PullRequest pullRequest, Instant now, long read) {
-        return new PullRequestPopup(branch, pullRequest, Option.none(), Reading.NOT, Option.none(), now, read);
+        return new PullRequestPopup(branch, pullRequest, Option.none(), Reading.NOT, Option.none(), now, read, false);
+    }
+
+    /**
+     * The popup while its details are being read, to show the files it changes in its place once they are.
+     */
+    public PullRequestPopup wantingFiles() {
+        return new PullRequestPopup(branch, pullRequest, details, reading, refreshFailed, readAt, read, true);
     }
 
     /**
@@ -55,7 +65,14 @@ public record PullRequestPopup(
                 ? this
                 : result.isLeft() && detailsRead()
                         ? new PullRequestPopup(
-                                branch, pullRequest, details, Reading.NOT, Option.of(result.getLeft()), readAt, read)
+                                branch,
+                                pullRequest,
+                                details,
+                                Reading.NOT,
+                                Option.of(result.getLeft()),
+                                readAt,
+                                read,
+                                false)
                         : new PullRequestPopup(
                                 branch,
                                 pullRequest,
@@ -63,7 +80,8 @@ public record PullRequestPopup(
                                 Reading.NOT,
                                 Option.none(),
                                 readAt,
-                                read);
+                                read,
+                                false);
     }
 
     /**
@@ -72,7 +90,7 @@ public record PullRequestPopup(
      */
     PullRequestPopup notTaken(long id) {
         return id == read
-                ? new PullRequestPopup(branch, pullRequest, details, Reading.NOT, refreshFailed, readAt, read)
+                ? new PullRequestPopup(branch, pullRequest, details, Reading.NOT, refreshFailed, readAt, read, false)
                 : this;
     }
 
@@ -97,14 +115,15 @@ public record PullRequestPopup(
      * The popup while its details are read again from {@code now} by read {@code id}, as {@code reading} tells.
      */
     public PullRequestPopup readingAgain(Reading reading, Instant now, long id) {
-        return new PullRequestPopup(branch, pullRequest, details, reading, refreshFailed, now, id);
+        return new PullRequestPopup(branch, pullRequest, details, reading, refreshFailed, now, id, filesWanted);
     }
 
     /**
      * The popup showing the read it does by itself as one asked for.
      */
     PullRequestPopup asked() {
-        return new PullRequestPopup(branch, pullRequest, details, Reading.ASKED, refreshFailed, readAt, read);
+        return new PullRequestPopup(
+                branch, pullRequest, details, Reading.ASKED, refreshFailed, readAt, read, filesWanted);
     }
 
     /**
@@ -137,7 +156,8 @@ public record PullRequestPopup(
                 reading,
                 refreshFailed,
                 readAt,
-                read);
+                read,
+                filesWanted);
     }
 
     /**

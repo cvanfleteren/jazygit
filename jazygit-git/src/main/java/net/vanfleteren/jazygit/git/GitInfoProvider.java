@@ -349,6 +349,20 @@ public interface GitInfoProvider {
     Either<ProcessError, DiffText> pullRequestFileChanges(
             PullRequestCommits commits, List<CommitFile> files, DiffOptions options);
 
+    // What a branch changes against its base, as a pull request of it would (ADR 61).
+
+    /**
+     * The files {@code tip} changes against the merge base of it and {@code base}, as {@link #pullRequestFiles} reads
+     * those of a pull request; nothing is fetched.
+     */
+    Either<ProcessError, List<CommitFile>> rangeFiles(Sha base, Sha tip);
+
+    /**
+     * What {@code tip} changes in {@code files} against the merge base of it and {@code base}, read with
+     * {@code options}. Long output is cut off.
+     */
+    Either<ProcessError, DiffText> rangeFileChanges(Sha base, Sha tip, List<CommitFile> files, DiffOptions options);
+
     // The changes in the working tree and the index, as git diff shows them.
 
     /**
