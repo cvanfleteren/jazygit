@@ -5,7 +5,8 @@
 $fg: #e6edf3;
 $bg: #0d1117;
 $subtle: #161b22;
-$border: #30363d;
+/* Darker than GitHub's own borders, as the titles of the panes are drawn in this colour. */
+$border: #6e7681;
 $accent: #2f81f7;
 $link: #58a6ff;
 $muted: #7d8590;
