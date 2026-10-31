@@ -54,16 +54,16 @@ import net.vanfleteren.jazygit.ui.ContentView.Tone;
  */
 public final class ContentPanel {
 
-    private static final DateTimeFormatter COMMIT_DATE = DateTimeFormatter.ofPattern(Messages.get("content.commitDatePattern"), Locale.ENGLISH);
-    private static final DateTimeFormatter DATE_TIME_PATTERN = DateTimeFormatter.ofPattern(Messages.get("content.dateTimePattern"));
+    private static final DateTimeFormatter COMMIT_DATE =
+            DateTimeFormatter.ofPattern(Messages.get("content.commitDatePattern"), Locale.ENGLISH);
+    private static final DateTimeFormatter LOG_DATE_TIME =
+            DateTimeFormatter.ofPattern(Messages.get("content.dateTimePattern"));
 
     private static final String MESSAGE_INDENT = "    ";
     /**
      * How the header lines of a diff start, before its first hunk.
      */
     private static final List<String> DIFF_HEADER_PREFIXES = List.of("+++", "---", "diff ", "index ");
-
-
 
     private final Theme.SpanStyles styles;
     // The scrollable areas for the diffs, the branch log and the commit. Where they are scrolled to lives in the
@@ -245,7 +245,7 @@ public final class ContentPanel {
      * How the log shows when a commit was made, in {@code zone}.
      */
     private static DateTimeFormatter dateTime(ZoneId zone) {
-        return DATE_TIME_PATTERN.withZone(zone);
+        return LOG_DATE_TIME.withZone(zone);
     }
 
     /**
