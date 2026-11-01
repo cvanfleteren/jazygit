@@ -11,18 +11,26 @@ import dev.tamboui.text.Span;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.collection.HashSet;
+import io.vavr.collection.Iterator;
 import io.vavr.collection.List;
 import io.vavr.collection.Set;
 import io.vavr.collection.Vector;
+import io.vavr.control.Option;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.function.Function;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Comment;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Collapsed;
 import net.vanfleteren.jazygit.ui.widgets.MarkdownScroll;
+import org.commonmark.node.FencedCodeBlock;
+import org.commonmark.node.IndentedCodeBlock;
+import org.commonmark.node.Node;
+import org.commonmark.parser.IncludeSourceSpans;
+import org.commonmark.parser.Parser;
 
 /**
  * The review threads of a pull request drawn as lines of its rich diff (ADR 55): each a block that starts some
@@ -262,12 +270,69 @@ final class RemarkLines {
     /**
      * {@code markdown} drawn {@code width} columns wide, as tamboui draws it into a buffer off the screen, its cells
      * read back as lines of spans: each run of cells of one style a span, without the blank cells at the end of a
-     * line. It is as high as tamboui measures it; empty text has no lines.
+     * line. It is as high as tamboui measures it; empty text has no lines. tamboui cuts off the lines of a code block
+     * at its border, so a code block too wide for it is drawn on its own, as wide as its lines, which the diff scrolls
+     * to, with the text around it still {@code width} wide and a blank line between them.
      */
     static List<Line> markdown(String markdown, int width, StylePropertyResolver resolver) {
         if (markdown.isBlank()) {
             return List.empty();
         }
+        List<Piece> pieces = pieces(markdown, width);
+        return pieces.forAll(piece -> piece.width() == width)
+                ? drawn(markdown, width, resolver)
+                : pieces.map(piece -> drawn(piece.markdown(), piece.width(), resolver))
+                        .intersperse(List.of(Line.from("")))
+                        .flatMap(Function.identity());
+    }
+
+    /**
+     * {@code markdown} in pieces: each code block at its top too wide for {@code width} a piece of its own, as wide as
+     * its widest line and its border, and the text between them pieces {@code width} wide.
+     */
+    private static List<Piece> pieces(String markdown, int width) {
+        Node document = Parser.builder()
+                .includeSourceSpans(IncludeSourceSpans.BLOCKS)
+                .build()
+                .parse(markdown);
+        Vector<String> lines = Vector.ofAll(markdown.lines());
+        List<Tuple2<Node, Integer>> blocks = List.ofAll(Iterator.iterate(document.getFirstChild(), Node::getNext)
+                        .takeWhile(Objects::nonNull))
+                .filter(block -> !block.getSourceSpans().isEmpty())
+                .map(block -> Tuple.of(block, wide(block, width)));
+        // Each block joins the piece before it, unless one of the two is a wide code block.
+        List<List<Tuple2<Node, Integer>>> runs = blocks.foldLeft(
+                        List.<List<Tuple2<Node, Integer>>>empty(),
+                        (done, block) -> done.headOption()
+                                .filter(last -> last.head()._2() == width && block._2() == width)
+                                .map(last -> done.tail().prepend(last.prepend(block)))
+                                .getOrElse(() -> done.prepend(List.of(block))))
+                .map(List::reverse)
+                .reverse();
+        return runs.map(run -> new Piece(
+                lines.subSequence(
+                                run.head()._1().getSourceSpans().getFirst().getLineIndex(),
+                                run.last()._1().getSourceSpans().getLast().getLineIndex() + 1)
+                        .mkString("\n"),
+                run.head()._2()));
+    }
+
+    /**
+     * How wide {@code block} is drawn: a code block too wide for {@code width} as wide as its widest line and its
+     * border, anything else {@code width}.
+     */
+    private static int wide(Node block, int width) {
+        Option<String> code = block instanceof FencedCodeBlock fenced
+                ? Option.of(fenced.getLiteral())
+                : block instanceof IndentedCodeBlock indented ? Option.of(indented.getLiteral()) : Option.none();
+        return code.map(literal ->
+                        List.ofAll(literal.lines()).map(TextWidth::of).max().getOrElse(0))
+                .map(widest -> widest + 2)
+                .filter(needed -> needed > width)
+                .getOrElse(width);
+    }
+
+    private static List<Line> drawn(String markdown, int width, StylePropertyResolver resolver) {
         MarkdownView view =
                 MarkdownView.builder().source(markdown).styleResolver(resolver).build();
         int height = view.computeHeight(width);
@@ -352,6 +417,11 @@ final class RemarkLines {
     private static Span deleting(Theme.SpanStyles styles) {
         return styled(" · " + Messages.get("content.remarks.deleting"), Theme.Classes.DIM, styles);
     }
+
+    /**
+     * A part of a comment and how wide it is drawn.
+     */
+    private record Piece(String markdown, int width) {}
 
     /**
      * How the threads are drawn: which are collapsed, what is being sent or deleted, and the time it is, to tell how
