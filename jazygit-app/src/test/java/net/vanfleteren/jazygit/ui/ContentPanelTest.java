@@ -201,6 +201,31 @@ class ContentPanelTest {
     }
 
     @Test
+    void hAndLScrollAFocusedAreaSidewaysAsTheArrowsDo() throws Exception {
+        java.util.List<Msg> dispatched = new java.util.ArrayList<>();
+        // The model takes where the area is scrolled to, as the app's does.
+        java.util.concurrent.atomic.AtomicReference<Model> model =
+                new java.util.concurrent.atomic.AtomicReference<>(showingCommit("+" + "x".repeat(300)));
+        ContentPanel scrolling = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, msg -> {
+            dispatched.add(msg);
+            model.set(Update.update(model.get(), msg).model());
+        });
+        String area = scrolling.areaOfPane(model.get(), CommitsPanel.ID).get();
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> scrolling.render(model.get(), area))) {
+            SettledPilot.focus(testRunner, area);
+            RenderedText.ofLarge(testRunner, () -> scrolling.render(model.get(), area));
+            List.of('l', 'l', 'h').forEach(key -> SettledPilot.of(testRunner).press(key));
+            SettledPilot.of(testRunner).pause();
+        }
+
+        assertEquals(
+                List.of(1, 2, 1),
+                List.ofAll(dispatched)
+                        .map(msg -> ((Msg.ContentScrolled) msg).to().column()));
+    }
+
+    @Test
     void leftLeavesADiffOfTheFilesPaneOnceItIsScrolledAllTheWayLeft() throws Exception {
         java.util.concurrent.atomic.AtomicInteger leaves = new java.util.concurrent.atomic.AtomicInteger();
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();

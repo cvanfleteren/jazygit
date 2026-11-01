@@ -484,6 +484,9 @@ public final class ContentPanel {
         // moved (ADR 60).
         private static final char UP = 'k';
         private static final char DOWN = 'j';
+        // The keys that scroll an area sideways besides the arrows, to the end of a long line or a wide code block.
+        private static final char LEFT = 'h';
+        private static final char RIGHT = 'l';
         private static final Keymap KEYMAP = Keymap.standard();
 
         private final ContentArea area;
@@ -563,10 +566,7 @@ public final class ContentPanel {
          */
         private EventResult keys(KeyEvent event, boolean focused, boolean ofFiles, ScrolledContent content) {
             boolean leaving = event.code() == KeyCode.ESCAPE
-                    || (focused
-                            && ofFiles
-                            && event.matches(Actions.MOVE_LEFT)
-                            && element.state().scrollCol() == 0);
+                    || (focused && ofFiles && left(event) && element.state().scrollCol() == 0);
             // Escape, and Left where it leaves as Escape does, drop an open range before they leave the area (ADR 60).
             return cursor.filter(on -> leaving && focused && on.mark().isDefined())
                     .map(ranged -> moved(ranged.marked().get(), content))
@@ -686,10 +686,15 @@ public final class ContentPanel {
                     .orElse(Option.when(event.matches(Actions.PAGE_DOWN), () -> state::pageDown))
                     .orElse(Option.when(event.matches(Actions.HOME), () -> state::scrollToTop))
                     .orElse(Option.when(event.matches(Actions.END), () -> state::scrollToBottom))
-                    .orElse(Option.when(event.matches(Actions.MOVE_LEFT), () -> state::scrollLeft))
-                    .orElse(Option.when(event.matches(Actions.MOVE_RIGHT), () -> state::scrollRight))
+                    .orElse(Option.when(left(event), () -> state::scrollLeft))
+                    .orElse(Option.when(
+                            event.matches(Actions.MOVE_RIGHT) || event.isChar(RIGHT), () -> state::scrollRight))
                     .peek(Runnable::run)
                     .isDefined();
+        }
+
+        private static boolean left(KeyEvent event) {
+            return event.matches(Actions.MOVE_LEFT) || event.isChar(LEFT);
         }
 
         /**
