@@ -52,10 +52,6 @@
         </dependency>
         <dependency>
             <groupId>dev.tamboui</groupId>
-            <artifactId>tamboui-jline3-backend</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>dev.tamboui</groupId>
             <artifactId>tamboui-panama-backend</artifactId>
         </dependency>
         <dependency>
@@ -234,7 +230,7 @@
                             </metadataRepository>
                             <buildArgs>
                                 <buildArg>-march=compatibility</buildArg>
-                                <!-- jline loads its terminal library itself; without this it warns on every start. -->
+                                <!-- The Panama backend calls into the native terminal library; without this it warns on every start. -->
                                 <buildArg>--enable-native-access=ALL-UNNAMED</buildArg>
                             </buildArgs>
                         </configuration>

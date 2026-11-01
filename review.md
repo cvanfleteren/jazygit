@@ -16,7 +16,7 @@ Six reviewers each took one area: the core git layer, the GitHub layer, the Elm 
 4. **✔ Deleting a local branch always uses `-D`.** `CliBranch.deleteLocal` passes `--force`, also when a worktree is removed together with its branch. Unmerged or unpushed commits go without a warning. Fix: try `-d` first, then confirm with a count of the commits that would be lost.
 5. **Merge and rebase pass bare branch names**, so a tag with the same name wins. The merge then says "Already up to date" and exits 0 without merging. This was reproduced. Fix: use `Refs.head(...)`, as move commits already does.
 6. **Global keys get through dialogs.** `q`, `Q` and Ctrl+C reach TamboUI's built-in `quit` binding when a list dialog or markdown dialog leaves them unhandled. `JazygitApp.dispatch` also quits on `Msg.Quit` before the model sees it, so no update can refuse. Ctrl+C in the commit dialog loses the typed message. `M` and Ctrl+P act behind an open popup.
-7. **✔ The fat jar picks the JLine backend.** The merged service file lists JLine first, and only `run.sh` and the acceptance tests pin Panama. With `java -jar`, handing the terminal to the editor (`e`, Ctrl+O) loses the first key typed in it, as ARCHITECTURE.md itself warns. Fix: default `tamboui.backend=panama` in `main`.
+7. **✔ The fat jar picks the JLine backend.** The merged service file lists JLine first, and only `run.sh` and the acceptance tests pin Panama. With `java -jar`, handing the terminal to the editor (`e`, Ctrl+O) loses the first key typed in it, as ARCHITECTURE.md itself warns. Fix: the JLine backend is removed from the fat jar, which leaves only Panama.
 
 ## High and medium
 
