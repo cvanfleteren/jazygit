@@ -2551,19 +2551,13 @@ class PullRequestUpdateTest {
     }
 
     @Test
-    void inALinkedWorktreeThatHasItsBranchAPullRequestGetsNoNewWorktree() {
-        Model asked = Update.update(
-                        linkedWith(new BranchName("patch-1"), false),
-                        new CheckoutPullRequestMsg.Requested(own("patch-1")))
-                .model();
-        assertTrue(asked.popup().exists(CheckoutWherePopup.class::isInstance));
+    void inALinkedWorktreeThatHasItsBranchAPullRequestIsCheckedOutThereWithoutAsking() {
+        Next next = Update.update(
+                linkedWith(new BranchName("patch-1"), false), new CheckoutPullRequestMsg.Requested(own("patch-1")));
 
-        Next refused = Update.update(asked, new CheckoutMsg.NewWorktreeChosen());
-
-        assertEquals(List.empty(), refused.cmds());
-        assertEquals(
-                Option.of(new AppError.PullRequestCheckedOutHere("owner/repo#9")),
-                refused.model().outcome().error());
+        // It changes no branch, and no other worktree could check it out.
+        assertEquals(List.of(new CheckoutPullRequestCmd(own("patch-1"))), next.cmds());
+        assertEquals(Option.none(), next.model().popup());
     }
 
     @Test

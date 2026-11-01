@@ -48,7 +48,8 @@ public final class CheckoutPullRequestUpdate {
     /**
      * Checks out {@code pullRequest}, if it is of the repository, where the user says: in a linked worktree, they are
      * asked whether here, in the main worktree or in a new one (ADR 68). When another worktree has its branch checked
-     * out, switching to that one is offered first, as checking out the branch offers it.
+     * out, switching to that one is offered first, as checking out the branch offers it; when this one has, it is
+     * checked out here, which changes no branch, as nowhere else could have it.
      */
     private static Next checkout(Model model, PullRequestSummary pullRequest) {
         return proceed(
@@ -56,7 +57,9 @@ public final class CheckoutPullRequestUpdate {
                 ofThisRepository(model, pullRequest)
                         .orElse(() -> checkedOutElsewhere(model, pullRequest))
                         .getOrElse(Readiness.Ready::new),
-                () -> CheckoutUpdate.place(model, new PullRequestCheckout(pullRequest)));
+                () -> checkedOutHere(model, pullRequest)
+                        ? here(model.clearError(), pullRequest)
+                        : CheckoutUpdate.place(model, new PullRequestCheckout(pullRequest)));
     }
 
     /**
