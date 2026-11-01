@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.RemoteRef;
 import net.vanfleteren.jazygit.git.model.Worktree;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
 
@@ -23,7 +24,7 @@ public final class AddWorktreeUpdate {
 
     public static Next update(Model model, AddWorktreeMsg msg) {
         return switch (msg) {
-            case Requested(BranchName branch) -> requested(model, branch);
+            case Requested(BranchName branch) -> forBranch(model, branch, false);
             case NewBranchRequested(BranchName base) ->
                 Update.ask(
                         model,
@@ -53,17 +54,7 @@ public final class AddWorktreeUpdate {
                 Next.of(model.fail(
                         new AppError.OperationFailed(AddWorktreeCmd.ADD_WORKTREE, Option.of(typed), failure)));
             case NameConfirmed() -> nameConfirmed(model);
-            // The worktrees are shown, the new one among them, and switching to it is offered.
-            case Added(var cmd, String location, var commands) -> {
-                Next succeeded = OperationUpdate.succeeded(
-                        model.mapRepoView(repoView -> repoView.withBranchesTab(BranchesTab.WORKTREES)), cmd, commands);
-                yield new Next(
-                        succeeded
-                                .model()
-                                .openPopupIfFree(
-                                        new SwitchToAddedPopup(cmd.source().label(), location)),
-                        succeeded.cmds());
-            }
+            case Added(var cmd, String location, var commands) -> added(model, cmd, location, commands);
             case SwitchConfirmed() ->
                 model.popup(SwitchToAddedPopup.class)
                         .map(popup -> Next.of(
@@ -81,18 +72,54 @@ public final class AddWorktreeUpdate {
     }
 
     /**
-     * Asks where to check out {@code branch}, a known branch that no operation runs on, starting out at
-     * {@link #location}. The branch checked out here git keeps from being checked out twice, so a new branch made
-     * from it is asked for instead; one that another worktree has checked out git would refuse too, which is said.
+     * Asks where the new worktree that checks out {@code source} goes, as {@link #ask(Model, WorktreeSource)} does;
+     * once added, the app switches to it without asking, as it was chosen to check {@code source} out in (ADR 68).
      */
-    private static Next requested(Model model, BranchName branch) {
+    public static Next askSwitching(Model model, WorktreeSource source) {
+        return Update.ask(model, new NewWorktreePopup(source, location(model, source.directory()), true));
+    }
+
+    /**
+     * The worktree {@code cmd} added at {@code location}, running {@code commands}. One added to check something out
+     * in is switched to, shown as a checkout here shows it: on the local branches, the focus where it was. Otherwise
+     * the worktrees are shown, the new one among them, and switching to it is offered.
+     */
+    private static Next added(Model model, AddWorktreeCmd cmd, String location, List<ExecutedCommand> commands) {
+        if (cmd.switching()) {
+            Next succeeded = OperationUpdate.succeeded(model, cmd, commands);
+            return new Next(
+                    succeeded.model(),
+                    succeeded
+                            .cmds()
+                            .append(new RecentReposCmd.SwitchTo(
+                                    location,
+                                    new Landing(
+                                            BranchesTab.LOCAL, model.repoView().focusedPane()))));
+        }
+        Next succeeded = OperationUpdate.succeeded(
+                model.mapRepoView(repoView -> repoView.withBranchesTab(BranchesTab.WORKTREES)), cmd, commands);
+        return new Next(
+                succeeded
+                        .model()
+                        .openPopupIfFree(new SwitchToAddedPopup(cmd.source().label(), location)),
+                succeeded.cmds());
+    }
+
+    /**
+     * Asks where to check out {@code branch}, a known branch that no operation runs on, in a new worktree, starting
+     * out at {@link #location}; once added, the app switches to it without asking when {@code switching} (ADR 68). The
+     * branch checked out here git keeps from being checked out twice, so a new branch made from it is asked for
+     * instead; one that another worktree has checked out git would refuse too, which is said.
+     */
+    public static Next forBranch(Model model, BranchName branch, boolean switching) {
+        WorktreeSource source = new WorktreeSource.Existing(branch);
         return model.idleBranch(branch)
                 .map(known -> known.current()
                         ? update(model, new NewBranchRequested(branch))
                         : known.worktreeLocation()
                                 .map(worktree -> Next.of(model.fail(new AppError.CheckedOutElsewhere(
                                         AddWorktreeCmd.ADD_WORKTREE, branch, worktree))))
-                                .getOrElse(() -> ask(model, new WorktreeSource.Existing(branch))))
+                                .getOrElse(() -> switching ? askSwitching(model, source) : ask(model, source)))
                 .getOrElse(() -> Next.of(model));
     }
 

@@ -705,7 +705,7 @@ class BranchUpdateTest {
         Model open = Update.update(loaded(), new NewBranchMsg.Requested(new BranchName("feature")))
                 .model();
 
-        Next next = Update.update(typed(open, " topic "), new Msg.PopupConfirmed(NewBranchPopup.class));
+        Next next = Update.update(typed(open, " topic "), new NewBranchMsg.Confirmed());
 
         assertEquals(
                 List.of(new NewBranchCmd(
@@ -721,7 +721,7 @@ class BranchUpdateTest {
         Model open = Update.update(loaded(), new NewBranchMsg.Requested(new BranchName("feature")))
                 .model();
 
-        Next next = Update.update(typed(open, "  "), new Msg.PopupConfirmed(NewBranchPopup.class));
+        Next next = Update.update(typed(open, "  "), new NewBranchMsg.Confirmed());
 
         assertEquals(List.of(), next.cmds());
         assertEquals(

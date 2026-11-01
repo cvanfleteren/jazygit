@@ -24,7 +24,6 @@ import java.util.function.BooleanSupplier;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutMsg;
 import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchMsg;
 import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchMsg;
-import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchPopup;
 import net.vanfleteren.jazygit.feature.commit.MessageEdited;
 import net.vanfleteren.jazygit.feature.commit.amend.AmendMsg;
 import net.vanfleteren.jazygit.feature.commit.amend.AmendPopup;
@@ -395,7 +394,7 @@ class ProgramTest {
 
         program.dispatch(new NewBranchMsg.Requested(new BranchName("other")));
         program.dispatch(new Msg.TextEdited("topic"));
-        program.dispatch(new Msg.PopupConfirmed(NewBranchPopup.class));
+        program.dispatch(new NewBranchMsg.Confirmed());
         settle();
 
         Model model = program.model();
@@ -417,7 +416,7 @@ class ProgramTest {
 
         program.dispatch(new NewBranchMsg.Requested(new BranchName("other")));
         program.dispatch(new Msg.TextEdited("topic"));
-        program.dispatch(new Msg.PopupConfirmed(NewBranchPopup.class));
+        program.dispatch(new NewBranchMsg.Confirmed());
         settle();
 
         assertEquals(Option.of("Creating branch topic failed: fatal: exists"), errorText(program.model()));

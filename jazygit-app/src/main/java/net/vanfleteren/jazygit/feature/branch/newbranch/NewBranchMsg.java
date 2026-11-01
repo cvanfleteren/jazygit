@@ -28,4 +28,9 @@ public sealed interface NewBranchMsg extends Msg {
      * The user asked for a new branch starting at the remote branch {@code branch}.
      */
     record RequestedAtRemote(RemoteBranch branch) implements NewBranchMsg {}
+
+    /**
+     * The user confirmed the name typed for the new branch.
+     */
+    record Confirmed() implements NewBranchMsg {}
 }

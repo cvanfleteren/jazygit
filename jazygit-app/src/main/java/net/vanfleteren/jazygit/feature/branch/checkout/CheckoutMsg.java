@@ -42,4 +42,24 @@ public sealed interface CheckoutMsg extends Msg {
      * The user agreed to switch to the worktree that has the branch to check out checked out.
      */
     record SwitchWorktreeConfirmed() implements CheckoutMsg {}
+
+    /**
+     * {@code request} is to be checked out where the user says, if this is a linked worktree, or here (ADR 68).
+     */
+    record Placed(CheckoutRequest request) implements CheckoutMsg {}
+
+    /**
+     * The user chose to check out in the worktree shown.
+     */
+    record HereChosen() implements CheckoutMsg {}
+
+    /**
+     * The user chose to check out in the main worktree, which is switched to first.
+     */
+    record MainChosen() implements CheckoutMsg {}
+
+    /**
+     * The user chose to check out in a new worktree, which is asked where it goes.
+     */
+    record NewWorktreeChosen() implements CheckoutMsg {}
 }

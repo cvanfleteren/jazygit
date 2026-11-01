@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.branch.newbranch;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutUpdate;
 import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchMsg.Requested;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.Revision;
@@ -21,6 +22,12 @@ public final class NewBranchUpdate {
             case Requested(BranchName base) ->
                 Update.ask(model, model.idleBranch(base).map(known -> new NewBranchPopup(base)));
             case NewBranchMsg.RequestedAtCommit(var sha) -> atCommit(model, sha);
+            // Checking it out may ask where, in a linked worktree (ADR 68).
+            case NewBranchMsg.Confirmed() ->
+                model.popup(NewBranchPopup.class)
+                        .flatMap(NewBranchPopup::request)
+                        .map(request -> CheckoutUpdate.place(model.withoutPopup(NewBranchPopup.class), request))
+                        .getOrElse(() -> Next.of(model));
             case NewBranchMsg.RequestedAtRemote(var remote) ->
                 Update.ask(
                         model,

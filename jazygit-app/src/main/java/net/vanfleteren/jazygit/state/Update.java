@@ -74,6 +74,7 @@ public final class Update {
             Model initial, SettingsStore.Loaded settings, Option<ThemeName> themeOverride, Landing landing) {
         // Commits are loaded once the first status tells us where HEAD is.
         return refresh(initial.mapRepoView(landing::applyTo)
+                .mapJobs(jobs -> jobs.withOnArrival(landing.then()))
                 .mapPreferences(preferences ->
                         preferences.withSettings(settings.settings()).withThemeOverride(themeOverride))
                 .mapOutcome(outcome -> outcome.withError(settings.problem().map(AppError.SettingsNotLoaded::new))));
@@ -93,12 +94,35 @@ public final class Update {
     }
 
     public static Next update(Model model, Msg msg) {
+        return arrived(handle(model, msg));
+    }
+
+    private static Next handle(Model model, Msg msg) {
         if (model.jobs().away() && msg instanceof Msg.Periodic periodic) {
             return model.jobs().dueWhileAway(periodic, model.now())
                     ? msg.apply(model.mapJobs(jobs -> jobs.handledWhileAway(periodic, model.now())))
                     : Next.of(model.mapJobs(jobs -> jobs.keptWhileAway(periodic, model.now())));
         }
         return msg.apply(model);
+    }
+
+    /**
+     * {@code next}, and what the repository was opened to do once its status, branches and worktrees are read, if it
+     * was and they are now: that is handled once (ADR 68). The status tells what changes a checkout would take along.
+     */
+    private static Next arrived(Next next) {
+        Model model = next.model();
+        return model.jobs()
+                .onArrival()
+                .filter(msg -> model.repo().status() instanceof Loadable.Loaded
+                        && model.repo().branches() instanceof Loadable.Loaded
+                        && model.repo().worktrees() instanceof Loadable.Loaded)
+                .map(msg -> {
+                    Next handled = update(model.mapJobs(jobs -> jobs.withOnArrival(Option.none())), msg);
+                    return new Next(
+                            handled.model(), next.cmds().appendAll(handled.cmds()), next.quit() || handled.quit());
+                })
+                .getOrElse(next);
     }
 
     /**

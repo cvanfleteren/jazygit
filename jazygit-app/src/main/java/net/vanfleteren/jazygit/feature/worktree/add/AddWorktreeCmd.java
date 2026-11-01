@@ -25,10 +25,19 @@ import net.vanfleteren.jazygit.state.OperationCmd;
  * Adds a worktree at {@code location} that checks out what {@code source} says. A pull request is checked out by
  * gh in the new worktree, which starts out on no branch; when gh fails, the worktree is removed again. Once added,
  * it tells where the worktree is, as git lists it.
+ *
+ * @param switching whether the app switches to it once it is added, without asking (ADR 68)
  */
-public record AddWorktreeCmd(WorktreeSource source, String location) implements OperationCmd {
+public record AddWorktreeCmd(WorktreeSource source, String location, boolean switching) implements OperationCmd {
 
     public static final Operation ADD_WORKTREE = Operation.of("log.title.addWorktree", "error.addWorktree.failed");
+
+    /**
+     * Adds it; once added, switching to it is offered.
+     */
+    public AddWorktreeCmd(WorktreeSource source, String location) {
+        this(source, location, false);
+    }
 
     @Override
     public Operation operation() {

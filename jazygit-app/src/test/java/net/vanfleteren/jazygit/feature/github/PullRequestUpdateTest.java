@@ -13,6 +13,8 @@ import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutMsg;
+import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutWherePopup;
 import net.vanfleteren.jazygit.feature.branch.checkout.SwitchWorktreePopup;
 import net.vanfleteren.jazygit.feature.branch.push.PushCmd.Push;
 import net.vanfleteren.jazygit.feature.branch.push.PushCmd.PushSettingUpstream;
@@ -22,6 +24,7 @@ import net.vanfleteren.jazygit.feature.fetch.FetchCmd;
 import net.vanfleteren.jazygit.feature.github.browse.BrowsePullRequestCmd;
 import net.vanfleteren.jazygit.feature.github.checkout.CheckoutPullRequestCmd;
 import net.vanfleteren.jazygit.feature.github.checkout.CheckoutPullRequestMsg;
+import net.vanfleteren.jazygit.feature.github.checkout.PullRequestCheckout;
 import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestCmd;
 import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestCmd.*;
 import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestMsg;
@@ -33,6 +36,7 @@ import net.vanfleteren.jazygit.feature.github.show.PullRequestCmd.*;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.feature.github.show.ShowsPullRequest;
+import net.vanfleteren.jazygit.feature.repos.RecentReposCmd;
 import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeCmd;
 import net.vanfleteren.jazygit.feature.worktree.add.NewWorktreePopup;
 import net.vanfleteren.jazygit.feature.worktree.add.WorktreeSource;
@@ -58,6 +62,7 @@ import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
+import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -2451,6 +2456,142 @@ class PullRequestUpdateTest {
         assertEquals(
                 Option.of(new AppError.ChangesBeforeCheckout("owner/repo#9")),
                 refused.model().outcome().error());
+    }
+
+    @Test
+    void inALinkedWorktreeAPullRequestIsCheckedOutWhereTheUserSays() {
+        RepoStatus changed = new RepoStatus(
+                Head.onBranch(new BranchName("main"), new Sha("aaaa")),
+                List.of(Fixtures.fileEntry("a.txt", ChangeType.MODIFIED)));
+        Worktree main =
+                new Worktree(java.nio.file.Path.of("/repos/app"), Option.none(), true, false, Option.none(), false);
+        Worktree linked = new Worktree(
+                java.nio.file.Path.of("/repos/app-agent"), Option.none(), false, true, Option.none(), false);
+        Model inLinked = Update.update(ofOwnerRepo(changed), new LoadMsg.WorktreesLoaded(List.of(main, linked)))
+                .model();
+        PullRequestSummary pr = summary("owner/repo");
+        PullRequestCheckout request = new PullRequestCheckout(pr);
+
+        // The changes here only stand in the way of checking it out here.
+        Model asked = Update.update(inLinked, new CheckoutPullRequestMsg.Requested(pr))
+                .model();
+        assertEquals(Option.of(new CheckoutWherePopup(request, linked, Option.of(main), Option.none())), asked.popup());
+
+        Next here = Update.update(asked, new CheckoutMsg.HereChosen());
+        assertEquals(List.empty(), here.cmds());
+        assertEquals(
+                Option.of(new AppError.ChangesBeforeCheckout("owner/repo#9")),
+                here.model().outcome().error());
+
+        assertEquals(
+                List.of(new RecentReposCmd.SwitchTo(
+                        "/repos/app",
+                        new Landing(BranchesTab.LOCAL, asked.repoView().focusedPane())
+                                .followedBy(new CheckoutMsg.Placed(request)))),
+                Update.update(asked, new CheckoutMsg.MainChosen()).cmds());
+        assertEquals(
+                Option.of(new NewWorktreePopup(new WorktreeSource.PullRequest(pr), "/repos/app-pr-9", true)),
+                Update.update(asked, new CheckoutMsg.NewWorktreeChosen())
+                        .model()
+                        .popup());
+        // There, which repository it is of is not asked again: the pull requests may not be read yet.
+        assertEquals(
+                List.of(new CheckoutPullRequestCmd(pr)),
+                Update.update(
+                                Update.update(loaded(), new LoadMsg.StatusLoaded(CLEAN))
+                                        .model(),
+                                new CheckoutMsg.Placed(request))
+                        .cmds());
+    }
+
+    /**
+     * {@code current} checked out in the linked worktree {@code /repos/app-agent}, which is shown; {@code patch-1} in
+     * the main worktree when {@code patchInMain}, else nowhere.
+     */
+    private static Model linkedWith(BranchName current, boolean patchInMain) {
+        java.nio.file.Path mainPath = java.nio.file.Path.of("/repos/app");
+        Model branches = localBranchesRead(
+                        ofOwnerRepo(CLEAN),
+                        List.of(
+                                Fixtures.branch(current, true, new Sha("1111")),
+                                new Branch(
+                                        new BranchName("patch-1"),
+                                        false,
+                                        new Sha("bbbb"),
+                                        Instant.EPOCH,
+                                        Option.none(),
+                                        false,
+                                        false,
+                                        new Tracking.None(),
+                                        patchInMain ? Option.of(mainPath) : Option.none())))
+                .model();
+        return Update.update(
+                        branches,
+                        new LoadMsg.WorktreesLoaded(List.of(
+                                new Worktree(mainPath, Option.none(), true, false, Option.none(), false),
+                                new Worktree(
+                                        java.nio.file.Path.of("/repos/app-agent"),
+                                        Option.of(Head.onBranch(current, new Sha("1111"))),
+                                        false,
+                                        true,
+                                        Option.none(),
+                                        false))))
+                .model();
+    }
+
+    @Test
+    void inALinkedWorktreeAPullRequestWhoseBranchTheMainWorktreeHasOffersToSwitchThere() {
+        Next offered = Update.update(
+                linkedWith(new BranchName("agent"), true), new CheckoutPullRequestMsg.Requested(own("patch-1")));
+
+        assertEquals(List.empty(), offered.cmds());
+        assertEquals(
+                Option.of(new SwitchWorktreePopup(new BranchName("patch-1"), "/repos/app")),
+                offered.model().popup());
+    }
+
+    @Test
+    void inALinkedWorktreeThatHasItsBranchAPullRequestIsCheckedOutThereWithoutAsking() {
+        Next next = Update.update(
+                linkedWith(new BranchName("patch-1"), false), new CheckoutPullRequestMsg.Requested(own("patch-1")));
+
+        // It changes no branch, and no other worktree could check it out.
+        assertEquals(List.of(new CheckoutPullRequestCmd(own("patch-1"))), next.cmds());
+        assertEquals(Option.none(), next.model().popup());
+    }
+
+    @Test
+    void inTheMainWorktreeSwitchedToAPullRequestWaitsForTheStatusBeforeCheckingOutOverChanges() {
+        PullRequestSummary pr = summary("owner/repo");
+        Landing landing = new Landing(BranchesTab.LOCAL, Option.none())
+                .followedBy(new CheckoutMsg.Placed(new PullRequestCheckout(pr)));
+        Model model = TestModels.started(Update.init("repo", SettingsStore.Loaded.DEFAULT, Option.none(), landing))
+                .model();
+        Next branches = TestModels.done(
+                model,
+                new Cmd.LoadBranches(),
+                TestModels.branchesLoaded(new AllBranches(TestModels.BRANCHES, List.empty())));
+        Next worktrees = TestModels.done(
+                TestModels.started(branches).model(),
+                new Cmd.LoadWorktrees(),
+                new LoadMsg.WorktreesLoaded(List.of(new Worktree(
+                        java.nio.file.Path.of("/repos/app"), Option.none(), true, true, Option.none(), false))));
+
+        Next status = TestModels.done(
+                TestModels.started(worktrees).model(),
+                new Cmd.LoadStatus(),
+                new LoadMsg.StatusLoaded(new RepoStatus(
+                        Head.onBranch(new BranchName("main"), new Sha("aaaa")),
+                        List.of(Fixtures.fileEntry("a.txt", ChangeType.MODIFIED)))));
+
+        assertTrue(branches.cmds()
+                .appendAll(worktrees.cmds())
+                .appendAll(status.cmds())
+                .filter(CheckoutPullRequestCmd.class::isInstance)
+                .isEmpty());
+        assertEquals(
+                Option.of(new AppError.ChangesBeforeCheckout("owner/repo#9")),
+                status.model().outcome().error());
     }
 
     @Test

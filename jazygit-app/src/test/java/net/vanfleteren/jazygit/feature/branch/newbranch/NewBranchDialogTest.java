@@ -57,7 +57,7 @@ class NewBranchDialogTest {
         }
 
         assertEquals(Option.of("topic"), open.popup(NewBranchPopup.class).map(NewBranchPopup::name));
-        assertEquals(new Msg.PopupConfirmed(NewBranchPopup.class), dispatched.getLast());
+        assertEquals(new NewBranchMsg.Confirmed(), dispatched.getLast());
     }
 
     @Test
@@ -79,7 +79,7 @@ class NewBranchDialogTest {
         }
 
         assertEquals(Option.of("bar"), open.popup(NewBranchPopup.class).map(NewBranchPopup::name));
-        assertEquals(new Msg.PopupConfirmed(NewBranchPopup.class), dispatched.getLast());
+        assertEquals(new NewBranchMsg.Confirmed(), dispatched.getLast());
         assertEquals(java.util.List.of(), global);
     }
 
