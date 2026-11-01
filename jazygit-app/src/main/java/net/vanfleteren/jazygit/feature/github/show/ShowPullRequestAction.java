@@ -17,9 +17,14 @@ public final class ShowPullRequestAction {
                                     Binding.onSelected("o", "help.branches.pullRequest", PullRequestMsg.Requested::new))
                             .add(
                                     Scopes.BRANCHES,
-                                    Binding.onSelected("f", "help.branches.files", PullRequestMsg.FilesRequested::new)),
+                                    Binding.onSelected("F", "help.branches.files", PullRequestMsg.FilesRequested::new)),
                     (added, scope) -> added.add(
-                            scope, Binding.onSelected("o", "help.prs.show", PullRequestMsg.SummaryRequested::new))),
+                                    scope,
+                                    Binding.onSelected("o", "help.prs.show", PullRequestMsg.SummaryRequested::new))
+                            .add(
+                                    scope,
+                                    Binding.onSelected(
+                                            "F", "help.prs.files", PullRequestMsg.SummaryFilesRequested::new))),
             PullRequestDialogs::popups);
 
     private ShowPullRequestAction() {}
