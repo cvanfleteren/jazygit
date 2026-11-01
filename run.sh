@@ -43,7 +43,7 @@ WRAPPED="$(dirname "$JAVA")/.java-wrapped"
 if [[ "${1:-}" == "--jdwp" ]]; then
     shift
     echo "Waiting for debugger to attach on port ${DEBUG_PORT}..."
-    exec "$JAVA" -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${DEBUG_PORT} -Dtamboui.backend=panama,jline3 -jar "$JAR" "$@"
+    exec "$JAVA" -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${DEBUG_PORT} -Dtamboui.backend=panama -jar "$JAR" "$@"
 else
     exec "$JAVA" -Dtamboui.backend=panama -jar "$JAR" "$@"
 fi

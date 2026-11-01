@@ -20,8 +20,8 @@ import java.util.function.Consumer;
  *
  * <p>While the terminal is handed over, nothing is drawn and no key is read. The app keeps running meanwhile: what it
  * draws is dropped, and drawn anew once it has the terminal back. This relies on a read of the wrapped backend that
- * timed out leaving no read behind, as for the Panama backend; JLine leaves a thread blocked on reading the terminal,
- * which would take the first key typed in the other program.
+ * timed out leaving no read behind, as for the Panama backend; a backend that leaves a thread blocked on reading the
+ * terminal would take the first key typed in the other program.
  *
  * <p>{@link #leave} and {@link #comeBack} are called on the render thread, which also draws, so a frame is never
  * half drawn when the terminal changes hands.

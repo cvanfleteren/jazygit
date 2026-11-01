@@ -495,8 +495,8 @@ by itself (`BackendFactory.create()`, so `tamboui.backend` or `TAMBOUI_BACKEND` 
 
 While the terminal is handed over, a read waits out its timeout without touching the terminal; one under way is let
 finish first. This takes a backend whose timed-out read leaves nothing behind, as the Panama backend, which polls the
-terminal. The JLine backend does not do for this: after a read that timed out, it leaves a thread blocked on reading
-the terminal, which would take the first key typed in the editor.
+terminal. A backend that leaves a thread blocked on reading the terminal after a timed-out read would not do for this:
+that thread would take the first key typed in the editor.
 
 ## The runtime loop
 

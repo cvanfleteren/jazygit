@@ -4,7 +4,7 @@ An analysis of what `jazygit-app/target/jazygit-0.1.0-SNAPSHOT-fat.jar` is made 
 (2026-11-01), and which dependencies could be dropped.
 
 The fat jar is **7.3 MB**. About 1.5 MB of it (~20%) could go with little effort, most of it by dropping the JLine
-backend.
+backend (now removed). The sizes in the table below are those from before that.
 
 ## Method
 
@@ -30,8 +30,6 @@ jazygit-app
 +- dev.tamboui:tamboui-toolkit-markdown:0.6.0
 +- dev.tamboui:tamboui-markdown:0.6.0
 |  \- org.commonmark:commonmark:0.28.0 (+ gfm-tables, task-list-items, gfm-strikethrough)
-+- dev.tamboui:tamboui-jline3-backend:0.6.0
-|  \- org.jline:jline:3.25.1
 +- dev.tamboui:tamboui-panama-backend:0.6.0
 +- com.electronwill.night-config:toml:3.9.0 (+ core)
 +- info.picocli:picocli:4.7.7
@@ -56,15 +54,18 @@ jazygit-app
 
 ## What could be dropped
 
-### 1. The JLine backend: ~1.26 MB
+### 1. The JLine backend: ~1.26 MB (done)
 
-No code imports JLine; it is only listed as a backend provider in `META-INF/services/dev.tamboui.terminal.BackendProvider`,
-next to Panama. `run.sh` already forces `-Dtamboui.backend=panama`, and `HandOverBackend` documents that JLine breaks
-handing the terminal over to an editor, as its reader thread takes the first key typed there. The jar also carries
-JLine's native libraries for about 15 platforms, its line reader, console and builtins, none of which jazygit uses.
+No code imported JLine; it was only listed as a backend provider in `META-INF/services/dev.tamboui.terminal.BackendProvider`,
+next to Panama, and listed first. Only `run.sh` and the acceptance tests pinned `-Dtamboui.backend=panama`, so a plain
+`java -jar` of the fat jar picked JLine, which breaks handing the terminal over to an editor: its reader thread takes the
+first key typed there (`review.md`, item 7). The jar also carried JLine's native libraries for about 15 platforms, its
+line reader, console and builtins, none of which jazygit uses.
 
-Dropping it means removing `tamboui-jline3-backend` from `jazygit-app/pom.xml`. To check first: that tamboui's Panama
-backend works on every platform jazygit is meant to run on (Windows in particular).
+`tamboui-jline3-backend` is removed from `jazygit-app/pom.xml`, so the fat jar now only has the Panama backend, which
+also fixes the hand-over for `java -jar`. `run.sh --jdwp` no longer falls back to `jline3`, and the comment on
+`--enable-native-access` in the `native` profile now names Panama. To check: that tamboui's Panama backend works on every
+platform jazygit is meant to run on (Windows in particular).
 
 ### 2. zt-exec and slf4j: ~110 KB, and fewer classes loaded at startup
 
