@@ -14,7 +14,6 @@ import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.Cmd.*;
-import net.vanfleteren.jazygit.state.Loadable.Failed;
 
 /**
  * The pure state transitions of the app: given a model and a message, the next model and the IO
@@ -229,51 +228,51 @@ public final class Update {
     private static List<Cmd.Load> retries(Model model) {
         return List.<Cmd.Load>empty()
                 .appendAll(Option.when(
-                        model.repo().commits() instanceof Failed || model.jobs().commitsFailed(),
+                        model.repo().commits().isFailed() || model.jobs().commitsFailed(),
                         () -> new LoadCommits(AheadUpdate.ofHead(model))))
                 .appendAll(AheadUpdate.retries(model))
                 .appendAll(model.repoView()
                         .commitSearch()
-                        .filter(search -> search.results() instanceof Failed)
+                        .filter(search -> search.results().isFailed())
                         .map(CommitSearch::load))
                 .appendAll(model.repoView()
                         .branchLog()
-                        .filter(log -> log.value() instanceof Failed)
+                        .filter(log -> log.value().isFailed())
                         .map(log -> new LoadBranchLog(log.key(), AheadUpdate.of(model, log.key()))))
                 .appendAll(model.repoView()
                         .commitDetail()
-                        .filter(detail -> detail.value() instanceof Failed)
+                        .filter(detail -> detail.value().isFailed())
                         .map(detail -> new LoadCommitDetail(
                                 detail.key(), model.preferences().diffOptions(), Slot.COMMIT_DETAIL)))
                 .appendAll(model.repoView()
                         .divergence()
-                        .filter(view -> view.commits() instanceof Failed)
+                        .filter(view -> view.commits().isFailed())
                         .map(DivergenceView::load))
                 .appendAll(model.repoView()
                         .divergence()
                         .flatMap(DivergenceView::detail)
-                        .filter(detail -> detail.value() instanceof Failed)
+                        .filter(detail -> detail.value().isFailed())
                         .map(detail -> new LoadCommitDetail(
                                 detail.key(), model.preferences().diffOptions(), Slot.DIVERGENCE_DETAIL)))
                 .appendAll(model.repoView()
                         .branchCommits()
                         .flatMap(BranchCommitsView::detail)
-                        .filter(detail -> detail.value() instanceof Failed)
+                        .filter(detail -> detail.value().isFailed())
                         .map(detail -> new LoadCommitDetail(
                                 detail.key(), model.preferences().diffOptions(), Slot.BRANCH_COMMITS_DETAIL)))
                 .appendAll(model.repoView()
                         .stashDetail()
-                        .filter(detail -> detail.value() instanceof Failed)
+                        .filter(detail -> detail.value().isFailed())
                         .map(detail -> new Cmd.LoadStashDetail(
                                 detail.key(), model.preferences().diffOptions())))
                 .appendAll(model.repoView()
                         .commitFiles()
-                        .filter(view -> view.files() instanceof Failed)
+                        .filter(view -> view.files().isFailed())
                         .map(CommitFilesView::load))
                 .appendAll(model.repoView()
                         .commitFiles()
                         .flatMap(view -> view.diff()
-                                .filter(diff -> diff.value() instanceof Failed)
+                                .filter(diff -> diff.value().isFailed())
                                 .map(diff -> view.diffLoad(
                                         diff.key(), model.preferences().diffOptions()))));
     }

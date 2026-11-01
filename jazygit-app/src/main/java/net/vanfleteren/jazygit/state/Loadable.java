@@ -50,6 +50,13 @@ public sealed interface Loadable<T> {
         return this instanceof Loaded<T> ? this : new Failed<>(failure);
     }
 
+    /**
+     * Whether the last read failed and no value is held.
+     */
+    default boolean isFailed() {
+        return this instanceof Failed<T>;
+    }
+
     record Loading<T>() implements Loadable<T> {}
 
     record Loaded<T>(T value) implements Loadable<T> {}

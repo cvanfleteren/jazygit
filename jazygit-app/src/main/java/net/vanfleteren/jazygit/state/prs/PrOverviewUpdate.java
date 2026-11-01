@@ -72,7 +72,7 @@ public final class PrOverviewUpdate {
             case PrOverviewMsg.Refresh() -> {
                 List<Cmd> loads = notRunning(LOADS, jobs);
                 yield overview.preview()
-                        .filter(preview -> preview.value() instanceof Loadable.Failed)
+                        .filter(preview -> preview.value().isFailed())
                         .map(preview -> preview(overview, preview.key(), loads))
                         .getOrElse(() -> new Step(overview, loads));
             }

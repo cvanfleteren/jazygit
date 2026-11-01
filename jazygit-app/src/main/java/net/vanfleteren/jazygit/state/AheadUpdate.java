@@ -261,12 +261,10 @@ public final class AheadUpdate {
     static List<Cmd.Load> retries(Model model) {
         return List.<Cmd.Load>empty()
                 .appendAll(Option.when(
-                        model.repo().ahead() instanceof Loadable.Failed
-                                || model.jobs().headAheadFailed(),
-                        () -> ofHead(model)))
+                        model.repo().ahead().isFailed() || model.jobs().headAheadFailed(), () -> ofHead(model)))
                 .appendAll(model.repoView()
                         .branchAhead()
-                        .filter(preview -> preview.value() instanceof Loadable.Failed)
+                        .filter(preview -> preview.value().isFailed())
                         .map(preview -> of(model, preview.key())));
     }
 
