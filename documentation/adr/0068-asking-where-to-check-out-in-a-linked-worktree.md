@@ -21,7 +21,7 @@ user chose it to.
    and creating a branch, which switches to it (`NewBranchCmd`): each moves HEAD and changes the files. The main
    worktree does not ask: checking out there stays one key. Next to a bare repository, where there is no main
    worktree, every worktree is a linked one, so every checkout asks. Moving commits, which also leaves another branch
-   checked out, is not a checkout the user asks for, and does not ask.
+   checked out, is not a checkout the user asks for, and does not ask. What moves no HEAD does not ask either (5).
 2. **The choices are: here, in the main worktree, or in a new worktree.** Each shows what it changes: the worktree
    and the branch it has checked out, whether the main one has changes, and why the one shown is locked, if it is.
    Checking out in another linked worktree is not offered: that is where the next sandbox is most likely to be.
@@ -29,7 +29,7 @@ user chose it to.
      is locked is shown in its place.
    - *In the main worktree* is not offered next to a bare repository.
    - *In a new worktree* asks where it goes, as adding a worktree does (`NewWorktreePopup`), starting out at the
-     same location, and refuses what adding one refuses, such as a pull request whose branch is checked out here.
+     same location, and refuses what adding one refuses, such as a branch that is busy.
      Once added, the app switches to it without asking (`SwitchToAddedPopup` is skipped): going there
      was what was chosen.
 3. **Each choice has a letter; Enter is never "here".** The dialog opens on *in the main worktree*, or on *in a new
@@ -55,7 +55,9 @@ user chose it to.
    through it. A `CheckoutRequest` says how it is checked out here, how a new worktree for it is asked for, with the
    checks adding one makes, and how it is asked for again. It is an interface rather than a sealed one, as checking out a pull request is one too, of the
    GitHub feature, which the branch feature does not use. A branch that another worktree has checked out still offers
-   to switch to that one first, for a pull request too: that moves no HEAD. Until the worktrees are read it is not known which one is shown,
+   to switch to that one first, for a pull request too: that moves no HEAD. A pull request whose branch this
+   worktree has checked out is checked out here without asking, as checking out the branch checked out here is: that
+   changes no branch, and no other worktree could have it. Until the worktrees are read it is not known which one is shown,
    and it is checked out here, as before; they are read with the branches, which a checkout needs too.
 
    Creating a branch went through `Msg.PopupConfirmed`, which starts what the popup confirms without a message of the
