@@ -2403,17 +2403,34 @@ class PullRequestUpdateTest {
     }
 
     @Test
-    void shiftFOnThePullRequestsScreenReadsAPullRequestListedWithoutItsCommitsFirst() {
-        Model ofOwnerRepo = loaded().withPrOverview(
-                        net.vanfleteren.jazygit.state.prs.PrOverview.INITIAL.withRepositoryName(
-                                Option.of("owner/repo")));
+    void shiftFOnThePullRequestsScreenShowsTheFilesOfAPullRequestListedWithoutItsCommitsOnceItIsRead() {
+        Model ofOwnerRepo = loaded().withScreen(Screen.PULL_REQUESTS)
+                .withPrOverview(net.vanfleteren.jazygit.state.prs.PrOverview.INITIAL.withRepositoryName(
+                        Option.of("owner/repo")));
 
-        Next requested = Update.update(ofOwnerRepo, new PullRequestMsg.SummaryFilesRequested(summary("owner/repo")));
+        Next requested =
+                Update.update(ofOwnerRepo, new PullRequestMsg.SummaryFilesRequested(summary("owner/repo", 42)));
 
+        // Its dialog shows it being read meanwhile, over the pull requests screen.
         PullRequestPopup loading =
                 requested.model().popup(PullRequestPopup.class).get();
         assertTrue(loading.filesWanted());
-        assertEquals(List.of(new LoadPullRequestDetails(9, lastRead(requested.model()))), requested.cmds());
+        assertEquals(Screen.PULL_REQUESTS, requested.model().screen());
+        assertEquals(List.of(new LoadPullRequestDetails(42, lastRead(requested.model()))), requested.cmds());
+
+        Next opened = Update.update(
+                requested.model(),
+                new PullRequestMsg.DetailsLoaded(
+                        42, lastRead(requested.model()), readAtCommits(PullRequestDetails.State.OPEN)));
+
+        CommitFilesView.Changes of = new CommitFilesView.Changes.OfPullRequest(
+                new PullRequestCommits(42, "owner/repo", "github.com", new Sha(BASE_OID), new Sha(HEAD_OID)));
+        assertEquals(Option.none(), opened.model().popup(PullRequestPopup.class));
+        assertEquals(Screen.REPOSITORY, opened.model().screen());
+        assertEquals(
+                Option.of(CommitFilesView.of(of, "branches", "files")),
+                opened.model().repoView().commitFiles());
+        assertTrue(opened.cmds().contains(new Cmd.LoadCommitFiles(of)));
     }
 
     @Test
@@ -2431,9 +2448,16 @@ class PullRequestUpdateTest {
     }
 
     private static PullRequestSummary summary(String repository) {
+        return summary(repository, 9);
+    }
+
+    /**
+     * Pull request {@code number} of {@code repository}, from a fork, listed without its commits.
+     */
+    private static PullRequestSummary summary(String repository, int number) {
         return new PullRequestSummary(
                 repository,
-                9,
+                number,
                 "From a fork",
                 "bob",
                 "patch-1",
@@ -2442,7 +2466,7 @@ class PullRequestUpdateTest {
                 Checks.NONE,
                 Review.NONE,
                 Instant.EPOCH,
-                "https://github.com/" + repository + "/pull/9");
+                "https://github.com/" + repository + "/pull/" + number);
     }
 
     private static Model ofOwnerRepo(RepoStatus status) {

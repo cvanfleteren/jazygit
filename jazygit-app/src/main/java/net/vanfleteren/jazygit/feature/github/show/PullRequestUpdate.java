@@ -325,9 +325,9 @@ public final class PullRequestUpdate {
 
     /**
      * {@code shown} going on to the files of the pull request when its dialog in {@code before} waited to show them,
-     * as F on its branch, or on it on the pull requests screen, asked. Only the read it waits for gives it its details, and so the commits to list them at,
-     * and taking that read ends the waiting: a read of another pull request, or another read of it, finds no commits,
-     * and lists nothing.
+     * as F on its branch, or on it on the pull requests screen, asked. Only the read it waits for gives it its
+     * details, and so the commits to list them at, and taking that read ends the waiting: a read of another pull
+     * request, or another read of it, finds no commits, and lists nothing.
      */
     private static Next filesIfWanted(Model before, Next shown) {
         return before.popup(PullRequestPopup.class)
