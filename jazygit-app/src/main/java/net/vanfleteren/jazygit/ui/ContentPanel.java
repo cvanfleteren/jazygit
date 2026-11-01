@@ -572,7 +572,9 @@ public final class ContentPanel {
          *                is scrolled all the way left: Right in the files pane moves into it
          */
         private EventResult keys(KeyEvent event, boolean focused, boolean ofFiles, ScrolledContent content) {
-            boolean leaving = event.code() == KeyCode.ESCAPE || (focused && ofFiles && left(event) && column == 0);
+            // Only the arrow leaves: h scrolls, as j and k move, without going to another panel.
+            boolean leaving = event.code() == KeyCode.ESCAPE
+                    || (focused && ofFiles && event.matches(Actions.MOVE_LEFT) && column == 0);
             // Escape, and Left where it leaves as Escape does, drop an open range before they leave the area (ADR 60).
             return cursor.filter(on -> leaving && focused && on.mark().isDefined())
                     .map(ranged -> moved(ranged.marked().get(), content))

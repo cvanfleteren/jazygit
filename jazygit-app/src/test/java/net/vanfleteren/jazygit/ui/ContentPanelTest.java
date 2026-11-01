@@ -257,6 +257,8 @@ class ContentPanelTest {
             RenderedText.ofLarge(testRunner, () -> scrolling.render(model.get(), area));
             SettledPilot.of(testRunner).press(KeyCode.RIGHT);
             SettledPilot.of(testRunner).press(KeyCode.LEFT);
+            // h scrolls, but does not leave as Left does.
+            SettledPilot.of(testRunner).press('h');
             SettledPilot.of(testRunner).pause();
             assertEquals(0, leaves.get());
             SettledPilot.of(testRunner).press(KeyCode.LEFT);
@@ -265,7 +267,7 @@ class ContentPanelTest {
 
         assertEquals(1, leaves.get());
         assertEquals(
-                List.of(1, 0),
+                List.of(1, 0, 0),
                 List.ofAll(dispatched)
                         .map(msg -> ((Msg.ContentScrolled) msg).to().column()));
     }
