@@ -34,25 +34,34 @@ user chose it to.
 3. **Each choice has a letter; Enter is never "here".** The dialog opens on *in the main worktree*, or on *in a new
    worktree* without one, so that a key pressed out of habit does not change the worktree shown.
 4. **The main worktree is switched to first, and checks out there once it is read.** The app opens the main worktree
-   in place of the one shown, and checking out is asked there anew, with the same message the user started with
-   (`CheckoutMsg.Requested`, `RemoteRequested`, the pull request's, or a new branch's). As the main worktree does not
-   ask (1), that runs the checkout as it always ran: the local branch that follows a remote one is found, a taken
-   name is asked again, uncommitted changes are offered to be stashed. Everything is looked at again, so a branch that
-   is gone by then fails as any checkout of it would, and one that another worktree has checked out offers to switch
-   to that one. When the main worktree cannot be opened, the app stays where it was, and the message is dropped.
+   in place of the one shown, and checking out is asked there anew (`CheckoutRequest.again()`): with the message the
+   user started with, `CheckoutMsg.Requested` or `RemoteRequested`, where there is one; else with
+   `CheckoutMsg.Placed`, for a new branch, a remote branch under another name, or a pull request. As the main
+   worktree does not ask (1), that runs the checkout as it always ran: the local branch that follows a remote one is
+   found, a taken name is asked again, uncommitted changes are offered to be stashed. What can have changed is looked
+   at again, so a branch that is gone by then fails as any checkout of it would, and one that another worktree has
+   checked out offers to switch to that one. Which repository a pull request is of is not asked again: it was in the
+   worktree it was asked for in, and the main worktree may not have read its pull requests yet. When the main
+   worktree cannot be opened, the app stays where it was, and the message is dropped.
 
    Opening another repository builds a new model, so the message cannot wait in the old one. It goes along in the
    `Landing`, which is all that is handed from one repository to the next: `Landing.then`. The new model keeps it,
-   in `Jobs`, until its branches and worktrees are read, and handles it then, once.
-5. **Which worktree asks is decided where the checkout would start.** One function takes the checkout asked for and
-   either starts it, in the main worktree, or opens the dialog; the checkouts of (1) all go through it. A branch that
-   another worktree has checked out still offers to switch to that one first: that moves no HEAD.
+   in `Jobs.onArrival`, until its branches and worktrees are read, and `Update.update` handles it then, once.
+5. **Which worktree asks is decided where the checkout would start.** One function, `CheckoutUpdate.place`, takes
+   the checkout asked for, a `CheckoutRequest`, and either starts it or opens the dialog; the checkouts of (1) all go
+   through it. A `CheckoutRequest` says how it is checked out here, what a new worktree for it checks out, and how it
+   is asked for again. It is an interface rather than a sealed one, as checking out a pull request is one too, of the
+   GitHub feature, which the branch feature does not use. A branch that another worktree has checked out still offers
+   to switch to that one first: that moves no HEAD. Until the worktrees are read it is not known which one is shown,
+   and it is checked out here, as before; they are read with the branches, which a checkout needs too.
 
    Creating a branch went through `Msg.PopupConfirmed`, which starts what the popup confirms without a message of the
    feature (ADR 38). It gets a message of its own, as it may ask first.
 
 ## Consequences
 
+- A pull request checked out in a linked worktree that has changes is asked where first; the changes only refuse it
+  here.
 - In a linked worktree, checking out takes a key more. There is no setting to turn that off; one can be added should
   it be missed.
 - A new way of checking out goes through the function of (5), or it changes linked worktrees silently again.

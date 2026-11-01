@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.feature.github.checkout;
 
 import io.vavr.control.Option;
 import java.util.function.Supplier;
+import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutUpdate;
 import net.vanfleteren.jazygit.feature.branch.checkout.SwitchWorktreePopup;
 import net.vanfleteren.jazygit.feature.github.checkout.CheckoutPullRequestMsg.Requested;
 import net.vanfleteren.jazygit.feature.github.checkout.CheckoutPullRequestMsg.WorktreeRequested;
@@ -43,10 +44,22 @@ public final class CheckoutPullRequestUpdate {
     }
 
     /**
-     * Checks out {@code pullRequest} in place, if it is of the repository and the working tree has no changes to
-     * bring along.
+     * Checks out {@code pullRequest}, if it is of the repository, where the user says: in a linked worktree, they are
+     * asked whether here, in the main worktree or in a new one (ADR 68).
      */
     private static Next checkout(Model model, PullRequestSummary pullRequest) {
+        return proceed(
+                model,
+                ofThisRepository(model, pullRequest).getOrElse(Readiness.Ready::new),
+                () -> CheckoutUpdate.place(model, new PullRequestCheckout(pullRequest)));
+    }
+
+    /**
+     * Checks out {@code pullRequest}, which is of the repository, in place, if the working tree has no changes to
+     * bring along. Which repository it is of is not asked again: in the main worktree, switched to to check it out,
+     * the pull requests may not be read yet.
+     */
+    static Next here(Model model, PullRequestSummary pullRequest) {
         return proceed(
                 model,
                 forCheckout(model, pullRequest),
@@ -84,15 +97,14 @@ public final class CheckoutPullRequestUpdate {
     }
 
     /**
-     * Whether {@code pullRequest} can be checked out in place: not while it is unknown which repository this is, or
-     * when it is of another one; not when the working tree has changes to bring along. Untracked files do not count,
-     * as git only stops for those that are in the way. When another worktree has its branch checked out, which git
-     * would refuse, switching to that worktree is offered instead, as checking out the branch offers it.
+     * Whether {@code pullRequest}, of this repository, can be checked out in place: not when the working tree has
+     * changes to bring along. Untracked files do not count, as git only stops for those that are in the way. When
+     * another worktree has its branch checked out, which git would refuse, switching to that worktree is offered
+     * instead, as checking out the branch offers it.
      */
     private static Readiness forCheckout(Model model, PullRequestSummary pullRequest) {
         boolean changed = Update.files(model).exists(file -> file.type() != ChangeType.UNTRACKED);
-        return ofThisRepository(model, pullRequest)
-                .orElse(() -> checkedOutElsewhere(model, pullRequest))
+        return checkedOutElsewhere(model, pullRequest)
                 .orElse(() -> Option.when(
                         changed, () -> new Readiness.Blocked(new AppError.ChangesBeforeCheckout(name(pullRequest)))))
                 .getOrElse(Readiness.Ready::new);
@@ -140,7 +152,7 @@ public final class CheckoutPullRequestUpdate {
         return source.busyBranch().exists(model.jobs().busy()::containsKey);
     }
 
-    private static String name(PullRequestSummary pullRequest) {
+    static String name(PullRequestSummary pullRequest) {
         return pullRequest.repository() + "#" + pullRequest.number();
     }
 

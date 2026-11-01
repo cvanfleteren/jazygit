@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.RemoteRef;
 import net.vanfleteren.jazygit.git.model.Worktree;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
 
@@ -53,17 +54,7 @@ public final class AddWorktreeUpdate {
                 Next.of(model.fail(
                         new AppError.OperationFailed(AddWorktreeCmd.ADD_WORKTREE, Option.of(typed), failure)));
             case NameConfirmed() -> nameConfirmed(model);
-            // The worktrees are shown, the new one among them, and switching to it is offered.
-            case Added(var cmd, String location, var commands) -> {
-                Next succeeded = OperationUpdate.succeeded(
-                        model.mapRepoView(repoView -> repoView.withBranchesTab(BranchesTab.WORKTREES)), cmd, commands);
-                yield new Next(
-                        succeeded
-                                .model()
-                                .openPopupIfFree(
-                                        new SwitchToAddedPopup(cmd.source().label(), location)),
-                        succeeded.cmds());
-            }
+            case Added(var cmd, String location, var commands) -> added(model, cmd, location, commands);
             case SwitchConfirmed() ->
                 model.popup(SwitchToAddedPopup.class)
                         .map(popup -> Next.of(
@@ -78,6 +69,40 @@ public final class AddWorktreeUpdate {
      */
     public static Next ask(Model model, WorktreeSource source) {
         return Update.ask(model, new NewWorktreePopup(source, location(model, source.directory())));
+    }
+
+    /**
+     * Asks where the new worktree that checks out {@code source} goes, as {@link #ask(Model, WorktreeSource)} does;
+     * once added, the app switches to it without asking, as it was chosen to check {@code source} out in (ADR 68).
+     */
+    public static Next askSwitching(Model model, WorktreeSource source) {
+        return Update.ask(model, new NewWorktreePopup(source, location(model, source.directory()), true));
+    }
+
+    /**
+     * The worktree {@code cmd} added at {@code location}, running {@code commands}. One added to check something out
+     * in is switched to, shown as a checkout here shows it: on the local branches, the focus where it was. Otherwise
+     * the worktrees are shown, the new one among them, and switching to it is offered.
+     */
+    private static Next added(Model model, AddWorktreeCmd cmd, String location, List<ExecutedCommand> commands) {
+        if (cmd.switching()) {
+            Next succeeded = OperationUpdate.succeeded(model, cmd, commands);
+            return new Next(
+                    succeeded.model(),
+                    succeeded
+                            .cmds()
+                            .append(new RecentReposCmd.SwitchTo(
+                                    location,
+                                    new Landing(
+                                            BranchesTab.LOCAL, model.repoView().focusedPane()))));
+        }
+        Next succeeded = OperationUpdate.succeeded(
+                model.mapRepoView(repoView -> repoView.withBranchesTab(BranchesTab.WORKTREES)), cmd, commands);
+        return new Next(
+                succeeded
+                        .model()
+                        .openPopupIfFree(new SwitchToAddedPopup(cmd.source().label(), location)),
+                succeeded.cmds());
     }
 
     /**

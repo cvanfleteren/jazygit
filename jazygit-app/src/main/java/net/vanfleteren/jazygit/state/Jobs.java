@@ -47,6 +47,8 @@ import net.vanfleteren.jazygit.git.model.MetadataStamp;
  *                   be handled once, when the terminal has the focus again
  * @param awayAt     while away, for each message of a timer that came, when it was last handled, or first kept: it is
  *                   handled again once it waited its {@link Msg.Periodic#whileAway()} since (ADR 67)
+ * @param onArrival  what the repository shown is to do once its branches and worktrees are read, as the
+ *                   {@link Landing} it was opened with said: handled once, then forgotten (ADR 68)
  */
 @With
 public record Jobs(
@@ -64,7 +66,8 @@ public record Jobs(
         Option<Lingering> lingering,
         boolean away,
         Set<Msg> missed,
-        Map<Msg.Periodic, Instant> awayAt) {
+        Map<Msg.Periodic, Instant> awayAt,
+        Option<Msg> onArrival) {
 
     public static final Jobs IDLE = new Jobs(
             HashSet.empty(),
@@ -81,7 +84,8 @@ public record Jobs(
             Option.none(),
             false,
             LinkedHashSet.empty(),
-            HashMap.empty());
+            HashMap.empty(),
+            Option.none());
 
     /**
      * How long a command runs before it shows: the reads that take a few milliseconds, on every key and every tick,
