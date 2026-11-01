@@ -33,7 +33,7 @@ public record Preview<K, V>(K key, Loadable<V> value, Option<Preview<K, V>> prev
      */
     public static <K, V> Option<Preview<K, V>> updated(
             Option<Preview<K, V>> preview, K key, UnaryOperator<Preview<K, V>> f) {
-        return preview.map(shown -> shown.key().equals(key) ? f.apply(shown) : shown);
+        return LoadUpdate.mapWhere(preview, shown -> shown.key().equals(key), f);
     }
 
     /**

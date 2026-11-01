@@ -51,7 +51,7 @@ public sealed interface Loadable<T> {
     }
 
     /**
-     * Whether reading failed and nothing was loaded before.
+     * Whether the last read failed and no value is held.
      */
     default boolean isFailed() {
         return this instanceof Failed<T>;

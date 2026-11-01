@@ -314,7 +314,7 @@ public final class LoadUpdate {
      * {@code open} with {@code f} applied if it holds a view that {@code matches}: what a read gives is only for the
      * view that asked for it, and is dropped when another one is open now.
      */
-    private static <V> Option<V> mapWhere(Option<V> open, Predicate<V> matches, UnaryOperator<V> f) {
+    static <V> Option<V> mapWhere(Option<V> open, Predicate<V> matches, UnaryOperator<V> f) {
         return open.map(view -> matches.test(view) ? f.apply(view) : view);
     }
 
