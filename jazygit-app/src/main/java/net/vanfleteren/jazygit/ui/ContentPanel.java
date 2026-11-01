@@ -507,6 +507,10 @@ public final class ContentPanel {
         private Option<Tuple2<Scrolled, Scrolled>> sent = Option.none();
         // Whether it shows the diff of a pull request's files, whose keys comment on it (ADR 60).
         private boolean review = false;
+        // How far the area is scrolled sideways, as last drawn, and how far it can be. TamboUI's text area keeps a
+        // column it never draws at, so the area draws its lines with as many columns cut off their start itself.
+        private int column = 0;
+        private int columns = 0;
 
         ScrollArea(ContentArea area, BooleanSupplier leaveScrollArea, Consumer<String> focus, Consumer<Msg> dispatch) {
             this.area = area;
@@ -548,13 +552,16 @@ public final class ContentPanel {
                     current.stops(), current.text().height(), state.viewportHeight(), at.row(), at.cursor(), at.mark());
             review = shown.body() instanceof Body.Diff(var diff, var look, var remarks) && remarks.isDefined();
             boolean focused = id.equals(focusedId);
-            element.text(cursor.filter(ignored -> focused)
-                            .map(on -> on.tinted(current.text(), styles.of(Theme.Classes.DIFF_CURSOR)))
-                            .getOrElse(current.text()))
-                    .title(shown.title());
+            Text text = cursor.filter(ignored -> focused)
+                    .map(on -> on.tinted(current.text(), styles.of(Theme.Classes.DIFF_CURSOR)))
+                    .getOrElse(current.text());
+            // The width of the area is that of the frame before, as the element only learns it while it draws.
+            columns =
+                    Math.max(0, List.ofAll(text.lines()).map(Line::width).max().getOrElse(0) - state.viewportWidth());
+            column = Math.clamp(at.column(), 0, columns);
+            element.text(column == 0 ? text : sideways(text, column)).title(shown.title());
             state.scrollToTop();
             state.scrollDown(cursor.map(DiffCursor::row).getOrElse(at.row()));
-            state.scrollRight(at.column());
             boolean ofFiles = area.pane(model).equals(FilesPanel.ID);
             return element.onKeyEvent(event -> keys(event, focused, ofFiles, content))
                     .onMouseEvent(event -> mouse(event, content));
@@ -565,8 +572,7 @@ public final class ContentPanel {
          *                is scrolled all the way left: Right in the files pane moves into it
          */
         private EventResult keys(KeyEvent event, boolean focused, boolean ofFiles, ScrolledContent content) {
-            boolean leaving = event.code() == KeyCode.ESCAPE
-                    || (focused && ofFiles && left(event) && element.state().scrollCol() == 0);
+            boolean leaving = event.code() == KeyCode.ESCAPE || (focused && ofFiles && left(event) && column == 0);
             // Escape, and Left where it leaves as Escape does, drop an open range before they leave the area (ADR 60).
             return cursor.filter(on -> leaving && focused && on.mark().isDefined())
                     .map(ranged -> moved(ranged.marked().get(), content))
@@ -577,7 +583,7 @@ public final class ContentPanel {
                     .orElse(() -> cursor.filter(ignored -> review)
                             .flatMap(on -> KEYMAP.handle(Scopes.PULL_REQUEST_DIFF, event, Option.of(at(on, content))))
                             .map(this::reviewed))
-                    .getOrElse(() -> scroll(element.state(), event) ? scrolled(content) : EventResult.UNHANDLED);
+                    .getOrElse(() -> scroll(event) ? scrolled(content) : EventResult.UNHANDLED);
         }
 
         /**
@@ -611,12 +617,7 @@ public final class ContentPanel {
         }
 
         private Scrolled scrolledTo(DiffCursor cursor, ScrolledContent content) {
-            return new Scrolled(
-                    content,
-                    cursor.row(),
-                    element.state().scrollCol(),
-                    Option.of(cursor.anchor()),
-                    cursor.markAnchor());
+            return new Scrolled(content, cursor.row(), column, Option.of(cursor.anchor()), cursor.markAnchor());
         }
 
         /**
@@ -676,9 +677,11 @@ public final class ContentPanel {
         }
 
         /**
-         * Scrolls {@code state} as the area itself does on {@code event}, and says whether it was a key for that.
+         * Scrolls the area as it does on {@code event}, and says whether it was a key for that: up and down its
+         * element, sideways itself.
          */
-        private static boolean scroll(RichTextState state, KeyEvent event) {
+        private boolean scroll(KeyEvent event) {
+            RichTextState state = element.state();
             return Option.<Runnable>none()
                     .orElse(Option.when(event.matches(Actions.MOVE_UP), () -> state::scrollUp))
                     .orElse(Option.when(event.matches(Actions.MOVE_DOWN), () -> state::scrollDown))
@@ -686,15 +689,42 @@ public final class ContentPanel {
                     .orElse(Option.when(event.matches(Actions.PAGE_DOWN), () -> state::pageDown))
                     .orElse(Option.when(event.matches(Actions.HOME), () -> state::scrollToTop))
                     .orElse(Option.when(event.matches(Actions.END), () -> state::scrollToBottom))
-                    .orElse(Option.when(left(event), () -> state::scrollLeft))
-                    .orElse(Option.when(
-                            event.matches(Actions.MOVE_RIGHT) || event.isChar(RIGHT), () -> state::scrollRight))
+                    .orElse(Option.when(left(event), () -> () -> column = Math.max(0, column - 1)))
+                    .orElse(Option.when(right(event), () -> () -> column = Math.min(columns, column + 1)))
                     .peek(Runnable::run)
                     .isDefined();
         }
 
         private static boolean left(KeyEvent event) {
             return event.matches(Actions.MOVE_LEFT) || event.isChar(LEFT);
+        }
+
+        private static boolean right(KeyEvent event) {
+            return event.matches(Actions.MOVE_RIGHT) || event.isChar(RIGHT);
+        }
+
+        /**
+         * {@code text} scrolled {@code column} columns sideways: each of its lines without its first columns.
+         */
+        private static Text sideways(Text text, int column) {
+            return Text.from(List.ofAll(text.lines())
+                    .map(line -> Line.from(List.ofAll(line.spans())
+                            .foldLeft(
+                                    Tuple.of(column, List.<Span>empty()),
+                                    (done, span) -> done._1() == 0
+                                            ? Tuple.of(0, done._2().prepend(span))
+                                            : Tuple.of(
+                                                    Math.max(0, done._1() - span.width()),
+                                                    done._1() >= span.width()
+                                                            ? done._2()
+                                                            : done._2()
+                                                                    .prepend(new Span(
+                                                                            TextWidth.rest(span.content(), done._1()),
+                                                                            span.style()))))
+                            ._2()
+                            .reverse()
+                            .toJavaList()))
+                    .toJavaList());
         }
 
         /**
@@ -705,7 +735,7 @@ public final class ContentPanel {
             Scrolled to = new Scrolled(
                     content,
                     state.scrollRow(),
-                    state.scrollCol(),
+                    column,
                     cursor.map(DiffCursor::anchor),
                     cursor.flatMap(DiffCursor::markAnchor));
             told(to);

@@ -19,6 +19,16 @@ import org.junit.jupiter.api.Test;
 class TextWidthTest {
 
     @Test
+    void theRestOfTextIsWhatFollowsItsFirstColumnsAWideCharacterSplitLeavingASpace() {
+        assertEquals("cdef", TextWidth.rest("abcdef", 2));
+        assertEquals("", TextWidth.rest("ab", 5));
+        assertEquals("abc", TextWidth.rest("abc", 0));
+        assertEquals("c", TextWidth.rest("ab漢c", 4));
+        assertEquals(" c", TextWidth.rest("ab漢c", 3));
+        assertEquals("漢c", TextWidth.rest("ab漢c", 2));
+    }
+
+    @Test
     void wideCharactersTakeTwoColumns() {
         assertEquals(5, TextWidth.of("hello"));
         assertEquals(4, TextWidth.of("👍👍"));

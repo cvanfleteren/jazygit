@@ -205,24 +205,29 @@ class ContentPanelTest {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
         // The model takes where the area is scrolled to, as the app's does.
         java.util.concurrent.atomic.AtomicReference<Model> model =
-                new java.util.concurrent.atomic.AtomicReference<>(showingCommit("+" + "x".repeat(300)));
+                new java.util.concurrent.atomic.AtomicReference<>(showingCommit("+0123456789" + "x".repeat(300)));
         ContentPanel scrolling = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, msg -> {
             dispatched.add(msg);
             model.set(Update.update(model.get(), msg).model());
         });
         String area = scrolling.areaOfPane(model.get(), CommitsPanel.ID).get();
 
+        String screen;
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> scrolling.render(model.get(), area))) {
             SettledPilot.focus(testRunner, area);
             RenderedText.ofLarge(testRunner, () -> scrolling.render(model.get(), area));
             List.of('l', 'l', 'h').forEach(key -> SettledPilot.of(testRunner).press(key));
             SettledPilot.of(testRunner).pause();
+            screen = RenderedText.ofLarge(testRunner, () -> scrolling.render(model.get(), area));
         }
 
         assertEquals(
                 List.of(1, 2, 1),
                 List.ofAll(dispatched)
                         .map(msg -> ((Msg.ContentScrolled) msg).to().column()));
+        // What shows is scrolled too, not only where the model has it.
+        assertTrue(screen.contains("│0123456789x"), screen);
+        assertFalse(screen.contains("+0123456789"), screen);
     }
 
     @Test
@@ -613,6 +618,36 @@ class ContentPanelTest {
     }
 
     @Test
+    void lScrollsTheDiffOfAPullRequestSidewaysWithItsCursorOnAThreadToAWideSuggestion() throws Exception {
+        java.util.List<Msg> dispatched = new java.util.ArrayList<>();
+        // The model takes where the area is scrolled to, as the app's does.
+        java.util.concurrent.atomic.AtomicReference<Model> model = new java.util.concurrent.atomic.AtomicReference<>(
+                pullRequestDiff("Wrap it:\n\n```suggestion\n" + "0123456789" + "x".repeat(300) + "\n```"));
+        ContentPanel reviewing = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, msg -> {
+            dispatched.add(msg);
+            model.set(Update.update(model.get(), msg).model());
+        });
+        String area = reviewing.areaOfPane(model.get(), FilesPanel.ID).get();
+
+        String screen;
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> reviewing.render(model.get(), area))) {
+            SettledPilot.focus(testRunner, area);
+            RenderedText.ofLarge(testRunner, () -> reviewing.render(model.get(), area));
+            SettledPilot.of(testRunner).press('n');
+            SettledPilot.of(testRunner).pause();
+            RenderedText.ofLarge(testRunner, () -> reviewing.render(model.get(), area));
+            SettledPilot.of(testRunner).press('l');
+            SettledPilot.of(testRunner).pause();
+            screen = RenderedText.ofLarge(testRunner, () -> reviewing.render(model.get(), area));
+        }
+
+        assertEquals(1, ((Msg.ContentScrolled) dispatched.getLast()).to().column(), dispatched.toString());
+        // The whole diff shows a column further, its bar too, which starts with a blank.
+        assertTrue(screen.contains("│modified  a.txt"), screen);
+        assertTrue(screen.contains("│0123456789x"), screen);
+    }
+
+    @Test
     void leftDropsAnOpenRangeBeforeItLeavesTheDiffAsEscapeDoes() throws Exception {
         java.util.concurrent.atomic.AtomicInteger leaves = new java.util.concurrent.atomic.AtomicInteger();
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
@@ -667,6 +702,13 @@ class ContentPanelTest {
      * line, with a thread on it.
      */
     private static Model pullRequestDiff() {
+        return pullRequestDiff("Why?");
+    }
+
+    /**
+     * {@link #pullRequestDiff()}, the one comment of its thread saying {@code body}.
+     */
+    private static Model pullRequestDiff(String body) {
         CommitFilesView.Changes of = new CommitFilesView.Changes.OfPullRequest(
                 new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
         CommitFile file = new CommitFile("a.txt", ChangeType.MODIFIED);
@@ -683,7 +725,7 @@ class ContentPanelTest {
                 List.of(new net.vanfleteren.jazygit.gh.model.ReviewThread.Comment(
                         "bob",
                         Instant.EPOCH,
-                        "Why?",
+                        body,
                         Option.none(),
                         "C",
                         "1",
