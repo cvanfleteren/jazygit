@@ -515,6 +515,58 @@ class RemarkLinesTest {
     }
 
     @Test
+    void aCodeBlockTooWideForTheTextIsDrawnAsWideAsItsLinesAndTheTextAroundItStillWraps() {
+        String code = "x".repeat(20) + " " + "y".repeat(20) + " " + "z".repeat(10);
+
+        String markdown = "word ".repeat(12).strip() + "\n\n```suggestion\n" + code + "\n```\n\n"
+                + "after ".repeat(10).strip();
+
+        assertEquals(
+                List.of(
+                        "word word word word word word",
+                        "word word word word word word",
+                        "",
+                        "╭suggestion──────────────────────────────────────────╮",
+                        "│" + code + "│",
+                        "╰────────────────────────────────────────────────────╯",
+                        "",
+                        "after after after after after",
+                        "after after after after after"),
+                text(RemarkLines.markdown(markdown, 30, StylePropertyResolver.empty())));
+    }
+
+    @Test
+    void theTextAndAWideCodeBlockAreSpacedAsTamboUiSpacesThemWhenItDrawsThemTogether() {
+        String code = "x".repeat(40);
+        String markdown = "# Title\n\nwords\n\n```\n" + code + "\n```\n\n- one\n- two";
+
+        List<String> together = text(RemarkLines.markdown(markdown, 60, StylePropertyResolver.empty()));
+        List<String> apart = text(RemarkLines.markdown(markdown, 30, StylePropertyResolver.empty()));
+
+        assertEquals(together.map(String::isEmpty), apart.map(String::isEmpty), apart.mkString("\n"));
+    }
+
+    @Test
+    void aCodeBlockAloneTooWideForTheTextIsDrawnAsWideAsItsLines() {
+        String code = "x".repeat(50);
+
+        List<String> lines = text(RemarkLines.markdown("```\n" + code + "\n```", 30, StylePropertyResolver.empty()));
+
+        assertTrue(lines.exists(line -> line.contains(code)), lines.mkString("\n"));
+    }
+
+    @Test
+    void aSuggestionWiderThanItsBlockIsDrawnWholeInTheDiff() {
+        String code = "a".repeat(40) + " " + "b".repeat(40);
+
+        List<String> lines =
+                rich(shown(Collapsed.NONE, thread(2, false, "Wrap it:\n\n```suggestion\n" + code + "\n```")));
+
+        assertTrue(lines.exists(line -> line.contains("┃  ") && line.contains(code)), lines.mkString("\n"));
+        assertTrue(lines.exists(line -> line.contains("suggestion")), lines.mkString("\n"));
+    }
+
+    @Test
     void thePlainViewCountsTheRemarksOfEachFileAtItsStart() {
         Text text = new Text(ContentPanel.diffText(
                 new ShownDiff(DiffText.of(DIFF), Option.none()),
