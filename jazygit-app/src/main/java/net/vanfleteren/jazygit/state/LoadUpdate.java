@@ -63,10 +63,10 @@ public final class LoadUpdate {
                         done.mapRepo(repo -> repo.withCommits(repo.commits().reload(commits))), load, ahead));
             // What arrives after another search was run, or after the search was cleared, is dropped.
             case CommitSearchLoaded(var query, var notOn, var commits) ->
-                Next.of(done.mapRepoView(repoView -> repoView.withCommitSearch(repoView.commitSearch()
-                        .map(search -> search.load().equals(msg.cmd())
-                                ? search.withResults(search.results().reload(commits))
-                                : search))));
+                Next.of(done.mapRepoView(repoView -> repoView.withCommitSearch(mapWhere(
+                        repoView.commitSearch(),
+                        search -> search.load().equals(msg.cmd()),
+                        search -> search.withResults(search.results().reload(commits))))));
             // What arrives after another item was highlighted, or after the diff options changed, is dropped.
             case BranchLogLoaded(var branch, var commits, var load, var ahead) ->
                 done.repoView().branchLog().exists(log -> log.key().equals(branch))
@@ -79,10 +79,10 @@ public final class LoadUpdate {
                         : Next.of(done);
             case AheadLoaded(var load, var ahead) -> AheadUpdate.aheadLoaded(done, load, ahead);
             case DivergenceLoaded(var branch, var other, var divergence) ->
-                Next.of(done.mapRepoView(repoView -> repoView.withDivergence(repoView.divergence()
-                        .map(view -> view.load().equals(msg.cmd())
-                                ? view.withCommits(view.commits().reload(divergence))
-                                : view))));
+                Next.of(done.mapRepoView(repoView -> repoView.withDivergence(mapWhere(
+                        repoView.divergence(),
+                        view -> view.load().equals(msg.cmd()),
+                        view -> view.withCommits(view.commits().reload(divergence))))));
             case CommitDetailLoaded(Sha sha, var options, DiffText changes, var preview) ->
                 Next.of(withDetail(
                         done.mapRepoView(repoView -> repoView.withCommitDetail(
@@ -108,15 +108,15 @@ public final class LoadUpdate {
                         ? metadataChecked(done, List.of(Tuple.of((Cmd.Load) load, stamp)))
                         : Next.of(done);
             case CommitFilesLoaded(var of, var files) ->
-                Next.of(done.mapRepoView(repoView -> repoView.withCommitFiles(repoView.commitFiles()
-                        .map(view -> view.of().equals(of)
-                                ? view.withFiles(view.files().reload(files))
-                                : view))));
+                Next.of(done.mapRepoView(repoView -> repoView.withCommitFiles(mapWhere(
+                        repoView.commitFiles(),
+                        view -> view.of().equals(of),
+                        view -> view.withFiles(view.files().reload(files))))));
             case CommitFileDiffLoaded(var of, var files, var options, var diff) ->
-                Next.of(done.mapRepoView(repoView -> repoView.withCommitFiles(repoView.commitFiles()
-                        .map(view -> view.of().equals(of)
-                                ? view.withDiff(Preview.updated(view.diff(), files, d -> d.reload(diff)))
-                                : view))));
+                Next.of(done.mapRepoView(repoView -> repoView.withCommitFiles(mapWhere(
+                        repoView.commitFiles(),
+                        view -> view.of().equals(of),
+                        view -> view.withDiff(Preview.updated(view.diff(), files, d -> d.reload(diff)))))));
             // Without the files to tell, the loads they guard run, as they would without them.
             case LoadMsg.Failed(Cmd.CheckMetadata cmd, var failure) ->
                 metadataChecked(done, Cmd.CheckMetadata.GUARDED.map(load -> Tuple.of(load, Option.none())));
@@ -310,6 +310,14 @@ public final class LoadUpdate {
         return model.mapJobs(jobs -> jobs.withWorktreeChangesRead(Option.of(model.now())));
     }
 
+    /**
+     * {@code open} with {@code f} applied if it holds a view that {@code matches}: what a read gives is only for the
+     * view that asked for it, and is dropped when another one is open now.
+     */
+    private static <V> Option<V> mapWhere(Option<V> open, Predicate<V> matches, UnaryOperator<V> f) {
+        return open.map(view -> matches.test(view) ? f.apply(view) : view);
+    }
+
     private static Model failed(Model model, Cmd.Load cmd, Failure failure) {
         return switch (cmd) {
             case Cmd.CheckMetadata() -> model;
@@ -330,9 +338,10 @@ public final class LoadUpdate {
             case LoadCommits _ ->
                 model.mapRepo(repo -> repo.withCommits(repo.commits().failed(failure)));
             case Cmd.SearchCommits load ->
-                model.mapRepoView(repoView -> repoView.withCommitSearch(repoView.commitSearch()
-                        .map(search ->
-                                search.load().equals(load) ? search.withResults(new Failed<>(failure)) : search)));
+                model.mapRepoView(repoView -> repoView.withCommitSearch(mapWhere(
+                        repoView.commitSearch(),
+                        search -> search.load().equals(load),
+                        search -> search.withResults(new Failed<>(failure)))));
             case Cmd.LoadAhead load -> AheadUpdate.failed(model, load, failure);
             case LoadCommitDetail(Sha sha, var options, var preview) ->
                 withDetail(
@@ -341,8 +350,10 @@ public final class LoadUpdate {
                         sha,
                         d -> d.failed(failure));
             case Cmd.LoadDivergence load ->
-                model.mapRepoView(repoView -> repoView.withDivergence(repoView.divergence()
-                        .map(view -> view.load().equals(load) ? view.withCommits(new Failed<>(failure)) : view)));
+                model.mapRepoView(repoView -> repoView.withDivergence(mapWhere(
+                        repoView.divergence(),
+                        view -> view.load().equals(load),
+                        view -> view.withCommits(new Failed<>(failure)))));
             case LoadFileDiff(var files, var options) ->
                 model.mapRepoView(repoView ->
                         repoView.withFileDiff(Preview.updated(repoView.fileDiff(), files, d -> d.failed(failure))));
@@ -352,13 +363,15 @@ public final class LoadUpdate {
                 model.mapRepoView(repoView ->
                         repoView.withStashDetail(Preview.updated(repoView.stashDetail(), sha, d -> d.failed(failure))));
             case Cmd.LoadCommitFiles(var of) ->
-                model.mapRepoView(repoView -> repoView.withCommitFiles(repoView.commitFiles()
-                        .map(view -> view.of().equals(of) ? view.withFiles(new Failed<>(failure)) : view)));
+                model.mapRepoView(repoView -> repoView.withCommitFiles(mapWhere(
+                        repoView.commitFiles(),
+                        view -> view.of().equals(of),
+                        view -> view.withFiles(new Failed<>(failure)))));
             case Cmd.LoadCommitFileDiff(var of, var files, var options) ->
-                model.mapRepoView(repoView -> repoView.withCommitFiles(repoView.commitFiles()
-                        .map(view -> view.of().equals(of)
-                                ? view.withDiff(Preview.updated(view.diff(), files, d -> d.failed(failure)))
-                                : view)));
+                model.mapRepoView(repoView -> repoView.withCommitFiles(mapWhere(
+                        repoView.commitFiles(),
+                        view -> view.of().equals(of),
+                        view -> view.withDiff(Preview.updated(view.diff(), files, d -> d.failed(failure))))));
             case LoadBranchLog(var branch, var _) ->
                 model.mapRepoView(repoView -> repoView.withBranchLog(
                         Preview.updated(repoView.branchLog(), branch, log -> log.failed(failure))));
