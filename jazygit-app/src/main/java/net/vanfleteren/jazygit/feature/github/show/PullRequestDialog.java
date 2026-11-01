@@ -105,7 +105,7 @@ public final class PullRequestDialog implements PopupView {
                                 CommentsMsg.Requested::new,
                                 (model, popup) -> popup.detailsRead()),
                         new Choice<>(
-                                'f',
+                                'F',
                                 "dialog.pullRequest.files",
                                 PullRequestMsg.FilesChosen::new,
                                 (model, popup) -> popup.commits().isDefined()),

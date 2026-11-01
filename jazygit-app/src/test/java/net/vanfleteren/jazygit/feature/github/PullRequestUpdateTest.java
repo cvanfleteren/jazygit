@@ -1403,7 +1403,7 @@ class PullRequestUpdateTest {
     }
 
     @Test
-    void fOnABranchWhosePullRequestIsListedWithoutItsCommitsShowsItsFilesOnceItIsRead() {
+    void shiftFOnABranchWhosePullRequestIsListedWithoutItsCommitsShowsItsFilesOnceItIsRead() {
         Next requested = Update.update(withPr(), new PullRequestMsg.FilesRequested(FEATURE));
 
         // Its dialog shows it being read meanwhile.
@@ -1451,7 +1451,7 @@ class PullRequestUpdateTest {
     }
 
     @Test
-    void fOnABranchWhosePullRequestIsListedWithItsCommitsShowsItsFilesAtOnce() {
+    void shiftFOnABranchWhosePullRequestIsListedWithItsCommitsShowsItsFilesAtOnce() {
         PullRequest listed = new PullRequest(
                 42,
                 "feature",
@@ -1484,7 +1484,7 @@ class PullRequestUpdateTest {
     }
 
     @Test
-    void fOnABranchWithoutAPullRequestShowsItsFilesAgainstItsBase() {
+    void shiftFOnABranchWithoutAPullRequestShowsItsFilesAgainstItsBase() {
         CommitFilesView.Changes of = new CommitFilesView.Changes.OfBranch(
                 UNPUSHED.name(), new Cmd.LoadAhead.Base(new BranchRef.Local(MAIN.name()), MAIN.tip()), UNPUSHED.tip());
         // Also when it is not known whether it has one: the pull requests are not read yet, or reading them failed.
@@ -2369,9 +2369,10 @@ class PullRequestUpdateTest {
         assertEquals(List.of(new BrowsePullRequestCmd(elsewhere)), opened.cmds());
     }
 
-    private static PullRequestSummary summary(String repository) {
-        return new PullRequestSummary(
-                repository,
+    @Test
+    void shiftFOnThePullRequestsScreenShowsTheFilesOfAPullRequestAtItsCommits() {
+        PullRequestSummary listed = new PullRequestSummary(
+                "owner/repo",
                 9,
                 "From a fork",
                 "bob",
@@ -2381,7 +2382,91 @@ class PullRequestUpdateTest {
                 Checks.NONE,
                 Review.NONE,
                 Instant.EPOCH,
-                "https://github.com/" + repository + "/pull/9");
+                "https://github.com/owner/repo/pull/9",
+                Option.none(),
+                Option.of(new GhCommit(BASE_OID)),
+                Option.of(new GhCommit(HEAD_OID)));
+        Model ofOwnerRepo = loaded().withScreen(Screen.PULL_REQUESTS)
+                .withPrOverview(net.vanfleteren.jazygit.state.prs.PrOverview.INITIAL.withRepositoryName(
+                        Option.of("owner/repo")));
+
+        Next opened = Update.update(ofOwnerRepo, new PullRequestMsg.SummaryFilesRequested(listed));
+
+        CommitFilesView.Changes of = new CommitFilesView.Changes.OfPullRequest(
+                new PullRequestCommits(9, "owner/repo", "github.com", new Sha(BASE_OID), new Sha(HEAD_OID)));
+        assertEquals(Option.none(), opened.model().popup());
+        assertEquals(Screen.REPOSITORY, opened.model().screen());
+        assertEquals(
+                Option.of(CommitFilesView.of(of, "branches", "files")),
+                opened.model().repoView().commitFiles());
+        assertTrue(opened.cmds().contains(new Cmd.LoadCommitFiles(of)));
+    }
+
+    @Test
+    void shiftFOnThePullRequestsScreenShowsTheFilesOfAPullRequestListedWithoutItsCommitsOnceItIsRead() {
+        Model ofOwnerRepo = loaded().withScreen(Screen.PULL_REQUESTS)
+                .withPrOverview(net.vanfleteren.jazygit.state.prs.PrOverview.INITIAL.withRepositoryName(
+                        Option.of("owner/repo")));
+
+        Next requested =
+                Update.update(ofOwnerRepo, new PullRequestMsg.SummaryFilesRequested(summary("owner/repo", 42)));
+
+        // Its dialog shows it being read meanwhile, over the pull requests screen.
+        PullRequestPopup loading =
+                requested.model().popup(PullRequestPopup.class).get();
+        assertTrue(loading.filesWanted());
+        assertEquals(Screen.PULL_REQUESTS, requested.model().screen());
+        assertEquals(List.of(new LoadPullRequestDetails(42, lastRead(requested.model()))), requested.cmds());
+
+        Next opened = Update.update(
+                requested.model(),
+                new PullRequestMsg.DetailsLoaded(
+                        42, lastRead(requested.model()), readAtCommits(PullRequestDetails.State.OPEN)));
+
+        CommitFilesView.Changes of = new CommitFilesView.Changes.OfPullRequest(
+                new PullRequestCommits(42, "owner/repo", "github.com", new Sha(BASE_OID), new Sha(HEAD_OID)));
+        assertEquals(Option.none(), opened.model().popup(PullRequestPopup.class));
+        assertEquals(Screen.REPOSITORY, opened.model().screen());
+        assertEquals(
+                Option.of(CommitFilesView.of(of, "branches", "files")),
+                opened.model().repoView().commitFiles());
+        assertTrue(opened.cmds().contains(new Cmd.LoadCommitFiles(of)));
+    }
+
+    @Test
+    void shiftFOnAPullRequestOfAnotherRepositoryOpensItInTheBrowser() {
+        PullRequestSummary elsewhere = summary("other/repo");
+        Model ofOwnerRepo = loaded().withPrOverview(
+                        net.vanfleteren.jazygit.state.prs.PrOverview.INITIAL.withRepositoryName(
+                                Option.of("owner/repo")));
+
+        Next opened = Update.update(ofOwnerRepo, new PullRequestMsg.SummaryFilesRequested(elsewhere));
+
+        assertEquals(Option.none(), opened.model().popup());
+        assertEquals(Option.none(), opened.model().repoView().commitFiles());
+        assertEquals(List.of(new BrowsePullRequestCmd(elsewhere)), opened.cmds());
+    }
+
+    private static PullRequestSummary summary(String repository) {
+        return summary(repository, 9);
+    }
+
+    /**
+     * Pull request {@code number} of {@code repository}, from a fork, listed without its commits.
+     */
+    private static PullRequestSummary summary(String repository, int number) {
+        return new PullRequestSummary(
+                repository,
+                number,
+                "From a fork",
+                "bob",
+                "patch-1",
+                false,
+                true,
+                Checks.NONE,
+                Review.NONE,
+                Instant.EPOCH,
+                "https://github.com/" + repository + "/pull/" + number);
     }
 
     private static Model ofOwnerRepo(RepoStatus status) {

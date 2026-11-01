@@ -43,6 +43,12 @@ public final class PullRequestUpdate {
                 show(model, new BranchName(pullRequest.headBranch()), pullRequest.pullRequest(), false);
             case PullRequestMsg.SummaryRequested(var pullRequest) ->
                 Update.start(model.clearError(), new BrowsePullRequestCmd(pullRequest));
+            // Its files are listed in the files pane, which only has those of this repository.
+            case PullRequestMsg.SummaryFilesRequested(var pullRequest)
+            when model.prOverview().ofThisRepository(pullRequest).getOrElse(false) ->
+                files(model.clearError(), new BranchName(pullRequest.headBranch()), pullRequest.pullRequest());
+            case PullRequestMsg.SummaryFilesRequested(var pullRequest) ->
+                Update.start(model.clearError(), new BrowsePullRequestCmd(pullRequest));
             // The branches pane shows the pull request as it was just read too, also when the dialog is closed.
             // How long its checks take is learned from them too (ADR 32).
             // A read that a later one was taken before, or that started before a change, is not taken: it would show
@@ -272,21 +278,29 @@ public final class PullRequestUpdate {
     }
 
     /**
-     * Shows the files the branch changes (ADR 61). With an open pull request, those of the pull request, at the
-     * commits the pull requests were listed with; when those are not known, once its dialog read them, which it shows
-     * meanwhile, and which stays, to say so, when they cannot be shown. Without one, as far as is known, those against
-     * its base. An error shown before goes, as the files are asked for anew.
+     * Shows the files the branch changes (ADR 61). With an open pull request, those of the pull request. Without one,
+     * as far as is known, those against its base. An error shown before goes, as the files are asked for anew.
      */
     private static Next filesRequested(Model model, BranchName branch) {
         Model cleared = model.clearError();
         return cleared.repo()
                 .branch(branch)
                 .flatMap(known -> cleared.gitHub().pullRequest(known))
-                .map(pr -> pr.commits()
-                        .flatMap(listed -> commits(pr.number(), listed))
-                        .map(commits -> files(cleared, commits))
-                        .getOrElse(() -> show(cleared, branch, pr, true)))
+                .map(pr -> files(cleared, branch, pr))
                 .getOrElse(() -> CommitFilesUpdate.againstBase(cleared, branch));
+    }
+
+    /**
+     * Shows the files {@code pullRequest}, of {@code branch}, changes: at the commits it was listed with; when those
+     * are not known, once its dialog read them, which it shows meanwhile, and which stays, to say so, when they cannot
+     * be shown.
+     */
+    private static Next files(Model model, BranchName branch, PullRequest pullRequest) {
+        return pullRequest
+                .commits()
+                .flatMap(listed -> commits(pullRequest.number(), listed))
+                .map(commits -> files(model, commits))
+                .getOrElse(() -> show(model, branch, pullRequest, true));
     }
 
     /**
@@ -311,9 +325,9 @@ public final class PullRequestUpdate {
 
     /**
      * {@code shown} going on to the files of the pull request when its dialog in {@code before} waited to show them,
-     * as f on its branch asked. Only the read it waits for gives it its details, and so the commits to list them at,
-     * and taking that read ends the waiting: a read of another pull request, or another read of it, finds no commits,
-     * and lists nothing.
+     * as F on its branch, or on it on the pull requests screen, asked. Only the read it waits for gives it its
+     * details, and so the commits to list them at, and taking that read ends the waiting: a read of another pull
+     * request, or another read of it, finds no commits, and lists nothing.
      */
     private static Next filesIfWanted(Model before, Next shown) {
         return before.popup(PullRequestPopup.class)
