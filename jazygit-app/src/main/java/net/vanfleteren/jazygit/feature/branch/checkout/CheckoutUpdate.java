@@ -5,7 +5,6 @@ import net.vanfleteren.jazygit.feature.branch.Branches;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutMsg.*;
 import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchPopup;
 import net.vanfleteren.jazygit.feature.repos.RecentReposCmd;
-import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeUpdate;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
@@ -58,9 +57,7 @@ public final class CheckoutUpdate {
             case MainChosen() -> mainChosen(model);
             case NewWorktreeChosen() ->
                 model.popup(CheckoutWherePopup.class)
-                        .map(popup -> AddWorktreeUpdate.askSwitching(
-                                model.withoutPopup(CheckoutWherePopup.class),
-                                popup.request().inNewWorktree()))
+                        .map(popup -> popup.request().inNewWorktree(model.withoutPopup(CheckoutWherePopup.class)))
                         .getOrElse(() -> Next.of(model));
         };
     }

@@ -24,7 +24,7 @@ public final class AddWorktreeUpdate {
 
     public static Next update(Model model, AddWorktreeMsg msg) {
         return switch (msg) {
-            case Requested(BranchName branch) -> requested(model, branch);
+            case Requested(BranchName branch) -> forBranch(model, branch, false);
             case NewBranchRequested(BranchName base) ->
                 Update.ask(
                         model,
@@ -106,18 +106,20 @@ public final class AddWorktreeUpdate {
     }
 
     /**
-     * Asks where to check out {@code branch}, a known branch that no operation runs on, starting out at
-     * {@link #location}. The branch checked out here git keeps from being checked out twice, so a new branch made
-     * from it is asked for instead; one that another worktree has checked out git would refuse too, which is said.
+     * Asks where to check out {@code branch}, a known branch that no operation runs on, in a new worktree, starting
+     * out at {@link #location}; once added, the app switches to it without asking when {@code switching} (ADR 68). The
+     * branch checked out here git keeps from being checked out twice, so a new branch made from it is asked for
+     * instead; one that another worktree has checked out git would refuse too, which is said.
      */
-    private static Next requested(Model model, BranchName branch) {
+    public static Next forBranch(Model model, BranchName branch, boolean switching) {
+        WorktreeSource source = new WorktreeSource.Existing(branch);
         return model.idleBranch(branch)
                 .map(known -> known.current()
                         ? update(model, new NewBranchRequested(branch))
                         : known.worktreeLocation()
                                 .map(worktree -> Next.of(model.fail(new AppError.CheckedOutElsewhere(
                                         AddWorktreeCmd.ADD_WORKTREE, branch, worktree))))
-                                .getOrElse(() -> ask(model, new WorktreeSource.Existing(branch))))
+                                .getOrElse(() -> switching ? askSwitching(model, source) : ask(model, source)))
                 .getOrElse(() -> Next.of(model));
     }
 

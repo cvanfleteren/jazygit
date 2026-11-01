@@ -220,8 +220,13 @@ class CheckoutWhereUpdateTest {
                 List.of(new CheckoutRemote(ORIGIN_TOPIC.branch(), ORIGIN_TOPIC)),
                 Update.update(asked, new CheckoutMsg.HereChosen()).cmds());
         assertEquals(
-                new WorktreeSource.Created(ORIGIN_TOPIC.branch(), new NewBranchStart.Following(ORIGIN_TOPIC)),
-                request.inNewWorktree());
+                Option.of(new NewWorktreePopup(
+                        new WorktreeSource.Created(ORIGIN_TOPIC.branch(), new NewBranchStart.Following(ORIGIN_TOPIC)),
+                        "/repos/app-topic",
+                        true)),
+                Update.update(asked, new CheckoutMsg.NewWorktreeChosen())
+                        .model()
+                        .popup());
         assertEquals(new CheckoutMsg.RemoteRequested(ORIGIN_TOPIC), request.again());
         // Under another name, it is that one that is checked out there.
         CheckoutRequest renamed = new CheckoutRequest.Remote(new BranchName("topic-2"), ORIGIN_TOPIC);
@@ -243,10 +248,15 @@ class CheckoutWhereUpdateTest {
                 List.of(new NewBranchCmd(new BranchName("topic"), new BranchRef.Local(FEATURE), Option.of(FEATURE))),
                 Update.update(asked, new CheckoutMsg.HereChosen()).cmds());
         assertEquals(
-                new WorktreeSource.Created(
-                        new BranchName("topic"),
-                        new NewBranchStart.From(new BranchRef.Local(FEATURE), Option.of(FEATURE))),
-                request.inNewWorktree());
+                Option.of(new NewWorktreePopup(
+                        new WorktreeSource.Created(
+                                new BranchName("topic"),
+                                new NewBranchStart.From(new BranchRef.Local(FEATURE), Option.of(FEATURE))),
+                        "/repos/app-topic",
+                        true)),
+                Update.update(asked, new CheckoutMsg.NewWorktreeChosen())
+                        .model()
+                        .popup());
     }
 
     @Test
@@ -264,27 +274,30 @@ class CheckoutWhereUpdateTest {
     }
 
     @Test
-    void whatALandingSaysToDoIsDoneOnceTheBranchesAndWorktreesAreRead() {
+    void whatALandingSaysToDoIsDoneOnceTheStatusBranchesAndWorktreesAreRead() {
         Landing landing = new Landing(BranchesTab.LOCAL, Option.none()).followedBy(new CheckoutMsg.Requested(FEATURE));
         Model model = started(Update.init("repo", SettingsStore.Loaded.DEFAULT, Option.none(), landing))
-                .model();
-        model = done(model, new Cmd.LoadStatus(), new LoadMsg.StatusLoaded(TestModels.CLEAN))
                 .model();
         Next branches = done(
                 model,
                 new Cmd.LoadBranches(),
                 TestModels.branchesLoaded(new AllBranches(TestModels.BRANCHES, List.empty())));
-        // The worktrees are not read yet: it waits.
-        assertTrue(branches.cmds().filter(Checkout.class::isInstance).isEmpty());
-
         Next worktrees = done(
                 started(branches).model(),
                 new Cmd.LoadWorktrees(),
                 new LoadMsg.WorktreesLoaded(
                         List.of(new Worktree(MAIN.path(), MAIN.head(), true, true, Option.none(), false))));
+        // The status, which tells what changes a checkout would take along, is not read yet: it waits.
+        assertTrue(branches.cmds()
+                .appendAll(worktrees.cmds())
+                .filter(Checkout.class::isInstance)
+                .isEmpty());
 
-        assertTrue(worktrees.cmds().contains(new Checkout(FEATURE)));
-        assertEquals(Option.none(), worktrees.model().jobs().onArrival());
+        Next status =
+                done(started(worktrees).model(), new Cmd.LoadStatus(), new LoadMsg.StatusLoaded(TestModels.CLEAN));
+
+        assertTrue(status.cmds().contains(new Checkout(FEATURE)));
+        assertEquals(Option.none(), status.model().jobs().onArrival());
     }
 
     @Test

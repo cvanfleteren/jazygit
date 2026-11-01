@@ -62,6 +62,7 @@ import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
+import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -2501,6 +2502,102 @@ class PullRequestUpdateTest {
                                         .model(),
                                 new CheckoutMsg.Placed(request))
                         .cmds());
+    }
+
+    /**
+     * {@code current} checked out in the linked worktree {@code /repos/app-agent}, which is shown; {@code patch-1} in
+     * the main worktree when {@code patchInMain}, else nowhere.
+     */
+    private static Model linkedWith(BranchName current, boolean patchInMain) {
+        java.nio.file.Path mainPath = java.nio.file.Path.of("/repos/app");
+        Model branches = localBranchesRead(
+                        ofOwnerRepo(CLEAN),
+                        List.of(
+                                Fixtures.branch(current, true, new Sha("1111")),
+                                new Branch(
+                                        new BranchName("patch-1"),
+                                        false,
+                                        new Sha("bbbb"),
+                                        Instant.EPOCH,
+                                        Option.none(),
+                                        false,
+                                        false,
+                                        new Tracking.None(),
+                                        patchInMain ? Option.of(mainPath) : Option.none())))
+                .model();
+        return Update.update(
+                        branches,
+                        new LoadMsg.WorktreesLoaded(List.of(
+                                new Worktree(mainPath, Option.none(), true, false, Option.none(), false),
+                                new Worktree(
+                                        java.nio.file.Path.of("/repos/app-agent"),
+                                        Option.of(Head.onBranch(current, new Sha("1111"))),
+                                        false,
+                                        true,
+                                        Option.none(),
+                                        false))))
+                .model();
+    }
+
+    @Test
+    void inALinkedWorktreeAPullRequestWhoseBranchTheMainWorktreeHasOffersToSwitchThere() {
+        Next offered = Update.update(
+                linkedWith(new BranchName("agent"), true), new CheckoutPullRequestMsg.Requested(own("patch-1")));
+
+        assertEquals(List.empty(), offered.cmds());
+        assertEquals(
+                Option.of(new SwitchWorktreePopup(new BranchName("patch-1"), "/repos/app")),
+                offered.model().popup());
+    }
+
+    @Test
+    void inALinkedWorktreeThatHasItsBranchAPullRequestGetsNoNewWorktree() {
+        Model asked = Update.update(
+                        linkedWith(new BranchName("patch-1"), false),
+                        new CheckoutPullRequestMsg.Requested(own("patch-1")))
+                .model();
+        assertTrue(asked.popup().exists(CheckoutWherePopup.class::isInstance));
+
+        Next refused = Update.update(asked, new CheckoutMsg.NewWorktreeChosen());
+
+        assertEquals(List.empty(), refused.cmds());
+        assertEquals(
+                Option.of(new AppError.PullRequestCheckedOutHere("owner/repo#9")),
+                refused.model().outcome().error());
+    }
+
+    @Test
+    void inTheMainWorktreeSwitchedToAPullRequestWaitsForTheStatusBeforeCheckingOutOverChanges() {
+        PullRequestSummary pr = summary("owner/repo");
+        Landing landing = new Landing(BranchesTab.LOCAL, Option.none())
+                .followedBy(new CheckoutMsg.Placed(new PullRequestCheckout(pr)));
+        Model model = TestModels.started(Update.init("repo", SettingsStore.Loaded.DEFAULT, Option.none(), landing))
+                .model();
+        Next branches = TestModels.done(
+                model,
+                new Cmd.LoadBranches(),
+                TestModels.branchesLoaded(new AllBranches(TestModels.BRANCHES, List.empty())));
+        Next worktrees = TestModels.done(
+                TestModels.started(branches).model(),
+                new Cmd.LoadWorktrees(),
+                new LoadMsg.WorktreesLoaded(List.of(new Worktree(
+                        java.nio.file.Path.of("/repos/app"), Option.none(), true, true, Option.none(), false))));
+
+        Next status = TestModels.done(
+                TestModels.started(worktrees).model(),
+                new Cmd.LoadStatus(),
+                new LoadMsg.StatusLoaded(new RepoStatus(
+                        Head.onBranch(new BranchName("main"), new Sha("aaaa")),
+                        List.of(Fixtures.fileEntry("a.txt", ChangeType.MODIFIED)))));
+
+        assertTrue(branches.cmds()
+                .appendAll(worktrees.cmds())
+                .appendAll(status.cmds())
+                .filter(CheckoutPullRequestCmd.class::isInstance)
+                .isEmpty());
+        assertEquals(
+                Option.of(new AppError.ChangesBeforeCheckout("owner/repo#9")),
+                status.model().outcome().error());
     }
 
     @Test

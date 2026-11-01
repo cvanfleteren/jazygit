@@ -8,8 +8,8 @@ import io.vavr.control.Option;
  *
  * @param branchesTab the list the branches pane shows
  * @param focusedPane the id of the pane that has the focus; none for the files, where the app starts
- * @param then        the message to handle once the branches and the worktrees of the repository are read, as when a
- *                    checkout asked for in another worktree is to run there (ADR 68)
+ * @param then        the message to handle once the status, the branches and the worktrees of the repository are
+ *                    read, as when a checkout asked for in another worktree is to run there (ADR 68)
  */
 public record Landing(BranchesTab branchesTab, Option<String> focusedPane, Option<Msg> then) {
 

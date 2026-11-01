@@ -2,7 +2,6 @@ package net.vanfleteren.jazygit.feature.github.checkout;
 
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutMsg;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutRequest;
-import net.vanfleteren.jazygit.feature.worktree.add.WorktreeSource;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -23,9 +22,13 @@ public record PullRequestCheckout(PullRequestSummary pullRequest) implements Che
         return CheckoutPullRequestUpdate.here(model, pullRequest);
     }
 
+    /**
+     * Asks where its new worktree goes, as adding one for it asks: not when this worktree has its branch checked out,
+     * nor while its worktree is being added already.
+     */
     @Override
-    public WorktreeSource inNewWorktree() {
-        return new WorktreeSource.PullRequest(pullRequest);
+    public Next inNewWorktree(Model model) {
+        return CheckoutPullRequestUpdate.inWorktree(model, pullRequest, true);
     }
 
     /**

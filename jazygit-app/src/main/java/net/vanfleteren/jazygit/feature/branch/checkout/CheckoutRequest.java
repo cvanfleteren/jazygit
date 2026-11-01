@@ -4,6 +4,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutCmd.Checkout;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutCmd.CheckoutRemote;
 import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchCmd;
+import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeUpdate;
 import net.vanfleteren.jazygit.feature.worktree.add.WorktreeSource;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.NewBranchStart;
@@ -31,9 +32,10 @@ public interface CheckoutRequest {
     Next here(Model model);
 
     /**
-     * What a new worktree for it checks out.
+     * Asks where the new worktree that checks it out goes, as adding a worktree for it asks, with the same checks;
+     * once added, the app switches to it without asking.
      */
-    WorktreeSource inNewWorktree();
+    Next inNewWorktree(Model model);
 
     /**
      * The message that asks for it anew: the one the user started with, where there is one. It is handled in the main
@@ -57,8 +59,8 @@ public interface CheckoutRequest {
         }
 
         @Override
-        public WorktreeSource inNewWorktree() {
-            return new WorktreeSource.Existing(branch);
+        public Next inNewWorktree(Model model) {
+            return AddWorktreeUpdate.forBranch(model, branch, true);
         }
 
         @Override
@@ -83,8 +85,9 @@ public interface CheckoutRequest {
         }
 
         @Override
-        public WorktreeSource inNewWorktree() {
-            return new WorktreeSource.Created(branch, new NewBranchStart.Following(upstream));
+        public Next inNewWorktree(Model model) {
+            return AddWorktreeUpdate.askSwitching(
+                    model, new WorktreeSource.Created(branch, new NewBranchStart.Following(upstream)));
         }
 
         /**
@@ -115,8 +118,9 @@ public interface CheckoutRequest {
         }
 
         @Override
-        public WorktreeSource inNewWorktree() {
-            return new WorktreeSource.Created(branch, new NewBranchStart.From(base, parent));
+        public Next inNewWorktree(Model model) {
+            return AddWorktreeUpdate.askSwitching(
+                    model, new WorktreeSource.Created(branch, new NewBranchStart.From(base, parent)));
         }
 
         @Override

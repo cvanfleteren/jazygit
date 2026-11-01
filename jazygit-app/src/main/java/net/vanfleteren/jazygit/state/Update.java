@@ -108,14 +108,15 @@ public final class Update {
     }
 
     /**
-     * {@code next}, and what the repository was opened to do once its branches and worktrees are read, if it was and
-     * they are now: that is handled once (ADR 68).
+     * {@code next}, and what the repository was opened to do once its status, branches and worktrees are read, if it
+     * was and they are now: that is handled once (ADR 68). The status tells what changes a checkout would take along.
      */
     private static Next arrived(Next next) {
         Model model = next.model();
         return model.jobs()
                 .onArrival()
-                .filter(msg -> model.repo().branches() instanceof Loadable.Loaded
+                .filter(msg -> model.repo().status() instanceof Loadable.Loaded
+                        && model.repo().branches() instanceof Loadable.Loaded
                         && model.repo().worktrees() instanceof Loadable.Loaded)
                 .map(msg -> {
                     Next handled = update(model.mapJobs(jobs -> jobs.withOnArrival(Option.none())), msg);

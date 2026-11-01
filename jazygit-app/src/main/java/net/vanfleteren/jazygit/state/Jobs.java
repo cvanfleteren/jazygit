@@ -47,7 +47,7 @@ import net.vanfleteren.jazygit.git.model.MetadataStamp;
  *                   be handled once, when the terminal has the focus again
  * @param awayAt     while away, for each message of a timer that came, when it was last handled, or first kept: it is
  *                   handled again once it waited its {@link Msg.Periodic#whileAway()} since (ADR 67)
- * @param onArrival  what the repository shown is to do once its branches and worktrees are read, as the
+ * @param onArrival  what the repository shown is to do once its status, branches and worktrees are read, as the
  *                   {@link Landing} it was opened with said: handled once, then forgotten (ADR 68)
  */
 @With

@@ -29,7 +29,8 @@ user chose it to.
      is locked is shown in its place.
    - *In the main worktree* is not offered next to a bare repository.
    - *In a new worktree* asks where it goes, as adding a worktree does (`NewWorktreePopup`), starting out at the
-     same location. Once added, the app switches to it without asking (`SwitchToAddedPopup` is skipped): going there
+     same location, and refuses what adding one refuses, such as a pull request whose branch is checked out here.
+     Once added, the app switches to it without asking (`SwitchToAddedPopup` is skipped): going there
      was what was chosen.
 3. **Each choice has a letter; Enter is never "here".** The dialog opens on *in the main worktree*, or on *in a new
    worktree* without one, so that a key pressed out of habit does not change the worktree shown.
@@ -46,13 +47,15 @@ user chose it to.
 
    Opening another repository builds a new model, so the message cannot wait in the old one. It goes along in the
    `Landing`, which is all that is handed from one repository to the next: `Landing.then`. The new model keeps it,
-   in `Jobs.onArrival`, until its branches and worktrees are read, and `Update.update` handles it then, once.
+   in `Jobs.onArrival`, until its status, branches and worktrees are read, and `Update.update` handles it then,
+   once. The status is waited for too: it tells what changes the checkout would take along, which checking out a
+   pull request refuses.
 5. **Which worktree asks is decided where the checkout would start.** One function, `CheckoutUpdate.place`, takes
    the checkout asked for, a `CheckoutRequest`, and either starts it or opens the dialog; the checkouts of (1) all go
-   through it. A `CheckoutRequest` says how it is checked out here, what a new worktree for it checks out, and how it
-   is asked for again. It is an interface rather than a sealed one, as checking out a pull request is one too, of the
+   through it. A `CheckoutRequest` says how it is checked out here, how a new worktree for it is asked for, with the
+   checks adding one makes, and how it is asked for again. It is an interface rather than a sealed one, as checking out a pull request is one too, of the
    GitHub feature, which the branch feature does not use. A branch that another worktree has checked out still offers
-   to switch to that one first: that moves no HEAD. Until the worktrees are read it is not known which one is shown,
+   to switch to that one first, for a pull request too: that moves no HEAD. Until the worktrees are read it is not known which one is shown,
    and it is checked out here, as before; they are read with the branches, which a checkout needs too.
 
    Creating a branch went through `Msg.PopupConfirmed`, which starts what the popup confirms without a message of the

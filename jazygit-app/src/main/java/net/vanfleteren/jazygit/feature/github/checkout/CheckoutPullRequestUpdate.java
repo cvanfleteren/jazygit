@@ -27,30 +27,35 @@ public final class CheckoutPullRequestUpdate {
     public static Next update(Model model, CheckoutPullRequestMsg msg) {
         return switch (msg) {
             case Requested(PullRequestSummary pullRequest) -> checkout(model, pullRequest);
-            case WorktreeRequested(PullRequestSummary pullRequest) -> inWorktree(model, pullRequest);
+            case WorktreeRequested(PullRequestSummary pullRequest) -> inWorktree(model, pullRequest, false);
         };
     }
 
     /**
      * Asks where the new worktree that checks out {@code pullRequest} goes, if it is of the repository; the changes
-     * here stay here.
+     * here stay here. Once added, the app switches to it without asking when {@code switching} (ADR 68).
      */
-    private static Next inWorktree(Model model, PullRequestSummary pullRequest) {
+    static Next inWorktree(Model model, PullRequestSummary pullRequest, boolean switching) {
         WorktreeSource source = new WorktreeSource.PullRequest(pullRequest);
         return proceed(
                 model,
                 forWorktree(model, pullRequest, source),
-                () -> AddWorktreeUpdate.ask(model.clearError(), source));
+                () -> switching
+                        ? AddWorktreeUpdate.askSwitching(model.clearError(), source)
+                        : AddWorktreeUpdate.ask(model.clearError(), source));
     }
 
     /**
      * Checks out {@code pullRequest}, if it is of the repository, where the user says: in a linked worktree, they are
-     * asked whether here, in the main worktree or in a new one (ADR 68).
+     * asked whether here, in the main worktree or in a new one (ADR 68). When another worktree has its branch checked
+     * out, switching to that one is offered first, as checking out the branch offers it.
      */
     private static Next checkout(Model model, PullRequestSummary pullRequest) {
         return proceed(
                 model,
-                ofThisRepository(model, pullRequest).getOrElse(Readiness.Ready::new),
+                ofThisRepository(model, pullRequest)
+                        .orElse(() -> checkedOutElsewhere(model, pullRequest))
+                        .getOrElse(Readiness.Ready::new),
                 () -> CheckoutUpdate.place(model, new PullRequestCheckout(pullRequest)));
     }
 
