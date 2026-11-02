@@ -125,17 +125,17 @@ class LinkedWorktreeTest {
     @Test
     void theMainWorktreeSeesWhetherTheLinkedOneHasChanges() throws Exception {
         CliGitInfoProvider provider = CliGitInfoProvider.open(main).get();
-        assertFalse(provider.hasChanges(linked).get());
+        assertFalse(provider.worktrees().hasChanges(linked).get());
 
         Files.writeString(linked.resolve(".gitignore"), "ignored.txt\n");
         git(linked, "add", ".gitignore");
         git(linked, "commit", "-q", "-m", "Ignore");
         Files.writeString(linked.resolve("ignored.txt"), "ignored\n");
-        assertFalse(provider.hasChanges(linked).get());
+        assertFalse(provider.worktrees().hasChanges(linked).get());
 
         Files.writeString(linked.resolve("new.txt"), "brand new\n");
-        assertTrue(provider.hasChanges(linked).get());
-        assertFalse(provider.hasChanges(main).get());
+        assertTrue(provider.worktrees().hasChanges(linked).get());
+        assertFalse(provider.worktrees().hasChanges(main).get());
     }
 
     @Test

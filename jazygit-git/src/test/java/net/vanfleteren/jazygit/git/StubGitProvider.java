@@ -33,7 +33,6 @@ import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.InProgressAction;
 import net.vanfleteren.jazygit.git.model.MergeMode;
 import net.vanfleteren.jazygit.git.model.MetadataStamp;
-import net.vanfleteren.jazygit.git.model.NewBranchStart;
 import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
@@ -45,7 +44,6 @@ import net.vanfleteren.jazygit.git.model.ResetTarget;
 import net.vanfleteren.jazygit.git.model.Revision;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.SquashMode;
-import net.vanfleteren.jazygit.git.model.Worktree;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
@@ -114,64 +112,17 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     /**
-     * Only the main worktree, which is the one shown.
+     * Only the main worktree, at {@link #worktree()}.
      */
     @Override
-    default Either<ProcessError, List<Worktree>> worktrees() {
-        return Either.right(List.of(new Worktree(
-                worktree(),
-                Option.of(new Head.OnBranch(new BranchName("main"), Option.of(new Sha("aaaa")))),
-                true,
-                true,
-                Option.none(),
-                false)));
-    }
-
-    @Override
-    default Either<ProcessError, Boolean> hasChanges(Path worktree) {
-        return Either.right(false);
-    }
-
-    @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> addWorktree(Path location, BranchName branch) {
-        return ran();
-    }
-
-    @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> addDetachedWorktree(
-            Path location, Revision startPoint) {
-        return ran();
-    }
-
-    @Override
-    default Either<GitFailure<GitError>, List<ExecutedCommand>> removeWorktree(Path location, boolean force) {
-        return ran();
-    }
-
-    @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> removeWorktreeAnyway(Path location) {
-        return ran();
-    }
-
-    @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> addWorktreeWithNewBranch(
-            Path location, BranchName name, NewBranchStart start) {
-        return ran();
-    }
-
-    @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> pruneWorktrees() {
-        return ran();
-    }
-
-    @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> lockWorktree(Path location, boolean lock) {
-        return ran();
-    }
-
-    @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> lockWorktree(Path location, String reason) {
-        return ran();
+    default Worktrees worktrees() {
+        Path shown = worktree();
+        return new StubWorktrees() {
+            @Override
+            public Path shown() {
+                return shown;
+            }
+        };
     }
 
     @Override

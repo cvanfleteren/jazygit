@@ -30,6 +30,6 @@ public record LockWorktreeCmd(String location, boolean lock) implements Worktree
 
     @Override
     public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
-        return git.lockWorktree(WorktreeCmd.path(location), lock);
+        return git.worktrees().lock(WorktreeCmd.path(location), lock);
     }
 }

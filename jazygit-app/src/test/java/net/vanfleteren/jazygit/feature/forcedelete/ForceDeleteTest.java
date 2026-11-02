@@ -18,6 +18,8 @@ import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.StubGitProvider;
+import net.vanfleteren.jazygit.git.StubWorktrees;
+import net.vanfleteren.jazygit.git.Worktrees;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Env;
@@ -138,8 +140,13 @@ class ForceDeleteTest {
         RemoveWorktreeCmd remove = new RemoveWorktreeCmd("/repos/app-feature", false, Option.of(FEATURE));
         GitInfoProvider git = new StubGitProvider() {
             @Override
-            public Either<GitFailure<GitError>, List<ExecutedCommand>> removeWorktree(Path location, boolean force) {
-                return StubGitProvider.ran("git worktree remove " + location);
+            public Worktrees worktrees() {
+                return new StubWorktrees() {
+                    @Override
+                    public Either<GitFailure<GitError>, List<ExecutedCommand>> remove(Path location, boolean force) {
+                        return StubGitProvider.ran("git worktree remove " + location);
+                    }
+                };
             }
 
             @Override

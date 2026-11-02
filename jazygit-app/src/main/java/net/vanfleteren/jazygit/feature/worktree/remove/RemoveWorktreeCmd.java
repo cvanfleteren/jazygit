@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.feature.worktree.WorktreeCmd;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
+import net.vanfleteren.jazygit.git.Worktrees;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -90,13 +91,15 @@ public record RemoveWorktreeCmd(String location, boolean force, Option<BranchNam
 
     private Either<GitFailure<GitError>, List<ExecutedCommand>> removing(GitInfoProvider git) {
         Path path = WorktreeCmd.path(location);
+        Worktrees worktrees = git.worktrees();
         return GitFailure.sequence(
                 () -> unlocking
-                        .map(reason -> GitFailure.<GitError, List<ExecutedCommand>>widen(git.lockWorktree(path, false)))
+                        .map(reason -> GitFailure.<GitError, List<ExecutedCommand>>widen(worktrees.lock(path, false)))
                         .getOrElse(GitFailure::nothing),
-                () -> git.removeWorktree(path, force)
+                () -> worktrees
+                        .remove(path, force)
                         .mapLeft(failure -> unlocking
-                                .map(reason -> failure.followedBy(git.lockWorktree(path, reason)))
+                                .map(reason -> failure.followedBy(worktrees.lock(path, reason)))
                                 .getOrElse(failure)),
                 () -> deleting.map(branch ->
                                 GitFailure.<GitError, List<ExecutedCommand>>widen(git.deleteLocalBranch(branch)))
