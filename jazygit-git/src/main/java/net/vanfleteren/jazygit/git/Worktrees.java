@@ -22,10 +22,10 @@ public interface Worktrees {
     Either<ProcessError, List<Worktree>> list();
 
     /**
-     * Whether the worktree at {@code worktree} has changes that removing it would lose: staged, unstaged or
-     * untracked files, not ignored ones.
+     * Whether the worktree at {@code location}, an absolute path, has changes that removing it would lose: staged,
+     * unstaged or untracked files, not ignored ones.
      */
-    Either<ProcessError, Boolean> hasChanges(Path worktree);
+    Either<ProcessError, Boolean> hasChanges(Path location);
 
     /**
      * Checks {@code branch} out in a new worktree at {@code location}, which is taken relative to the working

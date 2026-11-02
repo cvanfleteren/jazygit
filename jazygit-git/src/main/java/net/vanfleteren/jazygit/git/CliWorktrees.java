@@ -47,13 +47,13 @@ final class CliWorktrees implements Worktrees {
     }
 
     /**
-     * Runs {@code git status --porcelain -z --untracked-files=normal} in {@code other}: it has changes when git lists
-     * any file.
+     * Runs {@code git status --porcelain -z --untracked-files=normal} in {@code location}: it has changes when git
+     * lists any file.
      */
     @Override
-    public Either<ProcessError, Boolean> hasChanges(Path other) {
+    public Either<ProcessError, Boolean> hasChanges(Path location) {
         return GitProcess.read(
-                other,
+                location,
                 GitCommand.reading("status", "--porcelain", "-z", "--untracked-files=normal"),
                 raw -> Either.right(!raw.isEmpty()));
     }

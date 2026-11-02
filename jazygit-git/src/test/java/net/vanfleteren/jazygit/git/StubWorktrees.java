@@ -43,7 +43,7 @@ public interface StubWorktrees extends Worktrees {
     }
 
     @Override
-    default Either<ProcessError, Boolean> hasChanges(Path worktree) {
+    default Either<ProcessError, Boolean> hasChanges(Path location) {
         return Either.right(false);
     }
 

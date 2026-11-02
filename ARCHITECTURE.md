@@ -887,7 +887,7 @@ each role that is split off this way; the `Cli*` classes it still points to with
       `Branch.worktree`); they need the remote ones anyway, to tell which are pushed and which is the default.
       The branches pane shows the remote-tracking ones on its second tab (`Model.branchesTab`, switched with `[`
       and `]`).
-    - `CliWorktree` reads `git worktree list --porcelain -z`, which the branches pane shows on its third tab.
+    - `CliWorktrees` reads `git worktree list --porcelain -z`, which the branches pane shows on its third tab.
     - **Linked worktrees** are read like any repository: nothing assumes `.git` is a directory. What lives in
       the repository's own directory, like the index or `MERGE_HEAD`, is found with `git rev-parse --git-path`.
     - **What the repository is in the middle of** (a merge, rebase, cherry-pick or revert) is told by the files
@@ -903,7 +903,7 @@ each role that is split off this way; the `Cli*` classes it still points to with
     - These each have a pure parser for git's output. `CliDiff` and `CliShow` return git's text, cut off
       when it is long.
   - **Writes:** `CliCheckout`, `CliBranch` (push, pull, delete), `CliIndex` (stage, commit, discard),
-    `CliMerge`, `CliRebase`, `CliStashes`, `CliRemote` (fetch) and `CliWorktree` (add, remove).
+    `CliMerge`, `CliRebase`, `CliStashes`, `CliRemote` (fetch) and `CliWorktrees` (add, remove).
   - **Opening:** `CliGitInfoProvider.open` asks `git rev-parse` whether the directory is in a repository,
     whether that is bare, where its working tree is, and where git keeps the files that tell what it is in the
     middle of.
