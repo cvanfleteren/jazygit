@@ -855,7 +855,7 @@ classDiagram
     CliGitInfoProvider ..> CliIndex
     CliGitInfoProvider ..> CliMerge
     CliGitInfoProvider ..> CliRebase
-    CliGitInfoProvider ..> CliStash
+    CliGitInfoProvider ..> CliStashes
     CliGitInfoProvider ..> CliRemote
     CliRebase ..> Unfinished
     CliMerge ..> Unfinished
@@ -884,14 +884,14 @@ Every `Cli*` class runs git through `GitProcess`; only a few of those arrows are
       git. This assumes they never move while a repository is open, which holds as a provider is for one working
       tree, whose git directory stays where it is.
     - `CliLog` runs `git rev-parse` and `git log -z`.
-    - `CliStash` lists the stashes with the `git log --walk-reflogs … refs/stash` that `git stash list` runs
+    - `CliStashes` lists the stashes with the `git log --walk-reflogs … refs/stash` that `git stash list` runs
       itself, which saves a process. The stashes are the reflog of `refs/stash`, as git's documentation of
       `git stash` says. Without a stash there is no reflog, which `--ignore-missing` makes an empty list.
     - `CliRemote` reads the remotes.
     - These each have a pure parser for git's output. `CliDiff` and `CliShow` return git's text, cut off
       when it is long.
   - **Writes:** `CliCheckout`, `CliBranch` (push, pull, delete), `CliIndex` (stage, commit, discard),
-    `CliMerge`, `CliRebase`, `CliStash`, `CliRemote` (fetch) and `CliWorktree` (add, remove).
+    `CliMerge`, `CliRebase`, `CliStashes`, `CliRemote` (fetch) and `CliWorktree` (add, remove).
   - **Opening:** `CliGitInfoProvider.open` asks `git rev-parse` whether the directory is in a repository,
     whether that is bare, where its working tree is, and where git keeps the files that tell what it is in the
     middle of.
