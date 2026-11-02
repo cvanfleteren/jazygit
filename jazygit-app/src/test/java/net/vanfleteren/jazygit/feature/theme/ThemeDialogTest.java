@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.theme;
 import static dev.tamboui.toolkit.Toolkit.stack;
 import static dev.tamboui.toolkit.Toolkit.text;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
@@ -16,6 +17,7 @@ import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.CursorFeedback;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.RepositoryTheme;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.ui.RenderedText;
@@ -32,7 +34,8 @@ class ThemeDialogTest {
     private final CursorFeedback cursor = new CursorFeedback(dispatched::add);
     private final ChoiceDialog<ThemePopup> dialog =
             new net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<>(ThemeDialog.SPEC, cursor);
-    private final Model open = Update.update(TestModels.loaded(new SampleData()), new ThemeMsg.Requested())
+    private final Model open = Update.update(
+                    TestModels.loaded(new SampleData()), new ThemeMsg.Requested(ThemeScope.EVERYWHERE))
             .model();
 
     @Test
@@ -86,7 +89,43 @@ class ThemeDialogTest {
     void everyThemeCanBeChosen() {
         assertEquals(
                 List.of(ThemeName.values()).map(ThemeMsg.Chosen::new).toSet(),
-                ThemeDialog.SPEC.choices().map(choice -> choice.msg().get()).toSet());
+                ThemeDialog.SPEC
+                        .choices()
+                        .map(choice -> choice.msg().get())
+                        .filter(msg -> msg instanceof ThemeMsg.Chosen)
+                        .toSet());
+    }
+
+    @Test
+    void forTheRepositoryItsOwnThemeCanBeTakenAway() throws Exception {
+        Model own = Update.update(
+                        TestModels.loaded(new SampleData())
+                                .mapPreferences(preferences -> preferences.withRepositoryTheme(new RepositoryTheme(
+                                        Option.of(ThemeName.EMBER),
+                                        Option.of(new RepositoryTheme.Inherited(
+                                                ThemeName.LIGHT, "/etc/gitconfig-work"))))),
+                        new ThemeMsg.Requested(ThemeScope.REPOSITORY))
+                .model();
+
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(own))) {
+            String screen = RenderedText.ofLarge(runner, () -> view(own));
+            assertTrue(screen.contains("Theme for this repository"), screen);
+            assertTrue(screen.contains("(c) none of its own: light, from /etc/gitconfig-work"), screen);
+            assertTrue(screen.contains("(e) ember, blues and oranges (current)"), screen);
+            SettledPilot.focus(runner, ThemeDialog.SPEC.id());
+            SettledPilot.of(runner).press('c');
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(List.of(new ThemeMsg.Cleared()), List.ofAll(dispatched));
+    }
+
+    @Test
+    void theThemeForAllRepositoriesCannotBeTakenAway() throws Exception {
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view())) {
+            String screen = RenderedText.ofLarge(runner, () -> view());
+            assertFalse(screen.contains("none of its own"), screen);
+        }
     }
 
     @Test
@@ -118,7 +157,7 @@ class ThemeDialogTest {
                         TestModels.loaded(new SampleData())
                                 .mapPreferences(
                                         preferences -> preferences.withThemeOverride(Option.of(ThemeName.LIGHT))),
-                        new ThemeMsg.Requested())
+                        new ThemeMsg.Requested(ThemeScope.EVERYWHERE))
                 .model();
 
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(light))) {

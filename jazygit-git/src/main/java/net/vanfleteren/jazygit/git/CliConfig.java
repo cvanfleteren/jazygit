@@ -12,6 +12,7 @@ import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.GitError.CommandFailed;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.ConfigValue;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
@@ -24,6 +25,10 @@ final class CliConfig implements Config {
     private static final int NOT_SET = 5;
     private static final String PARENT_PREFIX = "branch.";
     private static final String PARENT_SUFFIX = ".gh-merge-base";
+    // The scopes of the repository's own configuration, as git config --show-scope names them.
+    private static final List<String> LOCAL_SCOPES = List.of("local", "worktree");
+    // How git config --show-origin starts the origin of a value read from a file.
+    private static final String FILE = "file:";
 
     private final Path worktree;
 
@@ -116,6 +121,35 @@ final class CliConfig implements Config {
                         GitCommand.reading(List.of("config").appendAll(scope).appendAll(List.of("--get", key))))
                 .map(answer -> answer.map(output -> output.stdout().strip()))
                 .mapLeft(GitFailure::error);
+    }
+
+    /**
+     * Every value of {@code key} as git reads them, with where each is. Only looked up, so not logged.
+     */
+    @Override
+    public Either<ProcessError, List<ConfigValue>> all(String key) {
+        // git config --get-all exits with 1, saying nothing, when the key is not set.
+        return GitProcess.ask(worktree, GitCommand.reading("config", "--show-scope", "--show-origin", "--get-all", key))
+                .map(answer ->
+                        answer.map(output -> parseValues(output.stdout())).getOrElse(List.empty()))
+                .mapLeft(GitFailure::error);
+    }
+
+    /**
+     * The values in {@code raw}, as {@code git config --show-scope --show-origin} lists them: the scope, the origin
+     * and the value per line, separated by tabs. An origin is a file, after {@code file:}; one that is not, like
+     * the command line, is kept as git names it.
+     */
+    static List<ConfigValue> parseValues(String raw) {
+        return GitOutput.nonBlankLines(raw).flatMap(line -> {
+            String[] fields = line.split("\t", 3);
+            return Option.when(
+                    fields.length == 3,
+                    () -> new ConfigValue(
+                            LOCAL_SCOPES.contains(fields[0]),
+                            fields[1].startsWith(FILE) ? fields[1].substring(FILE.length()) : fields[1],
+                            fields[2].strip()));
+        });
     }
 
     /**

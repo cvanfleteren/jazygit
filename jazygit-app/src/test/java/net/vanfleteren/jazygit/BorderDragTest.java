@@ -15,9 +15,11 @@ import io.vavr.control.Option;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.feature.layout.LayoutMsg;
 import net.vanfleteren.jazygit.feature.theme.ThemePopup;
+import net.vanfleteren.jazygit.feature.theme.ThemeScope;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.RepositoryTheme;
 import net.vanfleteren.jazygit.state.Screen;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
@@ -52,7 +54,8 @@ class BorderDragTest {
 
     @Test
     void aPressElsewhereOrWithAnotherButtonOrUnderAPopupIsLeftAlone() {
-        Model open = model.openPopup(new ThemePopup(ThemeName.DARK, Option.none()));
+        Model open = model.openPopup(new ThemePopup(
+                ThemeName.DARK, Option.none(), ThemeScope.EVERYWHERE, RepositoryTheme.NONE, ThemeName.DARK));
 
         assertEquals(EventResult.UNHANDLED, drag.handle(MouseEvent.press(MouseButton.LEFT, 10, 5), model));
         assertEquals(EventResult.UNHANDLED, drag.handle(MouseEvent.press(MouseButton.RIGHT, 29, 5), model));

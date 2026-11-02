@@ -15,6 +15,8 @@ import net.vanfleteren.jazygit.settings.ThemeName;
  * @param settings      what the user chose to keep from one session to the next, like the theme
  * @param themeOverride the theme asked for at startup, or highlighted in the theme dialog, for this session only,
  *                      until the user chooses one
+ * @param repositoryTheme the theme the git configuration gives the repository shown, which the saved one gives way
+ *                        to (ADR 70)
  * @param ignoreWhitespace whether the diffs leave out changes to whitespace only, for this session only
  * @param dragged       the width the left column of a screen is dragged to, which is kept once it is let go
  * @param draggedHeights the heights the panes of the left column of a screen are dragged to, which are kept once
@@ -24,12 +26,13 @@ import net.vanfleteren.jazygit.settings.ThemeName;
 public record Preferences(
         Settings settings,
         Option<ThemeName> themeOverride,
+        RepositoryTheme repositoryTheme,
         boolean ignoreWhitespace,
         Option<Dragged> dragged,
         Option<DraggedHeights> draggedHeights) {
 
     public static final Preferences DEFAULT =
-            new Preferences(Settings.DEFAULT, Option.none(), false, Option.none(), Option.none());
+            new Preferences(Settings.DEFAULT, Option.none(), RepositoryTheme.NONE, false, Option.none(), Option.none());
 
     /**
      * How the diffs of the files and the commits are read: a merge against its first parent when changes are drawn
@@ -48,10 +51,10 @@ public record Preferences(
     }
 
     /**
-     * The theme the UI is drawn in: the one asked for at startup, else the saved one.
+     * The theme the UI is drawn in: the one asked for at startup, else the one of the repository, else the saved one.
      */
     public ThemeName theme() {
-        return themeOverride.getOrElse(settings.theme());
+        return themeOverride.orElse(repositoryTheme.theme()).getOrElse(settings.theme());
     }
 
     /**

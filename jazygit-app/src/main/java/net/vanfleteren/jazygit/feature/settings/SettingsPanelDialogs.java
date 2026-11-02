@@ -3,8 +3,11 @@ package net.vanfleteren.jazygit.feature.settings;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
+import net.vanfleteren.jazygit.feature.theme.ThemeDialog;
 import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.RepositoryTheme;
 import net.vanfleteren.jazygit.ui.ErrorText;
 import net.vanfleteren.jazygit.ui.PopupSlot;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
@@ -49,12 +52,11 @@ public final class SettingsPanelDialogs {
             List.of(
                     new Choice<SettingsPanelPopup>(
                                     't',
-                                    popup -> Messages.get(
-                                            "dialog.settings.theme",
-                                            Messages.get("dialog.theme."
-                                                    + popup.theme().id())),
+                                    popup -> Messages.get("dialog.settings.theme", themeLabel(popup.theme())),
                                     SettingsPanelMsg.ThemeRequested::new)
                             .withHeading("dialog.settings.group.appearance"),
+                    new Choice<SettingsPanelPopup>(
+                            'r', SettingsPanelDialogs::repositoryTheme, SettingsPanelMsg.RepositoryThemeRequested::new),
                     new Choice<SettingsPanelPopup>(
                                     'g',
                                     SettingsPanelDialogs::ghExecutable,
@@ -80,6 +82,27 @@ public final class SettingsPanelDialogs {
                 PopupSlot.returningToFocus(new ChoiceDialog<>(PANEL, dispatch)),
                 PopupSlot.returningToFocus(new TextInputDialog<>(GH_EXECUTABLE, dispatch)),
                 PopupSlot.returningToFocus(new PickDialog<>(ACCOUNT, dispatch)));
+    }
+
+    /**
+     * The theme of the repository, as the settings show it: its own, else the one the user's git configuration gives
+     * it and where, else none, as the theme for all repositories shows (ADR 70).
+     */
+    static String repositoryTheme(SettingsPanelPopup popup) {
+        RepositoryTheme theme = popup.repositoryTheme();
+        String shown = theme.own()
+                .map(SettingsPanelDialogs::themeLabel)
+                .orElse(() -> theme.inherited()
+                        .map(inherited -> Messages.get(
+                                "dialog.theme.inherited",
+                                themeLabel(inherited.theme()),
+                                ThemeDialog.origin(inherited.origin()))))
+                .getOrElse(() -> Messages.get("dialog.settings.repositoryTheme.none"));
+        return Messages.get("dialog.settings.repositoryTheme", shown);
+    }
+
+    private static String themeLabel(ThemeName theme) {
+        return Messages.get("dialog.theme." + theme.id());
     }
 
     private static String ghExecutable(SettingsPanelPopup popup) {

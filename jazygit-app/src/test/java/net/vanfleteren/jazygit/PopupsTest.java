@@ -7,6 +7,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.help.HelpMsg;
 import net.vanfleteren.jazygit.feature.theme.ThemeMsg;
+import net.vanfleteren.jazygit.feature.theme.ThemeScope;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -33,7 +34,7 @@ class PopupsTest {
 
     @Test
     void whatIsBehindTheThemePopupIsNotDimmedSoTheThemeHighlightedShowsAsItWillBe() {
-        Popups.Rendered rendered = render(new ThemeMsg.Requested());
+        Popups.Rendered rendered = render(new ThemeMsg.Requested(ThemeScope.EVERYWHERE));
 
         assertTrue(rendered.dialog().isDefined());
         assertFalse(rendered.dimsBehind());

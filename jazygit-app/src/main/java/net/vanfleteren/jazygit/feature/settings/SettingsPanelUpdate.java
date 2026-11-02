@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.settings;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.theme.ThemeMsg;
+import net.vanfleteren.jazygit.feature.theme.ThemeScope;
 import net.vanfleteren.jazygit.feature.theme.ThemeUpdate;
 import net.vanfleteren.jazygit.settings.Settings;
 import net.vanfleteren.jazygit.state.AppError;
@@ -26,7 +27,8 @@ public final class SettingsPanelUpdate {
             case SettingsPanelMsg.Requested() ->
                 Next.of(
                         model.openPopup(new SettingsPanelPopup(
-                                model.preferences().theme(),
+                                model.preferences().settings().theme(),
+                                model.preferences().repositoryTheme(),
                                 model.preferences().settings().ghExecutable(),
                                 Option.none())),
                         new SettingsPanelCmd.ReadGitHub(
@@ -34,11 +36,14 @@ public final class SettingsPanelUpdate {
             // Read for a panel that may be closed already, or open on another gh executable.
             case SettingsPanelMsg.GitHubRead(GitHubSetup gitHub) ->
                 Next.of(model.popup(SettingsPanelPopup.class)
-                        .map(panel -> model.openPopup(
-                                new SettingsPanelPopup(panel.theme(), panel.ghExecutable(), Option.of(gitHub))))
+                        .map(panel -> model.openPopup(panel.withGitHub(Option.of(gitHub))))
                         .getOrElse(model));
             case SettingsPanelMsg.ThemeRequested() ->
-                ThemeUpdate.update(model.withoutPopup(SettingsPanelPopup.class), new ThemeMsg.Requested());
+                ThemeUpdate.update(
+                        model.withoutPopup(SettingsPanelPopup.class), new ThemeMsg.Requested(ThemeScope.EVERYWHERE));
+            case SettingsPanelMsg.RepositoryThemeRequested() ->
+                ThemeUpdate.update(
+                        model.withoutPopup(SettingsPanelPopup.class), new ThemeMsg.Requested(ThemeScope.REPOSITORY));
             case SettingsPanelMsg.GhExecutableRequested() ->
                 Next.of(model.popup(SettingsPanelPopup.class)
                         .map(panel -> model.openPopup(

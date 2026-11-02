@@ -27,7 +27,9 @@ Git and your pull requests, their reviews and their CI, in one terminal UI. In t
 - **One GitHub account per repository,** without switching gh's active account.
 - **Recent repositories** (Ctrl+R), and outside a repository it offers to `git init` it or open another one.
 
-Press `?` in any pane for all its keys. There are several themes, a colour-blind friendly one among them.
+Press `?` in any pane for all its keys. There are several themes, a colour-blind friendly one among them. A repository
+can have a theme of its own, kept as `jazygit.theme` in its git configuration; set it in an `includeIf "gitdir:~/work/"`
+of your `~/.gitconfig`, and every work repository has it.
 
 ## Getting it
 

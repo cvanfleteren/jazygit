@@ -7,6 +7,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.theme.ThemeMsg;
 import net.vanfleteren.jazygit.feature.theme.ThemePopup;
+import net.vanfleteren.jazygit.feature.theme.ThemeScope;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -35,7 +36,7 @@ class HelpUpdateTest {
                 .model();
 
         // The theme popup only opens when no other one is.
-        Model chosen = Update.update(open, new HelpMsg.Chosen(new ThemeMsg.Requested()))
+        Model chosen = Update.update(open, new HelpMsg.Chosen(new ThemeMsg.Requested(ThemeScope.EVERYWHERE)))
                 .model();
         assertTrue(chosen.popup(ThemePopup.class).isDefined(), chosen.popup().toString());
     }

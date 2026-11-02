@@ -67,30 +67,40 @@ public final class Update {
      */
     public static Next init(
             String repositoryName, SettingsStore.Loaded settings, Option<ThemeName> themeOverride, Landing landing) {
-        return init(Model.initial(repositoryName), settings, themeOverride, landing);
+        return init(Model.initial(repositoryName), settings, themeOverride, RepositoryTheme.NONE, landing);
     }
 
     private static Next init(
-            Model initial, SettingsStore.Loaded settings, Option<ThemeName> themeOverride, Landing landing) {
+            Model initial,
+            SettingsStore.Loaded settings,
+            Option<ThemeName> themeOverride,
+            RepositoryTheme repositoryTheme,
+            Landing landing) {
         // Commits are loaded once the first status tells us where HEAD is.
         return refresh(initial.mapRepoView(landing::applyTo)
                 .mapJobs(jobs -> jobs.withOnArrival(landing.then()))
-                .mapPreferences(preferences ->
-                        preferences.withSettings(settings.settings()).withThemeOverride(themeOverride))
+                .mapPreferences(preferences -> preferences
+                        .withSettings(settings.settings())
+                        .withThemeOverride(themeOverride)
+                        .withRepositoryTheme(repositoryTheme))
                 .mapOutcome(outcome -> outcome.withError(settings.problem().map(AppError.SettingsNotLoaded::new))));
     }
 
     /**
-     * The start of a session as {@link #init(String, SettingsStore.Loaded, Option, Landing)} starts it, at
-     * {@code now}: the commands it asks for are stamped (ADR 33).
+     * The start of a session as {@link #init(String, SettingsStore.Loaded, Option, Landing)} starts it, in a
+     * repository the git configuration gives {@code repositoryTheme} (ADR 70), at {@code now}: the commands it asks
+     * for are stamped (ADR 33).
      */
     public static Step begin(
             String repositoryName,
             SettingsStore.Loaded settings,
             Option<ThemeName> themeOverride,
+            RepositoryTheme repositoryTheme,
             Landing landing,
             Instant now) {
-        return stamped(init(Model.initial(repositoryName).withNow(now), settings, themeOverride, landing), now);
+        return stamped(
+                init(Model.initial(repositoryName).withNow(now), settings, themeOverride, repositoryTheme, landing),
+                now);
     }
 
     public static Next update(Model model, Msg msg) {

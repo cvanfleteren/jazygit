@@ -12,6 +12,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.feature.commit.create.CommitPopup;
 import net.vanfleteren.jazygit.feature.theme.ThemePopup;
+import net.vanfleteren.jazygit.feature.theme.ThemeScope;
 import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.GhLogin;
@@ -26,6 +27,7 @@ import net.vanfleteren.jazygit.settings.Settings;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.RepositoryTheme;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
 
@@ -39,14 +41,14 @@ class SettingsPanelUpdateTest {
                     new GhLogin("github.com", "alice", true, true),
                     new GhLogin("github.com", "alice-work", false, true))));
     private static final SettingsPanelPopup READ =
-            new SettingsPanelPopup(ThemeName.DARK, Option.none(), Option.of(SETUP));
+            new SettingsPanelPopup(ThemeName.DARK, RepositoryTheme.NONE, Option.none(), Option.of(SETUP));
 
     @Test
     void requestingShowsTheSettingsAndReadsHowGhIsSetUp() {
         Next next = Update.update(TestModels.loaded(), new SettingsPanelMsg.Requested());
 
         assertEquals(
-                Option.of(new SettingsPanelPopup(ThemeName.DARK, Option.none(), Option.none())),
+                Option.of(new SettingsPanelPopup(ThemeName.DARK, RepositoryTheme.NONE, Option.none(), Option.none())),
                 next.model().popup(SettingsPanelPopup.class));
         assertEquals(List.of(new SettingsPanelCmd.ReadGitHub("gh")), next.cmds());
     }
@@ -87,7 +89,10 @@ class SettingsPanelUpdateTest {
         Model choosing =
                 Update.update(open, new SettingsPanelMsg.ThemeRequested()).model();
 
-        assertEquals(Option.of(new ThemePopup(ThemeName.DARK, Option.none())), choosing.popup(ThemePopup.class));
+        assertEquals(
+                Option.of(new ThemePopup(
+                        ThemeName.DARK, Option.none(), ThemeScope.EVERYWHERE, RepositoryTheme.NONE, ThemeName.DARK)),
+                choosing.popup(ThemePopup.class));
     }
 
     @Test
@@ -229,8 +234,8 @@ class SettingsPanelUpdateTest {
 
     @Test
     void theAccountCannotBeChosenWhileTheAccountsAreRead() {
-        Model reading =
-                TestModels.loaded().openPopup(new SettingsPanelPopup(ThemeName.DARK, Option.none(), Option.none()));
+        Model reading = TestModels.loaded()
+                .openPopup(new SettingsPanelPopup(ThemeName.DARK, RepositoryTheme.NONE, Option.none(), Option.none()));
 
         assertEquals(
                 reading,
