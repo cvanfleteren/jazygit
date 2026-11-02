@@ -82,7 +82,8 @@ public final class Program {
      * @param env           what the commands run against
      * @param settings      the settings the session starts with
      * @param themeOverride the theme for this session instead of the saved one, if any
-     * @param landing       where the repository is shown at first
+     * @param repositoryTheme the theme the git configuration gives the repository, before the saved one (ADR 70)
+     * @param landing     where the repository is shown at first
      * @param io            where git is called; a single thread keeps git commands from running concurrently
      * @param background    where {@link Cmd#background() background} commands run, so they do not hold up the
      *                      others; several at once may
@@ -99,6 +100,7 @@ public final class Program {
             Env env,
             SettingsStore.Loaded settings,
             Option<ThemeName> themeOverride,
+            RepositoryTheme repositoryTheme,
             Landing landing,
             Executor io,
             Executor background,
@@ -108,7 +110,8 @@ public final class Program {
             Runnable quit,
             Clock clock) {
         Program program = new Program(env, io, background, ui, bugs, modelChanged, quit, clock);
-        program.apply(Update.begin(env.git().repositoryName(), settings, themeOverride, landing, clock.instant()));
+        program.apply(Update.begin(
+                env.git().repositoryName(), settings, themeOverride, repositoryTheme, landing, clock.instant()));
         return program;
     }
 

@@ -66,7 +66,18 @@ public final class TestModels {
      */
     public static Program program(Env env, Executor io, Executor background, Executor ui, Runnable modelChanged) {
         return Program.start(
-                env, PLAIN, Option.none(), Landing.START, io, background, ui, bug -> {}, modelChanged, () -> {}, STILL);
+                env,
+                PLAIN,
+                Option.none(),
+                RepositoryTheme.NONE,
+                Landing.START,
+                io,
+                background,
+                ui,
+                bug -> {},
+                modelChanged,
+                () -> {},
+                STILL);
     }
 
     /**

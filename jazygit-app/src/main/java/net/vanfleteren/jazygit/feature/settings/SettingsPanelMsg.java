@@ -26,6 +26,11 @@ public sealed interface SettingsPanelMsg extends Msg {
 
     record ThemeRequested() implements SettingsPanelMsg {}
 
+    /**
+     * The user asked to choose the theme of the repository's own (ADR 70).
+     */
+    record RepositoryThemeRequested() implements SettingsPanelMsg {}
+
     record GhExecutableRequested() implements SettingsPanelMsg {}
 
     /**

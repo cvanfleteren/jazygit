@@ -17,6 +17,7 @@ import net.vanfleteren.jazygit.gh.model.GhLogin;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.CursorFeedback;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.RepositoryTheme;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
@@ -62,10 +63,30 @@ class SettingsPanelDialogsTest {
     }
 
     @Test
+    void theThemeOfTheRepositoryIsItsOwnElseTheOneItInherits() {
+        RepositoryTheme.Inherited work = new RepositoryTheme.Inherited(ThemeName.LIGHT, "/etc/gitconfig-work");
+        SettingsPanelPopup popup =
+                new SettingsPanelPopup(ThemeName.DARK, RepositoryTheme.NONE, Option.none(), Option.none());
+
+        assertEquals(
+                "Theme for this repository: ember, blues and oranges",
+                SettingsPanelDialogs.repositoryTheme(
+                        popup.withRepositoryTheme(new RepositoryTheme(Option.of(ThemeName.EMBER), Option.of(work)))));
+        assertEquals(
+                "Theme for this repository: light, from /etc/gitconfig-work",
+                SettingsPanelDialogs.repositoryTheme(
+                        popup.withRepositoryTheme(new RepositoryTheme(Option.none(), Option.of(work)))));
+        assertEquals(
+                "Theme for this repository: none, the one for all repositories",
+                SettingsPanelDialogs.repositoryTheme(popup));
+    }
+
+    @Test
     void showsThatGhIsReadWhileItIs() throws Exception {
         ChoiceDialog<SettingsPanelPopup> dialog =
                 new ChoiceDialog<>(SettingsPanelDialogs.PANEL, new ArrayList<Msg>()::add);
-        SettingsPanelPopup popup = new SettingsPanelPopup(ThemeName.DARK, Option.of("/opt/gh"), Option.none());
+        SettingsPanelPopup popup =
+                new SettingsPanelPopup(ThemeName.DARK, RepositoryTheme.NONE, Option.of("/opt/gh"), Option.none());
         Element view = stack(
                 text("background"),
                 dialog.render(TestModels.loaded().openPopup(popup)).get());
@@ -81,8 +102,8 @@ class SettingsPanelDialogsTest {
     void showsTheSettings() throws Exception {
         ChoiceDialog<SettingsPanelPopup> dialog =
                 new ChoiceDialog<>(SettingsPanelDialogs.PANEL, new ArrayList<Msg>()::add);
-        SettingsPanelPopup popup =
-                new SettingsPanelPopup(ThemeName.DARCULA, Option.none(), Option.of(setup(Option.of("alice-work"))));
+        SettingsPanelPopup popup = new SettingsPanelPopup(
+                ThemeName.DARCULA, RepositoryTheme.NONE, Option.none(), Option.of(setup(Option.of("alice-work"))));
         Element view = stack(
                 text("background"),
                 dialog.render(TestModels.loaded().openPopup(popup)).get());
@@ -90,13 +111,14 @@ class SettingsPanelDialogsTest {
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view)) {
             String screen = RenderedText.ofLarge(runner, () -> view);
             assertTrue(screen.contains("(g) gh executable: gh on the PATH (2.102.0)"), screen);
-            assertTrue(screen.contains("(t) Theme: darcula"), screen);
+            assertTrue(screen.contains("(t) Theme for all repositories: darcula"), screen);
+            assertTrue(screen.contains("(r) Theme for this repository: none, the one for all repositories"), screen);
             assertTrue(screen.contains("(a) Account for this repository on github.com: ⚠ alice-work"), screen);
             List<String> lines = List.of(screen.split("\n")).map(String::strip);
             assertEquals(
-                    List.of("Appearance", "(t)", "", "GitHub", "(g)", "(a)"),
+                    List.of("Appearance", "(t)", "(r)", "", "GitHub", "(g)", "(a)"),
                     lines.dropWhile(line -> !line.contains("Appearance"))
-                            .take(6)
+                            .take(7)
                             .map(line -> line.replaceAll("^│", "").strip())
                             .map(line -> line.startsWith("(")
                                     ? line.substring(0, 3)
@@ -109,8 +131,8 @@ class SettingsPanelDialogsTest {
         java.util.List<Msg> dispatched = new ArrayList<>();
         CursorFeedback cursor = new CursorFeedback(dispatched::add);
         ChoiceDialog<SettingsPanelPopup> dialog = new ChoiceDialog<>(SettingsPanelDialogs.PANEL, cursor);
-        SettingsPanelPopup popup =
-                new SettingsPanelPopup(ThemeName.DARK, Option.none(), Option.of(setup(Option.none())));
+        SettingsPanelPopup popup = new SettingsPanelPopup(
+                ThemeName.DARK, RepositoryTheme.NONE, Option.none(), Option.of(setup(Option.none())));
         Supplier<Element> view = () -> stack(
                 text("background"),
                 dialog.render(cursor.on(TestModels.loaded().openPopup(popup))).get());
@@ -120,7 +142,9 @@ class SettingsPanelDialogsTest {
             RenderedText.of(runner, view);
             SettledPilot.of(runner).press(KeyCode.DOWN);
             SettledPilot.of(runner).press(KeyCode.DOWN);
+            SettledPilot.of(runner).press(KeyCode.DOWN);
             SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).press(KeyCode.UP);
             SettledPilot.of(runner).press(KeyCode.UP);
             SettledPilot.of(runner).press(KeyCode.UP);
             SettledPilot.of(runner).press(KeyCode.UP);

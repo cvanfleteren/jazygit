@@ -5,10 +5,12 @@ import static org.junit.jupiter.api.Assertions.*;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.theme.ThemePopup;
+import net.vanfleteren.jazygit.feature.theme.ThemeScope;
 import net.vanfleteren.jazygit.settings.Settings;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.RepositoryTheme;
 import net.vanfleteren.jazygit.state.Screen;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
@@ -52,7 +54,8 @@ class LayoutUpdateTest {
 
     @Test
     void theKeysDoNothingWhileAPopupIsOpen() {
-        Model open = model.openPopup(new ThemePopup(ThemeName.DARK, Option.none()));
+        Model open = model.openPopup(new ThemePopup(
+                ThemeName.DARK, Option.none(), ThemeScope.EVERYWHERE, RepositoryTheme.NONE, ThemeName.DARK));
 
         assertEquals(Next.of(open), Update.update(open, new LayoutMsg.Stepped(5)));
         assertEquals(Next.of(open), Update.update(open, new LayoutMsg.Resized(Screen.REPOSITORY, 50)));
@@ -139,7 +142,8 @@ class LayoutUpdateTest {
 
     @Test
     void aPaneIsNotDraggedWhileAPopupIsOpen() {
-        Model open = model.openPopup(new ThemePopup(ThemeName.DARK, Option.none()));
+        Model open = model.openPopup(new ThemePopup(
+                ThemeName.DARK, Option.none(), ThemeScope.EVERYWHERE, RepositoryTheme.NONE, ThemeName.DARK));
 
         assertEquals(Next.of(open), Update.update(open, new LayoutMsg.PaneResized(Screen.REPOSITORY, 0, 50)));
     }

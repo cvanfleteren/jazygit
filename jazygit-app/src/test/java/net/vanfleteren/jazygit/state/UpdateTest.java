@@ -213,7 +213,8 @@ class UpdateTest {
     void theFirstLoadsRunFromTheStart() {
         Instant now = Instant.parse("2026-10-22T10:00:00Z");
 
-        Step begun = Update.begin("repo", SettingsStore.Loaded.DEFAULT, Option.none(), Landing.START, now);
+        Step begun = Update.begin(
+                "repo", SettingsStore.Loaded.DEFAULT, Option.none(), RepositoryTheme.NONE, Landing.START, now);
 
         assertEquals(now, begun.model().now());
         assertEquals(Update.init("repo").cmds(), begun.launches().map(Launch::cmd));

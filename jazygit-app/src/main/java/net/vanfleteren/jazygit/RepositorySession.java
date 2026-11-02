@@ -90,10 +90,11 @@ final class RepositorySession {
     }
 
     /**
-     * Starts showing the repository the app starts in, as {@code settings} and {@code themeOverride} say.
+     * Starts showing the repository the app starts in, as {@code settings}, {@code themeOverride} and its git
+     * configuration say.
      */
     void start(SettingsStore.Loaded settings, Option<ThemeName> themeOverride) {
-        open(env, settings, themeOverride, Landing.START);
+        open(env, settings, themeOverride, RepositoryTheme.read(env.git()), Landing.START);
     }
 
     /**
@@ -127,9 +128,15 @@ final class RepositorySession {
     }
 
     /**
-     * Starts showing the repository {@code env} reads, from scratch, where {@code landing} says.
+     * Starts showing the repository {@code env} reads, from scratch, in the theme its git configuration gives it if
+     * no other is asked for, where {@code landing} says.
      */
-    private void open(Env env, SettingsStore.Loaded settings, Option<ThemeName> themeOverride, Landing landing) {
+    private void open(
+            Env env,
+            SettingsStore.Loaded settings,
+            Option<ThemeName> themeOverride,
+            RepositoryTheme repositoryTheme,
+            Landing landing) {
         ToolkitRunner runner = this.runner.get();
         ThreadPoolExecutor io = singleThread("git-io");
         ThreadPoolExecutor background =
@@ -138,6 +145,7 @@ final class RepositorySession {
                 env,
                 settings,
                 themeOverride,
+                repositoryTheme,
                 landing,
                 io,
                 background,
@@ -156,19 +164,23 @@ final class RepositorySession {
 
     /**
      * Opens the repository containing {@code directory} in place of the one shown, as {@link Repositories} asks;
-     * called on the thread of a command.
+     * called on the thread of a command, which reads its theme too, so the render thread does not wait for git.
      */
     private Either<GitError, Path> switchTo(Path directory, Landing landing) {
         return CliGitInfoProvider.open(directory)
-                .peek(provider -> runner.get().runOnRenderThread(() -> show(provider, landing)))
+                .peek(provider -> {
+                    RepositoryTheme theme = RepositoryTheme.read(provider);
+                    runner.get().runOnRenderThread(() -> show(provider, theme, landing));
+                })
                 .map(CliGitInfoProvider::worktree);
     }
 
     /**
      * Shows the repository {@code git} reads instead of the one shown, as if the app had been started there, where
-     * {@code landing} says; the theme and the settings stay as they are in this session.
+     * {@code landing} says; the settings, and a theme asked for at startup, stay as they are in this session, and
+     * {@code repositoryTheme} is the one its git configuration gives it.
      */
-    private void show(CliGitInfoProvider git, Landing landing) {
+    private void show(CliGitInfoProvider git, RepositoryTheme repositoryTheme, Landing landing) {
         runtime.forEach(running -> {
             Model last = running.program().model();
             // Not waiting for the command that runs keeps the UI going. It finishes by itself, in the other
@@ -178,6 +190,7 @@ final class RepositorySession {
                     RepositoryEnv.reopen(env, git, last.preferences().settings()),
                     new SettingsStore.Loaded(last.preferences().settings(), Option.none()),
                     last.preferences().themeOverride(),
+                    repositoryTheme,
                     landing);
             requestRedraw.run();
         });
