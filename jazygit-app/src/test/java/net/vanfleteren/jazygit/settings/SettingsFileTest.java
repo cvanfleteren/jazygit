@@ -304,6 +304,12 @@ class SettingsFileTest {
     void readsTheDiffStyleAndAnUnknownOneIsInvalid() throws IOException {
         write("""
                 [ui]
+                diff-style = "rich"
+                """);
+        assertEquals(DiffStyle.RICH, settingsFile().load().settings().diffStyle());
+
+        write("""
+                [ui]
                 diff-style = "plain"
                 """);
         assertEquals(
@@ -317,6 +323,15 @@ class SettingsFileTest {
         assertEquals(
                 new Loaded(Settings.DEFAULT, Option.of(new SettingsProblem.Invalid(file(), List.of("ui.diff-style")))),
                 settingsFile().load());
+    }
+
+    @Test
+    void withoutADiffStyleTheDiffsAreRich() throws IOException {
+        write("""
+                [ui]
+                """);
+
+        assertEquals(DiffStyle.RICH, settingsFile().load().settings().diffStyle());
     }
 
     @Test

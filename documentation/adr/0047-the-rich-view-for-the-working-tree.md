@@ -85,3 +85,5 @@ preamble when it comes first.
 - Ctrl+D changes every diff git reads; that of a pull request, read with `gh pr diff`, stays plain.
 - A conflicted file shows in the rich view as git prints it, under a bar, and no longer runs into the file before it.
 - A diff of the working tree with `diff.mnemonicPrefix` set shows `a/` and `b/` in the plain view too.
+
+The default has since become rich diffs: Ctrl+D switches to plain.
