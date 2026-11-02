@@ -59,7 +59,7 @@ class DivergenceList {
         List<CommitGraph.Node> nodes = CommitGraph.layout(side.commits());
         return List.<Entry>of(new Entry.Header(ahead))
                 .appendAll(nodes.zipWith(
-                        nodes.map(CommitGraph.Node::closesBranch).prepend(false),
+                        nodes.map(CommitGraph.Node::closes).prepend(0),
                         (node, joins) -> new Entry.Shown(node, joins, ahead)))
                 .appendAll(Option.<Entry>when(side.commits().isEmpty(), Entry.None::new))
                 .appendAll(Option.<Entry>when(side.hidden() > 0, () -> new Entry.More(side.hidden())));
@@ -82,7 +82,7 @@ class DivergenceList {
             case Entry.Header(boolean ahead) ->
                 LoadableList.Row.of(LoadableList.Seg.styled(
                         "── " + (ahead ? view.branch().value() : view.other().name()), Theme.Classes.BOLD));
-            case Entry.Shown(CommitGraph.Node node, boolean joins, boolean ahead) ->
+            case Entry.Shown(CommitGraph.Node node, int joins, boolean ahead) ->
                 new LoadableList.Row(List.of(
                                 ahead
                                         ? LoadableList.Seg.styled("↑ ", Theme.Classes.AHEAD)
@@ -188,10 +188,10 @@ class DivergenceList {
         /**
          * A commit only on one of the branches.
          *
-         * @param joins whether the branch before this commit joins the main line at it
+         * @param joins how many branches before this commit join it
          * @param ahead whether it is on the local branch, rather than on the one it is compared with
          */
-        record Shown(CommitGraph.Node node, boolean joins, boolean ahead) implements Entry {}
+        record Shown(CommitGraph.Node node, int joins, boolean ahead) implements Entry {}
 
         /**
          * That the branch above has no commits the other has not.

@@ -62,6 +62,68 @@ class CommitsPanelTest {
     }
 
     @Test
+    void theCommitAfterAStackOfMergedBranchesJoinsThemAll() {
+        // x is merged into y, y's branch into w and w's branch into main: all three branches end at x.
+        List<Commit> log = CommitGraph.arrange(List.of(
+                commit("mmmmmmm", "ccccccc", "vvvvvvv"),
+                commit("vvvvvvv", "wwwwwww"),
+                commit("wwwwwww", "bbbbbbb", "zzzzzzz"),
+                commit("zzzzzzz", "yyyyyyy"),
+                commit("yyyyyyy", "aaaaaaa", "xxxxxxx"),
+                commit("xxxxxxx", "aaaaaaa"),
+                commit("ccccccc", "bbbbbbb"),
+                commit("bbbbbbb", "aaaaaaa"),
+                commit("aaaaaaa")));
+
+        List<LoadableList.Row> rows = CommitsPanel.rows(CommitGraph.layout(log));
+
+        assertEquals(
+                List.of(
+                        "mmmmmmm Ad ◎─╮ msg mmmmmmm",
+                        "vvvvvvv Ad │ ○ msg vvvvvvv",
+                        "wwwwwww Ad │ ◎─╮ msg wwwwwww",
+                        "zzzzzzz Ad │ │ ○ msg zzzzzzz",
+                        "yyyyyyy Ad │ │ ◎─╮ msg yyyyyyy",
+                        "xxxxxxx Ad │ │ │ ○ msg xxxxxxx",
+                        "ccccccc Ad ○─┴─┴─╯ msg ccccccc",
+                        "bbbbbbb Ad ○ msg bbbbbbb",
+                        "aaaaaaa Ad ○ msg aaaaaaa"),
+                rows.map(LoadableList.Row::text).toList());
+    }
+
+    @Test
+    void aCommitWhereTheInnerBranchesOfAStackEndJoinsThemOnTheOuterRail() {
+        // x is merged into y, y's branch into w, both onto u; w's branch, which goes on to u, into main.
+        List<Commit> log = CommitGraph.arrange(List.of(
+                commit("mmmmmmm", "ccccccc", "vvvvvvv"),
+                commit("vvvvvvv", "wwwwwww"),
+                commit("wwwwwww", "uuuuuuu", "zzzzzzz"),
+                commit("zzzzzzz", "yyyyyyy"),
+                commit("yyyyyyy", "uuuuuuu", "xxxxxxx"),
+                commit("xxxxxxx", "uuuuuuu"),
+                commit("uuuuuuu", "aaaaaaa"),
+                commit("ccccccc", "bbbbbbb"),
+                commit("bbbbbbb", "aaaaaaa"),
+                commit("aaaaaaa")));
+
+        List<LoadableList.Row> rows = CommitsPanel.rows(CommitGraph.layout(log));
+
+        assertEquals(
+                List.of(
+                        "mmmmmmm Ad ◎─╮ msg mmmmmmm",
+                        "vvvvvvv Ad │ ○ msg vvvvvvv",
+                        "wwwwwww Ad │ ◎─╮ msg wwwwwww",
+                        "zzzzzzz Ad │ │ ○ msg zzzzzzz",
+                        "yyyyyyy Ad │ │ ◎─╮ msg yyyyyyy",
+                        "xxxxxxx Ad │ │ │ ○ msg xxxxxxx",
+                        "uuuuuuu Ad │ ○─┴─╯ msg uuuuuuu",
+                        "ccccccc Ad ○─╯ msg ccccccc",
+                        "bbbbbbb Ad ○ msg bbbbbbb",
+                        "aaaaaaa Ad ○ msg aaaaaaa"),
+                rows.map(LoadableList.Row::text).toList());
+    }
+
+    @Test
     void tagsComeBeforeTheMessageInTheirOwnColour() {
         Commit tagged = new Commit(
                 new Sha("abcdef0"),
@@ -73,7 +135,7 @@ class CommitsPanelTest {
                 List.empty(),
                 List.of(new Tag("v1"), new Tag("v1.1")));
 
-        LoadableList.Row row = CommitsPanel.row(new CommitGraph.Node(tagged, 0, false), false);
+        LoadableList.Row row = CommitsPanel.row(new CommitGraph.Node(tagged, 0, 0), 0);
 
         assertEquals("abcdef0 Ad ○ [v1] [v1.1] Release", row.text());
         assertEquals(

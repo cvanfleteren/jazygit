@@ -48,12 +48,14 @@ public final class CommitGraph {
         Map<Sha, Commit> bySha = index(arranged);
         Map<Sha, Integer> position = arranged.zipWithIndex().toMap(entry -> entry._1.sha(), entry -> entry._2);
         List<Set<Sha>> brought = arranged.filter(Commit::isMerge).map(merge -> broughtIn(merge, bySha));
-        // The last commit of each merged branch closes it.
-        Set<Integer> closing =
-                brought.flatMap(shas -> shas.flatMap(position::get).max()).toSet();
+        // The last commit of each merged branch closes it; nested branches can all end at the same commit.
+        List<Integer> closing =
+                brought.flatMap(shas -> shas.flatMap(position::get).max());
         return arranged.zipWithIndex()
                 .map(entry -> new Node(
-                        entry._1, brought.count(shas -> shas.contains(entry._1.sha())), closing.contains(entry._2)));
+                        entry._1,
+                        brought.count(shas -> shas.contains(entry._1.sha())),
+                        closing.count(entry._2::equals)));
     }
 
     private static Map<Sha, Commit> index(List<Commit> commits) {
@@ -79,10 +81,11 @@ public final class CommitGraph {
     /**
      * A commit, and where it stands in the branches of merges.
      *
-     * @param depth        in how many merged branches the commit is
-     * @param closesBranch whether it is the last commit of the (innermost) branch it is in
+     * @param depth  in how many merged branches the commit is
+     * @param closes of how many of those branches it is the last commit: the innermost ones, as a branch merged
+     *               into another branch can end at the same commit as that one
      */
-    public record Node(Commit commit, int depth, boolean closesBranch) {}
+    public record Node(Commit commit, int depth, int closes) {}
 
     /**
      * The shas placed so far, and the commits in the order they were placed, last placed first.

@@ -92,9 +92,9 @@ public class CommitsPanel {
      * @param copied the commit copied to cherry-pick, whose sha stands out
      */
     static List<LoadableList.Row> rows(List<CommitGraph.Node> nodes, Option<Sha> copied) {
-        // Each commit joins the branch that the commit before it closes.
+        // Each commit joins the branches that the commit before it closes.
         return nodes.zipWith(
-                nodes.map(CommitGraph.Node::closesBranch).prepend(false),
+                nodes.map(CommitGraph.Node::closes).prepend(0),
                 (node, joins) -> row(node, joins, copied.contains(node.commit().sha())));
     }
 
@@ -108,21 +108,27 @@ public class CommitsPanel {
 
     /**
      * The row of a commit. Commits brought in by a merge are drawn on a rail beside the merge, which opens
-     * it with {@code ◎─╮}; the commit after the branch, where it joins the main line, is {@code ○─╯}.
+     * it with {@code ◎─╮}; the commit after the branch, where it joins the main line, is {@code ○─╯}, with a
+     * {@code ─┴} more for each nested branch that ends with it.
      *
-     * @param joins whether the branch before this commit joins the main line at it
+     * @param joins how many branches before this commit join it
      */
-    static LoadableList.Row row(CommitGraph.Node node, boolean joins) {
+    static LoadableList.Row row(CommitGraph.Node node, int joins) {
         return row(node, joins, false);
     }
 
     /**
      * @param copied whether the commit is copied to cherry-pick, which shows in its sha
      */
-    static LoadableList.Row row(CommitGraph.Node node, boolean joins, boolean copied) {
+    static LoadableList.Row row(CommitGraph.Node node, int joins, boolean copied) {
         Commit commit = node.commit();
         String rails = "│ ".repeat(node.depth());
-        return row(commit, commit.isMerge() ? rails + "◎─╮ " : joins ? rails + "○─╯ " : rails + "○ ", copied);
+        return row(
+                commit,
+                commit.isMerge()
+                        ? rails + "◎─╮ "
+                        : joins > 0 ? rails + "○" + "─┴".repeat(joins - 1) + "─╯ " : rails + "○ ",
+                copied);
     }
 
     /**
