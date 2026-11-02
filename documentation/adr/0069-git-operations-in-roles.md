@@ -45,7 +45,7 @@ overrides, from the status to stashes, checkout, push, the index and commits.
    | `Integrate` | merge, cherryPick, revert, continueOrAbort, rebase |
    | `Remotes` | remotes, remoteUrls, push, pushSettingUpstream, pull, fetch, fastForward, deleteRemoteBranch, deleteBranch, pullRequestFiles |
    | `Index` | stage, unstageNew, discard, unstage |
-   | `Worktrees` | worktrees, hasChanges, add, addDetached, addWithNewBranch, remove, removeAnyway, prune, lock |
+   | `Worktrees` | worktrees, hasChanges, add, addDetached, addWithNewBranch, remove, removeAnyway, prune, lock (×2) |
    | `Config` | localConfig, setLocalConfig |
    | `Editor` | edit, editMessage, editText |
 
