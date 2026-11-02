@@ -33,11 +33,29 @@ final class CliLog {
     private CliLog() {}
 
     /**
+     * The commit {@code revision} names; none when it names nothing, e.g. {@code HEAD} in a repository
+     * without commits.
+     */
+    static Either<GitFailure<ProcessError>, Option<Sha>> resolve(Path worktree, String revision) {
+        // rev-parse --verify --quiet exits with 1, saying nothing, when the revision names nothing.
+        // After --end-of-options, a revision typed with a leading - is still read as one.
+        return GitProcess.ask(
+                        worktree,
+                        GitCommand.reading(
+                                "rev-parse", "--verify", "--quiet", "--end-of-options", revision + "^{commit}"))
+                .flatMap(answer -> answer.fold(
+                        () -> Either.right(Option.none()),
+                        found -> GitOutput.sha(found.stdout())
+                                .map(Option::of)
+                                .mapLeft(error -> new GitFailure<ProcessError>(error, found.log()))));
+    }
+
+    /**
      * The commits of the log of HEAD that {@code query} finds, newest first; none in a repository without commits.
      * They are left as git lists them: with commits left out, merges and what they brought in no longer join up.
      */
     static Either<ProcessError, List<Commit>> search(Path worktree, CommitQuery query, Option<BranchRef> notOn) {
-        return CliCheckout.resolve(worktree, "HEAD")
+        return resolve(worktree, "HEAD")
                 .mapLeft(GitFailure::error)
                 .flatMap(head -> head.fold(
                         () -> Either.right(List.empty()),
@@ -267,7 +285,7 @@ final class CliLog {
 
     private static Either<GitError, Sha> tip(Path worktree, BranchRef branch) {
         return Either.<GitError, Option<Sha>>narrow(
-                        CliCheckout.resolve(worktree, GitArgs.revision(branch)).mapLeft(GitFailure::error))
+                        resolve(worktree, GitArgs.revision(branch)).mapLeft(GitFailure::error))
                 .flatMap(tip -> tip.toEither(() -> new UnknownBranch(branch)));
     }
 

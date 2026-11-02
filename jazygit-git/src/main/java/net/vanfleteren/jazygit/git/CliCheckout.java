@@ -17,7 +17,7 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
  * The {@link Checkout} of a repository, through the {@code git checkout} command line tool, so the working tree is
  * handled exactly like git itself does: local changes are carried over, and conflicting ones make the checkout fail.
  * Moving commits checks out through {@link #checkout} and {@link #checkoutNewBranch}, adding a worktree records its
- * parent through {@link #recordParent}, and the log and the commits find a revision through {@link #resolve}.
+ * parent through {@link #recordParent}.
  */
 final class CliCheckout implements Checkout {
 
@@ -55,7 +55,7 @@ final class CliCheckout implements Checkout {
                 .mapLeft(failure -> failure.map(CliCheckout::classify));
     }
 
-    static GitError classify(ProcessError error) {
+    private static GitError classify(ProcessError error) {
         return error instanceof CommandFailed failed && failed.says(LOCAL_CHANGES)
                 ? new LocalChanges(failed.explanation().getOrElse(""))
                 : error;
@@ -131,24 +131,6 @@ final class CliCheckout implements Checkout {
 
     @Override
     public Either<GitFailure<ProcessError>, Option<Sha>> resolve(String text) {
-        return resolve(worktree, text);
-    }
-
-    /**
-     * The commit {@code revision} names; none when it names nothing, e.g. {@code HEAD} in a repository
-     * without commits.
-     */
-    static Either<GitFailure<ProcessError>, Option<Sha>> resolve(Path worktree, String revision) {
-        // rev-parse --verify --quiet exits with 1, saying nothing, when the revision names nothing.
-        // After --end-of-options, a revision typed with a leading - is still read as one.
-        return GitProcess.ask(
-                        worktree,
-                        GitCommand.reading(
-                                "rev-parse", "--verify", "--quiet", "--end-of-options", revision + "^{commit}"))
-                .flatMap(answer -> answer.fold(
-                        () -> Either.right(Option.none()),
-                        found -> GitOutput.sha(found.stdout())
-                                .map(Option::of)
-                                .mapLeft(error -> new GitFailure<ProcessError>(error, found.log()))));
+        return CliLog.resolve(worktree, text);
     }
 }

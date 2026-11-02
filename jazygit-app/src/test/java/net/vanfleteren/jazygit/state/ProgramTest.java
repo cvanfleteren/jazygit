@@ -168,13 +168,13 @@ class ProgramTest {
 
                 @Override
                 public Either<GitFailure<GitError>, List<ExecutedCommand>> branchWithStash(BranchName branch) {
-                    return GitFailure.widen(switchTo(branch, "git checkoutWithStash"));
+                    return GitFailure.widen(switchTo(branch, "git branchWithStash"));
                 }
 
                 @Override
                 public Either<GitFailure<ProcessError>, List<ExecutedCommand>> newBranch(
                         BranchName name, Revision startPoint, Option<BranchName> parent) {
-                    return switchTo(name, "git checkoutNewBranch");
+                    return switchTo(name, "git newBranch");
                 }
             };
         }

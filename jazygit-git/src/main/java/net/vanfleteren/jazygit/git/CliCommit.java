@@ -43,7 +43,7 @@ final class CliCommit {
      * @return the command lines that were run
      */
     static Either<GitFailure<GitError>, List<ExecutedCommand>> amend(Path worktree, Sha sha) {
-        return GitFailure.<GitError, Option<Sha>>widen(CliCheckout.resolve(worktree, "HEAD"))
+        return GitFailure.<GitError, Option<Sha>>widen(CliLog.resolve(worktree, "HEAD"))
                 .flatMap(head -> head.contains(sha)
                         ? GitFailure.widen(amend(worktree))
                         : GitFailure.<GitError>sequence(
@@ -71,7 +71,7 @@ final class CliCommit {
      * @return the command lines that were run
      */
     static Either<GitFailure<GitError>, List<ExecutedCommand>> reword(Path worktree, Sha sha, CommitMessage message) {
-        return GitFailure.<GitError, Option<Sha>>widen(CliCheckout.resolve(worktree, "HEAD"))
+        return GitFailure.<GitError, Option<Sha>>widen(CliLog.resolve(worktree, "HEAD"))
                 .flatMap(head -> head.contains(sha)
                         ? GitFailure.widen(rewordHead(worktree, message))
                         : CliRebase.reword(worktree, sha, message));
