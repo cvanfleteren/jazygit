@@ -193,6 +193,29 @@ public final class ContentPanel {
     }
 
     /**
+     * {@code line} scrolled {@code column} columns sideways: without its first columns, its spans kept in their
+     * styles, as {@link TextWidth#rest} cuts their text.
+     */
+    static Line sideways(Line line, int column) {
+        return Line.from(List.ofAll(line.spans())
+                .foldLeft(
+                        Tuple.of(column, List.<Span>empty()),
+                        (done, span) -> done._1() == 0
+                                ? Tuple.of(0, done._2().prepend(span))
+                                : Tuple.of(
+                                        Math.max(0, done._1() - span.width()),
+                                        done._1() >= span.width()
+                                                ? done._2()
+                                                : done._2()
+                                                        .prepend(new Span(
+                                                                TextWidth.rest(span.content(), done._1()),
+                                                                span.style()))))
+                ._2()
+                .reverse()
+                .toJavaList());
+    }
+
+    /**
      * A line of a unified diff, colored by what it is: added, removed, a hunk header or a file header.
      */
     static Line diffLine(String line, Theme.SpanStyles styles) {
@@ -555,13 +578,14 @@ public final class ContentPanel {
             Text text = cursor.filter(ignored -> focused)
                     .map(on -> on.tinted(current.text(), styles.of(Theme.Classes.DIFF_CURSOR)))
                     .getOrElse(current.text());
-            // The width of the area is that of the frame before, as the element only learns it while it draws.
-            columns =
-                    Math.max(0, List.ofAll(text.lines()).map(Line::width).max().getOrElse(0) - state.viewportWidth());
+            // The size of the area is that of the frame before, as the element only learns it while it draws.
+            columns = Math.max(0, current.widest() - state.viewportWidth());
             column = Math.clamp(at.column(), 0, columns);
-            element.text(column == 0 ? text : sideways(text, column)).title(shown.title());
+            int row = cursor.map(DiffCursor::row).getOrElse(at.row());
+            element.text(column == 0 ? text : sideways(text, column, row, state.viewportHeight()))
+                    .title(shown.title());
             state.scrollToTop();
-            state.scrollDown(cursor.map(DiffCursor::row).getOrElse(at.row()));
+            state.scrollDown(row);
             boolean ofFiles = area.pane(model).equals(FilesPanel.ID);
             return element.onKeyEvent(event -> keys(event, focused, ofFiles, content))
                     .onMouseEvent(event -> mouse(event, content));
@@ -706,26 +730,15 @@ public final class ContentPanel {
         }
 
         /**
-         * {@code text} scrolled {@code column} columns sideways: each of its lines without its first columns.
+         * {@code text} scrolled {@code column} columns sideways, at {@code row} in an area {@code height} lines high:
+         * the lines that show without their first columns. The element scrolls no further than its last line at its
+         * bottom, and the lines of another height after them are cut too, in case the area grew since.
          */
-        private static Text sideways(Text text, int column) {
-            return Text.from(List.ofAll(text.lines())
-                    .map(line -> Line.from(List.ofAll(line.spans())
-                            .foldLeft(
-                                    Tuple.of(column, List.<Span>empty()),
-                                    (done, span) -> done._1() == 0
-                                            ? Tuple.of(0, done._2().prepend(span))
-                                            : Tuple.of(
-                                                    Math.max(0, done._1() - span.width()),
-                                                    done._1() >= span.width()
-                                                            ? done._2()
-                                                            : done._2()
-                                                                    .prepend(new Span(
-                                                                            TextWidth.rest(span.content(), done._1()),
-                                                                            span.style()))))
-                            ._2()
-                            .reverse()
-                            .toJavaList()))
+        private static Text sideways(Text text, int column, int row, int height) {
+            Vector<Line> lines = Vector.ofAll(text.lines());
+            int top = Math.clamp(row, 0, Math.max(0, lines.size() - height));
+            return Text.from(Vector.range(top, Math.min(lines.size(), top + 2 * height))
+                    .foldLeft(lines, (done, at) -> done.update(at, ContentPanel.sideways(done.get(at), column)))
                     .toJavaList());
         }
 
@@ -756,11 +769,19 @@ public final class ContentPanel {
          * {@code body}, styled in {@code theme} as {@code text}, with where the stops of its cursor start, if it has
          * one.
          */
-        private record Styled(Body body, ThemeName theme, Text text, Vector<RichDiff.Stop> stops) {
+        /**
+         * @param widest how wide the widest line of {@code text} is, which the tint of the cursor never makes wider
+         */
+        private record Styled(Body body, ThemeName theme, Text text, Vector<RichDiff.Stop> stops, int widest) {
 
             static Styled of(Body body, ThemeName theme, RichDiff.Drawn drawn) {
+                Text text = styledText(drawn.lines());
                 return new Styled(
-                        body, theme, styledText(drawn.lines()), drawn.stops().toVector());
+                        body,
+                        theme,
+                        text,
+                        drawn.stops().toVector(),
+                        List.ofAll(text.lines()).map(Line::width).max().getOrElse(0));
             }
         }
     }

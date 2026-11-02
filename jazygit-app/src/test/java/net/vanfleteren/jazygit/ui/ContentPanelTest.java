@@ -2,6 +2,9 @@ package net.vanfleteren.jazygit.ui;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import dev.tamboui.style.Color;
+import dev.tamboui.style.Style;
+import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.event.EventResult;
@@ -228,6 +231,56 @@ class ContentPanelTest {
         // What shows is scrolled too, not only where the model has it.
         assertTrue(screen.contains("│0123456789x"), screen);
         assertFalse(screen.contains("+0123456789"), screen);
+    }
+
+    @Test
+    void rightStopsWithTheEndOfTheWidestLineAtTheEdgeOfTheAreaBesideItsScrollbar() throws Exception {
+        java.util.List<Msg> dispatched = new java.util.ArrayList<>();
+        // The model takes where the area is scrolled to, as the app's does.
+        java.util.concurrent.atomic.AtomicReference<Model> model =
+                new java.util.concurrent.atomic.AtomicReference<>(showingCommit("+" + "x".repeat(110) + "END"));
+        ContentPanel scrolling = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, msg -> {
+            dispatched.add(msg);
+            model.set(Update.update(model.get(), msg).model());
+        });
+        String area = scrolling.areaOfPane(model.get(), CommitsPanel.ID).get();
+
+        String screen;
+        // The frames the keys draw are as large as the screen read at the end, which the area learns its width from.
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(
+                () -> scrolling.render(model.get(), area), new dev.tamboui.layout.Size(100, 30))) {
+            SettledPilot.focus(testRunner, area);
+            RenderedText.ofLarge(testRunner, () -> scrolling.render(model.get(), area));
+            List.range(0, 40).forEach(i -> SettledPilot.of(testRunner).press(KeyCode.RIGHT));
+            SettledPilot.of(testRunner).pause();
+            screen = RenderedText.ofLarge(testRunner, () -> scrolling.render(model.get(), area));
+        }
+
+        List<Integer> columns = List.ofAll(dispatched)
+                .map(msg -> ((Msg.ContentScrolled) msg).to().column());
+        int last = columns.last();
+        assertTrue(last > 0 && last < 40, columns.toString());
+        assertEquals(List.fill(40 - columns.indexOf(last), last), columns.drop(columns.indexOf(last)));
+        assertTrue(java.util.regex.Pattern.compile("xEND[█│]").matcher(screen).find(), screen);
+    }
+
+    @Test
+    void sidewaysCutsTheFirstColumnsOffALineKeepingTheStylesOfItsSpans() {
+        Style red = Style.EMPTY.fg(Color.RED);
+        Style blue = Style.EMPTY.fg(Color.BLUE);
+        Style green = Style.EMPTY.fg(Color.GREEN);
+        Line line = Line.from(Span.styled("ab", red), Span.styled("cd", blue), Span.styled("漢e", green));
+
+        assertEquals(line, ContentPanel.sideways(line, 0));
+        assertEquals(
+                Line.from(Span.styled("b", red), Span.styled("cd", blue), Span.styled("漢e", green)),
+                ContentPanel.sideways(line, 1));
+        assertEquals(Line.from(Span.styled("cd", blue), Span.styled("漢e", green)), ContentPanel.sideways(line, 2));
+        assertEquals(Line.from(Span.styled("d", blue), Span.styled("漢e", green)), ContentPanel.sideways(line, 3));
+        // Through the wide character: a space for its column past the cut, in the style of its span.
+        assertEquals(Line.from(Span.styled(" e", green)), ContentPanel.sideways(line, 5));
+        assertEquals(Line.from(Span.styled("e", green)), ContentPanel.sideways(line, 6));
+        assertEquals(Line.from(java.util.List.of()), ContentPanel.sideways(line, 9));
     }
 
     @Test

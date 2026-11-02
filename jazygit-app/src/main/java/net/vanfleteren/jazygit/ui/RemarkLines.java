@@ -28,6 +28,7 @@ import net.vanfleteren.jazygit.state.Collapsed;
 import net.vanfleteren.jazygit.ui.widgets.MarkdownScroll;
 import org.commonmark.node.FencedCodeBlock;
 import org.commonmark.node.IndentedCodeBlock;
+import org.commonmark.node.LinkReferenceDefinition;
 import org.commonmark.node.Node;
 import org.commonmark.parser.IncludeSourceSpans;
 import org.commonmark.parser.Parser;
@@ -282,13 +283,16 @@ final class RemarkLines {
         return pieces.forAll(piece -> piece.width() == width)
                 ? drawn(markdown, width, resolver)
                 : pieces.map(piece -> drawn(piece.markdown(), piece.width(), resolver))
+                        // A piece of only link definitions draws nothing, and takes no blank line.
+                        .filter(drawn -> !drawn.isEmpty())
                         .intersperse(List.of(Line.from("")))
                         .flatMap(Function.identity());
     }
 
     /**
      * {@code markdown} in pieces: each code block at its top too wide for {@code width} a piece of its own, as wide as
-     * its widest line and its border, and the text between them pieces {@code width} wide.
+     * its widest line and its border, and the text between them pieces {@code width} wide. Each piece of text also
+     * holds the link definitions of the whole, as a link in one piece may be defined in another.
      */
     private static List<Piece> pieces(String markdown, int width) {
         Node document = Parser.builder()
@@ -309,12 +313,23 @@ final class RemarkLines {
                                 .getOrElse(() -> done.prepend(List.of(block))))
                 .map(List::reverse)
                 .reverse();
-        return runs.map(run -> new Piece(
-                lines.subSequence(
-                                run.head()._1().getSourceSpans().getFirst().getLineIndex(),
-                                run.last()._1().getSourceSpans().getLast().getLineIndex() + 1)
-                        .mkString("\n"),
-                run.head()._2()));
+        String definitions = blocks.map(Tuple2::_1)
+                .filter(LinkReferenceDefinition.class::isInstance)
+                .map(definition -> "\n\n" + source(lines, List.of(definition)))
+                .mkString();
+        return runs.map(run -> run.head()._2() == width
+                ? new Piece(source(lines, run.map(Tuple2::_1)) + definitions, width)
+                : new Piece(source(lines, run.map(Tuple2::_1)), run.head()._2()));
+    }
+
+    /**
+     * The lines of {@code markdown} that {@code blocks}, which follow each other, were parsed from.
+     */
+    private static String source(Vector<String> markdown, List<Node> blocks) {
+        return markdown.subSequence(
+                        blocks.head().getSourceSpans().getFirst().getLineIndex(),
+                        blocks.last().getSourceSpans().getLast().getLineIndex() + 1)
+                .mkString("\n");
     }
 
     /**

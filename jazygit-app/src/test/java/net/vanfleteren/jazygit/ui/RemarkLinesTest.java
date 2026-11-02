@@ -547,6 +547,16 @@ class RemarkLinesTest {
     }
 
     @Test
+    void aLinkKeepsItsDefinitionOnTheOtherSideOfAWideCodeBlockWhichAddsNoBlankLine() {
+        String markdown = "See [the docs][d].\n\n```\n" + "x".repeat(50) + "\n```\n\n[d]: https://example.com";
+
+        List<String> lines = text(RemarkLines.markdown(markdown, 30, StylePropertyResolver.empty()));
+
+        assertEquals("See the docs.", lines.head(), lines.mkString("\n"));
+        assertTrue(lines.last().startsWith("╰"), lines.mkString("|\n"));
+    }
+
+    @Test
     void aCodeBlockAloneTooWideForTheTextIsDrawnAsWideAsItsLines() {
         String code = "x".repeat(50);
 
