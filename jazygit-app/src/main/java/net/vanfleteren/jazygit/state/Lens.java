@@ -10,6 +10,9 @@ import java.util.function.UnaryOperator;
  * Where an {@code A} sits in an {@code S}, if it is there: reads it, and changes it. A change that changes nothing
  * gives back the same {@code S}, so that unchanged data keeps its identity and views can skip rebuilding it.
  *
+ * <p>An optional lens (an affine traversal): unlike a lens, it can find nothing, and then changes nothing. Use
+ * {@link #get} and {@link #map} rather than the components they wrap.
+ *
  * @param find   what is there, if anything
  * @param change {@code S} with a function applied to what is there; the same {@code S} when nothing is
  * @param <S>    what holds it
@@ -66,7 +69,8 @@ public record Lens<S, A>(Function<S, Option<A>> find, BiFunction<S, UnaryOperato
     }
 
     /**
-     * What this finds, changed together with what {@code other} finds: the same value kept in two places.
+     * What this finds, changed together with what {@code other} finds: the same value kept in two places. It reads
+     * only what this finds, so reading back what was changed through {@code other} alone tells nothing.
      */
     public Lens<S, A> alongWith(Lens<S, A> other) {
         return new Lens<>(find, (s, f) -> other.map(map(s, f), f));

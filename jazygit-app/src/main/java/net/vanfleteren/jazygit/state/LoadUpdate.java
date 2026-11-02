@@ -30,7 +30,7 @@ public final class LoadUpdate {
             case Skipped skipped -> Next.of(model);
             // What was read with other diff options than the ones now chosen is dropped, whatever came of it.
             case LoadMsg m when stale(done, m.cmd()) -> Next.of(done);
-            case StatusLoaded loaded -> statusLoaded(model, loaded.cmd().place().reload(done, loaded.status()));
+            case StatusLoaded loaded -> statusLoaded(model, loaded.kept(done));
             // The parents and the counts that could not be read stay as read before (ADR 46).
             case BranchesLoaded(var branches, var bases) ->
                 branchesLoaded(model, done.mapRepo(repo -> {
@@ -42,40 +42,27 @@ public final class LoadUpdate {
             case MetadataChecked(var stamps) -> metadataChecked(done, stamps);
             // The files of a stash that is dropped close, as its name is now that of another stash.
             case StashesLoaded loaded ->
-                Next.of(loaded.cmd()
-                        .place()
-                        .reload(done, loaded.stashes())
+                Next.of(loaded.kept(done)
                         .mapRepoView(repoView -> repoView.withCommitFiles(repoView.commitFiles()
                                 .filter(view -> !(view.of() instanceof CommitFilesView.Changes.OfStash stash)
                                         || loaded.stashes()
                                                 .exists(listed -> listed.sha().equals(stash.sha()))))));
-            case LoadMsg.WorktreesLoaded loaded -> Next.of(loaded.cmd().place().reload(done, loaded.worktrees()));
             case WorktreeChangesLoaded loaded ->
                 Next.of(worktreeChangesRead(done).mapRepo(repo -> repo.withWorktreeChanges(loaded.changes())));
             // The log is only read again when HEAD moved, so the history the search runs on changed too, and what
             // is not on its base: that was read with it, so that the log is shown with it at once.
             case CommitsLoaded loaded ->
-                commitsLoaded(AheadUpdate.read(
-                        loaded.cmd().place().reload(done, loaded.commits()), loaded.load(), loaded.ahead()));
-            // What arrives after another search was run, or after the search was cleared, is dropped.
-            case CommitSearchLoaded loaded -> Next.of(loaded.cmd().place().reload(done, loaded.commits()));
+                commitsLoaded(AheadUpdate.read(loaded.kept(done), loaded.load(), loaded.ahead()));
             // What arrives after another item was highlighted, or after the diff options changed, is dropped.
             case BranchLogLoaded loaded ->
-                loaded.cmd().place().wanted(done)
-                        ? AheadUpdate.branchLogLoaded(
-                                loaded.cmd().place().reload(done, loaded.commits()),
-                                loaded.branch(),
-                                loaded.load(),
-                                loaded.ahead())
+                loaded.cmd().target().wanted(done)
+                        ? AheadUpdate.branchLogLoaded(loaded.kept(done), loaded.branch(), loaded.load(), loaded.ahead())
                         : Next.of(done);
             case AheadLoaded(var load, var ahead) -> AheadUpdate.aheadLoaded(done, load, ahead);
-            case DivergenceLoaded loaded -> Next.of(loaded.cmd().place().reload(done, loaded.divergence()));
-            case CommitDetailLoaded loaded -> Next.of(loaded.cmd().place().reload(done, loaded.changes()));
-            case StashDetailLoaded loaded -> Next.of(loaded.cmd().place().reload(done, loaded.changes()));
             // What the files looked like is kept, so that the diff is read again only once they change (ADR 58). Only
             // the highlighted diff is looked at, so the stamps of the diffs read before go.
             case FileDiffLoaded loaded ->
-                Next.of(loaded.cmd().place().reload(done, loaded.diff()).mapJobs(jobs -> {
+                Next.of(loaded.kept(done).mapJobs(jobs -> {
                     Map<Cmd.Load, MetadataStamp> others =
                             jobs.readAt().filterKeys(load -> !(load instanceof LoadFileDiff));
                     return jobs.withReadAt(loaded.stamp().fold(() -> others, now -> others.put(msg.cmd(), now)));
@@ -85,8 +72,9 @@ public final class LoadUpdate {
                 Update.shownDiff(done).contains(load)
                         ? metadataChecked(done, List.of(Tuple.of((Cmd.Load) load, stamp)))
                         : Next.of(done);
-            case CommitFilesLoaded loaded -> Next.of(loaded.cmd().place().reload(done, loaded.files()));
-            case CommitFileDiffLoaded loaded -> Next.of(loaded.cmd().place().reload(done, loaded.diff()));
+            // What arrives after another search was run or another item was highlighted, or for a view closed since,
+            // finds no target, and is dropped.
+            case Read<?> read -> Next.of(read.kept(done));
             // Without the files to tell, the loads they guard run, as they would without them.
             case LoadMsg.Failed(Cmd.CheckMetadata cmd, var failure) ->
                 metadataChecked(done, Cmd.CheckMetadata.GUARDED.map(load -> Tuple.of(load, Option.none())));
@@ -278,11 +266,12 @@ public final class LoadUpdate {
     }
 
     /**
-     * {@code model} with {@code cmd} having failed: in its {@link Place}, but for the loads that keep what they read
-     * in a way of their own.
+     * {@code model} with {@code cmd} having failed: in its {@link Target}, or as each load that is not targeted keeps
+     * what it reads.
      */
     private static Model failed(Model model, Cmd.Load cmd, Failure failure) {
         return switch (cmd) {
+            case Cmd.Targeted<?> targeted -> targeted.target().failed(model, failure);
             // The parents and the counts read before stay, as they would while reading again (ADR 46).
             case Cmd.LoadBranches() ->
                 model.mapRepo(repo -> repo.withBranches(repo.branches().failed(failure))
@@ -291,7 +280,9 @@ public final class LoadUpdate {
             // a later tick tries again. A single worktree that cannot be read is left out of a read that succeeds.
             case Cmd.LoadWorktreeChanges _ -> worktreeChangesRead(model);
             case Cmd.LoadAhead load -> AheadUpdate.failed(model, load, failure);
-            case Cmd.Load load -> load.place().failed(model, failure);
+            // What the files look like is kept by Jobs: when looking at them fails, the next status looks again.
+            case Cmd.CheckMetadata() -> model;
+            case Cmd.CheckFileDiff load -> model;
         };
     }
 

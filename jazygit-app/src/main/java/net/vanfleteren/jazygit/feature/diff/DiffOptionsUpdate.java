@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.state.CommitFilesView;
 import net.vanfleteren.jazygit.state.DivergenceView;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Preview;
+import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
@@ -69,21 +70,7 @@ public final class DiffOptionsUpdate {
                 model.repoView().commitFiles().map(view -> view.withDiff(reloading(view.diff())));
         List<Cmd> loads = List.<Cmd>empty()
                 .appendAll(model.repoView().fileDiff().map(diff -> new Cmd.LoadFileDiff(diff.key(), options)))
-                .appendAll(model.repoView()
-                        .commitDetail()
-                        .map(detail -> new Cmd.LoadCommitDetail(detail.key(), options, Cmd.Slot.COMMIT_DETAIL)))
-                .appendAll(model.repoView()
-                        .divergence()
-                        .flatMap(DivergenceView::detail)
-                        .map(detail -> new Cmd.LoadCommitDetail(detail.key(), options, Cmd.Slot.DIVERGENCE_DETAIL)))
-                .appendAll(model.repoView()
-                        .branchCommits()
-                        .flatMap(BranchCommitsView::detail)
-                        .map(detail -> new Cmd.LoadCommitDetail(detail.key(), options, Cmd.Slot.BRANCH_COMMITS_DETAIL)))
-                .appendAll(model.repoView().stashDetail().map(detail -> new Cmd.LoadStashDetail(detail.key(), options)))
-                .appendAll(model.repoView()
-                        .commitFiles()
-                        .flatMap(view -> view.diff().map(diff -> view.diffLoad(diff.key(), options))));
+                .appendAll(Update.shown(model).filter(load -> load instanceof Cmd.DiffLoad));
         return new Next(
                 model.mapRepoView(repoView -> repoView.withFileDiff(reloading(repoView.fileDiff()))
                         .withCommitDetail(reloading(repoView.commitDetail()))

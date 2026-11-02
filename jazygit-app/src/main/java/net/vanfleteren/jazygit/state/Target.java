@@ -5,9 +5,9 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 
 /**
- * Where a {@link Cmd.Load} keeps what it reads in the model: the {@link Loadable} it fills, while the model still
- * wants what the load reads. What was read for another item than the one now shown, or for a view closed since,
- * finds no place, and is dropped.
+ * Where a {@link Cmd.Targeted} load keeps what it reads in the model: the {@link Loadable} it fills, while the model
+ * still wants what the load reads. What was read for another item than the one now shown, or for a view closed since,
+ * finds no target, and is dropped.
  *
  * @param lens      the loadable, if the model still wants what the load reads
  * @param keepsRead whether a value that was read stays when reading it again fails, as it does for what the
@@ -15,31 +15,24 @@ import java.util.function.Function;
  *                  replaced by the failure.
  * @param <T>       what the load reads
  */
-public record Place<T>(Lens<Model, Loadable<T>> lens, boolean keepsRead) {
+public record Target<T>(Lens<Model, Loadable<T>> lens, boolean keepsRead) {
 
     private static final Lens<Model, Repo> REPO = Lens.of(Model::repo, Model::withRepo);
 
     private static final Lens<Model, RepoView> REPO_VIEW = Lens.of(Model::repoView, Model::withRepoView);
 
     /**
-     * No place: the load keeps nothing as a {@link Loadable}, or keeps it in a way of its own.
-     */
-    public static <T> Place<T> none() {
-        return new Place<>(new Lens<>(model -> Option.none(), (model, f) -> model), false);
-    }
-
-    /**
      * A loadable of what git reports about the repository, which {@code get} reads and {@code set} sets.
      */
-    public static <T> Place<T> inRepo(Function<Repo, Loadable<T>> get, BiFunction<Repo, Loadable<T>, Repo> set) {
-        return new Place<>(REPO.andThen(Lens.of(get, set)), true);
+    public static <T> Target<T> inRepo(Function<Repo, Loadable<T>> get, BiFunction<Repo, Loadable<T>, Repo> set) {
+        return new Target<>(REPO.andThen(Lens.of(get, set)), true);
     }
 
     /**
      * A loadable of what the repository screen shows, where {@code lens} finds it.
      */
-    public static <T> Place<T> inView(Lens<RepoView, Loadable<T>> lens) {
-        return new Place<>(REPO_VIEW.andThen(lens), false);
+    public static <T> Target<T> inView(Lens<RepoView, Loadable<T>> lens) {
+        return new Target<>(REPO_VIEW.andThen(lens), false);
     }
 
     /**

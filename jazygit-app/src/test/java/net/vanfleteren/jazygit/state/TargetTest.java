@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 /**
  * Where a load keeps what it reads in the model.
  */
-class PlaceTest {
+class TargetTest {
 
     private static final Sha SHA = new Sha("abc123");
 
@@ -32,7 +32,7 @@ class PlaceTest {
     @Test
     void whatTheRepositoryHoldsStaysWhenReadingItAgainFails() {
         Model loaded = TestModels.loaded();
-        Place<?> status = new Cmd.LoadStatus().place();
+        Target<?> status = new Cmd.LoadStatus().target();
 
         assertEquals(
                 loaded.repo().status(), status.failed(loaded, FAILURE).repo().status());
@@ -46,13 +46,13 @@ class PlaceTest {
 
         assertSame(
                 loaded,
-                status.place().reload(loaded, loaded.repo().status().toOption().get()));
+                status.target().reload(loaded, loaded.repo().status().toOption().get()));
     }
 
     @Test
     void whatAViewShowsIsReplacedByAFailure() {
         Model shown = withStashDetail(TestModels.loaded(), SHA, new Loadable.Loaded<>(CHANGES));
-        Place<DiffText> detail = new Cmd.LoadStashDetail(SHA, options(shown)).place();
+        Target<DiffText> detail = new Cmd.LoadStashDetail(SHA, options(shown)).target();
 
         Model failed = detail.failed(shown, FAILURE);
 
@@ -63,7 +63,7 @@ class PlaceTest {
     @Test
     void whatIsReadForAnotherItemThanTheOneShownIsDropped() {
         Model shown = withStashDetail(TestModels.loaded(), new Sha("other"), Loadable.loading());
-        Place<DiffText> detail = new Cmd.LoadStashDetail(SHA, options(shown)).place();
+        Target<DiffText> detail = new Cmd.LoadStashDetail(SHA, options(shown)).target();
 
         assertFalse(detail.wanted(shown));
         assertSame(shown, detail.reload(shown, CHANGES));
@@ -80,16 +80,17 @@ class PlaceTest {
         Cmd.LoadCommitDetail ofBranch = new Cmd.LoadCommitDetail(SHA, options(shown), Cmd.Slot.BRANCH_COMMITS_DETAIL);
         Cmd.LoadCommitDetail ofCommits = new Cmd.LoadCommitDetail(SHA, options(shown));
 
-        Model read = ofBranch.place().reload(shown, CHANGES);
+        Model read = ofBranch.target().reload(shown, CHANGES);
 
-        assertEquals(Option.of(new Loadable.Loaded<>(CHANGES)), ofBranch.place().in(read));
         assertEquals(
-                Option.of(new Loadable.Loaded<>(CHANGES)), ofCommits.place().in(read));
+                Option.of(new Loadable.Loaded<>(CHANGES)), ofBranch.target().in(read));
+        assertEquals(
+                Option.of(new Loadable.Loaded<>(CHANGES)), ofCommits.target().in(read));
 
         Model branchFailed = read.mapRepoView(repoView -> repoView.withBranchCommits(repoView.branchCommits()
                 .map(view -> view.withDetail(Option.of(new Preview<>(SHA, new Loadable.Failed<>(FAILURE)))))));
 
-        assertTrue(ofBranch.place().failedIn(branchFailed));
-        assertFalse(ofCommits.place().failedIn(branchFailed));
+        assertTrue(ofBranch.target().failedIn(branchFailed));
+        assertFalse(ofCommits.target().failedIn(branchFailed));
     }
 }

@@ -2,7 +2,6 @@ package net.vanfleteren.jazygit.state;
 
 import io.vavr.Tuple;
 import io.vavr.collection.List;
-import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
@@ -173,12 +172,6 @@ public interface Cmd {
      */
     sealed interface Load extends Cmd {
 
-        /**
-         * Where this load keeps what it reads in the model: what it read goes there, so does that it failed, and
-         * a tick reads it again while it shows as failed there.
-         */
-        Place<?> place();
-
         @Override
         default Msg failed(Failure failure) {
             return new LoadMsg.Failed(this, failure);
@@ -191,6 +184,18 @@ public interface Cmd {
         default Option<Msg> skipped() {
             return Option.of(new LoadMsg.Skipped(this));
         }
+    }
+
+    /**
+     * A load that keeps what it reads in a {@link Target}: what it read goes there, so does that it failed, and a
+     * tick reads it again while it shows as failed there. The loads that are not targeted keep what they read in a
+     * way of their own, which {@link LoadUpdate} spells out for each.
+     *
+     * @param <T> what the load reads
+     */
+    sealed interface Targeted<T> extends Load {
+
+        Target<T> target();
     }
 
     /**
@@ -219,7 +224,7 @@ public interface Cmd {
         }
     }
 
-    record LoadStatus() implements Load {
+    record LoadStatus() implements Targeted<RepoStatus> {
 
         @Override
         public Option<Label> label() {
@@ -227,8 +232,8 @@ public interface Cmd {
         }
 
         @Override
-        public Place<RepoStatus> place() {
-            return Place.inRepo(Repo::status, Repo::withStatus);
+        public Target<RepoStatus> target() {
+            return Target.inRepo(Repo::status, Repo::withStatus);
         }
 
         @Override
@@ -248,14 +253,6 @@ public interface Cmd {
         @Override
         public Option<Label> label() {
             return Option.of(Label.of("work.branches"));
-        }
-
-        /**
-         * None: the local and the remote-tracking branches are two loadables, which {@link LoadUpdate} keeps.
-         */
-        @Override
-        public Place<AllBranches> place() {
-            return Place.none();
         }
 
         @Override
@@ -293,14 +290,6 @@ public interface Cmd {
             return Option.of(Label.of("work.metadata"));
         }
 
-        /**
-         * None: what the files look like is kept by {@link Jobs}.
-         */
-        @Override
-        public Place<Void> place() {
-            return Place.none();
-        }
-
         @Override
         public Msg run(Env env) {
             Option<GitMetadata> metadata = env.git().status().metadata();
@@ -311,7 +300,7 @@ public interface Cmd {
         }
     }
 
-    record LoadStashes() implements Load {
+    record LoadStashes() implements Targeted<List<Stash>> {
 
         @Override
         public Option<Label> label() {
@@ -319,8 +308,8 @@ public interface Cmd {
         }
 
         @Override
-        public Place<List<Stash>> place() {
-            return Place.inRepo(Repo::stashes, Repo::withStashes);
+        public Target<List<Stash>> target() {
+            return Target.inRepo(Repo::stashes, Repo::withStashes);
         }
 
         @Override
@@ -329,7 +318,7 @@ public interface Cmd {
         }
     }
 
-    record LoadWorktrees() implements Load {
+    record LoadWorktrees() implements Targeted<List<Worktree>> {
 
         @Override
         public Option<Label> label() {
@@ -337,8 +326,8 @@ public interface Cmd {
         }
 
         @Override
-        public Place<List<Worktree>> place() {
-            return Place.inRepo(Repo::worktrees, Repo::withWorktrees);
+        public Target<List<Worktree>> target() {
+            return Target.inRepo(Repo::worktrees, Repo::withWorktrees);
         }
 
         @Override
@@ -356,14 +345,6 @@ public interface Cmd {
         @Override
         public Option<Label> label() {
             return Option.of(Label.of("work.worktreeChanges"));
-        }
-
-        /**
-         * None: which worktrees have changes is a detail, not a loadable, which {@link LoadUpdate} keeps.
-         */
-        @Override
-        public Place<Map<String, Boolean>> place() {
-            return Place.none();
         }
 
         @Override
@@ -390,7 +371,7 @@ public interface Cmd {
      * and then what of it is not on its base, as {@code ahead} does: the log is shown with it. Without a commit, the
      * log is empty and nothing is read.
      */
-    record LoadCommits(LoadAhead ahead) implements Load {
+    record LoadCommits(LoadAhead ahead) implements Targeted<List<Commit>> {
 
         @Override
         public Option<Label> label() {
@@ -398,8 +379,8 @@ public interface Cmd {
         }
 
         @Override
-        public Place<List<Commit>> place() {
-            return Place.inRepo(Repo::commits, Repo::withCommits);
+        public Target<List<Commit>> target() {
+            return Target.inRepo(Repo::commits, Repo::withCommits);
         }
 
         @Override
@@ -413,7 +394,7 @@ public interface Cmd {
     /**
      * Reads the commits of the log of HEAD that {@code query} finds, leaving out those on {@code notOn}, if given.
      */
-    record SearchCommits(CommitQuery query, Option<BranchRef> notOn) implements Load {
+    record SearchCommits(CommitQuery query, Option<BranchRef> notOn) implements Targeted<List<Commit>> {
 
         @Override
         public Option<Label> label() {
@@ -424,8 +405,8 @@ public interface Cmd {
          * The results of the search, while it is the one shown.
          */
         @Override
-        public Place<List<Commit>> place() {
-            return Place.inView(Lens.where(
+        public Target<List<Commit>> target() {
+            return Target.inView(Lens.where(
                             RepoView::commitSearch,
                             RepoView::withCommitSearch,
                             search -> search.load().equals(this))
@@ -456,14 +437,6 @@ public interface Cmd {
             return Option.of(Label.of("work.ahead"));
         }
 
-        /**
-         * None: {@link AheadUpdate} keeps it, for HEAD with whether it failed whatever was kept.
-         */
-        @Override
-        public Place<Option<Ahead>> place() {
-            return Place.none();
-        }
-
         @Override
         public Msg run(Env env) {
             return read(env).fold(this::failed, ahead -> new LoadMsg.AheadLoaded(this, ahead));
@@ -491,7 +464,7 @@ public interface Cmd {
      * Reads the log of {@code branch}, and then what of it is not on its base, as {@code ahead} does: the log is shown
      * with it.
      */
-    record LoadBranchLog(BranchRef branch, LoadAhead ahead) implements Load {
+    record LoadBranchLog(BranchRef branch, LoadAhead ahead) implements Targeted<List<Commit>> {
 
         @Override
         public Option<Label> label() {
@@ -507,8 +480,8 @@ public interface Cmd {
          * The log of the branch, while it is the one highlighted.
          */
         @Override
-        public Place<List<Commit>> place() {
-            return Place.inView(Preview.lens(RepoView::branchLog, RepoView::withBranchLog, branch));
+        public Target<List<Commit>> target() {
+            return Target.inView(Preview.lens(RepoView::branchLog, RepoView::withBranchLog, branch));
         }
 
         @Override
@@ -524,7 +497,7 @@ public interface Cmd {
     /**
      * Reads the commits only on {@code branch} and the ones only on {@code other}.
      */
-    record LoadDivergence(BranchName branch, BranchRef other) implements Load {
+    record LoadDivergence(BranchName branch, BranchRef other) implements Targeted<Divergence> {
 
         @Override
         public Option<Label> label() {
@@ -535,8 +508,8 @@ public interface Cmd {
          * The commits of the divergence, while it is the one open.
          */
         @Override
-        public Place<Divergence> place() {
-            return Place.inView(Lens.where(
+        public Target<Divergence> target() {
+            return Target.inView(Lens.where(
                             RepoView::divergence,
                             RepoView::withDivergence,
                             view -> view.load().equals(this))
@@ -556,7 +529,7 @@ public interface Cmd {
      * the commits pane, of a divergence or of the commits of a branch. Each takes its own slot, so that highlighting
      * a commit in one does not skip the read another one waits for.
      */
-    record LoadCommitDetail(Sha sha, DiffOptions options, Slot preview) implements DiffLoad {
+    record LoadCommitDetail(Sha sha, DiffOptions options, Slot preview) implements DiffLoad, Targeted<DiffText> {
 
         /**
          * Reads the changes of the commit {@code sha} highlighted in the commits pane.
@@ -580,7 +553,7 @@ public interface Cmd {
          * other preview of it shows what was read too.
          */
         @Override
-        public Place<DiffText> place() {
+        public Target<DiffText> target() {
             Lens<RepoView, Loadable<DiffText>> commits =
                     Preview.lens(RepoView::commitDetail, RepoView::withCommitDetail, sha);
             Lens<RepoView, Loadable<DiffText>> divergence = Lens.some(RepoView::divergence, RepoView::withDivergence)
@@ -588,7 +561,7 @@ public interface Cmd {
             Lens<RepoView, Loadable<DiffText>> branchCommits = Lens.some(
                             RepoView::branchCommits, RepoView::withBranchCommits)
                     .andThen(Preview.lens(BranchCommitsView::detail, BranchCommitsView::withDetail, sha));
-            return Place.inView(
+            return Target.inView(
                     switch (preview) {
                         case DIVERGENCE_DETAIL -> divergence.alongWith(commits).alongWith(branchCommits);
                         case BRANCH_COMMITS_DETAIL ->
@@ -605,7 +578,7 @@ public interface Cmd {
         }
     }
 
-    record LoadStashDetail(Sha sha, DiffOptions options) implements DiffLoad {
+    record LoadStashDetail(Sha sha, DiffOptions options) implements DiffLoad, Targeted<DiffText> {
 
         @Override
         public Option<Label> label() {
@@ -621,8 +594,8 @@ public interface Cmd {
          * The detail of the stash, while it is the one highlighted.
          */
         @Override
-        public Place<DiffText> place() {
-            return Place.inView(Preview.lens(RepoView::stashDetail, RepoView::withStashDetail, sha));
+        public Target<DiffText> target() {
+            return Target.inView(Preview.lens(RepoView::stashDetail, RepoView::withStashDetail, sha));
         }
 
         @Override
@@ -638,7 +611,7 @@ public interface Cmd {
      * Reads the files a commit, a stash, a pull request or a branch changed, for the tree of them the files pane lists. Those
      * of a pull request are read in the background, as its commits may have to be fetched first (ADR 55).
      */
-    record LoadCommitFiles(CommitFilesView.Changes of) implements Load {
+    record LoadCommitFiles(CommitFilesView.Changes of) implements Targeted<List<CommitFile>> {
 
         @Override
         public Option<Label> label() {
@@ -654,8 +627,8 @@ public interface Cmd {
          * The files of the view of {@code of}, while it is the one open.
          */
         @Override
-        public Place<List<CommitFile>> place() {
-            return Place.inView(
+        public Target<List<CommitFile>> target() {
+            return Target.inView(
                     CommitFilesView.open(of).andThen(Lens.of(CommitFilesView::files, CommitFilesView::withFiles)));
         }
 
@@ -680,7 +653,7 @@ public interface Cmd {
      * files.
      */
     record LoadCommitFileDiff(CommitFilesView.Changes of, List<CommitFile> files, DiffOptions options)
-            implements DiffLoad {
+            implements DiffLoad, Targeted<DiffText> {
 
         @Override
         public Option<Label> label() {
@@ -696,8 +669,8 @@ public interface Cmd {
          * The diff in the view of {@code of}, while it is the one open, and {@code files} the node highlighted in it.
          */
         @Override
-        public Place<DiffText> place() {
-            return Place.inView(CommitFilesView.open(of)
+        public Target<DiffText> target() {
+            return Target.inView(CommitFilesView.open(of)
                     .andThen(Preview.lens(CommitFilesView::diff, CommitFilesView::withDiff, files)));
         }
 
@@ -717,7 +690,7 @@ public interface Cmd {
         }
     }
 
-    record LoadFileDiff(List<FileEntry> files, DiffOptions options) implements DiffLoad {
+    record LoadFileDiff(List<FileEntry> files, DiffOptions options) implements DiffLoad, Targeted<Diffs> {
 
         @Override
         public Option<Label> label() {
@@ -733,8 +706,8 @@ public interface Cmd {
          * The diff of the files, while they are the ones highlighted.
          */
         @Override
-        public Place<Diffs> place() {
-            return Place.inView(Preview.lens(RepoView::fileDiff, RepoView::withFileDiff, files));
+        public Target<Diffs> target() {
+            return Target.inView(Preview.lens(RepoView::fileDiff, RepoView::withFileDiff, files));
         }
 
         /**
@@ -755,15 +728,6 @@ public interface Cmd {
      * takes a git process or more, this none (ADR 58).
      */
     record CheckFileDiff(LoadFileDiff load) implements Load {
-
-        /**
-         * None: what the files look like is kept by {@link Jobs}. When looking at them fails, the next status looks
-         * again.
-         */
-        @Override
-        public Place<Option<MetadataStamp>> place() {
-            return Place.none();
-        }
 
         @Override
         public Msg run(Env env) {

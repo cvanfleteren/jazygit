@@ -261,20 +261,22 @@ public final class Update {
      * The loads to run again as they failed, while their failure is still shown.
      */
     private static List<Cmd.Load> retries(Model model) {
-        Cmd.Load commits = new LoadCommits(AheadUpdate.ofHead(model));
-        return Option.when(commits.place().failedIn(model) || model.jobs().commitsFailed(), commits)
+        LoadCommits commits = new LoadCommits(AheadUpdate.ofHead(model));
+        return Option.<Cmd.Load>when(
+                        commits.target().failedIn(model) || model.jobs().commitsFailed(), commits)
                 .toList()
                 .appendAll(AheadUpdate.retries(model))
-                .appendAll(shown(model).filter(load -> load.place().failedIn(model)));
+                .appendAll(shown(model).filter(load -> load.target().failedIn(model)));
     }
 
     /**
-     * The loads that read what the views that are open show, as the model would ask for them now.
+     * The loads that read what the views that are open show, as the model would ask for them now. The diff of the
+     * files highlighted is not one of them: every status reads it again when its files changed (ADR 58).
      */
-    private static List<Cmd.Load> shown(Model model) {
+    public static List<Cmd.Targeted<?>> shown(Model model) {
         RepoView repoView = model.repoView();
         DiffOptions options = model.preferences().diffOptions();
-        return List.<Cmd.Load>empty()
+        return List.<Cmd.Targeted<?>>empty()
                 .appendAll(repoView.commitSearch().map(CommitSearch::load))
                 .appendAll(repoView.branchLog()
                         .map(log -> new LoadBranchLog(log.key(), AheadUpdate.of(model, log.key()))))
