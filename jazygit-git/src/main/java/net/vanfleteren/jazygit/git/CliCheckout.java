@@ -10,21 +10,38 @@ import net.vanfleteren.jazygit.git.GitError.*;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Revision;
+import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
- * Checks out branches through the {@code git checkout} command line tool, so the working tree is
- * handled exactly like git itself does: local changes are carried over, and conflicting ones make
- * the checkout fail.
+ * The {@link Checkout} of a repository, through the {@code git checkout} command line tool, so the working tree is
+ * handled exactly like git itself does: local changes are carried over, and conflicting ones make the checkout fail.
+ * Moving commits checks out through {@link #checkout} and {@link #checkoutNewBranch}, adding a worktree records its
+ * parent through {@link #recordParent}.
  */
-final class CliCheckout {
+final class CliCheckout implements Checkout {
 
     // What git says when stashing the changes would let the checkout go through. It is matched in
     // English, so git is run with the C locale.
     private static final String LOCAL_CHANGES =
             "Your local changes to the following files would be overwritten by checkout";
 
-    private CliCheckout() {}
+    private final Path worktree;
+
+    CliCheckout(Path worktree) {
+        this.worktree = worktree;
+    }
+
+    @Override
+    public Either<GitFailure<GitError>, List<ExecutedCommand>> branch(BranchName branch) {
+        return checkout(worktree, branch);
+    }
+
+    @Override
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> newBranch(
+            BranchName name, Revision startPoint, Option<BranchName> parent) {
+        return checkoutNewBranch(worktree, name, startPoint, parent);
+    }
 
     /**
      * Runs {@code git checkout <branch>} in {@code worktree}.
@@ -38,7 +55,7 @@ final class CliCheckout {
                 .mapLeft(failure -> failure.map(CliCheckout::classify));
     }
 
-    static GitError classify(ProcessError error) {
+    private static GitError classify(ProcessError error) {
         return error instanceof CommandFailed failed && failed.says(LOCAL_CHANGES)
                 ? new LocalChanges(failed.explanation().getOrElse(""))
                 : error;
@@ -50,20 +67,21 @@ final class CliCheckout {
      * this method itself; only a conflict while popping on the new branch leaves them in the stash,
      * which is a {@link StashNotRestored}.
      */
-    static Either<GitFailure<GitError>, List<ExecutedCommand>> checkoutWithStash(Path worktree, BranchName branch) {
+    @Override
+    public Either<GitFailure<GitError>, List<ExecutedCommand>> branchWithStash(BranchName branch) {
         return GitFailure.<GitError, CliStashes.Stashed>widen(CliStashes.pushQuietly(worktree))
                 .flatMap(stashed -> GitFailure.sequence(
                         () -> Either.right(stashed.commands()),
                         () -> GitFailure.<GitError, List<ExecutedCommand>>widen(checkout(worktree, branch))
                                 .mapLeft(failure ->
                                         stashed.any() ? failure.followedBy(CliStashes.popQuietly(worktree)) : failure),
-                        () -> stashed.any() ? restore(worktree) : GitFailure.nothing()));
+                        () -> stashed.any() ? restore() : GitFailure.nothing()));
     }
 
     /**
      * Pops the changes that were stashed for the checkout.
      */
-    private static Either<GitFailure<GitError>, List<ExecutedCommand>> restore(Path worktree) {
+    private Either<GitFailure<GitError>, List<ExecutedCommand>> restore() {
         return CliStashes.popQuietly(worktree).mapLeft(failure -> failure.map(StashNotRestored::new));
     }
 
@@ -93,11 +111,12 @@ final class CliCheckout {
     }
 
     /**
-     * Runs {@code git checkout --track -b <name> <remote-tracking ref>} in {@code worktree}: creates the branch
-     * at the remote-tracking branch of {@code upstream}, following it, and checks it out.
+     * Runs {@code git checkout --track -b <name> <remote-tracking ref>}: creates the branch at the
+     * remote-tracking branch of {@code upstream}, following it, and checks it out.
      */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewTrackingBranch(
-            Path worktree, BranchName name, RemoteBranch upstream) {
+    @Override
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> newTrackingBranch(
+            BranchName name, RemoteBranch upstream) {
         return GitProcess.log(
                 worktree,
                 git(
@@ -108,5 +127,10 @@ final class CliCheckout {
                         GitArgs.name(name),
                         GitArgs.revision(upstream.tracking()),
                         "--"));
+    }
+
+    @Override
+    public Either<GitFailure<ProcessError>, Option<Sha>> resolve(String text) {
+        return CliLog.resolve(worktree, text);
     }
 }

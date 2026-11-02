@@ -41,10 +41,12 @@ import net.vanfleteren.jazygit.gh.GhFailure;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
+import net.vanfleteren.jazygit.git.Checkout;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
+import net.vanfleteren.jazygit.git.StubCheckout;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.StubWorktrees;
 import net.vanfleteren.jazygit.git.Worktrees;
@@ -299,8 +301,13 @@ class WorktreeUpdateTest {
     void theTypedStartIsResolvedByGit() {
         GitInfoProvider git = new StubGitProvider() {
             @Override
-            public Either<GitFailure<ProcessError>, Option<Sha>> resolve(String text) {
-                return Either.right(Option.of(new Sha("abc123")));
+            public Checkout checkout() {
+                return new StubCheckout() {
+                    @Override
+                    public Either<GitFailure<ProcessError>, Option<Sha>> resolve(String text) {
+                        return Either.right(Option.of(new Sha("abc123")));
+                    }
+                };
             }
         };
 
@@ -323,9 +330,15 @@ class WorktreeUpdateTest {
     void whenGitCannotBeAskedWhatTheStartNamesThatIsSaid() {
         GitInfoProvider git = new StubGitProvider() {
             @Override
-            public Either<GitFailure<ProcessError>, Option<Sha>> resolve(String text) {
-                return Either.left(new GitFailure<>(
-                        new GitError.CommandFailed(Option.of("fatal: not a git repository"), 128, ""), List.empty()));
+            public Checkout checkout() {
+                return new StubCheckout() {
+                    @Override
+                    public Either<GitFailure<ProcessError>, Option<Sha>> resolve(String text) {
+                        return Either.left(new GitFailure<>(
+                                new GitError.CommandFailed(Option.of("fatal: not a git repository"), 128, ""),
+                                List.empty()));
+                    }
+                };
             }
         };
 

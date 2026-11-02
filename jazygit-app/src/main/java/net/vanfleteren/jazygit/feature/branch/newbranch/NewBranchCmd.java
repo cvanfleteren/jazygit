@@ -26,6 +26,6 @@ public record NewBranchCmd(BranchName branch, Revision base, Option<BranchName> 
 
     @Override
     public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
-        return git.checkoutNewBranch(branch, base, parent);
+        return git.checkout().newBranch(branch, base, parent);
     }
 }

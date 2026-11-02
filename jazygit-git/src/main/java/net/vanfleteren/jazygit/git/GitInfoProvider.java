@@ -80,42 +80,10 @@ public interface GitInfoProvider {
      */
     Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteRemoteBranch(RemoteBranch remote);
 
-    // Checking out branches, as git checkout does.
-
     /**
-     * Checks out the local branch {@code branch}. Fails with {@link GitError.LocalChanges} when
-     * uncommitted changes would be overwritten.
+     * Checking out branches, as git checkout does, and finding the commit a revision the user typed names.
      */
-    Either<GitFailure<GitError>, List<ExecutedCommand>> checkout(BranchName branch);
-
-    /**
-     * Checks out the local branch {@code branch}, taking the uncommitted changes along: they are stashed
-     * first and popped again afterwards. When the checkout itself fails, the changes are popped back
-     * where they were; when popping them on {@code branch} fails, they stay in the stash, which is a
-     * {@link GitError.StashNotRestored}.
-     */
-    Either<GitFailure<GitError>, List<ExecutedCommand>> checkoutWithStash(BranchName branch);
-
-    /**
-     * Creates the local branch {@code name} at {@code startPoint} and checks it out; records {@code parent} as the
-     * branch it came from, if given, as {@link #parentBranch} reads it. Whether it follows {@code startPoint} is up
-     * to git's {@code branch.autoSetupMerge} (ADR 40).
-     */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewBranch(
-            BranchName name, Revision startPoint, Option<BranchName> parent);
-
-    /**
-     * The commit {@code text}, as the user typed it, names: a branch, a tag, a sha or any other revision; none when
-     * it names no commit. Git reads {@code text} as a revision even when it starts with {@code -}.
-     */
-    Either<GitFailure<ProcessError>, Option<Sha>> resolve(String text);
-
-    /**
-     * Creates the local branch {@code name} at the remote-tracking branch of {@code upstream}, following it, and
-     * checks it out.
-     */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewTrackingBranch(
-            BranchName name, RemoteBranch upstream);
+    Checkout checkout();
 
     // Merging branches, as git merge does.
 

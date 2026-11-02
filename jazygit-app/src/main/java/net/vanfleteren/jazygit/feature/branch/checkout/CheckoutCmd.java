@@ -34,13 +34,14 @@ public sealed interface CheckoutCmd extends BranchCmd.ChecksOutBranch {
 
         @Override
         public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
-            return git.checkout(branch);
+            return git.checkout().branch(branch);
         }
 
         @Override
         public Msg run(Env env) {
             return env.git()
-                    .checkout(branch)
+                    .checkout()
+                    .branch(branch)
                     .fold(
                             failure -> failure.error() instanceof GitError.LocalChanges
                                     ? new CheckoutMsg.NeedsStash(this, failure.commands())
@@ -62,7 +63,7 @@ public sealed interface CheckoutCmd extends BranchCmd.ChecksOutBranch {
 
         @Override
         public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
-            return git.checkoutNewTrackingBranch(branch, upstream);
+            return git.checkout().newTrackingBranch(branch, upstream);
         }
     }
 
@@ -73,7 +74,7 @@ public sealed interface CheckoutCmd extends BranchCmd.ChecksOutBranch {
 
         @Override
         public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
-            return git.checkoutWithStash(branch);
+            return git.checkout().branchWithStash(branch);
         }
     }
 }

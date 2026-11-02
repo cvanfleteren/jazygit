@@ -27,6 +27,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     // Asked each time git talks to a remote.
     private final Supplier<Map<String, String>> credentials;
     private final CliStatus status;
+    private final CliCheckout checkout;
     private final CliStashes stashes;
     private final CliWorktrees worktrees;
     private final CliConfig config;
@@ -43,6 +44,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
         this.metadataAt = metadataAt;
         this.credentials = credentials;
         this.status = new CliStatus(worktree, markers, metadataAt);
+        this.checkout = new CliCheckout(worktree);
         this.stashes = new CliStashes(worktree);
         this.worktrees = new CliWorktrees(worktree);
         this.config = new CliConfig(worktree);
@@ -165,33 +167,6 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     @Override
     public Either<GitError, CommitRange> commitRange(BranchName branch, Sha oldest, Option<RemoteBranch> upstream) {
         return CliLog.range(worktree, branch, oldest, upstream);
-    }
-
-    @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> checkout(BranchName branch) {
-        return CliCheckout.checkout(worktree, branch);
-    }
-
-    @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> checkoutWithStash(BranchName branch) {
-        return CliCheckout.checkoutWithStash(worktree, branch);
-    }
-
-    @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewBranch(
-            BranchName name, Revision startPoint, Option<BranchName> parent) {
-        return CliCheckout.checkoutNewBranch(worktree, name, startPoint, parent);
-    }
-
-    @Override
-    public Either<GitFailure<ProcessError>, Option<Sha>> resolve(String text) {
-        return CliLog.resolve(worktree, text);
-    }
-
-    @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewTrackingBranch(
-            BranchName name, RemoteBranch upstream) {
-        return CliCheckout.checkoutNewTrackingBranch(worktree, name, upstream);
     }
 
     @Override
@@ -411,5 +386,10 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     @Override
     public Status status() {
         return status;
+    }
+
+    @Override
+    public Checkout checkout() {
+        return checkout;
     }
 }
