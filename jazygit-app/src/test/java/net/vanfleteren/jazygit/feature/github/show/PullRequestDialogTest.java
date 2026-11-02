@@ -672,7 +672,7 @@ class PullRequestDialogTest {
                                 .with(Either.right(READY), 0))
                         .split("\n"));
 
-        for (String pair : List.of("(o)|(m)", "(c)|(s)", "(e)|(r)", "(v)|(x)", "(f)|(R)")) {
+        for (String pair : List.of("(o)|(m)", "(c)|(s)", "(e)|(r)", "(v)|(x)", "(F)|(R)")) {
             String[] options = pair.split("\\|");
             String line = lines.find(text -> text.contains(options[0])).getOrElse("");
             assertTrue(line.indexOf(options[0]) < line.indexOf(options[1]), lines.mkString("\n"));
@@ -748,14 +748,14 @@ class PullRequestDialogTest {
         for (PullRequestPopup popup :
                 List.of(loading, loading.with(Either.right(READY), 0), loading.with(Either.right(known), 0))) {
             try (ToolkitTestRunner runner = start(TestModels.loaded().openPopup(popup))) {
-                SettledPilot.of(runner).press('f');
+                SettledPilot.of(runner).press('F');
                 SettledPilot.of(runner).pause();
             }
         }
 
         assertEquals(java.util.List.of(new PullRequestMsg.FilesChosen()), dispatched);
         assertTrue(
-                screen(loading.with(Either.right(known), 0)).contains("(f) Files changed"),
+                screen(loading.with(Either.right(known), 0)).contains("(F) Files changed"),
                 screen(loading.with(Either.right(known), 0)));
     }
 

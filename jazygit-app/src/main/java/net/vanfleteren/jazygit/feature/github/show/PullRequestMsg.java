@@ -36,6 +36,12 @@ public sealed interface PullRequestMsg extends Msg {
     record SummaryRequested(PullRequestSummary pullRequest) implements PullRequestMsg {}
 
     /**
+     * The user asked for the files a pull request listed on the pull requests screen changes: to list them when it
+     * is of the repository, as choosing them in its dialog does, else to open it in the browser.
+     */
+    record SummaryFilesRequested(PullRequestSummary pullRequest) implements PullRequestMsg {}
+
+    /**
      * The details of pull request {@code number} were read, by read {@code read}.
      */
     record DetailsLoaded(int number, long read, PullRequestDetails details) implements PullRequestMsg {}

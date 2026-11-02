@@ -69,7 +69,7 @@ def test_the_files_changed_of_a_pull_request_show_in_the_files_pane_fetched_when
     ui.app.press("o")
     # The action shows dimmed until the details are read, and does nothing then: wait for them.
     ui.app.wait_for("in 2 files, 2 commits")
-    ui.app.press("f")
+    ui.app.press("F")
 
     ui.app.wait_in("Files", "b.txt")
     assert "Files of #1" in ui.app.text()
@@ -114,7 +114,7 @@ def test_the_review_remarks_of_a_pull_request_show_next_to_their_lines(repo, ori
     ui.app.press("o")
     # The action shows dimmed until the details are read, and does nothing then: wait for them.
     ui.app.wait_for("in 2 files, 2 commits")
-    ui.app.press("f")
+    ui.app.press("F")
     ui.app.wait_in("Files", "💬1")
     ui.app.move_cursor("Files", "b.txt")
 
@@ -147,7 +147,7 @@ def test_only_the_files_of_a_pull_request_with_remarks_can_be_listed(repo, origi
     ui.app.press("o")
     # The action shows dimmed until the details are read, and does nothing then: wait for them.
     ui.app.wait_for("in 2 files, 2 commits")
-    ui.app.press("f")
+    ui.app.press("F")
     ui.app.wait_in("Files", "b.txt 💬1 ✓1")
     assert "a.txt" in ui.app.pane_text("Files")
 
@@ -217,7 +217,7 @@ def test_a_thread_and_each_of_its_comments_are_collapsed_and_opened_with_space(r
     ui.app.press("o")
     # The action shows dimmed until the details are read, and does nothing then: wait for them.
     ui.app.wait_for("in 2 files, 2 commits")
-    ui.app.press("f")
+    ui.app.press("F")
     ui.app.wait_in("Files", "💬1")
     ui.app.move_cursor("Files", "b.txt")
     ui.app.press("ctrl+d")
@@ -262,7 +262,7 @@ def test_the_remarks_of_a_pull_request_are_resolved_replied_to_and_started_from_
     ui.app.press("o")
     # The action shows dimmed until the details are read, and does nothing then: wait for them.
     ui.app.wait_for("in 2 files, 2 commits")
-    ui.app.press("f")
+    ui.app.press("F")
     ui.app.wait_in("Files", "💬1")
     ui.app.move_cursor("Files", "b.txt")
     ui.app.press("ctrl+d")
@@ -322,7 +322,7 @@ def test_a_comment_of_a_thread_is_deleted_after_asking_without_reading_the_threa
     ui.app.press("o")
     # The action shows dimmed until the details are read, and does nothing then: wait for them.
     ui.app.wait_for("in 2 files, 2 commits")
-    ui.app.press("f")
+    ui.app.press("F")
     ui.app.wait_in("Files", "💬1")
     ui.app.move_cursor("Files", "b.txt")
     ui.app.press("ctrl+d")
@@ -362,7 +362,7 @@ def test_a_comment_of_a_thread_is_edited_from_its_body_and_shows_what_github_hol
     ui.app.press("o")
     # The action shows dimmed until the details are read, and does nothing then: wait for them.
     ui.app.wait_for("in 2 files, 2 commits")
-    ui.app.press("f")
+    ui.app.press("F")
     ui.app.wait_in("Files", "💬1")
     ui.app.move_cursor("Files", "b.txt")
     ui.app.press("ctrl+d")

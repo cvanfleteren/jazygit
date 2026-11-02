@@ -76,7 +76,7 @@ def test_f_on_a_branch_without_a_pull_request_shows_its_files_against_its_base(r
     ui = jazygit()
     ui.branches.select("feature")
 
-    ui.app.press("f")
+    ui.app.press("F")
 
     ui.app.wait_in("Files", "two.txt")
     assert "Files of feature · vs main" in ui.app.text()
