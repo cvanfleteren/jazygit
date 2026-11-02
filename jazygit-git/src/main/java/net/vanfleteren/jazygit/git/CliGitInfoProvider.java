@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.git;
 
-import io.vavr.Tuple2;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
@@ -30,6 +29,9 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     private final Supplier<Map<String, String>> credentials;
     private final CliStashes stashes;
     private final CliWorktrees worktrees;
+    private final CliConfig config;
+    private final CliIndex index;
+    private final CliEditor editor;
 
     private CliGitInfoProvider(
             Path worktree,
@@ -42,6 +44,9 @@ public final class CliGitInfoProvider implements GitInfoProvider {
         this.credentials = credentials;
         this.stashes = new CliStashes(worktree);
         this.worktrees = new CliWorktrees(worktree);
+        this.config = new CliConfig(worktree);
+        this.index = new CliIndex(worktree);
+        this.editor = new CliEditor(worktree);
     }
 
     /**
@@ -124,22 +129,6 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     @Override
     public Worktrees worktrees() {
         return worktrees;
-    }
-
-    @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> edit(List<String> files) {
-        return CliEditor.edit(worktree, files);
-    }
-
-    @Override
-    public Either<GitFailure<GitError>, Tuple2<CommitMessage, List<ExecutedCommand>>> editMessage(
-            CommitMessage message) {
-        return CliEditor.editMessage(worktree, message);
-    }
-
-    @Override
-    public Either<GitFailure<GitError>, Tuple2<String, List<ExecutedCommand>>> editText(String fileName, String text) {
-        return CliEditor.editText(worktree, fileName, text);
     }
 
     @Override
@@ -273,16 +262,6 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<ProcessError, Option<String>> localConfig(String key) {
-        return CliConfig.get(worktree, key);
-    }
-
-    @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> setLocalConfig(String key, Option<String> value) {
-        return CliConfig.set(worktree, key, value);
-    }
-
-    @Override
     public Either<ProcessError, Option<BranchName>> parentBranch(BranchName branch) {
         return CliConfig.parent(worktree, branch);
     }
@@ -340,21 +319,6 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> stage(List<String> paths) {
-        return CliIndex.add(worktree, paths);
-    }
-
-    @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> unstageNew(List<String> paths) {
-        return CliIndex.removeCached(worktree, paths);
-    }
-
-    @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> unstage(List<String> paths) {
-        return CliIndex.reset(worktree, paths);
-    }
-
-    @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> commit(CommitMessage message) {
         return CliCommit.commit(worktree, message);
     }
@@ -402,11 +366,6 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> discard(DiscardPlan plan) {
-        return CliIndex.discard(worktree, plan);
-    }
-
-    @Override
     public Either<ProcessError, DiffText> commitChanges(Sha sha, DiffOptions options) {
         return CliShow.changes(worktree, sha, options);
     }
@@ -446,5 +405,20 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     @Override
     public Either<GitError, Diffs> diff(List<FileEntry> files, DiffOptions options) {
         return CliDiff.diff(worktree, files, options);
+    }
+
+    @Override
+    public Config config() {
+        return config;
+    }
+
+    @Override
+    public Index index() {
+        return index;
+    }
+
+    @Override
+    public Editor editor() {
+        return editor;
     }
 }

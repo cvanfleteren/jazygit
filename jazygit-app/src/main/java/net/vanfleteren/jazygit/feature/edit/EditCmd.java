@@ -27,6 +27,6 @@ public record EditCmd(List<String> files) implements OperationCmd {
 
     @Override
     public Msg run(Env env) {
-        return env.terminal().handOver(() -> env.git().edit(files)).fold(this::failedWith, this::succeeded);
+        return env.terminal().handOver(() -> env.git().editor().edit(files)).fold(this::failedWith, this::succeeded);
     }
 }

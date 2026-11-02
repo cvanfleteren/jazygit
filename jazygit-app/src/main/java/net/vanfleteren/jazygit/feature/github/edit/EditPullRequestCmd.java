@@ -38,7 +38,7 @@ public sealed interface EditPullRequestCmd extends Cmd {
         @Override
         public Msg run(Env env) {
             return env.terminal()
-                    .handOver(() -> env.git().editText(FILE_NAME, text))
+                    .handOver(() -> env.git().editor().editText(FILE_NAME, text))
                     .fold(this::failedWith, edited -> new EditPullRequestMsg.EditorClosed(edited._1, edited._2));
         }
 

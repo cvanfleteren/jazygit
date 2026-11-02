@@ -21,7 +21,7 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
 /**
  * Opens files in the editor git uses for commit messages, on the terminal.
  */
-final class CliEditor {
+final class CliEditor implements Editor {
 
     // The characters for which git hands the editor to the shell rather than running it itself, from run-command.c.
     private static final Pattern SHELL_CHARACTERS = Pattern.compile("[|&;<>()$`\\\\\"' \t\n*?\\[#~=%]");
@@ -29,17 +29,22 @@ final class CliEditor {
     // What git calls the file it edits a commit message in.
     private static final String MESSAGE_FILE = "COMMIT_EDITMSG";
 
-    private CliEditor() {}
+    private final Path worktree;
+
+    CliEditor(Path worktree) {
+        this.worktree = worktree;
+    }
 
     /**
-     * Opens {@code files}, relative to {@code worktree}, in git's editor, and waits until it is closed. That editor
+     * Opens {@code files}, relative to the working tree, in git's editor, and waits until it is closed. That editor
      * is the one {@code git var GIT_EDITOR} names: {@code $GIT_EDITOR}, {@code core.editor}, {@code $VISUAL},
      * {@code $EDITOR}, else {@code vi}. It runs on the terminal, which the caller must have handed over.
      *
      * <p>Fails with a {@link EditorNotStarted} or {@link EditorFailed}, or a {@link GitError.ProcessError} when git
      * names no editor, as it does on a dumb terminal without {@code $EDITOR}.
      */
-    static Either<GitFailure<GitError>, List<ExecutedCommand>> edit(Path worktree, List<String> files) {
+    @Override
+    public Either<GitFailure<GitError>, List<ExecutedCommand>> edit(List<String> files) {
         return editor(worktree).flatMap(editor -> open(worktree, editor, files));
     }
 
@@ -50,17 +55,18 @@ final class CliEditor {
      *
      * <p>Fails as {@link #editText} does.
      */
-    static Either<GitFailure<GitError>, Tuple2<CommitMessage, List<ExecutedCommand>>> editMessage(
-            Path worktree, CommitMessage message) {
-        return editor(worktree).flatMap(editor -> editMessage(worktree, editor, message));
+    @Override
+    public Either<GitFailure<GitError>, Tuple2<CommitMessage, List<ExecutedCommand>>> editMessage(
+            CommitMessage message) {
+        return editor(worktree).flatMap(editor -> editMessageWith(worktree, editor, message));
     }
 
     /**
-     * Opens {@code message} in {@code editor}, as git names it, as {@link #editMessage(Path, CommitMessage)} does.
+     * Opens {@code message} in {@code editor}, as git names it, as {@link #editMessage(CommitMessage)} does.
      */
-    static Either<GitFailure<GitError>, Tuple2<CommitMessage, List<ExecutedCommand>>> editMessage(
+    static Either<GitFailure<GitError>, Tuple2<CommitMessage, List<ExecutedCommand>>> editMessageWith(
             Path worktree, String editor, CommitMessage message) {
-        return editText(worktree, editor, MESSAGE_FILE, message.text())
+        return editTextWith(worktree, editor, MESSAGE_FILE, message.text())
                 .map(edited -> edited.map1(CommitMessage::parse));
     }
 
@@ -71,15 +77,15 @@ final class CliEditor {
      *
      * <p>Fails as {@link #edit} does, or with a {@link TempFileFailed} when the file cannot be written or read.
      */
-    static Either<GitFailure<GitError>, Tuple2<String, List<ExecutedCommand>>> editText(
-            Path worktree, String fileName, String text) {
-        return editor(worktree).flatMap(editor -> editText(worktree, editor, fileName, text));
+    @Override
+    public Either<GitFailure<GitError>, Tuple2<String, List<ExecutedCommand>>> editText(String fileName, String text) {
+        return editor(worktree).flatMap(editor -> editTextWith(worktree, editor, fileName, text));
     }
 
     /**
-     * Opens {@code text} in {@code editor}, as git names it, as {@link #editText(Path, String, String)} does.
+     * Opens {@code text} in {@code editor}, as git names it, as {@link #editText(String, String)} does.
      */
-    static Either<GitFailure<GitError>, Tuple2<String, List<ExecutedCommand>>> editText(
+    static Either<GitFailure<GitError>, Tuple2<String, List<ExecutedCommand>>> editTextWith(
             Path worktree, String editor, String fileName, String text) {
         return Try.of(() -> Files.createTempDirectory("jazygit"))
                 .toEither()

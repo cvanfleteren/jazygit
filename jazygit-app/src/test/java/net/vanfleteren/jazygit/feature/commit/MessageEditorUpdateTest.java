@@ -15,8 +15,10 @@ import java.util.function.Supplier;
 import net.vanfleteren.jazygit.feature.commit.create.CommitPopup;
 import net.vanfleteren.jazygit.feature.commit.reword.RewordPopup;
 import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.git.Editor;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
+import net.vanfleteren.jazygit.git.StubEditor;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.model.SampleData;
@@ -106,10 +108,15 @@ class MessageEditorUpdateTest {
         };
         StubGitProvider git = new StubGitProvider() {
             @Override
-            public Either<GitFailure<GitError>, Tuple2<CommitMessage, List<ExecutedCommand>>> editMessage(
-                    CommitMessage message) {
-                events.add("edit " + message.summary());
-                return Either.right(Tuple.of(EDITED, List.of(NVIM)));
+            public Editor editor() {
+                return new StubEditor() {
+                    @Override
+                    public Either<GitFailure<GitError>, Tuple2<CommitMessage, List<ExecutedCommand>>> editMessage(
+                            CommitMessage message) {
+                        events.add("edit " + message.summary());
+                        return Either.right(Tuple.of(EDITED, List.of(NVIM)));
+                    }
+                };
             }
         };
 
@@ -123,9 +130,14 @@ class MessageEditorUpdateTest {
     void anEditorThatFailsKeepsTheDialogAndShowsWhy() {
         StubGitProvider git = new StubGitProvider() {
             @Override
-            public Either<GitFailure<GitError>, Tuple2<CommitMessage, List<ExecutedCommand>>> editMessage(
-                    CommitMessage message) {
-                return Either.left(new GitFailure<>(new GitError.EditorFailed("nvim", 1), List.of()));
+            public Editor editor() {
+                return new StubEditor() {
+                    @Override
+                    public Either<GitFailure<GitError>, Tuple2<CommitMessage, List<ExecutedCommand>>> editMessage(
+                            CommitMessage message) {
+                        return Either.left(new GitFailure<>(new GitError.EditorFailed("nvim", 1), List.of()));
+                    }
+                };
             }
         };
 

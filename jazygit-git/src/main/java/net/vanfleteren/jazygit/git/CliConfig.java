@@ -18,20 +18,24 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
  * The configuration, through {@code git config}: what jazygit records in the repository's own, with {@code --local},
  * and the settings of git it follows, as git reads them from the repository's, the user's and the system's.
  */
-final class CliConfig {
+final class CliConfig implements Config {
 
     // git config --unset exits with 5 when the key is not set.
     private static final int NOT_SET = 5;
     private static final String PARENT_PREFIX = "branch.";
     private static final String PARENT_SUFFIX = ".gh-merge-base";
 
-    private CliConfig() {}
+    private final Path worktree;
+
+    CliConfig(Path worktree) {
+        this.worktree = worktree;
+    }
 
     /**
      * The branch {@code branch} was made from, as {@code gh} records it to take as the base of its pull request.
      */
     static Either<ProcessError, Option<BranchName>> parent(Path worktree, BranchName branch) {
-        return get(worktree, parentKey(branch)).map(value -> value.flatMap(BranchName::parse));
+        return readLocal(worktree, parentKey(branch)).map(value -> value.flatMap(BranchName::parse));
     }
 
     /**
@@ -39,7 +43,7 @@ final class CliConfig {
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> setParent(
             Path worktree, BranchName branch, BranchName parent) {
-        return set(worktree, parentKey(branch), Option.of(GitArgs.name(parent)));
+        return writeLocal(worktree, parentKey(branch), Option.of(GitArgs.name(parent)));
     }
 
     private static String parentKey(BranchName branch) {
@@ -88,7 +92,12 @@ final class CliConfig {
      * The value of {@code key} in the repository's own configuration, not the user's or the system's. Only looked
      * up, so not logged.
      */
-    static Either<ProcessError, Option<String>> get(Path worktree, String key) {
+    @Override
+    public Either<ProcessError, Option<String>> local(String key) {
+        return readLocal(worktree, key);
+    }
+
+    private static Either<ProcessError, Option<String>> readLocal(Path worktree, String key) {
         return read(worktree, List.of("--local"), key);
     }
 
@@ -113,7 +122,12 @@ final class CliConfig {
      * Sets {@code key} to {@code value} in the repository's own configuration, or removes it for none; removing a
      * key that is not set does nothing.
      */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> set(
+    @Override
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> setLocal(String key, Option<String> value) {
+        return writeLocal(worktree, key, value);
+    }
+
+    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> writeLocal(
             Path worktree, String key, Option<String> value) {
         return value.fold(
                 () -> {

@@ -60,7 +60,7 @@ class CliEditorTest {
         assumeTrue(System.getenv("GIT_EDITOR") == null);
         configureEditor("sh -c 'echo edited > \"$1\"' -");
 
-        CliEditor.edit(repo, List.of("a.txt")).get();
+        CliGitInfoProvider.open(repo).get().editor().edit(List.of("a.txt")).get();
 
         assertEquals("edited\n", Files.readString(repo.resolve("a.txt")));
     }
@@ -83,7 +83,7 @@ class CliEditorTest {
 
     @Test
     void aMessageIsEditedInTheEditor() {
-        Tuple2<CommitMessage, List<ExecutedCommand>> edited = CliEditor.editMessage(
+        Tuple2<CommitMessage, List<ExecutedCommand>> edited = CliEditor.editMessageWith(
                         repo,
                         "sh -c 'test \"$(basename \"$1\")\" = COMMIT_EDITMSG && "
                                 + "printf \"%s\\n\\nbody of %s\\n\" \"$(head -n 1 \"$1\")!\" \"$(tail -n 1 \"$1\")\" > \"$1\"' -",
@@ -98,14 +98,14 @@ class CliEditorTest {
     void anEditorThatFailsLeavesTheMessage() {
         assertEquals(
                 new GitError.EditorFailed("false", 1),
-                CliEditor.editMessage(repo, "false", new CommitMessage("summary", ""))
+                CliEditor.editMessageWith(repo, "false", new CommitMessage("summary", ""))
                         .getLeft()
                         .error());
     }
 
     @Test
     void aTextIsEditedInAFileOfTheGivenName() {
-        Tuple2<String, List<ExecutedCommand>> edited = CliEditor.editText(
+        Tuple2<String, List<ExecutedCommand>> edited = CliEditor.editTextWith(
                         repo,
                         "sh -c 'test \"$(basename \"$1\")\" = PR_COMMENT.md && printf \"%s!\" \"$(cat \"$1\")\" > \"$1\"' -",
                         "PR_COMMENT.md",

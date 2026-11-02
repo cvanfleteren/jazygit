@@ -30,7 +30,7 @@ public sealed interface CreateCommitCmd extends GitOperationCmd {
 
         @Override
         public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
-            return git.stage(paths);
+            return git.index().stage(paths);
         }
 
         @Override

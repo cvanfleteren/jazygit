@@ -840,6 +840,9 @@ classDiagram
         reword(Sha, CommitMessage) Either of GitFailure of GitError or commands
         stashes() Stashes
         worktrees() Worktrees
+        index() Index
+        editor() Editor
+        config() Config
         ...
     }
     class CliGitInfoProvider {
@@ -853,6 +856,11 @@ classDiagram
     }
     CliGitInfoProvider ..|> GitInfoProvider
     CliStashes ..|> Stashes
+    CliIndex ..|> Index
+    CliEditor ..|> Editor
+    CliConfig ..|> Config
+    CliGitInfoProvider --> CliEditor : editor()
+    CliGitInfoProvider --> CliConfig : config()
     CliWorktrees ..|> Worktrees
     CliGitInfoProvider --> CliWorktrees : worktrees()
     CliGitInfoProvider ..> CliStatus
@@ -862,7 +870,7 @@ classDiagram
     CliGitInfoProvider ..> CliShow
     CliGitInfoProvider ..> CliCheckout
     CliGitInfoProvider ..> CliBranch
-    CliGitInfoProvider ..> CliIndex
+    CliGitInfoProvider --> CliIndex : index()
     CliGitInfoProvider ..> CliMerge
     CliGitInfoProvider ..> CliRebase
     CliGitInfoProvider --> CliStashes : stashes()

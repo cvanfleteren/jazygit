@@ -11,16 +11,21 @@ import net.vanfleteren.jazygit.git.model.DiscardPlan;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
- * Changes the index (staging area) through the git command line tool.
+ * The {@link Index} of a repository, the staging area, changed through the git command line tool.
  */
-final class CliIndex {
+final class CliIndex implements Index {
 
-    private CliIndex() {}
+    private final Path worktree;
+
+    CliIndex(Path worktree) {
+        this.worktree = worktree;
+    }
 
     /**
      * {@code git add -- <paths>}: stages the changes of the paths.
      */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> add(Path worktree, List<String> paths) {
+    @Override
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> stage(List<String> paths) {
         return onPaths(worktree, List.of("add"), paths);
     }
 
@@ -28,14 +33,16 @@ final class CliIndex {
      * {@code git rm --cached --force -- <paths>}: removes newly added paths from the index, leaving
      * them untracked in the working tree.
      */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> removeCached(Path worktree, List<String> paths) {
+    @Override
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> unstageNew(List<String> paths) {
         return onPaths(worktree, List.of("rm", "--cached", "--force", "--quiet"), paths);
     }
 
     /**
      * {@code git reset HEAD -- <paths>}: resets the index entries of the paths to HEAD.
      */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> reset(Path worktree, List<String> paths) {
+    @Override
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> unstage(List<String> paths) {
         return onPaths(worktree, List.of("reset", "--quiet", "HEAD"), paths);
     }
 
@@ -64,7 +71,8 @@ final class CliIndex {
     /**
      * Throws changes away as {@code plan} says.
      */
-    static Either<GitFailure<GitError>, List<ExecutedCommand>> discard(Path worktree, DiscardPlan plan) {
+    @Override
+    public Either<GitFailure<GitError>, List<ExecutedCommand>> discard(DiscardPlan plan) {
         return GitFailure.sequence(
                 () -> GitFailure.widen(removeAdded(worktree, plan.added())),
                 () -> GitFailure.widen(checkoutFromHead(worktree, plan.fromHead())),

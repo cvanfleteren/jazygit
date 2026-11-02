@@ -35,7 +35,7 @@ public sealed interface CommentCmd extends Cmd {
         @Override
         public Msg run(Env env) {
             return env.terminal()
-                    .handOver(() -> env.git().editText(FILE_NAME, text))
+                    .handOver(() -> env.git().editor().editText(FILE_NAME, text))
                     .fold(this::failedWith, edited -> new CommentMsg.EditorClosed(edited._1, edited._2));
         }
 

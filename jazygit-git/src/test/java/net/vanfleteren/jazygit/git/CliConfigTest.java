@@ -30,31 +30,36 @@ class CliConfigTest {
 
     @Test
     void aKeyThatIsNotSetIsNone() {
-        assertEquals(Option.none(), CliConfig.get(repo, KEY).get());
+        assertEquals(Option.none(), config().local(KEY).get());
     }
 
     @Test
     void aKeySetIsReadBack() {
         assertEquals(
                 io.vavr.collection.List.of("git config --local jazygit.githubUser alice-work"),
-                CliConfig.set(repo, KEY, Option.of("alice-work")).get().map(ExecutedCommand::line));
+                config().setLocal(KEY, Option.of("alice-work")).get().map(ExecutedCommand::line));
 
-        assertEquals(Option.of("alice-work"), CliConfig.get(repo, KEY).get());
+        assertEquals(Option.of("alice-work"), config().local(KEY).get());
     }
 
     @Test
     void settingNoneRemovesTheKey() {
-        CliConfig.set(repo, KEY, Option.of("alice-work")).get();
+        config().setLocal(KEY, Option.of("alice-work")).get();
 
-        CliConfig.set(repo, KEY, Option.none()).get();
+        config().setLocal(KEY, Option.none()).get();
 
-        assertEquals(Option.none(), CliConfig.get(repo, KEY).get());
+        assertEquals(Option.none(), config().local(KEY).get());
     }
 
     @Test
     void removingAKeyThatIsNotSetDoesNothing() {
         assertEquals(
                 io.vavr.collection.List.of("git config --local --unset-all jazygit.githubUser"),
-                CliConfig.set(repo, KEY, Option.none()).get().map(ExecutedCommand::line));
+                config().setLocal(KEY, Option.none()).get().map(ExecutedCommand::line));
+    }
+
+    // Through the provider, as the app reaches it.
+    private Config config() {
+        return CliGitInfoProvider.open(repo).get().config();
     }
 }
