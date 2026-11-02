@@ -41,8 +41,37 @@ class LogGraphTest {
 
     @Test
     void aMergeWithoutLinesDrawsNone() {
-        CommitGraph.Node merge = new CommitGraph.Node(commit("m", "b", "f"), 0, false);
+        CommitGraph.Node merge = new CommitGraph.Node(commit("m", "b", "f"), 0, 0);
 
         assertEquals(List.empty(), LogGraph.gutter(merge).draw(List.empty(), "Merge"));
+    }
+
+    @Test
+    void theLastCommitOfAStackOfMergedBranchesClosesEachOnALineOfItsOwnAddingBlankOnes() {
+        // x is merged into y, y's branch into w and w's branch into main: all three branches end at x.
+        List<CommitGraph.Node> nodes = CommitGraph.layout(CommitGraph.arrange(List.of(
+                commit("m", "c", "v"),
+                commit("v", "w"),
+                commit("w", "b", "z"),
+                commit("z", "y"),
+                commit("y", "a", "x"),
+                commit("x", "a"),
+                commit("c", "b"),
+                commit("b", "a"),
+                commit("a"))));
+        List<String> lines = List.of("first", "second", "third");
+
+        assertEquals(
+                List.of(
+                        List.of("*   first", "|\\  Merge", "| | second", "| | third"),
+                        List.of("| * first", "| | second", "| | third"),
+                        List.of("| *   first", "| |\\  Merge", "| | | second", "| | | third"),
+                        List.of("| | * first", "| | | second", "| | | third"),
+                        List.of("| | *   first", "| | |\\  Merge", "| | | | second", "| | | | third"),
+                        List.of("| | | * first", "| | |/  second", "| |/    third", "|/      "),
+                        List.of("* first", "| second", "| third"),
+                        List.of("* first", "| second", "| third"),
+                        List.of("* first", "| second", "| third")),
+                nodes.map(node -> LogGraph.gutter(node).draw(lines, "Merge")).toList());
     }
 }

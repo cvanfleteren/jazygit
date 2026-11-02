@@ -47,9 +47,7 @@ class CommitGraphTest {
         assertEquals(List.of("m", "f2", "f1", "b", "a"), shas(arranged));
         List<CommitGraph.Node> nodes = CommitGraph.layout(arranged);
         assertEquals(List.of(0, 1, 1, 0, 0), nodes.map(CommitGraph.Node::depth).toList());
-        assertEquals(
-                List.of(false, false, true, false, false),
-                nodes.map(CommitGraph.Node::closesBranch).toList());
+        assertEquals(List.of(0, 0, 1, 0, 0), nodes.map(CommitGraph.Node::closes).toList());
     }
 
     @Test
@@ -68,5 +66,29 @@ class CommitGraphTest {
         assertEquals(
                 List.of(0, 1, 2, 1, 0, 0),
                 CommitGraph.layout(arranged).map(CommitGraph.Node::depth).toList());
+    }
+
+    @Test
+    void theLastCommitOfAStackOfMergedBranchesClosesThemAll() {
+        // x is merged into y, y's branch into w and w's branch into main: all three branches end at x.
+        List<Commit> arranged = CommitGraph.arrange(List.of(
+                commit("m", "c", "v"),
+                commit("v", "w"),
+                commit("w", "b", "z"),
+                commit("z", "y"),
+                commit("y", "a", "x"),
+                commit("x", "a"),
+                commit("c", "b"),
+                commit("b", "a"),
+                commit("a")));
+
+        assertEquals(List.of("m", "v", "w", "z", "y", "x", "c", "b", "a"), shas(arranged));
+        List<CommitGraph.Node> nodes = CommitGraph.layout(arranged);
+        assertEquals(
+                List.of(0, 1, 1, 2, 2, 3, 0, 0, 0),
+                nodes.map(CommitGraph.Node::depth).toList());
+        assertEquals(
+                List.of(0, 0, 0, 0, 0, 3, 0, 0, 0),
+                nodes.map(CommitGraph.Node::closes).toList());
     }
 }
