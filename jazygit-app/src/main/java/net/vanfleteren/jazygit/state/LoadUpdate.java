@@ -9,12 +9,9 @@ import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
-import net.vanfleteren.jazygit.state.Cmd.LoadCommitDetail;
 import net.vanfleteren.jazygit.state.Cmd.LoadCommits;
 import net.vanfleteren.jazygit.state.Cmd.LoadFileDiff;
-import net.vanfleteren.jazygit.state.Cmd.LoadStashDetail;
 import net.vanfleteren.jazygit.state.LoadMsg.*;
-import net.vanfleteren.jazygit.state.Loadable.Failed;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
@@ -33,10 +30,7 @@ public final class LoadUpdate {
             case Skipped skipped -> Next.of(model);
             // What was read with other diff options than the ones now chosen is dropped, whatever came of it.
             case LoadMsg m when stale(done, m.cmd()) -> Next.of(done);
-            case StatusLoaded(RepoStatus status) ->
-                statusLoaded(
-                        model,
-                        done.mapRepo(repo -> repo.withStatus(repo.status().reload(status))));
+            case StatusLoaded loaded -> statusLoaded(model, loaded.cmd().place().reload(done, loaded.status()));
             // The parents and the counts that could not be read stay as read before (ADR 46).
             case BranchesLoaded(var branches, var bases) ->
                 branchesLoaded(model, done.mapRepo(repo -> {
@@ -47,76 +41,52 @@ public final class LoadUpdate {
                 }));
             case MetadataChecked(var stamps) -> metadataChecked(done, stamps);
             // The files of a stash that is dropped close, as its name is now that of another stash.
-            case StashesLoaded(var stashes) ->
-                Next.of(done.mapRepo(repo -> repo.withStashes(repo.stashes().reload(stashes)))
+            case StashesLoaded loaded ->
+                Next.of(loaded.cmd()
+                        .place()
+                        .reload(done, loaded.stashes())
                         .mapRepoView(repoView -> repoView.withCommitFiles(repoView.commitFiles()
                                 .filter(view -> !(view.of() instanceof CommitFilesView.Changes.OfStash stash)
-                                        || stashes.exists(listed -> listed.sha().equals(stash.sha()))))));
-            case LoadMsg.WorktreesLoaded(var worktrees) ->
-                Next.of(done.mapRepo(repo -> repo.withWorktrees(repo.worktrees().reload(worktrees))));
+                                        || loaded.stashes()
+                                                .exists(listed -> listed.sha().equals(stash.sha()))))));
+            case LoadMsg.WorktreesLoaded loaded -> Next.of(loaded.cmd().place().reload(done, loaded.worktrees()));
             case WorktreeChangesLoaded loaded ->
                 Next.of(worktreeChangesRead(done).mapRepo(repo -> repo.withWorktreeChanges(loaded.changes())));
             // The log is only read again when HEAD moved, so the history the search runs on changed too, and what
             // is not on its base: that was read with it, so that the log is shown with it at once.
-            case CommitsLoaded(var commits, var load, var ahead) ->
+            case CommitsLoaded loaded ->
                 commitsLoaded(AheadUpdate.read(
-                        done.mapRepo(repo -> repo.withCommits(repo.commits().reload(commits))), load, ahead));
+                        loaded.cmd().place().reload(done, loaded.commits()), loaded.load(), loaded.ahead()));
             // What arrives after another search was run, or after the search was cleared, is dropped.
-            case CommitSearchLoaded(var query, var notOn, var commits) ->
-                Next.of(done.mapRepoView(repoView -> repoView.withCommitSearch(mapWhere(
-                        repoView.commitSearch(),
-                        search -> search.load().equals(msg.cmd()),
-                        search -> search.withResults(search.results().reload(commits))))));
+            case CommitSearchLoaded loaded -> Next.of(loaded.cmd().place().reload(done, loaded.commits()));
             // What arrives after another item was highlighted, or after the diff options changed, is dropped.
-            case BranchLogLoaded(var branch, var commits, var load, var ahead) ->
-                done.repoView().branchLog().exists(log -> log.key().equals(branch))
+            case BranchLogLoaded loaded ->
+                loaded.cmd().place().wanted(done)
                         ? AheadUpdate.branchLogLoaded(
-                                done.mapRepoView(repoView -> repoView.withBranchLog(
-                                        Preview.updated(repoView.branchLog(), branch, log -> log.reload(commits)))),
-                                branch,
-                                load,
-                                ahead)
+                                loaded.cmd().place().reload(done, loaded.commits()),
+                                loaded.branch(),
+                                loaded.load(),
+                                loaded.ahead())
                         : Next.of(done);
             case AheadLoaded(var load, var ahead) -> AheadUpdate.aheadLoaded(done, load, ahead);
-            case DivergenceLoaded(var branch, var other, var divergence) ->
-                Next.of(done.mapRepoView(repoView -> repoView.withDivergence(mapWhere(
-                        repoView.divergence(),
-                        view -> view.load().equals(msg.cmd()),
-                        view -> view.withCommits(view.commits().reload(divergence))))));
-            case CommitDetailLoaded(Sha sha, var options, DiffText changes, var preview) ->
-                Next.of(withDetail(
-                        done.mapRepoView(repoView -> repoView.withCommitDetail(
-                                Preview.updated(repoView.commitDetail(), sha, d -> d.reload(changes)))),
-                        sha,
-                        d -> d.reload(changes)));
-            case StashDetailLoaded(Sha sha, var options, DiffText changes) ->
-                Next.of(done.mapRepoView(repoView -> repoView.withStashDetail(
-                        Preview.updated(repoView.stashDetail(), sha, d -> d.reload(changes)))));
+            case DivergenceLoaded loaded -> Next.of(loaded.cmd().place().reload(done, loaded.divergence()));
+            case CommitDetailLoaded loaded -> Next.of(loaded.cmd().place().reload(done, loaded.changes()));
+            case StashDetailLoaded loaded -> Next.of(loaded.cmd().place().reload(done, loaded.changes()));
             // What the files looked like is kept, so that the diff is read again only once they change (ADR 58). Only
             // the highlighted diff is looked at, so the stamps of the diffs read before go.
-            case FileDiffLoaded(var files, var options, var diff, var stamp) ->
-                Next.of(done.mapRepoView(repoView ->
-                                repoView.withFileDiff(Preview.updated(repoView.fileDiff(), files, d -> d.reload(diff))))
-                        .mapJobs(jobs -> {
-                            Map<Cmd.Load, MetadataStamp> others =
-                                    jobs.readAt().filterKeys(load -> !(load instanceof LoadFileDiff));
-                            return jobs.withReadAt(stamp.fold(() -> others, now -> others.put(msg.cmd(), now)));
-                        }));
+            case FileDiffLoaded loaded ->
+                Next.of(loaded.cmd().place().reload(done, loaded.diff()).mapJobs(jobs -> {
+                    Map<Cmd.Load, MetadataStamp> others =
+                            jobs.readAt().filterKeys(load -> !(load instanceof LoadFileDiff));
+                    return jobs.withReadAt(loaded.stamp().fold(() -> others, now -> others.put(msg.cmd(), now)));
+                }));
             // Only the diff that is still shown, with the options now chosen, is read again.
             case FileDiffChecked(var load, var stamp) ->
                 Update.shownDiff(done).contains(load)
                         ? metadataChecked(done, List.of(Tuple.of((Cmd.Load) load, stamp)))
                         : Next.of(done);
-            case CommitFilesLoaded(var of, var files) ->
-                Next.of(done.mapRepoView(repoView -> repoView.withCommitFiles(mapWhere(
-                        repoView.commitFiles(),
-                        view -> view.of().equals(of),
-                        view -> view.withFiles(view.files().reload(files))))));
-            case CommitFileDiffLoaded(var of, var files, var options, var diff) ->
-                Next.of(done.mapRepoView(repoView -> repoView.withCommitFiles(mapWhere(
-                        repoView.commitFiles(),
-                        view -> view.of().equals(of),
-                        view -> view.withDiff(Preview.updated(view.diff(), files, d -> d.reload(diff)))))));
+            case CommitFilesLoaded loaded -> Next.of(loaded.cmd().place().reload(done, loaded.files()));
+            case CommitFileDiffLoaded loaded -> Next.of(loaded.cmd().place().reload(done, loaded.diff()));
             // Without the files to tell, the loads they guard run, as they would without them.
             case LoadMsg.Failed(Cmd.CheckMetadata cmd, var failure) ->
                 metadataChecked(done, Cmd.CheckMetadata.GUARDED.map(load -> Tuple.of(load, Option.none())));
@@ -278,17 +248,6 @@ public final class LoadUpdate {
     }
 
     /**
-     * Applies {@code f} to the detail of the divergence that is open, and to that of the commits of a branch that are,
-     * if it is the one of {@code sha}.
-     */
-    private static Model withDetail(Model model, Sha sha, UnaryOperator<Preview<Sha, DiffText>> f) {
-        return model.mapRepoView(repoView -> repoView.withDivergence(
-                        repoView.divergence().map(view -> view.withDetail(Preview.updated(view.detail(), sha, f))))
-                .withBranchCommits(
-                        repoView.branchCommits().map(view -> view.withDetail(Preview.updated(view.detail(), sha, f)))));
-    }
-
-    /**
      * Reads the log of the highlighted branch again when it moved (a commit, reset, fetch...), as it is outdated.
      *
      * @param moved whether the highlighted branch is no longer where it was
@@ -318,63 +277,21 @@ public final class LoadUpdate {
         return open.map(view -> matches.test(view) ? f.apply(view) : view);
     }
 
+    /**
+     * {@code model} with {@code cmd} having failed: in its {@link Place}, but for the loads that keep what they read
+     * in a way of their own.
+     */
     private static Model failed(Model model, Cmd.Load cmd, Failure failure) {
         return switch (cmd) {
-            case Cmd.CheckMetadata() -> model;
-            // What was read before stays: reading again can fail for a while, say on a timeout.
-            case Cmd.LoadStatus() ->
-                model.mapRepo(repo -> repo.withStatus(repo.status().failed(failure)));
             // The parents and the counts read before stay, as they would while reading again (ADR 46).
             case Cmd.LoadBranches() ->
                 model.mapRepo(repo -> repo.withBranches(repo.branches().failed(failure))
                         .withRemoteBranches(repo.remoteBranches().failed(failure)));
-            case Cmd.LoadStashes() ->
-                model.mapRepo(repo -> repo.withStashes(repo.stashes().failed(failure)));
-            case Cmd.LoadWorktrees() ->
-                model.mapRepo(repo -> repo.withWorktrees(repo.worktrees().failed(failure)));
             // Which worktrees have changes is a detail: when the whole read fails, what was read before stays, and
             // a later tick tries again. A single worktree that cannot be read is left out of a read that succeeds.
             case Cmd.LoadWorktreeChanges _ -> worktreeChangesRead(model);
-            case LoadCommits _ ->
-                model.mapRepo(repo -> repo.withCommits(repo.commits().failed(failure)));
-            case Cmd.SearchCommits load ->
-                model.mapRepoView(repoView -> repoView.withCommitSearch(mapWhere(
-                        repoView.commitSearch(),
-                        search -> search.load().equals(load),
-                        search -> search.withResults(new Failed<>(failure)))));
             case Cmd.LoadAhead load -> AheadUpdate.failed(model, load, failure);
-            case LoadCommitDetail(Sha sha, var options, var preview) ->
-                withDetail(
-                        model.mapRepoView(repoView -> repoView.withCommitDetail(
-                                Preview.updated(repoView.commitDetail(), sha, d -> d.failed(failure)))),
-                        sha,
-                        d -> d.failed(failure));
-            case Cmd.LoadDivergence load ->
-                model.mapRepoView(repoView -> repoView.withDivergence(mapWhere(
-                        repoView.divergence(),
-                        view -> view.load().equals(load),
-                        view -> view.withCommits(new Failed<>(failure)))));
-            case LoadFileDiff(var files, var options) ->
-                model.mapRepoView(repoView ->
-                        repoView.withFileDiff(Preview.updated(repoView.fileDiff(), files, d -> d.failed(failure))));
-            // Looking at the files failed: the next status looks again.
-            case Cmd.CheckFileDiff _ -> model;
-            case LoadStashDetail(Sha sha, var options) ->
-                model.mapRepoView(repoView ->
-                        repoView.withStashDetail(Preview.updated(repoView.stashDetail(), sha, d -> d.failed(failure))));
-            case Cmd.LoadCommitFiles(var of) ->
-                model.mapRepoView(repoView -> repoView.withCommitFiles(mapWhere(
-                        repoView.commitFiles(),
-                        view -> view.of().equals(of),
-                        view -> view.withFiles(new Failed<>(failure)))));
-            case Cmd.LoadCommitFileDiff(var of, var files, var options) ->
-                model.mapRepoView(repoView -> repoView.withCommitFiles(mapWhere(
-                        repoView.commitFiles(),
-                        view -> view.of().equals(of),
-                        view -> view.withDiff(Preview.updated(view.diff(), files, d -> d.failed(failure))))));
-            case LoadBranchLog(var branch, var _) ->
-                model.mapRepoView(repoView -> repoView.withBranchLog(
-                        Preview.updated(repoView.branchLog(), branch, log -> log.failed(failure))));
+            case Cmd.Load load -> load.place().failed(model, failure);
         };
     }
 

@@ -9,6 +9,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.settings.SettingsStore;
@@ -260,55 +261,36 @@ public final class Update {
      * The loads to run again as they failed, while their failure is still shown.
      */
     private static List<Cmd.Load> retries(Model model) {
-        return List.<Cmd.Load>empty()
-                .appendAll(Option.when(
-                        model.repo().commits().isFailed() || model.jobs().commitsFailed(),
-                        () -> new LoadCommits(AheadUpdate.ofHead(model))))
+        Cmd.Load commits = new LoadCommits(AheadUpdate.ofHead(model));
+        return Option.when(commits.place().failedIn(model) || model.jobs().commitsFailed(), commits)
+                .toList()
                 .appendAll(AheadUpdate.retries(model))
-                .appendAll(model.repoView()
-                        .commitSearch()
-                        .filter(search -> search.results().isFailed())
-                        .map(CommitSearch::load))
-                .appendAll(model.repoView()
-                        .branchLog()
-                        .filter(log -> log.value().isFailed())
+                .appendAll(shown(model).filter(load -> load.place().failedIn(model)));
+    }
+
+    /**
+     * The loads that read what the views that are open show, as the model would ask for them now.
+     */
+    private static List<Cmd.Load> shown(Model model) {
+        RepoView repoView = model.repoView();
+        DiffOptions options = model.preferences().diffOptions();
+        return List.<Cmd.Load>empty()
+                .appendAll(repoView.commitSearch().map(CommitSearch::load))
+                .appendAll(repoView.branchLog()
                         .map(log -> new LoadBranchLog(log.key(), AheadUpdate.of(model, log.key()))))
-                .appendAll(model.repoView()
-                        .commitDetail()
-                        .filter(detail -> detail.value().isFailed())
-                        .map(detail -> new LoadCommitDetail(
-                                detail.key(), model.preferences().diffOptions(), Slot.COMMIT_DETAIL)))
-                .appendAll(model.repoView()
-                        .divergence()
-                        .filter(view -> view.commits().isFailed())
-                        .map(DivergenceView::load))
-                .appendAll(model.repoView()
-                        .divergence()
+                .appendAll(repoView.commitDetail()
+                        .map(detail -> new LoadCommitDetail(detail.key(), options, Slot.COMMIT_DETAIL)))
+                .appendAll(repoView.divergence().map(DivergenceView::load))
+                .appendAll(repoView.divergence()
                         .flatMap(DivergenceView::detail)
-                        .filter(detail -> detail.value().isFailed())
-                        .map(detail -> new LoadCommitDetail(
-                                detail.key(), model.preferences().diffOptions(), Slot.DIVERGENCE_DETAIL)))
-                .appendAll(model.repoView()
-                        .branchCommits()
+                        .map(detail -> new LoadCommitDetail(detail.key(), options, Slot.DIVERGENCE_DETAIL)))
+                .appendAll(repoView.branchCommits()
                         .flatMap(BranchCommitsView::detail)
-                        .filter(detail -> detail.value().isFailed())
-                        .map(detail -> new LoadCommitDetail(
-                                detail.key(), model.preferences().diffOptions(), Slot.BRANCH_COMMITS_DETAIL)))
-                .appendAll(model.repoView()
-                        .stashDetail()
-                        .filter(detail -> detail.value().isFailed())
-                        .map(detail -> new Cmd.LoadStashDetail(
-                                detail.key(), model.preferences().diffOptions())))
-                .appendAll(model.repoView()
-                        .commitFiles()
-                        .filter(view -> view.files().isFailed())
-                        .map(CommitFilesView::load))
-                .appendAll(model.repoView()
-                        .commitFiles()
-                        .flatMap(view -> view.diff()
-                                .filter(diff -> diff.value().isFailed())
-                                .map(diff -> view.diffLoad(
-                                        diff.key(), model.preferences().diffOptions()))));
+                        .map(detail -> new LoadCommitDetail(detail.key(), options, Slot.BRANCH_COMMITS_DETAIL)))
+                .appendAll(repoView.stashDetail().map(detail -> new Cmd.LoadStashDetail(detail.key(), options)))
+                .appendAll(repoView.commitFiles().map(CommitFilesView::load))
+                .appendAll(repoView.commitFiles()
+                        .flatMap(view -> view.diff().map(diff -> view.diffLoad(diff.key(), options))));
     }
 
     /**

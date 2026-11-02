@@ -1,6 +1,8 @@
 package net.vanfleteren.jazygit.state;
 
 import io.vavr.control.Option;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
 /**
@@ -34,6 +36,16 @@ public record Preview<K, V>(K key, Loadable<V> value, Option<Preview<K, V>> prev
     public static <K, V> Option<Preview<K, V>> updated(
             Option<Preview<K, V>> preview, K key, UnaryOperator<Preview<K, V>> f) {
         return LoadUpdate.mapWhere(preview, shown -> shown.key().equals(key), f);
+    }
+
+    /**
+     * What was read for the preview of {@code key} that {@code get} finds in an {@code S} and {@code set} sets. What
+     * replaces it is read or failed, no longer loading, so the previous preview goes with it.
+     */
+    public static <S, K, V> Lens<S, Loadable<V>> lens(
+            Function<S, Option<Preview<K, V>>> get, BiFunction<S, Option<Preview<K, V>>, S> set, K key) {
+        return Lens.where(get, set, (Preview<K, V> shown) -> shown.key().equals(key))
+                .andThen(Lens.of(Preview::value, (preview, value) -> new Preview<>(preview.key(), value)));
     }
 
     /**

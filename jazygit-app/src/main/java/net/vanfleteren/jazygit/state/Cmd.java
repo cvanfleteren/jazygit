@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.state;
 
 import io.vavr.Tuple;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
@@ -18,11 +19,17 @@ import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.CommitQuery;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
+import net.vanfleteren.jazygit.git.model.DiffText;
+import net.vanfleteren.jazygit.git.model.Diffs;
+import net.vanfleteren.jazygit.git.model.Divergence;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.GitMetadata;
 import net.vanfleteren.jazygit.git.model.MetadataStamp;
 import net.vanfleteren.jazygit.git.model.PullRequestCommits;
+import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.git.model.Stash;
+import net.vanfleteren.jazygit.git.model.Worktree;
 import net.vanfleteren.jazygit.settings.Settings;
 
 /**
@@ -166,6 +173,12 @@ public interface Cmd {
      */
     sealed interface Load extends Cmd {
 
+        /**
+         * Where this load keeps what it reads in the model: what it read goes there, so does that it failed, and
+         * a tick reads it again while it shows as failed there.
+         */
+        Place<?> place();
+
         @Override
         default Msg failed(Failure failure) {
             return new LoadMsg.Failed(this, failure);
@@ -214,6 +227,11 @@ public interface Cmd {
         }
 
         @Override
+        public Place<RepoStatus> place() {
+            return Place.inRepo(Repo::status, Repo::withStatus);
+        }
+
+        @Override
         public Msg run(Env env) {
             return env.git().status().read().fold(this::failedWith, LoadMsg.StatusLoaded::new);
         }
@@ -230,6 +248,14 @@ public interface Cmd {
         @Override
         public Option<Label> label() {
             return Option.of(Label.of("work.branches"));
+        }
+
+        /**
+         * None: the local and the remote-tracking branches are two loadables, which {@link LoadUpdate} keeps.
+         */
+        @Override
+        public Place<AllBranches> place() {
+            return Place.none();
         }
 
         @Override
@@ -267,6 +293,14 @@ public interface Cmd {
             return Option.of(Label.of("work.metadata"));
         }
 
+        /**
+         * None: what the files look like is kept by {@link Jobs}.
+         */
+        @Override
+        public Place<Void> place() {
+            return Place.none();
+        }
+
         @Override
         public Msg run(Env env) {
             Option<GitMetadata> metadata = env.git().status().metadata();
@@ -285,6 +319,11 @@ public interface Cmd {
         }
 
         @Override
+        public Place<List<Stash>> place() {
+            return Place.inRepo(Repo::stashes, Repo::withStashes);
+        }
+
+        @Override
         public Msg run(Env env) {
             return env.git().stashes().list().fold(this::failedWith, LoadMsg.StashesLoaded::new);
         }
@@ -295,6 +334,11 @@ public interface Cmd {
         @Override
         public Option<Label> label() {
             return Option.of(Label.of("work.worktrees"));
+        }
+
+        @Override
+        public Place<List<Worktree>> place() {
+            return Place.inRepo(Repo::worktrees, Repo::withWorktrees);
         }
 
         @Override
@@ -312,6 +356,14 @@ public interface Cmd {
         @Override
         public Option<Label> label() {
             return Option.of(Label.of("work.worktreeChanges"));
+        }
+
+        /**
+         * None: which worktrees have changes is a detail, not a loadable, which {@link LoadUpdate} keeps.
+         */
+        @Override
+        public Place<Map<String, Boolean>> place() {
+            return Place.none();
         }
 
         @Override
@@ -346,6 +398,11 @@ public interface Cmd {
         }
 
         @Override
+        public Place<List<Commit>> place() {
+            return Place.inRepo(Repo::commits, Repo::withCommits);
+        }
+
+        @Override
         public Msg run(Env env) {
             return ahead.tip()
                     .fold(() -> Either.<ProcessError, List<Commit>>right(List.empty()), env.git()::commits)
@@ -361,6 +418,18 @@ public interface Cmd {
         @Override
         public Option<Label> label() {
             return Option.of(Label.of("work.search"));
+        }
+
+        /**
+         * The results of the search, while it is the one shown.
+         */
+        @Override
+        public Place<List<Commit>> place() {
+            return Place.inView(Lens.where(
+                            RepoView::commitSearch,
+                            RepoView::withCommitSearch,
+                            search -> search.load().equals(this))
+                    .andThen(Lens.of(CommitSearch::results, CommitSearch::withResults)));
         }
 
         @Override
@@ -385,6 +454,14 @@ public interface Cmd {
         @Override
         public Option<Label> label() {
             return Option.of(Label.of("work.ahead"));
+        }
+
+        /**
+         * None: {@link AheadUpdate} keeps it, for HEAD with whether it failed whatever was kept.
+         */
+        @Override
+        public Place<Option<Ahead>> place() {
+            return Place.none();
         }
 
         @Override
@@ -426,6 +503,14 @@ public interface Cmd {
             return Option.of(Slot.BRANCH_LOG);
         }
 
+        /**
+         * The log of the branch, while it is the one highlighted.
+         */
+        @Override
+        public Place<List<Commit>> place() {
+            return Place.inView(Preview.lens(RepoView::branchLog, RepoView::withBranchLog, branch));
+        }
+
         @Override
         public Msg run(Env env) {
             return env.git()
@@ -444,6 +529,18 @@ public interface Cmd {
         @Override
         public Option<Label> label() {
             return Option.of(Label.of("work.divergence", branch.value(), other.name()));
+        }
+
+        /**
+         * The commits of the divergence, while it is the one open.
+         */
+        @Override
+        public Place<Divergence> place() {
+            return Place.inView(Lens.where(
+                            RepoView::divergence,
+                            RepoView::withDivergence,
+                            view -> view.load().equals(this))
+                    .andThen(Lens.of(DivergenceView::commits, DivergenceView::withCommits)));
         }
 
         @Override
@@ -478,6 +575,28 @@ public interface Cmd {
             return Option.of(preview);
         }
 
+        /**
+         * The detail of the commit in the preview of {@code preview}, while it is the one highlighted there. Every
+         * other preview of it shows what was read too.
+         */
+        @Override
+        public Place<DiffText> place() {
+            Lens<RepoView, Loadable<DiffText>> commits =
+                    Preview.lens(RepoView::commitDetail, RepoView::withCommitDetail, sha);
+            Lens<RepoView, Loadable<DiffText>> divergence = Lens.some(RepoView::divergence, RepoView::withDivergence)
+                    .andThen(Preview.lens(DivergenceView::detail, DivergenceView::withDetail, sha));
+            Lens<RepoView, Loadable<DiffText>> branchCommits = Lens.some(
+                            RepoView::branchCommits, RepoView::withBranchCommits)
+                    .andThen(Preview.lens(BranchCommitsView::detail, BranchCommitsView::withDetail, sha));
+            return Place.inView(
+                    switch (preview) {
+                        case DIVERGENCE_DETAIL -> divergence.alongWith(commits).alongWith(branchCommits);
+                        case BRANCH_COMMITS_DETAIL ->
+                            branchCommits.alongWith(commits).alongWith(divergence);
+                        default -> commits.alongWith(divergence).alongWith(branchCommits);
+                    });
+        }
+
         @Override
         public Msg run(Env env) {
             return env.git()
@@ -496,6 +615,14 @@ public interface Cmd {
         @Override
         public Option<Slot> slot() {
             return Option.of(Slot.STASH_DETAIL);
+        }
+
+        /**
+         * The detail of the stash, while it is the one highlighted.
+         */
+        @Override
+        public Place<DiffText> place() {
+            return Place.inView(Preview.lens(RepoView::stashDetail, RepoView::withStashDetail, sha));
         }
 
         @Override
@@ -521,6 +648,15 @@ public interface Cmd {
         @Override
         public boolean background() {
             return of instanceof CommitFilesView.Changes.OfPullRequest;
+        }
+
+        /**
+         * The files of the view of {@code of}, while it is the one open.
+         */
+        @Override
+        public Place<List<CommitFile>> place() {
+            return Place.inView(
+                    CommitFilesView.open(of).andThen(Lens.of(CommitFilesView::files, CommitFilesView::withFiles)));
         }
 
         @Override
@@ -556,6 +692,15 @@ public interface Cmd {
             return Option.of(Slot.COMMIT_FILE_DIFF);
         }
 
+        /**
+         * The diff in the view of {@code of}, while it is the one open, and {@code files} the node highlighted in it.
+         */
+        @Override
+        public Place<DiffText> place() {
+            return Place.inView(CommitFilesView.open(of)
+                    .andThen(Preview.lens(CommitFilesView::diff, CommitFilesView::withDiff, files)));
+        }
+
         @Override
         public Msg run(Env env) {
             return (switch (of) {
@@ -585,6 +730,14 @@ public interface Cmd {
         }
 
         /**
+         * The diff of the files, while they are the ones highlighted.
+         */
+        @Override
+        public Place<Diffs> place() {
+            return Place.inView(Preview.lens(RepoView::fileDiff, RepoView::withFileDiff, files));
+        }
+
+        /**
          * Reads the diff, after a stamp of what it is read from: a change while it is read then shows in the next
          * stamp, and the diff is read again (ADR 58).
          */
@@ -602,6 +755,15 @@ public interface Cmd {
      * takes a git process or more, this none (ADR 58).
      */
     record CheckFileDiff(LoadFileDiff load) implements Load {
+
+        /**
+         * None: what the files look like is kept by {@link Jobs}. When looking at them fails, the next status looks
+         * again.
+         */
+        @Override
+        public Place<Option<MetadataStamp>> place() {
+            return Place.none();
+        }
 
         @Override
         public Msg run(Env env) {

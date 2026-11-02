@@ -25,7 +25,7 @@ public sealed interface LoadMsg extends Msg {
     record StatusLoaded(RepoStatus status) implements LoadMsg {
 
         @Override
-        public Cmd.Load cmd() {
+        public Cmd.LoadStatus cmd() {
             return new Cmd.LoadStatus();
         }
     }
@@ -37,7 +37,7 @@ public sealed interface LoadMsg extends Msg {
     record BranchesLoaded(AllBranches branches, Option<Bases> bases) implements LoadMsg {
 
         @Override
-        public Cmd.Load cmd() {
+        public Cmd.LoadBranches cmd() {
             return new Cmd.LoadBranches();
         }
     }
@@ -49,7 +49,7 @@ public sealed interface LoadMsg extends Msg {
     record MetadataChecked(List<Tuple2<Cmd.Load, Option<MetadataStamp>>> stamps) implements LoadMsg {
 
         @Override
-        public Cmd.Load cmd() {
+        public Cmd.CheckMetadata cmd() {
             return new Cmd.CheckMetadata();
         }
     }
@@ -57,7 +57,7 @@ public sealed interface LoadMsg extends Msg {
     record StashesLoaded(List<Stash> stashes) implements LoadMsg {
 
         @Override
-        public Cmd.Load cmd() {
+        public Cmd.LoadStashes cmd() {
             return new Cmd.LoadStashes();
         }
     }
@@ -65,7 +65,7 @@ public sealed interface LoadMsg extends Msg {
     record WorktreesLoaded(List<Worktree> worktrees) implements LoadMsg {
 
         @Override
-        public Cmd.Load cmd() {
+        public Cmd.LoadWorktrees cmd() {
             return new Cmd.LoadWorktrees();
         }
     }
@@ -76,7 +76,7 @@ public sealed interface LoadMsg extends Msg {
     record WorktreeChangesLoaded(List<String> worktrees, Map<String, Boolean> changes) implements LoadMsg {
 
         @Override
-        public Cmd.Load cmd() {
+        public Cmd.LoadWorktreeChanges cmd() {
             return new Cmd.LoadWorktreeChanges(worktrees);
         }
     }
@@ -96,7 +96,7 @@ public sealed interface LoadMsg extends Msg {
             implements LoadMsg {
 
         @Override
-        public Cmd.Load cmd() {
+        public Cmd.LoadCommits cmd() {
             return new Cmd.LoadCommits(load);
         }
     }
@@ -104,7 +104,7 @@ public sealed interface LoadMsg extends Msg {
     record CommitSearchLoaded(CommitQuery query, Option<BranchRef> notOn, List<Commit> commits) implements LoadMsg {
 
         @Override
-        public Cmd.Load cmd() {
+        public Cmd.SearchCommits cmd() {
             return new Cmd.SearchCommits(query, notOn);
         }
     }
@@ -115,7 +115,7 @@ public sealed interface LoadMsg extends Msg {
     record AheadLoaded(Cmd.LoadAhead load, Option<Ahead> ahead) implements LoadMsg {
 
         @Override
-        public Cmd.Load cmd() {
+        public Cmd.LoadAhead cmd() {
             return load;
         }
     }
@@ -128,7 +128,7 @@ public sealed interface LoadMsg extends Msg {
             implements LoadMsg {
 
         @Override
-        public Cmd.Load cmd() {
+        public Cmd.LoadBranchLog cmd() {
             return new Cmd.LoadBranchLog(branch, load);
         }
     }
@@ -136,7 +136,7 @@ public sealed interface LoadMsg extends Msg {
     record DivergenceLoaded(BranchName branch, BranchRef other, Divergence divergence) implements LoadMsg {
 
         @Override
-        public Cmd.Load cmd() {
+        public Cmd.LoadDivergence cmd() {
             return new Cmd.LoadDivergence(branch, other);
         }
     }
@@ -155,7 +155,7 @@ public sealed interface LoadMsg extends Msg {
         }
 
         @Override
-        public Cmd.Load cmd() {
+        public Cmd.LoadCommitDetail cmd() {
             return new Cmd.LoadCommitDetail(sha, options, preview);
         }
     }
@@ -163,7 +163,7 @@ public sealed interface LoadMsg extends Msg {
     record StashDetailLoaded(Sha sha, DiffOptions options, DiffText changes) implements LoadMsg {
 
         @Override
-        public Cmd.Load cmd() {
+        public Cmd.LoadStashDetail cmd() {
             return new Cmd.LoadStashDetail(sha, options);
         }
     }
@@ -183,7 +183,7 @@ public sealed interface LoadMsg extends Msg {
         }
 
         @Override
-        public Cmd.Load cmd() {
+        public Cmd.LoadFileDiff cmd() {
             return new Cmd.LoadFileDiff(files, options);
         }
     }
@@ -195,7 +195,7 @@ public sealed interface LoadMsg extends Msg {
     record FileDiffChecked(Cmd.LoadFileDiff load, Option<MetadataStamp> stamp) implements LoadMsg {
 
         @Override
-        public Cmd.Load cmd() {
+        public Cmd.CheckFileDiff cmd() {
             return new Cmd.CheckFileDiff(load);
         }
     }
@@ -203,7 +203,7 @@ public sealed interface LoadMsg extends Msg {
     record CommitFilesLoaded(CommitFilesView.Changes of, List<CommitFile> files) implements LoadMsg {
 
         @Override
-        public Cmd.Load cmd() {
+        public Cmd.LoadCommitFiles cmd() {
             return new Cmd.LoadCommitFiles(of);
         }
     }
@@ -212,7 +212,7 @@ public sealed interface LoadMsg extends Msg {
             implements LoadMsg {
 
         @Override
-        public Cmd.Load cmd() {
+        public Cmd.LoadCommitFileDiff cmd() {
             return new Cmd.LoadCommitFileDiff(of, files, options);
         }
     }
