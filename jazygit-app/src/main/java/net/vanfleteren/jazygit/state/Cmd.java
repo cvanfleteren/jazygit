@@ -299,7 +299,7 @@ public interface Cmd {
 
         @Override
         public Msg run(Env env) {
-            return env.git().worktrees().fold(this::failedWith, LoadMsg.WorktreesLoaded::new);
+            return env.git().worktrees().list().fold(this::failedWith, LoadMsg.WorktreesLoaded::new);
         }
     }
 
@@ -325,6 +325,7 @@ public interface Cmd {
                     worktrees,
                     worktrees
                             .flatMap(location -> env.git()
+                                    .worktrees()
                                     .hasChanges(Path.of(location))
                                     .toOption()
                                     .map(changes -> Tuple.of(location, changes)))

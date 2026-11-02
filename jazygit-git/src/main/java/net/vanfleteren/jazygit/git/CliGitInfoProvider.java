@@ -29,6 +29,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     // Asked each time git talks to a remote.
     private final Supplier<Map<String, String>> credentials;
     private final CliStashes stashes;
+    private final CliWorktrees worktrees;
 
     private CliGitInfoProvider(
             Path worktree,
@@ -40,6 +41,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
         this.metadataAt = metadataAt;
         this.credentials = credentials;
         this.stashes = new CliStashes(worktree);
+        this.worktrees = new CliWorktrees(worktree);
     }
 
     /**
@@ -120,55 +122,8 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<ProcessError, List<Worktree>> worktrees() {
-        return CliWorktree.list(worktree);
-    }
-
-    @Override
-    public Either<ProcessError, Boolean> hasChanges(Path worktree) {
-        return CliWorktree.hasChanges(worktree);
-    }
-
-    @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> addWorktree(Path location, BranchName branch) {
-        return CliWorktree.add(worktree, location, branch);
-    }
-
-    @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> addDetachedWorktree(
-            Path location, Revision startPoint) {
-        return CliWorktree.addDetached(worktree, location, startPoint);
-    }
-
-    @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> removeWorktree(Path location, boolean force) {
-        return CliWorktree.remove(worktree, location, force);
-    }
-
-    @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> removeWorktreeAnyway(Path location) {
-        return CliWorktree.removeAnyway(worktree, location);
-    }
-
-    @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> addWorktreeWithNewBranch(
-            Path location, BranchName name, NewBranchStart start) {
-        return CliWorktree.addNewBranch(worktree, location, name, start);
-    }
-
-    @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> pruneWorktrees() {
-        return CliWorktree.prune(worktree);
-    }
-
-    @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> lockWorktree(Path location, boolean lock) {
-        return CliWorktree.lock(worktree, location, lock);
-    }
-
-    @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> lockWorktree(Path location, String reason) {
-        return CliWorktree.lock(worktree, location, reason);
+    public Worktrees worktrees() {
+        return worktrees;
     }
 
     @Override

@@ -19,9 +19,9 @@ import net.vanfleteren.jazygit.git.model.Worktree;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
- * Lists, adds and removes worktrees through the {@code git worktree} command line tool.
+ * The {@link Worktrees} of a repository, through the {@code git worktree} command line tool.
  */
-final class CliWorktree {
+final class CliWorktrees implements Worktrees {
 
     // What separates the worktrees in the -z porcelain output: the NUL ending the last line of one, and an empty
     // line.
@@ -30,24 +30,30 @@ final class CliWorktree {
     // English, so git is run with the C locale.
     private static final String HAS_CHANGES = "contains modified or untracked files";
 
-    private CliWorktree() {}
+    private final Path worktree;
+
+    CliWorktrees(Path worktree) {
+        this.worktree = worktree;
+    }
 
     /**
      * Runs {@code git worktree list --porcelain -z}: the worktrees, {@code worktree}, the one that is current, first,
      * then the others as git lists them, the main one first.
      */
-    static Either<ProcessError, List<Worktree>> list(Path worktree) {
+    @Override
+    public Either<ProcessError, List<Worktree>> list() {
         return GitProcess.read(
                 worktree, GitCommand.reading("worktree", "list", "--porcelain", "-z"), raw -> parse(raw, worktree));
     }
 
     /**
-     * Runs {@code git status --porcelain -z --untracked-files=normal} in {@code worktree}: it has changes when git
-     * lists any file.
+     * Runs {@code git status --porcelain -z --untracked-files=normal} in {@code other}: it has changes when git lists
+     * any file.
      */
-    static Either<ProcessError, Boolean> hasChanges(Path worktree) {
+    @Override
+    public Either<ProcessError, Boolean> hasChanges(Path other) {
         return GitProcess.read(
-                worktree,
+                other,
                 GitCommand.reading("status", "--porcelain", "-z", "--untracked-files=normal"),
                 raw -> Either.right(!raw.isEmpty()));
     }
@@ -126,8 +132,8 @@ final class CliWorktree {
     /**
      * Runs {@code git worktree add --quiet <location> <branch>} in {@code worktree}.
      */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> add(
-            Path worktree, Path location, BranchName branch) {
+    @Override
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> add(Path location, BranchName branch) {
         return GitProcess.log(
                 worktree,
                 git(
@@ -142,8 +148,8 @@ final class CliWorktree {
      * Runs {@code git worktree add --quiet --detach <location> <startPoint>} in {@code worktree}: a new worktree
      * with {@code startPoint} checked out, on no branch.
      */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> addDetached(
-            Path worktree, Path location, Revision startPoint) {
+    @Override
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> addDetached(Path location, Revision startPoint) {
         return GitProcess.log(
                 worktree,
                 git(
@@ -161,8 +167,9 @@ final class CliWorktree {
      * one {@link NewBranchStart.From} a revision, git's {@code branch.autoSetupMerge} says whether it follows it, and
      * its parent is recorded as the branch it came from, as a new branch records it (ADR 40).
      */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> addNewBranch(
-            Path worktree, Path location, BranchName name, NewBranchStart start) {
+    @Override
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> addWithNewBranch(
+            Path location, BranchName name, NewBranchStart start) {
         Option<BranchName> parent = start instanceof NewBranchStart.From(var from, var made) ? made : Option.none();
         return GitFailure.sequence(
                 () -> GitProcess.log(
@@ -184,20 +191,22 @@ final class CliWorktree {
      * @return the command lines that were run, or why git refused, {@link WorktreeHasChanges} when forcing it
      * would let the removal go through
      */
-    static Either<GitFailure<GitError>, List<ExecutedCommand>> remove(Path worktree, Path location, boolean force) {
+    @Override
+    public Either<GitFailure<GitError>, List<ExecutedCommand>> remove(Path location, boolean force) {
         return GitProcess.log(
                         worktree,
                         git(List.of("worktree", "remove")
                                 .appendAll(Option.when(force, "--force"))
                                 .append(worktree.resolve(location).normalize().toString())))
-                .mapLeft(failure -> failure.map(CliWorktree::classify));
+                .mapLeft(failure -> failure.map(CliWorktrees::classify));
     }
 
     /**
      * Runs {@code git worktree remove --force --force <location>} in {@code worktree}: removes it whatever it has,
      * also when it is locked or its directory is gone.
      */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> removeAnyway(Path worktree, Path location) {
+    @Override
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> removeAnyway(Path location) {
         return GitProcess.log(
                 worktree,
                 git(
@@ -211,14 +220,16 @@ final class CliWorktree {
     /**
      * Runs {@code git worktree prune} in {@code worktree}: forgets the worktrees whose directory is gone.
      */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> prune(Path worktree) {
+    @Override
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> prune() {
         return GitProcess.log(worktree, git("worktree", "prune"));
     }
 
     /**
      * Runs {@code git worktree lock <location>}, or {@code unlock} when not {@code lock}, in {@code worktree}.
      */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> lock(Path worktree, Path location, boolean lock) {
+    @Override
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> lock(Path location, boolean lock) {
         return GitProcess.log(
                 worktree,
                 git(
@@ -231,7 +242,8 @@ final class CliWorktree {
      * Runs {@code git worktree lock --reason <reason> <location>} in {@code worktree}, or without a reason when
      * {@code reason} is blank.
      */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> lock(Path worktree, Path location, String reason) {
+    @Override
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> lock(Path location, String reason) {
         String where = worktree.resolve(location).normalize().toString();
         return GitProcess.log(
                 worktree,

@@ -23,6 +23,6 @@ public record PruneWorktreesCmd() implements GitOperationCmd {
 
     @Override
     public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
-        return git.pruneWorktrees();
+        return git.worktrees().prune();
     }
 }

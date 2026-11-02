@@ -65,11 +65,12 @@ public record AddWorktreeCmd(WorktreeSource source, String location, boolean swi
         GitInfoProvider git = env.git();
         Path path = WorktreeCmd.path(location);
         return switch (source) {
-            case Existing(var branch) -> reported(env, git.addWorktree(path, branch));
-            case Created(var name, var from) -> reported(env, git.addWorktreeWithNewBranch(path, name, from));
-            case Detached(var start, var label) -> reported(env, git.addDetachedWorktree(path, start));
+            case Existing(var branch) -> reported(env, git.worktrees().add(path, branch));
+            case Created(var name, var from) -> reported(env, git.worktrees().addWithNewBranch(path, name, from));
+            case Detached(var start, var label) -> reported(env, git.worktrees().addDetached(path, start));
             case PullRequest(var pullRequest) ->
-                git.addDetachedWorktree(path, new Revision.Head())
+                git.worktrees()
+                        .addDetached(path, new Revision.Head())
                         .fold(
                                 this::failedWith,
                                 added -> checkout(git, env.gitHub(), path, pullRequest.number(), added)
@@ -89,7 +90,8 @@ public record AddWorktreeCmd(WorktreeSource source, String location, boolean swi
     private static Either<Failure, List<ExecutedCommand>> checkout(
             GitInfoProvider git, GitHub gitHub, Path path, int number, List<ExecutedCommand> added) {
         return gitHub.checkoutPullRequest(number, path).map(added::appendAll).mapLeft(failure -> {
-            Either<GitFailure<GitError>, List<ExecutedCommand>> removed = git.removeWorktree(path, true);
+            Either<GitFailure<GitError>, List<ExecutedCommand>> removed =
+                    git.worktrees().remove(path, true);
             return new Failure.GitHub(
                     failure.error(),
                     added.appendAll(failure.commands()).appendAll(removed.fold(GitFailure::commands, ran -> ran)),

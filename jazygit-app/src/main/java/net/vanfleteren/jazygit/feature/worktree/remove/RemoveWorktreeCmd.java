@@ -92,11 +92,14 @@ public record RemoveWorktreeCmd(String location, boolean force, Option<BranchNam
         Path path = WorktreeCmd.path(location);
         return GitFailure.sequence(
                 () -> unlocking
-                        .map(reason -> GitFailure.<GitError, List<ExecutedCommand>>widen(git.lockWorktree(path, false)))
+                        .map(reason -> GitFailure.<GitError, List<ExecutedCommand>>widen(
+                                git.worktrees().lock(path, false)))
                         .getOrElse(GitFailure::nothing),
-                () -> git.removeWorktree(path, force)
+                () -> git.worktrees()
+                        .remove(path, force)
                         .mapLeft(failure -> unlocking
-                                .map(reason -> failure.followedBy(git.lockWorktree(path, reason)))
+                                .map(reason ->
+                                        failure.followedBy(git.worktrees().lock(path, reason)))
                                 .getOrElse(failure)),
                 () -> deleting.map(branch ->
                                 GitFailure.<GitError, List<ExecutedCommand>>widen(git.deleteLocalBranch(branch)))

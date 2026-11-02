@@ -27,7 +27,7 @@ import org.zeroturnaround.exec.ProcessResult;
  * Listing, adding and removing worktrees: the parser on fixed output of {@code git worktree list --porcelain -z},
  * and {@link CliGitInfoProvider} against a real repository.
  */
-class CliWorktreeTest {
+class CliWorktreesTest {
 
     private static final String A = "a".repeat(40);
     private static final String ZEROES = "0".repeat(40);
@@ -122,7 +122,7 @@ class CliWorktreeTest {
                                 false,
                                 Option.none(),
                                 true)),
-                CliWorktree.parse(raw, Path.of("/repos/app feature")).get());
+                CliWorktrees.parse(raw, Path.of("/repos/app feature")).get());
     }
 
     @Test
@@ -138,24 +138,25 @@ class CliWorktreeTest {
                         true,
                         Option.none(),
                         false)),
-                CliWorktree.parse(raw, Path.of("/repos/linked")).get());
+                CliWorktrees.parse(raw, Path.of("/repos/linked")).get());
     }
 
     @Test
     void aRepositoryWithoutCommitsHasABranchWithoutATipAndMalformedOutputIsAnError() {
         assertEquals(
                 List.of(Option.of(new Head.OnBranch(new BranchName("main"), Option.none()))),
-                CliWorktree.parse(
+                CliWorktrees.parse(
                                 worktree("worktree /repos/new", "HEAD " + ZEROES, "branch refs/heads/main"),
                                 Path.of("/repos/new"))
                         .get()
                         .map(Worktree::head));
         assertEquals(
                 new GitError.UnexpectedOutput("/repos/app"),
-                CliWorktree.parse(worktree("/repos/app"), Path.of("/repos/app")).getLeft());
+                CliWorktrees.parse(worktree("/repos/app"), Path.of("/repos/app"))
+                        .getLeft());
         assertEquals(
                 new GitError.UnexpectedOutput("not a sha"),
-                CliWorktree.parse(worktree("worktree /repos/app", "HEAD not a sha"), Path.of("/repos/app"))
+                CliWorktrees.parse(worktree("worktree /repos/app", "HEAD not a sha"), Path.of("/repos/app"))
                         .getLeft());
     }
 
@@ -174,7 +175,7 @@ class CliWorktreeTest {
                         Option.<Head>none(),
                         Option.<Head>none(),
                         Option.<Head>none()),
-                CliWorktree.parse(raw, Path.of("/repos/app")).get().map(Worktree::head));
+                CliWorktrees.parse(raw, Path.of("/repos/app")).get().map(Worktree::head));
     }
 
     @Test
@@ -202,12 +203,13 @@ class CliWorktreeTest {
         CliGitInfoProvider provider = CliGitInfoProvider.open(main).get();
         Path linked = main.resolveSibling("linked");
 
-        List<String> added = provider.addWorktree(Path.of("../linked"), new BranchName("feature"))
+        List<String> added = provider.worktrees()
+                .add(Path.of("../linked"), new BranchName("feature"))
                 .get()
                 .map(ExecutedCommand::line);
 
         assertEquals(List.of("git worktree add --quiet " + linked + " feature"), added);
-        List<Worktree> worktrees = provider.worktrees().get();
+        List<Worktree> worktrees = provider.worktrees().list().get();
         assertEquals(List.of(main, linked), worktrees.map(Worktree::path));
         assertEquals(List.of(true, false), worktrees.map(Worktree::current));
         assertEquals(List.of(true, false), worktrees.map(Worktree::main));
@@ -216,17 +218,17 @@ class CliWorktreeTest {
                 worktrees.map(Worktree::branch));
         assertEquals(
                 List.of(linked, main),
-                CliGitInfoProvider.open(linked).get().worktrees().get().map(Worktree::path));
+                CliGitInfoProvider.open(linked).get().worktrees().list().get().map(Worktree::path));
 
         Files.writeString(linked.resolve("new.txt"), "untracked\n");
         assertInstanceOf(
                 GitError.WorktreeHasChanges.class,
-                provider.removeWorktree(linked, false).getLeft().error());
+                provider.worktrees().remove(linked, false).getLeft().error());
         assertTrue(Files.exists(linked.resolve("new.txt")));
 
-        provider.removeWorktree(linked, true).get();
+        provider.worktrees().remove(linked, true).get();
         assertFalse(Files.exists(linked));
-        assertEquals(List.of(main), provider.worktrees().get().map(Worktree::path));
+        assertEquals(List.of(main), provider.worktrees().list().get().map(Worktree::path));
     }
 
     @Test
@@ -237,31 +239,33 @@ class CliWorktreeTest {
         git(main, "branch", "feature");
         CliGitInfoProvider provider = CliGitInfoProvider.open(main).get();
         Path linked = main.resolveSibling("linked");
-        provider.addWorktree(linked, new BranchName("feature")).get();
+        provider.worktrees().add(linked, new BranchName("feature")).get();
 
         assertEquals(
                 List.of("git worktree lock " + linked),
-                provider.lockWorktree(linked, true).get().map(ExecutedCommand::line));
+                provider.worktrees().lock(linked, true).get().map(ExecutedCommand::line));
         assertEquals(
                 List.of(Option.none(), Option.of("")),
-                provider.worktrees().get().map(Worktree::locked));
+                provider.worktrees().list().get().map(Worktree::locked));
         assertInstanceOf(
                 GitError.CommandFailed.class,
-                provider.lockWorktree(main, true).getLeft().error());
-        provider.lockWorktree(linked, false).get();
-        assertEquals(List.of(false, false), provider.worktrees().get().map(Worktree::isLocked));
+                provider.worktrees().lock(main, true).getLeft().error());
+        provider.worktrees().lock(linked, false).get();
+        assertEquals(List.of(false, false), provider.worktrees().list().get().map(Worktree::isLocked));
 
         assertEquals(
                 List.of("git worktree lock --reason 'on usb' " + linked),
-                provider.lockWorktree(linked, "on usb").get().map(ExecutedCommand::line));
-        assertEquals(Option.of("on usb"), provider.worktrees().get().last().locked());
+                provider.worktrees().lock(linked, "on usb").get().map(ExecutedCommand::line));
+        assertEquals(
+                Option.of("on usb"), provider.worktrees().list().get().last().locked());
         git(main, "worktree", "unlock", linked.toString());
         deleteRecursively(linked);
-        assertTrue(provider.worktrees().get().last().prunable());
+        assertTrue(provider.worktrees().list().get().last().prunable());
 
         assertEquals(
-                List.of("git worktree prune"), provider.pruneWorktrees().get().map(ExecutedCommand::line));
-        assertEquals(List.of(main), provider.worktrees().get().map(Worktree::path));
+                List.of("git worktree prune"),
+                provider.worktrees().prune().get().map(ExecutedCommand::line));
+        assertEquals(List.of(main), provider.worktrees().list().get().map(Worktree::path));
     }
 
     @Test
@@ -274,22 +278,23 @@ class CliWorktreeTest {
         CliGitInfoProvider provider = CliGitInfoProvider.open(main).get();
         Path dirty = main.resolveSibling("dirty");
         Path gone = main.resolveSibling("gone");
-        provider.addWorktree(dirty, new BranchName("dirty")).get();
-        provider.addWorktree(gone, new BranchName("gone")).get();
+        provider.worktrees().add(dirty, new BranchName("dirty")).get();
+        provider.worktrees().add(gone, new BranchName("gone")).get();
         Files.writeString(dirty.resolve("new.txt"), "untracked\n");
-        provider.lockWorktree(dirty, true).get();
-        provider.lockWorktree(gone, true).get();
+        provider.worktrees().lock(dirty, true).get();
+        provider.worktrees().lock(gone, true).get();
         deleteRecursively(gone);
-        provider.pruneWorktrees().get();
-        assertEquals(List.of(main, dirty, gone), provider.worktrees().get().map(Worktree::path));
+        provider.worktrees().prune().get();
+        assertEquals(
+                List.of(main, dirty, gone), provider.worktrees().list().get().map(Worktree::path));
 
         assertEquals(
                 List.of("git worktree remove --force --force " + dirty),
-                provider.removeWorktreeAnyway(dirty).get().map(ExecutedCommand::line));
-        provider.removeWorktreeAnyway(gone).get();
+                provider.worktrees().removeAnyway(dirty).get().map(ExecutedCommand::line));
+        provider.worktrees().removeAnyway(gone).get();
 
         assertFalse(Files.exists(dirty));
-        assertEquals(List.of(main), provider.worktrees().get().map(Worktree::path));
+        assertEquals(List.of(main), provider.worktrees().list().get().map(Worktree::path));
         provider.forceDeleteLocalBranch(new BranchName("gone")).get();
     }
 
@@ -311,13 +316,15 @@ class CliWorktreeTest {
         Path fromRemote = main.resolveSibling("from-remote");
 
         BranchName mainBranch = new BranchName("main");
-        List<String> added = provider.addWorktreeWithNewBranch(
+        List<String> added = provider.worktrees()
+                .addWithNewBranch(
                         fromLocal,
                         new BranchName("topic"),
                         new NewBranchStart.From(new BranchRef.Local(mainBranch), Option.of(mainBranch)))
                 .get()
                 .map(ExecutedCommand::line);
-        provider.addWorktreeWithNewBranch(
+        provider.worktrees()
+                .addWithNewBranch(
                         fromRemote,
                         new BranchName("shared"),
                         new NewBranchStart.Following(new RemoteBranch("origin", new BranchName("shared"))))
@@ -329,7 +336,7 @@ class CliWorktreeTest {
                         Option.of(new BranchName("main")),
                         Option.of(new BranchName("topic")),
                         Option.of(new BranchName("shared"))),
-                provider.worktrees().get().map(Worktree::branch));
+                provider.worktrees().list().get().map(Worktree::branch));
         assertEquals(
                 Option.of(new BranchName("main")),
                 CliConfig.parent(main, new BranchName("topic")).get());
@@ -350,8 +357,8 @@ class CliWorktreeTest {
         git(main, "commit", "-q", "--allow-empty", "-m", "Initial commit");
         CliGitInfoProvider provider = CliGitInfoProvider.open(main).get();
 
-        GitFailure<GitError.ProcessError> failure = provider.addWorktree(
-                        main.resolveSibling("other"), new BranchName("main"))
+        GitFailure<GitError.ProcessError> failure = provider.worktrees()
+                .add(main.resolveSibling("other"), new BranchName("main"))
                 .getLeft();
 
         assertInstanceOf(GitError.CommandFailed.class, failure.error());
@@ -366,10 +373,11 @@ class CliWorktreeTest {
         git(main, "branch", "topic");
         CliGitInfoProvider provider = CliGitInfoProvider.open(main).get();
 
-        assertTrue(provider.addDetachedWorktree(Path.of("../detached"), new BranchRef.Local(new BranchName("topic")))
+        assertTrue(provider.worktrees()
+                .addDetached(Path.of("../detached"), new BranchRef.Local(new BranchName("topic")))
                 .isRight());
 
-        Worktree detached = provider.worktrees().get().last();
+        Worktree detached = provider.worktrees().list().get().last();
         assertEquals(main.resolveSibling("detached"), detached.path());
         assertEquals(Option.none(), detached.branch());
         assertInstanceOf(Head.Detached.class, detached.head().get());

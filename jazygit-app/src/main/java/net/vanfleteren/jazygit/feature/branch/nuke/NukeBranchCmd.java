@@ -68,7 +68,7 @@ public record NukeBranchCmd(BranchName branch, Option<String> worktree, Option<R
 
     private List<Step> nuking(GitInfoProvider git) {
         Option<Step> removed = worktree.map(
-                location -> new Step(location, Option.of(git.removeWorktreeAnyway(WorktreeCmd.path(location)))));
+                location -> new Step(location, Option.of(git.worktrees().removeAnyway(WorktreeCmd.path(location)))));
         Step deleted = new Step(
                 branch.value(), Option.when(removed.forAll(Step::deleted), () -> git.forceDeleteLocalBranch(branch)));
         Option<Step> deletedRemote =
