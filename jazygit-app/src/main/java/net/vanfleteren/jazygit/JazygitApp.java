@@ -9,6 +9,7 @@ import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.elements.Column;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.TuiConfig;
+import dev.tamboui.tui.bindings.Actions;
 import dev.tamboui.tui.event.Event;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.MouseEvent;
@@ -143,10 +144,14 @@ public class JazygitApp extends ToolkitApp {
 
     /**
      * Dispatches what a key means wherever the focus is, if it means something there. An open popup owns the keys:
-     * what it leaves unhandled reaches neither the global keys nor TamboUI's quit.
+     * what it leaves unhandled reaches neither the global keys nor TamboUI's quit. Right, which no pane took, moves
+     * the focus from the pane into its content.
      */
     private EventResult handleGlobalKey(Event event) {
         if (event instanceof KeyEvent && model().popup().isDefined()) {
+            return EventResult.HANDLED;
+        }
+        if (event instanceof KeyEvent key && key.matches(Actions.MOVE_RIGHT) && focus.openFocusedContent()) {
             return EventResult.HANDLED;
         }
         return Option.of(event)
