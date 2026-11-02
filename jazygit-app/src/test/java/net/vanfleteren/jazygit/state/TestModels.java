@@ -15,6 +15,8 @@ import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.*;
+import net.vanfleteren.jazygit.settings.DiffStyle;
+import net.vanfleteren.jazygit.settings.Settings;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.ui.ErrorText;
 
@@ -39,13 +41,20 @@ public final class TestModels {
     public static final List<Commit> FEATURE_COMMITS =
             List.of(Fixtures.commit(new Sha("ffff"), "Ada", "ada@example.com", Instant.EPOCH, "Feature", ""));
 
+    /**
+     * The default settings but for the diffs, drawn plain: the style most tests were written against, before
+     * the rich one became the default.
+     */
+    public static final SettingsStore.Loaded PLAIN =
+            new SettingsStore.Loaded(Settings.DEFAULT.withDiffStyle(DiffStyle.PLAIN), Option.none());
+
     // The time of the programs started without one: it stands still.
     private static final Clock STILL = Clock.fixed(Instant.EPOCH, ZoneOffset.UTC);
 
     private TestModels() {}
 
     /**
-     * The program over {@code env}, started with the default settings at a time that stands still, telling no one
+     * The program over {@code env}, started with the {@link #PLAIN} settings at a time that stands still, telling no one
      * about bugs, changes to the model or the app stopping.
      */
     public static Program program(Env env, Executor io, Executor background, Executor ui) {
@@ -57,17 +66,7 @@ public final class TestModels {
      */
     public static Program program(Env env, Executor io, Executor background, Executor ui, Runnable modelChanged) {
         return Program.start(
-                env,
-                SettingsStore.Loaded.DEFAULT,
-                Option.none(),
-                Landing.START,
-                io,
-                background,
-                ui,
-                bug -> {},
-                modelChanged,
-                () -> {},
-                STILL);
+                env, PLAIN, Option.none(), Landing.START, io, background, ui, bug -> {}, modelChanged, () -> {}, STILL);
     }
 
     /**
@@ -109,7 +108,7 @@ public final class TestModels {
      * The sample model before its log is read, as {@link Program} has it.
      */
     private static Model branchesRead() {
-        Model model = started(Update.init("repo")).model();
+        Model model = started(Update.init("repo", PLAIN)).model();
         model = done(model, new Cmd.LoadStatus(), new LoadMsg.StatusLoaded(CLEAN))
                 .model();
         model = done(model, new Cmd.LoadBranches(), branchesLoaded(new AllBranches(BRANCHES, List.empty())))

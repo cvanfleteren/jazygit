@@ -23,11 +23,11 @@ class LayoutUpdateTest {
     void aStepWidensTheLeftColumnOfTheScreenShownAndKeepsIt() {
         Next next = Update.update(model, new LayoutMsg.Stepped(5));
 
-        Settings wider = Settings.DEFAULT.withRepositoryWidth(35);
+        Settings wider = TestModels.PLAIN.settings().withRepositoryWidth(35);
         assertEquals(wider, next.model().preferences().settings());
         assertEquals(35, next.model().preferences().leftWidth(Screen.REPOSITORY));
         assertEquals(30, next.model().preferences().leftWidth(Screen.PULL_REQUESTS));
-        assertEquals(List.of(new Cmd.SaveSettings(Settings.DEFAULT, wider)), next.cmds());
+        assertEquals(List.of(new Cmd.SaveSettings(TestModels.PLAIN.settings(), wider)), next.cmds());
     }
 
     @Test
@@ -35,14 +35,14 @@ class LayoutUpdateTest {
         Next next = Update.update(model.withScreen(Screen.PULL_REQUESTS), new LayoutMsg.Stepped(-5));
 
         assertEquals(
-                Settings.DEFAULT.withPullRequestsWidth(25),
+                TestModels.PLAIN.settings().withPullRequestsWidth(25),
                 next.model().preferences().settings());
     }
 
     @Test
     void theWidthStaysWithinItsRangeAndAStepPastItKeepsNothing() {
-        Model narrowest = model.mapPreferences(
-                preferences -> preferences.withSettings(Settings.DEFAULT.withRepositoryWidth(Settings.MIN_WIDTH)));
+        Model narrowest = model.mapPreferences(preferences ->
+                preferences.withSettings(TestModels.PLAIN.settings().withRepositoryWidth(Settings.MIN_WIDTH)));
 
         Next next = Update.update(narrowest, new LayoutMsg.Stepped(-5));
 
@@ -63,15 +63,15 @@ class LayoutUpdateTest {
         Next dragged = Update.update(model, new LayoutMsg.Resized(Screen.REPOSITORY, 90));
 
         assertEquals(Settings.MAX_WIDTH, dragged.model().preferences().leftWidth(Screen.REPOSITORY));
-        assertEquals(Settings.DEFAULT, dragged.model().preferences().settings());
+        assertEquals(TestModels.PLAIN.settings(), dragged.model().preferences().settings());
         assertEquals(List.of(), dragged.cmds());
 
         Next settled = Update.update(dragged.model(), new LayoutMsg.Settled(Screen.REPOSITORY));
 
-        Settings kept = Settings.DEFAULT.withRepositoryWidth(Settings.MAX_WIDTH);
+        Settings kept = TestModels.PLAIN.settings().withRepositoryWidth(Settings.MAX_WIDTH);
         assertEquals(kept, settled.model().preferences().settings());
         assertEquals(Option.none(), settled.model().preferences().dragged());
-        assertEquals(List.of(new Cmd.SaveSettings(Settings.DEFAULT, kept)), settled.cmds());
+        assertEquals(List.of(new Cmd.SaveSettings(TestModels.PLAIN.settings(), kept)), settled.cmds());
     }
 
     @Test
@@ -103,15 +103,15 @@ class LayoutUpdateTest {
         Next dragged = Update.update(model, new LayoutMsg.PaneResized(Screen.REPOSITORY, 0, 35));
 
         assertEquals(List.of(35, 10, 30), dragged.model().preferences().leftHeights(Screen.REPOSITORY));
-        assertEquals(Settings.DEFAULT, dragged.model().preferences().settings());
+        assertEquals(TestModels.PLAIN.settings(), dragged.model().preferences().settings());
         assertEquals(List.of(), dragged.cmds());
 
         Next settled = Update.update(dragged.model(), new LayoutMsg.PaneSettled(Screen.REPOSITORY));
 
-        Settings kept = Settings.DEFAULT.withRepositoryHeights(List.of(35, 10, 30));
+        Settings kept = TestModels.PLAIN.settings().withRepositoryHeights(List.of(35, 10, 30));
         assertEquals(kept, settled.model().preferences().settings());
         assertEquals(Option.none(), settled.model().preferences().draggedHeights());
-        assertEquals(List.of(new Cmd.SaveSettings(Settings.DEFAULT, kept)), settled.cmds());
+        assertEquals(List.of(new Cmd.SaveSettings(TestModels.PLAIN.settings(), kept)), settled.cmds());
     }
 
     @Test

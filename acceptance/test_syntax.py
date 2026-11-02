@@ -12,8 +12,7 @@ def staged_java_change(repo, jazygit, env, settings=""):
     repo("add", "A.java")
     if settings:
         config = Path(env["XDG_CONFIG_HOME"]) / "jazygit" / "config.toml"
-        config.parent.mkdir(parents=True, exist_ok=True)
-        config.write_text("[ui]\n" + settings)
+        config.write_text(config.read_text() + settings)
     ui = jazygit()
     ui.files.select(FilesPane.ALL)
     ui.app.wait_for("diff --git a/A.java b/A.java")

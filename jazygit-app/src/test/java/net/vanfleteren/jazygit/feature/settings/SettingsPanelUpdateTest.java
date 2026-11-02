@@ -111,7 +111,7 @@ class SettingsPanelUpdateTest {
                         typed(first.openPopup(new GhExecutablePopup("")), "/new/gh"),
                         new SettingsPanelMsg.GhExecutableEntered())
                 .model();
-        Settings chosen = Settings.DEFAULT.withGhExecutable(Option.of("/new/gh"));
+        Settings chosen = TestModels.PLAIN.settings().withGhExecutable(Option.of("/new/gh"));
 
         Next latestFirst = Update.update(
                 second, new SettingsPanelMsg.GhExecutableChecked(Option.of("/new/gh"), Either.right("2.102.0")));
@@ -130,7 +130,7 @@ class SettingsPanelUpdateTest {
 
     @Test
     void aCheckOfAnotherGhExecutableIsDroppedOnceTheOneOnThePathWasEnteredLast() {
-        Settings saved = Settings.DEFAULT.withGhExecutable(Option.of("/opt/gh/bin/gh"));
+        Settings saved = TestModels.PLAIN.settings().withGhExecutable(Option.of("/opt/gh/bin/gh"));
         Model first = Update.update(
                         typed(
                                 TestModels.loaded()
@@ -153,7 +153,9 @@ class SettingsPanelUpdateTest {
         assertEquals(List.empty(), older.cmds());
         assertEquals(Option.none(), latest.model().preferences().settings().ghExecutable());
         assertEquals(
-                List.of(new Cmd.SaveSettings(saved, Settings.DEFAULT), new SettingsPanelCmd.Reopen(Landing.START)),
+                List.of(
+                        new Cmd.SaveSettings(saved, TestModels.PLAIN.settings()),
+                        new SettingsPanelCmd.Reopen(Landing.START)),
                 latest.cmds());
     }
 
@@ -168,7 +170,7 @@ class SettingsPanelUpdateTest {
 
     @Test
     void aGhExecutableThatRunsIsKeptAndTheRepositoryShownAgain() {
-        Settings chosen = Settings.DEFAULT.withGhExecutable(Option.of("/opt/gh/bin/gh"));
+        Settings chosen = TestModels.PLAIN.settings().withGhExecutable(Option.of("/opt/gh/bin/gh"));
 
         Next next = Update.update(
                 TestModels.loaded().mapJobs(jobs -> jobs.withGhExecutableEntered(Option.of("/opt/gh/bin/gh"))),
@@ -176,7 +178,9 @@ class SettingsPanelUpdateTest {
 
         assertEquals(chosen, next.model().preferences().settings());
         assertEquals(
-                List.of(new Cmd.SaveSettings(Settings.DEFAULT, chosen), new SettingsPanelCmd.Reopen(Landing.START)),
+                List.of(
+                        new Cmd.SaveSettings(TestModels.PLAIN.settings(), chosen),
+                        new SettingsPanelCmd.Reopen(Landing.START)),
                 next.cmds());
     }
 
@@ -202,7 +206,7 @@ class SettingsPanelUpdateTest {
                 TestModels.loaded().mapJobs(jobs -> jobs.withGhExecutableEntered(Option.of("/nowhere/gh"))),
                 new SettingsPanelMsg.GhExecutableChecked(Option.of("/nowhere/gh"), Either.left(failure)));
 
-        assertEquals(Settings.DEFAULT, next.model().preferences().settings());
+        assertEquals(TestModels.PLAIN.settings(), next.model().preferences().settings());
         assertEquals(List.empty(), next.cmds());
         assertEquals(
                 Option.of(new ErrorPopup(new AppError.GhExecutableUnusable(Option.of("/nowhere/gh"), failure))),
