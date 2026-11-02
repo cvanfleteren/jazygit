@@ -56,7 +56,7 @@ overrides, from the status to stashes, checkout, push, the index and commits.
    stashes and the pull requests take their flags from `CliDiff`, push reads `CliConfig`, the branches count through
    `CliLog`, and fetch, pull, push and the branches run through `CliRemote`. That stays as it is: a `Cli` role class
    keeps what another one calls as a package-private static method (`CliStashes.pushQuietly`,
-   `CliCheckouts.recordParent`, `CliDiffs.flags`), and the other calls it. A role class never holds another role, so
+   `CliCheckout.recordParent`, `CliDiffs.flags`), and the other calls it. A role class never holds another role, so
    none is built before another, and a stub of one role never changes what another one runs. What belongs to no role
    stays a static helper of its own: the plumbing of an interactive rebase in `CliRebase`, `CliInProgress`,
    `GitOutput` and `GitProcess`. Method names are short within their role: `branches().rename`, `stashes().drop`,
@@ -73,8 +73,8 @@ overrides, from the status to stashes, checkout, push, the index and commits.
    those credentials, in place of whatever `Remotes` it had. The `Cli` role classes are package-private, and an
    ArchUnit rule keeps the app away from them.
 4. **The app takes the whole `Git`.** `Env.git()` is a `Git`, and `GitOperationCmd.perform` takes one: a command reads
-   `git.branches().rename(...)`. Only a plain helper that uses a single role takes that role, as
-   `GitHubAccount.configured` takes `Config`.
+   `git.branches().rename(...)`. Only a plain helper that uses a single role takes that role; `GitHubAccount`, which
+   reads the configuration and the URLs of the remotes, takes the whole `Git`.
 5. **Every signature keeps its error type.** The mix of `ProcessError`, `GitError`, `GitFailure<GitError>` and
    `GitFailure<ProcessError>`, and the `baseDistance` that swallows its errors, are left for a later change, so that
    this one only moves code.
