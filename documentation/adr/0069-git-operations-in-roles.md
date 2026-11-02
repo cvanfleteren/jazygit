@@ -1,6 +1,6 @@
-# 68. Git operations in roles
+# 69. Git operations in roles
 
-Date: 2026-11-01
+Date: 2026-11-02
 
 ## Context
 
@@ -51,16 +51,27 @@ overrides, from the status to stashes, checkout, push, the index and commits.
 
    A helper that serves one role becomes its class (`CliStash` becomes `CliStashes implements Stashes`, its static
    methods instance methods on the worktree). The helpers of a role that draws on several are merged into its class.
-   Only what several roles share stays a package-private static helper: the plumbing of an interactive rebase in
-   `CliRebase`, `CliLog.resolve`, `CliInProgress.markers`, `GitOutput` and `GitProcess`. Method names are short within
-   their role: `branches().rename`, `stashes().drop`, `worktrees().remove`.
+   The helpers call each other today: a checkout with a stash pushes and pops it quietly through `CliStash`, moving
+   commits checks out through `CliCheckout`, adding a worktree records its parent through `CliCheckout`, the diffs, the
+   stashes and the pull requests take their flags from `CliDiff`, push reads `CliConfig`, the branches count through
+   `CliLog`, and fetch, pull, push and the branches run through `CliRemote`. That stays as it is: a `Cli` role class
+   keeps what another one calls as a package-private static method (`CliStashes.pushQuietly`,
+   `CliCheckouts.recordParent`, `CliDiffs.flags`), and the other calls it. A role class never holds another role, so
+   none is built before another, and a stub of one role never changes what another one runs. What belongs to no role
+   stays a static helper of its own: the plumbing of an interactive rebase in `CliRebase`, `CliInProgress`,
+   `GitOutput` and `GitProcess`. Method names are short within their role: `branches().rename`, `stashes().drop`,
+   `worktrees().remove`.
 2. **Everything that passes credentials to git is in `Remotes`.** That moves `deleteBranch` out of the branches and
    `pullRequestFiles` out of the diffs, with their signatures as they are. `Remotes` is the only role holding the
-   credentials, and `withCredentials` replaces only it.
+   credentials. `Diffs.pullRequestFileChanges` reads the commits that `Remotes.pullRequestFiles` fetched, so it
+   assumes that one ran first, as the files pane of a pull request does.
 3. **The roles are reached through a record.** `Git(Path worktree, String repositoryName, Status status, Branches
-   branches, …)`, with Lombok's `@With`. The worktree and the name of the repository are values, no longer operations.
-   One public factory, `CliGit.open(Path)` and `CliGit.init(Path)`, gives a `Git`. The `Cli` role classes are
-   package-private, and an ArchUnit rule keeps the app away from them.
+   branches, …)`. The worktree and the name of the repository are values, no longer operations; the name is read
+   once, when the repository is opened. Lombok's `@With` is on the roles only, so a `Git` cannot be given another
+   worktree than the one its roles run git in. One public factory, `CliGit`, gives a `Git`: `open(Path)`,
+   `init(Path)`, and `withCredentials(Git, Supplier<Map<String, String>>)`, which gives the `Git` a `CliRemotes` with
+   those credentials, in place of whatever `Remotes` it had. The `Cli` role classes are package-private, and an
+   ArchUnit rule keeps the app away from them.
 4. **The app takes the whole `Git`.** `Env.git()` is a `Git`, and `GitOperationCmd.perform` takes one: a command reads
    `git.branches().rename(...)`. Only a plain helper that uses a single role takes that role, as
    `GitHubAccount.configured` takes `Config`.
@@ -88,7 +99,9 @@ The split is done one role at a time, each in a pull request stacked on the one 
   tests is rewritten against the roles.
 - A test that faked several roles in one object needs one fake per role; `ProgramTest` the most.
 - `Remotes` holds operations that, by the git command they run, belong elsewhere (`deleteBranch`, `pullRequestFiles`):
-  where credentials go decides.
+  where credentials go decides. A test that stubs `Remotes` but keeps the real `Diffs` reads the files of a pull
+  request whose commits were never fetched.
+- A `Git` passed through `CliGit.withCredentials` gets a real `Remotes`, also when its other roles are stubs.
 - The error types stay as inconsistent as before, now spread over the roles.
 - `GitHub` keeps the three-file pattern for now.
 
