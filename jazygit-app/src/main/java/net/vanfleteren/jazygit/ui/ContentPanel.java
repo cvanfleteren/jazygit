@@ -731,13 +731,15 @@ public final class ContentPanel {
 
         /**
          * {@code text} scrolled {@code column} columns sideways, at {@code row} in an area {@code height} lines high:
-         * the lines that show without their first columns. The element scrolls no further than its last line at its
-         * bottom, and the lines of another height after them are cut too, in case the area grew since.
+         * the lines that show without their first columns. The height is that of the frame before, so the lines are
+         * cut that would show in an area up to twice as high, which the element scrolls up from its last line at its
+         * bottom; all of them before the area was ever drawn.
          */
         private static Text sideways(Text text, int column, int row, int height) {
             Vector<Line> lines = Vector.ofAll(text.lines());
-            int top = Math.clamp(row, 0, Math.max(0, lines.size() - height));
-            return Text.from(Vector.range(top, Math.min(lines.size(), top + 2 * height))
+            int high = height > 0 ? 2 * height : lines.size();
+            int top = Math.clamp(row, 0, Math.max(0, lines.size() - high));
+            return Text.from(Vector.range(top, Math.min(lines.size(), row + high))
                     .foldLeft(lines, (done, at) -> done.update(at, ContentPanel.sideways(done.get(at), column)))
                     .toJavaList());
         }
@@ -768,8 +770,7 @@ public final class ContentPanel {
         /**
          * {@code body}, styled in {@code theme} as {@code text}, with where the stops of its cursor start, if it has
          * one.
-         */
-        /**
+         *
          * @param widest how wide the widest line of {@code text} is, which the tint of the cursor never makes wider
          */
         private record Styled(Body body, ThemeName theme, Text text, Vector<RichDiff.Stop> stops, int widest) {

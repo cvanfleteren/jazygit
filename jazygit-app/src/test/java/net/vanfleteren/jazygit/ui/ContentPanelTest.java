@@ -265,6 +265,38 @@ class ContentPanelTest {
     }
 
     @Test
+    void allTheLinesThatShowAreScrolledSidewaysAlsoWhenTheAreaGrowsAtTheBottom() throws Exception {
+        // The model takes where the area is scrolled to, as the app's does.
+        java.util.concurrent.atomic.AtomicReference<Model> model =
+                new java.util.concurrent.atomic.AtomicReference<>(showingCommit(List.range(0, 200)
+                        .map(i -> "+%03d".formatted(i) + "x".repeat(150))
+                        .mkString("\n")));
+        ContentPanel scrolling = new ContentPanel(
+                Theme.SpanStyles.NONE,
+                () -> false,
+                id -> {},
+                msg -> model.set(Update.update(model.get(), msg).model()));
+        String area = scrolling.areaOfPane(model.get(), CommitsPanel.ID).get();
+
+        String screen;
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(
+                () -> scrolling.render(model.get(), area), new dev.tamboui.layout.Size(100, 30))) {
+            SettledPilot.focus(testRunner, area);
+            RenderedText.ofLarge(testRunner, () -> scrolling.render(model.get(), area));
+            SettledPilot.of(testRunner).press(KeyCode.END);
+            List.range(0, 3).forEach(i -> SettledPilot.of(testRunner).press(KeyCode.RIGHT));
+            SettledPilot.of(testRunner).pause();
+            // On a taller screen, the area shows lines above those it showed.
+            screen = RenderedText.ofTall(testRunner, () -> scrolling.render(model.get(), area));
+        }
+
+        // Each line shows without its first three columns: only the last digit of its number is left.
+        assertTrue(screen.contains("│9xxx"), screen);
+        assertFalse(
+                java.util.regex.Pattern.compile("│\\+?\\d\\d").matcher(screen).find(), screen);
+    }
+
+    @Test
     void sidewaysCutsTheFirstColumnsOffALineKeepingTheStylesOfItsSpans() {
         Style red = Style.EMPTY.fg(Color.RED);
         Style blue = Style.EMPTY.fg(Color.BLUE);
