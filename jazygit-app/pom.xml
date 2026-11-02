@@ -50,6 +50,11 @@
             <groupId>dev.tamboui</groupId>
             <artifactId>tamboui-markdown</artifactId>
         </dependency>
+        <!-- Finds the code blocks of a review remark, which are drawn as wide as their lines. -->
+        <dependency>
+            <groupId>org.commonmark</groupId>
+            <artifactId>commonmark</artifactId>
+        </dependency>
         <dependency>
             <groupId>dev.tamboui</groupId>
             <artifactId>tamboui-panama-backend</artifactId>

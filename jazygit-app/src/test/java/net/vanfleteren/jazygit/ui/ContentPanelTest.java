@@ -2,6 +2,9 @@ package net.vanfleteren.jazygit.ui;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import dev.tamboui.style.Color;
+import dev.tamboui.style.Style;
+import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.event.EventResult;
@@ -201,6 +204,118 @@ class ContentPanelTest {
     }
 
     @Test
+    void hAndLScrollAFocusedAreaSidewaysAsTheArrowsDo() throws Exception {
+        java.util.List<Msg> dispatched = new java.util.ArrayList<>();
+        // The model takes where the area is scrolled to, as the app's does.
+        java.util.concurrent.atomic.AtomicReference<Model> model =
+                new java.util.concurrent.atomic.AtomicReference<>(showingCommit("+0123456789" + "x".repeat(300)));
+        ContentPanel scrolling = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, msg -> {
+            dispatched.add(msg);
+            model.set(Update.update(model.get(), msg).model());
+        });
+        String area = scrolling.areaOfPane(model.get(), CommitsPanel.ID).get();
+
+        String screen;
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> scrolling.render(model.get(), area))) {
+            SettledPilot.focus(testRunner, area);
+            RenderedText.ofLarge(testRunner, () -> scrolling.render(model.get(), area));
+            List.of('l', 'l', 'h').forEach(key -> SettledPilot.of(testRunner).press(key));
+            SettledPilot.of(testRunner).pause();
+            screen = RenderedText.ofLarge(testRunner, () -> scrolling.render(model.get(), area));
+        }
+
+        assertEquals(
+                List.of(1, 2, 1),
+                List.ofAll(dispatched)
+                        .map(msg -> ((Msg.ContentScrolled) msg).to().column()));
+        // What shows is scrolled too, not only where the model has it.
+        assertTrue(screen.contains("│0123456789x"), screen);
+        assertFalse(screen.contains("+0123456789"), screen);
+    }
+
+    @Test
+    void rightStopsWithTheEndOfTheWidestLineAtTheEdgeOfTheAreaBesideItsScrollbar() throws Exception {
+        java.util.List<Msg> dispatched = new java.util.ArrayList<>();
+        // The model takes where the area is scrolled to, as the app's does.
+        java.util.concurrent.atomic.AtomicReference<Model> model =
+                new java.util.concurrent.atomic.AtomicReference<>(showingCommit("+" + "x".repeat(110) + "END"));
+        ContentPanel scrolling = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, msg -> {
+            dispatched.add(msg);
+            model.set(Update.update(model.get(), msg).model());
+        });
+        String area = scrolling.areaOfPane(model.get(), CommitsPanel.ID).get();
+
+        String screen;
+        // The frames the keys draw are as large as the screen read at the end, which the area learns its width from.
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(
+                () -> scrolling.render(model.get(), area), new dev.tamboui.layout.Size(100, 30))) {
+            SettledPilot.focus(testRunner, area);
+            RenderedText.ofLarge(testRunner, () -> scrolling.render(model.get(), area));
+            List.range(0, 40).forEach(i -> SettledPilot.of(testRunner).press(KeyCode.RIGHT));
+            SettledPilot.of(testRunner).pause();
+            screen = RenderedText.ofLarge(testRunner, () -> scrolling.render(model.get(), area));
+        }
+
+        List<Integer> columns = List.ofAll(dispatched)
+                .map(msg -> ((Msg.ContentScrolled) msg).to().column());
+        int last = columns.last();
+        assertTrue(last > 0 && last < 40, columns.toString());
+        assertEquals(List.fill(40 - columns.indexOf(last), last), columns.drop(columns.indexOf(last)));
+        assertTrue(java.util.regex.Pattern.compile("xEND[█│]").matcher(screen).find(), screen);
+    }
+
+    @Test
+    void allTheLinesThatShowAreScrolledSidewaysAlsoWhenTheAreaGrowsAtTheBottom() throws Exception {
+        // The model takes where the area is scrolled to, as the app's does.
+        java.util.concurrent.atomic.AtomicReference<Model> model =
+                new java.util.concurrent.atomic.AtomicReference<>(showingCommit(List.range(0, 200)
+                        .map(i -> "+%03d".formatted(i) + "x".repeat(150))
+                        .mkString("\n")));
+        ContentPanel scrolling = new ContentPanel(
+                Theme.SpanStyles.NONE,
+                () -> false,
+                id -> {},
+                msg -> model.set(Update.update(model.get(), msg).model()));
+        String area = scrolling.areaOfPane(model.get(), CommitsPanel.ID).get();
+
+        String screen;
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(
+                () -> scrolling.render(model.get(), area), new dev.tamboui.layout.Size(100, 30))) {
+            SettledPilot.focus(testRunner, area);
+            RenderedText.ofLarge(testRunner, () -> scrolling.render(model.get(), area));
+            SettledPilot.of(testRunner).press(KeyCode.END);
+            List.range(0, 3).forEach(i -> SettledPilot.of(testRunner).press(KeyCode.RIGHT));
+            SettledPilot.of(testRunner).pause();
+            // On a taller screen, the area shows lines above those it showed.
+            screen = RenderedText.ofTall(testRunner, () -> scrolling.render(model.get(), area));
+        }
+
+        // Each line shows without its first three columns: only the last digit of its number is left.
+        assertTrue(screen.contains("│9xxx"), screen);
+        assertFalse(
+                java.util.regex.Pattern.compile("│\\+?\\d\\d").matcher(screen).find(), screen);
+    }
+
+    @Test
+    void sidewaysCutsTheFirstColumnsOffALineKeepingTheStylesOfItsSpans() {
+        Style red = Style.EMPTY.fg(Color.RED);
+        Style blue = Style.EMPTY.fg(Color.BLUE);
+        Style green = Style.EMPTY.fg(Color.GREEN);
+        Line line = Line.from(Span.styled("ab", red), Span.styled("cd", blue), Span.styled("漢e", green));
+
+        assertEquals(line, ContentPanel.sideways(line, 0));
+        assertEquals(
+                Line.from(Span.styled("b", red), Span.styled("cd", blue), Span.styled("漢e", green)),
+                ContentPanel.sideways(line, 1));
+        assertEquals(Line.from(Span.styled("cd", blue), Span.styled("漢e", green)), ContentPanel.sideways(line, 2));
+        assertEquals(Line.from(Span.styled("d", blue), Span.styled("漢e", green)), ContentPanel.sideways(line, 3));
+        // Through the wide character: a space for its column past the cut, in the style of its span.
+        assertEquals(Line.from(Span.styled(" e", green)), ContentPanel.sideways(line, 5));
+        assertEquals(Line.from(Span.styled("e", green)), ContentPanel.sideways(line, 6));
+        assertEquals(Line.from(java.util.List.of()), ContentPanel.sideways(line, 9));
+    }
+
+    @Test
     void leftLeavesADiffOfTheFilesPaneOnceItIsScrolledAllTheWayLeft() throws Exception {
         java.util.concurrent.atomic.AtomicInteger leaves = new java.util.concurrent.atomic.AtomicInteger();
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
@@ -227,6 +342,8 @@ class ContentPanelTest {
             RenderedText.ofLarge(testRunner, () -> scrolling.render(model.get(), area));
             SettledPilot.of(testRunner).press(KeyCode.RIGHT);
             SettledPilot.of(testRunner).press(KeyCode.LEFT);
+            // h scrolls, but does not leave as Left does.
+            SettledPilot.of(testRunner).press('h');
             SettledPilot.of(testRunner).pause();
             assertEquals(0, leaves.get());
             SettledPilot.of(testRunner).press(KeyCode.LEFT);
@@ -235,7 +352,7 @@ class ContentPanelTest {
 
         assertEquals(1, leaves.get());
         assertEquals(
-                List.of(1, 0),
+                List.of(1, 0, 0),
                 List.ofAll(dispatched)
                         .map(msg -> ((Msg.ContentScrolled) msg).to().column()));
     }
@@ -588,6 +705,36 @@ class ContentPanelTest {
     }
 
     @Test
+    void lScrollsTheDiffOfAPullRequestSidewaysWithItsCursorOnAThreadToAWideSuggestion() throws Exception {
+        java.util.List<Msg> dispatched = new java.util.ArrayList<>();
+        // The model takes where the area is scrolled to, as the app's does.
+        java.util.concurrent.atomic.AtomicReference<Model> model = new java.util.concurrent.atomic.AtomicReference<>(
+                pullRequestDiff("Wrap it:\n\n```suggestion\n" + "0123456789" + "x".repeat(300) + "\n```"));
+        ContentPanel reviewing = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, msg -> {
+            dispatched.add(msg);
+            model.set(Update.update(model.get(), msg).model());
+        });
+        String area = reviewing.areaOfPane(model.get(), FilesPanel.ID).get();
+
+        String screen;
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> reviewing.render(model.get(), area))) {
+            SettledPilot.focus(testRunner, area);
+            RenderedText.ofLarge(testRunner, () -> reviewing.render(model.get(), area));
+            SettledPilot.of(testRunner).press('n');
+            SettledPilot.of(testRunner).pause();
+            RenderedText.ofLarge(testRunner, () -> reviewing.render(model.get(), area));
+            SettledPilot.of(testRunner).press('l');
+            SettledPilot.of(testRunner).pause();
+            screen = RenderedText.ofLarge(testRunner, () -> reviewing.render(model.get(), area));
+        }
+
+        assertEquals(1, ((Msg.ContentScrolled) dispatched.getLast()).to().column(), dispatched.toString());
+        // The whole diff shows a column further, its bar too, which starts with a blank.
+        assertTrue(screen.contains("│modified  a.txt"), screen);
+        assertTrue(screen.contains("│0123456789x"), screen);
+    }
+
+    @Test
     void leftDropsAnOpenRangeBeforeItLeavesTheDiffAsEscapeDoes() throws Exception {
         java.util.concurrent.atomic.AtomicInteger leaves = new java.util.concurrent.atomic.AtomicInteger();
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
@@ -642,6 +789,13 @@ class ContentPanelTest {
      * line, with a thread on it.
      */
     private static Model pullRequestDiff() {
+        return pullRequestDiff("Why?");
+    }
+
+    /**
+     * {@link #pullRequestDiff()}, the one comment of its thread saying {@code body}.
+     */
+    private static Model pullRequestDiff(String body) {
         CommitFilesView.Changes of = new CommitFilesView.Changes.OfPullRequest(
                 new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
         CommitFile file = new CommitFile("a.txt", ChangeType.MODIFIED);
@@ -658,7 +812,7 @@ class ContentPanelTest {
                 List.of(new net.vanfleteren.jazygit.gh.model.ReviewThread.Comment(
                         "bob",
                         Instant.EPOCH,
-                        "Why?",
+                        body,
                         Option.none(),
                         "C",
                         "1",

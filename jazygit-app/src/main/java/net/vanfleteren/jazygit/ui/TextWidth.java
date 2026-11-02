@@ -49,6 +49,22 @@ public final class TextWidth {
     }
 
     /**
+     * What is left of {@code text} after its first {@code width} columns. A character those columns end in the middle
+     * of leaves a space for each of its columns after them.
+     */
+    public static String rest(String text, int width) {
+        String start = start(text, width);
+        String rest = text.substring(start.length());
+        int missing = width - of(start);
+        if (missing <= 0 || rest.isEmpty()) {
+            return rest;
+        }
+        // The start stops short only before a character two columns wide, which the cut splits.
+        String split = CharWidth.substringByWidth(rest, 2);
+        return " ".repeat(Math.max(0, of(split) - missing)) + rest.substring(split.length());
+    }
+
+    /**
      * {@code text} with spaces before it to take {@code width} columns, as it is when it is that wide or wider.
      */
     public static String alignRight(String text, int width) {
