@@ -20,9 +20,9 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.model.SampleData;
-import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import net.vanfleteren.jazygit.ui.Theme;
 
@@ -48,11 +48,7 @@ final class TestApp extends JazygitApp {
     }
 
     TestApp(Env env) {
-        super(
-                env,
-                SettingsStore.Loaded.DEFAULT,
-                Option.none(),
-                Theme.createEngine().get());
+        super(env, TestModels.PLAIN, Option.none(), Theme.createEngine().get());
     }
 
     void start(ToolkitTestRunner testRunner) {

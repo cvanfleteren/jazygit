@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.settings.Settings;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Model;
@@ -31,7 +30,8 @@ class ThemeUpdateTest {
         Next previewed = Update.update(open, new ThemeMsg.Previewed(ThemeName.DARCULA));
 
         assertEquals(ThemeName.DARCULA, previewed.model().preferences().theme());
-        assertEquals(Settings.DEFAULT, previewed.model().preferences().settings());
+        assertEquals(
+                TestModels.PLAIN.settings(), previewed.model().preferences().settings());
         assertEquals(List.empty(), previewed.cmds());
         assertEquals(open.popup(), previewed.model().popup());
     }
@@ -65,7 +65,8 @@ class ThemeUpdateTest {
         assertEquals(ThemeName.LIGHT, chosen.model().preferences().theme());
         assertEquals(Option.none(), chosen.model().preferences().themeOverride());
         assertEquals(
-                List.of(new Cmd.SaveSettings(Settings.DEFAULT, Settings.DEFAULT.withTheme(ThemeName.LIGHT))),
+                List.of(new Cmd.SaveSettings(
+                        TestModels.PLAIN.settings(), TestModels.PLAIN.settings().withTheme(ThemeName.LIGHT))),
                 chosen.cmds());
     }
 
@@ -97,7 +98,8 @@ class ThemeUpdateTest {
         assertEquals(Option.none(), chosen.model().popup(ThemePopup.class));
         assertEquals(ThemeName.DARCULA, chosen.model().preferences().settings().theme());
         assertEquals(
-                List.of(new Cmd.SaveSettings(Settings.DEFAULT, Settings.DEFAULT.withTheme(ThemeName.DARCULA))),
+                List.of(new Cmd.SaveSettings(
+                        TestModels.PLAIN.settings(), TestModels.PLAIN.settings().withTheme(ThemeName.DARCULA))),
                 chosen.cmds());
     }
 
@@ -139,7 +141,8 @@ class ThemeUpdateTest {
         assertEquals(Option.none(), chosen.model().preferences().themeOverride());
         assertEquals(ThemeName.LIGHT, chosen.model().preferences().theme());
         assertEquals(
-                List.of(new Cmd.SaveSettings(Settings.DEFAULT, Settings.DEFAULT.withTheme(ThemeName.LIGHT))),
+                List.of(new Cmd.SaveSettings(
+                        TestModels.PLAIN.settings(), TestModels.PLAIN.settings().withTheme(ThemeName.LIGHT))),
                 chosen.cmds());
     }
 

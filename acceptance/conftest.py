@@ -143,7 +143,12 @@ def class_archive(java, jar, tmp_path_factory) -> list:
 def env(tmp_path) -> dict:
     home = tmp_path / "home"
     home.mkdir()
-    return isolated_env(home)
+    env = isolated_env(home)
+    # The diffs drawn plain: the style most tests were written against, before the rich one became the default.
+    config = Path(env["XDG_CONFIG_HOME"]) / "jazygit" / "config.toml"
+    config.parent.mkdir(parents=True)
+    config.write_text('[ui]\ndiff-style = "plain"\n')
+    return env
 
 
 @pytest.fixture

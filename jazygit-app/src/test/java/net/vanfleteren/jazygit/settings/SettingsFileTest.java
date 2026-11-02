@@ -304,10 +304,10 @@ class SettingsFileTest {
     void readsTheDiffStyleAndAnUnknownOneIsInvalid() throws IOException {
         write("""
                 [ui]
-                diff-style = "rich"
+                diff-style = "plain"
                 """);
         assertEquals(
-                new Loaded(Settings.DEFAULT.withDiffStyle(DiffStyle.RICH), Option.none()),
+                new Loaded(Settings.DEFAULT.withDiffStyle(DiffStyle.PLAIN), Option.none()),
                 settingsFile().load());
 
         write("""
@@ -383,12 +383,12 @@ class SettingsFileTest {
 
     @Test
     void savingTheDiffStyleAndGoingBackToTheDefaultRemovesIt() throws IOException {
-        Settings rich = Settings.DEFAULT.withDiffStyle(DiffStyle.RICH);
-        settingsFile().save(Settings.DEFAULT, rich);
+        Settings plain = Settings.DEFAULT.withDiffStyle(DiffStyle.PLAIN);
+        settingsFile().save(Settings.DEFAULT, plain);
 
-        assertEquals(rich, settingsFile().load().settings());
+        assertEquals(plain, settingsFile().load().settings());
 
-        settingsFile().save(rich, Settings.DEFAULT);
+        settingsFile().save(plain, Settings.DEFAULT);
 
         assertFalse(Files.readString(file()).contains("diff-style"), Files.readString(file()));
     }

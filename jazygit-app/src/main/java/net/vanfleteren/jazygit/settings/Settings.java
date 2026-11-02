@@ -70,7 +70,8 @@ public record Settings(
             Option.none(),
             DEFAULT_WIDTH,
             DEFAULT_WIDTH,
-            DiffStyle.PLAIN,
+            // The default has become rich diffs.
+            DiffStyle.RICH,
             true,
             true,
             DEFAULT_REPOSITORY_HEIGHTS,

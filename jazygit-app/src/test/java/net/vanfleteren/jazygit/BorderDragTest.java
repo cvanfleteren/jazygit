@@ -15,7 +15,6 @@ import io.vavr.control.Option;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.feature.layout.LayoutMsg;
 import net.vanfleteren.jazygit.feature.theme.ThemePopup;
-import net.vanfleteren.jazygit.settings.Settings;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -188,7 +187,7 @@ class BorderDragTest {
         drag.handle(MouseEvent.drag(MouseButton.LEFT, 10, 86), shown());
         drag.handle(MouseEvent.release(MouseButton.LEFT, 10, 87), shown());
 
-        assertEquals(Settings.DEFAULT, shown().preferences().settings());
+        assertEquals(TestModels.PLAIN.settings(), shown().preferences().settings());
         assertEquals(Option.none(), shown().preferences().draggedHeights());
     }
 
@@ -205,7 +204,7 @@ class BorderDragTest {
         drag.handle(MouseEvent.drag(MouseButton.LEFT, 10, 12), shown());
         drag.handle(MouseEvent.release(MouseButton.LEFT, 10, 11), shown());
 
-        assertEquals(Settings.DEFAULT, shown().preferences().settings());
+        assertEquals(TestModels.PLAIN.settings(), shown().preferences().settings());
     }
 
     @Test
