@@ -35,7 +35,7 @@ final class CliConfig implements Config {
      * The branch {@code branch} was made from, as {@code gh} records it to take as the base of its pull request.
      */
     static Either<ProcessError, Option<BranchName>> parent(Path worktree, BranchName branch) {
-        return local(worktree, parentKey(branch)).map(value -> value.flatMap(BranchName::parse));
+        return readLocal(worktree, parentKey(branch)).map(value -> value.flatMap(BranchName::parse));
     }
 
     /**
@@ -43,7 +43,7 @@ final class CliConfig implements Config {
      */
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> setParent(
             Path worktree, BranchName branch, BranchName parent) {
-        return setLocal(worktree, parentKey(branch), Option.of(GitArgs.name(parent)));
+        return writeLocal(worktree, parentKey(branch), Option.of(GitArgs.name(parent)));
     }
 
     private static String parentKey(BranchName branch) {
@@ -94,10 +94,10 @@ final class CliConfig implements Config {
      */
     @Override
     public Either<ProcessError, Option<String>> local(String key) {
-        return local(worktree, key);
+        return readLocal(worktree, key);
     }
 
-    private static Either<ProcessError, Option<String>> local(Path worktree, String key) {
+    private static Either<ProcessError, Option<String>> readLocal(Path worktree, String key) {
         return read(worktree, List.of("--local"), key);
     }
 
@@ -124,10 +124,10 @@ final class CliConfig implements Config {
      */
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> setLocal(String key, Option<String> value) {
-        return setLocal(worktree, key, value);
+        return writeLocal(worktree, key, value);
     }
 
-    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> setLocal(
+    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> writeLocal(
             Path worktree, String key, Option<String> value) {
         return value.fold(
                 () -> {

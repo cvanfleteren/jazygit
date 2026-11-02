@@ -4,6 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
+import net.vanfleteren.jazygit.git.Index;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.GitOperationCmd;
 import net.vanfleteren.jazygit.state.Operation;
@@ -43,8 +44,8 @@ public sealed interface StageCmd extends GitOperationCmd {
 
         @Override
         public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
-            return GitFailure.sequence(
-                    () -> git.index().unstageNew(added), () -> git.index().unstage(others));
+            Index index = git.index();
+            return GitFailure.sequence(() -> index.unstageNew(added), () -> index.unstage(others));
         }
     }
 }

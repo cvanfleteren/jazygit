@@ -58,15 +58,15 @@ final class CliEditor implements Editor {
     @Override
     public Either<GitFailure<GitError>, Tuple2<CommitMessage, List<ExecutedCommand>>> editMessage(
             CommitMessage message) {
-        return editor(worktree).flatMap(editor -> editMessage(worktree, editor, message));
+        return editor(worktree).flatMap(editor -> editMessageWith(worktree, editor, message));
     }
 
     /**
      * Opens {@code message} in {@code editor}, as git names it, as {@link #editMessage(CommitMessage)} does.
      */
-    static Either<GitFailure<GitError>, Tuple2<CommitMessage, List<ExecutedCommand>>> editMessage(
+    static Either<GitFailure<GitError>, Tuple2<CommitMessage, List<ExecutedCommand>>> editMessageWith(
             Path worktree, String editor, CommitMessage message) {
-        return editText(worktree, editor, MESSAGE_FILE, message.text())
+        return editTextWith(worktree, editor, MESSAGE_FILE, message.text())
                 .map(edited -> edited.map1(CommitMessage::parse));
     }
 
@@ -79,13 +79,13 @@ final class CliEditor implements Editor {
      */
     @Override
     public Either<GitFailure<GitError>, Tuple2<String, List<ExecutedCommand>>> editText(String fileName, String text) {
-        return editor(worktree).flatMap(editor -> editText(worktree, editor, fileName, text));
+        return editor(worktree).flatMap(editor -> editTextWith(worktree, editor, fileName, text));
     }
 
     /**
      * Opens {@code text} in {@code editor}, as git names it, as {@link #editText(String, String)} does.
      */
-    static Either<GitFailure<GitError>, Tuple2<String, List<ExecutedCommand>>> editText(
+    static Either<GitFailure<GitError>, Tuple2<String, List<ExecutedCommand>>> editTextWith(
             Path worktree, String editor, String fileName, String text) {
         return Try.of(() -> Files.createTempDirectory("jazygit"))
                 .toEither()
