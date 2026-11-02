@@ -839,6 +839,7 @@ classDiagram
         checkout(branch) Either of GitFailure of GitError or commands
         reword(Sha, CommitMessage) Either of GitFailure of GitError or commands
         stashes() Stashes
+        worktrees() Worktrees
         ...
     }
     class CliGitInfoProvider {
@@ -852,6 +853,8 @@ classDiagram
     }
     CliGitInfoProvider ..|> GitInfoProvider
     CliStashes ..|> Stashes
+    CliWorktrees ..|> Worktrees
+    CliGitInfoProvider --> CliWorktrees : worktrees()
     CliGitInfoProvider ..> CliStatus
     CliGitInfoProvider ..> CliBranches
     CliGitInfoProvider ..> CliLog
