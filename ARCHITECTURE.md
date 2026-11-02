@@ -836,7 +836,7 @@ classDiagram
         status() Status
         log(branch) Either of GitError or commits
         diff(files, DiffOptions) Either of GitError or Diffs
-        checkout(branch) Either of GitFailure of GitError or commands
+        checkout() Checkout
         reword(Sha, CommitMessage) Either of GitFailure of GitError or commands
         stashes() Stashes
         worktrees() Worktrees
@@ -856,6 +856,7 @@ classDiagram
     }
     CliGitInfoProvider ..|> GitInfoProvider
     CliStashes ..|> Stashes
+    CliCheckout ..|> Checkout
     CliStatus ..|> Status
     CliIndex ..|> Index
     CliEditor ..|> Editor
@@ -869,7 +870,7 @@ classDiagram
     CliGitInfoProvider ..> CliLog
     CliGitInfoProvider ..> CliDiff
     CliGitInfoProvider ..> CliShow
-    CliGitInfoProvider ..> CliCheckout
+    CliGitInfoProvider --> CliCheckout : checkout()
     CliGitInfoProvider ..> CliBranch
     CliGitInfoProvider --> CliIndex : index()
     CliGitInfoProvider ..> CliMerge
