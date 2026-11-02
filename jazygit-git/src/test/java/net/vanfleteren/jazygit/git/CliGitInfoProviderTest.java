@@ -1362,102 +1362,6 @@ class CliGitInfoProviderTest {
     }
 
     @Test
-    void stashSavesTrackedAndUntrackedChangesUnderTheGivenName() throws Exception {
-        Files.writeString(repo.resolve("README.md"), "changed\n");
-        Files.writeString(repo.resolve("new.txt"), "new\n");
-
-        List<String> executed = provider.stash(Option.of("my work")).get().map(ExecutedCommand::line);
-
-        assertEquals(List.of("git stash push --include-untracked --message 'my work'"), executed);
-        assertEquals(List.of(), provider.status().get().files());
-        assertEquals(
-                List.of("stash@{0} my work"),
-                provider.stashes().get().map(stash -> stash.ref() + " " + stash.message()));
-    }
-
-    @Test
-    void stashWithoutANameIsNamedByGit() throws Exception {
-        Files.writeString(repo.resolve("README.md"), "changed\n");
-        Commit head = commits().get().head();
-
-        List<String> executed = provider.stash(Option.none()).get().map(ExecutedCommand::line);
-
-        assertEquals(List.of("git stash push --include-untracked"), executed);
-        assertEquals(
-                List.of("WIP on main: " + head.shortSha() + " " + head.message()),
-                provider.stashes().get().map(Stash::message));
-    }
-
-    @Test
-    void popRestoresTheChangesAndDropsTheStash() throws Exception {
-        Files.writeString(repo.resolve("README.md"), "changed\n");
-        provider.stash(Option.of("work")).get();
-
-        List<String> executed =
-                provider.pop(provider.stashes().get().head()).get().map(ExecutedCommand::line);
-
-        assertEquals(1, executed.size());
-        assertTrue(executed.head().startsWith("git stash pop"), executed.toString());
-        assertEquals("changed\n", Files.readString(repo.resolve("README.md")));
-        assertEquals(List.of(), provider.stashes().get());
-    }
-
-    @Test
-    void dropDeletesTheStashWithoutApplyingIt() throws Exception {
-        Files.writeString(repo.resolve("README.md"), "changed\n");
-        provider.stash(Option.of("work")).get();
-
-        List<String> executed =
-                provider.drop(provider.stashes().get().head()).get().map(ExecutedCommand::line);
-
-        assertEquals(1, executed.size());
-        assertTrue(executed.head().startsWith("git stash drop"), executed.toString());
-        assertEquals(List.of(), provider.stashes().get());
-        assertEquals("hello\n", Files.readString(repo.resolve("README.md")));
-    }
-
-    @Test
-    void popOfAStashThatIsGoneFailsWithoutRunningAnything() throws Exception {
-        Files.writeString(repo.resolve("README.md"), "changed\n");
-        provider.stash(Option.of("work")).get();
-        Stash work = provider.stashes().get().head();
-        provider.drop(work).get();
-
-        GitFailure<GitError> failure = provider.pop(work).getLeft();
-
-        assertEquals(new GitError.StashGone("work"), failure.error());
-        assertEquals(List.of(), failure.commands());
-    }
-
-    @Test
-    void aStashIsFoundUnderItsNewNameOnceAnotherWasAdded() throws Exception {
-        Files.writeString(repo.resolve("README.md"), "one\n");
-        provider.stash(Option.of("first")).get();
-        Stash first = provider.stashes().get().head();
-        Files.writeString(repo.resolve("README.md"), "two\n");
-        provider.stash(Option.of("second")).get();
-
-        assertEquals(
-                List.of("git stash drop 'stash@{1}'"),
-                provider.drop(first).get().map(ExecutedCommand::line));
-
-        assertEquals(List.of("second"), provider.stashes().get().map(Stash::message));
-    }
-
-    @Test
-    void stashesListTheNewestFirstAndThereAreNoneInACleanRepository() throws Exception {
-        assertEquals(List.of(), provider.stashes().get());
-        Files.writeString(repo.resolve("README.md"), "one\n");
-        provider.stash(Option.of("first")).get();
-        Files.writeString(repo.resolve("README.md"), "two\n");
-        provider.stash(Option.of("second")).get();
-
-        assertEquals(
-                List.of("stash@{0} second", "stash@{1} first"),
-                provider.stashes().get().map(stash -> stash.ref() + " " + stash.message()));
-    }
-
-    @Test
     void aFailingCommandReportsTheCommandsRunUpToAndIncludingIt() {
         assertEquals(
                 List.of("git branch --delete -- missing"),
@@ -2354,7 +2258,7 @@ class CliGitInfoProviderTest {
         assertEquals(
                 List.of(), emptyProvider.allBranches().map(AllBranches::local).get());
         // Without a commit there is neither a stash nor a HEAD to fall back to.
-        assertEquals(List.of(), emptyProvider.stashes().get());
+        assertEquals(List.of(), emptyProvider.stashes().list().get());
     }
 
     private String git(String... args) throws IOException, InterruptedException, TimeoutException {

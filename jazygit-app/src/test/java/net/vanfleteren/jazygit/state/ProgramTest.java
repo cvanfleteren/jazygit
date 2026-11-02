@@ -38,7 +38,9 @@ import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
+import net.vanfleteren.jazygit.git.Stashes;
 import net.vanfleteren.jazygit.git.StubGitProvider;
+import net.vanfleteren.jazygit.git.StubStashes;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
@@ -96,18 +98,23 @@ class ProgramTest {
         }
 
         @Override
-        public Either<GitFailure<GitError>, List<ExecutedCommand>> drop(Stash stash) {
-            return StubGitProvider.ran("git stash drop " + stash.ref());
-        }
+        public Stashes stashes() {
+            return new StubStashes() {
+                @Override
+                public Either<GitFailure<GitError>, List<ExecutedCommand>> drop(Stash stash) {
+                    return StubGitProvider.ran("git stash drop " + stash.ref());
+                }
 
-        @Override
-        public Either<GitFailure<GitError>, List<ExecutedCommand>> pop(Stash stash) {
-            return StubGitProvider.ran("git stash pop --index " + stash.ref());
-        }
+                @Override
+                public Either<GitFailure<GitError>, List<ExecutedCommand>> pop(Stash stash) {
+                    return StubGitProvider.ran("git stash pop --index " + stash.ref());
+                }
 
-        @Override
-        public Either<GitFailure<ProcessError>, List<ExecutedCommand>> stash(Option<String> message) {
-            return StubGitProvider.ran("git stash");
+                @Override
+                public Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(Option<String> message) {
+                    return StubGitProvider.ran("git stash");
+                }
+            };
         }
 
         @Override

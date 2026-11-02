@@ -838,13 +838,20 @@ classDiagram
         diff(files, DiffOptions) Either of GitError or Diffs
         checkout(branch) Either of GitFailure of GitError or commands
         reword(Sha, CommitMessage) Either of GitFailure of GitError or commands
-        pop(Stash) Either of GitFailure of GitError or commands
+        stashes() Stashes
         ...
     }
     class CliGitInfoProvider {
         +open(Path) Either of GitError or provider
     }
+    class Stashes {
+        <<interface>>
+        list() Either of ProcessError or stashes
+        pop(Stash) Either of GitFailure of GitError or commands
+        ...
+    }
     CliGitInfoProvider ..|> GitInfoProvider
+    CliStashes ..|> Stashes
     CliGitInfoProvider ..> CliStatus
     CliGitInfoProvider ..> CliBranches
     CliGitInfoProvider ..> CliLog
@@ -855,7 +862,7 @@ classDiagram
     CliGitInfoProvider ..> CliIndex
     CliGitInfoProvider ..> CliMerge
     CliGitInfoProvider ..> CliRebase
-    CliGitInfoProvider ..> CliStash
+    CliGitInfoProvider --> CliStashes : stashes()
     CliGitInfoProvider ..> CliRemote
     CliRebase ..> Unfinished
     CliMerge ..> Unfinished
@@ -864,6 +871,11 @@ classDiagram
 ```
 
 Every `Cli*` class runs git through `GitProcess`; only a few of those arrows are drawn.
+
+The operations are being split into roles (ADR 69): an interface per role, such as `Stashes`, implemented by a
+package-private `Cli` class that holds the code, such as `CliStashes`, which the provider hands out
+(`git.stashes().pop(stash)`). A role a `Cli` class calls into stays a static method of that class. The diagram shows
+each role that is split off this way; the `Cli*` classes it still points to with a dotted arrow are static helpers.
 
 - **Everything goes through the `git` command line**, so the repository is read and changed exactly as
   git itself does: its configuration, hooks, credentials and repository formats included.
@@ -884,14 +896,14 @@ Every `Cli*` class runs git through `GitProcess`; only a few of those arrows are
       git. This assumes they never move while a repository is open, which holds as a provider is for one working
       tree, whose git directory stays where it is.
     - `CliLog` runs `git rev-parse` and `git log -z`.
-    - `CliStash` lists the stashes with the `git log --walk-reflogs … refs/stash` that `git stash list` runs
+    - `CliStashes` lists the stashes with the `git log --walk-reflogs … refs/stash` that `git stash list` runs
       itself, which saves a process. The stashes are the reflog of `refs/stash`, as git's documentation of
       `git stash` says. Without a stash there is no reflog, which `--ignore-missing` makes an empty list.
     - `CliRemote` reads the remotes.
     - These each have a pure parser for git's output. `CliDiff` and `CliShow` return git's text, cut off
       when it is long.
   - **Writes:** `CliCheckout`, `CliBranch` (push, pull, delete), `CliIndex` (stage, commit, discard),
-    `CliMerge`, `CliRebase`, `CliStash`, `CliRemote` (fetch) and `CliWorktree` (add, remove).
+    `CliMerge`, `CliRebase`, `CliStashes`, `CliRemote` (fetch) and `CliWorktree` (add, remove).
   - **Opening:** `CliGitInfoProvider.open` asks `git rev-parse` whether the directory is in a repository,
     whether that is bare, where its working tree is, and where git keeps the files that tell what it is in the
     middle of.

@@ -45,7 +45,6 @@ import net.vanfleteren.jazygit.git.model.ResetTarget;
 import net.vanfleteren.jazygit.git.model.Revision;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.SquashMode;
-import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.git.model.Worktree;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
@@ -110,23 +109,8 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<ProcessError, List<Stash>> stashes() {
-        return Either.right(List.empty());
-    }
-
-    @Override
-    default Either<ProcessError, DiffText> stashChanges(Sha sha, DiffOptions options) {
-        return Either.right(DiffText.of(""));
-    }
-
-    @Override
-    default Either<ProcessError, List<CommitFile>> stashFiles(Sha sha) {
-        return Either.right(List.empty());
-    }
-
-    @Override
-    default Either<ProcessError, DiffText> stashFileChanges(Sha sha, List<CommitFile> files, DiffOptions options) {
-        return Either.right(DiffText.of(""));
+    default Stashes stashes() {
+        return new StubStashes() {};
     }
 
     /**
@@ -518,21 +502,6 @@ public interface StubGitProvider extends GitInfoProvider {
     @Override
     default Either<GitFailure<GitError>, List<ExecutedCommand>> continueOrAbort(
             InProgress inProgress, InProgressAction action) {
-        return ran();
-    }
-
-    @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> stash(Option<String> message) {
-        return ran();
-    }
-
-    @Override
-    default Either<GitFailure<GitError>, List<ExecutedCommand>> pop(Stash stash) {
-        return ran();
-    }
-
-    @Override
-    default Either<GitFailure<GitError>, List<ExecutedCommand>> drop(Stash stash) {
         return ran();
     }
 }

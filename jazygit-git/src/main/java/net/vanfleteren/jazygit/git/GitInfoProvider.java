@@ -370,44 +370,10 @@ public interface GitInfoProvider {
      */
     Either<GitError, Diffs> diff(List<FileEntry> files, DiffOptions options);
 
-    // Listing and changing stashes, as git stash does.
-
     /**
-     * The stashes, newest first.
+     * Listing and changing stashes, as git stash does.
      */
-    Either<ProcessError, List<Stash>> stashes();
-
-    /**
-     * What the stash {@code sha} stashed, like {@code git stash show}: the changed files, untracked ones too, a
-     * summary of the changes, a blank line and the diff, read with {@code options}. Long output is cut off.
-     */
-    Either<ProcessError, DiffText> stashChanges(Sha sha, DiffOptions options);
-
-    /**
-     * The files the stash {@code sha} changed, untracked ones too.
-     */
-    Either<ProcessError, List<CommitFile>> stashFiles(Sha sha);
-
-    /**
-     * What the stash {@code sha} stashed of {@code files}: only the diff, untracked files too, read with
-     * {@code options}. Long output is cut off.
-     */
-    Either<ProcessError, DiffText> stashFileChanges(Sha sha, List<CommitFile> files, DiffOptions options);
-
-    /**
-     * Stashes the changes, staged and unstaged, and the untracked files, under the name {@code message}.
-     */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> stash(Option<String> message);
-
-    /**
-     * Applies {@code stash} to the working tree and drops it. When that conflicts, the stash is kept.
-     */
-    Either<GitFailure<GitError>, List<ExecutedCommand>> pop(Stash stash);
-
-    /**
-     * Deletes {@code stash} without applying it.
-     */
-    Either<GitFailure<GitError>, List<ExecutedCommand>> drop(Stash stash);
+    Stashes stashes();
 
     // Creating and rewriting commits, as git commit does, and through an interactive rebase for older commits.
 

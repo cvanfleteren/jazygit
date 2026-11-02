@@ -368,7 +368,7 @@ class CliParseTest {
                         .getLeft());
         assertEquals(
                 new GitError.UnexpectedOutput("stash@{0} without a separator"),
-                CliStash.parse("stash@{0} without a separator\n").getLeft());
+                CliStashes.parse("stash@{0} without a separator\n").getLeft());
         assertEquals(
                 List.of(
                         new Stash(
@@ -380,7 +380,7 @@ class CliParseTest {
                                 "WIP on feature/x: abc1234 Add widget",
                                 Option.of(new BranchName("feature/x")),
                                 Instant.ofEpochSecond(61))),
-                CliStash.parse("stash@{0}\u001f" + A + "\u001fOn main: work\u001f60\n" + "stash@{1}\u001f" + B
+                CliStashes.parse("stash@{0}\u001f" + A + "\u001fOn main: work\u001f60\n" + "stash@{1}\u001f" + B
                                 + "\u001fWIP on feature/x: abc1234 Add widget\u001f61\n")
                         .get());
         // On a detached HEAD, git names no branch but says so in its place.
@@ -393,7 +393,7 @@ class CliParseTest {
                                 "WIP on (no branch): abc1234 Add widget",
                                 Option.none(),
                                 Instant.ofEpochSecond(61))),
-                CliStash.parse("stash@{0}\u001f" + A + "\u001fOn (no branch): work\u001f60\n" + "stash@{1}\u001f" + B
+                CliStashes.parse("stash@{0}\u001f" + A + "\u001fOn (no branch): work\u001f60\n" + "stash@{1}\u001f" + B
                                 + "\u001fWIP on (no branch): abc1234 Add widget\u001f61\n")
                         .get());
         assertEquals(
