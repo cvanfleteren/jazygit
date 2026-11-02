@@ -8,8 +8,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.elements.Panel;
+import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.toolkit.focus.FocusManager;
 import dev.tamboui.tui.event.KeyCode;
+import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.KeyModifiers;
 import dev.tamboui.tui.pilot.Pilot;
 import io.vavr.collection.List;
@@ -167,6 +169,70 @@ class JazygitAppPilotTest {
             pilot.press(KeyCode.LEFT);
             pilot.pause();
             assertEquals(FilesPanel.ID, keeper.get().focusedId());
+
+            pilot.quit();
+        }
+    }
+
+    @Test
+    void rightMovesFromTheCommitsPaneIntoItsCommitAndLeftGivesTheFocusBack() throws Exception {
+        Model model = Update.update(
+                        Update.update(TestModels.loaded(), new SelectionMsg.CommitSelected(new Sha("aaaa")))
+                                .model(),
+                        new LoadMsg.CommitDetailLoaded(new Sha("aaaa"), DiffOptions.DEFAULT, DiffText.of("+a\n")))
+                .model();
+
+        assertRightEntersAndLeftLeaves(
+                model, CommitsPanel.ID, new CommitsPanel(msg -> {}, () -> {})::render, "commit-changes");
+    }
+
+    @Test
+    void rightMovesFromTheBranchesPaneIntoTheLogAndLeftGivesTheFocusBack() throws Exception {
+        Model model = TestModels.loaded(new SampleData(), "feature/initial-layout");
+
+        assertRightEntersAndLeftLeaves(
+                model, BranchesPanel.ID, new BranchesPanel(msg -> {}, tab -> {})::render, "branch-log");
+    }
+
+    /**
+     * Right in the pane {@code paneId}, which no list in it takes, moves the focus to the area {@code areaId}, as the
+     * app's global key handler does, and Left gives it back to the pane.
+     */
+    private static void assertRightEntersAndLeftLeaves(
+            Model model, String paneId, java.util.function.BiFunction<Model, String, Panel> pane, String areaId)
+            throws Exception {
+        AtomicReference<ToolkitTestRunner> runner = new AtomicReference<>();
+        AtomicReference<FocusKeeper> keeper = new AtomicReference<>();
+        ContentPanel content =
+                new ContentPanel(Theme.SpanStyles.NONE, () -> keeper.get().leaveScrollArea());
+        keeper.set(new FocusKeeper(() -> runner.get().runner(), () -> model, content, new Popups(msg -> {}), () -> {}));
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> {
+            String focusedId = runner.get() == null ? null : keeper.get().focusedId();
+            return row(
+                    pane.apply(model, focusedId).percent(30),
+                    content.render(model, focusedId).fill());
+        })) {
+            runner.set(testRunner);
+            testRunner
+                    .runner()
+                    .eventRouter()
+                    .addGlobalHandler(event -> event instanceof KeyEvent key
+                                    && key.code() == KeyCode.RIGHT
+                                    && keeper.get().openFocusedContent()
+                            ? EventResult.HANDLED
+                            : EventResult.UNHANDLED);
+            SettledPilot.focus(testRunner, paneId);
+            Pilot pilot = SettledPilot.of(testRunner);
+            pilot.pause();
+
+            pilot.press(KeyCode.RIGHT);
+            pilot.pause();
+            assertEquals(areaId, keeper.get().focusedId());
+
+            pilot.press(KeyCode.LEFT);
+            pilot.pause();
+            assertEquals(paneId, keeper.get().focusedId());
 
             pilot.quit();
         }

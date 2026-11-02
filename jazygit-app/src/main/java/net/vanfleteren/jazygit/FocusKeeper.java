@@ -144,6 +144,16 @@ final class FocusKeeper {
     }
 
     /**
+     * Moves the focus from the pane that has it into the content shown for that pane, as Right does in any pane that
+     * leaves the key unhandled; says whether there was such content.
+     */
+    boolean openFocusedContent() {
+        Option<String> area = Option.of(focusedId()).flatMap(id -> contentPanel.areaOfPane(model.get(), id));
+        area.forEach(this::moveTo);
+        return area.isDefined();
+    }
+
+    /**
      * Gives the focus back to the pane whose content has it, and says whether there was one.
      */
     boolean leaveScrollArea() {

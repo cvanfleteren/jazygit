@@ -73,8 +73,8 @@ public final class ContentPanel {
 
     /**
      * @param styles          how the diffs and the log are colored
-     * @param leaveScrollArea called when Escape is pressed; gives the focus back to the pane if a focusable
-     *                        area had it, and says whether it did
+     * @param leaveScrollArea called when Escape, or Left at the left edge of an area, is pressed; gives the focus
+     *                        back to the pane if an area had it, and says whether it did
      */
     public ContentPanel(Theme.SpanStyles styles, BooleanSupplier leaveScrollArea) {
         this(styles, leaveScrollArea, id -> {});
@@ -377,8 +377,8 @@ public final class ContentPanel {
     }
 
     /**
-     * The pane that gets the focus back when Escape is pressed in the area with id {@code areaId}, if that
-     * is a focusable area: the pane whose highlighted row it shows.
+     * The pane that gets the focus back when Escape, or Left at its left edge, is pressed in the area with id
+     * {@code areaId}, if that is an area: the pane whose highlighted row it shows.
      */
     public Option<String> paneOfArea(Model model, String areaId) {
         return ContentArea.focusable(areaId).map(area -> area.pane(model));
@@ -386,13 +386,13 @@ public final class ContentPanel {
 
     /**
      * The id of the area that shows what the pane {@code paneId} has highlighted, to move the focus into:
-     * the staged diff if it shows anything, else the unstaged one, or the commit; none while it shows nothing.
+     * the staged diff if it shows anything, else the unstaged one, the commit or the log; none while it shows nothing.
      */
     public Option<String> areaOfPane(Model model, String paneId) {
         return ContentView.of(model, paneId)
                 .areas()
                 .map(Shown.Area::area)
-                .find(area -> area.focusable() && area.pane(model).equals(paneId))
+                .find(area -> area.pane(model).equals(paneId))
                 .map(ContentArea::id);
     }
 
@@ -447,7 +447,7 @@ public final class ContentPanel {
     }
 
     /**
-     * Lets Tab move between the focusable areas only while one of them, {@code focusedId}, has the focus, or had it
+     * Lets Tab move between the areas only while one of them, {@code focusedId}, has the focus, or had it
      * before a popup took it: the area then takes the focus back when the popup closes, as from the popup of a review
      * comment (ADR 60).
      */
@@ -546,10 +546,10 @@ public final class ContentPanel {
 
         /**
          * Makes the area part of the Tab cycle while {@code inContent}, so Tab goes from one area to the
-         * other then, but from the last pane back to the first otherwise. Only the areas with a pane are.
+         * other then, but from the last pane back to the first otherwise.
          */
         void tabbable(boolean inContent) {
-            element.focusable(area.focusable() && inContent);
+            element.focusable(inContent);
         }
 
         /**
@@ -586,19 +586,18 @@ public final class ContentPanel {
                     .title(shown.title());
             state.scrollToTop();
             state.scrollDown(row);
-            boolean ofFiles = area.pane(model).equals(FilesPanel.ID);
-            return element.onKeyEvent(event -> keys(event, focused, ofFiles, content))
+            return element.onKeyEvent(event -> keys(event, focused, content))
                     .onMouseEvent(event -> mouse(event, content));
         }
 
         /**
-         * @param ofFiles whether the area shows a diff of the files pane, which Left leaves as Escape does, once it
-         *                is scrolled all the way left: Right in the files pane moves into it
+         * What {@code event} does: Left leaves the area as Escape does once it is scrolled all the way left, as Right in
+         * its pane moves into it.
          */
-        private EventResult keys(KeyEvent event, boolean focused, boolean ofFiles, ScrolledContent content) {
+        private EventResult keys(KeyEvent event, boolean focused, ScrolledContent content) {
             // Only the arrow leaves: h scrolls, as j and k move, without going to another panel.
-            boolean leaving = event.code() == KeyCode.ESCAPE
-                    || (focused && ofFiles && event.matches(Actions.MOVE_LEFT) && column == 0);
+            boolean leaving =
+                    event.code() == KeyCode.ESCAPE || (focused && event.matches(Actions.MOVE_LEFT) && column == 0);
             // Escape, and Left where it leaves as Escape does, drop an open range before they leave the area (ADR 60).
             return cursor.filter(on -> leaving && focused && on.mark().isDefined())
                     .map(ranged -> moved(ranged.marked().get(), content))
@@ -672,12 +671,12 @@ public final class ContentPanel {
         }
 
         /**
-         * A click gives the focus to an area that can have it, even from the panes, and puts the cursor of a rich diff
+         * A click gives the focus to an area, even from the panes, and puts the cursor of a rich diff
          * on the line clicked; the wheel scrolls.
          */
         private EventResult mouse(MouseEvent event, ScrolledContent content) {
             RichTextState state = element.state();
-            if (event.kind() == MouseEventKind.PRESS && event.isLeftButton() && area.focusable()) {
+            if (event.kind() == MouseEventKind.PRESS && event.isLeftButton()) {
                 focus.accept(id);
                 // The text starts a line below the top of the area, under its border.
                 return cursor.flatMap(on -> Option.of(element.renderedArea())

@@ -316,7 +316,7 @@ class ContentPanelTest {
     }
 
     @Test
-    void leftLeavesADiffOfTheFilesPaneOnceItIsScrolledAllTheWayLeft() throws Exception {
+    void leftLeavesADiffOnceItIsScrolledAllTheWayLeft() throws Exception {
         java.util.concurrent.atomic.AtomicInteger leaves = new java.util.concurrent.atomic.AtomicInteger();
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
         // The model takes where the area is scrolled to, as the app's does.
@@ -358,7 +358,7 @@ class ContentPanelTest {
     }
 
     @Test
-    void leftDoesNotLeaveTheAreasOfOtherPanes() throws Exception {
+    void leftLeavesTheAreasOfThePanesBesidesTheFilesToo() throws Exception {
         java.util.concurrent.atomic.AtomicInteger leaves = new java.util.concurrent.atomic.AtomicInteger();
         ContentPanel scrolling = new ContentPanel(Theme.SpanStyles.NONE, () -> {
             leaves.incrementAndGet();
@@ -374,7 +374,7 @@ class ContentPanelTest {
             SettledPilot.of(testRunner).pause();
         }
 
-        assertEquals(0, leaves.get());
+        assertEquals(1, leaves.get());
     }
 
     @Test
@@ -657,6 +657,22 @@ class ContentPanelTest {
             SettledPilot.of(testRunner).mousePress(MouseButton.LEFT, drawn.x() + 3, drawn.y());
             assertEquals(sent, dispatched.size());
         }
+    }
+
+    @Test
+    void aClickOnTheLogGivesItTheFocus() throws Exception {
+        java.util.List<String> focused = new java.util.ArrayList<>();
+        ContentPanel clicking = new ContentPanel(Theme.SpanStyles.NONE, () -> false, focused::add, msg -> {});
+        Model model = TestModels.loaded(new SampleData(), "feature/initial-layout");
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> clicking.render(model, BranchesPanel.ID))) {
+            RenderedText.of(testRunner, () -> clicking.render(model, BranchesPanel.ID));
+            dev.tamboui.layout.Rect drawn = SettledPilot.of(testRunner).findElement("branch-log");
+
+            SettledPilot.of(testRunner).mousePress(MouseButton.LEFT, drawn.x() + 3, drawn.y() + 2);
+        }
+
+        assertEquals(java.util.List.of("branch-log"), focused);
     }
 
     @Test

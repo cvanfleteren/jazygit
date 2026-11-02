@@ -21,24 +21,19 @@ enum ContentArea {
     BRANCH_COMMIT("branch-commit", BranchesPanel.ID),
     // It shows the pull request highlighted in whichever list of the pull requests screen is in use.
     PULL_REQUEST(
-            "pull-request-preview",
-            model -> model.prOverview().listPane().getOrElse(PullRequestsPanel.FIRST_PANE_ID),
-            true),
-    // Not focusable: clicking the log must not take the focus from the branches pane it mirrors.
-    LOG("branch-log", model -> BranchesPanel.ID, false);
+            "pull-request-preview", model -> model.prOverview().listPane().getOrElse(PullRequestsPanel.FIRST_PANE_ID)),
+    LOG("branch-log", BranchesPanel.ID);
 
     private final String id;
     private final Function<Model, String> pane;
-    private final boolean focusable;
 
     ContentArea(String id, String pane) {
-        this(id, model -> pane, true);
+        this(id, model -> pane);
     }
 
-    ContentArea(String id, Function<Model, String> pane, boolean focusable) {
+    ContentArea(String id, Function<Model, String> pane) {
         this.id = id;
         this.pane = pane;
-        this.focusable = focusable;
     }
 
     String id() {
@@ -46,22 +41,15 @@ enum ContentArea {
     }
 
     /**
-     * The area with id {@code id} that can have the focus, if it is one.
+     * The area with id {@code id}, which can have the focus, if it is one.
      */
     static Option<ContentArea> focusable(String id) {
-        return List.of(values()).find(area -> area.focusable && area.id.equals(id));
+        return List.of(values()).find(area -> area.id.equals(id));
     }
 
     /**
-     * Whether the area can have the focus, rather than only showing what its pane has highlighted.
-     */
-    boolean focusable() {
-        return focusable;
-    }
-
-    /**
-     * The pane whose highlighted row the area shows in {@code model}, which gets the focus back when Escape is
-     * pressed in it.
+     * The pane whose highlighted row the area shows in {@code model}, which gets the focus back when Escape, or Left
+     * once the area is scrolled all the way left, is pressed in it.
      */
     String pane(Model model) {
         return pane.apply(model);
