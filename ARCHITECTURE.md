@@ -838,13 +838,20 @@ classDiagram
         diff(files, DiffOptions) Either of GitError or Diffs
         checkout(branch) Either of GitFailure of GitError or commands
         reword(Sha, CommitMessage) Either of GitFailure of GitError or commands
-        pop(Stash) Either of GitFailure of GitError or commands
+        stashes() Stashes
         ...
     }
     class CliGitInfoProvider {
         +open(Path) Either of GitError or provider
     }
+    class Stashes {
+        <<interface>>
+        list() Either of ProcessError or stashes
+        pop(Stash) Either of GitFailure of GitError or commands
+        ...
+    }
     CliGitInfoProvider ..|> GitInfoProvider
+    CliStashes ..|> Stashes
     CliGitInfoProvider ..> CliStatus
     CliGitInfoProvider ..> CliBranches
     CliGitInfoProvider ..> CliLog
@@ -855,7 +862,7 @@ classDiagram
     CliGitInfoProvider ..> CliIndex
     CliGitInfoProvider ..> CliMerge
     CliGitInfoProvider ..> CliRebase
-    CliGitInfoProvider ..> CliStashes
+    CliGitInfoProvider --> CliStashes : stashes()
     CliGitInfoProvider ..> CliRemote
     CliRebase ..> Unfinished
     CliMerge ..> Unfinished
@@ -864,6 +871,11 @@ classDiagram
 ```
 
 Every `Cli*` class runs git through `GitProcess`; only a few of those arrows are drawn.
+
+The operations are being split into roles (ADR 69): an interface per role, such as `Stashes`, implemented by a
+package-private `Cli` class that holds the code, such as `CliStashes`, which the provider hands out
+(`git.stashes().pop(stash)`). A role a `Cli` class calls into stays a static method of that class. The diagram shows
+each role that is split off this way; the `Cli*` classes it still points to with a dotted arrow are static helpers.
 
 - **Everything goes through the `git` command line**, so the repository is read and changed exactly as
   git itself does: its configuration, hooks, credentials and repository formats included.
