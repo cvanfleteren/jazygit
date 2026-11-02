@@ -671,12 +671,12 @@ public final class ContentPanel {
         }
 
         /**
-         * A click gives the focus to an area that takes it from a click, even from the panes, and puts the cursor of a rich diff
+         * A click gives the focus to an area, even from the panes, and puts the cursor of a rich diff
          * on the line clicked; the wheel scrolls.
          */
         private EventResult mouse(MouseEvent event, ScrolledContent content) {
             RichTextState state = element.state();
-            if (event.kind() == MouseEventKind.PRESS && event.isLeftButton() && area.clickable()) {
+            if (event.kind() == MouseEventKind.PRESS && event.isLeftButton()) {
                 focus.accept(id);
                 // The text starts a line below the top of the area, under its border.
                 return cursor.flatMap(on -> Option.of(element.renderedArea())

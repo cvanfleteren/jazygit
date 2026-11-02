@@ -660,6 +660,22 @@ class ContentPanelTest {
     }
 
     @Test
+    void aClickOnTheLogGivesItTheFocus() throws Exception {
+        java.util.List<String> focused = new java.util.ArrayList<>();
+        ContentPanel clicking = new ContentPanel(Theme.SpanStyles.NONE, () -> false, focused::add, msg -> {});
+        Model model = TestModels.loaded(new SampleData(), "feature/initial-layout");
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> clicking.render(model, BranchesPanel.ID))) {
+            RenderedText.of(testRunner, () -> clicking.render(model, BranchesPanel.ID));
+            dev.tamboui.layout.Rect drawn = SettledPilot.of(testRunner).findElement("branch-log");
+
+            SettledPilot.of(testRunner).mousePress(MouseButton.LEFT, drawn.x() + 3, drawn.y() + 2);
+        }
+
+        assertEquals(java.util.List.of("branch-log"), focused);
+    }
+
+    @Test
     void theKeysOfTheDiffOfAPullRequestActOnItsCursor() throws Exception {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
         ContentPanel reviewing = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, dispatched::add);

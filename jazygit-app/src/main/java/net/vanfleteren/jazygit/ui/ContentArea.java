@@ -21,25 +21,19 @@ enum ContentArea {
     BRANCH_COMMIT("branch-commit", BranchesPanel.ID),
     // It shows the pull request highlighted in whichever list of the pull requests screen is in use.
     PULL_REQUEST(
-            "pull-request-preview",
-            model -> model.prOverview().listPane().getOrElse(PullRequestsPanel.FIRST_PANE_ID),
-            true),
-    // Right takes the focus into it, but a click does not: clicking the log must not take the focus from the branches
-    // pane it mirrors.
-    LOG("branch-log", model -> BranchesPanel.ID, false);
+            "pull-request-preview", model -> model.prOverview().listPane().getOrElse(PullRequestsPanel.FIRST_PANE_ID)),
+    LOG("branch-log", BranchesPanel.ID);
 
     private final String id;
     private final Function<Model, String> pane;
-    private final boolean clickable;
 
     ContentArea(String id, String pane) {
-        this(id, model -> pane, true);
+        this(id, model -> pane);
     }
 
-    ContentArea(String id, Function<Model, String> pane, boolean clickable) {
+    ContentArea(String id, Function<Model, String> pane) {
         this.id = id;
         this.pane = pane;
-        this.clickable = clickable;
     }
 
     String id() {
@@ -51,13 +45,6 @@ enum ContentArea {
      */
     static Option<ContentArea> focusable(String id) {
         return List.of(values()).find(area -> area.id.equals(id));
-    }
-
-    /**
-     * Whether a click gives the area the focus, rather than leaving it with the pane whose highlighted row it shows.
-     */
-    boolean clickable() {
-        return clickable;
     }
 
     /**
