@@ -25,7 +25,7 @@ public sealed interface DiscardCmd extends GitOperationCmd {
 
         @Override
         public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
-            return git.discard(plan);
+            return git.index().discard(plan);
         }
     }
 }

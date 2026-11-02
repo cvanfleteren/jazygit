@@ -10,8 +10,10 @@ import io.vavr.control.Either;
 import java.util.ArrayList;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.git.Editor;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
+import net.vanfleteren.jazygit.git.StubEditor;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.settings.RecentRepositories;
@@ -54,9 +56,14 @@ class EditUpdateTest {
         };
         StubGitProvider git = new StubGitProvider() {
             @Override
-            public Either<GitFailure<GitError>, List<ExecutedCommand>> edit(List<String> files) {
-                events.add("edit " + files.mkString(" "));
-                return Either.right(List.of(NVIM));
+            public Editor editor() {
+                return new StubEditor() {
+                    @Override
+                    public Either<GitFailure<GitError>, List<ExecutedCommand>> edit(List<String> files) {
+                        events.add("edit " + files.mkString(" "));
+                        return Either.right(List.of(NVIM));
+                    }
+                };
             }
         };
 
@@ -70,8 +77,13 @@ class EditUpdateTest {
     void anEditorThatFailsIsReported() {
         StubGitProvider git = new StubGitProvider() {
             @Override
-            public Either<GitFailure<GitError>, List<ExecutedCommand>> edit(List<String> files) {
-                return Either.left(new GitFailure<>(new GitError.EditorFailed("nvim", 1), List.of(NVIM)));
+            public Editor editor() {
+                return new StubEditor() {
+                    @Override
+                    public Either<GitFailure<GitError>, List<ExecutedCommand>> edit(List<String> files) {
+                        return Either.left(new GitFailure<>(new GitError.EditorFailed("nvim", 1), List.of(NVIM)));
+                    }
+                };
             }
         };
         EditCmd cmd = new EditCmd(List.of("src/A.java"));

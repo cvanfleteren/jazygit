@@ -22,7 +22,8 @@ public final class GitHubAccount {
      * there is none configured, or the configuration could not be read.
      */
     public static Option<GhAccount> configured(GitInfoProvider git) {
-        return git.localConfig(USER_KEY)
+        return git.config()
+                .local(USER_KEY)
                 .getOrElse(Option.none())
                 .filter(user -> !user.isBlank())
                 .map(user -> new GhAccount(host(git), user));

@@ -15,8 +15,10 @@ import net.vanfleteren.jazygit.feature.theme.ThemePopup;
 import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.GhLogin;
+import net.vanfleteren.jazygit.git.Config;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
+import net.vanfleteren.jazygit.git.StubConfig;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.settings.RecentRepositories;
@@ -246,8 +248,13 @@ class SettingsPanelUpdateTest {
         Env env = new Env(
                 new StubGitProvider() {
                     @Override
-                    public Either<ProcessError, Option<String>> localConfig(String key) {
-                        return Either.right(Option.when(key.equals(GitHubAccount.USER_KEY), "alice-work"));
+                    public Config config() {
+                        return new StubConfig() {
+                            @Override
+                            public Either<ProcessError, Option<String>> local(String key) {
+                                return Either.right(Option.when(key.equals(GitHubAccount.USER_KEY), "alice-work"));
+                            }
+                        };
                     }
 
                     @Override
@@ -276,10 +283,15 @@ class SettingsPanelUpdateTest {
         Env env = new Env(
                 new StubGitProvider() {
                     @Override
-                    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> setLocalConfig(
-                            String key, Option<String> value) {
-                        done.add(key + "=" + value.getOrElse("<unset>"));
-                        return Either.right(List.empty());
+                    public Config config() {
+                        return new StubConfig() {
+                            @Override
+                            public Either<GitFailure<ProcessError>, List<ExecutedCommand>> setLocal(
+                                    String key, Option<String> value) {
+                                done.add(key + "=" + value.getOrElse("<unset>"));
+                                return Either.right(List.empty());
+                            }
+                        };
                     }
 
                     @Override

@@ -26,7 +26,7 @@ public sealed interface StageCmd extends GitOperationCmd {
 
         @Override
         public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
-            return git.stage(paths);
+            return git.index().stage(paths);
         }
     }
 
@@ -43,7 +43,8 @@ public sealed interface StageCmd extends GitOperationCmd {
 
         @Override
         public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
-            return GitFailure.sequence(() -> git.unstageNew(added), () -> git.unstage(others));
+            return GitFailure.sequence(
+                    () -> git.index().unstageNew(added), () -> git.index().unstage(others));
         }
     }
 }

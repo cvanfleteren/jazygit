@@ -38,8 +38,10 @@ import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
+import net.vanfleteren.jazygit.git.Index;
 import net.vanfleteren.jazygit.git.Stashes;
 import net.vanfleteren.jazygit.git.StubGitProvider;
+import net.vanfleteren.jazygit.git.StubIndex;
 import net.vanfleteren.jazygit.git.StubStashes;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
@@ -200,13 +202,29 @@ class ProgramTest {
         }
 
         @Override
-        public Either<GitFailure<ProcessError>, List<ExecutedCommand>> stage(List<String> paths) {
-            return index("stage", paths, "git stage");
-        }
+        public Index index() {
+            return new StubIndex() {
+                @Override
+                public Either<GitFailure<ProcessError>, List<ExecutedCommand>> stage(List<String> paths) {
+                    return onIndex("stage", paths, "git stage");
+                }
 
-        @Override
-        public Either<GitFailure<ProcessError>, List<ExecutedCommand>> unstageNew(List<String> paths) {
-            return index("unstageNew", paths, "git unstageNew");
+                @Override
+                public Either<GitFailure<ProcessError>, List<ExecutedCommand>> unstageNew(List<String> paths) {
+                    return onIndex("unstageNew", paths, "git unstageNew");
+                }
+
+                @Override
+                public Either<GitFailure<GitError>, List<ExecutedCommand>> discard(DiscardPlan plan) {
+                    discarded.add(plan);
+                    return StubGitProvider.ran("git discard");
+                }
+
+                @Override
+                public Either<GitFailure<ProcessError>, List<ExecutedCommand>> unstage(List<String> paths) {
+                    return onIndex("unstage", paths, "git unstage");
+                }
+            };
         }
 
         @Override
@@ -222,7 +240,7 @@ class ProgramTest {
 
         @Override
         public Either<GitFailure<ProcessError>, List<ExecutedCommand>> amendLastCommit() {
-            return index("amend", List.of(), "git amendLastCommit");
+            return onIndex("amend", List.of(), "git amendLastCommit");
         }
 
         @Override
@@ -239,17 +257,6 @@ class ProgramTest {
         }
 
         @Override
-        public Either<GitFailure<GitError>, List<ExecutedCommand>> discard(DiscardPlan plan) {
-            discarded.add(plan);
-            return StubGitProvider.ran("git discard");
-        }
-
-        @Override
-        public Either<GitFailure<ProcessError>, List<ExecutedCommand>> unstage(List<String> paths) {
-            return index("unstage", paths, "git unstage");
-        }
-
-        @Override
         public Either<ProcessError, DiffText> commitChanges(Sha sha, DiffOptions options) {
             return Either.right(DiffText.of("changes of " + sha.value()));
         }
@@ -259,7 +266,7 @@ class ProgramTest {
             return Either.right(new Diffs("", "diff of " + files.size()));
         }
 
-        private Either<GitFailure<ProcessError>, List<ExecutedCommand>> index(
+        private Either<GitFailure<ProcessError>, List<ExecutedCommand>> onIndex(
                 String operation, List<String> paths, String command) {
             if (indexError != null) {
                 return StubGitProvider.refused(command, indexError);

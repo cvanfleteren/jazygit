@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.git;
 
-import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Either;
@@ -229,17 +228,10 @@ public interface GitInfoProvider {
      */
     Either<ProcessError, Map<String, String>> remoteUrls();
 
-    // The configuration of the repository itself, as git config --local reads and writes it.
-
     /**
-     * The value of {@code key} in the configuration of the repository, if it is set there.
+     * The configuration of the repository itself, as git config --local reads and writes it.
      */
-    Either<ProcessError, Option<String>> localConfig(String key);
-
-    /**
-     * Sets {@code key} to {@code value} in the configuration of the repository, or removes it there for none.
-     */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> setLocalConfig(String key, Option<String> value);
+    Config config();
 
     /**
      * The branch {@code branch} was made from, if that was recorded: as {@code gh} does, in
@@ -458,54 +450,18 @@ public interface GitInfoProvider {
      */
     Either<GitFailure<ProcessError>, List<ExecutedCommand>> reset(ResetTarget target, ResetMode mode);
 
-    // Operations on the index.
-
     /**
-     * Stages the changes of {@code paths}.
+     * Operations on the index.
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> stage(List<String> paths);
-
-    /**
-     * Removes the newly added {@code paths} from the index; they stay in the working tree, untracked.
-     */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> unstageNew(List<String> paths);
-
-    /**
-     * Throws changes away as described by {@code plan}. This cannot be undone.
-     */
-    Either<GitFailure<GitError>, List<ExecutedCommand>> discard(DiscardPlan plan);
-
-    /**
-     * Resets the index entries of {@code paths} to HEAD.
-     */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> unstage(List<String> paths);
+    Index index();
 
     /**
      * Listing, adding and removing the worktrees of the repository, as git worktree does.
      */
     Worktrees worktrees();
 
-    // Editing files, as git edits commit messages.
-
     /**
-     * Opens {@code files}, relative to the working tree, in the editor git uses for commit messages, and waits until
-     * it is closed. It runs on the terminal, which the caller must have handed over. Fails with a
-     * {@link GitError.EditorNotStarted} or {@link GitError.EditorFailed}, or a {@link ProcessError} when git names no
-     * editor.
+     * Editing files, as git edits commit messages.
      */
-    Either<GitFailure<GitError>, List<ExecutedCommand>> edit(List<String> files);
-
-    /**
-     * Opens {@code message} in the editor git uses for commit messages, and gives the message it was saved as once
-     * the editor is closed, with the command that ran. It runs on the terminal, which the caller must have handed
-     * over. Fails as {@link #edit} does, or with a {@link GitError.TempFileFailed}.
-     */
-    Either<GitFailure<GitError>, Tuple2<CommitMessage, List<ExecutedCommand>>> editMessage(CommitMessage message);
-
-    /**
-     * Opens {@code text} in the editor git uses, in a temporary file called {@code fileName}, which tells the editor
-     * what it is, and gives the text it was saved as once the editor is closed, with the command that ran. It runs on
-     * the terminal, which the caller must have handed over. Fails as {@link #editMessage} does.
-     */
-    Either<GitFailure<GitError>, Tuple2<String, List<ExecutedCommand>>> editText(String fileName, String text);
+    Editor editor();
 }

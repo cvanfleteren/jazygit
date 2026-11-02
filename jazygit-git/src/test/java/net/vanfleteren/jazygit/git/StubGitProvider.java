@@ -1,7 +1,5 @@
 package net.vanfleteren.jazygit.git;
 
-import io.vavr.Tuple;
-import io.vavr.Tuple2;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
@@ -24,7 +22,6 @@ import net.vanfleteren.jazygit.git.model.DeleteScope;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Diffs;
-import net.vanfleteren.jazygit.git.model.DiscardPlan;
 import net.vanfleteren.jazygit.git.model.Divergence;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.GitMetadata;
@@ -123,28 +120,6 @@ public interface StubGitProvider extends GitInfoProvider {
                 return shown;
             }
         };
-    }
-
-    @Override
-    default Either<GitFailure<GitError>, List<ExecutedCommand>> edit(List<String> files) {
-        return ran();
-    }
-
-    /**
-     * Saves the text as it is.
-     */
-    @Override
-    default Either<GitFailure<GitError>, Tuple2<String, List<ExecutedCommand>>> editText(String fileName, String text) {
-        return Either.right(Tuple.of(text, List.empty()));
-    }
-
-    /**
-     * Saves the message as it is.
-     */
-    @Override
-    default Either<GitFailure<GitError>, Tuple2<CommitMessage, List<ExecutedCommand>>> editMessage(
-            CommitMessage message) {
-        return Either.right(Tuple.of(message, List.empty()));
     }
 
     @Override
@@ -315,11 +290,6 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<ProcessError, Option<String>> localConfig(String key) {
-        return Either.right(Option.none());
-    }
-
-    @Override
     default Either<ProcessError, Option<BranchName>> parentBranch(BranchName branch) {
         return Either.right(Option.none());
     }
@@ -333,11 +303,6 @@ public interface StubGitProvider extends GitInfoProvider {
     default Map<BranchName, BaseDistance> baseDistance(
             Map<BranchRef, Sha> tips, Map<BranchName, BranchName> parents, Option<BranchName> main) {
         return HashMap.empty();
-    }
-
-    @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> setLocalConfig(String key, Option<String> value) {
-        return ran();
     }
 
     @Override
@@ -370,26 +335,6 @@ public interface StubGitProvider extends GitInfoProvider {
 
     @Override
     default Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(BranchName branch, BranchRef upstream) {
-        return ran();
-    }
-
-    @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> stage(List<String> paths) {
-        return ran();
-    }
-
-    @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> unstageNew(List<String> paths) {
-        return ran();
-    }
-
-    @Override
-    default Either<GitFailure<GitError>, List<ExecutedCommand>> discard(DiscardPlan plan) {
-        return ran();
-    }
-
-    @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> unstage(List<String> paths) {
         return ran();
     }
 
@@ -454,5 +399,20 @@ public interface StubGitProvider extends GitInfoProvider {
     default Either<GitFailure<GitError>, List<ExecutedCommand>> continueOrAbort(
             InProgress inProgress, InProgressAction action) {
         return ran();
+    }
+
+    @Override
+    default Config config() {
+        return new StubConfig() {};
+    }
+
+    @Override
+    default Index index() {
+        return new StubIndex() {};
+    }
+
+    @Override
+    default Editor editor() {
+        return new StubEditor() {};
     }
 }

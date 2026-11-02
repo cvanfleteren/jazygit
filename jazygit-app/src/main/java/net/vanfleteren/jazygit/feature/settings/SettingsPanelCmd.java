@@ -32,7 +32,7 @@ public sealed interface SettingsPanelCmd extends Cmd {
             return new SettingsPanelMsg.GitHubRead(new GitHubSetup(
                     env.gitHub().version(executable).mapLeft(Failure.GitHub::new),
                     GitHubAccount.host(env.git()),
-                    env.git().localConfig(GitHubAccount.USER_KEY).getOrElse(Option.none()),
+                    env.git().config().local(GitHubAccount.USER_KEY).getOrElse(Option.none()),
                     env.gitHub().logins().mapLeft(Failure.GitHub::new)));
         }
 
@@ -79,7 +79,8 @@ public sealed interface SettingsPanelCmd extends Cmd {
         @Override
         public Msg run(Env env) {
             return env.git()
-                    .setLocalConfig(GitHubAccount.USER_KEY, user)
+                    .config()
+                    .setLocal(GitHubAccount.USER_KEY, user)
                     .map(commands -> env.repositories()
                             .switchTo(env.git().worktree(), landing)
                             .fold(this::failedWith, reopened -> new SettingsPanelMsg.AccountSet()))

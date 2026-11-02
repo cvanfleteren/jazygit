@@ -60,7 +60,7 @@ class CliEditorTest {
         assumeTrue(System.getenv("GIT_EDITOR") == null);
         configureEditor("sh -c 'echo edited > \"$1\"' -");
 
-        CliEditor.edit(repo, List.of("a.txt")).get();
+        CliGitInfoProvider.open(repo).get().editor().edit(List.of("a.txt")).get();
 
         assertEquals("edited\n", Files.readString(repo.resolve("a.txt")));
     }

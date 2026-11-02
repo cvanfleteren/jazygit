@@ -1,0 +1,26 @@
+package net.vanfleteren.jazygit.git;
+
+import static net.vanfleteren.jazygit.git.StubGitProvider.ran;
+
+import io.vavr.collection.List;
+import io.vavr.control.Either;
+import io.vavr.control.Option;
+import net.vanfleteren.jazygit.git.GitError.ProcessError;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
+
+/**
+ * {@link Config} for tests: nothing is set, and setting succeeds without running anything. Fakes override what
+ * they need.
+ */
+public interface StubConfig extends Config {
+
+    @Override
+    default Either<ProcessError, Option<String>> local(String key) {
+        return Either.right(Option.none());
+    }
+
+    @Override
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> setLocal(String key, Option<String> value) {
+        return ran();
+    }
+}

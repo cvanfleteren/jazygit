@@ -576,11 +576,14 @@ class CliGitInfoProviderTest {
 
         assertEquals(
                 List.of("git add -- README.md 'new file.txt'"),
-                provider.stage(List.of("README.md", "new file.txt")).get().map(ExecutedCommand::line));
+                provider.index()
+                        .stage(List.of("README.md", "new file.txt"))
+                        .get()
+                        .map(ExecutedCommand::line));
         assertEquals(
                 List.of("git rm --cached --force --quiet -- 'new file.txt'"),
-                provider.unstageNew(List.of("new file.txt")).get().map(ExecutedCommand::line));
-        assertEquals(List.of(), provider.unstage(List.of()).get());
+                provider.index().unstageNew(List.of("new file.txt")).get().map(ExecutedCommand::line));
+        assertEquals(List.of(), provider.index().unstage(List.of()).get());
         assertEquals(
                 List.of("git commit --quiet -m 'a summary' -m details"),
                 provider.commit(new CommitMessage("a summary", "details")).get().map(ExecutedCommand::line));
@@ -1374,7 +1377,11 @@ class CliGitInfoProviderTest {
                         .map(ExecutedCommand::line));
         assertEquals(
                 List.of("git add -- missing.txt"),
-                provider.stage(List.of("missing.txt")).getLeft().commands().map(ExecutedCommand::line));
+                provider.index()
+                        .stage(List.of("missing.txt"))
+                        .getLeft()
+                        .commands()
+                        .map(ExecutedCommand::line));
     }
 
     @Test
@@ -2159,15 +2166,15 @@ class CliGitInfoProviderTest {
         Files.writeString(repo.resolve("README.md"), "changed\n");
         Files.writeString(repo.resolve("new.txt"), "new\n");
 
-        provider.stage(List.of("README.md", "new.txt")).get();
+        provider.index().stage(List.of("README.md", "new.txt")).get();
         assertEquals(
                 List.of(
                         new FileEntry("README.md", ChangeType.MODIFIED, true, false),
                         new FileEntry("new.txt", ChangeType.ADDED, true, false)),
                 provider.status().get().files());
 
-        provider.unstageNew(List.of("new.txt")).get();
-        provider.unstage(List.of("README.md")).get();
+        provider.index().unstageNew(List.of("new.txt")).get();
+        provider.index().unstage(List.of("README.md")).get();
         assertEquals(
                 List.of(
                         new FileEntry("README.md", ChangeType.MODIFIED, false, true),
@@ -2184,23 +2191,24 @@ class CliGitInfoProviderTest {
                         Fixtures.fileEntry("README.md", ChangeType.DELETED)),
                 provider.status().get().files());
 
-        provider.stage(List.of("READ.md", "README.md")).get();
+        provider.index().stage(List.of("READ.md", "README.md")).get();
         List<FileEntry> files = provider.status().get().files();
         assertEquals(List.of(FileEntry.renamed("READ.md", "README.md", true, false)), files);
 
         Diffs diffs = provider.diff(files, DiffOptions.DEFAULT).get();
         assertTrue(diffs.staged().text().contains("rename from README.md"), diffs.toString());
 
-        provider.unstageNew(List.of("READ.md")).get();
-        provider.unstage(List.of("README.md")).get();
+        provider.index().unstageNew(List.of("READ.md")).get();
+        provider.index().unstage(List.of("README.md")).get();
         assertEquals(
                 List.of(
                         Fixtures.fileEntry("READ.md", ChangeType.UNTRACKED),
                         Fixtures.fileEntry("README.md", ChangeType.DELETED)),
                 provider.status().get().files());
 
-        provider.stage(List.of("READ.md", "README.md")).get();
-        provider.discard(new DiscardPlan(List.of(), List.of(), List.of("README.md"), List.of("READ.md")))
+        provider.index().stage(List.of("READ.md", "README.md")).get();
+        provider.index()
+                .discard(new DiscardPlan(List.of(), List.of(), List.of("README.md"), List.of("READ.md")))
                 .get();
         assertEquals(List.of(), provider.status().get().files());
     }
@@ -2242,7 +2250,7 @@ class CliGitInfoProviderTest {
     @Test
     void stageFailsWithGitsExplanationForAnUnknownPath() {
         GitError.ProcessError error =
-                provider.stage(List.of("missing.txt")).getLeft().error();
+                provider.index().stage(List.of("missing.txt")).getLeft().error();
 
         assertTrue(error instanceof GitError.CommandFailed failed && failed.says("missing.txt"), error.toString());
     }

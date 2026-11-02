@@ -34,8 +34,10 @@ import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Branches;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.gh.model.PullRequestEdit;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
+import net.vanfleteren.jazygit.git.Editor;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
+import net.vanfleteren.jazygit.git.StubEditor;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
@@ -493,10 +495,15 @@ class EditPullRequestUpdateTest {
         };
         StubGitProvider git = new StubGitProvider() {
             @Override
-            public Either<GitFailure<GitError>, Tuple2<String, List<ExecutedCommand>>> editText(
-                    String fileName, String text) {
-                events.add("edit " + fileName + " " + text);
-                return Either.right(Tuple.of("Because", List.of(NVIM)));
+            public Editor editor() {
+                return new StubEditor() {
+                    @Override
+                    public Either<GitFailure<GitError>, Tuple2<String, List<ExecutedCommand>>> editText(
+                            String fileName, String text) {
+                        events.add("edit " + fileName + " " + text);
+                        return Either.right(Tuple.of("Because", List.of(NVIM)));
+                    }
+                };
             }
         };
 
@@ -523,9 +530,14 @@ class EditPullRequestUpdateTest {
     void anEditorThatFailsKeepsTheBodyAndShowsWhy() {
         StubGitProvider git = new StubGitProvider() {
             @Override
-            public Either<GitFailure<GitError>, Tuple2<String, List<ExecutedCommand>>> editText(
-                    String fileName, String text) {
-                return Either.left(new GitFailure<>(new GitError.EditorFailed("nvim", 1), List.of()));
+            public Editor editor() {
+                return new StubEditor() {
+                    @Override
+                    public Either<GitFailure<GitError>, Tuple2<String, List<ExecutedCommand>>> editText(
+                            String fileName, String text) {
+                        return Either.left(new GitFailure<>(new GitError.EditorFailed("nvim", 1), List.of()));
+                    }
+                };
             }
         };
 

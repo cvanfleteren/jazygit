@@ -47,7 +47,7 @@ public sealed interface ReviewCmd extends Cmd {
         @Override
         public Msg run(Env env) {
             return env.terminal()
-                    .handOver(() -> env.git().editText(FILE_NAME, text))
+                    .handOver(() -> env.git().editor().editText(FILE_NAME, text))
                     .fold(this::failedWith, edited -> new ReviewMsg.EditorClosed(edited._1, edited._2));
         }
 
