@@ -14,6 +14,7 @@ public record ResolveStartCmd(String typed) implements Cmd {
     @Override
     public Msg run(Env env) {
         return env.git()
+                .checkout()
                 .resolve(typed)
                 .fold(this::failedWith, commit -> new AddWorktreeMsg.StartResolved(typed, commit));
     }

@@ -41,14 +41,14 @@ class CliCheckoutTest {
 
         assertInstanceOf(
                 LocalChanges.class,
-                CliCheckout.checkout(repo, new BranchName("feature")).getLeft().error());
+                checkout().branch(new BranchName("feature")).getLeft().error());
     }
 
     @Test
     void checkoutCarriesNonConflictingChangesAcrossWithoutAStash() throws Exception {
         Files.writeString(repo.resolve("a.txt"), "changed\n");
 
-        assertTrue(CliCheckout.checkout(repo, new BranchName("feature")).isRight());
+        assertTrue(checkout().branch(new BranchName("feature")).isRight());
 
         assertEquals("changed\n", Files.readString(repo.resolve("a.txt")));
     }
@@ -57,9 +57,7 @@ class CliCheckoutTest {
     void otherCheckoutFailuresAreNotLocalChanges() {
         assertInstanceOf(
                 CommandFailed.class,
-                CliCheckout.checkout(repo, new BranchName("no-such-branch"))
-                        .getLeft()
-                        .error());
+                checkout().branch(new BranchName("no-such-branch")).getLeft().error());
     }
 
     @Test
@@ -68,9 +66,7 @@ class CliCheckoutTest {
 
         assertEquals(
                 List.of("git stash push --quiet", "git checkout --quiet feature --", "git stash pop --index --quiet"),
-                CliCheckout.checkoutWithStash(repo, new BranchName("feature"))
-                        .get()
-                        .map(ExecutedCommand::line));
+                checkout().branchWithStash(new BranchName("feature")).get().map(ExecutedCommand::line));
 
         assertEquals("feature", git("branch", "--show-current").strip());
         assertEquals("changed\n", Files.readString(repo.resolve("a.txt")));
@@ -82,8 +78,7 @@ class CliCheckoutTest {
         Files.writeString(repo.resolve("a.txt"), "staged\n");
         git("add", "a.txt");
 
-        assertTrue(
-                CliCheckout.checkoutWithStash(repo, new BranchName("feature")).isRight());
+        assertTrue(checkout().branchWithStash(new BranchName("feature")).isRight());
 
         assertEquals("M  a.txt\n", git("status", "--porcelain"));
     }
@@ -93,8 +88,7 @@ class CliCheckoutTest {
         Files.writeString(repo.resolve("a.txt"), "old\n");
         git("stash", "push", "-q");
 
-        assertTrue(
-                CliCheckout.checkoutWithStash(repo, new BranchName("feature")).isRight());
+        assertTrue(checkout().branchWithStash(new BranchName("feature")).isRight());
 
         assertEquals("feature", git("branch", "--show-current").strip());
         assertEquals("one\n", Files.readString(repo.resolve("a.txt")));
@@ -105,8 +99,8 @@ class CliCheckoutTest {
     void failedCheckoutPutsTheChangesBack() throws Exception {
         Files.writeString(repo.resolve("a.txt"), "changed\n");
 
-        GitFailure<GitError> failure = CliCheckout.checkoutWithStash(repo, new BranchName("no-such-branch"))
-                .getLeft();
+        GitFailure<GitError> failure =
+                checkout().branchWithStash(new BranchName("no-such-branch")).getLeft();
 
         assertInstanceOf(CommandFailed.class, failure.error());
         assertEquals(
@@ -130,11 +124,16 @@ class CliCheckoutTest {
         Files.writeString(repo.resolve("a.txt"), "main change\n");
 
         GitFailure<GitError> failure =
-                CliCheckout.checkoutWithStash(repo, new BranchName("feature")).getLeft();
+                checkout().branchWithStash(new BranchName("feature")).getLeft();
 
         assertInstanceOf(StashNotRestored.class, failure.error());
         assertEquals("feature", git("branch", "--show-current").strip());
         assertEquals(1, git("stash", "list").lines().count());
+    }
+
+    // Through the provider, as the app reaches it.
+    private Checkout checkout() {
+        return CliGitInfoProvider.open(repo).get().checkout();
     }
 
     private String git(String... args) throws Exception {

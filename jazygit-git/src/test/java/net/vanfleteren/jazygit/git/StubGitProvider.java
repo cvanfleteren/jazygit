@@ -34,7 +34,6 @@ import net.vanfleteren.jazygit.git.model.RemoteName;
 import net.vanfleteren.jazygit.git.model.RemoteRef;
 import net.vanfleteren.jazygit.git.model.ResetMode;
 import net.vanfleteren.jazygit.git.model.ResetTarget;
-import net.vanfleteren.jazygit.git.model.Revision;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.SquashMode;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -194,33 +193,6 @@ public interface StubGitProvider extends GitInfoProvider {
     @Override
     default Either<GitError, Diffs> diff(List<FileEntry> files, DiffOptions options) {
         return Either.right(new Diffs("", ""));
-    }
-
-    @Override
-    default Either<GitFailure<GitError>, List<ExecutedCommand>> checkout(BranchName branch) {
-        return ran();
-    }
-
-    @Override
-    default Either<GitFailure<GitError>, List<ExecutedCommand>> checkoutWithStash(BranchName branch) {
-        return ran();
-    }
-
-    @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewBranch(
-            BranchName name, Revision startPoint, Option<BranchName> parent) {
-        return ran();
-    }
-
-    @Override
-    default Either<GitFailure<ProcessError>, Option<Sha>> resolve(String text) {
-        return Either.right(Option.none());
-    }
-
-    @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewTrackingBranch(
-            BranchName name, RemoteBranch upstream) {
-        return ran();
     }
 
     @Override
@@ -399,5 +371,10 @@ public interface StubGitProvider extends GitInfoProvider {
     @Override
     default Status status() {
         return new StubStatus() {};
+    }
+
+    @Override
+    default Checkout checkout() {
+        return new StubCheckout() {};
     }
 }

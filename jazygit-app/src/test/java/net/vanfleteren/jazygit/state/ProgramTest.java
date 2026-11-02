@@ -35,12 +35,14 @@ import net.vanfleteren.jazygit.feature.fetch.FetchCmd;
 import net.vanfleteren.jazygit.feature.fetch.FetchMsg;
 import net.vanfleteren.jazygit.feature.stage.StageMsg;
 import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.git.Checkout;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.Index;
 import net.vanfleteren.jazygit.git.Stashes;
 import net.vanfleteren.jazygit.git.Status;
+import net.vanfleteren.jazygit.git.StubCheckout;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.StubIndex;
 import net.vanfleteren.jazygit.git.StubStashes;
@@ -157,19 +159,24 @@ class ProgramTest {
         }
 
         @Override
-        public Either<GitFailure<GitError>, List<ExecutedCommand>> checkout(BranchName branch) {
-            return GitFailure.widen(switchTo(branch, "git checkout"));
-        }
+        public Checkout checkout() {
+            return new StubCheckout() {
+                @Override
+                public Either<GitFailure<GitError>, List<ExecutedCommand>> branch(BranchName branch) {
+                    return GitFailure.widen(switchTo(branch, "git checkout"));
+                }
 
-        @Override
-        public Either<GitFailure<GitError>, List<ExecutedCommand>> checkoutWithStash(BranchName branch) {
-            return GitFailure.widen(switchTo(branch, "git checkoutWithStash"));
-        }
+                @Override
+                public Either<GitFailure<GitError>, List<ExecutedCommand>> branchWithStash(BranchName branch) {
+                    return GitFailure.widen(switchTo(branch, "git checkoutWithStash"));
+                }
 
-        @Override
-        public Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewBranch(
-                BranchName name, Revision startPoint, Option<BranchName> parent) {
-            return switchTo(name, "git checkoutNewBranch");
+                @Override
+                public Either<GitFailure<ProcessError>, List<ExecutedCommand>> newBranch(
+                        BranchName name, Revision startPoint, Option<BranchName> parent) {
+                    return switchTo(name, "git checkoutNewBranch");
+                }
+            };
         }
 
         private Either<GitFailure<ProcessError>, List<ExecutedCommand>> switchTo(BranchName branch, String command) {

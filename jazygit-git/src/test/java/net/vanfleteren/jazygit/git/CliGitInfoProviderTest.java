@@ -307,8 +307,8 @@ class CliGitInfoProviderTest {
         git("branch", "-D", "colleague");
         git("fetch", "-q", "origin");
 
-        provider.checkoutNewTrackingBranch(
-                        new BranchName("colleague"), new RemoteBranch("origin", new BranchName("colleague")))
+        provider.checkout()
+                .newTrackingBranch(new BranchName("colleague"), new RemoteBranch("origin", new BranchName("colleague")))
                 .get();
         gitAt("2020-01-04T00:00:00Z", "checkout", "-q", "-b", "feature", "origin/main");
 
@@ -559,7 +559,7 @@ class CliGitInfoProviderTest {
         git("branch", "feature");
         Files.writeString(repo.resolve("new.txt"), "new\n");
 
-        provider.checkout(new BranchName("feature")).get();
+        provider.checkout().branch(new BranchName("feature")).get();
 
         assertEquals(
                 Option.of(new BranchName("feature")),
@@ -592,7 +592,10 @@ class CliGitInfoProviderTest {
         Files.writeString(repo.resolve("README.md"), "dirty\n");
         assertEquals(
                 List.of("git stash push --quiet", "git checkout --quiet feature --", "git stash pop --index --quiet"),
-                provider.checkoutWithStash(new BranchName("feature")).get().map(ExecutedCommand::line));
+                provider.checkout()
+                        .branchWithStash(new BranchName("feature"))
+                        .get()
+                        .map(ExecutedCommand::line));
     }
 
     @Test
@@ -1400,7 +1403,8 @@ class CliGitInfoProviderTest {
         git("checkout", "-q", "main");
         Files.writeString(repo.resolve("README.md"), "local change\n");
 
-        GitError error = provider.checkout(new BranchName("feature")).getLeft().error();
+        GitError error =
+                provider.checkout().branch(new BranchName("feature")).getLeft().error();
 
         assertTrue(
                 error instanceof GitError.LocalChanges(String explanation)
@@ -1431,7 +1435,8 @@ class CliGitInfoProviderTest {
         git("commit", "-q", "-m", "On other");
         git("checkout", "-q", "main");
 
-        provider.checkoutNewBranch(
+        provider.checkout()
+                .newBranch(
                         new BranchName("topic"),
                         new BranchRef.Local(new BranchName("other")),
                         Option.of(new BranchName("other")))
@@ -1453,10 +1458,12 @@ class CliGitInfoProviderTest {
         Revision develop = new RemoteBranch("origin", new BranchName("develop")).tracking();
 
         git("config", "branch.autoSetupMerge", "true");
-        provider.checkoutNewBranch(new BranchName("follows"), develop, Option.none())
+        provider.checkout()
+                .newBranch(new BranchName("follows"), develop, Option.none())
                 .get();
         git("config", "branch.autoSetupMerge", "false");
-        provider.checkoutNewBranch(new BranchName("alone"), develop, Option.none())
+        provider.checkout()
+                .newBranch(new BranchName("alone"), develop, Option.none())
                 .get();
 
         assertTrue(gitSucceedsIn(repo, "config", "--get", "branch.follows.merge"));
@@ -1466,16 +1473,17 @@ class CliGitInfoProviderTest {
     @Test
     void whatTheUserTypedIsResolvedToTheCommitItNamesAndNeverReadAsAnOption() throws Exception {
         git("tag", "v1");
-        Sha head = provider.resolve("HEAD").get().get();
+        Sha head = provider.checkout().resolve("HEAD").get().get();
 
-        assertEquals(Option.of(head), provider.resolve("v1").get());
-        assertEquals(Option.none(), provider.resolve("--all").get());
-        assertEquals(Option.none(), provider.resolve("nowhere").get());
+        assertEquals(Option.of(head), provider.checkout().resolve("v1").get());
+        assertEquals(Option.none(), provider.checkout().resolve("--all").get());
+        assertEquals(Option.none(), provider.checkout().resolve("nowhere").get());
     }
 
     @Test
     void aBranchMadeWithoutAParentHasNoneRecorded() throws Exception {
-        provider.checkoutNewBranch(new BranchName("topic"), new BranchRef.Local(new BranchName("main")), Option.none())
+        provider.checkout()
+                .newBranch(new BranchName("topic"), new BranchRef.Local(new BranchName("main")), Option.none())
                 .get();
 
         assertEquals(
@@ -1487,10 +1495,11 @@ class CliGitInfoProviderTest {
         // git config cannot write the configuration while another writer holds its lock.
         Files.writeString(repo.resolve(".git/config.lock"), "");
 
-        var made = provider.checkoutNewBranch(
-                new BranchName("topic"),
-                new BranchRef.Local(new BranchName("main")),
-                Option.of(new BranchName("main")));
+        var made = provider.checkout()
+                .newBranch(
+                        new BranchName("topic"),
+                        new BranchRef.Local(new BranchName("main")),
+                        Option.of(new BranchName("main")));
 
         assertTrue(made.isRight());
         assertEquals(2, made.get().size());
@@ -1603,7 +1612,9 @@ class CliGitInfoProviderTest {
                         .map(Commit::message)
                         .toList());
 
-        provider.checkoutNewTrackingBranch(new BranchName("feature"), feature).get();
+        provider.checkout()
+                .newTrackingBranch(new BranchName("feature"), feature)
+                .get();
 
         Branch local = provider.allBranches()
                 .map(AllBranches::local)
@@ -2164,8 +2175,8 @@ class CliGitInfoProviderTest {
     void checkoutNewBranchFailsWhenTheNameIsTaken() throws Exception {
         git("branch", "topic");
 
-        assertTrue(provider.checkoutNewBranch(
-                        new BranchName("topic"), new BranchRef.Local(new BranchName("main")), Option.none())
+        assertTrue(provider.checkout()
+                .newBranch(new BranchName("topic"), new BranchRef.Local(new BranchName("main")), Option.none())
                 .isLeft());
     }
 
