@@ -118,9 +118,9 @@ class WorktreeChangesTest {
             public Worktrees worktrees() {
                 return new StubWorktrees() {
                     @Override
-                    public Either<GitError.ProcessError, Boolean> hasChanges(Path worktree) {
-                        return worktree.equals(broken)
-                                ? Either.left(new GitError.TimedOut("status", worktree))
+                    public Either<GitError.ProcessError, Boolean> hasChanges(Path location) {
+                        return location.equals(broken)
+                                ? Either.left(new GitError.TimedOut("status", location))
                                 : Either.right(true);
                     }
                 };
