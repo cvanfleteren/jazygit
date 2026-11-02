@@ -7,33 +7,56 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.function.Function;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.UnexpectedOutput;
 import net.vanfleteren.jazygit.git.model.*;
 
 /**
- * Reads the working tree status through the {@code git status} command line tool.
+ * The {@link Status} of a repository: the working tree status through the {@code git status} command line tool, and
+ * the stamps of the files git keeps, through {@link CliMetadata}, which runs no git.
  */
-final class CliStatus {
+final class CliStatus implements Status {
 
     private static final Duration TIMEOUT = Duration.ofSeconds(10);
     private static final String HEAD = "# branch.head ";
     private static final String OID = "# branch.oid ";
 
-    private CliStatus() {}
+    private final Path worktree;
+    // Where git keeps the files that tell what the repository is in the middle of, found once.
+    private final CliInProgress.Markers markers;
+    // Where the files are that tell whether the branches, the stashes or the worktrees changed, found once.
+    private final Option<CliMetadata.Locations> metadataAt;
+
+    CliStatus(Path worktree, CliInProgress.Markers markers, Option<CliMetadata.Locations> metadataAt) {
+        this.worktree = worktree;
+        this.markers = markers;
+        this.metadataAt = metadataAt;
+    }
 
     /**
-     * Runs {@code git status} in {@code worktree} and parses its output, and finds out what the repository is in
-     * the middle of from the files at {@code markers}.
+     * Runs {@code git status} in the worktree and parses its output, and finds out what the repository is in the
+     * middle of from the files at the markers.
      */
-    static Either<ProcessError, RepoStatus> read(Path worktree, CliInProgress.Markers markers) {
+    @Override
+    public Either<ProcessError, RepoStatus> read() {
         return GitProcess.read(
                         worktree,
                         GitCommand.reading("status", "--porcelain=v2", "--branch", "-z", "--untracked-files=all")
                                 .withTimeout(TIMEOUT),
                         CliStatus::parse)
                 .map(status -> status.withInProgress(CliInProgress.read(markers)));
+    }
+
+    @Override
+    public Option<GitMetadata> metadata() {
+        return metadataAt.map(at -> CliMetadata.read(at, Instant.now()));
+    }
+
+    @Override
+    public Option<MetadataStamp> diffStamp(List<FileEntry> files) {
+        return metadataAt.flatMap(at -> CliMetadata.diff(at, worktree, files, Instant.now()));
     }
 
     /**

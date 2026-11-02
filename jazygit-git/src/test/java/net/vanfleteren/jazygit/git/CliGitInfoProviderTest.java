@@ -114,7 +114,7 @@ class CliGitInfoProviderTest {
         CliGitInfoProvider initialised = CliGitInfoProvider.init(plain).get();
 
         assertEquals(plain.toRealPath(), initialised.worktree().toRealPath());
-        assertEquals(Option.none(), initialised.status().get().headCommit());
+        assertEquals(Option.none(), initialised.status().read().get().headCommit());
         assertTrue(gitSucceedsIn(plain, "rev-parse", "--git-dir"));
     }
 
@@ -127,27 +127,27 @@ class CliGitInfoProviderTest {
 
     @Test
     void statusFollowsTheWorkingTree() throws Exception {
-        assertEquals(List.of(), provider.status().get().files());
+        assertEquals(List.of(), provider.status().read().get().files());
 
         Files.writeString(repo.resolve("new.txt"), "new\n");
         assertEquals(
                 List.of(Fixtures.fileEntry("new.txt", ChangeType.UNTRACKED)),
-                provider.status().get().files());
+                provider.status().read().get().files());
 
         git("add", "new.txt");
         assertEquals(
                 List.of(Fixtures.fileEntry("new.txt", ChangeType.ADDED)),
-                provider.status().get().files());
+                provider.status().read().get().files());
     }
 
     @Test
     void commitsAndStatusFollowNewCommits() throws Exception {
-        Sha headBefore = provider.status().get().headCommit().get();
+        Sha headBefore = provider.status().read().get().headCommit().get();
         Files.writeString(repo.resolve("new.txt"), "new\n");
         git("add", "new.txt");
         git("commit", "-q", "-m", "Second commit");
 
-        RepoStatus status = provider.status().get();
+        RepoStatus status = provider.status().read().get();
         assertNotEquals(headBefore, status.headCommit().get());
         assertEquals(List.of(), status.files());
         List<Commit> commits = commits().get();
@@ -213,7 +213,7 @@ class CliGitInfoProviderTest {
 
     @Test
     void branchesFollowExternalChanges() throws Exception {
-        Sha head = provider.status().get().headCommit().get();
+        Sha head = provider.status().read().get().headCommit().get();
         assertEquals(
                 List.of(Fixtures.branch(new BranchName("main"), true, head)),
                 withoutTimes(provider.allBranches().map(AllBranches::local).get()));
@@ -233,7 +233,7 @@ class CliGitInfoProviderTest {
                 withoutTimes(provider.allBranches().map(AllBranches::local).get()));
 
         git("commit", "-q", "--allow-empty", "-m", "Move foo");
-        Sha moved = provider.status().get().headCommit().get();
+        Sha moved = provider.status().read().get().headCommit().get();
         assertEquals(
                 List.of(
                         Fixtures.branch(new BranchName("foo"), true, moved),
@@ -413,7 +413,7 @@ class CliGitInfoProviderTest {
 
     @Test
     void aheadListsTheCommitsNotOnTheBase() throws Exception {
-        Sha fork = provider.status().get().headCommit().get();
+        Sha fork = provider.status().read().get().headCommit().get();
         git("checkout", "-q", "-b", "side");
         git("commit", "-q", "--allow-empty", "-m", "Side one");
         git("checkout", "-q", "main");
@@ -421,7 +421,7 @@ class CliGitInfoProviderTest {
         git("checkout", "-q", "side");
         git("merge", "-q", "--no-edit", "main");
         BranchRef main = new BranchRef.Local(new BranchName("main"));
-        Sha head = provider.status().get().headCommit().get();
+        Sha head = provider.status().read().get().headCommit().get();
 
         Ahead ahead = provider.ahead(head, main, tip("main")).get();
 
@@ -443,7 +443,7 @@ class CliGitInfoProviderTest {
         git("commit", "-q", "--allow-empty", "-m", "Side two");
         git("commit", "-q", "--allow-empty", "-m", "Side three");
         BranchRef main = new BranchRef.Local(new BranchName("main"));
-        Sha head = provider.status().get().headCommit().get();
+        Sha head = provider.status().read().get().headCommit().get();
 
         Ahead three = CliLog.ahead(repo, head, main, tip("main"), 3).get();
         Ahead two = CliLog.ahead(repo, head, main, tip("main"), 2).get();
@@ -451,7 +451,7 @@ class CliGitInfoProviderTest {
         assertFalse(three.more());
         assertTrue(two.more());
         assertEquals(List.of("Side three", "Side two"), two.commits().map(Commit::message));
-        assertEquals(provider.status().get().headCommit().get(), two.tip());
+        assertEquals(provider.status().read().get().headCommit().get(), two.tip());
         // The walk cut short stops at Side one too, so the fork point is asked of git merge-base.
         assertEquals(three.forkPoint(), two.forkPoint());
         assertEquals(Option.of(tip("main")), two.forkPoint().map(Commit::sha));
@@ -492,7 +492,7 @@ class CliGitInfoProviderTest {
         git("commit", "-q", "--allow-empty", "-m", "Other root");
         BranchRef main = new BranchRef.Local(new BranchName("main"));
 
-        Ahead ahead = provider.ahead(provider.status().get().headCommit().get(), main, tip("main"))
+        Ahead ahead = provider.ahead(provider.status().read().get().headCommit().get(), main, tip("main"))
                 .get();
 
         assertEquals(List.of("Other root"), ahead.commits().map(Commit::message));
@@ -541,17 +541,17 @@ class CliGitInfoProviderTest {
         assertEquals(repo.getFileName().toString(), provider.repositoryName());
         assertEquals(
                 Option.of(new BranchName("main")),
-                provider.status().get().head().branchName());
+                provider.status().read().get().head().branchName());
 
         git("checkout", "-q", "-b", "feature");
         assertEquals(
                 Option.of(new BranchName("feature")),
-                provider.status().get().head().branchName());
+                provider.status().read().get().head().branchName());
 
         git("checkout", "-q", "--detach");
         assertEquals(
                 new Head.Detached(commits().get().get(0).sha()),
-                provider.status().get().head());
+                provider.status().read().get().head());
     }
 
     @Test
@@ -563,10 +563,10 @@ class CliGitInfoProviderTest {
 
         assertEquals(
                 Option.of(new BranchName("feature")),
-                provider.status().get().head().branchName());
+                provider.status().read().get().head().branchName());
         assertEquals(
                 List.of(Fixtures.fileEntry("new.txt", ChangeType.UNTRACKED)),
-                provider.status().get().files());
+                provider.status().read().get().files());
     }
 
     @Test
@@ -1027,11 +1027,19 @@ class CliGitInfoProviderTest {
         assertEquals(List.of("git reset --quiet --soft " + initial.value()), executed);
         assertEquals(
                 List.of("Initial commit"), commits().get().map(Commit::message).toList());
-        assertTrue(provider.status().get().files().exists(file -> file.path().equals("a.txt") && file.staged()));
+        assertTrue(provider.status()
+                .read()
+                .get()
+                .files()
+                .exists(file -> file.path().equals("a.txt") && file.staged()));
 
         git("reset", "-q", "--hard", second.value());
         provider.reset(new ResetTarget.ToCommit(initial), ResetMode.MIXED).get();
-        assertTrue(provider.status().get().files().exists(file -> file.path().equals("a.txt") && !file.staged()));
+        assertTrue(provider.status()
+                .read()
+                .get()
+                .files()
+                .exists(file -> file.path().equals("a.txt") && !file.staged()));
 
         git("reset", "-q", "--hard", second.value());
         Files.writeString(repo.resolve("README.md"), "dirty\n");
@@ -1400,7 +1408,7 @@ class CliGitInfoProviderTest {
                 error.toString());
         assertEquals(
                 Option.of(new BranchName("main")),
-                provider.status().get().head().branchName());
+                provider.status().read().get().head().branchName());
     }
 
     @Test
@@ -1431,7 +1439,7 @@ class CliGitInfoProviderTest {
 
         assertEquals(
                 Option.of(new BranchName("topic")),
-                provider.status().get().head().branchName());
+                provider.status().read().get().head().branchName());
         assertTrue(Files.exists(repo.resolve("other.txt")));
         assertEquals(
                 Option.of(new BranchName("other")),
@@ -1488,7 +1496,7 @@ class CliGitInfoProviderTest {
         assertEquals(2, made.get().size());
         assertEquals(
                 Option.of(new BranchName("topic")),
-                provider.status().get().head().branchName());
+                provider.status().read().get().head().branchName());
         assertEquals(
                 Option.none(), provider.parentBranch(new BranchName("topic")).get());
     }
@@ -2171,7 +2179,7 @@ class CliGitInfoProviderTest {
                 List.of(
                         new FileEntry("README.md", ChangeType.MODIFIED, true, false),
                         new FileEntry("new.txt", ChangeType.ADDED, true, false)),
-                provider.status().get().files());
+                provider.status().read().get().files());
 
         provider.index().unstageNew(List.of("new.txt")).get();
         provider.index().unstage(List.of("README.md")).get();
@@ -2179,7 +2187,7 @@ class CliGitInfoProviderTest {
                 List.of(
                         new FileEntry("README.md", ChangeType.MODIFIED, false, true),
                         new FileEntry("new.txt", ChangeType.UNTRACKED, false, true)),
-                provider.status().get().files());
+                provider.status().read().get().files());
     }
 
     @Test
@@ -2189,10 +2197,10 @@ class CliGitInfoProviderTest {
                 List.of(
                         Fixtures.fileEntry("READ.md", ChangeType.UNTRACKED),
                         Fixtures.fileEntry("README.md", ChangeType.DELETED)),
-                provider.status().get().files());
+                provider.status().read().get().files());
 
         provider.index().stage(List.of("READ.md", "README.md")).get();
-        List<FileEntry> files = provider.status().get().files();
+        List<FileEntry> files = provider.status().read().get().files();
         assertEquals(List.of(FileEntry.renamed("READ.md", "README.md", true, false)), files);
 
         Diffs diffs = provider.diff(files, DiffOptions.DEFAULT).get();
@@ -2204,13 +2212,13 @@ class CliGitInfoProviderTest {
                 List.of(
                         Fixtures.fileEntry("READ.md", ChangeType.UNTRACKED),
                         Fixtures.fileEntry("README.md", ChangeType.DELETED)),
-                provider.status().get().files());
+                provider.status().read().get().files());
 
         provider.index().stage(List.of("READ.md", "README.md")).get();
         provider.index()
                 .discard(new DiscardPlan(List.of(), List.of(), List.of("README.md"), List.of("READ.md")))
                 .get();
-        assertEquals(List.of(), provider.status().get().files());
+        assertEquals(List.of(), provider.status().read().get().files());
     }
 
     @Test
@@ -2220,7 +2228,7 @@ class CliGitInfoProviderTest {
         Files.writeString(repo.resolve("README.md"), "unstaged\n");
         Files.writeString(repo.resolve("new.txt"), "brand new\n");
 
-        Diffs diffs = provider.diff(provider.status().get().files(), DiffOptions.DEFAULT)
+        Diffs diffs = provider.diff(provider.status().read().get().files(), DiffOptions.DEFAULT)
                 .get();
 
         assertTrue(diffs.staged().text().contains("-hello"), diffs.toString());
@@ -2262,7 +2270,7 @@ class CliGitInfoProviderTest {
         gitIn(empty, "init", "-q", "-b", "main");
         CliGitInfoProvider emptyProvider = CliGitInfoProvider.open(empty).get();
         // Without a commit in HEAD there is no log to read (ADR 49).
-        assertEquals(Option.none(), emptyProvider.status().get().headCommit());
+        assertEquals(Option.none(), emptyProvider.status().read().get().headCommit());
         assertEquals(
                 List.of(), emptyProvider.allBranches().map(AllBranches::local).get());
         // Without a commit there is neither a stash nor a HEAD to fall back to.
@@ -2278,6 +2286,7 @@ class CliGitInfoProviderTest {
      */
     private io.vavr.control.Either<GitError.ProcessError, List<Commit>> commits() {
         return provider.status()
+                .read()
                 .flatMap(status ->
                         status.headCommit().fold(() -> io.vavr.control.Either.right(List.empty()), provider::commits));
     }

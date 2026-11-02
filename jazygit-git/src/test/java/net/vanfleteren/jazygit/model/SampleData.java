@@ -5,7 +5,9 @@ import io.vavr.control.Either;
 import java.time.Instant;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
+import net.vanfleteren.jazygit.git.Status;
 import net.vanfleteren.jazygit.git.StubGitProvider;
+import net.vanfleteren.jazygit.git.StubStatus;
 import net.vanfleteren.jazygit.git.model.*;
 
 /**
@@ -65,19 +67,25 @@ public final class SampleData implements StubGitProvider {
     }
 
     @Override
-    public Either<ProcessError, RepoStatus> status() {
-        return Either.right(new RepoStatus(
-                Head.onBranch(new BranchName("main"), new Sha("a1b2c3d4e5f60718293a4b5c6d7e8f9012345678")),
-                List.of(
-                        Fixtures.fileEntry(
-                                "src/main/java/net/vanfleteren/jazygit/JazygitApp.java", ChangeType.MODIFIED),
-                        Fixtures.fileEntry(
-                                "src/main/java/net/vanfleteren/jazygit/ui/ContentPanel.java", ChangeType.ADDED),
-                        Fixtures.fileEntry(
-                                "src/main/java/net/vanfleteren/jazygit/model/SampleData.java", ChangeType.ADDED),
-                        Fixtures.fileEntry("pom.xml", ChangeType.MODIFIED),
-                        Fixtures.fileEntry("README.md", ChangeType.DELETED),
-                        Fixtures.fileEntry("notes.txt", ChangeType.UNTRACKED))));
+    public Status status() {
+        return new StubStatus() {
+            @Override
+            public Either<ProcessError, RepoStatus> read() {
+                return Either.right(new RepoStatus(
+                        Head.onBranch(new BranchName("main"), new Sha("a1b2c3d4e5f60718293a4b5c6d7e8f9012345678")),
+                        List.of(
+                                Fixtures.fileEntry(
+                                        "src/main/java/net/vanfleteren/jazygit/JazygitApp.java", ChangeType.MODIFIED),
+                                Fixtures.fileEntry(
+                                        "src/main/java/net/vanfleteren/jazygit/ui/ContentPanel.java", ChangeType.ADDED),
+                                Fixtures.fileEntry(
+                                        "src/main/java/net/vanfleteren/jazygit/model/SampleData.java",
+                                        ChangeType.ADDED),
+                                Fixtures.fileEntry("pom.xml", ChangeType.MODIFIED),
+                                Fixtures.fileEntry("README.md", ChangeType.DELETED),
+                                Fixtures.fileEntry("notes.txt", ChangeType.UNTRACKED))));
+            }
+        };
     }
 
     @Override

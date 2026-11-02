@@ -8,7 +8,6 @@ import io.vavr.control.Option;
 import io.vavr.control.Try;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Instant;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.git.GitError.*;
 import net.vanfleteren.jazygit.git.model.*;
@@ -27,6 +26,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     private final Option<CliMetadata.Locations> metadataAt;
     // Asked each time git talks to a remote.
     private final Supplier<Map<String, String>> credentials;
+    private final CliStatus status;
     private final CliStashes stashes;
     private final CliWorktrees worktrees;
     private final CliConfig config;
@@ -42,6 +42,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
         this.markers = markers;
         this.metadataAt = metadataAt;
         this.credentials = credentials;
+        this.status = new CliStatus(worktree, markers, metadataAt);
         this.stashes = new CliStashes(worktree);
         this.worktrees = new CliWorktrees(worktree);
         this.config = new CliConfig(worktree);
@@ -109,21 +110,6 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     @Override
     public String repositoryName() {
         return RepositoryIdentity.labelOf(worktree);
-    }
-
-    @Override
-    public Either<ProcessError, RepoStatus> status() {
-        return CliStatus.read(worktree, markers);
-    }
-
-    @Override
-    public Option<GitMetadata> metadata() {
-        return metadataAt.map(at -> CliMetadata.read(at, Instant.now()));
-    }
-
-    @Override
-    public Option<MetadataStamp> diffStamp(List<FileEntry> files) {
-        return metadataAt.flatMap(at -> CliMetadata.diff(at, worktree, files, Instant.now()));
     }
 
     @Override
@@ -420,5 +406,10 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     @Override
     public Editor editor() {
         return editor;
+    }
+
+    @Override
+    public Status status() {
+        return status;
     }
 }

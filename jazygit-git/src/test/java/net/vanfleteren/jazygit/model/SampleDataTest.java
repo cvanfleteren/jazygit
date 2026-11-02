@@ -17,7 +17,7 @@ class SampleDataTest {
 
     @Test
     void filesAreNotEmpty() {
-        List<FileEntry> files = data.status().get().files();
+        List<FileEntry> files = data.status().read().get().files();
         assertFalse(files.isEmpty());
         for (FileEntry file : files) {
             assertFalse(file.path().isBlank());
@@ -43,7 +43,7 @@ class SampleDataTest {
 
     @Test
     void sampleCollectionsAreConsistentAcrossCalls() {
-        assertTrue(data.status().get().files().size() > 0);
+        assertTrue(data.status().read().get().files().size() > 0);
         assertEquals(data.branches().get().size(), data.branches().get().size());
         assertEquals(data.commits().get().size(), data.commits().get().size());
     }

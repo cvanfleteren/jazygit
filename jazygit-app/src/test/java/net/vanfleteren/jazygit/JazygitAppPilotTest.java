@@ -446,7 +446,8 @@ class JazygitAppPilotTest {
             StageMsg.Requested all = (StageMsg.Requested) fixture.dispatched().get(0);
             // The virtual root is selected first, so every changed file is requested.
             assertEquals(
-                    fixture.data().status().get().files().toSet(), all.files().toSet());
+                    fixture.data().status().read().get().files().toSet(),
+                    all.files().toSet());
 
             // Files come before directories: README.md, notes.txt, pom.xml, the merged src/... directory,
             // JazygitApp.java and then the "model" directory.
