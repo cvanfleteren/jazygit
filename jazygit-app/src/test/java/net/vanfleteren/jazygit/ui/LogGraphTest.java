@@ -74,4 +74,36 @@ class LogGraphTest {
                         List.of("* first", "| second", "| third")),
                 nodes.map(node -> LogGraph.gutter(node).draw(lines, "Merge")).toList());
     }
+
+    @Test
+    void closingTheInnerBranchesOfAStackKeepsTheRailsOfTheOuterOnes() {
+        // x is merged into y, y's branch into w, both onto u; w's branch, which goes on to u, into main.
+        List<CommitGraph.Node> nodes = CommitGraph.layout(CommitGraph.arrange(List.of(
+                commit("m", "c", "v"),
+                commit("v", "w"),
+                commit("w", "u", "z"),
+                commit("z", "y"),
+                commit("y", "u", "x"),
+                commit("x", "u"),
+                commit("u", "a"),
+                commit("c", "b"),
+                commit("b", "a"),
+                commit("a"))));
+        List<String> lines = List.of("first", "second", "third", "fourth");
+
+        assertEquals(
+                List.of(
+                        List.of("| | | * first", "| | |/  second", "| |/    third", "| |     fourth"),
+                        List.of("| * first", "|/  second", "|   third", "|   fourth")),
+                List.of(nodes.get(5), nodes.get(6))
+                        .map(node -> LogGraph.gutter(node).draw(lines, "Merge"))
+                        .toList());
+    }
+
+    @Test
+    void aOneLineCommitThatClosesABranchGetsABlankLineToCloseItOn() {
+        CommitGraph.Node closing = new CommitGraph.Node(commit("f", "a"), 1, 1);
+
+        assertEquals(List.of("| * only", "|/  "), LogGraph.gutter(closing).draw(List.of("only"), "Merge"));
+    }
 }

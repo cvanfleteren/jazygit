@@ -92,6 +92,38 @@ class CommitsPanelTest {
     }
 
     @Test
+    void aCommitWhereTheInnerBranchesOfAStackEndJoinsThemOnTheOuterRail() {
+        // x is merged into y, y's branch into w, both onto u; w's branch, which goes on to u, into main.
+        List<Commit> log = CommitGraph.arrange(List.of(
+                commit("mmmmmmm", "ccccccc", "vvvvvvv"),
+                commit("vvvvvvv", "wwwwwww"),
+                commit("wwwwwww", "uuuuuuu", "zzzzzzz"),
+                commit("zzzzzzz", "yyyyyyy"),
+                commit("yyyyyyy", "uuuuuuu", "xxxxxxx"),
+                commit("xxxxxxx", "uuuuuuu"),
+                commit("uuuuuuu", "aaaaaaa"),
+                commit("ccccccc", "bbbbbbb"),
+                commit("bbbbbbb", "aaaaaaa"),
+                commit("aaaaaaa")));
+
+        List<LoadableList.Row> rows = CommitsPanel.rows(CommitGraph.layout(log));
+
+        assertEquals(
+                List.of(
+                        "mmmmmmm Ad ◎─╮ msg mmmmmmm",
+                        "vvvvvvv Ad │ ○ msg vvvvvvv",
+                        "wwwwwww Ad │ ◎─╮ msg wwwwwww",
+                        "zzzzzzz Ad │ │ ○ msg zzzzzzz",
+                        "yyyyyyy Ad │ │ ◎─╮ msg yyyyyyy",
+                        "xxxxxxx Ad │ │ │ ○ msg xxxxxxx",
+                        "uuuuuuu Ad │ ○─┴─╯ msg uuuuuuu",
+                        "ccccccc Ad ○─╯ msg ccccccc",
+                        "bbbbbbb Ad ○ msg bbbbbbb",
+                        "aaaaaaa Ad ○ msg aaaaaaa"),
+                rows.map(LoadableList.Row::text).toList());
+    }
+
+    @Test
     void tagsComeBeforeTheMessageInTheirOwnColour() {
         Commit tagged = new Commit(
                 new Sha("abcdef0"),

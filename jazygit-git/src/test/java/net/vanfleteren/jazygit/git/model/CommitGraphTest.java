@@ -91,4 +91,29 @@ class CommitGraphTest {
                 List.of(0, 0, 0, 0, 0, 3, 0, 0, 0),
                 nodes.map(CommitGraph.Node::closes).toList());
     }
+
+    @Test
+    void aCommitCanCloseTheInnerBranchesOfAStackWhileAnOuterOneGoesOn() {
+        // x is merged into y, y's branch into w, both onto u; w's branch, which goes on to u, into main.
+        List<Commit> arranged = CommitGraph.arrange(List.of(
+                commit("m", "c", "v"),
+                commit("v", "w"),
+                commit("w", "u", "z"),
+                commit("z", "y"),
+                commit("y", "u", "x"),
+                commit("x", "u"),
+                commit("u", "a"),
+                commit("c", "b"),
+                commit("b", "a"),
+                commit("a")));
+
+        assertEquals(List.of("m", "v", "w", "z", "y", "x", "u", "c", "b", "a"), shas(arranged));
+        List<CommitGraph.Node> nodes = CommitGraph.layout(arranged);
+        assertEquals(
+                List.of(0, 1, 1, 2, 2, 3, 1, 0, 0, 0),
+                nodes.map(CommitGraph.Node::depth).toList());
+        assertEquals(
+                List.of(0, 0, 0, 0, 0, 2, 1, 0, 0, 0),
+                nodes.map(CommitGraph.Node::closes).toList());
+    }
 }
