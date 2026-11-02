@@ -28,6 +28,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     private final Option<CliMetadata.Locations> metadataAt;
     // Asked each time git talks to a remote.
     private final Supplier<Map<String, String>> credentials;
+    private final CliStashes stashes;
 
     private CliGitInfoProvider(
             Path worktree,
@@ -38,6 +39,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
         this.markers = markers;
         this.metadataAt = metadataAt;
         this.credentials = credentials;
+        this.stashes = new CliStashes(worktree);
     }
 
     /**
@@ -186,38 +188,8 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<ProcessError, List<Stash>> stashes() {
-        return CliStash.list(worktree);
-    }
-
-    @Override
-    public Either<ProcessError, DiffText> stashChanges(Sha sha, DiffOptions options) {
-        return CliStash.changes(worktree, sha, options);
-    }
-
-    @Override
-    public Either<ProcessError, List<CommitFile>> stashFiles(Sha sha) {
-        return CliStash.files(worktree, sha);
-    }
-
-    @Override
-    public Either<ProcessError, DiffText> stashFileChanges(Sha sha, List<CommitFile> files, DiffOptions options) {
-        return CliStash.fileChanges(worktree, sha, files, options);
-    }
-
-    @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> drop(Stash stash) {
-        return CliStash.drop(worktree, stash);
-    }
-
-    @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> pop(Stash stash) {
-        return CliStash.pop(worktree, stash);
-    }
-
-    @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> stash(Option<String> message) {
-        return CliStash.push(worktree, message);
+    public Stashes stashes() {
+        return stashes;
     }
 
     @Override

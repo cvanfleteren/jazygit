@@ -20,9 +20,10 @@ import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
- * Lists and creates stashes through the {@code git stash} command line tool.
+ * The {@link Stashes} of a repository, through the {@code git stash} command line tool. A checkout that takes the
+ * changes along stashes them through {@link #pushQuietly} and {@link #popQuietly}.
  */
-final class CliStash {
+final class CliStashes implements Stashes {
 
     // What git says when the staged changes of a stash do not apply.
     private static final String WITHOUT_INDEX = "Try without --index";
@@ -33,7 +34,11 @@ final class CliStash {
     // What git names in place of the branch when a stash is made on a detached HEAD.
     private static final String NO_BRANCH = "(no branch)";
 
-    private CliStash() {}
+    private final Path worktree;
+
+    CliStashes(Path worktree) {
+        this.worktree = worktree;
+    }
 
     /**
      * The stashes, newest first, as {@code git stash list} lists them: it runs this {@code git log} of the reflog of
@@ -42,7 +47,12 @@ final class CliStash {
      * built. Without a stash, there is no reflog, which {@code --ignore-missing} makes an empty list rather than an
      * error.
      */
-    static Either<ProcessError, List<Stash>> list(Path worktree) {
+    @Override
+    public Either<ProcessError, List<Stash>> list() {
+        return list(worktree);
+    }
+
+    private static Either<ProcessError, List<Stash>> list(Path worktree) {
         return GitProcess.read(
                 worktree,
                 GitCommand.reading(
@@ -54,11 +64,11 @@ final class CliStash {
                                 + "%gs" + GitOutput.PRETTY_FIELD_SEPARATOR + "%at",
                         "refs/stash",
                         "--"),
-                CliStash::parse);
+                CliStashes::parse);
     }
 
     static Either<UnexpectedOutput, List<Stash>> parse(String raw) {
-        return Either.sequenceRight(GitOutput.nonBlankLines(raw).map(CliStash::stash))
+        return Either.sequenceRight(GitOutput.nonBlankLines(raw).map(CliStashes::stash))
                 .map(Seq::toList);
     }
 
@@ -88,7 +98,8 @@ final class CliStash {
      * summary line, a blank line and the diff, read with {@code options}. Its untracked files are in it, whatever
      * the user's {@code stash.show*} settings say. Long output is cut off.
      */
-    static Either<ProcessError, DiffText> changes(Path worktree, Sha stash, DiffOptions options) {
+    @Override
+    public Either<ProcessError, DiffText> changes(Sha stash, DiffOptions options) {
         return GitProcess.read(
                 worktree,
                 GitCommand.reading(List.of(
@@ -108,7 +119,8 @@ final class CliStash {
     /**
      * The files {@code stash} changed, its untracked files included, with renames found.
      */
-    static Either<ProcessError, List<CommitFile>> files(Path worktree, Sha stash) {
+    @Override
+    public Either<ProcessError, List<CommitFile>> files(Sha stash) {
         return GitProcess.read(
                 worktree,
                 GitCommand.reading("stash", "show", "--include-untracked", "--name-status", "-z", "-M", stash.value()),
@@ -121,8 +133,8 @@ final class CliStash {
      * they were stashed on, and the untracked files, which a stash keeps in a third parent of its own, by showing
      * that parent. Without files, nothing is read: git would show every file.
      */
-    static Either<ProcessError, DiffText> fileChanges(
-            Path worktree, Sha stash, List<CommitFile> files, DiffOptions options) {
+    @Override
+    public Either<ProcessError, DiffText> fileChanges(Sha stash, List<CommitFile> files, DiffOptions options) {
         if (files.isEmpty()) {
             return Either.right(DiffText.of(""));
         }
@@ -162,25 +174,26 @@ final class CliStash {
      * {@code git stash pop <ref>} as {@link #popKeepingStaged} does. Git refuses e.g. when local changes would be
      * overwritten, or when the stash conflicts, which keeps it.
      */
-    static Either<GitFailure<GitError>, List<ExecutedCommand>> pop(Path worktree, Stash stash) {
-        return onStash(worktree, stash, ref -> popKeepingStaged(worktree, ref));
+    @Override
+    public Either<GitFailure<GitError>, List<ExecutedCommand>> pop(Stash stash) {
+        return onStash(stash, ref -> popKeepingStaged(worktree, ref));
     }
 
     /**
      * Runs {@code git stash drop <ref>} for {@code stash}, under the name it has now.
      */
-    static Either<GitFailure<GitError>, List<ExecutedCommand>> drop(Path worktree, Stash stash) {
-        return onStash(worktree, stash, ref -> GitProcess.log(worktree, git("stash", "drop", ref)));
+    @Override
+    public Either<GitFailure<GitError>, List<ExecutedCommand>> drop(Stash stash) {
+        return onStash(stash, ref -> GitProcess.log(worktree, git("stash", "drop", ref)));
     }
 
     /**
      * Runs {@code run} on the name {@code stash} has now: a stash added or removed since it was listed renamed it,
      * and its old name is another stash now. A stash that is gone is a {@link StashGone}.
      */
-    private static Either<GitFailure<GitError>, List<ExecutedCommand>> onStash(
-            Path worktree, Stash stash, Function<String, Either<GitFailure<ProcessError>, List<ExecutedCommand>>> run) {
-        return list(worktree)
-                .<GitFailure<GitError>>mapLeft(error -> new GitFailure<>(error, List.empty()))
+    private Either<GitFailure<GitError>, List<ExecutedCommand>> onStash(
+            Stash stash, Function<String, Either<GitFailure<ProcessError>, List<ExecutedCommand>>> run) {
+        return list().<GitFailure<GitError>>mapLeft(error -> new GitFailure<>(error, List.empty()))
                 .flatMap(stashes -> stashes.find(listed -> listed.sha().equals(stash.sha()))
                         .map(current -> GitFailure.<GitError, List<ExecutedCommand>>widen(run.apply(current.ref())))
                         .getOrElse(() -> Either.left(new GitFailure<>(new StashGone(stash.message()), List.empty()))));
@@ -191,7 +204,8 @@ final class CliStash {
      * unstaged, and the untracked files. Without a message, git names the stash after the branch and its
      * commit, e.g. {@code WIP on main: abc1234 Add widget}.
      */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(Path worktree, Option<String> message) {
+    @Override
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(Option<String> message) {
         return GitProcess.log(
                 worktree,
                 git(List.of("stash", "push", "--include-untracked")

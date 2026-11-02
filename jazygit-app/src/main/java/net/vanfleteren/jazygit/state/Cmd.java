@@ -286,7 +286,7 @@ public interface Cmd {
 
         @Override
         public Msg run(Env env) {
-            return env.git().stashes().fold(this::failedWith, LoadMsg.StashesLoaded::new);
+            return env.git().stashes().list().fold(this::failedWith, LoadMsg.StashesLoaded::new);
         }
     }
 
@@ -500,7 +500,8 @@ public interface Cmd {
         @Override
         public Msg run(Env env) {
             return env.git()
-                    .stashChanges(sha, options)
+                    .stashes()
+                    .changes(sha, options)
                     .fold(this::failedWith, changes -> new LoadMsg.StashDetailLoaded(sha, options, changes));
         }
     }
@@ -527,7 +528,7 @@ public interface Cmd {
                         case CommitFilesView.Changes.OfCommit(Sha sha) ->
                             env.git().commitFiles(sha);
                         case CommitFilesView.Changes.OfStash(Sha sha) ->
-                            env.git().stashFiles(sha);
+                            env.git().stashes().files(sha);
                         case CommitFilesView.Changes.OfBranch(var branch, var base, Sha sha) ->
                             env.git().rangeFiles(base.tip(), sha);
                         case CommitFilesView.Changes.OfPullRequest(PullRequestCommits commits) ->
@@ -560,7 +561,7 @@ public interface Cmd {
                         case CommitFilesView.Changes.OfCommit(Sha sha) ->
                             env.git().commitFileChanges(sha, files, options);
                         case CommitFilesView.Changes.OfStash(Sha sha) ->
-                            env.git().stashFileChanges(sha, files, options);
+                            env.git().stashes().fileChanges(sha, files, options);
                         case CommitFilesView.Changes.OfBranch(var branch, var base, Sha sha) ->
                             env.git().rangeFileChanges(base.tip(), sha, files, options);
                         case CommitFilesView.Changes.OfPullRequest(PullRequestCommits commits) ->

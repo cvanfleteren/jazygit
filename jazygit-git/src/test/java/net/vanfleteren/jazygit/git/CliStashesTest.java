@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.zeroturnaround.exec.ProcessExecutor;
 
-class CliStashTest {
+class CliStashesTest {
 
     @TempDir
     Path repo;
@@ -31,7 +31,7 @@ class CliStashTest {
         Files.writeString(repo.resolve("a.txt"), "one\ntwo\n");
         git("stash", "push", "-qm", "my work");
 
-        Stash stash = CliStash.list(repo).get().head();
+        Stash stash = stashes().list().get().head();
 
         assertEquals("my work", stash.message());
         assertEquals(Option.of(new BranchName("main")), stash.branch());
@@ -45,13 +45,13 @@ class CliStashTest {
         Files.writeString(repo.resolve("other.txt"), "o\n");
         git("stash", "push", "-u", "-qm", "my work");
 
-        List<CommitFile> files = CliStash.files(repo, stash()).get();
-        String tracked = CliStash.fileChanges(
-                        repo, stash(), files.filter(f -> f.path().equals("a.txt")), DiffOptions.DEFAULT)
+        List<CommitFile> files = stashes().files(stash()).get();
+        String tracked = stashes()
+                .fileChanges(stash(), files.filter(f -> f.path().equals("a.txt")), DiffOptions.DEFAULT)
                 .get()
                 .text();
-        String untracked = CliStash.fileChanges(
-                        repo, stash(), files.filter(f -> f.path().equals("untracked.txt")), DiffOptions.DEFAULT)
+        String untracked = stashes()
+                .fileChanges(stash(), files.filter(f -> f.path().equals("untracked.txt")), DiffOptions.DEFAULT)
                 .get()
                 .text();
 
@@ -76,10 +76,9 @@ class CliStashTest {
         Files.writeString(repo.resolve("untracked.txt"), "u\n");
         git("stash", "push", "-u", "-qm", "my work");
 
-        String whole =
-                CliStash.changes(repo, stash(), DiffOptions.DEFAULT).get().text();
-        String files = CliStash.fileChanges(
-                        repo, stash(), CliStash.files(repo, stash()).get(), DiffOptions.DEFAULT)
+        String whole = stashes().changes(stash(), DiffOptions.DEFAULT).get().text();
+        String files = stashes()
+                .fileChanges(stash(), stashes().files(stash()).get(), DiffOptions.DEFAULT)
                 .get()
                 .text();
 
@@ -94,8 +93,8 @@ class CliStashTest {
         Files.writeString(repo.resolve("a.txt"), "one\ntwo\n");
         git("stash", "push", "-qm", "my work");
 
-        String changes = CliStash.fileChanges(
-                        repo, stash(), List.of(new CommitFile("a.txt", ChangeType.MODIFIED)), DiffOptions.DEFAULT)
+        String changes = stashes()
+                .fileChanges(stash(), List.of(new CommitFile("a.txt", ChangeType.MODIFIED)), DiffOptions.DEFAULT)
                 .get()
                 .text();
 
@@ -116,7 +115,8 @@ class CliStashTest {
         git("config", "stash.showStat", "false");
         git("config", "stash.showIncludeUntracked", "false");
 
-        List<String> lines = CliStash.changes(repo, stash(), DiffOptions.DEFAULT)
+        List<String> lines = stashes()
+                .changes(stash(), DiffOptions.DEFAULT)
                 .get()
                 .text()
                 .lines()
@@ -143,7 +143,8 @@ class CliStashTest {
         Files.writeString(repo.resolve("b.txt"), "  x\n");
         git("stash", "push", "-q");
 
-        List<String> lines = CliStash.changes(repo, stash(), DiffOptions.DEFAULT.withIgnoreWhitespace(true))
+        List<String> lines = stashes()
+                .changes(stash(), DiffOptions.DEFAULT.withIgnoreWhitespace(true))
                 .get()
                 .text()
                 .lines()
@@ -161,7 +162,7 @@ class CliStashTest {
         Files.writeString(repo.resolve("b.txt"), "x\nunstaged\n");
         git("stash", "push", "-q");
 
-        assertTrue(CliStash.pop(repo, CliStash.list(repo).get().head()).isRight());
+        assertTrue(stashes().pop(stashes().list().get().head()).isRight());
 
         assertEquals("M  a.txt\n M b.txt\n", git("status", "--porcelain"));
         assertEquals("", git("stash", "list"));
@@ -179,7 +180,7 @@ class CliStashTest {
         Files.writeString(repo.resolve("a.txt"), "1\n2\nlater\n4\n5\n6\n7\n8\n");
         git("commit", "-qam", "later");
 
-        var commands = CliStash.pop(repo, CliStash.list(repo).get().head()).get();
+        var commands = stashes().pop(stashes().list().get().head()).get();
 
         assertEquals(
                 List.of("git stash pop --index 'stash@{0}'", "git stash pop 'stash@{0}'"),
@@ -199,7 +200,7 @@ class CliStashTest {
         Files.writeString(repo.resolve("b.txt"), "x\nstaged\n");
         git("add", "b.txt");
 
-        var commands = CliStash.pop(repo, CliStash.list(repo).get().head()).get();
+        var commands = stashes().pop(stashes().list().get().head()).get();
 
         assertEquals(List.of("git stash pop 'stash@{0}'"), commands.map(ExecutedCommand::line));
         assertEquals(" M a.txt\nM  b.txt\n", git("status", "--porcelain"));
@@ -215,13 +216,118 @@ class CliStashTest {
         Files.writeString(repo.resolve("a.txt"), "committed\n");
         git("commit", "-qam", "conflicting");
 
-        var failure = CliStash.pop(repo, CliStash.list(repo).get().head()).getLeft();
+        var failure = stashes().pop(stashes().list().get().head()).getLeft();
 
         assertEquals(
                 List.of("git stash pop --index 'stash@{0}'", "git stash pop 'stash@{0}'"),
                 failure.commands().map(ExecutedCommand::line));
         assertEquals("UU a.txt\n", git("status", "--porcelain"));
         assertEquals(1, git("stash", "list").lines().count());
+    }
+
+    @Test
+    void pushSavesTrackedAndUntrackedChangesUnderTheGivenName() throws Exception {
+        init();
+        Files.writeString(repo.resolve("a.txt"), "changed\n");
+        Files.writeString(repo.resolve("new.txt"), "new\n");
+
+        List<String> executed = stashes().push(Option.of("my work")).get().map(ExecutedCommand::line);
+
+        assertEquals(List.of("git stash push --include-untracked --message 'my work'"), executed);
+        assertEquals("", git("status", "--porcelain"));
+        assertEquals(
+                List.of("stash@{0} my work"), stashes().list().get().map(stash -> stash.ref() + " " + stash.message()));
+    }
+
+    @Test
+    void pushWithoutANameIsNamedByGit() throws Exception {
+        init();
+        Files.writeString(repo.resolve("a.txt"), "changed\n");
+        String head = git("log", "-1", "--format=%h %s").strip();
+
+        List<String> executed = stashes().push(Option.none()).get().map(ExecutedCommand::line);
+
+        assertEquals(List.of("git stash push --include-untracked"), executed);
+        assertEquals(List.of("WIP on main: " + head), stashes().list().get().map(Stash::message));
+    }
+
+    @Test
+    void popRestoresTheChangesAndDropsTheStash() throws Exception {
+        init();
+        Files.writeString(repo.resolve("a.txt"), "changed\n");
+        stashes().push(Option.of("work")).get();
+
+        List<String> executed =
+                stashes().pop(stashes().list().get().head()).get().map(ExecutedCommand::line);
+
+        assertEquals(1, executed.size());
+        assertTrue(executed.head().startsWith("git stash pop"), executed.toString());
+        assertEquals("changed\n", Files.readString(repo.resolve("a.txt")));
+        assertEquals(List.of(), stashes().list().get());
+    }
+
+    @Test
+    void dropDeletesTheStashWithoutApplyingIt() throws Exception {
+        init();
+        Files.writeString(repo.resolve("a.txt"), "changed\n");
+        stashes().push(Option.of("work")).get();
+
+        List<String> executed =
+                stashes().drop(stashes().list().get().head()).get().map(ExecutedCommand::line);
+
+        assertEquals(1, executed.size());
+        assertTrue(executed.head().startsWith("git stash drop"), executed.toString());
+        assertEquals(List.of(), stashes().list().get());
+        assertEquals("one\n", Files.readString(repo.resolve("a.txt")));
+    }
+
+    @Test
+    void popOfAStashThatIsGoneFailsWithoutRunningAnything() throws Exception {
+        init();
+        Files.writeString(repo.resolve("a.txt"), "changed\n");
+        stashes().push(Option.of("work")).get();
+        Stash work = stashes().list().get().head();
+        stashes().drop(work).get();
+
+        GitFailure<GitError> failure = stashes().pop(work).getLeft();
+
+        assertEquals(new GitError.StashGone("work"), failure.error());
+        assertEquals(List.of(), failure.commands());
+    }
+
+    @Test
+    void aStashIsFoundUnderItsNewNameOnceAnotherWasAdded() throws Exception {
+        init();
+        Files.writeString(repo.resolve("a.txt"), "first\n");
+        stashes().push(Option.of("first")).get();
+        Stash first = stashes().list().get().head();
+        Files.writeString(repo.resolve("a.txt"), "second\n");
+        stashes().push(Option.of("second")).get();
+
+        assertEquals(
+                List.of("git stash drop 'stash@{1}'"),
+                stashes().drop(first).get().map(ExecutedCommand::line));
+
+        assertEquals(List.of("second"), stashes().list().get().map(Stash::message));
+    }
+
+    @Test
+    void theNewestIsListedFirstAndThereAreNoneInACleanRepository() throws Exception {
+        init();
+        assertEquals(List.of(), stashes().list().get());
+        Files.writeString(repo.resolve("a.txt"), "first\n");
+        stashes().push(Option.of("first")).get();
+        Files.writeString(repo.resolve("a.txt"), "second\n");
+        stashes().push(Option.of("second")).get();
+
+        assertEquals(
+                List.of("stash@{0} second", "stash@{1} first"),
+                stashes().list().get().map(stash -> stash.ref() + " " + stash.message()));
+    }
+
+    // Through the provider, as the app reaches them.
+    private Stashes stashes() {
+        return CliGitInfoProvider.open(repo).get().stashes();
     }
 
     private void init() throws Exception {

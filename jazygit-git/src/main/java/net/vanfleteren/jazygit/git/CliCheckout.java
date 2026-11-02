@@ -51,12 +51,12 @@ final class CliCheckout {
      * which is a {@link StashNotRestored}.
      */
     static Either<GitFailure<GitError>, List<ExecutedCommand>> checkoutWithStash(Path worktree, BranchName branch) {
-        return GitFailure.<GitError, CliStash.Stashed>widen(CliStash.pushQuietly(worktree))
+        return GitFailure.<GitError, CliStashes.Stashed>widen(CliStashes.pushQuietly(worktree))
                 .flatMap(stashed -> GitFailure.sequence(
                         () -> Either.right(stashed.commands()),
                         () -> GitFailure.<GitError, List<ExecutedCommand>>widen(checkout(worktree, branch))
                                 .mapLeft(failure ->
-                                        stashed.any() ? failure.followedBy(CliStash.popQuietly(worktree)) : failure),
+                                        stashed.any() ? failure.followedBy(CliStashes.popQuietly(worktree)) : failure),
                         () -> stashed.any() ? restore(worktree) : GitFailure.nothing()));
     }
 
@@ -64,7 +64,7 @@ final class CliCheckout {
      * Pops the changes that were stashed for the checkout.
      */
     private static Either<GitFailure<GitError>, List<ExecutedCommand>> restore(Path worktree) {
-        return CliStash.popQuietly(worktree).mapLeft(failure -> failure.map(StashNotRestored::new));
+        return CliStashes.popQuietly(worktree).mapLeft(failure -> failure.map(StashNotRestored::new));
     }
 
     /**
