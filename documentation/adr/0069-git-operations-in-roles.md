@@ -59,8 +59,9 @@ overrides, from the status to stashes, checkout, push, the index and commits.
    `CliCheckout.recordParent`, `CliDiffs.flags`), and the other calls it. A role class never holds another role, so
    none is built before another, and a stub of one role never changes what another one runs. What belongs to no role
    stays a static helper of its own: the plumbing of an interactive rebase in `CliRebase`, `CliInProgress`,
-   `GitOutput` and `GitProcess`. Method names are short within their role: `branches().rename`, `stashes().drop`,
-   `worktrees().remove`.
+   `GitOutput` and `GitProcess`. So does `CliMetadata`, which the status reads its stamps through: it runs no git,
+   only stamps files of the git directory. Method names are short within their role: `branches().rename`,
+   `stashes().drop`, `worktrees().remove`.
 2. **Everything that passes credentials to git is in `Remotes`.** That moves `deleteBranch` out of the branches and
    `pullRequestFiles` out of the diffs, with their signatures as they are. `Remotes` is the only role holding the
    credentials. `Diffs.pullRequestFileChanges` reads the commits that `Remotes.pullRequestFiles` fetched, so it
