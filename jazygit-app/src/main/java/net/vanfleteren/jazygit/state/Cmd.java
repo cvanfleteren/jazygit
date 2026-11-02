@@ -215,7 +215,7 @@ public interface Cmd {
 
         @Override
         public Msg run(Env env) {
-            return env.git().status().fold(this::failedWith, LoadMsg.StatusLoaded::new);
+            return env.git().status().read().fold(this::failedWith, LoadMsg.StatusLoaded::new);
         }
     }
 
@@ -269,7 +269,7 @@ public interface Cmd {
 
         @Override
         public Msg run(Env env) {
-            Option<GitMetadata> metadata = env.git().metadata();
+            Option<GitMetadata> metadata = env.git().status().metadata();
             return new LoadMsg.MetadataChecked(List.of(
                     Tuple.of((Load) new LoadBranches(), metadata.flatMap(GitMetadata::branches)),
                     Tuple.of(new LoadStashes(), metadata.flatMap(GitMetadata::stashes)),
@@ -590,7 +590,7 @@ public interface Cmd {
          */
         @Override
         public Msg run(Env env) {
-            Option<MetadataStamp> stamp = env.git().diffStamp(files);
+            Option<MetadataStamp> stamp = env.git().status().diffStamp(files);
             return env.git()
                     .diff(files, options)
                     .fold(this::failedWith, diff -> new LoadMsg.FileDiffLoaded(files, options, diff, stamp));
@@ -605,7 +605,7 @@ public interface Cmd {
 
         @Override
         public Msg run(Env env) {
-            return new LoadMsg.FileDiffChecked(load, env.git().diffStamp(load.files()));
+            return new LoadMsg.FileDiffChecked(load, env.git().status().diffStamp(load.files()));
         }
     }
 }

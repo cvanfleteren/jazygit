@@ -833,7 +833,7 @@ no operation, like switching the lists of the branches pane from the worktrees, 
 classDiagram
     class GitInfoProvider {
         <<interface>>
-        status() Either of ProcessError or RepoStatus
+        status() Status
         log(branch) Either of GitError or commits
         diff(files, DiffOptions) Either of GitError or Diffs
         checkout(branch) Either of GitFailure of GitError or commands
@@ -856,6 +856,7 @@ classDiagram
     }
     CliGitInfoProvider ..|> GitInfoProvider
     CliStashes ..|> Stashes
+    CliStatus ..|> Status
     CliIndex ..|> Index
     CliEditor ..|> Editor
     CliConfig ..|> Config
@@ -863,7 +864,7 @@ classDiagram
     CliGitInfoProvider --> CliConfig : config()
     CliWorktrees ..|> Worktrees
     CliGitInfoProvider --> CliWorktrees : worktrees()
-    CliGitInfoProvider ..> CliStatus
+    CliGitInfoProvider --> CliStatus : status()
     CliGitInfoProvider ..> CliBranches
     CliGitInfoProvider ..> CliLog
     CliGitInfoProvider ..> CliDiff

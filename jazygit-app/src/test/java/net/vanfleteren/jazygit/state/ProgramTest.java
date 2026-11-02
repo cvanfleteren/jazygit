@@ -40,9 +40,11 @@ import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.Index;
 import net.vanfleteren.jazygit.git.Stashes;
+import net.vanfleteren.jazygit.git.Status;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.StubIndex;
 import net.vanfleteren.jazygit.git.StubStashes;
+import net.vanfleteren.jazygit.git.StubStatus;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
@@ -95,8 +97,15 @@ class ProgramTest {
         final java.util.List<String> logLoads = new ArrayList<>();
 
         @Override
-        public Either<ProcessError, RepoStatus> status() {
-            return statusError != null ? Either.left(new GitError.CommandFailed(statusError, 1)) : Either.right(status);
+        public Status status() {
+            return new StubStatus() {
+                @Override
+                public Either<ProcessError, RepoStatus> read() {
+                    return statusError != null
+                            ? Either.left(new GitError.CommandFailed(statusError, 1))
+                            : Either.right(status);
+                }
+            };
         }
 
         @Override

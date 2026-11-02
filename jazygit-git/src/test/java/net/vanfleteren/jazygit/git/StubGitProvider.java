@@ -24,18 +24,14 @@ import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.Divergence;
 import net.vanfleteren.jazygit.git.model.FileEntry;
-import net.vanfleteren.jazygit.git.model.GitMetadata;
-import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.InProgressAction;
 import net.vanfleteren.jazygit.git.model.MergeMode;
-import net.vanfleteren.jazygit.git.model.MetadataStamp;
 import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.RemoteName;
 import net.vanfleteren.jazygit.git.model.RemoteRef;
-import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.ResetMode;
 import net.vanfleteren.jazygit.git.model.ResetTarget;
 import net.vanfleteren.jazygit.git.model.Revision;
@@ -78,22 +74,6 @@ public interface StubGitProvider extends GitInfoProvider {
     @Override
     default Path worktree() {
         return Path.of("/repos/repo");
-    }
-
-    @Override
-    default Either<ProcessError, RepoStatus> status() {
-        return Either.right(new RepoStatus(Head.onBranch(new BranchName("main"), new Sha("aaaa")), List.empty()));
-    }
-
-    // No files to look at, so what the stub says is read every time.
-    @Override
-    default Option<GitMetadata> metadata() {
-        return Option.none();
-    }
-
-    @Override
-    default Option<MetadataStamp> diffStamp(List<FileEntry> files) {
-        return Option.none();
     }
 
     /**
@@ -414,5 +394,10 @@ public interface StubGitProvider extends GitInfoProvider {
     @Override
     default Editor editor() {
         return new StubEditor() {};
+    }
+
+    @Override
+    default Status status() {
+        return new StubStatus() {};
     }
 }

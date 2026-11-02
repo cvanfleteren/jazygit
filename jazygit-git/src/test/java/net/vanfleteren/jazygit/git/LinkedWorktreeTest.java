@@ -109,7 +109,7 @@ class LinkedWorktreeTest {
         Files.writeString(linked.resolve("new.txt"), "brand new\n");
         CliGitInfoProvider provider = CliGitInfoProvider.open(linked).get();
 
-        List<FileEntry> files = provider.status().get().files();
+        List<FileEntry> files = provider.status().read().get().files();
         Diffs diffs = provider.diff(files, DiffOptions.DEFAULT).get();
 
         assertEquals(List.of(Fixtures.fileEntry("new.txt", ChangeType.UNTRACKED)), files);
@@ -117,9 +117,10 @@ class LinkedWorktreeTest {
         // The untracked file was diffed in a copy of the index; the real one still does not have it.
         assertEquals(
                 List.of(Fixtures.fileEntry("new.txt", ChangeType.UNTRACKED)),
-                provider.status().get().files());
+                provider.status().read().get().files());
         assertEquals(
-                List.of(), CliGitInfoProvider.open(main).get().status().get().files());
+                List.of(),
+                CliGitInfoProvider.open(main).get().status().read().get().files());
     }
 
     @Test

@@ -13,7 +13,9 @@ import java.time.Instant;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
+import net.vanfleteren.jazygit.git.Status;
 import net.vanfleteren.jazygit.git.StubGitProvider;
+import net.vanfleteren.jazygit.git.StubStatus;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
@@ -37,8 +39,13 @@ class PanePositionTest {
             implements StubGitProvider {
 
         @Override
-        public Either<ProcessError, RepoStatus> status() {
-            return Either.right(new RepoStatus(Head.onBranch(new BranchName("main"), new Sha("aaaa")), files));
+        public Status status() {
+            return new StubStatus() {
+                @Override
+                public Either<ProcessError, RepoStatus> read() {
+                    return Either.right(new RepoStatus(Head.onBranch(new BranchName("main"), new Sha("aaaa")), files));
+                }
+            };
         }
 
         @Override

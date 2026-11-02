@@ -45,7 +45,7 @@ class InProgressTest {
 
     @Test
     void nothingIsInProgressInAQuietRepository() {
-        assertEquals(Option.none(), git.status().get().inProgress());
+        assertEquals(Option.none(), git.status().read().get().inProgress());
     }
 
     @Test
@@ -54,7 +54,7 @@ class InProgressTest {
 
         assertEquals(
                 Option.of(new InProgress.Merging(sha("conflicting"))),
-                git.status().get().inProgress());
+                git.status().read().get().inProgress());
     }
 
     @Test
@@ -67,7 +67,7 @@ class InProgressTest {
 
         assertEquals(
                 Option.of(new InProgress.Rebasing(Option.of(new BranchName("conflicting")), sha("main"), 1, 2)),
-                git.status().get().inProgress());
+                git.status().read().get().inProgress());
     }
 
     @Test
@@ -76,7 +76,7 @@ class InProgressTest {
 
         assertEquals(
                 Option.of(new InProgress.CherryPicking(sha("conflicting"))),
-                git.status().get().inProgress());
+                git.status().read().get().inProgress());
     }
 
     @Test
@@ -87,13 +87,13 @@ class InProgressTest {
 
         assertEquals(
                 Option.of(new InProgress.Reverting(sha("main~1"))),
-                git.status().get().inProgress());
+                git.status().read().get().inProgress());
     }
 
     @Test
     void continuingAResolvedMergeCommitsItWithGitsMessage() throws Exception {
         gitAnyExit("merge", "conflicting");
-        InProgress merging = git.status().get().inProgress().get();
+        InProgress merging = git.status().read().get().inProgress().get();
         write("a.txt", "resolved\n");
         git("add", "a.txt");
 
@@ -101,7 +101,7 @@ class InProgressTest {
                 List.of("git merge --continue"),
                 git.continueOrAbort(merging, InProgressAction.CONTINUE).get().map(ExecutedCommand::line));
 
-        assertEquals(Option.none(), git.status().get().inProgress());
+        assertEquals(Option.none(), git.status().read().get().inProgress());
         assertEquals(
                 "Merge branch 'conflicting'", git("log", "-1", "--format=%s").strip());
     }
@@ -112,7 +112,7 @@ class InProgressTest {
         write("a.txt", "again\n");
         git("commit", "-qam", "changes a again");
         gitAnyExit("rebase", "main");
-        InProgress rebasing = git.status().get().inProgress().get();
+        InProgress rebasing = git.status().read().get().inProgress().get();
         write("a.txt", "resolved\n");
         git("add", "a.txt");
 
@@ -122,33 +122,33 @@ class InProgressTest {
         InProgress next = new InProgress.Rebasing(Option.of(new BranchName("conflicting")), sha("main"), 2, 2);
         assertEquals(new GitError.StoppedOnConflicts(Option.of(next), 1), failure.error());
         assertEquals(List.of("git rebase --continue"), failure.commands().map(ExecutedCommand::line));
-        assertEquals(Option.of(next), git.status().get().inProgress());
+        assertEquals(Option.of(next), git.status().read().get().inProgress());
     }
 
     @Test
     void continuingWhileConflictsRemainFails() throws Exception {
         gitAnyExit("merge", "conflicting");
-        InProgress merging = git.status().get().inProgress().get();
+        InProgress merging = git.status().read().get().inProgress().get();
 
         GitFailure<GitError> failure =
                 git.continueOrAbort(merging, InProgressAction.CONTINUE).getLeft();
 
         assertInstanceOf(GitError.CommandFailed.class, failure.error());
         assertEquals(List.of("git merge --continue"), failure.commands().map(ExecutedCommand::line));
-        assertEquals(Option.of(merging), git.status().get().inProgress());
+        assertEquals(Option.of(merging), git.status().read().get().inProgress());
     }
 
     @Test
     void continuingARebaseWhileConflictsRemainFailsWhereItStopped() throws Exception {
         git("checkout", "-q", "conflicting");
         gitAnyExit("rebase", "main");
-        InProgress rebasing = git.status().get().inProgress().get();
+        InProgress rebasing = git.status().read().get().inProgress().get();
 
         GitFailure<GitError> failure =
                 git.continueOrAbort(rebasing, InProgressAction.CONTINUE).getLeft();
 
         assertInstanceOf(GitError.CommandFailed.class, failure.error());
-        assertEquals(Option.of(rebasing), git.status().get().inProgress());
+        assertEquals(Option.of(rebasing), git.status().read().get().inProgress());
     }
 
     @Test
@@ -159,11 +159,11 @@ class InProgressTest {
 
         assertEquals(
                 List.of("git rebase --abort"),
-                git.continueOrAbort(git.status().get().inProgress().get(), InProgressAction.ABORT)
+                git.continueOrAbort(git.status().read().get().inProgress().get(), InProgressAction.ABORT)
                         .get()
                         .map(ExecutedCommand::line));
 
-        assertEquals(Option.none(), git.status().get().inProgress());
+        assertEquals(Option.none(), git.status().read().get().inProgress());
         assertEquals(before, git("rev-parse", "conflicting"));
         assertEquals("conflicting\n", Files.readString(repo.resolve("a.txt")));
     }
@@ -179,11 +179,11 @@ class InProgressTest {
 
         assertEquals(
                 List.of("git rebase --abort", "git reset --quiet --soft HEAD^"),
-                git.continueOrAbort(git.status().get().inProgress().get(), InProgressAction.ABORT)
+                git.continueOrAbort(git.status().read().get().inProgress().get(), InProgressAction.ABORT)
                         .get()
                         .map(ExecutedCommand::line));
 
-        assertEquals(Option.none(), git.status().get().inProgress());
+        assertEquals(Option.none(), git.status().read().get().inProgress());
         assertEquals(before, git("rev-parse", "HEAD"));
         assertEquals("M  a.txt\n", git("status", "--porcelain"));
         assertEquals("amended\n", Files.readString(repo.resolve("a.txt")));
@@ -201,17 +201,17 @@ class InProgressTest {
         git("add", "a.txt");
         // The commit after the amended one changed a.txt too, so it stops again.
         GitFailure<GitError> again = git.continueOrAbort(
-                        git.status().get().inProgress().get(), InProgressAction.CONTINUE)
+                        git.status().read().get().inProgress().get(), InProgressAction.CONTINUE)
                 .getLeft();
         assertInstanceOf(GitError.StoppedOnConflicts.class, again.error());
 
         assertEquals(
                 List.of("git rebase --abort", "git reset --quiet --soft HEAD^"),
-                git.continueOrAbort(git.status().get().inProgress().get(), InProgressAction.ABORT)
+                git.continueOrAbort(git.status().read().get().inProgress().get(), InProgressAction.ABORT)
                         .get()
                         .map(ExecutedCommand::line));
 
-        assertEquals(Option.none(), git.status().get().inProgress());
+        assertEquals(Option.none(), git.status().read().get().inProgress());
         assertEquals(before, git("rev-parse", "HEAD"));
         assertEquals("M  a.txt\n", git("status", "--porcelain"));
         assertEquals("amended\n", Files.readString(repo.resolve("a.txt")));
@@ -224,11 +224,11 @@ class InProgressTest {
 
         assertEquals(
                 List.of("git cherry-pick --skip"),
-                git.continueOrAbort(git.status().get().inProgress().get(), InProgressAction.SKIP)
+                git.continueOrAbort(git.status().read().get().inProgress().get(), InProgressAction.SKIP)
                         .get()
                         .map(ExecutedCommand::line));
 
-        assertEquals(Option.none(), git.status().get().inProgress());
+        assertEquals(Option.none(), git.status().read().get().inProgress());
         assertEquals(before, git("rev-parse", "HEAD"));
         assertEquals("", git("status", "--porcelain"));
     }
