@@ -124,6 +124,54 @@ class CommitsPanelTest {
     }
 
     @Test
+    void aMergeRightAfterAMergedBranchEndsJoinsItWhereItOpensItsOwn() {
+        // f is merged into m, g into n: f's branch ends at n.
+        List<Commit> log = CommitGraph.arrange(List.of(
+                commit("mmmmmmm", "nnnnnnn", "fffffff"),
+                commit("fffffff", "bbbbbbb"),
+                commit("nnnnnnn", "bbbbbbb", "ggggggg"),
+                commit("ggggggg", "bbbbbbb"),
+                commit("bbbbbbb")));
+
+        List<LoadableList.Row> rows = CommitsPanel.rows(CommitGraph.layout(log));
+
+        assertEquals(
+                List.of(
+                        "mmmmmmm Ad ◎─╮ msg mmmmmmm",
+                        "fffffff Ad │ ○ msg fffffff",
+                        "nnnnnnn Ad ◎─┤ msg nnnnnnn",
+                        "ggggggg Ad │ ○ msg ggggggg",
+                        "bbbbbbb Ad ○─╯ msg bbbbbbb"),
+                rows.map(LoadableList.Row::text).toList());
+    }
+
+    @Test
+    void aMergeRightAfterAStackOfMergedBranchesEndsJoinsThemAll() {
+        // x is merged into w, w's branch into m, g into n: both branches end at n.
+        List<Commit> log = CommitGraph.arrange(List.of(
+                commit("mmmmmmm", "nnnnnnn", "wwwwwww"),
+                commit("wwwwwww", "bbbbbbb", "xxxxxxx"),
+                commit("xxxxxxx", "bbbbbbb"),
+                commit("nnnnnnn", "bbbbbbb", "ggggggg"),
+                commit("ggggggg", "bbbbbbb"),
+                commit("bbbbbbb", "aaaaaaa"),
+                commit("aaaaaaa")));
+
+        List<LoadableList.Row> rows = CommitsPanel.rows(CommitGraph.layout(log));
+
+        assertEquals(
+                List.of(
+                        "mmmmmmm Ad ◎─╮ msg mmmmmmm",
+                        "wwwwwww Ad │ ◎─╮ msg wwwwwww",
+                        "xxxxxxx Ad │ │ ○ msg xxxxxxx",
+                        "nnnnnnn Ad ◎─┼─╯ msg nnnnnnn",
+                        "ggggggg Ad │ ○ msg ggggggg",
+                        "bbbbbbb Ad ○─╯ msg bbbbbbb",
+                        "aaaaaaa Ad ○ msg aaaaaaa"),
+                rows.map(LoadableList.Row::text).toList());
+    }
+
+    @Test
     void tagsComeBeforeTheMessageInTheirOwnColour() {
         Commit tagged = new Commit(
                 new Sha("abcdef0"),
