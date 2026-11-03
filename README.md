@@ -37,6 +37,11 @@ Download the jar, or the native Linux executable, from [Releases](https://github
 The executable comes packed; `tar -xJf jazygit-*-linux-x86_64.tar.xz` unpacks it as `jazygit`.
 To build it yourself, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
+With Nix, the flake builds the native executable from source: `nix run github:cvanfleteren/jazygit` runs it, and
+`nix profile install github:cvanfleteren/jazygit` installs it. In a NixOS or home-manager flake, add
+`github:cvanfleteren/jazygit` as an input and take `packages.<system>.default`, or `pkgs.jazygit` through
+`overlays.default`. It brings its own git and gh, for when there are none on the `PATH`.
+
 ## Requirements
 
 - git 2.45 or newer.

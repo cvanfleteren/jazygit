@@ -1,0 +1,61 @@
+name: Nix package
+
+# mvnHash in flake.nix is the hash of every Maven dependency and plugin, so it changes with the poms, and with the
+# Maven of the flake's nixpkgs. This puts the new one in a pull request, and checks the package still builds.
+on:
+  pull_request:
+    paths:
+      - '**/pom.xml'
+      - '.mvn/**'
+      - 'flake.nix'
+      - 'flake.lock'
+  push:
+    branches: [main]
+    paths:
+      - '**/pom.xml'
+      - '.mvn/**'
+      - 'flake.nix'
+      - 'flake.lock'
+  workflow_dispatch:
+
+# A newer push to the branch takes over, so a run never pushes the hash on top of a commit it hasn't seen.
+concurrency:
+  group: nix-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    permissions:
+      # To push the new hash to the branch of the pull request; Dependabot's get read-only otherwise.
+      contents: write
+    steps:
+      # The branch itself rather than the merge commit, so a commit on it can be pushed; a fork's from the fork.
+      - uses: actions/checkout@v7
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.head_ref || github.ref }}
+
+      - uses: cachix/install-nix-action@v31
+
+      - name: Bring mvnHash up to date
+        env:
+          # A pull request from a fork can't be pushed to; it gets the hash to put in instead.
+          CAN_PUSH: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
+        run: |
+          if nix build --no-link .#default.fetchedMavenDeps 2> deps.log; then
+            exit 0
+          fi
+          hash=$(grep -oP 'got:\s+\Ksha256-\S+' deps.log) || { cat deps.log; exit 1; }
+          if [ "$CAN_PUSH" != true ]; then
+            echo "::error file=flake.nix::mvnHash is out of date; it is now $hash"
+            exit 1
+          fi
+          sed -i "s|mvnHash = \"[^\"]*\";|mvnHash = \"$hash\";|" flake.nix
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m "The Maven dependencies of the flake have the hash $hash" flake.nix
+          git push
+
+      - name: Build the package
+        run: nix build .#default
