@@ -190,10 +190,9 @@ final class HandOverBackend implements Backend {
                 }
                 return key;
             }
+            // Past the deadline, the next round still reads once without waiting: a key that came after the report
+            // is there now, and is not to wait for the next read.
             reportFocus(last == FOCUS_IN);
-            if (System.nanoTime() >= deadline) {
-                return NO_KEY;
-            }
         }
     }
 

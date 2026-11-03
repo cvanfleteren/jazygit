@@ -30,6 +30,35 @@ class HandOverBackendTest {
     }
 
     @Test
+    void aKeyThatCameAfterAFocusReportIsReadEvenWhenTheReportTookTheWholeWait() throws IOException {
+        List<Boolean> focus = new ArrayList<>();
+        Deque<Integer> sent = new ArrayDeque<>("a\u001b[Ob".chars().boxed().toList());
+        HandOverBackend backend = new HandOverBackend(
+                new TestBackend(80, 24) {
+                    @Override
+                    public int read(int timeoutMs) throws IOException {
+                        if (sent.peek() != null && sent.peek() == 'O') {
+                            try {
+                                Thread.sleep(20);
+                            } catch (InterruptedException e) {
+                                throw new InterruptedIOException();
+                            }
+                        }
+                        return sent.isEmpty() ? NO_KEY : sent.poll();
+                    }
+
+                    @Override
+                    public int peek(int timeoutMs) {
+                        return sent.isEmpty() ? NO_KEY : sent.peek();
+                    }
+                },
+                focus::add);
+
+        assertEquals(List.of((int) 'a', (int) 'b', NO_KEY), keys(backend, 3));
+        assertEquals(List.of(false, true), focus);
+    }
+
+    @Test
     void aKeyAfterTheFocusWasLostTellsItIsBackWhenItsReportGotLost() throws IOException {
         List<Boolean> focus = new ArrayList<>();
         HandOverBackend backend = new HandOverBackend(typed("\u001b[Oab"), focus::add);
