@@ -651,7 +651,7 @@ public interface Cmd {
                         case CommitFilesView.Changes.OfBranch(var branch, var base, Sha sha) ->
                             env.git().diffs().rangeFiles(base.tip(), sha);
                         case CommitFilesView.Changes.OfPullRequest(PullRequestCommits commits) ->
-                            env.git().pullRequestFiles(commits);
+                            env.git().remotes().pullRequestFiles(commits);
                     })
                     .fold(this::failedWith, files -> new LoadMsg.CommitFilesLoaded(of, files));
         }

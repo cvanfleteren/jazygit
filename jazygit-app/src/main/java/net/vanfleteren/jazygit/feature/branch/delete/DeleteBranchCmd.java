@@ -40,12 +40,13 @@ public sealed interface DeleteBranchCmd extends BranchCmd {
 
         @Override
         public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
-            return git.deleteBranch(branch, remote, scope);
+            return git.remotes().deleteBranch(branch, remote, scope);
         }
 
         @Override
         public Msg run(Env env) {
             return env.git()
+                    .remotes()
                     .deleteBranch(branch, remote, scope)
                     .fold(failure -> ForceDeleteCmd.refused(this, branch, failure, env.git()), this::succeeded);
         }
@@ -78,7 +79,7 @@ public sealed interface DeleteBranchCmd extends BranchCmd {
 
         @Override
         public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
-            return git.deleteRemoteBranch(remote);
+            return git.remotes().deleteRemoteBranch(remote);
         }
     }
 }

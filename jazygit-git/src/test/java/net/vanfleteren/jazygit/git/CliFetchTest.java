@@ -52,14 +52,14 @@ class CliFetchTest {
         git(repo, "remote", "add", "skipped", dir.resolve("nowhere.git").toString());
         git(repo, "config", "remote.skipped.skipFetchAll", "true");
 
-        List<RemoteName> remotes = CliRemote.remotes(repo).get();
+        List<RemoteName> remotes = new CliRemotes(repo, HashMap::empty).list().get();
         assertEquals(List.of(new RemoteName("origin"), new RemoteName("other")), remotes);
-        assertTrue(CliFetch.fetch(repo, new RemoteName("origin"), Option.none(), HashMap.empty())
+        assertTrue(CliRemotes.fetch(repo, new RemoteName("origin"), Option.none(), HashMap.empty())
                 .get());
-        assertTrue(CliFetch.fetch(repo, new RemoteName("other"), Option.none(), HashMap.empty())
+        assertTrue(CliRemotes.fetch(repo, new RemoteName("other"), Option.none(), HashMap.empty())
                 .get());
         // Nothing new on the remote: the fetch says it changed nothing.
-        assertFalse(CliFetch.fetch(repo, new RemoteName("origin"), Option.none(), HashMap.empty())
+        assertFalse(CliRemotes.fetch(repo, new RemoteName("origin"), Option.none(), HashMap.empty())
                 .get());
 
         assertTrue(git(repo, "branch", "-r").contains("origin/main"));
@@ -78,7 +78,7 @@ class CliFetchTest {
         git(repo, "branch", "-q", "--track", "feature", "origin/feature");
         git(origin, "branch", "-q", "-D", "feature");
 
-        assertTrue(CliFetch.fetch(repo, new RemoteName("origin"), Option.none(), HashMap.empty())
+        assertTrue(CliRemotes.fetch(repo, new RemoteName("origin"), Option.none(), HashMap.empty())
                 .get());
 
         assertFalse(git(repo, "branch", "-r").contains("origin/feature"));
@@ -101,7 +101,7 @@ class CliFetchTest {
         git(clone, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "theirs");
         git(clone, "push", "-q", "origin", "main");
 
-        CliFetch.fetch(repo, new RemoteName("origin"), Option.none(), HashMap.empty())
+        CliRemotes.fetch(repo, new RemoteName("origin"), Option.none(), HashMap.empty())
                 .get();
 
         assertEquals(pulled, Files.readString(fetchHead));

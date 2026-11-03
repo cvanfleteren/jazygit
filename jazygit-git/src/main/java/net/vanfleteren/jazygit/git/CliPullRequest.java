@@ -51,9 +51,9 @@ final class CliPullRequest {
                 .flatMap(head -> head ? has(worktree, commits.base()) : Either.right(false))
                 .flatMap(both -> both
                         ? Either.right(true)
-                        : CliRemote.remoteUrls(worktree)
+                        : CliRemotes.remoteUrls(worktree)
                                 .flatMap(urls -> remoteOf(urls, commits.repository(), commits.host())
-                                        .map(remote -> CliRemote.run(worktree, fetch(remote, commits), credentials)
+                                        .map(remote -> CliRemotes.run(worktree, fetch(remote, commits), credentials)
                                                 .<ProcessError>mapLeft(GitFailure::error)
                                                 .map(ran -> true))
                                         .getOrElse(() -> Either.right(false))));

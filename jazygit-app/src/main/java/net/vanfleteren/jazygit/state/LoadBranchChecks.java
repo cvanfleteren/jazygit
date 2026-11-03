@@ -25,7 +25,8 @@ public record LoadBranchChecks() implements Cmd {
                 .fold(
                         this::failedWith,
                         checks -> env.git()
-                                .remoteUrls()
+                                .remotes()
+                                .urls()
                                 .fold(
                                         this::failedWith,
                                         urls -> new BranchChecksMsg.Loaded(GitHubChecks.of(checks, urls))));

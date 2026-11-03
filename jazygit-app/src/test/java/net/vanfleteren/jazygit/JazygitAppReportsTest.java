@@ -25,8 +25,10 @@ import net.vanfleteren.jazygit.git.Branches;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
+import net.vanfleteren.jazygit.git.Remotes;
 import net.vanfleteren.jazygit.git.StubBranches;
 import net.vanfleteren.jazygit.git.StubGitProvider;
+import net.vanfleteren.jazygit.git.StubRemotes;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
@@ -197,13 +199,18 @@ class JazygitAppReportsTest {
         }
 
         @Override
-        public Either<GitFailure<GitError>, List<ExecutedCommand>> pull() {
-            try {
-                pulled.await();
-            } catch (InterruptedException interrupted) {
-                Thread.currentThread().interrupt();
-            }
-            return StubGitProvider.ran();
+        public Remotes remotes() {
+            return new StubRemotes() {
+                @Override
+                public Either<GitFailure<GitError>, List<ExecutedCommand>> pull() {
+                    try {
+                        pulled.await();
+                    } catch (InterruptedException interrupted) {
+                        Thread.currentThread().interrupt();
+                    }
+                    return StubGitProvider.ran();
+                }
+            };
         }
     }
 

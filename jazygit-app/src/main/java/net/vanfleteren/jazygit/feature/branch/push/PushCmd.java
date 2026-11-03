@@ -42,7 +42,7 @@ public sealed interface PushCmd extends BranchCmd.KeepsBranchBusy {
 
         @Override
         public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
-            return git.pushSettingUpstream(branch, upstream);
+            return git.remotes().pushSettingUpstream(branch, upstream);
         }
     }
 
@@ -54,12 +54,13 @@ public sealed interface PushCmd extends BranchCmd.KeepsBranchBusy {
 
         @Override
         public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
-            return git.push(branch, upstream, mode);
+            return git.remotes().push(branch, upstream, mode);
         }
 
         @Override
         public Msg run(Env env) {
             return env.git()
+                    .remotes()
                     .push(branch, upstream, mode)
                     .fold(
                             failure -> failure.error() instanceof GitError.PushRefused(var pushDefault, var target)

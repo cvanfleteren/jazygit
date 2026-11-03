@@ -13,13 +13,13 @@ import org.zeroturnaround.exec.ProcessExecutor;
 /**
  * Talking to the remotes.
  */
-class CliRemoteTest {
+class CliRemotesTest {
 
     @Test
     void remotesWithSkipFetchAllAreLeftOut() {
         assertEquals(
                 List.of("Mirror", "old"),
-                CliRemote.skipped(
+                CliRemotes.skipped(
                         "remote.Mirror.skipfetchall true\nremote.origin.skipfetchall false\nremote.old.skipfetchall true\n"));
     }
 
@@ -27,14 +27,14 @@ class CliRemoteTest {
     void theUrlOfEachRemoteIsReadByItsName() {
         assertEquals(
                 HashMap.of("origin", "git@github.com:owner/repo.git", "work.mirror", "https://example.com/repo"),
-                CliRemote.urls("remote.origin.url git@github.com:owner/repo.git\n"
+                CliRemotes.parseUrls("remote.origin.url git@github.com:owner/repo.git\n"
                         + "remote.work.mirror.url https://example.com/repo\n"
                         + "remote.origin.url https://github.com/owner/other\n"));
     }
 
     @Test
     void theCredentialsAreSetForCommandsThatTalkToARemote(@TempDir Path repo) {
-        GitCommand fetch = CliRemote.toRemote(
+        GitCommand fetch = CliRemotes.toRemote(
                         repo, GitCommand.git("fetch", "origin"), Option.of("ssh"), HashMap.of("GH_TOKEN", "secret"))
                 .get();
 
@@ -66,12 +66,12 @@ class CliRemoteTest {
 
     @Test
     void sshRunsInBatchModeKeepingTheConfiguredCommand() {
-        assertEquals("ssh -o BatchMode=yes", CliRemote.batchMode(Option.none()));
-        assertEquals("ssh -i ~/.ssh/work -o BatchMode=yes", CliRemote.batchMode(Option.of("ssh -i ~/.ssh/work")));
+        assertEquals("ssh -o BatchMode=yes", CliRemotes.batchMode(Option.none()));
+        assertEquals("ssh -i ~/.ssh/work -o BatchMode=yes", CliRemotes.batchMode(Option.of("ssh -i ~/.ssh/work")));
     }
 
     private static Option<String> sshCommand(Path repo, Option<String> environment) {
-        return CliRemote.toRemote(repo, GitCommand.git("fetch", "origin"), environment, HashMap.empty())
+        return CliRemotes.toRemote(repo, GitCommand.git("fetch", "origin"), environment, HashMap.empty())
                 .get()
                 .environment()
                 .get("GIT_SSH_COMMAND");

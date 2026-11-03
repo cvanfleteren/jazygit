@@ -44,6 +44,7 @@ import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.History;
 import net.vanfleteren.jazygit.git.Index;
 import net.vanfleteren.jazygit.git.Integrate;
+import net.vanfleteren.jazygit.git.Remotes;
 import net.vanfleteren.jazygit.git.Stashes;
 import net.vanfleteren.jazygit.git.Status;
 import net.vanfleteren.jazygit.git.StubBranches;
@@ -54,6 +55,7 @@ import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.StubHistory;
 import net.vanfleteren.jazygit.git.StubIndex;
 import net.vanfleteren.jazygit.git.StubIntegrate;
+import net.vanfleteren.jazygit.git.StubRemotes;
 import net.vanfleteren.jazygit.git.StubStashes;
 import net.vanfleteren.jazygit.git.StubStatus;
 import net.vanfleteren.jazygit.git.model.Branch;
@@ -207,31 +209,6 @@ class ProgramTest {
         }
 
         @Override
-        public Either<GitFailure<GitError>, List<ExecutedCommand>> push(
-                BranchName branch, RemoteBranch upstream, PushMode mode) {
-            pushed.add(branch.value() + (mode == PushMode.FORCE_WITH_LEASE ? " force" : ""));
-            return StubGitProvider.ran("git push");
-        }
-
-        @Override
-        public Either<ProcessError, List<RemoteName>> remotes() {
-            return Either.right(List.of(new RemoteName("origin"), new RemoteName("upstream")));
-        }
-
-        @Override
-        public Either<GitFailure<ProcessError>, Boolean> fetch(RemoteName remote) {
-            fetches++;
-            return Either.right(true);
-        }
-
-        @Override
-        public Either<GitFailure<GitError>, List<ExecutedCommand>> deleteBranch(
-                BranchName name, RemoteBranch remote, DeleteScope scope) {
-            deleted.add(name.value() + (scope.local() ? " local" : "") + (scope.remote() ? " remote" : ""));
-            return StubGitProvider.ran("git deleteBranch");
-        }
-
-        @Override
         public Index index() {
             return new StubIndex() {
                 @Override
@@ -321,6 +298,36 @@ class ProgramTest {
                 @Override
                 public Either<GitFailure<GitError>, List<ExecutedCommand>> rebase(BranchName onto) {
                     return StubGitProvider.ran("git rebase");
+                }
+            };
+        }
+
+        @Override
+        public Remotes remotes() {
+            return new StubRemotes() {
+                @Override
+                public Either<GitFailure<GitError>, List<ExecutedCommand>> push(
+                        BranchName branch, RemoteBranch upstream, PushMode mode) {
+                    pushed.add(branch.value() + (mode == PushMode.FORCE_WITH_LEASE ? " force" : ""));
+                    return StubGitProvider.ran("git push");
+                }
+
+                @Override
+                public Either<ProcessError, List<RemoteName>> list() {
+                    return Either.right(List.of(new RemoteName("origin"), new RemoteName("upstream")));
+                }
+
+                @Override
+                public Either<GitFailure<ProcessError>, Boolean> fetch(RemoteName remote) {
+                    fetches++;
+                    return Either.right(true);
+                }
+
+                @Override
+                public Either<GitFailure<GitError>, List<ExecutedCommand>> deleteBranch(
+                        BranchName name, RemoteBranch remote, DeleteScope scope) {
+                    deleted.add(name.value() + (scope.local() ? " local" : "") + (scope.remote() ? " remote" : ""));
+                    return StubGitProvider.ran("git deleteBranch");
                 }
             };
         }

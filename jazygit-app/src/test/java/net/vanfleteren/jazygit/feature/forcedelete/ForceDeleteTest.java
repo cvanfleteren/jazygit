@@ -18,8 +18,10 @@ import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
+import net.vanfleteren.jazygit.git.Remotes;
 import net.vanfleteren.jazygit.git.StubBranches;
 import net.vanfleteren.jazygit.git.StubGitProvider;
+import net.vanfleteren.jazygit.git.StubRemotes;
 import net.vanfleteren.jazygit.git.StubWorktrees;
 import net.vanfleteren.jazygit.git.Worktrees;
 import net.vanfleteren.jazygit.git.model.*;
@@ -69,11 +71,6 @@ class ForceDeleteTest {
     private GitInfoProvider git(
             Either<GitFailure<GitError>, List<ExecutedCommand>> deleted, Either<ProcessError, Integer> lost) {
         return new StubGitProvider() {
-            @Override
-            public Either<GitFailure<GitError>, List<ExecutedCommand>> deleteBranch(
-                    BranchName name, RemoteBranch remote, DeleteScope scope) {
-                return deleted;
-            }
 
             @Override
             public Branches branches() {
@@ -94,6 +91,17 @@ class ForceDeleteTest {
                     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> forceDeleteLocal(BranchName name) {
                         ran.add("force " + name.value());
                         return StubGitProvider.ran("git branch --delete --force -- " + name.value());
+                    }
+                };
+            }
+
+            @Override
+            public Remotes remotes() {
+                return new StubRemotes() {
+                    @Override
+                    public Either<GitFailure<GitError>, List<ExecutedCommand>> deleteBranch(
+                            BranchName name, RemoteBranch remote, DeleteScope scope) {
+                        return deleted;
                     }
                 };
             }
@@ -309,15 +317,21 @@ class ForceDeleteTest {
 
     private static GitInfoProvider deletedWith(GitInfoProvider git, GitFailure<GitError> refusal) {
         return new StubGitProvider() {
-            @Override
-            public Either<GitFailure<GitError>, List<ExecutedCommand>> deleteBranch(
-                    BranchName name, RemoteBranch remote, DeleteScope scope) {
-                return Either.left(refusal);
-            }
 
             @Override
             public Branches branches() {
                 return git.branches();
+            }
+
+            @Override
+            public Remotes remotes() {
+                return new StubRemotes() {
+                    @Override
+                    public Either<GitFailure<GitError>, List<ExecutedCommand>> deleteBranch(
+                            BranchName name, RemoteBranch remote, DeleteScope scope) {
+                        return Either.left(refusal);
+                    }
+                };
             }
         };
     }

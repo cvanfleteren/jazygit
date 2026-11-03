@@ -39,7 +39,7 @@ public interface Diffs {
 
     /**
      * What the pull request of {@code commits} changes in {@code files}, read with {@code options}, as
-     * {@link GitInfoProvider#pullRequestFiles} reads them, which fetched its commits. Long output is cut off.
+     * {@link Remotes#pullRequestFiles} reads them, which fetched its commits. Long output is cut off.
      */
     Either<ProcessError, DiffText> pullRequestFileChanges(
             PullRequestCommits commits, List<CommitFile> files, DiffOptions options);
@@ -48,7 +48,7 @@ public interface Diffs {
 
     /**
      * The files {@code tip} changes against the merge base of it and {@code base}, as
-     * {@link GitInfoProvider#pullRequestFiles} reads those of a pull request; nothing is fetched.
+     * {@link Remotes#pullRequestFiles} reads those of a pull request; nothing is fetched.
      */
     Either<ProcessError, List<CommitFile>> rangeFiles(Sha base, Sha tip);
 
