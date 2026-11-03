@@ -27,7 +27,7 @@ record Unfinished(Option<InProgress> inProgress, int conflicts) {
     static Either<ProcessError, Unfinished> read(Path worktree) {
         return CliInProgress.read(worktree)
                 .flatMap(inProgress ->
-                        CliMerge.conflicts(worktree).map(conflicts -> new Unfinished(inProgress, conflicts)));
+                        CliIntegrate.conflicts(worktree).map(conflicts -> new Unfinished(inProgress, conflicts)));
     }
 
     /**

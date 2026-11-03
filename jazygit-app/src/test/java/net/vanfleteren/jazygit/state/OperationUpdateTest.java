@@ -17,7 +17,9 @@ import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
+import net.vanfleteren.jazygit.git.Integrate;
 import net.vanfleteren.jazygit.git.StubGitProvider;
+import net.vanfleteren.jazygit.git.StubIntegrate;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.MergeMode;
@@ -153,9 +155,15 @@ class OperationUpdateTest {
     void anOperationThatStopsOnConflictsIsReportedAsStoppedNotAsFailed() {
         GitInfoProvider stopping = new StubGitProvider() {
             @Override
-            public Either<GitFailure<GitError>, List<ExecutedCommand>> merge(BranchName branch, MergeMode mode) {
-                return Either.left(new GitFailure<>(
-                        new GitError.StoppedOnConflicts(Option.of(MERGING), 2), executed("git merge feature")));
+            public Integrate integrate() {
+                return new StubIntegrate() {
+                    @Override
+                    public Either<GitFailure<GitError>, List<ExecutedCommand>> merge(
+                            BranchName branch, MergeMode mode) {
+                        return Either.left(new GitFailure<>(
+                                new GitError.StoppedOnConflicts(Option.of(MERGING), 2), executed("git merge feature")));
+                    }
+                };
             }
         };
 

@@ -8,17 +8,12 @@ import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
-import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.DeleteScope;
-import net.vanfleteren.jazygit.git.model.InProgress;
-import net.vanfleteren.jazygit.git.model.InProgressAction;
-import net.vanfleteren.jazygit.git.model.MergeMode;
 import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.RemoteName;
-import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
@@ -109,8 +104,8 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<GitFailure<GitError>, List<ExecutedCommand>> merge(BranchName branch, MergeMode mode) {
-        return ran();
+    default Integrate integrate() {
+        return new StubIntegrate() {};
     }
 
     @Override
@@ -127,11 +122,6 @@ public interface StubGitProvider extends GitInfoProvider {
     // A fetch changes what the stub has, as far as anything can tell.
     default Either<GitFailure<ProcessError>, Boolean> fetch(RemoteName remote) {
         return Either.right(true);
-    }
-
-    @Override
-    default Either<GitFailure<GitError>, List<ExecutedCommand>> rebase(BranchName onto) {
-        return ran();
     }
 
     @Override
@@ -159,22 +149,6 @@ public interface StubGitProvider extends GitInfoProvider {
     @Override
     default Commits commits() {
         return new StubCommits() {};
-    }
-
-    @Override
-    default Either<GitFailure<GitError>, List<ExecutedCommand>> cherryPick(Sha sha) {
-        return ran();
-    }
-
-    @Override
-    default Either<GitFailure<GitError>, List<ExecutedCommand>> revert(Commit commit) {
-        return ran();
-    }
-
-    @Override
-    default Either<GitFailure<GitError>, List<ExecutedCommand>> continueOrAbort(
-            InProgress inProgress, InProgressAction action) {
-        return ran();
     }
 
     @Override

@@ -99,7 +99,10 @@ class InProgressTest {
 
         assertEquals(
                 List.of("git merge --continue"),
-                git.continueOrAbort(merging, InProgressAction.CONTINUE).get().map(ExecutedCommand::line));
+                git.integrate()
+                        .continueOrAbort(merging, InProgressAction.CONTINUE)
+                        .get()
+                        .map(ExecutedCommand::line));
 
         assertEquals(Option.none(), git.status().read().get().inProgress());
         assertEquals(
@@ -116,8 +119,9 @@ class InProgressTest {
         write("a.txt", "resolved\n");
         git("add", "a.txt");
 
-        GitFailure<GitError> failure =
-                git.continueOrAbort(rebasing, InProgressAction.CONTINUE).getLeft();
+        GitFailure<GitError> failure = git.integrate()
+                .continueOrAbort(rebasing, InProgressAction.CONTINUE)
+                .getLeft();
 
         InProgress next = new InProgress.Rebasing(Option.of(new BranchName("conflicting")), sha("main"), 2, 2);
         assertEquals(new GitError.StoppedOnConflicts(Option.of(next), 1), failure.error());
@@ -130,8 +134,9 @@ class InProgressTest {
         gitAnyExit("merge", "conflicting");
         InProgress merging = git.status().read().get().inProgress().get();
 
-        GitFailure<GitError> failure =
-                git.continueOrAbort(merging, InProgressAction.CONTINUE).getLeft();
+        GitFailure<GitError> failure = git.integrate()
+                .continueOrAbort(merging, InProgressAction.CONTINUE)
+                .getLeft();
 
         assertInstanceOf(GitError.CommandFailed.class, failure.error());
         assertEquals(List.of("git merge --continue"), failure.commands().map(ExecutedCommand::line));
@@ -144,8 +149,9 @@ class InProgressTest {
         gitAnyExit("rebase", "main");
         InProgress rebasing = git.status().read().get().inProgress().get();
 
-        GitFailure<GitError> failure =
-                git.continueOrAbort(rebasing, InProgressAction.CONTINUE).getLeft();
+        GitFailure<GitError> failure = git.integrate()
+                .continueOrAbort(rebasing, InProgressAction.CONTINUE)
+                .getLeft();
 
         assertInstanceOf(GitError.CommandFailed.class, failure.error());
         assertEquals(Option.of(rebasing), git.status().read().get().inProgress());
@@ -159,7 +165,8 @@ class InProgressTest {
 
         assertEquals(
                 List.of("git rebase --abort"),
-                git.continueOrAbort(git.status().read().get().inProgress().get(), InProgressAction.ABORT)
+                git.integrate()
+                        .continueOrAbort(git.status().read().get().inProgress().get(), InProgressAction.ABORT)
                         .get()
                         .map(ExecutedCommand::line));
 
@@ -179,7 +186,8 @@ class InProgressTest {
 
         assertEquals(
                 List.of("git rebase --abort", "git reset --quiet --soft HEAD^"),
-                git.continueOrAbort(git.status().read().get().inProgress().get(), InProgressAction.ABORT)
+                git.integrate()
+                        .continueOrAbort(git.status().read().get().inProgress().get(), InProgressAction.ABORT)
                         .get()
                         .map(ExecutedCommand::line));
 
@@ -200,14 +208,15 @@ class InProgressTest {
         write("a.txt", "resolved\n");
         git("add", "a.txt");
         // The commit after the amended one changed a.txt too, so it stops again.
-        GitFailure<GitError> again = git.continueOrAbort(
-                        git.status().read().get().inProgress().get(), InProgressAction.CONTINUE)
+        GitFailure<GitError> again = git.integrate()
+                .continueOrAbort(git.status().read().get().inProgress().get(), InProgressAction.CONTINUE)
                 .getLeft();
         assertInstanceOf(GitError.StoppedOnConflicts.class, again.error());
 
         assertEquals(
                 List.of("git rebase --abort", "git reset --quiet --soft HEAD^"),
-                git.continueOrAbort(git.status().read().get().inProgress().get(), InProgressAction.ABORT)
+                git.integrate()
+                        .continueOrAbort(git.status().read().get().inProgress().get(), InProgressAction.ABORT)
                         .get()
                         .map(ExecutedCommand::line));
 
@@ -224,7 +233,8 @@ class InProgressTest {
 
         assertEquals(
                 List.of("git cherry-pick --skip"),
-                git.continueOrAbort(git.status().read().get().inProgress().get(), InProgressAction.SKIP)
+                git.integrate()
+                        .continueOrAbort(git.status().read().get().inProgress().get(), InProgressAction.SKIP)
                         .get()
                         .map(ExecutedCommand::line));
 

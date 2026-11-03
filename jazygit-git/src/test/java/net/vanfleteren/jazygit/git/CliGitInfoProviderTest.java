@@ -683,7 +683,8 @@ class CliGitInfoProviderTest {
         git("commit", "-q", "-m", "Main work");
         git("checkout", "-q", "feature");
 
-        List<String> executed = provider.rebase(new BranchName("main")).get().map(ExecutedCommand::line);
+        List<String> executed =
+                provider.integrate().rebase(new BranchName("main")).get().map(ExecutedCommand::line);
 
         assertEquals(
                 List.of("git rebase --autostash --keep-empty --rebase-merges --no-autosquash refs/heads/main"),
@@ -707,7 +708,7 @@ class CliGitInfoProviderTest {
         git("branch", "other", "main");
         git("checkout", "-q", "feature");
 
-        provider.rebase(new BranchName("other")).get();
+        provider.integrate().rebase(new BranchName("other")).get();
 
         assertEquals(
                 List.of("Feature work", "Main work", "Initial commit"),
@@ -739,7 +740,7 @@ class CliGitInfoProviderTest {
         git("commit", "-q", "-m", "Main work");
         git("checkout", "-q", "feature");
 
-        provider.rebase(new BranchName("main")).get();
+        provider.integrate().rebase(new BranchName("main")).get();
 
         List<Commit> after = commits().get();
         assertEquals(List.of("fixup! Feature work", "Merge side"), after.take(2).map(Commit::message));
@@ -757,7 +758,8 @@ class CliGitInfoProviderTest {
         git("commit", "-q", "-am", "Main edit");
         git("checkout", "-q", "feature");
 
-        GitFailure<GitError> failure = provider.rebase(new BranchName("main")).getLeft();
+        GitFailure<GitError> failure =
+                provider.integrate().rebase(new BranchName("main")).getLeft();
 
         GitError.StoppedOnConflicts stopped = assertInstanceOf(GitError.StoppedOnConflicts.class, failure.error());
         assertInstanceOf(InProgress.Rebasing.class, stopped.inProgress().get());
@@ -783,7 +785,8 @@ class CliGitInfoProviderTest {
         // Picking "Add x" would overwrite it, so the rebase stops there, without conflicts.
         Files.writeString(repo.resolve("x.txt"), "untracked\n");
 
-        GitFailure<GitError> failure = provider.rebase(new BranchName("main")).getLeft();
+        GitFailure<GitError> failure =
+                provider.integrate().rebase(new BranchName("main")).getLeft();
 
         assertInstanceOf(GitError.CommandFailed.class, failure.error());
         assertEquals(List.of("git rebase --abort"), failure.commands().tail().map(ExecutedCommand::line));
@@ -796,7 +799,8 @@ class CliGitInfoProviderTest {
 
     @Test
     void aRebaseThatDoesNotStartIsNotAborted() {
-        GitFailure<GitError> failure = provider.rebase(new BranchName("nope")).getLeft();
+        GitFailure<GitError> failure =
+                provider.integrate().rebase(new BranchName("nope")).getLeft();
 
         assertInstanceOf(GitError.CommandFailed.class, failure.error());
         assertEquals(1, failure.commands().size(), failure.commands().toString());
@@ -812,7 +816,7 @@ class CliGitInfoProviderTest {
         Sha picked = commits().get().head().sha();
         git("checkout", "-q", "main");
 
-        List<String> executed = provider.cherryPick(picked).get().map(ExecutedCommand::line);
+        List<String> executed = provider.integrate().cherryPick(picked).get().map(ExecutedCommand::line);
 
         assertEquals(List.of("git cherry-pick " + picked.value()), executed);
         assertEquals(
@@ -831,7 +835,7 @@ class CliGitInfoProviderTest {
         Files.writeString(repo.resolve("README.md"), "main\n");
         git("commit", "-q", "-am", "Main edit");
 
-        GitFailure<?> failure = provider.cherryPick(picked).getLeft();
+        GitFailure<?> failure = provider.integrate().cherryPick(picked).getLeft();
 
         assertEquals(
                 new GitError.StoppedOnConflicts(Option.of(new InProgress.CherryPicking(picked)), 1), failure.error());
@@ -854,7 +858,7 @@ class CliGitInfoProviderTest {
 
         assertInstanceOf(
                 GitError.CommandFailed.class,
-                provider.cherryPick(picked).getLeft().error());
+                provider.integrate().cherryPick(picked).getLeft().error());
 
         assertEquals(
                 List.of("Same work", "Initial commit"),
@@ -873,7 +877,7 @@ class CliGitInfoProviderTest {
         // Picking it would overwrite it, so git refuses before it starts.
         Files.writeString(repo.resolve("f.txt"), "untracked\n");
 
-        GitFailure<GitError> failure = provider.cherryPick(picked).getLeft();
+        GitFailure<GitError> failure = provider.integrate().cherryPick(picked).getLeft();
 
         assertInstanceOf(GitError.CommandFailed.class, failure.error());
         assertEquals(
@@ -888,7 +892,7 @@ class CliGitInfoProviderTest {
         git("commit", "-q", "-m", "Add f");
         Commit reverted = commits().get().head();
 
-        List<String> executed = provider.revert(reverted).get().map(ExecutedCommand::line);
+        List<String> executed = provider.integrate().revert(reverted).get().map(ExecutedCommand::line);
 
         assertEquals(List.of("git revert --no-edit " + reverted.sha().value()), executed);
         Commit revert = commits().get().head();
@@ -907,7 +911,7 @@ class CliGitInfoProviderTest {
         git("merge", "-q", "--no-ff", "-m", "Merge feature", "feature");
         Commit merge = commits().get().head();
 
-        List<String> executed = provider.revert(merge).get().map(ExecutedCommand::line);
+        List<String> executed = provider.integrate().revert(merge).get().map(ExecutedCommand::line);
 
         assertEquals(List.of("git revert --no-edit -m 1 " + merge.sha().value()), executed);
         assertEquals("Revert \"Merge feature\"", commits().get().head().message());
@@ -922,7 +926,7 @@ class CliGitInfoProviderTest {
         Files.writeString(repo.resolve("README.md"), "second\n");
         git("commit", "-q", "-am", "Second edit");
 
-        GitFailure<?> failure = provider.revert(reverted).getLeft();
+        GitFailure<?> failure = provider.integrate().revert(reverted).getLeft();
 
         assertEquals(
                 new GitError.StoppedOnConflicts(Option.of(new InProgress.Reverting(reverted.sha())), 1),
@@ -942,7 +946,7 @@ class CliGitInfoProviderTest {
 
         assertInstanceOf(
                 GitError.CommandFailed.class,
-                provider.revert(reverted).getLeft().error());
+                provider.integrate().revert(reverted).getLeft().error());
 
         assertEquals(
                 List.of("Remove f", "Add f", "Initial commit"),
@@ -1393,7 +1397,8 @@ class CliGitInfoProviderTest {
         git("branch", "other");
         gitWithEnvironment("GIT_SEQUENCE_EDITOR", "sed -i -e 's/^pick/edit/'", "rebase", "-i", "--root");
 
-        GitFailure<GitError> failure = provider.rebase(new BranchName("other")).getLeft();
+        GitFailure<GitError> failure =
+                provider.integrate().rebase(new BranchName("other")).getLeft();
 
         assertTrue(
                 failure.commands().forAll(command -> !command.line().contains("--abort")),
