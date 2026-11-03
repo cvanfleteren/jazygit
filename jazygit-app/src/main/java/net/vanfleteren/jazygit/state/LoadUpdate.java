@@ -282,7 +282,7 @@ public final class LoadUpdate {
             case Cmd.LoadAhead load -> AheadUpdate.failed(model, load, failure);
             // What the files look like is kept by Jobs: when looking at them fails, the next status looks again.
             case Cmd.CheckMetadata() -> model;
-            case Cmd.CheckFileDiff load -> model;
+            case Cmd.CheckFileDiff ignored -> model;
         };
     }
 
