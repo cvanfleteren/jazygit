@@ -78,7 +78,7 @@ class MessageEditorUpdateTest {
 
     @Test
     void theRewordDialogShowsTheEditedMessageToo() {
-        RewordPopup rewording = new RewordPopup(new SampleData().commits().get().head());
+        RewordPopup rewording = new RewordPopup(new SampleData().headLog().get().head());
 
         Model edited = Update.update(loaded().openPopup(rewording), new MessageEditorMsg.Edited(EDITED, List.of(NVIM)))
                 .model();

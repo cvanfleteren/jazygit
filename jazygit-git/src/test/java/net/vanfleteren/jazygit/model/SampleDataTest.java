@@ -33,7 +33,7 @@ class SampleDataTest {
 
     @Test
     void commitsHaveShortShaAndMessage() {
-        List<Commit> commits = data.commits().get();
+        List<Commit> commits = data.headLog().get();
         assertFalse(commits.isEmpty());
         for (Commit commit : commits) {
             assertFalse(commit.shortSha().isBlank());
@@ -47,6 +47,6 @@ class SampleDataTest {
         assertEquals(
                 data.branches().all().get().local().size(),
                 data.branches().all().get().local().size());
-        assertEquals(data.commits().get().size(), data.commits().get().size());
+        assertEquals(data.headLog().get().size(), data.headLog().get().size());
     }
 }

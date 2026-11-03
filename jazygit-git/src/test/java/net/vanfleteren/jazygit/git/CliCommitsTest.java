@@ -17,9 +17,11 @@ import org.junit.jupiter.api.io.TempDir;
 import org.zeroturnaround.exec.ProcessExecutor;
 
 /**
- * Moving the newest commits of the checked out branch to a new branch, and reading which commits that would move.
+ * The {@link CliCommits} that move the newest commits of the checked out branch to a new or an existing branch, and
+ * reading which commits that would move, through {@link CliHistory#commitRange}. The other operations of the role
+ * are still tested in {@link CliGitInfoProviderTest}.
  */
-class CliMoveCommitsTest {
+class CliCommitsTest {
 
     private static final BranchName FEATURE = new BranchName("feature");
     private static final BranchName MOVED = new BranchName("moved");
@@ -51,7 +53,7 @@ class CliMoveCommitsTest {
         Files.writeString(repo.resolve("a.txt"), "uncommitted\n");
 
         assertTrue(
-                CliMoveCommits.move(repo, FEATURE, oldest, MOVED, Option.none()).isRight());
+                new CliCommits(repo).move(FEATURE, oldest, MOVED, Option.none()).isRight());
 
         assertEquals("moved", git("branch", "--show-current").strip());
         assertEquals(tip, head());
@@ -65,7 +67,8 @@ class CliMoveCommitsTest {
         Sha oldest = sha("HEAD~1");
         String parent = sha("HEAD~2").value();
 
-        assertTrue(CliMoveCommits.move(repo, FEATURE, oldest, MOVED, Option.of(MAIN))
+        assertTrue(new CliCommits(repo)
+                .move(FEATURE, oldest, MOVED, Option.of(MAIN))
                 .isRight());
 
         assertEquals("moved", git("branch", "--show-current").strip());
@@ -82,7 +85,8 @@ class CliMoveCommitsTest {
         git("checkout", "-q", "feature");
         String tip = head();
 
-        var failure = CliMoveCommits.move(repo, FEATURE, sha("HEAD~1"), MOVED, Option.of(MAIN))
+        var failure = new CliCommits(repo)
+                .move(FEATURE, sha("HEAD~1"), MOVED, Option.of(MAIN))
                 .getLeft();
 
         assertInstanceOf(StoppedOnConflicts.class, failure.error());
@@ -94,7 +98,8 @@ class CliMoveCommitsTest {
     void aFailedCheckoutLeavesEverythingAlone() throws Exception {
         String tip = head();
 
-        assertTrue(CliMoveCommits.move(repo, FEATURE, sha("HEAD~1"), new BranchName("main"), Option.none())
+        assertTrue(new CliCommits(repo)
+                .move(FEATURE, sha("HEAD~1"), new BranchName("main"), Option.none())
                 .isLeft());
 
         assertEquals("feature", git("branch", "--show-current").strip());
@@ -109,7 +114,8 @@ class CliMoveCommitsTest {
         Sha oldest = sha("HEAD~1");
         String parent = sha("HEAD~2").value();
 
-        assertTrue(CliMoveCommits.moveTo(repo, FEATURE, oldest, new BranchName("main"))
+        assertTrue(new CliCommits(repo)
+                .moveTo(FEATURE, oldest, new BranchName("main"))
                 .isRight());
 
         assertEquals("main", git("branch", "--show-current").strip());
@@ -125,7 +131,8 @@ class CliMoveCommitsTest {
         Files.writeString(repo.resolve("b.txt"), "uncommitted\n");
         String tip = head();
 
-        var failure = CliMoveCommits.moveTo(repo, FEATURE, sha("HEAD~1"), new BranchName("main"))
+        var failure = new CliCommits(repo)
+                .moveTo(FEATURE, sha("HEAD~1"), new BranchName("main"))
                 .getLeft();
 
         assertInstanceOf(GitError.LocalChanges.class, failure.error());
@@ -141,7 +148,8 @@ class CliMoveCommitsTest {
         git("commit", "-q", "--allow-empty", "-m", "empty on purpose");
         String parent = sha("HEAD~3").value();
 
-        assertTrue(CliMoveCommits.moveTo(repo, FEATURE, sha("HEAD~2"), new BranchName("main"))
+        assertTrue(new CliCommits(repo)
+                .moveTo(FEATURE, sha("HEAD~2"), new BranchName("main"))
                 .isRight());
 
         assertEquals("main", git("branch", "--show-current").strip());
@@ -155,7 +163,8 @@ class CliMoveCommitsTest {
         String tip = head();
         failToSign();
 
-        var failure = CliMoveCommits.moveTo(repo, FEATURE, sha("HEAD~1"), new BranchName("main"))
+        var failure = new CliCommits(repo)
+                .moveTo(FEATURE, sha("HEAD~1"), new BranchName("main"))
                 .getLeft();
 
         assertFalse(failure.error() instanceof StoppedOnConflicts);
@@ -170,7 +179,8 @@ class CliMoveCommitsTest {
         String tip = head();
         failToSign();
 
-        assertTrue(CliMoveCommits.move(repo, FEATURE, sha("HEAD~1"), MOVED, Option.of(MAIN))
+        assertTrue(new CliCommits(repo)
+                .move(FEATURE, sha("HEAD~1"), MOVED, Option.of(MAIN))
                 .isLeft());
 
         assertEquals("feature", git("branch", "--show-current").strip());
