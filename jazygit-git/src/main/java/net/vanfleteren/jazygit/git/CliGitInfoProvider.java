@@ -33,6 +33,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     private final CliConfig config;
     private final CliIndex index;
     private final CliEditor editor;
+    private final CliDiffs diffs;
 
     private CliGitInfoProvider(
             Path worktree,
@@ -50,6 +51,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
         this.config = new CliConfig(worktree);
         this.index = new CliIndex(worktree);
         this.editor = new CliEditor(worktree);
+        this.diffs = new CliDiffs(worktree);
     }
 
     /**
@@ -327,45 +329,13 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<ProcessError, DiffText> commitChanges(Sha sha, DiffOptions options) {
-        return CliShow.changes(worktree, sha, options);
-    }
-
-    @Override
-    public Either<ProcessError, List<CommitFile>> commitFiles(Sha sha) {
-        return CliShow.files(worktree, sha);
-    }
-
-    @Override
-    public Either<ProcessError, DiffText> commitFileChanges(Sha sha, List<CommitFile> files, DiffOptions options) {
-        return CliShow.fileChanges(worktree, sha, files, options);
+    public Diffs diffs() {
+        return diffs;
     }
 
     @Override
     public Either<ProcessError, List<CommitFile>> pullRequestFiles(PullRequestCommits commits) {
         return CliPullRequest.files(worktree, commits, credentials.get());
-    }
-
-    @Override
-    public Either<ProcessError, DiffText> pullRequestFileChanges(
-            PullRequestCommits commits, List<CommitFile> files, DiffOptions options) {
-        return CliPullRequest.fileChanges(worktree, commits, files, options);
-    }
-
-    @Override
-    public Either<ProcessError, List<CommitFile>> rangeFiles(Sha base, Sha tip) {
-        return CliPullRequest.files(worktree, base, tip);
-    }
-
-    @Override
-    public Either<ProcessError, DiffText> rangeFileChanges(
-            Sha base, Sha tip, List<CommitFile> files, DiffOptions options) {
-        return CliPullRequest.fileChanges(worktree, base, tip, files, options);
-    }
-
-    @Override
-    public Either<GitError, Diffs> diff(List<FileEntry> files, DiffOptions options) {
-        return CliDiff.diff(worktree, files, options);
     }
 
     @Override

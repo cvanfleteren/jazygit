@@ -13,6 +13,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.concurrent.TimeoutException;
 import net.vanfleteren.jazygit.git.model.*;
+import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -2214,7 +2215,7 @@ class CliGitInfoProviderTest {
         List<FileEntry> files = provider.status().read().get().files();
         assertEquals(List.of(FileEntry.renamed("READ.md", "README.md", true, false)), files);
 
-        Diffs diffs = provider.diff(files, DiffOptions.DEFAULT).get();
+        Diffs diffs = provider.diffs().uncommitted(files, DiffOptions.DEFAULT).get();
         assertTrue(diffs.staged().text().contains("rename from README.md"), diffs.toString());
 
         provider.index().unstageNew(List.of("READ.md")).get();
@@ -2239,7 +2240,8 @@ class CliGitInfoProviderTest {
         Files.writeString(repo.resolve("README.md"), "unstaged\n");
         Files.writeString(repo.resolve("new.txt"), "brand new\n");
 
-        Diffs diffs = provider.diff(provider.status().read().get().files(), DiffOptions.DEFAULT)
+        Diffs diffs = provider.diffs()
+                .uncommitted(provider.status().read().get().files(), DiffOptions.DEFAULT)
                 .get();
 
         assertTrue(diffs.staged().text().contains("-hello"), diffs.toString());
@@ -2249,7 +2251,8 @@ class CliGitInfoProviderTest {
         assertTrue(diffs.unstaged().text().contains("+unstaged"), diffs.toString());
         assertTrue(diffs.unstaged().text().contains("+brand new"), diffs.toString());
         assertEquals(
-                new Diffs("", ""), provider.diff(List.of(), DiffOptions.DEFAULT).get());
+                new Diffs("", ""),
+                provider.diffs().uncommitted(List.of(), DiffOptions.DEFAULT).get());
     }
 
     @Test
@@ -2257,7 +2260,8 @@ class CliGitInfoProviderTest {
         Files.writeString(repo.resolve("README.md"), "changed\n");
         Files.writeString(repo.resolve("new.txt"), "new\n");
 
-        Diffs diffs = provider.diff(List.of(Fixtures.fileEntry("new.txt", ChangeType.UNTRACKED)), DiffOptions.DEFAULT)
+        Diffs diffs = provider.diffs()
+                .uncommitted(List.of(Fixtures.fileEntry("new.txt", ChangeType.UNTRACKED)), DiffOptions.DEFAULT)
                 .get();
 
         assertEquals("", diffs.staged().text());

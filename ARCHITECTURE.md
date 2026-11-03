@@ -350,7 +350,7 @@ which Ctrl+W toggles anywhere outside a dialog (`feature.diff`) for the session 
 against its first parent, which the diff style decides (below); the context and side-by-side diffs are to follow it
 there.
 
-- `GitInfoProvider.diff` and `commitChanges` take the options, which `CliDiff.flags` turns into git's
+- `Diffs.uncommitted` and `Diffs.commitChanges` take the options, which `CliDiffs.flags` turns into git's
   (`--ignore-all-space`). A file whose changes are all whitespace is then left out of the diff entirely, also from
   the files `git show --stat` lists.
 - `Cmd.LoadFileDiff`, `Cmd.LoadCommitDetail` and `Cmd.LoadStashDetail` carry the options, and so do the messages
@@ -434,7 +434,7 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
   `SummaryFragment`); else it opens the dialog, which goes on to them once its details are read
   (`PullRequestPopup.filesWanted`). Without an open pull request, as far as is known, `CommitFilesUpdate.againstBase`
   lists those of `Changes.OfBranch`: the branch against its base of ADR 20, as `AheadUpdate.of` finds it, at the tips
-  the branches read last have, diffed as a pull request is but with nothing fetched (`GitInfoProvider.rangeFiles`).
+  the branches read last have, diffed as a pull request is but with nothing fetched (`Diffs.rangeFiles`).
   It has no review threads.
 - **Their focus:** `FocusKeeper` moves the focus into the files pane when they open, and back to the pane they were
   opened from when Escape closes them. `Model.withShownPane` closes them when another pane gets the focus, and
@@ -835,7 +835,7 @@ classDiagram
         <<interface>>
         status() Status
         log(branch) Either of GitError or commits
-        diff(files, DiffOptions) Either of GitError or Diffs
+        diffs() Diffs
         checkout() Checkout
         reword(Sha, CommitMessage) Either of GitFailure of GitError or commands
         stashes() Stashes
@@ -861,6 +861,7 @@ classDiagram
     CliIndex ..|> Index
     CliEditor ..|> Editor
     CliConfig ..|> Config
+    CliDiffs ..|> Diffs
     CliGitInfoProvider --> CliEditor : editor()
     CliGitInfoProvider --> CliConfig : config()
     CliWorktrees ..|> Worktrees
@@ -868,8 +869,7 @@ classDiagram
     CliGitInfoProvider --> CliStatus : status()
     CliGitInfoProvider ..> CliBranches
     CliGitInfoProvider ..> CliLog
-    CliGitInfoProvider ..> CliDiff
-    CliGitInfoProvider ..> CliShow
+    CliGitInfoProvider --> CliDiffs : diffs()
     CliGitInfoProvider --> CliCheckout : checkout()
     CliGitInfoProvider ..> CliBranch
     CliGitInfoProvider --> CliIndex : index()
@@ -913,8 +913,8 @@ each role that is split off this way; the `Cli*` classes it still points to with
       itself, which saves a process. The stashes are the reflog of `refs/stash`, as git's documentation of
       `git stash` says. Without a stash there is no reflog, which `--ignore-missing` makes an empty list.
     - `CliRemote` reads the remotes.
-    - These each have a pure parser for git's output. `CliDiff` and `CliShow` return git's text, cut off
-      when it is long.
+    - These each have a pure parser for git's output. `CliDiffs` returns git's text, cut off when it
+      is long, and parses the files `--name-status -z` lists, for a commit, a range, a stash and a pull request.
   - **Writes:** `CliCheckout`, `CliBranch` (push, pull, delete), `CliIndex` (stage, commit, discard),
     `CliMerge`, `CliRebase`, `CliStashes`, `CliRemote` (fetch) and `CliWorktrees` (add, remove).
   - **Opening:** `CliGitInfoProvider.open` asks `git rev-parse` whether the directory is in a repository,

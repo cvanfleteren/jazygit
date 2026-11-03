@@ -62,8 +62,11 @@ class CliPullRequestTest {
         assertEquals(
                 List.of(new CommitFile("b.txt", ChangeType.ADDED)),
                 CliPullRequest.files(repo, commits, HashMap.empty()).get());
-        String diff = CliPullRequest.fileChanges(
-                        repo, commits, List.of(new CommitFile("b.txt", ChangeType.ADDED)), DiffOptions.DEFAULT)
+        String diff = CliGitInfoProvider.open(repo)
+                .get()
+                .diffs()
+                .pullRequestFileChanges(
+                        commits, List.of(new CommitFile("b.txt", ChangeType.ADDED)), DiffOptions.DEFAULT)
                 .get()
                 .text();
         assertTrue(diff.contains("diff --git a/b.txt b/b.txt"), diff);
@@ -80,12 +83,13 @@ class CliPullRequestTest {
         Sha tip = commit(repo, "b.txt", "b\n", "feature");
         git(repo, "checkout", "-q", "main");
         Sha base = commit(repo, "a.txt", "a\nmore\n", "main moved on");
+        Diffs diffs = CliGitInfoProvider.open(repo).get().diffs();
 
         assertEquals(
                 List.of(new CommitFile("b.txt", ChangeType.ADDED)),
-                CliPullRequest.files(repo, base, tip).get());
-        String diff = CliPullRequest.fileChanges(
-                        repo, base, tip, List.of(new CommitFile("b.txt", ChangeType.ADDED)), DiffOptions.DEFAULT)
+                diffs.rangeFiles(base, tip).get());
+        String diff = diffs.rangeFileChanges(
+                        base, tip, List.of(new CommitFile("b.txt", ChangeType.ADDED)), DiffOptions.DEFAULT)
                 .get()
                 .text();
         assertTrue(diff.contains("+b"), diff);

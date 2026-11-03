@@ -19,11 +19,7 @@ import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.git.model.CommitQuery;
 import net.vanfleteren.jazygit.git.model.CommitRange;
 import net.vanfleteren.jazygit.git.model.DeleteScope;
-import net.vanfleteren.jazygit.git.model.DiffOptions;
-import net.vanfleteren.jazygit.git.model.DiffText;
-import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.Divergence;
-import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.InProgressAction;
 import net.vanfleteren.jazygit.git.model.MergeMode;
@@ -154,45 +150,13 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<ProcessError, DiffText> commitChanges(Sha sha, DiffOptions options) {
-        return Either.right(DiffText.of(""));
-    }
-
-    @Override
-    default Either<ProcessError, List<CommitFile>> commitFiles(Sha sha) {
-        return Either.right(List.empty());
-    }
-
-    @Override
-    default Either<ProcessError, DiffText> commitFileChanges(Sha sha, List<CommitFile> files, DiffOptions options) {
-        return Either.right(DiffText.of(""));
+    default Diffs diffs() {
+        return new StubDiffs() {};
     }
 
     @Override
     default Either<ProcessError, List<CommitFile>> pullRequestFiles(PullRequestCommits commits) {
         return Either.right(List.empty());
-    }
-
-    @Override
-    default Either<ProcessError, DiffText> pullRequestFileChanges(
-            PullRequestCommits commits, List<CommitFile> files, DiffOptions options) {
-        return Either.right(DiffText.of(""));
-    }
-
-    @Override
-    default Either<ProcessError, List<CommitFile>> rangeFiles(Sha base, Sha tip) {
-        return Either.right(List.empty());
-    }
-
-    @Override
-    default Either<ProcessError, DiffText> rangeFileChanges(
-            Sha base, Sha tip, List<CommitFile> files, DiffOptions options) {
-        return Either.right(DiffText.of(""));
-    }
-
-    @Override
-    default Either<GitError, Diffs> diff(List<FileEntry> files, DiffOptions options) {
-        return Either.right(new Diffs("", ""));
     }
 
     @Override
