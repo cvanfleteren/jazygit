@@ -169,9 +169,9 @@ final class RepositorySession {
      */
     private Either<GitError, Path> switchTo(Path directory, Landing landing) {
         return CliGit.open(directory)
-                .peek(provider -> {
-                    RepositoryTheme theme = RepositoryTheme.read(provider);
-                    runner.get().runOnRenderThread(() -> show(provider, theme, landing));
+                .peek(git -> {
+                    RepositoryTheme theme = RepositoryTheme.read(git);
+                    runner.get().runOnRenderThread(() -> show(git, theme, landing));
                 })
                 .map(Git::worktree);
     }

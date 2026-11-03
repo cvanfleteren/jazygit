@@ -55,10 +55,10 @@ final class Launcher {
                             .onFailure(failed -> LoggerFactory.getLogger(Launcher.class)
                                     .debug("What was kept for all repositories at once could not be deleted", failed));
                     return open(start, recent, loaded, options.theme(), engine)
-                            .map(opened -> opened.map(provider -> {
-                                recent.opened(provider.worktree()).onFailure(BugLog::log);
+                            .map(opened -> opened.map(git -> {
+                                recent.opened(git.worktree()).onFailure(BugLog::log);
                                 Env env = RepositoryEnv.of(
-                                        provider,
+                                        git,
                                         loaded.settings(),
                                         settings,
                                         recent,
@@ -112,6 +112,6 @@ final class Launcher {
                                                         .mapLeft(ErrorText::of)
                                                         .map(Option::of)))
                                 : Either.left(ErrorText.of(error)),
-                        provider -> Either.right(Option.of(provider)));
+                        git -> Either.right(Option.of(git)));
     }
 }

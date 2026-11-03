@@ -131,7 +131,7 @@ class CliCheckoutTest {
         assertEquals(1, git("stash", "list").lines().count());
     }
 
-    // Through the provider, as the app reaches it.
+    // Through the repository, as the app reaches it.
     private Checkout checkout() {
         return CliGit.open(repo).get().checkout();
     }

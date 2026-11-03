@@ -742,7 +742,7 @@ classDiagram
   and Enter sends `Msg.PopupConfirmed(type)`, which `Spec.confirming(...)` sets up.
 - **`Cmd` is immutable data** that knows how to run itself against an `Env` (the `Git` and the
   `GitHub`) and how to report failure:
-  - `run` folds the provider's `Either` into a `Msg`.
+  - `run` folds the `Either` of a role into a `Msg`.
   - `failed(Failure)` turns a failure into the failure `Msg`. A `Failure` is data: `Failure.Git` (the
     `GitError`, the commands that ran, and why the cleanup failed if it did), `Failure.GitHub` (the `GhError`
     and the commands that ran) or `Failure.Bug` (the command threw, which `Program.perform` catches).
@@ -908,8 +908,8 @@ helpers. A test replaces the roles it needs on `StubGit.of()`, as in `StubGit.of
       the repository's own directory, like the index or `MERGE_HEAD`, is found with `git rev-parse --git-path`.
     - **What the repository is in the middle of** (a merge, rebase, cherry-pick or revert) is told by the files
       git keeps meanwhile. Where they are is asked once, when the repository is opened, and kept on the
-      provider (`CliInProgress.Markers`): every status read then only looks at those files, without starting
-      git. This assumes they never move while a repository is open, which holds as a provider is for one working
+      status (`CliInProgress.Markers`): every status read then only looks at those files, without starting
+      git. This assumes they never move while a repository is open, which holds as a `Git` is for one working
       tree, whose git directory stays where it is.
     - `CliHistory` runs `git rev-parse` and `git log -z`.
     - `CliStashes` lists the stashes with the `git log --walk-reflogs … refs/stash` that `git stash list` runs
@@ -1069,7 +1069,7 @@ sequenceDiagram
     participant App as JazygitApp.render
     participant Dialog as CommitDialog.reword
     participant IO as git-io thread
-    participant Provider as Git
+    participant Commits as git.commits()
     participant Git as git CLI
 
     User->>Panel: presses "r" on a commit
@@ -1086,21 +1086,21 @@ sequenceDiagram
     Update-->>Program: Next(model - popup, [RewordCmd(sha, message)])
     Program->>IO: io.execute(perform(env, cmd))
 
-    IO->>Provider: reword(sha, message)
-    Provider->>Git: git rev-parse --verify HEAD (is sha HEAD?)
+    IO->>Commits: reword(sha, message)
+    Commits->>Git: git rev-parse --verify HEAD (is sha HEAD?)
     alt sha is HEAD
-        Provider->>Git: git commit --amend --only -m ...
+        Commits->>Git: git commit --amend --only -m ...
     else an older commit
-        Provider->>Git: git rev-list --parents -n 1 sha
-        Provider->>Git: git -c ... rebase --interactive ... sha^<br/>(GIT_SEQUENCE_EDITOR marks it "reword",<br/>GIT_EDITOR copies the new message in)
+        Commits->>Git: git rev-list --parents -n 1 sha
+        Commits->>Git: git -c ... rebase --interactive ... sha^<br/>(GIT_SEQUENCE_EDITOR marks it "reword",<br/>GIT_EDITOR copies the new message in)
     end
-    Git-->>Provider: exit code
-    Provider-->>IO: Either of GitFailure or commands
+    Git-->>Commits: exit code
+    Commits-->>IO: Either of GitFailure or commands
     IO->>Program: ui.execute(dispatch(OperationMsg.Succeeded(reword, commands)))
 
     Program->>Update: OperationUpdate: Succeeded(reword, commands)
     Update-->>Program: Next(model + command log entry, [LoadStatus, LoadBranches, LoadStashes])
-    Note over Program,Provider: the loads run on git-io. StatusLoaded sees HEAD moved,<br/>so LoadCommits re-reads the log with the new message
+    Note over Program,Commits: the loads run on git-io. StatusLoaded sees HEAD moved,<br/>so LoadCommits re-reads the log with the new message
 ```
 
 ### Step by step

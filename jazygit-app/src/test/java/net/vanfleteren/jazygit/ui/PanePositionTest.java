@@ -41,10 +41,10 @@ import org.junit.jupiter.api.Test;
 class PanePositionTest {
 
     private static Git fixed(List<FileEntry> files, List<Branch> branchList, List<Commit> commitList) {
-        return new FixedProvider(files, branchList, commitList).git();
+        return new FixedRepo(files, branchList, commitList).git();
     }
 
-    private record FixedProvider(List<FileEntry> files, List<Branch> branchList, List<Commit> commitList) {
+    private record FixedRepo(List<FileEntry> files, List<Branch> branchList, List<Commit> commitList) {
 
         public Status status() {
             return new StubStatus() {

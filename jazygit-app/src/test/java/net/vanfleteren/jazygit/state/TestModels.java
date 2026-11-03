@@ -99,18 +99,18 @@ public final class TestModels {
     }
 
     /**
-     * The model after all of the provider's data has been loaded.
+     * The model after all of the repository's data has been loaded.
      */
-    public static Model loaded(Git provider) {
-        return program(new Env(provider, StubGitHub.empty()), Runnable::run, Runnable::run, Runnable::run)
+    public static Model loaded(Git git) {
+        return program(new Env(git, StubGitHub.empty()), Runnable::run, Runnable::run, Runnable::run)
                 .model();
     }
 
     /**
-     * The model after all of the provider's data, and the log of {@code branch}, has been loaded.
+     * The model after all of the repository's data, and the log of {@code branch}, has been loaded.
      */
-    public static Model loaded(Git provider, String branch) {
-        Program program = program(new Env(provider, StubGitHub.empty()), Runnable::run, Runnable::run, Runnable::run);
+    public static Model loaded(Git git, String branch) {
+        Program program = program(new Env(git, StubGitHub.empty()), Runnable::run, Runnable::run, Runnable::run);
         program.dispatch(new SelectionMsg.BranchSelected(new BranchRef.Local(new BranchName(branch))));
         return program.model();
     }
@@ -205,10 +205,10 @@ public final class TestModels {
     }
 
     /**
-     * The model after all of the provider's data, and the diff of {@code files}, has been loaded.
+     * The model after all of the repository's data, and the diff of {@code files}, has been loaded.
      */
-    public static Model withFilesSelected(Git provider, io.vavr.collection.List<FileEntry> files) {
-        Program program = program(new Env(provider, StubGitHub.empty()), Runnable::run, Runnable::run, Runnable::run);
+    public static Model withFilesSelected(Git git, io.vavr.collection.List<FileEntry> files) {
+        Program program = program(new Env(git, StubGitHub.empty()), Runnable::run, Runnable::run, Runnable::run);
         program.dispatch(new SelectionMsg.FilesSelected(files));
         return program.model();
     }

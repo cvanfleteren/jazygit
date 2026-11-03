@@ -643,10 +643,10 @@ class FilesPanelTest {
     }
 
     private static Git fixed(List<FileEntry> files) {
-        return new FixedProvider(files).git();
+        return new FixedRepo(files).git();
     }
 
-    private record FixedProvider(List<FileEntry> files) {
+    private record FixedRepo(List<FileEntry> files) {
 
         public Status status() {
             return new StubStatus() {

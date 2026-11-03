@@ -89,7 +89,7 @@ import net.vanfleteren.jazygit.state.prs.LoadRepositoryPullRequests;
 import org.junit.jupiter.api.Test;
 
 /**
- * The runtime loop: commands are performed against the provider and their results fed back.
+ * The runtime loop: commands are performed against a fake repository and their results fed back.
  * Both executors are queues drained by the test, so every step is deterministic.
  */
 class ProgramTest {
@@ -430,7 +430,7 @@ class ProgramTest {
     }
 
     @Test
-    void providerErrorsBecomeFailedState() {
+    void gitErrorsBecomeFailedState() {
         repo.statusError = "git status failed";
         settle();
 
@@ -503,7 +503,7 @@ class ProgramTest {
     }
 
     @Test
-    void deletingABranchCallsTheProviderWithTheChosenScope() {
+    void deletingABranchCallsGitWithTheChosenScope() {
         settle();
 
         program.dispatch(new DeleteBranchMsg.Requested(new BranchName("other")));
