@@ -83,3 +83,5 @@ easier to make out.
 
 Later: ADR 48 shows the symbols one column wide in the dialogs, the comments and the pull requests screen too; the
 emoji are gone.
+
+Amended by ADR 71: a stack has a header of one line, with its branches under it, indented.
