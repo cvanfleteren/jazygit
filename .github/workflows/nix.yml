@@ -18,6 +18,11 @@ on:
       - 'flake.lock'
   workflow_dispatch:
 
+# A newer push to the branch takes over, so a run never pushes the hash on top of a commit it hasn't seen.
+concurrency:
+  group: nix-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   package:
     runs-on: ubuntu-latest
@@ -25,9 +30,10 @@ jobs:
       # To push the new hash to the branch of the pull request; Dependabot's get read-only otherwise.
       contents: write
     steps:
-      # The branch itself rather than the merge commit, so a commit on it can be pushed.
+      # The branch itself rather than the merge commit, so a commit on it can be pushed; a fork's from the fork.
       - uses: actions/checkout@v7
         with:
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
           ref: ${{ github.head_ref || github.ref }}
 
       - uses: cachix/install-nix-action@v31
