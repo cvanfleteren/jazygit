@@ -77,7 +77,7 @@ final class CliInProgress {
 
     /**
      * Marks the rebase that stopped in {@code worktree} as one that amends an older commit: it started from a
-     * commit of the staged changes, which it folds into that one, see {@link CliCommit#amend(Path, Sha)}. Aborting
+     * commit of the staged changes, which it folds into that one, see {@link CliCommits#amend(Sha)}. Aborting
      * it then takes that commit away again, so the changes are staged as they were. When the mark cannot be left,
      * aborting leaves that commit on the branch, as aborting it outside jazygit does.
      */

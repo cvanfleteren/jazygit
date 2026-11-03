@@ -1133,7 +1133,7 @@ sequenceDiagram
    return perform(env.git()).fold(this::failedWith, this::succeeded);
    ```
 
-   where `Reword.perform` is `git.reword(sha, message)`.
+   where `Reword.perform` is `git.commits().reword(sha, message)`.
 
 6. **The git work**, in `CliRebase.rewordAny`.
    - `CliHistory.resolve(worktree, "HEAD")` runs `git rev-parse --verify --quiet HEAD^{commit}` to find out
@@ -1179,7 +1179,7 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-    Run["Reword.run(env)"] --> Either{"git.reword(...)"}
+    Run["Reword.run(env)"] --> Either{"git.commits().reword(...)"}
     Either -- "Right(commands)" --> Done["OperationMsg.Succeeded(reword, commands)"]
     Either -- "Left(GitFailure(error, commands, cleanupFailed))" --> FailedWith["Cmd.failedWith(failure)"]
     FailedWith --> Failed["OperationMsg.Failed(reword, Failure.Git(...))"]

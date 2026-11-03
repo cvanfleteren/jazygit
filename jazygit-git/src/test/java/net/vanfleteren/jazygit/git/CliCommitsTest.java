@@ -17,7 +17,9 @@ import org.junit.jupiter.api.io.TempDir;
 import org.zeroturnaround.exec.ProcessExecutor;
 
 /**
- * Moving the newest commits of the checked out branch to a new branch, and reading which commits that would move.
+ * The {@link CliCommits} that move the newest commits of the checked out branch to a new or an existing branch, and
+ * reading which commits that would move, through {@link CliHistory#commitRange}. The other operations of the role
+ * are still tested in {@link CliGitInfoProviderTest}.
  */
 class CliCommitsTest {
 
