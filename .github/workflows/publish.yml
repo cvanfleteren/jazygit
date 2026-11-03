@@ -43,7 +43,14 @@ jobs:
           ./mvnw --batch-mode --no-transfer-progress -T1 -Pnative package -DskipTests
           version=$(./mvnw --batch-mode --no-transfer-progress -N help:evaluate -Dexpression=project.version -q -DforceStdout)
           # Packed, the native image is a quarter of its size and keeps its executable bit.
-          XZ_OPT=-9T0 tar -C jazygit-app/target -cJf "jazygit-app/target/jazygit-$version-linux-x86_64.tar.xz" jazygit
+          # Owned by root, so unpacking it with sudo does not hand it to the runner's uid.
+          XZ_OPT=-9T0 tar -C jazygit-app/target --owner=0 --group=0 --numeric-owner -cJf "jazygit-app/target/jazygit-$version-linux-x86_64.tar.xz" jazygit
+
+      - name: Run the packed native image
+        run: |
+          unpacked=$(mktemp -d)
+          tar -xJf jazygit-app/target/jazygit-*-linux-x86_64.tar.xz -C "$unpacked"
+          "$unpacked/jazygit" --version
 
       - name: Keep the fat-jar and native image
         uses: actions/upload-artifact@v7
