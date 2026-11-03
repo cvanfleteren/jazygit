@@ -22,10 +22,38 @@ public sealed interface LoadMsg extends Msg {
      */
     Cmd.Load cmd();
 
-    record StatusLoaded(RepoStatus status) implements LoadMsg {
+    /**
+     * What a {@link Cmd.Targeted} load read, to keep in its {@link Target}.
+     *
+     * @param <T> what the load read
+     */
+    sealed interface Read<T> extends LoadMsg {
 
         @Override
-        public Cmd.Load cmd() {
+        Cmd.Targeted<T> cmd();
+
+        /**
+         * What the load read.
+         */
+        T value();
+
+        /**
+         * {@code model} with what was read kept in the target of the load.
+         */
+        default Model kept(Model model) {
+            return cmd().target().reload(model, value());
+        }
+    }
+
+    record StatusLoaded(RepoStatus status) implements Read<RepoStatus> {
+
+        @Override
+        public RepoStatus value() {
+            return status;
+        }
+
+        @Override
+        public Cmd.LoadStatus cmd() {
             return new Cmd.LoadStatus();
         }
     }
@@ -37,7 +65,7 @@ public sealed interface LoadMsg extends Msg {
     record BranchesLoaded(AllBranches branches, Option<Bases> bases) implements LoadMsg {
 
         @Override
-        public Cmd.Load cmd() {
+        public Cmd.LoadBranches cmd() {
             return new Cmd.LoadBranches();
         }
     }
@@ -49,23 +77,33 @@ public sealed interface LoadMsg extends Msg {
     record MetadataChecked(List<Tuple2<Cmd.Load, Option<MetadataStamp>>> stamps) implements LoadMsg {
 
         @Override
-        public Cmd.Load cmd() {
+        public Cmd.CheckMetadata cmd() {
             return new Cmd.CheckMetadata();
         }
     }
 
-    record StashesLoaded(List<Stash> stashes) implements LoadMsg {
+    record StashesLoaded(List<Stash> stashes) implements Read<List<Stash>> {
 
         @Override
-        public Cmd.Load cmd() {
+        public List<Stash> value() {
+            return stashes;
+        }
+
+        @Override
+        public Cmd.LoadStashes cmd() {
             return new Cmd.LoadStashes();
         }
     }
 
-    record WorktreesLoaded(List<Worktree> worktrees) implements LoadMsg {
+    record WorktreesLoaded(List<Worktree> worktrees) implements Read<List<Worktree>> {
 
         @Override
-        public Cmd.Load cmd() {
+        public List<Worktree> value() {
+            return worktrees;
+        }
+
+        @Override
+        public Cmd.LoadWorktrees cmd() {
             return new Cmd.LoadWorktrees();
         }
     }
@@ -76,7 +114,7 @@ public sealed interface LoadMsg extends Msg {
     record WorktreeChangesLoaded(List<String> worktrees, Map<String, Boolean> changes) implements LoadMsg {
 
         @Override
-        public Cmd.Load cmd() {
+        public Cmd.LoadWorktreeChanges cmd() {
             return new Cmd.LoadWorktreeChanges(worktrees);
         }
     }
@@ -93,18 +131,29 @@ public sealed interface LoadMsg extends Msg {
      * The log of HEAD, with what {@code load} read of it after.
      */
     record CommitsLoaded(List<Commit> commits, Cmd.LoadAhead load, Either<Failure, Option<Ahead>> ahead)
-            implements LoadMsg {
+            implements Read<List<Commit>> {
 
         @Override
-        public Cmd.Load cmd() {
+        public List<Commit> value() {
+            return commits;
+        }
+
+        @Override
+        public Cmd.LoadCommits cmd() {
             return new Cmd.LoadCommits(load);
         }
     }
 
-    record CommitSearchLoaded(CommitQuery query, Option<BranchRef> notOn, List<Commit> commits) implements LoadMsg {
+    record CommitSearchLoaded(CommitQuery query, Option<BranchRef> notOn, List<Commit> commits)
+            implements Read<List<Commit>> {
 
         @Override
-        public Cmd.Load cmd() {
+        public List<Commit> value() {
+            return commits;
+        }
+
+        @Override
+        public Cmd.SearchCommits cmd() {
             return new Cmd.SearchCommits(query, notOn);
         }
     }
@@ -115,7 +164,7 @@ public sealed interface LoadMsg extends Msg {
     record AheadLoaded(Cmd.LoadAhead load, Option<Ahead> ahead) implements LoadMsg {
 
         @Override
-        public Cmd.Load cmd() {
+        public Cmd.LoadAhead cmd() {
             return load;
         }
     }
@@ -125,18 +174,28 @@ public sealed interface LoadMsg extends Msg {
      */
     record BranchLogLoaded(
             BranchRef branch, List<Commit> commits, Cmd.LoadAhead load, Either<Failure, Option<Ahead>> ahead)
-            implements LoadMsg {
+            implements Read<List<Commit>> {
 
         @Override
-        public Cmd.Load cmd() {
+        public List<Commit> value() {
+            return commits;
+        }
+
+        @Override
+        public Cmd.LoadBranchLog cmd() {
             return new Cmd.LoadBranchLog(branch, load);
         }
     }
 
-    record DivergenceLoaded(BranchName branch, BranchRef other, Divergence divergence) implements LoadMsg {
+    record DivergenceLoaded(BranchName branch, BranchRef other, Divergence divergence) implements Read<Divergence> {
 
         @Override
-        public Cmd.Load cmd() {
+        public Divergence value() {
+            return divergence;
+        }
+
+        @Override
+        public Cmd.LoadDivergence cmd() {
             return new Cmd.LoadDivergence(branch, other);
         }
     }
@@ -145,7 +204,8 @@ public sealed interface LoadMsg extends Msg {
      * The changes of the commit {@code sha}, read for the preview whose slot is {@code preview}; every preview of
      * it shows them.
      */
-    record CommitDetailLoaded(Sha sha, DiffOptions options, DiffText changes, Cmd.Slot preview) implements LoadMsg {
+    record CommitDetailLoaded(Sha sha, DiffOptions options, DiffText changes, Cmd.Slot preview)
+            implements Read<DiffText> {
 
         /**
          * The changes of the commit {@code sha}, read for the commits pane.
@@ -155,15 +215,25 @@ public sealed interface LoadMsg extends Msg {
         }
 
         @Override
-        public Cmd.Load cmd() {
+        public DiffText value() {
+            return changes;
+        }
+
+        @Override
+        public Cmd.LoadCommitDetail cmd() {
             return new Cmd.LoadCommitDetail(sha, options, preview);
         }
     }
 
-    record StashDetailLoaded(Sha sha, DiffOptions options, DiffText changes) implements LoadMsg {
+    record StashDetailLoaded(Sha sha, DiffOptions options, DiffText changes) implements Read<DiffText> {
 
         @Override
-        public Cmd.Load cmd() {
+        public DiffText value() {
+            return changes;
+        }
+
+        @Override
+        public Cmd.LoadStashDetail cmd() {
             return new Cmd.LoadStashDetail(sha, options);
         }
     }
@@ -173,7 +243,7 @@ public sealed interface LoadMsg extends Msg {
      * told.
      */
     record FileDiffLoaded(List<FileEntry> files, DiffOptions options, Diffs diff, Option<MetadataStamp> stamp)
-            implements LoadMsg {
+            implements Read<Diffs> {
 
         /**
          * The diff of {@code files}, without telling what its files looked like: it is read again with every status.
@@ -183,7 +253,12 @@ public sealed interface LoadMsg extends Msg {
         }
 
         @Override
-        public Cmd.Load cmd() {
+        public Diffs value() {
+            return diff;
+        }
+
+        @Override
+        public Cmd.LoadFileDiff cmd() {
             return new Cmd.LoadFileDiff(files, options);
         }
     }
@@ -195,24 +270,34 @@ public sealed interface LoadMsg extends Msg {
     record FileDiffChecked(Cmd.LoadFileDiff load, Option<MetadataStamp> stamp) implements LoadMsg {
 
         @Override
-        public Cmd.Load cmd() {
+        public Cmd.CheckFileDiff cmd() {
             return new Cmd.CheckFileDiff(load);
         }
     }
 
-    record CommitFilesLoaded(CommitFilesView.Changes of, List<CommitFile> files) implements LoadMsg {
+    record CommitFilesLoaded(CommitFilesView.Changes of, List<CommitFile> files) implements Read<List<CommitFile>> {
 
         @Override
-        public Cmd.Load cmd() {
+        public List<CommitFile> value() {
+            return files;
+        }
+
+        @Override
+        public Cmd.LoadCommitFiles cmd() {
             return new Cmd.LoadCommitFiles(of);
         }
     }
 
     record CommitFileDiffLoaded(CommitFilesView.Changes of, List<CommitFile> files, DiffOptions options, DiffText diff)
-            implements LoadMsg {
+            implements Read<DiffText> {
 
         @Override
-        public Cmd.Load cmd() {
+        public DiffText value() {
+            return diff;
+        }
+
+        @Override
+        public Cmd.LoadCommitFileDiff cmd() {
             return new Cmd.LoadCommitFileDiff(of, files, options);
         }
     }

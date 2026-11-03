@@ -18,11 +18,17 @@ import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.CommitQuery;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
+import net.vanfleteren.jazygit.git.model.DiffText;
+import net.vanfleteren.jazygit.git.model.Diffs;
+import net.vanfleteren.jazygit.git.model.Divergence;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.GitMetadata;
 import net.vanfleteren.jazygit.git.model.MetadataStamp;
 import net.vanfleteren.jazygit.git.model.PullRequestCommits;
+import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.git.model.Stash;
+import net.vanfleteren.jazygit.git.model.Worktree;
 import net.vanfleteren.jazygit.settings.Settings;
 
 /**
@@ -181,6 +187,18 @@ public interface Cmd {
     }
 
     /**
+     * A load that keeps what it reads in a {@link Target}: what it read goes there, so does that it failed, and a
+     * tick reads it again while it shows as failed there. The loads that are not targeted keep what they read in a
+     * way of their own, which {@link LoadUpdate} spells out for each.
+     *
+     * @param <T> what the load reads
+     */
+    sealed interface Targeted<T> extends Load {
+
+        Target<T> target();
+    }
+
+    /**
      * A load whose result depends on the diff options it was started with.
      */
     sealed interface DiffLoad extends Load {
@@ -206,11 +224,16 @@ public interface Cmd {
         }
     }
 
-    record LoadStatus() implements Load {
+    record LoadStatus() implements Targeted<RepoStatus> {
 
         @Override
         public Option<Label> label() {
             return Option.of(Label.of("work.status"));
+        }
+
+        @Override
+        public Target<RepoStatus> target() {
+            return Target.inRepo(Repo::status, Repo::withStatus);
         }
 
         @Override
@@ -277,11 +300,16 @@ public interface Cmd {
         }
     }
 
-    record LoadStashes() implements Load {
+    record LoadStashes() implements Targeted<List<Stash>> {
 
         @Override
         public Option<Label> label() {
             return Option.of(Label.of("work.stashes"));
+        }
+
+        @Override
+        public Target<List<Stash>> target() {
+            return Target.inRepo(Repo::stashes, Repo::withStashes);
         }
 
         @Override
@@ -290,11 +318,16 @@ public interface Cmd {
         }
     }
 
-    record LoadWorktrees() implements Load {
+    record LoadWorktrees() implements Targeted<List<Worktree>> {
 
         @Override
         public Option<Label> label() {
             return Option.of(Label.of("work.worktrees"));
+        }
+
+        @Override
+        public Target<List<Worktree>> target() {
+            return Target.inRepo(Repo::worktrees, Repo::withWorktrees);
         }
 
         @Override
@@ -338,11 +371,16 @@ public interface Cmd {
      * and then what of it is not on its base, as {@code ahead} does: the log is shown with it. Without a commit, the
      * log is empty and nothing is read.
      */
-    record LoadCommits(LoadAhead ahead) implements Load {
+    record LoadCommits(LoadAhead ahead) implements Targeted<List<Commit>> {
 
         @Override
         public Option<Label> label() {
             return Option.of(Label.of("work.commits"));
+        }
+
+        @Override
+        public Target<List<Commit>> target() {
+            return Target.inRepo(Repo::commits, Repo::withCommits);
         }
 
         @Override
@@ -356,11 +394,23 @@ public interface Cmd {
     /**
      * Reads the commits of the log of HEAD that {@code query} finds, leaving out those on {@code notOn}, if given.
      */
-    record SearchCommits(CommitQuery query, Option<BranchRef> notOn) implements Load {
+    record SearchCommits(CommitQuery query, Option<BranchRef> notOn) implements Targeted<List<Commit>> {
 
         @Override
         public Option<Label> label() {
             return Option.of(Label.of("work.search"));
+        }
+
+        /**
+         * The results of the search, while it is the one shown.
+         */
+        @Override
+        public Target<List<Commit>> target() {
+            return Target.inView(Lens.where(
+                            RepoView::commitSearch,
+                            RepoView::withCommitSearch,
+                            search -> search.load().equals(this))
+                    .andThen(Lens.of(CommitSearch::results, CommitSearch::withResults)));
         }
 
         @Override
@@ -414,7 +464,7 @@ public interface Cmd {
      * Reads the log of {@code branch}, and then what of it is not on its base, as {@code ahead} does: the log is shown
      * with it.
      */
-    record LoadBranchLog(BranchRef branch, LoadAhead ahead) implements Load {
+    record LoadBranchLog(BranchRef branch, LoadAhead ahead) implements Targeted<List<Commit>> {
 
         @Override
         public Option<Label> label() {
@@ -424,6 +474,14 @@ public interface Cmd {
         @Override
         public Option<Slot> slot() {
             return Option.of(Slot.BRANCH_LOG);
+        }
+
+        /**
+         * The log of the branch, while it is the one highlighted.
+         */
+        @Override
+        public Target<List<Commit>> target() {
+            return Target.inView(Preview.lens(RepoView::branchLog, RepoView::withBranchLog, branch));
         }
 
         @Override
@@ -439,11 +497,23 @@ public interface Cmd {
     /**
      * Reads the commits only on {@code branch} and the ones only on {@code other}.
      */
-    record LoadDivergence(BranchName branch, BranchRef other) implements Load {
+    record LoadDivergence(BranchName branch, BranchRef other) implements Targeted<Divergence> {
 
         @Override
         public Option<Label> label() {
             return Option.of(Label.of("work.divergence", branch.value(), other.name()));
+        }
+
+        /**
+         * The commits of the divergence, while it is the one open.
+         */
+        @Override
+        public Target<Divergence> target() {
+            return Target.inView(Lens.where(
+                            RepoView::divergence,
+                            RepoView::withDivergence,
+                            view -> view.load().equals(this))
+                    .andThen(Lens.of(DivergenceView::commits, DivergenceView::withCommits)));
         }
 
         @Override
@@ -459,7 +529,7 @@ public interface Cmd {
      * the commits pane, of a divergence or of the commits of a branch. Each takes its own slot, so that highlighting
      * a commit in one does not skip the read another one waits for.
      */
-    record LoadCommitDetail(Sha sha, DiffOptions options, Slot preview) implements DiffLoad {
+    record LoadCommitDetail(Sha sha, DiffOptions options, Slot preview) implements DiffLoad, Targeted<DiffText> {
 
         /**
          * Reads the changes of the commit {@code sha} highlighted in the commits pane.
@@ -478,6 +548,28 @@ public interface Cmd {
             return Option.of(preview);
         }
 
+        /**
+         * The detail of the commit in the preview of {@code preview}, while it is the one highlighted there. Every
+         * other preview of it shows what was read too.
+         */
+        @Override
+        public Target<DiffText> target() {
+            Lens<RepoView, Loadable<DiffText>> commits =
+                    Preview.lens(RepoView::commitDetail, RepoView::withCommitDetail, sha);
+            Lens<RepoView, Loadable<DiffText>> divergence = Lens.some(RepoView::divergence, RepoView::withDivergence)
+                    .andThen(Preview.lens(DivergenceView::detail, DivergenceView::withDetail, sha));
+            Lens<RepoView, Loadable<DiffText>> branchCommits = Lens.some(
+                            RepoView::branchCommits, RepoView::withBranchCommits)
+                    .andThen(Preview.lens(BranchCommitsView::detail, BranchCommitsView::withDetail, sha));
+            return Target.inView(
+                    switch (preview) {
+                        case DIVERGENCE_DETAIL -> divergence.alongWith(commits).alongWith(branchCommits);
+                        case BRANCH_COMMITS_DETAIL ->
+                            branchCommits.alongWith(commits).alongWith(divergence);
+                        default -> commits.alongWith(divergence).alongWith(branchCommits);
+                    });
+        }
+
         @Override
         public Msg run(Env env) {
             return env.git()
@@ -486,7 +578,7 @@ public interface Cmd {
         }
     }
 
-    record LoadStashDetail(Sha sha, DiffOptions options) implements DiffLoad {
+    record LoadStashDetail(Sha sha, DiffOptions options) implements DiffLoad, Targeted<DiffText> {
 
         @Override
         public Option<Label> label() {
@@ -496,6 +588,14 @@ public interface Cmd {
         @Override
         public Option<Slot> slot() {
             return Option.of(Slot.STASH_DETAIL);
+        }
+
+        /**
+         * The detail of the stash, while it is the one highlighted.
+         */
+        @Override
+        public Target<DiffText> target() {
+            return Target.inView(Preview.lens(RepoView::stashDetail, RepoView::withStashDetail, sha));
         }
 
         @Override
@@ -511,7 +611,7 @@ public interface Cmd {
      * Reads the files a commit, a stash, a pull request or a branch changed, for the tree of them the files pane lists. Those
      * of a pull request are read in the background, as its commits may have to be fetched first (ADR 55).
      */
-    record LoadCommitFiles(CommitFilesView.Changes of) implements Load {
+    record LoadCommitFiles(CommitFilesView.Changes of) implements Targeted<List<CommitFile>> {
 
         @Override
         public Option<Label> label() {
@@ -521,6 +621,15 @@ public interface Cmd {
         @Override
         public boolean background() {
             return of instanceof CommitFilesView.Changes.OfPullRequest;
+        }
+
+        /**
+         * The files of the view of {@code of}, while it is the one open.
+         */
+        @Override
+        public Target<List<CommitFile>> target() {
+            return Target.inView(
+                    CommitFilesView.open(of).andThen(Lens.of(CommitFilesView::files, CommitFilesView::withFiles)));
         }
 
         @Override
@@ -544,7 +653,7 @@ public interface Cmd {
      * files.
      */
     record LoadCommitFileDiff(CommitFilesView.Changes of, List<CommitFile> files, DiffOptions options)
-            implements DiffLoad {
+            implements DiffLoad, Targeted<DiffText> {
 
         @Override
         public Option<Label> label() {
@@ -554,6 +663,15 @@ public interface Cmd {
         @Override
         public Option<Slot> slot() {
             return Option.of(Slot.COMMIT_FILE_DIFF);
+        }
+
+        /**
+         * The diff in the view of {@code of}, while it is the one open, and {@code files} the node highlighted in it.
+         */
+        @Override
+        public Target<DiffText> target() {
+            return Target.inView(CommitFilesView.open(of)
+                    .andThen(Preview.lens(CommitFilesView::diff, CommitFilesView::withDiff, files)));
         }
 
         @Override
@@ -572,7 +690,7 @@ public interface Cmd {
         }
     }
 
-    record LoadFileDiff(List<FileEntry> files, DiffOptions options) implements DiffLoad {
+    record LoadFileDiff(List<FileEntry> files, DiffOptions options) implements DiffLoad, Targeted<Diffs> {
 
         @Override
         public Option<Label> label() {
@@ -582,6 +700,14 @@ public interface Cmd {
         @Override
         public Option<Slot> slot() {
             return Option.of(Slot.FILE_DIFF);
+        }
+
+        /**
+         * The diff of the files, while they are the ones highlighted.
+         */
+        @Override
+        public Target<Diffs> target() {
+            return Target.inView(Preview.lens(RepoView::fileDiff, RepoView::withFileDiff, files));
         }
 
         /**

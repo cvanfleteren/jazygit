@@ -171,6 +171,16 @@ public record CommitFilesView(
     }
 
     /**
+     * The view of the files of {@code of}, while it is the one open.
+     */
+    public static Lens<RepoView, CommitFilesView> open(Changes of) {
+        return Lens.where(
+                RepoView::commitFiles,
+                RepoView::withCommitFiles,
+                view -> view.of().equals(of));
+    }
+
+    /**
      * The load of the files.
      */
     public Cmd.LoadCommitFiles load() {
