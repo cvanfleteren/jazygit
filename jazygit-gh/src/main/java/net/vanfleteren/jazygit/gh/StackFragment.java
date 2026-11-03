@@ -8,7 +8,9 @@ import static net.vanfleteren.jazygit.json.Decoder.integer;
 import static net.vanfleteren.jazygit.json.Decoder.list;
 import static net.vanfleteren.jazygit.json.Decoder.map2;
 import static net.vanfleteren.jazygit.json.Decoder.map3;
+import static net.vanfleteren.jazygit.json.Decoder.map4;
 import static net.vanfleteren.jazygit.json.Decoder.nullable;
+import static net.vanfleteren.jazygit.json.Decoder.string;
 import static net.vanfleteren.jazygit.json.Decoder.succeed;
 
 import io.vavr.Tuple;
@@ -27,16 +29,21 @@ final class StackFragment {
     // The stack of a pull request and where it sits in it, in GraphQL: both null when it is not stacked.
     static final String FIELDS = """
             stackEntry { position } stack { number size \
-            entries(first: 100) { nodes { position pullRequest { number state } } } }""";
+            entries(first: 100) { nodes { position pullRequest { number state headRefName baseRefName } } } }""";
 
     // A pull request of a stack; none when its pull request cannot be read.
     static final Decoder<Option<PullRequestStack.Entry>> ENTRY = nullable(map2(
                     field("position", integer()),
                     field(
                             "pullRequest",
-                            nullable(map2(field("number", integer()), field("state", enumOf(State.class)), Tuple::of))),
-                    (position, pullRequest) ->
-                            pullRequest.map(pr -> new PullRequestStack.Entry(position, pr._1(), pr._2()))))
+                            nullable(map4(
+                                    field("number", integer()),
+                                    field("state", enumOf(State.class)),
+                                    field("headRefName", string()),
+                                    field("baseRefName", string()),
+                                    Tuple::of))),
+                    (position, pullRequest) -> pullRequest.map(
+                            pr -> new PullRequestStack.Entry(position, pr._1(), pr._2(), pr._3(), pr._4()))))
             .map(entry -> entry.flatMap(readable -> readable));
 
     // The number, the size and the pull requests of a stack.

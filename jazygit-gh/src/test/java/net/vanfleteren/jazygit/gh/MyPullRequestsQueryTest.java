@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
+import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.MyPullRequests;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
@@ -37,7 +38,7 @@ class MyPullRequestsQueryTest {
         String fix = """
                 { "__typename": "PullRequest", "number": 9, "title": "Fix the\\tlogin",
                   "url": "https://github.com/other/repo/pull/9", "updatedAt": "2026-10-16T21:39:59Z",
-                  "isDraft": false, "isCrossRepository": false, "headRefName": "feature/login",
+                  "isDraft": false, "isCrossRepository": false, "headRefName": "feature/login", "baseRefName": "main",
                   "author": { "login": "alice" }, "repository": { "nameWithOwner": "other/repo" },
                   "reviewDecision": "APPROVED", "stackEntry": null, "stack": null,
                   "commits": { "nodes": [ { "commit": { "statusCheckRollup": { "state": "SUCCESS" },
@@ -57,7 +58,11 @@ class MyPullRequestsQueryTest {
                                         Checks.PASSING,
                                         Review.APPROVED,
                                         Instant.parse("2026-10-16T21:39:59Z"),
-                                        "https://github.com/other/repo/pull/9")),
+                                        "https://github.com/other/repo/pull/9",
+                                        Option.none(),
+                                        Option.none(),
+                                        Option.none(),
+                                        "main")),
                                 52),
                         PullRequestList.EMPTY)),
                 mine(52, fix, 0, ""));

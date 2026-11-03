@@ -248,9 +248,12 @@ public sealed interface CreatePullRequestCmd extends Cmd {
                                             .map(number -> new PullRequest(
                                                     number,
                                                     head.branch().value(),
+                                                    base.branch().value(),
                                                     pullRequest.draft(),
                                                     Checks.NONE,
-                                                    Review.NONE)),
+                                                    Review.NONE,
+                                                    Option.none(),
+                                                    Option.none())),
                                     created.commands()));
         }
     }

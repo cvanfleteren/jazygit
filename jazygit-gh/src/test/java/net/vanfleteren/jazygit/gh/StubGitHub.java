@@ -70,6 +70,14 @@ public interface StubGitHub extends GitHub {
     }
 
     /**
+     * A repository that protects no branch.
+     */
+    @Override
+    default Either<GhError, List<String>> protectedBranches() {
+        return Either.right(List.empty());
+    }
+
+    /**
      * The repository {@code owner/repo} without checks on any branch.
      */
     @Override

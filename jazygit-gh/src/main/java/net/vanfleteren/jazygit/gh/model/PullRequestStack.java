@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.gh.model;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.State;
 
 /**
@@ -23,11 +24,38 @@ public record PullRequestStack(int number, int position, int size, List<Entry> e
     }
 
     /**
+     * The branch the pull request below this one merges from, which this one is built on; none for the bottom one, or
+     * when that one cannot be read.
+     */
+    public Option<String> branchBelow() {
+        return entries.find(entry -> entry.position() == position - 1)
+                .map(Entry::headBranch)
+                .filter(branch -> !branch.isEmpty());
+    }
+
+    /**
+     * The branch the bottom pull request of the stack merges into, its base; none when it cannot be read.
+     */
+    public Option<String> base() {
+        return entries.minBy(Entry::position).map(Entry::baseBranch).filter(branch -> !branch.isEmpty());
+    }
+
+    /**
      * A pull request of a stack.
      *
-     * @param position where it sits in the stack, 1 being the closest to the base
-     * @param number   its number
-     * @param state    whether it is open, merged or closed
+     * @param position   where it sits in the stack, 1 being the closest to the base
+     * @param number     its number
+     * @param state      whether it is open, merged or closed
+     * @param headBranch the branch it merges from, empty when not known
+     * @param baseBranch the branch it merges into, empty when not known
      */
-    public record Entry(int position, int number, State state) {}
+    public record Entry(int position, int number, State state, String headBranch, String baseBranch) {
+
+        /**
+         * One whose branches are not known.
+         */
+        public Entry(int position, int number, State state) {
+            this(position, number, state, "", "");
+        }
+    }
 }

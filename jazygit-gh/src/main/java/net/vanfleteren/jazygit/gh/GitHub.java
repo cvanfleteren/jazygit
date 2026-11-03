@@ -45,6 +45,11 @@ public interface GitHub {
     Either<GhError, BranchChecks> branchChecks();
 
     /**
+     * The names of the protected branches of the repository (ADR 72).
+     */
+    Either<GhError, List<String>> protectedBranches();
+
+    /**
      * What there is to know about pull request {@code number}.
      */
     Either<GhError, PullRequestDetails> pullRequestDetails(int number);
