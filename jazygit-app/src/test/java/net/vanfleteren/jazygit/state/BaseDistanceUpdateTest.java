@@ -9,8 +9,10 @@ import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.git.Branches;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
+import net.vanfleteren.jazygit.git.StubBranches;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.*;
 import org.junit.jupiter.api.Test;
@@ -31,21 +33,26 @@ class BaseDistanceUpdateTest {
     void theBranchesAreCountedWithTheParentsAndTheTipsJustRead() {
         StubGitProvider git = new StubGitProvider() {
             @Override
-            public Either<ProcessError, AllBranches> allBranches() {
-                return Either.right(READ);
-            }
+            public Branches branches() {
+                return new StubBranches() {
+                    @Override
+                    public Either<ProcessError, AllBranches> all() {
+                        return Either.right(READ);
+                    }
 
-            @Override
-            public Either<ProcessError, Map<BranchName, BranchName>> parents() {
-                return Either.right(PARENTS);
-            }
+                    @Override
+                    public Either<ProcessError, Map<BranchName, BranchName>> parents() {
+                        return Either.right(PARENTS);
+                    }
 
-            @Override
-            public Map<BranchName, BaseDistance> baseDistance(
-                    Map<BranchRef, Sha> tips, Map<BranchName, BranchName> parents, Option<BranchName> main) {
-                return tips.equals(READ.tips()) && parents.equals(PARENTS) && main.equals(READ.main())
-                        ? HashMap.of(FEATURE, DISTANCE)
-                        : HashMap.empty();
+                    @Override
+                    public Map<BranchName, BaseDistance> baseDistance(
+                            Map<BranchRef, Sha> tips, Map<BranchName, BranchName> parents, Option<BranchName> main) {
+                        return tips.equals(READ.tips()) && parents.equals(PARENTS) && main.equals(READ.main())
+                                ? HashMap.of(FEATURE, DISTANCE)
+                                : HashMap.empty();
+                    }
+                };
             }
         };
 
@@ -58,13 +65,18 @@ class BaseDistanceUpdateTest {
     void branchesWhoseParentsCannotBeReadComeBackWithoutThem() {
         StubGitProvider git = new StubGitProvider() {
             @Override
-            public Either<ProcessError, AllBranches> allBranches() {
-                return Either.right(READ);
-            }
+            public Branches branches() {
+                return new StubBranches() {
+                    @Override
+                    public Either<ProcessError, AllBranches> all() {
+                        return Either.right(READ);
+                    }
 
-            @Override
-            public Either<ProcessError, Map<BranchName, BranchName>> parents() {
-                return Either.left(new GitError.UnexpectedOutput("garbled"));
+                    @Override
+                    public Either<ProcessError, Map<BranchName, BranchName>> parents() {
+                        return Either.left(new GitError.UnexpectedOutput("garbled"));
+                    }
+                };
             }
         };
 

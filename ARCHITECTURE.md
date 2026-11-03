@@ -235,8 +235,8 @@ one and one whose directory is gone.
 A local branch shows how many commits it has that its base does not, and how many of its base it does not have,
 `⇡1 ⇣58`, the base being that of ADR 20: its parent, else the main branch, from `origin` when it is there.
 A branch whose base is its upstream shows only `↑`/`↓`. Every read of the branches (`Cmd.LoadBranches`) reads the
-parents with them (`GitInfoProvider.parents`, one `git config --get-regexp`) and counts the distances against the tips
-and the main branch it just read (`GitInfoProvider.baseDistance`, `CliBaseDistance`: one
+parents with them (`Branches.parents`, one `git config --get-regexp`) and counts the distances against the tips
+and the main branch it just read (`Branches.baseDistance`, `CliBaseDistance`: one
 `for-each-ref --format=%(ahead-behind:<commit>)` for every base at once), and comes back with all three in
 `LoadMsg.BranchesLoaded`, which keeps the parents in `Repo.parents` and a `BaseDistance` per branch in
 `Repo.baseDistance` (ADR 49, 58). Parents that cannot be read, or a read that fails, leave the parents and counts read
@@ -836,6 +836,7 @@ classDiagram
         status() Status
         diffs() Diffs
         history() History
+        branches() Branches
         checkout() Checkout
         reword(Sha, CommitMessage) Either of GitFailure of GitError or commands
         stashes() Stashes
@@ -863,16 +864,16 @@ classDiagram
     CliConfig ..|> Config
     CliDiffs ..|> Diffs
     CliHistory ..|> History
+    CliBranches ..|> Branches
     CliGitInfoProvider --> CliEditor : editor()
     CliGitInfoProvider --> CliConfig : config()
     CliWorktrees ..|> Worktrees
     CliGitInfoProvider --> CliWorktrees : worktrees()
     CliGitInfoProvider --> CliStatus : status()
-    CliGitInfoProvider ..> CliBranches
+    CliGitInfoProvider --> CliBranches : branches()
     CliGitInfoProvider --> CliHistory : history()
     CliGitInfoProvider --> CliDiffs : diffs()
     CliGitInfoProvider --> CliCheckout : checkout()
-    CliGitInfoProvider ..> CliBranch
     CliGitInfoProvider --> CliIndex : index()
     CliGitInfoProvider ..> CliMerge
     CliGitInfoProvider ..> CliRebase
@@ -880,7 +881,7 @@ classDiagram
     CliGitInfoProvider ..> CliRemote
     CliRebase ..> Unfinished
     CliMerge ..> Unfinished
-    CliBranch ..> Unfinished
+    CliBranches ..> Unfinished
     Unfinished ..> GitProcess
 ```
 
@@ -895,7 +896,7 @@ each role that is split off this way; the `Cli*` classes it still points to with
   git itself does: its configuration, hooks, credentials and repository formats included.
   - **Reads:**
     - `CliStatus` reads `git status --porcelain=v2`.
-    - `CliBranch` runs one `git for-each-ref` for the local and the remote-tracking branches together
+    - `CliBranches` runs one `git for-each-ref` for the local and the remote-tracking branches together
       (`AllBranches`), so both are read at the same moment and in one process. The local ones come with their
       upstream and ahead/behind counts and the other worktree each is checked out in (`%(worktreepath)`,
       `Branch.worktree`); they need the remote ones anyway, to tell which are pushed and which is the default.
@@ -916,7 +917,7 @@ each role that is split off this way; the `Cli*` classes it still points to with
     - `CliRemote` reads the remotes.
     - These each have a pure parser for git's output. `CliDiffs` returns git's text, cut off when it
       is long, and parses the files `--name-status -z` lists, for a commit, a range, a stash and a pull request.
-  - **Writes:** `CliCheckout`, `CliBranch` (push, pull, delete), `CliIndex` (stage, commit, discard),
+  - **Writes:** `CliCheckout`, `CliBranches` (rename, delete), `CliPush`, `CliPull`, `CliIndex` (stage, commit, discard),
     `CliMerge`, `CliRebase`, `CliStashes`, `CliRemote` (fetch) and `CliWorktrees` (add, remove).
   - **Opening:** `CliGitInfoProvider.open` asks `git rev-parse` whether the directory is in a repository,
     whether that is bare, where its working tree is, and where git keeps the files that tell what it is in the

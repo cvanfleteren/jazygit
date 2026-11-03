@@ -70,7 +70,8 @@ public record NukeBranchCmd(BranchName branch, Option<String> worktree, Option<R
         Option<Step> removed = worktree.map(
                 location -> new Step(location, Option.of(git.worktrees().removeAnyway(WorktreeCmd.path(location)))));
         Step deleted = new Step(
-                branch.value(), Option.when(removed.forAll(Step::deleted), () -> git.forceDeleteLocalBranch(branch)));
+                branch.value(),
+                Option.when(removed.forAll(Step::deleted), () -> git.branches().forceDeleteLocal(branch)));
         Option<Step> deletedRemote =
                 remote.map(target -> new Step(target.shortName(), Option.of(git.deleteRemoteBranch(target))));
         return removed.toList().append(deleted).appendAll(deletedRemote);

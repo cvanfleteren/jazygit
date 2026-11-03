@@ -26,7 +26,7 @@ class SampleDataTest {
 
     @Test
     void exactlyOneBranchIsCurrent() {
-        List<Branch> branches = data.branches().get();
+        List<Branch> branches = data.branches().all().get().local();
         long currentCount = branches.count(Branch::current);
         assertEquals(1, currentCount);
     }
@@ -44,7 +44,9 @@ class SampleDataTest {
     @Test
     void sampleCollectionsAreConsistentAcrossCalls() {
         assertTrue(data.status().read().get().files().size() > 0);
-        assertEquals(data.branches().get().size(), data.branches().get().size());
+        assertEquals(
+                data.branches().all().get().local().size(),
+                data.branches().all().get().local().size());
         assertEquals(data.commits().get().size(), data.commits().get().size());
     }
 }

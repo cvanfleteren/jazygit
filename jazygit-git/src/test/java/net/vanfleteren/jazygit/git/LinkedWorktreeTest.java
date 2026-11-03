@@ -86,7 +86,8 @@ class LinkedWorktreeTest {
 
         assertEquals(linked, provider.worktree());
         assertTrue(Files.isRegularFile(linked.resolve(".git")));
-        List<Branch> branches = provider.allBranches().map(AllBranches::local).get();
+        List<Branch> branches =
+                provider.branches().all().map(AllBranches::local).get();
         assertEquals(
                 List.of("feature", "main"), branches.map(branch -> branch.name().value()));
         assertEquals(List.of(Option.none(), Option.of(main)), branches.map(Branch::worktree));
@@ -96,7 +97,8 @@ class LinkedWorktreeTest {
     void theMainWorktreeSeesTheBranchCheckedOutInTheLinkedOne() {
         List<Branch> branches = CliGitInfoProvider.open(main)
                 .get()
-                .allBranches()
+                .branches()
+                .all()
                 .map(AllBranches::local)
                 .get();
 

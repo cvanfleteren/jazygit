@@ -21,9 +21,11 @@ import java.time.Instant;
 import java.util.concurrent.CountDownLatch;
 import net.vanfleteren.jazygit.feature.help.HelpDialog;
 import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.git.Branches;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
+import net.vanfleteren.jazygit.git.StubBranches;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
@@ -178,15 +180,20 @@ class JazygitAppReportsTest {
     private record PullsSlowly(CountDownLatch pulled) implements StubGitProvider {
 
         @Override
-        public Either<ProcessError, List<Branch>> branches() {
-            return Either.right(List.of(Fixtures.branch(
-                    MAIN,
-                    true,
-                    new Sha("aaaa"),
-                    Instant.EPOCH,
-                    true,
-                    true,
-                    Option.of(new Upstream(new BranchRef.Remote(new RemoteBranch("origin", MAIN)), 0, 1)))));
+        public Branches branches() {
+            return new StubBranches() {
+                @Override
+                public Either<ProcessError, List<Branch>> local() {
+                    return Either.right(List.of(Fixtures.branch(
+                            MAIN,
+                            true,
+                            new Sha("aaaa"),
+                            Instant.EPOCH,
+                            true,
+                            true,
+                            Option.of(new Upstream(new BranchRef.Remote(new RemoteBranch("origin", MAIN)), 0, 1)))));
+                }
+            };
         }
 
         @Override

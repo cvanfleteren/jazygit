@@ -101,8 +101,8 @@ public record RemoveWorktreeCmd(String location, boolean force, Option<BranchNam
                         .mapLeft(failure -> unlocking
                                 .map(reason -> failure.followedBy(worktrees.lock(path, reason)))
                                 .getOrElse(failure)),
-                () -> deleting.map(branch ->
-                                GitFailure.<GitError, List<ExecutedCommand>>widen(git.deleteLocalBranch(branch)))
+                () -> deleting.map(branch -> GitFailure.<GitError, List<ExecutedCommand>>widen(
+                                git.branches().deleteLocal(branch)))
                         .getOrElse(GitFailure::nothing));
     }
 }

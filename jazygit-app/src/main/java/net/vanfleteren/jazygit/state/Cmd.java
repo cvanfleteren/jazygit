@@ -258,7 +258,8 @@ public interface Cmd {
         @Override
         public Msg run(Env env) {
             return env.git()
-                    .allBranches()
+                    .branches()
+                    .all()
                     .fold(this::failedWith, branches -> new LoadMsg.BranchesLoaded(branches, bases(env, branches)));
         }
 
@@ -267,10 +268,11 @@ public interface Cmd {
          */
         private static Option<LoadMsg.Bases> bases(Env env, AllBranches branches) {
             return env.git()
+                    .branches()
                     .parents()
                     .toOption()
                     .map(parents -> new LoadMsg.Bases(
-                            parents, env.git().baseDistance(branches.tips(), parents, branches.main())));
+                            parents, env.git().branches().baseDistance(branches.tips(), parents, branches.main())));
         }
     }
 

@@ -11,10 +11,12 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import java.time.Instant;
 import java.util.function.Supplier;
+import net.vanfleteren.jazygit.git.Branches;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.History;
 import net.vanfleteren.jazygit.git.Status;
+import net.vanfleteren.jazygit.git.StubBranches;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.StubHistory;
 import net.vanfleteren.jazygit.git.StubStatus;
@@ -51,8 +53,13 @@ class PanePositionTest {
         }
 
         @Override
-        public Either<ProcessError, List<Branch>> branches() {
-            return Either.right(branchList);
+        public Branches branches() {
+            return new StubBranches() {
+                @Override
+                public Either<ProcessError, List<Branch>> local() {
+                    return Either.right(branchList);
+                }
+            };
         }
 
         @Override

@@ -41,11 +41,13 @@ import net.vanfleteren.jazygit.gh.GhFailure;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
+import net.vanfleteren.jazygit.git.Branches;
 import net.vanfleteren.jazygit.git.Checkout;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
+import net.vanfleteren.jazygit.git.StubBranches;
 import net.vanfleteren.jazygit.git.StubCheckout;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.StubWorktrees;
@@ -892,9 +894,14 @@ class WorktreeUpdateTest {
             }
 
             @Override
-            public Either<GitFailure<GitError>, List<ExecutedCommand>> deleteLocalBranch(BranchName name) {
-                ran.add("delete " + name.value());
-                return Either.right(List.empty());
+            public Branches branches() {
+                return new StubBranches() {
+                    @Override
+                    public Either<GitFailure<GitError>, List<ExecutedCommand>> deleteLocal(BranchName name) {
+                        ran.add("delete " + name.value());
+                        return Either.right(List.empty());
+                    }
+                };
             }
         };
     }
@@ -918,9 +925,14 @@ class WorktreeUpdateTest {
             }
 
             @Override
-            public Either<GitFailure<GitError>, List<ExecutedCommand>> deleteLocalBranch(BranchName name) {
-                ran.add("delete " + name.value());
-                return Either.right(List.empty());
+            public Branches branches() {
+                return new StubBranches() {
+                    @Override
+                    public Either<GitFailure<GitError>, List<ExecutedCommand>> deleteLocal(BranchName name) {
+                        ran.add("delete " + name.value());
+                        return Either.right(List.empty());
+                    }
+                };
             }
         };
 
@@ -949,9 +961,14 @@ class WorktreeUpdateTest {
             }
 
             @Override
-            public Either<GitFailure<GitError>, List<ExecutedCommand>> deleteLocalBranch(BranchName name) {
-                return GitFailure.widen(
-                        StubGitProvider.refused("git branch --delete " + name.value(), "ref is locked"));
+            public Branches branches() {
+                return new StubBranches() {
+                    @Override
+                    public Either<GitFailure<GitError>, List<ExecutedCommand>> deleteLocal(BranchName name) {
+                        return GitFailure.widen(
+                                StubGitProvider.refused("git branch --delete " + name.value(), "ref is locked"));
+                    }
+                };
             }
         };
         RemoveWorktreeCmd remove = new RemoveWorktreeCmd("/repos/app-taken", false, Option.of(TAKEN));
