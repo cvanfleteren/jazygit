@@ -37,7 +37,7 @@ class AmendDialogTest {
      * The sample commits, with HEAD at the first one and a file that is not staged.
      */
     private static Model unstagedModel() {
-        Model loaded = TestModels.loaded(new SampleData());
+        Model loaded = TestModels.loaded(SampleData.git());
         Commit head = loaded.repo().commits().toOption().get().head();
         return Update.update(
                         loaded,
@@ -133,7 +133,7 @@ class AmendDialogTest {
 
     @Test
     void closedModelShowsNoPopup() {
-        assertTrue(dialog.render(TestModels.loaded(new SampleData())).isEmpty());
+        assertTrue(dialog.render(TestModels.loaded(SampleData.git())).isEmpty());
         assertTrue(stageAll.render(asked(Option.none())).isEmpty());
     }
 

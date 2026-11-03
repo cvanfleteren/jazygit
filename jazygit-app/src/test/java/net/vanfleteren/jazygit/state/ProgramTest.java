@@ -38,6 +38,7 @@ import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.git.Branches;
 import net.vanfleteren.jazygit.git.Checkout;
 import net.vanfleteren.jazygit.git.Commits;
+import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
@@ -51,7 +52,7 @@ import net.vanfleteren.jazygit.git.StubBranches;
 import net.vanfleteren.jazygit.git.StubCheckout;
 import net.vanfleteren.jazygit.git.StubCommits;
 import net.vanfleteren.jazygit.git.StubDiffs;
-import net.vanfleteren.jazygit.git.StubGitProvider;
+import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.git.StubHistory;
 import net.vanfleteren.jazygit.git.StubIndex;
 import net.vanfleteren.jazygit.git.StubIntegrate;
@@ -88,12 +89,12 @@ import net.vanfleteren.jazygit.state.prs.LoadRepositoryPullRequests;
 import org.junit.jupiter.api.Test;
 
 /**
- * The runtime loop: commands are performed against the provider and their results fed back.
+ * The runtime loop: commands are performed against a fake repository and their results fed back.
  * Both executors are queues drained by the test, so every step is deterministic.
  */
 class ProgramTest {
 
-    private static final class FakeProvider implements StubGitProvider {
+    private static final class FakeRepo {
 
         RepoStatus status = new RepoStatus(Head.onBranch(new BranchName("main"), new Sha("aaaa")), List.of());
         String statusError;
@@ -109,7 +110,6 @@ class ProgramTest {
         int fetches;
         final java.util.List<String> logLoads = new ArrayList<>();
 
-        @Override
         public Status status() {
             return new StubStatus() {
                 @Override
@@ -121,27 +121,25 @@ class ProgramTest {
             };
         }
 
-        @Override
         public Stashes stashes() {
             return new StubStashes() {
                 @Override
                 public Either<GitFailure<GitError>, List<ExecutedCommand>> drop(Stash stash) {
-                    return StubGitProvider.ran("git stash drop " + stash.ref());
+                    return StubGit.ran("git stash drop " + stash.ref());
                 }
 
                 @Override
                 public Either<GitFailure<GitError>, List<ExecutedCommand>> pop(Stash stash) {
-                    return StubGitProvider.ran("git stash pop --index " + stash.ref());
+                    return StubGit.ran("git stash pop --index " + stash.ref());
                 }
 
                 @Override
                 public Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(Option<String> message) {
-                    return StubGitProvider.ran("git stash");
+                    return StubGit.ran("git stash");
                 }
             };
         }
 
-        @Override
         public Branches branches() {
             return new StubBranches() {
                 @Override
@@ -161,7 +159,6 @@ class ProgramTest {
             };
         }
 
-        @Override
         public History history() {
             return new StubHistory() {
                 @Override
@@ -179,7 +176,6 @@ class ProgramTest {
             };
         }
 
-        @Override
         public Checkout checkout() {
             return new StubCheckout() {
                 @Override
@@ -202,13 +198,12 @@ class ProgramTest {
 
         private Either<GitFailure<ProcessError>, List<ExecutedCommand>> switchTo(BranchName branch, String command) {
             if (checkoutError != null) {
-                return StubGitProvider.refused(command, checkoutError);
+                return StubGit.refused(command, checkoutError);
             }
             status = new RepoStatus(Head.onBranch(branch, new Sha(branch.value() + "-head")), List.of());
-            return StubGitProvider.ran(command);
+            return StubGit.ran(command);
         }
 
-        @Override
         public Index index() {
             return new StubIndex() {
                 @Override
@@ -224,7 +219,7 @@ class ProgramTest {
                 @Override
                 public Either<GitFailure<GitError>, List<ExecutedCommand>> discard(DiscardPlan plan) {
                     discarded.add(plan);
-                    return StubGitProvider.ran("git discard");
+                    return StubGit.ran("git discard");
                 }
 
                 @Override
@@ -238,7 +233,6 @@ class ProgramTest {
             return Fixtures.commit(new Sha(sha), "Ada", "ada@example.com", Instant.EPOCH, "msg", "");
         }
 
-        @Override
         public net.vanfleteren.jazygit.git.Diffs diffs() {
             return new StubDiffs() {
                 @Override
@@ -256,24 +250,23 @@ class ProgramTest {
         private Either<GitFailure<ProcessError>, List<ExecutedCommand>> onIndex(
                 String operation, List<String> paths, String command) {
             if (indexError != null) {
-                return StubGitProvider.refused(command, indexError);
+                return StubGit.refused(command, indexError);
             }
             indexCalls.add(operation + paths.asJava());
-            return StubGitProvider.ran(command);
+            return StubGit.ran(command);
         }
 
-        @Override
         public Commits commits() {
             return new StubCommits() {
                 @Override
                 public Either<GitFailure<GitError>, List<ExecutedCommand>> squash(Sha sha, SquashMode mode) {
-                    return StubGitProvider.ran("git squash");
+                    return StubGit.ran("git squash");
                 }
 
                 @Override
                 public Either<GitFailure<GitError>, List<ExecutedCommand>> reword(Sha sha, CommitMessage message) {
                     commits.add("reword " + message.summary() + "|" + message.description());
-                    return StubGitProvider.ran("git reword");
+                    return StubGit.ran("git reword");
                 }
 
                 @Override
@@ -284,32 +277,30 @@ class ProgramTest {
                 @Override
                 public Either<GitFailure<ProcessError>, List<ExecutedCommand>> commit(CommitMessage message) {
                     if (commitFailure != null) {
-                        return StubGitProvider.refused("git commit", commitFailure);
+                        return StubGit.refused("git commit", commitFailure);
                     }
                     commits.add(message.summary() + "|" + message.description());
-                    return StubGitProvider.ran("git commit");
+                    return StubGit.ran("git commit");
                 }
             };
         }
 
-        @Override
         public Integrate integrate() {
             return new StubIntegrate() {
                 @Override
                 public Either<GitFailure<GitError>, List<ExecutedCommand>> rebase(BranchName onto) {
-                    return StubGitProvider.ran("git rebase");
+                    return StubGit.ran("git rebase");
                 }
             };
         }
 
-        @Override
         public Remotes remotes() {
             return new StubRemotes() {
                 @Override
                 public Either<GitFailure<GitError>, List<ExecutedCommand>> push(
                         BranchName branch, RemoteBranch upstream, PushMode mode) {
                     pushed.add(branch.value() + (mode == PushMode.FORCE_WITH_LEASE ? " force" : ""));
-                    return StubGitProvider.ran("git push");
+                    return StubGit.ran("git push");
                 }
 
                 @Override
@@ -327,37 +318,51 @@ class ProgramTest {
                 public Either<GitFailure<GitError>, List<ExecutedCommand>> deleteBranch(
                         BranchName name, RemoteBranch remote, DeleteScope scope) {
                     deleted.add(name.value() + (scope.local() ? " local" : "") + (scope.remote() ? " remote" : ""));
-                    return StubGitProvider.ran("git deleteBranch");
+                    return StubGit.ran("git deleteBranch");
                 }
             };
         }
+
+        Git git() {
+            return StubGit.of()
+                    .withStatus(status())
+                    .withStashes(stashes())
+                    .withBranches(branches())
+                    .withHistory(history())
+                    .withCheckout(checkout())
+                    .withIndex(index())
+                    .withDiffs(diffs())
+                    .withCommits(commits())
+                    .withIntegrate(integrate())
+                    .withRemotes(remotes());
+        }
     }
 
-    private final FakeProvider provider = new FakeProvider();
+    private final FakeRepo repo = new FakeRepo();
     private final Queue<Runnable> io = new ArrayDeque<>();
     private final Queue<Runnable> ui = new ArrayDeque<>();
     private final Queue<Runnable> background = new ArrayDeque<>();
-    private final Program program = program(new Env(provider, StubGitHub.empty()), io::add, background::add, ui::add);
+    private final Program program = program(new Env(repo.git(), StubGitHub.empty()), io::add, background::add, ui::add);
 
     @Test
     void initialLoadFillsTheModel() {
         settle();
 
         Model model = program.model();
-        assertEquals(new Loaded<>(provider.status), model.repo().status());
+        assertEquals(new Loaded<>(repo.status), model.repo().status());
         assertEquals(
                 new Loaded<>(List.of(
                         Fixtures.branch(new BranchName("main"), true, new Sha("main-tip")),
                         Fixtures.branch(new BranchName("other"), false, new Sha("other-tip"), Instant.EPOCH, true))),
                 model.repo().branches());
-        assertEquals(1, provider.commitLoads);
+        assertEquals(1, repo.commitLoads);
     }
 
     @Test
     void aMessageThatChangesTheModelSaysSoAndOneThatDoesNotSaysNothing() {
         AtomicInteger changes = new AtomicInteger();
         Program told = program(
-                new Env(provider, StubGitHub.empty()),
+                new Env(repo.git(), StubGitHub.empty()),
                 Runnable::run,
                 Runnable::run,
                 Runnable::run,
@@ -377,7 +382,11 @@ class ProgramTest {
         AtomicInteger changes = new AtomicInteger();
         Queue<Runnable> queued = new ArrayDeque<>();
         Program told = program(
-                new Env(provider, StubGitHub.empty()), queued::add, queued::add, queued::add, changes::incrementAndGet);
+                new Env(repo.git(), StubGitHub.empty()),
+                queued::add,
+                queued::add,
+                queued::add,
+                changes::incrementAndGet);
         told.dispatch(new Msg.Tick());
         drain(queued);
         int loaded = changes.get();
@@ -393,25 +402,25 @@ class ProgramTest {
     void ticksPickUpWorkingTreeChangesWithoutReloadingCommits() {
         settle();
 
-        provider.status = new RepoStatus(
+        repo.status = new RepoStatus(
                 Head.onBranch(new BranchName("main"), new Sha("aaaa")),
                 List.of(Fixtures.fileEntry("a.txt", ChangeType.UNTRACKED)));
         program.dispatch(new Msg.Tick());
         settle();
 
-        assertEquals(new Loaded<>(provider.status), program.model().repo().status());
-        assertEquals(1, provider.commitLoads);
+        assertEquals(new Loaded<>(repo.status), program.model().repo().status());
+        assertEquals(1, repo.commitLoads);
     }
 
     @Test
     void ticksReloadCommitsWhenHeadMoves() {
         settle();
 
-        provider.status = new RepoStatus(Head.onBranch(new BranchName("main"), new Sha("bbbb")), List.of());
+        repo.status = new RepoStatus(Head.onBranch(new BranchName("main"), new Sha("bbbb")), List.of());
         program.dispatch(new Msg.Tick());
         settle();
 
-        assertEquals(2, provider.commitLoads);
+        assertEquals(2, repo.commitLoads);
         assertEquals(
                 "bbbb",
                 ((Loaded<List<Commit>>) program.model().repo().commits())
@@ -421,18 +430,18 @@ class ProgramTest {
     }
 
     @Test
-    void providerErrorsBecomeFailedState() {
-        provider.statusError = "git status failed";
+    void gitErrorsBecomeFailedState() {
+        repo.statusError = "git status failed";
         settle();
 
         assertEquals(
                 new Failed<>(refused("git status failed")),
                 program.model().repo().status());
 
-        provider.statusError = null;
+        repo.statusError = null;
         program.dispatch(new Msg.Tick());
         settle();
-        assertEquals(new Loaded<>(provider.status), program.model().repo().status());
+        assertEquals(new Loaded<>(repo.status), program.model().repo().status());
     }
 
     @Test
@@ -443,7 +452,7 @@ class ProgramTest {
         settle();
 
         Model model = program.model();
-        assertEquals(new Loaded<>(provider.status), model.repo().status());
+        assertEquals(new Loaded<>(repo.status), model.repo().status());
         assertEquals(
                 new Loaded<>(List.of(
                         Fixtures.branch(new BranchName("main"), false, new Sha("main-tip")),
@@ -483,7 +492,7 @@ class ProgramTest {
     @Test
     void failedNewBranchIsReported() {
         settle();
-        provider.checkoutError = "fatal: exists";
+        repo.checkoutError = "fatal: exists";
 
         program.dispatch(new NewBranchMsg.Requested(new BranchName("other")));
         program.dispatch(new Msg.TextEdited("topic"));
@@ -494,14 +503,14 @@ class ProgramTest {
     }
 
     @Test
-    void deletingABranchCallsTheProviderWithTheChosenScope() {
+    void deletingABranchCallsGitWithTheChosenScope() {
         settle();
 
         program.dispatch(new DeleteBranchMsg.Requested(new BranchName("other")));
         program.dispatch(new DeleteBranchMsg.Chosen(DeleteScope.BOTH));
         settle();
 
-        assertEquals(java.util.List.of("other local remote"), provider.deleted);
+        assertEquals(java.util.List.of("other local remote"), repo.deleted);
         assertEquals(Option.none(), program.model().popup());
         assertEquals(Option.none(), program.model().outcome().error());
     }
@@ -517,13 +526,13 @@ class ProgramTest {
                 new FileEntry("c.txt", ChangeType.MODIFIED, true, false))));
         settle();
 
-        assertEquals(java.util.List.of("stage[a.txt]", "unstageNew[b.txt]", "unstage[c.txt]"), provider.indexCalls);
+        assertEquals(java.util.List.of("stage[a.txt]", "unstageNew[b.txt]", "unstage[c.txt]"), repo.indexCalls);
         assertEquals(Option.none(), program.model().outcome().error());
     }
 
     @Test
     void stagingAllAndCommitting() {
-        provider.status = new RepoStatus(
+        repo.status = new RepoStatus(
                 Head.onBranch(new BranchName("main"), new Sha("aaaa")),
                 List.of(Fixtures.fileEntry("a.txt", ChangeType.UNTRACKED)));
         settle();
@@ -532,21 +541,21 @@ class ProgramTest {
         program.dispatch(new CommitMsg.StageAllConfirmed());
         settle();
 
-        assertEquals(java.util.List.of("stage[a.txt]"), provider.indexCalls);
+        assertEquals(java.util.List.of("stage[a.txt]"), repo.indexCalls);
         assertEquals(true, program.model().popup(CommitPopup.class).isDefined());
 
         program.dispatch(new MessageEdited(new CommitMessage("summary", "more")));
         program.dispatch(new Msg.PopupConfirmed(CommitPopup.class));
         settle();
 
-        assertEquals(java.util.List.of("summary|more"), provider.commits);
+        assertEquals(java.util.List.of("summary|more"), repo.commits);
         assertEquals(false, program.model().popup(CommitPopup.class).isDefined());
         assertEquals(Option.none(), program.model().outcome().error());
     }
 
     @Test
     void amendingStagesAllFilesWhenNoneIsStagedOnceAgreed() {
-        provider.status = new RepoStatus(
+        repo.status = new RepoStatus(
                 Head.onBranch(new BranchName("main"), new Sha("aaaa")),
                 List.of(Fixtures.fileEntry("a.txt", ChangeType.MODIFIED)));
         settle();
@@ -556,7 +565,7 @@ class ProgramTest {
         program.dispatch(new AmendMsg.StageAllConfirmed());
         settle();
 
-        assertEquals(java.util.List.of("stage[a.txt]", "amend[]"), provider.indexCalls);
+        assertEquals(java.util.List.of("stage[a.txt]", "amend[]"), repo.indexCalls);
         assertEquals(false, program.model().popup(AmendPopup.class).isDefined());
         assertEquals(Option.none(), program.model().outcome().error());
     }
@@ -571,17 +580,17 @@ class ProgramTest {
         program.dispatch(new Msg.PopupConfirmed(RewordPopup.class));
         settle();
 
-        assertEquals(java.util.List.of("reword new summary|new body"), provider.commits);
+        assertEquals(java.util.List.of("reword new summary|new body"), repo.commits);
         assertEquals(Option.none(), program.model().popup());
         assertEquals(Option.none(), program.model().outcome().error());
     }
 
     @Test
     void failedCommitIsReported() {
-        provider.status = new RepoStatus(
+        repo.status = new RepoStatus(
                 Head.onBranch(new BranchName("main"), new Sha("aaaa")),
                 List.of(Fixtures.fileEntry("a.txt", ChangeType.ADDED)));
-        provider.commitFailure = "boom";
+        repo.commitFailure = "boom";
         settle();
 
         program.dispatch(new CommitMsg.Requested());
@@ -609,7 +618,7 @@ class ProgramTest {
     void failedToggleStageIsReported() {
         settle();
 
-        provider.indexError = "fatal: pathspec 'a.txt' did not match";
+        repo.indexError = "fatal: pathspec 'a.txt' did not match";
         program.dispatch(new StageMsg.Requested(List.of(Fixtures.fileEntry("a.txt", ChangeType.UNTRACKED))));
         settle();
 
@@ -620,7 +629,7 @@ class ProgramTest {
     void failedCheckoutIsReportedUntilTheNextOne() {
         settle();
 
-        provider.checkoutError = "error: Your local changes would be overwritten";
+        repo.checkoutError = "error: Your local changes would be overwritten";
         program.dispatch(new CheckoutMsg.Requested(new BranchName("other")));
         settle();
         assertEquals(
@@ -634,7 +643,7 @@ class ProgramTest {
                         .branchName()
                         .get());
 
-        provider.checkoutError = null;
+        repo.checkoutError = null;
         program.dispatch(new CheckoutMsg.Requested(new BranchName("other")));
         settle();
         assertEquals(Option.none(), program.model().outcome().error());
@@ -657,9 +666,9 @@ class ProgramTest {
         assertEquals(
                 Option.of(new Preview<>(
                         new BranchRef.Local(new BranchName("other")),
-                        new Loaded<>(List.of(FakeProvider.commit("other-tip"))))),
+                        new Loaded<>(List.of(FakeRepo.commit("other-tip"))))),
                 program.model().repoView().branchLog());
-        assertEquals(java.util.List.of("other"), provider.logLoads);
+        assertEquals(java.util.List.of("other"), repo.logLoads);
     }
 
     @Test
@@ -671,9 +680,9 @@ class ProgramTest {
         program.dispatch(new SelectionMsg.BranchSelected(new BranchRef.Local(new BranchName("other"))));
         settle();
 
-        assertEquals(java.util.List.of("other"), provider.logLoads);
+        assertEquals(java.util.List.of("other"), repo.logLoads);
         assertEquals(
-                Option.of(new Loaded<>(List.of(FakeProvider.commit("other-tip")))),
+                Option.of(new Loaded<>(List.of(FakeRepo.commit("other-tip")))),
                 program.model().repoView().branchLog().map(Preview::value));
     }
 
@@ -686,7 +695,7 @@ class ProgramTest {
         program.dispatch(new SelectionMsg.BranchSelected(new BranchRef.Local(new BranchName("other"))));
         settle();
 
-        assertEquals(java.util.List.of("other"), provider.logLoads);
+        assertEquals(java.util.List.of("other"), repo.logLoads);
         assertEquals(false, program.model().jobs().runs(reload));
     }
 
@@ -704,7 +713,7 @@ class ProgramTest {
         assertEquals(1, background.size());
         assertEquals(true, io.isEmpty());
         settle();
-        assertEquals(2, provider.fetches);
+        assertEquals(2, repo.fetches);
         assertEquals(false, program.model().jobs().runs(FetchCmd.class::isInstance));
         // Not logged: it runs every few seconds.
         assertEquals(List.of(), program.model().outcome().commandLog());
@@ -856,7 +865,7 @@ class ProgramTest {
         ExecutorService background = Executors.newFixedThreadPool(2);
         try {
             // The messages the commands answer with are not handled: only which commands ran counts.
-            Program guarding = program(new Env(provider, StubGitHub.empty()), io, background, task -> {});
+            Program guarding = program(new Env(repo.git(), StubGitHub.empty()), io, background, task -> {});
             java.util.List<String> ran = new CopyOnWriteArrayList<>();
             CountDownLatch fetched = new CountDownLatch(1);
             CountDownLatch done = new CountDownLatch(0);
@@ -885,7 +894,7 @@ class ProgramTest {
         ExecutorService io = Executors.newSingleThreadExecutor();
         ExecutorService background = Executors.newFixedThreadPool(2);
         try {
-            Program guarding = program(new Env(provider, StubGitHub.empty()), io, background, task -> {});
+            Program guarding = program(new Env(repo.git(), StubGitHub.empty()), io, background, task -> {});
             java.util.List<String> ran = new CopyOnWriteArrayList<>();
             CountDownLatch fetched = new CountDownLatch(1);
             Option<Cmd.Guard> remoteRefs = Option.of(Cmd.Guard.REMOTE_REFS);
@@ -918,7 +927,7 @@ class ProgramTest {
     @Test
     void gitIsReadOnTheIoExecutorAndGitHubInTheBackground() {
         settleWithout(background);
-        assertEquals(new Loaded<>(provider.status), program.model().repo().status());
+        assertEquals(new Loaded<>(repo.status), program.model().repo().status());
 
         program.dispatch(new PullRequestsMsg.Refresh());
         settleWithout(background);
@@ -938,7 +947,7 @@ class ProgramTest {
         AtomicInteger changes = new AtomicInteger();
         Queue<Runnable> queued = new ArrayDeque<>();
         Program timed = Program.start(
-                new Env(provider, StubGitHub.empty()),
+                new Env(repo.git(), StubGitHub.empty()),
                 SettingsStore.Loaded.DEFAULT,
                 Option.none(),
                 RepositoryTheme.NONE,
@@ -990,7 +999,7 @@ class ProgramTest {
         MovingClock clock = new MovingClock(start);
         Queue<Runnable> queued = new ArrayDeque<>();
         Program timed = Program.start(
-                new Env(provider, StubGitHub.empty()),
+                new Env(repo.git(), StubGitHub.empty()),
                 SettingsStore.Loaded.DEFAULT,
                 Option.none(),
                 RepositoryTheme.NONE,

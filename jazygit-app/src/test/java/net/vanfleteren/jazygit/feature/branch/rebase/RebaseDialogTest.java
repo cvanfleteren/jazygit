@@ -30,7 +30,7 @@ class RebaseDialogTest {
     private final ChoiceDialog<RebasePopup> dialog =
             new net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<>(RebaseDialogs.REBASE, dispatched::add);
     private final Model open = Update.update(
-                    TestModels.loaded(new SampleData()),
+                    TestModels.loaded(SampleData.git()),
                     new RebaseMsg.Requested(new BranchName("feature/initial-layout")))
             .model();
 

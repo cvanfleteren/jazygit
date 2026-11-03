@@ -22,7 +22,7 @@ import org.junit.jupiter.api.Test;
 class PopupsTest {
 
     private final Popups popups = new Popups(msg -> {});
-    private final Model loaded = TestModels.loaded(new SampleData());
+    private final Model loaded = TestModels.loaded(SampleData.git());
 
     @Test
     void whatIsBehindAnOpenPopupIsDimmed() {

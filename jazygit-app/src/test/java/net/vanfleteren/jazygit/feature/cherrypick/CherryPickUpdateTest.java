@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.git.StubGitProvider;
+import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Fixtures;
@@ -150,7 +150,7 @@ class CherryPickUpdateTest {
                 .model();
         CherryPickCmd cmd = new CherryPickCmd(FIRST.sha());
 
-        Model next = Update.update(running, cmd.succeeded(StubGitProvider.executed("git cherry-pick aaaa")))
+        Model next = Update.update(running, cmd.succeeded(StubGit.executed("git cherry-pick aaaa")))
                 .model();
 
         assertEquals(Option.none(), next.repoView().cherryPick());

@@ -57,7 +57,7 @@ class StatusPanelTest {
 
     @Test
     void showsRepositoryNameAndCurrentBranch() throws Exception {
-        Model model = TestModels.loaded(new SampleData());
+        Model model = TestModels.loaded(SampleData.git());
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> StatusPanel.render(model))) {
             String screen = RenderedText.of(testRunner, () -> StatusPanel.render(model));
@@ -79,7 +79,7 @@ class StatusPanelTest {
 
     @Test
     void doesNotShowTheLastOperationError() throws Exception {
-        Model model = TestModels.withCheckoutError(TestModels.loaded(new SampleData()), "foo", "boom");
+        Model model = TestModels.withCheckoutError(TestModels.loaded(SampleData.git()), "foo", "boom");
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> StatusPanel.render(model))) {
             String screen = RenderedText.of(testRunner, () -> StatusPanel.render(model));

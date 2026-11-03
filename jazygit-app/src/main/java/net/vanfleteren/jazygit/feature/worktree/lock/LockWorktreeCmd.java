@@ -4,8 +4,8 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.worktree.WorktreeCmd;
+import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitFailure;
-import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Operation;
 
@@ -29,7 +29,7 @@ public record LockWorktreeCmd(String location, boolean lock) implements Worktree
     }
 
     @Override
-    public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
+    public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
         return git.worktrees().lock(WorktreeCmd.path(location), lock);
     }
 }

@@ -2,8 +2,8 @@ package net.vanfleteren.jazygit.feature.commit.reword;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
+import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitFailure;
-import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -24,7 +24,7 @@ public record RewordCmd(Sha sha, CommitMessage message) implements GitOperationC
     }
 
     @Override
-    public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
+    public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
         return git.commits().reword(sha, message);
     }
 }

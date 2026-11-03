@@ -3,7 +3,8 @@ package net.vanfleteren.jazygit;
 import io.vavr.collection.HashMap;
 import net.vanfleteren.jazygit.gh.CliGitHub;
 import net.vanfleteren.jazygit.gh.GhToken;
-import net.vanfleteren.jazygit.git.CliGitInfoProvider;
+import net.vanfleteren.jazygit.git.CliGit;
+import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.settings.CheckTimingsStore;
 import net.vanfleteren.jazygit.settings.CollapsedStore;
 import net.vanfleteren.jazygit.settings.RecentRepositories;
@@ -27,7 +28,7 @@ final class RepositoryEnv {
      * and both gh and git as the account configured for the repository, if any.
      */
     static Env of(
-            CliGitInfoProvider git,
+            Git git,
             Settings settings,
             SettingsStore store,
             RecentRepositories recent,
@@ -39,7 +40,7 @@ final class RepositoryEnv {
         GhToken token = new GhToken(git.worktree(), settings.gh(), () -> GitHubAccount.configured(git));
         // Without the token, git still talks to the remotes, as the credential helper's own account.
         return new Env(
-                git.withCredentials(() -> token.environment().getOrElse(HashMap.empty())),
+                CliGit.withCredentials(git, () -> token.environment().getOrElse(HashMap.empty())),
                 new CliGitHub(git.worktree(), settings.gh(), token),
                 store,
                 recent,
@@ -53,7 +54,7 @@ final class RepositoryEnv {
     /**
      * As {@code env}, but for the repository {@code git} reads, with the {@code settings} of the session.
      */
-    static Env reopen(Env env, CliGitInfoProvider git, Settings settings) {
+    static Env reopen(Env env, Git git, Settings settings) {
         return of(
                 git,
                 settings,

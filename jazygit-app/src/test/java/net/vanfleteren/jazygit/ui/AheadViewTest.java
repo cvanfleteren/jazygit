@@ -127,7 +127,7 @@ class AheadViewTest {
 
     @Test
     void theCommitsPaneSaysHowManyCommitsAreNotOnTheBase() throws Exception {
-        Model model = TestModels.loaded(new SampleData())
+        Model model = TestModels.loaded(SampleData.git())
                 .mapRepo(repo ->
                         repo.withCommits(new Loadable.Loaded<>(LOG)).withAhead(new Loadable.Loaded<>(Option.of(AHEAD))))
                 .mapRepoView(repoView -> repoView.withOnlyAhead(true));

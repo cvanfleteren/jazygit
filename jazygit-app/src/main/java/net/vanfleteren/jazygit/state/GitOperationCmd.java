@@ -2,9 +2,9 @@ package net.vanfleteren.jazygit.state;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
+import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
-import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
@@ -18,7 +18,7 @@ public interface GitOperationCmd extends OperationCmd {
      *
      * @return the commands that were run, or why it failed
      */
-    Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git);
+    Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git);
 
     @Override
     default Msg run(Env env) {

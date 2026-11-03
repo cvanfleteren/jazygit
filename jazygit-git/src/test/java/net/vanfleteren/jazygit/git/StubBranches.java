@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.git;
 
-import static net.vanfleteren.jazygit.git.StubGitProvider.ran;
+import static net.vanfleteren.jazygit.git.StubGit.ran;
 
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;

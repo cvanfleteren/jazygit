@@ -11,16 +11,13 @@ import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.StubGitHub;
-import net.vanfleteren.jazygit.git.Branches;
+import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
-import net.vanfleteren.jazygit.git.GitInfoProvider;
-import net.vanfleteren.jazygit.git.Remotes;
 import net.vanfleteren.jazygit.git.StubBranches;
-import net.vanfleteren.jazygit.git.StubGitProvider;
+import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.git.StubRemotes;
 import net.vanfleteren.jazygit.git.StubWorktrees;
-import net.vanfleteren.jazygit.git.Worktrees;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Cmd;
@@ -211,42 +208,30 @@ class NukeBranchTest {
     @Test
     void theStepsRunInOrderAndTheirCommandsAreLoggedTogether() {
         java.util.List<String> ran = new java.util.ArrayList<>();
-        GitInfoProvider git = new StubGitProvider() {
-            @Override
-            public Worktrees worktrees() {
-                return new StubWorktrees() {
+        Git git = StubGit.of()
+                .withWorktrees(new StubWorktrees() {
                     @Override
                     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> removeAnyway(Path location) {
                         ran.add("remove " + location);
-                        return StubGitProvider.ran("git worktree remove --force --force " + location);
+                        return StubGit.ran("git worktree remove --force --force " + location);
                     }
-                };
-            }
-
-            @Override
-            public Branches branches() {
-                return new StubBranches() {
+                })
+                .withBranches(new StubBranches() {
                     @Override
                     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> forceDeleteLocal(BranchName name) {
                         ran.add("delete " + name.value());
-                        return StubGitProvider.ran("git branch -D " + name.value());
+                        return StubGit.ran("git branch -D " + name.value());
                     }
-                };
-            }
-
-            @Override
-            public Remotes remotes() {
-                return new StubRemotes() {
+                })
+                .withRemotes(new StubRemotes() {
                     @Override
                     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteRemoteBranch(
                             RemoteBranch remote) {
                         ran.add("delete " + remote.shortName());
-                        return StubGitProvider.ran("git push origin --delete refs/heads/"
+                        return StubGit.ran("git push origin --delete refs/heads/"
                                 + remote.branch().value());
                     }
-                };
-            }
-        };
+                });
         NukeBranchCmd cmd = new NukeBranchCmd(FEATURE, Option.of("/repos/app-feature"), Option.of(ORIGIN_FEATURE));
 
         Msg done = cmd.run(new Env(git, StubGitHub.empty()));
@@ -261,41 +246,28 @@ class NukeBranchTest {
     @Test
     void whenTheWorktreeStaysTheBranchStaysButItsRemoteBranchIsDeletedAndWhatIsLeftIsSaid() {
         java.util.List<String> ran = new java.util.ArrayList<>();
-        GitInfoProvider git = new StubGitProvider() {
-            @Override
-            public Worktrees worktrees() {
-                return new StubWorktrees() {
+        Git git = StubGit.of()
+                .withWorktrees(new StubWorktrees() {
                     @Override
                     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> removeAnyway(Path location) {
-                        return StubGitProvider.refused(
-                                "git worktree remove --force --force " + location, "Permission denied");
+                        return StubGit.refused("git worktree remove --force --force " + location, "Permission denied");
                     }
-                };
-            }
-
-            @Override
-            public Branches branches() {
-                return new StubBranches() {
+                })
+                .withBranches(new StubBranches() {
                     @Override
                     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> forceDeleteLocal(BranchName name) {
                         ran.add("delete " + name.value());
-                        return StubGitProvider.ran();
+                        return StubGit.ran();
                     }
-                };
-            }
-
-            @Override
-            public Remotes remotes() {
-                return new StubRemotes() {
+                })
+                .withRemotes(new StubRemotes() {
                     @Override
                     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteRemoteBranch(
                             RemoteBranch remote) {
                         ran.add("delete " + remote.shortName());
-                        return StubGitProvider.ran("git push origin --delete refs/heads/feature");
+                        return StubGit.ran("git push origin --delete refs/heads/feature");
                     }
-                };
-            }
-        };
+                });
         NukeBranchCmd cmd = new NukeBranchCmd(FEATURE, Option.of("/repos/app-feature"), Option.of(ORIGIN_FEATURE));
 
         Msg done = cmd.run(new Env(git, StubGitHub.empty()));

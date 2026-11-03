@@ -96,8 +96,8 @@ class CliConfigTest {
         assertEquals(io.vavr.collection.List.empty(), CliConfig.parseValues("global\tfile:/home/alice/.gitconfig\n"));
     }
 
-    // Through the provider, as the app reaches it.
+    // Through the repository, as the app reaches it.
     private Config config() {
-        return CliGitInfoProvider.open(repo).get().config();
+        return CliGit.open(repo).get().config();
     }
 }

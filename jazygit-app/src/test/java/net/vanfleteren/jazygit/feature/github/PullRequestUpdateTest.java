@@ -57,11 +57,10 @@ import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Status;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.gh.timing.CheckTimings;
-import net.vanfleteren.jazygit.git.Branches;
+import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitError;
-import net.vanfleteren.jazygit.git.History;
 import net.vanfleteren.jazygit.git.StubBranches;
-import net.vanfleteren.jazygit.git.StubGitProvider;
+import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.git.StubHistory;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
@@ -118,7 +117,7 @@ class PullRequestUpdateTest {
     }
 
     private static Env env() {
-        return new Env(new StubGitProvider() {}, StubGitHub.empty());
+        return new Env(StubGit.of(), StubGitHub.empty());
     }
 
     /**
@@ -255,29 +254,20 @@ class PullRequestUpdateTest {
 
     @Test
     void theRecordedParentIsReadWithoutCountingCommits() {
-        StubGitProvider git = new StubGitProvider() {
-
-            @Override
-            public History history() {
-                return new StubHistory() {
+        Git git = StubGit.of()
+                .withHistory(new StubHistory() {
                     @Override
                     public Either<GitError.ProcessError, Integer> countNotOn(
                             BranchRef branch, BranchRef base, int max) {
                         throw new AssertionError("counted");
                     }
-                };
-            }
-
-            @Override
-            public Branches branches() {
-                return new StubBranches() {
+                })
+                .withBranches(new StubBranches() {
                     @Override
                     public Either<GitError.ProcessError, Option<BranchName>> parent(BranchName branch) {
                         return Either.right(Option.of(RELEASE.name()));
                     }
-                };
-            }
-        };
+                });
 
         assertEquals(
                 new CreatePullRequestMsg.ParentRead(FEATURE, Option.of(RELEASE.name())),
@@ -308,29 +298,20 @@ class PullRequestUpdateTest {
 
     @Test
     void aRecordedParentThatIsNoBaseIsIgnored() {
-        StubGitProvider git = new StubGitProvider() {
-
-            @Override
-            public History history() {
-                return new StubHistory() {
+        Git git = StubGit.of()
+                .withHistory(new StubHistory() {
                     @Override
                     public Either<GitError.ProcessError, Integer> countNotOn(
                             BranchRef branch, BranchRef base, int max) {
                         return Either.right(base.equals(remote("ahead")) ? 1 : 4);
                     }
-                };
-            }
-
-            @Override
-            public Branches branches() {
-                return new StubBranches() {
+                })
+                .withBranches(new StubBranches() {
                     @Override
                     public Either<GitError.ProcessError, Option<BranchName>> parent(BranchName branch) {
                         return Either.right(Option.of(UNPUSHED.name()));
                     }
-                };
-            }
-        };
+                });
 
         assertEquals(
                 new CreatePullRequestMsg.ParentRead(FEATURE, Option.of(AHEAD.name())),
@@ -339,18 +320,12 @@ class PullRequestUpdateTest {
 
     @Test
     void failingToCountLeavesNoParent() {
-        StubGitProvider git = new StubGitProvider() {
+        Git git = StubGit.of().withHistory(new StubHistory() {
             @Override
-            public History history() {
-                return new StubHistory() {
-                    @Override
-                    public Either<GitError.ProcessError, Integer> countNotOn(
-                            BranchRef branch, BranchRef base, int max) {
-                        return Either.left(new GitError.CommandFailed("boom", 128));
-                    }
-                };
+            public Either<GitError.ProcessError, Integer> countNotOn(BranchRef branch, BranchRef base, int max) {
+                return Either.left(new GitError.CommandFailed("boom", 128));
             }
-        };
+        });
 
         assertEquals(
                 new CreatePullRequestMsg.ParentRead(FEATURE, Option.none()),
@@ -381,18 +356,13 @@ class PullRequestUpdateTest {
         Map<BranchRef, Integer> counts =
                 HashMap.of(remote("main"), main, remote("release"), release, remote("ahead"), ahead);
         return new Env(
-                new StubGitProvider() {
+                StubGit.of().withHistory(new StubHistory() {
                     @Override
-                    public History history() {
-                        return new StubHistory() {
-                            @Override
-                            public Either<GitError.ProcessError, Integer> countNotOn(
-                                    BranchRef branch, BranchRef base, int max) {
-                                return Either.right(counts.get(base).get());
-                            }
-                        };
+                    public Either<GitError.ProcessError, Integer> countNotOn(
+                            BranchRef branch, BranchRef base, int max) {
+                        return Either.right(counts.get(base).get());
                     }
-                },
+                }),
                 StubGitHub.empty());
     }
 
@@ -554,20 +524,15 @@ class PullRequestUpdateTest {
 
     @Test
     void theTitleIsReadAgainFromTheFirstCommitNotOnThePickedBase() {
-        StubGitProvider git = new StubGitProvider() {
+        Git git = StubGit.of().withHistory(new StubHistory() {
             @Override
-            public History history() {
-                return new StubHistory() {
-                    @Override
-                    public Either<GitError, Option<String>> firstSubject(BranchRef branch, BranchRef base) {
-                        return Either.right(Option.of(
-                                branch.equals(new BranchRef.Local(FEATURE)) && base.equals(remote("release"))
-                                        ? "Fix release"
-                                        : "wrong"));
-                    }
-                };
+            public Either<GitError, Option<String>> firstSubject(BranchRef branch, BranchRef base) {
+                return Either.right(Option.of(
+                        branch.equals(new BranchRef.Local(FEATURE)) && base.equals(remote("release"))
+                                ? "Fix release"
+                                : "wrong"));
             }
-        };
+        });
 
         assertEquals(
                 new CreatePullRequestMsg.BaseTitleRead(FEATURE, RELEASE.name(), Option.of("Fix release")),
@@ -613,29 +578,20 @@ class PullRequestUpdateTest {
 
     @Test
     void aParentRecordedUnderTheNameOnTheRemoteIsTheBaseOfThatName() {
-        StubGitProvider git = new StubGitProvider() {
-
-            @Override
-            public History history() {
-                return new StubHistory() {
+        Git git = StubGit.of()
+                .withHistory(new StubHistory() {
                     @Override
                     public Either<GitError.ProcessError, Integer> countNotOn(
                             BranchRef branch, BranchRef base, int max) {
                         throw new AssertionError("counted");
                     }
-                };
-            }
-
-            @Override
-            public Branches branches() {
-                return new StubBranches() {
+                })
+                .withBranches(new StubBranches() {
                     @Override
                     public Either<GitError.ProcessError, Option<BranchName>> parent(BranchName branch) {
                         return Either.right(Option.of(new BranchName("development")));
                     }
-                };
-            }
-        };
+                });
         ReadParent read = new ReadParent(
                 FEATURE, List.of(new Base(MAIN.name(), remote("main")), new Base(DEV.name(), remote("development"))));
 
@@ -665,30 +621,21 @@ class PullRequestUpdateTest {
                 read.run(new Env(parentRecorded("main"), StubGitHub.empty())));
     }
 
-    private static StubGitProvider parentRecorded(String name) {
-        return new StubGitProvider() {
-
-            @Override
-            public History history() {
-                return new StubHistory() {
+    private static Git parentRecorded(String name) {
+        return StubGit.of()
+                .withHistory(new StubHistory() {
                     @Override
                     public Either<GitError.ProcessError, Integer> countNotOn(
                             BranchRef branch, BranchRef base, int max) {
                         throw new AssertionError("counted");
                     }
-                };
-            }
-
-            @Override
-            public Branches branches() {
-                return new StubBranches() {
+                })
+                .withBranches(new StubBranches() {
                     @Override
                     public Either<GitError.ProcessError, Option<BranchName>> parent(BranchName branch) {
                         return Either.right(Option.of(new BranchName(name)));
                     }
-                };
-            }
-        };
+                });
     }
 
     @Test
@@ -887,7 +834,7 @@ class PullRequestUpdateTest {
                 new PushFirst(new PushSettingUpstream(UNPUSHED.name(), new RemoteBranch("origin", UNPUSHED.name())));
         Model pushing = Update.start(model(), push).model();
 
-        List<ExecutedCommand> commands = StubGitProvider.executed("git push -u origin local");
+        List<ExecutedCommand> commands = StubGit.executed("git push -u origin local");
 
         Next pushed = Update.update(pushing, push.succeeded(commands));
 
@@ -979,7 +926,7 @@ class PullRequestUpdateTest {
         Model pushing = Update.start(model(), push).model();
         Model gone = localBranchesRead(pushing, List.of(RELEASE, PUSHED, AHEAD, MAIN))
                 .model();
-        List<ExecutedCommand> commands = StubGitProvider.executed("git push -u origin local");
+        List<ExecutedCommand> commands = StubGit.executed("git push -u origin local");
 
         Next pushed = Update.update(gone, push.succeeded(commands));
 
@@ -992,7 +939,7 @@ class PullRequestUpdateTest {
         PushFirst push =
                 new PushFirst(new PushSettingUpstream(UNPUSHED.name(), new RemoteBranch("origin", UNPUSHED.name())));
         Model other = Update.start(model(), push).model().openPopup(new SwitchWorktreePopup(MAIN.name(), "/work/main"));
-        Model pushed = Update.update(other, push.succeeded(StubGitProvider.executed("git push -u origin local")))
+        Model pushed = Update.update(other, push.succeeded(StubGit.executed("git push -u origin local")))
                 .model();
 
         Model parentRead = Update.update(pushed, new CreatePullRequestMsg.ParentRead(UNPUSHED.name(), Option.none()))
@@ -1974,7 +1921,7 @@ class PullRequestUpdateTest {
         // The running read started before the merge, and would list the pull request as still open.
         Model merging = TestModels.running(withPr(), cmd, new LoadRepositoryPullRequests());
 
-        Next done = TestModels.done(merging, cmd, cmd.run(new Env(new StubGitProvider() {}, mergingAtOnce())));
+        Next done = TestModels.done(merging, cmd, cmd.run(new Env(StubGit.of(), mergingAtOnce())));
         Next earlierRead =
                 TestModels.done(done.model(), new LoadRepositoryPullRequests(), new PullRequestsMsg.Loaded(List.of()));
 
@@ -1991,7 +1938,7 @@ class PullRequestUpdateTest {
         MergePullRequest cmd = new MergePullRequest(FEATURE, 42, Option.none(), MergeMethod.MERGE);
         Model merging = TestModels.running(withPr(), cmd);
 
-        Next done = TestModels.done(merging, cmd, cmd.run(new Env(new StubGitProvider() {}, mergingAtOnce())));
+        Next done = TestModels.done(merging, cmd, cmd.run(new Env(StubGit.of(), mergingAtOnce())));
 
         assertEquals(Option.of(FEATURE_PR), done.model().gitHub().pullRequests().flatMap(open -> open.get(FEATURE)));
         assertEquals(Option.of(new MergeStatus.Merged()), done.model().gitHub().merge(42));
@@ -2262,7 +2209,7 @@ class PullRequestUpdateTest {
             }
         };
 
-        Next failed = Update.update(merging.model(), cmd.run(new Env(new StubGitProvider() {}, refusing)));
+        Next failed = Update.update(merging.model(), cmd.run(new Env(StubGit.of(), refusing)));
 
         // The pull request dialog stays closed; the error comes up in its own popup.
         assertEquals(Option.none(), failed.model().popup(PullRequestPopup.class));
@@ -2352,7 +2299,7 @@ class PullRequestUpdateTest {
                 new NewPullRequest("Login", "", true));
         Model creating = confirmed(cmd.pullRequest()).model();
 
-        Next done = TestModels.done(creating, cmd, cmd.run(new Env(new StubGitProvider() {}, StubGitHub.empty())));
+        Next done = TestModels.done(creating, cmd, cmd.run(new Env(StubGit.of(), StubGitHub.empty())));
 
         assertTrue(
                 done.cmds().contains(new LoadRepositoryPullRequests()),

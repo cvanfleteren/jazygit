@@ -62,7 +62,7 @@ class CliPullRequestTest {
         assertEquals(
                 List.of(new CommitFile("b.txt", ChangeType.ADDED)),
                 CliPullRequest.files(repo, commits, HashMap.empty()).get());
-        String diff = CliGitInfoProvider.open(repo)
+        String diff = CliGit.open(repo)
                 .get()
                 .diffs()
                 .pullRequestFileChanges(
@@ -83,7 +83,7 @@ class CliPullRequestTest {
         Sha tip = commit(repo, "b.txt", "b\n", "feature");
         git(repo, "checkout", "-q", "main");
         Sha base = commit(repo, "a.txt", "a\nmore\n", "main moved on");
-        Diffs diffs = CliGitInfoProvider.open(repo).get().diffs();
+        Diffs diffs = CliGit.open(repo).get().diffs();
 
         assertEquals(
                 List.of(new CommitFile("b.txt", ChangeType.ADDED)),

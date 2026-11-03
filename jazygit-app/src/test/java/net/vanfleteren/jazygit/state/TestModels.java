@@ -11,9 +11,9 @@ import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutCmd;
 import net.vanfleteren.jazygit.feature.commit.MessageEdited;
 import net.vanfleteren.jazygit.feature.commit.MessagePopup;
 import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitError;
-import net.vanfleteren.jazygit.git.GitInfoProvider;
-import net.vanfleteren.jazygit.git.StubGitProvider;
+import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.settings.Settings;
@@ -99,18 +99,18 @@ public final class TestModels {
     }
 
     /**
-     * The model after all of the provider's data has been loaded.
+     * The model after all of the repository's data has been loaded.
      */
-    public static Model loaded(GitInfoProvider provider) {
-        return program(new Env(provider, StubGitHub.empty()), Runnable::run, Runnable::run, Runnable::run)
+    public static Model loaded(Git git) {
+        return program(new Env(git, StubGitHub.empty()), Runnable::run, Runnable::run, Runnable::run)
                 .model();
     }
 
     /**
-     * The model after all of the provider's data, and the log of {@code branch}, has been loaded.
+     * The model after all of the repository's data, and the log of {@code branch}, has been loaded.
      */
-    public static Model loaded(GitInfoProvider provider, String branch) {
-        Program program = program(new Env(provider, StubGitHub.empty()), Runnable::run, Runnable::run, Runnable::run);
+    public static Model loaded(Git git, String branch) {
+        Program program = program(new Env(git, StubGitHub.empty()), Runnable::run, Runnable::run, Runnable::run);
         program.dispatch(new SelectionMsg.BranchSelected(new BranchRef.Local(new BranchName(branch))));
         return program.model();
     }
@@ -205,10 +205,10 @@ public final class TestModels {
     }
 
     /**
-     * The model after all of the provider's data, and the diff of {@code files}, has been loaded.
+     * The model after all of the repository's data, and the diff of {@code files}, has been loaded.
      */
-    public static Model withFilesSelected(GitInfoProvider provider, io.vavr.collection.List<FileEntry> files) {
-        Program program = program(new Env(provider, StubGitHub.empty()), Runnable::run, Runnable::run, Runnable::run);
+    public static Model withFilesSelected(Git git, io.vavr.collection.List<FileEntry> files) {
+        Program program = program(new Env(git, StubGitHub.empty()), Runnable::run, Runnable::run, Runnable::run);
         program.dispatch(new SelectionMsg.FilesSelected(files));
         return program.model();
     }
@@ -245,7 +245,7 @@ public final class TestModels {
      * {@code cmd} having run {@code commands}.
      */
     public static OperationMsg succeeded(OperationCmd cmd, String... commands) {
-        return new OperationMsg.Succeeded(cmd, StubGitProvider.executed(commands));
+        return new OperationMsg.Succeeded(cmd, StubGit.executed(commands));
     }
 
     /**

@@ -34,11 +34,11 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestComment;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Status;
-import net.vanfleteren.jazygit.git.Editor;
+import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.StubEditor;
-import net.vanfleteren.jazygit.git.StubGitProvider;
+import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -77,7 +77,7 @@ class CommentUpdateTest {
         return loaded().openPopup(CommentPopup.on(SHOWN).withText(text));
     }
 
-    private static Env env(StubGitProvider git, StubGitHub gitHub, Terminal terminal) {
+    private static Env env(Git git, StubGitHub gitHub, Terminal terminal) {
         return new Env(git, gitHub, SettingsStore.NONE, RecentRepositories.NONE, Repositories.NONE, terminal);
     }
 
@@ -140,7 +140,7 @@ class CommentUpdateTest {
         Model busy = TestModels.running(commenting("Looks good"), drafting);
         Next sending = Update.update(busy, new CommentMsg.Confirmed());
         AddComment cmd = (AddComment) sending.cmds().head();
-        Env env = env(new StubGitProvider() {}, StubGitHub.empty(), Terminal.NONE);
+        Env env = env(StubGit.of(), StubGitHub.empty(), Terminal.NONE);
 
         Model sent = Update.update(sending.model(), cmd.run(env)).model();
 
@@ -154,8 +154,7 @@ class CommentUpdateTest {
         SetDraft drafting = new SetDraft(FEATURE, 42, true);
         Model commenting = commenting("half a thought");
 
-        Model drafted = Update.update(
-                        commenting, drafting.run(env(new StubGitProvider() {}, StubGitHub.empty(), Terminal.NONE)))
+        Model drafted = Update.update(commenting, drafting.run(env(StubGit.of(), StubGitHub.empty(), Terminal.NONE)))
                 .model();
         Model back = Update.update(drafted, new CommentMsg.Cancelled()).model();
 
@@ -232,8 +231,7 @@ class CommentUpdateTest {
         Next sending = Update.update(commenting, new CommentMsg.Confirmed());
         AddComment cmd = (AddComment) sending.cmds().head();
 
-        Next sent = Update.update(
-                sending.model(), cmd.run(env(new StubGitProvider() {}, StubGitHub.empty(), Terminal.NONE)));
+        Next sent = Update.update(sending.model(), cmd.run(env(StubGit.of(), StubGitHub.empty(), Terminal.NONE)));
 
         assertEquals(
                 Option.of(comments.withHighlighted(Option.none())
@@ -251,8 +249,7 @@ class CommentUpdateTest {
         Next sending = Update.update(commenting("Looks good"), new CommentMsg.Confirmed());
         AddComment cmd = (AddComment) sending.cmds().head();
 
-        Next sent = Update.update(
-                sending.model(), cmd.run(env(new StubGitProvider() {}, StubGitHub.empty(), Terminal.NONE)));
+        Next sent = Update.update(sending.model(), cmd.run(env(StubGit.of(), StubGitHub.empty(), Terminal.NONE)));
 
         assertEquals(
                 Option.of(SHOWN.readingAgain(Reading.BY_ITSELF, sent.model().now(), lastRead(sent.model()))),
@@ -300,7 +297,7 @@ class CommentUpdateTest {
             }
         };
 
-        Next failed = Update.update(sending.model(), cmd.run(env(new StubGitProvider() {}, refusing, Terminal.NONE)));
+        Next failed = Update.update(sending.model(), cmd.run(env(StubGit.of(), refusing, Terminal.NONE)));
 
         assertEquals(
                 Option.of(CommentPopup.on(SHOWN).withText("Looks good")),
@@ -331,19 +328,14 @@ class CommentUpdateTest {
                 return result;
             }
         };
-        StubGitProvider git = new StubGitProvider() {
+        Git git = StubGit.of().withEditor(new StubEditor() {
             @Override
-            public Editor editor() {
-                return new StubEditor() {
-                    @Override
-                    public Either<GitFailure<GitError>, Tuple2<String, List<ExecutedCommand>>> editText(
-                            String fileName, String text) {
-                        events.add("edit " + fileName + " " + text);
-                        return Either.right(Tuple.of("Looks good", List.of(NVIM)));
-                    }
-                };
+            public Either<GitFailure<GitError>, Tuple2<String, List<ExecutedCommand>>> editText(
+                    String fileName, String text) {
+                events.add("edit " + fileName + " " + text);
+                return Either.right(Tuple.of("Looks good", List.of(NVIM)));
             }
-        };
+        });
 
         assertEquals(
                 new CommentMsg.EditorClosed("Looks good", List.of(NVIM)),
@@ -366,18 +358,13 @@ class CommentUpdateTest {
 
     @Test
     void anEditorThatFailsKeepsTheCommentAndShowsWhy() {
-        StubGitProvider git = new StubGitProvider() {
+        Git git = StubGit.of().withEditor(new StubEditor() {
             @Override
-            public Editor editor() {
-                return new StubEditor() {
-                    @Override
-                    public Either<GitFailure<GitError>, Tuple2<String, List<ExecutedCommand>>> editText(
-                            String fileName, String text) {
-                        return Either.left(new GitFailure<>(new GitError.EditorFailed("nvim", 1), List.of()));
-                    }
-                };
+            public Either<GitFailure<GitError>, Tuple2<String, List<ExecutedCommand>>> editText(
+                    String fileName, String text) {
+                return Either.left(new GitFailure<>(new GitError.EditorFailed("nvim", 1), List.of()));
             }
-        };
+        });
 
         Model failed = Update.update(
                         commenting("draft"), new EditComment("draft").run(env(git, StubGitHub.empty(), Terminal.NONE)))

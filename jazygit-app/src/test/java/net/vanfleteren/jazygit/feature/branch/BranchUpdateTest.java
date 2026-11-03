@@ -123,7 +123,7 @@ class BranchUpdateTest {
                 loaded(),
                 new CheckoutMsg.NeedsStash(
                         new CheckoutCmd.Checkout(new BranchName("feature")),
-                        net.vanfleteren.jazygit.git.StubGitProvider.executed("git checkout --quiet feature --")));
+                        net.vanfleteren.jazygit.git.StubGit.executed("git checkout --quiet feature --")));
 
         assertEquals(
                 Option.of(new StashCheckoutPopup(new BranchName("feature"))),

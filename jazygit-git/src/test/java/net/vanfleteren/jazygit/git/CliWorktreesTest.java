@@ -25,7 +25,7 @@ import org.zeroturnaround.exec.ProcessResult;
 
 /**
  * Listing, adding and removing worktrees: the parser on fixed output of {@code git worktree list --porcelain -z},
- * and {@link CliGitInfoProvider} against a real repository.
+ * and {@link Git} against a real repository.
  */
 class CliWorktreesTest {
 
@@ -200,16 +200,17 @@ class CliWorktreesTest {
         git(main, "init", "-q", "-b", "main");
         git(main, "commit", "-q", "--allow-empty", "-m", "Initial commit");
         git(main, "branch", "feature");
-        CliGitInfoProvider provider = CliGitInfoProvider.open(main).get();
+        Git repository = CliGit.open(main).get();
         Path linked = main.resolveSibling("linked");
 
-        List<String> added = provider.worktrees()
+        List<String> added = repository
+                .worktrees()
                 .add(Path.of("../linked"), new BranchName("feature"))
                 .get()
                 .map(ExecutedCommand::line);
 
         assertEquals(List.of("git worktree add --quiet " + linked + " feature"), added);
-        List<Worktree> worktrees = provider.worktrees().list().get();
+        List<Worktree> worktrees = repository.worktrees().list().get();
         assertEquals(List.of(main, linked), worktrees.map(Worktree::path));
         assertEquals(List.of(true, false), worktrees.map(Worktree::current));
         assertEquals(List.of(true, false), worktrees.map(Worktree::main));
@@ -218,17 +219,17 @@ class CliWorktreesTest {
                 worktrees.map(Worktree::branch));
         assertEquals(
                 List.of(linked, main),
-                CliGitInfoProvider.open(linked).get().worktrees().list().get().map(Worktree::path));
+                CliGit.open(linked).get().worktrees().list().get().map(Worktree::path));
 
         Files.writeString(linked.resolve("new.txt"), "untracked\n");
         assertInstanceOf(
                 GitError.WorktreeHasChanges.class,
-                provider.worktrees().remove(linked, false).getLeft().error());
+                repository.worktrees().remove(linked, false).getLeft().error());
         assertTrue(Files.exists(linked.resolve("new.txt")));
 
-        provider.worktrees().remove(linked, true).get();
+        repository.worktrees().remove(linked, true).get();
         assertFalse(Files.exists(linked));
-        assertEquals(List.of(main), provider.worktrees().list().get().map(Worktree::path));
+        assertEquals(List.of(main), repository.worktrees().list().get().map(Worktree::path));
     }
 
     @Test
@@ -237,35 +238,35 @@ class CliWorktreesTest {
         git(main, "init", "-q", "-b", "main");
         git(main, "commit", "-q", "--allow-empty", "-m", "Initial commit");
         git(main, "branch", "feature");
-        CliGitInfoProvider provider = CliGitInfoProvider.open(main).get();
+        Git repository = CliGit.open(main).get();
         Path linked = main.resolveSibling("linked");
-        provider.worktrees().add(linked, new BranchName("feature")).get();
+        repository.worktrees().add(linked, new BranchName("feature")).get();
 
         assertEquals(
                 List.of("git worktree lock " + linked),
-                provider.worktrees().lock(linked, true).get().map(ExecutedCommand::line));
+                repository.worktrees().lock(linked, true).get().map(ExecutedCommand::line));
         assertEquals(
                 List.of(Option.none(), Option.of("")),
-                provider.worktrees().list().get().map(Worktree::locked));
+                repository.worktrees().list().get().map(Worktree::locked));
         assertInstanceOf(
                 GitError.CommandFailed.class,
-                provider.worktrees().lock(main, true).getLeft().error());
-        provider.worktrees().lock(linked, false).get();
-        assertEquals(List.of(false, false), provider.worktrees().list().get().map(Worktree::isLocked));
+                repository.worktrees().lock(main, true).getLeft().error());
+        repository.worktrees().lock(linked, false).get();
+        assertEquals(List.of(false, false), repository.worktrees().list().get().map(Worktree::isLocked));
 
         assertEquals(
                 List.of("git worktree lock --reason 'on usb' " + linked),
-                provider.worktrees().lock(linked, "on usb").get().map(ExecutedCommand::line));
+                repository.worktrees().lock(linked, "on usb").get().map(ExecutedCommand::line));
         assertEquals(
-                Option.of("on usb"), provider.worktrees().list().get().last().locked());
+                Option.of("on usb"), repository.worktrees().list().get().last().locked());
         git(main, "worktree", "unlock", linked.toString());
         deleteRecursively(linked);
-        assertTrue(provider.worktrees().list().get().last().prunable());
+        assertTrue(repository.worktrees().list().get().last().prunable());
 
         assertEquals(
                 List.of("git worktree prune"),
-                provider.worktrees().prune().get().map(ExecutedCommand::line));
-        assertEquals(List.of(main), provider.worktrees().list().get().map(Worktree::path));
+                repository.worktrees().prune().get().map(ExecutedCommand::line));
+        assertEquals(List.of(main), repository.worktrees().list().get().map(Worktree::path));
     }
 
     @Test
@@ -275,27 +276,27 @@ class CliWorktreesTest {
         git(main, "commit", "-q", "--allow-empty", "-m", "Initial commit");
         git(main, "branch", "dirty");
         git(main, "branch", "gone");
-        CliGitInfoProvider provider = CliGitInfoProvider.open(main).get();
+        Git repository = CliGit.open(main).get();
         Path dirty = main.resolveSibling("dirty");
         Path gone = main.resolveSibling("gone");
-        provider.worktrees().add(dirty, new BranchName("dirty")).get();
-        provider.worktrees().add(gone, new BranchName("gone")).get();
+        repository.worktrees().add(dirty, new BranchName("dirty")).get();
+        repository.worktrees().add(gone, new BranchName("gone")).get();
         Files.writeString(dirty.resolve("new.txt"), "untracked\n");
-        provider.worktrees().lock(dirty, true).get();
-        provider.worktrees().lock(gone, true).get();
+        repository.worktrees().lock(dirty, true).get();
+        repository.worktrees().lock(gone, true).get();
         deleteRecursively(gone);
-        provider.worktrees().prune().get();
+        repository.worktrees().prune().get();
         assertEquals(
-                List.of(main, dirty, gone), provider.worktrees().list().get().map(Worktree::path));
+                List.of(main, dirty, gone), repository.worktrees().list().get().map(Worktree::path));
 
         assertEquals(
                 List.of("git worktree remove --force --force " + dirty),
-                provider.worktrees().removeAnyway(dirty).get().map(ExecutedCommand::line));
-        provider.worktrees().removeAnyway(gone).get();
+                repository.worktrees().removeAnyway(dirty).get().map(ExecutedCommand::line));
+        repository.worktrees().removeAnyway(gone).get();
 
         assertFalse(Files.exists(dirty));
-        assertEquals(List.of(main), provider.worktrees().list().get().map(Worktree::path));
-        provider.branches().forceDeleteLocal(new BranchName("gone")).get();
+        assertEquals(List.of(main), repository.worktrees().list().get().map(Worktree::path));
+        repository.branches().forceDeleteLocal(new BranchName("gone")).get();
     }
 
     @Test
@@ -311,19 +312,21 @@ class CliWorktreesTest {
                 "-q",
                 origin.toString(),
                 main.getFileName().toString());
-        CliGitInfoProvider provider = CliGitInfoProvider.open(main).get();
+        Git repository = CliGit.open(main).get();
         Path fromLocal = main.resolveSibling("from-local");
         Path fromRemote = main.resolveSibling("from-remote");
 
         BranchName mainBranch = new BranchName("main");
-        List<String> added = provider.worktrees()
+        List<String> added = repository
+                .worktrees()
                 .addWithNewBranch(
                         fromLocal,
                         new BranchName("topic"),
                         new NewBranchStart.From(new BranchRef.Local(mainBranch), Option.of(mainBranch)))
                 .get()
                 .map(ExecutedCommand::line);
-        provider.worktrees()
+        repository
+                .worktrees()
                 .addWithNewBranch(
                         fromRemote,
                         new BranchName("shared"),
@@ -336,13 +339,14 @@ class CliWorktreesTest {
                         Option.of(new BranchName("main")),
                         Option.of(new BranchName("topic")),
                         Option.of(new BranchName("shared"))),
-                provider.worktrees().list().get().map(Worktree::branch));
+                repository.worktrees().list().get().map(Worktree::branch));
         assertEquals(
                 Option.of(new BranchName("main")),
                 new CliBranches(main).parent(new BranchName("topic")).get());
         assertEquals(
                 Option.of("origin/shared"),
-                provider.branches()
+                repository
+                        .branches()
                         .all()
                         .map(AllBranches::local)
                         .get()
@@ -356,9 +360,10 @@ class CliWorktreesTest {
         assumeTrue(gitAvailable(), "git is not installed");
         git(main, "init", "-q", "-b", "main");
         git(main, "commit", "-q", "--allow-empty", "-m", "Initial commit");
-        CliGitInfoProvider provider = CliGitInfoProvider.open(main).get();
+        Git repository = CliGit.open(main).get();
 
-        GitFailure<GitError.ProcessError> failure = provider.worktrees()
+        GitFailure<GitError.ProcessError> failure = repository
+                .worktrees()
                 .add(main.resolveSibling("other"), new BranchName("main"))
                 .getLeft();
 
@@ -372,13 +377,14 @@ class CliWorktreesTest {
         git(main, "init", "-q", "-b", "main");
         git(main, "commit", "-q", "--allow-empty", "-m", "Initial commit");
         git(main, "branch", "topic");
-        CliGitInfoProvider provider = CliGitInfoProvider.open(main).get();
+        Git repository = CliGit.open(main).get();
 
-        assertTrue(provider.worktrees()
+        assertTrue(repository
+                .worktrees()
                 .addDetached(Path.of("../detached"), new BranchRef.Local(new BranchName("topic")))
                 .isRight());
 
-        Worktree detached = provider.worktrees().list().get().last();
+        Worktree detached = repository.worktrees().list().get().last();
         assertEquals(main.resolveSibling("detached"), detached.path());
         assertEquals(Option.none(), detached.branch());
         assertInstanceOf(Head.Detached.class, detached.head().get());

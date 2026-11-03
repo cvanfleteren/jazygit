@@ -4,9 +4,9 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd;
+import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
-import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Env;
@@ -33,7 +33,7 @@ public sealed interface CheckoutCmd extends BranchCmd.ChecksOutBranch {
     record Checkout(BranchName branch) implements CheckoutCmd {
 
         @Override
-        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
+        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
             return git.checkout().branch(branch);
         }
 
@@ -62,7 +62,7 @@ public sealed interface CheckoutCmd extends BranchCmd.ChecksOutBranch {
         }
 
         @Override
-        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
+        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
             return git.checkout().newTrackingBranch(branch, upstream);
         }
     }
@@ -73,7 +73,7 @@ public sealed interface CheckoutCmd extends BranchCmd.ChecksOutBranch {
     record CheckoutWithStash(BranchName branch) implements CheckoutCmd {
 
         @Override
-        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
+        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
             return git.checkout().branchWithStash(branch);
         }
     }

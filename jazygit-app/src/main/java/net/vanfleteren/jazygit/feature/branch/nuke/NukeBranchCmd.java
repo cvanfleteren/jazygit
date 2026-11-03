@@ -5,9 +5,9 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd;
 import net.vanfleteren.jazygit.feature.worktree.WorktreeCmd;
+import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
-import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -43,7 +43,7 @@ public record NukeBranchCmd(BranchName branch, Option<String> worktree, Option<R
      * The commands that ran, or the first step that failed with all the commands that ran.
      */
     @Override
-    public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
+    public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
         List<Step> steps = nuking(git);
         List<ExecutedCommand> commands = steps.flatMap(Step::commands);
         return steps.flatMap(Step::failure)
@@ -66,7 +66,7 @@ public record NukeBranchCmd(BranchName branch, Option<String> worktree, Option<R
                         steps.flatMap(Step::failure).map(Failure::of));
     }
 
-    private List<Step> nuking(GitInfoProvider git) {
+    private List<Step> nuking(Git git) {
         Option<Step> removed = worktree.map(
                 location -> new Step(location, Option.of(git.worktrees().removeAnyway(WorktreeCmd.path(location)))));
         Step deleted = new Step(

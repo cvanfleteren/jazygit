@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.state;
 
-import static net.vanfleteren.jazygit.git.StubGitProvider.executed;
+import static net.vanfleteren.jazygit.git.StubGit.executed;
 import static net.vanfleteren.jazygit.state.TestModels.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -14,12 +14,10 @@ import net.vanfleteren.jazygit.feature.branch.pull.PullCmd;
 import net.vanfleteren.jazygit.feature.branch.push.PushCmd;
 import net.vanfleteren.jazygit.feature.branch.rebase.RebaseCmd;
 import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
-import net.vanfleteren.jazygit.git.GitInfoProvider;
-import net.vanfleteren.jazygit.git.Integrate;
-import net.vanfleteren.jazygit.git.Remotes;
-import net.vanfleteren.jazygit.git.StubGitProvider;
+import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.git.StubIntegrate;
 import net.vanfleteren.jazygit.git.StubRemotes;
 import net.vanfleteren.jazygit.git.model.BranchName;
@@ -110,18 +108,13 @@ class OperationUpdateTest {
 
     @Test
     void aCommandThatThrowsIsReportedAsABugOfThatCommand() {
-        GitInfoProvider throwing = new StubGitProvider() {
+        Git throwing = StubGit.of().withRemotes(new StubRemotes() {
             @Override
-            public Remotes remotes() {
-                return new StubRemotes() {
-                    @Override
-                    public Either<GitFailure<GitError>, List<ExecutedCommand>> push(
-                            BranchName branch, RemoteBranch upstream, PushMode mode) {
-                        throw new IllegalStateException("unexpected");
-                    }
-                };
+            public Either<GitFailure<GitError>, List<ExecutedCommand>> push(
+                    BranchName branch, RemoteBranch upstream, PushMode mode) {
+                throw new IllegalStateException("unexpected");
             }
-        };
+        });
 
         Msg msg = Program.perform(new Env(throwing, StubGitHub.empty()), PUSH);
 
@@ -134,18 +127,13 @@ class OperationUpdateTest {
 
     @Test
     void aCommandThatThrowsAnErrorStillAnswersSoItsBranchIsReleased() {
-        GitInfoProvider throwing = new StubGitProvider() {
+        Git throwing = StubGit.of().withRemotes(new StubRemotes() {
             @Override
-            public Remotes remotes() {
-                return new StubRemotes() {
-                    @Override
-                    public Either<GitFailure<GitError>, List<ExecutedCommand>> push(
-                            BranchName branch, RemoteBranch upstream, PushMode mode) {
-                        throw new StackOverflowError();
-                    }
-                };
+            public Either<GitFailure<GitError>, List<ExecutedCommand>> push(
+                    BranchName branch, RemoteBranch upstream, PushMode mode) {
+                throw new StackOverflowError();
             }
-        };
+        });
         java.util.List<Throwable> bugs = new java.util.ArrayList<>();
 
         Msg msg = Program.perform(new Env(throwing, StubGitHub.empty()), PUSH, bugs::add);
@@ -165,19 +153,13 @@ class OperationUpdateTest {
 
     @Test
     void anOperationThatStopsOnConflictsIsReportedAsStoppedNotAsFailed() {
-        GitInfoProvider stopping = new StubGitProvider() {
+        Git stopping = StubGit.of().withIntegrate(new StubIntegrate() {
             @Override
-            public Integrate integrate() {
-                return new StubIntegrate() {
-                    @Override
-                    public Either<GitFailure<GitError>, List<ExecutedCommand>> merge(
-                            BranchName branch, MergeMode mode) {
-                        return Either.left(new GitFailure<>(
-                                new GitError.StoppedOnConflicts(Option.of(MERGING), 2), executed("git merge feature")));
-                    }
-                };
+            public Either<GitFailure<GitError>, List<ExecutedCommand>> merge(BranchName branch, MergeMode mode) {
+                return Either.left(new GitFailure<>(
+                        new GitError.StoppedOnConflicts(Option.of(MERGING), 2), executed("git merge feature")));
             }
-        };
+        });
 
         Msg msg = Program.perform(new Env(stopping, StubGitHub.empty()), MERGE);
 

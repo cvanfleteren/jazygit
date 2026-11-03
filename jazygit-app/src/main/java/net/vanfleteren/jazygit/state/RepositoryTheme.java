@@ -3,7 +3,7 @@ package net.vanfleteren.jazygit.state;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import lombok.With;
-import net.vanfleteren.jazygit.git.GitInfoProvider;
+import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.model.ConfigValue;
 import net.vanfleteren.jazygit.settings.ThemeName;
 
@@ -31,7 +31,7 @@ public record RepositoryTheme(Option<ThemeName> own, Option<Inherited> inherited
      * The theme of the repository of {@code git}. A value that names no theme, or that could not be read, gives
      * none, as if it were not set.
      */
-    public static RepositoryTheme read(GitInfoProvider git) {
+    public static RepositoryTheme read(Git git) {
         return new RepositoryTheme(
                 git.config().local(KEY).getOrElse(Option.none()).flatMap(ThemeName::of),
                 inherited(git.config().all(KEY).getOrElse(List.empty())));

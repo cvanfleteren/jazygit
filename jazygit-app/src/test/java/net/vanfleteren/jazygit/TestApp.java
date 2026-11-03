@@ -44,7 +44,7 @@ final class TestApp extends JazygitApp {
     final AtomicInteger quits = new AtomicInteger();
 
     TestApp() {
-        this(new Env(new SampleData(), StubGitHub.empty()));
+        this(new Env(SampleData.git(), StubGitHub.empty()));
     }
 
     TestApp(Env env) {

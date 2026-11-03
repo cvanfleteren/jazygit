@@ -325,9 +325,9 @@ class CliStashesTest {
                 stashes().list().get().map(stash -> stash.ref() + " " + stash.message()));
     }
 
-    // Through the provider, as the app reaches them.
+    // Through the repository, as the app reaches them.
     private Stashes stashes() {
-        return CliGitInfoProvider.open(repo).get().stashes();
+        return CliGit.open(repo).get().stashes();
     }
 
     private void init() throws Exception {

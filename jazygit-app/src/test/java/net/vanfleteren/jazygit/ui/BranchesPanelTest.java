@@ -35,7 +35,7 @@ class BranchesPanelTest {
     private static final Branch OLD = Fixtures.branch(new BranchName("old"), false, new Sha("3"));
 
     private final BranchesPanel panel = new BranchesPanel(msg -> {}, tab -> {});
-    private final Model before = with(TestModels.loaded(new SampleData()), List.of(MAIN, FEATURE, OLD));
+    private final Model before = with(TestModels.loaded(SampleData.git()), List.of(MAIN, FEATURE, OLD));
 
     private static Model withWorktrees(Model model) {
         return model.mapRepoView(repoView -> repoView.withBranchesTab(BranchesTab.WORKTREES))

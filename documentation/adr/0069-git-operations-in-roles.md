@@ -107,3 +107,6 @@ The split is done one role at a time, each in a pull request stacked on the one 
 - `GitHub` keeps the three-file pattern for now.
 
 Follows from issue #294, section 1a and item 6.
+
+Amended by ADR 71: `CliBaseDistance` and `CliPullRequest` stay helpers of their role, several operations are named
+within their role, and the tests are split per role in a later change.

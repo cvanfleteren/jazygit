@@ -3,8 +3,8 @@ package net.vanfleteren.jazygit.feature.stash;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitFailure;
-import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.GitOperationCmd;
 import net.vanfleteren.jazygit.state.Operation;
@@ -31,7 +31,7 @@ public sealed interface StashCmd extends GitOperationCmd {
         }
 
         @Override
-        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
+        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
             return git.stashes().push(name);
         }
     }
@@ -47,7 +47,7 @@ public sealed interface StashCmd extends GitOperationCmd {
         }
 
         @Override
-        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
+        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
             return git.stashes().drop(stash);
         }
     }
@@ -63,7 +63,7 @@ public sealed interface StashCmd extends GitOperationCmd {
         }
 
         @Override
-        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
+        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
             return git.stashes().pop(stash);
         }
     }

@@ -5,10 +5,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.Config;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.StubConfig;
-import net.vanfleteren.jazygit.git.StubGitProvider;
+import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.git.model.ConfigValue;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import org.junit.jupiter.api.Test;
@@ -23,22 +22,17 @@ class RepositoryThemeTest {
     private static final ConfigValue OWN = new ConfigValue(true, ".git/config", "ember");
 
     private static RepositoryTheme read(Option<String> local, List<ConfigValue> all) {
-        return RepositoryTheme.read(new StubGitProvider() {
+        return RepositoryTheme.read(StubGit.of().withConfig(new StubConfig() {
             @Override
-            public Config config() {
-                return new StubConfig() {
-                    @Override
-                    public Either<ProcessError, Option<String>> local(String key) {
-                        return Either.right(local.filter(value -> key.equals(RepositoryTheme.KEY)));
-                    }
-
-                    @Override
-                    public Either<ProcessError, List<ConfigValue>> all(String key) {
-                        return Either.right(key.equals(RepositoryTheme.KEY) ? all : List.empty());
-                    }
-                };
+            public Either<ProcessError, Option<String>> local(String key) {
+                return Either.right(local.filter(value -> key.equals(RepositoryTheme.KEY)));
             }
-        });
+
+            @Override
+            public Either<ProcessError, List<ConfigValue>> all(String key) {
+                return Either.right(key.equals(RepositoryTheme.KEY) ? all : List.empty());
+            }
+        }));
     }
 
     @Test

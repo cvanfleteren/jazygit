@@ -14,7 +14,7 @@ import net.vanfleteren.jazygit.gh.model.GhAccount;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
-import net.vanfleteren.jazygit.git.StubGitProvider;
+import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.prs.LoadRepositoryPullRequests;
@@ -127,7 +127,7 @@ class PullRequestsUpdateTest {
                 Update.update(loaded(), new PullRequestsMsg.Refresh()).cmds());
         assertInstanceOf(
                 PrOverviewMsg.RepositoryLoaded.class,
-                new LoadRepositoryPullRequests().run(new Env(new StubGitProvider() {}, StubGitHub.empty())));
+                new LoadRepositoryPullRequests().run(new Env(StubGit.of(), StubGitHub.empty())));
     }
 
     @Test

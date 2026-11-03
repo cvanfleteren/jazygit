@@ -30,7 +30,7 @@ import net.vanfleteren.jazygit.gh.model.RecentChecks;
 import net.vanfleteren.jazygit.gh.timing.CheckHistory;
 import net.vanfleteren.jazygit.gh.timing.CheckSample;
 import net.vanfleteren.jazygit.gh.timing.CheckTimings;
-import net.vanfleteren.jazygit.git.StubGitProvider;
+import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.settings.CheckTimingsStore;
 import net.vanfleteren.jazygit.settings.CheckTimingsStore.Kept;
 import net.vanfleteren.jazygit.settings.CheckTimingsStore.Run;
@@ -98,15 +98,7 @@ class CheckTimesUpdateTest {
     }
 
     private static Env env(CheckTimingsStore store) {
-        return new Env(
-                new StubGitProvider() {},
-                StubGitHub.empty(),
-                null,
-                null,
-                null,
-                store,
-                Repositories.NONE,
-                Terminal.NONE);
+        return new Env(StubGit.of(), StubGitHub.empty(), null, null, null, store, Repositories.NONE, Terminal.NONE);
     }
 
     /**
@@ -284,7 +276,7 @@ class CheckTimesUpdateTest {
         Run learned = new Run("Build/verify", 9, 100, 110, "push", other);
         AtomicReference<Kept> file = new AtomicReference<>(new Kept(List.of(learned), Option.of(other)));
         Env env = new Env(
-                new StubGitProvider() {},
+                StubGit.of(),
                 new StubGitHub() {
                     @Override
                     public Either<GhError, RecentChecks> recentChecks() {

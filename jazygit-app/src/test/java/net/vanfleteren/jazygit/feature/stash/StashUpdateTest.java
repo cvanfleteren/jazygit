@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.feature.stash;
 
-import static net.vanfleteren.jazygit.git.StubGitProvider.executed;
+import static net.vanfleteren.jazygit.git.StubGit.executed;
 import static net.vanfleteren.jazygit.state.TestModels.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 

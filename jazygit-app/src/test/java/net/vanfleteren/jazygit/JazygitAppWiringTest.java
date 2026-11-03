@@ -24,9 +24,10 @@ import net.vanfleteren.jazygit.feature.github.checks.ChecksMsg;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.feature.help.HelpPopup;
 import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.Status;
-import net.vanfleteren.jazygit.git.StubGitProvider;
+import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.git.StubStatus;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.state.Env;
@@ -93,7 +94,7 @@ class JazygitAppWiringTest {
     @Test
     void theStatusIsReadAgainWithoutInput() throws Exception {
         AtomicInteger reads = new AtomicInteger();
-        TestApp app = new TestApp(new Env(new CountsStatus(reads), StubGitHub.empty()));
+        TestApp app = new TestApp(new Env(new CountsStatus(reads).git(), StubGitHub.empty()));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {
             app.start(testRunner);
             int started = reads.get();
@@ -253,9 +254,8 @@ class JazygitAppWiringTest {
     /**
      * A repository that counts how often its status is read.
      */
-    private record CountsStatus(AtomicInteger reads) implements StubGitProvider {
+    private record CountsStatus(AtomicInteger reads) {
 
-        @Override
         public Status status() {
             return new StubStatus() {
                 @Override
@@ -264,6 +264,10 @@ class JazygitAppWiringTest {
                     return StubStatus.super.read();
                 }
             };
+        }
+
+        Git git() {
+            return StubGit.of().withStatus(status());
         }
     }
 }

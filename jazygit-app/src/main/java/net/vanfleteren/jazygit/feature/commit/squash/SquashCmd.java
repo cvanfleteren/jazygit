@@ -2,8 +2,8 @@ package net.vanfleteren.jazygit.feature.commit.squash;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
+import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitFailure;
-import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.SquashMode;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -27,7 +27,7 @@ public record SquashCmd(Sha sha, SquashMode mode) implements GitOperationCmd {
     }
 
     @Override
-    public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
+    public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
         return git.commits().squash(sha, mode);
     }
 }

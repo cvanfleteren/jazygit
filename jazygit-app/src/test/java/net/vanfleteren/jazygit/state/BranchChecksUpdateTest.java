@@ -26,8 +26,7 @@ import net.vanfleteren.jazygit.gh.timing.CheckSample;
 import net.vanfleteren.jazygit.gh.timing.CheckTimings;
 import net.vanfleteren.jazygit.gh.timing.Eta;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
-import net.vanfleteren.jazygit.git.Remotes;
-import net.vanfleteren.jazygit.git.StubGitProvider;
+import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.git.StubRemotes;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
@@ -73,23 +72,18 @@ class BranchChecksUpdateTest {
     void theChecksAreReadOnTheRemotesThatPointAtTheGitHubRepository() {
         Msg msg = new LoadBranchChecks()
                 .run(new Env(
-                        new StubGitProvider() {
+                        StubGit.of().withRemotes(new StubRemotes() {
                             @Override
-                            public Remotes remotes() {
-                                return new StubRemotes() {
-                                    @Override
-                                    public Either<ProcessError, Map<String, String>> urls() {
-                                        return Either.right(HashMap.of(
-                                                "origin",
-                                                "git@github.com:me/repo.git",
-                                                "upstream",
-                                                "git@github.com:owner/repo.git",
-                                                "mirror",
-                                                "https://github.com/owner/repo"));
-                                    }
-                                };
+                            public Either<ProcessError, Map<String, String>> urls() {
+                                return Either.right(HashMap.of(
+                                        "origin",
+                                        "git@github.com:me/repo.git",
+                                        "upstream",
+                                        "git@github.com:owner/repo.git",
+                                        "mirror",
+                                        "https://github.com/owner/repo"));
                             }
-                        },
+                        }),
                         new StubGitHub() {
                             @Override
                             public Either<GhError, BranchChecks> branchChecks() {

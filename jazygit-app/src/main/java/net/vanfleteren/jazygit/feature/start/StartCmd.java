@@ -2,7 +2,8 @@ package net.vanfleteren.jazygit.feature.start;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import net.vanfleteren.jazygit.git.CliGitInfoProvider;
+import net.vanfleteren.jazygit.git.CliGit;
+import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Env;
@@ -26,7 +27,7 @@ public sealed interface StartCmd extends Cmd {
         return named.toAbsolutePath().normalize();
     }
 
-    private static Msg opened(CliGitInfoProvider repository) {
+    private static Msg opened(Git repository) {
         return new StartMsg.Opened(repository.worktree().toString());
     }
 
@@ -52,7 +53,7 @@ public sealed interface StartCmd extends Cmd {
 
         @Override
         public Msg run() {
-            return CliGitInfoProvider.init(Path.of(directory)).fold(this::failedWith, StartCmd::opened);
+            return CliGit.init(Path.of(directory)).fold(this::failedWith, StartCmd::opened);
         }
     }
 
@@ -64,7 +65,7 @@ public sealed interface StartCmd extends Cmd {
         @Override
         public Msg run() {
             Path directory = resolve(Path.of(from), path);
-            return CliGitInfoProvider.open(directory)
+            return CliGit.open(directory)
                     .fold(
                             error -> error instanceof GitError.NotARepository
                                     ? new StartMsg.NoRepository(directory.toString(), Files.isDirectory(directory))

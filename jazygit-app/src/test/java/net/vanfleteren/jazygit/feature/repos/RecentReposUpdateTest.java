@@ -15,7 +15,7 @@ import java.util.ArrayList;
 import net.vanfleteren.jazygit.feature.commit.create.CommitPopup;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.git.GitError;
-import net.vanfleteren.jazygit.git.StubGitProvider;
+import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.settings.RecentRepositories;
@@ -34,17 +34,7 @@ class RecentReposUpdateTest {
     Path dir;
 
     private static Env env(Path current, RecentRepositories recent, Repositories repositories) {
-        return new Env(
-                new StubGitProvider() {
-                    @Override
-                    public Path worktree() {
-                        return current;
-                    }
-                },
-                StubGitHub.empty(),
-                SettingsStore.NONE,
-                recent,
-                repositories);
+        return new Env(StubGit.of(current), StubGitHub.empty(), SettingsStore.NONE, recent, repositories);
     }
 
     private Path repo(String name) throws Exception {

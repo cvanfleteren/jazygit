@@ -24,7 +24,7 @@ class InProgressTest {
     @TempDir
     Path repo;
 
-    private GitInfoProvider git;
+    private Git git;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -40,7 +40,7 @@ class InProgressTest {
         git("checkout", "-q", "main");
         write("a.txt", "main\n");
         git("commit", "-qam", "main changes a");
-        git = CliGitInfoProvider.open(repo).get();
+        git = CliGit.open(repo).get();
     }
 
     @Test

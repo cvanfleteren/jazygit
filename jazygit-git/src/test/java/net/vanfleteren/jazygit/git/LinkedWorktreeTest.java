@@ -82,12 +82,12 @@ class LinkedWorktreeTest {
 
     @Test
     void itOpensAtItsOwnRootAndListsItsOwnBranchAsTheCurrentOne() {
-        CliGitInfoProvider provider = CliGitInfoProvider.open(linked).get();
+        Git repository = CliGit.open(linked).get();
 
-        assertEquals(linked, provider.worktree());
+        assertEquals(linked, repository.worktree());
         assertTrue(Files.isRegularFile(linked.resolve(".git")));
         List<Branch> branches =
-                provider.branches().all().map(AllBranches::local).get();
+                repository.branches().all().map(AllBranches::local).get();
         assertEquals(
                 List.of("feature", "main"), branches.map(branch -> branch.name().value()));
         assertEquals(List.of(Option.none(), Option.of(main)), branches.map(Branch::worktree));
@@ -95,12 +95,8 @@ class LinkedWorktreeTest {
 
     @Test
     void theMainWorktreeSeesTheBranchCheckedOutInTheLinkedOne() {
-        List<Branch> branches = CliGitInfoProvider.open(main)
-                .get()
-                .branches()
-                .all()
-                .map(AllBranches::local)
-                .get();
+        List<Branch> branches =
+                CliGit.open(main).get().branches().all().map(AllBranches::local).get();
 
         assertEquals(List.of(Option.none(), Option.of(linked)), branches.map(Branch::worktree));
         assertEquals(List.of(false, true), branches.map(Branch::checkedOutElsewhere));
@@ -109,36 +105,34 @@ class LinkedWorktreeTest {
     @Test
     void theStatusAndTheDiffAreThoseOfTheLinkedWorktree() throws Exception {
         Files.writeString(linked.resolve("new.txt"), "brand new\n");
-        CliGitInfoProvider provider = CliGitInfoProvider.open(linked).get();
+        Git repository = CliGit.open(linked).get();
 
-        List<FileEntry> files = provider.status().read().get().files();
-        Diffs diffs = provider.diffs().uncommitted(files, DiffOptions.DEFAULT).get();
+        List<FileEntry> files = repository.status().read().get().files();
+        Diffs diffs = repository.diffs().uncommitted(files, DiffOptions.DEFAULT).get();
 
         assertEquals(List.of(Fixtures.fileEntry("new.txt", ChangeType.UNTRACKED)), files);
         assertTrue(diffs.unstaged().text().contains("+brand new"), diffs.toString());
         // The untracked file was diffed in a copy of the index; the real one still does not have it.
         assertEquals(
                 List.of(Fixtures.fileEntry("new.txt", ChangeType.UNTRACKED)),
-                provider.status().read().get().files());
-        assertEquals(
-                List.of(),
-                CliGitInfoProvider.open(main).get().status().read().get().files());
+                repository.status().read().get().files());
+        assertEquals(List.of(), CliGit.open(main).get().status().read().get().files());
     }
 
     @Test
     void theMainWorktreeSeesWhetherTheLinkedOneHasChanges() throws Exception {
-        CliGitInfoProvider provider = CliGitInfoProvider.open(main).get();
-        assertFalse(provider.worktrees().hasChanges(linked).get());
+        Git repository = CliGit.open(main).get();
+        assertFalse(repository.worktrees().hasChanges(linked).get());
 
         Files.writeString(linked.resolve(".gitignore"), "ignored.txt\n");
         git(linked, "add", ".gitignore");
         git(linked, "commit", "-q", "-m", "Ignore");
         Files.writeString(linked.resolve("ignored.txt"), "ignored\n");
-        assertFalse(provider.worktrees().hasChanges(linked).get());
+        assertFalse(repository.worktrees().hasChanges(linked).get());
 
         Files.writeString(linked.resolve("new.txt"), "brand new\n");
-        assertTrue(provider.worktrees().hasChanges(linked).get());
-        assertFalse(provider.worktrees().hasChanges(main).get());
+        assertTrue(repository.worktrees().hasChanges(linked).get());
+        assertFalse(repository.worktrees().hasChanges(main).get());
     }
 
     @Test

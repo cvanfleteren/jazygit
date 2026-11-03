@@ -38,7 +38,7 @@ class JazygitAppPullRequestsTest {
 
     @Test
     void enterMovesTheFocusToTheHighlightedPullRequestAndALetterDoesWhatTheKeymapSays() throws Exception {
-        TestApp app = new TestApp(new Env(new SampleData(), new ReviewRequested()));
+        TestApp app = new TestApp(new Env(SampleData.git(), new ReviewRequested()));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {
             app.start(testRunner);
             Pilot pilot = SettledPilot.of(testRunner, app.drawnAt::size);
@@ -74,7 +74,7 @@ class JazygitAppPullRequestsTest {
 
     @Test
     void qAndCtrlCDoNotQuitFromTheMarkdownDialog() throws Exception {
-        TestApp app = new TestApp(new Env(new SampleData(), new ReviewRequested()));
+        TestApp app = new TestApp(new Env(SampleData.git(), new ReviewRequested()));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {
             app.start(testRunner);
             Pilot pilot = SettledPilot.of(testRunner, app.drawnAt::size);

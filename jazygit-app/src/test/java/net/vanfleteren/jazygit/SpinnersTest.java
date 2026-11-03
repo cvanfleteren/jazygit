@@ -34,7 +34,7 @@ import org.junit.jupiter.api.Test;
  */
 class SpinnersTest {
 
-    private static final Model LOADED = TestModels.loaded(new SampleData());
+    private static final Model LOADED = TestModels.loaded(SampleData.git());
     private static final Instant NOW = Instant.parse("2026-10-26T10:00:00Z");
     private static final BranchRef.Local FEATURE = new BranchRef.Local(new BranchName("feature"));
     private static final PullRequestPopup PULL_REQUEST = PullRequestPopup.loading(

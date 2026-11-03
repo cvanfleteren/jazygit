@@ -3,8 +3,8 @@ package net.vanfleteren.jazygit.feature.commit.reset;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitFailure;
-import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.ResetMode;
 import net.vanfleteren.jazygit.git.model.ResetTarget;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -29,7 +29,7 @@ public record ResetCmd(ResetTarget target, ResetMode mode) implements GitOperati
     }
 
     @Override
-    public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
+    public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
         return git.commits().reset(target, mode);
     }
 }

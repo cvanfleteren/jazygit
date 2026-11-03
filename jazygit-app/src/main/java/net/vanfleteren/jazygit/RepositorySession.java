@@ -12,7 +12,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.feature.fetch.FetchMsg;
-import net.vanfleteren.jazygit.git.CliGitInfoProvider;
+import net.vanfleteren.jazygit.git.CliGit;
+import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.settings.ThemeName;
@@ -167,12 +168,12 @@ final class RepositorySession {
      * called on the thread of a command, which reads its theme too, so the render thread does not wait for git.
      */
     private Either<GitError, Path> switchTo(Path directory, Landing landing) {
-        return CliGitInfoProvider.open(directory)
-                .peek(provider -> {
-                    RepositoryTheme theme = RepositoryTheme.read(provider);
-                    runner.get().runOnRenderThread(() -> show(provider, theme, landing));
+        return CliGit.open(directory)
+                .peek(git -> {
+                    RepositoryTheme theme = RepositoryTheme.read(git);
+                    runner.get().runOnRenderThread(() -> show(git, theme, landing));
                 })
-                .map(CliGitInfoProvider::worktree);
+                .map(Git::worktree);
     }
 
     /**
@@ -180,7 +181,7 @@ final class RepositorySession {
      * {@code landing} says; the settings, and a theme asked for at startup, stay as they are in this session, and
      * {@code repositoryTheme} is the one its git configuration gives it.
      */
-    private void show(CliGitInfoProvider git, RepositoryTheme repositoryTheme, Landing landing) {
+    private void show(Git git, RepositoryTheme repositoryTheme, Landing landing) {
         runtime.forEach(running -> {
             Model last = running.program().model();
             // Not waiting for the command that runs keeps the UI going. It finishes by itself, in the other

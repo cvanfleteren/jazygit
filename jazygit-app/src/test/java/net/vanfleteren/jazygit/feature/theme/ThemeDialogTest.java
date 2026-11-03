@@ -35,7 +35,7 @@ class ThemeDialogTest {
     private final ChoiceDialog<ThemePopup> dialog =
             new net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<>(ThemeDialog.SPEC, cursor);
     private final Model open = Update.update(
-                    TestModels.loaded(new SampleData()), new ThemeMsg.Requested(ThemeScope.EVERYWHERE))
+                    TestModels.loaded(SampleData.git()), new ThemeMsg.Requested(ThemeScope.EVERYWHERE))
             .model();
 
     @Test
@@ -99,7 +99,7 @@ class ThemeDialogTest {
     @Test
     void forTheRepositoryItsOwnThemeCanBeTakenAway() throws Exception {
         Model own = Update.update(
-                        TestModels.loaded(new SampleData())
+                        TestModels.loaded(SampleData.git())
                                 .mapPreferences(preferences -> preferences.withRepositoryTheme(new RepositoryTheme(
                                         Option.of(ThemeName.EMBER),
                                         Option.of(new RepositoryTheme.Inherited(
@@ -154,7 +154,7 @@ class ThemeDialogTest {
     @Test
     void opensAtTheThemeInUse() throws Exception {
         Model light = Update.update(
-                        TestModels.loaded(new SampleData())
+                        TestModels.loaded(SampleData.git())
                                 .mapPreferences(
                                         preferences -> preferences.withThemeOverride(Option.of(ThemeName.LIGHT))),
                         new ThemeMsg.Requested(ThemeScope.EVERYWHERE))
