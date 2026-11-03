@@ -80,7 +80,8 @@ class BaseDistanceUpdateTest {
             }
         });
         // A protected branch is a root, which has no parent, whatever it was made from (ADR 72).
-        Cmd.LoadBranches load = new Cmd.LoadBranches(new GitHubBases(HashMap.empty(), HashSet.of(FEATURE)));
+        Cmd.LoadBranches load =
+                new Cmd.LoadBranches(new GitHubBases(HashMap.empty(), HashSet.of(FEATURE), Option.none()));
 
         assertEquals(
                 new LoadMsg.BranchesLoaded(

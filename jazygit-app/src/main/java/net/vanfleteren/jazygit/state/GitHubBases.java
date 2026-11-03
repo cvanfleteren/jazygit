@@ -19,13 +19,15 @@ import net.vanfleteren.jazygit.git.model.BranchName;
  *
  * @param byHead            by the branch a pull request merges from, the branch it is built on
  * @param protectedBranches the branches that are protected on GitHub; empty until they were read
+ * @param remotes           the remotes on GitHub; none until they were read, when any of them may be
  */
-public record GitHubBases(Map<BranchName, BranchName> byHead, Set<BranchName> protectedBranches) {
+public record GitHubBases(
+        Map<BranchName, BranchName> byHead, Set<BranchName> protectedBranches, Option<Set<String>> remotes) {
 
     /**
      * What is known before GitHub said anything.
      */
-    public static final GitHubBases NONE = new GitHubBases(HashMap.empty(), HashSet.empty());
+    public static final GitHubBases NONE = new GitHubBases(HashMap.empty(), HashSet.empty(), Option.none());
 
     /**
      * What {@code gitHub} read last says the branches are built on.
@@ -38,7 +40,8 @@ public record GitHubBases(Map<BranchName, BranchName> byHead, Set<BranchName> pr
                         .toList()
                         .flatMap(pr -> base(pr).map(base -> Tuple.of(new BranchName(pr.headBranch()), base)))
                         .toMap(pair -> pair),
-                gitHub.protectedBranches().getOrElse(HashSet.empty()));
+                gitHub.protectedBranches().getOrElse(HashSet.empty()),
+                gitHub.branchChecks().map(GitHubChecks::remotes));
     }
 
     /**
@@ -56,6 +59,13 @@ public record GitHubBases(Map<BranchName, BranchName> byHead, Set<BranchName> pr
      * built on another branch.
      */
     public boolean root(BranchName branch, Option<BranchName> main) {
+        return root(branch, main, protectedBranches);
+    }
+
+    /**
+     * Whether {@code branch} is a root: the main branch, {@code main}, or one of {@code protectedBranches}.
+     */
+    public static boolean root(BranchName branch, Option<BranchName> main, Set<BranchName> protectedBranches) {
         return main.contains(branch) || protectedBranches.contains(branch);
     }
 
@@ -70,7 +80,8 @@ public record GitHubBases(Map<BranchName, BranchName> byHead, Set<BranchName> pr
     public Map<BranchName, BranchName> parents(
             List<Branch> local, Option<BranchName> main, Map<BranchName, BranchName> recorded) {
         return local.filter(branch -> !root(branch.name(), main))
-                .flatMap(branch -> byHead.get(onGitHub(branch))
+                .flatMap(branch -> onGitHub(branch)
+                        .flatMap(byHead::get)
                         .fold(
                                 () -> recorded.get(branch.name()).filter(parent -> isLocal(local, parent)),
                                 onRemote -> localOf(local, onRemote))
@@ -80,10 +91,17 @@ public record GitHubBases(Map<BranchName, BranchName> byHead, Set<BranchName> pr
     }
 
     /**
-     * The name {@code branch} has on GitHub: that of the branch it follows on the remote, else its own.
+     * The name {@code branch} has on GitHub: that of the branch it follows on the remote, else its own; none when it
+     * follows a branch on a remote other than GitHub, as {@link GitHubState#pullRequest(Branch)} has it.
      */
-    private static BranchName onGitHub(Branch branch) {
-        return branch.remoteUpstream().map(upstream -> upstream.branch()).getOrElse(branch.name());
+    private Option<BranchName> onGitHub(Branch branch) {
+        return branch.remoteUpstream()
+                .fold(
+                        () -> Option.of(branch.name()),
+                        upstream -> remotes.forAll(onGitHub ->
+                                        onGitHub.contains(upstream.remote().value()))
+                                ? Option.of(upstream.branch())
+                                : Option.none());
     }
 
     /**

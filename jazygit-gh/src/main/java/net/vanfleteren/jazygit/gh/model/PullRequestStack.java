@@ -24,11 +24,13 @@ public record PullRequestStack(int number, int position, int size, List<Entry> e
     }
 
     /**
-     * The branch the pull request below this one merges from, which this one is built on; none for the bottom one, or
-     * when that one cannot be read.
+     * The branch the closest open pull request below this one merges from, which this one is built on; none for the
+     * bottom one, when the ones below are merged or closed, or when that one cannot be read. A stack keeps its merged
+     * pull requests, but GitHub moves the base of the one above onto what they merged into.
      */
     public Option<String> branchBelow() {
-        return entries.find(entry -> entry.position() == position - 1)
+        return entries.filter(entry -> entry.position() < position && entry.state() == State.OPEN)
+                .maxBy(Entry::position)
                 .map(Entry::headBranch)
                 .filter(branch -> !branch.isEmpty());
     }

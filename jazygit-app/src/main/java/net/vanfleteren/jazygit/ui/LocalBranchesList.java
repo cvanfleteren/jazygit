@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.ui;
 import dev.tamboui.text.Line;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.tui.event.KeyEvent;
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Clock;
@@ -104,7 +105,10 @@ class LocalBranchesList implements BranchesTabList {
         return model.repo()
                 .parents()
                 .get(branch.name())
-                .filter(parent -> !GitHubBases.of(model.gitHub()).root(parent, AheadUpdate.main(model)))
+                .filter(parent -> !GitHubBases.root(
+                        parent,
+                        AheadUpdate.main(model),
+                        model.gitHub().protectedBranches().getOrElse(HashSet.empty())))
                 .filter(parent -> model.gitHub()
                         .pullRequest(branch)
                         .flatMap(PullRequest::stack)

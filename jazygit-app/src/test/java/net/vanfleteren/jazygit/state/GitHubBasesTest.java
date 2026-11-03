@@ -39,6 +39,10 @@ class GitHubBasesTest {
     }
 
     private static Branch following(String name, String onRemote) {
+        return following(name, "origin", onRemote);
+    }
+
+    private static Branch following(String name, String remote, String onRemote) {
         return Fixtures.branch(
                 name(name),
                 false,
@@ -47,7 +51,7 @@ class GitHubBasesTest {
                 true,
                 false,
                 Option.of(new Upstream(
-                        new BranchRef.Remote(new RemoteBranch(new RemoteName("origin"), name(onRemote))), 0, 0)));
+                        new BranchRef.Remote(new RemoteBranch(new RemoteName(remote), name(onRemote))), 0, 0)));
     }
 
     private static PullRequest pr(int number, String head, String base) {
@@ -55,12 +59,17 @@ class GitHubBasesTest {
     }
 
     private static PullRequest stacked(int number, String head, String base, int position, String below) {
+        return stacked(number, head, base, position, below, State.OPEN);
+    }
+
+    private static PullRequest stacked(
+            int number, String head, String base, int position, String below, State belowState) {
         PullRequestStack stack = new PullRequestStack(
                 12,
                 position,
                 2,
                 List.of(
-                        new PullRequestStack.Entry(1, 1, State.OPEN, below, "main"),
+                        new PullRequestStack.Entry(1, 1, belowState, below, "main"),
                         new PullRequestStack.Entry(2, number, State.OPEN, head, base)));
         return new PullRequest(number, head, base, false, Checks.NONE, Review.NONE, Option.of(stack), Option.none());
     }
@@ -69,6 +78,12 @@ class GitHubBasesTest {
         return GitHubBases.of(GitHubState.NOT_READ
                 .withPullRequests(Option.of(PullRequestsUpdate.byHeadBranch(pullRequests)))
                 .withProtectedBranches(Option.of(HashSet.of(protectedBranches).map(BranchName::new))));
+    }
+
+    private static GitHubBases onGitHub(List<PullRequest> pullRequests, String... remotes) {
+        return GitHubBases.of(GitHubState.NOT_READ
+                .withPullRequests(Option.of(PullRequestsUpdate.byHeadBranch(pullRequests)))
+                .withBranchChecks(Option.of(new GitHubChecks(HashSet.of(remotes), HashMap.empty()))));
     }
 
     private static Map<BranchName, BranchName> parents(
@@ -149,5 +164,35 @@ class GitHubBasesTest {
                         of(List.of(pr(97, "theirs", "base-remote"))),
                         List.of(branch("main"), following("base-local", "base-remote"), following("mine", "theirs")),
                         HashMap.empty()));
+    }
+
+    @Test
+    void aMergedPullRequestBelowInTheStackLeavesTheBaseGitHubMovedTheOneAboveOnto() {
+        assertEquals(
+                HashMap.of(name("feat/b"), name("main")),
+                parents(
+                        of(List.of(stacked(97, "feat/b", "main", 2, "feat/a", State.MERGED))),
+                        List.of(branch("main"), branch("feat/a"), branch("feat/b")),
+                        HashMap.of(name("feat/b"), name("feat/a"))));
+    }
+
+    @Test
+    void aBranchOnARemoteOtherThanGitHubTakesNoPullRequestOfTheSameName() {
+        assertEquals(
+                HashMap.of(name("fix"), name("feat/a")),
+                parents(
+                        onGitHub(List.of(pr(97, "fix", "feat/x")), "origin"),
+                        List.of(branch("main"), branch("feat/a"), branch("feat/x"), following("fix", "gitlab", "fix")),
+                        HashMap.of(name("fix"), name("feat/a"))));
+    }
+
+    @Test
+    void whileTheRemotesOnGitHubAreNotKnownABranchMayBeOnAny() {
+        assertEquals(
+                HashMap.of(name("fix"), name("feat/x")),
+                parents(
+                        of(List.of(pr(97, "fix", "feat/x"))),
+                        List.of(branch("main"), branch("feat/a"), branch("feat/x"), following("fix", "gitlab", "fix")),
+                        HashMap.of(name("fix"), name("feat/a"))));
     }
 }
