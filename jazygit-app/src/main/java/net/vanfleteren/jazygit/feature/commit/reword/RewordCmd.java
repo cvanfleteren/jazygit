@@ -25,6 +25,6 @@ public record RewordCmd(Sha sha, CommitMessage message) implements GitOperationC
 
     @Override
     public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
-        return git.reword(sha, message);
+        return git.commits().reword(sha, message);
     }
 }

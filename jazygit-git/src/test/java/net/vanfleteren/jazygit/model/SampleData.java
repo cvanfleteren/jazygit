@@ -129,7 +129,7 @@ public final class SampleData implements StubGitProvider {
         return new StubHistory() {
             @Override
             public Either<ProcessError, List<Commit>> commits(Sha head) {
-                return SampleData.this.commits();
+                return headLog();
             }
 
             @Override
@@ -142,7 +142,7 @@ public final class SampleData implements StubGitProvider {
     /**
      * The log of HEAD, wherever it is.
      */
-    public Either<ProcessError, List<Commit>> commits() {
+    public Either<ProcessError, List<Commit>> headLog() {
         return Either.right(MAIN);
     }
 

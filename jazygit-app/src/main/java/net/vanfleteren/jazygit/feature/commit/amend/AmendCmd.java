@@ -34,10 +34,13 @@ public record AmendCmd(AmendTarget target, List<String> stage) implements GitOpe
     @Override
     public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
         return switch (target) {
-            case LastCommit() -> GitFailure.sequence(() -> git.index().stage(stage), git::amendLastCommit);
+            case LastCommit() ->
+                GitFailure.sequence(
+                        () -> git.index().stage(stage), () -> git.commits().amendLast());
             case Older(Sha sha) ->
                 GitFailure.<GitError>sequence(
-                        () -> GitFailure.widen(git.index().stage(stage)), () -> git.amendCommit(sha));
+                        () -> GitFailure.widen(git.index().stage(stage)),
+                        () -> git.commits().amend(sha));
         };
     }
 }

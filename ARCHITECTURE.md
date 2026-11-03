@@ -838,7 +838,7 @@ classDiagram
         history() History
         branches() Branches
         checkout() Checkout
-        reword(Sha, CommitMessage) Either of GitFailure of GitError or commands
+        commits() Commits
         stashes() Stashes
         worktrees() Worktrees
         index() Index
@@ -865,6 +865,9 @@ classDiagram
     CliDiffs ..|> Diffs
     CliHistory ..|> History
     CliBranches ..|> Branches
+    CliCommits ..|> Commits
+    CliGitInfoProvider --> CliCommits : commits()
+    CliCommits ..> CliRebase
     CliGitInfoProvider --> CliEditor : editor()
     CliGitInfoProvider --> CliConfig : config()
     CliWorktrees ..|> Worktrees

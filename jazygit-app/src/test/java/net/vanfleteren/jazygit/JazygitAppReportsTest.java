@@ -58,7 +58,7 @@ class JazygitAppReportsTest {
 
     private static final BranchName MAIN = new BranchName("main");
 
-    private final List<Sha> commits = new SampleData().commits().get().map(commit -> commit.sha());
+    private final List<Sha> commits = new SampleData().headLog().get().map(commit -> commit.sha());
 
     @Test
     void theHighlightedCommitIsReportedAfterTheFrameAndThenNothing() throws Exception {

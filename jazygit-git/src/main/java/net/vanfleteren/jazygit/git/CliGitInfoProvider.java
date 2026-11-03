@@ -36,6 +36,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     private final CliDiffs diffs;
     private final CliHistory history;
     private final CliBranches branches;
+    private final CliCommits commits;
 
     private CliGitInfoProvider(
             Path worktree,
@@ -56,6 +57,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
         this.diffs = new CliDiffs(worktree);
         this.history = new CliHistory(worktree);
         this.branches = new CliBranches(worktree);
+        this.commits = new CliCommits(worktree);
     }
 
     /**
@@ -215,50 +217,8 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> commit(CommitMessage message) {
-        return CliCommit.commit(worktree, message);
-    }
-
-    @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> amendLastCommit() {
-        return CliCommit.amend(worktree);
-    }
-
-    @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> amendCommit(Sha sha) {
-        return CliCommit.amend(worktree, sha);
-    }
-
-    @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> reword(Sha sha, CommitMessage message) {
-        return CliCommit.reword(worktree, sha, message);
-    }
-
-    @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> squash(Sha sha, SquashMode mode) {
-        return CliCommit.squash(worktree, sha, mode);
-    }
-
-    @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> dropCommit(Sha sha) {
-        return CliRebase.drop(worktree, sha);
-    }
-
-    @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> moveCommits(
-            BranchName from, Sha oldest, BranchName to, Option<BranchRef> onto) {
-        return CliMoveCommits.move(worktree, from, oldest, to, onto);
-    }
-
-    @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> moveCommitsTo(
-            BranchName from, Sha oldest, BranchName to) {
-        return CliMoveCommits.moveTo(worktree, from, oldest, to);
-    }
-
-    @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> reset(ResetTarget target, ResetMode mode) {
-        return CliReset.reset(worktree, target, mode);
+    public Commits commits() {
+        return commits;
     }
 
     @Override

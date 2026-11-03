@@ -48,7 +48,7 @@ public sealed interface CreateCommitCmd extends GitOperationCmd {
 
         @Override
         public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
-            return git.commit(message);
+            return git.commits().commit(message);
         }
     }
 }

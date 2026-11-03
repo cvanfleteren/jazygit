@@ -4,14 +4,12 @@ import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Either;
-import io.vavr.control.Option;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitFile;
-import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.git.model.DeleteScope;
 import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.InProgressAction;
@@ -20,10 +18,7 @@ import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.RemoteName;
-import net.vanfleteren.jazygit.git.model.ResetMode;
-import net.vanfleteren.jazygit.git.model.ResetTarget;
 import net.vanfleteren.jazygit.git.model.Sha;
-import net.vanfleteren.jazygit.git.model.SquashMode;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
@@ -162,50 +157,8 @@ public interface StubGitProvider extends GitInfoProvider {
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> commit(CommitMessage message) {
-        return ran();
-    }
-
-    @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> amendLastCommit() {
-        return ran();
-    }
-
-    @Override
-    default Either<GitFailure<GitError>, List<ExecutedCommand>> amendCommit(Sha sha) {
-        return ran();
-    }
-
-    @Override
-    default Either<GitFailure<GitError>, List<ExecutedCommand>> reword(Sha sha, CommitMessage message) {
-        return ran();
-    }
-
-    @Override
-    default Either<GitFailure<GitError>, List<ExecutedCommand>> squash(Sha sha, SquashMode mode) {
-        return ran();
-    }
-
-    @Override
-    default Either<GitFailure<GitError>, List<ExecutedCommand>> dropCommit(Sha sha) {
-        return ran();
-    }
-
-    @Override
-    default Either<GitFailure<GitError>, List<ExecutedCommand>> moveCommits(
-            BranchName from, Sha oldest, BranchName to, Option<BranchRef> onto) {
-        return ran();
-    }
-
-    @Override
-    default Either<GitFailure<GitError>, List<ExecutedCommand>> moveCommitsTo(
-            BranchName from, Sha oldest, BranchName to) {
-        return ran();
-    }
-
-    @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> reset(ResetTarget target, ResetMode mode) {
-        return ran();
+    default Commits commits() {
+        return new StubCommits() {};
     }
 
     @Override

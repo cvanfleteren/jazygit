@@ -394,7 +394,7 @@ class JazygitAppPilotTest {
 
             assertTrue(fixture.dispatched()
                     .contains(new RewordMsg.Requested(
-                            fixture.data().commits().get().head().sha())));
+                            fixture.data().headLog().get().head().sha())));
 
             pilot.quit();
         }

@@ -37,6 +37,7 @@ import net.vanfleteren.jazygit.feature.stage.StageMsg;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.git.Branches;
 import net.vanfleteren.jazygit.git.Checkout;
+import net.vanfleteren.jazygit.git.Commits;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
@@ -46,6 +47,7 @@ import net.vanfleteren.jazygit.git.Stashes;
 import net.vanfleteren.jazygit.git.Status;
 import net.vanfleteren.jazygit.git.StubBranches;
 import net.vanfleteren.jazygit.git.StubCheckout;
+import net.vanfleteren.jazygit.git.StubCommits;
 import net.vanfleteren.jazygit.git.StubDiffs;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.StubHistory;
@@ -258,31 +260,6 @@ class ProgramTest {
             };
         }
 
-        @Override
-        public Either<GitFailure<GitError>, List<ExecutedCommand>> squash(Sha sha, SquashMode mode) {
-            return StubGitProvider.ran("git squash");
-        }
-
-        @Override
-        public Either<GitFailure<GitError>, List<ExecutedCommand>> reword(Sha sha, CommitMessage message) {
-            commits.add("reword " + message.summary() + "|" + message.description());
-            return StubGitProvider.ran("git reword");
-        }
-
-        @Override
-        public Either<GitFailure<ProcessError>, List<ExecutedCommand>> amendLastCommit() {
-            return onIndex("amend", List.of(), "git amendLastCommit");
-        }
-
-        @Override
-        public Either<GitFailure<ProcessError>, List<ExecutedCommand>> commit(CommitMessage message) {
-            if (commitFailure != null) {
-                return StubGitProvider.refused("git commit", commitFailure);
-            }
-            commits.add(message.summary() + "|" + message.description());
-            return StubGitProvider.ran("git commit");
-        }
-
         private static Commit commit(String sha) {
             return Fixtures.commit(new Sha(sha), "Ada", "ada@example.com", Instant.EPOCH, "msg", "");
         }
@@ -309,6 +286,36 @@ class ProgramTest {
             }
             indexCalls.add(operation + paths.asJava());
             return StubGitProvider.ran(command);
+        }
+
+        @Override
+        public Commits commits() {
+            return new StubCommits() {
+                @Override
+                public Either<GitFailure<GitError>, List<ExecutedCommand>> squash(Sha sha, SquashMode mode) {
+                    return StubGitProvider.ran("git squash");
+                }
+
+                @Override
+                public Either<GitFailure<GitError>, List<ExecutedCommand>> reword(Sha sha, CommitMessage message) {
+                    commits.add("reword " + message.summary() + "|" + message.description());
+                    return StubGitProvider.ran("git reword");
+                }
+
+                @Override
+                public Either<GitFailure<ProcessError>, List<ExecutedCommand>> amendLast() {
+                    return onIndex("amend", List.of(), "git amendLastCommit");
+                }
+
+                @Override
+                public Either<GitFailure<ProcessError>, List<ExecutedCommand>> commit(CommitMessage message) {
+                    if (commitFailure != null) {
+                        return StubGitProvider.refused("git commit", commitFailure);
+                    }
+                    commits.add(message.summary() + "|" + message.description());
+                    return StubGitProvider.ran("git commit");
+                }
+            };
         }
     }
 

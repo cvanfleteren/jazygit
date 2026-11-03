@@ -24,6 +24,6 @@ public record DropCmd(Sha sha) implements GitOperationCmd {
 
     @Override
     public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
-        return git.dropCommit(sha);
+        return git.commits().drop(sha);
     }
 }

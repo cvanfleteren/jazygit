@@ -220,7 +220,7 @@ class CommitDialogTest {
         open = Update.update(
                         TestModels.loaded(new SampleData()),
                         new RewordMsg.Requested(
-                                new SampleData().commits().get().head().sha()))
+                                new SampleData().headLog().get().head().sha()))
                 .model();
         Commit last = open.popup(RewordPopup.class).get().commit();
 
@@ -243,7 +243,7 @@ class CommitDialogTest {
         open = Update.update(
                         TestModels.loaded(new SampleData()),
                         new RewordMsg.Requested(
-                                new SampleData().commits().get().head().sha()))
+                                new SampleData().headLog().get().head().sha()))
                 .model();
         Commit last = open.popup(RewordPopup.class).get().commit();
 
@@ -267,7 +267,7 @@ class CommitDialogTest {
         open = Update.update(
                         TestModels.loaded(new SampleData()),
                         new RewordMsg.Requested(
-                                new SampleData().commits().get().head().sha()))
+                                new SampleData().headLog().get().head().sha()))
                 .model();
         Commit last = open.popup(RewordPopup.class).get().commit();
 

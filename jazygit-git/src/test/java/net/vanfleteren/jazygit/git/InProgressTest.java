@@ -174,7 +174,7 @@ class InProgressTest {
         write("a.txt", "amended\n");
         git("add", "a.txt");
         // The staged change is to what the last commit made of a.txt, which the first one does not have.
-        GitFailure<GitError> stop = git.amendCommit(sha("main~1")).getLeft();
+        GitFailure<GitError> stop = git.commits().amend(sha("main~1")).getLeft();
         assertInstanceOf(GitError.StoppedOnConflicts.class, stop.error());
 
         assertEquals(
@@ -196,7 +196,7 @@ class InProgressTest {
         String before = git("rev-parse", "HEAD");
         write("a.txt", "amended\n");
         git("add", "a.txt");
-        git.amendCommit(sha("main~2")).getLeft();
+        git.commits().amend(sha("main~2")).getLeft();
         write("a.txt", "resolved\n");
         git("add", "a.txt");
         // The commit after the amended one changed a.txt too, so it stops again.
