@@ -1,4 +1,4 @@
-# 71. Stacks in the branches list
+# 72. Stacks in the branches list
 
 Date: 2026-11-03
 
@@ -11,13 +11,13 @@ branches that have nothing to do with them.
 
 Stacks are also made before GitHub knows of them: a branch made from a branch records its parent in
 `branch.<name>.gh-merge-base` (ADR 3), and an agent working in the background opens pull requests with
-`gh pr create --base <the branch below>`, which GitHub does not link into a stack until it is asked to (ADR 72).
+`gh pr create --base <the branch below>`, which GitHub does not link into a stack until it is asked to (ADR 73).
 
 GitHub's stacks are linear: every pull request has one below it and at most one above it. `gh-stack`, GitHub's
 extension for them, keeps its own list of the branches of a stack in `.git/gh-stack`, a JSON file of its own.
 
-This is the first of three ADRs on stacks: how they show (this one), making and unmaking them (ADR 72), and
-rebasing and pushing them (ADR 73).
+This is the first of three ADRs on stacks: how they show (this one), making and unmaking them (ADR 73), and
+rebasing and pushing them (ADR 74).
 
 ## Decision
 
@@ -47,7 +47,7 @@ that is not checked out has no parent, and stops a stack there.
 - Two or more local branches, each the parent of the next, that are not in a stack on GitHub: a chain, a stack that
   GitHub does not know of yet.
 - A chain on the top of a stack on GitHub is part of that stack: its branches are leaves above the linked ones,
-  without a `n/m`, until they are linked too (ADR 72).
+  without a `n/m`, until they are linked too (ADR 73).
 - A stack is linear, as GitHub's are. A branch that is the parent of two ends a chain: each of its children starts a
   stack of its own, on it. A chain is never shown as a tree of branches.
 

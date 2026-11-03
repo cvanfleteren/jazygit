@@ -96,5 +96,5 @@ review, which no longer matter:
   not show, every pull request read and merge would fail. Asking without those fields, and merging with `gh pr merge`,
   when a server does not have them, is left until a server needs it.
 
-Amended by ADR 71, 72 and 73: stacks show as a node of the branches list, are linked and unstacked from jazygit, and
+Amended by ADR 72, 73 and 74: stacks show as a node of the branches list, are linked and unstacked from jazygit, and
 are rebased and pushed whole.
