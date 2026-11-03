@@ -15,11 +15,11 @@ import java.util.function.Supplier;
 import net.vanfleteren.jazygit.feature.commit.create.CommitPopup;
 import net.vanfleteren.jazygit.feature.commit.reword.RewordPopup;
 import net.vanfleteren.jazygit.gh.StubGitHub;
-import net.vanfleteren.jazygit.git.Editor;
+import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.StubEditor;
-import net.vanfleteren.jazygit.git.StubGitProvider;
+import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -78,7 +78,7 @@ class MessageEditorUpdateTest {
 
     @Test
     void theRewordDialogShowsTheEditedMessageToo() {
-        RewordPopup rewording = new RewordPopup(new SampleData().headLog().get().head());
+        RewordPopup rewording = new RewordPopup(SampleData.headLog().get().head());
 
         Model edited = Update.update(loaded().openPopup(rewording), new MessageEditorMsg.Edited(EDITED, List.of(NVIM)))
                 .model();
@@ -106,19 +106,14 @@ class MessageEditorUpdateTest {
                 return result;
             }
         };
-        StubGitProvider git = new StubGitProvider() {
+        Git git = StubGit.of().withEditor(new StubEditor() {
             @Override
-            public Editor editor() {
-                return new StubEditor() {
-                    @Override
-                    public Either<GitFailure<GitError>, Tuple2<CommitMessage, List<ExecutedCommand>>> editMessage(
-                            CommitMessage message) {
-                        events.add("edit " + message.summary());
-                        return Either.right(Tuple.of(EDITED, List.of(NVIM)));
-                    }
-                };
+            public Either<GitFailure<GitError>, Tuple2<CommitMessage, List<ExecutedCommand>>> editMessage(
+                    CommitMessage message) {
+                events.add("edit " + message.summary());
+                return Either.right(Tuple.of(EDITED, List.of(NVIM)));
             }
-        };
+        });
 
         assertEquals(
                 new MessageEditorMsg.Edited(EDITED, List.of(NVIM)),
@@ -128,18 +123,13 @@ class MessageEditorUpdateTest {
 
     @Test
     void anEditorThatFailsKeepsTheDialogAndShowsWhy() {
-        StubGitProvider git = new StubGitProvider() {
+        Git git = StubGit.of().withEditor(new StubEditor() {
             @Override
-            public Editor editor() {
-                return new StubEditor() {
-                    @Override
-                    public Either<GitFailure<GitError>, Tuple2<CommitMessage, List<ExecutedCommand>>> editMessage(
-                            CommitMessage message) {
-                        return Either.left(new GitFailure<>(new GitError.EditorFailed("nvim", 1), List.of()));
-                    }
-                };
+            public Either<GitFailure<GitError>, Tuple2<CommitMessage, List<ExecutedCommand>>> editMessage(
+                    CommitMessage message) {
+                return Either.left(new GitFailure<>(new GitError.EditorFailed("nvim", 1), List.of()));
             }
-        };
+        });
 
         Model failed = Update.update(committing(), new MessageEditorCmd(TYPED).run(env(git, Terminal.NONE)))
                 .model();
@@ -150,7 +140,7 @@ class MessageEditorUpdateTest {
         assertEquals(MessageEditorCmd.EDIT_MESSAGE, error.operation());
     }
 
-    private static Env env(StubGitProvider git, Terminal terminal) {
+    private static Env env(Git git, Terminal terminal) {
         return new Env(
                 git, StubGitHub.empty(), SettingsStore.NONE, RecentRepositories.NONE, Repositories.NONE, terminal);
     }

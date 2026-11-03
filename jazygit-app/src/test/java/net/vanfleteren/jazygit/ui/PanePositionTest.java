@@ -12,12 +12,13 @@ import io.vavr.control.Either;
 import java.time.Instant;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.git.Branches;
+import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.History;
 import net.vanfleteren.jazygit.git.Status;
 import net.vanfleteren.jazygit.git.StubBranches;
-import net.vanfleteren.jazygit.git.StubGitProvider;
+import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.git.StubHistory;
 import net.vanfleteren.jazygit.git.StubStatus;
 import net.vanfleteren.jazygit.git.model.Branch;
@@ -39,10 +40,12 @@ import org.junit.jupiter.api.Test;
  */
 class PanePositionTest {
 
-    private record FixedProvider(List<FileEntry> files, List<Branch> branchList, List<Commit> commitList)
-            implements StubGitProvider {
+    private static Git fixed(List<FileEntry> files, List<Branch> branchList, List<Commit> commitList) {
+        return new FixedProvider(files, branchList, commitList).git();
+    }
 
-        @Override
+    private record FixedProvider(List<FileEntry> files, List<Branch> branchList, List<Commit> commitList) {
+
         public Status status() {
             return new StubStatus() {
                 @Override
@@ -52,7 +55,6 @@ class PanePositionTest {
             };
         }
 
-        @Override
         public Branches branches() {
             return new StubBranches() {
                 @Override
@@ -62,7 +64,6 @@ class PanePositionTest {
             };
         }
 
-        @Override
         public History history() {
             return new StubHistory() {
                 @Override
@@ -76,9 +77,13 @@ class PanePositionTest {
                 }
             };
         }
+
+        Git git() {
+            return StubGit.of().withStatus(status()).withBranches(branches()).withHistory(history());
+        }
     }
 
-    private static final Model MODEL = TestModels.loaded(new FixedProvider(
+    private static final Model MODEL = TestModels.loaded(fixed(
             List.of(
                     Fixtures.fileEntry("net/vanfleteren/A.java", ChangeType.MODIFIED),
                     Fixtures.fileEntry("net/vanfleteren/B.java", ChangeType.UNTRACKED)),

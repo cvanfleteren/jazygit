@@ -6,9 +6,9 @@ import io.vavr.control.Option;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.feature.forcedelete.ForceDeleteCmd;
 import net.vanfleteren.jazygit.feature.worktree.WorktreeCmd;
+import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
-import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.Worktrees;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
@@ -71,7 +71,7 @@ public record RemoveWorktreeCmd(String location, boolean force, Option<BranchNam
     }
 
     @Override
-    public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
+    public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
         return removing(git);
     }
 
@@ -89,7 +89,7 @@ public record RemoveWorktreeCmd(String location, boolean force, Option<BranchNam
                         this::succeeded);
     }
 
-    private Either<GitFailure<GitError>, List<ExecutedCommand>> removing(GitInfoProvider git) {
+    private Either<GitFailure<GitError>, List<ExecutedCommand>> removing(Git git) {
         Path path = WorktreeCmd.path(location);
         Worktrees worktrees = git.worktrees();
         return GitFailure.sequence(

@@ -327,7 +327,7 @@ class CliStashesTest {
 
     // Through the provider, as the app reaches them.
     private Stashes stashes() {
-        return CliGitInfoProvider.open(repo).get().stashes();
+        return CliGit.open(repo).get().stashes();
     }
 
     private void init() throws Exception {

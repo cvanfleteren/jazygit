@@ -32,7 +32,7 @@ The packages keep their names (`net.vanfleteren.jazygit.git`, ...), whichever mo
 cannot see the application, TamboUI, picocli or night-config, and git and gh cannot see each other, so the compiler
 stops any such dependency. The rules inside the core (the models are pure, failures are values) are in
 `CoreRules` and `ModelRules`, which `ProcessArchitectureTest`, `GitArchitectureTest` and `GhArchitectureTest` take
-in. The test-jars of git and gh share `StubGitProvider`, `SampleData` and `StubGitHub` with the app's tests.
+in. The test-jars of git and gh share `StubGit` with a stub of each role, `SampleData` and `StubGitHub` with the app's tests.
 `jazygit-json` knows nothing of jazygit; only its `JsonReader` uses Parsson, and the core and the app do not use it
 at all (`JsonArchitectureTest`, `CoreRules`, `ArchitectureTest`). `jazygit-syntax` knows nothing of jazygit either,
 not even of a diff: it lexes a line from where the line before it left the scanner, and uses only the JDK and vavr
@@ -50,7 +50,7 @@ graph TD
     Keys["keys<br/><i>Keymap: every shortcut, declared once</i>"]
     Feature["feature.*<br/><i>branch, commit, stage, stash, discard,<br/>github, fetch, error, help, theme, repos,<br/>settings, worktree, inprogress, edit, start</i>"]
     State["state<br/><i>Model, Msg, Update, Cmd, Program</i>"]
-    Git["git<br/><i>GitInfoProvider, CliGitInfoProvider, Cli*, GitProcess, GitError</i>"]
+    Git["git<br/><i>Git, its roles, CliGit, Cli*, GitProcess, GitError</i>"]
     GitModel["git.model<br/><i>Branch, Commit, RepoStatus, Sha, ...</i>"]
     Gh["gh<br/><i>GitHub, CliGitHub, GhProcess, GhError</i>"]
     GhModel["gh.model<br/><i>PullRequest, PullRequestDetails, ...</i>"]
@@ -185,7 +185,7 @@ shown in the one still open.
 When the start directory is in no repository, or does not exist, `Launcher` runs `StartApp` before `JazygitApp`
 (`feature.start`, see `documentation/adr/0028-start-outside-a-repository.md`). It asks what to open instead:
 
-- `i` makes the folder a repository with a plain `git init` (`CliGitInfoProvider.init`), unless it does not exist;
+- `i` makes the folder a repository with a plain `git init` (`CliGit.init`), unless it does not exist;
 - `o` asks for the path of another folder, relative to the folder asked about, or from `~`. One inside a repository
   opens it; one outside any is asked about in turn; a path that names no folder is said under the input;
 - `r` lists the recent repositories, when there are any;
@@ -697,7 +697,7 @@ classDiagram
     }
     class GitOperationCmd {
         <<interface>>
-        +perform(GitInfoProvider) Either
+        +perform(Git) Either
     }
     class Model {
         <<record>>
@@ -740,7 +740,7 @@ classDiagram
   `Cancelled` message of its own, with `cancelledBy` on the spec, only when Escape does more than close. Likewise,
   a popup whose confirmation only starts its operation is a `ConfirmablePopup`: its `confirm()` makes the command,
   and Enter sends `Msg.PopupConfirmed(type)`, which `Spec.confirming(...)` sets up.
-- **`Cmd` is immutable data** that knows how to run itself against an `Env` (the `GitInfoProvider` and the
+- **`Cmd` is immutable data** that knows how to run itself against an `Env` (the `Git` and the
   `GitHub`) and how to report failure:
   - `run` folds the provider's `Either` into a `Msg`.
   - `failed(Failure)` turns a failure into the failure `Msg`. A `Failure` is data: `Failure.Git` (the
@@ -758,7 +758,7 @@ classDiagram
   the repository again. A feature only adds its own messages for outcomes that really
   are special, like `CheckoutMsg.NeedsStash`; `OperationUpdate.succeeded` is what any success does, which
   such a message adds to. A `GitOperationCmd` is one done through git alone: it only implements
-  `perform(GitInfoProvider)`. The others, like creating a pull request, implement `run(Env)` themselves.
+  `perform(Git)`. The others, like creating a pull request, implement `run(Env)` themselves.
 - **Operations are started through `Update`.**
   - `Update.start` marks the operation's branch busy.
   - `Update.ask` opens the popup that asks about an operation, which clears the error of the last one.
@@ -831,8 +831,10 @@ no operation, like switching the lists of the branches pane from the worktrees, 
 
 ```mermaid
 classDiagram
-    class GitInfoProvider {
-        <<interface>>
+    class Git {
+        <<record>>
+        worktree() Path
+        repositoryName() String
         status() Status
         diffs() Diffs
         history() History
@@ -848,8 +850,10 @@ classDiagram
         config() Config
         ...
     }
-    class CliGitInfoProvider {
-        +open(Path) Either of GitError or provider
+    class CliGit {
+        +open(Path) Either of GitError or Git
+        +init(Path) Either of GitFailure of GitError or Git
+        +withCredentials(Git, credentials) Git
     }
     class Stashes {
         <<interface>>
@@ -857,7 +861,8 @@ classDiagram
         pop(Stash) Either of GitFailure of GitError or commands
         ...
     }
-    CliGitInfoProvider ..|> GitInfoProvider
+    CliGit ..> Git : gives
+    Git --> Stashes : stashes()
     CliStashes ..|> Stashes
     CliCheckout ..|> Checkout
     CliStatus ..|> Status
@@ -871,21 +876,8 @@ classDiagram
     CliIntegrate ..|> Integrate
     CliRemotes ..|> Remotes
     CliIntegrate ..> CliRebase
-    CliGitInfoProvider --> CliCommits : commits()
     CliCommits ..> CliRebase
-    CliGitInfoProvider --> CliEditor : editor()
-    CliGitInfoProvider --> CliConfig : config()
     CliWorktrees ..|> Worktrees
-    CliGitInfoProvider --> CliWorktrees : worktrees()
-    CliGitInfoProvider --> CliStatus : status()
-    CliGitInfoProvider --> CliBranches : branches()
-    CliGitInfoProvider --> CliHistory : history()
-    CliGitInfoProvider --> CliDiffs : diffs()
-    CliGitInfoProvider --> CliCheckout : checkout()
-    CliGitInfoProvider --> CliIndex : index()
-    CliGitInfoProvider --> CliIntegrate : integrate()
-    CliGitInfoProvider --> CliStashes : stashes()
-    CliGitInfoProvider --> CliRemotes : remotes()
     CliRebase ..> Unfinished
     CliIntegrate ..> Unfinished
     CliBranches ..> Unfinished
@@ -894,10 +886,12 @@ classDiagram
 
 Every `Cli*` class runs git through `GitProcess`; only a few of those arrows are drawn.
 
-The operations are being split into roles (ADR 69): an interface per role, such as `Stashes`, implemented by a
-package-private `Cli` class that holds the code, such as `CliStashes`, which the provider hands out
-(`git.stashes().pop(stash)`). A role a `Cli` class calls into stays a static method of that class. The diagram shows
-each role that is split off this way; the `Cli*` classes it still points to with a dotted arrow are static helpers.
+The operations are split into 13 roles (ADR 69): an interface per role, such as `Stashes`, implemented by a
+package-private `Cli` class that holds the code, such as `CliStashes`. A `Git` record holds one of each, with the
+worktree and the name of the repository (`git.stashes().pop(stash)`), and `CliGit` gives the one of a real
+repository; an ArchUnit rule keeps the application away from the other `Cli` classes. What a `Cli` class calls in
+another stays a static method of that one. The `Cli*` classes the diagram points to with a dotted arrow are static
+helpers. A test replaces the roles it needs on `StubGit.of()`, as in `StubGit.of().withBranches(new StubBranches() { … })`.
 
 - **Everything goes through the `git` command line**, so the repository is read and changed exactly as
   git itself does: its configuration, hooks, credentials and repository formats included.
@@ -926,7 +920,7 @@ each role that is split off this way; the `Cli*` classes it still points to with
       is long, and parses the files `--name-status -z` lists, for a commit, a range, a stash and a pull request.
   - **Writes:** `CliCheckout`, `CliBranches` (rename, delete), `CliIndex` (stage, commit, discard),
     `CliCommits`, `CliIntegrate`, `CliRebase`, `CliStashes`, `CliRemotes` (push, pull, fetch, delete on the remote) and `CliWorktrees` (add, remove).
-  - **Opening:** `CliGitInfoProvider.open` asks `git rev-parse` whether the directory is in a repository,
+  - **Opening:** `CliGit.open` asks `git rev-parse` whether the directory is in a repository,
     whether that is bare, where its working tree is, and where git keeps the files that tell what it is in the
     middle of.
 - **`GitProcess.run(worktree, GitCommand)`** is the only place that starts git, through `process.Exec`:
@@ -985,7 +979,7 @@ resolved with `ssh -G`). The settings list the accounts with `gh auth status --j
 
 `GhToken` asks `gh auth token --user <login> --hostname <host>` once, the first time it is needed, and keeps
 the token in memory only. `GhProcess` sets it as `GH_TOKEN` (`GH_ENTERPRISE_TOKEN` and `GH_HOST` for a
-GitHub Enterprise Server) for every gh command, and `CliGitInfoProvider.withCredentials` sets it for git's
+GitHub Enterprise Server) for every gh command, and `CliGit.withCredentials` sets it for git's
 commands that talk to a remote, for gh's credential helper. A token GitHub rejects is asked again once. A
 token gh does not have is kept as `GhError.TokenUnavailable`: gh does not run as another account, the error
 is shown once, and git still talks to the remotes without it. Without a configured account, nothing is set,
@@ -1075,7 +1069,7 @@ sequenceDiagram
     participant App as JazygitApp.render
     participant Dialog as CommitDialog.reword
     participant IO as git-io thread
-    participant Provider as CliGitInfoProvider
+    participant Provider as Git
     participant Git as git CLI
 
     User->>Panel: presses "r" on a commit
@@ -1197,9 +1191,9 @@ flowchart TD
 
 - **Update functions** are pure, so most tests build a `Model` (`TestModels`), apply a `Msg` and
   assert on the next model and its commands. No git is involved.
-- **`ProgramTest`** runs the real loop with queue executors and a fake provider (`StubGitProvider`
+- **`ProgramTest`** runs the real loop with queue executors and a fake repository (`StubGit`
   gives every method a default).
-- **The git layer** is tested against real temporary repositories: `CliGitInfoProviderTest`,
+- **The git layer** is tested against real temporary repositories: `CliGitTest`,
   `CliCheckoutTest`, `CliDiscardTest`, `CliDiffsTest`, `CliIntegrateTest` and `GitProcessTest`. The parsers
   (`CliStatus.parse`, `CliBranches.parse`, `CliHistory.parse`) are tested on fixed git output in
   `CliStatusTest` and `CliParseTest`.

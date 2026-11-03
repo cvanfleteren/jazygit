@@ -34,11 +34,11 @@ import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Branches;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.gh.model.PullRequestEdit;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
-import net.vanfleteren.jazygit.git.Editor;
+import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.StubEditor;
-import net.vanfleteren.jazygit.git.StubGitProvider;
+import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Fixtures;
@@ -124,12 +124,12 @@ class EditPullRequestUpdateTest {
         return withBranches().openPopup(EDITING.withFields(fields));
     }
 
-    private static Env env(StubGitProvider git, StubGitHub gitHub, Terminal terminal) {
+    private static Env env(Git git, StubGitHub gitHub, Terminal terminal) {
         return new Env(git, gitHub, SettingsStore.NONE, RecentRepositories.NONE, Repositories.NONE, terminal);
     }
 
     private static Env env(StubGitHub gitHub) {
-        return env(new StubGitProvider() {}, gitHub, Terminal.NONE);
+        return env(StubGit.of(), gitHub, Terminal.NONE);
     }
 
     private static Next saving(PullRequestFields fields) {
@@ -493,19 +493,14 @@ class EditPullRequestUpdateTest {
                 return result;
             }
         };
-        StubGitProvider git = new StubGitProvider() {
+        Git git = StubGit.of().withEditor(new StubEditor() {
             @Override
-            public Editor editor() {
-                return new StubEditor() {
-                    @Override
-                    public Either<GitFailure<GitError>, Tuple2<String, List<ExecutedCommand>>> editText(
-                            String fileName, String text) {
-                        events.add("edit " + fileName + " " + text);
-                        return Either.right(Tuple.of("Because", List.of(NVIM)));
-                    }
-                };
+            public Either<GitFailure<GitError>, Tuple2<String, List<ExecutedCommand>>> editText(
+                    String fileName, String text) {
+                events.add("edit " + fileName + " " + text);
+                return Either.right(Tuple.of("Because", List.of(NVIM)));
             }
-        };
+        });
 
         assertEquals(
                 new EditPullRequestMsg.EditorClosed("Because", List.of(NVIM)),
@@ -528,18 +523,13 @@ class EditPullRequestUpdateTest {
 
     @Test
     void anEditorThatFailsKeepsTheBodyAndShowsWhy() {
-        StubGitProvider git = new StubGitProvider() {
+        Git git = StubGit.of().withEditor(new StubEditor() {
             @Override
-            public Editor editor() {
-                return new StubEditor() {
-                    @Override
-                    public Either<GitFailure<GitError>, Tuple2<String, List<ExecutedCommand>>> editText(
-                            String fileName, String text) {
-                        return Either.left(new GitFailure<>(new GitError.EditorFailed("nvim", 1), List.of()));
-                    }
-                };
+            public Either<GitFailure<GitError>, Tuple2<String, List<ExecutedCommand>>> editText(
+                    String fileName, String text) {
+                return Either.left(new GitFailure<>(new GitError.EditorFailed("nvim", 1), List.of()));
             }
-        };
+        });
 
         Model failed = Update.update(
                         editing(OPENED), new EditBody("Why").run(env(git, StubGitHub.empty(), Terminal.NONE)))

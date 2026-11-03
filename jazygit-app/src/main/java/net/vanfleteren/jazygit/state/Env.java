@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
 import net.vanfleteren.jazygit.gh.GitHub;
-import net.vanfleteren.jazygit.git.GitInfoProvider;
+import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.settings.CheckTimingsStore;
 import net.vanfleteren.jazygit.settings.CollapsedStore;
 import net.vanfleteren.jazygit.settings.RecentRepositories;
@@ -14,7 +14,7 @@ import net.vanfleteren.jazygit.settings.UnseenPullRequestsStore;
  * collapsed or opened are kept, where another repository is opened, and the terminal the app is shown on.
  */
 public record Env(
-        GitInfoProvider git,
+        Git git,
         GitHub gitHub,
         SettingsStore settings,
         RecentRepositories recent,
@@ -28,7 +28,7 @@ public record Env(
      * As given, keeping no review threads collapsed or opened.
      */
     public Env(
-            GitInfoProvider git,
+            Git git,
             GitHub gitHub,
             SettingsStore settings,
             RecentRepositories recent,
@@ -43,7 +43,7 @@ public record Env(
      * As given, keeping no check timings.
      */
     public Env(
-            GitInfoProvider git,
+            Git git,
             GitHub gitHub,
             SettingsStore settings,
             RecentRepositories recent,
@@ -57,7 +57,7 @@ public record Env(
      * As given, keeping no unseen pull requests.
      */
     public Env(
-            GitInfoProvider git,
+            Git git,
             GitHub gitHub,
             SettingsStore settings,
             RecentRepositories recent,
@@ -69,19 +69,14 @@ public record Env(
     /**
      * As given, on no terminal.
      */
-    public Env(
-            GitInfoProvider git,
-            GitHub gitHub,
-            SettingsStore settings,
-            RecentRepositories recent,
-            Repositories repositories) {
+    public Env(Git git, GitHub gitHub, SettingsStore settings, RecentRepositories recent, Repositories repositories) {
         this(git, gitHub, settings, recent, repositories, Terminal.NONE);
     }
 
     /**
      * Against git and gh, keeping no settings and no recent repositories, and opening no other repository.
      */
-    public Env(GitInfoProvider git, GitHub gitHub) {
+    public Env(Git git, GitHub gitHub) {
         this(git, gitHub, SettingsStore.NONE);
     }
 
@@ -89,7 +84,7 @@ public record Env(
      * Against git and gh, keeping the settings in {@code settings}, keeping no recent repositories, and opening
      * no other repository.
      */
-    public Env(GitInfoProvider git, GitHub gitHub, SettingsStore settings) {
+    public Env(Git git, GitHub gitHub, SettingsStore settings) {
         this(git, gitHub, settings, RecentRepositories.NONE, Repositories.NONE);
     }
 

@@ -4,13 +4,14 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import java.time.Instant;
 import net.vanfleteren.jazygit.git.Branches;
+import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.History;
 import net.vanfleteren.jazygit.git.Status;
 import net.vanfleteren.jazygit.git.StubBranches;
 import net.vanfleteren.jazygit.git.StubDiffs;
-import net.vanfleteren.jazygit.git.StubGitProvider;
+import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.git.StubHistory;
 import net.vanfleteren.jazygit.git.StubStatus;
 import net.vanfleteren.jazygit.git.model.*;
@@ -18,7 +19,7 @@ import net.vanfleteren.jazygit.git.model.*;
 /**
  * Fixed sample data used by tests, so they don't depend on the state of a real repository.
  */
-public final class SampleData implements StubGitProvider {
+public final class SampleData {
 
     private static final String ADA = "Ada Lovelace <ada@example.com>";
     private static final String GRACE = "Grace Hopper <grace@example.com>";
@@ -66,13 +67,21 @@ public final class SampleData implements StubGitProvider {
                 .mkString();
     }
 
-    @Override
-    public String repositoryName() {
-        return "jazygit";
+    private SampleData() {}
+
+    /**
+     * The sample repository, {@code jazygit}, as a {@link Git} whose status, branches, history and diffs are the
+     * samples; its other roles are stubs.
+     */
+    public static Git git() {
+        return StubGit.of(StubGit.WORKTREE, "jazygit")
+                .withStatus(status())
+                .withBranches(branches())
+                .withHistory(history())
+                .withDiffs(diffs());
     }
 
-    @Override
-    public Status status() {
+    private static Status status() {
         return new StubStatus() {
             @Override
             public Either<ProcessError, RepoStatus> read() {
@@ -93,8 +102,7 @@ public final class SampleData implements StubGitProvider {
         };
     }
 
-    @Override
-    public Branches branches() {
+    private static Branches branches() {
         return new StubBranches() {
             @Override
             public Either<ProcessError, List<Branch>> local() {
@@ -124,8 +132,7 @@ public final class SampleData implements StubGitProvider {
         };
     }
 
-    @Override
-    public History history() {
+    private static History history() {
         return new StubHistory() {
             @Override
             public Either<ProcessError, List<Commit>> commits(Sha head) {
@@ -142,7 +149,7 @@ public final class SampleData implements StubGitProvider {
     /**
      * The log of HEAD, wherever it is.
      */
-    public Either<ProcessError, List<Commit>> headLog() {
+    public static Either<ProcessError, List<Commit>> headLog() {
         return Either.right(MAIN);
     }
 
@@ -170,8 +177,7 @@ public final class SampleData implements StubGitProvider {
         };
     }
 
-    @Override
-    public net.vanfleteren.jazygit.git.Diffs diffs() {
+    private static net.vanfleteren.jazygit.git.Diffs diffs() {
         return new StubDiffs() {
             @Override
             public Either<ProcessError, DiffText> commitChanges(Sha sha, DiffOptions options) {

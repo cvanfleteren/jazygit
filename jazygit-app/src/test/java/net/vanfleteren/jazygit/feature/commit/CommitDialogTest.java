@@ -56,7 +56,7 @@ class CommitDialogTest {
 
     private static Model openModel() {
         // The sample data has staged files, so the commit popup opens directly.
-        Model loaded = TestModels.loaded(new SampleData());
+        Model loaded = TestModels.loaded(SampleData.git());
         Model asked = Update.update(loaded, new CommitMsg.Requested()).model();
         return asked.popup(CommitPopup.class).isDefined()
                 ? asked
@@ -218,9 +218,9 @@ class CommitDialogTest {
     void upInTheRewordDialogSkipsTheSummaryOfTheCommitItself() throws Exception {
         CommitDialog reword = CommitDialog.reword(this::dispatch);
         open = Update.update(
-                        TestModels.loaded(new SampleData()),
+                        TestModels.loaded(SampleData.git()),
                         new RewordMsg.Requested(
-                                new SampleData().headLog().get().head().sha()))
+                                SampleData.headLog().get().head().sha()))
                 .model();
         Commit last = open.popup(RewordPopup.class).get().commit();
 
@@ -241,9 +241,9 @@ class CommitDialogTest {
     void rewordStartsOutWithTheCurrentMessageAndConfirmsIt() throws Exception {
         CommitDialog reword = CommitDialog.reword(this::dispatch);
         open = Update.update(
-                        TestModels.loaded(new SampleData()),
+                        TestModels.loaded(SampleData.git()),
                         new RewordMsg.Requested(
-                                new SampleData().headLog().get().head().sha()))
+                                SampleData.headLog().get().head().sha()))
                 .model();
         Commit last = open.popup(RewordPopup.class).get().commit();
 
@@ -265,9 +265,9 @@ class CommitDialogTest {
     void typingInTheRewordDialogAddsToTheEndOfTheCurrentSummary() throws Exception {
         CommitDialog reword = CommitDialog.reword(this::dispatch);
         open = Update.update(
-                        TestModels.loaded(new SampleData()),
+                        TestModels.loaded(SampleData.git()),
                         new RewordMsg.Requested(
-                                new SampleData().headLog().get().head().sha()))
+                                SampleData.headLog().get().head().sha()))
                 .model();
         Commit last = open.popup(RewordPopup.class).get().commit();
 

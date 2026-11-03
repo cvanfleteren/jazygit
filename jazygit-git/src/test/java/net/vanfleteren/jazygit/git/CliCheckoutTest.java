@@ -133,7 +133,7 @@ class CliCheckoutTest {
 
     // Through the provider, as the app reaches it.
     private Checkout checkout() {
-        return CliGitInfoProvider.open(repo).get().checkout();
+        return CliGit.open(repo).get().checkout();
     }
 
     private String git(String... args) throws Exception {

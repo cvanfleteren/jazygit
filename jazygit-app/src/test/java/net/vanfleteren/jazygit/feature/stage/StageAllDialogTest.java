@@ -34,7 +34,7 @@ class StageAllDialogTest {
 
     private static Model openModel() {
         Model unstaged = Update.update(
-                        TestModels.loaded(new SampleData()),
+                        TestModels.loaded(SampleData.git()),
                         new LoadMsg.StatusLoaded(new RepoStatus(
                                 Head.onBranch(new BranchName("main"), new Sha("aaaa")),
                                 List.of(Fixtures.fileEntry("a.txt", ChangeType.MODIFIED)))))
@@ -64,7 +64,7 @@ class StageAllDialogTest {
 
     @Test
     void closedModelShowsNoPopup() {
-        assertTrue(dialog.render(TestModels.loaded(new SampleData())).isEmpty());
+        assertTrue(dialog.render(TestModels.loaded(SampleData.git())).isEmpty());
     }
 
     private ToolkitTestRunner start() throws Exception {

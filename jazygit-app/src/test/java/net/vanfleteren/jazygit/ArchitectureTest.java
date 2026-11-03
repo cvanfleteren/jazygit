@@ -106,6 +106,16 @@ class ArchitectureTest {
             .dependOnClassesThat()
             .resideInAPackage("picocli..");
     /**
+     * The application reaches git through a {@code Git} and its roles, which {@code CliGit} gives for a real
+     * repository; the {@code Cli} classes behind the roles are none of its business (ADR 69).
+     */
+    @ArchTest
+    static final ArchRule gitIsReachedThroughItsRoles = noClasses()
+            .should()
+            .dependOnClassesThat(resideInAPackage("..jazygit.git")
+                    .and(simpleNameStartingWith("Cli"))
+                    .and(not(simpleName("CliGit"))));
+    /**
      * {@code Exec} is the only place that starts a program.
      */
     @ArchTest

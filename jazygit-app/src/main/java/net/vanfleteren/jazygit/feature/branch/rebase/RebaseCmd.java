@@ -3,8 +3,8 @@ package net.vanfleteren.jazygit.feature.branch.rebase;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd;
+import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitFailure;
-import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Operation;
@@ -23,7 +23,7 @@ public record RebaseCmd(BranchName branch) implements BranchCmd {
     }
 
     @Override
-    public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
+    public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
         return git.integrate().rebase(branch);
     }
 }

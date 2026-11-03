@@ -2,7 +2,7 @@ package net.vanfleteren.jazygit.state;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.GhAccount;
-import net.vanfleteren.jazygit.git.GitInfoProvider;
+import net.vanfleteren.jazygit.git.Git;
 
 /**
  * The gh account a repository is configured to use, kept in its own git configuration, so it stays with the
@@ -21,7 +21,7 @@ public final class GitHubAccount {
      * The account configured for the repository of {@code git}, on the GitHub host of its remotes; none when
      * there is none configured, or the configuration could not be read.
      */
-    public static Option<GhAccount> configured(GitInfoProvider git) {
+    public static Option<GhAccount> configured(Git git) {
         return git.config()
                 .local(USER_KEY)
                 .getOrElse(Option.none())
@@ -32,7 +32,7 @@ public final class GitHubAccount {
     /**
      * The GitHub host of the remotes of {@code git}; github.com when they do not say.
      */
-    public static String host(GitInfoProvider git) {
+    public static String host(Git git) {
         return git.remotes().urls().toOption().flatMap(GhAccount::remoteHost).getOrElse(GhAccount.GITHUB);
     }
 }

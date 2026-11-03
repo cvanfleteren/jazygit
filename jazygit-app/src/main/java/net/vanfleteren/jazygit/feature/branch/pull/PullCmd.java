@@ -4,8 +4,8 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd;
+import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitFailure;
-import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Operation;
@@ -38,7 +38,7 @@ public sealed interface PullCmd extends BranchCmd.KeepsBranchBusy {
         }
 
         @Override
-        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
+        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
             return git.remotes().pull();
         }
     }
@@ -54,7 +54,7 @@ public sealed interface PullCmd extends BranchCmd.KeepsBranchBusy {
         }
 
         @Override
-        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
+        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
             return git.remotes().fastForward(branch, upstream);
         }
     }

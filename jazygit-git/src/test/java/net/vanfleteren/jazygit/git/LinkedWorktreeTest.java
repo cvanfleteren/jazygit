@@ -82,7 +82,7 @@ class LinkedWorktreeTest {
 
     @Test
     void itOpensAtItsOwnRootAndListsItsOwnBranchAsTheCurrentOne() {
-        CliGitInfoProvider provider = CliGitInfoProvider.open(linked).get();
+        Git provider = CliGit.open(linked).get();
 
         assertEquals(linked, provider.worktree());
         assertTrue(Files.isRegularFile(linked.resolve(".git")));
@@ -95,12 +95,8 @@ class LinkedWorktreeTest {
 
     @Test
     void theMainWorktreeSeesTheBranchCheckedOutInTheLinkedOne() {
-        List<Branch> branches = CliGitInfoProvider.open(main)
-                .get()
-                .branches()
-                .all()
-                .map(AllBranches::local)
-                .get();
+        List<Branch> branches =
+                CliGit.open(main).get().branches().all().map(AllBranches::local).get();
 
         assertEquals(List.of(Option.none(), Option.of(linked)), branches.map(Branch::worktree));
         assertEquals(List.of(false, true), branches.map(Branch::checkedOutElsewhere));
@@ -109,7 +105,7 @@ class LinkedWorktreeTest {
     @Test
     void theStatusAndTheDiffAreThoseOfTheLinkedWorktree() throws Exception {
         Files.writeString(linked.resolve("new.txt"), "brand new\n");
-        CliGitInfoProvider provider = CliGitInfoProvider.open(linked).get();
+        Git provider = CliGit.open(linked).get();
 
         List<FileEntry> files = provider.status().read().get().files();
         Diffs diffs = provider.diffs().uncommitted(files, DiffOptions.DEFAULT).get();
@@ -120,14 +116,12 @@ class LinkedWorktreeTest {
         assertEquals(
                 List.of(Fixtures.fileEntry("new.txt", ChangeType.UNTRACKED)),
                 provider.status().read().get().files());
-        assertEquals(
-                List.of(),
-                CliGitInfoProvider.open(main).get().status().read().get().files());
+        assertEquals(List.of(), CliGit.open(main).get().status().read().get().files());
     }
 
     @Test
     void theMainWorktreeSeesWhetherTheLinkedOneHasChanges() throws Exception {
-        CliGitInfoProvider provider = CliGitInfoProvider.open(main).get();
+        Git provider = CliGit.open(main).get();
         assertFalse(provider.worktrees().hasChanges(linked).get());
 
         Files.writeString(linked.resolve(".gitignore"), "ignored.txt\n");

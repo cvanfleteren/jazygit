@@ -418,6 +418,6 @@ class CliMetadataTest {
 
     @Test
     void anOpenedRepositoryTellsItsStamps() {
-        assertTrue(CliGitInfoProvider.open(main).get().status().metadata().isDefined());
+        assertTrue(CliGit.open(main).get().status().metadata().isDefined());
     }
 }

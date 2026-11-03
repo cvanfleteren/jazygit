@@ -4,8 +4,8 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd;
+import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitFailure;
-import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -75,7 +75,7 @@ public sealed interface MoveCmd extends Cmd {
         }
 
         @Override
-        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
+        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
             return switch (target) {
                 case MoveTarget.NewBranch(var branch, var onto) -> git.commits().move(from, oldest, branch, onto);
                 case MoveTarget.Existing(var branch) -> git.commits().moveTo(from, oldest, branch);

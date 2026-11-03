@@ -24,6 +24,7 @@ import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutMsg;
 import net.vanfleteren.jazygit.feature.commit.create.CommitMsg;
 import net.vanfleteren.jazygit.feature.commit.reword.RewordMsg;
 import net.vanfleteren.jazygit.feature.stage.StageMsg;
+import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.*;
@@ -88,7 +89,7 @@ class JazygitAppPilotTest {
 
     @Test
     void theDiffAreasAreOnlyPartOfTheTabCycleOnceTheyHaveTheFocus() throws Exception {
-        SampleData data = new SampleData();
+        Git data = SampleData.git();
         Model loaded = TestModels.loaded(data);
         io.vavr.collection.List<FileEntry> files =
                 loaded.repo().status().toOption().get().files();
@@ -134,7 +135,7 @@ class JazygitAppPilotTest {
 
     @Test
     void rightMovesFromTheFilesPaneIntoItsDiffAndLeftGivesTheFocusBack() throws Exception {
-        SampleData data = new SampleData();
+        Git data = SampleData.git();
         Model loaded = TestModels.loaded(data);
         io.vavr.collection.List<FileEntry> files =
                 loaded.repo().status().toOption().get().files();
@@ -188,7 +189,7 @@ class JazygitAppPilotTest {
 
     @Test
     void rightMovesFromTheBranchesPaneIntoTheLogAndLeftGivesTheFocusBack() throws Exception {
-        Model model = TestModels.loaded(new SampleData(), "feature/initial-layout");
+        Model model = TestModels.loaded(SampleData.git(), "feature/initial-layout");
 
         assertRightEntersAndLeftLeaves(
                 model, BranchesPanel.ID, new BranchesPanel(msg -> {}, tab -> {})::render, "branch-log");
@@ -240,7 +241,7 @@ class JazygitAppPilotTest {
 
     @Test
     void theRemoteBranchesAreOneStopOfTheTabCycleAndTheirKeysWorkThere() throws Exception {
-        SampleData data = new SampleData();
+        Git data = SampleData.git();
         java.util.List<Msg> dispatched = new ArrayList<>();
         RemoteBranch feature = new RemoteBranch("origin", new BranchName("feature"));
         Model remote = TestModels.loaded(data)
@@ -394,7 +395,7 @@ class JazygitAppPilotTest {
 
             assertTrue(fixture.dispatched()
                     .contains(new RewordMsg.Requested(
-                            fixture.data().headLog().get().head().sha())));
+                            SampleData.headLog().get().head().sha())));
 
             pilot.quit();
         }
@@ -469,7 +470,7 @@ class JazygitAppPilotTest {
     }
 
     private record Fixture(
-            SampleData data,
+            Git data,
             Model model,
             java.util.List<Msg> dispatched,
             java.util.List<Msg> selections,
@@ -480,10 +481,10 @@ class JazygitAppPilotTest {
             AtomicReference<FocusManager> focusManagerRef) {
 
         private Fixture() {
-            this(new SampleData(), new ArrayList<>());
+            this(SampleData.git(), new ArrayList<>());
         }
 
-        private Fixture(SampleData data, java.util.List<Msg> dispatched) {
+        private Fixture(Git data, java.util.List<Msg> dispatched) {
             this(
                     data,
                     TestModels.loaded(data),

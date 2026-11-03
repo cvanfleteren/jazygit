@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.feature.forcedelete;
 
-import static net.vanfleteren.jazygit.git.StubGitProvider.executed;
+import static net.vanfleteren.jazygit.git.StubGit.executed;
 import static net.vanfleteren.jazygit.state.TestModels.loaded;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -13,17 +13,14 @@ import java.util.ArrayList;
 import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchCmd.DeleteBranch;
 import net.vanfleteren.jazygit.feature.worktree.remove.RemoveWorktreeCmd;
 import net.vanfleteren.jazygit.gh.StubGitHub;
-import net.vanfleteren.jazygit.git.Branches;
+import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
-import net.vanfleteren.jazygit.git.GitInfoProvider;
-import net.vanfleteren.jazygit.git.Remotes;
 import net.vanfleteren.jazygit.git.StubBranches;
-import net.vanfleteren.jazygit.git.StubGitProvider;
+import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.git.StubRemotes;
 import net.vanfleteren.jazygit.git.StubWorktrees;
-import net.vanfleteren.jazygit.git.Worktrees;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Env;
@@ -68,13 +65,9 @@ class ForceDeleteTest {
      * A git that refuses to delete a branch with {@code deleted}, finds {@code lost} commits only on it, and records
      * deleting it with force.
      */
-    private GitInfoProvider git(
-            Either<GitFailure<GitError>, List<ExecutedCommand>> deleted, Either<ProcessError, Integer> lost) {
-        return new StubGitProvider() {
-
-            @Override
-            public Branches branches() {
-                return new StubBranches() {
+    private Git git(Either<GitFailure<GitError>, List<ExecutedCommand>> deleted, Either<ProcessError, Integer> lost) {
+        return StubGit.of()
+                .withBranches(new StubBranches() {
                     @Override
                     public Either<GitFailure<GitError>, List<ExecutedCommand>> deleteLocal(BranchName name) {
                         ran.add("delete " + name.value());
@@ -90,25 +83,19 @@ class ForceDeleteTest {
                     @Override
                     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> forceDeleteLocal(BranchName name) {
                         ran.add("force " + name.value());
-                        return StubGitProvider.ran("git branch --delete --force -- " + name.value());
+                        return StubGit.ran("git branch --delete --force -- " + name.value());
                     }
-                };
-            }
-
-            @Override
-            public Remotes remotes() {
-                return new StubRemotes() {
+                })
+                .withRemotes(new StubRemotes() {
                     @Override
                     public Either<GitFailure<GitError>, List<ExecutedCommand>> deleteBranch(
                             BranchName name, RemoteBranch remote, DeleteScope scope) {
                         return deleted;
                     }
-                };
-            }
-        };
+                });
     }
 
-    private static Env env(GitInfoProvider git) {
+    private static Env env(Git git) {
         return new Env(git, StubGitHub.empty());
     }
 
@@ -153,20 +140,14 @@ class ForceDeleteTest {
     @Test
     void removingAWorktreeWithItsUnmergedBranchAsksTheSameOnceTheWorktreeIsGone() {
         RemoveWorktreeCmd remove = new RemoveWorktreeCmd("/repos/app-feature", false, Option.of(FEATURE));
-        GitInfoProvider git = new StubGitProvider() {
-            @Override
-            public Worktrees worktrees() {
-                return new StubWorktrees() {
+        Git git = StubGit.of()
+                .withWorktrees(new StubWorktrees() {
                     @Override
                     public Either<GitFailure<GitError>, List<ExecutedCommand>> remove(Path location, boolean force) {
-                        return StubGitProvider.ran("git worktree remove " + location);
+                        return StubGit.ran("git worktree remove " + location);
                     }
-                };
-            }
-
-            @Override
-            public Branches branches() {
-                return new StubBranches() {
+                })
+                .withBranches(new StubBranches() {
                     @Override
                     public Either<GitFailure<GitError>, List<ExecutedCommand>> deleteLocal(BranchName name) {
                         return Either.left(new GitFailure<>(
@@ -178,9 +159,7 @@ class ForceDeleteTest {
                     public Either<ProcessError, Integer> countOnlyOn(BranchName name) {
                         return Either.right(2);
                     }
-                };
-            }
-        };
+                });
 
         assertEquals(
                 new ForceDeleteMsg.NotFullyMerged(
@@ -293,47 +272,31 @@ class ForceDeleteTest {
     void whenNoCommitIsLostButForcingFailsTheFailureIsReportedAfterBothCommands() {
         GitFailure<ProcessError> locked =
                 new GitFailure<>(new GitError.CommandFailed("ref is locked", 1), executed("git branch -D"));
-        GitInfoProvider git = new StubGitProvider() {
+        Git git = StubGit.of().withBranches(new StubBranches() {
             @Override
-            public Branches branches() {
-                return new StubBranches() {
-                    @Override
-                    public Either<ProcessError, Integer> countOnlyOn(BranchName name) {
-                        return Either.right(0);
-                    }
-
-                    @Override
-                    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> forceDeleteLocal(BranchName name) {
-                        return Either.left(locked);
-                    }
-                };
+            public Either<ProcessError, Integer> countOnlyOn(BranchName name) {
+                return Either.right(0);
             }
-        };
+
+            @Override
+            public Either<GitFailure<ProcessError>, List<ExecutedCommand>> forceDeleteLocal(BranchName name) {
+                return Either.left(locked);
+            }
+        });
 
         assertEquals(
                 DELETE_BOTH.failedWith(locked.after(NOT_MERGED.commands())),
                 DELETE_BOTH.run(env(deletedWith(git, NOT_MERGED))));
     }
 
-    private static GitInfoProvider deletedWith(GitInfoProvider git, GitFailure<GitError> refusal) {
-        return new StubGitProvider() {
-
+    private static Git deletedWith(Git git, GitFailure<GitError> refusal) {
+        return StubGit.of().withBranches(git.branches()).withRemotes(new StubRemotes() {
             @Override
-            public Branches branches() {
-                return git.branches();
+            public Either<GitFailure<GitError>, List<ExecutedCommand>> deleteBranch(
+                    BranchName name, RemoteBranch remote, DeleteScope scope) {
+                return Either.left(refusal);
             }
-
-            @Override
-            public Remotes remotes() {
-                return new StubRemotes() {
-                    @Override
-                    public Either<GitFailure<GitError>, List<ExecutedCommand>> deleteBranch(
-                            BranchName name, RemoteBranch remote, DeleteScope scope) {
-                        return Either.left(refusal);
-                    }
-                };
-            }
-        };
+        });
     }
 
     @Test

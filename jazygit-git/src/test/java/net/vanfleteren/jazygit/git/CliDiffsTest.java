@@ -318,7 +318,7 @@ class CliDiffsTest {
     }
 
     private Diffs diffs() {
-        return CliGitInfoProvider.open(repo).get().diffs();
+        return CliGit.open(repo).get().diffs();
     }
 
     private void init() throws Exception {

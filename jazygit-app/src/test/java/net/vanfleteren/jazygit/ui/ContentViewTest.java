@@ -48,7 +48,7 @@ class ContentViewTest {
 
     private static final PullRequestPreview READ = new PullRequestPreview("main", "Why", "+fixed\n", false);
 
-    private final Model model = TestModels.loaded(new SampleData(), "feature/initial-layout");
+    private final Model model = TestModels.loaded(SampleData.git(), "feature/initial-layout");
 
     private static Shown dim(String title, String text) {
         return new Shown.Message(title, text, Tone.DIM);
@@ -171,7 +171,7 @@ class ContentViewTest {
 
     @Test
     void theBranchesShowLoadingBeforeABranchIsSelected() {
-        assertEquals(loading("Log"), ContentView.of(TestModels.loaded(new SampleData()), BranchesPanel.ID));
+        assertEquals(loading("Log"), ContentView.of(TestModels.loaded(SampleData.git()), BranchesPanel.ID));
     }
 
     @Test
@@ -329,7 +329,7 @@ class ContentViewTest {
     @Test
     void theFilesShowTheStagedChangesAboveTheUnstagedOnes() {
         Model selected = TestModels.withFilesSelected(
-                new SampleData(),
+                SampleData.git(),
                 List.of(
                         new FileEntry("a.txt", ChangeType.MODIFIED, true, false),
                         new FileEntry("b.txt", ChangeType.MODIFIED, false, true)));
@@ -344,7 +344,7 @@ class ContentViewTest {
     @Test
     void theStagedAndUnstagedChangesAreDrawnInTheStyleChosen() {
         Model selected = TestModels.withFilesSelected(
-                new SampleData(),
+                SampleData.git(),
                 List.of(
                         new FileEntry("a.txt", ChangeType.MODIFIED, true, false),
                         new FileEntry("b.txt", ChangeType.MODIFIED, false, true)));

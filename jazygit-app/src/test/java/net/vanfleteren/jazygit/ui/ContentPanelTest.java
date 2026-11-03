@@ -23,6 +23,7 @@ import net.vanfleteren.jazygit.feature.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
+import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.settings.DiffLook;
@@ -322,7 +323,7 @@ class ContentPanelTest {
         // The model takes where the area is scrolled to, as the app's does.
         java.util.concurrent.atomic.AtomicReference<Model> model =
                 new java.util.concurrent.atomic.AtomicReference<>(TestModels.withFilesSelected(
-                        new SampleData(),
+                        SampleData.git(),
                         List.of(new FileEntry("x".repeat(300) + ".txt", ChangeType.MODIFIED, true, false))));
         ContentPanel scrolling = new ContentPanel(
                 Theme.SpanStyles.NONE,
@@ -663,7 +664,7 @@ class ContentPanelTest {
     void aClickOnTheLogGivesItTheFocus() throws Exception {
         java.util.List<String> focused = new java.util.ArrayList<>();
         ContentPanel clicking = new ContentPanel(Theme.SpanStyles.NONE, () -> false, focused::add, msg -> {});
-        Model model = TestModels.loaded(new SampleData(), "feature/initial-layout");
+        Model model = TestModels.loaded(SampleData.git(), "feature/initial-layout");
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> clicking.render(model, BranchesPanel.ID))) {
             RenderedText.of(testRunner, () -> clicking.render(model, BranchesPanel.ID));
@@ -1101,7 +1102,7 @@ class ContentPanelTest {
 
     @Test
     void filesFocusedShowsStagedAndUnstagedChangesInSeparatePanels() throws Exception {
-        SampleData data = new SampleData();
+        Git data = SampleData.git();
         Model selected = TestModels.withFilesSelected(
                 data,
                 List.of(

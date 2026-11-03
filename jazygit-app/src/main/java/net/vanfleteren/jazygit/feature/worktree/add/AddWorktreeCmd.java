@@ -8,10 +8,10 @@ import java.nio.file.Path;
 import net.vanfleteren.jazygit.feature.worktree.WorktreeCmd;
 import net.vanfleteren.jazygit.feature.worktree.add.WorktreeSource.*;
 import net.vanfleteren.jazygit.gh.GitHub;
+import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
-import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Revision;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -62,7 +62,7 @@ public record AddWorktreeCmd(WorktreeSource source, String location, boolean swi
 
     @Override
     public Msg run(Env env) {
-        GitInfoProvider git = env.git();
+        Git git = env.git();
         Path path = WorktreeCmd.path(location);
         return switch (source) {
             case Existing(var branch) -> reported(env, git.worktrees().add(path, branch));
@@ -88,7 +88,7 @@ public record AddWorktreeCmd(WorktreeSource source, String location, boolean swi
      * worktree failed too, if it did, as the worktree is then left behind.
      */
     private static Either<Failure, List<ExecutedCommand>> checkout(
-            GitInfoProvider git, GitHub gitHub, Path path, int number, List<ExecutedCommand> added) {
+            Git git, GitHub gitHub, Path path, int number, List<ExecutedCommand> added) {
         return gitHub.checkoutPullRequest(number, path).map(added::appendAll).mapLeft(failure -> {
             Either<GitFailure<GitError>, List<ExecutedCommand>> removed =
                     git.worktrees().remove(path, true);

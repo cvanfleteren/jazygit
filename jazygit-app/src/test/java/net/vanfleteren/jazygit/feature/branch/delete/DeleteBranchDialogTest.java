@@ -34,7 +34,7 @@ class DeleteBranchDialogTest {
     private final net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<DeleteBranchPopup> dialog =
             new net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<>(DeleteBranchDialogs.DELETE_BRANCH, cursor);
     private final Model open = Update.update(
-                    TestModels.loaded(new SampleData()),
+                    TestModels.loaded(SampleData.git()),
                     new DeleteBranchMsg.Requested(new BranchName("feature/initial-layout")))
             .model();
 
@@ -70,7 +70,7 @@ class DeleteBranchDialogTest {
     @Test
     void remoteOptionsAreNotActionableForALocalOnlyBranch() throws Exception {
         Model localOnly = Update.update(
-                        TestModels.loaded(new SampleData()),
+                        TestModels.loaded(SampleData.git()),
                         new DeleteBranchMsg.Requested(new BranchName("feature/jgit-backend")))
                 .model();
 
@@ -91,7 +91,7 @@ class DeleteBranchDialogTest {
     @Test
     void remoteOptionsAreNotActionableForTheDefaultBranch() throws Exception {
         Model model = TestModels.localBranchesRead(
-                        TestModels.loaded(new SampleData()),
+                        TestModels.loaded(SampleData.git()),
                         List.of(
                                 Fixtures.branch(new BranchName("x"), true, new Sha("1")),
                                 Fixtures.branch(
@@ -127,7 +127,7 @@ class DeleteBranchDialogTest {
     @Test
     void aRemoteBranchUnderAnotherNameIsSaidToBeAnotherBranch() throws Exception {
         Model model = TestModels.localBranchesRead(
-                        TestModels.loaded(new SampleData()),
+                        TestModels.loaded(SampleData.git()),
                         List.of(
                                 Fixtures.branch(new BranchName("x"), true, new Sha("1")),
                                 Fixtures.branch(

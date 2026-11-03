@@ -9,7 +9,8 @@ import java.nio.file.Path;
 import net.vanfleteren.jazygit.cli.StartupCli;
 import net.vanfleteren.jazygit.cli.StartupOptions;
 import net.vanfleteren.jazygit.feature.repos.RecentReposCmd;
-import net.vanfleteren.jazygit.git.CliGitInfoProvider;
+import net.vanfleteren.jazygit.git.CliGit;
+import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.RepositoryIdentity;
 import net.vanfleteren.jazygit.i18n.Messages;
@@ -88,13 +89,13 @@ final class Launcher {
      * The repository containing {@code start}. Outside one, the user is asked what to open instead (ADR 28), drawn
      * as {@code settings} and {@code themeOverride} say: none when they quit.
      */
-    private static Either<String, Option<CliGitInfoProvider>> open(
+    private static Either<String, Option<Git>> open(
             Path start,
             RecentRepositories recent,
             SettingsStore.Loaded settings,
             Option<ThemeName> themeOverride,
             StyleEngine engine) {
-        return CliGitInfoProvider.open(start)
+        return CliGit.open(start)
                 .fold(
                         error -> error instanceof GitError.NotARepository
                                 ? Try.of(() -> StartApp.choose(
@@ -107,7 +108,7 @@ final class Launcher {
                                         .mapLeft(ErrorText::reason)
                                         .flatMap(chosen -> chosen.fold(
                                                 () -> Either.right(Option.none()),
-                                                worktree -> CliGitInfoProvider.open(worktree)
+                                                worktree -> CliGit.open(worktree)
                                                         .mapLeft(ErrorText::of)
                                                         .map(Option::of)))
                                 : Either.left(ErrorText.of(error)),

@@ -22,15 +22,15 @@ import org.zeroturnaround.exec.ProcessExecutor;
 import org.zeroturnaround.exec.ProcessResult;
 
 /**
- * {@link CliGitInfoProvider} against a real repository changed through the git CLI: every call
+ * {@link Git} against a real repository changed through the git CLI: every call
  * reflects the current state of the repository.
  */
-class CliGitInfoProviderTest {
+class CliGitTest {
 
     @TempDir
     Path repo;
 
-    private CliGitInfoProvider provider;
+    private Git provider;
 
     private static List<Branch> withoutTimes(List<Branch> branches) {
         return branches.map(b -> Fixtures.branch(b.name(), b.current(), b.tip()))
@@ -90,7 +90,7 @@ class CliGitInfoProviderTest {
         Files.writeString(repo.resolve("README.md"), "hello\n");
         git("add", "README.md");
         git("commit", "-q", "-m", "Initial commit");
-        provider = CliGitInfoProvider.open(repo).get();
+        provider = CliGit.open(repo).get();
     }
 
     @Test
@@ -99,12 +99,9 @@ class CliGitInfoProviderTest {
         Path bare = elsewhere.resolve("bare.git");
         gitIn(elsewhere, "init", "-q", "--bare", bare.toString());
 
-        assertInstanceOf(
-                GitError.NoWorktree.class, CliGitInfoProvider.open(bare).getLeft());
+        assertInstanceOf(GitError.NoWorktree.class, CliGit.open(bare).getLeft());
         assumeTrue(!gitSucceedsIn(plain, "rev-parse"), "the temporary directory is inside a repository");
-        assertEquals(
-                new GitError.NotARepository(plain),
-                CliGitInfoProvider.open(plain).getLeft());
+        assertEquals(new GitError.NotARepository(plain), CliGit.open(plain).getLeft());
     }
 
     @Test
@@ -112,7 +109,7 @@ class CliGitInfoProviderTest {
         Path plain = Files.createDirectories(elsewhere.resolve("plain"));
         assumeTrue(!gitSucceedsIn(plain, "rev-parse"), "the temporary directory is inside a repository");
 
-        CliGitInfoProvider initialised = CliGitInfoProvider.init(plain).get();
+        Git initialised = CliGit.init(plain).get();
 
         assertEquals(plain.toRealPath(), initialised.worktree().toRealPath());
         assertEquals(Option.none(), initialised.status().read().get().headCommit());
@@ -123,7 +120,7 @@ class CliGitInfoProviderTest {
     void initFailsWhereGitCannotMakeARepository(@TempDir Path elsewhere) {
         Path missing = elsewhere.resolve("missing");
 
-        assertTrue(CliGitInfoProvider.init(missing).isLeft());
+        assertTrue(CliGit.init(missing).isLeft());
     }
 
     @Test
@@ -199,7 +196,7 @@ class CliGitInfoProviderTest {
 
         assertEquals(
                 List.of(),
-                CliGitInfoProvider.open(empty)
+                CliGit.open(empty)
                         .get()
                         .history()
                         .search(CommitQuery.parse("x"), Option.none())
@@ -2373,7 +2370,7 @@ class CliGitInfoProviderTest {
         Path empty = repo.resolve("empty");
         Files.createDirectories(empty);
         gitIn(empty, "init", "-q", "-b", "main");
-        CliGitInfoProvider emptyProvider = CliGitInfoProvider.open(empty).get();
+        Git emptyProvider = CliGit.open(empty).get();
         // Without a commit in HEAD there is no log to read (ADR 49).
         assertEquals(Option.none(), emptyProvider.status().read().get().headCommit());
         assertEquals(

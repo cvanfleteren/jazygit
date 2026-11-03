@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.ui;
 
-import static net.vanfleteren.jazygit.git.StubGitProvider.executed;
+import static net.vanfleteren.jazygit.git.StubGit.executed;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -23,7 +23,7 @@ class CommandLogPanelTest {
 
     @Test
     void showsTheLastOperationError() throws Exception {
-        Model model = TestModels.withCheckoutError(TestModels.loaded(new SampleData()), "foo", "boom");
+        Model model = TestModels.withCheckoutError(TestModels.loaded(SampleData.git()), "foo", "boom");
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> CommandLogPanel.render(model))) {
             String screen = RenderedText.of(testRunner, () -> CommandLogPanel.render(model));
@@ -36,7 +36,7 @@ class CommandLogPanelTest {
 
     @Test
     void showsANoticeWhenTheLastOperationStoppedOnConflicts() throws Exception {
-        Model model = TestModels.loaded(new SampleData()).inform(new Notice.StoppedOnConflicts(Option.none(), 2));
+        Model model = TestModels.loaded(SampleData.git()).inform(new Notice.StoppedOnConflicts(Option.none(), 2));
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> CommandLogPanel.render(model))) {
             String screen = RenderedText.of(testRunner, () -> CommandLogPanel.render(model));
@@ -49,7 +49,7 @@ class CommandLogPanelTest {
     @Test
     void showsExecutedCommandsUnderTheirTitle() throws Exception {
         Model model = TestModels.withLog(
-                TestModels.loaded(new SampleData()), new LogEntry(PushCmd.PUSH, executed("git push origin main")));
+                TestModels.loaded(SampleData.git()), new LogEntry(PushCmd.PUSH, executed("git push origin main")));
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> CommandLogPanel.render(model))) {
             String screen = RenderedText.of(testRunner, () -> CommandLogPanel.render(model));
@@ -63,7 +63,7 @@ class CommandLogPanelTest {
     @Test
     void keepsTheNewestLinesWhenTheyDoNotAllFit() throws Exception {
         Model model = TestModels.withLog(
-                TestModels.loaded(new SampleData()),
+                TestModels.loaded(SampleData.git()),
                 new LogEntry(StageCmd.STAGE, executed("git add -- old.txt")),
                 new LogEntry(
                         CreateCommitCmd.COMMIT,
@@ -87,7 +87,7 @@ class CommandLogPanelTest {
 
     @Test
     void isEmptyWithoutAnError() throws Exception {
-        Model model = TestModels.loaded(new SampleData());
+        Model model = TestModels.loaded(SampleData.git());
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> CommandLogPanel.render(model))) {
             String screen = RenderedText.of(testRunner, () -> CommandLogPanel.render(model));

@@ -16,12 +16,10 @@ import net.vanfleteren.jazygit.feature.theme.ThemeScope;
 import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.GhLogin;
-import net.vanfleteren.jazygit.git.Config;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
-import net.vanfleteren.jazygit.git.Remotes;
 import net.vanfleteren.jazygit.git.StubConfig;
-import net.vanfleteren.jazygit.git.StubGitProvider;
+import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.git.StubRemotes;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.settings.RecentRepositories;
@@ -257,27 +255,19 @@ class SettingsPanelUpdateTest {
     @Test
     void readingHowGhIsSetUp() {
         Env env = new Env(
-                new StubGitProvider() {
-                    @Override
-                    public Config config() {
-                        return new StubConfig() {
+                StubGit.of()
+                        .withConfig(new StubConfig() {
                             @Override
                             public Either<ProcessError, Option<String>> local(String key) {
                                 return Either.right(Option.when(key.equals(GitHubAccount.USER_KEY), "alice-work"));
                             }
-                        };
-                    }
-
-                    @Override
-                    public Remotes remotes() {
-                        return new StubRemotes() {
+                        })
+                        .withRemotes(new StubRemotes() {
                             @Override
                             public Either<ProcessError, Map<String, String>> urls() {
                                 return Either.right(HashMap.of("origin", "git@github.com:team/repo.git"));
                             }
-                        };
-                    }
-                },
+                        }),
                 new StubGitHub() {
                     @Override
                     public Either<GhError, List<GhLogin>> logins() {
@@ -297,24 +287,14 @@ class SettingsPanelUpdateTest {
     void settingTheAccountConfiguresItAndShowsTheRepositoryAgain() {
         java.util.List<String> done = new ArrayList<>();
         Env env = new Env(
-                new StubGitProvider() {
+                StubGit.of(Path.of("/repos/a")).withConfig(new StubConfig() {
                     @Override
-                    public Config config() {
-                        return new StubConfig() {
-                            @Override
-                            public Either<GitFailure<ProcessError>, List<ExecutedCommand>> setLocal(
-                                    String key, Option<String> value) {
-                                done.add(key + "=" + value.getOrElse("<unset>"));
-                                return Either.right(List.empty());
-                            }
-                        };
+                    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> setLocal(
+                            String key, Option<String> value) {
+                        done.add(key + "=" + value.getOrElse("<unset>"));
+                        return Either.right(List.empty());
                     }
-
-                    @Override
-                    public Path worktree() {
-                        return Path.of("/repos/a");
-                    }
-                },
+                }),
                 StubGitHub.empty(),
                 SettingsStore.NONE,
                 RecentRepositories.NONE,

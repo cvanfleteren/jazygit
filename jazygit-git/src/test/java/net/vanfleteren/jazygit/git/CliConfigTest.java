@@ -98,6 +98,6 @@ class CliConfigTest {
 
     // Through the provider, as the app reaches it.
     private Config config() {
-        return CliGitInfoProvider.open(repo).get().config();
+        return CliGit.open(repo).get().config();
     }
 }

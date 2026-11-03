@@ -216,7 +216,7 @@ class CommitsPanelTest {
     void theSelectionFollowsItsCommitWhenANewOneComesOnTop() throws Exception {
         List<Commit> log = List.of(commit("s1"), commit("s0"));
         java.util.concurrent.atomic.AtomicReference<Model> model = new java.util.concurrent.atomic.AtomicReference<>(
-                TestModels.loaded(new SampleData()).mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(log))));
+                TestModels.loaded(SampleData.git()).mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(log))));
         CommitsPanel panel = new CommitsPanel(msg -> {}, () -> {});
 
         try (ToolkitTestRunner testRunner =
@@ -238,7 +238,7 @@ class CommitsPanelTest {
     void theNewestCommitStaysSelectedWhenANewOneComesOnTop() throws Exception {
         List<Commit> log = List.of(commit("s1"), commit("s0"));
         java.util.concurrent.atomic.AtomicReference<Model> model = new java.util.concurrent.atomic.AtomicReference<>(
-                TestModels.loaded(new SampleData()).mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(log))));
+                TestModels.loaded(SampleData.git()).mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(log))));
         CommitsPanel panel = new CommitsPanel(msg -> {}, () -> {});
 
         try (ToolkitTestRunner testRunner =
@@ -257,7 +257,7 @@ class CommitsPanelTest {
     @Test
     void theListScrollsAlongWithTheSelection() throws Exception {
         List<Commit> log = List.range(0, 80).map(i -> commit("s" + i));
-        Model model = TestModels.loaded(new SampleData()).mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(log)));
+        Model model = TestModels.loaded(SampleData.git()).mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(log)));
         CommitsPanel panel = new CommitsPanel(msg -> {}, () -> {});
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, CommitsPanel.ID))) {
@@ -280,7 +280,7 @@ class CommitsPanelTest {
     @Test
     void clickingACommitHighlightsItAndFocusesThePane() throws Exception {
         List<Commit> log = List.of(commit("s1"), commit("s0"));
-        Model model = TestModels.loaded(new SampleData()).mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(log)));
+        Model model = TestModels.loaded(SampleData.git()).mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(log)));
         CommitsPanel panel = new CommitsPanel(msg -> {}, () -> {});
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, CommitsPanel.ID))) {
@@ -317,7 +317,7 @@ class CommitsPanelTest {
 
     @Test
     void theSearchIsTypedAboveTheListRunWithEnterAndClearedWithEscape() throws Exception {
-        AtomicReference<Model> model = new AtomicReference<>(TestModels.loaded(new SampleData())
+        AtomicReference<Model> model = new AtomicReference<>(TestModels.loaded(SampleData.git())
                 .mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(List.of(commit("s1"), commit("s0"))))));
         java.util.List<Msg> sent = new java.util.ArrayList<>();
         CommitsPanel panel = new CommitsPanel(
@@ -368,7 +368,7 @@ class CommitsPanelTest {
 
     @Test
     void aSearchThatFindsNothingSaysSo() throws Exception {
-        Model model = TestModels.loaded(new SampleData())
+        Model model = TestModels.loaded(SampleData.git())
                 .mapRepoView(
                         repoView -> repoView.withCommitSearch(Option.of(CommitSearch.loading("nothing", Option.none())
                                 .withResults(new Loadable.Loaded<>(List.empty())))));

@@ -7,11 +7,10 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.gh.StubGitHub;
-import net.vanfleteren.jazygit.git.Config;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.StubConfig;
-import net.vanfleteren.jazygit.git.StubGitProvider;
+import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.Env;
@@ -25,19 +24,14 @@ class ThemeCmdTest {
 
     private final java.util.List<String> done = new ArrayList<>();
     private final Env env = new Env(
-            new StubGitProvider() {
+            StubGit.of().withConfig(new StubConfig() {
                 @Override
-                public Config config() {
-                    return new StubConfig() {
-                        @Override
-                        public Either<GitFailure<ProcessError>, List<ExecutedCommand>> setLocal(
-                                String key, Option<String> value) {
-                            done.add(key + "=" + value.getOrElse("<unset>"));
-                            return Either.right(List.empty());
-                        }
-                    };
+                public Either<GitFailure<ProcessError>, List<ExecutedCommand>> setLocal(
+                        String key, Option<String> value) {
+                    done.add(key + "=" + value.getOrElse("<unset>"));
+                    return Either.right(List.empty());
                 }
-            },
+            }),
             StubGitHub.empty());
 
     @Test

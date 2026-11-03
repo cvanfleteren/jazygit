@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.model;
 import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.FileEntry;
@@ -13,7 +14,7 @@ import org.junit.jupiter.api.Test;
  */
 class SampleDataTest {
 
-    private final SampleData data = new SampleData();
+    private final Git data = SampleData.git();
 
     @Test
     void filesAreNotEmpty() {
@@ -33,7 +34,7 @@ class SampleDataTest {
 
     @Test
     void commitsHaveShortShaAndMessage() {
-        List<Commit> commits = data.headLog().get();
+        List<Commit> commits = SampleData.headLog().get();
         assertFalse(commits.isEmpty());
         for (Commit commit : commits) {
             assertFalse(commit.shortSha().isBlank());
@@ -47,6 +48,7 @@ class SampleDataTest {
         assertEquals(
                 data.branches().all().get().local().size(),
                 data.branches().all().get().local().size());
-        assertEquals(data.headLog().get().size(), data.headLog().get().size());
+        assertEquals(
+                SampleData.headLog().get().size(), SampleData.headLog().get().size());
     }
 }

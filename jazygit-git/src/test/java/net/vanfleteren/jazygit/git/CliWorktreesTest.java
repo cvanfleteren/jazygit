@@ -25,7 +25,7 @@ import org.zeroturnaround.exec.ProcessResult;
 
 /**
  * Listing, adding and removing worktrees: the parser on fixed output of {@code git worktree list --porcelain -z},
- * and {@link CliGitInfoProvider} against a real repository.
+ * and {@link Git} against a real repository.
  */
 class CliWorktreesTest {
 
@@ -200,7 +200,7 @@ class CliWorktreesTest {
         git(main, "init", "-q", "-b", "main");
         git(main, "commit", "-q", "--allow-empty", "-m", "Initial commit");
         git(main, "branch", "feature");
-        CliGitInfoProvider provider = CliGitInfoProvider.open(main).get();
+        Git provider = CliGit.open(main).get();
         Path linked = main.resolveSibling("linked");
 
         List<String> added = provider.worktrees()
@@ -218,7 +218,7 @@ class CliWorktreesTest {
                 worktrees.map(Worktree::branch));
         assertEquals(
                 List.of(linked, main),
-                CliGitInfoProvider.open(linked).get().worktrees().list().get().map(Worktree::path));
+                CliGit.open(linked).get().worktrees().list().get().map(Worktree::path));
 
         Files.writeString(linked.resolve("new.txt"), "untracked\n");
         assertInstanceOf(
@@ -237,7 +237,7 @@ class CliWorktreesTest {
         git(main, "init", "-q", "-b", "main");
         git(main, "commit", "-q", "--allow-empty", "-m", "Initial commit");
         git(main, "branch", "feature");
-        CliGitInfoProvider provider = CliGitInfoProvider.open(main).get();
+        Git provider = CliGit.open(main).get();
         Path linked = main.resolveSibling("linked");
         provider.worktrees().add(linked, new BranchName("feature")).get();
 
@@ -275,7 +275,7 @@ class CliWorktreesTest {
         git(main, "commit", "-q", "--allow-empty", "-m", "Initial commit");
         git(main, "branch", "dirty");
         git(main, "branch", "gone");
-        CliGitInfoProvider provider = CliGitInfoProvider.open(main).get();
+        Git provider = CliGit.open(main).get();
         Path dirty = main.resolveSibling("dirty");
         Path gone = main.resolveSibling("gone");
         provider.worktrees().add(dirty, new BranchName("dirty")).get();
@@ -311,7 +311,7 @@ class CliWorktreesTest {
                 "-q",
                 origin.toString(),
                 main.getFileName().toString());
-        CliGitInfoProvider provider = CliGitInfoProvider.open(main).get();
+        Git provider = CliGit.open(main).get();
         Path fromLocal = main.resolveSibling("from-local");
         Path fromRemote = main.resolveSibling("from-remote");
 
@@ -356,7 +356,7 @@ class CliWorktreesTest {
         assumeTrue(gitAvailable(), "git is not installed");
         git(main, "init", "-q", "-b", "main");
         git(main, "commit", "-q", "--allow-empty", "-m", "Initial commit");
-        CliGitInfoProvider provider = CliGitInfoProvider.open(main).get();
+        Git provider = CliGit.open(main).get();
 
         GitFailure<GitError.ProcessError> failure = provider.worktrees()
                 .add(main.resolveSibling("other"), new BranchName("main"))
@@ -372,7 +372,7 @@ class CliWorktreesTest {
         git(main, "init", "-q", "-b", "main");
         git(main, "commit", "-q", "--allow-empty", "-m", "Initial commit");
         git(main, "branch", "topic");
-        CliGitInfoProvider provider = CliGitInfoProvider.open(main).get();
+        Git provider = CliGit.open(main).get();
 
         assertTrue(provider.worktrees()
                 .addDetached(Path.of("../detached"), new BranchRef.Local(new BranchName("topic")))

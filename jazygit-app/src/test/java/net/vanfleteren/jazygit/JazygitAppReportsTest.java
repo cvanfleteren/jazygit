@@ -22,12 +22,13 @@ import java.util.concurrent.CountDownLatch;
 import net.vanfleteren.jazygit.feature.help.HelpDialog;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.git.Branches;
+import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.Remotes;
 import net.vanfleteren.jazygit.git.StubBranches;
-import net.vanfleteren.jazygit.git.StubGitProvider;
+import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.git.StubRemotes;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
@@ -60,7 +61,7 @@ class JazygitAppReportsTest {
 
     private static final BranchName MAIN = new BranchName("main");
 
-    private final List<Sha> commits = new SampleData().headLog().get().map(commit -> commit.sha());
+    private final List<Sha> commits = SampleData.headLog().get().map(commit -> commit.sha());
 
     @Test
     void theHighlightedCommitIsReportedAfterTheFrameAndThenNothing() throws Exception {
@@ -149,7 +150,7 @@ class JazygitAppReportsTest {
     @Test
     void theSpinnerOfABusyBranchTurnsWithoutInput() throws Exception {
         CountDownLatch pulled = new CountDownLatch(1);
-        TestApp app = new TestApp(new Env(new PullsSlowly(pulled), StubGitHub.empty()));
+        TestApp app = new TestApp(new Env(new PullsSlowly(pulled).git(), StubGitHub.empty()));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, SIZE, tickless())) {
             app.start(testRunner);
             SettledPilot.focus(testRunner, BranchesPanel.ID, app.drawnAt::size);
@@ -179,9 +180,8 @@ class JazygitAppReportsTest {
     /**
      * A repository on {@code main}, which follows {@code origin/main}, where a pull runs until {@code pulled}.
      */
-    private record PullsSlowly(CountDownLatch pulled) implements StubGitProvider {
+    private record PullsSlowly(CountDownLatch pulled) {
 
-        @Override
         public Branches branches() {
             return new StubBranches() {
                 @Override
@@ -198,7 +198,6 @@ class JazygitAppReportsTest {
             };
         }
 
-        @Override
         public Remotes remotes() {
             return new StubRemotes() {
                 @Override
@@ -208,9 +207,13 @@ class JazygitAppReportsTest {
                     } catch (InterruptedException interrupted) {
                         Thread.currentThread().interrupt();
                     }
-                    return StubGitProvider.ran();
+                    return StubGit.ran();
                 }
             };
+        }
+
+        Git git() {
+            return StubGit.of().withBranches(branches()).withRemotes(remotes());
         }
     }
 

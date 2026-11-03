@@ -10,11 +10,10 @@ import java.nio.file.Path;
 import java.time.Instant;
 import net.vanfleteren.jazygit.feature.branch.tabs.BranchesTabMsg;
 import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitError;
-import net.vanfleteren.jazygit.git.GitInfoProvider;
-import net.vanfleteren.jazygit.git.StubGitProvider;
+import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.git.StubWorktrees;
-import net.vanfleteren.jazygit.git.Worktrees;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -113,19 +112,14 @@ class WorktreeChangesTest {
     @Test
     void theyAreReadInTheBackgroundLeavingOutTheWorktreesThatCannotBeRead() {
         Path broken = Path.of("/repos/app-broken");
-        GitInfoProvider git = new StubGitProvider() {
+        Git git = StubGit.of().withWorktrees(new StubWorktrees() {
             @Override
-            public Worktrees worktrees() {
-                return new StubWorktrees() {
-                    @Override
-                    public Either<GitError.ProcessError, Boolean> hasChanges(Path location) {
-                        return location.equals(broken)
-                                ? Either.left(new GitError.TimedOut("status", location))
-                                : Either.right(true);
-                    }
-                };
+            public Either<GitError.ProcessError, Boolean> hasChanges(Path location) {
+                return location.equals(broken)
+                        ? Either.left(new GitError.TimedOut("status", location))
+                        : Either.right(true);
             }
-        };
+        });
         LoadWorktreeChanges load = new LoadWorktreeChanges(List.of(broken.toString(), LINKED.toString()));
 
         assertTrue(load.background());

@@ -30,7 +30,7 @@ class NewBranchDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     private Model open = Update.update(
-                    TestModels.loaded(new SampleData()), new NewBranchMsg.Requested(new BranchName("main")))
+                    TestModels.loaded(SampleData.git()), new NewBranchMsg.Requested(new BranchName("main")))
             .model();
     // As in the app, an edit changes the model the popup shows; the other messages are only kept.
     private final net.vanfleteren.jazygit.ui.widgets.TextInputDialog<NewBranchPopup> dialog =
@@ -97,7 +97,7 @@ class NewBranchDialogTest {
     @Test
     void aLongBranchNameFitsInTheTitle() throws Exception {
         String base = "feature/some-rather-long-branch-name-here";
-        open = TestModels.loaded(new SampleData()).openPopup(new NewBranchPopup(new BranchName(base)));
+        open = TestModels.loaded(SampleData.git()).openPopup(new NewBranchPopup(new BranchName(base)));
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view)) {
             String screen = RenderedText.ofLarge(runner, this::view);
             assertTrue(screen.contains("New branch from " + base), screen);
@@ -106,7 +106,7 @@ class NewBranchDialogTest {
 
     @Test
     void closedModelShowsNoPopup() {
-        assertTrue(dialog.render(TestModels.loaded(new SampleData())).isEmpty());
+        assertTrue(dialog.render(TestModels.loaded(SampleData.git())).isEmpty());
     }
 
     private ToolkitTestRunner start() throws Exception {

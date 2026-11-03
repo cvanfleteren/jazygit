@@ -16,9 +16,10 @@ import net.vanfleteren.jazygit.gh.model.CommentRights;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
+import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.Status;
-import net.vanfleteren.jazygit.git.StubGitProvider;
+import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.git.StubStatus;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.state.Cmd;
@@ -44,10 +45,10 @@ class FilesPanelTest {
 
     @Test
     void conflictedFilesShowAMarkerForEachBranchThatChangedThem() throws Exception {
-        Model updated = TestModels.loaded(new FixedProvider(List.of(
+        Model updated = TestModels.loaded(fixed(List.of(
                 FileEntry.conflicted("both.txt", Conflict.of('U', 'U')),
                 FileEntry.conflicted("added.txt", Conflict.of('A', 'A')))));
-        Model deleted = TestModels.loaded(new FixedProvider(List.of(
+        Model deleted = TestModels.loaded(fixed(List.of(
                 FileEntry.conflicted("theirs-deleted.txt", Conflict.of('U', 'D')),
                 FileEntry.conflicted("ours-deleted.txt", Conflict.of('D', 'U')))));
 
@@ -66,8 +67,7 @@ class FilesPanelTest {
 
     @Test
     void theHighlightedNodeOnlyShowsWhileThePaneIsInUse() throws Exception {
-        Model model =
-                TestModels.loaded(new FixedProvider(List.of(FileEntry.conflicted("both.txt", Conflict.of('U', 'U')))));
+        Model model = TestModels.loaded(fixed(List.of(FileEntry.conflicted("both.txt", Conflict.of('U', 'U')))));
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.ID))) {
             String active = RenderedText.of(testRunner, () -> panel.render(model, FilesPanel.ID));
@@ -83,10 +83,10 @@ class FilesPanelTest {
 
     @Test
     void renamedFilesShowWhereTheyCameFrom() throws Exception {
-        Model sameDirectory = TestModels.loaded(new FixedProvider(List.of(
+        Model sameDirectory = TestModels.loaded(fixed(List.of(
                 FileEntry.renamed("b.txt", "a.txt", true, false), FileEntry.renamed("c.txt", "old.txt", true, true))));
         Model otherDirectory =
-                TestModels.loaded(new FixedProvider(List.of(FileEntry.renamed("lib/m.txt", "src/m.txt", true, false))));
+                TestModels.loaded(fixed(List.of(FileEntry.renamed("lib/m.txt", "src/m.txt", true, false))));
 
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> panel.render(sameDirectory, FilesPanel.ID))) {
@@ -104,7 +104,7 @@ class FilesPanelTest {
     @Test
     void changesOnlyInTheWorkingTreeShowInTheUnstagedColumn() throws Exception {
         // The rename only in the working tree follows intent-to-add of the new path.
-        Model model = TestModels.loaded(new FixedProvider(List.of(
+        Model model = TestModels.loaded(fixed(List.of(
                 Fixtures.fileEntry("gone.txt", ChangeType.DELETED), FileEntry.renamed("b.txt", "a.txt", false, true))));
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.ID))) {
@@ -129,9 +129,8 @@ class FilesPanelTest {
 
     @Test
     void rendersLoadingThenStatusChanges() throws Exception {
-        Model untracked =
-                TestModels.loaded(new FixedProvider(List.of(Fixtures.fileEntry("a.txt", ChangeType.UNTRACKED))));
-        Model added = TestModels.loaded(new FixedProvider(List.of(Fixtures.fileEntry("a.txt", ChangeType.ADDED))));
+        Model untracked = TestModels.loaded(fixed(List.of(Fixtures.fileEntry("a.txt", ChangeType.UNTRACKED))));
+        Model added = TestModels.loaded(fixed(List.of(Fixtures.fileEntry("a.txt", ChangeType.ADDED))));
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(untracked, FilesPanel.ID))) {
             String loading = RenderedText.of(testRunner, () -> panel.render(TestModels.loading("repo"), FilesPanel.ID));
@@ -150,7 +149,7 @@ class FilesPanelTest {
 
     @Test
     void rendersEmptyPanelWithoutRootWhenThereAreNoFiles() throws Exception {
-        Model empty = TestModels.loaded(new FixedProvider(List.of()));
+        Model empty = TestModels.loaded(fixed(List.of()));
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(empty, FilesPanel.ID))) {
             String screen = RenderedText.of(testRunner, () -> panel.render(empty, FilesPanel.ID));
@@ -167,9 +166,8 @@ class FilesPanelTest {
     void rendersMergedDirectoriesAndKeepsSelectionWhenStatusChanges() throws Exception {
         FileEntry a = Fixtures.fileEntry("net/vanfleteren/A.java", ChangeType.MODIFIED);
         FileEntry b = Fixtures.fileEntry("net/vanfleteren/B.java", ChangeType.UNTRACKED);
-        Model before = TestModels.loaded(new FixedProvider(List.of(a, b)));
-        Model after =
-                TestModels.loaded(new FixedProvider(List.of(Fixtures.fileEntry("aaa.txt", ChangeType.ADDED), a, b)));
+        Model before = TestModels.loaded(fixed(List.of(a, b)));
+        Model after = TestModels.loaded(fixed(List.of(Fixtures.fileEntry("aaa.txt", ChangeType.ADDED), a, b)));
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(before, FilesPanel.ID))) {
             String screen = RenderedText.of(testRunner, () -> panel.render(before, FilesPanel.ID));
@@ -190,7 +188,7 @@ class FilesPanelTest {
     void rightMovesIntoTheDiffAsEnterDoesButFirstExpandsACollapsedDirectory() throws Exception {
         java.util.concurrent.atomic.AtomicInteger opened = new java.util.concurrent.atomic.AtomicInteger();
         FilesPanel opening = new FilesPanel(msg -> {}, opened::incrementAndGet);
-        Model model = TestModels.loaded(new FixedProvider(List.of(
+        Model model = TestModels.loaded(fixed(List.of(
                 Fixtures.fileEntry("net/vanfleteren/A.java", ChangeType.MODIFIED),
                 Fixtures.fileEntry("net/vanfleteren/B.java", ChangeType.MODIFIED))));
 
@@ -218,7 +216,7 @@ class FilesPanelTest {
     void rightMovesIntoTheDiffOfAFileOfACommitAsEnterDoesButFirstExpandsACollapsedDirectory() throws Exception {
         java.util.concurrent.atomic.AtomicInteger opened = new java.util.concurrent.atomic.AtomicInteger();
         FilesPanel opening = new FilesPanel(msg -> {}, opened::incrementAndGet);
-        Model loaded = loaded(opened(TestModels.loaded(new FixedProvider(List.of()))), MODEL_AND_TEST);
+        Model loaded = loaded(opened(TestModels.loaded(fixed(List.of()))), MODEL_AND_TEST);
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> opening.render(loaded, FilesPanel.ID))) {
             SettledPilot.focus(testRunner, FilesPanel.ID);
@@ -284,9 +282,8 @@ class FilesPanelTest {
      * {@code row} was, among the changed {@code names}.
      */
     private String selectedAfter(int row, List<String> names, List<String> remaining) throws Exception {
-        Model before = TestModels.loaded(new FixedProvider(names.map(n -> Fixtures.fileEntry(n, ChangeType.MODIFIED))));
-        Model after =
-                TestModels.loaded(new FixedProvider(remaining.map(n -> Fixtures.fileEntry(n, ChangeType.MODIFIED))));
+        Model before = TestModels.loaded(fixed(names.map(n -> Fixtures.fileEntry(n, ChangeType.MODIFIED))));
+        Model after = TestModels.loaded(fixed(remaining.map(n -> Fixtures.fileEntry(n, ChangeType.MODIFIED))));
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(before, FilesPanel.ID))) {
             RenderedText.of(testRunner, () -> panel.render(before, FilesPanel.ID));
@@ -301,7 +298,7 @@ class FilesPanelTest {
 
     @Test
     void clickingANodeHighlightsIt() throws Exception {
-        Model model = TestModels.loaded(new FixedProvider(List.of(
+        Model model = TestModels.loaded(fixed(List.of(
                 Fixtures.fileEntry("a.txt", ChangeType.MODIFIED), Fixtures.fileEntry("b.txt", ChangeType.MODIFIED))));
 
         try (ToolkitTestRunner testRunner =
@@ -318,7 +315,7 @@ class FilesPanelTest {
 
     @Test
     void clickingANodeOfAScrolledTreeHighlightsTheNodeShownThere() throws Exception {
-        Model model = TestModels.loaded(new FixedProvider(
+        Model model = TestModels.loaded(fixed(
                 List.range(0, 20).map(i -> Fixtures.fileEntry("f%02d.txt".formatted(i), ChangeType.MODIFIED))));
 
         try (ToolkitTestRunner testRunner =
@@ -358,8 +355,7 @@ class FilesPanelTest {
 
     @Test
     void theFilesOfACommitShowInPlaceOfThoseOfTheWorkingTreeUntilTheyClose() throws Exception {
-        Model model =
-                TestModels.loaded(new FixedProvider(List.of(Fixtures.fileEntry("work.txt", ChangeType.MODIFIED))));
+        Model model = TestModels.loaded(fixed(List.of(Fixtures.fileEntry("work.txt", ChangeType.MODIFIED))));
         CommitFilesView.Changes of = new CommitFilesView.Changes.OfCommit(new Sha("aaaa"));
         Model open = Update.update(
                         Update.update(model, new CommitFilesMsg.Opened(of, CommitsPanel.ID))
@@ -574,7 +570,7 @@ class FilesPanelTest {
     @Test
     void theFilesOfACommitOpenedAgainOpenOnTheFirstDirectoryThatHoldsFilesAgain() throws Exception {
         FilesPanel panel = new FilesPanel(msg -> {}, () -> {});
-        Model opened = opened(TestModels.loaded(new FixedProvider(List.of())));
+        Model opened = opened(TestModels.loaded(fixed(List.of())));
         Model loaded = loaded(opened, MODEL_AND_TEST);
         Model closed = Update.update(loaded, new CommitFilesMsg.Closed()).model();
         Model reopened = opened(closed);
@@ -591,7 +587,7 @@ class FilesPanelTest {
     @Test
     void theFilesOfACommitOnlyOpenOnTheFirstDirectoryThatHoldsFilesOnce() throws Exception {
         FilesPanel panel = new FilesPanel(msg -> {}, () -> {});
-        Model opened = opened(TestModels.loaded(new FixedProvider(List.of())));
+        Model opened = opened(TestModels.loaded(fixed(List.of())));
         Model loaded = loaded(opened, MODEL_AND_TEST);
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(opened, FilesPanel.ID))) {
@@ -614,7 +610,7 @@ class FilesPanelTest {
      */
     private static String highlightedOnOpen(List<CommitFile> files) throws Exception {
         FilesPanel panel = new FilesPanel(msg -> {}, () -> {});
-        Model opened = opened(TestModels.loaded(new FixedProvider(List.of())));
+        Model opened = opened(TestModels.loaded(fixed(List.of())));
         Model loaded = loaded(opened, files);
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(opened, FilesPanel.ID))) {
@@ -646,9 +642,12 @@ class FilesPanelTest {
         return panel.commitTree().selectedNode().data().path();
     }
 
-    private record FixedProvider(List<FileEntry> files) implements StubGitProvider {
+    private static Git fixed(List<FileEntry> files) {
+        return new FixedProvider(files).git();
+    }
 
-        @Override
+    private record FixedProvider(List<FileEntry> files) {
+
         public Status status() {
             return new StubStatus() {
                 @Override
@@ -656,6 +655,10 @@ class FilesPanelTest {
                     return Either.right(new RepoStatus(Head.onBranch(new BranchName("main"), new Sha("aaaa")), files));
                 }
             };
+        }
+
+        Git git() {
+            return StubGit.of().withStatus(status());
         }
     }
 }

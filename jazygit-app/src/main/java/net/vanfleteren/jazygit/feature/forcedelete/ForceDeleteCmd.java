@@ -3,9 +3,9 @@ package net.vanfleteren.jazygit.feature.forcedelete;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
-import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -28,7 +28,7 @@ public record ForceDeleteCmd(BranchName branch) implements GitOperationCmd {
      * it is deleted with force straight away; else whether to lose them is asked. Any other failure, and one where
      * the commits cannot be counted, is reported as it is.
      */
-    public static Msg refused(OperationCmd cmd, BranchName branch, GitFailure<?> failure, GitInfoProvider git) {
+    public static Msg refused(OperationCmd cmd, BranchName branch, GitFailure<?> failure, Git git) {
         return failure.error() instanceof GitError.NotFullyMerged
                 ? git.branches()
                         .countOnlyOn(branch)
@@ -43,7 +43,7 @@ public record ForceDeleteCmd(BranchName branch) implements GitOperationCmd {
      * are only on it: with none, it is deleted with force; else whether to lose them is asked.
      */
     private static Msg forceIfNothingLost(
-            OperationCmd cmd, BranchName branch, GitFailure<?> failure, GitInfoProvider git, int lost) {
+            OperationCmd cmd, BranchName branch, GitFailure<?> failure, Git git, int lost) {
         return lost == 0
                 ? git.branches()
                         .forceDeleteLocal(branch)
@@ -69,7 +69,7 @@ public record ForceDeleteCmd(BranchName branch) implements GitOperationCmd {
     }
 
     @Override
-    public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
+    public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
         return git.branches().forceDeleteLocal(branch);
     }
 }
