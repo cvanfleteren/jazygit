@@ -16,24 +16,24 @@ class CliPushTest {
 
     @Test
     void simplePushesOnlyToAnUpstreamOfTheSameName() {
-        assertEquals(Option.of(SAME_NAME), CliPush.target(PushDefault.SIMPLE, FEATURE, SAME_NAME));
-        assertEquals(Option.none(), CliPush.target(PushDefault.SIMPLE, FEATURE, DEVELOP));
+        assertEquals(Option.of(SAME_NAME), CliRemotes.target(PushDefault.SIMPLE, FEATURE, SAME_NAME));
+        assertEquals(Option.none(), CliRemotes.target(PushDefault.SIMPLE, FEATURE, DEVELOP));
     }
 
     @Test
     void currentAndMatchingPushToTheSameNameOnTheUpstreamsRemote() {
-        assertEquals(Option.of(SAME_NAME), CliPush.target(PushDefault.CURRENT, FEATURE, DEVELOP));
-        assertEquals(Option.of(SAME_NAME), CliPush.target(PushDefault.MATCHING, FEATURE, DEVELOP));
+        assertEquals(Option.of(SAME_NAME), CliRemotes.target(PushDefault.CURRENT, FEATURE, DEVELOP));
+        assertEquals(Option.of(SAME_NAME), CliRemotes.target(PushDefault.MATCHING, FEATURE, DEVELOP));
     }
 
     @Test
     void upstreamPushesToTheUpstream() {
-        assertEquals(Option.of(DEVELOP), CliPush.target(PushDefault.UPSTREAM, FEATURE, DEVELOP));
+        assertEquals(Option.of(DEVELOP), CliRemotes.target(PushDefault.UPSTREAM, FEATURE, DEVELOP));
     }
 
     @Test
     void nothingPushesNowhere() {
-        assertEquals(Option.none(), CliPush.target(PushDefault.NOTHING, FEATURE, SAME_NAME));
+        assertEquals(Option.none(), CliRemotes.target(PushDefault.NOTHING, FEATURE, SAME_NAME));
     }
 
     @Test

@@ -18,8 +18,10 @@ import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
 import net.vanfleteren.jazygit.git.Integrate;
+import net.vanfleteren.jazygit.git.Remotes;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.StubIntegrate;
+import net.vanfleteren.jazygit.git.StubRemotes;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.MergeMode;
@@ -110,9 +112,14 @@ class OperationUpdateTest {
     void aCommandThatThrowsIsReportedAsABugOfThatCommand() {
         GitInfoProvider throwing = new StubGitProvider() {
             @Override
-            public Either<GitFailure<GitError>, List<ExecutedCommand>> push(
-                    BranchName branch, RemoteBranch upstream, PushMode mode) {
-                throw new IllegalStateException("unexpected");
+            public Remotes remotes() {
+                return new StubRemotes() {
+                    @Override
+                    public Either<GitFailure<GitError>, List<ExecutedCommand>> push(
+                            BranchName branch, RemoteBranch upstream, PushMode mode) {
+                        throw new IllegalStateException("unexpected");
+                    }
+                };
             }
         };
 
@@ -129,9 +136,14 @@ class OperationUpdateTest {
     void aCommandThatThrowsAnErrorStillAnswersSoItsBranchIsReleased() {
         GitInfoProvider throwing = new StubGitProvider() {
             @Override
-            public Either<GitFailure<GitError>, List<ExecutedCommand>> push(
-                    BranchName branch, RemoteBranch upstream, PushMode mode) {
-                throw new StackOverflowError();
+            public Remotes remotes() {
+                return new StubRemotes() {
+                    @Override
+                    public Either<GitFailure<GitError>, List<ExecutedCommand>> push(
+                            BranchName branch, RemoteBranch upstream, PushMode mode) {
+                        throw new StackOverflowError();
+                    }
+                };
             }
         };
         java.util.List<Throwable> bugs = new java.util.ArrayList<>();

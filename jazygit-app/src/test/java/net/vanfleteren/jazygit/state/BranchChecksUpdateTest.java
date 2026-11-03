@@ -26,7 +26,9 @@ import net.vanfleteren.jazygit.gh.timing.CheckSample;
 import net.vanfleteren.jazygit.gh.timing.CheckTimings;
 import net.vanfleteren.jazygit.gh.timing.Eta;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
+import net.vanfleteren.jazygit.git.Remotes;
 import net.vanfleteren.jazygit.git.StubGitProvider;
+import net.vanfleteren.jazygit.git.StubRemotes;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
@@ -73,14 +75,19 @@ class BranchChecksUpdateTest {
                 .run(new Env(
                         new StubGitProvider() {
                             @Override
-                            public Either<ProcessError, Map<String, String>> remoteUrls() {
-                                return Either.right(HashMap.of(
-                                        "origin",
-                                        "git@github.com:me/repo.git",
-                                        "upstream",
-                                        "git@github.com:owner/repo.git",
-                                        "mirror",
-                                        "https://github.com/owner/repo"));
+                            public Remotes remotes() {
+                                return new StubRemotes() {
+                                    @Override
+                                    public Either<ProcessError, Map<String, String>> urls() {
+                                        return Either.right(HashMap.of(
+                                                "origin",
+                                                "git@github.com:me/repo.git",
+                                                "upstream",
+                                                "git@github.com:owner/repo.git",
+                                                "mirror",
+                                                "https://github.com/owner/repo"));
+                                    }
+                                };
                             }
                         },
                         new StubGitHub() {

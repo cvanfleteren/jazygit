@@ -840,6 +840,7 @@ classDiagram
         checkout() Checkout
         commits() Commits
         integrate() Integrate
+        remotes() Remotes
         stashes() Stashes
         worktrees() Worktrees
         index() Index
@@ -868,6 +869,7 @@ classDiagram
     CliBranches ..|> Branches
     CliCommits ..|> Commits
     CliIntegrate ..|> Integrate
+    CliRemotes ..|> Remotes
     CliIntegrate ..> CliRebase
     CliGitInfoProvider --> CliCommits : commits()
     CliCommits ..> CliRebase
@@ -883,7 +885,7 @@ classDiagram
     CliGitInfoProvider --> CliIndex : index()
     CliGitInfoProvider --> CliIntegrate : integrate()
     CliGitInfoProvider --> CliStashes : stashes()
-    CliGitInfoProvider ..> CliRemote
+    CliGitInfoProvider --> CliRemotes : remotes()
     CliRebase ..> Unfinished
     CliIntegrate ..> Unfinished
     CliBranches ..> Unfinished
@@ -919,11 +921,11 @@ each role that is split off this way; the `Cli*` classes it still points to with
     - `CliStashes` lists the stashes with the `git log --walk-reflogs … refs/stash` that `git stash list` runs
       itself, which saves a process. The stashes are the reflog of `refs/stash`, as git's documentation of
       `git stash` says. Without a stash there is no reflog, which `--ignore-missing` makes an empty list.
-    - `CliRemote` reads the remotes.
+    - `CliRemotes` reads the remotes.
     - These each have a pure parser for git's output. `CliDiffs` returns git's text, cut off when it
       is long, and parses the files `--name-status -z` lists, for a commit, a range, a stash and a pull request.
-  - **Writes:** `CliCheckout`, `CliBranches` (rename, delete), `CliPush`, `CliPull`, `CliIndex` (stage, commit, discard),
-    `CliCommits`, `CliIntegrate`, `CliRebase`, `CliStashes`, `CliRemote` (fetch) and `CliWorktrees` (add, remove).
+  - **Writes:** `CliCheckout`, `CliBranches` (rename, delete), `CliIndex` (stage, commit, discard),
+    `CliCommits`, `CliIntegrate`, `CliRebase`, `CliStashes`, `CliRemotes` (push, pull, fetch, delete on the remote) and `CliWorktrees` (add, remove).
   - **Opening:** `CliGitInfoProvider.open` asks `git rev-parse` whether the directory is in a repository,
     whether that is bare, where its working tree is, and where git keeps the files that tell what it is in the
     middle of.
@@ -936,7 +938,7 @@ each role that is split off this way; the `Cli*` classes it still points to with
     (`GitCommand.reading`) gets 30 seconds and takes no optional locks.
   - **Paths:** a command on paths takes them literally (`withLiteralPaths`), never as patterns, so
     discarding a file named `*.txt` discards only that file.
-  - **Remotes:** a command that talks to a remote runs ssh in batch mode (`CliRemote.toRemote`), so a
+  - **Remotes:** a command that talks to a remote runs ssh in batch mode (`CliRemotes.toRemote`), so a
     passphrase or unknown host fails rather than prompts.
   - It returns `Either<GitFailure<ProcessError>, Output>`. A failure's `CommandFailed` holds the line
     that explains it (the first `error:` or `fatal:` line, else the first line) and everything git printed.

@@ -31,7 +31,7 @@ public sealed interface FetchCmd extends Cmd {
 
         @Override
         public Msg run(Env env) {
-            return env.git().remotes().fold(this::failedWith, FetchMsg.RemotesListed::new);
+            return env.git().remotes().list().fold(this::failedWith, FetchMsg.RemotesListed::new);
         }
 
         @Override
@@ -58,6 +58,7 @@ public sealed interface FetchCmd extends Cmd {
         @Override
         public Msg run(Env env) {
             return env.git()
+                    .remotes()
                     .fetch(remote)
                     .fold(this::failedWith, changed -> new FetchMsg.Fetched(remote, rest, changed));
         }

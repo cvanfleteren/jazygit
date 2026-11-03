@@ -24,8 +24,6 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     private final CliInProgress.Markers markers;
     // Where the files are that tell whether the branches, the stashes or the worktrees changed, found once.
     private final Option<CliMetadata.Locations> metadataAt;
-    // Asked each time git talks to a remote.
-    private final Supplier<Map<String, String>> credentials;
     private final CliStatus status;
     private final CliCheckout checkout;
     private final CliStashes stashes;
@@ -38,6 +36,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     private final CliBranches branches;
     private final CliCommits commits;
     private final CliIntegrate integrate;
+    private final CliRemotes remotes;
 
     private CliGitInfoProvider(
             Path worktree,
@@ -47,7 +46,6 @@ public final class CliGitInfoProvider implements GitInfoProvider {
         this.worktree = worktree;
         this.markers = markers;
         this.metadataAt = metadataAt;
-        this.credentials = credentials;
         this.status = new CliStatus(worktree, markers, metadataAt);
         this.checkout = new CliCheckout(worktree);
         this.stashes = new CliStashes(worktree);
@@ -60,6 +58,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
         this.branches = new CliBranches(worktree);
         this.commits = new CliCommits(worktree);
         this.integrate = new CliIntegrate(worktree);
+        this.remotes = new CliRemotes(worktree, credentials);
     }
 
     /**
@@ -145,56 +144,13 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> push(
-            BranchName branch, RemoteBranch upstream, PushMode mode) {
-        return CliPush.push(worktree, branch, upstream, mode, credentials.get());
-    }
-
-    @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushSettingUpstream(
-            BranchName branch, RemoteBranch upstream) {
-        return CliPush.pushSettingUpstream(worktree, branch, upstream, credentials.get());
-    }
-
-    @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> pull() {
-        return CliPull.pull(worktree, credentials.get());
-    }
-
-    @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(BranchName branch, BranchRef upstream) {
-        return CliFetch.fastForward(worktree, branch, upstream, credentials.get());
-    }
-
-    @Override
     public Integrate integrate() {
         return integrate;
     }
 
     @Override
-    public Either<ProcessError, List<RemoteName>> remotes() {
-        return CliRemote.remotes(worktree);
-    }
-
-    @Override
-    public Either<ProcessError, Map<String, String>> remoteUrls() {
-        return CliRemote.remoteUrls(worktree);
-    }
-
-    @Override
-    public Either<GitFailure<ProcessError>, Boolean> fetch(RemoteName remote) {
-        return CliFetch.fetch(worktree, remote, Option.of(System.getenv("GIT_SSH_COMMAND")), credentials.get());
-    }
-
-    @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> deleteBranch(
-            BranchName name, RemoteBranch remote, DeleteScope scope) {
-        return CliBranches.delete(worktree, name, remote, scope, credentials.get());
-    }
-
-    @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteRemoteBranch(RemoteBranch remote) {
-        return CliBranches.deleteRemote(worktree, remote, credentials.get());
+    public Remotes remotes() {
+        return remotes;
     }
 
     @Override
@@ -205,11 +161,6 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     @Override
     public Diffs diffs() {
         return diffs;
-    }
-
-    @Override
-    public Either<ProcessError, List<CommitFile>> pullRequestFiles(PullRequestCommits commits) {
-        return CliPullRequest.files(worktree, commits, credentials.get());
     }
 
     @Override

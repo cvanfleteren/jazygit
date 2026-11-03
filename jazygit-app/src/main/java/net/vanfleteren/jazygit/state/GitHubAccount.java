@@ -33,6 +33,6 @@ public final class GitHubAccount {
      * The GitHub host of the remotes of {@code git}; github.com when they do not say.
      */
     public static String host(GitInfoProvider git) {
-        return git.remoteUrls().toOption().flatMap(GhAccount::remoteHost).getOrElse(GhAccount.GITHUB);
+        return git.remotes().urls().toOption().flatMap(GhAccount::remoteHost).getOrElse(GhAccount.GITHUB);
     }
 }

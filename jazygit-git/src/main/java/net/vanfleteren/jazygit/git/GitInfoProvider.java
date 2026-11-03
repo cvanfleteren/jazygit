@@ -1,12 +1,6 @@
 package net.vanfleteren.jazygit.git;
 
-import io.vavr.collection.List;
-import io.vavr.collection.Map;
-import io.vavr.control.Either;
 import java.nio.file.Path;
-import net.vanfleteren.jazygit.git.GitError.*;
-import net.vanfleteren.jazygit.git.model.*;
-import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
  * Everything the TUI does with git: the information it shows and the operations it performs, grouped by the
@@ -36,21 +30,6 @@ public interface GitInfoProvider {
      */
     Branches branches();
 
-    // Deleting branches on their remote, with the credentials.
-
-    /**
-     * Deletes the branch {@code name}, locally and/or {@code remote}, the branch it is pushed to. With both, the
-     * remote one goes first, so a failure leaves the local branch in place. Locally, git refuses a branch that is
-     * not merged, which is a {@link GitError.NotFullyMerged}.
-     */
-    Either<GitFailure<GitError>, List<ExecutedCommand>> deleteBranch(
-            BranchName name, RemoteBranch remote, DeleteScope scope);
-
-    /**
-     * Deletes {@code remote} on its remote.
-     */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteRemoteBranch(RemoteBranch remote);
-
     /**
      * Checking out branches, as git checkout does, and finding the commit a revision the user typed names.
      */
@@ -62,58 +41,10 @@ public interface GitInfoProvider {
      */
     Integrate integrate();
 
-    // Pushing branches, as git push does.
-
     /**
-     * Pushes the local branch {@code branch}, which tracks {@code upstream}, where {@code push.default} says: to
-     * {@code upstream}, or to the branch of the same name on its remote.
-     *
-     * @return the command lines that were run, or why git failed; {@link GitError.PushRefused} when
-     *     {@code push.default} does not push the branch there, before anything is pushed
+     * The remotes, and everything that talks to them, with the credentials it was given.
      */
-    Either<GitFailure<GitError>, List<ExecutedCommand>> push(BranchName branch, RemoteBranch upstream, PushMode mode);
-
-    /**
-     * Pushes the local branch {@code branch} to {@code upstream}, which becomes its upstream once the push
-     * succeeded.
-     */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushSettingUpstream(
-            BranchName branch, RemoteBranch upstream);
-
-    // Pulling the checked out branch, as git pull does.
-
-    /**
-     * Pulls the checked out branch from its upstream, as git's {@code pull.rebase} and {@code pull.ff} say, without
-     * asking for a merge message. A pull that stops on conflicts is left so, and fails with
-     * {@link GitError.StoppedOnConflicts}.
-     */
-    Either<GitFailure<GitError>, List<ExecutedCommand>> pull();
-
-    // Fetching from the remotes, as git fetch does.
-
-    /**
-     * Fetches from {@code remote}, and tells whether that changed a remote-tracking branch: one moved, came or went.
-     * It never asks for credentials or passphrases: what would need them fails.
-     */
-    Either<GitFailure<ProcessError>, Boolean> fetch(RemoteName remote);
-
-    /**
-     * Fast-forwards the local branch {@code branch}, which is not checked out, to {@code upstream}, the branch it
-     * tracks. Fails when that is not a fast-forward.
-     */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(BranchName branch, BranchRef upstream);
-
-    // The remotes, as git remote lists them.
-
-    /**
-     * The remotes that fetching all fetches from: all of them but those with {@code skipFetchAll} set.
-     */
-    Either<ProcessError, List<RemoteName>> remotes();
-
-    /**
-     * The URL of each remote, by its name.
-     */
-    Either<ProcessError, Map<String, String>> remoteUrls();
+    Remotes remotes();
 
     /**
      * The configuration of the repository itself, as git config --local reads and writes it.
@@ -129,14 +60,6 @@ public interface GitInfoProvider {
      * Reading what changed: a commit, a pull request, a branch against its base, and the working tree and the index.
      */
     Diffs diffs();
-
-    // What a pull request on GitHub changes, as GitHub shows it (ADR 55).
-
-    /**
-     * The files the pull request of {@code commits} changes: its head against the merge base of its head and its
-     * base. Its commits are fetched first, from the remote of its repository, when the repository lacks either.
-     */
-    Either<ProcessError, List<CommitFile>> pullRequestFiles(PullRequestCommits commits);
 
     /**
      * Listing and changing stashes, as git stash does.

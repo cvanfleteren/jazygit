@@ -25,7 +25,7 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
 /**
  * The {@link Branches} of a repository, through the {@code git} command line tool. The branches are read through
  * {@code git for-each-ref}, in one call for all of them. Creating a branch records its parent through
- * {@link #setParent}; deleting one on its remote too goes through {@link #delete} and {@link #deleteRemote}.
+ * {@link #setParent}; deleting one on its remote too deletes it locally through {@link #deleteLocal(Path, BranchName)}.
  */
 final class CliBranches implements Branches {
 
@@ -97,19 +97,6 @@ final class CliBranches implements Branches {
                         worktree,
                         GitCommand.reading("for-each-ref", "--format=" + FORMAT, HEADS, REMOTES),
                         raw -> parseAll(raw, created)));
-    }
-
-    /**
-     * Deletes the branch {@code name} where {@code scope} says: locally, and/or {@code remote}, the branch it is
-     * pushed to. With both, the remote one goes first, so a failure leaves the local branch in place.
-     */
-    static Either<GitFailure<GitError>, List<ExecutedCommand>> delete(
-            Path worktree, BranchName name, RemoteBranch remote, DeleteScope scope, Map<String, String> credentials) {
-        return GitFailure.sequence(
-                () -> scope.remote()
-                        ? GitFailure.<GitError, List<ExecutedCommand>>widen(deleteRemote(worktree, remote, credentials))
-                        : GitFailure.nothing(),
-                () -> scope.local() ? deleteLocal(worktree, name) : GitFailure.nothing());
     }
 
     /**
@@ -231,22 +218,6 @@ final class CliBranches implements Branches {
         return error instanceof GitError.CommandFailed failed && failed.says(NOT_FULLY_MERGED)
                 ? new GitError.NotFullyMerged(failed.explanation().getOrElse(""))
                 : error;
-    }
-
-    /**
-     * Runs {@code git push <remote> --delete refs/heads/<branch>} in {@code worktree}: the branch is named in full, as
-     * it is on the remote, so a tag of the same name there neither makes git refuse nor is deleted instead (ADR 40).
-     */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteRemote(
-            Path worktree, RemoteBranch remote, Map<String, String> credentials) {
-        return CliRemote.run(
-                worktree,
-                git(
-                        "push",
-                        GitArgs.remote(remote.remote()),
-                        "--delete",
-                        GitArgs.revision(new BranchRef.Local(remote.branch()))),
-                credentials);
     }
 
     /**
@@ -406,7 +377,7 @@ final class CliBranches implements Branches {
                     .flatMap(r -> remoteRef
                             .flatMap(ref -> GitOutput.after(ref, HEADS))
                             .map(BranchName::new)
-                            .map(branch -> CliRemote.THIS_REPOSITORY.equals(r)
+                            .map(branch -> CliRemotes.THIS_REPOSITORY.equals(r)
                                     ? new BranchRef.Local(branch)
                                     : new BranchRef.Remote(new RemoteBranch(r, branch))));
         }

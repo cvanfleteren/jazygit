@@ -19,8 +19,10 @@ import net.vanfleteren.jazygit.gh.model.GhLogin;
 import net.vanfleteren.jazygit.git.Config;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
+import net.vanfleteren.jazygit.git.Remotes;
 import net.vanfleteren.jazygit.git.StubConfig;
 import net.vanfleteren.jazygit.git.StubGitProvider;
+import net.vanfleteren.jazygit.git.StubRemotes;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.settings.RecentRepositories;
 import net.vanfleteren.jazygit.settings.Settings;
@@ -267,8 +269,13 @@ class SettingsPanelUpdateTest {
                     }
 
                     @Override
-                    public Either<ProcessError, Map<String, String>> remoteUrls() {
-                        return Either.right(HashMap.of("origin", "git@github.com:team/repo.git"));
+                    public Remotes remotes() {
+                        return new StubRemotes() {
+                            @Override
+                            public Either<ProcessError, Map<String, String>> urls() {
+                                return Either.right(HashMap.of("origin", "git@github.com:team/repo.git"));
+                            }
+                        };
                     }
                 },
                 new StubGitHub() {
