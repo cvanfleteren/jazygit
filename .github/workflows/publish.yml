@@ -42,7 +42,8 @@ jobs:
         run: |
           ./mvnw --batch-mode --no-transfer-progress -T1 -Pnative package -DskipTests
           version=$(./mvnw --batch-mode --no-transfer-progress -N help:evaluate -Dexpression=project.version -q -DforceStdout)
-          mv jazygit-app/target/jazygit "jazygit-app/target/jazygit-$version-linux-x86_64"
+          # Packed, the native image is a quarter of its size and keeps its executable bit.
+          XZ_OPT=-9T0 tar -C jazygit-app/target -cJf "jazygit-app/target/jazygit-$version-linux-x86_64.tar.xz" jazygit
 
       - name: Keep the fat-jar and native image
         uses: actions/upload-artifact@v7
@@ -50,7 +51,7 @@ jobs:
           name: binaries
           path: |
             jazygit-app/target/jazygit-*-fat.jar
-            jazygit-app/target/jazygit-*-linux-x86_64
+            jazygit-app/target/jazygit-*-linux-x86_64.tar.xz
           if-no-files-found: error
           retention-days: 1
 
@@ -72,7 +73,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           gh release delete snapshot --cleanup-tag --yes || true
-          gh release create snapshot binaries/jazygit-*-fat.jar binaries/jazygit-*-linux-x86_64 \
+          gh release create snapshot binaries/jazygit-*-fat.jar binaries/jazygit-*-linux-x86_64.tar.xz \
             --target "$GITHUB_SHA" \
             --prerelease \
             --title "Latest snapshot" \
@@ -94,4 +95,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-        run: gh release upload "$GITHUB_REF_NAME" binaries/jazygit-*-fat.jar binaries/jazygit-*-linux-x86_64 --clobber
+        run: gh release upload "$GITHUB_REF_NAME" binaries/jazygit-*-fat.jar binaries/jazygit-*-linux-x86_64.tar.xz --clobber
