@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.feature.branch.pull.PullAction;
 import net.vanfleteren.jazygit.feature.branch.push.PushAction;
 import net.vanfleteren.jazygit.feature.branch.rebase.RebaseAction;
 import net.vanfleteren.jazygit.feature.branch.rename.RenameBranchAction;
+import net.vanfleteren.jazygit.feature.branch.stack.StackAction;
 import net.vanfleteren.jazygit.feature.branch.tabs.BranchesTabAction;
 import net.vanfleteren.jazygit.feature.branch.upstream.UpstreamAction;
 import net.vanfleteren.jazygit.keys.Keymap;
@@ -43,6 +44,7 @@ public final class BranchFeature {
             DeleteBranchAction.ACTION,
             NukeBranchAction.ACTION,
             BranchCommitsAction.ACTION,
+            StackAction.ACTION,
             UpstreamAction.ACTION,
             AheadAction.BRANCHES,
             BranchesTabAction.ACTION);

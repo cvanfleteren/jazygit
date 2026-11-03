@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.ui;
 
 import dev.tamboui.text.Line;
 import dev.tamboui.toolkit.elements.Panel;
+import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Clock;
@@ -21,12 +22,21 @@ import net.vanfleteren.jazygit.state.*;
  * out in a new worktree.
  * A branch with a pull request shows its number, its CI checks and its review; one without shows the CI checks
  * of the branch it follows on GitHub.
+ * <p>
+ * A stack of pull requests on GitHub with a local branch is one node: a header, and its pull requests under it in
+ * GitHub's order, indented (ADR 72). Enter on the header opens or closes it; the keys of a branch do nothing there.
  */
 class LocalBranchesList implements BranchesTabList {
 
-    private final LoadableList<List<Branch>> list;
+    // How far a branch under the header of its stack is indented.
+    private static final String INDENT = "    ";
+
+    private final LoadableList<List<BranchNode>> list;
     private final Keymap keymap = Keymap.standard();
     private final Clock clock;
+    // The nodes the last render listed: built again on every render, and kept while they are the same, so the list
+    // reselects only when they change.
+    private Loadable<List<BranchNode>> nodes = Loadable.loading();
 
     /**
      * @param id         the id of the pane the branches are listed in
@@ -39,7 +49,7 @@ class LocalBranchesList implements BranchesTabList {
         list = new LoadableList<>(Messages.get("panel.branches.title"), id, LocalBranchesList::reselect, highlights);
         // The highlight alone marks the selection; a symbol would indent the rows.
         list.highlightSymbol("");
-        list.onKey(event -> PaneKeys.sending(keymap.handle(Scopes.BRANCHES, event, selectedBranch()), dispatch));
+        list.onKey(event -> PaneKeys.sending(keys(event), dispatch));
     }
 
     /**
@@ -102,20 +112,57 @@ class LocalBranchesList implements BranchesTabList {
     }
 
     /**
-     * The selection follows its branch when the list is reordered, also when it was renamed: when it is gone and
-     * one branch came in its place. After a checkout it goes to the new current branch, which is listed first.
+     * The selection follows its node when the list is reordered, also a branch that was renamed: when it is gone and
+     * one branch came in its place. After a checkout it goes to the new current branch, which is listed first, or to
+     * the header of its stack when that is closed.
      */
-    private static int reselect(List<Branch> previous, List<Branch> next, int selected) {
+    private static int reselect(List<BranchNode> previous, List<BranchNode> next, int selected) {
         Option<BranchName> before = current(previous);
-        Option<BranchName> target = before.equals(current(next))
+        Option<String> target = before.equals(current(next))
                 ? Option.of(selected)
                         .filter(i -> i < previous.size())
-                        .map(i -> previous.get(i).name())
-                        .map(name -> renamed(previous, next, name))
-                : current(next);
-        return target.map(name -> next.indexWhere(b -> b.name().equals(name)))
+                        .map(previous::get)
+                        .map(node -> node instanceof BranchNode.Leaf leaf
+                                ? leafKey(renamed(
+                                        branches(previous),
+                                        branches(next),
+                                        leaf.branch().name()))
+                                : node.key())
+                : current(next)
+                        .map(name -> next.find(node -> holds(node, name))
+                                .map(BranchNode::key)
+                                .getOrElse(() -> leafKey(name)));
+        return target.map(key -> next.indexWhere(node -> node.key().equals(key)))
                 .filter(i -> i >= 0)
                 .getOrElse(selected);
+    }
+
+    private static String leafKey(BranchName name) {
+        return "branch:" + name.value();
+    }
+
+    /**
+     * Whether {@code node} shows the branch {@code name}: as itself, or under the header of a closed stack.
+     */
+    private static boolean holds(BranchNode node, BranchName name) {
+        return switch (node) {
+            case BranchNode.Leaf leaf -> leaf.branch().name().equals(name);
+            case BranchNode.Header header ->
+                !header.open()
+                        && header.branches().exists(branch -> branch.name().equals(name));
+            case BranchNode.Other other -> false;
+        };
+    }
+
+    /**
+     * The branches of {@code nodes}, also those of the stacks shown closed.
+     */
+    private static List<Branch> branches(List<BranchNode> nodes) {
+        return nodes.flatMap(node -> switch (node) {
+            case BranchNode.Leaf leaf -> List.of(leaf.branch());
+            case BranchNode.Header header -> header.open() ? List.<Branch>empty() : header.branches();
+            case BranchNode.Other other -> List.<Branch>empty();
+        });
     }
 
     /**
@@ -128,42 +175,125 @@ class LocalBranchesList implements BranchesTabList {
         return after.contains(name) || added.size() != 1 ? name : added.head();
     }
 
-    private static Option<BranchName> current(List<Branch> branches) {
-        return branches.find(Branch::current).map(Branch::name);
+    private static Option<BranchName> current(List<BranchNode> nodes) {
+        return branches(nodes).find(Branch::current).map(Branch::name);
+    }
+
+    /**
+     * The header of a stack on one line: whether it is open, its number and its base, then apart how many pull
+     * requests it has (ADR 72).
+     */
+    static LoadableList.Row header(BranchNode.Header header) {
+        return new LoadableList.Row(List.of(
+                        LoadableList.Seg.styled(header.open() ? "▾ " : "▸ ", Theme.Classes.DIM),
+                        LoadableList.Seg.styled(
+                                Messages.get(
+                                        "branches.stack.header",
+                                        header.stack().number(),
+                                        header.stack().base().getOrElse("?")),
+                                Theme.Classes.PULL_REQUEST))
+                .appendAll(BranchSegs.group(List.of(LoadableList.Seg.styled(
+                        " " + Messages.get("branches.stack.size", header.stack().size()), Theme.Classes.DIM)))));
+    }
+
+    /**
+     * A pull request of a stack whose branch is not checked out, or that is merged or closed, on one dimmed line
+     * under the header of its stack.
+     */
+    static LoadableList.Row other(BranchNode.Other other) {
+        String key = switch (other.entry().state()) {
+            case OPEN -> "branches.stack.notCheckedOut";
+            case MERGED -> "branches.stack.merged";
+            case CLOSED -> "branches.stack.closed";
+        };
+        return LoadableList.Row.of(
+                LoadableList.Seg.styled(INDENT + Messages.get(key, other.entry().number()), Theme.Classes.DIM));
+    }
+
+    /**
+     * {@code row} indented under the header of its stack, both its lines.
+     */
+    static LoadableList.Row indented(LoadableList.Row row) {
+        return new LoadableList.Row(
+                row.segs().prepend(LoadableList.Seg.of(INDENT)),
+                row.detail().map(detail -> detail.prepend(LoadableList.Seg.of(INDENT))));
     }
 
     @Override
     public Panel render(Model model, boolean focused, boolean active, Line title) {
         Function<BranchRef, Option<String>> spinnerOf = BranchSegs.spinners(model, clock.instant());
+        Loadable<List<BranchNode>> read = model.repo()
+                .branches()
+                .map(branches -> BranchNode.of(
+                        branches, model.gitHub()::pullRequest, model.repoView().closedStacks()));
+        nodes = read.equals(nodes) ? nodes : read;
+        Function<Branch, LoadableList.Row> rowOf = b -> row(
+                b,
+                Duration.between(b.lastActivity(), model.now()),
+                model.repo().baseDistance().get(b.name()),
+                shownParent(model, b),
+                BranchSegs.gitHub(
+                        model.gitHub().pullRequest(b),
+                        model.gitHub().merge(model.gitHub().pullRequest(b)),
+                        model.gitHub().checks(b),
+                        model.gitHub().waiting(b),
+                        BranchSegs.eta(model, model.gitHub().eta(b)),
+                        model.now()),
+                spinnerOf.apply(new BranchRef.Local(b.name())));
         return list.render(
-                model.repo().branches(),
-                branches -> branches.map(b -> row(
-                        b,
-                        Duration.between(b.lastActivity(), model.now()),
-                        model.repo().baseDistance().get(b.name()),
-                        shownParent(model, b),
-                        BranchSegs.gitHub(
-                                model.gitHub().pullRequest(b),
-                                model.gitHub().merge(model.gitHub().pullRequest(b)),
-                                model.gitHub().checks(b),
-                                model.gitHub().waiting(b),
-                                BranchSegs.eta(model, model.gitHub().eta(b)),
-                                model.now()),
-                        spinnerOf.apply(new BranchRef.Local(b.name())))),
+                nodes,
+                listed -> listed.map(node -> switch (node) {
+                    case BranchNode.Leaf leaf ->
+                        leaf.inStack() ? indented(rowOf.apply(leaf.branch())) : rowOf.apply(leaf.branch());
+                    case BranchNode.Header header -> header(header);
+                    case BranchNode.Other other -> other(other);
+                }),
                 focused,
                 active,
                 title);
     }
 
+    /**
+     * The branch whose log shows: the highlighted one, or the highest local branch of the stack whose header is
+     * highlighted, whose log holds the whole stack.
+     */
     @Override
     public Option<BranchRef> selectedRef() {
-        return selectedBranch().map(BranchRef.Local::new);
+        return selected()
+                .flatMap(node -> switch (node) {
+                    case BranchNode.Leaf leaf -> Option.of(leaf.branch().name());
+                    case BranchNode.Header header -> header.top();
+                    case BranchNode.Other other -> Option.<BranchName>none();
+                })
+                .map(BranchRef.Local::new);
     }
 
     /**
-     * The name of the highlighted branch, once the branches are shown.
+     * The name of the highlighted branch, once the branches are shown; none while a header or a pull request whose
+     * branch is not checked out is highlighted.
      */
     Option<BranchName> selectedBranch() {
-        return list.selected(branches -> branches).map(Branch::name);
+        return selected()
+                .flatMap(node -> node instanceof BranchNode.Leaf leaf
+                        ? Option.of(leaf.branch().name())
+                        : Option.none());
+    }
+
+    private Option<BranchNode> selected() {
+        return list.selected(listed -> listed);
+    }
+
+    /**
+     * What {@code event} does on the highlighted node: on a header, what the keys of a stack do, else what those of
+     * the pane do that need no branch; on anything else, what the keys of a branch do.
+     */
+    private Option<Msg> keys(KeyEvent event) {
+        return selected()
+                .filter(BranchNode.Header.class::isInstance)
+                .map(node -> ((BranchNode.Header) node).stack().number())
+                .fold(
+                        () -> keymap.handle(Scopes.BRANCHES, event, selectedBranch()),
+                        stack -> keymap.handle(Scopes.STACKS, event, Option.of(stack))
+                                .orElse(() -> keymap.handle(Scopes.BRANCHES, event, Option.none())));
     }
 }
