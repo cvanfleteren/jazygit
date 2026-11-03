@@ -19,9 +19,10 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
  * The {@link Integrate} of a repository, through {@code git merge}, {@code git cherry-pick}, {@code git revert} and
- * {@code git rebase}. One that stops on conflicts is left so, for the user to resolve them; git itself refuses to
- * start one while uncommitted changes would be overwritten, or while the repository is in the middle of something
- * else, which is then left alone. What the repository stopped in the middle of is told through {@link #conflicts}.
+ * {@code git rebase}. One that stops on conflicts is left so, for the user to resolve them. Git itself refuses to
+ * start one while the repository is in the middle of something else, which is then left alone, and a merge, a
+ * cherry-pick or a revert while uncommitted changes would be overwritten; a rebase takes them along, stashed. How many
+ * files one left with conflicts is counted through {@link #conflicts}.
  */
 final class CliIntegrate implements Integrate {
 
