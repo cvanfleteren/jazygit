@@ -196,11 +196,14 @@ class CliMoveCommitsTest {
 
         assertEquals(
                 new CommitRange(5, 1, 2, Option.none()),
-                CliLog.range(repo, FEATURE, sha("HEAD~3"), Option.of(new RemoteBranch("origin", FEATURE)))
+                new CliHistory(repo)
+                        .commitRange(FEATURE, sha("HEAD~3"), Option.of(new RemoteBranch("origin", FEATURE)))
                         .get());
         assertEquals(
                 new CommitRange(5, 1, 0, Option.none()),
-                CliLog.range(repo, FEATURE, sha("HEAD~3"), Option.none()).get());
+                new CliHistory(repo)
+                        .commitRange(FEATURE, sha("HEAD~3"), Option.none())
+                        .get());
     }
 
     @Test
@@ -209,7 +212,10 @@ class CliMoveCommitsTest {
 
         assertEquals(
                 Option.of(sha("HEAD~1")),
-                CliLog.range(repo, FEATURE, sha("side"), Option.none()).get().mergedThrough());
+                new CliHistory(repo)
+                        .commitRange(FEATURE, sha("side"), Option.none())
+                        .get()
+                        .mergedThrough());
     }
 
     @Test
@@ -218,13 +224,22 @@ class CliMoveCommitsTest {
 
         assertEquals(
                 Option.none(),
-                CliLog.range(repo, FEATURE, sha("side~1"), Option.none()).get().mergedThrough());
+                new CliHistory(repo)
+                        .commitRange(FEATURE, sha("side~1"), Option.none())
+                        .get()
+                        .mergedThrough());
         assertEquals(
                 Option.none(),
-                CliLog.range(repo, FEATURE, sha("HEAD~2"), Option.none()).get().mergedThrough());
+                new CliHistory(repo)
+                        .commitRange(FEATURE, sha("HEAD~2"), Option.none())
+                        .get()
+                        .mergedThrough());
         assertEquals(
                 Option.none(),
-                CliLog.range(repo, FEATURE, sha("HEAD~4"), Option.none()).get().mergedThrough());
+                new CliHistory(repo)
+                        .commitRange(FEATURE, sha("HEAD~4"), Option.none())
+                        .get()
+                        .mergedThrough());
     }
 
     /**

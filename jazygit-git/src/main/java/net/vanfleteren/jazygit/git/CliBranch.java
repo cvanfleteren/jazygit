@@ -135,7 +135,7 @@ final class CliBranch {
      * {@code refs/heads/}; a branch name cannot have the characters that make it a wider glob.
      */
     static Either<ProcessError, Integer> countOnlyOn(Path worktree, BranchName name) {
-        return CliLog.count(
+        return CliHistory.count(
                 worktree,
                 List.of(
                         GitArgs.revision(new BranchRef.Local(name)),

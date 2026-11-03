@@ -36,7 +36,10 @@ public sealed interface CreatePullRequestCmd extends Cmd {
      * The subject of the oldest commit of {@code branch} that is not on {@code baseRef}, if it could be read.
      */
     private static Option<String> firstSubject(Env env, BranchName branch, BranchRef baseRef) {
-        return env.git().firstSubject(new BranchRef.Local(branch), baseRef).getOrElse(Option.none());
+        return env.git()
+                .history()
+                .firstSubject(new BranchRef.Local(branch), baseRef)
+                .getOrElse(Option.none());
     }
 
     /**
@@ -102,6 +105,7 @@ public sealed interface CreatePullRequestCmd extends Cmd {
         private Either<GitError.ProcessError, Option<BranchName>> closest(Env env) {
             BranchRef local = new BranchRef.Local(branch);
             return Either.sequenceRight(bases.map(base -> env.git()
+                            .history()
                             .countNotOn(local, base.ref(), MAX_DISTANCE)
                             .map(distance -> Tuple.of(base.name(), distance))))
                     .map(distances -> distances

@@ -13,8 +13,10 @@ import java.time.Instant;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
+import net.vanfleteren.jazygit.git.History;
 import net.vanfleteren.jazygit.git.Status;
 import net.vanfleteren.jazygit.git.StubGitProvider;
+import net.vanfleteren.jazygit.git.StubHistory;
 import net.vanfleteren.jazygit.git.StubStatus;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
@@ -54,13 +56,18 @@ class PanePositionTest {
         }
 
         @Override
-        public Either<ProcessError, List<Commit>> commits(Sha head) {
-            return Either.right(commitList);
-        }
+        public History history() {
+            return new StubHistory() {
+                @Override
+                public Either<ProcessError, List<Commit>> commits(Sha head) {
+                    return Either.right(commitList);
+                }
 
-        @Override
-        public Either<GitError, List<Commit>> log(BranchRef branch) {
-            return Either.right(commitList);
+                @Override
+                public Either<GitError, List<Commit>> log(BranchRef branch) {
+                    return Either.right(commitList);
+                }
+            };
         }
     }
 

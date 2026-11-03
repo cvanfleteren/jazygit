@@ -255,7 +255,7 @@ highlighted branch diverged (`feature.branch`, `UpstreamUpdate`):
   marks. The main branch itself has no base.
 
 `Model.divergence` (`state.DivergenceView`) holds the two branches, the commits only on either of them, read with
-`GitInfoProvider.divergence` (two `git log a ^b` of at most 300 commits each, and `rev-list --left-right --count` for
+`History.divergence` (two `git log a ^b` of at most 300 commits each, and `rev-list --left-right --count` for
 how many there are), and the preview of the highlighted one. While it is open, the branches pane lists it in place of
 the local branches: the commits only on the other branch, then the ones only on the local branch, each under the
 name of its branch. The highlight skips those names. The content panel shows the highlighted commit as the commits
@@ -281,7 +281,7 @@ content panel shows the highlighted commit as the commits pane does, in a scroll
 ## Searching the commits
 
 `/` in the commits pane opens a line above the list to type a query in (`RepoView.searchLine`); Enter runs it through
-`GitInfoProvider.search`, and the pane then lists what it found in place of the log of HEAD (`RepoView.commitSearch`,
+`History.search`, and the pane then lists what it found in place of the log of HEAD (`RepoView.commitSearch`,
 `state.CommitSearch`), flat, without the rails of merges, until Escape clears it. Its messages and update are in
 `state` (`CommitSearchMsg`, `CommitSearchUpdate`), as the pane sends them; `feature.commit.search` only declares the
 key. `git.model.CommitQuery` parses the query: bare words for the message, `author:`, `path:` and `-S:`, smart case.
@@ -834,8 +834,8 @@ classDiagram
     class GitInfoProvider {
         <<interface>>
         status() Status
-        log(branch) Either of GitError or commits
         diffs() Diffs
+        history() History
         checkout() Checkout
         reword(Sha, CommitMessage) Either of GitFailure of GitError or commands
         stashes() Stashes
@@ -862,13 +862,14 @@ classDiagram
     CliEditor ..|> Editor
     CliConfig ..|> Config
     CliDiffs ..|> Diffs
+    CliHistory ..|> History
     CliGitInfoProvider --> CliEditor : editor()
     CliGitInfoProvider --> CliConfig : config()
     CliWorktrees ..|> Worktrees
     CliGitInfoProvider --> CliWorktrees : worktrees()
     CliGitInfoProvider --> CliStatus : status()
     CliGitInfoProvider ..> CliBranches
-    CliGitInfoProvider ..> CliLog
+    CliGitInfoProvider --> CliHistory : history()
     CliGitInfoProvider --> CliDiffs : diffs()
     CliGitInfoProvider --> CliCheckout : checkout()
     CliGitInfoProvider ..> CliBranch
@@ -908,7 +909,7 @@ each role that is split off this way; the `Cli*` classes it still points to with
       provider (`CliInProgress.Markers`): every status read then only looks at those files, without starting
       git. This assumes they never move while a repository is open, which holds as a provider is for one working
       tree, whose git directory stays where it is.
-    - `CliLog` runs `git rev-parse` and `git log -z`.
+    - `CliHistory` runs `git rev-parse` and `git log -z`.
     - `CliStashes` lists the stashes with the `git log --walk-reflogs … refs/stash` that `git stash list` runs
       itself, which saves a process. The stashes are the reflog of `refs/stash`, as git's documentation of
       `git stash` says. Without a stash there is no reflog, which `--ignore-missing` makes an empty list.
@@ -1131,7 +1132,7 @@ sequenceDiagram
    where `Reword.perform` is `git.reword(sha, message)`.
 
 6. **The git work**, in `CliRebase.rewordAny`.
-   - `CliLog.resolve(worktree, "HEAD")` runs `git rev-parse --verify --quiet HEAD^{commit}` to find out
+   - `CliHistory.resolve(worktree, "HEAD")` runs `git rev-parse --verify --quiet HEAD^{commit}` to find out
      whether the commit is `HEAD`. If that fails, it's a `ProcessError`.
    - **The commit is `HEAD`:** `CliIndex.reword` runs `git commit --allow-empty --amend --only -m … [-m …]`.
      Its `ProcessError` is widened to a `GitError`.
@@ -1192,7 +1193,7 @@ flowchart TD
   gives every method a default).
 - **The git layer** is tested against real temporary repositories: `CliGitInfoProviderTest`,
   `CliCheckoutTest`, `CliDiscardTest`, `CliDiffTest`, `CliMergeTest` and `GitProcessTest`. The parsers
-  (`CliStatus.parse`, `CliBranches.parse`, `CliLog.parse`) are tested on fixed git output in
+  (`CliStatus.parse`, `CliBranches.parse`, `CliHistory.parse`) are tested on fixed git output in
   `CliStatusTest` and `CliParseTest`.
 - **UI tests** use TamboUI's `ToolkitTestRunner` and its pilot.
 - **Acceptance tests** (`acceptance/`, in Python) run the built jar in a pseudo terminal, press keys and check the

@@ -34,6 +34,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     private final CliIndex index;
     private final CliEditor editor;
     private final CliDiffs diffs;
+    private final CliHistory history;
 
     private CliGitInfoProvider(
             Path worktree,
@@ -52,6 +53,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
         this.index = new CliIndex(worktree);
         this.editor = new CliEditor(worktree);
         this.diffs = new CliDiffs(worktree);
+        this.history = new CliHistory(worktree);
     }
 
     /**
@@ -127,48 +129,13 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<ProcessError, List<Commit>> commits(Sha head) {
-        return CliLog.log(worktree, head);
-    }
-
-    @Override
-    public Either<ProcessError, List<Commit>> search(CommitQuery query, Option<BranchRef> notOn) {
-        return CliLog.search(worktree, query, notOn);
-    }
-
-    @Override
-    public Either<ProcessError, Ahead> ahead(Sha tip, BranchRef base, Sha baseTip) {
-        return CliLog.ahead(worktree, tip, base, baseTip, MAX_COMMITS);
+    public History history() {
+        return history;
     }
 
     @Override
     public Either<ProcessError, AllBranches> allBranches() {
         return CliBranch.all(worktree);
-    }
-
-    @Override
-    public Either<GitError, List<Commit>> log(BranchRef branch) {
-        return CliLog.log(worktree, branch);
-    }
-
-    @Override
-    public Either<GitError, Divergence> divergence(BranchRef branch, BranchRef other) {
-        return CliLog.divergence(worktree, branch, other);
-    }
-
-    @Override
-    public Either<GitError, Option<String>> firstSubject(BranchRef branch, BranchRef base) {
-        return CliLog.firstSubject(worktree, branch, base);
-    }
-
-    @Override
-    public Either<ProcessError, Integer> countNotOn(BranchRef branch, BranchRef base, int max) {
-        return CliLog.countNotOn(worktree, branch, base, max);
-    }
-
-    @Override
-    public Either<GitError, CommitRange> commitRange(BranchName branch, Sha oldest, Option<RemoteBranch> upstream) {
-        return CliLog.range(worktree, branch, oldest, upstream);
     }
 
     @Override

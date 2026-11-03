@@ -386,7 +386,9 @@ public interface Cmd {
         @Override
         public Msg run(Env env) {
             return ahead.tip()
-                    .fold(() -> Either.<ProcessError, List<Commit>>right(List.empty()), env.git()::commits)
+                    .fold(
+                            () -> Either.<ProcessError, List<Commit>>right(List.empty()),
+                            env.git().history()::commits)
                     .fold(this::failedWith, commits -> new LoadMsg.CommitsLoaded(commits, ahead, ahead.read(env)));
         }
     }
@@ -416,6 +418,7 @@ public interface Cmd {
         @Override
         public Msg run(Env env) {
             return env.git()
+                    .history()
                     .search(query, notOn)
                     .fold(this::failedWith, commits -> new LoadMsg.CommitSearchLoaded(query, notOn, commits));
         }
@@ -448,6 +451,7 @@ public interface Cmd {
          */
         Either<Failure, Option<Ahead>> read(Env env) {
             return tip.flatMap(ours -> base.map(theirs -> env.git()
+                            .history()
                             .ahead(ours, theirs.ref(), theirs.tip())
                             .<Failure>mapLeft(Failure.Git::new)
                             .map(Option::of)))
@@ -487,6 +491,7 @@ public interface Cmd {
         @Override
         public Msg run(Env env) {
             return env.git()
+                    .history()
                     .log(branch)
                     .fold(
                             this::failedWith,
@@ -519,6 +524,7 @@ public interface Cmd {
         @Override
         public Msg run(Env env) {
             return env.git()
+                    .history()
                     .divergence(new BranchRef.Local(branch), other)
                     .fold(this::failedWith, divergence -> new LoadMsg.DivergenceLoaded(branch, other, divergence));
         }
