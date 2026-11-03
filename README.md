@@ -34,6 +34,7 @@ of your `~/.gitconfig`, and every work repository has it.
 ## Getting it
 
 Download the jar, or the native Linux executable, from [Releases](https://github.com/cvanfleteren/jazygit/releases).
+The executable comes packed; `tar -xJf jazygit-*-linux-x86_64.tar.xz` unpacks it as `jazygit`.
 To build it yourself, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Requirements
