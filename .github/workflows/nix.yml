@@ -20,7 +20,7 @@ on:
 
 # A newer push to the branch takes over, so a run never pushes the hash on top of a commit it hasn't seen.
 concurrency:
-  group: nix-${{ github.head_ref || github.ref }}
+  group: nix-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
