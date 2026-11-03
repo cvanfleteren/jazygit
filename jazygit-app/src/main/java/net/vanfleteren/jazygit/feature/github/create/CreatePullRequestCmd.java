@@ -84,7 +84,8 @@ public sealed interface CreatePullRequestCmd extends Cmd {
         @Override
         public Msg run(Env env) {
             return env.git()
-                    .parentBranch(branch)
+                    .branches()
+                    .parent(branch)
                     .map(recorded -> recorded.flatMap(this::base))
                     .flatMap(recorded -> recorded.isDefined() ? Either.right(recorded) : closest(env))
                     .fold(error -> read(Option.none()), this::read);

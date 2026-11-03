@@ -305,7 +305,7 @@ class JazygitAppPilotTest {
             pilot.pause();
             assertEquals(fixture.selecting(1), fixture.branches().selectionChange(fixture.model()));
 
-            int branchCount = fixture.data().branches().get().size();
+            int branchCount = fixture.data().branches().all().get().local().size();
             for (int i = 0; i < branchCount + 5; i++) {
                 pilot.press(KeyCode.DOWN);
             }
@@ -500,8 +500,8 @@ class JazygitAppPilotTest {
          * What the branches pane sends when the {@code index}th branch gets highlighted.
          */
         Option<Msg> selecting(int index) {
-            return Option.of(new SelectionMsg.BranchSelected(
-                    new BranchRef.Local(data.branches().get().get(index).name())));
+            return Option.of(new SelectionMsg.BranchSelected(new BranchRef.Local(
+                    data.branches().all().get().local().get(index).name())));
         }
 
         Supplier<Element> renderer() {

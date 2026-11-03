@@ -35,6 +35,7 @@ import net.vanfleteren.jazygit.feature.fetch.FetchCmd;
 import net.vanfleteren.jazygit.feature.fetch.FetchMsg;
 import net.vanfleteren.jazygit.feature.stage.StageMsg;
 import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.git.Branches;
 import net.vanfleteren.jazygit.git.Checkout;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
@@ -43,6 +44,7 @@ import net.vanfleteren.jazygit.git.History;
 import net.vanfleteren.jazygit.git.Index;
 import net.vanfleteren.jazygit.git.Stashes;
 import net.vanfleteren.jazygit.git.Status;
+import net.vanfleteren.jazygit.git.StubBranches;
 import net.vanfleteren.jazygit.git.StubCheckout;
 import net.vanfleteren.jazygit.git.StubDiffs;
 import net.vanfleteren.jazygit.git.StubGitProvider;
@@ -134,18 +136,23 @@ class ProgramTest {
         }
 
         @Override
-        public Either<ProcessError, List<Branch>> branches() {
-            return Either.right(List.of(
-                    Fixtures.branch(
-                            new BranchName("main"),
-                            status.head().branchName().contains(new BranchName("main")),
-                            new Sha("main-tip")),
-                    Fixtures.branch(
-                            new BranchName("other"),
-                            status.head().branchName().contains(new BranchName("other")),
-                            new Sha("other-tip"),
-                            Instant.EPOCH,
-                            true)));
+        public Branches branches() {
+            return new StubBranches() {
+                @Override
+                public Either<ProcessError, List<Branch>> local() {
+                    return Either.right(List.of(
+                            Fixtures.branch(
+                                    new BranchName("main"),
+                                    status.head().branchName().contains(new BranchName("main")),
+                                    new Sha("main-tip")),
+                            Fixtures.branch(
+                                    new BranchName("other"),
+                                    status.head().branchName().contains(new BranchName("other")),
+                                    new Sha("other-tip"),
+                                    Instant.EPOCH,
+                                    true)));
+                }
+            };
         }
 
         @Override

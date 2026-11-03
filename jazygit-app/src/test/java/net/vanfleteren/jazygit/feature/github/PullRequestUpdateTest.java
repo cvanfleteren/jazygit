@@ -57,8 +57,10 @@ import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Status;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.gh.timing.CheckTimings;
+import net.vanfleteren.jazygit.git.Branches;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.History;
+import net.vanfleteren.jazygit.git.StubBranches;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.StubHistory;
 import net.vanfleteren.jazygit.git.model.*;
@@ -254,10 +256,6 @@ class PullRequestUpdateTest {
     @Test
     void theRecordedParentIsReadWithoutCountingCommits() {
         StubGitProvider git = new StubGitProvider() {
-            @Override
-            public Either<GitError.ProcessError, Option<BranchName>> parentBranch(BranchName branch) {
-                return Either.right(Option.of(RELEASE.name()));
-            }
 
             @Override
             public History history() {
@@ -266,6 +264,16 @@ class PullRequestUpdateTest {
                     public Either<GitError.ProcessError, Integer> countNotOn(
                             BranchRef branch, BranchRef base, int max) {
                         throw new AssertionError("counted");
+                    }
+                };
+            }
+
+            @Override
+            public Branches branches() {
+                return new StubBranches() {
+                    @Override
+                    public Either<GitError.ProcessError, Option<BranchName>> parent(BranchName branch) {
+                        return Either.right(Option.of(RELEASE.name()));
                     }
                 };
             }
@@ -301,10 +309,6 @@ class PullRequestUpdateTest {
     @Test
     void aRecordedParentThatIsNoBaseIsIgnored() {
         StubGitProvider git = new StubGitProvider() {
-            @Override
-            public Either<GitError.ProcessError, Option<BranchName>> parentBranch(BranchName branch) {
-                return Either.right(Option.of(UNPUSHED.name()));
-            }
 
             @Override
             public History history() {
@@ -313,6 +317,16 @@ class PullRequestUpdateTest {
                     public Either<GitError.ProcessError, Integer> countNotOn(
                             BranchRef branch, BranchRef base, int max) {
                         return Either.right(base.equals(remote("ahead")) ? 1 : 4);
+                    }
+                };
+            }
+
+            @Override
+            public Branches branches() {
+                return new StubBranches() {
+                    @Override
+                    public Either<GitError.ProcessError, Option<BranchName>> parent(BranchName branch) {
+                        return Either.right(Option.of(UNPUSHED.name()));
                     }
                 };
             }
@@ -600,10 +614,6 @@ class PullRequestUpdateTest {
     @Test
     void aParentRecordedUnderTheNameOnTheRemoteIsTheBaseOfThatName() {
         StubGitProvider git = new StubGitProvider() {
-            @Override
-            public Either<GitError.ProcessError, Option<BranchName>> parentBranch(BranchName branch) {
-                return Either.right(Option.of(new BranchName("development")));
-            }
 
             @Override
             public History history() {
@@ -612,6 +622,16 @@ class PullRequestUpdateTest {
                     public Either<GitError.ProcessError, Integer> countNotOn(
                             BranchRef branch, BranchRef base, int max) {
                         throw new AssertionError("counted");
+                    }
+                };
+            }
+
+            @Override
+            public Branches branches() {
+                return new StubBranches() {
+                    @Override
+                    public Either<GitError.ProcessError, Option<BranchName>> parent(BranchName branch) {
+                        return Either.right(Option.of(new BranchName("development")));
                     }
                 };
             }
@@ -647,10 +667,6 @@ class PullRequestUpdateTest {
 
     private static StubGitProvider parentRecorded(String name) {
         return new StubGitProvider() {
-            @Override
-            public Either<GitError.ProcessError, Option<BranchName>> parentBranch(BranchName branch) {
-                return Either.right(Option.of(new BranchName(name)));
-            }
 
             @Override
             public History history() {
@@ -659,6 +675,16 @@ class PullRequestUpdateTest {
                     public Either<GitError.ProcessError, Integer> countNotOn(
                             BranchRef branch, BranchRef base, int max) {
                         throw new AssertionError("counted");
+                    }
+                };
+            }
+
+            @Override
+            public Branches branches() {
+                return new StubBranches() {
+                    @Override
+                    public Either<GitError.ProcessError, Option<BranchName>> parent(BranchName branch) {
+                        return Either.right(Option.of(new BranchName(name)));
                     }
                 };
             }

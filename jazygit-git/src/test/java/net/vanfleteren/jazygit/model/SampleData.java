@@ -3,10 +3,12 @@ package net.vanfleteren.jazygit.model;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import java.time.Instant;
+import net.vanfleteren.jazygit.git.Branches;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.History;
 import net.vanfleteren.jazygit.git.Status;
+import net.vanfleteren.jazygit.git.StubBranches;
 import net.vanfleteren.jazygit.git.StubDiffs;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.StubHistory;
@@ -92,29 +94,34 @@ public final class SampleData implements StubGitProvider {
     }
 
     @Override
-    public Either<ProcessError, List<Branch>> branches() {
-        return Either.right(List.of(
-                Fixtures.branch(
-                        new BranchName("main"),
-                        true,
-                        new Sha("a1b2c3d4e5f60718293a4b5c6d7e8f9012345678"),
-                        Instant.EPOCH,
-                        true,
-                        true),
-                Fixtures.branch(
-                        new BranchName("feature/initial-layout"),
-                        false,
-                        new Sha("0a1b2c3d4e5f60718293a4b5c6d7e8f901234567"),
-                        Instant.EPOCH,
-                        true),
-                Fixtures.branch(
-                        new BranchName("feature/jgit-backend"),
-                        false,
-                        new Sha("1a2b3c4d5e6f708192a3b4c5d6e7f80912345678")),
-                Fixtures.branch(
-                        new BranchName("bugfix/focus-cycling"),
-                        false,
-                        new Sha("c3d4e5f60718293a4b5c6d7e8f9012345678a1b2"))));
+    public Branches branches() {
+        return new StubBranches() {
+            @Override
+            public Either<ProcessError, List<Branch>> local() {
+                return Either.right(List.of(
+                        Fixtures.branch(
+                                new BranchName("main"),
+                                true,
+                                new Sha("a1b2c3d4e5f60718293a4b5c6d7e8f9012345678"),
+                                Instant.EPOCH,
+                                true,
+                                true),
+                        Fixtures.branch(
+                                new BranchName("feature/initial-layout"),
+                                false,
+                                new Sha("0a1b2c3d4e5f60718293a4b5c6d7e8f901234567"),
+                                Instant.EPOCH,
+                                true),
+                        Fixtures.branch(
+                                new BranchName("feature/jgit-backend"),
+                                false,
+                                new Sha("1a2b3c4d5e6f708192a3b4c5d6e7f80912345678")),
+                        Fixtures.branch(
+                                new BranchName("bugfix/focus-cycling"),
+                                false,
+                                new Sha("c3d4e5f60718293a4b5c6d7e8f9012345678a1b2"))));
+            }
+        };
     }
 
     @Override

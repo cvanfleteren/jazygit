@@ -4,6 +4,7 @@ import static net.vanfleteren.jazygit.git.GitCommand.git;
 import static net.vanfleteren.jazygit.git.model.BranchRef.HEADS;
 import static net.vanfleteren.jazygit.git.model.BranchRef.REMOTES;
 
+import io.vavr.Tuple;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
@@ -22,10 +23,11 @@ import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
- * Lists, renames and deletes branches through the {@code git} command line tool. The branches are read through
- * {@code git for-each-ref}, in one call for all of them.
+ * The {@link Branches} of a repository, through the {@code git} command line tool. The branches are read through
+ * {@code git for-each-ref}, in one call for all of them. Creating a branch records its parent through
+ * {@link #setParent}; deleting one on its remote too goes through {@link #delete} and {@link #deleteRemote}.
  */
-final class CliBranch {
+final class CliBranches implements Branches {
 
     private static final String ORIGIN = BranchRef.REMOTES + GitArgs.remote(RemoteBranch.DEFAULT_REMOTE) + "/";
 
@@ -54,6 +56,8 @@ final class CliBranch {
     // What git says when it refuses to delete a branch that is not merged. It is matched in English, so git is run
     // with the C locale.
     private static final String NOT_FULLY_MERGED = "is not fully merged";
+    private static final String PARENT_PREFIX = "branch.";
+    private static final String PARENT_SUFFIX = ".gh-merge-base";
     // The checked out branch first, then the most recently worked on.
     private static final Comparator<Branch> ORDER = Comparator.comparing(Branch::current)
             .reversed()
@@ -64,14 +68,19 @@ final class CliBranch {
             .reversed()
             .thenComparing(ref -> ref.branch().shortName());
 
-    private CliBranch() {}
+    private final Path worktree;
+
+    CliBranches(Path worktree) {
+        this.worktree = worktree;
+    }
 
     /**
      * The local and the remote-tracking branches, from a single {@code git for-each-ref}: the local branches need
      * the remote ones anyway, to tell which are pushed and which is the default. When the local ones were made comes
      * from their reflogs, read with one {@code git log --walk-reflogs} before.
      */
-    static Either<ProcessError, AllBranches> all(Path worktree) {
+    @Override
+    public Either<ProcessError, AllBranches> all() {
         return GitProcess.read(
                         worktree,
                         GitCommand.reading(
@@ -83,7 +92,7 @@ final class CliBranch {
                                 "--format=" + REFLOG_FORMAT,
                                 "--glob=" + HEADS,
                                 "--"),
-                        CliBranch::parseCreated)
+                        CliBranches::parseCreated)
                 .flatMap(created -> GitProcess.read(
                         worktree,
                         GitCommand.reading("for-each-ref", "--format=" + FORMAT, HEADS, REMOTES),
@@ -106,9 +115,14 @@ final class CliBranch {
     /**
      * Runs {@code git branch -m <name> <newName>} in {@code worktree}, which refuses to overwrite a branch.
      */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> rename(
-            Path worktree, BranchName name, BranchName newName) {
+    @Override
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> rename(BranchName name, BranchName newName) {
         return GitProcess.log(worktree, git("branch", "--move", "--", GitArgs.name(name), GitArgs.name(newName)));
+    }
+
+    @Override
+    public Either<GitFailure<GitError>, List<ExecutedCommand>> deleteLocal(BranchName name) {
+        return deleteLocal(worktree, name);
     }
 
     /**
@@ -119,13 +133,14 @@ final class CliBranch {
      */
     static Either<GitFailure<GitError>, List<ExecutedCommand>> deleteLocal(Path worktree, BranchName name) {
         return GitProcess.log(worktree, git("branch", "--delete", "--", GitArgs.name(name)))
-                .mapLeft(failure -> failure.map(CliBranch::classify));
+                .mapLeft(failure -> failure.map(CliBranches::classify));
     }
 
     /**
      * Runs {@code git branch -D <name>} in {@code worktree}.
      */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> forceDeleteLocal(Path worktree, BranchName name) {
+    @Override
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> forceDeleteLocal(BranchName name) {
         return GitProcess.log(worktree, git("branch", "--delete", "--force", "--", GitArgs.name(name)));
     }
 
@@ -134,7 +149,8 @@ final class CliBranch {
      * deleting it loses. Git matches the exclusion against the name {@code --branches} lists, without
      * {@code refs/heads/}; a branch name cannot have the characters that make it a wider glob.
      */
-    static Either<ProcessError, Integer> countOnlyOn(Path worktree, BranchName name) {
+    @Override
+    public Either<ProcessError, Integer> countOnlyOn(BranchName name) {
         return CliHistory.count(
                 worktree,
                 List.of(
@@ -146,7 +162,72 @@ final class CliBranch {
                         "--tags"));
     }
 
-    static GitError classify(ProcessError error) {
+    /**
+     * The branch {@code branch} was made from, as {@code gh} records it to take as the base of its pull request.
+     */
+    @Override
+    public Either<ProcessError, Option<BranchName>> parent(BranchName branch) {
+        return CliConfig.readLocal(worktree, parentKey(branch)).map(value -> value.flatMap(BranchName::parse));
+    }
+
+    /**
+     * Records {@code parent} as the branch {@code branch} was made from, where {@code gh} looks for it.
+     */
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> setParent(
+            Path worktree, BranchName branch, BranchName parent) {
+        return CliConfig.writeLocal(worktree, parentKey(branch), Option.of(GitArgs.name(parent)));
+    }
+
+    private static String parentKey(BranchName branch) {
+        return PARENT_PREFIX + GitArgs.name(branch) + PARENT_SUFFIX;
+    }
+
+    /**
+     * The parent of each branch that has one recorded, as {@code gh} does, in one {@code git config}.
+     */
+    @Override
+    public Either<ProcessError, Map<BranchName, BranchName>> parents() {
+        // git config --get-regexp exits with 1, saying nothing, when no key matches.
+        return GitProcess.ask(
+                        worktree,
+                        GitCommand.reading(
+                                "config",
+                                "--local",
+                                "--get-regexp",
+                                "^" + PARENT_PREFIX.replace(".", "\\.") + ".*" + PARENT_SUFFIX.replace(".", "\\.")
+                                        + "$"))
+                .mapLeft(GitFailure::error)
+                .map(answer ->
+                        answer.map(output -> parseParents(output.stdout())).getOrElse(HashMap.empty()));
+    }
+
+    /**
+     * The parents in {@code raw}, as {@code git config --get-regexp} lists them: the key, a space and the value per
+     * line. A value that is no branch name is left out.
+     */
+    static Map<BranchName, BranchName> parseParents(String raw) {
+        return HashMap.ofEntries(GitOutput.nonBlankLines(raw).flatMap(line -> {
+            int space = line.indexOf(' ');
+            String key = space < 0 ? line : line.substring(0, space);
+            Option<BranchName> branch = Option.when(
+                            key.startsWith(PARENT_PREFIX)
+                                    && key.endsWith(PARENT_SUFFIX)
+                                    && key.length() > PARENT_PREFIX.length() + PARENT_SUFFIX.length(),
+                            () -> key.substring(PARENT_PREFIX.length(), key.length() - PARENT_SUFFIX.length()))
+                    .map(BranchName::new);
+            Option<BranchName> parent =
+                    Option.when(space >= 0, () -> line.substring(space + 1)).flatMap(BranchName::parse);
+            return branch.flatMap(name -> parent.map(value -> Tuple.of(name, value)));
+        }));
+    }
+
+    @Override
+    public Map<BranchName, BaseDistance> baseDistance(
+            Map<BranchRef, Sha> tips, Map<BranchName, BranchName> parents, Option<BranchName> main) {
+        return CliBaseDistance.read(worktree, tips, parents, main);
+    }
+
+    private static GitError classify(ProcessError error) {
         return error instanceof GitError.CommandFailed failed && failed.says(NOT_FULLY_MERGED)
                 ? new GitError.NotFullyMerged(failed.explanation().getOrElse(""))
                 : error;

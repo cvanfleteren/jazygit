@@ -11,9 +11,11 @@ import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.git.Branches;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
+import net.vanfleteren.jazygit.git.StubBranches;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.StubWorktrees;
 import net.vanfleteren.jazygit.git.Worktrees;
@@ -220,16 +222,21 @@ class NukeBranchTest {
             }
 
             @Override
-            public Either<GitFailure<ProcessError>, List<ExecutedCommand>> forceDeleteLocalBranch(BranchName name) {
-                ran.add("delete " + name.value());
-                return StubGitProvider.ran("git branch -D " + name.value());
-            }
-
-            @Override
             public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteRemoteBranch(RemoteBranch remote) {
                 ran.add("delete " + remote.shortName());
                 return StubGitProvider.ran(
                         "git push origin --delete refs/heads/" + remote.branch().value());
+            }
+
+            @Override
+            public Branches branches() {
+                return new StubBranches() {
+                    @Override
+                    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> forceDeleteLocal(BranchName name) {
+                        ran.add("delete " + name.value());
+                        return StubGitProvider.ran("git branch -D " + name.value());
+                    }
+                };
             }
         };
         NukeBranchCmd cmd = new NukeBranchCmd(FEATURE, Option.of("/repos/app-feature"), Option.of(ORIGIN_FEATURE));
@@ -259,15 +266,20 @@ class NukeBranchTest {
             }
 
             @Override
-            public Either<GitFailure<ProcessError>, List<ExecutedCommand>> forceDeleteLocalBranch(BranchName name) {
-                ran.add("delete " + name.value());
-                return StubGitProvider.ran();
-            }
-
-            @Override
             public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteRemoteBranch(RemoteBranch remote) {
                 ran.add("delete " + remote.shortName());
                 return StubGitProvider.ran("git push origin --delete refs/heads/feature");
+            }
+
+            @Override
+            public Branches branches() {
+                return new StubBranches() {
+                    @Override
+                    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> forceDeleteLocal(BranchName name) {
+                        ran.add("delete " + name.value());
+                        return StubGitProvider.ran();
+                    }
+                };
             }
         };
         NukeBranchCmd cmd = new NukeBranchCmd(FEATURE, Option.of("/repos/app-feature"), Option.of(ORIGIN_FEATURE));

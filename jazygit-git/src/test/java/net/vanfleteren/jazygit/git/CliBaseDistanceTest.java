@@ -109,7 +109,7 @@ class CliBaseDistanceTest {
     void theParentsAreReadFromTheKeysGhSets() {
         assertEquals(
                 HashMap.of(new BranchName("feat.x"), MAIN, STACKED, FEATURE),
-                CliConfig.parseParents(
+                CliBranches.parseParents(
                         "branch.feat.x.gh-merge-base main\nbranch.stacked.gh-merge-base feature\nbranch.odd.gh-merge-base\n"));
     }
 
@@ -163,7 +163,7 @@ class CliBaseDistanceTest {
 
         assertEquals(
                 HashMap.of(FEATURE, distance(LOCAL_MAIN, "feature", 0, 1)),
-                CliBaseDistance.read(repo, tips, CliConfig.parents(repo).get(), Option.of(MAIN)));
+                CliBaseDistance.read(repo, tips, new CliBranches(repo).parents().get(), Option.of(MAIN)));
     }
 
     @Test
@@ -222,7 +222,8 @@ class CliBaseDistanceTest {
      * How far each branch is from its base, its branches and their bases where they are now.
      */
     private Map<BranchName, BaseDistance> read(Option<BranchName> main) throws Exception {
-        return CliBaseDistance.read(repo, tips(), CliConfig.parents(repo).get(), main);
+        return CliBaseDistance.read(
+                repo, tips(), new CliBranches(repo).parents().get(), main);
     }
 
     /**

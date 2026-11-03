@@ -13,10 +13,12 @@ import java.util.ArrayList;
 import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchCmd.DeleteBranch;
 import net.vanfleteren.jazygit.feature.worktree.remove.RemoveWorktreeCmd;
 import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.git.Branches;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.GitInfoProvider;
+import net.vanfleteren.jazygit.git.StubBranches;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.StubWorktrees;
 import net.vanfleteren.jazygit.git.Worktrees;
@@ -74,21 +76,26 @@ class ForceDeleteTest {
             }
 
             @Override
-            public Either<GitFailure<GitError>, List<ExecutedCommand>> deleteLocalBranch(BranchName name) {
-                ran.add("delete " + name.value());
-                return deleted;
-            }
+            public Branches branches() {
+                return new StubBranches() {
+                    @Override
+                    public Either<GitFailure<GitError>, List<ExecutedCommand>> deleteLocal(BranchName name) {
+                        ran.add("delete " + name.value());
+                        return deleted;
+                    }
 
-            @Override
-            public Either<ProcessError, Integer> countOnlyOn(BranchName name) {
-                ran.add("count " + name.value());
-                return lost;
-            }
+                    @Override
+                    public Either<ProcessError, Integer> countOnlyOn(BranchName name) {
+                        ran.add("count " + name.value());
+                        return lost;
+                    }
 
-            @Override
-            public Either<GitFailure<ProcessError>, List<ExecutedCommand>> forceDeleteLocalBranch(BranchName name) {
-                ran.add("force " + name.value());
-                return StubGitProvider.ran("git branch --delete --force -- " + name.value());
+                    @Override
+                    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> forceDeleteLocal(BranchName name) {
+                        ran.add("force " + name.value());
+                        return StubGitProvider.ran("git branch --delete --force -- " + name.value());
+                    }
+                };
             }
         };
     }
@@ -150,14 +157,20 @@ class ForceDeleteTest {
             }
 
             @Override
-            public Either<GitFailure<GitError>, List<ExecutedCommand>> deleteLocalBranch(BranchName name) {
-                return Either.left(new GitFailure<>(
-                        new GitError.NotFullyMerged("not fully merged"), executed("git branch --delete -- feature")));
-            }
+            public Branches branches() {
+                return new StubBranches() {
+                    @Override
+                    public Either<GitFailure<GitError>, List<ExecutedCommand>> deleteLocal(BranchName name) {
+                        return Either.left(new GitFailure<>(
+                                new GitError.NotFullyMerged("not fully merged"),
+                                executed("git branch --delete -- feature")));
+                    }
 
-            @Override
-            public Either<ProcessError, Integer> countOnlyOn(BranchName name) {
-                return Either.right(2);
+                    @Override
+                    public Either<ProcessError, Integer> countOnlyOn(BranchName name) {
+                        return Either.right(2);
+                    }
+                };
             }
         };
 
@@ -274,13 +287,18 @@ class ForceDeleteTest {
                 new GitFailure<>(new GitError.CommandFailed("ref is locked", 1), executed("git branch -D"));
         GitInfoProvider git = new StubGitProvider() {
             @Override
-            public Either<ProcessError, Integer> countOnlyOn(BranchName name) {
-                return Either.right(0);
-            }
+            public Branches branches() {
+                return new StubBranches() {
+                    @Override
+                    public Either<ProcessError, Integer> countOnlyOn(BranchName name) {
+                        return Either.right(0);
+                    }
 
-            @Override
-            public Either<GitFailure<ProcessError>, List<ExecutedCommand>> forceDeleteLocalBranch(BranchName name) {
-                return Either.left(locked);
+                    @Override
+                    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> forceDeleteLocal(BranchName name) {
+                        return Either.left(locked);
+                    }
+                };
             }
         };
 
@@ -298,13 +316,8 @@ class ForceDeleteTest {
             }
 
             @Override
-            public Either<ProcessError, Integer> countOnlyOn(BranchName name) {
-                return git.countOnlyOn(name);
-            }
-
-            @Override
-            public Either<GitFailure<ProcessError>, List<ExecutedCommand>> forceDeleteLocalBranch(BranchName name) {
-                return git.forceDeleteLocalBranch(name);
+            public Branches branches() {
+                return git.branches();
             }
         };
     }

@@ -7,9 +7,6 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
-import net.vanfleteren.jazygit.git.model.AllBranches;
-import net.vanfleteren.jazygit.git.model.BaseDistance;
-import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Commit;
@@ -23,7 +20,6 @@ import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.RemoteName;
-import net.vanfleteren.jazygit.git.model.RemoteRef;
 import net.vanfleteren.jazygit.git.model.ResetMode;
 import net.vanfleteren.jazygit.git.model.ResetTarget;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -67,11 +63,9 @@ public interface StubGitProvider extends GitInfoProvider {
         return Path.of("/repos/repo");
     }
 
-    /**
-     * The local branches {@link #allBranches()} reads, for a stub that only has those.
-     */
-    default Either<ProcessError, List<Branch>> branches() {
-        return Either.right(List.empty());
+    @Override
+    default Branches branches() {
+        return new StubBranches() {};
     }
 
     @Override
@@ -98,18 +92,6 @@ public interface StubGitProvider extends GitInfoProvider {
         return new StubHistory() {};
     }
 
-    /**
-     * The remote-tracking branches {@link #allBranches()} reads, for a stub that only has those.
-     */
-    default Either<ProcessError, List<RemoteRef>> remoteBranches() {
-        return Either.right(List.empty());
-    }
-
-    @Override
-    default Either<ProcessError, AllBranches> allBranches() {
-        return branches().flatMap(local -> remoteBranches().map(remote -> new AllBranches(local, remote)));
-    }
-
     @Override
     default Diffs diffs() {
         return new StubDiffs() {};
@@ -123,26 +105,6 @@ public interface StubGitProvider extends GitInfoProvider {
     @Override
     default Either<GitFailure<GitError>, List<ExecutedCommand>> deleteBranch(
             BranchName name, RemoteBranch remote, DeleteScope scope) {
-        return ran();
-    }
-
-    @Override
-    default Either<GitFailure<GitError>, List<ExecutedCommand>> deleteLocalBranch(BranchName name) {
-        return ran();
-    }
-
-    @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> forceDeleteLocalBranch(BranchName name) {
-        return ran();
-    }
-
-    @Override
-    default Either<ProcessError, Integer> countOnlyOn(BranchName name) {
-        return Either.right(0);
-    }
-
-    @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> renameBranch(BranchName name, BranchName newName) {
         return ran();
     }
 
@@ -164,22 +126,6 @@ public interface StubGitProvider extends GitInfoProvider {
     @Override
     default Either<ProcessError, Map<String, String>> remoteUrls() {
         return Either.right(HashMap.empty());
-    }
-
-    @Override
-    default Either<ProcessError, Option<BranchName>> parentBranch(BranchName branch) {
-        return Either.right(Option.none());
-    }
-
-    @Override
-    default Either<ProcessError, Map<BranchName, BranchName>> parents() {
-        return Either.right(HashMap.empty());
-    }
-
-    @Override
-    default Map<BranchName, BaseDistance> baseDistance(
-            Map<BranchRef, Sha> tips, Map<BranchName, BranchName> parents, Option<BranchName> main) {
-        return HashMap.empty();
     }
 
     @Override

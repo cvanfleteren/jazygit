@@ -2,16 +2,12 @@ package net.vanfleteren.jazygit.git;
 
 import static net.vanfleteren.jazygit.git.GitCommand.git;
 
-import io.vavr.Tuple;
-import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
-import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.GitError.CommandFailed;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
-import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.ConfigValue;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
@@ -23,8 +19,6 @@ final class CliConfig implements Config {
 
     // git config --unset exits with 5 when the key is not set.
     private static final int NOT_SET = 5;
-    private static final String PARENT_PREFIX = "branch.";
-    private static final String PARENT_SUFFIX = ".gh-merge-base";
     // The scopes of the repository's own configuration, as git config --show-scope names them.
     private static final List<String> LOCAL_SCOPES = List.of("local", "worktree");
     // How git config --show-origin starts the origin of a value read from a file.
@@ -37,63 +31,6 @@ final class CliConfig implements Config {
     }
 
     /**
-     * The branch {@code branch} was made from, as {@code gh} records it to take as the base of its pull request.
-     */
-    static Either<ProcessError, Option<BranchName>> parent(Path worktree, BranchName branch) {
-        return readLocal(worktree, parentKey(branch)).map(value -> value.flatMap(BranchName::parse));
-    }
-
-    /**
-     * Records {@code parent} as the branch {@code branch} was made from, where {@code gh} looks for it.
-     */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> setParent(
-            Path worktree, BranchName branch, BranchName parent) {
-        return writeLocal(worktree, parentKey(branch), Option.of(GitArgs.name(parent)));
-    }
-
-    private static String parentKey(BranchName branch) {
-        return PARENT_PREFIX + GitArgs.name(branch) + PARENT_SUFFIX;
-    }
-
-    /**
-     * The parent of each branch that has one recorded, as {@code gh} does, in one {@code git config}.
-     */
-    static Either<ProcessError, Map<BranchName, BranchName>> parents(Path worktree) {
-        // git config --get-regexp exits with 1, saying nothing, when no key matches.
-        return GitProcess.ask(
-                        worktree,
-                        GitCommand.reading(
-                                "config",
-                                "--local",
-                                "--get-regexp",
-                                "^" + PARENT_PREFIX.replace(".", "\\.") + ".*" + PARENT_SUFFIX.replace(".", "\\.")
-                                        + "$"))
-                .mapLeft(GitFailure::error)
-                .map(answer ->
-                        answer.map(output -> parseParents(output.stdout())).getOrElse(HashMap.empty()));
-    }
-
-    /**
-     * The parents in {@code raw}, as {@code git config --get-regexp} lists them: the key, a space and the value per
-     * line. A value that is no branch name is left out.
-     */
-    static Map<BranchName, BranchName> parseParents(String raw) {
-        return HashMap.ofEntries(GitOutput.nonBlankLines(raw).flatMap(line -> {
-            int space = line.indexOf(' ');
-            String key = space < 0 ? line : line.substring(0, space);
-            Option<BranchName> branch = Option.when(
-                            key.startsWith(PARENT_PREFIX)
-                                    && key.endsWith(PARENT_SUFFIX)
-                                    && key.length() > PARENT_PREFIX.length() + PARENT_SUFFIX.length(),
-                            () -> key.substring(PARENT_PREFIX.length(), key.length() - PARENT_SUFFIX.length()))
-                    .map(BranchName::new);
-            Option<BranchName> parent =
-                    Option.when(space >= 0, () -> line.substring(space + 1)).flatMap(BranchName::parse);
-            return branch.flatMap(name -> parent.map(value -> Tuple.of(name, value)));
-        }));
-    }
-
-    /**
      * The value of {@code key} in the repository's own configuration, not the user's or the system's. Only looked
      * up, so not logged.
      */
@@ -102,7 +39,10 @@ final class CliConfig implements Config {
         return readLocal(worktree, key);
     }
 
-    private static Either<ProcessError, Option<String>> readLocal(Path worktree, String key) {
+    /**
+     * The value of {@code key} in the repository's own configuration; the parents of the branches are read through it.
+     */
+    static Either<ProcessError, Option<String>> readLocal(Path worktree, String key) {
         return read(worktree, List.of("--local"), key);
     }
 
@@ -161,7 +101,11 @@ final class CliConfig implements Config {
         return writeLocal(worktree, key, value);
     }
 
-    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> writeLocal(
+    /**
+     * Sets {@code key} in the repository's own configuration, or removes it; the parents of the branches are recorded
+     * through it.
+     */
+    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> writeLocal(
             Path worktree, String key, Option<String> value) {
         return value.fold(
                 () -> {

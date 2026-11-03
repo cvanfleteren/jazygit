@@ -35,6 +35,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     private final CliEditor editor;
     private final CliDiffs diffs;
     private final CliHistory history;
+    private final CliBranches branches;
 
     private CliGitInfoProvider(
             Path worktree,
@@ -54,6 +55,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
         this.editor = new CliEditor(worktree);
         this.diffs = new CliDiffs(worktree);
         this.history = new CliHistory(worktree);
+        this.branches = new CliBranches(worktree);
     }
 
     /**
@@ -134,8 +136,8 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<ProcessError, AllBranches> allBranches() {
-        return CliBranch.all(worktree);
+    public Branches branches() {
+        return branches;
     }
 
     @Override
@@ -192,22 +194,6 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<ProcessError, Option<BranchName>> parentBranch(BranchName branch) {
-        return CliConfig.parent(worktree, branch);
-    }
-
-    @Override
-    public Either<ProcessError, Map<BranchName, BranchName>> parents() {
-        return CliConfig.parents(worktree);
-    }
-
-    @Override
-    public Map<BranchName, BaseDistance> baseDistance(
-            Map<BranchRef, Sha> tips, Map<BranchName, BranchName> parents, Option<BranchName> main) {
-        return CliBaseDistance.read(worktree, tips, parents, main);
-    }
-
-    @Override
     public Either<GitFailure<ProcessError>, Boolean> fetch(RemoteName remote) {
         return CliFetch.fetch(worktree, remote, Option.of(System.getenv("GIT_SSH_COMMAND")), credentials.get());
     }
@@ -220,32 +206,12 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     @Override
     public Either<GitFailure<GitError>, List<ExecutedCommand>> deleteBranch(
             BranchName name, RemoteBranch remote, DeleteScope scope) {
-        return CliBranch.delete(worktree, name, remote, scope, credentials.get());
-    }
-
-    @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> deleteLocalBranch(BranchName name) {
-        return CliBranch.deleteLocal(worktree, name);
-    }
-
-    @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> forceDeleteLocalBranch(BranchName name) {
-        return CliBranch.forceDeleteLocal(worktree, name);
-    }
-
-    @Override
-    public Either<ProcessError, Integer> countOnlyOn(BranchName name) {
-        return CliBranch.countOnlyOn(worktree, name);
-    }
-
-    @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> renameBranch(BranchName name, BranchName newName) {
-        return CliBranch.rename(worktree, name, newName);
+        return CliBranches.delete(worktree, name, remote, scope, credentials.get());
     }
 
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteRemoteBranch(RemoteBranch remote) {
-        return CliBranch.deleteRemote(worktree, remote, credentials.get());
+        return CliBranches.deleteRemote(worktree, remote, credentials.get());
     }
 
     @Override

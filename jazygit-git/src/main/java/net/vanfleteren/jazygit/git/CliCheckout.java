@@ -107,7 +107,7 @@ final class CliCheckout implements Checkout {
     static Either<GitFailure<ProcessError>, List<ExecutedCommand>> recordParent(
             Path worktree, BranchName name, BranchName parent) {
         return Either.right(
-                CliConfig.setParent(worktree, name, parent).fold(GitFailure::commands, commands -> commands));
+                CliBranches.setParent(worktree, name, parent).fold(GitFailure::commands, commands -> commands));
     }
 
     /**

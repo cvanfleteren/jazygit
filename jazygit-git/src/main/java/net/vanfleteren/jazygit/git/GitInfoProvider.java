@@ -32,12 +32,12 @@ public interface GitInfoProvider {
      */
     Status status();
 
-    // Listing, renaming and deleting branches, as git branch does.
-
     /**
-     * The local and the remote-tracking branches, read at the same moment.
+     * Listing, renaming and deleting branches, as git branch does, and the branch each was made from.
      */
-    Either<ProcessError, AllBranches> allBranches();
+    Branches branches();
+
+    // Deleting branches on their remote, with the credentials.
 
     /**
      * Deletes the branch {@code name}, locally and/or {@code remote}, the branch it is pushed to. With both, the
@@ -46,29 +46,6 @@ public interface GitInfoProvider {
      */
     Either<GitFailure<GitError>, List<ExecutedCommand>> deleteBranch(
             BranchName name, RemoteBranch remote, DeleteScope scope);
-
-    /**
-     * Deletes the local branch {@code name} when it is merged; git refuses one that is not, which is a
-     * {@link GitError.NotFullyMerged}.
-     */
-    Either<GitFailure<GitError>, List<ExecutedCommand>> deleteLocalBranch(BranchName name);
-
-    /**
-     * Deletes the local branch {@code name}, merged or not.
-     */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> forceDeleteLocalBranch(BranchName name);
-
-    /**
-     * How many commits of the local branch {@code name} no other branch, remote-tracking branch or tag has: the ones
-     * deleting it loses.
-     */
-    Either<ProcessError, Integer> countOnlyOn(BranchName name);
-
-    /**
-     * Renames the local branch {@code name} to {@code newName}; it keeps following the same upstream. Fails when a
-     * branch is called {@code newName} already.
-     */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> renameBranch(BranchName name, BranchName newName);
 
     /**
      * Deletes {@code remote} on its remote.
@@ -187,29 +164,6 @@ public interface GitInfoProvider {
     Config config();
 
     /**
-     * The branch {@code branch} was made from, if that was recorded: as {@code gh} does, in
-     * {@code branch.<name>.gh-merge-base}.
-     */
-    Either<ProcessError, Option<BranchName>> parentBranch(BranchName branch);
-
-    /**
-     * The branch each branch was made from, of those that have one recorded, as {@link #parentBranch} reads it.
-     */
-    Either<ProcessError, Map<BranchName, BranchName>> parents();
-
-    /**
-     * How far each local branch is from its base, by its name, for those that have a base (ADR 46): the branch it was
-     * made from, as {@code parents} has it, else {@code main}; of each, the one on {@code origin} when it is there,
-     * else the local one; never the branch itself. The branches and their bases are those of {@code tips}, at the
-     * commits it has them at (ADR 49). The branches of a base whose count cannot be read are left out.
-     *
-     * @param tips the commit of each local branch and of each branch on {@code origin}, as the branches read last
-     *             have them
-     */
-    Map<BranchName, BaseDistance> baseDistance(
-            Map<BranchRef, Sha> tips, Map<BranchName, BranchName> parents, Option<BranchName> main);
-
-    /**
      * The history, as git log shows it.
      */
     History history();
@@ -289,7 +243,7 @@ public interface GitInfoProvider {
      * is left alone. With it, the new branch starts at {@code onto}, and the commits are cherry-picked onto it;
      * a cherry-pick that stops on conflicts is left so, and fails with {@link GitError.StoppedOnConflicts}, and
      * {@code from} is only moved back once they are all copied. The new branch records the branch it starts at as
-     * the one it came from, as {@link #parentBranch} reads it.
+     * the one it came from, as {@link Branches#parent} reads it.
      *
      * @param oldest the full object id of a commit of {@code from} that has a parent
      * @param onto   the branch the new branch starts at, if not at {@code from}

@@ -31,7 +31,7 @@ public interface Checkout {
 
     /**
      * Creates the local branch {@code name} at {@code startPoint} and checks it out; records {@code parent} as the
-     * branch it came from, if given, as {@link GitInfoProvider#parentBranch} reads it. Whether it follows
+     * branch it came from, if given, as {@link Branches#parent} reads it. Whether it follows
      * {@code startPoint} is up to git's {@code branch.autoSetupMerge} (ADR 40).
      */
     Either<GitFailure<ProcessError>, List<ExecutedCommand>> newBranch(

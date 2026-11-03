@@ -30,7 +30,8 @@ public record ForceDeleteCmd(BranchName branch) implements GitOperationCmd {
      */
     public static Msg refused(OperationCmd cmd, BranchName branch, GitFailure<?> failure, GitInfoProvider git) {
         return failure.error() instanceof GitError.NotFullyMerged
-                ? git.countOnlyOn(branch)
+                ? git.branches()
+                        .countOnlyOn(branch)
                         .fold(
                                 uncounted -> cmd.failedWith(failure),
                                 lost -> forceIfNothingLost(cmd, branch, failure, git, lost))
@@ -44,7 +45,8 @@ public record ForceDeleteCmd(BranchName branch) implements GitOperationCmd {
     private static Msg forceIfNothingLost(
             OperationCmd cmd, BranchName branch, GitFailure<?> failure, GitInfoProvider git, int lost) {
         return lost == 0
-                ? git.forceDeleteLocalBranch(branch)
+                ? git.branches()
+                        .forceDeleteLocal(branch)
                         .fold(
                                 forced -> cmd.failedWith(forced.after(failure.commands())),
                                 forced -> cmd.succeeded(failure.commands().appendAll(forced)))
@@ -68,6 +70,6 @@ public record ForceDeleteCmd(BranchName branch) implements GitOperationCmd {
 
     @Override
     public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
-        return git.forceDeleteLocalBranch(branch);
+        return git.branches().forceDeleteLocal(branch);
     }
 }

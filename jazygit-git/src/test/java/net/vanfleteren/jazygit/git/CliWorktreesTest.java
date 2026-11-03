@@ -295,7 +295,7 @@ class CliWorktreesTest {
 
         assertFalse(Files.exists(dirty));
         assertEquals(List.of(main), provider.worktrees().list().get().map(Worktree::path));
-        provider.forceDeleteLocalBranch(new BranchName("gone")).get();
+        provider.branches().forceDeleteLocal(new BranchName("gone")).get();
     }
 
     @Test
@@ -339,10 +339,11 @@ class CliWorktreesTest {
                 provider.worktrees().list().get().map(Worktree::branch));
         assertEquals(
                 Option.of(new BranchName("main")),
-                CliConfig.parent(main, new BranchName("topic")).get());
+                new CliBranches(main).parent(new BranchName("topic")).get());
         assertEquals(
                 Option.of("origin/shared"),
-                provider.allBranches()
+                provider.branches()
+                        .all()
                         .map(AllBranches::local)
                         .get()
                         .find(branch -> branch.name().value().equals("shared"))
