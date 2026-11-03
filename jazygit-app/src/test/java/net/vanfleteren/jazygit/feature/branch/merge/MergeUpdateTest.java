@@ -76,7 +76,7 @@ class MergeUpdateTest {
         assertEquals(
                 List.of(
                         new LoadStatus(),
-                        new LoadBranches(),
+                        LoadBranches.LISTED,
                         new LoadStashes(),
                         new net.vanfleteren.jazygit.state.Cmd.LoadWorktrees()),
                 done.cmds());

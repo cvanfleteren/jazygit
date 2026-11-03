@@ -290,6 +290,7 @@ class AheadUpdateTest {
     private static LoadMsg.BranchesLoaded sameBranchesWith(
             Model model, io.vavr.collection.Map<BranchName, BranchName> parents) {
         return new LoadMsg.BranchesLoaded(
+                Cmd.LoadBranches.LISTED,
                 new AllBranches(
                         model.repo().branches().getOrElse(List.empty()),
                         model.repo().remoteBranches().getOrElse(List.empty())),

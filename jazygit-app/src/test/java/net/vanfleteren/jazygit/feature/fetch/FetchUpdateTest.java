@@ -69,7 +69,7 @@ class FetchUpdateTest {
         Next done = done(
                 upstream.model(), fromUpstream, new FetchMsg.Fetched(new RemoteName("upstream"), List.empty(), true));
         assertFalse(fetching(done.model()));
-        assertTrue(done.cmds().contains(new LoadBranches()));
+        assertTrue(done.cmds().contains(LoadBranches.LISTED));
         assertTrue(done.cmds().contains(new LoadRepositoryPullRequests()));
         // Neither logged nor reported.
         assertEquals(List.of(), done.model().outcome().commandLog());
@@ -114,7 +114,7 @@ class FetchUpdateTest {
 
         Next done =
                 done(requested.model(), fromOrigin, new FetchMsg.Fetched(new RemoteName("origin"), List.empty(), true));
-        assertTrue(done.cmds().contains(new LoadBranches()));
+        assertTrue(done.cmds().contains(LoadBranches.LISTED));
         assertTrue(done.cmds().contains(LIST), done.cmds().toString());
         assertFalse(done.model().jobs().fetchAgain());
 
@@ -147,12 +147,12 @@ class FetchUpdateTest {
                 fromUpstream,
                 new FetchMsg.Fetched(new RemoteName("upstream"), List.empty(), false));
 
-        assertFalse(nothing.cmds().contains(new LoadBranches()), nothing.cmds().toString());
+        assertFalse(nothing.cmds().contains(LoadBranches.LISTED), nothing.cmds().toString());
         assertTrue(
                 nothing.cmds().contains(new LoadRepositoryPullRequests()),
                 nothing.cmds().toString());
         assertTrue(
-                something.cmds().contains(new LoadBranches()), something.cmds().toString());
+                something.cmds().contains(LoadBranches.LISTED), something.cmds().toString());
     }
 
     @Test

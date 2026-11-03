@@ -71,7 +71,7 @@ class FetchLineTest {
                         running(TestModels.loaded(), new FetchCmd.Fetch(new RemoteName("origin"), List.empty()), START),
                         new Cmd.LoadStatus(),
                         START.plusMillis(100)),
-                new Cmd.LoadBranches(),
+                Cmd.LoadBranches.LISTED,
                 START.plusMillis(400));
 
         // The branches ran too short to count.

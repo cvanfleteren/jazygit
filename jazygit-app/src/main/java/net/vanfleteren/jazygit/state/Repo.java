@@ -22,8 +22,9 @@ import net.vanfleteren.jazygit.git.model.*;
  *                        not read, or could not be read the last time, is not known
  * @param baseDistance    how far each local branch that has a base is from it, by its name, as read last with the
  *                        branches (ADR 46, ADR 58); none before the first read
- * @param parents         the branch each branch was made from, of those that have one recorded, as read last with
- *                        the branches (ADR 58); none before the first read
+ * @param parents         the parent of each branch that has one, as read last with the branches (ADR 58, ADR 72):
+ *                        what GitHub says it is built on, else the branch it was made from; none before the first
+ *                        read
  */
 @With
 public record Repo(

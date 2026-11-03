@@ -24,6 +24,8 @@ import net.vanfleteren.jazygit.git.model.RemoteBranch;
  * @param pullRequests        the open pull requests on GitHub, by the remote branch they merge from; none until they
  *                            were read once, and the ones read last when reading them again failed
  * @param pullRequestsFailure why the pull requests could not be read the last time, if they could not
+ * @param protectedBranches   the branches that are protected on GitHub, roots that others are built on; none until
+ *                            they were read, once while jazygit runs, as they seldom change (ADR 72)
  * @param branchChecks        how the CI checks are doing on the branches on GitHub; none until they were read once,
  *                            and the ones read last when reading them again failed
  * @param again               the running reads to start again once they are done, as they may have missed a change
@@ -47,6 +49,7 @@ import net.vanfleteren.jazygit.git.model.RemoteBranch;
 public record GitHubState(
         Option<Map<BranchName, PullRequest>> pullRequests,
         Option<Failure> pullRequestsFailure,
+        Option<Set<BranchName>> protectedBranches,
         Option<GitHubChecks> branchChecks,
         Set<Cmd> again,
         Map<Integer, PullRequestMerge> merges,
@@ -57,6 +60,7 @@ public record GitHubState(
         Map<Cmd, FailingRead> failing) {
 
     public static final GitHubState NOT_READ = new GitHubState(
+            Option.none(),
             Option.none(),
             Option.none(),
             Option.none(),

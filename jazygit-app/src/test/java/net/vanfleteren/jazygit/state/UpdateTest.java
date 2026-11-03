@@ -32,7 +32,7 @@ class UpdateTest {
     @Test
     void branchesThatCannotBeReadFailBothListsAsTheyAreReadTogether() {
         Model failed = Update.update(
-                        Update.init("repo").model(), new LoadMsg.Failed(new LoadBranches(), refused("boom")))
+                        Update.init("repo").model(), new LoadMsg.Failed(LoadBranches.LISTED, refused("boom")))
                 .model();
 
         assertInstanceOf(Failed.class, failed.repo().branches());
@@ -42,7 +42,7 @@ class UpdateTest {
     @Test
     void aFailedReadKeepsWhatWasReadBefore() {
         Model before = loaded();
-        Model after = Update.update(before, new LoadMsg.Failed(new LoadBranches(), refused("boom")))
+        Model after = Update.update(before, new LoadMsg.Failed(LoadBranches.LISTED, refused("boom")))
                 .model();
         Model afterStatus = Update.update(after, new LoadMsg.Failed(new LoadStatus(), refused("boom")))
                 .model();
@@ -62,7 +62,7 @@ class UpdateTest {
         assertEquals(
                 List.of(
                         new LoadStatus(),
-                        new LoadBranches(),
+                        LoadBranches.LISTED,
                         new net.vanfleteren.jazygit.state.Cmd.LoadStashes(),
                         new net.vanfleteren.jazygit.state.Cmd.LoadWorktrees()),
                 next.cmds());
@@ -356,8 +356,8 @@ class UpdateTest {
     @Test
     void aCommandAskedForTwiceInOneMessageIsAskedForOnce() {
         assertEquals(
-                List.of(new LoadStatus(), new LoadBranches()),
-                new Next(loaded(), List.of(new LoadStatus(), new LoadBranches(), new LoadStatus())).cmds());
+                List.of(new LoadStatus(), LoadBranches.LISTED),
+                new Next(loaded(), List.of(new LoadStatus(), LoadBranches.LISTED, new LoadStatus())).cmds());
     }
 
     @Test

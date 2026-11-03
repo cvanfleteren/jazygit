@@ -563,7 +563,7 @@ class BranchUpdateTest {
                         new RemoteBranch("origin", new BranchName("feature")),
                         PushMode.FAST_FORWARD)));
         assertEquals(Option.none(), done.model().outcome().error());
-        assertTrue(done.cmds().contains(new LoadBranches()));
+        assertTrue(done.cmds().contains(LoadBranches.LISTED));
     }
 
     @Test
@@ -1004,7 +1004,7 @@ class BranchUpdateTest {
         assertEquals(
                 List.of(
                         new LoadStatus(),
-                        new LoadBranches(),
+                        LoadBranches.LISTED,
                         new net.vanfleteren.jazygit.state.Cmd.LoadStashes(),
                         new net.vanfleteren.jazygit.state.Cmd.LoadWorktrees()),
                 next.cmds());
@@ -1022,7 +1022,7 @@ class BranchUpdateTest {
         assertEquals(
                 List.of(
                         new LoadStatus(),
-                        new LoadBranches(),
+                        LoadBranches.LISTED,
                         new LoadStashes(),
                         new net.vanfleteren.jazygit.state.Cmd.LoadWorktrees()),
                 next.cmds());

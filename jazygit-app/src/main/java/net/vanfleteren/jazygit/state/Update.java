@@ -249,6 +249,7 @@ public final class Update {
     private static Next reload(Model model, List<Cmd.Load> periodic, Predicate<Cmd.Load> due) {
         List<Cmd.Load> retries = retries(model);
         List<Cmd.Load> loads = periodic.appendAll(retries.filter(due))
+                .map(load -> Cmd.LoadBranches.current(model, load))
                 .filter(cmd -> !model.jobs().runs(cmd))
                 .appendAll(worktreeChanges(model)
                         .filter(load -> model.jobs()

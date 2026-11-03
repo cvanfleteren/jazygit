@@ -4,6 +4,7 @@ import static net.vanfleteren.jazygit.state.TestModels.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.HashMap;
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Either;
@@ -52,8 +53,39 @@ class BaseDistanceUpdateTest {
         });
 
         assertEquals(
-                new LoadMsg.BranchesLoaded(READ, Option.of(new LoadMsg.Bases(PARENTS, HashMap.of(FEATURE, DISTANCE)))),
-                new Cmd.LoadBranches().run(new Env(git, StubGitHub.empty())));
+                new LoadMsg.BranchesLoaded(
+                        Cmd.LoadBranches.LISTED,
+                        READ,
+                        Option.of(new LoadMsg.Bases(PARENTS, HashMap.of(FEATURE, DISTANCE)))),
+                Cmd.LoadBranches.LISTED.run(new Env(git, StubGitHub.empty())));
+    }
+
+    @Test
+    void theBranchesAreCountedWithTheParentsGitHubSays() {
+        Git git = StubGit.of().withBranches(new StubBranches() {
+            @Override
+            public Either<ProcessError, AllBranches> all() {
+                return Either.right(READ);
+            }
+
+            @Override
+            public Either<ProcessError, Map<BranchName, BranchName>> parents() {
+                return Either.right(PARENTS);
+            }
+
+            @Override
+            public Map<BranchName, BaseDistance> baseDistance(
+                    Map<BranchRef, Sha> tips, Map<BranchName, BranchName> parents, Option<BranchName> main) {
+                return parents.isEmpty() ? HashMap.of(FEATURE, DISTANCE) : HashMap.empty();
+            }
+        });
+        // A protected branch is a root, which has no parent, whatever it was made from (ADR 72).
+        Cmd.LoadBranches load = new Cmd.LoadBranches(new GitHubBases(HashMap.empty(), HashSet.of(FEATURE)));
+
+        assertEquals(
+                new LoadMsg.BranchesLoaded(
+                        load, READ, Option.of(new LoadMsg.Bases(HashMap.empty(), HashMap.of(FEATURE, DISTANCE)))),
+                load.run(new Env(git, StubGitHub.empty())));
     }
 
     @Test
@@ -71,8 +103,8 @@ class BaseDistanceUpdateTest {
         });
 
         assertEquals(
-                new LoadMsg.BranchesLoaded(READ, Option.none()),
-                new Cmd.LoadBranches().run(new Env(git, StubGitHub.empty())));
+                new LoadMsg.BranchesLoaded(Cmd.LoadBranches.LISTED, READ, Option.none()),
+                Cmd.LoadBranches.LISTED.run(new Env(git, StubGitHub.empty())));
     }
 
     @Test
@@ -108,7 +140,7 @@ class BaseDistanceUpdateTest {
         Model failed = Update.update(
                         read,
                         new LoadMsg.Failed(
-                                new Cmd.LoadBranches(), new Failure.Git(new GitError.UnexpectedOutput("garbled"))))
+                                Cmd.LoadBranches.LISTED, new Failure.Git(new GitError.UnexpectedOutput("garbled"))))
                 .model();
 
         assertEquals(PARENTS, failed.repo().parents());
@@ -117,6 +149,6 @@ class BaseDistanceUpdateTest {
 
     private static LoadMsg.BranchesLoaded withBases(
             Map<BranchName, BranchName> parents, Map<BranchName, BaseDistance> counts) {
-        return new LoadMsg.BranchesLoaded(READ, Option.of(new LoadMsg.Bases(parents, counts)));
+        return new LoadMsg.BranchesLoaded(Cmd.LoadBranches.LISTED, READ, Option.of(new LoadMsg.Bases(parents, counts)));
     }
 }

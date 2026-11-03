@@ -1013,7 +1013,8 @@ class PullRequestUpdateTest {
                         new PullRequestMsg.DetailsLoaded(42, lastRead(shown), failing))
                 .model();
 
-        PullRequest now = new PullRequest(42, "feature", true, Checks.FAILING, Review.CHANGES_REQUESTED);
+        PullRequest now = new PullRequest(
+                42, "feature", "main", true, Checks.FAILING, Review.CHANGES_REQUESTED, Option.none(), Option.none());
         assertEquals(Option.of(now), loaded.gitHub().pullRequest(PUSHED));
         assertEquals(Option.of(now), closed.gitHub().pullRequest(PUSHED));
     }
@@ -1299,7 +1300,8 @@ class PullRequestUpdateTest {
                 .model();
         assertEquals(Option.of(loading), read.popup(PullRequestPopup.class));
         assertEquals(
-                Option.of(new PullRequest(42, "feature", true, Checks.NONE, Review.NONE)),
+                Option.of(new PullRequest(
+                        42, "feature", "main", true, Checks.NONE, Review.NONE, Option.none(), Option.none())),
                 read.gitHub().pullRequest(PUSHED));
     }
 
@@ -2669,7 +2671,7 @@ class PullRequestUpdateTest {
                 .model();
         Next branches = TestModels.done(
                 model,
-                new Cmd.LoadBranches(),
+                Cmd.LoadBranches.LISTED,
                 TestModels.branchesLoaded(new AllBranches(TestModels.BRANCHES, List.empty())));
         Next worktrees = TestModels.done(
                 TestModels.started(branches).model(),
