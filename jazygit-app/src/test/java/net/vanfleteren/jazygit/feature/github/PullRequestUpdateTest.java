@@ -58,7 +58,9 @@ import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.gh.timing.CheckTimings;
 import net.vanfleteren.jazygit.git.GitError;
+import net.vanfleteren.jazygit.git.History;
 import net.vanfleteren.jazygit.git.StubGitProvider;
+import net.vanfleteren.jazygit.git.StubHistory;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -258,8 +260,14 @@ class PullRequestUpdateTest {
             }
 
             @Override
-            public Either<GitError.ProcessError, Integer> countNotOn(BranchRef branch, BranchRef base, int max) {
-                throw new AssertionError("counted");
+            public History history() {
+                return new StubHistory() {
+                    @Override
+                    public Either<GitError.ProcessError, Integer> countNotOn(
+                            BranchRef branch, BranchRef base, int max) {
+                        throw new AssertionError("counted");
+                    }
+                };
             }
         };
 
@@ -299,8 +307,14 @@ class PullRequestUpdateTest {
             }
 
             @Override
-            public Either<GitError.ProcessError, Integer> countNotOn(BranchRef branch, BranchRef base, int max) {
-                return Either.right(base.equals(remote("ahead")) ? 1 : 4);
+            public History history() {
+                return new StubHistory() {
+                    @Override
+                    public Either<GitError.ProcessError, Integer> countNotOn(
+                            BranchRef branch, BranchRef base, int max) {
+                        return Either.right(base.equals(remote("ahead")) ? 1 : 4);
+                    }
+                };
             }
         };
 
@@ -313,8 +327,14 @@ class PullRequestUpdateTest {
     void failingToCountLeavesNoParent() {
         StubGitProvider git = new StubGitProvider() {
             @Override
-            public Either<GitError.ProcessError, Integer> countNotOn(BranchRef branch, BranchRef base, int max) {
-                return Either.left(new GitError.CommandFailed("boom", 128));
+            public History history() {
+                return new StubHistory() {
+                    @Override
+                    public Either<GitError.ProcessError, Integer> countNotOn(
+                            BranchRef branch, BranchRef base, int max) {
+                        return Either.left(new GitError.CommandFailed("boom", 128));
+                    }
+                };
             }
         };
 
@@ -349,9 +369,14 @@ class PullRequestUpdateTest {
         return new Env(
                 new StubGitProvider() {
                     @Override
-                    public Either<GitError.ProcessError, Integer> countNotOn(
-                            BranchRef branch, BranchRef base, int max) {
-                        return Either.right(counts.get(base).get());
+                    public History history() {
+                        return new StubHistory() {
+                            @Override
+                            public Either<GitError.ProcessError, Integer> countNotOn(
+                                    BranchRef branch, BranchRef base, int max) {
+                                return Either.right(counts.get(base).get());
+                            }
+                        };
                     }
                 },
                 StubGitHub.empty());
@@ -517,11 +542,16 @@ class PullRequestUpdateTest {
     void theTitleIsReadAgainFromTheFirstCommitNotOnThePickedBase() {
         StubGitProvider git = new StubGitProvider() {
             @Override
-            public Either<GitError, Option<String>> firstSubject(BranchRef branch, BranchRef base) {
-                return Either.right(Option.of(
-                        branch.equals(new BranchRef.Local(FEATURE)) && base.equals(remote("release"))
-                                ? "Fix release"
-                                : "wrong"));
+            public History history() {
+                return new StubHistory() {
+                    @Override
+                    public Either<GitError, Option<String>> firstSubject(BranchRef branch, BranchRef base) {
+                        return Either.right(Option.of(
+                                branch.equals(new BranchRef.Local(FEATURE)) && base.equals(remote("release"))
+                                        ? "Fix release"
+                                        : "wrong"));
+                    }
+                };
             }
         };
 
@@ -576,8 +606,14 @@ class PullRequestUpdateTest {
             }
 
             @Override
-            public Either<GitError.ProcessError, Integer> countNotOn(BranchRef branch, BranchRef base, int max) {
-                throw new AssertionError("counted");
+            public History history() {
+                return new StubHistory() {
+                    @Override
+                    public Either<GitError.ProcessError, Integer> countNotOn(
+                            BranchRef branch, BranchRef base, int max) {
+                        throw new AssertionError("counted");
+                    }
+                };
             }
         };
         ReadParent read = new ReadParent(
@@ -617,8 +653,14 @@ class PullRequestUpdateTest {
             }
 
             @Override
-            public Either<GitError.ProcessError, Integer> countNotOn(BranchRef branch, BranchRef base, int max) {
-                throw new AssertionError("counted");
+            public History history() {
+                return new StubHistory() {
+                    @Override
+                    public Either<GitError.ProcessError, Integer> countNotOn(
+                            BranchRef branch, BranchRef base, int max) {
+                        throw new AssertionError("counted");
+                    }
+                };
             }
         };
     }

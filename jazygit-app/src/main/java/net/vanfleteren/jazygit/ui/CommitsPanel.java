@@ -8,7 +8,7 @@ import io.vavr.control.Option;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import net.vanfleteren.jazygit.git.GitInfoProvider;
+import net.vanfleteren.jazygit.git.History;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitGraph;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -233,8 +233,8 @@ public class CommitsPanel {
      * lists.
      */
     static String title(CommitSearch search) {
-        return search.results().toOption().exists(found -> found.size() >= GitInfoProvider.MAX_COMMITS)
-                ? Messages.get("panel.commits.titleSearchCapped", search.text(), GitInfoProvider.MAX_COMMITS)
+        return search.results().toOption().exists(found -> found.size() >= History.MAX_COMMITS)
+                ? Messages.get("panel.commits.titleSearchCapped", search.text(), History.MAX_COMMITS)
                 : Messages.get("panel.commits.titleSearch", search.text());
     }
 

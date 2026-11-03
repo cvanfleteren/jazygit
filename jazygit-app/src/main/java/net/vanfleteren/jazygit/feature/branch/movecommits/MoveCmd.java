@@ -46,6 +46,7 @@ public sealed interface MoveCmd extends Cmd {
         @Override
         public Msg run(Env env) {
             return env.git()
+                    .history()
                     .commitRange(from, oldest, upstream)
                     .fold(this::failedWith, range -> new MoveMsg.RangeRead(from, oldest, range));
         }

@@ -201,12 +201,14 @@ class CliGitInfoProviderTest {
                 List.of(),
                 CliGitInfoProvider.open(empty)
                         .get()
+                        .history()
                         .search(CommitQuery.parse("x"), Option.none())
                         .get());
     }
 
     private List<String> messages(String query) {
-        return provider.search(CommitQuery.parse(query), Option.none())
+        return provider.history()
+                .search(CommitQuery.parse(query), Option.none())
                 .get()
                 .map(Commit::message)
                 .toList();
@@ -347,8 +349,9 @@ class CliGitInfoProviderTest {
         git("commit", "-q", "--allow-empty", "-m", "Side subject", "-m", "Side detail\nsecond line");
         git("checkout", "-q", "main");
 
-        List<Commit> side =
-                provider.log(new BranchRef.Local(new BranchName("side"))).get();
+        List<Commit> side = provider.history()
+                .log(new BranchRef.Local(new BranchName("side")))
+                .get();
         assertEquals(
                 List.of("Side subject", "Initial commit"),
                 side.map(Commit::message).toList());
@@ -359,13 +362,16 @@ class CliGitInfoProviderTest {
 
         assertEquals(
                 List.of("Initial commit"),
-                provider.log(new BranchRef.Local(new BranchName("main")))
+                provider.history()
+                        .log(new BranchRef.Local(new BranchName("main")))
                         .get()
                         .map(Commit::message)
                         .toList());
         assertEquals(
                 new GitError.UnknownBranch(new BranchRef.Local(new BranchName("gone"))),
-                provider.log(new BranchRef.Local(new BranchName("gone"))).getLeft());
+                provider.history()
+                        .log(new BranchRef.Local(new BranchName("gone")))
+                        .getLeft());
     }
 
     @Test
@@ -378,7 +384,7 @@ class CliGitInfoProviderTest {
         BranchRef side = new BranchRef.Local(new BranchName("side"));
         BranchRef main = new BranchRef.Local(new BranchName("main"));
 
-        Divergence divergence = provider.divergence(side, main).get();
+        Divergence divergence = provider.history().divergence(side, main).get();
 
         assertEquals(
                 List.of("Side two", "Side one"), divergence.ahead().commits().map(Commit::message));
@@ -388,7 +394,7 @@ class CliGitInfoProviderTest {
         BranchRef gone = new BranchRef.Local(new BranchName("gone"));
         assertEquals(
                 new GitError.UnknownBranch(gone),
-                provider.divergence(side, gone).getLeft());
+                provider.history().divergence(side, gone).getLeft());
     }
 
     @Test
@@ -400,13 +406,14 @@ class CliGitInfoProviderTest {
 
         assertEquals(
                 new GitError.UnknownBranch(side),
-                provider.divergence(side, main).getLeft());
+                provider.history().divergence(side, main).getLeft());
         assertEquals(
                 new GitError.UnknownBranch(side),
-                provider.firstSubject(main, side).getLeft());
+                provider.history().firstSubject(main, side).getLeft());
         assertEquals(
                 0,
-                provider.divergence(new BranchRef.Local(new BranchName("side/x")), main)
+                provider.history()
+                        .divergence(new BranchRef.Local(new BranchName("side/x")), main)
                         .get()
                         .ahead()
                         .count());
@@ -424,7 +431,7 @@ class CliGitInfoProviderTest {
         BranchRef main = new BranchRef.Local(new BranchName("main"));
         Sha head = provider.status().read().get().headCommit().get();
 
-        Ahead ahead = provider.ahead(head, main, tip("main")).get();
+        Ahead ahead = provider.history().ahead(head, main, tip("main")).get();
 
         assertEquals(main, ahead.base());
         assertEquals(
@@ -446,8 +453,8 @@ class CliGitInfoProviderTest {
         BranchRef main = new BranchRef.Local(new BranchName("main"));
         Sha head = provider.status().read().get().headCommit().get();
 
-        Ahead three = CliLog.ahead(repo, head, main, tip("main"), 3).get();
-        Ahead two = CliLog.ahead(repo, head, main, tip("main"), 2).get();
+        Ahead three = CliHistory.ahead(repo, head, main, tip("main"), 3).get();
+        Ahead two = CliHistory.ahead(repo, head, main, tip("main"), 2).get();
 
         assertFalse(three.more());
         assertTrue(two.more());
@@ -467,7 +474,7 @@ class CliGitInfoProviderTest {
         git("commit", "-q", "--allow-empty", "-m", "Main one");
         BranchRef main = new BranchRef.Local(new BranchName("main"));
 
-        Ahead ahead = provider.ahead(tip("side"), main, tip("main")).get();
+        Ahead ahead = provider.history().ahead(tip("side"), main, tip("main")).get();
 
         assertEquals(List.of("Side one"), ahead.commits().map(Commit::message));
         assertEquals(Option.of(fork), ahead.forkPoint().map(Commit::sha));
@@ -480,7 +487,7 @@ class CliGitInfoProviderTest {
         git("commit", "-q", "--allow-empty", "-m", "Main one");
         BranchRef main = new BranchRef.Local(new BranchName("main"));
 
-        Ahead ahead = provider.ahead(fork, main, tip("main")).get();
+        Ahead ahead = provider.history().ahead(fork, main, tip("main")).get();
 
         assertEquals(List.empty(), ahead.commits());
         assertFalse(ahead.more());
@@ -493,7 +500,8 @@ class CliGitInfoProviderTest {
         git("commit", "-q", "--allow-empty", "-m", "Other root");
         BranchRef main = new BranchRef.Local(new BranchName("main"));
 
-        Ahead ahead = provider.ahead(provider.status().read().get().headCommit().get(), main, tip("main"))
+        Ahead ahead = provider.history()
+                .ahead(provider.status().read().get().headCommit().get(), main, tip("main"))
                 .get();
 
         assertEquals(List.of("Other root"), ahead.commits().map(Commit::message));
@@ -508,7 +516,10 @@ class CliGitInfoProviderTest {
 
         assertEquals(
                 List.of("Side one"),
-                provider.search(CommitQuery.parse("e"), Option.of(main)).get().map(Commit::message));
+                provider.history()
+                        .search(CommitQuery.parse("e"), Option.of(main))
+                        .get()
+                        .map(Commit::message));
     }
 
     @Test
@@ -519,8 +530,10 @@ class CliGitInfoProviderTest {
         BranchRef side = new BranchRef.Local(new BranchName("side"));
         BranchRef main = new BranchRef.Local(new BranchName("main"));
 
-        assertEquals(Option.of("Side one"), provider.firstSubject(side, main).get());
-        assertEquals(Option.none(), provider.firstSubject(main, side).get());
+        assertEquals(
+                Option.of("Side one"),
+                provider.history().firstSubject(side, main).get());
+        assertEquals(Option.none(), provider.history().firstSubject(main, side).get());
     }
 
     @Test
@@ -532,9 +545,9 @@ class CliGitInfoProviderTest {
         BranchRef side = new BranchRef.Local(new BranchName("side"));
         BranchRef main = new BranchRef.Local(new BranchName("main"));
 
-        assertEquals(3, provider.countNotOn(side, main, 1000).get());
-        assertEquals(2, provider.countNotOn(side, main, 2).get());
-        assertEquals(0, provider.countNotOn(main, side, 1000).get());
+        assertEquals(3, provider.history().countNotOn(side, main, 1000).get());
+        assertEquals(2, provider.history().countNotOn(side, main, 2).get());
+        assertEquals(0, provider.history().countNotOn(main, side, 1000).get());
     }
 
     @Test
@@ -1530,7 +1543,8 @@ class CliGitInfoProviderTest {
                 provider.fastForward(new BranchName("topic"), main).get().map(ExecutedCommand::line));
         assertEquals(
                 0,
-                provider.countNotOn(main, new BranchRef.Local(new BranchName("topic")), 1000)
+                provider.history()
+                        .countNotOn(main, new BranchRef.Local(new BranchName("topic")), 1000)
                         .get());
     }
 
@@ -1608,7 +1622,8 @@ class CliGitInfoProviderTest {
                         .sorted());
         assertEquals(
                 List.of("On feature", "Initial commit"),
-                provider.log(new BranchRef.Remote(feature))
+                provider.history()
+                        .log(new BranchRef.Remote(feature))
                         .get()
                         .map(Commit::message)
                         .toList());
@@ -2302,8 +2317,8 @@ class CliGitInfoProviderTest {
     private io.vavr.control.Either<GitError.ProcessError, List<Commit>> commits() {
         return provider.status()
                 .read()
-                .flatMap(status ->
-                        status.headCommit().fold(() -> io.vavr.control.Either.right(List.empty()), provider::commits));
+                .flatMap(status -> status.headCommit()
+                        .fold(() -> io.vavr.control.Either.right(List.empty()), provider.history()::commits));
     }
 
     /**

@@ -255,7 +255,7 @@ class CliParseTest {
                                 List.of(new Sha(B)),
                                 List.of(new Tag("v1"), new Tag("v1.1"))),
                         Fixtures.commit(new Sha(B), "Bob", "bob@example.com", Instant.EPOCH, "Root", "", List.empty())),
-                CliLog.parse(raw).get());
+                CliHistory.parse(raw).get());
     }
 
     @Test
@@ -263,7 +263,7 @@ class CliParseTest {
         String raw = String.join("\u001f", ">", A, B, "Ada", "ada@example.com", "60", "Side", "", "Side\n") + "\0"
                 + String.join("\u001f", "-", B, "", "Bob", "bob@example.com", "0", "Root", "", "Root\n");
 
-        CliLog.Walk walk = CliLog.parseWalk(raw).get();
+        CliHistory.Walk walk = CliHistory.parseWalk(raw).get();
 
         assertEquals(List.of(new Sha(A)), walk.commits().map(Commit::sha));
         assertEquals(List.of(new Sha(B)), walk.boundary().map(Commit::sha));
@@ -364,7 +364,7 @@ class CliParseTest {
                 CliBranch.parseCreated("refs/heads/main\u001fcommit: A\n").getLeft());
         assertEquals(
                 new GitError.UnexpectedOutput(" "),
-                CliLog.parse(String.join("\u001f", " ", "", "Ada", "ada@example.com", "60", "S", "", "S\n"))
+                CliHistory.parse(String.join("\u001f", " ", "", "Ada", "ada@example.com", "60", "S", "", "S\n"))
                         .getLeft());
         assertEquals(
                 new GitError.UnexpectedOutput("stash@{0} without a separator"),
@@ -412,8 +412,8 @@ class CliParseTest {
     void theParentsOfTheCommitsAreReadAsFullShasOnly() {
         assertEquals(
                 List.of(List.of(new Sha(A), new Sha(B)), List.of(new Sha(B))),
-                CliLog.parents(A + " " + B + "\n" + B + "\n").get());
-        assertTrue(CliLog.parents(A + " " + B + "\nwarning: something\n").isLeft());
+                CliHistory.parents(A + " " + B + "\n" + B + "\n").get());
+        assertTrue(CliHistory.parents(A + " " + B + "\nwarning: something\n").isLeft());
     }
 
     @Test

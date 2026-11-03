@@ -39,12 +39,14 @@ import net.vanfleteren.jazygit.git.Checkout;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
+import net.vanfleteren.jazygit.git.History;
 import net.vanfleteren.jazygit.git.Index;
 import net.vanfleteren.jazygit.git.Stashes;
 import net.vanfleteren.jazygit.git.Status;
 import net.vanfleteren.jazygit.git.StubCheckout;
 import net.vanfleteren.jazygit.git.StubDiffs;
 import net.vanfleteren.jazygit.git.StubGitProvider;
+import net.vanfleteren.jazygit.git.StubHistory;
 import net.vanfleteren.jazygit.git.StubIndex;
 import net.vanfleteren.jazygit.git.StubStashes;
 import net.vanfleteren.jazygit.git.StubStatus;
@@ -147,16 +149,21 @@ class ProgramTest {
         }
 
         @Override
-        public Either<ProcessError, List<Commit>> commits(Sha head) {
-            commitLoads++;
-            return Either.right(List.of(commit(status.headCommit().get().value())));
-        }
+        public History history() {
+            return new StubHistory() {
+                @Override
+                public Either<ProcessError, List<Commit>> commits(Sha head) {
+                    commitLoads++;
+                    return Either.right(List.of(commit(status.headCommit().get().value())));
+                }
 
-        @Override
-        public Either<GitError, List<Commit>> log(BranchRef ref) {
-            String branch = ref.name();
-            logLoads.add(branch);
-            return Either.right(List.of(commit(branch + "-tip")));
+                @Override
+                public Either<GitError, List<Commit>> log(BranchRef ref) {
+                    String branch = ref.name();
+                    logLoads.add(branch);
+                    return Either.right(List.of(commit(branch + "-tip")));
+                }
+            };
         }
 
         @Override

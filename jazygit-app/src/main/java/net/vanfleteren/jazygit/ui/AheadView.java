@@ -2,7 +2,7 @@ package net.vanfleteren.jazygit.ui;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.GitInfoProvider;
+import net.vanfleteren.jazygit.git.History;
 import net.vanfleteren.jazygit.git.model.Ahead;
 import net.vanfleteren.jazygit.git.model.BaseDistance;
 import net.vanfleteren.jazygit.git.model.BranchRef;
@@ -37,7 +37,7 @@ record AheadView(Option<Ahead> ahead, Option<BaseDistance> distance, boolean onl
      * @param more whether there are more than {@code ahead} commits ahead
      */
     private static String title(String title, int ahead, boolean more, int behind, BranchRef base) {
-        String aheadText = more ? Messages.get("panel.ahead.more", GitInfoProvider.MAX_COMMITS) : String.valueOf(ahead);
+        String aheadText = more ? Messages.get("panel.ahead.more", History.MAX_COMMITS) : String.valueOf(ahead);
         if (behind == 0) {
             return Messages.get("panel.ahead", title, aheadText, base.name());
         }

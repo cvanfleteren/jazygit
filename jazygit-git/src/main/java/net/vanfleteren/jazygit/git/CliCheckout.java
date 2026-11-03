@@ -131,6 +131,6 @@ final class CliCheckout implements Checkout {
 
     @Override
     public Either<GitFailure<ProcessError>, Option<Sha>> resolve(String text) {
-        return CliLog.resolve(worktree, text);
+        return CliHistory.resolve(worktree, text);
     }
 }
