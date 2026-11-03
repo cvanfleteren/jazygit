@@ -31,7 +31,7 @@ public record CherryPickCmd(Sha sha) implements GitOperationCmd {
 
     @Override
     public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(GitInfoProvider git) {
-        return git.cherryPick(sha);
+        return git.integrate().cherryPick(sha);
     }
 
     @Override

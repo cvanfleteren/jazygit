@@ -37,6 +37,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     private final CliHistory history;
     private final CliBranches branches;
     private final CliCommits commits;
+    private final CliIntegrate integrate;
 
     private CliGitInfoProvider(
             Path worktree,
@@ -58,6 +59,7 @@ public final class CliGitInfoProvider implements GitInfoProvider {
         this.history = new CliHistory(worktree);
         this.branches = new CliBranches(worktree);
         this.commits = new CliCommits(worktree);
+        this.integrate = new CliIntegrate(worktree);
     }
 
     /**
@@ -165,24 +167,8 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     }
 
     @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> merge(BranchName branch, MergeMode mode) {
-        return CliMerge.merge(worktree, branch, mode);
-    }
-
-    @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> cherryPick(Sha sha) {
-        return CliCherryPick.cherryPick(worktree, sha);
-    }
-
-    @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> revert(Commit commit) {
-        return CliRevert.revert(worktree, commit);
-    }
-
-    @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> continueOrAbort(
-            InProgress inProgress, InProgressAction action) {
-        return CliInProgress.continueOrAbort(worktree, inProgress, action);
+    public Integrate integrate() {
+        return integrate;
     }
 
     @Override
@@ -198,11 +184,6 @@ public final class CliGitInfoProvider implements GitInfoProvider {
     @Override
     public Either<GitFailure<ProcessError>, Boolean> fetch(RemoteName remote) {
         return CliFetch.fetch(worktree, remote, Option.of(System.getenv("GIT_SSH_COMMAND")), credentials.get());
-    }
-
-    @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> rebase(BranchName onto) {
-        return CliRebase.onto(worktree, onto);
     }
 
     @Override

@@ -839,6 +839,7 @@ classDiagram
         branches() Branches
         checkout() Checkout
         commits() Commits
+        integrate() Integrate
         stashes() Stashes
         worktrees() Worktrees
         index() Index
@@ -866,6 +867,8 @@ classDiagram
     CliHistory ..|> History
     CliBranches ..|> Branches
     CliCommits ..|> Commits
+    CliIntegrate ..|> Integrate
+    CliIntegrate ..> CliRebase
     CliGitInfoProvider --> CliCommits : commits()
     CliCommits ..> CliRebase
     CliGitInfoProvider --> CliEditor : editor()
@@ -878,12 +881,11 @@ classDiagram
     CliGitInfoProvider --> CliDiffs : diffs()
     CliGitInfoProvider --> CliCheckout : checkout()
     CliGitInfoProvider --> CliIndex : index()
-    CliGitInfoProvider ..> CliMerge
-    CliGitInfoProvider ..> CliRebase
+    CliGitInfoProvider --> CliIntegrate : integrate()
     CliGitInfoProvider --> CliStashes : stashes()
     CliGitInfoProvider ..> CliRemote
     CliRebase ..> Unfinished
-    CliMerge ..> Unfinished
+    CliIntegrate ..> Unfinished
     CliBranches ..> Unfinished
     Unfinished ..> GitProcess
 ```
@@ -921,7 +923,7 @@ each role that is split off this way; the `Cli*` classes it still points to with
     - These each have a pure parser for git's output. `CliDiffs` returns git's text, cut off when it
       is long, and parses the files `--name-status -z` lists, for a commit, a range, a stash and a pull request.
   - **Writes:** `CliCheckout`, `CliBranches` (rename, delete), `CliPush`, `CliPull`, `CliIndex` (stage, commit, discard),
-    `CliMerge`, `CliRebase`, `CliStashes`, `CliRemote` (fetch) and `CliWorktrees` (add, remove).
+    `CliCommits`, `CliIntegrate`, `CliRebase`, `CliStashes`, `CliRemote` (fetch) and `CliWorktrees` (add, remove).
   - **Opening:** `CliGitInfoProvider.open` asks `git rev-parse` whether the directory is in a repository,
     whether that is bare, where its working tree is, and where git keeps the files that tell what it is in the
     middle of.
@@ -1196,7 +1198,7 @@ flowchart TD
 - **`ProgramTest`** runs the real loop with queue executors and a fake provider (`StubGitProvider`
   gives every method a default).
 - **The git layer** is tested against real temporary repositories: `CliGitInfoProviderTest`,
-  `CliCheckoutTest`, `CliDiscardTest`, `CliDiffTest`, `CliMergeTest` and `GitProcessTest`. The parsers
+  `CliCheckoutTest`, `CliDiscardTest`, `CliDiffsTest`, `CliIntegrateTest` and `GitProcessTest`. The parsers
   (`CliStatus.parse`, `CliBranches.parse`, `CliHistory.parse`) are tested on fixed git output in
   `CliStatusTest` and `CliParseTest`.
 - **UI tests** use TamboUI's `ToolkitTestRunner` and its pilot.

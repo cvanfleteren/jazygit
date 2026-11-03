@@ -21,7 +21,7 @@ import org.zeroturnaround.exec.ProcessExecutor;
 /**
  * Merging a branch into the checked out one, in each of the four ways.
  */
-class CliMergeTest {
+class CliIntegrateTest {
 
     @TempDir
     Path repo;
@@ -45,7 +45,8 @@ class CliMergeTest {
     void fastForwardMovesTheBranchWhenItHasNothingOfItsOwn() throws Exception {
         assertEquals(
                 List.of("git merge --ff --no-edit -m 'Merge branch '\\''feature'\\''' refs/heads/feature"),
-                CliMerge.merge(repo, new BranchName("feature"), MergeMode.FAST_FORWARD)
+                new CliIntegrate(repo)
+                        .merge(new BranchName("feature"), MergeMode.FAST_FORWARD)
                         .get()
                         .map(ExecutedCommand::line));
 
@@ -56,7 +57,9 @@ class CliMergeTest {
     void fastForwardMakesAMergeCommitWhenBothBranchesMoved() throws Exception {
         commitOnMain();
 
-        CliMerge.merge(repo, new BranchName("feature"), MergeMode.FAST_FORWARD).get();
+        new CliIntegrate(repo)
+                .merge(new BranchName("feature"), MergeMode.FAST_FORWARD)
+                .get();
 
         assertEquals(2, parents("HEAD"));
     }
@@ -65,7 +68,8 @@ class CliMergeTest {
     void mergeCommitIsMadeEvenWhenAFastForwardWouldDo() throws Exception {
         assertEquals(
                 List.of("git merge --no-ff --no-edit -m 'Merge branch '\\''feature'\\''' refs/heads/feature"),
-                CliMerge.merge(repo, new BranchName("feature"), MergeMode.MERGE_COMMIT)
+                new CliIntegrate(repo)
+                        .merge(new BranchName("feature"), MergeMode.MERGE_COMMIT)
                         .get()
                         .map(ExecutedCommand::line));
 
@@ -79,7 +83,8 @@ class CliMergeTest {
 
         assertEquals(
                 List.of("git merge --squash refs/heads/feature"),
-                CliMerge.merge(repo, new BranchName("feature"), MergeMode.SQUASH)
+                new CliIntegrate(repo)
+                        .merge(new BranchName("feature"), MergeMode.SQUASH)
                         .get()
                         .map(ExecutedCommand::line));
 
@@ -93,7 +98,8 @@ class CliMergeTest {
 
         assertEquals(
                 List.of("git merge --squash refs/heads/feature", "git commit --quiet --no-edit"),
-                CliMerge.merge(repo, new BranchName("feature"), MergeMode.SQUASH_AND_COMMIT)
+                new CliIntegrate(repo)
+                        .merge(new BranchName("feature"), MergeMode.SQUASH_AND_COMMIT)
                         .get()
                         .map(ExecutedCommand::line));
 
@@ -104,12 +110,15 @@ class CliMergeTest {
 
     @Test
     void squashAndCommitOfAMergedBranchCommitsNothing() throws Exception {
-        CliMerge.merge(repo, new BranchName("feature"), MergeMode.FAST_FORWARD).get();
+        new CliIntegrate(repo)
+                .merge(new BranchName("feature"), MergeMode.FAST_FORWARD)
+                .get();
         String head = git("rev-parse", "HEAD");
 
         assertEquals(
                 List.of("git merge --squash refs/heads/feature"),
-                CliMerge.merge(repo, new BranchName("feature"), MergeMode.SQUASH_AND_COMMIT)
+                new CliIntegrate(repo)
+                        .merge(new BranchName("feature"), MergeMode.SQUASH_AND_COMMIT)
                         .get()
                         .map(ExecutedCommand::line));
 
@@ -130,7 +139,8 @@ class CliMergeTest {
         git("commit", "-qm", "main changes a and b");
         write("unrelated.txt", "keep\n");
 
-        GitFailure<GitError> failure = CliMerge.merge(repo, new BranchName("conflicting"), MergeMode.MERGE_COMMIT)
+        GitFailure<GitError> failure = new CliIntegrate(repo)
+                .merge(new BranchName("conflicting"), MergeMode.MERGE_COMMIT)
                 .getLeft();
 
         assertEquals(
@@ -154,7 +164,8 @@ class CliMergeTest {
         git("commit", "-qam", "main changes a");
         String head = git("rev-parse", "HEAD");
 
-        GitFailure<GitError> failure = CliMerge.merge(repo, new BranchName("conflicting"), MergeMode.SQUASH_AND_COMMIT)
+        GitFailure<GitError> failure = new CliIntegrate(repo)
+                .merge(new BranchName("conflicting"), MergeMode.SQUASH_AND_COMMIT)
                 .getLeft();
 
         assertEquals(new GitError.StoppedOnConflicts(Option.none(), 1), failure.error());
@@ -170,7 +181,8 @@ class CliMergeTest {
         write("b.txt", "local\n");
         git("add", "b.txt");
 
-        GitFailure<GitError> failure = CliMerge.merge(repo, new BranchName("feature"), MergeMode.FAST_FORWARD)
+        GitFailure<GitError> failure = new CliIntegrate(repo)
+                .merge(new BranchName("feature"), MergeMode.FAST_FORWARD)
                 .getLeft();
 
         // Nothing was started, so nothing is undone.
@@ -188,7 +200,8 @@ class CliMergeTest {
         gitAnyExit("merge", "conflicting");
         write("a.txt", "resolved\n");
 
-        GitFailure<GitError> failure = CliMerge.merge(repo, new BranchName("feature"), MergeMode.MERGE_COMMIT)
+        GitFailure<GitError> failure = new CliIntegrate(repo)
+                .merge(new BranchName("feature"), MergeMode.MERGE_COMMIT)
                 .getLeft();
 
         assertEquals(
@@ -207,7 +220,8 @@ class CliMergeTest {
         gitAnyExit("merge", "conflicting");
         Files.delete(repo.resolve(".git/MERGE_HEAD"));
 
-        GitFailure<GitError> failure = CliMerge.merge(repo, new BranchName("feature"), MergeMode.SQUASH)
+        GitFailure<GitError> failure = new CliIntegrate(repo)
+                .merge(new BranchName("feature"), MergeMode.SQUASH)
                 .getLeft();
 
         assertEquals(
@@ -224,7 +238,7 @@ class CliMergeTest {
         // The tag is on main, so merging it would be "Already up to date".
         git("tag", "feature", "main");
 
-        CliMerge.merge(repo, new BranchName("feature"), mode).get();
+        new CliIntegrate(repo).merge(new BranchName("feature"), mode).get();
 
         assertTrue(Files.exists(repo.resolve("b.txt")));
     }
@@ -233,7 +247,9 @@ class CliMergeTest {
     void aMergeCommitIsStillNamedAfterTheBranchNotItsRef() throws Exception {
         git("tag", "feature", "main");
 
-        CliMerge.merge(repo, new BranchName("feature"), MergeMode.MERGE_COMMIT).get();
+        new CliIntegrate(repo)
+                .merge(new BranchName("feature"), MergeMode.MERGE_COMMIT)
+                .get();
 
         assertEquals("Merge branch 'feature'", git("log", "-1", "--format=%s").strip());
     }
@@ -243,7 +259,9 @@ class CliMergeTest {
         git("checkout", "-qb", "develop");
         git("tag", "feature", "main");
 
-        CliMerge.merge(repo, new BranchName("feature"), MergeMode.MERGE_COMMIT).get();
+        new CliIntegrate(repo)
+                .merge(new BranchName("feature"), MergeMode.MERGE_COMMIT)
+                .get();
 
         assertEquals(
                 "Merge branch 'feature' into develop",
@@ -254,7 +272,9 @@ class CliMergeTest {
     void aMergeCommitIntoMasterDoesNotNameIt() throws Exception {
         git("branch", "-m", "main", "master");
 
-        CliMerge.merge(repo, new BranchName("feature"), MergeMode.MERGE_COMMIT).get();
+        new CliIntegrate(repo)
+                .merge(new BranchName("feature"), MergeMode.MERGE_COMMIT)
+                .get();
 
         assertEquals("Merge branch 'feature'", git("log", "-1", "--format=%s").strip());
     }
@@ -263,7 +283,9 @@ class CliMergeTest {
     void aMergeCommitOnADetachedHeadIsMergedIntoHeadLikeGitDoes() throws Exception {
         git("checkout", "-q", "--detach");
 
-        CliMerge.merge(repo, new BranchName("feature"), MergeMode.MERGE_COMMIT).get();
+        new CliIntegrate(repo)
+                .merge(new BranchName("feature"), MergeMode.MERGE_COMMIT)
+                .get();
 
         assertEquals(
                 "Merge branch 'feature' into HEAD",
@@ -275,7 +297,9 @@ class CliMergeTest {
         git("checkout", "-qb", "develop");
         git("config", "merge.suppressDest", "develop");
 
-        CliMerge.merge(repo, new BranchName("feature"), MergeMode.MERGE_COMMIT).get();
+        new CliIntegrate(repo)
+                .merge(new BranchName("feature"), MergeMode.MERGE_COMMIT)
+                .get();
 
         assertEquals("Merge branch 'feature'", git("log", "-1", "--format=%s").strip());
     }
@@ -284,7 +308,9 @@ class CliMergeTest {
     void aMergeCommitWithMergeLogListsTheBranchNotItsRef() throws Exception {
         git("config", "merge.log", "true");
 
-        CliMerge.merge(repo, new BranchName("feature"), MergeMode.MERGE_COMMIT).get();
+        new CliIntegrate(repo)
+                .merge(new BranchName("feature"), MergeMode.MERGE_COMMIT)
+                .get();
 
         String message = git("log", "-1", "--format=%B");
         assertTrue(message.contains("* feature:"), message);

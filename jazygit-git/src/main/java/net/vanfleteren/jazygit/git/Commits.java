@@ -32,7 +32,7 @@ public interface Commits {
     /**
      * Amends the commit {@code sha} with what is staged, keeping its message. Other than for the last commit, this
      * rebases the commits after it, unstaged changes being stashed meanwhile; the rebase is left as it stopped on
-     * conflicts, see {@link GitInfoProvider#rebase}, and aborted when it fails otherwise, leaving the staged changes
+     * conflicts, see {@link Integrate#rebase}, and aborted when it fails otherwise, leaving the staged changes
      * staged.
      *
      * @param sha the full object id of a commit that is not a merge
@@ -42,7 +42,7 @@ public interface Commits {
     /**
      * Replaces the message of the commit {@code sha}, leaving its content alone. Other than for the last commit,
      * this rebases the commits after it, uncommitted changes being stashed meanwhile; the rebase is left
-     * as it stopped on conflicts, see {@link GitInfoProvider#rebase}, and aborted when it fails otherwise.
+     * as it stopped on conflicts, see {@link Integrate#rebase}, and aborted when it fails otherwise.
      *
      * @param sha the full object id of the commit
      */
@@ -51,7 +51,7 @@ public interface Commits {
     /**
      * Folds the commit {@code sha} into its parent, keeping the messages {@code mode} says. This rebases the
      * commits after it, uncommitted changes being stashed meanwhile; the rebase is left as it stopped on
-     * conflicts, see {@link GitInfoProvider#rebase}, and aborted when it fails otherwise.
+     * conflicts, see {@link Integrate#rebase}, and aborted when it fails otherwise.
      *
      * @param sha the full object id of a commit that has exactly one parent
      */
@@ -60,7 +60,7 @@ public interface Commits {
     /**
      * Removes the commit {@code sha} from the history of the checked out branch. This rebases the commits after
      * it, uncommitted changes being stashed meanwhile; the rebase is left as it stopped on conflicts, see
-     * {@link GitInfoProvider#rebase}, and aborted when it fails otherwise.
+     * {@link Integrate#rebase}, and aborted when it fails otherwise.
      *
      * @param sha the full object id of a commit that is not a merge
      */

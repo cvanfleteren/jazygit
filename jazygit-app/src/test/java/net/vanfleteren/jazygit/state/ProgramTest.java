@@ -43,6 +43,7 @@ import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.History;
 import net.vanfleteren.jazygit.git.Index;
+import net.vanfleteren.jazygit.git.Integrate;
 import net.vanfleteren.jazygit.git.Stashes;
 import net.vanfleteren.jazygit.git.Status;
 import net.vanfleteren.jazygit.git.StubBranches;
@@ -52,6 +53,7 @@ import net.vanfleteren.jazygit.git.StubDiffs;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.StubHistory;
 import net.vanfleteren.jazygit.git.StubIndex;
+import net.vanfleteren.jazygit.git.StubIntegrate;
 import net.vanfleteren.jazygit.git.StubStashes;
 import net.vanfleteren.jazygit.git.StubStatus;
 import net.vanfleteren.jazygit.git.model.Branch;
@@ -223,11 +225,6 @@ class ProgramTest {
         }
 
         @Override
-        public Either<GitFailure<GitError>, List<ExecutedCommand>> rebase(BranchName onto) {
-            return StubGitProvider.ran("git rebase");
-        }
-
-        @Override
         public Either<GitFailure<GitError>, List<ExecutedCommand>> deleteBranch(
                 BranchName name, RemoteBranch remote, DeleteScope scope) {
             deleted.add(name.value() + (scope.local() ? " local" : "") + (scope.remote() ? " remote" : ""));
@@ -314,6 +311,16 @@ class ProgramTest {
                     }
                     commits.add(message.summary() + "|" + message.description());
                     return StubGitProvider.ran("git commit");
+                }
+            };
+        }
+
+        @Override
+        public Integrate integrate() {
+            return new StubIntegrate() {
+                @Override
+                public Either<GitFailure<GitError>, List<ExecutedCommand>> rebase(BranchName onto) {
+                    return StubGitProvider.ran("git rebase");
                 }
             };
         }
