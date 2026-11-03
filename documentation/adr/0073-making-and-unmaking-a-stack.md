@@ -1,4 +1,4 @@
-# 72. Making and unmaking a stack
+# 73. Making and unmaking a stack
 
 Date: 2026-11-03
 
@@ -19,23 +19,23 @@ GitHub refuses pull requests whose bases do not make one line from the base of t
 Stacks get made in two ways. By hand, a branch at a time: a branch made from a branch, then a pull request for it
 on its parent, which the create dialog proposes as base already (ADR 3). And by an agent working in the background,
 which makes several branches on each other and opens a pull request for each with `gh pr create --base`. Either way
-the pull requests form a line that ADR 71 shows as a chain, and that is not a stack on GitHub until someone links it.
+the pull requests form a line that ADR 72 shows as a chain, and that is not a stack on GitHub until someone links it.
 
 ## Decision
 
 ### The stack menu
 
 `s` on a branch or on the header of a stack opens a menu of what can be done with its stack, with only the choices
-that apply: link the stack, stack on…, unstack, and rebase and push the stack (ADR 73). `s` is free on the branches
+that apply: link the stack, stack on…, unstack, and rebase and push the stack (ADR 74). `s` is free on the branches
 pane, and a menu leaves the other free keys for later, as `u` does for the upstream.
 
 ### Linking a chain
 
 "Link stack" makes a stack on GitHub of a whole chain at once, from its bottom to its top.
 
-- One `POST stacks` with the pull requests of the chain; or, for a chain on the top of a stack on GitHub (ADR 71),
+- One `POST stacks` with the pull requests of the chain; or, for a chain on the top of a stack on GitHub (ADR 72),
   one `POST stacks/{n}/add` with only the ones on top.
-- The chain is what ADR 71 shows: its parents can come from `gh-merge-base`, where the base of a pull request is
+- The chain is what ADR 72 shows: its parents can come from `gh-merge-base`, where the base of a pull request is
   another branch, often `main`. Before linking, the menu says which bases it changes, `#97: main → feat/a`, and asks;
   then `gh pr edit --base` changes them, from the bottom up, and the stack is linked.
 - A branch of the chain without an open pull request stops it: the menu names the branches without one, and links

@@ -60,5 +60,5 @@ gone falls back to the main branch, without saying so.
 ADR 20's "the branches list does not count the commits of each branch" no longer holds: it counts those behind the
 base, not those ahead.
 
-Amended by ADR 71: the base of a branch with an open pull request is the base of that pull request on GitHub, or
+Amended by ADR 72: the base of a branch with an open pull request is the base of that pull request on GitHub, or
 the branch below it in its stack, before `gh-merge-base`.

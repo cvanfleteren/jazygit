@@ -1,4 +1,4 @@
-# 73. Rebasing and pushing a stack
+# 74. Rebasing and pushing a stack
 
 Date: 2026-11-03
 
@@ -33,7 +33,7 @@ Updated the following refs with --update-refs:
 
 ### One rebase of the top
 
-"Rebase stack" from the stack menu (ADR 72), on any branch of a stack or on its header, rebases the whole stack:
+"Rebase stack" from the stack menu (ADR 73), on any branch of a stack or on its header, rebases the whole stack:
 
 ```
 git rebase --update-refs --autostash --keep-empty --rebase-merges --no-autosquash <base> <top>
