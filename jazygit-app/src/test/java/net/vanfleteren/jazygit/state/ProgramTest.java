@@ -43,6 +43,7 @@ import net.vanfleteren.jazygit.git.Index;
 import net.vanfleteren.jazygit.git.Stashes;
 import net.vanfleteren.jazygit.git.Status;
 import net.vanfleteren.jazygit.git.StubCheckout;
+import net.vanfleteren.jazygit.git.StubDiffs;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.StubIndex;
 import net.vanfleteren.jazygit.git.StubStashes;
@@ -273,13 +274,18 @@ class ProgramTest {
         }
 
         @Override
-        public Either<ProcessError, DiffText> commitChanges(Sha sha, DiffOptions options) {
-            return Either.right(DiffText.of("changes of " + sha.value()));
-        }
+        public net.vanfleteren.jazygit.git.Diffs diffs() {
+            return new StubDiffs() {
+                @Override
+                public Either<ProcessError, DiffText> commitChanges(Sha sha, DiffOptions options) {
+                    return Either.right(DiffText.of("changes of " + sha.value()));
+                }
 
-        @Override
-        public Either<GitError, Diffs> diff(List<FileEntry> files, DiffOptions options) {
-            return Either.right(new Diffs("", "diff of " + files.size()));
+                @Override
+                public Either<GitError, Diffs> uncommitted(List<FileEntry> files, DiffOptions options) {
+                    return Either.right(new Diffs("", "diff of " + files.size()));
+                }
+            };
         }
 
         private Either<GitFailure<ProcessError>, List<ExecutedCommand>> onIndex(

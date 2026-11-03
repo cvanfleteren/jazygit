@@ -6,6 +6,7 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.Status;
+import net.vanfleteren.jazygit.git.StubDiffs;
 import net.vanfleteren.jazygit.git.StubGitProvider;
 import net.vanfleteren.jazygit.git.StubStatus;
 import net.vanfleteren.jazygit.git.model.*;
@@ -152,13 +153,18 @@ public final class SampleData implements StubGitProvider {
     }
 
     @Override
-    public Either<ProcessError, DiffText> commitChanges(Sha sha, DiffOptions options) {
-        return Either.right(DiffText.of(
-                "1 file changed, 1 insertion(+)\n\ndiff --git a/" + sha.value() + " b/" + sha.value() + "\n"));
-    }
+    public net.vanfleteren.jazygit.git.Diffs diffs() {
+        return new StubDiffs() {
+            @Override
+            public Either<ProcessError, DiffText> commitChanges(Sha sha, DiffOptions options) {
+                return Either.right(DiffText.of(
+                        "1 file changed, 1 insertion(+)\n\ndiff --git a/" + sha.value() + " b/" + sha.value() + "\n"));
+            }
 
-    @Override
-    public Either<GitError, Diffs> diff(List<FileEntry> files, DiffOptions options) {
-        return Either.right(new Diffs(sample(files, FileEntry::staged), sample(files, FileEntry::unstaged)));
+            @Override
+            public Either<GitError, Diffs> uncommitted(List<FileEntry> files, DiffOptions options) {
+                return Either.right(new Diffs(sample(files, FileEntry::staged), sample(files, FileEntry::unstaged)));
+            }
+        };
     }
 }

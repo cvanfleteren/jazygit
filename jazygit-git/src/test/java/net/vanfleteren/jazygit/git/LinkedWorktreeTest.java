@@ -110,7 +110,7 @@ class LinkedWorktreeTest {
         CliGitInfoProvider provider = CliGitInfoProvider.open(linked).get();
 
         List<FileEntry> files = provider.status().read().get().files();
-        Diffs diffs = provider.diff(files, DiffOptions.DEFAULT).get();
+        Diffs diffs = provider.diffs().uncommitted(files, DiffOptions.DEFAULT).get();
 
         assertEquals(List.of(Fixtures.fileEntry("new.txt", ChangeType.UNTRACKED)), files);
         assertTrue(diffs.unstaged().text().contains("+brand new"), diffs.toString());

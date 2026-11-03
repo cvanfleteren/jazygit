@@ -12,23 +12,17 @@ import java.nio.file.Path;
 import java.util.Locale;
 import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.model.CommitFile;
-import net.vanfleteren.jazygit.git.model.DiffOptions;
-import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.RemoteName;
 import net.vanfleteren.jazygit.git.model.Revision;
 import net.vanfleteren.jazygit.git.model.Sha;
 
 /**
- * Reads what a pull request on GitHub changes through the git command line tool, as GitHub shows it: its head commit
- * against the merge base of that and its base commit, {@code <base>...<head>} (ADR 55). Its commits are fetched
- * first when the repository does not have them. A branch is read against its base the same way, without a fetch
- * (ADR 61).
+ * Reads the files a pull request on GitHub changes through the git command line tool, as GitHub shows them: its head
+ * commit against the merge base of that and its base commit, {@code <base>...<head>} (ADR 55). Its commits are
+ * fetched first when the repository does not have them; what they change is then read through {@link CliDiffs}.
  */
 final class CliPullRequest {
-
-    private static final List<String> DIFF =
-            List.of("diff", "--no-color", "--no-ext-diff").appendAll(CliDiff.PREFIXES);
 
     private CliPullRequest() {}
 
@@ -39,51 +33,8 @@ final class CliPullRequest {
      */
     static Either<ProcessError, List<CommitFile>> files(
             Path worktree, PullRequestCommits commits, Map<String, String> credentials) {
-        return fetched(worktree, commits, credentials).flatMap(done -> files(worktree, commits.base(), commits.head()));
-    }
-
-    /**
-     * The files {@code head} changes against the merge base of it and {@code base}, with renames found.
-     */
-    static Either<ProcessError, List<CommitFile>> files(Path worktree, Sha base, Sha head) {
-        return GitProcess.read(
-                worktree,
-                reading(List.of("diff", "--name-status", "-z", "-M").append(range(base, head))),
-                CliShow::parseFiles);
-    }
-
-    /**
-     * What the pull request of {@code commits} changes in {@code files}, read with {@code options}. Long output is
-     * cut off. Without files, nothing is read: git would show every file. Its commits were fetched, if they had to
-     * be, when its files were read.
-     */
-    static Either<ProcessError, DiffText> fileChanges(
-            Path worktree, PullRequestCommits commits, List<CommitFile> files, DiffOptions options) {
-        return fileChanges(worktree, commits.base(), commits.head(), files, options);
-    }
-
-    /**
-     * What {@code head} changes in {@code files} against the merge base of it and {@code base}, read with
-     * {@code options}. Long output is cut off; without files, nothing is read.
-     */
-    static Either<ProcessError, DiffText> fileChanges(
-            Path worktree, Sha base, Sha head, List<CommitFile> files, DiffOptions options) {
-        if (files.isEmpty()) {
-            return Either.right(DiffText.of(""));
-        }
-        return GitProcess.read(
-                worktree,
-                reading(DIFF.append("-M")
-                                .appendAll(CliDiff.flags(options))
-                                .append(range(base, head))
-                                .append("--")
-                                .appendAll(files.flatMap(CommitFile::paths)))
-                        .withLiteralPaths(),
-                output -> Either.right(CliDiff.truncated(output)));
-    }
-
-    private static String range(Sha base, Sha head) {
-        return GitArgs.symmetric(new Revision.Commit(base), new Revision.Commit(head));
+        return fetched(worktree, commits, credentials)
+                .flatMap(done -> CliDiffs.rangeFiles(worktree, commits.base(), commits.head()));
     }
 
     /**

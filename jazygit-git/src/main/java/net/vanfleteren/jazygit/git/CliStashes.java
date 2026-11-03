@@ -110,10 +110,10 @@ final class CliStashes implements Stashes {
                                 "--patch",
                                 "--no-color",
                                 "--no-ext-diff")
-                        .appendAll(CliDiff.PREFIXES)
-                        .appendAll(CliDiff.flags(options))
+                        .appendAll(CliDiffs.PREFIXES)
+                        .appendAll(CliDiffs.flags(options))
                         .append(stash.value())),
-                output -> Either.right(CliDiff.truncated(output)));
+                output -> Either.right(CliDiffs.truncated(output)));
     }
 
     /**
@@ -124,7 +124,7 @@ final class CliStashes implements Stashes {
         return GitProcess.read(
                 worktree,
                 GitCommand.reading("stash", "show", "--include-untracked", "--name-status", "-z", "-M", stash.value()),
-                CliShow::parseFiles);
+                CliDiffs::parseFiles);
     }
 
     /**
@@ -139,8 +139,8 @@ final class CliStashes implements Stashes {
             return Either.right(DiffText.of(""));
         }
         List<String> flags = List.of("--patch", "--no-color", "--no-ext-diff", "-M")
-                .appendAll(CliDiff.PREFIXES)
-                .appendAll(CliDiff.flags(options));
+                .appendAll(CliDiffs.PREFIXES)
+                .appendAll(CliDiffs.flags(options));
         List<String> paths = files.flatMap(CommitFile::paths).prepend("--");
         String untracked = stash.value() + "^3";
         return GitProcess.read(
@@ -166,7 +166,7 @@ final class CliStashes implements Stashes {
                                                 .withLiteralPaths(),
                                         Either::right))
                         .map(tracked::concat))
-                .map(CliDiff::truncated);
+                .map(CliDiffs::truncated);
     }
 
     /**

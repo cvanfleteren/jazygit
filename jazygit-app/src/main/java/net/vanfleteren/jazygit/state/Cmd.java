@@ -573,6 +573,7 @@ public interface Cmd {
         @Override
         public Msg run(Env env) {
             return env.git()
+                    .diffs()
                     .commitChanges(sha, options)
                     .fold(this::failedWith, changes -> new LoadMsg.CommitDetailLoaded(sha, options, changes, preview));
         }
@@ -636,11 +637,11 @@ public interface Cmd {
         public Msg run(Env env) {
             return (switch (of) {
                         case CommitFilesView.Changes.OfCommit(Sha sha) ->
-                            env.git().commitFiles(sha);
+                            env.git().diffs().commitFiles(sha);
                         case CommitFilesView.Changes.OfStash(Sha sha) ->
                             env.git().stashes().files(sha);
                         case CommitFilesView.Changes.OfBranch(var branch, var base, Sha sha) ->
-                            env.git().rangeFiles(base.tip(), sha);
+                            env.git().diffs().rangeFiles(base.tip(), sha);
                         case CommitFilesView.Changes.OfPullRequest(PullRequestCommits commits) ->
                             env.git().pullRequestFiles(commits);
                     })
@@ -678,13 +679,13 @@ public interface Cmd {
         public Msg run(Env env) {
             return (switch (of) {
                         case CommitFilesView.Changes.OfCommit(Sha sha) ->
-                            env.git().commitFileChanges(sha, files, options);
+                            env.git().diffs().commitFileChanges(sha, files, options);
                         case CommitFilesView.Changes.OfStash(Sha sha) ->
                             env.git().stashes().fileChanges(sha, files, options);
                         case CommitFilesView.Changes.OfBranch(var branch, var base, Sha sha) ->
-                            env.git().rangeFileChanges(base.tip(), sha, files, options);
+                            env.git().diffs().rangeFileChanges(base.tip(), sha, files, options);
                         case CommitFilesView.Changes.OfPullRequest(PullRequestCommits commits) ->
-                            env.git().pullRequestFileChanges(commits, files, options);
+                            env.git().diffs().pullRequestFileChanges(commits, files, options);
                     })
                     .fold(this::failedWith, diff -> new LoadMsg.CommitFileDiffLoaded(of, files, options, diff));
         }
@@ -718,7 +719,8 @@ public interface Cmd {
         public Msg run(Env env) {
             Option<MetadataStamp> stamp = env.git().status().diffStamp(files);
             return env.git()
-                    .diff(files, options)
+                    .diffs()
+                    .uncommitted(files, options)
                     .fold(this::failedWith, diff -> new LoadMsg.FileDiffLoaded(files, options, diff, stamp));
         }
     }

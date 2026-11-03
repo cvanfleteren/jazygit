@@ -74,7 +74,7 @@ public class WordDiffBenchmark {
     }
 
     /**
-     * The kinds of diff measured. Each is close to the 5000 lines a diff is cut off at ({@code CliDiff.MAX_LINES}), or
+     * The kinds of diff measured. Each is close to the 5000 lines a diff is cut off at ({@code CliDiffs.MAX_LINES}), or
      * says why not.
      */
     public enum Shape {
