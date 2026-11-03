@@ -8,6 +8,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
@@ -55,6 +56,22 @@ class LocalBranchesList implements BranchesTabList {
             Option<BaseDistance> distance,
             List<LoadableList.Seg> gitHub,
             Option<String> spinner) {
+        return row(b, since, distance, Option.none(), gitHub, spinner);
+    }
+
+    /**
+     * A branch on two lines, as {@link #row(Branch, Duration, Option, List, Option)}, with the parent it shows after
+     * how far it is from its base, {@code ⇣1 on feat/a} (ADR 72).
+     *
+     * @param parent the parent the branch shows, if it shows one ({@link #shownParent})
+     */
+    static LoadableList.Row row(
+            Branch b,
+            Duration since,
+            Option<BaseDistance> distance,
+            Option<BranchName> parent,
+            List<LoadableList.Seg> gitHub,
+            Option<String> spinner) {
         return new LoadableList.Row(List.of(
                                 b.current()
                                         ? LoadableList.Seg.styled(b.name().value(), Theme.Classes.CURRENT)
@@ -63,9 +80,25 @@ class LocalBranchesList implements BranchesTabList {
                                 BranchSegs.group(BranchSegs.spinnerSeg(spinner).toList())))
                 .withDetail(List.of(LoadableList.Seg.of("  " + TimeText.age(since)))
                         .appendAll(BranchSegs.group(BranchSegs.sync(b)))
-                        .appendAll(BranchSegs.group(BranchSegs.baseDistance(b, distance)))
+                        .appendAll(BranchSegs.group(
+                                BranchSegs.baseDistance(b, distance).appendAll(BranchSegs.parent(parent))))
                         .appendAll(BranchSegs.group(gitHub))
                         .appendAll(BranchSegs.group(BranchSegs.worktree(b))));
+    }
+
+    /**
+     * The parent {@code branch} shows on its line 2 (ADR 72): none for one built on a root, which is what one expects,
+     * nor for one in a stack on GitHub, whose place in it says it.
+     */
+    static Option<BranchName> shownParent(Model model, Branch branch) {
+        return model.repo()
+                .parents()
+                .get(branch.name())
+                .filter(parent -> !GitHubBases.of(model.gitHub()).root(parent, AheadUpdate.main(model)))
+                .filter(parent -> model.gitHub()
+                        .pullRequest(branch)
+                        .flatMap(PullRequest::stack)
+                        .isEmpty());
     }
 
     /**
@@ -108,6 +141,7 @@ class LocalBranchesList implements BranchesTabList {
                         b,
                         Duration.between(b.lastActivity(), model.now()),
                         model.repo().baseDistance().get(b.name()),
+                        shownParent(model, b),
                         BranchSegs.gitHub(
                                 model.gitHub().pullRequest(b),
                                 model.gitHub().merge(model.gitHub().pullRequest(b)),
