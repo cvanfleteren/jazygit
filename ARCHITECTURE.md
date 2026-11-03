@@ -914,7 +914,7 @@ each role that is split off this way; the `Cli*` classes it still points to with
       `git stash` says. Without a stash there is no reflog, which `--ignore-missing` makes an empty list.
     - `CliRemote` reads the remotes.
     - These each have a pure parser for git's output. `CliDiffs` returns git's text, cut off when it
-      is long.
+      is long, and parses the files `--name-status -z` lists, for a commit, a range, a stash and a pull request.
   - **Writes:** `CliCheckout`, `CliBranch` (push, pull, delete), `CliIndex` (stage, commit, discard),
     `CliMerge`, `CliRebase`, `CliStashes`, `CliRemote` (fetch) and `CliWorktrees` (add, remove).
   - **Opening:** `CliGitInfoProvider.open` asks `git rev-parse` whether the directory is in a repository,
