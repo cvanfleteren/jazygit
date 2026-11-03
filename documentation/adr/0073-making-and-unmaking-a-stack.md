@@ -19,31 +19,62 @@ GitHub refuses pull requests whose bases do not make one line from the base of t
 Stacks get made in two ways. By hand, a branch at a time: a branch made from a branch, then a pull request for it
 on its parent, which the create dialog proposes as base already (ADR 3). And by an agent working in the background,
 which makes several branches on each other and opens a pull request for each with `gh pr create --base`. Either way
-the pull requests form a line that ADR 72 shows as a chain, and that is not a stack on GitHub until someone links it.
+the pull requests form a line of branches, each the parent of the next (ADR 72), that is not a stack on GitHub until
+someone links it.
+
+Which branches of such a line make the stack is not always the whole line. A line goes down to a branch such as
+`develop` that is no part of any stack, and up through branches that are not ready to be stacked; and a branch with
+two children forks it.
 
 ## Decision
 
 ### The stack menu
 
 `s` on a branch or on the header of a stack opens a menu of what can be done with its stack, with only the choices
-that apply: link the stack, stack on…, unstack, and rebase and push the stack (ADR 74). `s` is free on the branches
+that apply: make a stack, add to the stack, stack on…, unstack, and rebase and push the stack (ADR 74). `s` is free on the branches
 pane, and a menu leaves the other free keys for later, as `u` does for the upstream.
 
-### Linking a chain
+### Making a stack
 
-"Link stack" makes a stack on GitHub of a whole chain at once, from its bottom to its top.
+"Make stack…", on a branch that is in no stack on GitHub, lists the branches it could make a stack with, and the user
+chooses its bottom and its top.
 
-- One `POST stacks` with the pull requests of the chain; or, for a chain on the top of a stack on GitHub (ADR 72),
-  one `POST stacks/{n}/add` with only the ones on top.
-- The chain is what ADR 72 shows: its parents can come from `gh-merge-base`, where the base of a pull request is
-  another branch, often `main`. Before linking, the menu says which bases it changes, `#97: main → feat/a`, and asks;
-  then `gh pr edit --base` changes them, from the bottom up, and the stack is linked.
-- A branch of the chain without an open pull request stops it: the menu names the branches without one, and links
-  nothing.
-- Not: linking by itself. Jazygit does not write to GitHub while it reads, and a line of pull requests is not always
-  meant as a stack. An agent that wants its pull requests linked can do it itself, with `gh stack link` or the same
-  request.
-- Not: "submit stack", pushing a chain and opening a pull request for each of its branches at once. The create dialog
+```
+ Make a stack → develop
+   feat/a          #96
+   feat/b          #97   ← this branch
+     feat/c        #98
+       feat/d      no pull request
+     feat/e        #99
+```
+
+- The list is the line of parents of the branch (ADR 72), down to the first root, which is not listed: it is the
+  base of the stack. Then the branch; then the branches built on it, and on those, as a tree, indented.
+- `b` makes the highlighted branch the bottom, `t` the top; `Enter` makes the stack. The branches between them are
+  marked as they are chosen.
+- The bottom is the branch or one below it, the top the branch or one above it: from the bottom to the top there is
+  then one line, also where the tree forks. A bottom above the branch, or a top below it, is refused with why.
+- At first the bottom is as far down as the branches have open pull requests, and the top is the branch: what is
+  above it the user adds.
+- One `POST stacks` with the pull requests from the bottom to the top.
+- The parents can come from `gh-merge-base`, where the base of a pull request is another branch, often the root.
+  Before making the stack, the menu says which bases it changes, `#97: develop → feat/a`, and asks; then
+  `gh pr edit --base` changes them, from the bottom up, and the stack is made. The base of the bottom stays as it is:
+  it is the base of the stack.
+- A branch between the bottom and the top without an open pull request stops it: the menu names the branches without
+  one, and makes nothing.
+- A root is never in the list, so a long-lived branch such as `develop` is never stacked.
+- Not: making stacks by itself, of the lines of branches it finds. Jazygit does not write to GitHub while it reads, a
+  line of pull requests is not always meant as a stack, and where one ends only the user knows. An agent that wants
+  its pull requests linked can do it itself, with `gh stack link` or the same request.
+
+### Adding to a stack
+
+"Add to stack…", on a branch of a stack on GitHub, lists the branches built on its top as "Make stack…" does, with the
+top of the stack as the fixed bottom; the user chooses the top. One `POST stacks/{n}/add` puts them on, after the same
+check of their bases and pull requests.
+
+- Not: "submit stack", pushing branches and opening a pull request for each of them at once. The create dialog
   asks for a title, a body and a template per pull request; doing that for many is a design of its own. Agents open
   their pull requests themselves.
 
@@ -71,7 +102,8 @@ The create dialog gets a line `Stack on #96`, on when the base is a branch with 
 "Unstack" takes a stack apart on GitHub, whole, as `unstack` does, after asking:
 `Unstack #12: 3 pull requests stay open, unlinked`.
 
-- The pull requests and their bases stay as they are: the line stays a chain, and is linked again with "Link stack".
+- The pull requests and their bases stay as they are: the branches stay built on each other, and are made a stack
+  again with "Make stack…".
 - Merged and queued pull requests stay in the stack on GitHub; the menu says so when there are any.
 
 ### When GitHub refuses
@@ -82,8 +114,10 @@ says. The menu does not ask GitHub first whether it has stacks: that would be a 
 
 ## Consequences
 
-- A chain of pull requests, also one an agent made, becomes a stack on GitHub with one choice of a menu.
-- Jazygit changes the bases of pull requests on GitHub when linking, after saying which.
+- A line of pull requests, also one an agent made, becomes a stack on GitHub from a menu, with the user choosing where
+  it starts and ends.
+- Jazygit changes the bases of pull requests on GitHub when making a stack, after saying which.
+- Nothing becomes a stack that the user did not choose.
 - The Stacks REST API is used through `gh api`, as `merge-async` is (ADR 24).
 - `.git/gh-stack` is neither read nor written: a stack made with `gh-stack` shows through GitHub, and one made in
   jazygit is not in `gh-stack`'s own list until `gh stack checkout` reads it from GitHub.
