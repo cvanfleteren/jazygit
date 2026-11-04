@@ -110,3 +110,5 @@ Follows from issue #294, section 1a and item 6.
 
 Amended by ADR 71: `CliBaseDistance` and `CliPullRequest` stay helpers of their role, several operations are named
 within their role, and the tests are split per role in a later change.
+
+Amended by ADR 72: `GitFailure` is no longer generic, and `ProcessError` is folded into `GitError`.
