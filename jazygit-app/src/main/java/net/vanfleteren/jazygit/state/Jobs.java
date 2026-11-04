@@ -234,7 +234,7 @@ public record Jobs(
                 .map(Running::cmd)
                 .filter(OperationCmd.class::isInstance)
                 .map(OperationCmd.class::cast)
-                .flatMap(cmd -> cmd.busyBranch().map(branch -> Tuple.of(branch, cmd.operation())))
+                .flatMap(cmd -> cmd.busyBranches().map(branch -> Tuple.of(branch, cmd.operation())))
                 .toMap(entry -> entry);
     }
 

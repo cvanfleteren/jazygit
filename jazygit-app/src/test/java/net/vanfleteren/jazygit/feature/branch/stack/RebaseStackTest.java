@@ -261,6 +261,24 @@ class RebaseStackTest {
     }
 
     @Test
+    void theBranchesOfAStackAreBusyWhileItIsPushedOrRebased() {
+        StackRebaseCmd.PushStack push = new StackRebaseCmd.PushStack(12, List.of(C, D));
+        StackRebaseCmd.RebaseStack rebase =
+                new StackRebaseCmd.RebaseStack(plan(MODEL, ENTRIES).get(), List.empty(), true);
+
+        Model pushing = TestModels.running(MODEL, push);
+        Model rebasing = TestModels.running(MODEL, rebase);
+
+        assertEquals(
+                io.vavr.collection.HashMap.of(
+                        new BranchRef.Local(C), StackRebaseCmd.PUSH_STACK,
+                        new BranchRef.Local(D), StackRebaseCmd.PUSH_STACK),
+                pushing.jobs().busy());
+        assertEquals(Option.none(), pushing.idleBranch(D));
+        assertEquals(2, rebasing.jobs().busy().size());
+    }
+
+    @Test
     void aRebaseOnlyPushesNothing() {
         StackRebaseCmd.RebaseStack cmd =
                 new StackRebaseCmd.RebaseStack(plan(MODEL, ENTRIES).get(), List.empty(), false);

@@ -7,6 +7,7 @@ import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.StackLayer;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -23,10 +24,20 @@ import net.vanfleteren.jazygit.state.Operation;
 public sealed interface StackRebaseCmd extends Cmd {
 
     // It does not start while the repository is in the middle of something, as any rebase.
-    Operation REBASE_STACK =
-            Operation.of("log.title.rebaseStack", "error.rebaseStack.failed").waitingForUnfinished();
+    Operation REBASE_STACK = Operation.of("log.title.rebaseStack", "error.rebaseStack.failed")
+            .waitingForUnfinished()
+            .labelledWhenBusy("branches.busy.rebaseStack");
 
-    Operation PUSH_STACK = Operation.of("log.title.pushStack", "error.pushStack.failed");
+    Operation PUSH_STACK =
+            Operation.of("log.title.pushStack", "error.pushStack.failed").labelledWhenBusy("branches.busy.push");
+
+    /**
+     * The branches of the stack, busy while it is rebased or pushed: each shows a spinner, and so does the header of the
+     * stack, and none takes another operation meanwhile.
+     */
+    static List<BranchRef> busy(List<BranchName> branches) {
+        return branches.map(BranchRef.Local::new);
+    }
 
     /**
      * Reads the own commits of each branch of {@code rebase}, and the merges a rebase of it drops, to ask about.
@@ -72,6 +83,11 @@ public sealed interface StackRebaseCmd extends Cmd {
             return Option.of("#" + rebase.stack());
         }
 
+        @Override
+        public List<BranchRef> busyBranches() {
+            return busy(rebase.branches());
+        }
+
         // A push does not share the refs of the remote with a fetch, as a push of one branch does not.
         @Override
         public Option<Guard> guard() {
@@ -110,6 +126,11 @@ public sealed interface StackRebaseCmd extends Cmd {
         @Override
         public Option<String> subject() {
             return Option.of("#" + stack);
+        }
+
+        @Override
+        public List<BranchRef> busyBranches() {
+            return busy(branches);
         }
 
         @Override

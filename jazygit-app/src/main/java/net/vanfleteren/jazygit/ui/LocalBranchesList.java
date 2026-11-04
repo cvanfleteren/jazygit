@@ -188,8 +188,10 @@ class LocalBranchesList implements BranchesTabList {
     /**
      * The header of a stack on one line: whether it is open, its number and its base, then apart how many pull
      * requests it has (ADR 72), and whether it {@code diverged}: GitHub does not merge it until it is rebased (ADR 73).
+     * While its branches are rebased or pushed, the {@code spinner} shows after its name, as on a busy branch, also
+     * while the stack is closed (ADR 74).
      */
-    static LoadableList.Row header(BranchNode.Header header, boolean diverged) {
+    static LoadableList.Row header(BranchNode.Header header, boolean diverged, Option<String> spinner) {
         return new LoadableList.Row(List.of(
                         LoadableList.Seg.styled(header.open() ? "▾ " : "▸ ", Theme.Classes.DIM),
                         LoadableList.Seg.styled(
@@ -198,6 +200,7 @@ class LocalBranchesList implements BranchesTabList {
                                         header.stack().number(),
                                         header.stack().base().getOrElse("?")),
                                 Theme.Classes.PULL_REQUEST))
+                .appendAll(BranchSegs.group(BranchSegs.spinnerSeg(spinner).toList()))
                 .appendAll(BranchSegs.group(List.of(LoadableList.Seg.styled(
                         " " + Messages.get("branches.stack.size", header.stack().size()), Theme.Classes.DIM))))
                 .appendAll(
@@ -267,7 +270,14 @@ class LocalBranchesList implements BranchesTabList {
                 listed -> listed.map(node -> switch (node) {
                     case BranchNode.Leaf leaf ->
                         leaf.inStack() ? indented(rowOf.apply(leaf.branch())) : rowOf.apply(leaf.branch());
-                    case BranchNode.Header header -> header(header, diverged(model, header));
+                    case BranchNode.Header header ->
+                        header(
+                                header,
+                                diverged(model, header),
+                                header.branches()
+                                        .map(b -> spinnerOf.apply(new BranchRef.Local(b.name())))
+                                        .find(Option::isDefined)
+                                        .flatMap(spinner -> spinner));
                     case BranchNode.Other other -> other(other);
                 }),
                 focused,
