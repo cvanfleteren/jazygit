@@ -96,18 +96,18 @@ It refuses, naming the branch and why, when a branch it would move:
   out again. One that stopped on a conflict is continued, skipped or aborted with `M`, as any rebase, and ends on the
   top; aborting puts every branch back.
 - `--autostash` keeps what is not committed.
-- Once it is done, pushing the stack is offered.
+- Once it is done without stopping, the stack is pushed (below), unless the question was answered with `l`.
 
 ### From the link
 
 When making or adding to a stack warns that a branch is not built on the one below (ADR 73), the confirmation also
-offers to link and rebase. The rebase is planned once GitHub lists the stack, which it reads again for until it does
-(ADR 73).
+offers to link and rebase, with `r`. The rebase is planned once GitHub lists the stack, which it reads again for until it
+does (ADR 73), and asked about as from the menu: rebased and pushed, or rebased only.
 
 ### Pushing
 
-"Push stack", in the stack menu and offered after a rebase, pushes every open branch of the stack in one push that
-GitHub takes whole or not at all:
+A rebase of the stack pushes it too, and so does "Push stack" in the stack menu: every open branch of the stack, in one
+push that GitHub takes whole or not at all:
 
 ```
 git push --force-with-lease --atomic --set-upstream origin <branch>…
@@ -115,7 +115,12 @@ git push --force-with-lease --atomic --set-upstream origin <branch>…
 
 - Each lease is the branch on the remote as last fetched, which the rebase refused to start without having.
 - A branch without an upstream gets `origin/<branch>`, so the branches of an agent push too.
-- A rebase does not push by itself, as `r` does not.
+- The question before the rebase is the only one: `(enter) rebase and push   (l) rebase only   (esc) cancel`. GitHub
+  sees a stack rebased only once it is pushed, so pushing is what is meant nearly always; `l` keeps it here, to look
+  at or test first, and "Push stack" pushes it after.
+- A rebase that stopped on a conflict pushes nothing, also once `M` finished it: what was resolved by hand is looked
+  at before it goes anywhere, and "Push stack" pushes it then.
+- Not: asking again before pushing, once the rebase is done: two questions for what is one step.
 
 ## Consequences
 

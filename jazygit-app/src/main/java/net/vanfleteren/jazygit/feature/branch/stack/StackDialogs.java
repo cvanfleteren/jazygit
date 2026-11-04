@@ -44,31 +44,6 @@ public final class StackDialogs {
                             .shownWhen((model, menu) -> menu.canUnstack())));
 
     /**
-     * Asks before rebasing a stack: its branches, what onto, and the merges it drops (ADR 74).
-     */
-    public static final ConfirmDialog.Spec<StackPopups.RebaseConfirm> REBASE = new ConfirmDialog.Spec<>(
-            "stack-rebase",
-            StackPopups.RebaseConfirm.class,
-            popup -> Messages.get(
-                    "dialog.rebaseStack.title",
-                    String.valueOf(popup.cmd().rebase().stack())),
-            StackDialogs::rebased,
-            () -> new Msg.PopupConfirmed(StackPopups.RebaseConfirm.class));
-
-    /**
-     * Offers to push a stack once it is rebased (ADR 74).
-     */
-    public static final ConfirmDialog.Spec<StackPopups.PushOffer> PUSH = new ConfirmDialog.Spec<>(
-            "stack-push",
-            StackPopups.PushOffer.class,
-            popup -> Messages.get(
-                    "dialog.pushStack.title", String.valueOf(popup.cmd().stack())),
-            popup -> Messages.get(
-                    "dialog.pushStack.message",
-                    popup.cmd().branches().map(branch -> branch.value()).mkString(", ")),
-            () -> new Msg.PopupConfirmed(StackPopups.PushOffer.class));
-
-    /**
      * The pull requests the one of the branch can be stacked on: in no stack, or on the top of one.
      */
     public static final PickDialog.Spec<StackPopups.StackOn, StackPopups.Target> STACK_ON = new PickDialog.Spec<>(
@@ -106,16 +81,36 @@ public final class StackDialogs {
             () -> new Msg.PopupConfirmed(StackPopups.Unstack.class));
 
     /**
-     * Asks before changing the bases of pull requests on GitHub to make a stack of them.
+     * Asks before rebasing a stack and pushing it: its branches, what onto, and the merges it drops (ADR 74). Enter
+     * rebases and pushes, {@code l} only rebases.
      */
-    public static final ConfirmDialog.Spec<StackPopups.Confirm> CONFIRM = new ConfirmDialog.Spec<>(
+    static final KeyedConfirmDialog.Spec<StackPopups.RebaseConfirm> REBASE = new KeyedConfirmDialog.Spec<>(
+            "stack-rebase",
+            StackPopups.RebaseConfirm.class,
+            popup -> Messages.get(
+                    "dialog.rebaseStack.title",
+                    String.valueOf(popup.cmd().rebase().stack())),
+            StackDialogs::rebased,
+            'l',
+            popup -> true,
+            StackMsg.RebaseLocallyChosen::new,
+            "dialog.rebaseStack.hint");
+
+    /**
+     * Asks before linking branches as a stack; when a branch is not on the one below, {@code r} links them and rebases
+     * the stack once GitHub lists it (ADR 73, ADR 74).
+     */
+    static final KeyedConfirmDialog.Spec<StackPopups.Confirm> LINK = new KeyedConfirmDialog.Spec<>(
             "stack-confirm",
             StackPopups.Confirm.class,
             confirm -> Messages.get(
                     "dialog.makeStack.confirmTitle",
                     confirm.cmd().pullRequests().map(number -> "#" + number).mkString(" ")),
             StackDialogs::changes,
-            () -> new Msg.PopupConfirmed(StackPopups.Confirm.class));
+            'r',
+            confirm -> !confirm.diverged().isEmpty(),
+            StackMsg.LinkAndRebaseChosen::new,
+            "dialog.makeStack.hintRebase");
 
     private StackDialogs() {}
 
@@ -123,11 +118,10 @@ public final class StackDialogs {
         return List.of(
                 PopupSlot.returningTo(BranchesPanel.ID, new ChoiceDialog<>(MENU, dispatch)),
                 PopupSlot.returningTo(BranchesPanel.ID, new StackPickDialog(dispatch)),
-                PopupSlot.returningTo(BranchesPanel.ID, new LinkConfirmDialog(dispatch)),
+                PopupSlot.returningTo(BranchesPanel.ID, new KeyedConfirmDialog<>(LINK, dispatch)),
                 PopupSlot.returningTo(BranchesPanel.ID, new PickDialog<>(STACK_ON, dispatch)),
                 PopupSlot.returningTo(BranchesPanel.ID, new ConfirmDialog<>(UNSTACK, dispatch)),
-                PopupSlot.returningTo(BranchesPanel.ID, new ConfirmDialog<>(REBASE, dispatch)),
-                PopupSlot.returningTo(BranchesPanel.ID, new ConfirmDialog<>(PUSH, dispatch)));
+                PopupSlot.returningTo(BranchesPanel.ID, new KeyedConfirmDialog<>(REBASE, dispatch)));
     }
 
     /**

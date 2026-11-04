@@ -121,20 +121,17 @@ public final class StackUpdate {
                         menu -> menu.stack()
                                 .map(stack -> pushed(model.withoutPopup(StackPopups.Menu.class), stack))
                                 .getOrElse(() -> Next.of(model)));
+            // Pushed as well unless asked not to: GitHub sees the stack rebased only once it is (ADR 74).
             case StackMsg.StackRead(StackRebase rebase, var commits) ->
-                Update.ask(model, new StackPopups.RebaseConfirm(new StackRebaseCmd.RebaseStack(rebase, commits)));
+                Update.ask(model, new StackPopups.RebaseConfirm(new StackRebaseCmd.RebaseStack(rebase, commits, true)));
             case StackMsg.StackReadFailed(int stack, var failure) ->
                 Next.of(model.fail(
                         new AppError.OperationFailed(StackRebaseCmd.REBASE_STACK, Option.of("#" + stack), failure)));
-            // Rebased like any operation; pushing the stack is offered then, as a rebase does not push.
-            case StackMsg.Rebased(StackRebaseCmd.RebaseStack cmd, var commands) -> {
-                Next done = OperationUpdate.succeeded(model, cmd, commands);
-                Next offered = Update.ask(
-                        done.model(),
-                        new StackPopups.PushOffer(new StackRebaseCmd.PushStack(
-                                cmd.rebase().stack(), cmd.rebase().branches())));
-                yield new Next(offered.model(), done.cmds().appendAll(offered.cmds()));
-            }
+            case StackMsg.RebaseLocallyChosen() ->
+                Update.confirm(
+                        model,
+                        StackPopups.RebaseConfirm.class,
+                        popup -> Option.of(popup.cmd().locally()));
         };
     }
 

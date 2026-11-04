@@ -49,10 +49,18 @@ public sealed interface StackRebaseCmd extends Cmd {
 
     /**
      * Rebases the stack of {@code rebase}, picking {@code commits}, then checks out again the branch that was, when
-     * it was not the top and the rebase did not stop.
+     * it was not the top, and pushes its branches when {@code push}: only when the rebase did not stop, as one that
+     * stopped on conflicts is looked at before it goes anywhere.
      */
-    record RebaseStack(StackRebase rebase, List<StackLayer.Commits> commits)
+    record RebaseStack(StackRebase rebase, List<StackLayer.Commits> commits, boolean push)
             implements StackRebaseCmd, GitOperationCmd {
+
+        /**
+         * This, rebasing only: the branches are not pushed.
+         */
+        public RebaseStack locally() {
+            return new RebaseStack(rebase, commits, false);
+        }
 
         @Override
         public Operation operation() {
@@ -64,18 +72,27 @@ public sealed interface StackRebaseCmd extends Cmd {
             return Option.of("#" + rebase.stack());
         }
 
+        // A push does not share the refs of the remote with a fetch, as a push of one branch does not.
+        @Override
+        public Option<Guard> guard() {
+            return Option.when(push, Guard.REMOTE_REFS);
+        }
+
+        @Override
+        public boolean changesGitHub() {
+            return push;
+        }
+
         @Override
         public Either<GitFailure<GitError>, List<ExecutedCommand>> perform(Git git) {
             return GitFailure.<GitError>sequence(
                     () -> git.integrate().rebaseStack(rebase.base(), commits),
                     () -> rebase.back()
                             .map(branch -> git.checkout().branch(branch))
-                            .getOrElse(GitFailure::nothing));
-        }
-
-        @Override
-        public Msg succeeded(List<ExecutedCommand> commands) {
-            return new StackMsg.Rebased(this, commands);
+                            .getOrElse(GitFailure::nothing),
+                    () -> push
+                            ? GitFailure.widen(git.remotes().pushAll(rebase.branches(), RemoteBranch.DEFAULT_REMOTE))
+                            : GitFailure.nothing());
         }
     }
 
@@ -93,6 +110,11 @@ public sealed interface StackRebaseCmd extends Cmd {
         @Override
         public Option<String> subject() {
             return Option.of("#" + stack);
+        }
+
+        @Override
+        public Option<Guard> guard() {
+            return Option.of(Guard.REMOTE_REFS);
         }
 
         @Override

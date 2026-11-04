@@ -65,16 +65,17 @@ def test_a_stack_whose_branch_is_not_on_the_one_below_is_rebased_and_pushed_from
     # Wrapped at the width of the dialog.
     assert "Puts feat/c, feat/d each on the one" in ui.app.text()
     assert "origin/main" in ui.app.text()
+    assert "(enter) rebase and push   (l) rebase only" in ui.app.text()
     ui.app.press("enter")
 
-    ui.app.wait_for("Push stack #12")
-    assert repo("log", "--format=%s", "feat/d").splitlines() == ["Add d", "Add c", "Initial commit"]
-    assert repo("rev-parse", "--abbrev-ref", "HEAD") == "main", "the branch that was is checked out again"
-    ui.app.press("enter")
-
+    # Rebased and pushed at once, without asking again.
     ui.app.eventually(
-        lambda: repo("rev-parse", "origin/feat/d") == repo("rev-parse", "feat/d"), "the stack pushed")
-    assert origin("log", "--format=%s", "feat/d").splitlines() == ["Add d", "Add c", "Initial commit"]
+        lambda: origin("log", "--format=%s", "feat/d").splitlines() == ["Add d", "Add c", "Initial commit"],
+        "the stack rebased and pushed")
+    assert repo("log", "--format=%s", "feat/d").splitlines() == ["Add d", "Add c", "Initial commit"]
+    assert repo("rev-parse", "origin/feat/d") == repo("rev-parse", "feat/d")
+    assert repo("rev-parse", "--abbrev-ref", "HEAD") == "main", "the branch that was is checked out again"
+    assert "Push stack" not in ui.app.text()
 
 
 def test_the_branches_an_agent_built_on_each_other_are_made_a_stack_from_the_menu(repo, origin, gh, jazygit):

@@ -151,23 +151,13 @@ public final class StackPopups {
     }
 
     /**
-     * Asking before rebasing a stack as {@code cmd} does: which branches, onto what, and the merges it drops (ADR 74).
+     * Asking before rebasing a stack and pushing it as {@code cmd} does: which branches, onto what, and the merges it
+     * drops (ADR 74). Confirming it rebases and pushes; it can also rebase only.
      */
     public record RebaseConfirm(StackRebaseCmd.RebaseStack cmd) implements ConfirmablePopup {
 
         @Override
         public Option<StackRebaseCmd.RebaseStack> confirm() {
-            return Option.of(cmd);
-        }
-    }
-
-    /**
-     * Offering to push a stack once it is rebased, as {@code cmd} does (ADR 74).
-     */
-    public record PushOffer(StackRebaseCmd.PushStack cmd) implements ConfirmablePopup {
-
-        @Override
-        public Option<StackRebaseCmd.PushStack> confirm() {
             return Option.of(cmd);
         }
     }

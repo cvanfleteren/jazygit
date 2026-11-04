@@ -21,11 +21,13 @@ import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.git.StubIntegrate;
+import net.vanfleteren.jazygit.git.StubRemotes;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.git.model.RemoteName;
 import net.vanfleteren.jazygit.git.model.RemoteRef;
 import net.vanfleteren.jazygit.git.model.Revision;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -199,11 +201,21 @@ class RebaseStackTest {
 
         StackPopups.RebaseConfirm popup =
                 asking.popup(StackPopups.RebaseConfirm.class).get();
-        assertEquals(new StackRebaseCmd.RebaseStack(rebase, commits), popup.cmd());
+        assertEquals(new StackRebaseCmd.RebaseStack(rebase, commits, true), popup.cmd());
         assertEquals(
-                "Puts feat/c, feat/d each on the one below, the bottom on origin/main, in one rebase.\n\n"
+                "Puts feat/c, feat/d each on the one below, the bottom on origin/main, in one rebase; then "
+                        + "force-pushes them, all or none.\n\n"
                         + "feat/d: its merge \"Merge main\" is dropped",
                 StackDialogs.rebased(popup));
+
+        // Enter rebases and pushes; l only rebases.
+        assertEquals(
+                List.of(popup.cmd()),
+                Update.update(asking, new Msg.PopupConfirmed(StackPopups.RebaseConfirm.class))
+                        .cmds());
+        assertEquals(
+                List.of(popup.cmd().locally()),
+                Update.update(asking, new StackMsg.RebaseLocallyChosen()).cmds());
     }
 
     @Test
@@ -220,23 +232,50 @@ class RebaseStackTest {
                 TestModels.errorText(chosen.model()));
     }
 
-    @Test
-    void theRebaseChecksOutTheBranchThatWasThenOffersToPush() {
-        StackRebase rebase = plan(MODEL, ENTRIES).get();
-        StackRebaseCmd.RebaseStack cmd = new StackRebaseCmd.RebaseStack(rebase, List.empty());
-
-        Msg done = cmd.run(new Env(StubGit.of(), StubGitHub.empty()));
-
-        assertInstanceOf(StackMsg.Rebased.class, done);
-        Model offered = Update.update(TestModels.running(MODEL, cmd), done).model();
-        assertEquals(
-                Option.of(new StackPopups.PushOffer(new StackRebaseCmd.PushStack(12, List.of(C, D)))), offered.popup());
+    // Records the branches it is asked to push.
+    private static Git pushingInto(java.util.List<List<BranchName>> pushed) {
+        return StubGit.of().withRemotes(new StubRemotes() {
+            @Override
+            public Either<GitFailure<GitError.ProcessError>, List<ExecutedCommand>> pushAll(
+                    List<BranchName> branches, RemoteName remote) {
+                pushed.add(branches);
+                return Either.right(List.empty());
+            }
+        });
     }
 
     @Test
-    void aRebaseThatStopsOnAConflictChecksNothingOut() {
+    void theRebaseChecksOutTheBranchThatWasThenPushesTheStackAtOnce() {
         StackRebaseCmd.RebaseStack cmd =
-                new StackRebaseCmd.RebaseStack(plan(MODEL, ENTRIES).get(), List.empty());
+                new StackRebaseCmd.RebaseStack(plan(MODEL, ENTRIES).get(), List.empty(), true);
+        java.util.List<List<BranchName>> pushed = new java.util.ArrayList<>();
+
+        Msg done = cmd.run(new Env(pushingInto(pushed), StubGitHub.empty()));
+
+        assertInstanceOf(OperationMsg.Succeeded.class, done);
+        assertEquals(java.util.List.of(List.of(C, D)), pushed);
+        assertEquals(true, cmd.changesGitHub());
+        assertEquals(
+                Option.none(),
+                Update.update(TestModels.running(MODEL, cmd), done).model().popup());
+    }
+
+    @Test
+    void aRebaseOnlyPushesNothing() {
+        StackRebaseCmd.RebaseStack cmd =
+                new StackRebaseCmd.RebaseStack(plan(MODEL, ENTRIES).get(), List.empty(), false);
+        java.util.List<List<BranchName>> pushed = new java.util.ArrayList<>();
+
+        cmd.run(new Env(pushingInto(pushed), StubGitHub.empty()));
+
+        assertEquals(java.util.List.of(), pushed);
+        assertEquals(false, cmd.changesGitHub());
+    }
+
+    @Test
+    void aRebaseThatStopsOnAConflictChecksNothingOutAndPushesNothing() {
+        StackRebaseCmd.RebaseStack cmd =
+                new StackRebaseCmd.RebaseStack(plan(MODEL, ENTRIES).get(), List.empty(), true);
         Git stopping = StubGit.of().withIntegrate(new StubIntegrate() {
             @Override
             public Either<GitFailure<GitError>, List<ExecutedCommand>> rebaseStack(

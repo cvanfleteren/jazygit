@@ -84,9 +84,9 @@ public sealed interface StackMsg extends Msg {
     record StackReadFailed(int stack, Failure failure) implements StackMsg {}
 
     /**
-     * {@code cmd} rebased its stack, running {@code commands}.
+     * The user chose to rebase the stack asked about without pushing it (ADR 74).
      */
-    record Rebased(StackRebaseCmd.RebaseStack cmd, List<ExecutedCommand> commands) implements StackMsg {}
+    record RebaseLocallyChosen() implements StackMsg {}
 
     /**
      * The user chose to take the stack of the menu apart.
