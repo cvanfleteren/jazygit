@@ -137,6 +137,30 @@ public sealed interface AppError {
     record CheckedOutElsewhere(Operation operation, BranchName branch, String worktree) implements AppError {}
 
     /**
+     * Stack {@code stack} is not rebased, as {@code branch} of it, a branch or a pull request, is as {@code why} says
+     * (ADR 74).
+     */
+    record StackNotRebased(int stack, String branch, StackRefusal why) implements AppError {}
+
+    /**
+     * Why a stack is not rebased (ADR 74).
+     */
+    enum StackRefusal {
+        /** Its base, or any open branch, is not known. */
+        NO_BASE,
+        /** Where a merged branch under it was is not known: its commits would be replayed. */
+        MERGED_UNKNOWN,
+        /** An open pull request of it has no local branch, which cannot be moved. */
+        NOT_CHECKED_OUT,
+        /** A branch of it is checked out in another worktree, under whose files it would move. */
+        OTHER_WORKTREE,
+        /** A branch of it is in a merge queue, which rewriting it takes it out of. */
+        MERGE_QUEUE,
+        /** A branch of it is behind its branch on the remote, which a rebase would lose. */
+        BEHIND_REMOTE
+    }
+
+    /**
      * The main worktree was asked to be removed, which holds the repository.
      *
      * @param worktree the name of its directory

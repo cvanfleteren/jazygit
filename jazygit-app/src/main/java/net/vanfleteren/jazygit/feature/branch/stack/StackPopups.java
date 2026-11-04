@@ -60,6 +60,9 @@ public final class StackPopups {
             return canMake() && pullRequest.isDefined() && !targets.isEmpty();
         }
 
+        /**
+         * Whether the stack can be taken apart, rebased and pushed: any stack on GitHub (ADR 73, ADR 74).
+         */
         public boolean canUnstack() {
             return stack.isDefined();
         }
@@ -144,6 +147,28 @@ public final class StackPopups {
         /** How many of its pull requests are merged, which stay in the stack on GitHub. */
         public int merged() {
             return stack.entries().count(entry -> entry.state() == State.MERGED);
+        }
+    }
+
+    /**
+     * Asking before rebasing a stack as {@code cmd} does: which branches, onto what, and the merges it drops (ADR 74).
+     */
+    public record RebaseConfirm(StackRebaseCmd.RebaseStack cmd) implements ConfirmablePopup {
+
+        @Override
+        public Option<StackRebaseCmd.RebaseStack> confirm() {
+            return Option.of(cmd);
+        }
+    }
+
+    /**
+     * Offering to push a stack once it is rebased, as {@code cmd} does (ADR 74).
+     */
+    public record PushOffer(StackRebaseCmd.PushStack cmd) implements ConfirmablePopup {
+
+        @Override
+        public Option<StackRebaseCmd.PushStack> confirm() {
+            return Option.of(cmd);
         }
     }
 }

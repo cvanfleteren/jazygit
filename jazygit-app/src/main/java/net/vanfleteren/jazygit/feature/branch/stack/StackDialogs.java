@@ -36,8 +36,37 @@ public final class StackDialogs {
                             .shownWhen((model, menu) -> menu.canStackOn()),
                     new Choice<StackPopups.Menu>('a', "dialog.stack.add", StackMsg.AddChosen::new)
                             .shownWhen((model, menu) -> menu.canAdd()),
+                    new Choice<StackPopups.Menu>('r', "dialog.stack.rebase", StackMsg.RebaseChosen::new)
+                            .shownWhen((model, menu) -> menu.canUnstack()),
+                    new Choice<StackPopups.Menu>('p', "dialog.stack.push", StackMsg.PushChosen::new)
+                            .shownWhen((model, menu) -> menu.canUnstack()),
                     new Choice<StackPopups.Menu>('u', "dialog.stack.unstack", StackMsg.UnstackChosen::new)
                             .shownWhen((model, menu) -> menu.canUnstack())));
+
+    /**
+     * Asks before rebasing a stack: its branches, what onto, and the merges it drops (ADR 74).
+     */
+    public static final ConfirmDialog.Spec<StackPopups.RebaseConfirm> REBASE = new ConfirmDialog.Spec<>(
+            "stack-rebase",
+            StackPopups.RebaseConfirm.class,
+            popup -> Messages.get(
+                    "dialog.rebaseStack.title",
+                    String.valueOf(popup.cmd().rebase().stack())),
+            StackDialogs::rebased,
+            () -> new Msg.PopupConfirmed(StackPopups.RebaseConfirm.class));
+
+    /**
+     * Offers to push a stack once it is rebased (ADR 74).
+     */
+    public static final ConfirmDialog.Spec<StackPopups.PushOffer> PUSH = new ConfirmDialog.Spec<>(
+            "stack-push",
+            StackPopups.PushOffer.class,
+            popup -> Messages.get(
+                    "dialog.pushStack.title", String.valueOf(popup.cmd().stack())),
+            popup -> Messages.get(
+                    "dialog.pushStack.message",
+                    popup.cmd().branches().map(branch -> branch.value()).mkString(", ")),
+            () -> new Msg.PopupConfirmed(StackPopups.PushOffer.class));
 
     /**
      * The pull requests the one of the branch can be stacked on: in no stack, or on the top of one.
@@ -96,7 +125,25 @@ public final class StackDialogs {
                 PopupSlot.returningTo(BranchesPanel.ID, new StackPickDialog(dispatch)),
                 PopupSlot.returningTo(BranchesPanel.ID, new ConfirmDialog<>(CONFIRM, dispatch)),
                 PopupSlot.returningTo(BranchesPanel.ID, new PickDialog<>(STACK_ON, dispatch)),
-                PopupSlot.returningTo(BranchesPanel.ID, new ConfirmDialog<>(UNSTACK, dispatch)));
+                PopupSlot.returningTo(BranchesPanel.ID, new ConfirmDialog<>(UNSTACK, dispatch)),
+                PopupSlot.returningTo(BranchesPanel.ID, new ConfirmDialog<>(REBASE, dispatch)),
+                PopupSlot.returningTo(BranchesPanel.ID, new ConfirmDialog<>(PUSH, dispatch)));
+    }
+
+    /**
+     * What a rebase of a stack does: its branches from the bottom up, what onto, and the merges it drops, one per line.
+     */
+    static String rebased(StackPopups.RebaseConfirm popup) {
+        StackRebaseCmd.RebaseStack cmd = popup.cmd();
+        String branches = Messages.get(
+                "dialog.rebaseStack.message",
+                cmd.rebase().branches().map(branch -> branch.value()).mkString(", "),
+                cmd.rebase().base().label());
+        List<String> dropped = cmd.commits()
+                .flatMap(layer -> layer.merges()
+                        .map(merge -> Messages.get(
+                                "dialog.rebaseStack.dropped", layer.branch().value(), merge.subject())));
+        return dropped.isEmpty() ? branches : branches + "\n\n" + dropped.mkString("\n");
     }
 
     /**

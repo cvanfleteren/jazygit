@@ -54,6 +54,11 @@ public final class ErrorText {
             case AppError.NoBranchCheckedOut() -> Messages.get("error.detached");
             case AppError.UnpushedCommits(BranchName branch) ->
                 Messages.get("error.fastForward.unpushed", branch.value());
+            case AppError.StackNotRebased(int stack, String branch, var why) ->
+                Messages.get(
+                        "error.stackNotRebased",
+                        String.valueOf(stack),
+                        Messages.get("error.stackNotRebased." + why.name().toLowerCase(java.util.Locale.ROOT), branch));
             case AppError.CheckedOutElsewhere(var operation, BranchName branch, var worktree) ->
                 Messages.get(operation.errorKey(), branch.value(), Messages.get("error.checkedOutElsewhere", worktree));
             case AppError.MainWorktreeNotRemovable(String worktree) ->

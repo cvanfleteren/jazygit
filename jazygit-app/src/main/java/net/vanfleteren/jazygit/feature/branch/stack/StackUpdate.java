@@ -26,6 +26,7 @@ import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.AheadUpdate;
+import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.GitHubBases;
 import net.vanfleteren.jazygit.state.ListCursor;
 import net.vanfleteren.jazygit.state.Model;
@@ -92,7 +93,56 @@ public final class StackUpdate {
                         done.cmds());
             }
             case Tick() -> settling(model);
+            case StackMsg.RebaseChosen() ->
+                chosen(
+                        model,
+                        menu -> menu.stack()
+                                .map(stack -> StackRebase.of(model, stack)
+                                        .fold(
+                                                refused -> Next.of(model.withoutPopup(StackPopups.Menu.class)
+                                                        .fail(refused)),
+                                                rebase -> Next.of(
+                                                        model.withoutPopup(StackPopups.Menu.class)
+                                                                .clearError(),
+                                                        new StackRebaseCmd.ReadStack(rebase))))
+                                .getOrElse(() -> Next.of(model)));
+            case StackMsg.PushChosen() ->
+                chosen(
+                        model,
+                        menu -> menu.stack()
+                                .map(stack -> pushed(model.withoutPopup(StackPopups.Menu.class), stack))
+                                .getOrElse(() -> Next.of(model)));
+            case StackMsg.StackRead(StackRebase rebase, var commits) ->
+                Update.ask(model, new StackPopups.RebaseConfirm(new StackRebaseCmd.RebaseStack(rebase, commits)));
+            case StackMsg.StackReadFailed(int stack, var failure) ->
+                Next.of(model.fail(
+                        new AppError.OperationFailed(StackRebaseCmd.REBASE_STACK, Option.of("#" + stack), failure)));
+            // Rebased like any operation; pushing the stack is offered then, as a rebase does not push.
+            case StackMsg.Rebased(StackRebaseCmd.RebaseStack cmd, var commands) -> {
+                Next done = OperationUpdate.succeeded(model, cmd, commands);
+                Next offered = Update.ask(
+                        done.model(),
+                        new StackPopups.PushOffer(new StackRebaseCmd.PushStack(
+                                cmd.rebase().stack(), cmd.rebase().branches())));
+                yield new Next(offered.model(), done.cmds().appendAll(offered.cmds()));
+            }
         };
+    }
+
+    /**
+     * Pushes the open branches of {@code stack} that are checked out here, all of them or none (ADR 74).
+     */
+    private static Next pushed(Model model, PullRequestStack stack) {
+        List<Branch> local = local(model);
+        List<BranchName> branches = stack.entries()
+                .filter(entry -> entry.state() == State.OPEN)
+                .sortBy(PullRequestStack.Entry::position)
+                .flatMap(entry ->
+                        local.find(b -> model.gitHub().pullRequest(b).exists(pr -> pr.number() == entry.number())))
+                .map(Branch::name);
+        return branches.isEmpty()
+                ? Next.of(model)
+                : Update.start(model.clearError(), new StackRebaseCmd.PushStack(stack.number(), branches));
     }
 
     /**

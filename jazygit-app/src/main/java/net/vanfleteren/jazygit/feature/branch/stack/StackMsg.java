@@ -3,7 +3,9 @@ package net.vanfleteren.jazygit.feature.branch.stack;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.StackLayer;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
+import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
@@ -55,6 +57,31 @@ public sealed interface StackMsg extends Msg {
      * The user chose {@code target} to stack the pull request of the branch on.
      */
     record TargetChosen(StackPopups.Target target) implements StackMsg {}
+
+    /**
+     * The user chose to rebase the stack of the menu (ADR 74).
+     */
+    record RebaseChosen() implements StackMsg {}
+
+    /**
+     * The user chose to push the stack of the menu (ADR 74).
+     */
+    record PushChosen() implements StackMsg {}
+
+    /**
+     * The own commits of the branches of {@code rebase} were read, to ask about rebasing them.
+     */
+    record StackRead(StackRebase rebase, List<StackLayer.Commits> commits) implements StackMsg {}
+
+    /**
+     * The own commits of the branches of stack {@code stack} could not be read.
+     */
+    record StackReadFailed(int stack, Failure failure) implements StackMsg {}
+
+    /**
+     * {@code cmd} rebased its stack, running {@code commands}.
+     */
+    record Rebased(StackRebaseCmd.RebaseStack cmd, List<ExecutedCommand> commands) implements StackMsg {}
 
     /**
      * The user chose to take the stack of the menu apart.
