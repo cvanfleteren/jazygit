@@ -33,6 +33,9 @@ class CliStackRebaseTest {
     @TempDir
     Path remote;
 
+    @TempDir
+    Path other;
+
     // main ← c1 ← c2 (c); d was made from main, not from c: d1 (d). Then main moved on: m1.
     @BeforeEach
     void setUp() throws Exception {
@@ -129,6 +132,59 @@ class CliStackRebaseTest {
         assertEquals(git("rev-parse", "c"), git("rev-parse", "origin/c"));
         assertEquals(git("rev-parse", "d"), git("rev-parse", "origin/d"));
         assertEquals("origin/d", git("rev-parse", "--abbrev-ref", "d@{upstream}"));
+    }
+
+    @Test
+    void aRebasedStackIsPushedOverWhatItWas() throws Exception {
+        pushedToOrigin();
+
+        new CliIntegrate(repo)
+                .rebaseStack(
+                        BASE, new CliHistory(repo).stackCommits(layers(), BASE).get())
+                .get();
+        new CliRemotes(repo, HashMap::empty)
+                .pushAll(List.of(C, D), new RemoteName("origin"))
+                .get();
+
+        assertEquals(git("rev-parse", "d"), git("rev-parse", "origin/d"));
+    }
+
+    @Test
+    void aCommitFetchedButNotInTheBranchIsNotPushedOver() throws Exception {
+        pushedToOrigin();
+        new ProcessExecutor()
+                .command("git", "clone", "-q", "-b", "c", remote.toString(), other.toString())
+                .exitValueNormal()
+                .execute();
+        Files.writeString(other.resolve("agent"), "agent\n");
+        new ProcessExecutor()
+                .command(
+                        "sh", "-c", "git add . && git -c user.email=a@a -c user.name=a commit -qm agent && git push -q")
+                .directory(other.toFile())
+                .exitValueNormal()
+                .execute();
+        git("fetch", "-q", "origin");
+        String agent = git("rev-parse", "origin/c");
+
+        new CliIntegrate(repo)
+                .rebaseStack(
+                        BASE, new CliHistory(repo).stackCommits(layers(), BASE).get())
+                .get();
+
+        assertTrue(new CliRemotes(repo, HashMap::empty)
+                .pushAll(List.of(C, D), new RemoteName("origin"))
+                .isLeft());
+        git("fetch", "-q", "origin");
+        assertEquals(agent, git("rev-parse", "origin/c"));
+    }
+
+    private void pushedToOrigin() throws Exception {
+        new ProcessExecutor()
+                .command("git", "init", "-q", "--bare", remote.toString())
+                .exitValueNormal()
+                .execute();
+        git("remote", "add", "origin", remote.toString());
+        git("push", "-q", "-u", "origin", "c", "d");
     }
 
     private String subject(Sha sha) {

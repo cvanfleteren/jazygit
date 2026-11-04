@@ -110,10 +110,13 @@ A rebase of the stack pushes it too, and so does "Push stack" in the stack menu:
 push that GitHub takes whole or not at all:
 
 ```
-git push --force-with-lease --atomic --set-upstream origin <branch>…
+git push --force-with-lease --force-if-includes --atomic --set-upstream origin <branch>…
 ```
 
 - Each lease is the branch on the remote as last fetched, which the rebase refused to start without having.
+- `--force-if-includes` refuses a branch whose remote was fetched where the local branch never was. jazygit fetches
+  in the background, so a lease alone would take on what an agent pushed while the question was open, or between
+  `l` and "Push stack", and push over it.
 - A branch without an upstream gets `origin/<branch>`, so the branches of an agent push too.
 - The question before the rebase is the only one: `(enter) rebase and push   (l) rebase only   (esc) cancel`. GitHub
   sees a stack rebased only once it is pushed, so pushing is what is meant nearly always; `l` keeps it here, to look
