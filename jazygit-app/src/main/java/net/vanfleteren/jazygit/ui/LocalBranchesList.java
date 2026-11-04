@@ -99,7 +99,8 @@ class LocalBranchesList implements BranchesTabList {
 
     /**
      * The parent {@code branch} shows on its line 2 (ADR 72): none for one built on a root, which is what one expects,
-     * nor for one in a stack on GitHub, whose place in it says it.
+     * nor for one in a stack on GitHub, whose place in it says it, unless it does not have all the commits of that
+     * parent, which GitHub does not merge (ADR 73).
      */
     static Option<BranchName> shownParent(Model model, Branch branch) {
         return model.repo()
@@ -110,9 +111,10 @@ class LocalBranchesList implements BranchesTabList {
                         AheadUpdate.main(model),
                         model.gitHub().protectedBranches().getOrElse(HashSet.empty())))
                 .filter(parent -> model.gitHub()
-                        .pullRequest(branch)
-                        .flatMap(PullRequest::stack)
-                        .isEmpty());
+                                .pullRequest(branch)
+                                .flatMap(PullRequest::stack)
+                                .isEmpty()
+                        || model.repo().behindParent(branch.name()).isDefined());
     }
 
     /**
@@ -185,9 +187,9 @@ class LocalBranchesList implements BranchesTabList {
 
     /**
      * The header of a stack on one line: whether it is open, its number and its base, then apart how many pull
-     * requests it has (ADR 72).
+     * requests it has (ADR 72), and whether it {@code diverged}: GitHub does not merge it until it is rebased (ADR 73).
      */
-    static LoadableList.Row header(BranchNode.Header header) {
+    static LoadableList.Row header(BranchNode.Header header, boolean diverged) {
         return new LoadableList.Row(List.of(
                         LoadableList.Seg.styled(header.open() ? "▾ " : "▸ ", Theme.Classes.DIM),
                         LoadableList.Seg.styled(
@@ -197,7 +199,23 @@ class LocalBranchesList implements BranchesTabList {
                                         header.stack().base().getOrElse("?")),
                                 Theme.Classes.PULL_REQUEST))
                 .appendAll(BranchSegs.group(List.of(LoadableList.Seg.styled(
-                        " " + Messages.get("branches.stack.size", header.stack().size()), Theme.Classes.DIM)))));
+                        " " + Messages.get("branches.stack.size", header.stack().size()), Theme.Classes.DIM))))
+                .appendAll(
+                        diverged
+                                ? BranchSegs.group(List.of(LoadableList.Seg.styled(
+                                        " " + Messages.get("branches.stack.diverged"), Theme.Classes.ERROR)))
+                                : List.empty()));
+    }
+
+    /**
+     * Whether a branch of the stack of {@code header} does not have all the commits of the one below it in the stack
+     * (ADR 73). One that is only behind the base of the stack is not: GitHub merges that.
+     */
+    static boolean diverged(Model model, BranchNode.Header header) {
+        List<BranchName> members = header.branches().map(Branch::name);
+        return header.branches()
+                .exists(b -> model.repo().parents().get(b.name()).exists(members::contains)
+                        && model.repo().behindParent(b.name()).isDefined());
     }
 
     /**
@@ -249,7 +267,7 @@ class LocalBranchesList implements BranchesTabList {
                 listed -> listed.map(node -> switch (node) {
                     case BranchNode.Leaf leaf ->
                         leaf.inStack() ? indented(rowOf.apply(leaf.branch())) : rowOf.apply(leaf.branch());
-                    case BranchNode.Header header -> header(header);
+                    case BranchNode.Header header -> header(header, diverged(model, header));
                     case BranchNode.Other other -> other(other);
                 }),
                 focused,

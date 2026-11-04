@@ -117,11 +117,16 @@ class BranchNodeTest {
                         HashSet.empty())
                 .head();
 
-        assertEquals("▾ stack #12 → main  3 PRs", LocalBranchesList.header(open).text());
+        assertEquals(
+                "▾ stack #12 → main  3 PRs",
+                LocalBranchesList.header(open, false).text());
+        assertEquals(
+                "▾ stack #12 → main  3 PRs  diverged: rebase it",
+                LocalBranchesList.header(open, true).text());
         assertEquals(Option.of(new BranchName("feat/b")), open.top());
         assertEquals(
                 "▸ stack #12 → main  3 PRs",
-                LocalBranchesList.header(new BranchNode.Header(open.stack(), false, open.branches(), open.top()))
+                LocalBranchesList.header(new BranchNode.Header(open.stack(), false, open.branches(), open.top()), false)
                         .text());
     }
 

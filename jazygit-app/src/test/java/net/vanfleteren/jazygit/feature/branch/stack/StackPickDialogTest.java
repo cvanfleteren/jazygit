@@ -14,8 +14,10 @@ import java.util.ArrayList;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
+import net.vanfleteren.jazygit.git.model.BaseDistance;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.ListCursor;
@@ -86,6 +88,19 @@ class StackPickDialogTest {
     }
 
     @Test
+    void aBranchBehindTheOneUnderItSaysByHowMuch() throws Exception {
+        Model lagging = TestModels.loaded()
+                .mapRepo(repo -> repo.withParents(HashMap.of(name("feat/c"), name("feat/b")))
+                        .withBaseDistance(HashMap.of(
+                                name("feat/c"),
+                                new BaseDistance(new BranchRef.Local(name("feat/b")), new Sha("bbbb"), 1, 2))));
+
+        String screen = render(lagging, new StackPopups.Pick(CHOICE, Option.none(), Option.none()));
+
+        assertTrue(screen.contains("feat/c  #98  ⇣2 not on feat/b"), screen);
+    }
+
+    @Test
     void aRefusedBottomSaysWhy() throws Exception {
         String screen = render(new StackPopups.Pick(CHOICE, Option.of("dialog.makeStack.bottomAbove"), Option.none()));
 
@@ -93,7 +108,11 @@ class StackPickDialogTest {
     }
 
     private String render(StackPopups.Pick pick) throws Exception {
-        Model open = TestModels.loaded().openPopup(pick).withListCursor(ListCursor.START.at(1));
+        return render(TestModels.loaded(), pick);
+    }
+
+    private String render(Model model, StackPopups.Pick pick) throws Exception {
+        Model open = model.openPopup(pick).withListCursor(ListCursor.START.at(1));
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(open))) {
             return RenderedText.ofLarge(runner, () -> view(open));
         }

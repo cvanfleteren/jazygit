@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.state.ConfirmablePopup;
 import net.vanfleteren.jazygit.state.Popup;
 
@@ -107,15 +108,23 @@ public final class StackPopups {
     public record StackOn(Branch branch, PullRequest pullRequest, List<Target> targets) implements Popup {}
 
     /**
-     * Asking before changing the bases of pull requests on GitHub to make {@code cmd}'s stack.
+     * Asking before changing the bases of pull requests on GitHub to make {@code cmd}'s stack, or before stacking
+     * branches that do not have all the commits of the one below, which GitHub does not merge until they are rebased.
+     *
+     * @param diverged the branches of the stack that do not have all the commits of the one below them
      */
-    public record Confirm(StackCmd.MakeStack cmd) implements ConfirmablePopup {
+    public record Confirm(StackCmd.MakeStack cmd, List<Diverged> diverged) implements ConfirmablePopup {
 
         @Override
         public Option<StackCmd.MakeStack> confirm() {
             return Option.of(cmd);
         }
     }
+
+    /**
+     * A branch to stack that does not have the last {@code behind} commits of {@code below}, the one under it.
+     */
+    public record Diverged(BranchName branch, BranchName below, int behind) {}
 
     /**
      * Asking before taking {@code stack} apart on GitHub.

@@ -20,9 +20,12 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.git.StubGit;
+import net.vanfleteren.jazygit.git.model.BaseDistance;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Fixtures;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Env;
@@ -174,10 +177,12 @@ class MakeStackTest {
         Update.Next chosen = Update.update(choosing, new StackMsg.TargetChosen(onA));
 
         assertEquals(
-                Option.of(new StackPopups.Confirm(new StackCmd.MakeStack(
-                        List.of(new BaseChange(98, "feat/b", new GhBranch("feat/a"))),
-                        List.of(96, 98),
-                        Option.none()))),
+                Option.of(new StackPopups.Confirm(
+                        new StackCmd.MakeStack(
+                                List.of(new BaseChange(98, "feat/b", new GhBranch("feat/a"))),
+                                List.of(96, 98),
+                                Option.none()),
+                        List.empty())),
                 chosen.model().popup());
     }
 
@@ -243,11 +248,13 @@ class MakeStackTest {
 
         StackCmd.MakeStack cmd = new StackCmd.MakeStack(
                 List.of(new BaseChange(97, "main", new GhBranch("feat/a"))), List.of(96, 97, 98), Option.none());
-        assertEquals(Option.of(new StackPopups.Confirm(cmd)), confirmed.model().popup());
+        assertEquals(
+                Option.of(new StackPopups.Confirm(cmd, List.empty())),
+                confirmed.model().popup());
         assertEquals(List.empty(), confirmed.cmds());
         assertEquals(
                 "These bases change on GitHub first:\n#97: main → feat/a",
-                StackDialogs.changes(new StackPopups.Confirm(cmd)));
+                StackDialogs.changes(new StackPopups.Confirm(cmd, List.empty())));
     }
 
     @Test
@@ -363,5 +370,28 @@ class MakeStackTest {
 
         assertEquals(false, gone.shownIn(STACKED.gitHub().pullRequests().get()));
         assertEquals(true, gone.shownIn(MODEL.gitHub().pullRequests().get()));
+    }
+
+    @Test
+    void aBranchBehindTheOneBelowIsMarkedAndAskedAbout() {
+        // feat/c lacks the last 2 commits of feat/b, as on its remote.
+        Model lagging = MODEL.mapRepo(repo -> repo.withBaseDistance(HashMap.of(
+                name("feat/c"),
+                new BaseDistance(
+                        new BranchRef.Remote(new RemoteBranch("origin", name("feat/b"))), new Sha("bbbb"), 1, 2))));
+        // feat/b's pull request is on feat/a already, so no base changes: only the lag is asked about.
+        Model onA = lagging.mapGitHub(gitHub -> gitHub.withPullRequests(
+                gitHub.pullRequests().map(open -> open.put(name("feat/b"), pr(97, "feat/b", "feat/a")))));
+        Model picking = step(step(menu(onA, "feat/b"), new StackMsg.MakeChosen()), new StackMsg.TopChosen(2));
+
+        Update.Next confirmed = Update.update(picking, new StackMsg.PickConfirmed());
+
+        StackPopups.Confirm confirm =
+                confirmed.model().popup(StackPopups.Confirm.class).get();
+        assertEquals(List.of(new StackPopups.Diverged(name("feat/c"), name("feat/b"), 2)), confirm.diverged());
+        assertEquals(
+                "GitHub does not merge the stack until these are rebased onto the branch below:\n"
+                        + "feat/c is 2 commits behind feat/b",
+                StackDialogs.changes(confirm));
     }
 }

@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.branch.stack;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Msg;
@@ -112,15 +113,27 @@ public final class StackDialogs {
      * The bases that change, one per line: {@code #97: develop → feat/a}.
      */
     static String changes(StackPopups.Confirm confirm) {
-        return Messages.get(
-                "dialog.makeStack.confirmMessage",
-                confirm.cmd()
-                        .changes()
-                        .map(change -> Messages.get(
-                                "dialog.makeStack.change",
-                                String.valueOf(change.number()),
-                                change.from(),
-                                change.to().name()))
-                        .mkString("\n"));
+        List<String> changes = confirm.cmd()
+                .changes()
+                .map(change -> Messages.get(
+                        "dialog.makeStack.change",
+                        String.valueOf(change.number()),
+                        change.from(),
+                        change.to().name()));
+        List<String> diverged = confirm.diverged()
+                .map(branch -> Messages.get(
+                        "dialog.makeStack.behind",
+                        branch.branch().value(),
+                        String.valueOf(branch.behind()),
+                        branch.below().value()));
+        return List.of(
+                        Option.when(
+                                !changes.isEmpty(),
+                                () -> Messages.get("dialog.makeStack.confirmMessage", changes.mkString("\n"))),
+                        Option.when(
+                                !diverged.isEmpty(),
+                                () -> Messages.get("dialog.makeStack.divergedMessage", diverged.mkString("\n"))))
+                .flatMap(section -> section)
+                .mkString("\n\n");
     }
 }

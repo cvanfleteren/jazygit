@@ -261,18 +261,31 @@ public final class StackUpdate {
                             changes,
                             stack.isDefined() ? List.of(pr.number()) : List.of(on.number(), pr.number()),
                             stack);
-                    return made(model.withoutPopup(StackPopups.StackOn.class), cmd);
+                    return made(model.withoutPopup(StackPopups.StackOn.class), cmd, List.empty());
                 })
                 .getOrElse(() -> Next.of(model));
     }
 
     /**
-     * Starts {@code cmd} at once when no base changes, else asks first.
+     * Starts {@code cmd} at once when no base changes and no branch {@code diverged}, else asks first.
      */
-    private static Next made(Model model, StackCmd.MakeStack cmd) {
-        return cmd.changes().isEmpty()
+    private static Next made(Model model, StackCmd.MakeStack cmd, List<StackPopups.Diverged> diverged) {
+        return cmd.changes().isEmpty() && diverged.isEmpty()
                 ? Update.start(model.clearError(), cmd)
-                : Update.ask(model, new StackPopups.Confirm(cmd));
+                : Update.ask(model, new StackPopups.Confirm(cmd, diverged));
+    }
+
+    /**
+     * The branches from the bottom to the top of {@code choice}, past the bottom, that do not have all the commits of
+     * the one below them (ADR 73).
+     */
+    private static List<StackPopups.Diverged> diverged(Model model, StackChoice choice) {
+        List<StackChoice.Row> path = choice.chosen();
+        return path.zip(path.drop(1))
+                .flatMap(pair -> model.repo()
+                        .behindParent(pair._2().branch().name())
+                        .map(behind -> new StackPopups.Diverged(
+                                pair._2().branch().name(), pair._1().branch().name(), behind)));
     }
 
     private static Next picked(Model model, UnaryOperator<StackPopups.Pick> change) {
@@ -291,7 +304,11 @@ public final class StackUpdate {
                         .toOption()
                         .map(plan -> new StackCmd.MakeStack(
                                 plan.changes(), plan.pullRequests().map(PullRequest::number), pick.addTo())))
-                .map(cmd -> made(model.withoutPopup(StackPopups.Pick.class), cmd))
+                .map(cmd -> made(
+                        model.withoutPopup(StackPopups.Pick.class),
+                        cmd,
+                        diverged(
+                                model, model.popup(StackPopups.Pick.class).get().choice())))
                 .getOrElse(() -> Next.of(model));
     }
 }

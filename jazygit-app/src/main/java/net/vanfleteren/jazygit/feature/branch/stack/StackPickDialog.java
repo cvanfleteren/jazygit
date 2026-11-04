@@ -59,7 +59,9 @@ final class StackPickDialog implements PopupView {
             ListCursor cursor = model.listCursor();
             int line = Math.clamp(
                     cursor.line().getOrElse(choice.branch()), 0, choice.rows().size() - 1);
-            List<String> lines = choice.rows().zipWithIndex().map(at -> line(choice, at._1(), at._2()));
+            List<String> lines = choice.rows()
+                    .zipWithIndex()
+                    .map(at -> line(choice, at._1(), at._2(), behind(model, choice, at._1())));
             list.elements(lines.zipWithIndex()
                             .map(at -> styled(choice, at._1(), at._2()))
                             .toJavaArray(StyledElement[]::new))
@@ -96,10 +98,24 @@ final class StackPickDialog implements PopupView {
     }
 
     /**
-     * A branch as the popup lists it: its marks, indented as far as it is built on the branch, its name and its pull
-     * request.
+     * How many commits of the branch under it in {@code choice} the branch of {@code row} does not have, which GitHub
+     * does not merge a stack with until it is rebased (ADR 73); none for the lowest, or one that has them all.
      */
-    static String line(StackChoice choice, StackChoice.Row row, int index) {
+    private static Option<String> behind(Model model, StackChoice choice, StackChoice.Row row) {
+        return row.parent()
+                .flatMap(below -> model.repo()
+                        .behindParent(row.branch().name())
+                        .map(behind -> Messages.get(
+                                "dialog.makeStack.notOn",
+                                String.valueOf(behind),
+                                choice.rows().get(below).branch().name().value())));
+    }
+
+    /**
+     * A branch as the popup lists it: its marks, indented as far as it is built on the branch, its name, its pull
+     * request, and how far it is behind the branch under it, if it is.
+     */
+    static String line(StackChoice choice, StackChoice.Row row, int index, Option<String> behind) {
         String mark = index == choice.bottom() && index == choice.top()
                 ? "▶"
                 : index == choice.bottom() ? "┗" : index == choice.top() ? "┏" : choice.isChosen(index) ? "┃" : " ";
@@ -108,7 +124,9 @@ final class StackPickDialog implements PopupView {
                 .getOrElse(() -> Messages.get("dialog.makeStack.noPullRequest"));
         String here = index == choice.branch() ? "  " + Messages.get("dialog.makeStack.thisBranch") : "";
         return mark + " " + " ".repeat(INDENT * row.depth())
-                + row.branch().name().value() + "  " + pullRequest + here;
+                + row.branch().name().value() + "  " + pullRequest
+                + behind.map(text -> "  " + text).getOrElse("")
+                + here;
     }
 
     private static StyledElement<?> styled(StackChoice choice, String line, int index) {
