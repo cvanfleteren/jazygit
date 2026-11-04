@@ -106,6 +106,20 @@ The create dialog gets a line `Stack on #96`, on when the base is a branch with 
   again with "Make stack…".
 - Merged and queued pull requests stay in the stack on GitHub; the menu says so when there are any.
 
+### Diverged branches
+
+GitHub links a branch on top of one whose commits it does not have, but does not merge the stack then: it says the
+branches have diverged, and offers to rebase the stack on its web page. Neither that state nor that rebase is in its
+API. Each branch having all the commits of the one below is what ADR 46's `⇣` counts, against the parent of ADR 72,
+as on the remote.
+
+- A stack with a branch behind another branch of it shows `diverged: rebase it` on its header, and that branch shows
+  its parent again, `⇣2 on feat/c`. A stack only behind its base is not diverged: GitHub merges that.
+- "Make stack…" and "Add to stack…" mark such a branch, `⇣2 not on feat/c`, and ask before linking it, saying GitHub
+  does not merge the stack until it is rebased onto the branch below.
+- Linking does not rebase: rebasing rewrites the branches, can stop on conflicts and needs a force push, where linking
+  only changes GitHub. Rebasing the stack is ADR 74's, which has to move such a branch onto the one below first.
+
 ### When GitHub refuses
 
 A repository without stacks, as one where the preview is off, or GitHub Enterprise Server, answers these requests
