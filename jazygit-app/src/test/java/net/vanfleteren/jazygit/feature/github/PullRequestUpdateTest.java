@@ -388,7 +388,8 @@ class PullRequestUpdateTest {
                         List.of(MAIN.name(), RELEASE.name(), AHEAD.name()),
                         MAIN.name(),
                         "Add login",
-                        new NewPullRequest("Add login", "", false))),
+                        new NewPullRequest("Add login", "", false),
+                        true)),
                 asking.model().popup());
         assertEquals(List.empty(), asking.cmds());
     }

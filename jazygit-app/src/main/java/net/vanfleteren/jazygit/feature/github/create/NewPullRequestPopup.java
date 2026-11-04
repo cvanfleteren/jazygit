@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.state.Popup;
  * @param base        the one picked: the highlighted one, or the one highlighted last while the filter shows none
  * @param titleRead   the title read last, for a base: the subject of the oldest commit not on it
  * @param pullRequest what it says as far as the user typed and ticked it; the title starts out as {@code titleRead}
+ * @param stack       whether it is stacked on the pull request of its base, when that has one (ADR 73)
  */
 @With
 public record NewPullRequestPopup(
@@ -24,7 +25,8 @@ public record NewPullRequestPopup(
         List<BranchName> bases,
         BranchName base,
         String titleRead,
-        NewPullRequest pullRequest)
+        NewPullRequest pullRequest,
+        boolean stack)
         implements Popup {
 
     /**

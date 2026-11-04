@@ -7,6 +7,7 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd;
 import net.vanfleteren.jazygit.feature.branch.push.PushCmd;
+import net.vanfleteren.jazygit.feature.branch.stack.StackCmd;
 import net.vanfleteren.jazygit.feature.github.OnGitHub;
 import net.vanfleteren.jazygit.gh.model.NewPullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
@@ -65,6 +66,27 @@ public sealed interface CreatePullRequestCmd extends Cmd {
                     : new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, name);
         }
     }
+
+    /**
+     * Where a new pull request goes in a stack once it is created (ADR 73): on pull request {@code below}, a new stack
+     * of the two, or on the top of its stack {@code stack}.
+     */
+    record Stacking(int below, Option<Integer> stack) {
+
+        /**
+         * Puts the pull request {@code number} on {@code below}.
+         */
+        StackCmd.MakeStack cmd(int number) {
+            return new StackCmd.MakeStack(
+                    List.empty(), stack.isDefined() ? List.of(number) : List.of(below, number), stack);
+        }
+    }
+
+    /**
+     * Why a new pull request cannot be stacked on pull request {@code below}: it is in stack {@code stack}, but not on
+     * its top, where only GitHub adds.
+     */
+    record NotTop(int below, int stack) {}
 
     /**
      * Reads which of {@code bases} the branch {@code branch} was made from: the one recorded as such, or else the
@@ -218,8 +240,20 @@ public sealed interface CreatePullRequestCmd extends Cmd {
      * Creates a pull request from {@code branch}, as it is on its remote under the name {@code head}, into
      * {@code base}, the name that branch has on its remote, as {@code pullRequest} says.
      */
-    record CreatePullRequest(BranchName branch, RemoteBranch head, RemoteBranch base, NewPullRequest pullRequest)
+    record CreatePullRequest(
+            BranchName branch,
+            RemoteBranch head,
+            RemoteBranch base,
+            NewPullRequest pullRequest,
+            Option<Stacking> stacking)
             implements CreatePullRequestCmd, OperationCmd {
+
+        /**
+         * One that is stacked on nothing.
+         */
+        public CreatePullRequest(BranchName branch, RemoteBranch head, RemoteBranch base, NewPullRequest pullRequest) {
+            this(branch, head, base, pullRequest, Option.none());
+        }
 
         @Override
         public Operation operation() {
