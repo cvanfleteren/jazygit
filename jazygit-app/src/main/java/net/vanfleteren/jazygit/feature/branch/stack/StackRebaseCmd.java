@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.History;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.StackLayer;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Cmd;
@@ -54,16 +55,17 @@ public sealed interface StackRebaseCmd extends Cmd {
             return Either.sequenceRight(rebase.elsewhere()
                             .map(remote -> history.everHad(
                                             remote._1(), remote._2().tracking())
-                                    .map(had -> Tuple.of(remote._1(), had))))
+                                    .map(had -> Tuple.of(remote, had))))
                     .<GitError>mapLeft(error -> error)
                     .map(had -> had.find(branch -> !branch._2()).map(Tuple2::_1))
                     .flatMap(behind -> read(history, behind))
                     .fold(this::failedWith, msg -> msg);
         }
 
-        private Either<GitError, Msg> read(History history, Option<BranchName> behind) {
+        private Either<GitError, Msg> read(History history, Option<Tuple2<BranchName, RemoteBranch>> behind) {
             if (behind.isDefined()) {
-                return Either.right(new StackMsg.StackBehindRemote(rebase.stack(), behind.get()));
+                return Either.right(new StackMsg.StackBehindRemote(
+                        rebase.stack(), behind.get()._1(), behind.get()._2()));
             }
             return history.stackCommits(rebase.layers(), rebase.base())
                     .map(commits -> new StackMsg.StackRead(rebase, commits));

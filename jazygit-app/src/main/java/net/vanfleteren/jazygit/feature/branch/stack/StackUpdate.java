@@ -137,9 +137,17 @@ public final class StackUpdate {
             case StackMsg.StackReadFailed(int stack, var failure) ->
                 Next.of(model.fail(
                         new AppError.OperationFailed(StackRebaseCmd.REBASE_STACK, Option.of("#" + stack), failure)));
-            case StackMsg.StackBehindRemote(int stack, BranchName branch) ->
-                Next.of(model.fail(
-                        new AppError.StackNotRebased(stack, branch.value(), AppError.StackRefusal.BEHIND_REMOTE)));
+            // A pull brings in what is there only when the branch follows it.
+            case StackMsg.StackBehindRemote(int stack, BranchName branch, var remote) ->
+                Next.of(model.fail(new AppError.StackNotRebased(
+                        stack,
+                        branch.value(),
+                        model.repo()
+                                        .branch(branch)
+                                        .flatMap(Branch::remoteUpstream)
+                                        .contains(remote)
+                                ? AppError.StackRefusal.BEHIND_REMOTE
+                                : AppError.StackRefusal.BEHIND_UNFOLLOWED)));
             case StackMsg.RebaseLocallyChosen() ->
                 Update.confirm(
                         model,

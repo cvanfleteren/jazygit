@@ -174,10 +174,10 @@ class RebaseStackTest {
 
         Msg read = new StackRebaseCmd.ReadStack(rebase).run(new Env(everHad(false), StubGitHub.empty()));
 
-        assertEquals(new StackMsg.StackBehindRemote(12, D), read);
+        assertEquals(new StackMsg.StackBehindRemote(12, D, new RemoteBranch("origin", D)), read);
         assertEquals(
                 Option.of("Stack #12 is not rebased: feat/d is behind what was pushed to it; pull it first"),
-                TestModels.errorText(Update.update(MODEL, read).model()));
+                TestModels.errorText(Update.update(behindOrigin(), read).model()));
     }
 
     // feat/d was amended here after it was pushed: it is behind origin, but had what is there.
@@ -210,12 +210,17 @@ class RebaseStackTest {
     }
 
     @Test
-    void aBranchWithoutAnUpstreamBehindOriginIsPulledFirst() {
-        StackRebase rebase = plan(withOriginD(new Sha("d2d2")), ENTRIES).get();
+    void aBranchWithoutAnUpstreamBehindOriginIsMadeToFollowItAndPulledFirst() {
+        Model model = withOriginD(new Sha("d2d2"));
+        StackRebase rebase = plan(model, ENTRIES).get();
 
         Msg read = new StackRebaseCmd.ReadStack(rebase).run(new Env(everHad(false), StubGitHub.empty()));
 
-        assertEquals(new StackMsg.StackBehindRemote(12, D), read);
+        assertEquals(new StackMsg.StackBehindRemote(12, D, new RemoteBranch("origin", D)), read);
+        assertEquals(
+                Option.of("Stack #12 is not rebased: feat/d is behind what was pushed to it, which it does not follow;"
+                        + " set that as its upstream, then pull it"),
+                TestModels.errorText(Update.update(model, read).model()));
     }
 
     @Test

@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.branch.stack;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.StackLayer;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Failure;
@@ -90,10 +91,10 @@ public sealed interface StackMsg extends Msg {
     record StackReadFailed(int stack, Failure failure) implements StackMsg {}
 
     /**
-     * {@code branch} of stack {@code stack}, without an upstream, lacks commits its branch on the remote has: it is
+     * {@code branch} of stack {@code stack} lacks commits that {@code remote}, its branch on the remote, has: it is
      * not rebased, as it would be pushed over them (ADR 74).
      */
-    record StackBehindRemote(int stack, BranchName branch) implements StackMsg {}
+    record StackBehindRemote(int stack, BranchName branch, RemoteBranch remote) implements StackMsg {}
 
     /**
      * The user chose to rebase the stack asked about without pushing it (ADR 74).

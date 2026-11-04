@@ -168,8 +168,13 @@ public sealed interface AppError {
         OTHER_WORKTREE,
         /** A branch of it is in a merge queue, which rewriting it takes it out of. */
         MERGE_QUEUE,
-        /** A branch of it never had what is on its branch on the remote, which a rebase and push would lose. */
-        BEHIND_REMOTE
+        /** A branch of it never had what is on its upstream, which a rebase and push would lose: it is pulled first. */
+        BEHIND_REMOTE,
+        /**
+         * As {@link #BEHIND_REMOTE}, for a branch that does not follow its branch on the remote, which a pull then does
+         * not bring in.
+         */
+        BEHIND_UNFOLLOWED
     }
 
     /**
