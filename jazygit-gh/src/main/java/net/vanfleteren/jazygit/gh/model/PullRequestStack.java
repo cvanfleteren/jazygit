@@ -50,14 +50,30 @@ public record PullRequestStack(int number, int position, int size, List<Entry> e
      * @param state      whether it is open, merged or closed
      * @param headBranch the branch it merges from, empty when not known
      * @param baseBranch the branch it merges into, empty when not known
+     * @param headOid    the commit its branch was at last, as GitHub has it: where a merged one was (ADR 74)
+     * @param queued     whether it is in a merge queue, where rewriting its branch takes it out (ADR 74)
      */
-    public record Entry(int position, int number, State state, String headBranch, String baseBranch) {
+    public record Entry(
+            int position,
+            int number,
+            State state,
+            String headBranch,
+            String baseBranch,
+            Option<String> headOid,
+            boolean queued) {
+
+        /**
+         * One whose head commit and queue are not known.
+         */
+        public Entry(int position, int number, State state, String headBranch, String baseBranch) {
+            this(position, number, state, headBranch, baseBranch, Option.none(), false);
+        }
 
         /**
          * One whose branches are not known.
          */
         public Entry(int position, int number, State state) {
-            this(position, number, state, "", "");
+            this(position, number, state, "", "", Option.none(), false);
         }
     }
 }
