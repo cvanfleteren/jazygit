@@ -60,6 +60,13 @@ public record PullRequest(
     }
 
     /**
+     * The branch it merges from, as GitHub names it: what a pull request stacked on it takes as its base (ADR 73).
+     */
+    public GhBranch head() {
+        return new GhBranch(headBranch);
+    }
+
+    /**
      * The commits a pull request is diffed between, as GitHub shows its changes (ADR 55, 61).
      *
      * @param repository the repository it is of, as {@code owner/name}

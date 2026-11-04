@@ -10,6 +10,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.stack.StackChoice.BaseChange;
 import net.vanfleteren.jazygit.feature.branch.stack.StackChoice.Plan;
 import net.vanfleteren.jazygit.feature.branch.stack.StackChoice.Refusal;
+import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -99,7 +100,7 @@ class StackChoiceTest {
                         List.of(
                                 OPEN.get(name("feat/a")).get(),
                                 OPEN.get(name("feat/b")).get()),
-                        List.of(new BaseChange(97, "develop", "feat/a")))),
+                        List.of(new BaseChange(97, "develop", new GhBranch("feat/a"))))),
                 choice().plan(2, 0));
     }
 

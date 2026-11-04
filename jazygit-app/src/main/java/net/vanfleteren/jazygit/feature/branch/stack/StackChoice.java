@@ -8,6 +8,7 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
@@ -24,45 +25,6 @@ import net.vanfleteren.jazygit.git.model.BranchName;
  * @param base   the base of the stack: the root the line stands on, if it stands on one
  */
 public record StackChoice(List<StackChoice.Row> rows, int branch, int bottom, int top, Option<BranchName> base) {
-
-    /**
-     * A branch that can be in the stack.
-     *
-     * @param branch      the branch
-     * @param depth       how far it is indented: 0 for the line and the branch, one more per branch above that
-     * @param parent      the row of its parent, none for the lowest of the line
-     * @param pullRequest its open pull request, if it has one
-     */
-    public record Row(Branch branch, int depth, Option<Integer> parent, Option<PullRequest> pullRequest) {}
-
-    /**
-     * A base of a pull request that has to change for the stack to be one line.
-     *
-     * @param number its pull request
-     * @param from   the base it has, as GitHub names it
-     * @param to     the head of the pull request below it
-     */
-    public record BaseChange(int number, String from, String to) {}
-
-    /**
-     * What making the stack takes: the pull requests from the bottom up, and the bases that change first.
-     */
-    public record Plan(List<PullRequest> pullRequests, List<BaseChange> changes) {}
-
-    /**
-     * Why the chosen branches do not make a stack.
-     */
-    public sealed interface Refusal {
-
-        /** Branches between the bottom and the top without an open pull request. */
-        record NoPullRequest(List<BranchName> branches) implements Refusal {}
-
-        /** Branches between the bottom and the top whose pull request is in a stack already. */
-        record Stacked(List<BranchName> branches) implements Refusal {}
-
-        /** Only one pull request: a stack takes two. */
-        record TooFew() implements Refusal {}
-    }
 
     /**
      * The branches a stack can be made of from {@code branch}, with the bottom as far down as the branches have open
@@ -85,7 +47,7 @@ public record StackChoice(List<StackChoice.Row> rows, int branch, int bottom, in
                 .map(at -> new Row(at._1(), 0, Option.when(at._2() > 0, at._2() - 1), pullRequest.apply(at._1())));
         int at = line.size();
         List<Row> rows = lineRows.append(new Row(branch, 0, Option.when(at > 0, at - 1), pullRequest.apply(branch)));
-        rows = above(rows, at, local, parents, pullRequest);
+        rows = grown(rows, at, local, parents, pullRequest);
         Option<BranchName> base =
                 parents.get(line.headOption().getOrElse(branch).name()).filter(root);
         int bottom = at;
@@ -105,7 +67,7 @@ public record StackChoice(List<StackChoice.Row> rows, int branch, int bottom, in
             Map<BranchName, BranchName> parents,
             Function<Branch, Option<PullRequest>> pullRequest) {
         List<Row> rows =
-                above(List.of(new Row(top, 0, Option.none(), pullRequest.apply(top))), 0, local, parents, pullRequest);
+                grown(List.of(new Row(top, 0, Option.none(), pullRequest.apply(top))), 0, local, parents, pullRequest);
         return new StackChoice(rows, 0, 0, 0, Option.none());
     }
 
@@ -133,7 +95,7 @@ public record StackChoice(List<StackChoice.Row> rows, int branch, int bottom, in
      * {@code rows} with the branches built on the one at row {@code at} added after it, depth first, in the order of
      * {@code local}; none that is in the rows already, so a loop of parents ends.
      */
-    private static List<Row> above(
+    private static List<Row> grown(
             List<Row> rows,
             int at,
             List<Branch> local,
@@ -146,7 +108,7 @@ public record StackChoice(List<StackChoice.Row> rows, int branch, int bottom, in
                 continue;
             }
             int index = result.size();
-            result = above(
+            result = grown(
                     result.append(new Row(child, rows.get(at).depth() + 1, Option.of(at), pullRequest.apply(child))),
                     index,
                     local,
@@ -219,7 +181,46 @@ public record StackChoice(List<StackChoice.Row> rows, int branch, int bottom, in
                 .zip(pullRequests.drop(1))
                 .filter(pair -> !pair._2().baseBranch().equals(pair._1().headBranch()))
                 .map(pair -> new BaseChange(
-                        pair._2().number(), pair._2().baseBranch(), pair._1().headBranch()));
+                        pair._2().number(), pair._2().baseBranch(), pair._1().head()));
         return Either.right(new Plan(pullRequests.drop(skip), changes));
+    }
+
+    /**
+     * A branch that can be in the stack.
+     *
+     * @param branch      the branch
+     * @param depth       how far it is indented: 0 for the line and the branch, one more per branch above that
+     * @param parent      the row of its parent, none for the lowest of the line
+     * @param pullRequest its open pull request, if it has one
+     */
+    public record Row(Branch branch, int depth, Option<Integer> parent, Option<PullRequest> pullRequest) {}
+
+    /**
+     * A base of a pull request that has to change for the stack to be one line.
+     *
+     * @param number its pull request
+     * @param from   the base it has, as GitHub names it
+     * @param to     the head of the pull request below it
+     */
+    public record BaseChange(int number, String from, GhBranch to) {}
+
+    /**
+     * What making the stack takes: the pull requests from the bottom up, and the bases that change first.
+     */
+    public record Plan(List<PullRequest> pullRequests, List<BaseChange> changes) {}
+
+    /**
+     * Why the chosen branches do not make a stack.
+     */
+    public sealed interface Refusal {
+
+        /** Branches between the bottom and the top without an open pull request. */
+        record NoPullRequest(List<BranchName> branches) implements Refusal {}
+
+        /** Branches between the bottom and the top whose pull request is in a stack already. */
+        record Stacked(List<BranchName> branches) implements Refusal {}
+
+        /** Only one pull request: a stack takes two. */
+        record TooFew() implements Refusal {}
     }
 }
