@@ -12,7 +12,9 @@ import net.vanfleteren.jazygit.git.model.CommitQuery;
 import net.vanfleteren.jazygit.git.model.CommitRange;
 import net.vanfleteren.jazygit.git.model.Divergence;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.git.model.Revision;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.git.model.StackLayer;
 
 /**
  * The history, as git log shows it (ADR 69).
@@ -72,4 +74,11 @@ public interface History {
      * @param oldest the full object id of a commit of {@code branch} that has a parent
      */
     Either<GitError, CommitRange> commitRange(BranchName branch, Sha oldest, Option<RemoteBranch> upstream);
+
+    /**
+     * The own commits of each of {@code layers}, from the bottom of a stack up: those of its branch that are not on
+     * the {@code below} of the layer, nor on {@code base}, which the stack is rebased onto; oldest first, the merges
+     * apart (ADR 74).
+     */
+    Either<ProcessError, List<StackLayer.Commits>> stackCommits(List<StackLayer> layers, Revision base);
 }

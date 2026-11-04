@@ -12,7 +12,9 @@ import net.vanfleteren.jazygit.git.model.CommitQuery;
 import net.vanfleteren.jazygit.git.model.CommitRange;
 import net.vanfleteren.jazygit.git.model.Divergence;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.git.model.Revision;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.git.model.StackLayer;
 
 /**
  * {@link History} for tests: no commits anywhere. Fakes override what they need.
@@ -57,5 +59,10 @@ public interface StubHistory extends History {
     @Override
     default Either<GitError, CommitRange> commitRange(BranchName branch, Sha oldest, Option<RemoteBranch> upstream) {
         return Either.right(new CommitRange(1, 0, 0, Option.none()));
+    }
+
+    @Override
+    default Either<ProcessError, List<StackLayer.Commits>> stackCommits(List<StackLayer> layers, Revision base) {
+        return Either.right(layers.map(layer -> new StackLayer.Commits(layer.branch(), List.empty(), List.empty())));
     }
 }

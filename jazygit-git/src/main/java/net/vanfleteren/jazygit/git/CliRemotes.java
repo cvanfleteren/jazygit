@@ -183,6 +183,20 @@ final class CliRemotes implements Remotes {
     }
 
     /**
+     * Runs {@code git push --force-with-lease --atomic --set-upstream <remote> refs/heads/<name>:refs/heads/<name>…}:
+     * GitHub takes all of them or none, and refuses one that is no longer where it was last fetched.
+     */
+    @Override
+    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushAll(
+            List<BranchName> branches, RemoteName remote) {
+        return run(
+                worktree,
+                git(List.of("push", "--force-with-lease", "--atomic", "--set-upstream", GitArgs.remote(remote))
+                        .appendAll(branches.map(name -> refspec(name, new RemoteBranch(remote, name))))),
+                credentials.get());
+    }
+
+    /**
      * What to push {@code name} as: {@code refs/heads/<name>:refs/heads/<branch>}, in full, so that a tag of the same
      * name is not pushed instead (ADR 40).
      */

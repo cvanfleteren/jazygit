@@ -434,6 +434,46 @@ final class CliHistory implements History {
                 .getOrElse("");
     }
 
+    @Override
+    public Either<ProcessError, List<StackLayer.Commits>> stackCommits(List<StackLayer> layers, Revision base) {
+        return Either.sequenceRight(layers.map(layer -> GitProcess.read(
+                        worktree,
+                        GitCommand.reading(
+                                "log",
+                                "--no-color",
+                                "--reverse",
+                                "--format=%H" + GitOutput.PRETTY_FIELD_SEPARATOR + "%P"
+                                        + GitOutput.PRETTY_FIELD_SEPARATOR + "%s",
+                                GitArgs.not(layer.below()),
+                                GitArgs.not(base),
+                                GitArgs.revision(new BranchRef.Local(layer.branch())),
+                                "--"),
+                        raw -> layerCommits(layer.branch(), raw))))
+                .map(List::ofAll);
+    }
+
+    /**
+     * The commits of {@code branch} in {@code raw}, a line per commit: its sha, its parents and its subject. One
+     * with more than one parent is a merge.
+     */
+    private static Either<UnexpectedOutput, StackLayer.Commits> layerCommits(BranchName branch, String raw) {
+        return Either.sequenceRight(GitOutput.nonBlankLines(raw)
+                        .map(line -> GitOutput.fields(line, 3)
+                                .flatMap(fields -> GitOutput.sha(fields.get(0))
+                                        .map(sha -> Tuple.of(
+                                                sha,
+                                                fields.get(1).isBlank()
+                                                        ? 0
+                                                        : fields.get(1).split(" ").length,
+                                                fields.get(2))))))
+                .map(List::ofAll)
+                .map(read -> new StackLayer.Commits(
+                        branch,
+                        read.filter(commit -> commit._2() < 2).map(commit -> commit._1()),
+                        read.filter(commit -> commit._2() >= 2)
+                                .map(commit -> new StackLayer.Merge(commit._1(), commit._3()))));
+    }
+
     /**
      * What {@code git log --boundary} listed.
      *

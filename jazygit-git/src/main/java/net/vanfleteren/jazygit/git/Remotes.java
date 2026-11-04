@@ -50,6 +50,12 @@ public interface Remotes {
     Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushSettingUpstream(
             BranchName branch, RemoteBranch upstream);
 
+    /**
+     * Pushes {@code branches} to the branches of the same names on {@code remote}, all of them or none, each only while
+     * it is on the remote as last fetched, and each then tracking it (ADR 74).
+     */
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushAll(List<BranchName> branches, RemoteName remote);
+
     // Pulling the checked out branch, as git pull does.
 
     /**

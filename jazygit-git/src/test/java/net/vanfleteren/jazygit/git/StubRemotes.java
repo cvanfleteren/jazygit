@@ -46,6 +46,12 @@ public interface StubRemotes extends Remotes {
     }
 
     @Override
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushAll(
+            List<BranchName> branches, RemoteName remote) {
+        return ran();
+    }
+
+    @Override
     default Either<GitFailure<GitError>, List<ExecutedCommand>> pull() {
         return ran();
     }
