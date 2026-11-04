@@ -30,6 +30,7 @@ import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.GitHubBases;
 import net.vanfleteren.jazygit.state.ListCursor;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Notice;
 import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.state.PullRequestsUpdate;
 import net.vanfleteren.jazygit.state.StackChange;
@@ -168,9 +169,14 @@ public final class StackUpdate {
                                 ? rebaseListed(settled, stacked)
                                 : Next.of(settled);
                     }
-                    return model.now().isAfter(change.until())
-                            ? Next.of(settled)
-                            : PullRequestsUpdate.load(Next.of(model));
+                    if (!model.now().isAfter(change.until())) {
+                        return PullRequestsUpdate.load(Next.of(model));
+                    }
+                    // A rebase asked for when linking is not done: the user is told, to do it from the menu.
+                    return change instanceof StackChange.Stacked stacked && stacked.rebase()
+                            ? Next.of(settled.inform(new Notice.StackNotListed(
+                                    stacked.pullRequests().head())))
+                            : Next.of(settled);
                 })
                 .getOrElse(() -> Next.of(model));
     }

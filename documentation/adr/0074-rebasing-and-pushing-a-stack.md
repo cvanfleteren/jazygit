@@ -104,7 +104,8 @@ It refuses, naming the branch and why, when a branch it would move:
 
 When making or adding to a stack warns that a branch is not built on the one below (ADR 73), the confirmation also
 offers to link and rebase, with `r`. The rebase is planned once GitHub lists the stack, which it reads again for until it
-does (ADR 73), and asked about as from the menu: rebased and pushed, or rebased only.
+does (ADR 73), and asked about as from the menu: rebased and pushed, or rebased only. When GitHub does not list it
+before that is given up on, the user is told it was not rebased, to do it from the menu.
 
 ### Pushing
 

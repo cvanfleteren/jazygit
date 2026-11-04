@@ -32,11 +32,13 @@ import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.ListCursor;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.Notice;
 import net.vanfleteren.jazygit.state.OperationMsg;
 import net.vanfleteren.jazygit.state.StackChange;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.prs.LoadRepositoryPullRequests;
+import net.vanfleteren.jazygit.ui.NoticeText;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -362,6 +364,24 @@ class MakeStackTest {
 
         assertEquals(List.empty(), given.cmds());
         assertEquals(Option.none(), given.model().gitHub().stackChange());
+        assertEquals(Option.none(), given.model().outcome().notice());
+    }
+
+    @Test
+    void aStackToBeRebasedThatGitHubDoesNotListInTimeSaysItWasNotRebased() {
+        Model late = MODEL.mapGitHub(gitHub -> gitHub.withStackChange(Option.of(new StackChange.Stacked(
+                List.of(96, 97), Option.none(), MODEL.now().minusSeconds(1), true))));
+
+        Update.Next given = Update.update(late, new StackMsg.Tick());
+
+        assertEquals(List.empty(), given.cmds());
+        assertEquals(Option.none(), given.model().gitHub().stackChange());
+        Notice notice = given.model().outcome().notice().get();
+        assertEquals(new Notice.StackNotListed(96), notice);
+        assertEquals(
+                "GitHub did not list the stack of #96 in time, so it was not rebased: rebase it from the stack menu"
+                        + " (s) once it shows.",
+                NoticeText.of(notice));
     }
 
     @Test
