@@ -62,7 +62,13 @@ public interface StubHistory extends History {
     }
 
     @Override
-    default Either<ProcessError, List<StackLayer.Commits>> stackCommits(List<StackLayer> layers, Revision base) {
-        return Either.right(layers.map(layer -> new StackLayer.Commits(layer.branch(), List.empty(), List.empty())));
+    default Either<GitError, List<StackLayer.Commits>> stackCommits(List<StackLayer> layers, Revision base) {
+        return Either.right(layers.map(
+                layer -> new StackLayer.Commits(layer.branch(), new Sha("0".repeat(40)), List.empty(), List.empty())));
+    }
+
+    @Override
+    default Either<ProcessError, Boolean> everHad(BranchName branch, Revision revision) {
+        return Either.right(true);
     }
 }

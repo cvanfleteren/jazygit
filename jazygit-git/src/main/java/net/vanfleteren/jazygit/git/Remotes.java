@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.git;
 
+import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Either;
@@ -51,10 +52,11 @@ public interface Remotes {
             BranchName branch, RemoteBranch upstream);
 
     /**
-     * Pushes {@code branches} to the branches of the same names on {@code remote}, all of them or none, each only while
-     * it is on the remote as last fetched, and each then tracking it (ADR 74).
+     * Pushes each local branch {@code _1} of {@code branches} to the branch {@code _2} on {@code remote}, all of them
+     * or none, each only while it is on the remote as last fetched, and each then tracking it (ADR 74).
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushAll(List<BranchName> branches, RemoteName remote);
+    Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushAll(
+            RemoteName remote, List<Tuple2<BranchName, BranchName>> branches);
 
     // Pulling the checked out branch, as git pull does.
 

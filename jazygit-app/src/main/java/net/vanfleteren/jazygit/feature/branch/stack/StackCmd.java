@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.gh.GitHub;
 import net.vanfleteren.jazygit.gh.model.PullRequestEdit;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Env;
+import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Operation;
 import net.vanfleteren.jazygit.state.OperationCmd;
@@ -35,6 +36,11 @@ public sealed interface StackCmd extends OperationCmd {
     @Override
     default Msg succeeded(List<ExecutedCommand> commands) {
         return new StackMsg.Changed(this, commands);
+    }
+
+    @Override
+    default Msg failed(Failure failure) {
+        return new StackMsg.ChangeFailed(this, failure);
     }
 
     /**

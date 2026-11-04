@@ -139,14 +139,14 @@ public final class StackPopups {
             return Option.of(new StackCmd.Unstack(stack.number()));
         }
 
-        /** How many of its pull requests are open, which stay so, unlinked. */
+        /** How many of its pull requests are open and leave it, which stay open, unlinked. */
         public int open() {
-            return stack.entries().count(entry -> entry.state() == State.OPEN);
+            return stack.entries().count(entry -> entry.state() == State.OPEN && !entry.staysWhenUnstacked());
         }
 
-        /** How many of its pull requests are merged, which stay in the stack on GitHub. */
-        public int merged() {
-            return stack.entries().count(entry -> entry.state() == State.MERGED);
+        /** How many of its pull requests are merged or in a merge queue, which stay in the stack on GitHub. */
+        public int staying() {
+            return stack.entries().count(PullRequestStack.Entry::staysWhenUnstacked);
         }
     }
 

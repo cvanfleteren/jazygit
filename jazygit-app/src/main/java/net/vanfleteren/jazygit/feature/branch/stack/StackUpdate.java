@@ -1,7 +1,9 @@
 package net.vanfleteren.jazygit.feature.branch.stack;
 
 import io.vavr.collection.HashSet;
+import io.vavr.collection.Iterator;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import java.time.Duration;
 import java.util.function.Function;
@@ -27,10 +29,12 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.AheadUpdate;
 import net.vanfleteren.jazygit.state.AppError;
+import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.GitHubBases;
 import net.vanfleteren.jazygit.state.ListCursor;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Notice;
+import net.vanfleteren.jazygit.state.OperationMsg;
 import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.state.PullRequestsUpdate;
 import net.vanfleteren.jazygit.state.StackChange;
@@ -102,6 +106,11 @@ public final class StackUpdate {
                                         Option.of(cmd.change(model.now().plus(SETTLING))))),
                         done.cmds());
             }
+            // What it changed before it failed shows: the pull requests are read again.
+            case StackMsg.ChangeFailed(StackCmd cmd, Failure failure) -> {
+                Next failed = OperationUpdate.update(model, new OperationMsg.Failed(cmd, failure));
+                yield failure.commands().isEmpty() ? failed : PullRequestsUpdate.loadAnyway(failed);
+            }
             case Tick() -> settling(model);
             case StackMsg.RebaseChosen() ->
                 chosen(
@@ -140,19 +149,15 @@ public final class StackUpdate {
     }
 
     /**
-     * Pushes the open branches of {@code stack} that are checked out here, all of them or none (ADR 74).
+     * Pushes the open branches of {@code stack}, all of them or none (ADR 74); or says why not, as when one is not
+     * checked out here.
      */
     private static Next pushed(Model model, PullRequestStack stack) {
-        List<Branch> local = local(model);
-        List<BranchName> branches = stack.entries()
-                .filter(entry -> entry.state() == State.OPEN)
-                .sortBy(PullRequestStack.Entry::position)
-                .flatMap(entry ->
-                        local.find(b -> model.gitHub().pullRequest(b).exists(pr -> pr.number() == entry.number())))
-                .map(Branch::name);
-        return branches.isEmpty()
-                ? Next.of(model)
-                : Update.start(model.clearError(), new StackRebaseCmd.PushStack(stack.number(), branches));
+        return StackPush.of(model, stack)
+                .fold(
+                        refused -> Next.of(model.fail(
+                                new AppError.StackNotPushed(stack.number(), refused.branch(), refused.why()))),
+                        push -> Update.start(model.clearError(), new StackRebaseCmd.PushStack(push)));
     }
 
     /**
@@ -246,25 +251,34 @@ public final class StackUpdate {
         return stack.entries()
                 .filter(entry -> entry.state() == State.OPEN)
                 .maxBy(PullRequestStack.Entry::position)
-                .flatMap(entry ->
-                        local.find(b -> model.gitHub().pullRequest(b).exists(pr -> pr.number() == entry.number())));
+                .flatMap(entry -> StackPush.checkedOut(model, entry));
     }
 
     /**
      * The branches whose pull request the one of {@code branch} can be stacked on: other branches that are no roots,
-     * with an open pull request in no stack or on the top of one.
+     * with an open pull request in no stack or on the top of one, and not built on {@code branch}, which would make a
+     * pull request the base of its own base.
      */
     private static List<StackPopups.Target> targets(Model model, List<Branch> local, Branch branch) {
         Predicate<BranchName> root = root(model);
-        return local.filter(b -> !b.name().equals(branch.name()) && !root.test(b.name()))
+        return local.filter(b -> !b.name().equals(branch.name())
+                        && !root.test(b.name())
+                        && !builtOn(model, b.name(), branch.name()))
                 .flatMap(b -> model.gitHub()
                         .pullRequest(b)
-                        .filter(pr -> pr.stack().forAll(StackUpdate::isTop))
+                        .filter(pr -> pr.stack().forAll(PullRequestStack::isTop))
                         .map(pr -> new StackPopups.Target(b, pr)));
     }
 
-    private static boolean isTop(PullRequestStack stack) {
-        return stack.entries().forAll(entry -> entry.position() <= stack.position());
+    /**
+     * Whether {@code branch} is built on {@code below}, through its parent, or its parent's, and so on (ADR 72).
+     */
+    private static boolean builtOn(Model model, BranchName branch, BranchName below) {
+        Map<BranchName, BranchName> parents = model.repo().parents();
+        return Iterator.iterate(parents.get(branch), parent -> parent.flatMap(parents::get))
+                .take(parents.size())
+                .takeWhile(Option::isDefined)
+                .exists(parent -> parent.contains(below));
     }
 
     private static Next chosen(Model model, Function<StackPopups.Menu, Next> then) {

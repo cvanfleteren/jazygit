@@ -26,6 +26,7 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.git.model.RemoteRef;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Env;
@@ -33,7 +34,6 @@ import net.vanfleteren.jazygit.state.ListCursor;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Notice;
-import net.vanfleteren.jazygit.state.OperationMsg;
 import net.vanfleteren.jazygit.state.StackChange;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
@@ -215,6 +215,54 @@ class MakeStackTest {
                         .commandLine());
     }
 
+    // feat/c is built on feat/b: stacking feat/b on it would make #97 the base of its own base.
+    @Test
+    void aBranchIsNotStackedOnOneBuiltOnIt() {
+        Model choosing = step(menu(MODEL, "feat/b"), new StackMsg.StackOnChosen());
+
+        assertEquals(
+                List.of(name("feat/a")),
+                choosing.popup(StackPopups.StackOn.class)
+                        .get()
+                        .targets()
+                        .map(t -> t.branch().name()));
+    }
+
+    // #95 is merged and #96 in a merge queue: both stay in the stack; only #97 leaves it.
+    private static final PullRequestStack STAYING = new PullRequestStack(
+            12,
+            3,
+            3,
+            List.of(
+                    new PullRequestStack.Entry(1, 95, State.MERGED, "feat/z", "main"),
+                    new PullRequestStack.Entry(2, 96, State.OPEN, "feat/a", "feat/z", Option.none(), true),
+                    new PullRequestStack.Entry(3, 97, State.OPEN, "feat/b", "feat/a")));
+
+    @Test
+    void unstackingSaysMergedAndQueuedPullRequestsStayInTheStack() {
+        assertEquals(
+                "1 pull request stays open, unlinked.\n"
+                        + "2 merged or queued pull requests stay in the stack on GitHub.",
+                StackDialogs.unstacked(new StackPopups.Unstack(STAYING)));
+    }
+
+    @Test
+    void anUnstackedStackIsShownThoughAQueuedPullRequestStaysInIt() {
+        StackChange gone = new StackChange.Unstacked(12, MODEL.now());
+        PullRequest queued = new PullRequest(
+                96,
+                "feat/a",
+                "feat/z",
+                false,
+                Checks.NONE,
+                Review.NONE,
+                Option.of(new PullRequestStack(12, 2, 3, STAYING.entries())),
+                Option.none());
+
+        assertEquals(
+                true, gone.shownIn(HashMap.of(name("feat/a"), queued, name("feat/b"), pr(97, "feat/b", "feat/a"))));
+    }
+
     @Test
     void makingOneOpensOnTheBranchWithTheBottomAsFarDownAsThereArePullRequests() {
         Model picking = step(menu(MODEL, "feat/b"), new StackMsg.MakeChosen());
@@ -324,10 +372,19 @@ class MakeStackTest {
 
         Msg done = cmd.run(new Env(StubGit.of(), refusing));
 
-        OperationMsg.Failed failed = (OperationMsg.Failed) done;
+        StackMsg.ChangeFailed failed = (StackMsg.ChangeFailed) done;
         assertEquals(
                 List.of(List.of("gh", "pr", "edit", "97", "--base", "feat/a")),
                 failed.failure().commands().map(ExecutedCommand::commandLine));
+
+        // The base it changed shows: the pull requests are read again, and the error says why it failed.
+        Update.Next shown = Update.update(TestModels.running(MODEL, cmd), done);
+        assertTrue(
+                shown.cmds().exists(LoadRepositoryPullRequests.class::isInstance),
+                shown.cmds().toString());
+        assertTrue(
+                TestModels.errorText(shown.model()).exists(text -> text.contains("HTTP 404: Not Found")),
+                TestModels.errorText(shown.model()).toString());
     }
 
     @Test
@@ -436,7 +493,13 @@ class MakeStackTest {
     void aStackLinkedToBeRebasedIsRebasedOnceGitHubListsIt() {
         StackCmd.MakeStack cmd = new StackCmd.MakeStack(List.empty(), List.of(96, 97), Option.none()).rebasing();
         Model changed = step(TestModels.running(MODEL, cmd), new StackMsg.Changed(cmd, List.empty()));
-        Model listed = STACKED.mapGitHub(
+        // The base is rebased onto as fetched from origin.
+        Model fetched = TestModels.remoteBranchesRead(
+                        STACKED,
+                        List.of(new RemoteRef(
+                                new RemoteBranch("origin", name("main")), new Sha("aaaa"), Instant.EPOCH)))
+                .model();
+        Model listed = fetched.mapGitHub(
                 gitHub -> gitHub.withStackChange(changed.gitHub().stackChange()));
 
         Update.Next settled = Update.update(listed, new StackMsg.Tick());

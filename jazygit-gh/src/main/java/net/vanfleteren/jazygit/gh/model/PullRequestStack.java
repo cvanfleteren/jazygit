@@ -43,6 +43,20 @@ public record PullRequestStack(int number, int position, int size, List<Entry> e
     }
 
     /**
+     * The entry of the pull request it was read for, at {@link #position}.
+     */
+    public Option<Entry> own() {
+        return entries.find(entry -> entry.position() == position);
+    }
+
+    /**
+     * Whether the pull request it was read for is the top open one of the stack, which more can be put on.
+     */
+    public boolean isTop() {
+        return entries.forAll(entry -> entry.position() <= position);
+    }
+
+    /**
      * A pull request of a stack.
      *
      * @param position   where it sits in the stack, 1 being the closest to the base
@@ -74,6 +88,14 @@ public record PullRequestStack(int number, int position, int size, List<Entry> e
          */
         public Entry(int position, int number, State state) {
             this(position, number, state, "", "", Option.none(), false);
+        }
+
+        /**
+         * Whether it stays in its stack on GitHub when the stack is taken apart: it is merged, or in a merge queue
+         * (ADR 73).
+         */
+        public boolean staysWhenUnstacked() {
+            return state == State.MERGED || queued;
         }
     }
 }

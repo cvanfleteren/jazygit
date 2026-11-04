@@ -11,7 +11,6 @@ import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.History;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
-import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.StackLayer;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Cmd;
@@ -44,26 +43,27 @@ public sealed interface StackRebaseCmd extends Cmd {
 
     /**
      * Reads the own commits of each branch of {@code rebase}, and the merges a rebase of it drops, to ask about; or
-     * says which branch without an upstream lacks commits of its branch on the remote, which is not rebased then.
+     * says which branch never had what is on its branch on the remote, as what someone else pushed, which is not
+     * rebased then: pushing it after would lose that.
      */
     record ReadStack(StackRebase rebase) implements StackRebaseCmd {
 
         @Override
         public Msg run(Env env) {
             History history = env.git().history();
-            return Either.sequenceRight(rebase.unfollowed()
-                            .map(remote -> history.countNotOn(
-                                            new BranchRef.Remote(remote), new BranchRef.Local(remote.branch()), 1)
-                                    .map(missing -> Tuple.of(remote, missing))))
-                    .map(missing -> missing.find(branch -> branch._2 > 0).map(Tuple2::_1))
+            return Either.sequenceRight(rebase.elsewhere()
+                            .map(remote -> history.everHad(
+                                            remote._1(), remote._2().tracking())
+                                    .map(had -> Tuple.of(remote._1(), had))))
+                    .<GitError>mapLeft(error -> error)
+                    .map(had -> had.find(branch -> !branch._2()).map(Tuple2::_1))
                     .flatMap(behind -> read(history, behind))
                     .fold(this::failedWith, msg -> msg);
         }
 
-        private Either<GitError.ProcessError, Msg> read(History history, Option<RemoteBranch> behind) {
+        private Either<GitError, Msg> read(History history, Option<BranchName> behind) {
             if (behind.isDefined()) {
-                return Either.right(new StackMsg.StackBehindRemote(
-                        rebase.stack(), behind.get().branch()));
+                return Either.right(new StackMsg.StackBehindRemote(rebase.stack(), behind.get()));
             }
             return history.stackCommits(rebase.layers(), rebase.base())
                     .map(commits -> new StackMsg.StackRead(rebase, commits));
@@ -124,16 +124,18 @@ public sealed interface StackRebaseCmd extends Cmd {
                             .map(branch -> git.checkout().branch(branch))
                             .getOrElse(GitFailure::nothing),
                     () -> push
-                            ? GitFailure.widen(git.remotes().pushAll(rebase.branches(), RemoteBranch.DEFAULT_REMOTE))
+                            ? GitFailure.widen(git.remotes()
+                                    .pushAll(
+                                            rebase.push().remote(),
+                                            rebase.push().pushed()))
                             : GitFailure.nothing());
         }
     }
 
     /**
-     * Pushes {@code branches} of stack {@code stack} to the default remote, all of them or none, each only while it is
-     * there as last fetched.
+     * Pushes the branches of {@code push}, all of them or none, each only while it is on the remote as last fetched.
      */
-    record PushStack(int stack, List<BranchName> branches) implements StackRebaseCmd, GitOperationCmd {
+    record PushStack(StackPush push) implements StackRebaseCmd, GitOperationCmd {
 
         @Override
         public Operation operation() {
@@ -142,12 +144,12 @@ public sealed interface StackRebaseCmd extends Cmd {
 
         @Override
         public Option<String> subject() {
-            return Option.of("#" + stack);
+            return Option.of("#" + push.stack());
         }
 
         @Override
         public List<BranchRef> busyBranches() {
-            return busy(branches);
+            return busy(push.local());
         }
 
         @Override
@@ -162,7 +164,7 @@ public sealed interface StackRebaseCmd extends Cmd {
 
         @Override
         public Either<GitFailure<GitError>, List<ExecutedCommand>> perform(Git git) {
-            return GitFailure.widen(git.remotes().pushAll(branches, RemoteBranch.DEFAULT_REMOTE));
+            return GitFailure.widen(git.remotes().pushAll(push.remote(), push.pushed()));
         }
     }
 }

@@ -137,7 +137,7 @@ public final class CreatePullRequestUpdate {
                 .branch(base)
                 .flatMap(model.gitHub()::pullRequest)
                 .map(below -> below.stack()
-                        .map(stack -> stack.entries().forAll(entry -> entry.position() <= stack.position())
+                        .map(stack -> stack.isTop()
                                 ? Either.<CreatePullRequestCmd.NotTop, CreatePullRequestCmd.Stacking>right(
                                         new CreatePullRequestCmd.Stacking(below.number(), Option.of(stack.number())))
                                 : Either.<CreatePullRequestCmd.NotTop, CreatePullRequestCmd.Stacking>left(

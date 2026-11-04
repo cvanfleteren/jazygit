@@ -59,8 +59,11 @@ public interface Integrate {
     /**
      * Rebases a stack onto {@code base} in one interactive rebase whose todo picks the own commits of each of
      * {@code layers}, from the bottom up, and moves the branch of each to where its last one lands (ADR 74). It
-     * checks out the top, the last of {@code layers}, and brings uncommitted changes along. One that stops on
-     * conflicts is left so, as {@link #rebase(BranchName)} is; one that fails otherwise is aborted again.
+     * checks out the top, the last of {@code layers}, and refuses changes that are not committed. It does not start
+     * when a branch is no longer at the {@code tip} its commits were read at
+     * ({@link GitError.StackBranchMoved}), or is checked out in another worktree
+     * ({@link GitError.StackBranchCheckedOutElsewhere}). One that stops on conflicts is left so, as
+     * {@link #rebase(BranchName)} is; one that fails otherwise is aborted again.
      */
     Either<GitFailure<GitError>, List<ExecutedCommand>> rebaseStack(Revision base, List<StackLayer.Commits> layers);
 }

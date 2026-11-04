@@ -144,10 +144,8 @@ public final class StackDialogs {
      * What stays of a stack taken apart: its open pull requests, unlinked, and its merged ones, in it on GitHub.
      */
     static String unstacked(StackPopups.Unstack popup) {
-        String open = Messages.get("dialog.unstack.message", String.valueOf(popup.open()));
-        return popup.merged() == 0
-                ? open
-                : open + "\n" + Messages.get("dialog.unstack.merged", String.valueOf(popup.merged()));
+        String open = Messages.get("dialog.unstack.message", popup.open());
+        return popup.staying() == 0 ? open : open + "\n" + Messages.get("dialog.unstack.staying", popup.staying());
     }
 
     /**

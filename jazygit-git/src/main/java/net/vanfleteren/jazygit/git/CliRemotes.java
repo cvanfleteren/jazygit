@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.git;
 import static net.vanfleteren.jazygit.git.GitCommand.git;
 
 import io.vavr.Tuple;
+import io.vavr.Tuple2;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
@@ -184,13 +185,13 @@ final class CliRemotes implements Remotes {
 
     /**
      * Runs {@code git push --force-with-lease --force-if-includes --atomic --set-upstream <remote>
-     * refs/heads/<name>:refs/heads/<name>…}: GitHub takes all of them or none, and refuses one that is no longer where
-     * it was last fetched, or that was fetched where the local branch never was, as when a fetch in the background
-     * brought in what an agent pushed.
+     * refs/heads/<local>:refs/heads/<branch>…}: GitHub takes all of them or none, and refuses one that is no longer
+     * where it was last fetched, or that was fetched where the local branch never was, as when a fetch in the
+     * background brought in what an agent pushed.
      */
     @Override
     public Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushAll(
-            List<BranchName> branches, RemoteName remote) {
+            RemoteName remote, List<Tuple2<BranchName, BranchName>> branches) {
         return run(
                 worktree,
                 git(List.of(
@@ -200,7 +201,8 @@ final class CliRemotes implements Remotes {
                                 "--atomic",
                                 "--set-upstream",
                                 GitArgs.remote(remote))
-                        .appendAll(branches.map(name -> refspec(name, new RemoteBranch(remote, name))))),
+                        .appendAll(
+                                branches.map(pushed -> refspec(pushed._1(), new RemoteBranch(remote, pushed._2()))))),
                 credentials.get());
     }
 

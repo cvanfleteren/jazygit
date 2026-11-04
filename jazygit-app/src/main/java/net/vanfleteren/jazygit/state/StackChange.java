@@ -68,7 +68,11 @@ public sealed interface StackChange {
 
         @Override
         public boolean shownIn(Map<BranchName, PullRequest> open) {
-            return open.values().forAll(pr -> pr.stack().forAll(on -> on.number() != stack));
+            // A pull request in a merge queue stays in the stack on GitHub.
+            return open.values()
+                    .forAll(pr -> pr.stack()
+                            .forAll(on -> on.number() != stack
+                                    || on.own().exists(PullRequestStack.Entry::staysWhenUnstacked)));
         }
     }
 }

@@ -435,28 +435,78 @@ final class CliHistory implements History {
     }
 
     @Override
-    public Either<ProcessError, List<StackLayer.Commits>> stackCommits(List<StackLayer> layers, Revision base) {
-        return Either.sequenceRight(layers.map(layer -> GitProcess.read(
-                        worktree,
-                        GitCommand.reading(
-                                "log",
-                                "--no-color",
-                                "--reverse",
-                                "--format=%H" + GitOutput.PRETTY_FIELD_SEPARATOR + "%P"
-                                        + GitOutput.PRETTY_FIELD_SEPARATOR + "%s",
-                                GitArgs.not(layer.below()),
-                                GitArgs.not(base),
-                                GitArgs.revision(new BranchRef.Local(layer.branch())),
-                                "--"),
-                        raw -> layerCommits(layer.branch(), raw))))
+    public Either<GitError, List<StackLayer.Commits>> stackCommits(List<StackLayer> layers, Revision base) {
+        return Either.sequenceRight(layers.map(layer -> layerCommits(layer, base)))
                 .map(List::ofAll);
     }
 
     /**
-     * The commits of {@code branch} in {@code raw}, a line per commit: its sha, its parents and its subject. One
-     * with more than one parent is a merge.
+     * The own commits of {@code layer}: those of its branch that are not on any of its {@code below}, nor on where
+     * those were when the branch forked from them, nor on {@code base}; in the order they were made, parents first.
      */
-    private static Either<UnexpectedOutput, StackLayer.Commits> layerCommits(BranchName branch, String raw) {
+    private Either<GitError, StackLayer.Commits> layerCommits(StackLayer layer, Revision base) {
+        BranchRef branch = new BranchRef.Local(layer.branch());
+        return tip(worktree, branch)
+                .flatMap(tip -> Either.<GitError, List<Sha>>narrow(forkPoints(layer.below(), branch))
+                        .flatMap(forks -> Either.narrow(GitProcess.read(
+                                worktree,
+                                GitCommand.reading(List.of(
+                                                "log",
+                                                "--no-color",
+                                                "--topo-order",
+                                                "--reverse",
+                                                "--format=%H" + GitOutput.PRETTY_FIELD_SEPARATOR + "%P"
+                                                        + GitOutput.PRETTY_FIELD_SEPARATOR + "%s")
+                                        .appendAll(layer.below().map(GitArgs::not))
+                                        .appendAll(forks.map(fork -> GitArgs.not(new Revision.Commit(fork))))
+                                        .append(GitArgs.not(base))
+                                        .append(GitArgs.revision(branch))
+                                        .append("--")),
+                                raw -> parsedLayer(layer.branch(), tip, raw)))));
+    }
+
+    /**
+     * Where each of the branches among {@code below} was when {@code branch} forked from it, as its reflog says
+     * ({@code git merge-base --fork-point}): a commit of it that it no longer has, as one amended since, is still not
+     * the branch's own.
+     */
+    private Either<ProcessError, List<Sha>> forkPoints(List<Revision> below, BranchRef branch) {
+        return Either.sequenceRight(below.filter(BranchRef.class::isInstance)
+                        .map(ref -> GitProcess.ask(
+                                        worktree,
+                                        GitCommand.reading(
+                                                "merge-base",
+                                                "--fork-point",
+                                                GitArgs.revision(ref),
+                                                GitArgs.revision(branch)))
+                                .mapLeft(GitFailure::error)
+                                .flatMap(answer -> answer.fold(
+                                        () -> Either.right(Option.<Sha>none()),
+                                        found -> Either.<ProcessError, Sha>narrow(GitOutput.sha(found.stdout()))
+                                                .map(Option::of)))))
+                .map(found -> List.ofAll(found).flatMap(fork -> fork));
+    }
+
+    @Override
+    public Either<ProcessError, Boolean> everHad(BranchName branch, Revision revision) {
+        BranchRef local = new BranchRef.Local(branch);
+        return GitProcess.read(
+                        worktree,
+                        GitCommand.reading("rev-list", "--walk-reflogs", GitArgs.revision(local), "--"),
+                        raw -> Either.sequenceRight(GitOutput.nonBlankLines(raw).map(GitOutput::sha))
+                                .map(List::ofAll))
+                .flatMap(seen -> count(
+                        worktree,
+                        List.of("--max-count=1", GitArgs.revision(revision), GitArgs.not(local))
+                                .appendAll(seen.map(sha -> GitArgs.not(new Revision.Commit(sha))))))
+                .map(missing -> missing == 0);
+    }
+
+    /**
+     * The commits of {@code branch}, at {@code tip}, in {@code raw}, a line per commit: its sha, its parents and its
+     * subject. One with more than one parent is a merge.
+     */
+    private static Either<UnexpectedOutput, StackLayer.Commits> parsedLayer(BranchName branch, Sha tip, String raw) {
         return Either.sequenceRight(GitOutput.nonBlankLines(raw)
                         .map(line -> GitOutput.fields(line, 3)
                                 .flatMap(fields -> GitOutput.sha(fields.get(0))
@@ -469,6 +519,7 @@ final class CliHistory implements History {
                 .map(List::ofAll)
                 .map(read -> new StackLayer.Commits(
                         branch,
+                        tip,
                         read.filter(commit -> commit._2() < 2).map(commit -> commit._1()),
                         read.filter(commit -> commit._2() >= 2)
                                 .map(commit -> new StackLayer.Merge(commit._1(), commit._3()))));

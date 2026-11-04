@@ -118,3 +118,110 @@ def test_the_branches_an_agent_built_on_each_other_are_made_a_stack_from_the_men
     gh.answer((LISTED, listed(repository, [node(repository, 2, "feat/b", "feat/a", stack, 2),
                                            node(repository, 1, "feat/a", "main", stack, 1)])))
     ui.app.eventually(lambda: "stack #12 → main" in ui.app.text(), "the stack shown")
+
+
+def two_pushed_branches(repo, origin) -> str:
+    """feat/a on main and feat/b on feat/a, pushed; the repository on GitHub."""
+    repo.commit("Initial commit", **{"README.md": "# Repo\n"})
+    repo("push", "--quiet", "origin", "main")
+    repo("checkout", "--quiet", "-b", "feat/a")
+    repo.commit("Add a", **{"a.txt": "a\n"})
+    repo("push", "--quiet", "-u", "origin", "feat/a")
+    repo("checkout", "--quiet", "-b", "feat/b")
+    repo.commit("Add b", **{"b.txt": "b\n"})
+    repo("push", "--quiet", "-u", "origin", "feat/b")
+    return f"{origin.path.parent.name}/origin"
+
+
+def test_a_stack_is_unstacked_from_the_menu_after_saying_what_stays(repo, origin, gh, jazygit):
+    repository = two_pushed_branches(repo, origin)
+    stack = stacked(repository, [(1, "feat/a"), (2, "feat/b")])
+    gh.answer((LISTED, listed(repository, [node(repository, 2, "feat/b", "feat/a", stack, 2),
+                                           node(repository, 1, "feat/a", "main", stack, 1)])),
+              ("/unstack", ""))
+    ui = jazygit()
+    ui.app.eventually(lambda: "stack #12 → main" in ui.app.text(), "the stack shown")
+    ui.branches.select("feat/b")
+
+    ui.app.press("s")
+    ui.app.wait_for("(u) unstack")
+    ui.app.press("u")
+    ui.app.wait_for("Unstack #12")
+    assert "2 pull requests stay open, unlinked." in ui.app.text()
+    ui.app.press("enter")
+
+    ui.app.eventually(
+        lambda: ["api", "--method", "POST", "repos/{owner}/{repo}/stacks/12/unstack"] in gh.calls(),
+        "the stack taken apart on GitHub")
+    # Once GitHub lists them unlinked, the stack shows no more.
+    gh.answer((LISTED, listed(repository, [node(repository, 2, "feat/b", "feat/a"),
+                                           node(repository, 1, "feat/a", "main")])))
+    ui.app.eventually(lambda: "stack #12" not in ui.app.text(), "the stack no longer shown")
+
+
+def test_a_branch_built_on_the_top_of_a_stack_is_added_to_it_from_the_menu(repo, origin, gh, jazygit):
+    repository = two_pushed_branches(repo, origin)
+    repo("checkout", "--quiet", "-b", "feat/c")
+    repo.commit("Add c", **{"c.txt": "c\n"})
+    repo("push", "--quiet", "-u", "origin", "feat/c")
+    stack = stacked(repository, [(1, "feat/a"), (2, "feat/b")])
+    gh.answer((LISTED, listed(repository, [node(repository, 3, "feat/c", "feat/b"),
+                                           node(repository, 2, "feat/b", "feat/a", stack, 2),
+                                           node(repository, 1, "feat/a", "main", stack, 1)])),
+              ("/stacks/12/add", {"number": 12}))
+    # Checked out, the stack is listed first: feat/b's own row comes before the "on feat/b" of feat/c.
+    repo("checkout", "--quiet", "feat/b")
+    ui = jazygit()
+    ui.app.eventually(lambda: "stack #12 → main" in ui.app.text(), "the stack shown")
+    ui.branches.select("feat/b")
+
+    ui.app.press("s")
+    ui.app.wait_for("(a) add to the stack…")
+    ui.app.press("a")
+    ui.app.wait_for("(t) top")
+    # The top of the stack is the bottom; the branch built on it is chosen as the new top.
+    ui.app.press("j")
+    ui.app.press("t")
+    ui.app.press("enter")
+
+    ui.app.eventually(
+        lambda: ["api", "--method", "POST", "repos/{owner}/{repo}/stacks/12/add",
+                 "-F", "pull_requests[]=3"] in gh.calls(),
+        "the branch added on GitHub")
+    assert not any(call[:2] == ["pr", "edit"] for call in gh.calls()), "no base changed"
+
+
+def test_a_pull_request_is_stacked_on_another_from_the_menu_after_changing_its_base(repo, origin, gh, jazygit):
+    repo.commit("Initial commit", **{"README.md": "# Repo\n"})
+    repo("push", "--quiet", "origin", "main")
+    repo("checkout", "--quiet", "-b", "feat/a")
+    repo.commit("Add a", **{"a.txt": "a\n"})
+    repo("push", "--quiet", "-u", "origin", "feat/a")
+    # feat/c was opened on main; it is to go on feat/a.
+    repo("checkout", "--quiet", "-b", "feat/c")
+    repo.commit("Add c", **{"c.txt": "c\n"})
+    repo("push", "--quiet", "-u", "origin", "feat/c")
+    repository = f"{origin.path.parent.name}/origin"
+    gh.answer((LISTED, listed(repository, [node(repository, 3, "feat/c", "main"),
+                                           node(repository, 1, "feat/a", "main")])),
+              ("pr edit", ""),
+              ("/stacks", {"number": 12}))
+    ui = jazygit()
+    ui.branches.select("feat/c")
+    ui.app.eventually(lambda: "#3" in ui.app.text(), "the pull requests read")
+
+    ui.app.press("s")
+    ui.app.wait_for("(o) stack on…")
+    ui.app.press("o")
+    ui.app.wait_for("Stack #3 of feat/c on")
+    assert "feat/a" in ui.app.text()
+    ui.app.press("enter")
+    ui.app.wait_for("#3: main → feat/a")
+    ui.app.press("enter")
+
+    ui.app.eventually(
+        lambda: ["api", "--method", "POST", "repos/{owner}/{repo}/stacks",
+                 "-F", "pull_requests[]=1", "-F", "pull_requests[]=3"] in gh.calls(),
+        "the stack made on GitHub")
+    edits = [call for call in gh.calls() if call[:2] == ["pr", "edit"]]
+    assert edits and edits[0][2:] == ["3", "--base", "feat/a"], edits

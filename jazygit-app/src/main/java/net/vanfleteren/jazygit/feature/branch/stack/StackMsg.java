@@ -34,6 +34,12 @@ public sealed interface StackMsg extends Msg {
     record Changed(StackCmd cmd, List<ExecutedCommand> commands) implements StackMsg {}
 
     /**
+     * {@code cmd} failed, maybe after changing GitHub already, as the bases of the pull requests before GitHub refused
+     * the stack (ADR 73).
+     */
+    record ChangeFailed(StackCmd cmd, Failure failure) implements StackMsg {}
+
+    /**
      * Time to read the pull requests again, while they may not show a change made to the stacks yet.
      */
     record Tick() implements StackMsg {}

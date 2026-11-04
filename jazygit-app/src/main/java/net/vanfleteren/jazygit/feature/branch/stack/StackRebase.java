@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.feature.branch.stack;
 
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
@@ -9,6 +11,7 @@ import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.git.model.RemoteName;
 import net.vanfleteren.jazygit.git.model.RemoteRef;
 import net.vanfleteren.jazygit.git.model.Revision;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -21,16 +24,26 @@ import net.vanfleteren.jazygit.state.Model;
  * What rebasing a stack on GitHub takes (ADR 74): its base, and its open branches from the bottom up, each with what
  * its own commits are told apart from; or why it is not rebased.
  *
- * @param stack  the number of the stack
- * @param base   what it is rebased onto: its base on the remote, else the local branch
- * @param layers its open branches, from the bottom up
- * @param back   the branch to check out again once it is done, when that is not its top
- * @param unfollowed its branches without an upstream that are on the remote at another commit: whether that has
- *                   commits the branch lacks is asked of git before the rebase, as {@code behind} only knows an
- *                   upstream
+ * @param base      what it is rebased onto: its base on the remote its branches are pushed to
+ * @param layers    its open branches, from the bottom up
+ * @param push      where its branches are pushed once it is rebased
+ * @param back      the branch to check out again once it is done, when that is not its top
+ * @param elsewhere its branches whose branch on the remote is at another commit, with that branch: whether the branch
+ *                  ever had what is there is asked of git before the rebase, as one that never had it would lose it
  */
 public record StackRebase(
-        int stack, Revision base, List<StackLayer> layers, Option<BranchName> back, List<RemoteBranch> unfollowed) {
+        Revision base,
+        List<StackLayer> layers,
+        StackPush push,
+        Option<BranchName> back,
+        List<Tuple2<BranchName, RemoteBranch>> elsewhere) {
+
+    /**
+     * The number of the stack.
+     */
+    public int stack() {
+        return push.stack();
+    }
 
     /**
      * Its open branches, from the bottom up.
@@ -40,107 +53,109 @@ public record StackRebase(
     }
 
     /**
-     * What rebasing {@code stack} takes, as {@code model} has its branches; or why it is not rebased: a branch of it
-     * is checked out in another worktree, is in a merge queue, is not checked out, or is behind its branch on the
-     * remote; or where a merged branch below was, or its base, is not known.
+     * What rebasing {@code stack} takes, as {@code model} has its branches; or why it is not rebased: the worktree has
+     * changes, a branch of it is not checked out, is pushed to another remote than the others, is checked out in
+     * another worktree, or is in a merge queue; or its base is not on that remote, or where a merged branch below was
+     * is not known.
      */
     public static Either<AppError, StackRebase> of(Model model, PullRequestStack stack) {
-        List<Branch> local = model.repo().branches().toOption().getOrElse(List.empty());
+        if (!model.repo().status().toOption().exists(status -> status.files().isEmpty())) {
+            return refused(stack, new StackPush.Refused("", StackRefusal.CHANGES));
+        }
         List<PullRequestStack.Entry> entries = stack.entries().sortBy(PullRequestStack.Entry::position);
-        List<PullRequestStack.Entry> open = entries.filter(entry -> entry.state() == State.OPEN);
-        Option<Revision> base = stack.base().flatMap(name -> onRemoteElseLocal(model, local, new BranchName(name)));
-        if (base.isEmpty() || open.isEmpty()) {
-            return refused(stack, "#" + stack.number(), StackRefusal.NO_BASE);
+        if (stack.base().isEmpty() || entries.forAll(entry -> entry.state() != State.OPEN)) {
+            return refused(stack, new StackPush.Refused("#" + stack.number(), StackRefusal.NO_BASE));
+        }
+        Either<StackPush.Refused, StackPush> planned = StackPush.of(model, stack);
+        if (planned.isLeft()) {
+            return refused(stack, planned.getLeft());
+        }
+        StackPush push = planned.get();
+        Option<StackPush.Refused> unmovable = push.branches()
+                .map(Tuple2::_1)
+                .zip(entries.filter(StackRebase::open))
+                .map(branch -> unmovable(branch._1(), branch._2()))
+                .find(Option::isDefined)
+                .flatMap(why -> why);
+        if (unmovable.isDefined()) {
+            return refused(stack, unmovable.get());
+        }
+        RemoteBranch base =
+                new RemoteBranch(push.remote(), new BranchName(stack.base().get()));
+        if (model.repo().remoteBranch(base).isEmpty()) {
+            return refused(stack, new StackPush.Refused(base.shortName(), StackRefusal.BASE_NOT_FETCHED));
         }
         // The merged branches under the first open one: their commits are in the base, but not by their shas.
-        Option<PullRequestStack.Entry> merged = entries.takeWhile(entry -> entry.state() != State.OPEN)
+        Option<PullRequestStack.Entry> merged = entries.takeWhile(entry -> !open(entry))
                 .filter(entry -> entry.state() == State.MERGED)
                 .lastOption();
-        Option<Revision> belowBottom = merged.isEmpty() ? base : merged.flatMap(entry -> where(model, local, entry));
+        List<Revision> belowBottom =
+                merged.map(entry -> where(model, push.remote(), entry)).getOrElse(List.of(base.tracking()));
         if (belowBottom.isEmpty()) {
-            return refused(stack, "#" + merged.get().number(), StackRefusal.MERGED_UNKNOWN);
+            return refused(stack, new StackPush.Refused("#" + merged.get().number(), StackRefusal.MERGED_UNKNOWN));
         }
-        List<Either<AppError, Branch>> branches = open.map(entry -> branchOf(model, local, stack, entry));
-        Option<AppError> refusal = branches.find(Either::isLeft).map(Either::getLeft);
-        if (refusal.isDefined()) {
-            return Either.left(refusal.get());
-        }
-        List<Branch> stacked = branches.map(Either::get);
-        List<StackLayer> layers = stacked.zipWithIndex()
+        List<Tuple2<Branch, RemoteBranch>> targets = push.targets();
+        List<StackLayer> layers = targets.zipWithIndex()
                 .map(at -> new StackLayer(
-                        at._1().name(),
-                        at._2() == 0
-                                ? belowBottom.get()
-                                : new Revision.Commit(stacked.get(at._2() - 1).tip())));
-        BranchName top = stacked.last().name();
+                        at._1()._1().name(), at._2() == 0 ? belowBottom : positions(model, targets.get(at._2() - 1))));
+        BranchName top = push.local().last();
         return Either.right(new StackRebase(
-                stack.number(),
-                base.get(),
+                base.tracking(),
                 layers,
+                push,
                 model.repo().currentBranch().map(Branch::name).filter(current -> !current.equals(top)),
-                stacked.filter(branch -> branch.upstream().isEmpty()).flatMap(branch -> unfollowed(model, branch))));
+                targets.filter(target -> model.repo()
+                                .remoteBranch(target._2())
+                                .exists(remote ->
+                                        !remote.tip().equals(target._1().tip())))
+                        .map(target -> Tuple.of(target._1().name(), target._2()))));
+    }
+
+    private static boolean open(PullRequestStack.Entry entry) {
+        return entry.state() == State.OPEN;
     }
 
     /**
-     * {@code branch}, without an upstream, on the default remote, when it is there at another commit: an agent can
-     * push it without setting one, and pushing over it would lose what it has that the branch has not (ADR 74).
+     * Why {@code branch}, of the open pull request {@code entry}, cannot be moved, if it cannot: it is checked out in
+     * another worktree, or is in a merge queue.
      */
-    private static Option<RemoteBranch> unfollowed(Model model, Branch branch) {
-        return model.repo()
-                .remoteBranch(new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, branch.name()))
-                .filter(remote -> !remote.tip().equals(branch.tip()))
-                .map(RemoteRef::branch);
+    private static Option<StackPush.Refused> unmovable(Branch branch, PullRequestStack.Entry entry) {
+        String name = branch.name().value();
+        if (branch.checkedOutElsewhere()) {
+            return Option.of(new StackPush.Refused(name, StackRefusal.OTHER_WORKTREE));
+        }
+        return Option.when(entry.queued(), new StackPush.Refused(name, StackRefusal.MERGE_QUEUE));
     }
 
     /**
-     * The local branch of {@code entry}, an open pull request of {@code stack}; or why it is not rebased.
+     * Where the branch below, {@code below} with what it is pushed to, is: the local branch, and the branch on the
+     * remote when that was fetched.
      */
-    private static Either<AppError, Branch> branchOf(
-            Model model, List<Branch> local, PullRequestStack stack, PullRequestStack.Entry entry) {
-        Option<Branch> branch =
-                local.find(b -> model.gitHub().pullRequest(b).exists(pr -> pr.number() == entry.number()));
-        if (branch.isEmpty()) {
-            return refused(stack, "#" + entry.number(), StackRefusal.NOT_CHECKED_OUT);
-        }
-        Branch found = branch.get();
-        String name = found.name().value();
-        if (found.checkedOutElsewhere()) {
-            return refused(stack, name, StackRefusal.OTHER_WORKTREE);
-        }
-        if (entry.queued()) {
-            return refused(stack, name, StackRefusal.MERGE_QUEUE);
-        }
-        if (found.behind() > 0) {
-            return refused(stack, name, StackRefusal.BEHIND_REMOTE);
-        }
-        return Either.right(found);
+    private static List<Revision> positions(Model model, Tuple2<Branch, RemoteBranch> below) {
+        return List.<Revision>of(new BranchRef.Local(below._1().name()))
+                .appendAll(model.repo()
+                        .remoteBranch(below._2())
+                        .map(found -> found.branch().tracking()));
     }
 
     /**
-     * Where the branch of {@code entry}, a merged pull request, was: the local branch, the branch on the remote, or
-     * where GitHub says it was last.
+     * All that is known of where the branch of {@code entry}, a merged pull request, was: where GitHub says it was
+     * last, the branch on {@code remote}, and the local branch.
      */
-    private static Option<Revision> where(Model model, List<Branch> local, PullRequestStack.Entry entry) {
+    private static List<Revision> where(Model model, RemoteName remote, PullRequestStack.Entry entry) {
         BranchName name = new BranchName(entry.headBranch());
-        return local.find(b -> b.name().equals(name))
-                .<Revision>map(b -> new Revision.Commit(b.tip()))
-                .orElse(() -> model.repo()
-                        .remoteBranch(new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, name))
-                        .map(remote -> new BranchRef.Remote(remote.branch())))
-                .orElse(() -> entry.headOid().flatMap(Sha::parse).map(Revision.Commit::new));
+        return entry.headOid()
+                .flatMap(Sha::parse)
+                .<Revision>map(Revision.Commit::new)
+                .toList()
+                .appendAll(model.repo()
+                        .remoteBranch(new RemoteBranch(remote, name))
+                        .map(RemoteRef::branch)
+                        .map(RemoteBranch::tracking))
+                .appendAll(model.repo().branch(name).map(branch -> new BranchRef.Local(branch.name())));
     }
 
-    /**
-     * {@code name} on the default remote, when it is there; else the local branch of that name.
-     */
-    private static Option<Revision> onRemoteElseLocal(Model model, List<Branch> local, BranchName name) {
-        return model.repo()
-                .remoteBranch(new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, name))
-                .<Revision>map(remote -> new BranchRef.Remote(remote.branch()))
-                .orElse(() -> local.find(b -> b.name().equals(name)).map(b -> new BranchRef.Local(b.name())));
-    }
-
-    private static <T> Either<AppError, T> refused(PullRequestStack stack, String branch, StackRefusal why) {
-        return Either.left(new AppError.StackNotRebased(stack.number(), branch, why));
+    private static <T> Either<AppError, T> refused(PullRequestStack stack, StackPush.Refused why) {
+        return Either.left(new AppError.StackNotRebased(stack.number(), why.branch(), why.why()));
     }
 }
