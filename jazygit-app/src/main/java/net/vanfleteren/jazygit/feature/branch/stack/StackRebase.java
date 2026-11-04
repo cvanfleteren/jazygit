@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.git.model.RemoteRef;
 import net.vanfleteren.jazygit.git.model.Revision;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.StackLayer;
@@ -24,8 +25,12 @@ import net.vanfleteren.jazygit.state.Model;
  * @param base   what it is rebased onto: its base on the remote, else the local branch
  * @param layers its open branches, from the bottom up
  * @param back   the branch to check out again once it is done, when that is not its top
+ * @param unfollowed its branches without an upstream that are on the remote at another commit: whether that has
+ *                   commits the branch lacks is asked of git before the rebase, as {@code behind} only knows an
+ *                   upstream
  */
-public record StackRebase(int stack, Revision base, List<StackLayer> layers, Option<BranchName> back) {
+public record StackRebase(
+        int stack, Revision base, List<StackLayer> layers, Option<BranchName> back, List<RemoteBranch> unfollowed) {
 
     /**
      * Its open branches, from the bottom up.
@@ -72,7 +77,19 @@ public record StackRebase(int stack, Revision base, List<StackLayer> layers, Opt
                 stack.number(),
                 base.get(),
                 layers,
-                model.repo().currentBranch().map(Branch::name).filter(current -> !current.equals(top))));
+                model.repo().currentBranch().map(Branch::name).filter(current -> !current.equals(top)),
+                stacked.filter(branch -> branch.upstream().isEmpty()).flatMap(branch -> unfollowed(model, branch))));
+    }
+
+    /**
+     * {@code branch}, without an upstream, on the default remote, when it is there at another commit: an agent can
+     * push it without setting one, and pushing over it would lose what it has that the branch has not (ADR 74).
+     */
+    private static Option<RemoteBranch> unfollowed(Model model, Branch branch) {
+        return model.repo()
+                .remoteBranch(new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, branch.name()))
+                .filter(remote -> !remote.tip().equals(branch.tip()))
+                .map(RemoteRef::branch);
     }
 
     /**

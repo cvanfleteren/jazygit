@@ -88,7 +88,9 @@ It refuses, naming the branch and why, when a branch it would move:
 - is in a merge queue, which its stack entry says (`isInMergeQueue`): rewriting it would take it out;
 - is open on GitHub but not checked out here: it cannot be moved;
 - is behind its own branch on the remote, as when GitHub rebased the stack itself, or an agent pushed to it: it is
-  pulled first, or the rebase would start from what is no longer there, and pushing would fail or lose that.
+  pulled first, or the rebase would start from what is no longer there, and pushing would fail or lose that. A
+  branch without an upstream is compared to `origin/<branch>`, asking git before the rebase, as an agent can push one
+  without setting it.
 
 ### While and after it runs
 

@@ -1,11 +1,14 @@
 package net.vanfleteren.jazygit.feature.branch.stack;
 
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
+import net.vanfleteren.jazygit.git.History;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
@@ -40,16 +43,30 @@ public sealed interface StackRebaseCmd extends Cmd {
     }
 
     /**
-     * Reads the own commits of each branch of {@code rebase}, and the merges a rebase of it drops, to ask about.
+     * Reads the own commits of each branch of {@code rebase}, and the merges a rebase of it drops, to ask about; or
+     * says which branch without an upstream lacks commits of its branch on the remote, which is not rebased then.
      */
     record ReadStack(StackRebase rebase) implements StackRebaseCmd {
 
         @Override
         public Msg run(Env env) {
-            return env.git()
-                    .history()
-                    .stackCommits(rebase.layers(), rebase.base())
-                    .fold(this::failedWith, commits -> new StackMsg.StackRead(rebase, commits));
+            History history = env.git().history();
+            return Either.sequenceRight(rebase.unfollowed()
+                            .map(remote -> history.countNotOn(
+                                            new BranchRef.Remote(remote), new BranchRef.Local(remote.branch()), 1)
+                                    .map(missing -> Tuple.of(remote, missing))))
+                    .map(missing -> missing.find(branch -> branch._2 > 0).map(Tuple2::_1))
+                    .flatMap(behind -> read(history, behind))
+                    .fold(this::failedWith, msg -> msg);
+        }
+
+        private Either<GitError.ProcessError, Msg> read(History history, Option<RemoteBranch> behind) {
+            if (behind.isDefined()) {
+                return Either.right(new StackMsg.StackBehindRemote(
+                        rebase.stack(), behind.get().branch()));
+            }
+            return history.stackCommits(rebase.layers(), rebase.base())
+                    .map(commits -> new StackMsg.StackRead(rebase, commits));
         }
 
         @Override

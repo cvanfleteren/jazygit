@@ -84,6 +84,12 @@ public sealed interface StackMsg extends Msg {
     record StackReadFailed(int stack, Failure failure) implements StackMsg {}
 
     /**
+     * {@code branch} of stack {@code stack}, without an upstream, lacks commits its branch on the remote has: it is
+     * not rebased, as it would be pushed over them (ADR 74).
+     */
+    record StackBehindRemote(int stack, BranchName branch) implements StackMsg {}
+
+    /**
      * The user chose to rebase the stack asked about without pushing it (ADR 74).
      */
     record RebaseLocallyChosen() implements StackMsg {}

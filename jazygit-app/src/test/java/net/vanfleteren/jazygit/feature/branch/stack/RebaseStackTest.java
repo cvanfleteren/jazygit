@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.StubGit;
+import net.vanfleteren.jazygit.git.StubHistory;
 import net.vanfleteren.jazygit.git.StubIntegrate;
 import net.vanfleteren.jazygit.git.StubRemotes;
 import net.vanfleteren.jazygit.git.model.Branch;
@@ -145,6 +146,43 @@ class RebaseStackTest {
                 Option.of(new Upstream(new BranchRef.Remote(new RemoteBranch("origin", D)), 0, 2)));
 
         assertEquals(Option.of(StackRefusal.BEHIND_REMOTE), refusal(model(LOCAL.update(2, behind), ENTRIES), ENTRIES));
+    }
+
+    // As model, with feat/d on origin at originD too.
+    private static Model withOriginD(Sha originD) {
+        return TestModels.remoteBranchesRead(
+                        MODEL,
+                        List.of(
+                                new RemoteRef(new RemoteBranch("origin", MAIN), new Sha("0000"), Instant.EPOCH),
+                                new RemoteRef(new RemoteBranch("origin", D), originD, Instant.EPOCH)))
+                .model();
+    }
+
+    @Test
+    void aBranchWithoutAnUpstreamElsewhereOnOriginIsAskedAboutBeforeTheRebase() {
+        assertEquals(
+                List.of(new RemoteBranch("origin", D)),
+                plan(withOriginD(new Sha("d2d2")), ENTRIES).get().unfollowed());
+        assertEquals(
+                List.empty(), plan(withOriginD(new Sha("dddd")), ENTRIES).get().unfollowed());
+    }
+
+    @Test
+    void aBranchWithoutAnUpstreamBehindOriginIsPulledFirst() {
+        StackRebase rebase = plan(withOriginD(new Sha("d2d2")), ENTRIES).get();
+        Git behind = StubGit.of().withHistory(new StubHistory() {
+            @Override
+            public Either<GitError.ProcessError, Integer> countNotOn(BranchRef branch, BranchRef base, int max) {
+                return Either.right(branch.equals(new BranchRef.Remote(new RemoteBranch("origin", D))) ? 1 : 0);
+            }
+        });
+
+        Msg read = new StackRebaseCmd.ReadStack(rebase).run(new Env(behind, StubGitHub.empty()));
+
+        assertEquals(new StackMsg.StackBehindRemote(12, D), read);
+        assertEquals(
+                Option.of("Stack #12 is not rebased: feat/d is behind origin; pull it first"),
+                TestModels.errorText(Update.update(MODEL, read).model()));
     }
 
     @Test
