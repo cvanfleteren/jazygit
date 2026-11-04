@@ -110,7 +110,7 @@ final class CliStashes implements Stashes {
                                 "--patch",
                                 "--no-color",
                                 "--no-ext-diff")
-                        .appendAll(CliDiffs.PREFIXES)
+                        .appendAll(CliDiffs.STASH_SHOW_PREFIXES)
                         .appendAll(CliDiffs.flags(options))
                         .append(stash.value())),
                 output -> Either.right(CliDiffs.truncated(output)));
