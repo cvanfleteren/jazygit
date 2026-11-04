@@ -26,9 +26,28 @@ public sealed interface StackChange {
     boolean shownIn(Map<BranchName, PullRequest> open);
 
     /**
-     * Pull requests {@code pullRequests} were stacked: on stack {@code stack}, when they were put on one.
+     * Pull requests {@code pullRequests} were stacked: on stack {@code stack}, when they were put on one; and the stack
+     * is to be rebased once it is listed, when {@code rebase} (ADR 74).
      */
-    record Stacked(List<Integer> pullRequests, Option<Integer> stack, Instant until) implements StackChange {
+    record Stacked(List<Integer> pullRequests, Option<Integer> stack, Instant until, boolean rebase)
+            implements StackChange {
+
+        /**
+         * One after which the stack is not rebased.
+         */
+        public Stacked(List<Integer> pullRequests, Option<Integer> stack, Instant until) {
+            this(pullRequests, stack, until, false);
+        }
+
+        /**
+         * The stack the pull requests are in, once {@code open} shows it.
+         */
+        public Option<PullRequestStack> in(Map<BranchName, PullRequest> open) {
+            return pullRequests
+                    .headOption()
+                    .flatMap(number -> open.values().find(pr -> pr.number() == number))
+                    .flatMap(PullRequest::stack);
+        }
 
         @Override
         public boolean shownIn(Map<BranchName, PullRequest> open) {

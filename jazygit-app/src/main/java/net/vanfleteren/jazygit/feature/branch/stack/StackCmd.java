@@ -70,9 +70,25 @@ public sealed interface StackCmd extends OperationCmd {
 
     /**
      * Changes the bases of {@code changes}, from the bottom up, then makes a stack of {@code pullRequests}, the bottom
-     * one first; or puts them on the top of stack {@code stack}, when one is given.
+     * one first; or puts them on the top of stack {@code stack}, when one is given. When {@code rebase}, the stack is
+     * rebased once GitHub lists it (ADR 74).
      */
-    record MakeStack(List<BaseChange> changes, List<Integer> pullRequests, Option<Integer> stack) implements StackCmd {
+    record MakeStack(List<BaseChange> changes, List<Integer> pullRequests, Option<Integer> stack, boolean rebase)
+            implements StackCmd {
+
+        /**
+         * One after which the stack is not rebased.
+         */
+        public MakeStack(List<BaseChange> changes, List<Integer> pullRequests, Option<Integer> stack) {
+            this(changes, pullRequests, stack, false);
+        }
+
+        /**
+         * This, with the stack rebased once GitHub lists it (ADR 74).
+         */
+        public MakeStack rebasing() {
+            return new MakeStack(changes, pullRequests, stack, true);
+        }
 
         @Override
         public Operation operation() {
@@ -91,7 +107,7 @@ public sealed interface StackCmd extends OperationCmd {
 
         @Override
         public StackChange change(Instant until) {
-            return new StackChange.Stacked(pullRequests, stack, until);
+            return new StackChange.Stacked(pullRequests, stack, until, rebase);
         }
 
         @Override

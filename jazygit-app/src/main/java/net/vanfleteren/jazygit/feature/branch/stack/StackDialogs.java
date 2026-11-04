@@ -123,7 +123,7 @@ public final class StackDialogs {
         return List.of(
                 PopupSlot.returningTo(BranchesPanel.ID, new ChoiceDialog<>(MENU, dispatch)),
                 PopupSlot.returningTo(BranchesPanel.ID, new StackPickDialog(dispatch)),
-                PopupSlot.returningTo(BranchesPanel.ID, new ConfirmDialog<>(CONFIRM, dispatch)),
+                PopupSlot.returningTo(BranchesPanel.ID, new LinkConfirmDialog(dispatch)),
                 PopupSlot.returningTo(BranchesPanel.ID, new PickDialog<>(STACK_ON, dispatch)),
                 PopupSlot.returningTo(BranchesPanel.ID, new ConfirmDialog<>(UNSTACK, dispatch)),
                 PopupSlot.returningTo(BranchesPanel.ID, new ConfirmDialog<>(REBASE, dispatch)),

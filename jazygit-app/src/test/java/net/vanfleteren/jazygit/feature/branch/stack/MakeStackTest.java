@@ -394,4 +394,36 @@ class MakeStackTest {
                         + "feat/c is 2 commits behind feat/b",
                 StackDialogs.changes(confirm));
     }
+
+    @Test
+    void linkingAndRebasingIsOfferedOnlyForBranchesNotOnTheOneBelow() {
+        StackCmd.MakeStack cmd = new StackCmd.MakeStack(List.empty(), List.of(96, 97), Option.none());
+        Model diverged = MODEL.openPopup(
+                new StackPopups.Confirm(cmd, List.of(new StackPopups.Diverged(name("feat/b"), name("feat/a"), 1))));
+
+        Update.Next linked = Update.update(diverged, new StackMsg.LinkAndRebaseChosen());
+
+        assertEquals(List.of(cmd.rebasing()), linked.cmds());
+        assertEquals(
+                List.empty(),
+                Update.update(
+                                MODEL.openPopup(new StackPopups.Confirm(cmd, List.empty())),
+                                new StackMsg.LinkAndRebaseChosen())
+                        .cmds());
+    }
+
+    @Test
+    void aStackLinkedToBeRebasedIsRebasedOnceGitHubListsIt() {
+        StackCmd.MakeStack cmd = new StackCmd.MakeStack(List.empty(), List.of(96, 97), Option.none()).rebasing();
+        Model changed = step(TestModels.running(MODEL, cmd), new StackMsg.Changed(cmd, List.empty()));
+        Model listed = STACKED.mapGitHub(
+                gitHub -> gitHub.withStackChange(changed.gitHub().stackChange()));
+
+        Update.Next settled = Update.update(listed, new StackMsg.Tick());
+
+        assertEquals(Option.none(), settled.model().gitHub().stackChange());
+        assertTrue(
+                settled.cmds().exists(StackRebaseCmd.ReadStack.class::isInstance),
+                settled.cmds().toString());
+    }
 }

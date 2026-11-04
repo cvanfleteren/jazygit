@@ -59,6 +59,11 @@ public sealed interface StackMsg extends Msg {
     record TargetChosen(StackPopups.Target target) implements StackMsg {}
 
     /**
+     * The user chose to link the branches asked about, and to rebase their stack once GitHub lists it (ADR 74).
+     */
+    record LinkAndRebaseChosen() implements StackMsg {}
+
+    /**
      * The user chose to rebase the stack of the menu (ADR 74).
      */
     record RebaseChosen() implements StackMsg {}

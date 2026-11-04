@@ -32,6 +32,7 @@ import net.vanfleteren.jazygit.state.ListCursor;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.state.PullRequestsUpdate;
+import net.vanfleteren.jazygit.state.StackChange;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 
@@ -84,6 +85,14 @@ public final class StackUpdate {
                                 .map(pick::withChoice)
                                 .getOrElse(() -> pick.withRefused("dialog.makeStack.topBelow")));
             case PickConfirmed() -> confirmed(model);
+            // Linked as asked, and rebased once GitHub lists the stack (ADR 74).
+            case StackMsg.LinkAndRebaseChosen() ->
+                model.popup(StackPopups.Confirm.class)
+                        .filter(confirm -> !confirm.diverged().isEmpty())
+                        .map(confirm -> Update.start(
+                                model.withoutPopup(StackPopups.Confirm.class).clearError(),
+                                confirm.cmd().rebasing()))
+                        .getOrElse(() -> Next.of(model));
             case Changed(StackCmd cmd, List<ExecutedCommand> commands) -> {
                 Next done = OperationUpdate.succeeded(model, cmd, commands);
                 yield new Next(
@@ -152,10 +161,32 @@ public final class StackUpdate {
     private static Next settling(Model model) {
         return model.gitHub()
                 .stackChange()
-                .map(change -> model.gitHub().pullRequests().exists(change::shownIn)
-                                || model.now().isAfter(change.until())
-                        ? Next.of(model.mapGitHub(gitHub -> gitHub.withStackChange(Option.none())))
-                        : PullRequestsUpdate.load(Next.of(model)))
+                .map(change -> {
+                    Model settled = model.mapGitHub(gitHub -> gitHub.withStackChange(Option.none()));
+                    if (model.gitHub().pullRequests().exists(change::shownIn)) {
+                        return change instanceof StackChange.Stacked stacked && stacked.rebase()
+                                ? rebaseListed(settled, stacked)
+                                : Next.of(settled);
+                    }
+                    return model.now().isAfter(change.until())
+                            ? Next.of(settled)
+                            : PullRequestsUpdate.load(Next.of(model));
+                })
+                .getOrElse(() -> Next.of(model));
+    }
+
+    /**
+     * Rebases the stack that GitHub now lists {@code stacked} in, as was asked when linking it (ADR 74): its commits
+     * are read, then asked about; or it says why it is not rebased.
+     */
+    private static Next rebaseListed(Model model, StackChange.Stacked stacked) {
+        return model.gitHub()
+                .pullRequests()
+                .flatMap(stacked::in)
+                .map(stack -> StackRebase.of(model, stack)
+                        .fold(
+                                refused -> Next.of(model.fail(refused)),
+                                rebase -> Next.of(model, new StackRebaseCmd.ReadStack(rebase))))
                 .getOrElse(() -> Next.of(model));
     }
 
