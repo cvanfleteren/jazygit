@@ -169,7 +169,7 @@ public record Model(
                         .withRetries(HashMap.empty())
                         .withRunning(jobs.running()
                                 .filterValues(command -> command.cmd() instanceof OperationCmd operation
-                                        && operation.busyBranch().isDefined()))
+                                        && !operation.busyBranches().isEmpty()))
                         .withNextId(0)
                         .withMissed(LinkedHashSet.empty())
                         .withAwayAt(HashMap.empty()))

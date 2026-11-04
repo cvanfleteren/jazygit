@@ -58,6 +58,24 @@ class StackFragmentTest {
     }
 
     @Test
+    void anEntrySaysWhereItsBranchWasAndWhetherItIsInAMergeQueue() {
+        Option<PullRequestStack> read = stack("""
+                        { "stackEntry": { "position": 2 }, "stack": { "number": 7, "size": 2, "entries": { "nodes": [
+                          { "position": 1, "pullRequest": { "number": 94, "state": "MERGED",
+                            "headRefName": "feat/a", "baseRefName": "main", "headRefOid": "abc123",
+                            "isInMergeQueue": false } },
+                          { "position": 2, "pullRequest": { "number": 95, "state": "OPEN",
+                            "headRefName": "feat/b", "baseRefName": "feat/a", "headRefOid": "def456",
+                            "isInMergeQueue": true } } ] } } }""").get();
+
+        assertEquals(
+                Option.of(List.of(
+                        new PullRequestStack.Entry(1, 94, State.MERGED, "feat/a", "main", Option.of("abc123"), false),
+                        new PullRequestStack.Entry(2, 95, State.OPEN, "feat/b", "feat/a", Option.of("def456"), true))),
+                read.map(PullRequestStack::entries));
+    }
+
+    @Test
     void anEntryWhosePullRequestCannotBeReadIsLeftOut() {
         assertEquals(
                 Either.right(Option.of(

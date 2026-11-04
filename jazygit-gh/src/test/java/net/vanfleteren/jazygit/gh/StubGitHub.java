@@ -190,6 +190,21 @@ public interface StubGitHub extends GitHub {
     }
 
     @Override
+    default Either<GhFailure, List<ExecutedCommand>> createStack(List<Integer> pullRequests) {
+        return Either.right(List.of(StackMutations.create(pullRequests).executed()));
+    }
+
+    @Override
+    default Either<GhFailure, List<ExecutedCommand>> addToStack(int stack, List<Integer> pullRequests) {
+        return Either.right(List.of(StackMutations.add(stack, pullRequests).executed()));
+    }
+
+    @Override
+    default Either<GhFailure, List<ExecutedCommand>> unstack(int stack) {
+        return Either.right(List.of(StackMutations.unstack(stack).executed()));
+    }
+
+    @Override
     default Either<GhFailure, List<ExecutedCommand>> commentOnPullRequest(int number, String body) {
         return Either.right(List.of(CliGitHub.commentCommand(number, body).executed()));
     }

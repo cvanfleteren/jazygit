@@ -245,6 +245,21 @@ public final class CliGitHub implements GitHub {
     }
 
     @Override
+    public Either<GhFailure, List<ExecutedCommand>> createStack(List<Integer> pullRequests) {
+        return process.log(StackMutations.create(pullRequests));
+    }
+
+    @Override
+    public Either<GhFailure, List<ExecutedCommand>> addToStack(int stack, List<Integer> pullRequests) {
+        return process.log(StackMutations.add(stack, pullRequests));
+    }
+
+    @Override
+    public Either<GhFailure, List<ExecutedCommand>> unstack(int stack) {
+        return process.log(StackMutations.unstack(stack));
+    }
+
+    @Override
     public Either<GhFailure, List<ExecutedCommand>> commentOnPullRequest(int number, String body) {
         return process.log(commentCommand(number, body));
     }

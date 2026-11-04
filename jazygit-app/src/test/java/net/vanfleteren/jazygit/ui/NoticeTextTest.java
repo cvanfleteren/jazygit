@@ -44,4 +44,12 @@ class NoticeTextTest {
                 "The merge stopped on 2 conflicts, and nothing was committed. Resolve them, then commit.",
                 NoticeText.of(new Notice.StoppedOnConflicts(Option.none(), 2)));
     }
+
+    @Test
+    void aStackNotListedNamesItsPullRequestWithoutGroupingTheNumber() {
+        assertEquals(
+                "GitHub did not list the stack of #1234 in time, so it was not rebased: rebase it from the stack menu"
+                        + " (s) once it shows.",
+                NoticeText.of(new Notice.StackNotListed(1234)));
+    }
 }

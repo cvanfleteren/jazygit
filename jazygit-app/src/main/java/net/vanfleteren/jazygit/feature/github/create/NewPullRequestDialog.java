@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.github.create;
 import static dev.tamboui.toolkit.Toolkit.*;
 
 import dev.tamboui.toolkit.element.Element;
+import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
@@ -19,6 +20,7 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.ui.BasesField;
 import net.vanfleteren.jazygit.ui.LineEditInput;
 import net.vanfleteren.jazygit.ui.SubmittableTextArea;
+import net.vanfleteren.jazygit.ui.Theme;
 import net.vanfleteren.jazygit.ui.widgets.DialogFrame;
 import net.vanfleteren.jazygit.ui.widgets.HintedDialog;
 import net.vanfleteren.jazygit.ui.widgets.PopupView;
@@ -28,7 +30,8 @@ import net.vanfleteren.jazygit.ui.widgets.PopupView;
  * title, which starts out as the subject of the oldest commit of the branch not on the base, its body, which starts
  * out empty, and whether it is a draft. Tab goes from one part to the next; the focus starts in the title. In the
  * list, the highlighted branch is the base; the arrows move it, typing filters the list, and Enter goes on to the
- * title. Space or Enter on the draft box ticks it. Enter in the title, or Ctrl+S anywhere, creates the pull request;
+ * title. Space or Enter on the draft box ticks it, and on the box that stacks it on the pull request of its base,
+ * shown when the base has one (ADR 73). Enter in the title, or Ctrl+S anywhere, creates the pull request;
  * Escape clears the filter, or else cancels. What is picked, typed and ticked lives in the {@link Model}, which every
  * change is sent to; the fields only keep where their cursor is.
  */
@@ -42,6 +45,7 @@ public final class NewPullRequestDialog implements PopupView {
     public static final String BASES_ID = "new-pull-request-bases";
     public static final String BODY_ID = "new-pull-request-body";
     public static final String DRAFT_ID = "new-pull-request-draft";
+    public static final String STACK_ID = "new-pull-request-stack";
 
     /**
      * The class of the draft box, which the themes reverse when it has the focus.
@@ -54,6 +58,8 @@ public final class NewPullRequestDialog implements PopupView {
     private static final int INPUT_HEIGHT = 3;
     private static final int BODY_HEIGHT = 10;
     private static final int BOX_WIDTH = 3;
+    // Between the draft box and the stack box.
+    private static final String GAP = "    ";
 
     private final TextInputState title = new TextInputState();
     private final TextAreaState body = new TextAreaState();
@@ -73,7 +79,7 @@ public final class NewPullRequestDialog implements PopupView {
      */
     @Override
     public List<String> ids() {
-        return List.of(ID, BASES_ID, BODY_ID, DRAFT_ID);
+        return List.of(ID, BASES_ID, BODY_ID, DRAFT_ID, STACK_ID);
     }
 
     /**
@@ -123,17 +129,61 @@ public final class NewPullRequestDialog implements PopupView {
                                     .rows(BODY_HEIGHT)
                                     .onKeyEvent(this::keys),
                             // The box itself takes the focus, which the themes show by reversing it, as a cursor.
-                            panel(row(
-                                            text(box(pullRequest.draft()))
-                                                    .id(DRAFT_ID)
-                                                    .addClass(CHECKBOX)
-                                                    .focusable()
-                                                    .length(BOX_WIDTH)
-                                                    .onKeyEvent(event -> draftKeys(event, pullRequest.draft())),
-                                            text(" " + Messages.get("dialog.newPullRequest.draft"))))
+                            panel(row(List.<StyledElement<?>>of(
+                                                    text(box(pullRequest.draft()))
+                                                            .id(DRAFT_ID)
+                                                            .addClass(CHECKBOX)
+                                                            .focusable()
+                                                            .length(BOX_WIDTH)
+                                                            .onKeyEvent(event -> draftKeys(event, pullRequest.draft())),
+                                                    text(" " + Messages.get("dialog.newPullRequest.draft")))
+                                            .appendAll(stack(model, open))
+                                            .toJavaArray(StyledElement[]::new)))
                                     .length(INPUT_HEIGHT)),
                     Messages.get("dialog.newPullRequest.hint"));
         });
+    }
+
+    /**
+     * The box that stacks the pull request on the one of its base, after the draft box, when the base has one
+     * (ADR 73): ticked or not; or, when that one is not on the top of its stack, the line off and dimmed, with why.
+     */
+    private List<StyledElement<?>> stack(Model model, NewPullRequestPopup open) {
+        return CreatePullRequestUpdate.stackOn(model, open.base())
+                .map(on -> on.fold(
+                        notTop -> List.<StyledElement<?>>of(text(GAP
+                                        + box(false)
+                                        + " "
+                                        + Messages.get("dialog.newPullRequest.stack", String.valueOf(notTop.below()))
+                                        + " · "
+                                        + Messages.get(
+                                                "dialog.newPullRequest.notTop",
+                                                String.valueOf(notTop.below()),
+                                                String.valueOf(notTop.stack())))
+                                .addClass(Theme.Classes.DIM)),
+                        stacking -> List.<StyledElement<?>>of(
+                                text(GAP),
+                                text(box(open.stack()))
+                                        .id(STACK_ID)
+                                        .addClass(CHECKBOX)
+                                        .focusable()
+                                        .length(BOX_WIDTH)
+                                        .onKeyEvent(this::stackKeys),
+                                text(" "
+                                        + Messages.get(
+                                                "dialog.newPullRequest.stack", String.valueOf(stacking.below()))))))
+                .getOrElse(List.empty());
+    }
+
+    /**
+     * Ticks or unticks the stack box on space or Enter; the other keys are those of every field.
+     */
+    private EventResult stackKeys(KeyEvent event) {
+        if (event.code() == KeyCode.ENTER || (event.isChar(' ') && !event.hasCtrl() && !event.hasAlt())) {
+            dispatch.accept(new CreatePullRequestMsg.StackToggled());
+            return EventResult.HANDLED;
+        }
+        return keys(event);
     }
 
     /**

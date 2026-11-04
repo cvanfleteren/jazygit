@@ -53,7 +53,8 @@ class NewPullRequestDialogTest {
                     List.of(new BranchName("main"), new BranchName("release"), new BranchName("ahead")),
                     new BranchName("main"),
                     "Add login",
-                    new NewPullRequest("Add login", "", false)));
+                    new NewPullRequest("Add login", "", false),
+                    true));
     // As in the app, an edit or a move changes the model the popup shows; the other messages are only kept.
     private final NewPullRequestDialog dialog = new NewPullRequestDialog(msg -> {
         dispatched.add(msg);

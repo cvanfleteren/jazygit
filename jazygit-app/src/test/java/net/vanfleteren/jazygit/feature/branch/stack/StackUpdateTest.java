@@ -35,8 +35,11 @@ class StackUpdateTest {
     }
 
     @Test
-    void enterOnAHeaderTogglesItsStack() {
+    void theKeysOfAHeaderToggleItsStackAndOpenItsMenu() {
         assertEquals(
-                List.of(Option.of(new StackMsg.Toggled(12))), Keymap.standard().actions(Scopes.STACKS, Option.of(12)));
+                List.of(
+                        Option.of(new StackMsg.Toggled(12)),
+                        Option.of(new StackMsg.MenuRequested(Option.none(), Option.of(12)))),
+                Keymap.standard().actions(Scopes.STACKS, Option.of(12)));
     }
 }

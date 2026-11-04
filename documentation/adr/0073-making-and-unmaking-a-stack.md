@@ -84,7 +84,11 @@ check of their bases and pull requests.
 is in no stack or on the top of one, takes the chosen one's branch as the base of the pull request, and links it:
 a new stack of the two, or added to the top of the stack.
 
-- A pull request in a stack already is not stacked again: it is unstacked first.
+- A pull request in a stack already is not stacked again: the menu does not offer "Stack on…" for it, and the user
+  unstacks it first, with "Unstack". Unstacking it by itself would take its whole stack apart, which the user asks
+  for, not a side effect of stacking.
+- A branch built on the branch, through its parent or its parent's (ADR 72), is not listed: stacking on it would make
+  the pull request the base of its own base, which GitHub takes for `gh pr edit --base` before it refuses the stack.
 - Not: putting a pull request in the middle of a stack, or changing their order. GitHub only adds on top; it would
   take unstacking the stack and making it again.
 
@@ -104,13 +108,34 @@ The create dialog gets a line `Stack on #96`, on when the base is a branch with 
 
 - The pull requests and their bases stay as they are: the branches stay built on each other, and are made a stack
   again with "Make stack…".
-- Merged and queued pull requests stay in the stack on GitHub; the menu says so when there are any.
+- Merged and queued pull requests stay in the stack on GitHub; the question counts them apart, `2 merged or queued
+  pull requests stay in the stack on GitHub`, and not among those that stay open, unlinked. Once GitHub lists the
+  others out of the stack, it is taken as unstacked, while a queued one is still in it.
+
+### Diverged branches
+
+GitHub links a branch on top of one whose commits it does not have, but does not merge the stack then: it says the
+branches have diverged, and offers to rebase the stack on its web page. Neither that state nor that rebase is in its
+API. Each branch having all the commits of the one below is what ADR 46's `⇣` counts, against the parent of ADR 72,
+as on the remote.
+
+- A stack with a branch behind another branch of it shows `diverged: rebase it` on its header, and that branch shows
+  its parent again, `⇣2 on feat/c`. A stack only behind its base is not diverged: GitHub merges that.
+- "Make stack…" and "Add to stack…" mark such a branch, `⇣2 not on feat/c`, and ask before linking it, saying GitHub
+  does not merge the stack until it is rebased onto the branch below.
+- Linking does not rebase: rebasing rewrites the branches, can stop on conflicts and needs a force push, where linking
+  only changes GitHub. Rebasing the stack is ADR 74's, which has to move such a branch onto the one below first.
 
 ### When GitHub refuses
 
 A repository without stacks, as one where the preview is off, or GitHub Enterprise Server, answers these requests
 with an error. It shows as any failed request does: in the command log and in the error popup, with what GitHub
 says. The menu does not ask GitHub first whether it has stacks: that would be a request more for a rare case.
+
+GitHub can refuse the stack after `gh pr edit --base` changed bases already. Those stay changed: undoing them could
+fail as well, and the branches are built on each other as the new bases say. The command log lists the bases that
+were changed, and the pull requests are read again, as after any failed operation that changes GitHub, so the
+branches pane shows them.
 
 ## Consequences
 
