@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.feature.branch.stack;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
@@ -29,8 +30,10 @@ import net.vanfleteren.jazygit.state.ListCursor;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.OperationMsg;
+import net.vanfleteren.jazygit.state.StackChange;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.prs.LoadRepositoryPullRequests;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -199,7 +202,7 @@ class MakeStackTest {
         assertEquals("2 pull requests stay open, unlinked.", StackDialogs.unstacked(popup));
         assertEquals(
                 List.of("gh", "api", "--method", "POST", "repos/{owner}/{repo}/stacks/12/unstack"),
-                ((OperationMsg.Succeeded) popup.confirm().get().run(new Env(StubGit.of(), StubGitHub.empty())))
+                ((StackMsg.Changed) popup.confirm().get().run(new Env(StubGit.of(), StubGitHub.empty())))
                         .commands()
                         .head()
                         .commandLine());
@@ -294,7 +297,7 @@ class MakeStackTest {
                                 "pull_requests[]=97",
                                 "-F",
                                 "pull_requests[]=98")),
-                ((OperationMsg.Succeeded) done).commands().map(ExecutedCommand::commandLine));
+                ((StackMsg.Changed) done).commands().map(ExecutedCommand::commandLine));
         assertEquals(true, cmd.changesGitHub());
     }
 
@@ -316,5 +319,49 @@ class MakeStackTest {
         assertEquals(
                 List.of(List.of("gh", "pr", "edit", "97", "--base", "feat/a")),
                 failed.failure().commands().map(ExecutedCommand::commandLine));
+    }
+
+    @Test
+    void aChangeMadeIsWaitedForUntilGitHubListsIt() {
+        StackCmd.MakeStack cmd = new StackCmd.MakeStack(List.empty(), List.of(96, 97), Option.none());
+
+        Model changed = step(TestModels.running(MODEL, cmd), new StackMsg.Changed(cmd, List.empty()));
+        assertEquals(
+                Option.of(new StackChange.Stacked(
+                        List.of(96, 97), Option.none(), MODEL.now().plus(StackUpdate.SETTLING))),
+                changed.gitHub().stackChange());
+
+        // GitHub still lists them as they were: they are read again.
+        Update.Next waiting = Update.update(changed, new StackMsg.Tick());
+        assertTrue(
+                waiting.cmds().exists(LoadRepositoryPullRequests.class::isInstance),
+                waiting.cmds().toString());
+        assertEquals(changed.gitHub().stackChange(), waiting.model().gitHub().stackChange());
+
+        // Once it lists them as one stack, nothing more is read for it.
+        Model listed = STACKED.mapGitHub(
+                gitHub -> gitHub.withStackChange(changed.gitHub().stackChange()));
+        Update.Next seen = Update.update(listed, new StackMsg.Tick());
+        assertEquals(List.empty(), seen.cmds());
+        assertEquals(Option.none(), seen.model().gitHub().stackChange());
+    }
+
+    @Test
+    void aChangeGitHubDoesNotListInTimeIsGivenUpOn() {
+        Model late = MODEL.mapGitHub(gitHub -> gitHub.withStackChange(Option.of(new StackChange.Stacked(
+                List.of(96, 97), Option.none(), MODEL.now().minusSeconds(1)))));
+
+        Update.Next given = Update.update(late, new StackMsg.Tick());
+
+        assertEquals(List.empty(), given.cmds());
+        assertEquals(Option.none(), given.model().gitHub().stackChange());
+    }
+
+    @Test
+    void anUnstackedStackIsShownOnceNoPullRequestIsInItAnyMore() {
+        StackChange gone = new StackChange.Unstacked(12, MODEL.now());
+
+        assertEquals(false, gone.shownIn(STACKED.gitHub().pullRequests().get()));
+        assertEquals(true, gone.shownIn(MODEL.gitHub().pullRequests().get()));
     }
 }

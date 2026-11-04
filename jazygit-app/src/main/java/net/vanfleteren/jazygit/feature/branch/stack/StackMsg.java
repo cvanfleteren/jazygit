@@ -1,7 +1,9 @@
 package net.vanfleteren.jazygit.feature.branch.stack;
 
+import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
@@ -23,6 +25,16 @@ public sealed interface StackMsg extends Msg {
      * {@code stack} (ADR 73).
      */
     record MenuRequested(Option<BranchName> branch, Option<Integer> stack) implements StackMsg {}
+
+    /**
+     * {@code cmd} changed the stacks on GitHub, running {@code commands} (ADR 73).
+     */
+    record Changed(StackCmd cmd, List<ExecutedCommand> commands) implements StackMsg {}
+
+    /**
+     * Time to read the pull requests again, while they may not show a change made to the stacks yet.
+     */
+    record Tick() implements StackMsg {}
 
     /**
      * The user chose to make a stack from the branch of the menu.

@@ -44,6 +44,8 @@ import net.vanfleteren.jazygit.git.model.RemoteBranch;
  * @param failing             the reads that keep failing, which the timers start again only once they waited longer the
  *                            more they failed: a repository without a remote on GitHub, gh logged out or offline
  *                            (ADR 58)
+ * @param stackChange         a change made to the stacks that the pull requests read may not show yet, which they are
+ *                            read again for until they do (ADR 73)
  */
 @With
 public record GitHubState(
@@ -57,7 +59,8 @@ public record GitHubState(
         Option<PendingChecks> pendingChecks,
         long nextRead,
         Map<Integer, Long> readsFrom,
-        Map<Cmd, FailingRead> failing) {
+        Map<Cmd, FailingRead> failing,
+        Option<StackChange> stackChange) {
 
     public static final GitHubState NOT_READ = new GitHubState(
             Option.none(),
@@ -70,7 +73,8 @@ public record GitHubState(
             Option.none(),
             0,
             HashMap.empty(),
-            HashMap.empty());
+            HashMap.empty(),
+            Option.none());
 
     /**
      * How the latest merge that merges pull request {@code number} went, or is going: the merge of it, or of one

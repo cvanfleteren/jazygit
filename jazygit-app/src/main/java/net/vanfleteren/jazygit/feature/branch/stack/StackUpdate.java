@@ -3,16 +3,19 @@ package net.vanfleteren.jazygit.feature.branch.stack;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.time.Duration;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 import net.vanfleteren.jazygit.feature.branch.stack.StackMsg.AddChosen;
 import net.vanfleteren.jazygit.feature.branch.stack.StackMsg.BottomChosen;
+import net.vanfleteren.jazygit.feature.branch.stack.StackMsg.Changed;
 import net.vanfleteren.jazygit.feature.branch.stack.StackMsg.MakeChosen;
 import net.vanfleteren.jazygit.feature.branch.stack.StackMsg.MenuRequested;
 import net.vanfleteren.jazygit.feature.branch.stack.StackMsg.PickConfirmed;
 import net.vanfleteren.jazygit.feature.branch.stack.StackMsg.StackOnChosen;
 import net.vanfleteren.jazygit.feature.branch.stack.StackMsg.TargetChosen;
+import net.vanfleteren.jazygit.feature.branch.stack.StackMsg.Tick;
 import net.vanfleteren.jazygit.feature.branch.stack.StackMsg.Toggled;
 import net.vanfleteren.jazygit.feature.branch.stack.StackMsg.TopChosen;
 import net.vanfleteren.jazygit.feature.branch.stack.StackMsg.UnstackChosen;
@@ -21,10 +24,13 @@ import net.vanfleteren.jazygit.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.AheadUpdate;
 import net.vanfleteren.jazygit.state.GitHubBases;
 import net.vanfleteren.jazygit.state.ListCursor;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.OperationUpdate;
+import net.vanfleteren.jazygit.state.PullRequestsUpdate;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 
@@ -33,6 +39,9 @@ import net.vanfleteren.jazygit.state.Update.Next;
  * state, as the cursors are, and is not kept.
  */
 public final class StackUpdate {
+
+    // How long the pull requests are read again after a change to the stacks, while GitHub does not list it yet.
+    static final Duration SETTLING = Duration.ofSeconds(30);
 
     private StackUpdate() {}
 
@@ -74,7 +83,30 @@ public final class StackUpdate {
                                 .map(pick::withChoice)
                                 .getOrElse(() -> pick.withRefused("dialog.makeStack.topBelow")));
             case PickConfirmed() -> confirmed(model);
+            case Changed(StackCmd cmd, List<ExecutedCommand> commands) -> {
+                Next done = OperationUpdate.succeeded(model, cmd, commands);
+                yield new Next(
+                        done.model()
+                                .mapGitHub(gitHub -> gitHub.withStackChange(
+                                        Option.of(cmd.change(model.now().plus(SETTLING))))),
+                        done.cmds());
+            }
+            case Tick() -> settling(model);
         };
+    }
+
+    /**
+     * Reads the pull requests again while they do not show the change made to the stacks yet, until they do or it is
+     * given up on: GitHub can list them as they were for a while after it made the change (ADR 73).
+     */
+    private static Next settling(Model model) {
+        return model.gitHub()
+                .stackChange()
+                .map(change -> model.gitHub().pullRequests().exists(change::shownIn)
+                                || model.now().isAfter(change.until())
+                        ? Next.of(model.mapGitHub(gitHub -> gitHub.withStackChange(Option.none())))
+                        : PullRequestsUpdate.load(Next.of(model)))
+                .getOrElse(() -> Next.of(model));
     }
 
     /**

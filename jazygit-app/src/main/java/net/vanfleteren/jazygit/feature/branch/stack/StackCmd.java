@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.branch.stack;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import java.time.Instant;
 import net.vanfleteren.jazygit.feature.branch.stack.StackChoice.BaseChange;
 import net.vanfleteren.jazygit.gh.GhFailure;
 import net.vanfleteren.jazygit.gh.GitHub;
@@ -12,6 +13,7 @@ import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Operation;
 import net.vanfleteren.jazygit.state.OperationCmd;
+import net.vanfleteren.jazygit.state.StackChange;
 
 /**
  * Making and unmaking stacks on GitHub (ADR 73).
@@ -23,6 +25,17 @@ public sealed interface StackCmd extends OperationCmd {
     Operation ADD_TO_STACK = Operation.of("log.title.addToStack", "error.addToStack.failed");
 
     Operation UNSTACK = Operation.of("log.title.unstack", "error.unstack.failed");
+
+    /**
+     * What the pull requests read from GitHub show once they show this change, which they are read again for until
+     * {@code until}.
+     */
+    StackChange change(Instant until);
+
+    @Override
+    default Msg succeeded(List<ExecutedCommand> commands) {
+        return new StackMsg.Changed(this, commands);
+    }
 
     /**
      * Takes stack {@code stack} apart on GitHub: its pull requests stay open, with their bases.
@@ -48,6 +61,11 @@ public sealed interface StackCmd extends OperationCmd {
         public Msg run(Env env) {
             return env.gitHub().unstack(stack).fold(this::failedWith, this::succeeded);
         }
+
+        @Override
+        public StackChange change(Instant until) {
+            return new StackChange.Unstacked(stack, until);
+        }
     }
 
     /**
@@ -69,6 +87,11 @@ public sealed interface StackCmd extends OperationCmd {
         @Override
         public boolean changesGitHub() {
             return true;
+        }
+
+        @Override
+        public StackChange change(Instant until) {
+            return new StackChange.Stacked(pullRequests, stack, until);
         }
 
         @Override
