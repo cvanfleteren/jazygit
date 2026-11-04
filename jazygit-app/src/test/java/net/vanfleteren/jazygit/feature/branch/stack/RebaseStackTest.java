@@ -11,6 +11,7 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.time.Instant;
+import net.vanfleteren.jazygit.feature.commit.create.CommitPopup;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
@@ -28,6 +29,7 @@ import net.vanfleteren.jazygit.git.StubRemotes;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.RemoteName;
@@ -44,6 +46,7 @@ import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.Notice;
 import net.vanfleteren.jazygit.state.OperationMsg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
@@ -392,6 +395,23 @@ class RebaseStackTest {
         assertEquals(
                 List.of(popup.cmd().locally()),
                 Update.update(asking, new StackMsg.RebaseLocallyChosen()).cmds());
+    }
+
+    @Test
+    void aStackReadWhileAnotherDialogIsOpenLeavesItAndSaysToRebaseFromTheMenu() {
+        // As after linking and rebasing, when GitHub lists the stack only once the user started a commit.
+        CommitPopup typing = new CommitPopup(new CommitMessage("Half a sum", ""));
+        StackRebase rebase = plan(MODEL, ENTRIES).get();
+
+        Update.Next read = Update.update(
+                MODEL.openPopup(typing),
+                new StackMsg.StackRead(
+                        rebase, List.of(new StackLayer.Commits(C, C_TIP, List.of(new Sha("c1c1")), List.empty()))));
+
+        assertEquals(Option.of(typing), read.model().popup(CommitPopup.class));
+        assertEquals(
+                Option.of(new Notice.StackNotAsked(12)), read.model().outcome().notice());
+        assertEquals(List.empty(), read.cmds());
     }
 
     @Test

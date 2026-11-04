@@ -18,6 +18,8 @@ import net.vanfleteren.jazygit.git.model.*;
  *                      branches while it is open
  * @param branchLog    the log of the branch, local or remote, highlighted in the branches pane, once one is
  *                     highlighted
+ * @param unfetched    the pull request of a stack highlighted in the branches pane in place of a branch, whose
+ *                     branch is neither checked out nor fetched, so that no log shows (ADR 72)
  * @param branchAhead  the commits of the branch whose log is shown that are not on its base, keyed by the branch;
  *                     none in it when the branch has no base
  * @param commitDetail what the commit highlighted in the commits pane changed (its files, a summary and its
@@ -44,6 +46,7 @@ public record RepoView(
         Option<DivergenceView> divergence,
         Option<BranchCommitsView> branchCommits,
         Option<Preview<BranchRef, List<Commit>>> branchLog,
+        Option<Integer> unfetched,
         Option<Preview<BranchRef, Option<Ahead>>> branchAhead,
         Option<Preview<Sha, DiffText>> commitDetail,
         Option<Preview<List<FileEntry>, Diffs>> fileDiff,
@@ -58,6 +61,7 @@ public record RepoView(
 
     public static final RepoView INITIAL = new RepoView(
             BranchesTab.LOCAL,
+            Option.none(),
             Option.none(),
             Option.none(),
             Option.none(),

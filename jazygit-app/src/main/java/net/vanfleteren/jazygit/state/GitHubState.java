@@ -262,7 +262,7 @@ public record GitHubState(
     /**
      * Whether {@code remote} is on GitHub, or could be, as which remotes are is not known yet.
      */
-    private boolean mayBeOnGitHub(RemoteBranch remote) {
+    public boolean mayBeOnGitHub(RemoteBranch remote) {
         return branchChecks.isEmpty() || onGitHub(remote);
     }
 }

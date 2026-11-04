@@ -234,7 +234,12 @@ final class ContentView {
                                 new Body.BranchLog(shown, ahead));
                     });
                 })
-                .getOrElse(() -> loading(Messages.get("panel.log.title")));
+                .getOrElse(() -> model.repoView()
+                        .unfetched()
+                        .map(pullRequest -> dim(
+                                Messages.get("panel.log.title"),
+                                Messages.get("content.unfetched", String.valueOf(pullRequest))))
+                        .getOrElse(() -> loading(Messages.get("panel.log.title"))));
     }
 
     /**

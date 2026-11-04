@@ -131,9 +131,15 @@ public final class StackUpdate {
                         menu -> menu.stack()
                                 .map(stack -> pushed(model.withoutPopup(StackPopups.Menu.class), stack))
                                 .getOrElse(() -> Next.of(model)));
-            // Pushed as well unless asked not to: GitHub sees the stack rebased only once it is (ADR 74).
+            // Pushed as well unless asked not to: GitHub sees the stack rebased only once it is (ADR 74). The menu is
+            // closed by now, so a dialog that is open came up since, as one the user types in while a linked stack
+            // settles: it stays, and the user is told to rebase from the menu.
             case StackMsg.StackRead(StackRebase rebase, var commits) ->
-                Update.ask(model, new StackPopups.RebaseConfirm(new StackRebaseCmd.RebaseStack(rebase, commits, true)));
+                model.popup().isDefined()
+                        ? Next.of(model.inform(new Notice.StackNotAsked(rebase.stack())))
+                        : Update.ask(
+                                model,
+                                new StackPopups.RebaseConfirm(new StackRebaseCmd.RebaseStack(rebase, commits, true)));
             case StackMsg.StackReadFailed(int stack, var failure) ->
                 Next.of(model.fail(
                         new AppError.OperationFailed(StackRebaseCmd.REBASE_STACK, Option.of("#" + stack), failure)));

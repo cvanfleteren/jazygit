@@ -26,6 +26,8 @@ import net.vanfleteren.jazygit.state.*;
  * <p>
  * A stack of pull requests on GitHub with a local branch is one node: a header, and its pull requests under it in
  * GitHub's order, indented (ADR 72). Enter on the header opens or closes it; the keys of a branch do nothing there.
+ * A pull request of it whose branch is not checked out shows the log of its remote-tracking branch, once that is
+ * fetched.
  */
 class LocalBranchesList implements BranchesTabList {
 
@@ -250,7 +252,10 @@ class LocalBranchesList implements BranchesTabList {
         Loadable<List<BranchNode>> read = model.repo()
                 .branches()
                 .map(branches -> BranchNode.of(
-                        branches, model.gitHub()::pullRequest, model.repoView().closedStacks()));
+                        branches,
+                        model.gitHub()::pullRequest,
+                        model.repoView().closedStacks(),
+                        head -> fetched(model, head)));
         nodes = read.equals(nodes) ? nodes : read;
         Function<Branch, LoadableList.Row> rowOf = b -> row(
                 b,
@@ -286,18 +291,43 @@ class LocalBranchesList implements BranchesTabList {
     }
 
     /**
-     * The branch whose log shows: the highlighted one, or the highest local branch of the stack whose header is
-     * highlighted, whose log holds the whole stack.
+     * The remote-tracking branch on GitHub of {@code head}, the branch a pull request merges from, if it was fetched.
+     */
+    static Option<RemoteBranch> fetched(Model model, String head) {
+        return model.repo()
+                .remoteBranches()
+                .toOption()
+                .getOrElse(List.empty())
+                .map(RemoteRef::branch)
+                .find(remote ->
+                        remote.branch().value().equals(head) && model.gitHub().mayBeOnGitHub(remote));
+    }
+
+    /**
+     * The branch whose log shows: the highlighted one, the highest local branch of the stack whose header is
+     * highlighted, whose log holds the whole stack, or the remote-tracking branch of the highlighted pull request that
+     * is not checked out, if it was fetched.
      */
     @Override
     public Option<BranchRef> selectedRef() {
+        return selected().flatMap(node -> switch (node) {
+            case BranchNode.Leaf leaf ->
+                Option.<BranchRef>of(new BranchRef.Local(leaf.branch().name()));
+            case BranchNode.Header header -> header.top().map(BranchRef.Local::new);
+            case BranchNode.Other other -> other.fetched().map(BranchRef.Remote::new);
+        });
+    }
+
+    /**
+     * The highlighted pull request of a stack, whose branch is neither checked out nor fetched, so that it has no log.
+     */
+    @Override
+    public Option<Integer> unfetched() {
         return selected()
-                .flatMap(node -> switch (node) {
-                    case BranchNode.Leaf leaf -> Option.of(leaf.branch().name());
-                    case BranchNode.Header header -> header.top();
-                    case BranchNode.Other other -> Option.<BranchName>none();
-                })
-                .map(BranchRef.Local::new);
+                .filter(BranchNode.Other.class::isInstance)
+                .map(node -> (BranchNode.Other) node)
+                .filter(other -> other.fetched().isEmpty())
+                .map(other -> other.entry().number());
     }
 
     /**

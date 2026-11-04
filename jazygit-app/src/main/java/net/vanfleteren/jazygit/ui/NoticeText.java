@@ -25,6 +25,7 @@ public final class NoticeText {
             case Notice.MergeStillPending(var branch) -> Messages.get("notice.mergeStillPending", branch.value());
             case Notice.StackNotListed(int pullRequest) ->
                 Messages.get("notice.stackNotListed", String.valueOf(pullRequest));
+            case Notice.StackNotAsked(int stack) -> Messages.get("notice.stackNotAsked", String.valueOf(stack));
         };
     }
 

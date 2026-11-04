@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
 
 /**
  * A row of the local branches (ADR 72): a branch, the header of a stack of pull requests on GitHub that has a local
@@ -29,9 +30,13 @@ sealed interface BranchNode {
      *
      * @param pullRequest the open pull request of a branch, if it has one
      * @param closed      the numbers of the stacks shown closed
+     * @param fetched     the remote-tracking branch on GitHub of a branch a pull request merges from, if it was fetched
      */
     static List<BranchNode> of(
-            List<Branch> branches, Function<Branch, Option<PullRequest>> pullRequest, Set<Integer> closed) {
+            List<Branch> branches,
+            Function<Branch, Option<PullRequest>> pullRequest,
+            Set<Integer> closed,
+            Function<String, Option<RemoteBranch>> fetched) {
         List<Option<PullRequestStack>> stacks =
                 branches.map(branch -> pullRequest.apply(branch).flatMap(PullRequest::stack));
         return branches.zip(stacks)
@@ -44,7 +49,7 @@ sealed interface BranchNode {
                                                 .exists(earlier ->
                                                         earlier.exists(seen -> seen.number() == stack.number()))
                                         ? List.<BranchNode>empty()
-                                        : stack(stack.number(), branches.zip(stacks), pullRequest, closed)));
+                                        : stack(stack.number(), branches.zip(stacks), pullRequest, closed, fetched)));
     }
 
     /**
@@ -54,7 +59,8 @@ sealed interface BranchNode {
             int number,
             List<Tuple2<Branch, Option<PullRequestStack>>> branches,
             Function<Branch, Option<PullRequest>> pullRequest,
-            Set<Integer> closed) {
+            Set<Integer> closed,
+            Function<String, Option<RemoteBranch>> fetched) {
         List<Tuple2<Branch, PullRequestStack>> members = branches.flatMap(
                 branch -> branch._2().filter(stack -> stack.number() == number).map(stack -> branch.map2(s -> stack)));
         // The stacks of its pull requests are read with each, and the one that lists the most of them says most.
@@ -65,7 +71,7 @@ sealed interface BranchNode {
                 .map(entry -> members.find(
                                 member -> pullRequest.apply(member._1()).exists(pr -> pr.number() == entry.number()))
                         .<BranchNode>map(member -> new Leaf(member._1(), true))
-                        .getOrElse(() -> new Other(number, entry)));
+                        .getOrElse(() -> new Other(number, entry, fetched.apply(entry.headBranch()))));
         // A branch whose pull request the stack it was read with does not list goes after the ones it does.
         List<BranchNode> unlisted = members.filter(member -> !leaves.exists(
                         leaf -> leaf instanceof Leaf listed && listed.branch().equals(member._1())))
@@ -116,9 +122,10 @@ sealed interface BranchNode {
     /**
      * A pull request of a stack whose branch is not checked out here, or that is merged or closed.
      *
-     * @param stack the number of its stack
+     * @param stack   the number of its stack
+     * @param fetched the remote-tracking branch of its branch, whose log it shows, if that was fetched
      */
-    record Other(int stack, PullRequestStack.Entry entry) implements BranchNode {
+    record Other(int stack, PullRequestStack.Entry entry, Option<RemoteBranch> fetched) implements BranchNode {
 
         @Override
         public String key() {

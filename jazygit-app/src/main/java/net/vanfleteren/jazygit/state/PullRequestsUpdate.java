@@ -108,7 +108,7 @@ public final class PullRequestsUpdate {
      * {@code before}: their parents and how far each is from its base go by it (ADR 72). One that runs already reads
      * as GitHub said before, and the next tick reads them again.
      */
-    private static Next branchesAgain(Model before, Next next) {
+    static Next branchesAgain(Model before, Next next) {
         Cmd.Load load = Cmd.LoadBranches.current(next.model(), Cmd.LoadBranches.LISTED);
         return GitHubBases.of(before.gitHub())
                                 .equals(GitHubBases.of(next.model().gitHub()))

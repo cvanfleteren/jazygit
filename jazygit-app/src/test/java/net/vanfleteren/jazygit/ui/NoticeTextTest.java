@@ -52,4 +52,11 @@ class NoticeTextTest {
                         + " (s) once it shows.",
                 NoticeText.of(new Notice.StackNotListed(1234)));
     }
+
+    @Test
+    void aStackNotAskedNamesItsStackWithoutGroupingTheNumber() {
+        assertEquals(
+                "Stack #1234 was not rebased, as another dialog was open: rebase it from the stack menu (s).",
+                NoticeText.of(new Notice.StackNotAsked(1234)));
+    }
 }

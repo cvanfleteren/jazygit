@@ -22,6 +22,12 @@ public sealed interface SelectionMsg extends Msg {
     record BranchSelected(BranchRef branch) implements SelectionMsg {}
 
     /**
+     * The user highlighted a pull request of a stack in the branches pane whose branch is neither checked out nor
+     * fetched, so that it has no log (ADR 72).
+     */
+    record UnfetchedSelected(int pullRequest) implements SelectionMsg {}
+
+    /**
      * The user highlighted a commit in the commits pane.
      */
     record CommitSelected(Sha sha) implements SelectionMsg {}

@@ -47,7 +47,7 @@ class BranchNodeTest {
     }
 
     private static List<String> keys(List<Branch> branches, Map<String, PullRequest> byBranch, Set<Integer> closed) {
-        return BranchNode.of(branches, branch -> byBranch.get(branch.name().value()), closed)
+        return BranchNode.of(branches, branch -> byBranch.get(branch.name().value()), closed, head -> Option.none())
                 .map(BranchNode::key);
     }
 
@@ -84,7 +84,10 @@ class BranchNodeTest {
                 new PullRequestStack.Entry(3, 97, State.OPEN, "feat/b", "feat/a"));
 
         List<BranchNode> nodes = BranchNode.of(
-                List.of(branch("feat/b")), branch -> Option.of(stacked(97, "feat/b", 3, entries)), HashSet.empty());
+                List.of(branch("feat/b")),
+                branch -> Option.of(stacked(97, "feat/b", 3, entries)),
+                HashSet.empty(),
+                head -> Option.none());
 
         assertEquals(
                 List.of("stack:12", "pullRequest:95", "pullRequest:96", "branch:feat/b"), nodes.map(BranchNode::key));
@@ -114,7 +117,8 @@ class BranchNodeTest {
                                 branch.name().value().equals("feat/a")
                                         ? stacked(96, "feat/a", 1, ENTRIES)
                                         : stacked(97, "feat/b", 2, ENTRIES)),
-                        HashSet.empty())
+                        HashSet.empty(),
+                        head -> Option.none())
                 .head();
 
         assertEquals(

@@ -30,9 +30,12 @@ public final class BranchChecksUpdate {
                                 false),
                         new LoadBranchChecks());
                 List<BranchName> pending = pending(done.model(), checks);
-                yield pending.isEmpty() || readingRuns(done.model())
-                        ? done
-                        : startRuns(done, new LoadBranchCheckRuns(pending));
+                // The remotes on GitHub say which branches may have a pull request, so their parents go by them too.
+                yield PullRequestsUpdate.branchesAgain(
+                        model,
+                        pending.isEmpty() || readingRuns(done.model())
+                                ? done
+                                : startRuns(done, new LoadBranchCheckRuns(pending)));
             }
             // Like for the pull requests, a failure is no reason to bother the user: the checks read last stay.
             case BranchChecksMsg.LoadFailed(var failure) ->

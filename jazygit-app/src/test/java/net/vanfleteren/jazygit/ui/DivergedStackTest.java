@@ -69,9 +69,12 @@ class DivergedStackTest {
     }
 
     private static BranchNode.Header header(Model model) {
-        return (BranchNode.Header)
-                BranchNode.of(List.of(branch(FEAT_C), branch(FEAT_D)), model.gitHub()::pullRequest, HashSet.empty())
-                        .head();
+        return (BranchNode.Header) BranchNode.of(
+                        List.of(branch(FEAT_C), branch(FEAT_D)),
+                        model.gitHub()::pullRequest,
+                        HashSet.empty(),
+                        head -> Option.none())
+                .head();
     }
 
     @Test
