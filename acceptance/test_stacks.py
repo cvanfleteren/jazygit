@@ -27,6 +27,56 @@ def listed(repository: str, nodes: list) -> list:
         }}}}]
 
 
+def stacked(repository: str, numbers_and_branches: list) -> dict:
+    """Stack 12 of repository, on main, of the pull requests given as (number, branch), the bottom one first."""
+    nodes = []
+    base = "main"
+    for position, (number, branch) in enumerate(numbers_and_branches, start=1):
+        nodes.append({"position": position, "pullRequest": {
+            "number": number, "state": "OPEN", "headRefName": branch, "baseRefName": base}})
+        base = branch
+    return {"number": 12, "size": len(nodes), "entries": {"nodes": nodes}}
+
+
+def test_a_stack_whose_branch_is_not_on_the_one_below_is_rebased_and_pushed_from_the_menu(
+        repo, origin, gh, jazygit):
+    repo.commit("Initial commit", **{"README.md": "# Repo\n"})
+    repo("push", "--quiet", "origin", "main")
+    repo("checkout", "--quiet", "-b", "feat/c")
+    repo.commit("Add c", **{"c.txt": "c\n"})
+    repo("push", "--quiet", "-u", "origin", "feat/c")
+    # feat/d was made from main, not from feat/c, then linked on it: GitHub would not merge the stack.
+    repo("checkout", "--quiet", "-b", "feat/d", "main")
+    repo.commit("Add d", **{"d.txt": "d\n"})
+    repo("push", "--quiet", "-u", "origin", "feat/d")
+    repo("checkout", "--quiet", "main")
+    repository = f"{origin.path.parent.name}/origin"
+    stack = stacked(repository, [(1, "feat/c"), (2, "feat/d")])
+    gh.answer((LISTED, listed(repository, [node(repository, 2, "feat/d", "feat/c", stack, 2),
+                                           node(repository, 1, "feat/c", "main", stack, 1)])))
+    ui = jazygit()
+    ui.app.eventually(lambda: "stack #12 → main" in ui.app.text(), "the stack shown")
+    ui.branches.select("feat/d")
+
+    ui.app.press("s")
+    ui.app.wait_for("(r) rebase the stack")
+    ui.app.press("r")
+    ui.app.wait_for("Rebase stack #12")
+    # Wrapped at the width of the dialog.
+    assert "Puts feat/c, feat/d each on the one" in ui.app.text()
+    assert "origin/main" in ui.app.text()
+    ui.app.press("enter")
+
+    ui.app.wait_for("Push stack #12")
+    assert repo("log", "--format=%s", "feat/d").splitlines() == ["Add d", "Add c", "Initial commit"]
+    assert repo("rev-parse", "--abbrev-ref", "HEAD") == "main", "the branch that was is checked out again"
+    ui.app.press("enter")
+
+    ui.app.eventually(
+        lambda: repo("rev-parse", "origin/feat/d") == repo("rev-parse", "feat/d"), "the stack pushed")
+    assert origin("log", "--format=%s", "feat/d").splitlines() == ["Add d", "Add c", "Initial commit"]
+
+
 def test_the_branches_an_agent_built_on_each_other_are_made_a_stack_from_the_menu(repo, origin, gh, jazygit):
     repo.commit("Initial commit", **{"README.md": "# Repo\n"})
     repo("push", "--quiet", "origin", "main")
