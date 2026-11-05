@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.git.model;
 
+import io.vavr.Tuple;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.nio.charset.StandardCharsets;
@@ -39,18 +40,19 @@ public record UnifiedDiff(List<String> preamble, List<FileDiff> files) {
     public static UnifiedDiff parse(String text) {
         List<String> lines = List.ofAll(text.lines());
         List<String> preamble = lines.takeWhile(line -> !startsFile(line));
-        return new UnifiedDiff(preamble, files(lines.drop(preamble.size()), List.empty()));
+        return new UnifiedDiff(preamble, files(lines.drop(preamble.size())));
     }
 
-    private static List<FileDiff> files(List<String> lines, List<FileDiff> parsed) {
-        if (lines.isEmpty()) {
-            return parsed.reverse();
-        }
-        List<String> rest = lines.tail();
-        List<String> own = rest.takeWhile(line -> !startsFile(line));
-        String start = lines.head();
-        FileDiff file = start.startsWith(FILE_START) ? file(start, own) : conflicted(start, own);
-        return files(rest.drop(own.size()), parsed.prepend(file));
+    private static List<FileDiff> files(List<String> lines) {
+        // Unfolded rather than recursive, as a diff can have more files than the stack is deep.
+        return List.unfoldRight(
+                lines,
+                rest -> Option.when(!rest.isEmpty(), () -> {
+                    List<String> own = rest.tail().takeWhile(line -> !startsFile(line));
+                    String start = rest.head();
+                    FileDiff file = start.startsWith(FILE_START) ? file(start, own) : conflicted(start, own);
+                    return Tuple.of(file, rest.tail().drop(own.size()));
+                }));
     }
 
     /**
@@ -114,7 +116,7 @@ public record UnifiedDiff(List<String> preamble, List<FileDiff> files) {
      */
     private static List<Hunk> fileHunks(List<String> header, List<String> lines) {
         List<DiffLine> notes = header.filter(UnifiedDiff::unknownHeader).map(DiffLine::note);
-        List<Hunk> hunks = hunks(lines, List.empty());
+        List<Hunk> hunks = hunks(lines);
         return notes.isEmpty() ? hunks : hunks.prepend(new Hunk("", notes));
     }
 
@@ -227,18 +229,24 @@ public record UnifiedDiff(List<String> preamble, List<FileDiff> files) {
         };
     }
 
-    private static List<Hunk> hunks(List<String> lines, List<Hunk> parsed) {
-        if (lines.isEmpty()) {
-            return parsed.reverse();
-        }
-        String header = lines.head();
-        List<String> own = lines.tail().takeWhile(line -> !line.startsWith("@@"));
-        Matcher numbers = HUNK.matcher(header);
-        Hunk hunk = numbers.matches()
-                ? new Hunk(
-                        header, numbered(own, Integer.parseInt(numbers.group(1)), Integer.parseInt(numbers.group(2))))
-                : new Hunk(header, own.map(DiffLine::note));
-        return hunks(lines.drop(1 + own.size()), parsed.prepend(hunk));
+    private static List<Hunk> hunks(List<String> lines) {
+        // Unfolded rather than recursive, as a file can have more hunks than the stack is deep.
+        return List.unfoldRight(
+                lines,
+                rest -> Option.when(!rest.isEmpty(), () -> {
+                    String header = rest.head();
+                    List<String> own = rest.tail().takeWhile(line -> !line.startsWith("@@"));
+                    Matcher numbers = HUNK.matcher(header);
+                    Hunk hunk = numbers.matches()
+                            ? new Hunk(
+                                    header,
+                                    numbered(
+                                            own,
+                                            Integer.parseInt(numbers.group(1)),
+                                            Integer.parseInt(numbers.group(2))))
+                            : new Hunk(header, own.map(DiffLine::note));
+                    return Tuple.of(hunk, rest.drop(1 + own.size()));
+                }));
     }
 
     /**
