@@ -9,12 +9,15 @@ import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
+import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Duration;
 import java.util.stream.Collectors;
 import net.vanfleteren.jazygit.git.model.ParsedDiff;
 import net.vanfleteren.jazygit.git.model.WordDiff.Segment;
+import net.vanfleteren.jazygit.state.Anchor;
+import net.vanfleteren.jazygit.state.Expansion;
 import net.vanfleteren.jazygit.syntax.Lexer;
 import net.vanfleteren.jazygit.syntax.Token;
 import org.junit.jupiter.api.Test;
@@ -47,15 +50,55 @@ class RichDiffTest {
                         " 1 file changed",
                         "",
                         " modified  a.txt ",
-                        // The first hunk has no rule: the bar is right above it.
+                        // The first hunk has no rule, but a marker of the lines above it (ADR 76).
+                        "┄┄┄┄┄ │ 8 lines hidden ┄",
                         " 9  9 │  nine",
                         // Changed lines are padded to the width of the file, so their background makes a block.
                         "10    │ -ten = 1 ",
                         "   10 │ +ten = 2 ",
+                        // How many lines follow is not known until the file is read whole.
+                        "┄┄┄┄┄ │ more ┄",
                         "",
                         " renamed  old.txt → new.txt ",
                         "renamed, contents unchanged"),
                 lines);
+    }
+
+    @Test
+    void theMarkersSayHowManyLinesTheyLeaveOutOnceTheFileIsReadWholeAndAreStops() {
+        ParsedDiff diff = ParsedDiff.of("""
+                diff --git a/a.txt b/a.txt
+                --- a/a.txt
+                +++ b/a.txt
+                @@ -9,2 +9,2 @@
+                 nine
+                -ten
+                +TEN
+                """);
+        Expansion.Folded known =
+                new Expansion.Folded(diff, HashMap.of("a.txt", new Expansion.Fold(Option.of(12), false, false)));
+        Expansion.Folded reading =
+                new Expansion.Folded(diff, HashMap.of("a.txt", new Expansion.Fold(Option.none(), true, false)));
+
+        RichDiff.Drawn drawn = RichDiff.drawn(known, true, true, Option.none(), Theme.SpanStyles.NONE);
+
+        assertEquals(
+                List.of(
+                        " modified  a.txt",
+                        "┄┄┄┄┄ │ 8 lines hidden ┄",
+                        " 9  9 │  nine",
+                        "10    │ -ten",
+                        "   10 │ +TEN",
+                        "┄┄┄┄┄ │ 2 lines hidden ┄"),
+                text(drawn.lines()).map(String::stripTrailing));
+        assertEquals(
+                List.of(new Anchor.Gap("a.txt", 1, Option.of(9)), new Anchor.Gap("a.txt", 11, Option.of(13))),
+                drawn.stops().map(stop -> stop.mark().anchor()).filter(Anchor.Gap.class::isInstance));
+        assertEquals(
+                List.of("┄┄┄┄┄ │ reading the whole file ┄", "┄┄┄┄┄ │ reading the whole file ┄"),
+                text(RichDiff.drawn(reading, true, true, Option.none(), Theme.SpanStyles.NONE)
+                                .lines())
+                        .filter(line -> line.startsWith("┄")));
     }
 
     @Test
@@ -99,7 +142,7 @@ class RichDiffTest {
     }
 
     @Test
-    void aHunkAfterTheFirstStartsWithARuleAsWideAsItsLineNumbers() {
+    void aHunkAfterTheFirstStartsWithAMarkerAsWideAsItsLineNumbers() {
         List<String> lines = text(lines(ParsedDiff.of("""
                 diff --git a/a.txt b/a.txt
                 --- a/a.txt
@@ -113,7 +156,13 @@ class RichDiffTest {
 
         // The changed lines are padded to the width of the bar.
         assertEquals(
-                List.of(" modified  a.txt ", "1   │ -one       ", "  1 │ +two       ", "┄┄┄ │ ", "5   │ -five      "),
+                List.of(
+                        " modified  a.txt ",
+                        "1   │ -one       ",
+                        "  1 │ +two       ",
+                        "┄┄┄ │ 3 lines hidden ┄",
+                        "5   │ -five      ",
+                        "┄┄┄ │ more ┄"),
                 lines);
     }
 
@@ -133,7 +182,7 @@ class RichDiffTest {
 
         assertEquals(
                 List.of("2"),
-                List.ofAll(lines.last().spans())
+                List.ofAll(lastOfDiff(lines).spans())
                         .filter(span -> span.style().equals(word))
                         .map(Span::content));
     }
@@ -149,7 +198,7 @@ class RichDiffTest {
                         Tuple.of("ac", Style.EMPTY.fg(Color.MAGENTA).bg(Color.WHITE)),
                         Tuple.of("\"", Style.EMPTY.fg(Color.MAGENTA).bg(Color.BLACK)),
                         Tuple.of(";", Style.EMPTY.bg(Color.BLACK))),
-                code(lines.last()));
+                code(lastOfDiff(lines)));
     }
 
     @Test
@@ -158,7 +207,7 @@ class RichDiffTest {
 
         assertEquals(
                 Style.EMPTY.fg(Color.GREEN).bg(Color.BLACK),
-                lines.last().spans().get(1).style());
+                lastOfDiff(lines).spans().get(1).style());
     }
 
     @Test
@@ -190,7 +239,7 @@ class RichDiffTest {
                         Tuple.of("String s = \"", Style.EMPTY.fg(Color.GREEN).bg(Color.BLACK)),
                         Tuple.of("ac", Style.EMPTY.fg(Color.GREEN).bg(Color.WHITE)),
                         Tuple.of("\";", Style.EMPTY.fg(Color.GREEN).bg(Color.BLACK))),
-                code(lines.last()));
+                code(lastOfDiff(lines)));
     }
 
     @Test
@@ -203,7 +252,7 @@ class RichDiffTest {
                         Tuple.of("String s = \"", Style.EMPTY.fg(Color.GREEN).bg(Color.BLACK)),
                         Tuple.of("ac", Style.EMPTY.fg(Color.GREEN).bg(Color.BLACK)),
                         Tuple.of("\";", Style.EMPTY.fg(Color.GREEN).bg(Color.BLACK))),
-                code(lines.last()));
+                code(lastOfDiff(lines)));
     }
 
     @Test
@@ -215,7 +264,7 @@ class RichDiffTest {
                         Tuple.of("String s = \"", Style.EMPTY.fg(Color.GREEN).bg(Color.BLACK)),
                         Tuple.of("ac", Style.EMPTY.fg(Color.GREEN).bg(Color.WHITE)),
                         Tuple.of("\";", Style.EMPTY.fg(Color.GREEN).bg(Color.BLACK))),
-                code(lines.last()));
+                code(lastOfDiff(lines)));
     }
 
     @Test
@@ -232,7 +281,7 @@ class RichDiffTest {
                         Tuple.of("String s = \"", Style.EMPTY.fg(Color.GREEN)),
                         Tuple.of("ac", word),
                         Tuple.of("\";", Style.EMPTY.fg(Color.GREEN))),
-                code(lines.last()));
+                code(lastOfDiff(lines)));
     }
 
     @Test
@@ -245,10 +294,10 @@ class RichDiffTest {
 
         assertEquals(
                 Tuple.of("String s = ", Style.EMPTY.bg(Color.BLACK).bold()),
-                code(lines.last()).head());
+                code(lastOfDiff(lines)).head());
         assertEquals(
                 Tuple.of("\"", Style.EMPTY.fg(Color.MAGENTA).bg(Color.BLACK).bold()),
-                code(lines.last()).get(1));
+                code(lastOfDiff(lines)).get(1));
     }
 
     @Test
@@ -267,7 +316,7 @@ class RichDiffTest {
                         Tuple.of("x = ", Style.EMPTY.bg(Color.BLACK)),
                         Tuple.of("bar", Style.EMPTY.bg(Color.WHITE)),
                         Tuple.of(";", Style.EMPTY.bg(Color.BLACK))),
-                code(lines.last()));
+                code(lastOfDiff(lines)));
     }
 
     @Test
@@ -285,7 +334,7 @@ class RichDiffTest {
         assertEquals(List.of(Tuple.of(tooLong, Style.EMPTY.fg(Color.GREEN).bg(Color.BLACK))), code(lines.get(1)));
         assertEquals(
                 Tuple.of("int", Style.EMPTY.fg(Color.BLUE).bg(Color.BLACK)),
-                code(lines.last()).head());
+                code(lastOfDiff(lines)).head());
     }
 
     @Test
@@ -321,6 +370,7 @@ class RichDiffTest {
                         .flatMap(file -> List.of(" modified  f%d.txt".formatted(file))
                                 .appendAll(List.rangeClosed(1, lines)
                                         .map(line -> "%3d %3d │  f%d line %d".formatted(line, line, file, line)))
+                                .append("┄┄┄┄┄┄┄ │ more ┄")
                                 .prependAll(file > 0 ? List.of("") : List.empty())),
                 drawn);
     }
@@ -337,7 +387,8 @@ class RichDiffTest {
                 +a ✔️
                 """), true, Theme.SpanStyles.NONE);
 
-        assertEquals(List.of(17, 17, 17), lines.map(RichDiffTest::width));
+        // The marker after the last hunk is as wide as it says.
+        assertEquals(List.of(17, 17, 17, 12), lines.map(RichDiffTest::width));
     }
 
     private static final String STRING_CHANGED = """
@@ -379,6 +430,14 @@ class RichDiffTest {
      */
     private static List<Line> lines(ParsedDiff diff, boolean syntax, Theme.SpanStyles styles) {
         return RichDiff.drawn(diff, syntax, true, Option.none(), styles).lines();
+    }
+
+    /**
+     * The last line of {@code lines} that is not a marker of lines left out.
+     */
+    private static Line lastOfDiff(List<Line> lines) {
+        return lines.findLast(line -> !text(List.of(line)).head().startsWith("┄"))
+                .get();
     }
 
     private static List<String> text(List<Line> lines) {

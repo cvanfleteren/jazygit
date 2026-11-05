@@ -27,6 +27,7 @@ import net.vanfleteren.jazygit.state.AheadUpdate;
 import net.vanfleteren.jazygit.state.BranchesTab;
 import net.vanfleteren.jazygit.state.Collapsed;
 import net.vanfleteren.jazygit.state.CommitFilesView;
+import net.vanfleteren.jazygit.state.Expansion;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
@@ -54,7 +55,14 @@ final class ContentView {
         if (model.screen() == Screen.PULL_REQUESTS) {
             return pullRequest(model);
         }
-        return switch (mirrored(model, focusedId)) {
+        return expanded(model, mirrored(model, focusedId));
+    }
+
+    /**
+     * What the repository screen shows next to the pane {@code mirrored} has highlighted.
+     */
+    private static Shown repository(Model model, Mirrored mirrored) {
+        return switch (mirrored) {
             case FILES ->
                 model.repoView()
                         .commitFiles()
@@ -70,6 +78,34 @@ final class ContentView {
                         Option.when(model.repo().commits().toOption().exists(List::isEmpty), "content.noCommits"));
             case STASH -> stash(model);
         };
+    }
+
+    /**
+     * What the repository screen shows next to the pane {@code mirrored} has highlighted, each diff with the lines
+     * expanded in the area it is shown in (ADR 76).
+     */
+    private static Shown expanded(Model model, Mirrored mirrored) {
+        return switch (repository(model, mirrored)) {
+            case Shown.Area area -> expanded(model, area);
+            case Shown.Stacked(List<Shown.Area> areas) -> new Shown.Stacked(areas.map(area -> expanded(model, area)));
+            case Shown other -> other;
+        };
+    }
+
+    private static Shown.Area expanded(Model model, Shown.Area area) {
+        Option<Expansion> expansion =
+                model.repoView().expanded().get(area.area().id()).filter(kept -> kept.holdsFor(area.content()));
+        DiffContext context = model.preferences().context();
+        Body body = switch (area.body()) {
+            case Body.Diff(ShownDiff diff, DiffLook look, var remarks) ->
+                new Body.Diff(diff.expanded(expansion, context), look, remarks);
+            case Body.CommitChanges(Commit commit, ShownDiff changes, DiffLook look) ->
+                new Body.CommitChanges(commit, changes.expanded(expansion, context), look);
+            case Body.StashChanges(Stash stash, ShownDiff changes, DiffLook look) ->
+                new Body.StashChanges(stash, changes.expanded(expansion, context), look);
+            case Body other -> other;
+        };
+        return new Shown.Area(area.area(), area.title(), area.content(), body);
     }
 
     /**
@@ -521,9 +557,35 @@ final class ContentView {
             Set<String> deleting) {}
 
     /**
-     * A diff as it is shown: {@code diff}, then the line {@code note}, which git did not print, if there is one.
+     * A diff as it is shown: {@code diff}, then the line {@code note}, which git did not print, if there is one, with
+     * the lines {@code expansion} expanded around its hunks, folded to {@code context} lines (ADR 76).
      */
-    record ShownDiff(DiffText diff, Option<String> note) {
+    record ShownDiff(DiffText diff, Option<String> note, Option<Expansion> expansion, DiffContext context) {
+
+        /**
+         * {@code diff} and its note, as git gives it.
+         */
+        ShownDiff(DiffText diff, Option<String> note) {
+            this(diff, note, Option.none(), DiffContext.DEFAULT);
+        }
+
+        /**
+         * This diff with the lines of {@code expanded} shown, folded to {@code folding} lines of context (ADR 76).
+         */
+        ShownDiff expanded(Option<Expansion> expanded, DiffContext folding) {
+            return new ShownDiff(diff, note, expanded, folding);
+        }
+
+        /**
+         * The diff shown parsed, its files read whole folded, with what is known of each of them (ADR 76).
+         */
+        Expansion.Folded folded() {
+            Expansion.Folded folded = expansion
+                    .map(expanded -> expanded.folded(diff.parsed(), context))
+                    .getOrElse(() -> Expansion.Folded.of(diff.parsed()));
+            return note.map(line -> new Expansion.Folded(folded.diff().withNote(line), folded.files()))
+                    .getOrElse(folded);
+        }
 
         /**
          * Whether nothing is shown.
@@ -543,7 +605,7 @@ final class ContentView {
          * The diff shown parsed, as the rich view draws it; parsed when it was read, but for the note.
          */
         ParsedDiff parsed() {
-            return note.map(diff.parsed()::withNote).getOrElse(diff.parsed());
+            return folded().diff();
         }
     }
 

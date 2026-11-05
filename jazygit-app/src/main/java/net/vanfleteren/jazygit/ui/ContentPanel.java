@@ -37,6 +37,7 @@ import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.settings.DiffLook;
 import net.vanfleteren.jazygit.settings.ThemeName;
+import net.vanfleteren.jazygit.state.Anchor;
 import net.vanfleteren.jazygit.state.DiffCursorAt;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -138,7 +139,7 @@ public final class ContentPanel {
                 RichDiff.Drawn.plain(remarks.filter(shown -> !shown.threads().isEmpty())
                         .map(shown -> counted(diff, shown.threads(), styles))
                         .getOrElse(() -> changeLines(diff, look, styles)));
-            case RICH -> RichDiff.drawn(diff.parsed(), look.syntax(), look.words(), remarks, styles);
+            case RICH -> RichDiff.drawn(diff.folded(), look.syntax(), look.words(), remarks, styles);
         };
         return drawn.after(failed).withLead();
     }
@@ -360,7 +361,7 @@ public final class ContentPanel {
     private static RichDiff.Drawn changeDrawn(ShownDiff changes, DiffLook look, Theme.SpanStyles styles) {
         return switch (look.style()) {
             case PLAIN -> RichDiff.Drawn.plain(lines(changes.text()).map(line -> diffLine(line, styles)));
-            case RICH -> RichDiff.drawn(changes.parsed(), look.syntax(), look.words(), Option.none(), styles);
+            case RICH -> RichDiff.drawn(changes.folded(), look.syntax(), look.words(), Option.none(), styles);
         };
     }
 
@@ -605,8 +606,8 @@ public final class ContentPanel {
                     .orElse(() -> Option.when(leaving && leaveScrollArea.getAsBoolean(), EventResult.HANDLED))
                     .orElse(() -> Option.when(!focused, EventResult.UNHANDLED))
                     .orElse(() -> cursor.flatMap(on -> move(on, event)).map(to -> moved(to, content)))
-                    .orElse(() -> cursor.filter(ignored -> review)
-                            .flatMap(on -> KEYMAP.handle(Scopes.PULL_REQUEST_DIFF, event, Option.of(at(on, content))))
+                    .orElse(() -> cursor.flatMap(on -> KEYMAP.handle(
+                                    review ? Scopes.PULL_REQUEST_DIFF : Scopes.DIFF, event, Option.of(at(on, content))))
                             .map(this::reviewed))
                     .getOrElse(() -> scroll(event) ? scrolled(content) : EventResult.UNHANDLED);
         }
@@ -681,7 +682,18 @@ public final class ContentPanel {
                 // The text starts a line below the top of the area, under its border.
                 return cursor.flatMap(on -> Option.of(element.renderedArea())
                                 .flatMap(drawn -> on.clicked(event.y() - drawn.top() - 1)))
-                        .map(clicked -> moved(clicked, content))
+                        .map(clicked -> {
+                            EventResult result = moved(clicked, content);
+                            // A click on a marker shows all the lines it leaves out, as Enter on it does (ADR 76).
+                            if (clicked.anchor() instanceof Anchor.Gap) {
+                                KEYMAP.handle(
+                                                Scopes.DIFF,
+                                                KeyEvent.ofKey(KeyCode.ENTER),
+                                                Option.of(at(clicked, content)))
+                                        .forEach(dispatch);
+                            }
+                            return result;
+                        })
                         .getOrElse(EventResult.HANDLED);
             }
             if (event.kind() == MouseEventKind.SCROLL_UP) {

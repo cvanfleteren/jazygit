@@ -205,10 +205,10 @@ public final class ReviewUpdate {
      * first line of a range is the one the diff shows first, and both are in one hunk.
      */
     private static Either<Why, ReviewPopup> start(Model model, DiffCursorAt at) {
-        return reviewed(model).flatMap(view -> startIn(view, at));
+        return reviewed(model).flatMap(view -> startIn(model, view, at));
     }
 
-    private static Either<Why, ReviewPopup> startIn(CommitFilesView view, DiffCursorAt at) {
+    private static Either<Why, ReviewPopup> startIn(Model model, CommitFilesView view, DiffCursorAt at) {
         String commit = view.of().sha().value();
         if (at.mark().isEmpty() && at.cursor() instanceof Anchor.File(String path)) {
             return Either.right(popup(
@@ -222,7 +222,7 @@ public final class ReviewUpdate {
                 || !(at.cursor() instanceof Anchor.OnLine cursor)) {
             return Either.left(Why.NOT_ON_LINE);
         }
-        return diffLines(view)
+        return diffLines(model, view, at)
                 .between(from, cursor)
                 .filter(range -> range.head().hunk().equals(range.last().hunk()))
                 .toEither(Why.NOT_ONE_HUNK)
@@ -514,8 +514,27 @@ public final class ReviewUpdate {
     }
 
     /**
-     * The lines the cursor stops on in the diff the files of the pull request {@code view} shows, as the content panel
-     * draws it.
+     * The lines the cursor {@code at} stops on in the diff the files of the pull request {@code view} shows, as the
+     * content panel draws it: with the lines expanded in its area (ADR 76), so that a range stays in a hunk as shown.
+     */
+    private static DiffLines diffLines(Model model, CommitFilesView view, DiffCursorAt at) {
+        Option<Expansion> expansion = model.repoView()
+                .expanded()
+                .get(at.area())
+                .filter(kept -> kept.holdsFor(at.at().content()));
+        return view.diff()
+                .flatMap(preview -> preview.shown().value().toOption())
+                .map(text -> expansion
+                        .map(expanded -> expanded.folded(
+                                        text.parsed(), model.preferences().context())
+                                .diff())
+                        .getOrElse(text.parsed()))
+                .map(parsed -> DiffLines.of(parsed.diff()))
+                .getOrElse(() -> new DiffLines(Vector.empty()));
+    }
+
+    /**
+     * The lines the cursor stops on in the diff the files of the pull request {@code view} shows, as git gives it.
      */
     private static DiffLines diffLines(CommitFilesView view) {
         return view.diff()

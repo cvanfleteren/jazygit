@@ -63,6 +63,20 @@ class DiffStopsTest {
     }
 
     @Test
+    void aMarkerThatIsGoneGoesToTheMarkerOfItsFileThatStartsClosestElseToTheLineWhereItStarted() {
+        Anchor.Gap above = new Anchor.Gap("a.txt", 4, Option.of(10));
+        Anchor.Gap after = new Anchor.Gap("a.txt", 11, Option.none());
+        List<Anchor> stops = List.of(A, line(Side.RIGHT, 3), above, line(Side.RIGHT, 10), after, B);
+
+        // Expanding ten lines down from the hunk above moves where the marker starts.
+        assertEquals(Option.of(above), DiffStops.nearest(stops, new Anchor.Gap("a.txt", 1, Option.of(10))));
+        assertEquals(Option.of(after), DiffStops.nearest(stops, new Anchor.Gap("a.txt", 14, Option.none())));
+        // Expanding all of it leaves no marker: the cursor goes to the line where it started.
+        assertEquals(
+                Option.of(line(Side.RIGHT, 10)), DiffStops.nearest(STOPS, new Anchor.Gap("a.txt", 8, Option.of(10))));
+    }
+
+    @Test
     void aLineThatIsGoneGoesToTheClosestOfItsSideElseToItsFileElseToTheFirst() {
         assertEquals(Option.of(line(Side.RIGHT, 10)), DiffStops.nearest(STOPS, line(Side.RIGHT, 8)));
         assertEquals(Option.of(line(Side.LEFT, 2)), DiffStops.nearest(STOPS, line(Side.LEFT, 40)));

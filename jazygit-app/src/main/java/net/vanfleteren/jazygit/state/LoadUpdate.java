@@ -8,6 +8,7 @@ import io.vavr.control.Option;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 import net.vanfleteren.jazygit.git.model.*;
+import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
 import net.vanfleteren.jazygit.state.Cmd.LoadCommits;
 import net.vanfleteren.jazygit.state.Cmd.LoadFileDiff;
@@ -61,8 +62,9 @@ public final class LoadUpdate {
             case AheadLoaded(var load, var ahead) -> AheadUpdate.aheadLoaded(done, load, ahead);
             // What the files looked like is kept, so that the diff is read again only once they change (ADR 58). Only
             // the highlighted diff is looked at, so the stamps of the diffs read before go.
+            // The files of the working tree read whole to expand them are read again with it (ADR 76).
             case FileDiffLoaded loaded ->
-                Next.of(loaded.kept(done).mapJobs(jobs -> {
+                rereadWhole(loaded.kept(done).mapJobs(jobs -> {
                     Map<Cmd.Load, MetadataStamp> others =
                             jobs.readAt().filterKeys(load -> !(load instanceof LoadFileDiff));
                     return jobs.withReadAt(loaded.stamp().fold(() -> others, now -> others.put(msg.cmd(), now)));
@@ -85,6 +87,32 @@ public final class LoadUpdate {
                         cmd,
                         failure));
         };
+    }
+
+    /**
+     * Reads again, with the options now chosen, each file of the working tree read whole to expand it that the diff
+     * now read of the working tree has, and that is not being read (ADR 76).
+     */
+    private static Next rereadWhole(Model model) {
+        DiffOptions options = model.preferences().diffOptions();
+        List<String> shown = model.repoView()
+                .fileDiff()
+                .flatMap(preview -> preview.value().toOption())
+                .toList()
+                .flatMap(diffs -> diffs.staged()
+                        .parsed()
+                        .files()
+                        .appendAll(diffs.unstaged().parsed().files()))
+                .map(file -> file.file().path());
+        List<Cmd.ReadWholeFile> reads = model.repoView()
+                .expanded()
+                .values()
+                .filter(expansion -> expansion.content() instanceof ScrolledContent.Diff)
+                .flatMap(expansion -> expansion.files().values())
+                .map(file -> file.read().withOptions(options))
+                .filter(read -> shown.contains(read.path()) && !model.jobs().runs(read))
+                .toList();
+        return new Next(model, List.narrow(reads));
     }
 
     /**

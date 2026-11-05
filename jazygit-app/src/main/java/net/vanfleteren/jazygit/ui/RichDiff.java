@@ -13,6 +13,7 @@ import java.time.Instant;
 import java.util.function.Function;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.model.ChangeType;
+import net.vanfleteren.jazygit.git.model.Folding;
 import net.vanfleteren.jazygit.git.model.ParsedDiff;
 import net.vanfleteren.jazygit.git.model.ParsedDiff.ParsedFile;
 import net.vanfleteren.jazygit.git.model.ParsedDiff.ParsedHunk;
@@ -25,6 +26,7 @@ import net.vanfleteren.jazygit.git.model.WordDiff.Segment;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Anchor;
 import net.vanfleteren.jazygit.state.DiffStops;
+import net.vanfleteren.jazygit.state.Expansion;
 import net.vanfleteren.jazygit.state.PlacedRemarks;
 import net.vanfleteren.jazygit.state.PlacedRemarks.FileRemarks;
 import net.vanfleteren.jazygit.state.PlacedRemarks.LineRemarks;
@@ -58,6 +60,21 @@ final class RichDiff {
             boolean words,
             Option<ContentView.ShownRemarks> remarks,
             Theme.SpanStyles styles) {
+        return drawn(Expansion.Folded.of(diff), syntax, words, remarks, styles);
+    }
+
+    /**
+     * The lines of the diff of {@code folded}, as {@link #drawn(ParsedDiff, boolean, boolean, Option,
+     * Theme.SpanStyles)} draws them, with a marker for the lines each of its files leaves out, as far as
+     * {@code folded} knows them (ADR 76).
+     */
+    static Drawn drawn(
+            Expansion.Folded folded,
+            boolean syntax,
+            boolean words,
+            Option<ContentView.ShownRemarks> remarks,
+            Theme.SpanStyles styles) {
+        ParsedDiff diff = folded.diff();
         UnifiedDiff parsed = diff.diff();
         Vector<Option<FileRemarks>> placed = remarks.map(
                         shown -> PlacedRemarks.place(parsed, shown.threads(), shown.onLines())
@@ -72,7 +89,15 @@ final class RichDiff {
         // many files and one of a long file both hold up the render thread for less.
         List<Pending> pending = inParallel(
                         diff.files().zip(placed).zipWithIndex(),
-                        file -> file(file._1()._1(), file._1()._2(), file._2(), syntax, words, style, styles))
+                        file -> file(
+                                file._1()._1(),
+                                file._1()._2(),
+                                file._2(),
+                                folded.fold(file._1()._1().file().path()),
+                                syntax,
+                                words,
+                                style,
+                                styles))
                 .intersperse(List.of(BLANK))
                 .flatMap(file -> file);
         return Drawn.of(parsed.preamble()
@@ -110,6 +135,7 @@ final class RichDiff {
             ParsedFile parsed,
             Option<FileRemarks> remarks,
             int index,
+            Expansion.Fold fold,
             boolean syntax,
             boolean words,
             RemarkLines.RemarkStyle style,
@@ -133,10 +159,14 @@ final class RichDiff {
         Vector<LineRemarks> onLines = remarks.map(
                         placed -> placed.lines().flatMap(hunk -> hunk).toVector())
                 .getOrElse(() -> Vector.fill(lines.size(), () -> NO_REMARKS));
+        List<Folding.Gap> gaps = Folding.gaps(file, fold.length());
+        Option<Folding.Gap> trailing =
+                gaps.find(gap -> gap.before() == parsed.hunks().size());
         boolean unplaced = remarks.exists(placed -> !placed.unplaced().isEmpty());
+        boolean afterLast = unplaced || trailing.isDefined();
         Vector<Row> rows = Vector.range(0, lines.size())
                 .map(at ->
-                        new Row(lines.get(at), measured.get(at), onLines.get(at), unplaced || at < lines.size() - 1));
+                        new Row(lines.get(at), measured.get(at), onLines.get(at), afterLast || at < lines.size() - 1));
         Vector<Vector<Row>> byHunk =
                 cut(rows, parsed.hunks().map(hunk -> hunk.lines().size()));
         return List.<Pending>of(() -> List.of(new Marked(
@@ -148,8 +178,10 @@ final class RichDiff {
                         .<Pending>map(placed -> () -> blocks.threads(
                                 placed.onFile(), Option.none(), !file.hunks().isEmpty() || unplaced, styles)))
                 .appendAll(parsed.hunks()
-                        .zipWithIndex((hunk, at) -> hunk(hunk.hunk(), byHunk.get(at), at, layout))
+                        .zipWithIndex((hunk, at) -> hunk(
+                                hunk.hunk(), byHunk.get(at), at, gaps.find(gap -> gap.before() == at), fold, layout))
                         .flatMap(hunk -> hunk))
+                .appendAll(trailing.toList().map(gap -> marker(gap, fold, layout)))
                 .appendAll(remarks.toList().<Pending>map(placed -> () -> blocks.unplaced(placed.unplaced(), styles)));
     }
 
@@ -189,18 +221,22 @@ final class RichDiff {
      * numbers the gutter shows already. Not the section heading git gives after them: it is a line from above the
      * hunk, which reads as one of its own. A header whose numbers cannot be read, whose lines are not numbered,
      * follows the rule as git printed it. The first hunk of a file, at {@code index} 0, has no rule, as the bar of the
-     * file marks where it starts, unless its header has to be shown.
+     * file marks where it starts, unless its header has to be shown. When lines are left out before it, {@code gap},
+     * a marker that says how many takes the place of the rule (ADR 76).
      */
-    private static List<Pending> hunk(Hunk hunk, Vector<Row> rows, int index, Layout layout) {
+    private static List<Pending> hunk(
+            Hunk hunk, Vector<Row> rows, int index, Option<Folding.Gap> gap, Expansion.Fold fold, Layout layout) {
         boolean first = index == 0;
         Theme.SpanStyles styles = layout.styles();
-        Span rule = styled("┄".repeat(2 * layout.digits() + 1) + GUTTER_END, Theme.Classes.DIFF_LINE_NUMBER, styles);
-        List<Pending> header = hunk.header().isEmpty() || (first && hunk.numbered())
-                ? List.empty()
-                : List.of(() -> List.of(Marked.plain(
-                        hunk.numbered()
-                                ? Line.from(rule)
-                                : Line.from(rule, styled(hunk.header(), Theme.Classes.DIFF_HUNK, styles)))));
+        Span rule = rule(layout);
+        List<Pending> header = gap.isDefined()
+                ? gap.toList().map(before -> marker(before, fold, layout))
+                : hunk.header().isEmpty() || (first && hunk.numbered())
+                        ? List.empty()
+                        : List.of(() -> List.of(Marked.plain(
+                                hunk.numbered()
+                                        ? Line.from(rule)
+                                        : Line.from(rule, styled(hunk.header(), Theme.Classes.DIFF_HUNK, styles)))));
         return header.appendAll(rows.<Pending>map(row -> () -> {
             Option<Anchor.OnLine> anchor = Anchor.of(layout.path(), row.parsed().line());
             return layout.blocks()
@@ -213,6 +249,35 @@ final class RichDiff {
                                     layout.fileWidth(),
                                     Option.of(new DiffStops.HunkAt(layout.file(), index))))));
         }));
+    }
+
+    /**
+     * The rule in the gutter that marks where a hunk starts.
+     */
+    private static Span rule(Layout layout) {
+        return styled(
+                "┄".repeat(2 * layout.digits() + 1) + GUTTER_END, Theme.Classes.DIFF_LINE_NUMBER, layout.styles());
+    }
+
+    /**
+     * The marker of {@code gap}, the lines a file leaves out, a stop of the cursor (ADR 76): the rule, and how many it
+     * leaves out, or that more follow when that is not known, or that the file is being read whole, or could not be.
+     */
+    private static Pending marker(Folding.Gap gap, Expansion.Fold fold, Layout layout) {
+        String says = fold.reading()
+                ? Messages.get("content.gap.reading")
+                : fold.failed()
+                        ? Messages.get("content.gap.failed")
+                        : gap.hidden()
+                                .map(hidden -> Messages.get("content.gap.hidden", hidden))
+                                .getOrElse(() -> Messages.get("content.gap.more"));
+        return () -> List.of(new Marked(
+                Line.from(rule(layout), styled(says + " ┄", Theme.Classes.DIFF_HUNK, layout.styles())),
+                Option.of(new Mark(
+                        new Anchor.Gap(layout.path(), gap.from(), gap.until()),
+                        1,
+                        layout.fileWidth(),
+                        Option.none()))));
     }
 
     /**
