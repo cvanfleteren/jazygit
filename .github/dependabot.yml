@@ -6,6 +6,9 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # tamboui-markdown decides the commonmark version; the pin in pom.xml only follows it.
+    ignore:
+      - dependency-name: "org.commonmark:*"
     groups:
       maven-minor-and-patch:
         update-types: [minor, patch]
