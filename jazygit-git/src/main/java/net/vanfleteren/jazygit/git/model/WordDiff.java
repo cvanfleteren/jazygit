@@ -145,22 +145,25 @@ public final class WordDiff {
      */
     private static Tuple2<Tuple2<List<Segment>, List<Segment>>, Long> compared(
             String removed, String added, long budget) {
+        int total = removed.length() + added.length();
+        // A pair that differs in an insertion or a deletion only keeps all of its shorter line, and what is between the
+        // tokens both start and end with in the longer one is its one change. Those tokens are found on the characters,
+        // so such a pair, like a line indented, is not even split into tokens.
+        int start = sharedStart(removed, added);
+        int end = sharedEnd(removed, added, start);
+        if (start + end == Math.min(removed.length(), added.length())) {
+            return Tuple.of(
+                    rewritten(Math.min(removed.length(), added.length()), total)
+                            ? Tuple.of(whole(removed), whole(added))
+                            : Tuple.of(around(removed, start, end), around(added, start, end)),
+                    budget);
+        }
         String[] before = tokens(removed);
         String[] after = tokens(added);
         // The tokens both start and end with are kept as they are; only those between them are compared, which for a
         // line changed in a word or two leaves next to nothing.
         int prefix = commonPrefix(before, after);
         int suffix = commonSuffix(before, after, prefix);
-        int total = removed.length() + added.length();
-        // A pair that differs in an insertion or a deletion only keeps all of its shorter line, and the tokens between
-        // what both start and end with in the longer one are its one change: it needs neither a count nor a table.
-        if (prefix + suffix == Math.min(before.length, after.length)) {
-            return Tuple.of(
-                    rewritten(Math.min(removed.length(), added.length()), total)
-                            ? Tuple.of(whole(removed), whole(added))
-                            : Tuple.of(around(removed, before, prefix, suffix), around(added, after, prefix, suffix)),
-                    budget);
-        }
         long cells = (long) (before.length - prefix - suffix) * (after.length - prefix - suffix);
         // A pair that could not keep enough even if its tokens were in the same order was rewritten: it is drawn whole
         // without filling the table, and leaves the budget to the pairs after it. Counting its tokens is not worth it
@@ -343,22 +346,67 @@ public final class WordDiff {
     }
 
     /**
-     * The segments of {@code line}, whose tokens are {@code tokens}: the first {@code prefix} and the last
-     * {@code suffix} unchanged, and those between them, if any, changed.
+     * How many characters the tokens {@code removed} and {@code added} start with alike have: the characters they
+     * start with alike, up to where a token starts in both. A token starts where it does whatever comes after it, so
+     * the tokens before there are those of {@link #commonPrefix}.
      */
-    private static List<Segment> around(String line, String[] tokens, int prefix, int suffix) {
-        if (prefix + suffix == tokens.length) {
+    private static int sharedStart(String removed, String added) {
+        int shorter = Math.min(removed.length(), added.length());
+        int alike = IntStream.range(0, shorter)
+                .filter(i -> removed.charAt(i) != added.charAt(i))
+                .findFirst()
+                .orElse(shorter);
+        // Ends, as a token starts at 0.
+        return IntStream.iterate(alike, at -> at - 1)
+                .filter(at -> splits(removed, at) && splits(added, at))
+                .findFirst()
+                .getAsInt();
+    }
+
+    /**
+     * How many characters the tokens {@code removed} and {@code added} end with alike have, of those after the first
+     * {@code start}: as {@link #sharedStart}, from the end, and those of {@link #commonSuffix}.
+     */
+    private static int sharedEnd(String removed, String added, int start) {
+        int shorter = Math.min(removed.length(), added.length()) - start;
+        int alike = IntStream.range(0, shorter)
+                .filter(i -> removed.charAt(removed.length() - 1 - i) != added.charAt(added.length() - 1 - i))
+                .findFirst()
+                .orElse(shorter);
+        // Ends, as a token ends at the end of a line.
+        return IntStream.iterate(alike, from -> from - 1)
+                .filter(from -> splits(removed, removed.length() - from) && splits(added, added.length() - from))
+                .findFirst()
+                .getAsInt();
+    }
+
+    /**
+     * Whether a token of {@code line} starts or ends at {@code at}, as {@link #tokens} splits it: at either end, and
+     * between two code points unless they are of a word, or of whitespace, both.
+     */
+    private static boolean splits(String line, int at) {
+        if (at == 0 || at == line.length()) {
+            return true;
+        }
+        if (Character.isHighSurrogate(line.charAt(at - 1)) && Character.isLowSurrogate(line.charAt(at))) {
+            return false;
+        }
+        int before = kind(line.codePointBefore(at));
+        return before == OTHER || before != kind(line.codePointAt(at));
+    }
+
+    /**
+     * The segments of {@code line}: the first {@code start} and the last {@code end} characters unchanged, and those
+     * between them, if any, changed.
+     */
+    private static List<Segment> around(String line, int start, int end) {
+        if (start + end == line.length()) {
             return whole(line);
         }
-        int start = Arrays.stream(tokens, 0, prefix).mapToInt(String::length).sum();
-        int end = line.length()
-                - Arrays.stream(tokens, tokens.length - suffix, tokens.length)
-                        .mapToInt(String::length)
-                        .sum();
         return List.of(
                         new Segment(line.substring(0, start), false),
-                        new Segment(line.substring(start, end), true),
-                        new Segment(line.substring(end), false))
+                        new Segment(line.substring(start, line.length() - end), true),
+                        new Segment(line.substring(line.length() - end), false))
                 .filter(segment -> !segment.text().isEmpty());
     }
 

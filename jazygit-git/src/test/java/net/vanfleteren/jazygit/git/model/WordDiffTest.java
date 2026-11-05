@@ -255,6 +255,25 @@ class WordDiffTest {
     }
 
     @Test
+    void aPairThatStartsAlikeWithinAWordHighlightsTheWholeWord() {
+        assertEquals(
+                Tuple.of(
+                        List.of(changed(false, "foo("), changed(true, "a"), changed(false, ")")),
+                        List.of(changed(false, "foo("), changed(true, "ab"), changed(false, ")"))),
+                WordDiff.compared("foo(a)", "foo(ab)"));
+    }
+
+    @Test
+    void anInsertionIsHighlightedAWholeCodePointAtATime() {
+        // Both emoji start with the same surrogate, so the lines are alike for one character more than for a token.
+        assertEquals(
+                Tuple.of(
+                        List.of(changed(false, "😀😀")),
+                        List.of(changed(false, "😀"), changed(true, "😃"), changed(false, "😀"))),
+                WordDiff.compared("😀😀", "😀😃😀"));
+    }
+
+    @Test
     void aPairOfLinesAlikeHighlightsNothing() {
         assertEquals(
                 Tuple.of(List.of(changed(false, "same")), List.of(changed(false, "same"))),
