@@ -483,7 +483,8 @@ public final class ContentPanel {
             case Shown.Area area -> area(area.area()).show(model, focusedId, area, this::bodyDrawn, styles);
             case Shown.Stacked(List<Shown.Area> stacked) ->
                 column(stacked.<Element>map(area -> element(area, model, focusedId))
-                        .toJavaArray(Element[]::new));
+                                .toJavaArray(Element[]::new))
+                        .fill();
         };
     }
 
@@ -923,12 +924,8 @@ public final class ContentPanel {
                         DiffCursor.indexes(stops),
                         lines.map(Line::width).max().getOrElse(0),
                         stops.filter(stop -> switch (stop.mark().anchor()) {
-                                    case Anchor.File ignored -> true;
-                                    case Anchor.OnLine ignored -> true;
-                                    case Anchor.Gap ignored -> true;
-                                    case Anchor.Lead ignored -> false;
-                                    case Anchor.Thread ignored -> false;
-                                    case Anchor.Comment ignored -> false;
+                                    case Anchor.File _, Anchor.OnLine _, Anchor.Gap _ -> true;
+                                    case Anchor.Lead _, Anchor.Thread _, Anchor.Comment _ -> false;
                                 })
                                 .map(RichDiff.Stop::row)
                                 .toSet());

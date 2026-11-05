@@ -256,6 +256,20 @@ class DiffCursorTest {
     }
 
     @Test
+    void aLineAsWideAsItsFileIsTintedWithPaddingTheAreaDrawsToItsEdge() {
+        // Line 1 is a context line as wide as its file: it ends in its text, not in padding.
+        Vector<Line> text = Vector.range(0, 20).map(row -> Line.from(Span.raw(" 1 │ "), Span.raw("abc")));
+        Style tint = Style.EMPTY.reversed();
+
+        Line tinted = on(ONE, 4).tinted(text, tint).get(4);
+
+        assertEquals("", List.ofAll(tinted.spans()).last().content());
+        Line filled = ContentPanel.filled(tinted, 12);
+        assertEquals(12, filled.width());
+        assertEquals(new Span("    ", tint), List.ofAll(filled.spans()).last());
+    }
+
+    @Test
     void theLinesOfARangeAreTintedAndMarkedInTheGutter() {
         Vector<Line> text = Vector.range(0, 20).map(row -> Line.from(Span.raw(" 1  1 │ "), Span.raw("x" + row)));
         Vector<Line> tinted = on(TWO, 11).marked().get().up().tinted(text, Style.EMPTY.reversed());
