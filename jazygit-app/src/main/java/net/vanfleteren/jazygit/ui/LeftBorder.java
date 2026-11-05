@@ -27,4 +27,12 @@ public final class LeftBorder {
     public static Option<Integer> width(Rect panes, int x) {
         return Option.when(panes.width() > 0, () -> Math.round((x + 1 - panes.x()) * 100f / panes.width()));
     }
+
+    /**
+     * How many columns a left column {@code percent} of panes {@code width} columns wide takes, the nearest (ADR 81):
+     * dragged to a column, it takes that column again, as {@link #width} turns it into its nearest percent.
+     */
+    public static int columns(int width, int percent) {
+        return Math.round(width * percent / 100f);
+    }
 }

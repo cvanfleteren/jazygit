@@ -13,8 +13,8 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
- * Looking at the settings and changing them: the theme, the gh executable, and the account gh and git use for the
- * repository. A change to how gh runs shows the repository again, as if the app had been started with it.
+ * Looking at the settings and changing them: the theme, whether what moves moves smoothly, the gh executable, and
+ * the account gh and git use for the repository. A change to how gh runs shows the repository again, as if the app had been started with it.
  */
 public final class SettingsPanelUpdate {
 
@@ -30,7 +30,8 @@ public final class SettingsPanelUpdate {
                                 model.preferences().settings().theme(),
                                 model.preferences().repositoryTheme(),
                                 model.preferences().settings().ghExecutable(),
-                                Option.none())),
+                                Option.none(),
+                                model.preferences().settings().animations())),
                         new SettingsPanelCmd.ReadGitHub(
                                 model.preferences().settings().gh()));
             // Read for a panel that may be closed already, or open on another gh executable.
@@ -44,6 +45,10 @@ public final class SettingsPanelUpdate {
             case SettingsPanelMsg.RepositoryThemeRequested() ->
                 ThemeUpdate.update(
                         model.withoutPopup(SettingsPanelPopup.class), new ThemeMsg.Requested(ThemeScope.REPOSITORY));
+            case SettingsPanelMsg.AnimationsToggled() ->
+                model.popup(SettingsPanelPopup.class)
+                        .map(panel -> toggleAnimations(model, panel))
+                        .getOrElse(() -> Next.of(model));
             case SettingsPanelMsg.GhExecutableRequested() ->
                 Next.of(model.popup(SettingsPanelPopup.class)
                         .map(panel -> model.openPopup(
@@ -86,6 +91,19 @@ public final class SettingsPanelUpdate {
             case SettingsPanelMsg.NotReopened(var failure) ->
                 Next.of(model.fail(new AppError.SettingsNotApplied(failure)));
         };
+    }
+
+    /**
+     * Turns the animations off if they are on, else on, keeping that for the next session, with the {@code panel}
+     * still open to show it.
+     */
+    private static Next toggleAnimations(Model model, SettingsPanelPopup panel) {
+        Settings kept = model.preferences().settings();
+        Settings chosen = kept.withAnimations(!kept.animations());
+        return new Next(
+                model.mapPreferences(preferences -> preferences.withSettings(chosen))
+                        .openPopup(panel.withAnimations(chosen.animations())),
+                List.of(new Cmd.SaveSettings(kept, chosen)));
     }
 
     /**

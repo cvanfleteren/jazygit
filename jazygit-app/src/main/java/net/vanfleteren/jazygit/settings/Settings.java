@@ -22,6 +22,8 @@ import lombok.With;
  *                            status takes but the last, which takes what is left, in percent
  * @param pullRequestsHeights the share of the height of the left column of the pull requests screen each pane under
  *                            the status takes but the last, which takes what is left, in percent
+ * @param animations          whether what moves on the screen, like the left column stepped wider or narrower,
+ *                            moves there smoothly, rather than at once (ADR 81)
  */
 @With
 public record Settings(
@@ -33,7 +35,8 @@ public record Settings(
         boolean diffSyntax,
         boolean diffWords,
         List<Integer> repositoryHeights,
-        List<Integer> pullRequestsHeights) {
+        List<Integer> pullRequestsHeights,
+        boolean animations) {
 
     /**
      * The narrowest the left column may get, in percent of the width.
@@ -75,7 +78,8 @@ public record Settings(
             true,
             true,
             DEFAULT_REPOSITORY_HEIGHTS,
-            DEFAULT_PULL_REQUESTS_HEIGHTS);
+            DEFAULT_PULL_REQUESTS_HEIGHTS,
+            true);
 
     /**
      * The key of the theme in the settings file.
@@ -113,6 +117,10 @@ public record Settings(
      * The key of the heights of the panes of the left column of the pull requests screen in the settings file.
      */
     static final String PULL_REQUESTS_HEIGHTS = "ui.pull-requests-heights";
+    /**
+     * The key of whether what moves on the screen moves there smoothly in the settings file (ADR 81).
+     */
+    static final String ANIMATIONS = "ui.animations";
 
     /**
      * {@code width} brought within the widths the left column may have.
@@ -171,6 +179,9 @@ public record Settings(
         Option<Object> pullRequestsHeights = value.apply(PULL_REQUESTS_HEIGHTS);
         Option<List<Integer>> validPullRequestsHeights =
                 pullRequestsHeights.flatMap(heights -> heights(heights, DEFAULT_PULL_REQUESTS_HEIGHTS.size()));
+        Option<Object> animations = value.apply(ANIMATIONS);
+        Option<Boolean> validAnimations =
+                animations.filter(Boolean.class::isInstance).map(Boolean.class::cast);
         return new Read(
                 new Settings(
                         validTheme.getOrElse(DEFAULT.theme),
@@ -181,7 +192,8 @@ public record Settings(
                         validDiffSyntax.getOrElse(DEFAULT.diffSyntax),
                         validDiffWords.getOrElse(DEFAULT.diffWords),
                         validRepositoryHeights.getOrElse(DEFAULT_REPOSITORY_HEIGHTS),
-                        validPullRequestsHeights.getOrElse(DEFAULT_PULL_REQUESTS_HEIGHTS)),
+                        validPullRequestsHeights.getOrElse(DEFAULT_PULL_REQUESTS_HEIGHTS),
+                        validAnimations.getOrElse(DEFAULT.animations)),
                 Option.when(theme.isDefined() && validTheme.isEmpty(), THEME)
                         .toList()
                         .appendAll(Option.when(gh.isDefined() && validGh.isEmpty(), GH_EXECUTABLE))
@@ -196,7 +208,8 @@ public record Settings(
                                 repositoryHeights.isDefined() && validRepositoryHeights.isEmpty(), REPOSITORY_HEIGHTS))
                         .appendAll(Option.when(
                                 pullRequestsHeights.isDefined() && validPullRequestsHeights.isEmpty(),
-                                PULL_REQUESTS_HEIGHTS)));
+                                PULL_REQUESTS_HEIGHTS))
+                        .appendAll(Option.when(animations.isDefined() && validAnimations.isEmpty(), ANIMATIONS)));
     }
 
     /**
@@ -254,7 +267,11 @@ public record Settings(
                                 : LinkedHashMap.of(DIFF_SYNTAX, diffSyntax))
                 .merge(diffWords == DEFAULT.diffWords ? LinkedHashMap.empty() : LinkedHashMap.of(DIFF_WORDS, diffWords))
                 .merge(heightsEntry(REPOSITORY_HEIGHTS, repositoryHeights, DEFAULT_REPOSITORY_HEIGHTS))
-                .merge(heightsEntry(PULL_REQUESTS_HEIGHTS, pullRequestsHeights, DEFAULT_PULL_REQUESTS_HEIGHTS));
+                .merge(heightsEntry(PULL_REQUESTS_HEIGHTS, pullRequestsHeights, DEFAULT_PULL_REQUESTS_HEIGHTS))
+                .merge(
+                        animations == DEFAULT.animations
+                                ? LinkedHashMap.empty()
+                                : LinkedHashMap.of(ANIMATIONS, animations));
     }
 
     private static Map<String, Object> widthEntry(String key, int width) {

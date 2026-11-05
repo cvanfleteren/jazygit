@@ -31,6 +31,11 @@ public sealed interface SettingsPanelMsg extends Msg {
      */
     record RepositoryThemeRequested() implements SettingsPanelMsg {}
 
+    /**
+     * The user turned the animations on or off (ADR 81).
+     */
+    record AnimationsToggled() implements SettingsPanelMsg {}
+
     record GhExecutableRequested() implements SettingsPanelMsg {}
 
     /**

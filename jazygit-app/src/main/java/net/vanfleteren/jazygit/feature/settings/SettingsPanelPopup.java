@@ -13,8 +13,13 @@ import net.vanfleteren.jazygit.state.RepositoryTheme;
  * @param repositoryTheme the theme the git configuration gives the repository (ADR 70)
  * @param ghExecutable    the gh executable chosen, if not the one on the PATH
  * @param gitHub          how gh is set up for the repository; none while it is read
+ * @param animations      whether what moves on the screen moves there smoothly (ADR 81)
  */
 @With
 public record SettingsPanelPopup(
-        ThemeName theme, RepositoryTheme repositoryTheme, Option<String> ghExecutable, Option<GitHubSetup> gitHub)
+        ThemeName theme,
+        RepositoryTheme repositoryTheme,
+        Option<String> ghExecutable,
+        Option<GitHubSetup> gitHub,
+        boolean animations)
         implements Popup {}
