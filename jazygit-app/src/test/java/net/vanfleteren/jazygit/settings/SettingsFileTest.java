@@ -373,6 +373,37 @@ class SettingsFileTest {
     }
 
     @Test
+    void readsWhetherWhatMovesMovesSmoothlyAndAnythingButABooleanIsInvalid() throws IOException {
+        write("""
+                [ui]
+                animations = false
+                """);
+        assertEquals(
+                new Loaded(Settings.DEFAULT.withAnimations(false), Option.none()),
+                settingsFile().load());
+
+        write("""
+                [ui]
+                animations = "no"
+                """);
+        assertEquals(
+                new Loaded(Settings.DEFAULT, Option.of(new SettingsProblem.Invalid(file(), List.of("ui.animations")))),
+                settingsFile().load());
+    }
+
+    @Test
+    void savingTheAnimationsAndGoingBackToTheDefaultRemovesIt() throws IOException {
+        Settings still = Settings.DEFAULT.withAnimations(false);
+        settingsFile().save(Settings.DEFAULT, still);
+
+        assertEquals(still, settingsFile().load().settings());
+
+        settingsFile().save(still, Settings.DEFAULT);
+
+        assertFalse(Files.readString(file()).contains("animations"), Files.readString(file()));
+    }
+
+    @Test
     void savingTheDiffWordsAndGoingBackToTheDefaultRemovesIt() throws IOException {
         Settings wholeLines = Settings.DEFAULT.withDiffWords(false);
         settingsFile().save(Settings.DEFAULT, wholeLines);

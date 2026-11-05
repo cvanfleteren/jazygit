@@ -58,6 +58,12 @@ public final class SettingsPanelDialogs {
                     new Choice<SettingsPanelPopup>(
                             'r', SettingsPanelDialogs::repositoryTheme, SettingsPanelMsg.RepositoryThemeRequested::new),
                     new Choice<SettingsPanelPopup>(
+                            'm',
+                            popup -> Messages.get(
+                                    "dialog.settings.animations",
+                                    Messages.get(popup.animations() ? "dialog.settings.on" : "dialog.settings.off")),
+                            SettingsPanelMsg.AnimationsToggled::new),
+                    new Choice<SettingsPanelPopup>(
                                     'g',
                                     SettingsPanelDialogs::ghExecutable,
                                     SettingsPanelMsg.GhExecutableRequested::new)

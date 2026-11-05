@@ -66,7 +66,7 @@ class SettingsPanelDialogsTest {
     void theThemeOfTheRepositoryIsItsOwnElseTheOneItInherits() {
         RepositoryTheme.Inherited work = new RepositoryTheme.Inherited(ThemeName.LIGHT, "/etc/gitconfig-work");
         SettingsPanelPopup popup =
-                new SettingsPanelPopup(ThemeName.DARK, RepositoryTheme.NONE, Option.none(), Option.none());
+                new SettingsPanelPopup(ThemeName.DARK, RepositoryTheme.NONE, Option.none(), Option.none(), true);
 
         assertEquals(
                 "Theme for this repository: ember, blues and oranges",
@@ -86,7 +86,7 @@ class SettingsPanelDialogsTest {
         ChoiceDialog<SettingsPanelPopup> dialog =
                 new ChoiceDialog<>(SettingsPanelDialogs.PANEL, new ArrayList<Msg>()::add);
         SettingsPanelPopup popup =
-                new SettingsPanelPopup(ThemeName.DARK, RepositoryTheme.NONE, Option.of("/opt/gh"), Option.none());
+                new SettingsPanelPopup(ThemeName.DARK, RepositoryTheme.NONE, Option.of("/opt/gh"), Option.none(), true);
         Element view = stack(
                 text("background"),
                 dialog.render(TestModels.loaded().openPopup(popup)).get());
@@ -103,7 +103,11 @@ class SettingsPanelDialogsTest {
         ChoiceDialog<SettingsPanelPopup> dialog =
                 new ChoiceDialog<>(SettingsPanelDialogs.PANEL, new ArrayList<Msg>()::add);
         SettingsPanelPopup popup = new SettingsPanelPopup(
-                ThemeName.DARCULA, RepositoryTheme.NONE, Option.none(), Option.of(setup(Option.of("alice-work"))));
+                ThemeName.DARCULA,
+                RepositoryTheme.NONE,
+                Option.none(),
+                Option.of(setup(Option.of("alice-work"))),
+                true);
         Element view = stack(
                 text("background"),
                 dialog.render(TestModels.loaded().openPopup(popup)).get());
@@ -114,11 +118,12 @@ class SettingsPanelDialogsTest {
             assertTrue(screen.contains("(t) Theme for all repositories: darcula"), screen);
             assertTrue(screen.contains("(r) Theme for this repository: none, the one for all repositories"), screen);
             assertTrue(screen.contains("(a) Account for this repository on github.com: ⚠ alice-work"), screen);
+            assertTrue(screen.contains("(m) Animations: on"), screen);
             List<String> lines = List.of(screen.split("\n")).map(String::strip);
             assertEquals(
-                    List.of("Appearance", "(t)", "(r)", "", "GitHub", "(g)", "(a)"),
+                    List.of("Appearance", "(t)", "(r)", "(m)", "", "GitHub", "(g)", "(a)"),
                     lines.dropWhile(line -> !line.contains("Appearance"))
-                            .take(7)
+                            .take(8)
                             .map(line -> line.replaceAll("^│", "").strip())
                             .map(line -> line.startsWith("(")
                                     ? line.substring(0, 3)
@@ -132,7 +137,7 @@ class SettingsPanelDialogsTest {
         CursorFeedback cursor = new CursorFeedback(dispatched::add);
         ChoiceDialog<SettingsPanelPopup> dialog = new ChoiceDialog<>(SettingsPanelDialogs.PANEL, cursor);
         SettingsPanelPopup popup = new SettingsPanelPopup(
-                ThemeName.DARK, RepositoryTheme.NONE, Option.none(), Option.of(setup(Option.none())));
+                ThemeName.DARK, RepositoryTheme.NONE, Option.none(), Option.of(setup(Option.none())), true);
         Supplier<Element> view = () -> stack(
                 text("background"),
                 dialog.render(cursor.on(TestModels.loaded().openPopup(popup))).get());
@@ -143,7 +148,9 @@ class SettingsPanelDialogsTest {
             SettledPilot.of(runner).press(KeyCode.DOWN);
             SettledPilot.of(runner).press(KeyCode.DOWN);
             SettledPilot.of(runner).press(KeyCode.DOWN);
+            SettledPilot.of(runner).press(KeyCode.DOWN);
             SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).press(KeyCode.UP);
             SettledPilot.of(runner).press(KeyCode.UP);
             SettledPilot.of(runner).press(KeyCode.UP);
             SettledPilot.of(runner).press(KeyCode.UP);

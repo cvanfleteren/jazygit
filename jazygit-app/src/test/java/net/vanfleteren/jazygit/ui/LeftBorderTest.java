@@ -60,4 +60,27 @@ class LeftBorderTest {
             assertEquals(x, left.right() - 1, "mouse at " + x);
         });
     }
+
+    @ParameterizedTest
+    @ValueSource(ints = {20, 37, 80, 99})
+    void aColumnDraggedToTakesThatManyColumnsAgainInPanesNarrowerThan100Columns(int panesWidth) {
+        Rect panes = new Rect(0, 0, panesWidth, 10);
+        List.range(1, panesWidth)
+                .forEach(columns -> assertEquals(
+                        columns,
+                        LeftBorder.columns(
+                                panesWidth, LeftBorder.width(panes, columns - 1).get()),
+                        columns + " columns"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {100, 120, 160, 237, 400})
+    void eachPercentTakesColumnsThatAreThatPercentAgainInPanesOf100ColumnsOrMore(int panesWidth) {
+        Rect panes = new Rect(0, 0, panesWidth, 10);
+        List.rangeClosed(1, 99)
+                .forEach(percent -> assertEquals(
+                        Option.of(percent),
+                        LeftBorder.width(panes, LeftBorder.columns(panesWidth, percent) - 1),
+                        percent + " percent"));
+    }
 }

@@ -18,6 +18,8 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
 import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.feature.branch.tabs.BranchesTabMsg;
 import net.vanfleteren.jazygit.i18n.Messages;
@@ -38,6 +40,8 @@ public class JazygitApp extends ToolkitApp {
 
     // Rows of the command log panel, borders included.
     private static final int COMMAND_LOG_HEIGHT = CommandLogPanel.VISIBLE_LINES + 2;
+    // How long after a frame of the left column on its way the next one is drawn (ADR 81).
+    private static final Duration SLIDE_FRAME = Duration.ofMillis(16);
 
     private final SettingsStore.Loaded settings;
     private final Option<ThemeName> themeOverride;
@@ -58,6 +62,10 @@ public class JazygitApp extends ToolkitApp {
     private final BorderDrag borderDrag = new BorderDrag(dispatch);
     // Whether a Redraw is queued that no frame has been drawn since; only touched on the render thread.
     private boolean redrawPending;
+    // The left column as the frame before drew it, maybe on its way to the width chosen (ADR 81), and whether a frame
+    // that moves it on is asked for; only touched on the render thread.
+    private Option<ColumnSlide> leftSlide = Option.none();
+    private boolean slideFramePending;
 
     /**
      * @param env           what the repository the app starts in is read with; it opens other repositories in
@@ -220,7 +228,11 @@ public class JazygitApp extends ToolkitApp {
                         () -> runner().tuiRunner().backend().size().height() - FetchLine.HEIGHT)
                 .toOption();
         LeftColumn.Rendered rendered = leftColumn.render(model, focusedId, activeId, leftHeight);
-        Column left = rendered.column().percent(model.preferences().leftWidth(model.screen()));
+        // In columns, which the column slides through, once the width of the screen is known (ADR 81).
+        Column left = Try.of(() -> runner().tuiRunner().backend().size().width())
+                .toOption()
+                .map(width -> rendered.column().length(leftColumns(model, width)))
+                .getOrElse(() -> rendered.column().percent(model.preferences().leftWidth(model.screen())));
         var panes = row(
                 left,
                 column(
@@ -264,6 +276,33 @@ public class JazygitApp extends ToolkitApp {
         if (!reports.isEmpty()) {
             runner().tuiRunner().runLater(() -> reports.forEach(dispatch));
         }
+    }
+
+    /**
+     * How many columns the left column takes in a frame drawn now on a screen {@code width} columns wide, as
+     * {@link ColumnSlide#next} says (ADR 81), asking for the frame that moves it on while it is on its way.
+     */
+    private int leftColumns(Model model, int width) {
+        Instant now = clock.instant();
+        ColumnSlide shown = ColumnSlide.next(
+                leftSlide,
+                model.screen(),
+                width,
+                model.preferences().leftWidth(model.screen()),
+                model.preferences().settings().animations(),
+                model.preferences().dragged().isDefined(),
+                now);
+        leftSlide = Option.of(shown);
+        if (shown.moving(now) && !slideFramePending) {
+            slideFramePending = true;
+            runner().schedule(
+                            () -> runner().runOnRenderThread(() -> {
+                                slideFramePending = false;
+                                requestRedraw();
+                            }),
+                            SLIDE_FRAME);
+        }
+        return shown.columnsAt(now);
     }
 
     /**

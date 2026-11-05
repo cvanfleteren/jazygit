@@ -2,6 +2,8 @@ package net.vanfleteren.jazygit.feature.settings;
 
 import static net.vanfleteren.jazygit.state.TestModels.typed;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
@@ -41,14 +43,15 @@ class SettingsPanelUpdateTest {
                     new GhLogin("github.com", "alice", true, true),
                     new GhLogin("github.com", "alice-work", false, true))));
     private static final SettingsPanelPopup READ =
-            new SettingsPanelPopup(ThemeName.DARK, RepositoryTheme.NONE, Option.none(), Option.of(SETUP));
+            new SettingsPanelPopup(ThemeName.DARK, RepositoryTheme.NONE, Option.none(), Option.of(SETUP), true);
 
     @Test
     void requestingShowsTheSettingsAndReadsHowGhIsSetUp() {
         Next next = Update.update(TestModels.loaded(), new SettingsPanelMsg.Requested());
 
         assertEquals(
-                Option.of(new SettingsPanelPopup(ThemeName.DARK, RepositoryTheme.NONE, Option.none(), Option.none())),
+                Option.of(new SettingsPanelPopup(
+                        ThemeName.DARK, RepositoryTheme.NONE, Option.none(), Option.none(), true)),
                 next.model().popup(SettingsPanelPopup.class));
         assertEquals(List.of(new SettingsPanelCmd.ReadGitHub("gh")), next.cmds());
     }
@@ -235,11 +238,29 @@ class SettingsPanelUpdateTest {
     @Test
     void theAccountCannotBeChosenWhileTheAccountsAreRead() {
         Model reading = TestModels.loaded()
-                .openPopup(new SettingsPanelPopup(ThemeName.DARK, RepositoryTheme.NONE, Option.none(), Option.none()));
+                .openPopup(new SettingsPanelPopup(
+                        ThemeName.DARK, RepositoryTheme.NONE, Option.none(), Option.none(), true));
 
         assertEquals(
                 reading,
                 Update.update(reading, new SettingsPanelMsg.AccountRequested()).model());
+    }
+
+    @Test
+    void theAnimationsAreTurnedOffAndOnAgainAndKeptWithThePanelStillOpen() {
+        Model open = TestModels.loaded().openPopup(READ);
+        Settings kept = open.preferences().settings();
+
+        Next off = Update.update(open, new SettingsPanelMsg.AnimationsToggled());
+
+        assertFalse(off.model().preferences().settings().animations());
+        assertEquals(Option.of(READ.withAnimations(false)), off.model().popup(SettingsPanelPopup.class));
+        assertEquals(List.of(new Cmd.SaveSettings(kept, kept.withAnimations(false))), off.cmds());
+
+        Next on = Update.update(off.model(), new SettingsPanelMsg.AnimationsToggled());
+
+        assertTrue(on.model().preferences().settings().animations());
+        assertEquals(Option.of(READ), on.model().popup(SettingsPanelPopup.class));
     }
 
     @Test
