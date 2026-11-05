@@ -31,6 +31,15 @@ class ExecTest {
     }
 
     @Test
+    void onlyTheStartOfALongErrorOutputIsKept() {
+        ExecFailure.NonZero failed =
+                (ExecFailure.NonZero) sh("head -c 1000000 /dev/zero | tr '\\0' x >&2; exit 1", HashMap.empty())
+                        .getLeft();
+
+        assertEquals("x".repeat(Exec.MAX_STDERR), failed.stderr());
+    }
+
+    @Test
     void theEnvironmentIsSetForTheProgram() {
         assertEquals(Either.right("y"), sh("printf %s \"$X\"", HashMap.of("X", "y")));
     }

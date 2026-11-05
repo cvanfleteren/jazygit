@@ -124,8 +124,9 @@ public final class Program {
             return cmd.run(env);
         } catch (Throwable e) {
             // A bug rather than a git failure, which commands report as a Msg. Still keep the app going, and
-            // always answer: a command that never does would keep its load running and its branch busy.
-            bugs.accept(e);
+            // always answer: a command that never does would keep its load running and its branch busy. Writing the
+            // bug down may throw too, as when memory ran out.
+            Try.run(() -> bugs.accept(e));
             return cmd.failed(new Failure.Bug(e));
         }
     }
@@ -188,8 +189,11 @@ public final class Program {
     private void launch(Launch launch) {
         Cmd cmd = launch.cmd();
         Option<Lock> guard = cmd.guard().map(guards::get);
+        // A command that failed even to say so is still done, with nothing to report: else its job never ends.
         FutureTask<Void> task = new FutureTask<>(
-                () -> guarded(guard, () -> perform(env, cmd, bugs)).forEach(result -> done(launch, Option.of(result))),
+                () -> Try.of(() -> guarded(guard, () -> perform(env, cmd, bugs)).map(Option::of))
+                        .getOrElse(() -> Option.of(Option.none()))
+                        .forEach(result -> done(launch, result)),
                 null);
         cmd.slot()
                 .flatMap(slot -> Option.of(latest.put(slot, Tuple.of(launch, task))))

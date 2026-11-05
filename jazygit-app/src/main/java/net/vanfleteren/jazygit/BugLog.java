@@ -10,7 +10,7 @@ import java.time.Instant;
 import org.slf4j.LoggerFactory;
 
 /**
- * Where the commands that threw are written down, as the terminal is the TUI's.
+ * Where the commands and threads that threw are written down, as the terminal is the TUI's.
  */
 final class BugLog {
 
@@ -19,11 +19,11 @@ final class BugLog {
     private BugLog() {}
 
     /**
-     * Writes how a command threw to the bug log; failing that, it is lost. The debug log gets it too, after what led
-     * up to it.
+     * Writes how a command or a thread threw to the bug log; failing that, it is lost. The debug log gets it too,
+     * after what led up to it.
      */
     static void log(Throwable bug) {
-        LoggerFactory.getLogger(BugLog.class).error("A command threw", bug);
+        LoggerFactory.getLogger(BugLog.class).error("A command or a thread threw", bug);
         StringWriter trace = new StringWriter();
         bug.printStackTrace(new PrintWriter(trace));
         Try.run(() -> Files.writeString(

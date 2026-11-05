@@ -4,7 +4,6 @@ import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
@@ -21,6 +20,8 @@ import org.zeroturnaround.exec.ProcessResult;
  */
 public final class Exec {
 
+    // The most of the error output that is kept: what went wrong is said at its start (ADR 79).
+    static final int MAX_STDERR = 64 * 1024;
     // How git starts the lines that say what went wrong.
     private static final List<String> ERROR_PREFIXES = List.of("fatal:", "error:", "CONFLICT");
     // What ran, for the debug log; never the environment, which may hold a token.
@@ -41,7 +42,7 @@ public final class Exec {
 
     private static Either<ExecFailure, String> execute(
             Path directory, List<String> commandLine, Map<String, String> environment, Duration timeout) {
-        ByteArrayOutputStream stderr = new ByteArrayOutputStream();
+        FirstBytes stderr = new FirstBytes(MAX_STDERR);
         try {
             ProcessResult result = new ProcessExecutor()
                     .command(commandLine.toJavaList())
