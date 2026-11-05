@@ -180,7 +180,8 @@ final class CliDiffs implements Diffs {
      * The flags of {@code git diff} and {@code git show} that read diffs with {@code options}.
      */
     static List<String> flags(DiffOptions options) {
-        return options.ignoreWhitespace() ? List.of("--ignore-all-space") : List.empty();
+        return List.of(options.context().flag())
+                .appendAll(options.ignoreWhitespace() ? List.of("--ignore-all-space") : List.empty());
     }
 
     /**

@@ -25,4 +25,14 @@ public sealed interface DiffOptionsMsg extends Msg {
      * The user asked for the rich view to highlight the words that changed in a changed line, or only the line.
      */
     record WordsToggled() implements DiffOptionsMsg {}
+
+    /**
+     * The user asked for the diffs to show more lines around a change.
+     */
+    record ContextWidened() implements DiffOptionsMsg {}
+
+    /**
+     * The user asked for the diffs to show fewer lines around a change.
+     */
+    record ContextNarrowed() implements DiffOptionsMsg {}
 }

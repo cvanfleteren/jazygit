@@ -327,6 +327,24 @@ class ContentViewTest {
     }
 
     @Test
+    void theTitleSaysHowMuchContextIsShownWhenItIsNotThreeLines() {
+        DiffOptions ignoring = DiffOptions.DEFAULT.withIgnoreWhitespace(true);
+
+        assertEquals("Diff", ContentView.titled("Diff", DiffOptions.DEFAULT));
+        assertEquals(
+                "Diff · 10 lines of context",
+                ContentView.titled("Diff", DiffOptions.DEFAULT.withContext(new DiffContext(10))));
+        assertEquals(
+                "Diff · 1 line of context",
+                ContentView.titled("Diff", DiffOptions.DEFAULT.withContext(new DiffContext(1))));
+        assertEquals(
+                "Diff · no context", ContentView.titled("Diff", DiffOptions.DEFAULT.withContext(new DiffContext(0))));
+        assertEquals(
+                "Diff · the whole file · ignoring whitespace",
+                ContentView.titled("Diff", ignoring.withContext(DiffContext.WHOLE_FILE)));
+    }
+
+    @Test
     void theFilesShowTheStagedChangesAboveTheUnstagedOnes() {
         Model selected = TestModels.withFilesSelected(
                 SampleData.git(),

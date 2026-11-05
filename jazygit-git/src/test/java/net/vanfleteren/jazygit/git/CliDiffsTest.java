@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.CommitFile;
+import net.vanfleteren.jazygit.git.model.DiffContext;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.FileEntry;
@@ -315,6 +316,39 @@ class CliDiffsTest {
 
         assertEquals(List.of("src/one.txt"), UnifiedDiff.parse(whole).files().map(UnifiedDiff.FileDiff::path));
         assertEquals(List.of("src/one.txt"), UnifiedDiff.parse(file).files().map(UnifiedDiff.FileDiff::path));
+    }
+
+    @Test
+    void theContextIsThreeLinesWhateverTheUserConfiguredUntilItIsChanged() throws Exception {
+        init();
+        git("config", "diff.context", "0");
+        String numbered = List.rangeClosed(1, 20).map(n -> "line" + n + "\n").mkString();
+        Files.writeString(repo.resolve("a.txt"), numbered);
+        commitAll("init");
+        Files.writeString(repo.resolve("a.txt"), numbered.replace("line10\n", "changed\n"));
+        commitAll("second");
+
+        List<String> shown = diffs().commitChanges(head(), DiffOptions.DEFAULT)
+                .get()
+                .text()
+                .lines()
+                .collect(List.collector());
+        List<String> wider = diffs().commitChanges(head(), DiffOptions.DEFAULT.withContext(new DiffContext(5)))
+                .get()
+                .text()
+                .lines()
+                .collect(List.collector());
+        List<String> whole = diffs().commitChanges(head(), DiffOptions.DEFAULT.withContext(DiffContext.WHOLE_FILE))
+                .get()
+                .text()
+                .lines()
+                .collect(List.collector());
+
+        assertTrue(shown.containsAll(List.of(" line7", " line13")), shown.mkString("\n"));
+        assertFalse(shown.exists(line -> line.equals(" line6") || line.equals(" line14")), shown.mkString("\n"));
+        assertTrue(wider.containsAll(List.of(" line5", " line15")), wider.mkString("\n"));
+        assertFalse(wider.contains(" line4"), wider.mkString("\n"));
+        assertTrue(whole.containsAll(List.of(" line1", " line20")), whole.mkString("\n"));
     }
 
     private Diffs diffs() {

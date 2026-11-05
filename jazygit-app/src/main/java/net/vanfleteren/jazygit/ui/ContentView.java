@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitFile;
+import net.vanfleteren.jazygit.git.model.DiffContext;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Diffs;
@@ -89,10 +90,17 @@ final class ContentView {
     }
 
     /**
-     * {@code title}, saying that changes to whitespace only are left out when they are.
+     * {@code title}, saying how much context is shown when it is not git's own (ADR 72), and that changes to
+     * whitespace only are left out when they are.
      */
     static String titled(String title, DiffOptions options) {
-        return options.ignoreWhitespace() ? Messages.get("panel.ignoringWhitespace", title) : title;
+        DiffContext context = options.context();
+        String withContext = context.equals(DiffContext.DEFAULT)
+                ? title
+                : context.wholeFile()
+                        ? Messages.get("panel.wholeFile", title)
+                        : Messages.get("panel.context", title, context.lines());
+        return options.ignoreWhitespace() ? Messages.get("panel.ignoringWhitespace", withContext) : withContext;
     }
 
     /**

@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.state;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import lombok.With;
+import net.vanfleteren.jazygit.git.model.DiffContext;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.settings.DiffLook;
 import net.vanfleteren.jazygit.settings.DiffStyle;
@@ -18,6 +19,7 @@ import net.vanfleteren.jazygit.settings.ThemeName;
  * @param repositoryTheme the theme the git configuration gives the repository shown, which the saved one gives way
  *                        to (ADR 70)
  * @param ignoreWhitespace whether the diffs leave out changes to whitespace only, for this session only
+ * @param context       how many lines the diffs show around a change, for this session only (ADR 72)
  * @param dragged       the width the left column of a screen is dragged to, which is kept once it is let go
  * @param draggedHeights the heights the panes of the left column of a screen are dragged to, which are kept once
  *                       they are let go
@@ -28,18 +30,25 @@ public record Preferences(
         Option<ThemeName> themeOverride,
         RepositoryTheme repositoryTheme,
         boolean ignoreWhitespace,
+        DiffContext context,
         Option<Dragged> dragged,
         Option<DraggedHeights> draggedHeights) {
 
-    public static final Preferences DEFAULT =
-            new Preferences(Settings.DEFAULT, Option.none(), RepositoryTheme.NONE, false, Option.none(), Option.none());
+    public static final Preferences DEFAULT = new Preferences(
+            Settings.DEFAULT,
+            Option.none(),
+            RepositoryTheme.NONE,
+            false,
+            DiffContext.DEFAULT,
+            Option.none(),
+            Option.none());
 
     /**
      * How the diffs of the files and the commits are read: a merge against its first parent when changes are drawn
      * rich, as the rich view does not draw git's combined diff (ADR 44).
      */
     public DiffOptions diffOptions() {
-        return new DiffOptions(ignoreWhitespace, settings.diffStyle() == DiffStyle.RICH);
+        return new DiffOptions(ignoreWhitespace, settings.diffStyle() == DiffStyle.RICH, context);
     }
 
     /**

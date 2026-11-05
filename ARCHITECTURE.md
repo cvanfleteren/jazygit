@@ -347,11 +347,12 @@ request. The design and the steps still to come are in `prs.md`.
 How the diffs of the files and the commits are read is a `DiffOptions` (in `git.model`), which
 `Preferences.diffOptions()` makes of what the user chose. It says whether changes to whitespace only are left out,
 which Ctrl+W toggles anywhere outside a dialog (`feature.diff`) for the session only, and whether a merge is read
-against its first parent, which the diff style decides (below); the context and side-by-side diffs are to follow it
-there.
+against its first parent, which the diff style decides (below), and how many lines are shown around a change
+(`DiffContext`, ADR 72), which `}` and `{` step along 0, 1, 3, 5, 10, 20, 50 and the whole file, for the session
+only; side-by-side diffs are to follow them there.
 
 - `Diffs.uncommitted` and `Diffs.commitChanges` take the options, which `CliDiffs.flags` turns into git's
-  (`--ignore-all-space`). A file whose changes are all whitespace is then left out of the diff entirely, also from
+  (`-U<n>`, always, so the user's `diff.context` does not count, and `--ignore-all-space`). A file whose changes are all whitespace is then left out of the diff entirely, also from
   the files `git show --stat` lists.
 - `Cmd.LoadFileDiff`, `Cmd.LoadCommitDetail` and `Cmd.LoadStashDetail` carry the options, and so do the messages
   they send back. They are the `Cmd.DiffLoad`s: what one of them read with other options than the model's, or
@@ -359,9 +360,11 @@ there.
   highlighted item is.
 - Toggling reads the diffs shown again (the files, the commit, the commit of a divergence and the commit of a
   branch's commits), which keep showing as they were until they are read.
-- The titles of the diffs say when whitespace is ignored, and a diff that comes back blank says that only
+- The titles of the diffs say how much context is shown when it is not three lines, and when whitespace is ignored,
+  and a diff that comes back blank says that only
   whitespace changed.
-- The diff of a pull request is read with `gh pr diff`, which has no such option, so it shows all changes.
+- The diff of a pull request on its screen is read with `gh pr diff`, which has no such options, so it shows all
+  changes with three lines of context.
 
 ### The diff style and the files of a commit
 

@@ -61,6 +61,14 @@ class KeymapTest {
     }
 
     @Test
+    void bracesShowMoreAndLessContextInTheDiffs() {
+        assertEquals(Option.of(new DiffOptionsMsg.ContextWidened()), keymap.handleGlobal(KeyEvent.ofChar('}')));
+        assertEquals(Option.of(new DiffOptionsMsg.ContextNarrowed()), keymap.handleGlobal(KeyEvent.ofChar('{')));
+        assertTrue(keymap.globals().exists(global -> global.label().equals("}")));
+        assertTrue(keymap.globals().exists(global -> global.label().equals("{")));
+    }
+
+    @Test
     void shiftMAsksWhatToDoWithTheOperationInProgressFromAnywhere() {
         assertEquals(Option.of(new InProgressMsg.Requested()), keymap.handleGlobal(KeyEvent.ofChar('M')));
         assertEquals(Option.none(), keymap.handleGlobal(KeyEvent.ofChar('m')));
