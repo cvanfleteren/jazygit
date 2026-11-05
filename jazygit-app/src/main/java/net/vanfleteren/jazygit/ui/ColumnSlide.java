@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.ui;
 
+import io.vavr.control.Option;
 import java.time.Duration;
 import java.time.Instant;
 import net.vanfleteren.jazygit.state.Screen;
@@ -21,6 +22,25 @@ public record ColumnSlide(Screen screen, int width, int from, int to, Instant st
      * How long the column takes to get where it is going.
      */
     public static final Duration LENGTH = Duration.ofMillis(150);
+
+    /**
+     * The left column of {@code screen} in a frame drawn at {@code now} on a screen {@code width} columns wide, after
+     * it was {@code before} in the frame before, if one was drawn: on its way to {@code percent} of the screen, which
+     * it slides to while the {@code animations} are on and it is not {@code dragged}, else there at once. In the first
+     * frame, it is there at rest.
+     */
+    public static ColumnSlide next(
+            Option<ColumnSlide> before,
+            Screen screen,
+            int width,
+            int percent,
+            boolean animations,
+            boolean dragged,
+            Instant now) {
+        int columns = LeftBorder.columns(width, percent);
+        return before.map(shown -> shown.toward(screen, width, columns, animations && !dragged, now))
+                .getOrElse(() -> at(screen, width, columns));
+    }
 
     /**
      * The left column of {@code screen}, on a screen {@code width} columns wide, at rest {@code columns} wide.

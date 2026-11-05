@@ -279,22 +279,19 @@ public class JazygitApp extends ToolkitApp {
     }
 
     /**
-     * The columns of the screen; as many as there could be when that is not known.
-     */
-    /**
-     * How many columns the left column takes in a frame drawn now on a screen {@code width} columns wide: as many as
-     * the width chosen, which it slides to while the animations are on and it is not dragged (ADR 81), asking for
-     * the frames that move it on.
+     * How many columns the left column takes in a frame drawn now on a screen {@code width} columns wide, as
+     * {@link ColumnSlide#next} says (ADR 81), asking for the frame that moves it on while it is on its way.
      */
     private int leftColumns(Model model, int width) {
         Instant now = clock.instant();
-        Screen screen = model.screen();
-        int columns = LeftBorder.columns(width, model.preferences().leftWidth(screen));
-        boolean slide = model.preferences().settings().animations()
-                && model.preferences().dragged().isEmpty();
-        ColumnSlide shown = leftSlide
-                .map(before -> before.toward(screen, width, columns, slide, now))
-                .getOrElse(() -> ColumnSlide.at(screen, width, columns));
+        ColumnSlide shown = ColumnSlide.next(
+                leftSlide,
+                model.screen(),
+                width,
+                model.preferences().leftWidth(model.screen()),
+                model.preferences().settings().animations(),
+                model.preferences().dragged().isDefined(),
+                now);
         leftSlide = Option.of(shown);
         if (shown.moving(now) && !slideFramePending) {
             slideFramePending = true;
@@ -308,6 +305,9 @@ public class JazygitApp extends ToolkitApp {
         return shown.columnsAt(now);
     }
 
+    /**
+     * The columns of the screen; as many as there could be when that is not known.
+     */
     private int screenWidth() {
         return Try.of(() -> runner().tuiRunner().backend().size().width()).getOrElse(Integer.MAX_VALUE);
     }

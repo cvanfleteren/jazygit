@@ -14,7 +14,8 @@ import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
  * Looking at the settings and changing them: the theme, whether what moves moves smoothly, the gh executable, and
- * the account gh and git use for the repository. A change to how gh runs shows the repository again, as if the app had been started with it.
+ * the account gh and git use for the repository. A change to how gh runs shows the repository again, as if the app
+ * had been started with it.
  */
 public final class SettingsPanelUpdate {
 
