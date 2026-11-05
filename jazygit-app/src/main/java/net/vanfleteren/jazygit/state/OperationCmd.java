@@ -41,6 +41,14 @@ public interface OperationCmd extends Cmd {
     }
 
     /**
+     * The branches that are marked busy while this runs: {@link #busyBranch()}, or more for one that runs on several,
+     * as on the branches of a stack (ADR 74).
+     */
+    default List<BranchRef> busyBranches() {
+        return busyBranch().toList();
+    }
+
+    /**
      * Whether the operation changes what GitHub knows, like a push, after which the pull requests and the checks
      * of the branches are read again.
      */

@@ -35,8 +35,44 @@ class StackFragmentTest {
                                 new PullRequestStack.Entry(2, 95, State.OPEN))))),
                 stack("""
                         { "stackEntry": { "position": 2 }, "stack": { "number": 7, "size": 2, "entries": { "nodes": [
-                          { "position": 1, "pullRequest": { "number": 94, "state": "MERGED" } },
-                          { "position": 2, "pullRequest": { "number": 95, "state": "OPEN" } } ] } } }"""));
+                          { "position": 1, "pullRequest": { "number": 94, "state": "MERGED", "headRefName": "", "baseRefName": "" } },
+                          { "position": 2, "pullRequest": { "number": 95, "state": "OPEN", "headRefName": "", "baseRefName": "" } } ] } } }"""));
+    }
+
+    @Test
+    void anEntrySaysTheBranchesOfItsPullRequest() {
+        Option<PullRequestStack> read = stack("""
+                        { "stackEntry": { "position": 2 }, "stack": { "number": 7, "size": 2, "entries": { "nodes": [
+                          { "position": 1, "pullRequest": { "number": 94, "state": "OPEN",
+                            "headRefName": "feat/a", "baseRefName": "main" } },
+                          { "position": 2, "pullRequest": { "number": 95, "state": "OPEN",
+                            "headRefName": "feat/b", "baseRefName": "feat/a" } } ] } } }""").get();
+
+        assertEquals(
+                Option.of(List.of(
+                        new PullRequestStack.Entry(1, 94, State.OPEN, "feat/a", "main"),
+                        new PullRequestStack.Entry(2, 95, State.OPEN, "feat/b", "feat/a"))),
+                read.map(PullRequestStack::entries));
+        assertEquals(Option.of(Option.of("feat/a")), read.map(PullRequestStack::branchBelow));
+        assertEquals(Option.of(Option.of("main")), read.map(PullRequestStack::base));
+    }
+
+    @Test
+    void anEntrySaysWhereItsBranchWasAndWhetherItIsInAMergeQueue() {
+        Option<PullRequestStack> read = stack("""
+                        { "stackEntry": { "position": 2 }, "stack": { "number": 7, "size": 2, "entries": { "nodes": [
+                          { "position": 1, "pullRequest": { "number": 94, "state": "MERGED",
+                            "headRefName": "feat/a", "baseRefName": "main", "headRefOid": "abc123",
+                            "isInMergeQueue": false } },
+                          { "position": 2, "pullRequest": { "number": 95, "state": "OPEN",
+                            "headRefName": "feat/b", "baseRefName": "feat/a", "headRefOid": "def456",
+                            "isInMergeQueue": true } } ] } } }""").get();
+
+        assertEquals(
+                Option.of(List.of(
+                        new PullRequestStack.Entry(1, 94, State.MERGED, "feat/a", "main", Option.of("abc123"), false),
+                        new PullRequestStack.Entry(2, 95, State.OPEN, "feat/b", "feat/a", Option.of("def456"), true))),
+                read.map(PullRequestStack::entries));
     }
 
     @Test
@@ -47,7 +83,7 @@ class StackFragmentTest {
                 stack("""
                         { "stackEntry": { "position": 2 }, "stack": { "number": 7, "size": 3, "entries": { "nodes": [
                           { "position": 1, "pullRequest": null }, null,
-                          { "position": 2, "pullRequest": { "number": 95, "state": "OPEN" } } ] } } }"""));
+                          { "position": 2, "pullRequest": { "number": 95, "state": "OPEN", "headRefName": "", "baseRefName": "" } } ] } } }"""));
     }
 
     @Test
@@ -69,6 +105,6 @@ class StackFragmentTest {
                                 "stack.entries.nodes[0].pullRequest.state: expected one of OPEN, CLOSED, MERGED, got \"DRAFT\"")),
                 stack("""
                         { "stackEntry": { "position": 1 }, "stack": { "number": 7, "size": 1, "entries": { "nodes": [
-                          { "position": 1, "pullRequest": { "number": 95, "state": "DRAFT" } } ] } } }"""));
+                          { "position": 1, "pullRequest": { "number": 95, "state": "DRAFT", "headRefName": "", "baseRefName": "" } } ] } } }"""));
     }
 }

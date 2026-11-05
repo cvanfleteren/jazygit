@@ -54,6 +54,16 @@ public final class ErrorText {
             case AppError.NoBranchCheckedOut() -> Messages.get("error.detached");
             case AppError.UnpushedCommits(BranchName branch) ->
                 Messages.get("error.fastForward.unpushed", branch.value());
+            case AppError.StackNotRebased(int stack, String branch, var why) ->
+                Messages.get(
+                        "error.stackNotRebased",
+                        String.valueOf(stack),
+                        Messages.get("error.stackNotRebased." + why.name().toLowerCase(java.util.Locale.ROOT), branch));
+            case AppError.StackNotPushed(int stack, String branch, var why) ->
+                Messages.get(
+                        "error.stackNotPushed",
+                        String.valueOf(stack),
+                        Messages.get("error.stackNotRebased." + why.name().toLowerCase(java.util.Locale.ROOT), branch));
             case AppError.CheckedOutElsewhere(var operation, BranchName branch, var worktree) ->
                 Messages.get(operation.errorKey(), branch.value(), Messages.get("error.checkedOutElsewhere", worktree));
             case AppError.MainWorktreeNotRemovable(String worktree) ->
@@ -167,6 +177,9 @@ public final class ErrorText {
             case GitError.NotFullyMerged(String explanation) -> explanation;
             case GitError.StashNotRestored(var cause) -> Messages.get("git.stashPopFailed", of(cause));
             case GitError.StashGone(String message) -> Messages.get("git.stashGone", message);
+            case GitError.StackBranchMoved(BranchName branch) -> Messages.get("git.stackBranchMoved", branch.value());
+            case GitError.StackBranchCheckedOutElsewhere(BranchName branch, String worktree) ->
+                Messages.get("git.stackBranchCheckedOutElsewhere", branch.value(), worktree);
             case GitError.PushRefused(String pushDefault, RemoteBranch upstream) ->
                 Messages.get("git.pushRefused", pushDefault, upstream.shortName());
             case GitError.StoppedOnConflicts(var inProgress, int conflicts) ->

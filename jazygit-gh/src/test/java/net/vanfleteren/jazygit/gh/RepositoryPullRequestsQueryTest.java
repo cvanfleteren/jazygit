@@ -54,14 +54,18 @@ class RepositoryPullRequestsQueryTest {
                                         Checks.NONE,
                                         Review.NONE,
                                         Instant.parse("2026-10-15T08:00:00Z"),
-                                        "https://github.com/owner/repo/pull/7")),
+                                        "https://github.com/owner/repo/pull/7",
+                                        Option.none(),
+                                        Option.none(),
+                                        Option.none(),
+                                        "main")),
                                 1),
                         Option.of("bob"),
                         7)),
                 read("{ \"login\": \"bob\" }", "{ \"number\": 7 }", 1, """
                         { "number": 7, "title": "WIP", "url": "https://github.com/owner/repo/pull/7",
                           "updatedAt": "2026-10-15T08:00:00Z", "isDraft": true, "isCrossRepository": true,
-                          "headRefName": "patch-1", "author": null, "repository": { "nameWithOwner": "owner/repo" },
+                          "headRefName": "patch-1", "baseRefName": "main", "author": null, "repository": { "nameWithOwner": "owner/repo" },
                           "reviewDecision": null, "stackEntry": null, "stack": null,
                           "commits": { "nodes": [ { "commit": { "statusCheckRollup": null, %s } } ] } }""".formatted(NO_SUITES)));
     }
@@ -90,8 +94,8 @@ class RepositoryPullRequestsQueryTest {
                         2,
                         2,
                         List.of(
-                                new PullRequestStack.Entry(1, 94, State.MERGED),
-                                new PullRequestStack.Entry(2, 95, State.OPEN)))),
+                                new PullRequestStack.Entry(1, 94, State.MERGED, "b94", "main"),
+                                new PullRequestStack.Entry(2, 95, State.OPEN, "b95", "b94")))),
                 read("{ \"login\": \"bob\" }", "", 1, summary(95, "null", NO_SUITES, STACKED))
                         .get()
                         .open()

@@ -56,6 +56,11 @@ public sealed interface CreatePullRequestMsg extends Msg {
     record PullRequestEdited(NewPullRequest pullRequest) implements CreatePullRequestMsg {}
 
     /**
+     * The user ticked or unticked stacking the new pull request on the one of its base (ADR 73).
+     */
+    record StackToggled() implements CreatePullRequestMsg {}
+
+    /**
      * The user confirmed what the new pull request says.
      */
     record Confirmed() implements CreatePullRequestMsg {}

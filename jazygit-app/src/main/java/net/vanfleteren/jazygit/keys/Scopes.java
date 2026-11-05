@@ -30,6 +30,10 @@ public final class Scopes {
      */
     public static final Scope<BranchName> BRANCHES = new Scope<>("branches", "panel.branches.title");
     /**
+     * The number of the stack whose header is selected in the local branches (ADR 72).
+     */
+    public static final Scope<Integer> STACKS = new Scope<>("stacks", "panel.stacks.title");
+    /**
      * The selected remote-tracking branch.
      */
     public static final Scope<RemoteBranch> REMOTE_BRANCHES =

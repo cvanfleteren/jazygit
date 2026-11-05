@@ -22,7 +22,7 @@ import org.junit.jupiter.api.Test;
  */
 class MetadataGuardTest {
 
-    private static final LoadBranches BRANCHES = new LoadBranches();
+    private static final LoadBranches BRANCHES = LoadBranches.LISTED;
     private static final LoadStashes STASHES = new LoadStashes();
     private static final LoadWorktrees WORKTREES = new LoadWorktrees();
 
@@ -57,7 +57,7 @@ class MetadataGuardTest {
 
     private static Msg cameBack(Cmd cmd) {
         return switch (cmd) {
-            case LoadBranches() -> TestModels.branchesLoaded(new AllBranches(TestModels.BRANCHES, List.empty()));
+            case LoadBranches _ -> TestModels.branchesLoaded(new AllBranches(TestModels.BRANCHES, List.empty()));
             case LoadStashes() -> new LoadMsg.StashesLoaded(List.empty());
             case LoadWorktrees() -> new LoadMsg.WorktreesLoaded(List.empty());
             default -> throw new IllegalArgumentException("Not guarded: " + cmd);

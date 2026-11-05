@@ -64,8 +64,26 @@ class BranchChecksUpdateTest {
                 Option.of(new Upstream(new BranchRef.Remote(upstream), 1, 0)));
     }
 
+    /**
+     * The reads {@code next} starts, apart from reading the branches again as the remotes on GitHub became known.
+     */
+    private static List<Cmd> reads(Next next) {
+        return next.cmds().filter(cmd -> !(cmd instanceof Cmd.LoadBranches));
+    }
+
     private static Model withChecks() {
         return Update.update(loaded(), new BranchChecksMsg.Loaded(ON_ORIGIN)).model();
+    }
+
+    @Test
+    void theBranchesAreReadAgainWhenTheRemotesOnGitHubAreRead() {
+        Next read = Update.update(loaded(), new BranchChecksMsg.Loaded(ON_ORIGIN));
+        assertEquals(
+                List.of(new Cmd.LoadBranches(GitHubBases.of(read.model().gitHub()))),
+                read.cmds().filter(Cmd.LoadBranches.class::isInstance));
+
+        Next same = Update.update(read.model(), new BranchChecksMsg.Loaded(ON_ORIGIN));
+        assertEquals(List.empty(), same.cmds().filter(Cmd.LoadBranches.class::isInstance));
     }
 
     @Test
@@ -187,13 +205,13 @@ class BranchChecksUpdateTest {
         assertEquals(
                 List.of(new LoadBranchCheckRuns(
                         List.of("zeta", "trunk", "alpha").map(BranchName::new))),
-                next.cmds());
+                reads(next));
     }
 
     @Test
     void theChecksOfPendingBranchesAreNotReadTwiceAtOnceSoAnOlderReadCannotReplaceANewerOne() {
         Next first = TestModels.stepped(loaded(), new BranchChecksMsg.Loaded(pending("feature")));
-        assertEquals(1, first.cmds().size());
+        assertEquals(1, reads(first).size());
 
         Next second = Update.update(first.model(), new BranchChecksMsg.Loaded(pending("feature")));
         assertEquals(List.empty(), second.cmds());
@@ -228,10 +246,8 @@ class BranchChecksUpdateTest {
 
         assertEquals(
                 CheckTimings.PENDING_BRANCHES,
-                ((LoadBranchCheckRuns) many.cmds().last()).branches().size());
-        assertEquals(
-                List.empty(),
-                Update.update(loaded(), new BranchChecksMsg.Loaded(ON_ORIGIN)).cmds());
+                ((LoadBranchCheckRuns) reads(many).last()).branches().size());
+        assertEquals(List.empty(), reads(Update.update(loaded(), new BranchChecksMsg.Loaded(ON_ORIGIN))));
     }
 
     @Test
@@ -332,7 +348,7 @@ class BranchChecksUpdateTest {
         assertEquals(List.empty(), asked.cmds());
 
         Next done = TestModels.done(asked.model(), new LoadBranchChecks(), new BranchChecksMsg.Loaded(ON_ORIGIN));
-        assertEquals(List.of(new LoadBranchChecks()), done.cmds());
+        assertEquals(List.of(new LoadBranchChecks()), reads(done));
         assertEquals(Option.of(ON_ORIGIN), done.model().gitHub().branchChecks());
 
         assertEquals(

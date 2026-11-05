@@ -5,6 +5,7 @@ import io.vavr.collection.List;
 import java.time.Duration;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import net.vanfleteren.jazygit.feature.branch.stack.StackMsg;
 import net.vanfleteren.jazygit.feature.fetch.FetchMsg;
 import net.vanfleteren.jazygit.feature.github.checks.ChecksMsg;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestMsg;
@@ -32,7 +33,9 @@ final class Timers {
             // The dialogs that list checks read them only while one is not done, or once a minute (ADR 34).
             new Timer(CheckTimings.READ_WHILE_PENDING, PullRequestMsg.Tick::new),
             new Timer(CheckTimings.READ_WHILE_PENDING, ChecksMsg.Tick::new),
-            new Timer(MERGE_CHECK_INTERVAL, PullRequestMsg.MergeTick::new));
+            new Timer(MERGE_CHECK_INTERVAL, PullRequestMsg.MergeTick::new),
+            // The pull requests are read again while they do not show a change made to the stacks yet (ADR 73).
+            new Timer(MERGE_CHECK_INTERVAL, StackMsg.Tick::new));
 
     private Timers() {}
 

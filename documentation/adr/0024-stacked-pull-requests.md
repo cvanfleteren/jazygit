@@ -95,3 +95,6 @@ review, which no longer matter:
   `stack` or `stackEntry` on a server that does not know them, and there may be no `merge-async`. Not only would stacks
   not show, every pull request read and merge would fail. Asking without those fields, and merging with `gh pr merge`,
   when a server does not have them, is left until a server needs it.
+
+Amended by ADR 72, 73 and 74: stacks show as a node of the branches list, are linked and unstacked from jazygit, and
+are rebased and pushed whole.

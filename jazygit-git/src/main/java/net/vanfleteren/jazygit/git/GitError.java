@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.git;
 import io.vavr.control.Option;
 import java.io.IOException;
 import java.nio.file.Path;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
@@ -115,6 +116,23 @@ public sealed interface GitError {
      * @param explanation git's explanation
      */
     record NotFullyMerged(String explanation) implements GitError {}
+
+    /**
+     * A rebase of a stack did not start: {@code branch} moved since its commits were read, and the todo would leave
+     * out what it has now (ADR 74).
+     *
+     * @param branch the branch that moved
+     */
+    record StackBranchMoved(BranchName branch) implements GitError {}
+
+    /**
+     * A rebase of a stack did not start: {@code branch} is checked out in another worktree, under whose files it would
+     * move (ADR 74).
+     *
+     * @param branch   the branch
+     * @param worktree where it is checked out
+     */
+    record StackBranchCheckedOutElsewhere(BranchName branch, String worktree) implements GitError {}
 
     /**
      * The operation stopped on conflicts, and is left so for the user to resolve them and go on. It did not

@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.gh.model;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.State;
 
 /**
@@ -23,11 +24,78 @@ public record PullRequestStack(int number, int position, int size, List<Entry> e
     }
 
     /**
+     * The branch the closest open pull request below this one merges from, which this one is built on; none for the
+     * bottom one, when the ones below are merged or closed, or when that one cannot be read. A stack keeps its merged
+     * pull requests, but GitHub moves the base of the one above onto what they merged into.
+     */
+    public Option<String> branchBelow() {
+        return entries.filter(entry -> entry.position() < position && entry.state() == State.OPEN)
+                .maxBy(Entry::position)
+                .map(Entry::headBranch)
+                .filter(branch -> !branch.isEmpty());
+    }
+
+    /**
+     * The branch the bottom pull request of the stack merges into, its base; none when it cannot be read.
+     */
+    public Option<String> base() {
+        return entries.minBy(Entry::position).map(Entry::baseBranch).filter(branch -> !branch.isEmpty());
+    }
+
+    /**
+     * The entry of the pull request it was read for, at {@link #position}.
+     */
+    public Option<Entry> own() {
+        return entries.find(entry -> entry.position() == position);
+    }
+
+    /**
+     * Whether the pull request it was read for is the top open one of the stack, which more can be put on.
+     */
+    public boolean isTop() {
+        return entries.forAll(entry -> entry.position() <= position);
+    }
+
+    /**
      * A pull request of a stack.
      *
-     * @param position where it sits in the stack, 1 being the closest to the base
-     * @param number   its number
-     * @param state    whether it is open, merged or closed
+     * @param position   where it sits in the stack, 1 being the closest to the base
+     * @param number     its number
+     * @param state      whether it is open, merged or closed
+     * @param headBranch the branch it merges from, empty when not known
+     * @param baseBranch the branch it merges into, empty when not known
+     * @param headOid    the commit its branch was at last, as GitHub has it: where a merged one was (ADR 74)
+     * @param queued     whether it is in a merge queue, where rewriting its branch takes it out (ADR 74)
      */
-    public record Entry(int position, int number, State state) {}
+    public record Entry(
+            int position,
+            int number,
+            State state,
+            String headBranch,
+            String baseBranch,
+            Option<String> headOid,
+            boolean queued) {
+
+        /**
+         * One whose head commit and queue are not known.
+         */
+        public Entry(int position, int number, State state, String headBranch, String baseBranch) {
+            this(position, number, state, headBranch, baseBranch, Option.none(), false);
+        }
+
+        /**
+         * One whose branches are not known.
+         */
+        public Entry(int position, int number, State state) {
+            this(position, number, state, "", "", Option.none(), false);
+        }
+
+        /**
+         * Whether it stays in its stack on GitHub when the stack is taken apart: it is merged, or in a merge queue
+         * (ADR 73).
+         */
+        public boolean staysWhenUnstacked() {
+            return state == State.MERGED || queued;
+        }
+    }
 }

@@ -24,6 +24,8 @@ import net.vanfleteren.jazygit.git.model.RemoteBranch;
  * @param pullRequests        the open pull requests on GitHub, by the remote branch they merge from; none until they
  *                            were read once, and the ones read last when reading them again failed
  * @param pullRequestsFailure why the pull requests could not be read the last time, if they could not
+ * @param protectedBranches   the branches that are protected on GitHub, roots that others are built on; none until
+ *                            they were read, once while jazygit runs, as they seldom change (ADR 72)
  * @param branchChecks        how the CI checks are doing on the branches on GitHub; none until they were read once,
  *                            and the ones read last when reading them again failed
  * @param again               the running reads to start again once they are done, as they may have missed a change
@@ -42,11 +44,14 @@ import net.vanfleteren.jazygit.git.model.RemoteBranch;
  * @param failing             the reads that keep failing, which the timers start again only once they waited longer the
  *                            more they failed: a repository without a remote on GitHub, gh logged out or offline
  *                            (ADR 58)
+ * @param stackChange         a change made to the stacks that the pull requests read may not show yet, which they are
+ *                            read again for until they do (ADR 73)
  */
 @With
 public record GitHubState(
         Option<Map<BranchName, PullRequest>> pullRequests,
         Option<Failure> pullRequestsFailure,
+        Option<Set<BranchName>> protectedBranches,
         Option<GitHubChecks> branchChecks,
         Set<Cmd> again,
         Map<Integer, PullRequestMerge> merges,
@@ -54,9 +59,11 @@ public record GitHubState(
         Option<PendingChecks> pendingChecks,
         long nextRead,
         Map<Integer, Long> readsFrom,
-        Map<Cmd, FailingRead> failing) {
+        Map<Cmd, FailingRead> failing,
+        Option<StackChange> stackChange) {
 
     public static final GitHubState NOT_READ = new GitHubState(
+            Option.none(),
             Option.none(),
             Option.none(),
             Option.none(),
@@ -66,7 +73,8 @@ public record GitHubState(
             Option.none(),
             0,
             HashMap.empty(),
-            HashMap.empty());
+            HashMap.empty(),
+            Option.none());
 
     /**
      * How the latest merge that merges pull request {@code number} went, or is going: the merge of it, or of one
@@ -254,7 +262,7 @@ public record GitHubState(
     /**
      * Whether {@code remote} is on GitHub, or could be, as which remotes are is not known yet.
      */
-    private boolean mayBeOnGitHub(RemoteBranch remote) {
+    public boolean mayBeOnGitHub(RemoteBranch remote) {
         return branchChecks.isEmpty() || onGitHub(remote);
     }
 }

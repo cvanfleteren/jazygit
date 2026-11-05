@@ -46,7 +46,16 @@ class GitHubStateTest {
     void aListedPullRequestThatWasReadIsListedAsItNowIs() {
         assertEquals(
                 Option.of(HashMap.of(
-                        FEATURE, new PullRequest(42, "feature", true, Checks.FAILING, Review.CHANGES_REQUESTED))),
+                        FEATURE,
+                        new PullRequest(
+                                42,
+                                "feature",
+                                "main",
+                                true,
+                                Checks.FAILING,
+                                Review.CHANGES_REQUESTED,
+                                Option.none(),
+                                Option.none()))),
                 LISTED.withRead(details(42, "feature", State.OPEN)).pullRequests());
     }
 

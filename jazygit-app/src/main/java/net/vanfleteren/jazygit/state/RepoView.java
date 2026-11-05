@@ -1,6 +1,8 @@
 package net.vanfleteren.jazygit.state;
 
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
+import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import lombok.With;
 import net.vanfleteren.jazygit.git.model.*;
@@ -16,6 +18,8 @@ import net.vanfleteren.jazygit.git.model.*;
  *                      branches while it is open
  * @param branchLog    the log of the branch, local or remote, highlighted in the branches pane, once one is
  *                     highlighted
+ * @param unfetched    the pull request of a stack highlighted in the branches pane in place of a branch, whose
+ *                     branch is neither checked out nor fetched, so that no log shows (ADR 72)
  * @param branchAhead  the commits of the branch whose log is shown that are not on its base, keyed by the branch;
  *                     none in it when the branch has no base
  * @param commitDetail what the commit highlighted in the commits pane changed (its files, a summary and its
@@ -33,6 +37,8 @@ import net.vanfleteren.jazygit.git.model.*;
  * @param commitSearch the search of the log of HEAD that was run last, which the commits pane lists in place of
  *                     the log until it is cleared
  * @param onlyAhead    whether the logs list only the commits not on their base, and the commit they forked from
+ * @param closedStacks the numbers of the stacks the branches pane shows closed, as only their header; a stack
+ *                     starts open (ADR 72)
  */
 @With
 public record RepoView(
@@ -40,6 +46,7 @@ public record RepoView(
         Option<DivergenceView> divergence,
         Option<BranchCommitsView> branchCommits,
         Option<Preview<BranchRef, List<Commit>>> branchLog,
+        Option<Integer> unfetched,
         Option<Preview<BranchRef, Option<Ahead>>> branchAhead,
         Option<Preview<Sha, DiffText>> commitDetail,
         Option<Preview<List<FileEntry>, Diffs>> fileDiff,
@@ -49,7 +56,8 @@ public record RepoView(
         Option<Commit> cherryPick,
         Option<String> searchLine,
         Option<CommitSearch> commitSearch,
-        boolean onlyAhead) {
+        boolean onlyAhead,
+        Set<Integer> closedStacks) {
 
     public static final RepoView INITIAL = new RepoView(
             BranchesTab.LOCAL,
@@ -65,5 +73,7 @@ public record RepoView(
             Option.none(),
             Option.none(),
             Option.none(),
-            false);
+            Option.none(),
+            false,
+            HashSet.empty());
 }

@@ -8,7 +8,6 @@ import static net.vanfleteren.jazygit.json.Decoder.instant;
 import static net.vanfleteren.jazygit.json.Decoder.integer;
 import static net.vanfleteren.jazygit.json.Decoder.list;
 import static net.vanfleteren.jazygit.json.Decoder.map2;
-import static net.vanfleteren.jazygit.json.Decoder.map4;
 import static net.vanfleteren.jazygit.json.Decoder.map5;
 import static net.vanfleteren.jazygit.json.Decoder.map6;
 import static net.vanfleteren.jazygit.json.Decoder.nullable;
@@ -37,7 +36,7 @@ import net.vanfleteren.jazygit.json.Decoder;
 final class SummaryFragment {
 
     static final String FRAGMENT = """
-            fragment summary on PullRequest { number title url updatedAt isDraft isCrossRepository headRefName headRefOid baseRefOid \
+            fragment summary on PullRequest { number title url updatedAt isDraft isCrossRepository headRefName baseRefName headRefOid baseRefOid \
             author { login } repository { nameWithOwner } reviewDecision %s \
             commits(last: 1) { nodes { commit { statusCheckRollup { state } %s } } } }""".formatted(StackFragment.FIELDS, SuiteFragment.FIELDS);
 
@@ -76,12 +75,13 @@ final class SummaryFragment {
     static final Decoder<Tuple2<Option<GhCommit>, Option<GhCommit>>> COMMITS =
             map2(commit("baseRefOid"), commit("headRefOid"), Tuple::of);
 
-    static final Decoder<PullRequestSummary> SUMMARY = map4(
+    static final Decoder<PullRequestSummary> SUMMARY = map5(
             NAMED,
             STATE,
             StackFragment.DECODER,
             COMMITS,
-            (named, state, stack, commits) -> new PullRequestSummary(
+            field("baseRefName", string()),
+            (named, state, stack, commits, base) -> new PullRequestSummary(
                     named._1(),
                     named._2(),
                     named._3(),
@@ -95,7 +95,8 @@ final class SummaryFragment {
                     named._6(),
                     stack,
                     commits._1(),
-                    commits._2()));
+                    commits._2(),
+                    base));
 
     /**
      * A hit of a search of issues: a pull request, or none for an issue, which answers only its {@code __typename}.

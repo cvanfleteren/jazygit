@@ -247,16 +247,16 @@ class DetailsQueryTest {
                         .put("stackEntry", "{ \"position\": 2 }")
                         .put("stack", """
                                 { "number": 96, "size": 2, "entries": { "nodes": [
-                                  { "position": 1, "pullRequest": { "number": 94, "state": "MERGED" } },
-                                  { "position": 2, "pullRequest": { "number": 95, "state": "OPEN" } } ] } }"""))
+                                  { "position": 1, "pullRequest": { "number": 94, "state": "MERGED", "headRefName": "b94", "baseRefName": "main" } },
+                                  { "position": 2, "pullRequest": { "number": 95, "state": "OPEN", "headRefName": "b95", "baseRefName": "b94" } } ] } }"""))
                 .get();
         PullRequestStack stack = new PullRequestStack(
                 96,
                 2,
                 2,
                 List.of(
-                        new PullRequestStack.Entry(1, 94, State.MERGED),
-                        new PullRequestStack.Entry(2, 95, State.OPEN)));
+                        new PullRequestStack.Entry(1, 94, State.MERGED, "b94", "main"),
+                        new PullRequestStack.Entry(2, 95, State.OPEN, "b95", "b94")));
 
         assertEquals(Option.of(new GhCommit("abc123")), details.branches().headCommit());
         assertEquals(Option.of(stack), details.stack());

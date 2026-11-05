@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.state;
 
-import static net.vanfleteren.jazygit.state.TestModels.loaded;
 import static net.vanfleteren.jazygit.state.TestModels.refused;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -25,6 +24,13 @@ import org.junit.jupiter.api.Test;
  * Reading the open pull requests from GitHub.
  */
 class PullRequestsUpdateTest {
+
+    /**
+     * The repository read, with the protected branches read too: they are read once, before the first pull requests.
+     */
+    private static Model loaded() {
+        return TestModels.loaded().mapGitHub(gitHub -> gitHub.withProtectedBranches(Option.of(HashSet.empty())));
+    }
 
     private static final PullRequest FEATURE_PR =
             new PullRequest(42, "feature", false, Checks.PASSING, Review.APPROVED);
@@ -183,5 +189,52 @@ class PullRequestsUpdateTest {
 
         assertEquals(List.of(new LoadRepositoryPullRequests(), new LoadBranchChecks()), asked.cmds());
         assertEquals(HashSet.empty(), asked.model().gitHub().again());
+    }
+
+    @Test
+    void theProtectedBranchesAreReadOnceWithThePullRequests() {
+        Next first = Update.update(TestModels.loaded(), new PullRequestsMsg.Refresh());
+        assertEquals(
+                List.of(new LoadProtectedBranches(), new LoadRepositoryPullRequests(), new LoadBranchChecks()),
+                first.cmds());
+
+        Model read = Update.update(TestModels.loaded(), new PullRequestsMsg.ProtectedLoaded(List.of("develop")))
+                .model();
+        assertEquals(
+                Option.of(HashSet.of(new BranchName("develop"))), read.gitHub().protectedBranches());
+        assertEquals(
+                List.of(new LoadRepositoryPullRequests(), new LoadBranchChecks()),
+                Update.update(read, new PullRequestsMsg.Refresh()).cmds());
+    }
+
+    @Test
+    void protectedBranchesThatCannotBeReadAreReadAgainLater() {
+        Model failed = Update.update(TestModels.loaded(), new PullRequestsMsg.ProtectedLoadFailed(refused("offline")))
+                .model();
+
+        assertEquals(Option.none(), failed.gitHub().protectedBranches());
+    }
+
+    @Test
+    void theBranchesAreReadAgainWhenGitHubSaysAnotherBaseForOne() {
+        PullRequest onA = new PullRequest(
+                42, "feature", "feat/a", false, Checks.PASSING, Review.APPROVED, Option.none(), Option.none());
+
+        Next read = Update.update(loaded(), new PullRequestsMsg.Loaded(List.of(onA)));
+        assertEquals(
+                List.of(new Cmd.LoadBranches(GitHubBases.of(read.model().gitHub()))),
+                read.cmds().filter(Cmd.LoadBranches.class::isInstance));
+
+        Next same = Update.update(read.model(), new PullRequestsMsg.Loaded(List.of(onA)));
+        assertEquals(List.empty(), same.cmds().filter(Cmd.LoadBranches.class::isInstance));
+    }
+
+    @Test
+    void theBranchesAreReadAgainWhenTheProtectedBranchesAreRead() {
+        Next read = Update.update(TestModels.loaded(), new PullRequestsMsg.ProtectedLoaded(List.of("develop")));
+
+        assertEquals(
+                List.of(new Cmd.LoadBranches(GitHubBases.of(read.model().gitHub()))),
+                read.cmds().filter(Cmd.LoadBranches.class::isInstance));
     }
 }

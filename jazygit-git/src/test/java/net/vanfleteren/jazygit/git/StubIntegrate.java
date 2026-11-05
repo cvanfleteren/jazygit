@@ -9,7 +9,9 @@ import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.InProgressAction;
 import net.vanfleteren.jazygit.git.model.MergeMode;
+import net.vanfleteren.jazygit.git.model.Revision;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.git.model.StackLayer;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
@@ -41,6 +43,12 @@ public interface StubIntegrate extends Integrate {
 
     @Override
     default Either<GitFailure<GitError>, List<ExecutedCommand>> rebase(BranchName onto) {
+        return ran();
+    }
+
+    @Override
+    default Either<GitFailure<GitError>, List<ExecutedCommand>> rebaseStack(
+            Revision base, List<StackLayer.Commits> layers) {
         return ran();
     }
 }

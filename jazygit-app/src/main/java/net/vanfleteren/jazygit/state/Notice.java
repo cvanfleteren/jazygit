@@ -36,4 +36,16 @@ public sealed interface Notice {
      * GitHub was still merging the pull request of {@code branch} after so long that it is no longer asked about.
      */
     record MergeStillPending(BranchName branch) implements Notice {}
+
+    /**
+     * The stack of pull request {@code pullRequest}, linked to be rebased, was not listed by GitHub after so long
+     * that it is no longer waited for: it was not rebased (ADR 74).
+     */
+    record StackNotListed(int pullRequest) implements Notice {}
+
+    /**
+     * Stack {@code stack} was ready to be rebased while another dialog was open, which it does not take the place of:
+     * it was not rebased (ADR 74).
+     */
+    record StackNotAsked(int stack) implements Notice {}
 }
