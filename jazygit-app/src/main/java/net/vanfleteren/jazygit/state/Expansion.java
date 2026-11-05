@@ -74,7 +74,7 @@ public record Expansion(ScrolledContent content, Map<String, Expanded> files) {
                 .map(read -> new FoldedFile(
                         Folding.fold(read, context.lines(), expanded.lines()),
                         whole.truncated()
-                                ? new Fold(Option.none(), Read.CUT)
+                                ? new Fold(Option.none(), Read.CUT, Option.of(Folding.length(read)))
                                 : new Fold(Option.of(Folding.length(read)), Read.WHOLE)))
                 .getOrElse(() -> new FoldedFile(
                         file, whole.truncated() ? new Fold(Option.none(), Read.TOO_LONG) : Fold.UNKNOWN));
@@ -111,12 +111,28 @@ public record Expansion(ScrolledContent content, Map<String, Expanded> files) {
     }
 
     /**
-     * What is known of a file of a diff: how many lines its new file has, once it was read whole, and how far it was
-     * read whole.
+     * What is known of a file of a diff: how many lines its new file has, once it was read whole, how far it was read
+     * whole, and, when its read was {@link Read#CUT cut}, how many lines of its new file the read has: up to there,
+     * what it leaves out can still be shown.
      */
-    public record Fold(Option<Integer> length, Read read) {
+    public record Fold(Option<Integer> length, Read read, Option<Integer> reach) {
 
         public static final Fold UNKNOWN = new Fold(Option.none(), Read.NOT);
+
+        /**
+         * What is known of a file whose read, if any, was not cut.
+         */
+        public Fold(Option<Integer> length, Read read) {
+            this(length, read, Option.none());
+        }
+
+        /**
+         * Whether the lines from {@code from} on are past where the read of the file was cut, so none of them can be
+         * shown.
+         */
+        public boolean pastTheCut(int from) {
+            return read == Read.CUT && reach.forAll(lines -> from > lines);
+        }
     }
 
     /**

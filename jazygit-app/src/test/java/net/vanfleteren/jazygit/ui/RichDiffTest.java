@@ -102,7 +102,7 @@ class RichDiffTest {
     }
 
     @Test
-    void aFileReadOnlyUpToTheCutSaysItIsTooLongAfterItsLastHunkAndEverywhereWhenItCannotBeFolded() {
+    void aFileReadOnlyUpToTheCutSaysItIsTooLongOncePastTheCutAndEverywhereWhenItCannotBeFolded() {
         ParsedDiff diff = ParsedDiff.of("""
                 diff --git a/a.txt b/a.txt
                 --- a/a.txt
@@ -112,13 +112,18 @@ class RichDiffTest {
                 -ten
                 +TEN
                 """);
-        Expansion.Folded cut =
-                new Expansion.Folded(diff, HashMap.of("a.txt", new Expansion.Fold(Option.none(), Expansion.Read.CUT)));
+        // Read up to line 30: the lines after the last hunk can be shown up to there, and not past it.
+        Expansion.Folded beforeTheCut = new Expansion.Folded(
+                diff, HashMap.of("a.txt", new Expansion.Fold(Option.none(), Expansion.Read.CUT, Option.of(30))));
+        Expansion.Folded atTheCut = new Expansion.Folded(
+                diff, HashMap.of("a.txt", new Expansion.Fold(Option.none(), Expansion.Read.CUT, Option.of(10))));
         Expansion.Folded tooLong = new Expansion.Folded(
                 diff, HashMap.of("a.txt", new Expansion.Fold(Option.none(), Expansion.Read.TOO_LONG)));
 
+        assertEquals(List.of("┄┄┄┄┄ │ 8 lines hidden ┄", "┄┄┄┄┄ │ more ┄"), markers(beforeTheCut));
         assertEquals(
-                List.of("┄┄┄┄┄ │ 8 lines hidden ┄", "┄┄┄┄┄ │ the file is too long to show more of ┄"), markers(cut));
+                List.of("┄┄┄┄┄ │ 8 lines hidden ┄", "┄┄┄┄┄ │ the file is too long to show more of ┄"),
+                markers(atTheCut));
         assertEquals(
                 List.of(
                         "┄┄┄┄┄ │ the file is too long to show more of ┄",

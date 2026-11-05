@@ -41,7 +41,7 @@ class ExpansionTest {
     void aReadCutBeforeTheEndIsFoldedUpToTheCutAndTellsNoLength() {
         Expansion.Folded folded = expanded(whole(30, 10, true)).folded(shown(10), DiffContext.DEFAULT);
 
-        assertEquals(new Expansion.Fold(Option.none(), Expansion.Read.CUT), folded.fold("a.txt"));
+        assertEquals(new Expansion.Fold(Option.none(), Expansion.Read.CUT, Option.of(30)), folded.fold("a.txt"));
         assertEquals(List.of("@@ -1,13 +1,13 @@"), headers(folded));
     }
 
