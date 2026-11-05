@@ -4,6 +4,7 @@ import io.vavr.collection.Map;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.image.Picture;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
@@ -46,6 +47,39 @@ public sealed interface CommitFilesCmd extends Cmd {
         @Override
         public Msg failed(Failure failure) {
             return new CommitFilesMsg.RemarksFailed(number, failure, settled, version);
+        }
+    }
+
+    /**
+     * Reads the image at {@code url}, in a review thread of pull request {@code number}, as a picture to show it
+     * (ADR 84). It runs in the background, as it talks to GitHub. An image that cannot be read or shown is none, and
+     * stays the text that says it is there: it is no failure to tell.
+     */
+    record LoadPicture(int number, String url) implements CommitFilesCmd {
+
+        @Override
+        public Option<Label> label() {
+            return Option.of(Label.of("work.picture", String.valueOf(number)));
+        }
+
+        @Override
+        public boolean background() {
+            return true;
+        }
+
+        @Override
+        public Msg run(Env env) {
+            return env.gitHub()
+                    .image(url)
+                    .fold(
+                            this::failedWith,
+                            bytes -> new CommitFilesMsg.PictureLoaded(
+                                    number, url, Picture.of(bytes).toOption()));
+        }
+
+        @Override
+        public Msg failed(Failure failure) {
+            return new CommitFilesMsg.PictureLoaded(number, url, Option.none());
         }
     }
 

@@ -8,10 +8,12 @@ import java.util.function.Function;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
+import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.image.MarkdownImage;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.AheadUpdate;
 import net.vanfleteren.jazygit.state.AppError;
@@ -30,6 +32,9 @@ import net.vanfleteren.jazygit.state.Update.Next;
  * have some (ADR 57).
  */
 public final class CommitFilesUpdate {
+
+    // The most images of the review threads of a pull request that are read to be shown (ADR 84).
+    private static final int MAX_PICTURES = 20;
 
     private CommitFilesUpdate() {}
 
@@ -67,6 +72,9 @@ public final class CommitFilesUpdate {
                         number,
                         view -> view.withCollapsed(view.collapsed().with(kept).readAgain(view.threads()))));
             case CommitFilesMsg.CollapsedKept() -> Next.of(model);
+            case CommitFilesMsg.PictureLoaded(int number, String url, var picture) ->
+                Next.of(mapPullRequest(
+                        model, number, view -> view.withPictures(view.pictures().put(url, picture))));
             case CommitFilesMsg.RemarksRefreshed() ->
                 new Next(
                         model,
@@ -139,15 +147,42 @@ public final class CommitFilesUpdate {
                                         .withCollapsed(read.collapsed())
                                         .withSending(read.sending())
                                         .withDeleting(read.deleting())
-                                        .withVersion(read.version());
-                                return Next.of(
+                                        .withVersion(read.version())
+                                        .withPictures(read.pictures());
+                                return pictures(
                                         model.mapRepoView(repoView -> repoView.withCommitFiles(Option.of(again))),
-                                        again.load());
+                                        again,
+                                        number,
+                                        List.of(again.load()));
                             })
-                            .getOrElse(() ->
-                                    Next.of(model.mapRepoView(repoView -> repoView.withCommitFiles(Option.of(read)))));
+                            .getOrElse(() -> pictures(
+                                    model.mapRepoView(repoView -> repoView.withCommitFiles(Option.of(read))),
+                                    read,
+                                    number,
+                                    List.empty()));
                 })
                 .getOrElse(() -> Next.of(model));
+    }
+
+    /**
+     * {@code cmds}, and reads the images of the review threads of pull request {@code number}, which {@code view}
+     * lists the files of in {@code model}, that are not read or being read yet, up to {@link #MAX_PICTURES} of them,
+     * to show them (ADR 84).
+     */
+    private static Next pictures(Model model, CommitFilesView view, int number, List<Cmd> cmds) {
+        List<String> urls = view.threads()
+                .flatMap(ReviewThread::comments)
+                .flatMap(comment -> MarkdownImage.onGitHub(comment.body()))
+                .distinct()
+                .filter(url -> !view.pictures().containsKey(url))
+                .take(Math.max(0, MAX_PICTURES - view.pictures().size()));
+        return new Next(
+                mapPullRequest(
+                        model,
+                        number,
+                        open -> open.withPictures(
+                                urls.foldLeft(open.pictures(), (pictures, url) -> pictures.put(url, Option.none())))),
+                cmds.appendAll(urls.map(url -> new CommitFilesCmd.LoadPicture(number, url))));
     }
 
     /**

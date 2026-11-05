@@ -1,7 +1,9 @@
 package net.vanfleteren.jazygit.ui;
 
 import io.vavr.Tuple;
+import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import java.time.Instant;
@@ -22,6 +24,7 @@ import net.vanfleteren.jazygit.git.model.ParsedDiff;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.image.Picture;
 import net.vanfleteren.jazygit.settings.DiffLook;
 import net.vanfleteren.jazygit.state.AheadUpdate;
 import net.vanfleteren.jazygit.state.BranchesTab;
@@ -378,7 +381,8 @@ final class ContentView {
                         view.remarksAtItsCommits(),
                         view.collapsed(),
                         view.sending(),
-                        view.deleting()));
+                        view.deleting(),
+                        view.pictures().filterValues(Option::isDefined).mapValues(Option::get)));
             case Loadable.Failed<ReviewRemarks>(Failure failure) ->
                 Option.of(new ShownRemarks(
                         List.empty(),
@@ -546,6 +550,7 @@ final class ContentView {
      * @param collapsed which threads and comments are collapsed (ADR 62)
      * @param sending the ids of the threads a reply or a resolving is sent for (ADR 60)
      * @param deleting the ids of the comments being deleted (ADR 64)
+     * @param pictures the pictures of the images of the threads that were read, by where they are (ADR 84)
      */
     record ShownRemarks(
             List<ReviewThread> threads,
@@ -554,7 +559,20 @@ final class ContentView {
             boolean onLines,
             Collapsed collapsed,
             Set<String> sending,
-            Set<String> deleting) {}
+            Set<String> deleting,
+            Map<String, Picture> pictures) {
+
+        ShownRemarks(
+                List<ReviewThread> threads,
+                Instant now,
+                Option<Failure> failed,
+                boolean onLines,
+                Collapsed collapsed,
+                Set<String> sending,
+                Set<String> deleting) {
+            this(threads, now, failed, onLines, collapsed, sending, deleting, HashMap.empty());
+        }
+    }
 
     /**
      * A diff as it is shown: {@code diff}, then the line {@code note}, which git did not print, if there is one, with
