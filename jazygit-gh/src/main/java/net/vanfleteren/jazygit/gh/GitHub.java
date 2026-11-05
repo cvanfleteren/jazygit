@@ -95,6 +95,13 @@ public interface GitHub {
     Either<GhFailure, List<ExecutedCommand>> openPullRequest(String url);
 
     /**
+     * Opens the pull request, or the review comment, {@code link} is to in the browser gh would open it in, started
+     * by jazygit, as gh drops the anchor of a link (ADR 85). Without a browser set, on another system than Linux, gh
+     * opens the pull request, without the anchor; so does it when the host is not known.
+     */
+    Either<GhFailure, List<ExecutedCommand>> openInBrowser(PullRequestLink link);
+
+    /**
      * Opens {@code branch}, as it is named on the remote, in the browser.
      */
     Either<GhFailure, List<ExecutedCommand>> browse(GhBranch branch);

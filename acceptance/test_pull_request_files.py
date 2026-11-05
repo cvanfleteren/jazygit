@@ -138,6 +138,41 @@ def test_the_review_remarks_of_a_pull_request_show_next_to_their_lines(repo, ori
     assert any(THREADS in " ".join(call) for call in gh.calls())
 
 
+def test_o_opens_the_browser_on_the_remark_of_the_cursor_or_else_on_the_pull_request(
+        repo, origin, clone, gh, jazygit, env, tmp_path):
+    repository = pull_request(repo, origin, clone, gh)
+    head = origin("rev-parse", "refs/pull/1/head").strip()
+    gh.answer((THREADS, threads(head, repo("rev-parse", "main").strip())))
+    # The browser the app starts, as $BROWSER names it: it writes down the links it is given (ADR 85).
+    opened = tmp_path / "opened"
+    browser = tmp_path / "browser"
+    browser.write_text(f"#!/bin/sh\necho \"$@\" >> '{opened}'\n")
+    browser.chmod(0o755)
+    env["BROWSER"] = str(browser)
+    ui = jazygit()
+    ui.branches.select("feature")
+    ui.app.press("o")
+    ui.app.wait_for("in 2 files, 2 commits")
+    ui.app.press("F")
+    ui.app.wait_in("Files", "💬1")
+    ui.app.move_cursor("Files", "b.txt")
+    ui.app.press("ctrl+d")
+    ui.app.wait_for("Why b?")
+    ui.app.press("enter")
+
+    # On the file: the pull request.
+    ui.app.press("o")
+    ui.app.eventually(lambda: opened.exists(), "the browser to open the pull request")
+    pull = f"https://github.com/{repository}/pull/1"
+    assert opened.read_text() == f"{pull}\n"
+
+    # On the open thread: its first comment.
+    ui.app.press("n")
+    ui.app.press("o")
+    ui.app.eventually(lambda: opened.read_text().count("\n") == 2, "the browser to open the thread")
+    assert opened.read_text().splitlines()[1] == f"{pull}#discussion_r10"
+
+
 def test_only_the_files_of_a_pull_request_with_remarks_can_be_listed(repo, origin, clone, gh, jazygit):
     pull_request(repo, origin, clone, gh)
     head = origin("rev-parse", "refs/pull/1/head").strip()

@@ -71,4 +71,12 @@ public sealed interface GhError {
      * GitHub has nothing with the id gh was given, as when someone else deleted it meanwhile (ADR 65).
      */
     record Gone() implements GhError {}
+
+    /**
+     * The browser gh would open a link in, which jazygit started itself, did not open it (ADR 85).
+     *
+     * @param browser  the browser, as it is set, like {@code xdg-open}
+     * @param exitCode what it exited with; none when it could not be started
+     */
+    record BrowserFailed(String browser, Option<Integer> exitCode) implements GhError {}
 }

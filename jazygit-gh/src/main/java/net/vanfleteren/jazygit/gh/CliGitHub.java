@@ -6,12 +6,15 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import net.vanfleteren.jazygit.gh.GhError.UnexpectedOutput;
 import net.vanfleteren.jazygit.gh.model.*;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.json.Decoder;
+import net.vanfleteren.jazygit.process.Exec;
+import net.vanfleteren.jazygit.process.ExecFailure;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
@@ -40,15 +43,29 @@ public final class CliGitHub implements GitHub {
     private final GhProcess process;
     // As gh's own active accounts: with a token in the environment, gh only knows of that one.
     private final GhProcess unconfigured;
+    // The environment and the system the browser is chosen by, as gh chooses it (ADR 85).
+    private final Function<String, Option<String>> environment;
+    private final String os;
 
     /**
      * GitHub for the repository in {@code worktree}, through the gh at {@code executable}, as the account of
      * {@code token}.
      */
     public CliGitHub(Path worktree, String executable, GhToken token) {
+        this(worktree, executable, token, name -> Option.of(System.getenv(name)), System.getProperty("os.name", ""));
+    }
+
+    /**
+     * GitHub as {@link #CliGitHub(Path, String, GhToken)}, choosing the browser by the variables {@code environment}
+     * gives and the system {@code os}.
+     */
+    CliGitHub(
+            Path worktree, String executable, GhToken token, Function<String, Option<String>> environment, String os) {
         this.worktree = worktree;
         this.process = new GhProcess(worktree, executable, token);
         this.unconfigured = new GhProcess(worktree, executable, GhToken.NONE);
+        this.environment = environment;
+        this.os = os;
     }
 
     /**
@@ -195,6 +212,40 @@ public final class CliGitHub implements GitHub {
     @Override
     public Either<GhFailure, List<ExecutedCommand>> openPullRequest(String url) {
         return process.log(gh("pr", "view", url, "--web"));
+    }
+
+    @Override
+    public Either<GhFailure, List<ExecutedCommand>> openInBrowser(PullRequestLink link) {
+        if (link.host().isEmpty()) {
+            return openPullRequest(link.number());
+        }
+        return Browser.chosen(environment, () -> configuredBrowser(link.host()), os)
+                .map(browser -> launch(browser, link.url()))
+                .getOrElse(() -> openPullRequest(link.pullRequest()));
+    }
+
+    /**
+     * gh's {@code browser} setting for {@code host}, or its own; none when it is not set, or cannot be read.
+     */
+    private Option<String> configuredBrowser(String host) {
+        return process.read(gh("config", "get", "browser", "--host", host), Either::right)
+                .toOption();
+    }
+
+    /**
+     * Opens {@code url} in {@code browser}, as it is set, without waiting for it to close.
+     */
+    private Either<GhFailure, List<ExecutedCommand>> launch(String browser, String url) {
+        List<String> commandLine = Browser.commandLine(browser, url);
+        return Exec.launch(worktree, commandLine, Browser.SETTLE)
+                .mapLeft(failure -> new GhFailure(
+                        new GhError.BrowserFailed(
+                                browser,
+                                failure instanceof ExecFailure.NonZero(int exitCode, var stderr, var stdout)
+                                        ? Option.of(exitCode)
+                                        : Option.none()),
+                        List.of(new ExecutedCommand(commandLine))))
+                .map(List::of);
     }
 
     @Override

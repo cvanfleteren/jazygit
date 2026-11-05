@@ -16,6 +16,9 @@ import org.junit.jupiter.api.io.TempDir;
 
 class ExecTest {
 
+    // Long enough for a program that ends at once to have ended.
+    private static final Duration SETTLE = Duration.ofSeconds(5);
+
     @TempDir
     Path dir;
 
@@ -166,6 +169,26 @@ class ExecTest {
         assertInstanceOf(
                 ExecFailure.NotStarted.class,
                 Exec.interactive(dir, List.of("jazygit-no-such-program")).getLeft());
+    }
+
+    @Test
+    void aLaunchedProgramIsLeftRunningOnceItSettled() {
+        long started = System.nanoTime();
+        List<String> sleeping = List.of("sh", "-c", "sleep 5");
+
+        assertEquals(Either.right(new ExecutedCommand(sleeping)), Exec.launch(dir, sleeping, Duration.ofMillis(200)));
+        assertTrue(Duration.ofNanos(System.nanoTime() - started).compareTo(Duration.ofSeconds(4)) < 0);
+    }
+
+    @Test
+    void aLaunchedProgramThatFailsBeforeItSettledSaysWithWhatCode() {
+        List<String> failing = List.of("sh", "-c", "exit 3");
+
+        assertEquals(Either.right(new ExecutedCommand(List.of("true"))), Exec.launch(dir, List.of("true"), SETTLE));
+        assertEquals(Either.left(new ExecFailure.NonZero(3, "", "")), Exec.launch(dir, failing, SETTLE));
+        assertInstanceOf(
+                ExecFailure.NotStarted.class,
+                Exec.launch(dir, List.of("jazygit-no-such-program"), SETTLE).getLeft());
     }
 
     @Test

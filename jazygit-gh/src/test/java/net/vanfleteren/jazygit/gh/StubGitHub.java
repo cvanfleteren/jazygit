@@ -145,6 +145,11 @@ public interface StubGitHub extends GitHub {
     }
 
     @Override
+    default Either<GhFailure, List<ExecutedCommand>> openInBrowser(PullRequestLink link) {
+        return Either.right(List.of(ExecutedCommand.of(Browser.XDG_OPEN, link.url())));
+    }
+
+    @Override
     default Either<GhFailure, List<ExecutedCommand>> browse(GhBranch branch) {
         return Either.right(List.of(ExecutedCommand.of("gh", "browse", "--branch", branch.name())));
     }

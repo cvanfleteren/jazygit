@@ -157,6 +157,9 @@ public final class ErrorText {
             case GhError.UnexpectedOutput(String output) -> Messages.get("gh.unexpectedOutput", output);
             case GhError.TooOld(String needed) -> Messages.get("gh.tooOld", needed);
             case GhError.Gone() -> Messages.get("gh.gone");
+            case GhError.BrowserFailed(String browser, var exitCode) ->
+                exitCode.map(code -> Messages.get("gh.browserFailed", browser, String.valueOf(code)))
+                        .getOrElse(() -> Messages.get("gh.browserNotStarted", browser));
             case GhError.TokenUnavailable(var account, GhError cause) ->
                 Messages.get("gh.tokenUnavailable", account.user(), account.host(), of(cause));
         };
