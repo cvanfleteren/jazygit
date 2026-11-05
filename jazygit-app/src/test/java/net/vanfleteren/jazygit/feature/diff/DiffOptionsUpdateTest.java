@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.feature.commit.amend.AmendPopup;
 import net.vanfleteren.jazygit.feature.commit.amend.AmendTarget;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.DiffContext;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Diffs;
@@ -59,6 +60,37 @@ class DiffOptionsUpdateTest {
                         .model()
                         .preferences()
                         .diffOptions());
+    }
+
+    @Test
+    void wideningTheContextReadsTheShownDiffsAgainWithMoreLines() {
+        DiffOptions wider = DiffOptions.DEFAULT.withContext(new DiffContext(5));
+
+        Next next = Update.update(shown(), new DiffOptionsMsg.ContextWidened());
+
+        assertEquals(wider, next.model().preferences().diffOptions());
+        assertEquals(
+                List.of(new Cmd.LoadFileDiff(DIRTY.files(), wider), new Cmd.LoadCommitDetail(SHA, wider)), next.cmds());
+        assertEquals(
+                DiffOptions.DEFAULT,
+                Update.update(next.model(), new DiffOptionsMsg.ContextNarrowed())
+                        .model()
+                        .preferences()
+                        .diffOptions());
+    }
+
+    @Test
+    void steppingPastTheLastAmountReadsNothingAgain() {
+        Model narrowest = shown().mapPreferences(preferences -> preferences.withContext(new DiffContext(0)));
+        Model widest = shown().mapPreferences(preferences -> preferences.withContext(DiffContext.WHOLE_FILE));
+
+        Next narrowed = Update.update(narrowest, new DiffOptionsMsg.ContextNarrowed());
+        Next widened = Update.update(widest, new DiffOptionsMsg.ContextWidened());
+
+        assertSame(narrowest, narrowed.model());
+        assertEquals(List.of(), narrowed.cmds());
+        assertSame(widest, widened.model());
+        assertEquals(List.of(), widened.cmds());
     }
 
     @Test

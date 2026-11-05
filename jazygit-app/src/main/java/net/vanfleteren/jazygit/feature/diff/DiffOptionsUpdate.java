@@ -2,6 +2,8 @@ package net.vanfleteren.jazygit.feature.diff;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.util.function.UnaryOperator;
+import net.vanfleteren.jazygit.git.model.DiffContext;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.settings.Settings;
 import net.vanfleteren.jazygit.state.BranchCommitsView;
@@ -17,7 +19,7 @@ import net.vanfleteren.jazygit.state.Update.Next;
  * How the diffs are read, and how the diffs of the working tree, of a commit and of a stash are drawn. Changing either
  * reads the diffs that are shown again, which keep showing as they were until they are read; what was read before the
  * change is dropped when it arrives. The style decides how a merge is read (ADR 44), so it changes how the diffs are
- * read too.
+ * read too. The amount of context, like ignoring whitespace, holds for this session only (ADR 76).
  */
 public final class DiffOptionsUpdate {
 
@@ -32,7 +34,21 @@ public final class DiffOptionsUpdate {
                         preferences -> preferences.withIgnoreWhitespace(!preferences.ignoreWhitespace())));
             case DiffOptionsMsg.StyleToggled() -> styleToggled(model);
             case DiffOptionsMsg.WordsToggled() -> wordsToggled(model);
+            case DiffOptionsMsg.ContextWidened() -> stepped(model, DiffContext::wider);
+            case DiffOptionsMsg.ContextNarrowed() -> stepped(model, DiffContext::narrower);
         };
+    }
+
+    /**
+     * Shows the amount of context {@code step} takes the current one to, for this session (ADR 76). On the last step
+     * it changes nothing, so nothing is read again.
+     */
+    private static Next stepped(Model model, UnaryOperator<DiffContext> step) {
+        DiffContext current = model.preferences().context();
+        DiffContext next = step.apply(current);
+        return next.equals(current)
+                ? Next.of(model)
+                : changed(model.mapPreferences(preferences -> preferences.withContext(next)));
     }
 
     /**

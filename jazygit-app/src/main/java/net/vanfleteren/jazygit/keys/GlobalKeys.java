@@ -51,6 +51,16 @@ final class GlobalKeys {
                         GlobalKeys::isDiffWordsKey,
                         DiffOptionsMsg.WordsToggled::new))
                 .global(new Keymap.Global.Dispatching(
+                        "}",
+                        "help.global.moreContext",
+                        event -> isChar(event, '}'),
+                        DiffOptionsMsg.ContextWidened::new))
+                .global(new Keymap.Global.Dispatching(
+                        "{",
+                        "help.global.lessContext",
+                        event -> isChar(event, '{'),
+                        DiffOptionsMsg.ContextNarrowed::new))
+                .global(new Keymap.Global.Dispatching(
                         "ctrl+p", "help.global.screen", GlobalKeys::isScreenKey, PrOverviewMsg.Toggled::new))
                 // Escape only gets here when nothing else, like a dialog, took it.
                 .global(new Keymap.Global.Dispatching(
