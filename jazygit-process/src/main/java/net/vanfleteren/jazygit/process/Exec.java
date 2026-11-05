@@ -44,7 +44,7 @@ public final class Exec {
                 directory,
                 commandLine,
                 started,
-                execute(directory, commandLine, environment, timeout, MAX_OUTPUT)
+                execute(directory, commandLine, environment, timeout, MAX_OUTPUT, false)
                         .flatMap(output -> output.cut()
                                 ? Either.left(new ExecFailure.TooMuchOutput())
                                 : Either.right(output.text())));
@@ -52,18 +52,29 @@ public final class Exec {
 
     /**
      * Runs {@code commandLine} as {@link #run} does, reading its standard output only up to {@code limit}: once it
-     * printed more, it is stopped, and what it printed is cut off, however it exited (ADR 79).
+     * printed more, it is stopped, and what it printed is cut off, however it exited. When it takes too long, the
+     * whole lines it printed until then are what it printed, cut off, unless there are none (ADR 79).
      *
      * @return what it printed, when it exited with 0 or was cut off
      */
     public static Either<ExecFailure, Limited> read(
             Path directory, List<String> commandLine, Map<String, String> environment, Duration timeout, Limit limit) {
         long started = System.nanoTime();
-        return logged(directory, commandLine, started, execute(directory, commandLine, environment, timeout, limit));
+        return logged(
+                directory, commandLine, started, execute(directory, commandLine, environment, timeout, limit, true));
     }
 
+    /**
+     * Runs {@code commandLine}, reading its output up to {@code limit}; when it takes too long, what it printed until
+     * then is kept, if {@code keepWhenLate}.
+     */
     private static Either<ExecFailure, Limited> execute(
-            Path directory, List<String> commandLine, Map<String, String> environment, Duration timeout, Limit limit) {
+            Path directory,
+            List<String> commandLine,
+            Map<String, String> environment,
+            Duration timeout,
+            Limit limit,
+            boolean keepWhenLate) {
         FirstBytes stderr = new FirstBytes(MAX_STDERR);
         CutOutput stdout = new CutOutput(limit);
         try {
@@ -90,7 +101,10 @@ public final class Exec {
         } catch (IOException e) {
             return Either.left(new ExecFailure.NotStarted(e));
         } catch (TimeoutException e) {
-            return Either.left(new ExecFailure.TimedOut());
+            Limited printed = stdout.wholeLines();
+            return keepWhenLate && !printed.text().isEmpty()
+                    ? Either.right(printed)
+                    : Either.left(new ExecFailure.TimedOut());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             return Either.left(new ExecFailure.Interrupted());

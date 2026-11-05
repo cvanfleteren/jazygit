@@ -34,6 +34,8 @@ once per hunk, and a diff of 50 000 lines read with `-U0` has tens of thousands 
 - Git's output is read only up to there (`Exec.read`, with a `Limit`): it is read as UTF-8 text while git prints it,
   and once it is longer than the limit, git and what it started are stopped, and the rest is never read. Its exit
   code then says nothing.
+- A diff that takes too long to read (30 s) is the whole lines git printed until then, cut off, rather than a
+  failure; one of which not even a line came is still one.
 - Every other program's output is read up to 64 MiB, far more than is ever meant to be; more is a failure, "printed
   too much to read", not a cut. Of the error output only the first 64 KiB is kept: what went wrong is said at its
   start.
@@ -54,7 +56,8 @@ once per hunk, and a diff of 50 000 lines read with `-U0` has tens of thousands 
 - A diff of code is shown in full up to about 50 000 lines: about 100 ms to read off the render thread, about 40 ms
   to style, once, and about 100 MB kept while it is shown.
 - A diff of long lines is cut off sooner than before: 2000 lines of 2000 characters, where it was 5000.
-- A diff of any size is read in about the time and memory of 4 MiB of it, and shown cut off.
+- A diff of any size is read in about the time and memory of 4 MiB of it, and shown cut off. One that git is slow
+  to make shows what it made in 30 s.
 - Large output that is not a diff, like the status of a working tree with a million untracked files or a long
   reflog, fails at 64 MiB rather than taking the memory; it is not cut off.
 - Staging a hunk, once there is a way to (`wanted.md`), has to refuse a hunk of a diff that is truncated: its last

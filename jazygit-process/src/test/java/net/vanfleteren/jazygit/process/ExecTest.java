@@ -89,6 +89,41 @@ class ExecTest {
     }
 
     @Test
+    void aReadThatTakesTooLongKeepsTheWholeLinesPrintedUntilThen() {
+        assertEquals(
+                Either.right(new Limited("a\nb\n", true)),
+                Exec.read(
+                        dir,
+                        List.of("sh", "-c", "printf 'a\\nb\\nhalf'; exec sleep 5"),
+                        HashMap.empty(),
+                        Duration.ofMillis(500),
+                        new Limit(10, 100)));
+    }
+
+    @Test
+    void aReadThatTakesTooLongWithoutAWholeLineTimesOut() {
+        assertEquals(
+                Either.left(new ExecFailure.TimedOut()),
+                Exec.read(
+                        dir,
+                        List.of("sh", "-c", "printf half; exec sleep 5"),
+                        HashMap.empty(),
+                        Duration.ofMillis(500),
+                        new Limit(10, 100)));
+    }
+
+    @Test
+    void aRunThatTakesTooLongTimesOutWhateverItPrinted() {
+        assertEquals(
+                Either.left(new ExecFailure.TimedOut()),
+                Exec.run(
+                        dir,
+                        List.of("sh", "-c", "printf 'a\\n'; exec sleep 5"),
+                        HashMap.empty(),
+                        Duration.ofMillis(500)));
+    }
+
+    @Test
     void aProgramThatPrintsMoreThanIsEverReadFails() {
         assertEquals(Either.left(new ExecFailure.TooMuchOutput()), sh("yes", HashMap.empty()));
     }

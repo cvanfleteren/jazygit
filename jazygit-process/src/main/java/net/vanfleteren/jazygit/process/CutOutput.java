@@ -74,6 +74,15 @@ final class CutOutput extends OutputStream {
         return limit.cut(text.toString());
     }
 
+    /**
+     * The whole lines kept so far, cut off, as when the program did not finish; what comes after is dropped.
+     */
+    synchronized Limited wholeLines() {
+        finished = true;
+        String kept = limit.cut(text.toString()).text();
+        return new Limited(kept.substring(0, kept.lastIndexOf('\n') + 1), true);
+    }
+
     private void decode(ByteBuffer in, boolean last) {
         boolean full = true;
         while (full && !over) {

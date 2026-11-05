@@ -959,7 +959,8 @@ helpers. A test replaces the roles it needs on `StubGit.of()`, as in `StubGit.of
   - It returns `Either<GitFailure, Output>`. A failure's `CommandFailed` holds the line
     that explains it (the first `error:` or `fatal:` line, else the first line) and what git printed: its output
     up to 64 MiB, more is `TooMuchOutput`, and the first 64 KiB of its errors (ADR 79). A diff is read with
-    `GitProcess.read(worktree, command, limit)`, which stops git once it printed more than the limit.
+    `GitProcess.read(worktree, command, limit)`, which stops git once it printed more than the limit, and
+    keeps the whole lines git printed when it takes too long.
 
 ## The GitHub layer
 
