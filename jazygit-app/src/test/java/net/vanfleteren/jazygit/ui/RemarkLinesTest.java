@@ -7,6 +7,7 @@ import dev.tamboui.style.Style;
 import dev.tamboui.style.StylePropertyResolver;
 import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
+import io.vavr.collection.HashMap;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
@@ -24,6 +25,8 @@ import net.vanfleteren.jazygit.settings.DiffLook;
 import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.state.Anchor;
 import net.vanfleteren.jazygit.state.Collapsed;
+import net.vanfleteren.jazygit.state.DiffStops;
+import net.vanfleteren.jazygit.state.Expansion;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.ui.ContentView.ShownDiff;
 import net.vanfleteren.jazygit.ui.ContentView.ShownRemarks;
@@ -111,7 +114,7 @@ class RemarkLinesTest {
                 List.of(new Comment(
                         "bob", NOW.minusSeconds(7200), "Why?", Option.none(), "C0", "1", CommentRights.ALL)),
                 0,
-                "T" + start + line,
+                "T" + startSide + start + side + line,
                 ReviewThread.Rights.ALL);
     }
 
@@ -140,6 +143,73 @@ class RemarkLinesTest {
                         "  2 │ +int total = 43;",
                         "┄┄┄ │ more ┄"),
                 lines);
+    }
+
+    @Test
+    void theThreadsOnBothLinesOfAPairFollowItOneAfterTheOther() {
+        List<String> lines = rich(
+                PAIRS,
+                shown(Collapsed.NONE, onLines(Side.LEFT, 1, Side.LEFT, 1), onLines(Side.RIGHT, 1, Side.RIGHT, 1)));
+
+        String indent = " ".repeat(8);
+        assertEquals(
+                List.of(
+                        " modified  a.txt",
+                        "1   ● -int count = 1;",
+                        "  1 ● +int count = 42;",
+                        indent + "┏━ bob · 2h ago",
+                        indent + "┃  Why?",
+                        indent + "┗━",
+                        "",
+                        indent + "┏━ bob · 2h ago",
+                        indent + "┃  Why?",
+                        indent + "┗━",
+                        "",
+                        "2   │ -int total = 2;",
+                        "  2 │ +int total = 43;",
+                        "┄┄┄ │ more ┄"),
+                lines);
+    }
+
+    @Test
+    void theThreadsOnTheLastPairOfAFileAreSetApartOnlyFromWhatFollowsThem() {
+        ShownRemarks remarks = shown(Collapsed.NONE, onLines(Side.LEFT, 2, Side.LEFT, 2));
+        String indent = " ".repeat(8);
+        List<String> pair = List.of(
+                " modified  a.txt",
+                "1   │ -int count = 1;",
+                "  1 │ +int count = 42;",
+                "2   ● -int total = 2;",
+                "  2 │ +int total = 43;",
+                indent + "┏━ bob · 2h ago",
+                indent + "┃  Why?",
+                indent + "┗━");
+
+        // How many lines follow is not known, so a marker follows the threads.
+        assertEquals(pair.appendAll(List.of("", "┄┄┄ │ more ┄")), rich(PAIRS, remarks));
+        // Read whole, the file has no more lines, and nothing follows them.
+        Expansion.Folded whole = new Expansion.Folded(
+                ParsedDiff.of(PAIRS), HashMap.of("a.txt", new Expansion.Fold(Option.of(2), Expansion.Read.WHOLE)));
+        assertEquals(
+                pair,
+                text(RichDiff.drawn(whole, false, true, Option.of(remarks), Option.none(), Theme.SpanStyles.NONE)
+                                .lines())
+                        .map(String::stripTrailing));
+    }
+
+    @Test
+    void theHunkOfARangeIsFoundInTheDiffWithoutDrawingIt() {
+        ContentView.Body body = new ContentView.Body.Diff(
+                new ShownDiff(DiffText.of(PAIRS + DIFF.replace("a.txt", "b.txt")), Option.none()),
+                new DiffLook(DiffStyle.RICH, true, true));
+
+        assertEquals(
+                Option.of(new DiffStops.HunkAt(0, 0)),
+                ContentPanel.markedHunk(body, new Anchor.OnLine("a.txt", Side.LEFT, 2)));
+        assertEquals(
+                Option.of(new DiffStops.HunkAt(1, 0)),
+                ContentPanel.markedHunk(body, new Anchor.OnLine("b.txt", Side.RIGHT, 2)));
+        assertEquals(Option.none(), ContentPanel.markedHunk(body, new Anchor.OnLine("c.txt", Side.RIGHT, 2)));
     }
 
     @Test

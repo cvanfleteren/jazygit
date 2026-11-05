@@ -49,6 +49,7 @@ import net.vanfleteren.jazygit.settings.DiffLook;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.Anchor;
 import net.vanfleteren.jazygit.state.DiffCursorAt;
+import net.vanfleteren.jazygit.state.DiffLines;
 import net.vanfleteren.jazygit.state.DiffStops;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -149,7 +150,7 @@ public final class ContentPanel {
     /**
      * The lines of {@link #diffText(ShownDiff, DiffLook, Option, Theme.SpanStyles)}, with the stops of the cursor in
      * the rich view (ADR 60), and the lines of {@code asGiven}, the hunk a range is open in, as git gives them (ADR
-     * 82).
+     * 83).
      */
     static RichDiff.Drawn diffDrawn(
             ShownDiff diff,
@@ -523,6 +524,21 @@ public final class ContentPanel {
         };
     }
 
+    /**
+     * The hunk of the line {@code mark} in {@code body}, found in its diff without drawing it: the hunk a range from
+     * that line is open in (ADR 83). Numbered as the rich view numbers them, among the hunks of the diff as its lines
+     * left out are shown (ADR 77). None unless {@code body} is a diff with that line: only the diff of a pull request's
+     * files has ranges.
+     */
+    static Option<DiffStops.HunkAt> markedHunk(Body body, Anchor mark) {
+        return body instanceof Body.Diff(ShownDiff diff, var look, var remarks)
+                ? DiffLines.of(diff.folded().diff().diff())
+                        .lines()
+                        .find(line -> line.anchor().equals(mark))
+                        .map(DiffLines.Line::hunk)
+                : Option.none();
+    }
+
     private static RichDiff.Drawn plain(Text text) {
         return RichDiff.Drawn.plain(List.ofAll(text.lines()));
     }
@@ -668,13 +684,12 @@ public final class ContentPanel {
             shownAt = known;
             Body body = shown.body();
             Option<Styled> last = styled.filter(before -> before.body().equals(body) && before.theme() == theme);
-            Styled styledLast =
-                    last.getOrElse(() -> Styled.of(body, theme, Option.none(), style.apply(body, Option.none())));
-            // The hunk a range is open in is shown as git gives it, so a range holds the lines it shows (ADR 83).
-            Option<DiffStops.HunkAt> asGiven = told.mark().flatMap(styledLast::hunk);
-            Styled current = styledLast.asGiven().equals(asGiven)
-                    ? styledLast
-                    : Styled.of(body, theme, asGiven, style.apply(body, asGiven));
+            // The hunk a range is open in is shown as git gives it, so a range holds the lines it shows (ADR 83). A new
+            // body has its hunk looked up in its diff, so it is drawn once, in the order it is shown in.
+            Option<DiffStops.HunkAt> asGiven = told.mark()
+                    .flatMap(mark -> last.flatMap(before -> before.hunk(mark)).orElse(() -> markedHunk(body, mark)));
+            Styled current = last.filter(before -> before.asGiven().equals(asGiven))
+                    .getOrElse(() -> Styled.of(body, theme, asGiven, style.apply(body, asGiven)));
             styled = Option.of(current);
             // Shown in another order, the line of the cursor stays where it was on the screen: the view moves by as
             // much as it does, which the model learns with the next move (ADR 83).
