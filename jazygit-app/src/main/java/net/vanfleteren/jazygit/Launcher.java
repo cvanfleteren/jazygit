@@ -31,8 +31,15 @@ final class Launcher {
      * @param args as {@link StartupCli} reads them; {@code --help} lists them
      */
     static void main(String[] args) {
-        // What a thread does not catch, as zt-exec's when memory runs out, would be printed over the TUI.
-        Thread.setDefaultUncaughtExceptionHandler((thread, bug) -> BugLog.log(bug));
+        // What a thread does not catch, as zt-exec's when memory runs out, would be printed over the TUI; and so would
+        // what the handler throws, as when memory is still short.
+        Thread.setDefaultUncaughtExceptionHandler((thread, bug) -> {
+            try {
+                BugLog.log(bug);
+            } catch (Throwable unwritten) {
+                // Lost, as the bug log loses what it cannot write.
+            }
+        });
         StartupCli.parse(args, new PrintWriter(System.out), new PrintWriter(System.err))
                 .peekLeft(exit -> System.exit(exit.code()))
                 .forEach(Launcher::start);

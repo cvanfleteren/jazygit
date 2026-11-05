@@ -835,7 +835,7 @@ class ProgramTest {
 
         @Override
         public Msg failed(Failure failure) {
-            throw new IllegalStateException("another bug");
+            throw new OutOfMemoryError("another bug");
         }
     }
 

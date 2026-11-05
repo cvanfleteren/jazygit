@@ -125,8 +125,12 @@ public final class Program {
         } catch (Throwable e) {
             // A bug rather than a git failure, which commands report as a Msg. Still keep the app going, and
             // always answer: a command that never does would keep its load running and its branch busy. Writing the
-            // bug down may throw too, as when memory ran out.
-            Try.run(() -> bugs.accept(e));
+            // bug down may throw too, as when memory ran out; not Try, which throws an OutOfMemoryError on.
+            try {
+                bugs.accept(e);
+            } catch (Throwable unwritten) {
+                // Lost, as the bug log loses what it cannot write.
+            }
             return cmd.failed(new Failure.Bug(e));
         }
     }
@@ -189,12 +193,8 @@ public final class Program {
     private void launch(Launch launch) {
         Cmd cmd = launch.cmd();
         Option<Lock> guard = cmd.guard().map(guards::get);
-        // A command that failed even to say so is still done, with nothing to report: else its job never ends.
-        FutureTask<Void> task = new FutureTask<>(
-                () -> Try.of(() -> guarded(guard, () -> perform(env, cmd, bugs)).map(Option::of))
-                        .getOrElse(() -> Option.of(Option.none()))
-                        .forEach(result -> done(launch, result)),
-                null);
+        FutureTask<Void> task =
+                new FutureTask<>(() -> performed(guard, cmd).forEach(result -> done(launch, result)), null);
         cmd.slot()
                 .flatMap(slot -> Option.of(latest.put(slot, Tuple.of(launch, task))))
                 .filter(older -> older._2().cancel(false))
@@ -202,6 +202,19 @@ public final class Program {
                 .forEach(older -> done(older, older.cmd().skipped()));
         // Once the app stops, the executors take nothing anymore, and what is left is dropped.
         Try.run(() -> (cmd.background() ? background : io).execute(task));
+    }
+
+    /**
+     * What {@code cmd} reported, once it holds {@code guard}; none when it was not performed, as the program stopped.
+     * One that failed even to say so is still done, with nothing to report: else its job never ends. Not Try, which
+     * throws an OutOfMemoryError on, and that is just what may strike here.
+     */
+    private Option<Option<Msg>> performed(Option<Lock> guard, Cmd cmd) {
+        try {
+            return guarded(guard, () -> perform(env, cmd, bugs)).map(Option::of);
+        } catch (Throwable e) {
+            return Option.of(Option.none());
+        }
     }
 
     /**
