@@ -114,7 +114,7 @@ class WorktreeChangesTest {
         Path broken = Path.of("/repos/app-broken");
         Git git = StubGit.of().withWorktrees(new StubWorktrees() {
             @Override
-            public Either<GitError.ProcessError, Boolean> hasChanges(Path location) {
+            public Either<GitError, Boolean> hasChanges(Path location) {
                 return location.equals(broken)
                         ? Either.left(new GitError.TimedOut("status", location))
                         : Either.right(true);

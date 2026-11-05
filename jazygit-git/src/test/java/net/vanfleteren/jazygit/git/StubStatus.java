@@ -3,7 +3,6 @@ package net.vanfleteren.jazygit.git;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.GitMetadata;
@@ -18,7 +17,7 @@ import net.vanfleteren.jazygit.git.model.Sha;
 public interface StubStatus extends Status {
 
     @Override
-    default Either<ProcessError, RepoStatus> read() {
+    default Either<GitError, RepoStatus> read() {
         return Either.right(new RepoStatus(Head.onBranch(new BranchName("main"), new Sha("aaaa")), List.empty()));
     }
 

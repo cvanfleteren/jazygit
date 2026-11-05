@@ -7,7 +7,6 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.GitError.CommandFailed;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.model.ConfigValue;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
@@ -35,14 +34,14 @@ final class CliConfig implements Config {
      * up, so not logged.
      */
     @Override
-    public Either<ProcessError, Option<String>> local(String key) {
+    public Either<GitError, Option<String>> local(String key) {
         return readLocal(worktree, key);
     }
 
     /**
      * The value of {@code key} in the repository's own configuration; the parents of the branches are read through it.
      */
-    static Either<ProcessError, Option<String>> readLocal(Path worktree, String key) {
+    static Either<GitError, Option<String>> readLocal(Path worktree, String key) {
         return read(worktree, List.of("--local"), key);
     }
 
@@ -50,11 +49,11 @@ final class CliConfig implements Config {
      * The value of {@code key} as git sees it: from the repository's configuration, the user's or the system's,
      * whichever sets it last. Only looked up, so not logged.
      */
-    static Either<ProcessError, Option<String>> effective(Path worktree, String key) {
+    static Either<GitError, Option<String>> effective(Path worktree, String key) {
         return read(worktree, List.empty(), key);
     }
 
-    private static Either<ProcessError, Option<String>> read(Path worktree, List<String> scope, String key) {
+    private static Either<GitError, Option<String>> read(Path worktree, List<String> scope, String key) {
         // git config --get exits with 1, saying nothing, when the key is not set.
         return GitProcess.ask(
                         worktree,
@@ -67,7 +66,7 @@ final class CliConfig implements Config {
      * Every value of {@code key} as git reads them, with where each is. Only looked up, so not logged.
      */
     @Override
-    public Either<ProcessError, List<ConfigValue>> all(String key) {
+    public Either<GitError, List<ConfigValue>> all(String key) {
         // git config --get-all exits with 1, saying nothing, when the key is not set.
         return GitProcess.ask(worktree, GitCommand.reading("config", "--show-scope", "--show-origin", "--get-all", key))
                 .map(answer ->
@@ -97,7 +96,7 @@ final class CliConfig implements Config {
      * key that is not set does nothing.
      */
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> setLocal(String key, Option<String> value) {
+    public Either<GitFailure, List<ExecutedCommand>> setLocal(String key, Option<String> value) {
         return writeLocal(worktree, key, value);
     }
 
@@ -105,8 +104,7 @@ final class CliConfig implements Config {
      * Sets {@code key} in the repository's own configuration, or removes it; the parents of the branches are recorded
      * through it.
      */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> writeLocal(
-            Path worktree, String key, Option<String> value) {
+    static Either<GitFailure, List<ExecutedCommand>> writeLocal(Path worktree, String key, Option<String> value) {
         return value.fold(
                 () -> {
                     GitCommand unset = git("config", "--local", "--unset-all", key);

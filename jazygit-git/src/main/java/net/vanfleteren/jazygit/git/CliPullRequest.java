@@ -10,7 +10,6 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.util.Locale;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.RemoteName;
@@ -31,7 +30,7 @@ final class CliPullRequest {
      *
      * @param credentials environment variables that tell the credential helper which account to use
      */
-    static Either<ProcessError, List<CommitFile>> files(
+    static Either<GitError, List<CommitFile>> files(
             Path worktree, PullRequestCommits commits, Map<String, String> credentials) {
         return fetched(worktree, commits, credentials)
                 .flatMap(done -> CliDiffs.rangeFiles(worktree, commits.base(), commits.head()));
@@ -45,7 +44,7 @@ final class CliPullRequest {
      * remote-tracking branch of what it fetches by name either, and it needs no guard of the remote refs (ADR 27).
      * Without a remote of its repository, nothing is fetched: reading the diff then fails as git says.
      */
-    private static Either<ProcessError, Boolean> fetched(
+    private static Either<GitError, Boolean> fetched(
             Path worktree, PullRequestCommits commits, Map<String, String> credentials) {
         return has(worktree, commits.head())
                 .flatMap(head -> head ? has(worktree, commits.base()) : Either.right(false))
@@ -54,7 +53,7 @@ final class CliPullRequest {
                         : CliRemotes.remoteUrls(worktree)
                                 .flatMap(urls -> remoteOf(urls, commits.repository(), commits.host())
                                         .map(remote -> CliRemotes.run(worktree, fetch(remote, commits), credentials)
-                                                .<ProcessError>mapLeft(GitFailure::error)
+                                                .<GitError>mapLeft(GitFailure::error)
                                                 .map(ran -> true))
                                         .getOrElse(() -> Either.right(false))));
     }
@@ -73,7 +72,7 @@ final class CliPullRequest {
     /**
      * Whether the repository has the commit {@code sha}.
      */
-    private static Either<ProcessError, Boolean> has(Path worktree, Sha sha) {
+    private static Either<GitError, Boolean> has(Path worktree, Sha sha) {
         return GitProcess.ask(
                         worktree,
                         reading(

@@ -22,7 +22,7 @@ public record RenameBranchCmd(BranchName branch, BranchName newName) implements 
     }
 
     @Override
-    public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
+    public Either<GitFailure, List<ExecutedCommand>> perform(Git git) {
         return git.branches().rename(branch, newName);
     }
 }

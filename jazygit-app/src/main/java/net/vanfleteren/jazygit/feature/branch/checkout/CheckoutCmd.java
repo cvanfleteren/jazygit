@@ -33,7 +33,7 @@ public sealed interface CheckoutCmd extends BranchCmd.ChecksOutBranch {
     record Checkout(BranchName branch) implements CheckoutCmd {
 
         @Override
-        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
+        public Either<GitFailure, List<ExecutedCommand>> perform(Git git) {
             return git.checkout().branch(branch);
         }
 
@@ -62,7 +62,7 @@ public sealed interface CheckoutCmd extends BranchCmd.ChecksOutBranch {
         }
 
         @Override
-        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
+        public Either<GitFailure, List<ExecutedCommand>> perform(Git git) {
             return git.checkout().newTrackingBranch(branch, upstream);
         }
     }
@@ -73,7 +73,7 @@ public sealed interface CheckoutCmd extends BranchCmd.ChecksOutBranch {
     record CheckoutWithStash(BranchName branch) implements CheckoutCmd {
 
         @Override
-        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
+        public Either<GitFailure, List<ExecutedCommand>> perform(Git git) {
             return git.checkout().branchWithStash(branch);
         }
     }

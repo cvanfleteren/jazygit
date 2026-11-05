@@ -6,7 +6,6 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.BranchCmd;
 import net.vanfleteren.jazygit.feature.worktree.WorktreeCmd;
 import net.vanfleteren.jazygit.git.Git;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
@@ -43,13 +42,13 @@ public record NukeBranchCmd(BranchName branch, Option<String> worktree, Option<R
      * The commands that ran, or the first step that failed with all the commands that ran.
      */
     @Override
-    public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
+    public Either<GitFailure, List<ExecutedCommand>> perform(Git git) {
         List<Step> steps = nuking(git);
         List<ExecutedCommand> commands = steps.flatMap(Step::commands);
         return steps.flatMap(Step::failure)
                 .headOption()
-                .<Either<GitFailure<ProcessError>, List<ExecutedCommand>>>map(
-                        failure -> Either.left(new GitFailure<>(failure.error(), commands, failure.cleanupFailed())))
+                .<Either<GitFailure, List<ExecutedCommand>>>map(
+                        failure -> Either.left(new GitFailure(failure.error(), commands, failure.cleanupFailed())))
                 .getOrElse(() -> Either.right(commands));
     }
 
@@ -81,7 +80,7 @@ public record NukeBranchCmd(BranchName branch, Option<String> worktree, Option<R
      * A step of the nuke: what it deletes, named as the dialog named it, and how that went; none when it was
      * skipped, as a step it needs failed.
      */
-    private record Step(String what, Option<Either<GitFailure<ProcessError>, List<ExecutedCommand>>> outcome) {
+    private record Step(String what, Option<Either<GitFailure, List<ExecutedCommand>>> outcome) {
 
         boolean deleted() {
             return outcome.exists(Either::isRight);
@@ -92,7 +91,7 @@ public record NukeBranchCmd(BranchName branch, Option<String> worktree, Option<R
                     .getOrElse(List.empty());
         }
 
-        Option<GitFailure<ProcessError>> failure() {
+        Option<GitFailure> failure() {
             return outcome.flatMap(done -> done.swap().toOption());
         }
     }

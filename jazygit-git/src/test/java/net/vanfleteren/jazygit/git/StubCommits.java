@@ -5,7 +5,6 @@ import static net.vanfleteren.jazygit.git.StubGit.ran;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
@@ -22,48 +21,48 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
 public interface StubCommits extends Commits {
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> commit(CommitMessage message) {
+    default Either<GitFailure, List<ExecutedCommand>> commit(CommitMessage message) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> amendLast() {
+    default Either<GitFailure, List<ExecutedCommand>> amendLast() {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<GitError>, List<ExecutedCommand>> amend(Sha sha) {
+    default Either<GitFailure, List<ExecutedCommand>> amend(Sha sha) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<GitError>, List<ExecutedCommand>> reword(Sha sha, CommitMessage message) {
+    default Either<GitFailure, List<ExecutedCommand>> reword(Sha sha, CommitMessage message) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<GitError>, List<ExecutedCommand>> squash(Sha sha, SquashMode mode) {
+    default Either<GitFailure, List<ExecutedCommand>> squash(Sha sha, SquashMode mode) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<GitError>, List<ExecutedCommand>> drop(Sha sha) {
+    default Either<GitFailure, List<ExecutedCommand>> drop(Sha sha) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<GitError>, List<ExecutedCommand>> move(
+    default Either<GitFailure, List<ExecutedCommand>> move(
             BranchName from, Sha oldest, BranchName to, Option<BranchRef> onto) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<GitError>, List<ExecutedCommand>> moveTo(BranchName from, Sha oldest, BranchName to) {
+    default Either<GitFailure, List<ExecutedCommand>> moveTo(BranchName from, Sha oldest, BranchName to) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> reset(ResetTarget target, ResetMode mode) {
+    default Either<GitFailure, List<ExecutedCommand>> reset(ResetTarget target, ResetMode mode) {
         return ran();
     }
 }

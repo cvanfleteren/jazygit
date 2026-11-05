@@ -2,7 +2,6 @@ package net.vanfleteren.jazygit.git;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.DiffText;
@@ -16,33 +15,33 @@ import net.vanfleteren.jazygit.git.model.Sha;
 public interface StubDiffs extends Diffs {
 
     @Override
-    default Either<ProcessError, DiffText> commitChanges(Sha sha, DiffOptions options) {
+    default Either<GitError, DiffText> commitChanges(Sha sha, DiffOptions options) {
         return Either.right(DiffText.of(""));
     }
 
     @Override
-    default Either<ProcessError, List<CommitFile>> commitFiles(Sha sha) {
+    default Either<GitError, List<CommitFile>> commitFiles(Sha sha) {
         return Either.right(List.empty());
     }
 
     @Override
-    default Either<ProcessError, DiffText> commitFileChanges(Sha sha, List<CommitFile> files, DiffOptions options) {
+    default Either<GitError, DiffText> commitFileChanges(Sha sha, List<CommitFile> files, DiffOptions options) {
         return Either.right(DiffText.of(""));
     }
 
     @Override
-    default Either<ProcessError, DiffText> pullRequestFileChanges(
+    default Either<GitError, DiffText> pullRequestFileChanges(
             PullRequestCommits commits, List<CommitFile> files, DiffOptions options) {
         return Either.right(DiffText.of(""));
     }
 
     @Override
-    default Either<ProcessError, List<CommitFile>> rangeFiles(Sha base, Sha tip) {
+    default Either<GitError, List<CommitFile>> rangeFiles(Sha base, Sha tip) {
         return Either.right(List.empty());
     }
 
     @Override
-    default Either<ProcessError, DiffText> rangeFileChanges(
+    default Either<GitError, DiffText> rangeFileChanges(
             Sha base, Sha tip, List<CommitFile> files, DiffOptions options) {
         return Either.right(DiffText.of(""));
     }

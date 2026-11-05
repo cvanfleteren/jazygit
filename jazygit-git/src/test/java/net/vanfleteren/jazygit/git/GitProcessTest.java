@@ -30,8 +30,7 @@ class GitProcessTest {
 
     @Test
     void aRefusedCommandFailsWithGitsExplanationAndItsLine() {
-        GitFailure<GitError.ProcessError> failure =
-                GitProcess.run(dir, git("rev-parse", "HEAD")).getLeft();
+        GitFailure failure = GitProcess.run(dir, git("rev-parse", "HEAD")).getLeft();
 
         CommandFailed failed = (CommandFailed) failure.error();
         assertTrue(failed.says("fatal: not a git repository"), failed.toString());

@@ -26,7 +26,7 @@ import net.vanfleteren.jazygit.feature.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.feature.help.HelpPopup;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.git.Git;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
+import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.Status;
 import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.git.StubStatus;
@@ -261,7 +261,7 @@ class JazygitAppWiringTest {
         public Status status() {
             return new StubStatus() {
                 @Override
-                public Either<ProcessError, RepoStatus> read() {
+                public Either<GitError, RepoStatus> read() {
                     reads.incrementAndGet();
                     return StubStatus.super.read();
                 }

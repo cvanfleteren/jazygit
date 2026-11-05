@@ -289,7 +289,7 @@ class CliStashesTest {
         Stash work = stashes().list().get().head();
         stashes().drop(work).get();
 
-        GitFailure<GitError> failure = stashes().pop(work).getLeft();
+        GitFailure failure = stashes().pop(work).getLeft();
 
         assertEquals(new GitError.StashGone("work"), failure.error());
         assertEquals(List.of(), failure.commands());

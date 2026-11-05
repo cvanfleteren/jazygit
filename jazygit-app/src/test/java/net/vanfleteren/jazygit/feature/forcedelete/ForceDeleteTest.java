@@ -15,7 +15,6 @@ import net.vanfleteren.jazygit.feature.worktree.remove.RemoveWorktreeCmd;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitError;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.StubBranches;
 import net.vanfleteren.jazygit.git.StubGit;
@@ -43,7 +42,7 @@ class ForceDeleteTest {
     private static final BranchRef ORIGIN_FEATURE = new BranchRef.Remote(new RemoteBranch("origin", FEATURE));
     private static final DeleteBranch DELETE_BOTH =
             new DeleteBranch(FEATURE, new RemoteBranch("origin", FEATURE), DeleteScope.BOTH);
-    private static final GitFailure<GitError> NOT_MERGED = new GitFailure<>(
+    private static final GitFailure NOT_MERGED = new GitFailure(
             new GitError.NotFullyMerged("error: the branch 'feature' is not fully merged"),
             executed("git push origin --delete feature", "git branch --delete -- feature"));
 
@@ -65,30 +64,30 @@ class ForceDeleteTest {
      * A git that refuses to delete a branch with {@code deleted}, finds {@code lost} commits only on it, and records
      * deleting it with force.
      */
-    private Git git(Either<GitFailure<GitError>, List<ExecutedCommand>> deleted, Either<ProcessError, Integer> lost) {
+    private Git git(Either<GitFailure, List<ExecutedCommand>> deleted, Either<GitError, Integer> lost) {
         return StubGit.of()
                 .withBranches(new StubBranches() {
                     @Override
-                    public Either<GitFailure<GitError>, List<ExecutedCommand>> deleteLocal(BranchName name) {
+                    public Either<GitFailure, List<ExecutedCommand>> deleteLocal(BranchName name) {
                         ran.add("delete " + name.value());
                         return deleted;
                     }
 
                     @Override
-                    public Either<ProcessError, Integer> countOnlyOn(BranchName name) {
+                    public Either<GitError, Integer> countOnlyOn(BranchName name) {
                         ran.add("count " + name.value());
                         return lost;
                     }
 
                     @Override
-                    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> forceDeleteLocal(BranchName name) {
+                    public Either<GitFailure, List<ExecutedCommand>> forceDeleteLocal(BranchName name) {
                         ran.add("force " + name.value());
                         return StubGit.ran("git branch --delete --force -- " + name.value());
                     }
                 })
                 .withRemotes(new StubRemotes() {
                     @Override
-                    public Either<GitFailure<GitError>, List<ExecutedCommand>> deleteBranch(
+                    public Either<GitFailure, List<ExecutedCommand>> deleteBranch(
                             BranchName name, RemoteBranch remote, DeleteScope scope) {
                         return deleted;
                     }
@@ -131,7 +130,7 @@ class ForceDeleteTest {
 
     @Test
     void anyOtherFailureIsReportedWithoutCounting() {
-        GitFailure<GitError> locked = new GitFailure<>(new GitError.CommandFailed("ref is locked", 1), List.empty());
+        GitFailure locked = new GitFailure(new GitError.CommandFailed("ref is locked", 1), List.empty());
 
         assertEquals(DELETE_BOTH.failedWith(locked), DELETE_BOTH.run(env(git(Either.left(locked), Either.right(3)))));
         assertEquals(java.util.List.of(), ran);
@@ -143,20 +142,20 @@ class ForceDeleteTest {
         Git git = StubGit.of()
                 .withWorktrees(new StubWorktrees() {
                     @Override
-                    public Either<GitFailure<GitError>, List<ExecutedCommand>> remove(Path location, boolean force) {
+                    public Either<GitFailure, List<ExecutedCommand>> remove(Path location, boolean force) {
                         return StubGit.ran("git worktree remove " + location);
                     }
                 })
                 .withBranches(new StubBranches() {
                     @Override
-                    public Either<GitFailure<GitError>, List<ExecutedCommand>> deleteLocal(BranchName name) {
-                        return Either.left(new GitFailure<>(
+                    public Either<GitFailure, List<ExecutedCommand>> deleteLocal(BranchName name) {
+                        return Either.left(new GitFailure(
                                 new GitError.NotFullyMerged("not fully merged"),
                                 executed("git branch --delete -- feature")));
                     }
 
                     @Override
-                    public Either<ProcessError, Integer> countOnlyOn(BranchName name) {
+                    public Either<GitError, Integer> countOnlyOn(BranchName name) {
                         return Either.right(2);
                     }
                 });
@@ -270,16 +269,15 @@ class ForceDeleteTest {
 
     @Test
     void whenNoCommitIsLostButForcingFailsTheFailureIsReportedAfterBothCommands() {
-        GitFailure<ProcessError> locked =
-                new GitFailure<>(new GitError.CommandFailed("ref is locked", 1), executed("git branch -D"));
+        GitFailure locked = new GitFailure(new GitError.CommandFailed("ref is locked", 1), executed("git branch -D"));
         Git git = StubGit.of().withBranches(new StubBranches() {
             @Override
-            public Either<ProcessError, Integer> countOnlyOn(BranchName name) {
+            public Either<GitError, Integer> countOnlyOn(BranchName name) {
                 return Either.right(0);
             }
 
             @Override
-            public Either<GitFailure<ProcessError>, List<ExecutedCommand>> forceDeleteLocal(BranchName name) {
+            public Either<GitFailure, List<ExecutedCommand>> forceDeleteLocal(BranchName name) {
                 return Either.left(locked);
             }
         });
@@ -289,10 +287,10 @@ class ForceDeleteTest {
                 DELETE_BOTH.run(env(deletedWith(git, NOT_MERGED))));
     }
 
-    private static Git deletedWith(Git git, GitFailure<GitError> refusal) {
+    private static Git deletedWith(Git git, GitFailure refusal) {
         return StubGit.of().withBranches(git.branches()).withRemotes(new StubRemotes() {
             @Override
-            public Either<GitFailure<GitError>, List<ExecutedCommand>> deleteBranch(
+            public Either<GitFailure, List<ExecutedCommand>> deleteBranch(
                     BranchName name, RemoteBranch remote, DeleteScope scope) {
                 return Either.left(refusal);
             }

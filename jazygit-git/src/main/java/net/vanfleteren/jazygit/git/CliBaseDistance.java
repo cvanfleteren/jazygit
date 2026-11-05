@@ -10,7 +10,6 @@ import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.UnexpectedOutput;
 import net.vanfleteren.jazygit.git.model.BaseDistance;
 import net.vanfleteren.jazygit.git.model.BranchName;
@@ -75,7 +74,7 @@ final class CliBaseDistance {
      * with an {@code %(ahead-behind:)} per commit; the branches by their name, with the base they are compared with by
      * its name.
      */
-    private static Either<ProcessError, Map<BranchName, BaseDistance>> distances(
+    private static Either<GitError, Map<BranchName, BaseDistance>> distances(
             Path worktree, List<String> commits, Map<BranchName, Base> branches) {
         return commits.isEmpty()
                 ? Either.right(HashMap.empty())

@@ -7,7 +7,6 @@ import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.model.AllBranches;
 import net.vanfleteren.jazygit.git.model.BaseDistance;
 import net.vanfleteren.jazygit.git.model.Branch;
@@ -26,49 +25,49 @@ public interface StubBranches extends Branches {
     /**
      * The local branches {@link #all()} reads, for a stub that only has those.
      */
-    default Either<ProcessError, List<Branch>> local() {
+    default Either<GitError, List<Branch>> local() {
         return Either.right(List.empty());
     }
 
     /**
      * The remote-tracking branches {@link #all()} reads, for a stub that only has those.
      */
-    default Either<ProcessError, List<RemoteRef>> remote() {
+    default Either<GitError, List<RemoteRef>> remote() {
         return Either.right(List.empty());
     }
 
     @Override
-    default Either<ProcessError, AllBranches> all() {
+    default Either<GitError, AllBranches> all() {
         return local().flatMap(local -> remote().map(remote -> new AllBranches(local, remote)));
     }
 
     @Override
-    default Either<GitFailure<GitError>, List<ExecutedCommand>> deleteLocal(BranchName name) {
+    default Either<GitFailure, List<ExecutedCommand>> deleteLocal(BranchName name) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> forceDeleteLocal(BranchName name) {
+    default Either<GitFailure, List<ExecutedCommand>> forceDeleteLocal(BranchName name) {
         return ran();
     }
 
     @Override
-    default Either<ProcessError, Integer> countOnlyOn(BranchName name) {
+    default Either<GitError, Integer> countOnlyOn(BranchName name) {
         return Either.right(0);
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> rename(BranchName name, BranchName newName) {
+    default Either<GitFailure, List<ExecutedCommand>> rename(BranchName name, BranchName newName) {
         return ran();
     }
 
     @Override
-    default Either<ProcessError, Option<BranchName>> parent(BranchName branch) {
+    default Either<GitError, Option<BranchName>> parent(BranchName branch) {
         return Either.right(Option.none());
     }
 
     @Override
-    default Either<ProcessError, Map<BranchName, BranchName>> parents() {
+    default Either<GitError, Map<BranchName, BranchName>> parents() {
         return Either.right(HashMap.empty());
     }
 

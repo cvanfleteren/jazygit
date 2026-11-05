@@ -18,7 +18,7 @@ public interface GitOperationCmd extends OperationCmd {
      *
      * @return the commands that were run, or why it failed
      */
-    Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git);
+    Either<GitFailure, List<ExecutedCommand>> perform(Git git);
 
     @Override
     default Msg run(Env env) {

@@ -23,7 +23,7 @@ public interface Integrate {
      * left so, for the user to resolve them, and fails with {@link GitError.StoppedOnConflicts}; a squash merge is
      * then not committed.
      */
-    Either<GitFailure<GitError>, List<ExecutedCommand>> merge(BranchName branch, MergeMode mode);
+    Either<GitFailure, List<ExecutedCommand>> merge(BranchName branch, MergeMode mode);
 
     /**
      * Commits the changes of the commit {@code sha} on top of the checked out branch. A cherry-pick that stops on
@@ -32,7 +32,7 @@ public interface Integrate {
      *
      * @param sha the full object id of a commit that is not a merge
      */
-    Either<GitFailure<GitError>, List<ExecutedCommand>> cherryPick(Sha sha);
+    Either<GitFailure, List<ExecutedCommand>> cherryPick(Sha sha);
 
     /**
      * Commits the inverse of {@code commit} on top of the checked out branch, with the message git writes; a merge
@@ -40,21 +40,21 @@ public interface Integrate {
      * {@link GitError.StoppedOnConflicts}; one that fails otherwise is undone again, so the repository is left as it
      * was.
      */
-    Either<GitFailure<GitError>, List<ExecutedCommand>> revert(Commit commit);
+    Either<GitFailure, List<ExecutedCommand>> revert(Commit commit);
 
     /**
      * Does {@code action} to {@code inProgress}, the operation the repository stopped in the middle of. Continuing
      * takes the commit message git prepared, without asking; when it stops on the conflicts of a next commit, it
      * fails with {@link GitError.StoppedOnConflicts}.
      */
-    Either<GitFailure<GitError>, List<ExecutedCommand>> continueOrAbort(InProgress inProgress, InProgressAction action);
+    Either<GitFailure, List<ExecutedCommand>> continueOrAbort(InProgress inProgress, InProgressAction action);
 
     /**
      * Rebases the checked out branch onto {@code onto}, bringing uncommitted changes along. A rebase that stops on
      * conflicts is left so, and fails with {@link GitError.StoppedOnConflicts}; when it fails otherwise, it is
      * aborted again, so the repository is left as it was.
      */
-    Either<GitFailure<GitError>, List<ExecutedCommand>> rebase(BranchName onto);
+    Either<GitFailure, List<ExecutedCommand>> rebase(BranchName onto);
 
     /**
      * Rebases a stack onto {@code base} in one interactive rebase whose todo picks the own commits of each of
@@ -65,5 +65,5 @@ public interface Integrate {
      * ({@link GitError.StackBranchCheckedOutElsewhere}). One that stops on conflicts is left so, as
      * {@link #rebase(BranchName)} is; one that fails otherwise is aborted again.
      */
-    Either<GitFailure<GitError>, List<ExecutedCommand>> rebaseStack(Revision base, List<StackLayer.Commits> layers);
+    Either<GitFailure, List<ExecutedCommand>> rebaseStack(Revision base, List<StackLayer.Commits> layers);
 }

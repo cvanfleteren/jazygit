@@ -154,7 +154,7 @@ class RebaseStackTest {
     private static Git everHad(boolean had) {
         return StubGit.of().withHistory(new StubHistory() {
             @Override
-            public Either<GitError.ProcessError, Boolean> everHad(BranchName branch, Revision revision) {
+            public Either<GitError, Boolean> everHad(BranchName branch, Revision revision) {
                 return Either.right(
                         !branch.equals(D) || !revision.equals(new RemoteBranch("origin", D).tracking()) || had);
             }
@@ -432,7 +432,7 @@ class RebaseStackTest {
     private static Git pushingInto(java.util.List<List<Tuple2<BranchName, BranchName>>> pushed) {
         return StubGit.of().withRemotes(new StubRemotes() {
             @Override
-            public Either<GitFailure<GitError.ProcessError>, List<ExecutedCommand>> pushAll(
+            public Either<GitFailure, List<ExecutedCommand>> pushAll(
                     RemoteName remote, List<Tuple2<BranchName, BranchName>> branches) {
                 pushed.add(branches);
                 return Either.right(List.empty());
@@ -493,10 +493,10 @@ class RebaseStackTest {
                 new StackRebaseCmd.RebaseStack(plan(MODEL, ENTRIES).get(), List.empty(), true);
         Git stopping = StubGit.of().withIntegrate(new StubIntegrate() {
             @Override
-            public Either<GitFailure<GitError>, List<ExecutedCommand>> rebaseStack(
+            public Either<GitFailure, List<ExecutedCommand>> rebaseStack(
                     Revision base, List<StackLayer.Commits> layers) {
-                return Either.left(new GitFailure<>(
-                        new GitError.StoppedOnConflicts(Option.none(), 1), List.empty(), Option.none()));
+                return Either.left(
+                        new GitFailure(new GitError.StoppedOnConflicts(Option.none(), 1), List.empty(), Option.none()));
             }
         });
 

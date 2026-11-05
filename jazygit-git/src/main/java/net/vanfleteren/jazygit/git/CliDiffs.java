@@ -14,7 +14,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.UnexpectedOutput;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.CommitFile;
@@ -64,7 +63,7 @@ final class CliDiffs implements Diffs {
      * git call however many files the commit touches, read with {@code options}. Long output is cut off.
      */
     @Override
-    public Either<ProcessError, DiffText> commitChanges(Sha sha, DiffOptions options) {
+    public Either<GitError, DiffText> commitChanges(Sha sha, DiffOptions options) {
         return GitProcess.read(
                 worktree,
                 reading(SHOW.appendAll(List.of("--stat=1000", "--patch"))
@@ -77,7 +76,7 @@ final class CliDiffs implements Diffs {
      * The files the commit {@code sha} changed, a merge against its first parent, with renames found.
      */
     @Override
-    public Either<ProcessError, List<CommitFile>> commitFiles(Sha sha) {
+    public Either<GitError, List<CommitFile>> commitFiles(Sha sha) {
         return GitProcess.read(
                 worktree,
                 reading(SHOW.appendAll(List.of("--name-status", "-z", "-M", FIRST_PARENT))
@@ -90,7 +89,7 @@ final class CliDiffs implements Diffs {
      * {@code options}. Long output is cut off. Without files, nothing is read: git would show every file.
      */
     @Override
-    public Either<ProcessError, DiffText> commitFileChanges(Sha sha, List<CommitFile> files, DiffOptions options) {
+    public Either<GitError, DiffText> commitFileChanges(Sha sha, List<CommitFile> files, DiffOptions options) {
         if (files.isEmpty()) {
             return Either.right(DiffText.of(""));
         }
@@ -110,13 +109,13 @@ final class CliDiffs implements Diffs {
      * its base commit, {@code <base>...<head>}, as GitHub shows it (ADR 55).
      */
     @Override
-    public Either<ProcessError, DiffText> pullRequestFileChanges(
+    public Either<GitError, DiffText> pullRequestFileChanges(
             PullRequestCommits commits, List<CommitFile> files, DiffOptions options) {
         return rangeFileChanges(commits.base(), commits.head(), files, options);
     }
 
     @Override
-    public Either<ProcessError, List<CommitFile>> rangeFiles(Sha base, Sha tip) {
+    public Either<GitError, List<CommitFile>> rangeFiles(Sha base, Sha tip) {
         return rangeFiles(worktree, base, tip);
     }
 
@@ -124,7 +123,7 @@ final class CliDiffs implements Diffs {
      * The files {@code tip} changes against the merge base of it and {@code base}, with renames found: a branch
      * against its base (ADR 61), and a pull request once its commits are fetched.
      */
-    static Either<ProcessError, List<CommitFile>> rangeFiles(Path worktree, Sha base, Sha tip) {
+    static Either<GitError, List<CommitFile>> rangeFiles(Path worktree, Sha base, Sha tip) {
         return GitProcess.read(
                 worktree,
                 reading(List.of("diff", "--name-status", "-z", "-M").append(range(base, tip))),
@@ -136,8 +135,7 @@ final class CliDiffs implements Diffs {
      * {@code options}. Long output is cut off; without files, nothing is read: git would show every file.
      */
     @Override
-    public Either<ProcessError, DiffText> rangeFileChanges(
-            Sha base, Sha tip, List<CommitFile> files, DiffOptions options) {
+    public Either<GitError, DiffText> rangeFileChanges(Sha base, Sha tip, List<CommitFile> files, DiffOptions options) {
         if (files.isEmpty()) {
             return Either.right(DiffText.of(""));
         }
@@ -228,7 +226,7 @@ final class CliDiffs implements Diffs {
         }
     }
 
-    private static Either<ProcessError, String> withUntracked(
+    private static Either<GitError, String> withUntracked(
             Path worktree,
             List<String> subcommand,
             List<String> unstaged,
@@ -238,7 +236,7 @@ final class CliDiffs implements Diffs {
                 .flatMap(added -> tracked(worktree, subcommand, unstaged.appendAll(untracked), env));
     }
 
-    private static Either<ProcessError, String> tracked(
+    private static Either<GitError, String> tracked(
             Path worktree, List<String> subcommand, List<String> paths, Map<String, String> env) {
         return paths.isEmpty() ? Either.right("") : run(worktree, subcommand.appendAll(paths), env);
     }
@@ -253,7 +251,7 @@ final class CliDiffs implements Diffs {
                 : DiffText.of(lines.take(MAX_LINES).mkString("", "\n", "\n"), true);
     }
 
-    private static Either<ProcessError, String> run(Path worktree, List<String> args, Map<String, String> env) {
+    private static Either<GitError, String> run(Path worktree, List<String> args, Map<String, String> env) {
         return GitProcess.read(worktree, reading(args).withEnvironment(env).withLiteralPaths(), Either::right);
     }
 

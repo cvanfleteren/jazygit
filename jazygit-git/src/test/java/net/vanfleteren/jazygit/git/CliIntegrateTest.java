@@ -139,7 +139,7 @@ class CliIntegrateTest {
         git("commit", "-qm", "main changes a and b");
         write("unrelated.txt", "keep\n");
 
-        GitFailure<GitError> failure = new CliIntegrate(repo)
+        GitFailure failure = new CliIntegrate(repo)
                 .merge(new BranchName("conflicting"), MergeMode.MERGE_COMMIT)
                 .getLeft();
 
@@ -164,7 +164,7 @@ class CliIntegrateTest {
         git("commit", "-qam", "main changes a");
         String head = git("rev-parse", "HEAD");
 
-        GitFailure<GitError> failure = new CliIntegrate(repo)
+        GitFailure failure = new CliIntegrate(repo)
                 .merge(new BranchName("conflicting"), MergeMode.SQUASH_AND_COMMIT)
                 .getLeft();
 
@@ -181,7 +181,7 @@ class CliIntegrateTest {
         write("b.txt", "local\n");
         git("add", "b.txt");
 
-        GitFailure<GitError> failure = new CliIntegrate(repo)
+        GitFailure failure = new CliIntegrate(repo)
                 .merge(new BranchName("feature"), MergeMode.FAST_FORWARD)
                 .getLeft();
 
@@ -200,7 +200,7 @@ class CliIntegrateTest {
         gitAnyExit("merge", "conflicting");
         write("a.txt", "resolved\n");
 
-        GitFailure<GitError> failure = new CliIntegrate(repo)
+        GitFailure failure = new CliIntegrate(repo)
                 .merge(new BranchName("feature"), MergeMode.MERGE_COMMIT)
                 .getLeft();
 
@@ -220,7 +220,7 @@ class CliIntegrateTest {
         gitAnyExit("merge", "conflicting");
         Files.delete(repo.resolve(".git/MERGE_HEAD"));
 
-        GitFailure<GitError> failure = new CliIntegrate(repo)
+        GitFailure failure = new CliIntegrate(repo)
                 .merge(new BranchName("feature"), MergeMode.SQUASH)
                 .getLeft();
 

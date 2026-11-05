@@ -7,7 +7,6 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.gh.StubGitHub;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.StubConfig;
 import net.vanfleteren.jazygit.git.StubGit;
@@ -26,8 +25,7 @@ class ThemeCmdTest {
     private final Env env = new Env(
             StubGit.of().withConfig(new StubConfig() {
                 @Override
-                public Either<GitFailure<ProcessError>, List<ExecutedCommand>> setLocal(
-                        String key, Option<String> value) {
+                public Either<GitFailure, List<ExecutedCommand>> setLocal(String key, Option<String> value) {
                     done.add(key + "=" + value.getOrElse("<unset>"));
                     return Either.right(List.empty());
                 }

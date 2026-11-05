@@ -33,12 +33,12 @@ final class CliCheckout implements Checkout {
     }
 
     @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> branch(BranchName branch) {
+    public Either<GitFailure, List<ExecutedCommand>> branch(BranchName branch) {
         return checkout(worktree, branch);
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> newBranch(
+    public Either<GitFailure, List<ExecutedCommand>> newBranch(
             BranchName name, Revision startPoint, Option<BranchName> parent) {
         return checkoutNewBranch(worktree, name, startPoint, parent);
     }
@@ -49,13 +49,13 @@ final class CliCheckout implements Checkout {
      * @return the command lines that were run, or why git refused, {@link LocalChanges} when stashing
      * the uncommitted changes would let the checkout go through
      */
-    static Either<GitFailure<GitError>, List<ExecutedCommand>> checkout(Path worktree, BranchName branch) {
+    static Either<GitFailure, List<ExecutedCommand>> checkout(Path worktree, BranchName branch) {
         // A trailing "--" keeps git from treating branch names as paths.
         return GitProcess.log(worktree, git("checkout", "--quiet", GitArgs.name(branch), "--"))
                 .mapLeft(failure -> failure.map(CliCheckout::classify));
     }
 
-    private static GitError classify(ProcessError error) {
+    private static GitError classify(GitError error) {
         return error instanceof CommandFailed failed && failed.says(LOCAL_CHANGES)
                 ? new LocalChanges(failed.explanation().getOrElse(""))
                 : error;
@@ -68,11 +68,11 @@ final class CliCheckout implements Checkout {
      * which is a {@link StashNotRestored}.
      */
     @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> branchWithStash(BranchName branch) {
-        return GitFailure.<GitError, CliStashes.Stashed>widen(CliStashes.pushQuietly(worktree))
+    public Either<GitFailure, List<ExecutedCommand>> branchWithStash(BranchName branch) {
+        return CliStashes.pushQuietly(worktree)
                 .flatMap(stashed -> GitFailure.sequence(
                         () -> Either.right(stashed.commands()),
-                        () -> GitFailure.<GitError, List<ExecutedCommand>>widen(checkout(worktree, branch))
+                        () -> checkout(worktree, branch)
                                 .mapLeft(failure ->
                                         stashed.any() ? failure.followedBy(CliStashes.popQuietly(worktree)) : failure),
                         () -> stashed.any() ? restore() : GitFailure.nothing()));
@@ -81,7 +81,7 @@ final class CliCheckout implements Checkout {
     /**
      * Pops the changes that were stashed for the checkout.
      */
-    private Either<GitFailure<GitError>, List<ExecutedCommand>> restore() {
+    private Either<GitFailure, List<ExecutedCommand>> restore() {
         return CliStashes.popQuietly(worktree).mapLeft(failure -> failure.map(StashNotRestored::new));
     }
 
@@ -91,7 +91,7 @@ final class CliCheckout implements Checkout {
      * The parent is only a hint, so failing to record it does not fail the branch, which is there. Whether the
      * branch follows {@code startPoint} is up to git's {@code branch.autoSetupMerge} (ADR 40).
      */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkoutNewBranch(
+    static Either<GitFailure, List<ExecutedCommand>> checkoutNewBranch(
             Path worktree, BranchName name, Revision startPoint, Option<BranchName> parent) {
         return GitFailure.sequence(
                 () -> GitProcess.log(
@@ -104,8 +104,7 @@ final class CliCheckout implements Checkout {
      * Records {@code parent} as the branch {@code name} came from; the command lines that were run, also when that
      * failed.
      */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> recordParent(
-            Path worktree, BranchName name, BranchName parent) {
+    static Either<GitFailure, List<ExecutedCommand>> recordParent(Path worktree, BranchName name, BranchName parent) {
         return Either.right(
                 CliBranches.setParent(worktree, name, parent).fold(GitFailure::commands, commands -> commands));
     }
@@ -115,8 +114,7 @@ final class CliCheckout implements Checkout {
      * remote-tracking branch of {@code upstream}, following it, and checks it out.
      */
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> newTrackingBranch(
-            BranchName name, RemoteBranch upstream) {
+    public Either<GitFailure, List<ExecutedCommand>> newTrackingBranch(BranchName name, RemoteBranch upstream) {
         return GitProcess.log(
                 worktree,
                 git(
@@ -130,7 +128,7 @@ final class CliCheckout implements Checkout {
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, Option<Sha>> resolve(String text) {
+    public Either<GitFailure, Option<Sha>> resolve(String text) {
         return CliHistory.resolve(worktree, text);
     }
 }

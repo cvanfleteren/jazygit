@@ -112,7 +112,7 @@ class OperationUpdateTest {
     void aCommandThatThrowsIsReportedAsABugOfThatCommand() {
         Git throwing = StubGit.of().withRemotes(new StubRemotes() {
             @Override
-            public Either<GitFailure<GitError>, List<ExecutedCommand>> push(
+            public Either<GitFailure, List<ExecutedCommand>> push(
                     BranchName branch, RemoteBranch upstream, PushMode mode) {
                 throw new IllegalStateException("unexpected");
             }
@@ -131,7 +131,7 @@ class OperationUpdateTest {
     void aCommandThatThrowsAnErrorStillAnswersSoItsBranchIsReleased() {
         Git throwing = StubGit.of().withRemotes(new StubRemotes() {
             @Override
-            public Either<GitFailure<GitError>, List<ExecutedCommand>> push(
+            public Either<GitFailure, List<ExecutedCommand>> push(
                     BranchName branch, RemoteBranch upstream, PushMode mode) {
                 throw new StackOverflowError();
             }
@@ -157,8 +157,8 @@ class OperationUpdateTest {
     void anOperationThatStopsOnConflictsIsReportedAsStoppedNotAsFailed() {
         Git stopping = StubGit.of().withIntegrate(new StubIntegrate() {
             @Override
-            public Either<GitFailure<GitError>, List<ExecutedCommand>> merge(BranchName branch, MergeMode mode) {
-                return Either.left(new GitFailure<>(
+            public Either<GitFailure, List<ExecutedCommand>> merge(BranchName branch, MergeMode mode) {
+                return Either.left(new GitFailure(
                         new GitError.StoppedOnConflicts(Option.of(MERGING), 2), executed("git merge feature")));
             }
         });

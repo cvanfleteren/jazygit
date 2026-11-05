@@ -11,7 +11,6 @@ import io.vavr.collection.Set;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.UnexpectedOutput;
 import net.vanfleteren.jazygit.git.GitError.UnknownBranch;
 import net.vanfleteren.jazygit.git.model.*;
@@ -40,7 +39,7 @@ final class CliHistory implements History {
      * The commit {@code revision} names; none when it names nothing, e.g. {@code HEAD} in a repository
      * without commits.
      */
-    static Either<GitFailure<ProcessError>, Option<Sha>> resolve(Path worktree, String revision) {
+    static Either<GitFailure, Option<Sha>> resolve(Path worktree, String revision) {
         // rev-parse --verify --quiet exits with 1, saying nothing, when the revision names nothing.
         // After --end-of-options, a revision typed with a leading - is still read as one.
         return GitProcess.ask(
@@ -51,7 +50,7 @@ final class CliHistory implements History {
                         () -> Either.right(Option.none()),
                         found -> GitOutput.sha(found.stdout())
                                 .map(Option::of)
-                                .mapLeft(error -> new GitFailure<ProcessError>(error, found.log()))));
+                                .mapLeft(error -> new GitFailure(error, found.log()))));
     }
 
     /**
@@ -59,7 +58,7 @@ final class CliHistory implements History {
      * They are left as git lists them: with commits left out, merges and what they brought in no longer join up.
      */
     @Override
-    public Either<ProcessError, List<Commit>> search(CommitQuery query, Option<BranchRef> notOn) {
+    public Either<GitError, List<Commit>> search(CommitQuery query, Option<BranchRef> notOn) {
         return resolve(worktree, "HEAD")
                 .mapLeft(GitFailure::error)
                 .flatMap(head -> head.fold(
@@ -96,7 +95,7 @@ final class CliHistory implements History {
      * The newest commits reachable from {@code start}, newest first, laid out by {@link CommitGraph#arrange}.
      */
     @Override
-    public Either<ProcessError, List<Commit>> commits(Sha start) {
+    public Either<GitError, List<Commit>> commits(Sha start) {
         return selected(worktree, List.of(start.value()), MAX_COMMITS);
     }
 
@@ -149,7 +148,7 @@ final class CliHistory implements History {
     }
 
     @Override
-    public Either<ProcessError, Ahead> ahead(Sha tip, BranchRef base, Sha baseTip) {
+    public Either<GitError, Ahead> ahead(Sha tip, BranchRef base, Sha baseTip) {
         return ahead(worktree, tip, base, baseTip, MAX_COMMITS);
     }
 
@@ -158,7 +157,7 @@ final class CliHistory implements History {
      * the commit they forked from, read in one {@code git log --boundary} where it can (ADR 56): one more commit than
      * {@code max} tells whether there are more.
      */
-    static Either<ProcessError, Ahead> ahead(Path worktree, Sha tip, BranchRef base, Sha baseTip, int max) {
+    static Either<GitError, Ahead> ahead(Path worktree, Sha tip, BranchRef base, Sha baseTip, int max) {
         return walk(worktree, tip, baseTip, max + 1).flatMap(walk -> {
             boolean more = walk.commits().size() > max;
             List<Commit> commits = CommitGraph.arrange(walk.commits().take(max));
@@ -173,7 +172,7 @@ final class CliHistory implements History {
      * never met; and without commits walked, the tip is on the base, and is the fork point itself. Several boundary
      * commits, or a walk cut short, are asked of {@code git merge-base}.
      */
-    private static Either<ProcessError, Option<Commit>> forkPoint(
+    private static Either<GitError, Option<Commit>> forkPoint(
             Path worktree, Sha tip, Sha baseTip, Walk walk, boolean more) {
         if (more || walk.boundary().size() > 1) {
             return forkPoint(worktree, tip, baseTip);
@@ -188,13 +187,13 @@ final class CliHistory implements History {
     /**
      * The best common ancestor of {@code ours} and {@code theirs}; none for histories that never met.
      */
-    private static Either<ProcessError, Option<Commit>> forkPoint(Path worktree, Sha ours, Sha theirs) {
+    private static Either<GitError, Option<Commit>> forkPoint(Path worktree, Sha ours, Sha theirs) {
         // merge-base exits with 1, saying nothing, when there is no common ancestor.
         return GitProcess.ask(worktree, GitCommand.reading("merge-base", ours.value(), theirs.value()))
                 .mapLeft(GitFailure::error)
                 .flatMap(answer -> answer.fold(
                         () -> Either.right(Option.none()),
-                        found -> Either.<ProcessError, Sha>narrow(GitOutput.sha(found.stdout()))
+                        found -> Either.<GitError, Sha>narrow(GitOutput.sha(found.stdout()))
                                 .flatMap(sha -> read(worktree, List.of("--no-walk", sha.value()), List.empty(), 1))
                                 .map(List::headOption)));
     }
@@ -283,14 +282,14 @@ final class CliHistory implements History {
      * How many commits are on {@code branch} and not on {@code base}, counting no further than {@code max}.
      */
     @Override
-    public Either<ProcessError, Integer> countNotOn(BranchRef branch, BranchRef base, int max) {
+    public Either<GitError, Integer> countNotOn(BranchRef branch, BranchRef base, int max) {
         return count(worktree, List.of("--max-count=" + max, GitArgs.revision(branch), GitArgs.not(base)));
     }
 
     /**
      * How many commits {@code revisions} select.
      */
-    static Either<ProcessError, Integer> count(Path worktree, List<String> revisions) {
+    static Either<GitError, Integer> count(Path worktree, List<String> revisions) {
         return GitProcess.read(
                 worktree,
                 GitCommand.reading(
@@ -307,7 +306,7 @@ final class CliHistory implements History {
     /**
      * How many commits are only on {@code ours}, and how many only on {@code theirs}.
      */
-    private static Either<ProcessError, Tuple2<Integer, Integer>> counts(Path worktree, Sha ours, Sha theirs) {
+    private static Either<GitError, Tuple2<Integer, Integer>> counts(Path worktree, Sha ours, Sha theirs) {
         return GitProcess.read(
                 worktree,
                 GitCommand.reading(
@@ -333,7 +332,7 @@ final class CliHistory implements History {
      * The newest commits {@code revisions} select, at most {@code max}, newest first, laid out by
      * {@link CommitGraph#arrange}.
      */
-    private static Either<ProcessError, List<Commit>> selected(Path worktree, List<String> revisions, int max) {
+    private static Either<GitError, List<Commit>> selected(Path worktree, List<String> revisions, int max) {
         return read(worktree, revisions, List.empty(), max).map(CommitGraph::arrange);
     }
 
@@ -341,7 +340,7 @@ final class CliHistory implements History {
      * The newest commits {@code arguments} select that change one of {@code paths}, or any commit when there are
      * none, at most {@code max}, as {@code git log} lists them.
      */
-    private static Either<ProcessError, List<Commit>> read(
+    private static Either<GitError, List<Commit>> read(
             Path worktree, List<String> arguments, List<String> paths, int max) {
         return GitProcess.read(
                 worktree,
@@ -358,7 +357,7 @@ final class CliHistory implements History {
      * lists them, and the boundary commits it stopped at: the commits on the base whose child it listed, and, when
      * {@code max} cut it short, those it would have listed next.
      */
-    private static Either<ProcessError, Walk> walk(Path worktree, Sha tip, Sha baseTip, int max) {
+    private static Either<GitError, Walk> walk(Path worktree, Sha tip, Sha baseTip, int max) {
         return GitProcess.read(
                 worktree,
                 GitCommand.reading(List.of(
@@ -470,7 +469,7 @@ final class CliHistory implements History {
      * ({@code git merge-base --fork-point}): a commit of it that it no longer has, as one amended since, is still not
      * the branch's own.
      */
-    private Either<ProcessError, List<Sha>> forkPoints(List<Revision> below, BranchRef branch) {
+    private Either<GitError, List<Sha>> forkPoints(List<Revision> below, BranchRef branch) {
         return Either.sequenceRight(below.filter(BranchRef.class::isInstance)
                         .map(ref -> GitProcess.ask(
                                         worktree,
@@ -482,13 +481,13 @@ final class CliHistory implements History {
                                 .mapLeft(GitFailure::error)
                                 .flatMap(answer -> answer.fold(
                                         () -> Either.right(Option.<Sha>none()),
-                                        found -> Either.<ProcessError, Sha>narrow(GitOutput.sha(found.stdout()))
+                                        found -> Either.<GitError, Sha>narrow(GitOutput.sha(found.stdout()))
                                                 .map(Option::of)))))
                 .map(found -> List.ofAll(found).flatMap(fork -> fork));
     }
 
     @Override
-    public Either<ProcessError, Boolean> everHad(BranchName branch, Revision revision) {
+    public Either<GitError, Boolean> everHad(BranchName branch, Revision revision) {
         BranchRef local = new BranchRef.Local(branch);
         return GitProcess.read(
                         worktree,

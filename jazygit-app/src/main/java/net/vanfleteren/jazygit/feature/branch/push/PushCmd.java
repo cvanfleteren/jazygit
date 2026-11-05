@@ -41,7 +41,7 @@ public sealed interface PushCmd extends BranchCmd.KeepsBranchBusy {
     record PushSettingUpstream(BranchName branch, RemoteBranch upstream) implements PushCmd {
 
         @Override
-        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
+        public Either<GitFailure, List<ExecutedCommand>> perform(Git git) {
             return git.remotes().pushSettingUpstream(branch, upstream);
         }
     }
@@ -53,7 +53,7 @@ public sealed interface PushCmd extends BranchCmd.KeepsBranchBusy {
     record Push(BranchName branch, RemoteBranch upstream, PushMode mode) implements PushCmd {
 
         @Override
-        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
+        public Either<GitFailure, List<ExecutedCommand>> perform(Git git) {
             return git.remotes().push(branch, upstream, mode);
         }
 

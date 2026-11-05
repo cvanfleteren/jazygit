@@ -7,7 +7,6 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.util.function.Supplier;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
@@ -39,7 +38,7 @@ final class CliCommits implements Commits {
      * {@code git commit -m <summary> [-m <description>]}: commits the index.
      */
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> commit(CommitMessage message) {
+    public Either<GitFailure, List<ExecutedCommand>> commit(CommitMessage message) {
         return run(List.of("commit", "--quiet").appendAll(messageArgs(message)));
     }
 
@@ -47,7 +46,7 @@ final class CliCommits implements Commits {
      * {@code git commit --amend --no-edit}: amends the last commit with the index.
      */
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> amendLast() {
+    public Either<GitFailure, List<ExecutedCommand>> amendLast() {
         return run(List.of("commit", "--quiet", "--amend", "--no-edit"));
     }
 
@@ -60,12 +59,12 @@ final class CliCommits implements Commits {
      * @return the command lines that were run
      */
     @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> amend(Sha sha) {
-        return GitFailure.<GitError, Option<Sha>>widen(CliHistory.resolve(worktree, "HEAD"))
+    public Either<GitFailure, List<ExecutedCommand>> amend(Sha sha) {
+        return CliHistory.resolve(worktree, "HEAD")
                 .flatMap(head -> head.contains(sha)
-                        ? GitFailure.widen(amendLast())
-                        : GitFailure.<GitError>sequence(
-                                () -> GitFailure.widen(run(List.of("commit", "--quiet", "--fixup=" + sha.value()))),
+                        ? amendLast()
+                        : GitFailure.sequence(
+                                () -> run(List.of("commit", "--quiet", "--fixup=" + sha.value())),
                                 () -> CliRebase.fixupInto(worktree, sha)
                                         .mapLeft(failure -> failure.error() instanceof GitError.StoppedOnConflicts
                                                 ? markedAmending(failure)
@@ -77,7 +76,7 @@ final class CliCommits implements Commits {
      * {@code stop}, once the rebase it stopped is marked as one that amends, see
      * {@link CliInProgress#markAmending}.
      */
-    private GitFailure<GitError> markedAmending(GitFailure<GitError> stop) {
+    private GitFailure markedAmending(GitFailure stop) {
         CliInProgress.markAmending(worktree);
         return stop;
     }
@@ -88,11 +87,9 @@ final class CliCommits implements Commits {
      * @return the command lines that were run
      */
     @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> reword(Sha sha, CommitMessage message) {
-        return GitFailure.<GitError, Option<Sha>>widen(CliHistory.resolve(worktree, "HEAD"))
-                .flatMap(head -> head.contains(sha)
-                        ? GitFailure.widen(rewordHead(message))
-                        : CliRebase.reword(worktree, sha, message));
+    public Either<GitFailure, List<ExecutedCommand>> reword(Sha sha, CommitMessage message) {
+        return CliHistory.resolve(worktree, "HEAD")
+                .flatMap(head -> head.contains(sha) ? rewordHead(message) : CliRebase.reword(worktree, sha, message));
     }
 
     /**
@@ -102,7 +99,7 @@ final class CliCommits implements Commits {
      * @return the command lines that were run
      */
     @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> squash(Sha sha, SquashMode mode) {
+    public Either<GitFailure, List<ExecutedCommand>> squash(Sha sha, SquashMode mode) {
         return CliRebase.squash(worktree, sha, mode);
     }
 
@@ -110,7 +107,7 @@ final class CliCommits implements Commits {
      * Removes the commit {@code sha}, as {@link CliRebase#drop} does.
      */
     @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> drop(Sha sha) {
+    public Either<GitFailure, List<ExecutedCommand>> drop(Sha sha) {
         return CliRebase.drop(worktree, sha);
     }
 
@@ -118,7 +115,7 @@ final class CliCommits implements Commits {
      * {@code git commit --allow-empty --amend --only -m <summary> [-m <description>]}: replaces the
      * message of the last commit, whatever is staged.
      */
-    private Either<GitFailure<ProcessError>, List<ExecutedCommand>> rewordHead(CommitMessage message) {
+    private Either<GitFailure, List<ExecutedCommand>> rewordHead(CommitMessage message) {
         return run(List.of("commit", "--quiet", "--allow-empty", "--amend", "--only")
                 .appendAll(messageArgs(message)));
     }
@@ -129,7 +126,7 @@ final class CliCommits implements Commits {
                 : List.of("-m", message.summary());
     }
 
-    private Either<GitFailure<ProcessError>, List<ExecutedCommand>> run(List<String> args) {
+    private Either<GitFailure, List<ExecutedCommand>> run(List<String> args) {
         return GitProcess.log(worktree, git(args));
     }
 
@@ -144,14 +141,14 @@ final class CliCommits implements Commits {
      * @return the command lines that were run
      */
     @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> move(
+    public Either<GitFailure, List<ExecutedCommand>> move(
             BranchName from, Sha oldest, BranchName to, Option<BranchRef> onto) {
         return GitFailure.sequence(
-                () -> GitFailure.widen(CliCheckout.checkoutNewBranch(
+                () -> CliCheckout.checkoutNewBranch(
                         worktree,
                         to,
                         Option.<Revision>narrow(onto).getOrElse(() -> new BranchRef.Local(from)),
-                        Option.of(onto.map(CliCommits::name).getOrElse(from)))),
+                        Option.of(onto.map(CliCommits::name).getOrElse(from))),
                 () -> onto.isDefined()
                         ? copy(from, oldest)
                                 .mapLeft(failure -> undone(
@@ -170,7 +167,7 @@ final class CliCommits implements Commits {
      * @return the command lines that were run
      */
     @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> moveTo(BranchName from, Sha oldest, BranchName to) {
+    public Either<GitFailure, List<ExecutedCommand>> moveTo(BranchName from, Sha oldest, BranchName to) {
         return GitFailure.sequence(
                 () -> CliCheckout.checkout(worktree, to),
                 () -> copy(from, oldest).mapLeft(failure -> undone(failure, () -> checkout(from))),
@@ -182,7 +179,7 @@ final class CliCommits implements Commits {
      * {@code oldest} onto the checked out branch. A commit whose changes are on it already is left out, as there is
      * nothing to copy; one that was empty to begin with is copied as it is.
      */
-    private Either<GitFailure<GitError>, List<ExecutedCommand>> copy(BranchName from, Sha oldest) {
+    private Either<GitFailure, List<ExecutedCommand>> copy(BranchName from, Sha oldest) {
         return Unfinished.runOrUndo(
                 worktree,
                 git(
@@ -197,22 +194,21 @@ final class CliCommits implements Commits {
      * {@code failure} of the copy, followed by the {@code undo} of what came before it, unless it stopped on
      * conflicts, which are left for the user to resolve on the branch they are copied onto.
      */
-    private static GitFailure<GitError> undone(
-            GitFailure<GitError> failure, Supplier<Either<GitFailure<ProcessError>, List<ExecutedCommand>>> undo) {
+    private static GitFailure undone(GitFailure failure, Supplier<Either<GitFailure, List<ExecutedCommand>>> undo) {
         return failure.error() instanceof GitError.StoppedOnConflicts ? failure : failure.followedBy(undo.get());
     }
 
     /**
      * {@code git checkout <branch>}: checks out {@code branch} again, which the working tree came from.
      */
-    private Either<GitFailure<ProcessError>, List<ExecutedCommand>> checkout(BranchName branch) {
+    private Either<GitFailure, List<ExecutedCommand>> checkout(BranchName branch) {
         return GitProcess.log(worktree, git("checkout", "--quiet", GitArgs.name(branch), "--"));
     }
 
     /**
      * {@code git branch -D <branch>}: deletes the new {@code branch}, which got none of the commits.
      */
-    private Either<GitFailure<ProcessError>, List<ExecutedCommand>> delete(BranchName branch) {
+    private Either<GitFailure, List<ExecutedCommand>> delete(BranchName branch) {
         return GitProcess.log(worktree, git("branch", "-D", GitArgs.name(branch)));
     }
 
@@ -220,9 +216,8 @@ final class CliCommits implements Commits {
      * {@code git branch --force <branch> <oldest>^}: moves {@code branch}, which is not checked out, back to the
      * parent of {@code oldest}.
      */
-    private Either<GitFailure<GitError>, List<ExecutedCommand>> moveBack(BranchName branch, Sha oldest) {
-        return GitFailure.widen(
-                GitProcess.log(worktree, git("branch", "--force", GitArgs.name(branch), parent(oldest))));
+    private Either<GitFailure, List<ExecutedCommand>> moveBack(BranchName branch, Sha oldest) {
+        return GitProcess.log(worktree, git("branch", "--force", GitArgs.name(branch), parent(oldest)));
     }
 
     /**
@@ -245,7 +240,7 @@ final class CliCommits implements Commits {
      * @return the command lines that were run
      */
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> reset(ResetTarget target, ResetMode mode) {
+    public Either<GitFailure, List<ExecutedCommand>> reset(ResetTarget target, ResetMode mode) {
         return GitProcess.log(worktree, git("reset", "--quiet", mode.option(), GitArgs.revision(target.revision())));
     }
 }

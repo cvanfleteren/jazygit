@@ -16,7 +16,7 @@ import net.vanfleteren.jazygit.feature.theme.ThemeScope;
 import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.GhLogin;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
+import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.StubConfig;
 import net.vanfleteren.jazygit.git.StubGit;
@@ -258,13 +258,13 @@ class SettingsPanelUpdateTest {
                 StubGit.of()
                         .withConfig(new StubConfig() {
                             @Override
-                            public Either<ProcessError, Option<String>> local(String key) {
+                            public Either<GitError, Option<String>> local(String key) {
                                 return Either.right(Option.when(key.equals(GitHubAccount.USER_KEY), "alice-work"));
                             }
                         })
                         .withRemotes(new StubRemotes() {
                             @Override
-                            public Either<ProcessError, Map<String, String>> urls() {
+                            public Either<GitError, Map<String, String>> urls() {
                                 return Either.right(HashMap.of("origin", "git@github.com:team/repo.git"));
                             }
                         }),
@@ -289,8 +289,7 @@ class SettingsPanelUpdateTest {
         Env env = new Env(
                 StubGit.of(Path.of("/repos/a")).withConfig(new StubConfig() {
                     @Override
-                    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> setLocal(
-                            String key, Option<String> value) {
+                    public Either<GitFailure, List<ExecutedCommand>> setLocal(String key, Option<String> value) {
                         done.add(key + "=" + value.getOrElse("<unset>"));
                         return Either.right(List.empty());
                     }

@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
+import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.StubConfig;
 import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.git.model.ConfigValue;
@@ -24,12 +24,12 @@ class RepositoryThemeTest {
     private static RepositoryTheme read(Option<String> local, List<ConfigValue> all) {
         return RepositoryTheme.read(StubGit.of().withConfig(new StubConfig() {
             @Override
-            public Either<ProcessError, Option<String>> local(String key) {
+            public Either<GitError, Option<String>> local(String key) {
                 return Either.right(local.filter(value -> key.equals(RepositoryTheme.KEY)));
             }
 
             @Override
-            public Either<ProcessError, List<ConfigValue>> all(String key) {
+            public Either<GitError, List<ConfigValue>> all(String key) {
                 return Either.right(key.equals(RepositoryTheme.KEY) ? all : List.empty());
             }
         }));

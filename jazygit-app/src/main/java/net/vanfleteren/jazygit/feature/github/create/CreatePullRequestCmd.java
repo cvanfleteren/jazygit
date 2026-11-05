@@ -125,7 +125,7 @@ public sealed interface CreatePullRequestCmd extends Cmd {
                     .map(Base::name);
         }
 
-        private Either<GitError.ProcessError, Option<BranchName>> closest(Env env) {
+        private Either<GitError, Option<BranchName>> closest(Env env) {
             BranchRef local = new BranchRef.Local(branch);
             return Either.sequenceRight(bases.map(base -> env.git()
                             .history()
@@ -226,7 +226,7 @@ public sealed interface CreatePullRequestCmd extends Cmd {
         }
 
         @Override
-        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
+        public Either<GitFailure, List<ExecutedCommand>> perform(Git git) {
             return push.perform(git);
         }
 

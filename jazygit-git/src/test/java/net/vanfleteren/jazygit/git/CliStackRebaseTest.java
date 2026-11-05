@@ -149,7 +149,7 @@ class CliStackRebaseTest {
         git("commit", "-qm", "d touches c1");
         git("checkout", "-q", "main");
 
-        GitFailure<GitError> failure =
+        GitFailure failure =
                 new CliIntegrate(repo).rebaseStack(BASE, read(layers())).getLeft();
 
         assertInstanceOf(GitError.StoppedOnConflicts.class, failure.error());
@@ -175,8 +175,7 @@ class CliStackRebaseTest {
         commit("c3");
         git("checkout", "-q", "main");
 
-        GitFailure<GitError> failure =
-                new CliIntegrate(repo).rebaseStack(BASE, commits).getLeft();
+        GitFailure failure = new CliIntegrate(repo).rebaseStack(BASE, commits).getLeft();
 
         assertEquals(new GitError.StackBranchMoved(C), failure.error());
         assertEquals("c3 c2 c1 base", log("c"));
@@ -188,8 +187,7 @@ class CliStackRebaseTest {
         Files.delete(other);
         git("worktree", "add", "-q", other.toString(), "c");
 
-        GitFailure<GitError> failure =
-                new CliIntegrate(repo).rebaseStack(BASE, commits).getLeft();
+        GitFailure failure = new CliIntegrate(repo).rebaseStack(BASE, commits).getLeft();
 
         assertInstanceOf(GitError.StackBranchCheckedOutElsewhere.class, failure.error());
         assertEquals(C, ((GitError.StackBranchCheckedOutElsewhere) failure.error()).branch());

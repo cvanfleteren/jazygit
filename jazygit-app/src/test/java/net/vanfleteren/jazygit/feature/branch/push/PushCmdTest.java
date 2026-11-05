@@ -45,9 +45,9 @@ class PushCmdTest {
     private static Git pushFailingWith(GitError error) {
         return StubGit.of().withRemotes(new StubRemotes() {
             @Override
-            public Either<GitFailure<GitError>, List<ExecutedCommand>> push(
+            public Either<GitFailure, List<ExecutedCommand>> push(
                     BranchName branch, RemoteBranch upstream, PushMode mode) {
-                return Either.left(new GitFailure<>(error, List.empty()));
+                return Either.left(new GitFailure(error, List.empty()));
             }
         });
     }

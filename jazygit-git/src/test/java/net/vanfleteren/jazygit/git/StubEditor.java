@@ -15,7 +15,7 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
 public interface StubEditor extends Editor {
 
     @Override
-    default Either<GitFailure<GitError>, List<ExecutedCommand>> edit(List<String> files) {
+    default Either<GitFailure, List<ExecutedCommand>> edit(List<String> files) {
         return ran();
     }
 
@@ -23,8 +23,7 @@ public interface StubEditor extends Editor {
      * Saves the message as it is.
      */
     @Override
-    default Either<GitFailure<GitError>, Tuple2<CommitMessage, List<ExecutedCommand>>> editMessage(
-            CommitMessage message) {
+    default Either<GitFailure, Tuple2<CommitMessage, List<ExecutedCommand>>> editMessage(CommitMessage message) {
         return Either.right(Tuple.of(message, List.empty()));
     }
 
@@ -32,7 +31,7 @@ public interface StubEditor extends Editor {
      * Saves the text as it is.
      */
     @Override
-    default Either<GitFailure<GitError>, Tuple2<String, List<ExecutedCommand>>> editText(String fileName, String text) {
+    default Either<GitFailure, Tuple2<String, List<ExecutedCommand>>> editText(String fileName, String text) {
         return Either.right(Tuple.of(text, List.empty()));
     }
 }

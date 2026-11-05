@@ -6,7 +6,6 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.git.Branches;
 import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitError;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.History;
 import net.vanfleteren.jazygit.git.Status;
 import net.vanfleteren.jazygit.git.StubBranches;
@@ -84,7 +83,7 @@ public final class SampleData {
     private static Status status() {
         return new StubStatus() {
             @Override
-            public Either<ProcessError, RepoStatus> read() {
+            public Either<GitError, RepoStatus> read() {
                 return Either.right(new RepoStatus(
                         Head.onBranch(new BranchName("main"), new Sha("a1b2c3d4e5f60718293a4b5c6d7e8f9012345678")),
                         List.of(
@@ -105,7 +104,7 @@ public final class SampleData {
     private static Branches branches() {
         return new StubBranches() {
             @Override
-            public Either<ProcessError, List<Branch>> local() {
+            public Either<GitError, List<Branch>> local() {
                 return Either.right(List.of(
                         Fixtures.branch(
                                 new BranchName("main"),
@@ -135,7 +134,7 @@ public final class SampleData {
     private static History history() {
         return new StubHistory() {
             @Override
-            public Either<ProcessError, List<Commit>> commits(Sha head) {
+            public Either<GitError, List<Commit>> commits(Sha head) {
                 return headLog();
             }
 
@@ -149,7 +148,7 @@ public final class SampleData {
     /**
      * The log of HEAD, wherever it is.
      */
-    public static Either<ProcessError, List<Commit>> headLog() {
+    public static Either<GitError, List<Commit>> headLog() {
         return Either.right(MAIN);
     }
 
@@ -180,7 +179,7 @@ public final class SampleData {
     private static net.vanfleteren.jazygit.git.Diffs diffs() {
         return new StubDiffs() {
             @Override
-            public Either<ProcessError, DiffText> commitChanges(Sha sha, DiffOptions options) {
+            public Either<GitError, DiffText> commitChanges(Sha sha, DiffOptions options) {
                 return Either.right(DiffText.of(
                         "1 file changed, 1 insertion(+)\n\ndiff --git a/" + sha.value() + " b/" + sha.value() + "\n"));
             }

@@ -3,7 +3,6 @@ package net.vanfleteren.jazygit.git;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.model.Ahead;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
@@ -22,17 +21,17 @@ import net.vanfleteren.jazygit.git.model.StackLayer;
 public interface StubHistory extends History {
 
     @Override
-    default Either<ProcessError, List<Commit>> commits(Sha head) {
+    default Either<GitError, List<Commit>> commits(Sha head) {
         return Either.right(List.empty());
     }
 
     @Override
-    default Either<ProcessError, List<Commit>> search(CommitQuery query, Option<BranchRef> notOn) {
+    default Either<GitError, List<Commit>> search(CommitQuery query, Option<BranchRef> notOn) {
         return Either.right(List.empty());
     }
 
     @Override
-    default Either<ProcessError, Ahead> ahead(Sha tip, BranchRef base, Sha baseTip) {
+    default Either<GitError, Ahead> ahead(Sha tip, BranchRef base, Sha baseTip) {
         return Either.right(new Ahead(tip, base, List.empty(), false, Option.none()));
     }
 
@@ -52,7 +51,7 @@ public interface StubHistory extends History {
     }
 
     @Override
-    default Either<ProcessError, Integer> countNotOn(BranchRef branch, BranchRef base, int max) {
+    default Either<GitError, Integer> countNotOn(BranchRef branch, BranchRef base, int max) {
         return Either.right(0);
     }
 
@@ -68,7 +67,7 @@ public interface StubHistory extends History {
     }
 
     @Override
-    default Either<ProcessError, Boolean> everHad(BranchName branch, Revision revision) {
+    default Either<GitError, Boolean> everHad(BranchName branch, Revision revision) {
         return Either.right(true);
     }
 }

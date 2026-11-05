@@ -40,7 +40,6 @@ import net.vanfleteren.jazygit.git.Checkout;
 import net.vanfleteren.jazygit.git.Commits;
 import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitError;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.History;
 import net.vanfleteren.jazygit.git.Index;
@@ -113,7 +112,7 @@ class ProgramTest {
         public Status status() {
             return new StubStatus() {
                 @Override
-                public Either<ProcessError, RepoStatus> read() {
+                public Either<GitError, RepoStatus> read() {
                     return statusError != null
                             ? Either.left(new GitError.CommandFailed(statusError, 1))
                             : Either.right(status);
@@ -124,17 +123,17 @@ class ProgramTest {
         public Stashes stashes() {
             return new StubStashes() {
                 @Override
-                public Either<GitFailure<GitError>, List<ExecutedCommand>> drop(Stash stash) {
+                public Either<GitFailure, List<ExecutedCommand>> drop(Stash stash) {
                     return StubGit.ran("git stash drop " + stash.ref());
                 }
 
                 @Override
-                public Either<GitFailure<GitError>, List<ExecutedCommand>> pop(Stash stash) {
+                public Either<GitFailure, List<ExecutedCommand>> pop(Stash stash) {
                     return StubGit.ran("git stash pop --index " + stash.ref());
                 }
 
                 @Override
-                public Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(Option<String> message) {
+                public Either<GitFailure, List<ExecutedCommand>> push(Option<String> message) {
                     return StubGit.ran("git stash");
                 }
             };
@@ -143,7 +142,7 @@ class ProgramTest {
         public Branches branches() {
             return new StubBranches() {
                 @Override
-                public Either<ProcessError, List<Branch>> local() {
+                public Either<GitError, List<Branch>> local() {
                     return Either.right(List.of(
                             Fixtures.branch(
                                     new BranchName("main"),
@@ -162,7 +161,7 @@ class ProgramTest {
         public History history() {
             return new StubHistory() {
                 @Override
-                public Either<ProcessError, List<Commit>> commits(Sha head) {
+                public Either<GitError, List<Commit>> commits(Sha head) {
                     commitLoads++;
                     return Either.right(List.of(commit(status.headCommit().get().value())));
                 }
@@ -179,24 +178,24 @@ class ProgramTest {
         public Checkout checkout() {
             return new StubCheckout() {
                 @Override
-                public Either<GitFailure<GitError>, List<ExecutedCommand>> branch(BranchName branch) {
-                    return GitFailure.widen(switchTo(branch, "git checkout"));
+                public Either<GitFailure, List<ExecutedCommand>> branch(BranchName branch) {
+                    return switchTo(branch, "git checkout");
                 }
 
                 @Override
-                public Either<GitFailure<GitError>, List<ExecutedCommand>> branchWithStash(BranchName branch) {
-                    return GitFailure.widen(switchTo(branch, "git branchWithStash"));
+                public Either<GitFailure, List<ExecutedCommand>> branchWithStash(BranchName branch) {
+                    return switchTo(branch, "git branchWithStash");
                 }
 
                 @Override
-                public Either<GitFailure<ProcessError>, List<ExecutedCommand>> newBranch(
+                public Either<GitFailure, List<ExecutedCommand>> newBranch(
                         BranchName name, Revision startPoint, Option<BranchName> parent) {
                     return switchTo(name, "git newBranch");
                 }
             };
         }
 
-        private Either<GitFailure<ProcessError>, List<ExecutedCommand>> switchTo(BranchName branch, String command) {
+        private Either<GitFailure, List<ExecutedCommand>> switchTo(BranchName branch, String command) {
             if (checkoutError != null) {
                 return StubGit.refused(command, checkoutError);
             }
@@ -207,23 +206,23 @@ class ProgramTest {
         public Index index() {
             return new StubIndex() {
                 @Override
-                public Either<GitFailure<ProcessError>, List<ExecutedCommand>> stage(List<String> paths) {
+                public Either<GitFailure, List<ExecutedCommand>> stage(List<String> paths) {
                     return onIndex("stage", paths, "git stage");
                 }
 
                 @Override
-                public Either<GitFailure<ProcessError>, List<ExecutedCommand>> unstageNew(List<String> paths) {
+                public Either<GitFailure, List<ExecutedCommand>> unstageNew(List<String> paths) {
                     return onIndex("unstageNew", paths, "git unstageNew");
                 }
 
                 @Override
-                public Either<GitFailure<GitError>, List<ExecutedCommand>> discard(DiscardPlan plan) {
+                public Either<GitFailure, List<ExecutedCommand>> discard(DiscardPlan plan) {
                     discarded.add(plan);
                     return StubGit.ran("git discard");
                 }
 
                 @Override
-                public Either<GitFailure<ProcessError>, List<ExecutedCommand>> unstage(List<String> paths) {
+                public Either<GitFailure, List<ExecutedCommand>> unstage(List<String> paths) {
                     return onIndex("unstage", paths, "git unstage");
                 }
             };
@@ -236,7 +235,7 @@ class ProgramTest {
         public net.vanfleteren.jazygit.git.Diffs diffs() {
             return new StubDiffs() {
                 @Override
-                public Either<ProcessError, DiffText> commitChanges(Sha sha, DiffOptions options) {
+                public Either<GitError, DiffText> commitChanges(Sha sha, DiffOptions options) {
                     return Either.right(DiffText.of("changes of " + sha.value()));
                 }
 
@@ -247,7 +246,7 @@ class ProgramTest {
             };
         }
 
-        private Either<GitFailure<ProcessError>, List<ExecutedCommand>> onIndex(
+        private Either<GitFailure, List<ExecutedCommand>> onIndex(
                 String operation, List<String> paths, String command) {
             if (indexError != null) {
                 return StubGit.refused(command, indexError);
@@ -259,23 +258,23 @@ class ProgramTest {
         public Commits commits() {
             return new StubCommits() {
                 @Override
-                public Either<GitFailure<GitError>, List<ExecutedCommand>> squash(Sha sha, SquashMode mode) {
+                public Either<GitFailure, List<ExecutedCommand>> squash(Sha sha, SquashMode mode) {
                     return StubGit.ran("git squash");
                 }
 
                 @Override
-                public Either<GitFailure<GitError>, List<ExecutedCommand>> reword(Sha sha, CommitMessage message) {
+                public Either<GitFailure, List<ExecutedCommand>> reword(Sha sha, CommitMessage message) {
                     commits.add("reword " + message.summary() + "|" + message.description());
                     return StubGit.ran("git reword");
                 }
 
                 @Override
-                public Either<GitFailure<ProcessError>, List<ExecutedCommand>> amendLast() {
+                public Either<GitFailure, List<ExecutedCommand>> amendLast() {
                     return onIndex("amend", List.of(), "git amendLastCommit");
                 }
 
                 @Override
-                public Either<GitFailure<ProcessError>, List<ExecutedCommand>> commit(CommitMessage message) {
+                public Either<GitFailure, List<ExecutedCommand>> commit(CommitMessage message) {
                     if (commitFailure != null) {
                         return StubGit.refused("git commit", commitFailure);
                     }
@@ -288,7 +287,7 @@ class ProgramTest {
         public Integrate integrate() {
             return new StubIntegrate() {
                 @Override
-                public Either<GitFailure<GitError>, List<ExecutedCommand>> rebase(BranchName onto) {
+                public Either<GitFailure, List<ExecutedCommand>> rebase(BranchName onto) {
                     return StubGit.ran("git rebase");
                 }
             };
@@ -297,25 +296,25 @@ class ProgramTest {
         public Remotes remotes() {
             return new StubRemotes() {
                 @Override
-                public Either<GitFailure<GitError>, List<ExecutedCommand>> push(
+                public Either<GitFailure, List<ExecutedCommand>> push(
                         BranchName branch, RemoteBranch upstream, PushMode mode) {
                     pushed.add(branch.value() + (mode == PushMode.FORCE_WITH_LEASE ? " force" : ""));
                     return StubGit.ran("git push");
                 }
 
                 @Override
-                public Either<ProcessError, List<RemoteName>> list() {
+                public Either<GitError, List<RemoteName>> list() {
                     return Either.right(List.of(new RemoteName("origin"), new RemoteName("upstream")));
                 }
 
                 @Override
-                public Either<GitFailure<ProcessError>, Boolean> fetch(RemoteName remote) {
+                public Either<GitFailure, Boolean> fetch(RemoteName remote) {
                     fetches++;
                     return Either.right(true);
                 }
 
                 @Override
-                public Either<GitFailure<GitError>, List<ExecutedCommand>> deleteBranch(
+                public Either<GitFailure, List<ExecutedCommand>> deleteBranch(
                         BranchName name, RemoteBranch remote, DeleteScope scope) {
                     deleted.add(name.value() + (scope.local() ? " local" : "") + (scope.remote() ? " remote" : ""));
                     return StubGit.ran("git deleteBranch");

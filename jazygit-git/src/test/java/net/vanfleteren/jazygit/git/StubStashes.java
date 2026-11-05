@@ -5,7 +5,6 @@ import static net.vanfleteren.jazygit.git.StubGit.ran;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.DiffText;
@@ -20,37 +19,37 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
 public interface StubStashes extends Stashes {
 
     @Override
-    default Either<ProcessError, List<Stash>> list() {
+    default Either<GitError, List<Stash>> list() {
         return Either.right(List.empty());
     }
 
     @Override
-    default Either<ProcessError, DiffText> changes(Sha sha, DiffOptions options) {
+    default Either<GitError, DiffText> changes(Sha sha, DiffOptions options) {
         return Either.right(DiffText.of(""));
     }
 
     @Override
-    default Either<ProcessError, List<CommitFile>> files(Sha sha) {
+    default Either<GitError, List<CommitFile>> files(Sha sha) {
         return Either.right(List.empty());
     }
 
     @Override
-    default Either<ProcessError, DiffText> fileChanges(Sha sha, List<CommitFile> files, DiffOptions options) {
+    default Either<GitError, DiffText> fileChanges(Sha sha, List<CommitFile> files, DiffOptions options) {
         return Either.right(DiffText.of(""));
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> push(Option<String> message) {
+    default Either<GitFailure, List<ExecutedCommand>> push(Option<String> message) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<GitError>, List<ExecutedCommand>> pop(Stash stash) {
+    default Either<GitFailure, List<ExecutedCommand>> pop(Stash stash) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<GitError>, List<ExecutedCommand>> drop(Stash stash) {
+    default Either<GitFailure, List<ExecutedCommand>> drop(Stash stash) {
         return ran();
     }
 }

@@ -8,7 +8,6 @@ import java.nio.file.Path;
 import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.GhFailure;
 import net.vanfleteren.jazygit.git.GitError;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.model.Ahead;
 import net.vanfleteren.jazygit.git.model.AllBranches;
@@ -59,7 +58,7 @@ public interface Cmd {
     /**
      * The {@link Msg} that reports this command failing with {@code failure}.
      */
-    default Msg failedWith(GitFailure<?> failure) {
+    default Msg failedWith(GitFailure failure) {
         return failed(Failure.of(failure));
     }
 
@@ -406,7 +405,7 @@ public interface Cmd {
         public Msg run(Env env) {
             return ahead.tip()
                     .fold(
-                            () -> Either.<ProcessError, List<Commit>>right(List.empty()),
+                            () -> Either.<GitError, List<Commit>>right(List.empty()),
                             env.git().history()::commits)
                     .fold(this::failedWith, commits -> new LoadMsg.CommitsLoaded(commits, ahead, ahead.read(env)));
         }

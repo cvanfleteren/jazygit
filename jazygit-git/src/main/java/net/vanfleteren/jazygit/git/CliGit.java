@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.git;
 
 import io.vavr.collection.HashMap;
-import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
@@ -10,7 +9,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.git.GitError.*;
-import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
  * Gives the {@link Git} of a real repository, whose roles go through the {@code git} command line tool only, so the
@@ -69,17 +67,16 @@ public final class CliGit {
      * Makes {@code directory} a new repository with {@code git init}, as the user's git config has it, and opens it.
      * In a repository already, git initialises it again, which changes nothing of what is in it.
      */
-    public static Either<GitFailure<GitError>, Git> init(Path directory) {
-        return GitFailure.<GitError, List<ExecutedCommand>>widen(
-                        GitProcess.log(directory, GitCommand.git("init", "--quiet")))
-                .flatMap(log -> open(directory).mapLeft(error -> new GitFailure<>(error, log)));
+    public static Either<GitFailure, Git> init(Path directory) {
+        return GitProcess.log(directory, GitCommand.git("init", "--quiet"))
+                .flatMap(log -> open(directory).mapLeft(error -> new GitFailure(error, log)));
     }
 
     private static Either<UnexpectedOutput, Path> path(String raw) {
         return Try.of(() -> Path.of(raw.strip())).toEither().mapLeft(e -> new UnexpectedOutput(raw));
     }
 
-    private static GitError notARepository(ProcessError error, Path startDir) {
+    private static GitError notARepository(GitError error, Path startDir) {
         return error instanceof CommandFailed failed && failed.says("not a git repository")
                 ? new NotARepository(startDir)
                 : error;

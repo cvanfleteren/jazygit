@@ -9,7 +9,6 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.function.Function;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.UnexpectedOutput;
 import net.vanfleteren.jazygit.git.model.*;
 
@@ -40,7 +39,7 @@ final class CliStatus implements Status {
      * middle of from the files at the markers.
      */
     @Override
-    public Either<ProcessError, RepoStatus> read() {
+    public Either<GitError, RepoStatus> read() {
         return GitProcess.read(
                         worktree,
                         GitCommand.reading("status", "--porcelain=v2", "--branch", "-z", "--untracked-files=all")

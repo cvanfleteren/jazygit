@@ -257,14 +257,13 @@ class PullRequestUpdateTest {
         Git git = StubGit.of()
                 .withHistory(new StubHistory() {
                     @Override
-                    public Either<GitError.ProcessError, Integer> countNotOn(
-                            BranchRef branch, BranchRef base, int max) {
+                    public Either<GitError, Integer> countNotOn(BranchRef branch, BranchRef base, int max) {
                         throw new AssertionError("counted");
                     }
                 })
                 .withBranches(new StubBranches() {
                     @Override
-                    public Either<GitError.ProcessError, Option<BranchName>> parent(BranchName branch) {
+                    public Either<GitError, Option<BranchName>> parent(BranchName branch) {
                         return Either.right(Option.of(RELEASE.name()));
                     }
                 });
@@ -301,14 +300,13 @@ class PullRequestUpdateTest {
         Git git = StubGit.of()
                 .withHistory(new StubHistory() {
                     @Override
-                    public Either<GitError.ProcessError, Integer> countNotOn(
-                            BranchRef branch, BranchRef base, int max) {
+                    public Either<GitError, Integer> countNotOn(BranchRef branch, BranchRef base, int max) {
                         return Either.right(base.equals(remote("ahead")) ? 1 : 4);
                     }
                 })
                 .withBranches(new StubBranches() {
                     @Override
-                    public Either<GitError.ProcessError, Option<BranchName>> parent(BranchName branch) {
+                    public Either<GitError, Option<BranchName>> parent(BranchName branch) {
                         return Either.right(Option.of(UNPUSHED.name()));
                     }
                 });
@@ -322,7 +320,7 @@ class PullRequestUpdateTest {
     void failingToCountLeavesNoParent() {
         Git git = StubGit.of().withHistory(new StubHistory() {
             @Override
-            public Either<GitError.ProcessError, Integer> countNotOn(BranchRef branch, BranchRef base, int max) {
+            public Either<GitError, Integer> countNotOn(BranchRef branch, BranchRef base, int max) {
                 return Either.left(new GitError.CommandFailed("boom", 128));
             }
         });
@@ -358,8 +356,7 @@ class PullRequestUpdateTest {
         return new Env(
                 StubGit.of().withHistory(new StubHistory() {
                     @Override
-                    public Either<GitError.ProcessError, Integer> countNotOn(
-                            BranchRef branch, BranchRef base, int max) {
+                    public Either<GitError, Integer> countNotOn(BranchRef branch, BranchRef base, int max) {
                         return Either.right(counts.get(base).get());
                     }
                 }),
@@ -582,14 +579,13 @@ class PullRequestUpdateTest {
         Git git = StubGit.of()
                 .withHistory(new StubHistory() {
                     @Override
-                    public Either<GitError.ProcessError, Integer> countNotOn(
-                            BranchRef branch, BranchRef base, int max) {
+                    public Either<GitError, Integer> countNotOn(BranchRef branch, BranchRef base, int max) {
                         throw new AssertionError("counted");
                     }
                 })
                 .withBranches(new StubBranches() {
                     @Override
-                    public Either<GitError.ProcessError, Option<BranchName>> parent(BranchName branch) {
+                    public Either<GitError, Option<BranchName>> parent(BranchName branch) {
                         return Either.right(Option.of(new BranchName("development")));
                     }
                 });
@@ -626,14 +622,13 @@ class PullRequestUpdateTest {
         return StubGit.of()
                 .withHistory(new StubHistory() {
                     @Override
-                    public Either<GitError.ProcessError, Integer> countNotOn(
-                            BranchRef branch, BranchRef base, int max) {
+                    public Either<GitError, Integer> countNotOn(BranchRef branch, BranchRef base, int max) {
                         throw new AssertionError("counted");
                     }
                 })
                 .withBranches(new StubBranches() {
                     @Override
-                    public Either<GitError.ProcessError, Option<BranchName>> parent(BranchName branch) {
+                    public Either<GitError, Option<BranchName>> parent(BranchName branch) {
                         return Either.right(Option.of(new BranchName(name)));
                     }
                 });

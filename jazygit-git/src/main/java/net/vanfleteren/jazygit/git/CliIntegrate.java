@@ -7,7 +7,6 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Commit;
@@ -45,12 +44,12 @@ final class CliIntegrate implements Integrate {
      * @return the command lines that were run
      */
     @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> merge(BranchName branch, MergeMode mode) {
+    public Either<GitFailure, List<ExecutedCommand>> merge(BranchName branch, MergeMode mode) {
         return switch (mode) {
             case FAST_FORWARD -> withMessage(branch, "--ff");
             case MERGE_COMMIT -> withMessage(branch, "--no-ff");
             case SQUASH -> squash(branch);
-            case SQUASH_AND_COMMIT -> GitFailure.sequence(() -> squash(branch), () -> GitFailure.widen(commitStaged()));
+            case SQUASH_AND_COMMIT -> GitFailure.sequence(() -> squash(branch), () -> commitStaged());
         };
     }
 
@@ -59,7 +58,7 @@ final class CliIntegrate implements Integrate {
      * word the merge commit after the ref, so the message is given: the one {@code git fmt-merge-msg} writes for
      * the branch, as it does for {@code git merge <branch>}, so the user's {@code merge.*} config applies.
      */
-    private Either<GitFailure<GitError>, List<ExecutedCommand>> withMessage(BranchName branch, String fastForward) {
+    private Either<GitFailure, List<ExecutedCommand>> withMessage(BranchName branch, String fastForward) {
         return message(branch)
                 .flatMap(message -> Unfinished.runOrStop(
                         worktree,
@@ -72,32 +71,32 @@ final class CliIntegrate implements Integrate {
                                 GitArgs.revision(new BranchRef.Local(branch)))));
     }
 
-    private Either<GitFailure<GitError>, String> message(BranchName branch) {
+    private Either<GitFailure, String> message(BranchName branch) {
         return GitProcess.read(
                         worktree,
                         GitCommand.reading("rev-parse", "--verify", GitArgs.revision(new BranchRef.Local(branch))),
                         raw -> Either.right(raw.strip()))
-                .<GitFailure<GitError>>mapLeft(error -> new GitFailure<>(error, List.empty()))
+                .mapLeft(error -> new GitFailure(error, List.empty()))
                 .flatMap(sha -> TempFiles.using(
                         "jazygit-merge",
                         // What git merge hands to fmt-merge-msg for a local branch, as in FETCH_HEAD.
                         file -> Files.writeString(file, sha + "\t\tbranch '" + GitArgs.name(branch) + "' of .\n"),
-                        failed -> new GitFailure<GitError>(failed, List.empty()),
+                        failed -> new GitFailure(failed, List.empty()),
                         file -> GitProcess.read(
                                         worktree,
                                         GitCommand.reading("fmt-merge-msg", "--file", file.toString()),
                                         raw -> Either.right(raw.strip()))
-                                .mapLeft(error -> new GitFailure<GitError>(error, List.empty()))));
+                                .mapLeft(error -> new GitFailure(error, List.empty()))));
     }
 
-    private Either<GitFailure<GitError>, List<ExecutedCommand>> squash(BranchName branch) {
+    private Either<GitFailure, List<ExecutedCommand>> squash(BranchName branch) {
         return Unfinished.runOrStop(worktree, git("merge", "--squash", GitArgs.revision(new BranchRef.Local(branch))));
     }
 
     /**
      * How many files in the index have conflicts. Only asked, so not logged.
      */
-    static Either<ProcessError, Integer> conflicts(Path worktree) {
+    static Either<GitError, Integer> conflicts(Path worktree) {
         // "<mode> <object> <stage>\t<path>", a line for each stage of each conflicted path.
         return GitProcess.read(
                 worktree,
@@ -113,7 +112,7 @@ final class CliIntegrate implements Integrate {
      * Commits what the squash staged, with git's message listing the squashed commits. A branch that had
      * nothing to squash staged nothing, and then nothing is committed.
      */
-    private Either<GitFailure<ProcessError>, List<ExecutedCommand>> commitStaged() {
+    private Either<GitFailure, List<ExecutedCommand>> commitStaged() {
         // diff --cached --quiet exits with 1, saying nothing, when something is staged.
         return GitProcess.ask(worktree, GitCommand.reading("diff", "--cached", "--quiet"))
                 .flatMap(nothingStaged -> nothingStaged.isDefined()
@@ -128,7 +127,7 @@ final class CliIntegrate implements Integrate {
      * @return the command lines that were run
      */
     @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> cherryPick(Sha sha) {
+    public Either<GitFailure, List<ExecutedCommand>> cherryPick(Sha sha) {
         return Unfinished.runOrUndo(
                 worktree, git("cherry-pick", sha.value()), left -> Option.when(left.picking(), ABORT_PICK));
     }
@@ -141,7 +140,7 @@ final class CliIntegrate implements Integrate {
      * @return the command lines that were run
      */
     @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> revert(Commit commit) {
+    public Either<GitFailure, List<ExecutedCommand>> revert(Commit commit) {
         List<String> mainline = commit.isMerge() ? List.of("-m", "1") : List.of();
         return Unfinished.runOrUndo(
                 worktree,
@@ -152,19 +151,17 @@ final class CliIntegrate implements Integrate {
     }
 
     @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> continueOrAbort(
-            InProgress inProgress, InProgressAction action) {
+    public Either<GitFailure, List<ExecutedCommand>> continueOrAbort(InProgress inProgress, InProgressAction action) {
         return CliInProgress.continueOrAbort(worktree, inProgress, action);
     }
 
     @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> rebase(BranchName onto) {
+    public Either<GitFailure, List<ExecutedCommand>> rebase(BranchName onto) {
         return CliRebase.onto(worktree, onto);
     }
 
     @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> rebaseStack(
-            Revision base, List<StackLayer.Commits> layers) {
+    public Either<GitFailure, List<ExecutedCommand>> rebaseStack(Revision base, List<StackLayer.Commits> layers) {
         return CliRebase.stack(worktree, base, layers);
     }
 }

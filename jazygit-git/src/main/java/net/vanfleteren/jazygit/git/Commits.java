@@ -3,7 +3,6 @@ package net.vanfleteren.jazygit.git;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
@@ -22,12 +21,12 @@ public interface Commits {
     /**
      * Commits what is staged.
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> commit(CommitMessage message);
+    Either<GitFailure, List<ExecutedCommand>> commit(CommitMessage message);
 
     /**
      * Amends the last commit with what is staged, keeping its message.
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> amendLast();
+    Either<GitFailure, List<ExecutedCommand>> amendLast();
 
     /**
      * Amends the commit {@code sha} with what is staged, keeping its message. Other than for the last commit, this
@@ -37,7 +36,7 @@ public interface Commits {
      *
      * @param sha the full object id of a commit that is not a merge
      */
-    Either<GitFailure<GitError>, List<ExecutedCommand>> amend(Sha sha);
+    Either<GitFailure, List<ExecutedCommand>> amend(Sha sha);
 
     /**
      * Replaces the message of the commit {@code sha}, leaving its content alone. Other than for the last commit,
@@ -46,7 +45,7 @@ public interface Commits {
      *
      * @param sha the full object id of the commit
      */
-    Either<GitFailure<GitError>, List<ExecutedCommand>> reword(Sha sha, CommitMessage message);
+    Either<GitFailure, List<ExecutedCommand>> reword(Sha sha, CommitMessage message);
 
     /**
      * Folds the commit {@code sha} into its parent, keeping the messages {@code mode} says. This rebases the
@@ -55,7 +54,7 @@ public interface Commits {
      *
      * @param sha the full object id of a commit that has exactly one parent
      */
-    Either<GitFailure<GitError>, List<ExecutedCommand>> squash(Sha sha, SquashMode mode);
+    Either<GitFailure, List<ExecutedCommand>> squash(Sha sha, SquashMode mode);
 
     /**
      * Removes the commit {@code sha} from the history of the checked out branch. This rebases the commits after
@@ -64,7 +63,7 @@ public interface Commits {
      *
      * @param sha the full object id of a commit that is not a merge
      */
-    Either<GitFailure<GitError>, List<ExecutedCommand>> drop(Sha sha);
+    Either<GitFailure, List<ExecutedCommand>> drop(Sha sha);
 
     // Moving commits to another branch, as git checkout, cherry-pick and branch do.
 
@@ -80,8 +79,7 @@ public interface Commits {
      * @param oldest the full object id of a commit of {@code from} that has a parent
      * @param onto   the branch the new branch starts at, if not at {@code from}
      */
-    Either<GitFailure<GitError>, List<ExecutedCommand>> move(
-            BranchName from, Sha oldest, BranchName to, Option<BranchRef> onto);
+    Either<GitFailure, List<ExecutedCommand>> move(BranchName from, Sha oldest, BranchName to, Option<BranchRef> onto);
 
     /**
      * Moves the commits of the checked out branch {@code from}, from {@code oldest} up to its tip, onto the existing
@@ -92,12 +90,12 @@ public interface Commits {
      *
      * @param oldest the full object id of a commit of {@code from} that has a parent
      */
-    Either<GitFailure<GitError>, List<ExecutedCommand>> moveTo(BranchName from, Sha oldest, BranchName to);
+    Either<GitFailure, List<ExecutedCommand>> moveTo(BranchName from, Sha oldest, BranchName to);
 
     // Moving the checked out branch, as git reset does.
 
     /**
      * Moves the checked out branch to {@code target}, doing with the changes {@code mode} says.
      */
-    Either<GitFailure<ProcessError>, List<ExecutedCommand>> reset(ResetTarget target, ResetMode mode);
+    Either<GitFailure, List<ExecutedCommand>> reset(ResetTarget target, ResetMode mode);
 }

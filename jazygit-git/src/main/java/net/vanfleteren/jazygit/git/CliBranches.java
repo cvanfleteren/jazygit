@@ -17,7 +17,6 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.regex.Pattern;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.UnexpectedOutput;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -80,7 +79,7 @@ final class CliBranches implements Branches {
      * from their reflogs, read with one {@code git log --walk-reflogs} before.
      */
     @Override
-    public Either<ProcessError, AllBranches> all() {
+    public Either<GitError, AllBranches> all() {
         return GitProcess.read(
                         worktree,
                         GitCommand.reading(
@@ -103,12 +102,12 @@ final class CliBranches implements Branches {
      * Runs {@code git branch -m <name> <newName>} in {@code worktree}, which refuses to overwrite a branch.
      */
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> rename(BranchName name, BranchName newName) {
+    public Either<GitFailure, List<ExecutedCommand>> rename(BranchName name, BranchName newName) {
         return GitProcess.log(worktree, git("branch", "--move", "--", GitArgs.name(name), GitArgs.name(newName)));
     }
 
     @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> deleteLocal(BranchName name) {
+    public Either<GitFailure, List<ExecutedCommand>> deleteLocal(BranchName name) {
         return deleteLocal(worktree, name);
     }
 
@@ -118,7 +117,7 @@ final class CliBranches implements Branches {
      * @return the command lines that were run, or why git refused, {@link GitError.NotFullyMerged} when forcing it
      * would delete the branch
      */
-    static Either<GitFailure<GitError>, List<ExecutedCommand>> deleteLocal(Path worktree, BranchName name) {
+    static Either<GitFailure, List<ExecutedCommand>> deleteLocal(Path worktree, BranchName name) {
         return GitProcess.log(worktree, git("branch", "--delete", "--", GitArgs.name(name)))
                 .mapLeft(failure -> failure.map(CliBranches::classify));
     }
@@ -127,7 +126,7 @@ final class CliBranches implements Branches {
      * Runs {@code git branch -D <name>} in {@code worktree}.
      */
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> forceDeleteLocal(BranchName name) {
+    public Either<GitFailure, List<ExecutedCommand>> forceDeleteLocal(BranchName name) {
         return GitProcess.log(worktree, git("branch", "--delete", "--force", "--", GitArgs.name(name)));
     }
 
@@ -137,7 +136,7 @@ final class CliBranches implements Branches {
      * {@code refs/heads/}; a branch name cannot have the characters that make it a wider glob.
      */
     @Override
-    public Either<ProcessError, Integer> countOnlyOn(BranchName name) {
+    public Either<GitError, Integer> countOnlyOn(BranchName name) {
         return CliHistory.count(
                 worktree,
                 List.of(
@@ -153,15 +152,14 @@ final class CliBranches implements Branches {
      * The branch {@code branch} was made from, as {@code gh} records it to take as the base of its pull request.
      */
     @Override
-    public Either<ProcessError, Option<BranchName>> parent(BranchName branch) {
+    public Either<GitError, Option<BranchName>> parent(BranchName branch) {
         return CliConfig.readLocal(worktree, parentKey(branch)).map(value -> value.flatMap(BranchName::parse));
     }
 
     /**
      * Records {@code parent} as the branch {@code branch} was made from, where {@code gh} looks for it.
      */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> setParent(
-            Path worktree, BranchName branch, BranchName parent) {
+    static Either<GitFailure, List<ExecutedCommand>> setParent(Path worktree, BranchName branch, BranchName parent) {
         return CliConfig.writeLocal(worktree, parentKey(branch), Option.of(GitArgs.name(parent)));
     }
 
@@ -173,7 +171,7 @@ final class CliBranches implements Branches {
      * The parent of each branch that has one recorded, as {@code gh} does, in one {@code git config}.
      */
     @Override
-    public Either<ProcessError, Map<BranchName, BranchName>> parents() {
+    public Either<GitError, Map<BranchName, BranchName>> parents() {
         // git config --get-regexp exits with 1, saying nothing, when no key matches.
         return GitProcess.ask(
                         worktree,
@@ -214,7 +212,7 @@ final class CliBranches implements Branches {
         return CliBaseDistance.read(worktree, tips, parents, main);
     }
 
-    private static GitError classify(ProcessError error) {
+    private static GitError classify(GitError error) {
         return error instanceof GitError.CommandFailed failed && failed.says(NOT_FULLY_MERGED)
                 ? new GitError.NotFullyMerged(failed.explanation().getOrElse(""))
                 : error;

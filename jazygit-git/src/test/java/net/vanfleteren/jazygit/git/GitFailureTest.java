@@ -15,19 +15,19 @@ class GitFailureTest {
 
     @Test
     void aCleanupThatSucceedsOnlyAddsItsCommands() {
-        GitFailure<GitError.ProcessError> failure = new GitFailure<>(REFUSED, StubGit.executed("git rebase main"));
+        GitFailure failure = new GitFailure(REFUSED, StubGit.executed("git rebase main"));
 
         assertEquals(
-                new GitFailure<>(REFUSED, StubGit.executed("git rebase main", "git rebase --abort")),
+                new GitFailure(REFUSED, StubGit.executed("git rebase main", "git rebase --abort")),
                 failure.followedBy(Either.right(StubGit.executed("git rebase --abort"))));
     }
 
     @Test
     void aCleanupThatFailsIsReportedNextToTheFailure() {
-        GitFailure<GitError.ProcessError> failure = new GitFailure<>(REFUSED, StubGit.executed("git rebase main"));
+        GitFailure failure = new GitFailure(REFUSED, StubGit.executed("git rebase main"));
 
-        GitFailure<GitError.ProcessError> cleanedUp =
-                failure.followedBy(Either.left(new GitFailure<>(ABORT_FAILED, StubGit.executed("git rebase --abort"))));
+        GitFailure cleanedUp =
+                failure.followedBy(Either.left(new GitFailure(ABORT_FAILED, StubGit.executed("git rebase --abort"))));
 
         assertEquals(REFUSED, cleanedUp.error());
         assertEquals(StubGit.executed("git rebase main", "git rebase --abort"), cleanedUp.commands());
@@ -36,11 +36,11 @@ class GitFailureTest {
 
     @Test
     void aSequenceStopsAtTheFirstFailureKeepingTheEarlierCommands() {
-        Either<GitFailure<GitError.ProcessError>, List<ExecutedCommand>> outcome = GitFailure.sequence(
+        Either<GitFailure, List<ExecutedCommand>> outcome = GitFailure.sequence(
                 () -> Either.right(StubGit.executed("git add a")),
-                () -> Either.left(new GitFailure<>(REFUSED, StubGit.executed("git commit"))),
+                () -> Either.left(new GitFailure(REFUSED, StubGit.executed("git commit"))),
                 () -> Either.right(StubGit.executed("git push")));
 
-        assertEquals(new GitFailure<>(REFUSED, StubGit.executed("git add a", "git commit")), outcome.getLeft());
+        assertEquals(new GitFailure(REFUSED, StubGit.executed("git add a", "git commit")), outcome.getLeft());
     }
 }

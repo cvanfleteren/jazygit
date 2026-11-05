@@ -27,7 +27,7 @@ public record SquashCmd(Sha sha, SquashMode mode) implements GitOperationCmd {
     }
 
     @Override
-    public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
+    public Either<GitFailure, List<ExecutedCommand>> perform(Git git) {
         return git.commits().squash(sha, mode);
     }
 }

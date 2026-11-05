@@ -362,7 +362,7 @@ class CliWorktreesTest {
         git(main, "commit", "-q", "--allow-empty", "-m", "Initial commit");
         Git repository = CliGit.open(main).get();
 
-        GitFailure<GitError.ProcessError> failure = repository
+        GitFailure failure = repository
                 .worktrees()
                 .add(main.resolveSibling("other"), new BranchName("main"))
                 .getLeft();
