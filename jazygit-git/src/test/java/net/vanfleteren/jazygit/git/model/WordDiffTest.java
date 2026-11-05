@@ -229,6 +229,38 @@ class WordDiffTest {
                 WordDiff.segments(List.of(hunk), 0));
     }
 
+    @Test
+    void aPairThatDiffersInADeletionOnlyHighlightsWhatTheRemovedLineHasMore() {
+        assertEquals(
+                Tuple.of(
+                        List.of(changed(false, "foo(a"), changed(true, ", b"), changed(false, ")")),
+                        List.of(changed(false, "foo(a)"))),
+                WordDiff.compared("foo(a, b)", "foo(a)"));
+    }
+
+    @Test
+    void aPairThatDiffersInAnIndentOnlyHighlightsTheIndent() {
+        assertEquals(
+                Tuple.of(
+                        List.of(changed(false, "line 1: the quick fox")),
+                        List.of(changed(true, " "), changed(false, "line 1: the quick fox"))),
+                WordDiff.compared("line 1: the quick fox", " line 1: the quick fox"));
+    }
+
+    @Test
+    void aPairThatDiffersInAnInsertionTwiceTheLengthOfTheShorterLineWasRewritten() {
+        assertEquals(
+                Tuple.of(List.of(changed(false, "x")), List.of(changed(false, "x + y"))),
+                WordDiff.compared("x", "x + y"));
+    }
+
+    @Test
+    void aPairOfLinesAlikeHighlightsNothing() {
+        assertEquals(
+                Tuple.of(List.of(changed(false, "same")), List.of(changed(false, "same"))),
+                WordDiff.compared("same", "same"));
+    }
+
     private static List<List<Segment>> segments(List<DiffLine> lines) {
         return WordDiff.segments(List.of(lines)).head();
     }

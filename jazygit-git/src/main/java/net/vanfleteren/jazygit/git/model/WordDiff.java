@@ -152,6 +152,15 @@ public final class WordDiff {
         int prefix = commonPrefix(before, after);
         int suffix = commonSuffix(before, after, prefix);
         int total = removed.length() + added.length();
+        // A pair that differs in an insertion or a deletion only keeps all of its shorter line, and the tokens between
+        // what both start and end with in the longer one are its one change: it needs neither a count nor a table.
+        if (prefix + suffix == Math.min(before.length, after.length)) {
+            return Tuple.of(
+                    rewritten(Math.min(removed.length(), added.length()), total)
+                            ? Tuple.of(whole(removed), whole(added))
+                            : Tuple.of(around(removed, before, prefix, suffix), around(added, after, prefix, suffix)),
+                    budget);
+        }
         long cells = (long) (before.length - prefix - suffix) * (after.length - prefix - suffix);
         // A pair that could not keep enough even if its tokens were in the same order was rewritten: it is drawn whole
         // without filling the table, and leaves the budget to the pairs after it. Counting its tokens is not worth it
@@ -331,6 +340,26 @@ public final class WordDiff {
                 .map(run -> Tuple.of(starts[run], starts[run + 1]))
                 .map(run -> new Segment(
                         String.join("", Arrays.asList(tokens).subList(run._1, run._2)), !unchanged.test(run._1)));
+    }
+
+    /**
+     * The segments of {@code line}, whose tokens are {@code tokens}: the first {@code prefix} and the last
+     * {@code suffix} unchanged, and those between them, if any, changed.
+     */
+    private static List<Segment> around(String line, String[] tokens, int prefix, int suffix) {
+        if (prefix + suffix == tokens.length) {
+            return whole(line);
+        }
+        int start = Arrays.stream(tokens, 0, prefix).mapToInt(String::length).sum();
+        int end = line.length()
+                - Arrays.stream(tokens, tokens.length - suffix, tokens.length)
+                        .mapToInt(String::length)
+                        .sum();
+        return List.of(
+                        new Segment(line.substring(0, start), false),
+                        new Segment(line.substring(start, end), true),
+                        new Segment(line.substring(end), false))
+                .filter(segment -> !segment.text().isEmpty());
     }
 
     private static List<Segment> whole(String text) {
