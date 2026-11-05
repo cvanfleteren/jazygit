@@ -70,6 +70,14 @@ public interface StubGitHub extends GitHub {
     }
 
     /**
+     * A repository that protects no branch.
+     */
+    @Override
+    default Either<GhError, List<String>> protectedBranches() {
+        return Either.right(List.empty());
+    }
+
+    /**
      * The repository {@code owner/repo} without checks on any branch.
      */
     @Override
@@ -179,6 +187,21 @@ public interface StubGitHub extends GitHub {
     @Override
     default Either<GhFailure, List<ExecutedCommand>> editPullRequest(int number, PullRequestEdit edit) {
         return Either.right(List.of(CliGitHub.editCommand(number, edit).executed()));
+    }
+
+    @Override
+    default Either<GhFailure, List<ExecutedCommand>> createStack(List<Integer> pullRequests) {
+        return Either.right(List.of(StackMutations.create(pullRequests).executed()));
+    }
+
+    @Override
+    default Either<GhFailure, List<ExecutedCommand>> addToStack(int stack, List<Integer> pullRequests) {
+        return Either.right(List.of(StackMutations.add(stack, pullRequests).executed()));
+    }
+
+    @Override
+    default Either<GhFailure, List<ExecutedCommand>> unstack(int stack) {
+        return Either.right(List.of(StackMutations.unstack(stack).executed()));
     }
 
     @Override

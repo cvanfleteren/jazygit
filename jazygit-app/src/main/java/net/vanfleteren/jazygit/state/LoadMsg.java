@@ -62,13 +62,7 @@ public sealed interface LoadMsg extends Msg {
      * The local and the remote-tracking branches, read at the same moment, with the parents of the branches and how
      * far each is from its base, read right after; none when the parents could not be read.
      */
-    record BranchesLoaded(AllBranches branches, Option<Bases> bases) implements LoadMsg {
-
-        @Override
-        public Cmd.LoadBranches cmd() {
-            return new Cmd.LoadBranches();
-        }
-    }
+    record BranchesLoaded(Cmd.LoadBranches cmd, AllBranches branches, Option<Bases> bases) implements LoadMsg {}
 
     /**
      * What each of the loads that {@link Cmd.CheckMetadata} guards is read from looks like now; none when that
@@ -122,7 +116,8 @@ public sealed interface LoadMsg extends Msg {
     /**
      * What the bases of the branches are, and how far each local branch is from its own.
      *
-     * @param parents the branch each branch was made from, of those that have one recorded
+     * @param parents the parent of each branch that has one: what GitHub says it is built on, else the branch it was
+     *                made from (ADR 72)
      * @param counts  how far each local branch that has a base is from it, by its name (ADR 46)
      */
     record Bases(Map<BranchName, BranchName> parents, Map<BranchName, BaseDistance> counts) {}

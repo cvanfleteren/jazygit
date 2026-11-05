@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import dev.tamboui.layout.Size;
 import dev.tamboui.toolkit.Toolkit;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
+import io.vavr.collection.HashMap;
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.nio.file.Path;
@@ -13,7 +15,11 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.State;
+import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.git.model.*;
+import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.TestModels;
 import org.junit.jupiter.api.Test;
 
 class LocalBranchesListTest {
@@ -66,6 +72,101 @@ class LocalBranchesListTest {
         assertEquals("feature  Pushing |", row.text());
         assertEquals(Option.of("  3d  ↑2 ↓5  ⇡1 ⇣58  ✓ #42  +  wt"), row.detailText());
         assertEquals(2, row.height());
+    }
+
+    @Test
+    void aBranchShowsItsParentAfterHowFarItIsBehindIt() {
+        LoadableList.Row row = LocalBranchesList.row(
+                Fixtures.branch(new BranchName("feat/b"), false, new Sha("1")),
+                Duration.ofDays(2),
+                Option.of(new BaseDistance(new BranchRef.Local(new BranchName("feat/a")), new Sha("1"), 0, 1)),
+                Option.of(new BranchName("feat/a")),
+                BranchSegs.gitHub(
+                        Option.of(new PullRequest(97, "feat/b", false, Checks.PASSING, Review.NONE)), Option.none()),
+                Option.none());
+
+        assertEquals(Option.of("  2d  ⇣1 on feat/a  ✓ #97"), row.detailText());
+    }
+
+    @Test
+    void aBranchNotBehindItsParentShowsTheParentAlone() {
+        LoadableList.Row row = LocalBranchesList.row(
+                Fixtures.branch(new BranchName("feat/b"), false, new Sha("1")),
+                Duration.ofDays(2),
+                Option.none(),
+                Option.of(new BranchName("feat/a")),
+                List.empty(),
+                Option.none());
+
+        assertEquals(Option.of("  2d  on feat/a"), row.detailText());
+        assertEquals(
+                Option.of(Theme.Classes.DIM),
+                row.detail().map(segs -> segs.last()).flatMap(LoadableList.Seg::cssClass));
+    }
+
+    @Test
+    void aLongParentIsCutSoWhatComesAfterItStaysInView() {
+        assertEquals(
+                List.of(" on feature/a-very-long…"),
+                BranchSegs.parent(Option.of(new BranchName("feature/a-very-long-name")))
+                        .map(LoadableList.Seg::text));
+    }
+
+    private static final BranchName FEATURE = new BranchName("feature");
+    private static final BranchName FEAT_A = new BranchName("feat/a");
+
+    private static Model withParent(BranchName parent) {
+        return TestModels.loaded().mapRepo(repo -> repo.withParents(HashMap.of(FEATURE, parent)));
+    }
+
+    private static Option<BranchName> shownParent(Model model) {
+        return LocalBranchesList.shownParent(
+                model,
+                model.repo()
+                        .branches()
+                        .toOption()
+                        .get()
+                        .find(b -> b.name().equals(FEATURE))
+                        .get());
+    }
+
+    @Test
+    void aBranchShowsAParentThatIsNoRoot() {
+        assertEquals(Option.of(FEAT_A), shownParent(withParent(FEAT_A)));
+    }
+
+    @Test
+    void aBranchBuiltOnARootShowsNoParent() {
+        BranchName main = new BranchName("main");
+        Model onMain = withParent(main)
+                .mapRepo(repo -> repo.withBranches(repo.branches()
+                        .map(branches -> branches.map(b -> b.name().equals(main)
+                                ? Fixtures.branch(main, true, b.tip(), Instant.EPOCH, false, true)
+                                : b))));
+
+        assertEquals(Option.none(), shownParent(onMain));
+        assertEquals(
+                Option.none(),
+                shownParent(withParent(FEAT_A)
+                        .mapGitHub(gitHub -> gitHub.withProtectedBranches(Option.of(HashSet.of(FEAT_A))))));
+    }
+
+    @Test
+    void aBranchInAStackOnGitHubShowsNoParent() {
+        PullRequestStack stack = new PullRequestStack(
+                12,
+                2,
+                2,
+                List.of(
+                        new PullRequestStack.Entry(1, 96, State.OPEN, "feat/a", "main"),
+                        new PullRequestStack.Entry(2, 97, State.OPEN, "feature", "feat/a")));
+        PullRequest stacked = new PullRequest(
+                97, "feature", "feat/a", false, Checks.NONE, Review.NONE, Option.of(stack), Option.none());
+
+        assertEquals(
+                Option.none(),
+                shownParent(withParent(FEAT_A)
+                        .mapGitHub(gitHub -> gitHub.withPullRequests(Option.of(HashMap.of(FEATURE, stacked))))));
     }
 
     @Test

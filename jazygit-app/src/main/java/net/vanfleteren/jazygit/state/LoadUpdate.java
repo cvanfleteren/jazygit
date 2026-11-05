@@ -32,7 +32,7 @@ public final class LoadUpdate {
             case LoadMsg m when stale(done, m.cmd()) -> Next.of(done);
             case StatusLoaded loaded -> statusLoaded(model, loaded.kept(done));
             // The parents and the counts that could not be read stay as read before (ADR 46).
-            case BranchesLoaded(var branches, var bases) ->
+            case BranchesLoaded(var load, var branches, var bases) ->
                 branchesLoaded(model, done.mapRepo(repo -> {
                     Repo read = repo.withBranches(repo.branches().reload(branches.local()))
                             .withRemoteBranches(repo.remoteBranches().reload(branches.remote()));
@@ -114,7 +114,18 @@ public final class LoadUpdate {
      * keeps what their files look like now. One that still runs is left alone, with what it was started with: it may
      * have read before the change, so the next tick looks again.
      */
-    private static Next metadataChecked(Model model, List<Tuple2<Cmd.Load, Option<MetadataStamp>>> stamps) {
+    private static Next metadataChecked(Model model, List<Tuple2<Cmd.Load, Option<MetadataStamp>>> listed) {
+        // The branches are read as GitHub now says they are built on: when that changed, they are read again, and
+        // what the files looked like for the load told something else is of no use anymore.
+        List<Tuple2<Cmd.Load, Option<MetadataStamp>>> stamps =
+                listed.map(stamp -> stamp.map1(load -> Cmd.LoadBranches.current(model, load)));
+        Cmd.Load branches = Cmd.LoadBranches.current(model, Cmd.LoadBranches.LISTED);
+        Model current = model.mapJobs(jobs -> jobs.withReadAt(
+                jobs.readAt().filterKeys(load -> !(load instanceof Cmd.LoadBranches) || load.equals(branches))));
+        return started(current, stamps);
+    }
+
+    private static Next started(Model model, List<Tuple2<Cmd.Load, Option<MetadataStamp>>> stamps) {
         List<Tuple2<Cmd.Load, Option<MetadataStamp>>> changed = stamps.filter(
                         stamp -> !model.jobs().runs(stamp._1()))
                 .filter(stamp -> stamp._2().isEmpty()
@@ -273,7 +284,7 @@ public final class LoadUpdate {
         return switch (cmd) {
             case Cmd.Targeted<?> targeted -> targeted.target().failed(model, failure);
             // The parents and the counts read before stay, as they would while reading again (ADR 46).
-            case Cmd.LoadBranches() ->
+            case Cmd.LoadBranches _ ->
                 model.mapRepo(repo -> repo.withBranches(repo.branches().failed(failure))
                         .withRemoteBranches(repo.remoteBranches().failed(failure)));
             // Which worktrees have changes is a detail: when the whole read fails, what was read before stays, and

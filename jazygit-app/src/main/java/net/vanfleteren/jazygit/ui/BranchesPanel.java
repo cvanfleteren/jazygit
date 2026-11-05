@@ -213,10 +213,13 @@ public class BranchesPanel {
                 .getOrElse(() -> tabSelectionChange(model));
     }
 
+    // A row without a log says so, rather than leaving the log of the row highlighted before.
     private Option<Msg> tabSelectionChange(Model model) {
+        BranchesTabList tab = list(model.repoView().branchesTab());
         return PaneKeys.selectionChange(
-                list(model.repoView().branchesTab()).selectedRef(),
-                model.repoView().branchLog(),
-                SelectionMsg.BranchSelected::new);
+                        tab.selectedRef(), model.repoView().branchLog(), SelectionMsg.BranchSelected::new)
+                .orElse(() -> tab.unfetched()
+                        .filter(pullRequest -> !model.repoView().unfetched().contains(pullRequest))
+                        .map(SelectionMsg.UnfetchedSelected::new));
     }
 }

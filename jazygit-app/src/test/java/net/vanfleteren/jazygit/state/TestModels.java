@@ -122,7 +122,7 @@ public final class TestModels {
         Model model = started(Update.init("repo", PLAIN)).model();
         model = done(model, new Cmd.LoadStatus(), new LoadMsg.StatusLoaded(CLEAN))
                 .model();
-        model = done(model, new Cmd.LoadBranches(), branchesLoaded(new AllBranches(BRANCHES, List.empty())))
+        model = done(model, Cmd.LoadBranches.LISTED, branchesLoaded(new AllBranches(BRANCHES, List.empty())))
                 .model();
         model = done(model, new Cmd.LoadStashes(), new LoadMsg.StashesLoaded(io.vavr.collection.List.of()))
                 .model();
@@ -170,7 +170,7 @@ public final class TestModels {
      * {@code branches} read, with the parents and the counts the model had before, as when those could not be read.
      */
     public static LoadMsg.BranchesLoaded branchesLoaded(AllBranches branches) {
-        return new LoadMsg.BranchesLoaded(branches, Option.none());
+        return new LoadMsg.BranchesLoaded(Cmd.LoadBranches.LISTED, branches, Option.none());
     }
 
     /**

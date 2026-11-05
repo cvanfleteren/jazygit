@@ -20,4 +20,12 @@ interface BranchesTabList {
      * The branch whose log the highlighted row shows, if any.
      */
     Option<BranchRef> selectedRef();
+
+    /**
+     * The pull request the highlighted row shows when it has no log to show: one of a stack whose branch is neither
+     * checked out nor fetched (ADR 72).
+     */
+    default Option<Integer> unfetched() {
+        return Option.none();
+    }
 }

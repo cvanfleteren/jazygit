@@ -21,4 +21,11 @@ public sealed interface PullRequestsMsg extends Msg {
     record Loaded(List<PullRequest> pullRequests) implements PullRequestsMsg {}
 
     record LoadFailed(Failure failure) implements PullRequestsMsg {}
+
+    /**
+     * The branches that are protected on GitHub (ADR 72).
+     */
+    record ProtectedLoaded(List<String> branches) implements PullRequestsMsg {}
+
+    record ProtectedLoadFailed(Failure failure) implements PullRequestsMsg {}
 }

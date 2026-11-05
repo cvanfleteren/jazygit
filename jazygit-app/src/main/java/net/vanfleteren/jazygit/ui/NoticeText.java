@@ -23,6 +23,9 @@ public final class NoticeText {
                         + Messages.get("notice.moveStopped", branch.value(), oldest.shortSha(), target.value());
             case Notice.MergeEnqueued(var branch) -> Messages.get("notice.mergeEnqueued", branch.value());
             case Notice.MergeStillPending(var branch) -> Messages.get("notice.mergeStillPending", branch.value());
+            case Notice.StackNotListed(int pullRequest) ->
+                Messages.get("notice.stackNotListed", String.valueOf(pullRequest));
+            case Notice.StackNotAsked(int stack) -> Messages.get("notice.stackNotAsked", String.valueOf(stack));
         };
     }
 

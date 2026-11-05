@@ -72,3 +72,6 @@ The title no longer says `only` while `b` is on: see ADR 0023.
 
 Amended by ADR 46: the branches list shows how many commits of its base each local branch does not have, read for
 all branches at once with `for-each-ref --format=%(ahead-behind:<base>)`.
+
+Amended by ADR 72: the base of a branch with an open pull request is the base of that pull request on GitHub, or
+the branch below it in its stack, before `gh-merge-base`.

@@ -38,7 +38,8 @@ class PullRequestDetailsTest {
     @Test
     void anOpenPullRequestIsListedAsItIs() {
         assertEquals(
-                Option.of(new PullRequest(42, "feature", true, Checks.PASSING, Review.REQUIRED)),
+                Option.of(new PullRequest(
+                        42, "feature", "main", true, Checks.PASSING, Review.REQUIRED, Option.none(), Option.none())),
                 details(State.OPEN, List.of(new Check("build", Checks.PASSING))).listed());
     }
 

@@ -49,3 +49,5 @@ Git does not store when a branch was made, but its reflog does (checked with git
 - A branch made a while ago whose last commit has an older committer date, as a test can make with
   `GIT_COMMITTER_DATE`, shows the time it was made.
 - Each read of the branches runs one more git command, which reads the whole reflog of every branch.
+
+Amended by ADR 72: the branches of a stack are listed together, ordered by the one that saw activity last.

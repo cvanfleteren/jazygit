@@ -21,6 +21,11 @@ import net.vanfleteren.jazygit.state.*;
  */
 final class BranchSegs {
 
+    /**
+     * How wide the name of the parent of a branch is at most, so that what comes after it on its line stays in view.
+     */
+    static final int PARENT_WIDTH = 20;
+
     private BranchSegs() {}
 
     /**
@@ -95,6 +100,17 @@ final class BranchSegs {
                 .flatMap(read -> List.of(Tuple.of("⇡", read.ahead()), Tuple.of("⇣", read.behind())))
                 .filter(count -> count._2 > 0)
                 .map(count -> LoadableList.Seg.styled(" " + count._1 + count._2, Theme.Classes.DIM));
+    }
+
+    /**
+     * The parent of a branch, {@code on feat/a}, dimmed and with a leading space, its name cut with an ellipsis past
+     * {@link #PARENT_WIDTH} columns; nothing for none (ADR 72).
+     */
+    static List<LoadableList.Seg> parent(Option<BranchName> parent) {
+        return parent.map(name -> LoadableList.Seg.styled(
+                        " " + Messages.get("branches.on", TextWidth.cut(name.value(), PARENT_WIDTH)),
+                        Theme.Classes.DIM))
+                .toList();
     }
 
     /**

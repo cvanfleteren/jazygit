@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.git;
 
 import static net.vanfleteren.jazygit.git.StubGit.ran;
 
+import io.vavr.Tuple2;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
@@ -42,6 +43,12 @@ public interface StubRemotes extends Remotes {
     @Override
     default Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushSettingUpstream(
             BranchName branch, RemoteBranch upstream) {
+        return ran();
+    }
+
+    @Override
+    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushAll(
+            RemoteName remote, List<Tuple2<BranchName, BranchName>> branches) {
         return ran();
     }
 

@@ -5,6 +5,7 @@ import static net.vanfleteren.jazygit.git.GitCommand.git;
 import io.vavr.Tuple2;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Files;
@@ -13,8 +14,10 @@ import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
+import net.vanfleteren.jazygit.git.model.Revision;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.SquashMode;
+import net.vanfleteren.jazygit.git.model.StackLayer;
 import net.vanfleteren.jazygit.process.CommandLine;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
@@ -129,6 +132,113 @@ final class CliRebase {
                                 INTERACTIVE.append("--no-autosquash").append(base),
                                 sequenceEditor(sha, List.of(new Tuple2<>("pick", "drop"))),
                                 "true")));
+    }
+
+    /**
+     * Rebases a stack onto {@code base} in one interactive rebase, whose todo jazygit writes instead of an editor
+     * (ADR 74): for each of {@code layers} from the bottom up, {@code pick} its own commits, then
+     * {@code update-ref refs/heads/<branch>}; none for the top, the last of them, which the rebase checks out and moves
+     * itself. {@code git rebase --interactive --keep-empty --no-autosquash --empty=drop --onto <base> <base> <top>}: a
+     * commit that has nothing left once picked, as the base has it already, is dropped. Without {@code --autostash}:
+     * git refuses changes that are not committed, which would else come back on the top instead of where they were.
+     * It does not start when a branch moved since its commits were read, which the todo would leave out, or is now
+     * checked out in another worktree, under whose files an {@code update-ref} would move it.
+     *
+     * @return the command lines that were run
+     */
+    static Either<GitFailure<GitError>, List<ExecutedCommand>> stack(
+            Path worktree, Revision base, List<StackLayer.Commits> layers) {
+        BranchName top = layers.last().branch();
+        return GitFailure.<GitError, Option<GitError>>widen(changedSince(worktree, layers))
+                .flatMap(changed -> changed.isDefined()
+                        ? Either.left(new GitFailure<>(changed.get(), List.empty()))
+                        : TempFiles.using(
+                                "jazygit-stack-todo",
+                                file -> Files.writeString(file, todo(layers)),
+                                failed -> new GitFailure<GitError>(failed, List.empty()),
+                                file -> rebase(
+                                        worktree,
+                                        interactive(
+                                                        List.of(
+                                                                "rebase",
+                                                                "--interactive",
+                                                                "--keep-empty",
+                                                                "--no-autosquash",
+                                                                "--empty=drop",
+                                                                "--onto",
+                                                                GitArgs.revision(base),
+                                                                GitArgs.revision(base),
+                                                                // Its name, not its ref: given refs/heads/<top>, git
+                                                                // would rebase a detached HEAD and leave the branch
+                                                                // where it was.
+                                                                GitArgs.name(top)),
+                                                        CommandLine.format(List.of("cp", file.toString())),
+                                                        "true")
+                                                // The todo leaves out on purpose what the base or a merged branch
+                                                // below has already, which git would else stop for.
+                                                .withConfig("rebase.missingCommitsCheck", "ignore"))));
+    }
+
+    /**
+     * Why a rebase of {@code layers} does not start, if it does not: one of their branches is no longer where its
+     * commits were read, or is checked out in another worktree. One checked out here is not: the rebase checks out
+     * the top first.
+     */
+    private static Either<GitFailure<ProcessError>, Option<GitError>> changedSince(
+            Path worktree, List<StackLayer.Commits> layers) {
+        String format =
+                List.of("%(refname)", "%(objectname)", "%(worktreepath)").mkString(GitOutput.REF_FIELD_SEPARATOR);
+        return GitProcess.ask(worktree, GitCommand.reading("symbolic-ref", "--quiet", "HEAD"))
+                .map(head -> head.map(found -> found.stdout().strip()))
+                .flatMap(head -> GitProcess.run(
+                                worktree,
+                                GitCommand.reading(List.of("for-each-ref", "--format=" + format)
+                                        .appendAll(layers.map(
+                                                layer -> GitArgs.revision(new BranchRef.Local(layer.branch()))))))
+                        .flatMap(refs -> Either.sequenceRight(
+                                        GitOutput.nonBlankLines(refs.stdout()).map(line -> GitOutput.fields(line, 3)))
+                                .mapLeft(error -> new GitFailure<ProcessError>(error, refs.log()))
+                                .map(read -> List.ofAll(read).toMap(fields -> fields.get(0), fields -> fields.tail()))
+                                .map(read -> layers.map(layer -> changed(layer, read, head))
+                                        .find(Option::isDefined)
+                                        .flatMap(why -> why))));
+    }
+
+    /**
+     * Why the branch of {@code layer} stops a rebase of the stack, if it does, as {@code refs} has the branches,
+     * their tips and worktrees by their refs, while {@code head} is checked out here.
+     */
+    private static Option<GitError> changed(
+            StackLayer.Commits layer, Map<String, List<String>> refs, Option<String> head) {
+        String ref = GitArgs.revision(new BranchRef.Local(layer.branch()));
+        Option<List<String>> found = refs.get(ref);
+        if (found.forAll(
+                tipAndWorktree -> !tipAndWorktree.get(0).equals(layer.tip().value()))) {
+            return Option.of(new GitError.StackBranchMoved(layer.branch()));
+        }
+        String elsewhere = found.get().get(1);
+        return Option.when(
+                !elsewhere.isBlank() && !head.contains(ref),
+                new GitError.StackBranchCheckedOutElsewhere(layer.branch(), elsewhere));
+    }
+
+    /**
+     * The todo of a rebase of {@code layers}: the own commits of each, then where its branch goes, but for the top.
+     * A todo without a commit to pick says {@code noop}, which git otherwise takes for having nothing to do.
+     */
+    static String todo(List<StackLayer.Commits> layers) {
+        List<String> lines = layers.zipWithIndex()
+                .flatMap(layer -> layer._1()
+                        .commits()
+                        .map(sha -> "pick " + sha.value())
+                        .appendAll(
+                                layer._2() < layers.size() - 1
+                                        ? List.of("update-ref "
+                                                + GitArgs.revision(new BranchRef.Local(
+                                                        layer._1().branch())))
+                                        : List.empty()));
+        return (layers.exists(layer -> !layer.commits().isEmpty()) ? lines : lines.prepend("noop")).mkString("\n")
+                + "\n";
     }
 
     /**

@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.state.SelectionMsg.CommitSelected;
 import net.vanfleteren.jazygit.state.SelectionMsg.DivergenceCommitSelected;
 import net.vanfleteren.jazygit.state.SelectionMsg.FilesSelected;
 import net.vanfleteren.jazygit.state.SelectionMsg.StashSelected;
+import net.vanfleteren.jazygit.state.SelectionMsg.UnfetchedSelected;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
@@ -30,8 +31,13 @@ public final class SelectionUpdate {
                         model,
                         branch,
                         model.repoView().branchLog(),
-                        log -> model.mapRepoView(repoView -> repoView.withBranchLog(log)),
+                        log -> model.mapRepoView(
+                                repoView -> repoView.withBranchLog(log).withUnfetched(Option.none())),
                         log -> new LoadBranchLog(log, AheadUpdate.of(model, log)));
+            // No log is shown, nor read again as branches move.
+            case UnfetchedSelected(int pullRequest) ->
+                Next.of(model.mapRepoView(
+                        repoView -> repoView.withBranchLog(Option.none()).withUnfetched(Option.of(pullRequest))));
             case CommitSelected(var sha) ->
                 selected(
                         model,

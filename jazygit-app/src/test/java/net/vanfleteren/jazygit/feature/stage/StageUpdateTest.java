@@ -144,7 +144,7 @@ class StageUpdateTest {
         assertEquals(
                 List.of(
                         new LoadStatus(),
-                        new LoadBranches(),
+                        LoadBranches.LISTED,
                         new net.vanfleteren.jazygit.state.Cmd.LoadStashes(),
                         new net.vanfleteren.jazygit.state.Cmd.LoadWorktrees()),
                 Update.update(loaded(), succeeded(new StageCmd.Stage(List.of())))
@@ -155,7 +155,7 @@ class StageUpdateTest {
         assertEquals(
                 List.of(
                         new LoadStatus(),
-                        new LoadBranches(),
+                        LoadBranches.LISTED,
                         new net.vanfleteren.jazygit.state.Cmd.LoadStashes(),
                         new net.vanfleteren.jazygit.state.Cmd.LoadWorktrees()),
                 failed.cmds());

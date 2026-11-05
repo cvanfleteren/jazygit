@@ -45,6 +45,11 @@ public interface GitHub {
     Either<GhError, BranchChecks> branchChecks();
 
     /**
+     * The names of the protected branches of the repository (ADR 72).
+     */
+    Either<GhError, List<String>> protectedBranches();
+
+    /**
      * What there is to know about pull request {@code number}.
      */
     Either<GhError, PullRequestDetails> pullRequestDetails(int number);
@@ -132,6 +137,22 @@ public interface GitHub {
      * Changes what {@code edit} gives of pull request {@code number}: its title, its description and its base.
      */
     Either<GhFailure, List<ExecutedCommand>> editPullRequest(int number, PullRequestEdit edit);
+
+    /**
+     * Makes a stack on GitHub of {@code pullRequests}, the bottom one first: two or more, each with the head of the one
+     * below it as its base (ADR 73).
+     */
+    Either<GhFailure, List<ExecutedCommand>> createStack(List<Integer> pullRequests);
+
+    /**
+     * Puts {@code pullRequests}, the lowest one first, on the top of stack {@code stack} (ADR 73).
+     */
+    Either<GhFailure, List<ExecutedCommand>> addToStack(int stack, List<Integer> pullRequests);
+
+    /**
+     * Takes stack {@code stack} apart on GitHub; its pull requests stay open, with their bases (ADR 73).
+     */
+    Either<GhFailure, List<ExecutedCommand>> unstack(int stack);
 
     /**
      * Adds a comment saying {@code body} to the conversation of pull request {@code number}.

@@ -280,7 +280,7 @@ class CheckoutWhereUpdateTest {
                 .model();
         Next branches = done(
                 model,
-                new Cmd.LoadBranches(),
+                Cmd.LoadBranches.LISTED,
                 TestModels.branchesLoaded(new AllBranches(TestModels.BRANCHES, List.empty())));
         Next worktrees = done(
                 started(branches).model(),

@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.github.create;
 
 import io.vavr.collection.List;
+import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.push.PushCmd;
 import net.vanfleteren.jazygit.feature.branch.push.PushCmd.Push;
@@ -44,7 +45,7 @@ public final class CreatePullRequestUpdate {
                 String title = subject.getOrElse(branch::value);
                 yield Next.of(model.clearError()
                         .openPopupIfFree(new NewPullRequestPopup(
-                                branch, head, bases, bases.head(), title, new NewPullRequest(title, "", false))));
+                                branch, head, bases, bases.head(), title, new NewPullRequest(title, "", false), true)));
             }
             case BaseMoved(var cursor, var base) ->
                 model.popup(NewPullRequestPopup.class)
@@ -62,6 +63,10 @@ public final class CreatePullRequestUpdate {
                         .map(popup -> model.openPopup(popup.withPullRequest(pullRequest)))
                         .getOrElse(model));
             // A blank title keeps the popup open, as GitHub needs one.
+            case StackToggled() ->
+                Next.of(model.popup(NewPullRequestPopup.class)
+                        .map(popup -> model.openPopup(popup.withStack(!popup.stack())))
+                        .getOrElse(model));
             case Confirmed()
             when model.popup(NewPullRequestPopup.class)
                     .exists(popup -> popup.pullRequest().title().isBlank()) -> Next.of(model);
@@ -75,7 +80,10 @@ public final class CreatePullRequestUpdate {
                                         popup.branch(),
                                         popup.head(),
                                         new Base(popup.base(), baseRef(model, popup.base())).remote(),
-                                        stripped(popup.pullRequest()))));
+                                        stripped(popup.pullRequest()),
+                                        Option.when(popup.stack(), () -> stackOn(model, popup.base()))
+                                                .flatMap(on -> on)
+                                                .flatMap(Either::toOption))));
             // The branches may have been read again while the user was asked: with nothing to push any more, it was
             // pushed meanwhile or has diverged since, so it is asked about again as it is now.
             case PushFirstConfirmed() ->
@@ -109,9 +117,33 @@ public final class CreatePullRequestUpdate {
                         .getOrElse(done.model());
                 // A read that is still running may have missed it, so this one is started anyway. GitHub may have
                 // changed the remote too, which a fetch brings in.
-                yield FetchUpdate.requested(PullRequestsUpdate.loadAnyway(new Next(shown, done.cmds())));
+                Next read = FetchUpdate.requested(PullRequestsUpdate.loadAnyway(new Next(shown, done.cmds())));
+                // Stacked once it is there: on the pull request of its base, as the dialog said (ADR 73).
+                yield cmd.stacking()
+                        .flatMap(stacking -> pullRequest.map(pr -> stacking.cmd(pr.number())))
+                        .map(stack -> new Next(read.model(), read.cmds().append(stack)))
+                        .getOrElse(read);
             }
         };
+    }
+
+    /**
+     * Where a new pull request on {@code base} goes in a stack (ADR 73): none when {@code base} has no open pull
+     * request; why it cannot when that one is in a stack but not on its top.
+     */
+    static Option<Either<CreatePullRequestCmd.NotTop, CreatePullRequestCmd.Stacking>> stackOn(
+            Model model, BranchName base) {
+        return model.repo()
+                .branch(base)
+                .flatMap(model.gitHub()::pullRequest)
+                .map(below -> below.stack()
+                        .map(stack -> stack.isTop()
+                                ? Either.<CreatePullRequestCmd.NotTop, CreatePullRequestCmd.Stacking>right(
+                                        new CreatePullRequestCmd.Stacking(below.number(), Option.of(stack.number())))
+                                : Either.<CreatePullRequestCmd.NotTop, CreatePullRequestCmd.Stacking>left(
+                                        new CreatePullRequestCmd.NotTop(below.number(), stack.number())))
+                        .getOrElse(
+                                () -> Either.right(new CreatePullRequestCmd.Stacking(below.number(), Option.none()))));
     }
 
     /**
