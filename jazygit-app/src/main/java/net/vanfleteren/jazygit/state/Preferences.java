@@ -19,7 +19,7 @@ import net.vanfleteren.jazygit.settings.ThemeName;
  * @param repositoryTheme the theme the git configuration gives the repository shown, which the saved one gives way
  *                        to (ADR 70)
  * @param ignoreWhitespace whether the diffs leave out changes to whitespace only, for this session only
- * @param context       how many lines the diffs show around a change, for this session only (ADR 72)
+ * @param context       how many lines the diffs show around a change, for this session only (ADR 75)
  * @param dragged       the width the left column of a screen is dragged to, which is kept once it is let go
  * @param draggedHeights the heights the panes of the left column of a screen are dragged to, which are kept once
  *                       they are let go

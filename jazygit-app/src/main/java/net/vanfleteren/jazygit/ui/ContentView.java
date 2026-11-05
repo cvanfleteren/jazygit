@@ -90,7 +90,7 @@ final class ContentView {
     }
 
     /**
-     * {@code title}, saying how much context is shown when it is not git's own (ADR 72), and that changes to
+     * {@code title}, saying how much context is shown when it is not git's own (ADR 75), and that changes to
      * whitespace only are left out when they are.
      */
     static String titled(String title, DiffOptions options) {

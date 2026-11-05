@@ -1,4 +1,4 @@
-# 72. The amount of context in a diff
+# 75. The amount of context in a diff
 
 Date: 2026-11-05
 
@@ -9,7 +9,7 @@ leaves jazygit for an editor or for GitHub, which can show more lines around one
 
 There are two ways to show more: one amount of context for every diff, as `git diff -U<n>` reads it, or more lines
 around one hunk, as GitHub's arrows above and below a hunk show them. This ADR is the first; showing more of one hunk
-is ADR 73, built on it.
+is ADR 76, built on it.
 
 `DiffOptions` already holds how diffs are read (ignoring whitespace, a merge against its first parent), and changing
 it reads the diffs shown again (`DiffOptionsUpdate.changed`), dropping what was read with the options before

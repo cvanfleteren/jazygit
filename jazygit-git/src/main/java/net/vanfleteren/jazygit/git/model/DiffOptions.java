@@ -9,7 +9,7 @@ import lombok.With;
  *                         with nothing else changed is left out entirely
  * @param firstParent      whether what a merge commit changed is read against its first parent only, as
  *                         {@code --diff-merges=first-parent} does, rather than as git's combined diff
- * @param context          how many lines are shown around a change (ADR 72)
+ * @param context          how many lines are shown around a change (ADR 75)
  */
 @With
 public record DiffOptions(boolean ignoreWhitespace, boolean firstParent, DiffContext context) {

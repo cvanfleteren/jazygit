@@ -19,7 +19,7 @@ import net.vanfleteren.jazygit.state.Update.Next;
  * How the diffs are read, and how the diffs of the working tree, of a commit and of a stash are drawn. Changing either
  * reads the diffs that are shown again, which keep showing as they were until they are read; what was read before the
  * change is dropped when it arrives. The style decides how a merge is read (ADR 44), so it changes how the diffs are
- * read too. The amount of context, like ignoring whitespace, holds for this session only (ADR 72).
+ * read too. The amount of context, like ignoring whitespace, holds for this session only (ADR 75).
  */
 public final class DiffOptionsUpdate {
 
@@ -40,7 +40,7 @@ public final class DiffOptionsUpdate {
     }
 
     /**
-     * Shows the amount of context {@code step} takes the current one to, for this session (ADR 72). On the last step
+     * Shows the amount of context {@code step} takes the current one to, for this session (ADR 75). On the last step
      * it changes nothing, so nothing is read again.
      */
     private static Next stepped(Model model, UnaryOperator<DiffContext> step) {
