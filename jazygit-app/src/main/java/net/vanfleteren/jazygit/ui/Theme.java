@@ -6,11 +6,15 @@ import dev.tamboui.style.Color;
 import dev.tamboui.style.Modifier;
 import dev.tamboui.style.Style;
 import dev.tamboui.style.StylePropertyResolver;
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import net.vanfleteren.jazygit.settings.ThemeName;
 
 /**
@@ -54,10 +58,16 @@ public final class Theme {
      * element of its own.
      */
     public static SpanStyles spanStyles(StyleEngine engine) {
+        // Resolving a class goes over every rule of the theme, and a diff has spans of a few classes on each of its
+        // lines, drawn on many threads at once: each class is resolved once for each theme, which only changes whole.
+        Map<Tuple2<Option<String>, String>, Style> resolved = new ConcurrentHashMap<>();
         return new SpanStyles() {
             @Override
             public Style of(String cssClass) {
-                return engine.resolve(new Node("Span", Set.of(cssClass))).toStyle();
+                return resolved.computeIfAbsent(
+                        Tuple.of(Option.ofOptional(engine.getActiveStylesheet()), cssClass),
+                        key -> engine.resolve(new Node("Span", Set.of(cssClass)))
+                                .toStyle());
             }
 
             @Override
