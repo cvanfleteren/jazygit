@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.ui;
 
 import dev.tamboui.layout.Rect;
+import dev.tamboui.style.Style;
 import dev.tamboui.terminal.Frame;
 import dev.tamboui.toolkit.element.DefaultRenderContext;
 import dev.tamboui.toolkit.element.RenderContext;
@@ -27,11 +28,12 @@ public final class LineEditInput extends StyledElement<LineEditInput> {
     private Consumer<String> onChange = text -> {};
 
     /**
-     * @param input the text input, with its size already set; it gets the id
+     * @param input the text input, with its size already set; it gets the id, and leaves its cursor to the terminal
      * @param state the state of the text input
      */
     public LineEditInput(TextInputElement input, TextInputState state, String id) {
-        this.input = input.id(id);
+        // The terminal's own cursor shows where typing goes; a styled cell under it could cancel it out.
+        this.input = input.id(id).cursorStyle(Style.EMPTY);
         this.state = state;
         id(id);
         Option.of(input.constraint()).forEach(this::constraint);
