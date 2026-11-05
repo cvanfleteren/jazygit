@@ -152,8 +152,8 @@ public final class CheckTimesText {
         return switch (eta) {
             case Eta.Done done -> Option.none();
             case Eta.Unknown unknown -> Option.of(unknown(learning));
-            case Eta.Expected expected ->
-                Option.of(expected.overdue(now) ? Messages.get("checks.late") : leftInMinutes(expected.left(now)));
+            case Eta.Expected expected when expected.overdue(now) -> Option.of(Messages.get("checks.late"));
+            case Eta.Expected expected -> Option.of(leftInMinutes(expected.left(now)));
         };
     }
 
