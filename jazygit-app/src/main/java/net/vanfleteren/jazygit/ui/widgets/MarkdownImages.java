@@ -92,28 +92,34 @@ public final class MarkdownImages {
     }
 
     /**
-     * {@code picture} as large as {@code image} says it is shown, or as it is, no wider than {@code columns} and no
-     * higher than {@link Picture#MAX_ROWS}.
+     * {@code picture} as large as {@code image} says it is shown, the side it leaves out as the picture has it, or as
+     * it is, no wider than {@code columns} less what quotes and lists indent it by, and no higher than
+     * {@link Picture#MAX_ROWS}.
      */
     private static Picture fitted(MarkdownImage image, Picture picture, int columns) {
-        int width =
-                image.width().map(pixels -> Math.ceilDiv(pixels, Picture.SCALE)).getOrElse(picture.width());
-        int height = image.height()
-                .map(pixels -> Math.ceilDiv(pixels, Picture.SCALE))
-                .getOrElse(() -> image.width().isDefined()
-                        ? Math.max(1, (int) Math.round((double) width * picture.height() / picture.width()))
-                        : picture.height());
-        return picture.fit(width, height, Math.max(1, columns), Picture.MAX_ROWS);
+        Option<Integer> tagWidth = image.width().map(pixels -> Math.ceilDiv(pixels, Picture.SCALE));
+        Option<Integer> tagHeight = image.height().map(pixels -> Math.ceilDiv(pixels, Picture.SCALE));
+        int width = tagWidth.getOrElse(() -> tagHeight
+                .map(height -> Math.max(1, (int) Math.round((double) height * picture.width() / picture.height())))
+                .getOrElse(picture.width()));
+        int height = tagHeight.getOrElse(() -> tagWidth.isDefined()
+                ? Math.max(1, (int) Math.round((double) width * picture.height() / picture.width()))
+                : picture.height());
+        return picture.fit(width, height, Math.max(1, columns - image.indent()), Picture.MAX_ROWS);
     }
 
     /**
      * The characters that stand for the cells of {@code picture}, the {@code index}th: a row of them for each row of
-     * cells, each row a line of its own, in a paragraph of its own if it is in a block of HTML.
+     * cells, each row a line of its own. A block of HTML at the top becomes a paragraph of its own; in a quote or a
+     * list it stays in its item, and a line of its own keeps it apart from an image on the next line.
      */
     private static String cells(MarkdownImage image, Picture picture, int index) {
         String row = String.valueOf((char) (PICTURE + index)).repeat(picture.width());
         String rows = List.fill(picture.rows(), row).mkString("\\\n");
-        return image.block() ? "\n\n" + rows + "\n\n" : rows;
+        if (image.block() && image.indent() == 0) {
+            return "\n\n" + rows + "\n\n";
+        }
+        return image.breakAfter() ? rows + "\\" : rows;
     }
 
     /**

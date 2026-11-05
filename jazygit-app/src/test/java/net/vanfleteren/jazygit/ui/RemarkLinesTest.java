@@ -30,6 +30,7 @@ import net.vanfleteren.jazygit.state.Collapsed;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.ui.ContentView.ShownDiff;
 import net.vanfleteren.jazygit.ui.ContentView.ShownRemarks;
+import net.vanfleteren.jazygit.ui.widgets.MarkdownImages;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -551,6 +552,27 @@ class RemarkLinesTest {
         assertEquals(
                 Style.EMPTY.fg(Color.rgb(255, 0, 0)).bg(Color.rgb(0, 0, 255)),
                 cells.last().style());
+    }
+
+    @Test
+    void aPictureInAQuoteOrListIsDrawnWholeInTheRoomTheyLeaveIt() {
+        Picture picture = new Picture(10, 4, Vector.fill(40, 0xffff0000));
+
+        for (String markdown : List.of("> ![](a.png)", "- ![](a.png)", "1. ![](a.png)", "> > ![](a.png)")) {
+            MarkdownImages.Drawn drawn = MarkdownImages.drawn(markdown, HashMap.of("a.png", picture), 10);
+            List<String> lines =
+                    text(RemarkLines.markdown(drawn.markdown(), 10, StylePropertyResolver.empty(), drawn.pictures()));
+
+            // Each row of the picture is one line of all its cells, never wrapped onto the next; two quotes leave it
+            // room for one row only.
+            List<Integer> cells = lines.map(
+                            line -> (int) line.chars().filter(c -> c == '▀').count())
+                    .filter(count -> count > 0);
+            Picture fitted = drawn.pictures().head();
+            assertEquals(fitted.rows(), cells.size(), markdown + "\n" + lines.mkString("\n"));
+            assertTrue(cells.forAll(count -> count == fitted.width()), markdown + "\n" + lines.mkString("\n"));
+            assertTrue(lines.forAll(line -> TextWidth.of(line) <= 10), markdown + "\n" + lines.mkString("\n"));
+        }
     }
 
     @Test

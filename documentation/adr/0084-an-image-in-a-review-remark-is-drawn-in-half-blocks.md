@@ -23,9 +23,12 @@ any other.
 - jazygit reads PNG, every colour type and depth, interlaced or not, and the first frame of a GIF, itself, without
   AWT or `tamboui-image`. A JPEG, a WebP, an SVG and an image that cannot be read stay the placeholder.
 - An image is as large as a browser shows it, with a pixel of the screen for each 8 of it, as a cell is about 8
-  pixels wide and 16 high: as its tag says, `width="14px"`, else as large as it is. It is never wider than the text of
-  the remark nor higher than 24 rows, and keeps its shape; shrunk, each pixel is the average of those it covers,
-  weighed by how opaque they are.
+  pixels wide and 16 high: as its tag says, `width="14px"`, the side it leaves out as the image has it, else as large
+  as it is. It is never wider than the text of the remark, less what the quotes and list items it is in indent it by
+  as tamboui draws them, nor higher than 24 rows, and keeps its shape; shrunk, each pixel is the average of those it
+  covers, weighed by how opaque they are. A quoted screenshot, as GitHub's "Quote reply" makes one, is drawn too.
+- A block of HTML of only `<img>` tags at the top becomes a paragraph of its own; in a quote or a list it stays in
+  its item.
 - One row high, a picture is drawn in the line, where the placeholder was, as the icon of a bot is. Higher, only an
   image that is all there is of its paragraph is drawn, as a pasted screenshot is, a block of rows; in a line of text
   it stays the placeholder.

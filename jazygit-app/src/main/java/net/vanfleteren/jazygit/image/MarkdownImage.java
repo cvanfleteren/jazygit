@@ -9,11 +9,14 @@ import java.util.Objects;
 import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.commonmark.node.BlockQuote;
 import org.commonmark.node.HtmlBlock;
 import org.commonmark.node.HtmlInline;
 import org.commonmark.node.Image;
 import org.commonmark.node.Link;
+import org.commonmark.node.ListItem;
 import org.commonmark.node.Node;
+import org.commonmark.node.OrderedList;
 import org.commonmark.node.Paragraph;
 import org.commonmark.node.SourceSpan;
 import org.commonmark.node.Text;
@@ -33,6 +36,10 @@ import org.commonmark.parser.Parser;
  * @param inLink whether it is in a link
  * @param block  whether it is in a block of HTML, which becomes a paragraph of its own
  * @param alone  whether it is all there is of its paragraph, or in a block of HTML
+ * @param indent how many columns the quotes and list items it is in indent it by, as tamboui draws them: 2 for a
+ *               quote or a bullet, and the digits of its number and 2 for a numbered item
+ * @param breakAfter whether another image of its block of HTML is on the next line, which a line of its own keeps
+ *               apart from it
  */
 public record MarkdownImage(
         int start,
@@ -43,9 +50,12 @@ public record MarkdownImage(
         Option<Integer> height,
         boolean inLink,
         boolean block,
-        boolean alone) {
+        boolean alone,
+        int indent,
+        boolean breakAfter) {
 
-    private static final Pattern IMG = Pattern.compile("<img\\b[^>]*>", Pattern.CASE_INSENSITIVE);
+    // An <img> tag, not a custom element whose name starts with img-.
+    private static final Pattern IMG = Pattern.compile("<img(?=[\\s/>])[^>]*>", Pattern.CASE_INSENSITIVE);
     private static final Pattern ATTRIBUTE =
             Pattern.compile("\\s([a-z-]+)\\s*=\\s*(?:\"([^\"]*)\"|'([^']*)'|([^\\s\"'>]+))", Pattern.CASE_INSENSITIVE);
     private static final Pattern PIXELS = Pattern.compile("\\s*(\\d{1,5})\\s*(?:px)?\\s*", Pattern.CASE_INSENSITIVE);
@@ -133,7 +143,9 @@ public record MarkdownImage(
                         height,
                         inLink,
                         false,
-                        alone));
+                        alone,
+                        indent(node),
+                        false));
     }
 
     private static boolean blank(Node node) {
@@ -144,25 +156,51 @@ public record MarkdownImage(
      * Each {@code <img>} of a block of HTML in {@code markdown} that has nothing else.
      */
     private static List<MarkdownImage> tags(HtmlBlock html, String markdown) {
-        return List.ofAll(html.getSourceSpans())
+        List<MatchResult> tags = List.ofAll(html.getSourceSpans())
                 .flatMap(span -> List.ofAll(IMG.matcher(markdown)
-                                .region(span.getInputIndex(), span.getInputIndex() + span.getLength())
-                                .results()
-                                .toList())
-                        .map(match -> {
-                            List<MatchResult> attributes = List.ofAll(
-                                    ATTRIBUTE.matcher(match.group()).results().toList());
-                            return new MarkdownImage(
-                                    match.start(),
-                                    match.end(),
-                                    attribute(attributes, "alt").getOrElse(""),
-                                    attribute(attributes, "src"),
-                                    pixels(attribute(attributes, "width")),
-                                    pixels(attribute(attributes, "height")),
-                                    false,
-                                    true,
-                                    true);
-                        }));
+                        .region(span.getInputIndex(), span.getInputIndex() + span.getLength())
+                        .results()
+                        .toList()));
+        return tags.zipWithIndex().map(tag -> {
+            MatchResult match = tag._1();
+            List<MatchResult> attributes =
+                    List.ofAll(ATTRIBUTE.matcher(match.group()).results().toList());
+            return new MarkdownImage(
+                    match.start(),
+                    match.end(),
+                    attribute(attributes, "alt").getOrElse(""),
+                    attribute(attributes, "src"),
+                    pixels(attribute(attributes, "width")),
+                    pixels(attribute(attributes, "height")),
+                    false,
+                    true,
+                    true,
+                    indent(html),
+                    tag._2() < tags.size() - 1
+                            && match.end() < markdown.length()
+                            && (markdown.charAt(match.end()) == '\n' || markdown.charAt(match.end()) == '\r'));
+        });
+    }
+
+    /**
+     * How many columns the quotes and list items {@code node} is in indent it by, as tamboui draws them.
+     */
+    private static int indent(Node node) {
+        return Iterator.iterate(node.getParent(), Node::getParent)
+                .takeWhile(Objects::nonNull)
+                .map(container -> switch (container) {
+                    case BlockQuote quote -> 2;
+                    case ListItem item
+                    when item.getParent() instanceof OrderedList list ->
+                        String.valueOf(Option.of(list.getMarkerStartNumber()).getOrElse(1)
+                                                + children(list).indexOf(item))
+                                        .length()
+                                + 2;
+                    case ListItem item -> 2;
+                    default -> 0;
+                })
+                .sum()
+                .intValue();
     }
 
     private static Option<String> attribute(List<MatchResult> attributes, String name) {

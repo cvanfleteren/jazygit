@@ -113,4 +113,70 @@ class MarkdownImagesTest {
         assertEquals(2, drawn.pictures().size());
         assertEquals(4, drawn.pictures().head().width());
     }
+
+    @Test
+    void aCustomElementWhoseNameStartsWithImgIsNoImage() {
+        String markdown = "Look <img-comparison-slider> here\n\n<img-comparison-slider>\n</img-comparison-slider>";
+
+        assertEquals(markdown, MarkdownImages.asLinks(markdown));
+    }
+
+    @Test
+    void imagesOfABodyWithCarriageReturnsAreReplacedWhereTheyAre() {
+        assertEquals(
+                "a\r\n\r\n[\\[image\\]](<a.png>)\r\n[\\[image\\]](<b.png>)",
+                MarkdownImages.asLinks("a\r\n\r\n<img src=\"a.png\">\r\n<img src=\"b.png\">"));
+    }
+
+    @Test
+    void anImageInAListItemOrAQuoteIsReplacedInIt() {
+        assertEquals(
+                "- [\\[image\\]](<a.png>)\n\n> see [\\[image: b\\]](<b.png>)",
+                MarkdownImages.asLinks("- <img src=\"a.png\">\n\n> see ![b](b.png)"));
+    }
+
+    @Test
+    void aTagWithOnlyAHeightKeepsTheShapeOfThePicture() {
+        Picture wide = new Picture(100, 50, Vector.fill(5000, 0xff112233));
+
+        MarkdownImages.Drawn drawn =
+                MarkdownImages.drawn("<img height=\"16\" src=\"a.png\">", HashMap.of("a.png", wide), 100);
+
+        // 16 pixels high is 2 of the picture, so 4 wide: no squashed strip of 100 by 2.
+        assertEquals(List.of(4), drawn.pictures().map(Picture::width));
+        assertEquals(List.of(2), drawn.pictures().map(Picture::height));
+    }
+
+    @Test
+    void aPictureInAListItemKeepsItsBulletAndTwoOfThemStayApart() {
+        Picture shot = new Picture(3, 4, Vector.fill(12, 0xff112233));
+
+        MarkdownImages.Drawn drawn = MarkdownImages.drawn(
+                "- <img src=\"a.png\">\n  <img src=\"b.png\">\n- next", HashMap.of("a.png", shot, "b.png", shot), 40);
+
+        assertEquals(
+                "- \uE000\uE000\uE000\\\n\uE000\uE000\uE000\\\n  \uE001\uE001\uE001\\\n\uE001\uE001\uE001\n- next",
+                drawn.markdown());
+    }
+
+    @Test
+    void aPictureInAQuoteOrListIsNarrowerByWhatTheyIndentItBy() {
+        Picture shot = new Picture(40, 4, Vector.fill(160, 0xff112233));
+        HashMap<String, Picture> pictures = HashMap.of("a.png", shot);
+
+        assertEquals(
+                List.of(40, 38, 36, 38, 37, 36, 33),
+                List.of(
+                                "![](a.png)",
+                                "> ![](a.png)",
+                                "> > ![](a.png)",
+                                "- ![](a.png)",
+                                "1. ![](a.png)",
+                                "10. ![](a.png)",
+                                "1. a\n   - > ![](a.png)")
+                        .map(markdown -> MarkdownImages.drawn(markdown, pictures, 40)
+                                .pictures()
+                                .head()
+                                .width()));
+    }
 }
