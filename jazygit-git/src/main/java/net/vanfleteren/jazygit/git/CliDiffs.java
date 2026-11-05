@@ -40,6 +40,13 @@ final class CliDiffs implements Diffs {
     static final List<String> PREFIXES = List.of("--src-prefix=a/", "--dst-prefix=b/");
 
     /**
+     * The same for {@code git stash show}, which on git 2.55.0 garbles the paths when given {@link #PREFIXES}
+     * (issue 287). {@code --default-prefix} (git 2.41 or newer) is right on every release, also with the user's
+     * prefix settings.
+     */
+    static final List<String> STASH_SHOW_PREFIXES = List.of("--default-prefix");
+
+    /**
      * Reads a merge against its first parent, as the files of a commit are always read.
      */
     private static final String FIRST_PARENT = "--diff-merges=first-parent";
