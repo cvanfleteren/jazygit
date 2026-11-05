@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.gh;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.Tuple;
@@ -39,6 +40,18 @@ class PreviewQueryTest {
 
         assertTrue(preview.truncated());
         assertEquals(PreviewQuery.MAX_DIFF_LINES, preview.diff().lines().count());
+    }
+
+    @Test
+    void aDiffOfLongLinesIsCutOffAtTheLastWholeLineThatFits() {
+        // 1000 characters with its line end: as many fit as there are thousands in the most characters.
+        String line = "+" + "x".repeat(998) + "\n";
+        String fits = line.repeat(PreviewQuery.MAX_DIFF_CHARS / 1000);
+
+        assertFalse(PreviewQuery.preview("main", "", fits).truncated());
+        PullRequestPreview cut = PreviewQuery.preview("main", "", fits + line + line);
+        assertTrue(cut.truncated());
+        assertEquals(fits, cut.diff());
     }
 
     @Test

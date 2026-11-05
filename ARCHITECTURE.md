@@ -331,7 +331,8 @@ request. The design and the steps still to come are in `prs.md`.
   one of another repository opens in the browser, as `O` does for any (`gh pr view <url> --web`).
 - **The preview**: the content panel shows the pull request highlighted in the pane in use like a commit: a header,
   its title and description, `---`, and its diff, read with `gh pr view <url> --json baseRefName,body` and
-  `gh pr diff <url>`, so also for repositories that are not cloned; the diff is cut off after 5000 lines. It is read
+  `gh pr diff <url>`, so also for repositories that are not cloned; the diff is cut off as git's are, after 50 000 lines or 4 MiB
+  (ADR 79). It is read
   again when the pull request changed (`PrOverview.preview` is keyed by its summary), and the one shown before
   stays while it is read. Enter moves the focus into it, Escape back to the pane it shows.
 - **Checking out**: space checks out a pull request of the repository in place, from a fork too, with
@@ -938,7 +939,7 @@ helpers. A test replaces the roles it needs on `StubGit.of()`, as in `StubGit.of
       `git stash` says. Without a stash there is no reflog, which `--ignore-missing` makes an empty list.
     - `CliRemotes` reads the remotes.
     - These each have a pure parser for git's output. `CliDiffs` returns git's text, cut off when it
-      is long, and parses the files `--name-status -z` lists, for a commit, a range, a stash and a pull request.
+      is long (after 50 000 lines or 4 MiB, ADR 79), and parses the files `--name-status -z` lists, for a commit, a range, a stash and a pull request.
   - **Writes:** `CliCheckout`, `CliBranches` (rename, delete), `CliIndex` (stage, commit, discard),
     `CliCommits`, `CliIntegrate`, `CliRebase`, `CliStashes`, `CliRemotes` (push, pull, fetch, delete on the remote) and `CliWorktrees` (add, remove).
   - **Opening:** `CliGit.open` asks `git rev-parse` whether the directory is in a repository,

@@ -17,8 +17,9 @@ import net.vanfleteren.jazygit.json.Decoder;
  */
 final class PreviewQuery {
 
-    // The most lines of a diff of a pull request that are shown, as for the diffs of git.
-    static final int MAX_DIFF_LINES = 5000;
+    // The most of a diff of a pull request that is shown, in lines and in characters, as for the diffs of git (ADR 79).
+    static final int MAX_DIFF_LINES = 50_000;
+    static final int MAX_DIFF_CHARS = 4 * 1024 * 1024;
 
     // Its base branch and its body.
     static final Decoder<Tuple2<String, String>> DECODER =
@@ -36,13 +37,26 @@ final class PreviewQuery {
 
     /**
      * The preview of a pull request into {@code base}, with its body and its diff, cut off after
-     * {@link #MAX_DIFF_LINES} lines.
+     * {@link #MAX_DIFF_LINES} lines, or before the line that would make it longer than {@link #MAX_DIFF_CHARS}
+     * characters.
      */
     static PullRequestPreview preview(String base, String body, String diff) {
         List<String> lines = List.of(diff.split("\n", -1));
-        return lines.size() <= MAX_DIFF_LINES
+        return lines.size() <= MAX_DIFF_LINES && diff.length() <= MAX_DIFF_CHARS
                 ? new PullRequestPreview(base, body.stripTrailing(), diff, false)
                 : new PullRequestPreview(
-                        base, body.stripTrailing(), lines.take(MAX_DIFF_LINES).mkString("", "\n", "\n"), true);
+                        base, body.stripTrailing(), lines.take(kept(lines)).mkString("", "\n", "\n"), true);
+    }
+
+    /**
+     * How many of the first of {@code lines} are kept: at most {@link #MAX_DIFF_LINES}, of at most
+     * {@link #MAX_DIFF_CHARS} characters with the line ends.
+     */
+    private static int kept(List<String> lines) {
+        return lines.take(MAX_DIFF_LINES)
+                .scanLeft(0L, (chars, line) -> chars + line.length() + 1)
+                .tail()
+                .takeWhile(chars -> chars <= MAX_DIFF_CHARS)
+                .size();
     }
 }

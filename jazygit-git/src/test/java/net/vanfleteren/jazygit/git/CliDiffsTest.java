@@ -153,6 +153,16 @@ class CliDiffsTest {
     }
 
     @Test
+    void aDiffOfLongLinesIsCutOffAtTheLastWholeLineThatFits() {
+        // 1000 characters with its line end: as many fit as there are thousands in the most characters.
+        String line = "+" + "x".repeat(998) + "\n";
+        String fits = line.repeat(CliDiffs.MAX_CHARS / 1000);
+
+        assertEquals(DiffText.of(fits), CliDiffs.truncated(fits));
+        assertEquals(DiffText.of(fits, true), CliDiffs.truncated(fits + line));
+    }
+
+    @Test
     void listsTheFilesASummaryAndTheDiffOfACommitInOneCall() throws Exception {
         init();
         Files.writeString(repo.resolve("a.txt"), "one\n");

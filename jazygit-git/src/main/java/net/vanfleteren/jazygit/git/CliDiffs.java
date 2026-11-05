@@ -31,7 +31,9 @@ import net.vanfleteren.jazygit.git.model.Sha;
  */
 final class CliDiffs implements Diffs {
 
-    static final int MAX_LINES = 5000;
+    // The most of a diff that is shown, in lines and in characters (ADR 79): its first lines up to either.
+    static final int MAX_LINES = 50_000;
+    static final int MAX_CHARS = 4 * 1024 * 1024;
     /**
      * The flags that keep git's own {@code a/} and {@code b/} before the paths of a diff that is parsed
      * ({@code UnifiedDiff}), whatever the user's {@code diff.noprefix}, {@code diff.mnemonicPrefix},
@@ -250,13 +252,27 @@ final class CliDiffs implements Diffs {
     }
 
     /**
-     * {@code diff} cut off after {@link #MAX_LINES} lines.
+     * {@code diff} cut off after {@link #MAX_LINES} lines, or before the line that would make it longer than
+     * {@link #MAX_CHARS} characters.
      */
     static DiffText truncated(String diff) {
         List<String> lines = GitOutput.lines(diff);
-        return lines.size() <= MAX_LINES
-                ? DiffText.of(diff)
-                : DiffText.of(lines.take(MAX_LINES).mkString("", "\n", "\n"), true);
+        if (lines.size() <= MAX_LINES && diff.length() <= MAX_CHARS) {
+            return DiffText.of(diff);
+        }
+        return DiffText.of(lines.take(kept(lines)).mkString("", "\n", "\n"), true);
+    }
+
+    /**
+     * How many of the first of {@code lines} are kept: at most {@link #MAX_LINES}, of at most {@link #MAX_CHARS}
+     * characters with the line ends.
+     */
+    private static int kept(List<String> lines) {
+        return lines.take(MAX_LINES)
+                .scanLeft(0L, (chars, line) -> chars + line.length() + 1)
+                .tail()
+                .takeWhile(chars -> chars <= MAX_CHARS)
+                .size();
     }
 
     private static Either<GitError, String> run(Path worktree, List<String> args, Map<String, String> env) {
