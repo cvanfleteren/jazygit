@@ -511,6 +511,17 @@ class RemarkLinesTest {
     }
 
     @Test
+    void anImageInACommentIsAPlaceholderNotItsTag() {
+        String body = "Claude Code is working… <img src=\"https://github.com/user-attachments/assets/5ac3\""
+                + " width=\"14px\" height=\"14px\" style=\"vertical-align: middle; margin-left: 4px;\" />";
+
+        List<String> lines = rich(shown(Collapsed.NONE, thread(2, false, body)));
+
+        assertTrue(lines.exists(line -> line.endsWith("Claude Code is working… [image]")), lines.mkString("\n"));
+        assertTrue(lines.forAll(line -> !line.contains("<img") && !line.contains("user-attachments")));
+    }
+
+    @Test
     void markdownIsReadBackFromWhatTamboUiDrawsAsLinesWithoutTheirBlankEnd() {
         List<String> lines = text(
                 RemarkLines.markdown("# Title\n\n- one\n- `two`\n\n```\ncode\n```", 30, StylePropertyResolver.empty()));
