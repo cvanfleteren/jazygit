@@ -32,16 +32,9 @@ record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int stop, 
      * {@code row}, on the stop {@code at} is on now ({@link DiffStops#nearest}), or the first, with its range from
      * {@code mark} while that is a line of the hunk of the cursor; the view scrolled so it shows it. None when the diff
      * has no stop.
-     */
-    static Option<DiffCursor> of(
-            Vector<RichDiff.Stop> stops, int lines, int height, int row, Option<Anchor> at, Option<Anchor> mark) {
-        return of(stops, indexes(stops), lines, height, row, at, mark);
-    }
-
-    /**
-     * As {@link #of(Vector, int, int, int, Option, Option)}, with the index of the stop of each anchor of
-     * {@code stops}, {@link #indexes}: a frame of a long diff then finds the stop the cursor is on without going
-     * through all of them.
+     *
+     * @param indexes the index of the stop of each anchor of {@code stops}, {@link #indexes}, made once for the diff:
+     *                a frame of a long diff then finds the stop the cursor is on without going through all of them
      */
     static Option<DiffCursor> of(
             Vector<RichDiff.Stop> stops,

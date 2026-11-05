@@ -46,9 +46,16 @@ class DiffCursorTest {
         return new RichDiff.Stop(new RichDiff.Mark(anchor, 1, 8, Option.of(new DiffStops.HunkAt(0, 0))), row);
     }
 
+    /**
+     * The cursor of a diff of {@code lines} lines with {@code stops}, indexed as the area indexes them once for a diff.
+     */
+    private static Option<DiffCursor> cursor(
+            Vector<RichDiff.Stop> stops, int lines, int height, int row, Option<Anchor> at, Option<Anchor> mark) {
+        return DiffCursor.of(stops, DiffCursor.indexes(stops), lines, height, row, at, mark);
+    }
+
     private static DiffCursor on(Anchor anchor, int row) {
-        return DiffCursor.of(STOPS, 20, 5, row, Option.of(anchor), Option.none())
-                .get();
+        return cursor(STOPS, 20, 5, row, Option.of(anchor), Option.none()).get();
     }
 
     private static void assertAt(Anchor anchor, int row, DiffCursor cursor) {
@@ -58,11 +65,8 @@ class DiffCursorTest {
 
     @Test
     void itStartsOnTheFirstStopAndADiffWithoutStopsHasNone() {
-        assertAt(
-                LEAD,
-                0,
-                DiffCursor.of(STOPS, 20, 5, 0, Option.none(), Option.none()).get());
-        assertEquals(Option.none(), DiffCursor.of(Vector.empty(), 20, 5, 0, Option.none(), Option.none()));
+        assertAt(LEAD, 0, cursor(STOPS, 20, 5, 0, Option.none(), Option.none()).get());
+        assertEquals(Option.none(), cursor(Vector.empty(), 20, 5, 0, Option.none(), Option.none()));
     }
 
     @Test
@@ -185,7 +189,7 @@ class DiffCursorTest {
                 stop(LAST, 1, 5),
                 line(THREE, 6));
         DiffCursor onReply =
-                DiffCursor.of(stops, 7, 20, 0, Option.of(reply), Option.none()).get();
+                cursor(stops, 7, 20, 0, Option.of(reply), Option.none()).get();
 
         // n and N go from thread to thread, not from comment to comment (ADR 62).
         assertEquals(LAST, onReply.nextThread().get().anchor());
@@ -196,8 +200,7 @@ class DiffCursorTest {
     }
 
     private static DiffCursor onTwoThreads(Anchor anchor) {
-        return DiffCursor.of(TWO_THREADS, 6, 20, 0, Option.of(anchor), Option.none())
-                .get();
+        return cursor(TWO_THREADS, 6, 20, 0, Option.of(anchor), Option.none()).get();
     }
 
     @Test
@@ -228,14 +231,10 @@ class DiffCursorTest {
     void aMarkThatIsNotALineOfTheHunkOfTheCursorIsDropped() {
         assertEquals(
                 Option.none(),
-                DiffCursor.of(STOPS, 20, 5, 0, Option.of(TWO), Option.of(FILE))
-                        .get()
-                        .markAnchor());
+                cursor(STOPS, 20, 5, 0, Option.of(TWO), Option.of(FILE)).get().markAnchor());
         assertEquals(
                 Option.of(ONE),
-                DiffCursor.of(STOPS, 20, 5, 0, Option.of(TWO), Option.of(ONE))
-                        .get()
-                        .markAnchor());
+                cursor(STOPS, 20, 5, 0, Option.of(TWO), Option.of(ONE)).get().markAnchor());
     }
 
     @Test
@@ -246,19 +245,12 @@ class DiffCursorTest {
     }
 
     @Test
-    void theIndexedCursorIsOnTheStopOfItsAnchorOrTheNearest() {
+    void theCursorIsOnTheStopOfItsAnchorOrTheNearest() {
         // Line 4 is no stop: the nearest of its side of the file is line 3.
         assertAt(
                 THREE,
                 15,
-                DiffCursor.of(
-                                STOPS,
-                                DiffCursor.indexes(STOPS),
-                                20,
-                                5,
-                                15,
-                                Option.of(new Anchor.OnLine("a.txt", Side.RIGHT, 4)),
-                                Option.none())
+                cursor(STOPS, 20, 5, 15, Option.of(new Anchor.OnLine("a.txt", Side.RIGHT, 4)), Option.none())
                         .get());
         assertAt(THREAD, 5, on(THREAD, 5));
     }
