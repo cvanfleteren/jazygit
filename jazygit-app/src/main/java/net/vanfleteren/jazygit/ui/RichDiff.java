@@ -261,16 +261,20 @@ final class RichDiff {
 
     /**
      * The marker of {@code gap}, the lines a file leaves out, a stop of the cursor (ADR 77): the rule, and how many it
-     * leaves out, or that more follow when that is not known, or that the file is being read whole, or could not be.
+     * leaves out, or that more follow when that is not known, or that the file is being read whole, or could not be,
+     * or is too long to be shown past where its read was cut.
      */
     private static Pending marker(Folding.Gap gap, Expansion.Fold fold, Layout layout) {
-        String says = fold.reading()
-                ? Messages.get("content.gap.reading")
-                : fold.failed()
-                        ? Messages.get("content.gap.failed")
-                        : gap.hidden()
-                                .map(hidden -> Messages.get("content.gap.hidden", hidden))
-                                .getOrElse(() -> Messages.get("content.gap.more"));
+        String says = switch (fold.read()) {
+            case READING -> Messages.get("content.gap.reading");
+            case FAILED -> Messages.get("content.gap.failed");
+            case TOO_LONG -> Messages.get("content.gap.tooLong");
+            case CUT, NOT, WHOLE ->
+                gap.hidden()
+                        .map(hidden -> Messages.get("content.gap.hidden", hidden))
+                        .getOrElse(() -> Messages.get(
+                                fold.read() == Expansion.Read.CUT ? "content.gap.tooLong" : "content.gap.more"));
+        };
         return () -> List.of(new Marked(
                 Line.from(rule(layout), styled(says + " ┄", Theme.Classes.DIFF_HUNK, layout.styles())),
                 Option.of(new Mark(

@@ -300,7 +300,7 @@ public final class ReviewUpdate {
                                             false),
                                     before.lastOption()
                                             .map(ReviewUpdate::excerpt)
-                                            .getOrElse(() -> lines(found._1(), thread)))
+                                            .getOrElse(() -> lines(model, found._1(), at, thread)))
                             .withText(body);
                 });
     }
@@ -313,12 +313,13 @@ public final class ReviewUpdate {
     }
 
     /**
-     * The lines of the diff {@code thread} is on, as the popup that starts one shows them; none when the diff does not
-     * show them, as for an outdated thread, or one on a whole file.
+     * The lines of the diff {@code thread} is on, as the popup that starts one shows them, with the lines expanded in
+     * the area of the cursor {@code at} (ADR 77); none when the diff does not show them, as for an outdated thread, or
+     * one on a whole file.
      */
-    private static List<String> lines(CommitFilesView view, ReviewThread thread) {
+    private static List<String> lines(Model model, CommitFilesView view, DiffCursorAt at, ReviewThread thread) {
         return thread.line()
-                .flatMap(line -> diffLines(view)
+                .flatMap(line -> diffLines(model, view, at)
                         .between(
                                 new Anchor.OnLine(
                                         thread.path(),
@@ -530,16 +531,6 @@ public final class ReviewUpdate {
                                 .diff())
                         .getOrElse(text.parsed()))
                 .map(parsed -> DiffLines.of(parsed.diff()))
-                .getOrElse(() -> new DiffLines(Vector.empty()));
-    }
-
-    /**
-     * The lines the cursor stops on in the diff the files of the pull request {@code view} shows, as git gives it.
-     */
-    private static DiffLines diffLines(CommitFilesView view) {
-        return view.diff()
-                .flatMap(preview -> preview.shown().value().toOption())
-                .map(text -> DiffLines.of(text.parsed().diff()))
                 .getOrElse(() -> new DiffLines(Vector.empty()));
     }
 

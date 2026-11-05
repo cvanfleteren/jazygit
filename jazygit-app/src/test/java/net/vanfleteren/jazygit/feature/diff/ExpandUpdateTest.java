@@ -80,7 +80,7 @@ class ExpandUpdateTest {
                         .hunks()
                         .map(hunk -> hunk.hunk().header()));
         assertEquals(
-                new Expansion.Fold(Option.of(30), false, false),
+                new Expansion.Fold(Option.of(30), Expansion.Read.WHOLE),
                 expansion
                         .folded(CHANGES.parsed(), next.model().preferences().context())
                         .fold("a.txt"));
@@ -138,6 +138,8 @@ class ExpandUpdateTest {
         assertEquals(new Folding.Lines(20, 99), ExpandUpdate.lines(between, ExpandMsg.Toward.ALL));
         assertEquals(new Folding.Lines(1, 6), ExpandUpdate.lines(ABOVE, ExpandMsg.Toward.UP));
         assertEquals(new Folding.Lines(14, Integer.MAX_VALUE), ExpandUpdate.lines(BELOW, ExpandMsg.Toward.ALL));
+        // After the last hunk there is no hunk below: [ shows the next lines, as ] does.
+        assertEquals(new Folding.Lines(14, 23), ExpandUpdate.lines(BELOW, ExpandMsg.Toward.UP));
     }
 
     @Test

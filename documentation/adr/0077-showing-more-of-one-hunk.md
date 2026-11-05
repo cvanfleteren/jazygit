@@ -26,7 +26,9 @@ counted without reading anything; how many follow the last hunk cannot, as git d
 - Folding the whole file at the amount of context gives the hunks git gives, so a file looks the same once it is read
   whole, and two hunks whose gap was expanded away are one: what is between two markers is one hunk.
 - A file read whole is cut at the 5000 lines jazygit reads of a diff (ADR 76); a file longer than that cannot be
-  expanded past the cut.
+  expanded past the cut. A read that was cut tells no length: when the changes are all before the cut, the file is
+  folded up to there and the marker after its last hunk says it is too long to show more of; when a change is after
+  it, every marker of the file says so, and the file shows as git gives it.
 
 ### Markers
 

@@ -75,10 +75,10 @@ class RichDiffTest {
                 -ten
                 +TEN
                 """);
-        Expansion.Folded known =
-                new Expansion.Folded(diff, HashMap.of("a.txt", new Expansion.Fold(Option.of(12), false, false)));
-        Expansion.Folded reading =
-                new Expansion.Folded(diff, HashMap.of("a.txt", new Expansion.Fold(Option.none(), true, false)));
+        Expansion.Folded known = new Expansion.Folded(
+                diff, HashMap.of("a.txt", new Expansion.Fold(Option.of(12), Expansion.Read.WHOLE)));
+        Expansion.Folded reading = new Expansion.Folded(
+                diff, HashMap.of("a.txt", new Expansion.Fold(Option.none(), Expansion.Read.READING)));
 
         RichDiff.Drawn drawn = RichDiff.drawn(known, true, true, Option.none(), Theme.SpanStyles.NONE);
 
@@ -99,6 +99,40 @@ class RichDiffTest {
                 text(RichDiff.drawn(reading, true, true, Option.none(), Theme.SpanStyles.NONE)
                                 .lines())
                         .filter(line -> line.startsWith("┄")));
+    }
+
+    @Test
+    void aFileReadOnlyUpToTheCutSaysItIsTooLongAfterItsLastHunkAndEverywhereWhenItCannotBeFolded() {
+        ParsedDiff diff = ParsedDiff.of("""
+                diff --git a/a.txt b/a.txt
+                --- a/a.txt
+                +++ b/a.txt
+                @@ -9,2 +9,2 @@
+                 nine
+                -ten
+                +TEN
+                """);
+        Expansion.Folded cut =
+                new Expansion.Folded(diff, HashMap.of("a.txt", new Expansion.Fold(Option.none(), Expansion.Read.CUT)));
+        Expansion.Folded tooLong = new Expansion.Folded(
+                diff, HashMap.of("a.txt", new Expansion.Fold(Option.none(), Expansion.Read.TOO_LONG)));
+
+        assertEquals(
+                List.of("┄┄┄┄┄ │ 8 lines hidden ┄", "┄┄┄┄┄ │ the file is too long to show more of ┄"), markers(cut));
+        assertEquals(
+                List.of(
+                        "┄┄┄┄┄ │ the file is too long to show more of ┄",
+                        "┄┄┄┄┄ │ the file is too long to show more of ┄"),
+                markers(tooLong));
+    }
+
+    /**
+     * The markers {@code folded} is drawn with.
+     */
+    private static List<String> markers(Expansion.Folded folded) {
+        return text(RichDiff.drawn(folded, true, true, Option.none(), Theme.SpanStyles.NONE)
+                        .lines())
+                .filter(line -> line.startsWith("┄"));
     }
 
     @Test

@@ -51,22 +51,33 @@ public record Expansion(ScrolledContent content, Map<String, Expanded> files) {
     private FoldedFile folded(ParsedFile file, DiffContext context) {
         String path = file.file().path();
         return files.get(path)
-                .map(expanded -> expanded.whole()
-                        .toOption()
-                        .flatMap(whole -> whole.parsed()
-                                .files()
-                                .find(read -> read.file().path().equals(path)))
-                        .filter(whole -> Folding.agrees(whole, file))
-                        .map(whole -> new FoldedFile(
-                                Folding.fold(whole, context.lines(), expanded.lines()),
-                                new Fold(Option.of(Folding.length(whole)), false, false)))
-                        .getOrElse(() -> new FoldedFile(
-                                file,
-                                new Fold(
-                                        Option.none(),
-                                        expanded.whole() instanceof Loadable.Loading,
-                                        expanded.whole().isFailed()))))
+                .map(expanded -> switch (expanded.whole()) {
+                    case Loadable.Loading<DiffText>() -> new FoldedFile(file, new Fold(Option.none(), Read.READING));
+                    case Loadable.Failed<DiffText>(var failure) ->
+                        new FoldedFile(file, new Fold(Option.none(), Read.FAILED));
+                    case Loadable.Loaded<DiffText>(DiffText whole) -> folded(file, whole, expanded, context);
+                })
                 .getOrElse(() -> new FoldedFile(file, Fold.UNKNOWN));
+    }
+
+    /**
+     * {@code file} folded from {@code whole}, the diff of it read with the whole file as context, unless that does not
+     * have the changes {@code file} has. A read cut at the lines jazygit reads of a diff tells no length: when its
+     * changes are all before the cut, the file is folded up to there; else it cannot be.
+     */
+    private FoldedFile folded(ParsedFile file, DiffText whole, Expanded expanded, DiffContext context) {
+        String path = file.file().path();
+        return whole.parsed()
+                .files()
+                .find(read -> read.file().path().equals(path))
+                .filter(read -> Folding.agrees(read, file))
+                .map(read -> new FoldedFile(
+                        Folding.fold(read, context.lines(), expanded.lines()),
+                        whole.truncated()
+                                ? new Fold(Option.none(), Read.CUT)
+                                : new Fold(Option.of(Folding.length(read)), Read.WHOLE)))
+                .getOrElse(() -> new FoldedFile(
+                        file, whole.truncated() ? new Fold(Option.none(), Read.TOO_LONG) : Fold.UNKNOWN));
     }
 
     /**
@@ -100,12 +111,42 @@ public record Expansion(ScrolledContent content, Map<String, Expanded> files) {
     }
 
     /**
-     * What is known of a file of a diff: how many lines its new file has, once it was read whole, and whether it is
-     * being read whole, or failed to be.
+     * What is known of a file of a diff: how many lines its new file has, once it was read whole, and how far it was
+     * read whole.
      */
-    public record Fold(Option<Integer> length, boolean reading, boolean failed) {
+    public record Fold(Option<Integer> length, Read read) {
 
-        public static final Fold UNKNOWN = new Fold(Option.none(), false, false);
+        public static final Fold UNKNOWN = new Fold(Option.none(), Read.NOT);
+    }
+
+    /**
+     * How far a file of a diff was read whole.
+     */
+    public enum Read {
+        /**
+         * Not, or not with the changes the diff shows, as when it was read before the file changed.
+         */
+        NOT,
+        /**
+         * It is being read.
+         */
+        READING,
+        /**
+         * Reading it failed.
+         */
+        FAILED,
+        /**
+         * It was read whole, and is folded.
+         */
+        WHOLE,
+        /**
+         * It was read up to the lines jazygit reads of a diff, its changes all before them, and is folded up to there.
+         */
+        CUT,
+        /**
+         * It was read up to the lines jazygit reads of a diff, and has changes after them: it cannot be folded.
+         */
+        TOO_LONG
     }
 
     private record FoldedFile(ParsedFile file, Fold fold) {}

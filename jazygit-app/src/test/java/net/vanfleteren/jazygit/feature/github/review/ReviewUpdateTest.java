@@ -23,6 +23,7 @@ import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.DiffText;
+import net.vanfleteren.jazygit.git.model.Folding;
 import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.keys.Scopes;
@@ -519,6 +520,82 @@ class ReviewUpdateTest {
                 Option.of(new AppError.CannotReview(Why.NOT_ON_LINE)),
                 error(Update.update(files(), new ReviewMsg.StartAsked(at(onThread("T1"))))
                         .model()));
+    }
+
+    @Test
+    void aThreadIsStartedOnExpandedLinesButNotOnARangeAcrossAMarker() {
+        // Shown: 1 to 5 and 7 to 13, git's hunks, and 20 and 21 expanded (ADR 77).
+        Model expanded = expanded(files(), new Folding.Lines(20, 21));
+
+        Model asked = Update.update(
+                        expanded, new ReviewMsg.StartAsked(at(line(Side.RIGHT, 21), Option.of(line(Side.RIGHT, 20)))))
+                .model();
+
+        ReviewPopup popup = asked.popup(ReviewPopup.class).get();
+        assertEquals(
+                new Target.Start(HEAD, "a.txt", Option.of(new NewReviewThread.Lines(Side.RIGHT, 20, Side.RIGHT, 21))),
+                popup.target());
+        assertEquals(List.of(" line20", " line21"), popup.quoted());
+        assertEquals(
+                Option.of(new AppError.CannotReview(Why.NOT_ONE_HUNK)),
+                error(Update.update(
+                                expanded,
+                                new ReviewMsg.StartAsked(at(line(Side.RIGHT, 13), Option.of(line(Side.RIGHT, 20)))))
+                        .model()));
+    }
+
+    @Test
+    void editingTheFirstCommentOfAThreadOnAnExpandedLineQuotesItsLine() {
+        ReviewThread onExpanded = new ReviewThread(
+                "a.txt",
+                Side.RIGHT,
+                Option.of(20),
+                Option.none(),
+                Side.RIGHT,
+                Option.of(20),
+                false,
+                false,
+                ReviewThread.Subject.LINE,
+                List.of(new Comment("bob", Instant.EPOCH, "Why?", Option.none(), "C3", "3", CommentRights.ALL)),
+                0,
+                "T3",
+                ReviewThread.Rights.ALL);
+        Model expanded =
+                expanded(files(PullRequestDetails.State.OPEN, HEAD, List.of(onExpanded)), new Folding.Lines(20, 21));
+
+        Model asked = Update.update(
+                        expanded, new ReviewMsg.EditAsked(at(new Anchor.Thread("T3", Option.of(line(Side.RIGHT, 20))))))
+                .model();
+
+        assertEquals(List.of(" line20"), asked.popup(ReviewPopup.class).get().quoted());
+    }
+
+    /**
+     * {@code model} with a.txt read whole, 30 lines with lines 2 and 10 changed as {@link #DIFF} has them, and
+     * {@code lines} expanded in it, in the area of the diff of the files.
+     */
+    private static Model expanded(Model model, Folding.Lines lines) {
+        DiffText whole = DiffText.of("diff --git a/a.txt b/a.txt\n--- a/a.txt\n+++ b/a.txt\n@@ -1,30 +1,30 @@\n"
+                + List.rangeClosed(1, 30)
+                        .map(n -> switch (n) {
+                            case 1 -> " one\n";
+                            case 2 -> "-two\n+TWO\n";
+                            case 3 -> " three\n";
+                            case 10 -> "-ten\n+TEN\n";
+                            default -> " line" + n + "\n";
+                        })
+                        .mkString());
+        Cmd.ReadWholeFile read = new Cmd.ReadWholeFile(
+                AREA,
+                CONTENT,
+                new Cmd.ReadWholeFile.Source.OfFiles(new Changes.OfPullRequest(COMMITS), A),
+                "a.txt",
+                model.preferences().diffOptions());
+        Expansion expansion = new Expansion(
+                CONTENT,
+                io.vavr.collection.HashMap.of(
+                        "a.txt", new Expansion.Expanded(read, new Loadable.Loaded<>(whole), List.of(lines))));
+        return model.mapRepoView(view -> view.withExpanded(view.expanded().put(AREA, expansion)));
     }
 
     @Test

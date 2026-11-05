@@ -63,6 +63,37 @@ class FoldingTest {
     }
 
     @Test
+    void theNoteThatAFileEndsWithoutANewlineGoesWithItsLastLine() {
+        ParsedFile whole = ParsedDiff.of("""
+                        diff --git a/a.txt b/a.txt
+                        --- a/a.txt
+                        +++ b/a.txt
+                        @@ -1,10 +1,10 @@
+                         one
+                        -two
+                        +TWO
+                         three
+                         four
+                         five
+                         six
+                         seven
+                         eight
+                         nine
+                         ten
+                        \\ No newline at end of file
+                        """).files().head();
+
+        ParsedFile hidden = Folding.fold(whole, 1, List.empty());
+        ParsedFile shown = Folding.fold(whole, 1, List.of(new Lines(10, 10)));
+
+        assertFalse(lines(hidden).exists(line -> line.kind() == UnifiedDiff.DiffLine.Kind.NOTE));
+        assertEquals(
+                List.of(" ten", "\\ No newline at end of file"),
+                lines(shown.hunks().last())
+                        .map(line -> line.kind() == UnifiedDiff.DiffLine.Kind.NOTE ? line.text() : " " + line.text()));
+    }
+
+    @Test
     void theGapsAreTheLinesBetweenTheHunksAndAroundThem() {
         ParsedFile folded = Folding.fold(whole(), 3, List.empty());
 
@@ -105,6 +136,14 @@ class FoldingTest {
 
     private static ParsedFile whole() {
         return ParsedDiff.of(WHOLE).files().head();
+    }
+
+    private static List<UnifiedDiff.DiffLine> lines(ParsedFile file) {
+        return file.hunks().flatMap(FoldingTest::lines);
+    }
+
+    private static List<UnifiedDiff.DiffLine> lines(ParsedHunk hunk) {
+        return hunk.lines().map(ParsedLine::line);
     }
 
     private static List<Integer> numbers(ParsedHunk hunk) {

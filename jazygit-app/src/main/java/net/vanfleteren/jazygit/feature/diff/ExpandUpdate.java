@@ -74,13 +74,18 @@ public final class ExpandUpdate {
     }
 
     /**
-     * The lines of the new file {@code toward} says of those {@code gap} leaves out.
+     * The lines of the new file {@code toward} says of those {@code gap} leaves out. After the last hunk, how many
+     * follow is not known, and both brackets show the next ones.
      */
     static Folding.Lines lines(Anchor.Gap gap, ExpandMsg.Toward toward) {
         int last = gap.until().map(until -> until - 1).getOrElse(Integer.MAX_VALUE);
         return switch (toward) {
             case DOWN -> new Folding.Lines(gap.from(), Math.min(last, gap.from() + STEP - 1));
-            case UP -> new Folding.Lines(Math.max(gap.from(), last - STEP + 1), last);
+            // After the last hunk there is no hunk below: the lines above it are the next ones.
+            case UP ->
+                gap.until().isEmpty()
+                        ? new Folding.Lines(gap.from(), gap.from() + STEP - 1)
+                        : new Folding.Lines(Math.max(gap.from(), last - STEP + 1), last);
             case ALL -> new Folding.Lines(gap.from(), last);
         };
     }
