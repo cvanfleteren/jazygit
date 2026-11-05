@@ -311,8 +311,10 @@ record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int stop, 
     }
 
     private static Line tinted(Line line, int width, Style tint) {
-        int pad = Math.max(0, width - line.width());
-        return (pad > 0 ? line.append(Span.raw(" ".repeat(pad))) : line).patchStyle(tint);
+        // Padded in a span of its own even when the line is as wide as its file, which the area draws as far as its
+        // edge (ADR 80).
+        return line.append(Span.raw(" ".repeat(Math.max(0, width - line.width()))))
+                .patchStyle(tint);
     }
 
     /**

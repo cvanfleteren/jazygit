@@ -19,6 +19,7 @@ import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
+import io.vavr.collection.Set;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import java.time.Instant;
@@ -227,9 +228,10 @@ public final class ContentPanel {
      * measures how wide every line it is given is, each frame, so a long diff would hold up every frame; it still gets
      * as many lines, for its scrollbar and how far it scrolls. The height is that of the frame before, so the lines are
      * kept that would show in an area up to twice as high, which the element scrolls up from its last line at its
-     * bottom; all of them before the area was ever drawn.
+     * bottom; all of them before the area was ever drawn. Those of them that are {@code filling} are
+     * {@link #filled} to the edge of an area {@code width} columns wide (ADR 80).
      */
-    static Text windowed(Vector<Line> lines, int column, int row, int height) {
+    static Text windowed(Vector<Line> lines, int column, int row, int height, int width, Set<Integer> filling) {
         int high = height > 0 ? 2 * height : lines.size();
         int top = Math.clamp(row, 0, Math.max(0, lines.size() - high));
         int bottom = Math.min(lines.size(), row + high);
@@ -237,9 +239,11 @@ public final class ContentPanel {
         return Text.from(new AbstractList<Line>() {
             @Override
             public Line get(int index) {
-                return index < top || index >= bottom
-                        ? BLANK
-                        : column == 0 ? lines.get(index) : sideways(lines.get(index), column);
+                if (index < top || index >= bottom) {
+                    return BLANK;
+                }
+                Line line = filling.contains(index) ? filled(lines.get(index), column + width) : lines.get(index);
+                return column == 0 ? line : sideways(line, column);
             }
 
             @Override
@@ -247,6 +251,21 @@ public final class ContentPanel {
                 return lines.size();
             }
         });
+    }
+
+    /**
+     * {@code line} as wide as {@code width}, if its last span is blank: the padding of a changed line, of the bar of a
+     * file or of the tint of the cursor, lengthened so its background goes on to the edge of the area (ADR 80).
+     */
+    static Line filled(Line line, int width) {
+        List<Span> spans = List.ofAll(line.spans());
+        int missing = width - line.width();
+        return spans.lastOption()
+                .filter(last -> missing > 0 && last.content().isBlank())
+                .map(last -> Line.from(spans.init()
+                        .append(new Span(last.content() + " ".repeat(missing), last.style()))
+                        .toJavaList()))
+                .getOrElse(line);
     }
 
     /**
@@ -622,7 +641,8 @@ public final class ContentPanel {
             columns = Math.max(0, current.widest() - state.viewportWidth());
             column = Math.clamp(at.column(), 0, columns);
             int row = cursor.map(DiffCursor::row).getOrElse(at.row());
-            element.text(windowed(lines, column, row, state.viewportHeight())).title(shown.title());
+            element.text(windowed(lines, column, row, state.viewportHeight(), state.viewportWidth(), current.filling()))
+                    .title(shown.title());
             state.scrollToTop();
             state.scrollDown(row);
             return element.onKeyEvent(event -> keys(event, focused, content))
@@ -807,6 +827,8 @@ public final class ContentPanel {
          *
          * @param indexes the index of the stop of each anchor, {@link DiffCursor#indexes}
          * @param widest  how wide the widest of {@code lines} is, which the tint of the cursor never makes wider
+         * @param filling the lines drawn to the edge of the area (ADR 80): the bar of each file, the lines of the diff
+         *                and the markers of the lines it leaves out, not the threads on them
          */
         private record Styled(
                 Body body,
@@ -814,7 +836,8 @@ public final class ContentPanel {
                 Vector<Line> lines,
                 Vector<RichDiff.Stop> stops,
                 Map<Anchor, Integer> indexes,
-                int widest) {
+                int widest,
+                Set<Integer> filling) {
 
             static Styled of(Body body, ThemeName theme, RichDiff.Drawn drawn) {
                 Vector<Line> lines = drawn.lines().toVector();
@@ -825,7 +848,17 @@ public final class ContentPanel {
                         lines,
                         stops,
                         DiffCursor.indexes(stops),
-                        lines.map(Line::width).max().getOrElse(0));
+                        lines.map(Line::width).max().getOrElse(0),
+                        stops.filter(stop -> switch (stop.mark().anchor()) {
+                                    case Anchor.File ignored -> true;
+                                    case Anchor.OnLine ignored -> true;
+                                    case Anchor.Gap ignored -> true;
+                                    case Anchor.Lead ignored -> false;
+                                    case Anchor.Thread ignored -> false;
+                                    case Anchor.Comment ignored -> false;
+                                })
+                                .map(RichDiff.Stop::row)
+                                .toSet());
             }
         }
     }

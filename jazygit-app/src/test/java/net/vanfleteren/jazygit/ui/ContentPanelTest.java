@@ -378,7 +378,8 @@ class ContentPanelTest {
         io.vavr.collection.Vector<Line> lines =
                 io.vavr.collection.Vector.range(0, 100).map(i -> Line.from("%03d".formatted(i)));
 
-        java.util.List<Line> windowed = ContentPanel.windowed(lines, 1, 40, 10).lines();
+        java.util.List<Line> windowed =
+                ContentPanel.windowed(lines, 1, 40, 10, 0, HashSet.empty()).lines();
 
         assertEquals(100, windowed.size());
         // From where it is scrolled to, as many lines as an area twice as high shows, cut sideways.
@@ -387,12 +388,107 @@ class ContentPanelTest {
         assertEquals("", windowed.get(39).rawContent());
         assertEquals("", windowed.get(60).rawContent());
         // At the end, the lines an area twice as high would show from its last line at its bottom.
-        java.util.List<Line> atEnd = ContentPanel.windowed(lines, 0, 95, 10).lines();
+        java.util.List<Line> atEnd =
+                ContentPanel.windowed(lines, 0, 95, 10, 0, HashSet.empty()).lines();
         assertEquals("080", atEnd.get(80).rawContent());
         assertEquals("", atEnd.get(79).rawContent());
         // Before the area was ever drawn, all of them.
         assertEquals(
-                "000", ContentPanel.windowed(lines, 0, 50, 0).lines().get(0).rawContent());
+                "000",
+                ContentPanel.windowed(lines, 0, 50, 0, 0, HashSet.empty())
+                        .lines()
+                        .get(0)
+                        .rawContent());
+    }
+
+    @Test
+    void aLineThatFillsTheAreaHasItsBlankLastSpanLengthenedToTheEdge() {
+        Style green = Style.EMPTY.bg(Color.GREEN);
+        Line changed = Line.from(Span.raw(" 1 │ "), Span.styled("+ab", green), Span.styled(" ", green));
+
+        assertEquals(
+                Line.from(Span.raw(" 1 │ "), Span.styled("+ab", green), Span.styled("      ", green)),
+                ContentPanel.filled(changed, 14));
+        // A line as wide already, and one that does not end in padding, are left as they are.
+        assertEquals(changed, ContentPanel.filled(changed, 9));
+        Line context = Line.from(Span.raw(" 1 │ "), Span.raw(" ab"));
+        assertEquals(context, ContentPanel.filled(context, 14));
+    }
+
+    @Test
+    void onlyTheLinesThatFillAreDrawnToTheEdgeAndThenScrolledSideways() {
+        Style green = Style.EMPTY.bg(Color.GREEN);
+        io.vavr.collection.Vector<Line> lines = io.vavr.collection.Vector.of(
+                Line.from(Span.raw("ab"), Span.styled(" ", green)), Line.from(Span.raw("ab"), Span.styled(" ", green)));
+
+        java.util.List<Line> windowed =
+                ContentPanel.windowed(lines, 1, 0, 10, 6, HashSet.of(0)).lines();
+
+        // Filled to the edge of the area where it is scrolled to, then cut sideways.
+        assertEquals(Line.from(Span.raw("b"), Span.styled("     ", green)), windowed.get(0));
+        assertEquals(Line.from(Span.raw("b"), Span.styled(" ", green)), windowed.get(1));
+    }
+
+    @Test
+    void theBackgroundOfAChangedLineGoesOnToTheEdgeOfTheArea() throws Exception {
+        Model rich = TestModels.loaded()
+                .mapPreferences(preferences ->
+                        preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
+        Model model = Update.update(
+                        Update.update(rich, new SelectionMsg.CommitSelected(new Sha("aaaa")))
+                                .model(),
+                        new LoadMsg.CommitDetailLoaded(
+                                new Sha("aaaa"), rich.preferences().diffOptions(), DiffText.of("""
+                                diff --git a/schema.sql b/schema.sql
+                                new file mode 100644
+                                --- /dev/null
+                                +++ b/schema.sql
+                                @@ -0,0 +1,2 @@
+                                +short
+                                +a bit longer
+                                """)))
+                .model();
+        Theme.SpanStyles styles =
+                cssClass -> cssClass.equals(Theme.Classes.DIFF_ADDED_LINE) ? Style.EMPTY.bg(Color.GREEN) : Style.EMPTY;
+        ContentPanel filling = new ContentPanel(styles, () -> false, id -> {}, msg -> {});
+        String area = filling.areaOfPane(model, CommitsPanel.ID).get();
+
+        dev.tamboui.layout.Rect screen = new dev.tamboui.layout.Rect(0, 0, 100, 30);
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(() -> filling.render(model, area), new dev.tamboui.layout.Size(100, 30))) {
+            // The area learns how wide it is while it draws: the frame after shows the lines filled.
+            RenderedText.ofLarge(testRunner, () -> filling.render(model, area));
+            java.util.concurrent.CompletableFuture<dev.tamboui.buffer.Buffer> drawn =
+                    new java.util.concurrent.CompletableFuture<>();
+            testRunner.runner().runOnRenderThread(() -> {
+                dev.tamboui.buffer.Buffer buffer = dev.tamboui.buffer.Buffer.empty(screen);
+                filling.render(model, area)
+                        .render(
+                                dev.tamboui.terminal.Frame.forTesting(buffer),
+                                screen,
+                                dev.tamboui.toolkit.element.RenderContext.empty());
+                drawn.complete(buffer);
+            });
+            dev.tamboui.buffer.Buffer buffer = drawn.get(5, java.util.concurrent.TimeUnit.SECONDS);
+
+            int row = List.range(0, 30)
+                    .find(y -> List.range(0, 100)
+                            .map(x -> buffer.get(x, y).symbol())
+                            .mkString()
+                            .contains("+short"))
+                    .get();
+            List<Integer> green = List.range(0, 100)
+                    .filter(x -> buffer.get(x, row).style().bg().equals(java.util.Optional.of(Color.GREEN)));
+            assertFalse(
+                    green.isEmpty(),
+                    List.range(0, 100)
+                            .map(x -> buffer.get(x, row).symbol() + ":"
+                                    + buffer.get(x, row).style().bg())
+                            .mkString(" "));
+            // From its marker to the scrollbar, past the widest line of the file, not just as wide as that.
+            assertTrue(green.last() >= 95, green.toString());
+            assertEquals(green.last() - green.head() + 1, green.size(), green.toString());
+        }
     }
 
     @Test
