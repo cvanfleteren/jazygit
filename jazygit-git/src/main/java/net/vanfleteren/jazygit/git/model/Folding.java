@@ -20,31 +20,6 @@ public final class Folding {
     private Folding() {}
 
     /**
-     * The lines of the new file from {@code from} to {@code to}, both in.
-     */
-    public record Lines(int from, int to) {
-
-        boolean has(int number) {
-            return number >= from && number <= to;
-        }
-    }
-
-    /**
-     * Lines a file leaves out: before its hunk {@code before}, or after its last one when that is as many as it has,
-     * the lines of the new file from {@code from} up to {@code until}, which is not one of them; none when it is not
-     * known how many follow the last hunk.
-     */
-    public record Gap(int before, int from, Option<Integer> until) {
-
-        /**
-         * How many lines it leaves out, when that is known.
-         */
-        public Option<Integer> hidden() {
-            return until.map(end -> end - from);
-        }
-    }
-
-    /**
      * The lines {@code file} leaves out, in order, the new file being {@code length} lines long when that is known. A
      * file added or deleted leaves none out, nor does one whose hunks cannot be read.
      */
@@ -59,7 +34,10 @@ public final class Folding {
         }
         Vector<Covered> hunks = covered.map(Option::get).toVector();
         List<Gap> between = List.range(0, hunks.size())
-                .map(at -> new Gap(at, at == 0 ? 1 : hunks.get(at - 1).until(), Option.of(hunks.get(at).from())));
+                .map(at -> new Gap(
+                        at,
+                        at == 0 ? 1 : hunks.get(at - 1).until(),
+                        Option.of(hunks.get(at).from())));
         int after = hunks.last().until();
         Gap last = new Gap(hunks.size(), after, length.map(lines -> Math.max(after, lines + 1)));
         return between.append(last).filter(gap -> gap.hidden().forAll(hidden -> hidden > 0));
@@ -99,10 +77,12 @@ public final class Folding {
         Vector<Integer> fromChange = distances(lines);
         Vector<Integer> toChange = distances(lines.reverse()).reverse();
         Vector<Boolean> own = Vector.range(0, lines.size())
-                .map(at -> shown(lines.get(at).line(), Math.min(fromChange.get(at), toChange.get(at)), context, expanded));
+                .map(at ->
+                        shown(lines.get(at).line(), Math.min(fromChange.get(at), toChange.get(at)), context, expanded));
         // A note, as that a file has no newline at its end, goes with the line before it.
         Vector<Boolean> shown = Vector.range(0, lines.size())
-                .map(at -> lines.get(at).line().kind() == DiffLine.Kind.NOTE ? at == 0 || own.get(at - 1) : own.get(at));
+                .map(at ->
+                        lines.get(at).line().kind() == DiffLine.Kind.NOTE ? at == 0 || own.get(at - 1) : own.get(at));
         List<ParsedHunk> hunks = runs(shown).map(run -> hunk(lines, run));
         FileDiff file = whole.file();
         return new ParsedFile(
@@ -125,8 +105,7 @@ public final class Folding {
             case ADDED, REMOVED -> true;
             case NOTE -> false;
             case CONTEXT ->
-                distance <= context
-                        || line.newNumber().exists(number -> expanded.exists(asked -> asked.has(number)));
+                distance <= context || line.newNumber().exists(number -> expanded.exists(asked -> asked.has(number)));
         };
     }
 
@@ -172,5 +151,30 @@ public final class Folding {
         String header = "@@ -" + (oldLength > 0 ? oldBefore + 1 : oldBefore) + "," + oldLength + " +"
                 + (newLength > 0 ? newBefore + 1 : newBefore) + "," + newLength + " @@";
         return new ParsedHunk(new Hunk(header, own.map(ParsedLine::line)), own);
+    }
+
+    /**
+     * The lines of the new file from {@code from} to {@code to}, both in.
+     */
+    public record Lines(int from, int to) {
+
+        boolean has(int number) {
+            return number >= from && number <= to;
+        }
+    }
+
+    /**
+     * Lines a file leaves out: before its hunk {@code before}, or after its last one when that is as many as it has,
+     * the lines of the new file from {@code from} up to {@code until}, which is not one of them; none when it is not
+     * known how many follow the last hunk.
+     */
+    public record Gap(int before, int from, Option<Integer> until) {
+
+        /**
+         * How many lines it leaves out, when that is known.
+         */
+        public Option<Integer> hidden() {
+            return until.map(end -> end - from);
+        }
     }
 }
