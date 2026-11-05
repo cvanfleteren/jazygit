@@ -6,7 +6,6 @@ import dev.tamboui.style.Modifier;
 import dev.tamboui.style.Style;
 import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
-import dev.tamboui.text.Text;
 import io.vavr.collection.List;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
@@ -240,38 +239,59 @@ class DiffCursorTest {
     }
 
     @Test
-    void theLinesOfARangeAreTintedAndMarkedInTheGutter() {
-        Text text = Text.from(List.range(0, 20)
-                .map(row -> Line.from(Span.raw(" 1  1 │ "), Span.raw("x" + row)))
-                .toJavaList());
-        Text tinted = on(TWO, 11).marked().get().up().tinted(text, Style.EMPTY.reversed());
+    void theIndexOfTheStopOfAnAnchorIsThatOfTheFirstWithIt() {
+        assertEquals(
+                io.vavr.collection.HashMap.of(FILE, 0, ONE, 1),
+                DiffCursor.indexes(Vector.of(stop(FILE, 1, 0), line(ONE, 1), line(FILE, 2))));
+    }
 
-        assertEquals(" 1  1 ┃ x4", tinted.lines().get(4).rawContent());
-        assertEquals(" 1  1 ┃ x15", tinted.lines().get(15).rawContent());
-        assertEquals(" 1  1 │ x5", tinted.lines().get(5).rawContent());
+    @Test
+    void theIndexedCursorIsOnTheStopOfItsAnchorOrTheNearest() {
+        // Line 4 is no stop: the nearest of its side of the file is line 3.
+        assertAt(
+                THREE,
+                15,
+                DiffCursor.of(
+                                STOPS,
+                                DiffCursor.indexes(STOPS),
+                                20,
+                                5,
+                                15,
+                                Option.of(new Anchor.OnLine("a.txt", Side.RIGHT, 4)),
+                                Option.none())
+                        .get());
+        assertAt(THREAD, 5, on(THREAD, 5));
+    }
+
+    @Test
+    void theLinesOfARangeAreTintedAndMarkedInTheGutter() {
+        Vector<Line> text = Vector.range(0, 20).map(row -> Line.from(Span.raw(" 1  1 │ "), Span.raw("x" + row)));
+        Vector<Line> tinted = on(TWO, 11).marked().get().up().tinted(text, Style.EMPTY.reversed());
+
+        assertEquals(" 1  1 ┃ x4", tinted.get(4).rawContent());
+        assertEquals(" 1  1 ┃ x15", tinted.get(15).rawContent());
+        assertEquals(" 1  1 │ x5", tinted.get(5).rawContent());
     }
 
     @Test
     void aBarOrALineIsTintedAsWideAsItsFileAndAThreadHasItsRuleReversed() {
-        Text text = Text.from(List.range(0, 20)
-                .map(row -> switch (row) {
-                    case 5 -> Line.from(Span.raw("  "), Span.raw("┏━"), Span.raw(" bob"));
-                    case 6 -> Line.from(Span.raw("  "), Span.raw("┃ "), Span.raw("me no like"));
-                    default -> Line.from("x" + row);
-                })
-                .toJavaList());
+        Vector<Line> text = Vector.range(0, 20).map(row -> switch (row) {
+            case 5 -> Line.from(Span.raw("  "), Span.raw("┏━"), Span.raw(" bob"));
+            case 6 -> Line.from(Span.raw("  "), Span.raw("┃ "), Span.raw("me no like"));
+            default -> Line.from("x" + row);
+        });
         Style tint = Style.EMPTY.reversed();
 
-        Line bar = on(FILE, 0).tinted(text, tint).lines().get(3);
+        Line bar = on(FILE, 0).tinted(text, tint).get(3);
         assertEquals("x3      ", bar.rawContent());
         assertTrue(bar.spans().stream()
                 .allMatch(span -> span.style().addModifiers().contains(Modifier.REVERSED)));
 
-        Line rule = on(THREAD, 5).tinted(text, tint).lines().get(5);
+        Line rule = on(THREAD, 5).tinted(text, tint).get(5);
         assertTrue(rule.spans().get(1).style().addModifiers().contains(Modifier.REVERSED));
         assertFalse(rule.spans().get(0).style().addModifiers().contains(Modifier.REVERSED));
         // Only the stroke, not the space after it.
-        Line body = on(THREAD, 5).tinted(text, tint).lines().get(6);
+        Line body = on(THREAD, 5).tinted(text, tint).get(6);
         assertEquals("  ┃ me no like", body.rawContent());
         assertEquals(
                 List.of(false, true, false, false),

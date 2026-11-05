@@ -341,6 +341,61 @@ class ContentPanelTest {
     }
 
     @Test
+    void theLinesOfALongDiffShowAlsoWhenTheAreaGrowsAtTheBottom() throws Exception {
+        // The model takes where the area is scrolled to, as the app's does.
+        java.util.concurrent.atomic.AtomicReference<Model> model =
+                new java.util.concurrent.atomic.AtomicReference<>(showingCommit(
+                        List.range(0, 2000).map(i -> "+line %04d".formatted(i)).mkString("\n")));
+        ContentPanel scrolling = new ContentPanel(
+                Theme.SpanStyles.NONE,
+                () -> false,
+                id -> {},
+                msg -> model.set(Update.update(model.get(), msg).model()));
+        String area = scrolling.areaOfPane(model.get(), CommitsPanel.ID).get();
+
+        String screen;
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(
+                () -> scrolling.render(model.get(), area), new dev.tamboui.layout.Size(100, 30))) {
+            SettledPilot.focus(testRunner, area);
+            RenderedText.ofLarge(testRunner, () -> scrolling.render(model.get(), area));
+            SettledPilot.of(testRunner).press(KeyCode.END);
+            SettledPilot.of(testRunner).pause();
+            // On a taller screen, the area shows lines above those it showed.
+            screen = RenderedText.ofTall(testRunner, () -> scrolling.render(model.get(), area));
+        }
+
+        assertTrue(screen.contains("+line 1999"), screen);
+        // No blank line in place of one that shows: each row up to the last line of the diff has one.
+        List<String> rows = List.of(screen.split("\n"))
+                .dropUntil(row -> row.contains("+line "))
+                .takeWhile(row -> row.contains("+line "));
+        assertTrue(rows.size() > 30, screen);
+        assertTrue(rows.last().contains("+line 1999"), screen);
+    }
+
+    @Test
+    void anAreaIsGivenAllTheLinesButMeasuresOnlyThoseThatShow() {
+        io.vavr.collection.Vector<Line> lines =
+                io.vavr.collection.Vector.range(0, 100).map(i -> Line.from("%03d".formatted(i)));
+
+        java.util.List<Line> windowed = ContentPanel.windowed(lines, 1, 40, 10).lines();
+
+        assertEquals(100, windowed.size());
+        // From where it is scrolled to, as many lines as an area twice as high shows, cut sideways.
+        assertEquals("40", windowed.get(40).rawContent());
+        assertEquals("59", windowed.get(59).rawContent());
+        assertEquals("", windowed.get(39).rawContent());
+        assertEquals("", windowed.get(60).rawContent());
+        // At the end, the lines an area twice as high would show from its last line at its bottom.
+        java.util.List<Line> atEnd = ContentPanel.windowed(lines, 0, 95, 10).lines();
+        assertEquals("080", atEnd.get(80).rawContent());
+        assertEquals("", atEnd.get(79).rawContent());
+        // Before the area was ever drawn, all of them.
+        assertEquals(
+                "000", ContentPanel.windowed(lines, 0, 50, 0).lines().get(0).rawContent());
+    }
+
+    @Test
     void sidewaysCutsTheFirstColumnsOffALineKeepingTheStylesOfItsSpans() {
         Style red = Style.EMPTY.fg(Color.RED);
         Style blue = Style.EMPTY.fg(Color.BLUE);

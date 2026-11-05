@@ -191,3 +191,5 @@ noise, not a mistake to explain.
 Amended by ADR 64: `d` deletes a comment of a thread.
 
 Amended by ADR 65: `e` edits a comment of a thread.
+
+Amended by ADR 78: the cursor tints the lines of its stop only, not a copy of all of them each frame.
