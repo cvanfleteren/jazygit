@@ -318,17 +318,25 @@ public final class Lexer {
             Scan scan = new Scan(line, 0, state, List.empty());
             String stripped = line.stripLeading();
             int indent = line.length() - stripped.length();
-            if (state instanceof InFence(String fence)) {
-                Scan code = scan.token(0, line.length(), Kind.STRING);
-                return stripped.startsWith(fence) ? code.in(new Outside()) : code;
-            } else if (!(state instanceof Outside) || indent > 3) {
-                return scan;
-            }
+            return switch (state) {
+                case InFence(String fence) -> {
+                    Scan code = scan.token(0, line.length(), Kind.STRING);
+                    yield stripped.startsWith(fence) ? code.in(new Outside()) : code;
+                }
+                case Outside outside when indent <= 3 -> block(scan, stripped, indent);
+                default -> scan;
+            };
+        }
+
+        /**
+         * The scan of the start of a line outside any block, {@code stripped} after its {@code indent}.
+         */
+        private static Scan block(Scan scan, String stripped, int indent) {
             Option<String> fence = fence(stripped);
             if (fence.isDefined()) {
-                return scan.in(new InFence(fence.get())).token(0, line.length(), Kind.STRING);
+                return scan.in(new InFence(fence.get())).token(0, scan.line().length(), Kind.STRING);
             } else if (heading(stripped)) {
-                return scan.token(0, line.length(), Kind.KEYWORD);
+                return scan.token(0, scan.line().length(), Kind.KEYWORD);
             }
             return markers(scan.to(indent));
         }

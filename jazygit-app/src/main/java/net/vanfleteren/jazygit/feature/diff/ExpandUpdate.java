@@ -30,10 +30,10 @@ public final class ExpandUpdate {
 
     public static Next update(Model model, ExpandMsg msg) {
         return switch (msg) {
-            case ExpandMsg.Asked(var at, var toward) ->
-                at.cursor() instanceof Anchor.Gap gap
-                        ? asked(model, at.area(), at.at().content(), gap, toward)
-                        : Next.of(model);
+            case ExpandMsg.Asked(var at, var toward)
+            when at.cursor() instanceof Anchor.Gap gap ->
+                asked(model, at.area(), at.at().content(), gap, toward);
+            case ExpandMsg.Asked elsewhere -> Next.of(model);
         };
     }
 

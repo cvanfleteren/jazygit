@@ -46,13 +46,11 @@ public final class PrOverviewUpdate {
             case PrOverviewMsg.Toggled() ->
                 reloadIfShown(Next.of(model.withScreen(model.screen().other())));
             // The screen already shown stays as it is, without reading it again.
-            case PrOverviewMsg.Chosen(Screen screen) ->
-                screen == model.screen() ? Next.of(model) : reloadIfShown(Next.of(model.withScreen(screen)));
+            case PrOverviewMsg.Chosen(Screen screen) when screen == model.screen() -> Next.of(model);
+            case PrOverviewMsg.Chosen(Screen screen) -> reloadIfShown(Next.of(model.withScreen(screen)));
+            case PrOverviewMsg.Tick() when model.screen() != Screen.PULL_REQUESTS -> Next.of(model);
             // The reads that keep failing wait longer the more they failed (ADR 58).
-            case PrOverviewMsg.Tick() ->
-                model.screen() == Screen.PULL_REQUESTS
-                        ? loaded(Next.of(model), TICKED.filter(load -> FailingRead.due(model, load)))
-                        : Next.of(model);
+            case PrOverviewMsg.Tick() -> loaded(Next.of(model), TICKED.filter(load -> FailingRead.due(model, load)));
             // The pull requests of the repository are those of the branches too (ADR 58).
             case PrOverviewMsg.RepositoryLoaded(var read, var kept) ->
                 withBranches(overview(model, msg), new PullRequestsMsg.Loaded(read.ofBranches()));
