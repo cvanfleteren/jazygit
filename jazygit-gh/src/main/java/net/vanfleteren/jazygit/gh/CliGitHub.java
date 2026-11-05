@@ -136,7 +136,7 @@ public final class CliGitHub implements GitHub {
     @Override
     public Either<GhError, PullRequestPreview> pullRequestPreview(String url) {
         return process.readJson(PreviewQuery.command(url), PreviewQuery.DECODER)
-                .flatMap(described -> process.read(PreviewQuery.diffCommand(url), Either::right)
+                .flatMap(described -> process.read(PreviewQuery.diffCommand(url), PreviewQuery.DIFF_LIMIT)
                         .map(diff -> PreviewQuery.preview(described._1(), described._2(), diff)));
     }
 

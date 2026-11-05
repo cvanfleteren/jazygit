@@ -7,9 +7,10 @@ import static net.vanfleteren.jazygit.json.Decoder.string;
 
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
-import io.vavr.collection.List;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.json.Decoder;
+import net.vanfleteren.jazygit.process.Limit;
+import net.vanfleteren.jazygit.process.Limited;
 
 /**
  * What the preview of a pull request of another repository shows: its base branch and its body, read with
@@ -17,8 +18,8 @@ import net.vanfleteren.jazygit.json.Decoder;
  */
 final class PreviewQuery {
 
-    // The most lines of a diff of a pull request that are shown, as for the diffs of git.
-    static final int MAX_DIFF_LINES = 5000;
+    // The most of a diff of a pull request that is read and shown, as of the diffs of git (ADR 79).
+    static final Limit DIFF_LIMIT = new Limit(50_000, 4 * 1024 * 1024);
 
     // Its base branch and its body.
     static final Decoder<Tuple2<String, String>> DECODER =
@@ -35,14 +36,9 @@ final class PreviewQuery {
     }
 
     /**
-     * The preview of a pull request into {@code base}, with its body and its diff, cut off after
-     * {@link #MAX_DIFF_LINES} lines.
+     * The preview of a pull request into {@code base}, with its body and the {@code diff} read of it.
      */
-    static PullRequestPreview preview(String base, String body, String diff) {
-        List<String> lines = List.of(diff.split("\n", -1));
-        return lines.size() <= MAX_DIFF_LINES
-                ? new PullRequestPreview(base, body.stripTrailing(), diff, false)
-                : new PullRequestPreview(
-                        base, body.stripTrailing(), lines.take(MAX_DIFF_LINES).mkString("", "\n", "\n"), true);
+    static PullRequestPreview preview(String base, String body, Limited diff) {
+        return new PullRequestPreview(base, body.stripTrailing(), diff.text(), diff.cut());
     }
 }

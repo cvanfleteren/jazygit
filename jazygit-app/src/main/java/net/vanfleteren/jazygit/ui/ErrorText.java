@@ -151,6 +151,7 @@ public final class ErrorText {
             case GhError.GhUnavailable(var cause) -> Messages.get("gh.notInstalled");
             case GhError.TimedOut(String operation) -> Messages.get("gh.timedOut", operation);
             case GhError.Interrupted(String operation) -> Messages.get("gh.interrupted", operation);
+            case GhError.TooMuchOutput(String operation) -> Messages.get("gh.tooMuchOutput", operation);
             case GhError.CommandFailed(var explanation, int exitCode) ->
                 explanation.getOrElse(() -> Messages.get("gh.exitedWithCode", String.valueOf(exitCode)));
             case GhError.UnexpectedOutput(String output) -> Messages.get("gh.unexpectedOutput", output);
@@ -166,6 +167,7 @@ public final class ErrorText {
             case GitError.GitUnavailable(var cause) -> Messages.get("git.notInstalled");
             case GitError.TimedOut(String operation, var worktree) -> Messages.get("git.timedOut", operation, worktree);
             case GitError.Interrupted(String operation) -> Messages.get("git.interrupted", operation);
+            case GitError.TooMuchOutput(String operation) -> Messages.get("git.tooMuchOutput", operation);
             case GitError.CommandFailed(var explanation, int exitCode, var output) ->
                 explanation.getOrElse(() -> Messages.get("git.exitedWithCode", String.valueOf(exitCode)));
             case GitError.UnexpectedOutput(String output) -> Messages.get("git.unexpectedOutput", output);

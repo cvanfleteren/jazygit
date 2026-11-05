@@ -9,6 +9,8 @@ import net.vanfleteren.jazygit.git.GitError.*;
 import net.vanfleteren.jazygit.process.Exec;
 import net.vanfleteren.jazygit.process.ExecFailure;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
+import net.vanfleteren.jazygit.process.Limit;
+import net.vanfleteren.jazygit.process.Limited;
 
 /**
  * Runs {@link GitCommand}s through the {@code git} command line tool, with {@link Exec}. The only place that
@@ -41,6 +43,15 @@ final class GitProcess {
     }
 
     /**
+     * Runs {@code command} to read what it prints, only up to {@code limit}: once it printed more, it is stopped and
+     * what it printed is cut off (ADR 79). Reads are not logged.
+     */
+    static Either<GitError, Limited> read(Path worktree, GitCommand command, Limit limit) {
+        return Exec.read(worktree, command.commandLine(), command.environment(), command.timeout(), limit)
+                .mapLeft(failure -> error(worktree, command, failure));
+    }
+
+    /**
      * Runs {@code command}, a question git answers "no" to by exiting with 1 without saying anything, like
      * {@code git diff --quiet} or {@code git config --get} for a key that is not set. That answer is none.
      */
@@ -55,14 +66,19 @@ final class GitProcess {
 
     private static Either<GitError, Output> execute(Path worktree, GitCommand command) {
         return Exec.run(worktree, command.commandLine(), command.environment(), command.timeout())
-                .<GitError>mapLeft(failure -> switch (failure) {
-                    case ExecFailure.NotStarted(var cause) -> new GitUnavailable(cause);
-                    case ExecFailure.TimedOut() -> new TimedOut(command.operation(), worktree);
-                    case ExecFailure.Interrupted() -> new Interrupted(command.operation());
-                    case ExecFailure.NonZero(int exitCode, String stderr, String stdout) ->
-                        new CommandFailed(Exec.explanation(stderr, stdout), exitCode, stderr);
-                })
+                .mapLeft(failure -> error(worktree, command, failure))
                 .map(stdout -> new Output(stdout, command.executed()));
+    }
+
+    private static GitError error(Path worktree, GitCommand command, ExecFailure failure) {
+        return switch (failure) {
+            case ExecFailure.NotStarted(var cause) -> new GitUnavailable(cause);
+            case ExecFailure.TimedOut() -> new TimedOut(command.operation(), worktree);
+            case ExecFailure.Interrupted() -> new Interrupted(command.operation());
+            case ExecFailure.TooMuchOutput() -> new TooMuchOutput(command.operation());
+            case ExecFailure.NonZero(int exitCode, String stderr, String stdout) ->
+                new CommandFailed(Exec.explanation(stderr, stdout), exitCode, stderr);
+        };
     }
 
     /**

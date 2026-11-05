@@ -29,6 +29,13 @@ public sealed interface GhError {
     record Interrupted(String operation) implements GhError {}
 
     /**
+     * The {@code gh} command printed more than is ever read, so it was stopped (ADR 79).
+     *
+     * @param operation the gh command, e.g. {@code api}
+     */
+    record TooMuchOutput(String operation) implements GhError {}
+
+    /**
      * gh ran, but failed.
      *
      * @param explanation the first line gh printed about why, preferring its error output; none if it

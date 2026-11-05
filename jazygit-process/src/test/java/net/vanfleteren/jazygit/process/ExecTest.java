@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.process;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
@@ -28,6 +29,103 @@ class ExecTest {
         assertEquals(
                 Either.left(new ExecFailure.NonZero(3, "err\n", "out\n")),
                 sh("echo out; echo err >&2; exit 3", HashMap.empty()));
+    }
+
+    @Test
+    void onlyTheStartOfALongErrorOutputIsKept() {
+        ExecFailure.NonZero failed =
+                (ExecFailure.NonZero) sh("head -c 1000000 /dev/zero | tr '\\0' x >&2; exit 1", HashMap.empty())
+                        .getLeft();
+
+        assertEquals("x".repeat(Exec.MAX_STDERR), failed.stderr());
+    }
+
+    @Test
+    void aProgramThatPrintsWithoutEndIsStoppedAtTheLimit() {
+        long started = System.nanoTime();
+
+        Either<ExecFailure, Limited> read =
+                Exec.read(dir, List.of("yes"), HashMap.empty(), Duration.ofSeconds(30), new Limit(1000, 1 << 20));
+
+        assertEquals(Either.right(new Limited("y\n".repeat(1000), true)), read);
+        assertTrue(Duration.ofNanos(System.nanoTime() - started).compareTo(Duration.ofSeconds(10)) < 0);
+    }
+
+    @Test
+    void aProgramThatPrintsOneEndlessLineIsStoppedAtTheLimit() {
+        Either<ExecFailure, Limited> read = Exec.read(
+                dir,
+                List.of("sh", "-c", "tr '\\0' x < /dev/zero"),
+                HashMap.empty(),
+                Duration.ofSeconds(30),
+                new Limit(1000, 1 << 20));
+
+        assertEquals(Either.right(new Limited("", true)), read);
+    }
+
+    @Test
+    void whatAProgramStartedIsStoppedWithIt() {
+        // The shell waits for yes, which holds the output open as long as it runs.
+        Either<ExecFailure, Limited> read = Exec.read(
+                dir, List.of("sh", "-c", "yes; true"), HashMap.empty(), Duration.ofSeconds(30), new Limit(10, 1000));
+
+        assertEquals(Either.right(new Limited("y\n".repeat(10), true)), read);
+    }
+
+    @Test
+    void aProgramWithinTheLimitIsReadWholeAndMayFail() {
+        assertEquals(
+                Either.right(new Limited("a\nb\n", false)),
+                Exec.read(
+                        dir, List.of("printf", "a\\nb\\n"), HashMap.empty(), Duration.ofSeconds(10), new Limit(2, 4)));
+        assertEquals(
+                Either.left(new ExecFailure.NonZero(1, "", "a\n")),
+                Exec.read(
+                        dir,
+                        List.of("sh", "-c", "echo a; exit 1"),
+                        HashMap.empty(),
+                        Duration.ofSeconds(10),
+                        new Limit(2, 4)));
+    }
+
+    @Test
+    void aReadThatTakesTooLongKeepsTheWholeLinesPrintedUntilThen() {
+        assertEquals(
+                Either.right(new Limited("a\nb\n", true)),
+                Exec.read(
+                        dir,
+                        List.of("sh", "-c", "printf 'a\\nb\\nhalf'; exec sleep 5"),
+                        HashMap.empty(),
+                        Duration.ofMillis(500),
+                        new Limit(10, 100)));
+    }
+
+    @Test
+    void aReadThatTakesTooLongWithoutAWholeLineTimesOut() {
+        assertEquals(
+                Either.left(new ExecFailure.TimedOut()),
+                Exec.read(
+                        dir,
+                        List.of("sh", "-c", "printf half; exec sleep 5"),
+                        HashMap.empty(),
+                        Duration.ofMillis(500),
+                        new Limit(10, 100)));
+    }
+
+    @Test
+    void aRunThatTakesTooLongTimesOutWhateverItPrinted() {
+        assertEquals(
+                Either.left(new ExecFailure.TimedOut()),
+                Exec.run(
+                        dir,
+                        List.of("sh", "-c", "printf 'a\\n'; exec sleep 5"),
+                        HashMap.empty(),
+                        Duration.ofMillis(500)));
+    }
+
+    @Test
+    void aProgramThatPrintsMoreThanIsEverReadFails() {
+        assertEquals(Either.left(new ExecFailure.TooMuchOutput()), sh("yes", HashMap.empty()));
     }
 
     @Test

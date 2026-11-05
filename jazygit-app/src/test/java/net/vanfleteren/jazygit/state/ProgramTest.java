@@ -813,6 +813,32 @@ class ProgramTest {
         assertEquals(HashMap.empty(), program.model().jobs().running());
     }
 
+    @Test
+    void aCommandThatThrowsAlsoWhenItFailsIsDone() {
+        settle();
+
+        program.dispatch(new Asked(List.of(new ThrowsTwice())));
+        settle();
+
+        assertEquals(HashMap.empty(), program.model().jobs().running());
+    }
+
+    /**
+     * A command that has a bug, also in how it fails, as when memory ran out.
+     */
+    private record ThrowsTwice() implements Cmd {
+
+        @Override
+        public Msg run(Env env) {
+            throw new IllegalStateException("bug");
+        }
+
+        @Override
+        public Msg failed(Failure failure) {
+            throw new OutOfMemoryError("another bug");
+        }
+    }
+
     /**
      * A command that has a bug.
      */

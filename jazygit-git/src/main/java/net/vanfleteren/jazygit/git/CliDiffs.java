@@ -23,6 +23,8 @@ import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.Revision;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.process.Limit;
+import net.vanfleteren.jazygit.process.Limited;
 
 /**
  * The {@link Diffs} of a repository, through the {@code git diff} and {@code git show} command line tools. The
@@ -31,7 +33,8 @@ import net.vanfleteren.jazygit.git.model.Sha;
  */
 final class CliDiffs implements Diffs {
 
-    static final int MAX_LINES = 5000;
+    // The most of a diff that is read and shown (ADR 79): its first lines up to either.
+    static final Limit LIMIT = new Limit(50_000, 4 * 1024 * 1024);
     /**
      * The flags that keep git's own {@code a/} and {@code b/} before the paths of a diff that is parsed
      * ({@code UnifiedDiff}), whatever the user's {@code diff.noprefix}, {@code diff.mnemonicPrefix},
@@ -71,12 +74,11 @@ final class CliDiffs implements Diffs {
      */
     @Override
     public Either<GitError, DiffText> commitChanges(Sha sha, DiffOptions options) {
-        return GitProcess.read(
+        return diff(
                 worktree,
                 reading(SHOW.appendAll(List.of("--stat=1000", "--patch"))
                         .appendAll(showFlags(options))
-                        .append(sha.value())),
-                output -> Either.right(truncated(output)));
+                        .append(sha.value())));
     }
 
     /**
@@ -100,15 +102,14 @@ final class CliDiffs implements Diffs {
         if (files.isEmpty()) {
             return Either.right(DiffText.of(""));
         }
-        return GitProcess.read(
+        return diff(
                 worktree,
                 reading(SHOW.appendAll(List.of("--patch", "-M", FIRST_PARENT))
                                 .appendAll(flags(options))
                                 .append(sha.value())
                                 .append("--")
                                 .appendAll(files.flatMap(CommitFile::paths)))
-                        .withLiteralPaths(),
-                output -> Either.right(truncated(output)));
+                        .withLiteralPaths());
     }
 
     /**
@@ -146,15 +147,14 @@ final class CliDiffs implements Diffs {
         if (files.isEmpty()) {
             return Either.right(DiffText.of(""));
         }
-        return GitProcess.read(
+        return diff(
                 worktree,
                 reading(DIFF.append("-M")
                                 .appendAll(flags(options))
                                 .append(range(base, tip))
                                 .append("--")
                                 .appendAll(files.flatMap(CommitFile::paths)))
-                        .withLiteralPaths(),
-                output -> Either.right(truncated(output)));
+                        .withLiteralPaths());
     }
 
     private static String range(Sha base, Sha tip) {
@@ -176,11 +176,10 @@ final class CliDiffs implements Diffs {
                 .flatMap(f -> f.paths(false));
         List<String> untracked = FileEntry.paths(files, f -> f.type() == ChangeType.UNTRACKED);
         List<String> unstagedDiff = DIFF.appendAll(flags(options)).append("--");
-        return Either.<GitError, String>narrow(
-                        tracked(worktree, STAGED.appendAll(flags(options)).append("--"), staged, HashMap.empty()))
+        return tracked(worktree, STAGED.appendAll(flags(options)).append("--"), staged, HashMap.empty())
                 .flatMap(stagedDiff -> unstagedAndUntracked(worktree, unstagedDiff, unstaged, untracked)
-                        .map(unstagedText -> new net.vanfleteren.jazygit.git.model.Diffs(
-                                truncated(stagedDiff), truncated(unstagedText))));
+                        .map(unstagedChanges ->
+                                new net.vanfleteren.jazygit.git.model.Diffs(stagedDiff, unstagedChanges)));
     }
 
     /**
@@ -202,10 +201,10 @@ final class CliDiffs implements Diffs {
      * Untracked files are marked intent-to-add in a temporary copy of the index, so one {@code git diff}
      * shows them as entirely added next to the unstaged changes. The real index is left untouched.
      */
-    private static Either<GitError, String> unstagedAndUntracked(
+    private static Either<GitError, DiffText> unstagedAndUntracked(
             Path worktree, List<String> subcommand, List<String> unstaged, List<String> untracked) {
         return untracked.isEmpty()
-                ? Either.narrow(tracked(worktree, subcommand, unstaged, HashMap.empty()))
+                ? tracked(worktree, subcommand, unstaged, HashMap.empty())
                 : Either.<GitError, String>narrow(
                                 run(worktree, List.of("rev-parse", "--git-path", "index"), HashMap.empty()))
                         .map(index -> worktree.resolve(index.strip()))
@@ -234,7 +233,7 @@ final class CliDiffs implements Diffs {
         }
     }
 
-    private static Either<GitError, String> withUntracked(
+    private static Either<GitError, DiffText> withUntracked(
             Path worktree,
             List<String> subcommand,
             List<String> unstaged,
@@ -244,19 +243,29 @@ final class CliDiffs implements Diffs {
                 .flatMap(added -> tracked(worktree, subcommand, unstaged.appendAll(untracked), env));
     }
 
-    private static Either<GitError, String> tracked(
+    private static Either<GitError, DiffText> tracked(
             Path worktree, List<String> subcommand, List<String> paths, Map<String, String> env) {
-        return paths.isEmpty() ? Either.right("") : run(worktree, subcommand.appendAll(paths), env);
+        return paths.isEmpty()
+                ? Either.right(DiffText.of(""))
+                : diff(
+                        worktree,
+                        reading(subcommand.appendAll(paths))
+                                .withEnvironment(env)
+                                .withLiteralPaths());
     }
 
     /**
-     * {@code diff} cut off after {@link #MAX_LINES} lines.
+     * The diff {@code command} prints, read only up to {@link #LIMIT}.
      */
-    static DiffText truncated(String diff) {
-        List<String> lines = GitOutput.lines(diff);
-        return lines.size() <= MAX_LINES
-                ? DiffText.of(diff)
-                : DiffText.of(lines.take(MAX_LINES).mkString("", "\n", "\n"), true);
+    static Either<GitError, DiffText> diff(Path worktree, GitCommand command) {
+        return GitProcess.read(worktree, command, LIMIT).map(CliDiffs::diff);
+    }
+
+    /**
+     * {@code read} as a diff, cut off when it was.
+     */
+    static DiffText diff(Limited read) {
+        return DiffText.of(read.text(), read.cut());
     }
 
     private static Either<GitError, String> run(Path worktree, List<String> args, Map<String, String> env) {

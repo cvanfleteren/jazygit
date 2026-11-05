@@ -36,3 +36,5 @@ few frames a second.
   how wide the widest line is.
 
 Amends ADR 60, whose cursor tinted a copy of all the lines of the diff each frame.
+
+Amended by ADR 79: a diff is read only up to 50 000 lines or 4 MiB, and cut off there.
