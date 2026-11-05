@@ -431,10 +431,43 @@ class ContentPanelTest {
 
     @Test
     void theBackgroundOfAChangedLineGoesOnToTheEdgeOfTheArea() throws Exception {
+        ContentPanel filling = new ContentPanel(GREEN_ADDED, () -> false, id -> {}, msg -> {});
+        Model model = showingRichCommit();
+        String area = filling.areaOfPane(model, CommitsPanel.ID).get();
+
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(() -> filling.render(model, area), new dev.tamboui.layout.Size(100, 30))) {
+            // From its marker to the scrollbar, past the widest line of the file, not just as wide as that: from the
+            // first frame, though the area only learns how wide it is while it draws.
+            assertGreenTo(97, drawn(testRunner, () -> filling.render(model, area), 100));
+        }
+    }
+
+    @Test
+    void theFirstFrameInAnotherSizeFillsTheAreaItIsDrawnIn() throws Exception {
+        ContentPanel filling = new ContentPanel(GREEN_ADDED, () -> false, id -> {}, msg -> {});
+        Model model = showingRichCommit();
+        String area = filling.areaOfPane(model, CommitsPanel.ID).get();
+
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(() -> filling.render(model, area), new dev.tamboui.layout.Size(100, 30))) {
+            drawn(testRunner, () -> filling.render(model, area), 60);
+            // Wider, as when the left column is made narrower: on to the new edge, not that of the frame before.
+            assertGreenTo(97, drawn(testRunner, () -> filling.render(model, area), 100));
+            // Narrower again: nothing left of the frame before, like a column for a scrollbar.
+            dev.tamboui.buffer.Buffer narrower = drawn(testRunner, () -> filling.render(model, area), 60);
+            assertGreenTo(57, narrower);
+        }
+    }
+
+    private static final Theme.SpanStyles GREEN_ADDED =
+            cssClass -> cssClass.equals(Theme.Classes.DIFF_ADDED_LINE) ? Style.EMPTY.bg(Color.GREEN) : Style.EMPTY;
+
+    private static Model showingRichCommit() {
         Model rich = TestModels.loaded()
                 .mapPreferences(preferences ->
                         preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
-        Model model = Update.update(
+        return Update.update(
                         Update.update(rich, new SelectionMsg.CommitSelected(new Sha("aaaa")))
                                 .model(),
                         new LoadMsg.CommitDetailLoaded(
@@ -448,47 +481,47 @@ class ContentPanelTest {
                                 +a bit longer
                                 """)))
                 .model();
-        Theme.SpanStyles styles =
-                cssClass -> cssClass.equals(Theme.Classes.DIFF_ADDED_LINE) ? Style.EMPTY.bg(Color.GREEN) : Style.EMPTY;
-        ContentPanel filling = new ContentPanel(styles, () -> false, id -> {}, msg -> {});
-        String area = filling.areaOfPane(model, CommitsPanel.ID).get();
+    }
 
-        dev.tamboui.layout.Rect screen = new dev.tamboui.layout.Rect(0, 0, 100, 30);
-        try (ToolkitTestRunner testRunner =
-                ToolkitTestRunner.runTest(() -> filling.render(model, area), new dev.tamboui.layout.Size(100, 30))) {
-            // The area learns how wide it is while it draws: the frame after shows the lines filled.
-            RenderedText.ofLarge(testRunner, () -> filling.render(model, area));
-            java.util.concurrent.CompletableFuture<dev.tamboui.buffer.Buffer> drawn =
-                    new java.util.concurrent.CompletableFuture<>();
-            testRunner.runner().runOnRenderThread(() -> {
-                dev.tamboui.buffer.Buffer buffer = dev.tamboui.buffer.Buffer.empty(screen);
-                filling.render(model, area)
-                        .render(
-                                dev.tamboui.terminal.Frame.forTesting(buffer),
-                                screen,
-                                dev.tamboui.toolkit.element.RenderContext.empty());
-                drawn.complete(buffer);
-            });
-            dev.tamboui.buffer.Buffer buffer = drawn.get(5, java.util.concurrent.TimeUnit.SECONDS);
+    /**
+     * The cells {@code element} draws on a screen {@code width} columns wide and 30 high, on the render thread.
+     */
+    private static dev.tamboui.buffer.Buffer drawn(
+            ToolkitTestRunner testRunner,
+            java.util.function.Supplier<? extends dev.tamboui.toolkit.element.Element> element,
+            int width)
+            throws Exception {
+        dev.tamboui.layout.Rect screen = new dev.tamboui.layout.Rect(0, 0, width, 30);
+        java.util.concurrent.CompletableFuture<dev.tamboui.buffer.Buffer> drawn =
+                new java.util.concurrent.CompletableFuture<>();
+        testRunner.runner().runOnRenderThread(() -> {
+            dev.tamboui.buffer.Buffer buffer = dev.tamboui.buffer.Buffer.empty(screen);
+            element.get()
+                    .render(
+                            dev.tamboui.terminal.Frame.forTesting(buffer),
+                            screen,
+                            dev.tamboui.toolkit.element.RenderContext.empty());
+            drawn.complete(buffer);
+        });
+        return drawn.get(5, java.util.concurrent.TimeUnit.SECONDS);
+    }
 
-            int row = List.range(0, 30)
-                    .find(y -> List.range(0, 100)
-                            .map(x -> buffer.get(x, y).symbol())
-                            .mkString()
-                            .contains("+short"))
-                    .get();
-            List<Integer> green = List.range(0, 100)
-                    .filter(x -> buffer.get(x, row).style().bg().equals(java.util.Optional.of(Color.GREEN)));
-            assertFalse(
-                    green.isEmpty(),
-                    List.range(0, 100)
-                            .map(x -> buffer.get(x, row).symbol() + ":"
-                                    + buffer.get(x, row).style().bg())
-                            .mkString(" "));
-            // From its marker to the scrollbar, past the widest line of the file, not just as wide as that.
-            assertTrue(green.last() >= 95, green.toString());
-            assertEquals(green.last() - green.head() + 1, green.size(), green.toString());
-        }
+    /**
+     * Asserts the background of the line {@code +short} in {@code buffer} is green in one stretch, up to column
+     * {@code last}.
+     */
+    private static void assertGreenTo(int last, dev.tamboui.buffer.Buffer buffer) {
+        int width = buffer.area().width();
+        int row = List.range(0, buffer.area().height())
+                .find(y -> List.range(0, width)
+                        .map(x -> buffer.get(x, y).symbol())
+                        .mkString()
+                        .contains("+short"))
+                .get();
+        List<Integer> green = List.range(0, width)
+                .filter(x -> buffer.get(x, row).style().bg().equals(java.util.Optional.of(Color.GREEN)));
+        assertEquals(last, green.last(), green.toString());
+        assertEquals(green.last() - green.head() + 1, green.size(), green.toString());
     }
 
     @Test
