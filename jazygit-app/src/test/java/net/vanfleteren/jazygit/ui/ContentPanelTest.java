@@ -126,6 +126,49 @@ class ContentPanelTest {
     }
 
     @Test
+    void onAMarkerEnterAndTheBracketsAskToShowTheLinesItLeavesOut() throws Exception {
+        java.util.List<Msg> dispatched = new java.util.ArrayList<>();
+        ContentPanel expanding = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, dispatched::add);
+        Model shown = showingCommit("""
+                diff --git a/a.txt b/a.txt
+                --- a/a.txt
+                +++ b/a.txt
+                @@ -9,2 +9,2 @@
+                 nine
+                -ten
+                +TEN
+                """)
+                .mapPreferences(preferences ->
+                        preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
+        String area = expanding.areaOfPane(shown, CommitsPanel.ID).get();
+        ScrolledContent content = ContentView.of(shown, area).areas().head().content();
+        Anchor.Gap above = new Anchor.Gap("a.txt", 1, Option.of(9));
+        Model onMarker = shown.withScrolled(
+                io.vavr.collection.HashMap.of(area, new Scrolled(content, 0, 0, Option.of(above), Option.none())));
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> expanding.render(onMarker, area))) {
+            String screen = RenderedText.ofLarge(testRunner, () -> expanding.render(onMarker, area));
+            assertTrue(screen.contains("8 lines hidden"), screen);
+            assertTrue(screen.contains("more ┄"), screen);
+            SettledPilot.focus(testRunner, area);
+            SettledPilot.of(testRunner).press(KeyCode.ENTER);
+            SettledPilot.of(testRunner).press(']');
+            SettledPilot.of(testRunner).pause();
+        }
+
+        List<net.vanfleteren.jazygit.feature.diff.ExpandMsg.Asked> asked = List.ofAll(dispatched)
+                .filter(net.vanfleteren.jazygit.feature.diff.ExpandMsg.Asked.class::isInstance)
+                .map(net.vanfleteren.jazygit.feature.diff.ExpandMsg.Asked.class::cast);
+        assertEquals(
+                List.of(
+                        net.vanfleteren.jazygit.feature.diff.ExpandMsg.Toward.ALL,
+                        net.vanfleteren.jazygit.feature.diff.ExpandMsg.Toward.DOWN),
+                asked.map(net.vanfleteren.jazygit.feature.diff.ExpandMsg.Asked::toward));
+        assertEquals(List.of(above, above), asked.map(msg -> msg.at().cursor()));
+        assertEquals(List.of(area, area), asked.map(msg -> msg.at().area()));
+    }
+
+    @Test
     void aFocusedAreaScrollsSidewaysLeavesOnEscapeAndLeavesOtherKeysToTheApp() throws Exception {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
         java.util.List<KeyEvent> global = new java.util.ArrayList<>();

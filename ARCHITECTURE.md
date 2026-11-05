@@ -366,6 +366,24 @@ only; side-by-side diffs are to follow them there.
 - The diff of a pull request on its screen is read with `gh pr diff`, which has no such options, so it shows all
   changes with three lines of context.
 
+### Showing more of one hunk
+
+See `documentation/adr/0077-showing-more-of-one-hunk.md`.
+
+- The rich view draws a marker in place of the rule between two hunks, above the first and after the last
+  (`Folding.gaps`, from the hunk headers): how many lines it leaves out, or `more` after the last until the file is
+  read whole. A marker is a stop of the cursor, `Anchor.Gap`.
+- On a marker, `]`, `[` and Enter (`Scopes.DIFF`, and `Scopes.PULL_REQUEST_DIFF` next to the keys of the review;
+  `feature.diff.ExpandAction`) send `ExpandMsg.Asked` with the `DiffCursorAt`; a click on one is Enter.
+- `ExpandUpdate` keeps the lines asked for in `RepoView.expanded`, by the id of the area, as an `Expansion` of what the
+  area showed. The first expansion in a file starts `Cmd.ReadWholeFile`, a `DiffLoad` targeted at that file of the
+  expansion, which reads its diff again as it was read (`Source`) with `DiffContext.WHOLE_FILE`.
+- `ContentView` gives each diff shown the expansion of its area (`ShownDiff.expanded`); `ShownDiff.folded` folds each
+  file read whole with `Folding.fold` to the context of the moment and the lines expanded, unless it no longer has the
+  changes the diff shown has. The review starts threads on the folded diff too.
+- Changing the options drops every expansion (`DiffOptionsUpdate`); a diff of the working tree read again reads its
+  files read whole again (`LoadUpdate`).
+
 ### The diff style and the files of a commit
 
 See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and

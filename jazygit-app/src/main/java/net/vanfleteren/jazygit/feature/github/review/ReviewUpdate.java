@@ -205,10 +205,10 @@ public final class ReviewUpdate {
      * first line of a range is the one the diff shows first, and both are in one hunk.
      */
     private static Either<Why, ReviewPopup> start(Model model, DiffCursorAt at) {
-        return reviewed(model).flatMap(view -> startIn(view, at));
+        return reviewed(model).flatMap(view -> startIn(model, view, at));
     }
 
-    private static Either<Why, ReviewPopup> startIn(CommitFilesView view, DiffCursorAt at) {
+    private static Either<Why, ReviewPopup> startIn(Model model, CommitFilesView view, DiffCursorAt at) {
         String commit = view.of().sha().value();
         if (at.mark().isEmpty() && at.cursor() instanceof Anchor.File(String path)) {
             return Either.right(popup(
@@ -222,7 +222,7 @@ public final class ReviewUpdate {
                 || !(at.cursor() instanceof Anchor.OnLine cursor)) {
             return Either.left(Why.NOT_ON_LINE);
         }
-        return diffLines(view)
+        return diffLines(model, view, at)
                 .between(from, cursor)
                 .filter(range -> range.head().hunk().equals(range.last().hunk()))
                 .toEither(Why.NOT_ONE_HUNK)
@@ -300,7 +300,7 @@ public final class ReviewUpdate {
                                             false),
                                     before.lastOption()
                                             .map(ReviewUpdate::excerpt)
-                                            .getOrElse(() -> lines(found._1(), thread)))
+                                            .getOrElse(() -> lines(model, found._1(), at, thread)))
                             .withText(body);
                 });
     }
@@ -313,12 +313,13 @@ public final class ReviewUpdate {
     }
 
     /**
-     * The lines of the diff {@code thread} is on, as the popup that starts one shows them; none when the diff does not
-     * show them, as for an outdated thread, or one on a whole file.
+     * The lines of the diff {@code thread} is on, as the popup that starts one shows them, with the lines expanded in
+     * the area of the cursor {@code at} (ADR 77); none when the diff does not show them, as for an outdated thread, or
+     * one on a whole file.
      */
-    private static List<String> lines(CommitFilesView view, ReviewThread thread) {
+    private static List<String> lines(Model model, CommitFilesView view, DiffCursorAt at, ReviewThread thread) {
         return thread.line()
-                .flatMap(line -> diffLines(view)
+                .flatMap(line -> diffLines(model, view, at)
                         .between(
                                 new Anchor.OnLine(
                                         thread.path(),
@@ -514,13 +515,22 @@ public final class ReviewUpdate {
     }
 
     /**
-     * The lines the cursor stops on in the diff the files of the pull request {@code view} shows, as the content panel
-     * draws it.
+     * The lines the cursor {@code at} stops on in the diff the files of the pull request {@code view} shows, as the
+     * content panel draws it: with the lines expanded in its area (ADR 77), so that a range stays in a hunk as shown.
      */
-    private static DiffLines diffLines(CommitFilesView view) {
+    private static DiffLines diffLines(Model model, CommitFilesView view, DiffCursorAt at) {
+        Option<Expansion> expansion = model.repoView()
+                .expanded()
+                .get(at.area())
+                .filter(kept -> kept.holdsFor(at.at().content()));
         return view.diff()
                 .flatMap(preview -> preview.shown().value().toOption())
-                .map(text -> DiffLines.of(text.parsed().diff()))
+                .map(text -> expansion
+                        .map(expanded -> expanded.folded(
+                                        text.parsed(), model.preferences().context())
+                                .diff())
+                        .getOrElse(text.parsed()))
+                .map(parsed -> DiffLines.of(parsed.diff()))
                 .getOrElse(() -> new DiffLines(Vector.empty()));
     }
 

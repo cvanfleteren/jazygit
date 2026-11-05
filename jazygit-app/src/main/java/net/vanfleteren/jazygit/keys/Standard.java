@@ -6,6 +6,7 @@ import net.vanfleteren.jazygit.feature.branch.BranchFeature;
 import net.vanfleteren.jazygit.feature.cherrypick.CherryPickKeys;
 import net.vanfleteren.jazygit.feature.commit.CommitFeature;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesAction;
+import net.vanfleteren.jazygit.feature.diff.ExpandAction;
 import net.vanfleteren.jazygit.feature.discard.DiscardKeys;
 import net.vanfleteren.jazygit.feature.edit.EditKeys;
 import net.vanfleteren.jazygit.feature.github.GitHubFeature;
@@ -29,6 +30,7 @@ final class Standard {
                     GitHubFeature::register,
                     WorktreeFeature::register,
                     CommitFilesAction.ACTION.keys(),
+                    ExpandAction.ACTION.keys(),
                     GlobalKeys::register)
             .foldLeft(Keymap.empty(), (keymap, feature) -> feature.apply(keymap));
 

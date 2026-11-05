@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.diff;
 
+import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.UnaryOperator;
@@ -93,7 +94,9 @@ public final class DiffOptionsUpdate {
                         .withStashDetail(reloading(repoView.stashDetail()))
                         .withDivergence(divergence)
                         .withBranchCommits(branchCommits)
-                        .withCommitFiles(commitFiles)),
+                        .withCommitFiles(commitFiles)
+                        // What was expanded was read with the options before, and is folded to their context.
+                        .withExpanded(HashMap.empty())),
                 loads);
     }
 

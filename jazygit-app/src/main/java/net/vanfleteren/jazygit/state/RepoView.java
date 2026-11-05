@@ -1,7 +1,9 @@
 package net.vanfleteren.jazygit.state;
 
+import io.vavr.collection.HashMap;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import lombok.With;
@@ -39,6 +41,8 @@ import net.vanfleteren.jazygit.git.model.*;
  * @param onlyAhead    whether the logs list only the commits not on their base, and the commit they forked from
  * @param closedStacks the numbers of the stacks the branches pane shows closed, as only their header; a stack
  *                     starts open (ADR 72)
+ * @param expanded     the lines expanded around the hunks of the diff each area of the content panel shows, by the
+ *                     id of the area (ADR 77)
  */
 @With
 public record RepoView(
@@ -57,7 +61,8 @@ public record RepoView(
         Option<String> searchLine,
         Option<CommitSearch> commitSearch,
         boolean onlyAhead,
-        Set<Integer> closedStacks) {
+        Set<Integer> closedStacks,
+        Map<String, Expansion> expanded) {
 
     public static final RepoView INITIAL = new RepoView(
             BranchesTab.LOCAL,
@@ -75,5 +80,6 @@ public record RepoView(
             Option.none(),
             Option.none(),
             false,
-            HashSet.empty());
+            HashSet.empty(),
+            HashMap.empty());
 }

@@ -38,6 +38,14 @@ public sealed interface Anchor {
     record OnLine(String path, Side side, int number) implements Anchor {}
 
     /**
+     * A marker of lines the file with the path {@code path} leaves out between its hunks, or around them: those of the
+     * new file from {@code from} up to {@code until}, which is not one of them; none when it is not known how many
+     * follow the last hunk (ADR 77). It is found again by its path and the closest {@code from}, as expanding it moves
+     * where it starts or ends.
+     */
+    record Gap(String path, int from, Option<Integer> until) implements Anchor {}
+
+    /**
      * The review thread with the id {@code id}, which was after {@code line} when the anchor was made, if after one:
      * where the cursor goes when the thread is gone. It is found again by its id, wherever it is now
      * ({@link DiffStops#nearest}).

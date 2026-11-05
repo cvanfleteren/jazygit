@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.CommitQuery;
+import net.vanfleteren.jazygit.git.model.DiffContext;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Diffs;
@@ -746,6 +747,106 @@ public interface Cmd {
                     .diffs()
                     .uncommitted(files, options)
                     .fold(this::failedWith, diff -> new LoadMsg.FileDiffLoaded(files, options, diff, stamp));
+        }
+    }
+
+    /**
+     * Reads the diff of the file with the path {@code path} again, the way {@code source} says, with the whole file
+     * as context, to show more of it than its hunks in the area {@code area} while it shows {@code content} (ADR 77).
+     * It reads with {@code options} but for the context, so what it read with options changed since is dropped.
+     */
+    record ReadWholeFile(String area, ScrolledContent content, Source source, String path, DiffOptions options)
+            implements DiffLoad, Targeted<DiffText> {
+
+        @Override
+        public Option<Label> label() {
+            return Option.of(Label.of("work.wholeFile", path));
+        }
+
+        /**
+         * The file read whole of the expansion of the area, while it holds for what was expanded.
+         */
+        @Override
+        public Target<DiffText> target() {
+            return Target.inView(new Lens<RepoView, Loadable<DiffText>>(
+                    view -> expanded(view).map(Expansion.Expanded::whole),
+                    (view, change) -> expanded(view)
+                            .map(file -> view.withExpanded(view.expanded()
+                                    .computeIfPresent(
+                                            area,
+                                            (key, expansion) -> expansion.withFiles(expansion
+                                                    .files()
+                                                    .put(path, file.withWhole(change.apply(file.whole())))))
+                                    ._2()))
+                            .getOrElse(view)));
+        }
+
+        /**
+         * This read with {@code chosen} options.
+         */
+        public ReadWholeFile withOptions(DiffOptions chosen) {
+            return new ReadWholeFile(area, content, source, path, chosen);
+        }
+
+        private Option<Expansion.Expanded> expanded(RepoView view) {
+            return view.expanded()
+                    .get(area)
+                    .filter(expansion -> expansion.holdsFor(content))
+                    .flatMap(expansion -> expansion.files().get(path));
+        }
+
+        @Override
+        public Msg run(Env env) {
+            DiffOptions whole = options.withContext(DiffContext.WHOLE_FILE);
+            return (switch (source) {
+                        case Source.WorkingTree(FileEntry file, boolean staged) ->
+                            env.git()
+                                    .diffs()
+                                    .uncommitted(List.of(file), whole)
+                                    .map(diffs -> staged ? diffs.staged() : diffs.unstaged());
+                        case Source.OfCommit(Sha sha, CommitFile file) ->
+                            env.git().diffs().commitFileChanges(sha, List.of(file), whole);
+                        case Source.OfStash(Sha sha, CommitFile file) ->
+                            env.git().stashes().fileChanges(sha, List.of(file), whole);
+                        case Source.OfFiles(CommitFilesView.Changes of, CommitFile file) ->
+                            switch (of) {
+                                case CommitFilesView.Changes.OfCommit(Sha sha) ->
+                                    env.git().diffs().commitFileChanges(sha, List.of(file), whole);
+                                case CommitFilesView.Changes.OfStash(Sha sha) ->
+                                    env.git().stashes().fileChanges(sha, List.of(file), whole);
+                                case CommitFilesView.Changes.OfBranch(var branch, var base, Sha sha) ->
+                                    env.git().diffs().rangeFileChanges(base.tip(), sha, List.of(file), whole);
+                                case CommitFilesView.Changes.OfPullRequest(PullRequestCommits commits) ->
+                                    env.git().diffs().pullRequestFileChanges(commits, List.of(file), whole);
+                            };
+                    })
+                    .fold(this::failedWith, text -> new LoadMsg.WholeFileRead(this, text));
+        }
+
+        /**
+         * How a file is read whole: as the diff it is shown in was read.
+         */
+        public sealed interface Source {
+
+            /**
+             * The staged changes of {@code file} in the working tree, or the unstaged ones.
+             */
+            record WorkingTree(FileEntry file, boolean staged) implements Source {}
+
+            /**
+             * What the commit {@code sha} changed in {@code file}.
+             */
+            record OfCommit(Sha sha, CommitFile file) implements Source {}
+
+            /**
+             * What the stash {@code sha} stashed of {@code file}.
+             */
+            record OfStash(Sha sha, CommitFile file) implements Source {}
+
+            /**
+             * What {@code of}, whose files the files pane lists, changed in {@code file}.
+             */
+            record OfFiles(CommitFilesView.Changes of, CommitFile file) implements Source {}
         }
     }
 

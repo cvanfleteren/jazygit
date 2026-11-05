@@ -27,6 +27,10 @@ public record UnifiedDiff(List<String> preamble, List<FileDiff> files) {
     private static final String UNMERGED_START = "* Unmerged path ";
 
     private static final Pattern HUNK = Pattern.compile("^@@ -(\\d+)(?:,\\d+)? \\+(\\d+)(?:,\\d+)? @@ ?(.*)");
+    /**
+     * Where a hunk starts in the new file and how many lines it has there, which git leaves out when it is one.
+     */
+    private static final Pattern RANGES = Pattern.compile("^@@ -\\d+(?:,\\d+)? \\+(\\d+)(?:,(\\d+))? @@.*");
 
     /**
      * {@code text} parsed. What it does not know is kept: before the first file in the preamble, and in a file as a
@@ -316,7 +320,26 @@ public record UnifiedDiff(List<String> preamble, List<FileDiff> files) {
         public boolean numbered() {
             return HUNK.matcher(header).matches();
         }
+
+        /**
+         * The lines of the new file the hunk covers, as its header gives them; none when its numbers cannot be read.
+         * A hunk that covers none, as one that only removes, is empty, at the line after the one its header names.
+         */
+        public Option<Covered> covered() {
+            Matcher numbers = RANGES.matcher(header);
+            if (!numbers.matches()) {
+                return Option.none();
+            }
+            int start = Integer.parseInt(numbers.group(1));
+            int length = numbers.group(2) == null ? 1 : Integer.parseInt(numbers.group(2));
+            return Option.of(length == 0 ? new Covered(start + 1, start + 1) : new Covered(start, start + length));
+        }
     }
+
+    /**
+     * The lines of the new file from {@code from} up to {@code until}, which is not one of them.
+     */
+    public record Covered(int from, int until) {}
 
     /**
      * A line of a hunk, without its marker.

@@ -284,6 +284,8 @@ record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int stop, 
                                 .foldLeft(lines, (done, at) -> done.update(at, ruled(done.get(at))));
                     case Anchor.File ignored ->
                         lines.update(first, tinted(lines.get(first), on.mark().width(), tint));
+                    case Anchor.Gap ignored ->
+                        lines.update(first, tinted(lines.get(first), on.mark().width(), tint));
                     case Anchor.OnLine ignored ->
                         lines.update(first, tinted(lines.get(first), on.mark().width(), tint));
                 };

@@ -103,7 +103,9 @@ class RemarkLinesTest {
                         indent + "┃  Shouting.",
                         indent + "┗━",
                         "",
-                        "3 3 │  three"),
+                        "3 3 │  three",
+                        // How many lines follow is not known until the file is read whole (ADR 77).
+                        "┄┄┄ │ more ┄"),
                 lines);
     }
 
@@ -327,8 +329,9 @@ class RemarkLinesTest {
                         " ".repeat(8) + "┃  2 more on GitHub",
                         " ".repeat(8) + "┗━",
                         "",
+                        "┄┄┄ │ more ┄",
                         " ".repeat(8) + "Not on a line of this diff"),
-                lines.dropRight(2).takeRight(4));
+                lines.dropRight(2).takeRight(5));
     }
 
     @Test
@@ -347,12 +350,13 @@ class RemarkLinesTest {
                         indent + "┃  Two",
                         indent + "┗━",
                         "",
-                        "3 3 │  three"),
+                        "3 3 │  three",
+                        "┄┄┄ │ more ┄"),
                 lines.drop(3));
     }
 
     @Test
-    void nothingButTheBlankLineBetweenFilesFollowsAThreadOnTheLastLineOfAFile() {
+    void aBlankLineSetsAThreadOnTheLastLineOfAFileApartFromTheMarkerAfterIt() {
         String diff = DIFF + """
                 diff --git a/b.txt b/b.txt
                 index 3333333..4444444 100644
@@ -375,12 +379,16 @@ class RemarkLinesTest {
                         indent + "┃  End of a",
                         indent + "┗━",
                         "",
+                        "┄┄┄ │ more ┄",
+                        "",
                         " modified  b.txt",
                         "1   │ -x",
                         "  1 ● +y",
                         indent + "┏━ bob · 2h ago",
                         indent + "┃  End of b",
-                        indent + "┗━"),
+                        indent + "┗━",
+                        "",
+                        "┄┄┄ │ more ┄"),
                 lines.drop(4));
     }
 
@@ -454,7 +462,7 @@ class RemarkLinesTest {
         assertFalse(lines.exists(line -> line.contains("●")), lines.mkString("\n"));
         assertEquals(
                 " ".repeat(8) + "Not on a line of this diff",
-                lines.dropWhile(line -> !line.contains("three")).get(1));
+                lines.dropWhile(line -> !line.contains("three")).get(2));
         assertTrue(lines.contains(" ".repeat(8) + "┃  Moved on"), lines.mkString("\n"));
     }
 
@@ -632,6 +640,7 @@ class RemarkLinesTest {
                         replied,
                         new Anchor.Comment("C1", replied),
                         new Anchor.OnLine("a.txt", Side.RIGHT, 3),
+                        new Anchor.Gap("a.txt", 4, Option.none()),
                         new Anchor.Thread(outdated.id(), Option.none())),
                 drawn.stops().map(stop -> stop.mark().anchor()));
         List<String> lines = text(drawn.lines());
@@ -706,6 +715,7 @@ class RemarkLinesTest {
                         new Anchor.Comment("C2", open),
                         three,
                         new Anchor.Thread(collapsed.id(), Option.of(three)),
+                        new Anchor.Gap("a.txt", 4, Option.none()),
                         new Anchor.Thread(resolved.id(), Option.none())),
                 drawn.stops().map(stop -> stop.mark().anchor()));
         assertEquals(
