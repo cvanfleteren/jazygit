@@ -85,6 +85,76 @@ class RemarkLinesTest {
                 .map(String::stripTrailing);
     }
 
+    private static final String PAIRS = """
+            diff --git a/a.txt b/a.txt
+            index 1111111..2222222 100644
+            --- a/a.txt
+            +++ b/a.txt
+            @@ -1,2 +1,2 @@
+            -int count = 1;
+            -int total = 2;
+            +int count = 42;
+            +int total = 43;
+            """;
+
+    private static ReviewThread onLines(Side startSide, int start, Side side, int line) {
+        return new ReviewThread(
+                "a.txt",
+                side,
+                Option.of(line),
+                Option.when(startSide != side || start != line, start),
+                startSide,
+                Option.of(line),
+                false,
+                false,
+                Subject.LINE,
+                List.of(new Comment(
+                        "bob", NOW.minusSeconds(7200), "Why?", Option.none(), "C0", "1", CommentRights.ALL)),
+                0,
+                "T" + start + line,
+                ReviewThread.Rights.ALL);
+    }
+
+    /**
+     * The lines of the diff among {@code lines}, without the threads.
+     */
+    private static List<String> diffLines(List<String> lines) {
+        return lines.filter(line -> line.matches("^[ 0-9]*[0-9][ 0-9]* [│┃●] .*"));
+    }
+
+    @Test
+    void aThreadOnALineOfAPairGoesAfterThePair() {
+        List<String> lines = rich(PAIRS, shown(Collapsed.NONE, onLines(Side.LEFT, 1, Side.LEFT, 1)));
+
+        String indent = " ".repeat(8);
+        assertEquals(
+                List.of(
+                        " modified  a.txt",
+                        "1   ● -int count = 1;",
+                        "  1 │ +int count = 42;",
+                        indent + "┏━ bob · 2h ago",
+                        indent + "┃  Why?",
+                        indent + "┗━",
+                        "",
+                        "2   │ -int total = 2;",
+                        "  2 │ +int total = 43;",
+                        "┄┄┄ │ more ┄"),
+                lines);
+    }
+
+    @Test
+    void aBlockAThreadOnSeveralLinesCoversIsShownAsGitGivesIt() {
+        List<String> lines = rich(PAIRS, shown(Collapsed.NONE, onLines(Side.LEFT, 1, Side.RIGHT, 1)));
+
+        assertEquals(
+                List.of(
+                        "1   ┃ -int count = 1;",
+                        "2   ┃ -int total = 2;",
+                        "  1 ● +int count = 42;",
+                        "  2 │ +int total = 43;"),
+                diffLines(lines));
+    }
+
     @Test
     void aThreadIsABlockAfterItsLineWhichTheGutterMarks() {
         List<String> lines = rich(shown(Collapsed.NONE, thread(2, false, "Why **upper** case?", "Shouting.")));
