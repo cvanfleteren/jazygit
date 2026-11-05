@@ -378,7 +378,8 @@ class ContentPanelTest {
         io.vavr.collection.Vector<Line> lines =
                 io.vavr.collection.Vector.range(0, 100).map(i -> Line.from("%03d".formatted(i)));
 
-        java.util.List<Line> windowed = ContentPanel.windowed(lines, 1, 40, 10).lines();
+        java.util.List<Line> windowed =
+                ContentPanel.windowed(lines, 1, 40, 10, 0, HashSet.empty()).lines();
 
         assertEquals(100, windowed.size());
         // From where it is scrolled to, as many lines as an area twice as high shows, cut sideways.
@@ -387,12 +388,184 @@ class ContentPanelTest {
         assertEquals("", windowed.get(39).rawContent());
         assertEquals("", windowed.get(60).rawContent());
         // At the end, the lines an area twice as high would show from its last line at its bottom.
-        java.util.List<Line> atEnd = ContentPanel.windowed(lines, 0, 95, 10).lines();
+        java.util.List<Line> atEnd =
+                ContentPanel.windowed(lines, 0, 95, 10, 0, HashSet.empty()).lines();
         assertEquals("080", atEnd.get(80).rawContent());
         assertEquals("", atEnd.get(79).rawContent());
         // Before the area was ever drawn, all of them.
         assertEquals(
-                "000", ContentPanel.windowed(lines, 0, 50, 0).lines().get(0).rawContent());
+                "000",
+                ContentPanel.windowed(lines, 0, 50, 0, 0, HashSet.empty())
+                        .lines()
+                        .get(0)
+                        .rawContent());
+    }
+
+    @Test
+    void aLineThatFillsTheAreaHasItsBlankLastSpanLengthenedToTheEdge() {
+        Style green = Style.EMPTY.bg(Color.GREEN);
+        Line changed = Line.from(Span.raw(" 1 │ "), Span.styled("+ab", green), Span.styled(" ", green));
+
+        assertEquals(
+                Line.from(Span.raw(" 1 │ "), Span.styled("+ab", green), Span.styled("      ", green)),
+                ContentPanel.filled(changed, 14));
+        // A line as wide already, and one that does not end in padding, are left as they are.
+        assertEquals(changed, ContentPanel.filled(changed, 9));
+        Line context = Line.from(Span.raw(" 1 │ "), Span.raw(" ab"));
+        assertEquals(context, ContentPanel.filled(context, 14));
+    }
+
+    @Test
+    void onlyTheLinesThatFillAreDrawnToTheEdgeAndThenScrolledSideways() {
+        Style green = Style.EMPTY.bg(Color.GREEN);
+        io.vavr.collection.Vector<Line> lines = io.vavr.collection.Vector.of(
+                Line.from(Span.raw("ab"), Span.styled(" ", green)), Line.from(Span.raw("ab"), Span.styled(" ", green)));
+
+        java.util.List<Line> windowed =
+                ContentPanel.windowed(lines, 1, 0, 10, 6, HashSet.of(0)).lines();
+
+        // Filled to the edge of the area where it is scrolled to, then cut sideways.
+        assertEquals(Line.from(Span.raw("b"), Span.styled("     ", green)), windowed.get(0));
+        assertEquals(Line.from(Span.raw("b"), Span.styled(" ", green)), windowed.get(1));
+    }
+
+    @Test
+    void theBackgroundOfAChangedLineGoesOnToTheEdgeOfTheArea() throws Exception {
+        ContentPanel filling = new ContentPanel(GREEN_ADDED, () -> false, id -> {}, msg -> {});
+        Model model = showingRichCommit("+short\n+a bit longer");
+        String area = filling.areaOfPane(model, CommitsPanel.ID).get();
+
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(() -> filling.render(model, area), new dev.tamboui.layout.Size(100, 30))) {
+            dev.tamboui.buffer.Buffer buffer = drawn(testRunner, () -> filling.render(model, area), 100);
+            // From its marker to the scrollbar, past the widest line of the file, not just as wide as that: from the
+            // first frame, though the area only learns how wide it is while it draws.
+            assertBackgroundTo(Color.GREEN, "+short", 97, buffer);
+            // The bar of the file too.
+            assertBackgroundTo(Color.BLUE, "added  schema.sql", 97, buffer);
+        }
+    }
+
+    @Test
+    void aBarWiderThanTheLinesOfItsFileGoesOnToTheEdgeOfTheArea() throws Exception {
+        ContentPanel filling = new ContentPanel(GREEN_ADDED, () -> false, id -> {}, msg -> {});
+        // The bar is the widest line of its file: it is not padded to the width of the file.
+        Model model = showingRichCommit("+x");
+        String area = filling.areaOfPane(model, CommitsPanel.ID).get();
+
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(() -> filling.render(model, area), new dev.tamboui.layout.Size(100, 30))) {
+            assertBackgroundTo(
+                    Color.BLUE, "added  schema.sql", 97, drawn(testRunner, () -> filling.render(model, area), 100));
+        }
+    }
+
+    @Test
+    void theFirstFrameInAnotherSizeFillsTheAreaItIsDrawnIn() throws Exception {
+        ContentPanel filling = new ContentPanel(GREEN_ADDED, () -> false, id -> {}, msg -> {});
+        Model model = showingRichCommit("+short\n+a bit longer");
+        String area = filling.areaOfPane(model, CommitsPanel.ID).get();
+
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(() -> filling.render(model, area), new dev.tamboui.layout.Size(100, 30))) {
+            drawn(testRunner, () -> filling.render(model, area), 60);
+            // Wider, as when the left column is made narrower: on to the new edge, not that of the frame before.
+            assertBackgroundTo(Color.GREEN, "+short", 97, drawn(testRunner, () -> filling.render(model, area), 100));
+            // Narrower again: nothing left of the frame before, like a column for a scrollbar.
+            assertBackgroundTo(Color.GREEN, "+short", 57, drawn(testRunner, () -> filling.render(model, area), 60));
+        }
+    }
+
+    @Test
+    void theStagedAndUnstagedChangesEachTakeHalfOfTheArea() throws Exception {
+        Model selected = TestModels.withFilesSelected(
+                SampleData.git(),
+                List.of(
+                        new FileEntry("a.txt", ChangeType.MODIFIED, true, false),
+                        new FileEntry("b.txt", ChangeType.MODIFIED, false, true)));
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> content.render(selected, FilesPanel.ID))) {
+            String screen = RenderedText.ofLarge(testRunner, () -> content.render(selected, FilesPanel.ID));
+            List<String> rows = List.of(screen.split("\n"));
+            int staged = rows.indexWhere(row -> row.contains("Staged changes"));
+            int unstaged = rows.indexWhere(row -> row.contains("Unstaged changes"));
+            // Each takes half of the 30 rows, not only as many as its first lines take.
+            assertEquals(15, unstaged - staged, screen);
+            assertEquals(2, rows.count(row -> row.contains("+new")), screen);
+        }
+    }
+
+    // The added lines in green, the bars of the files in blue.
+    private static final Theme.SpanStyles GREEN_ADDED = cssClass -> switch (cssClass) {
+        case Theme.Classes.DIFF_ADDED_LINE -> Style.EMPTY.bg(Color.GREEN);
+        case Theme.Classes.DIFF_FILE_HEADER -> Style.EMPTY.bg(Color.BLUE);
+        default -> Style.EMPTY;
+    };
+
+    /**
+     * The model with a commit selected that adds {@code schema.sql} with {@code lines}, drawn rich.
+     */
+    private static Model showingRichCommit(String lines) {
+        Model rich = TestModels.loaded()
+                .mapPreferences(preferences ->
+                        preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
+        int count = lines.split("\n").length;
+        return Update.update(
+                        Update.update(rich, new SelectionMsg.CommitSelected(new Sha("aaaa")))
+                                .model(),
+                        new LoadMsg.CommitDetailLoaded(
+                                new Sha("aaaa"),
+                                rich.preferences().diffOptions(),
+                                DiffText.of(String.join(
+                                        "\n",
+                                        "diff --git a/schema.sql b/schema.sql",
+                                        "new file mode 100644",
+                                        "--- /dev/null",
+                                        "+++ b/schema.sql",
+                                        "@@ -0,0 +1," + count + " @@",
+                                        lines))))
+                .model();
+    }
+
+    /**
+     * The cells {@code element} draws on a screen {@code width} columns wide and 30 high, on the render thread.
+     */
+    private static dev.tamboui.buffer.Buffer drawn(
+            ToolkitTestRunner testRunner,
+            java.util.function.Supplier<? extends dev.tamboui.toolkit.element.Element> element,
+            int width)
+            throws Exception {
+        dev.tamboui.layout.Rect screen = new dev.tamboui.layout.Rect(0, 0, width, 30);
+        java.util.concurrent.CompletableFuture<dev.tamboui.buffer.Buffer> drawn =
+                new java.util.concurrent.CompletableFuture<>();
+        testRunner.runner().runOnRenderThread(() -> {
+            dev.tamboui.buffer.Buffer buffer = dev.tamboui.buffer.Buffer.empty(screen);
+            element.get()
+                    .render(
+                            dev.tamboui.terminal.Frame.forTesting(buffer),
+                            screen,
+                            dev.tamboui.toolkit.element.RenderContext.empty());
+            drawn.complete(buffer);
+        });
+        return drawn.get(5, java.util.concurrent.TimeUnit.SECONDS);
+    }
+
+    /**
+     * Asserts the background of the row of {@code buffer} that shows {@code text} is {@code colour} in one stretch, up
+     * to column {@code last}.
+     */
+    private static void assertBackgroundTo(Color colour, String text, int last, dev.tamboui.buffer.Buffer buffer) {
+        int width = buffer.area().width();
+        int row = List.range(0, buffer.area().height())
+                .find(y -> List.range(0, width)
+                        .map(x -> buffer.get(x, y).symbol())
+                        .mkString()
+                        .contains(text))
+                .get();
+        List<Integer> coloured =
+                List.range(0, width).filter(x -> buffer.get(x, row).style().bg().equals(java.util.Optional.of(colour)));
+        assertEquals(last, coloured.last(), coloured.toString());
+        assertEquals(coloured.last() - coloured.head() + 1, coloured.size(), coloured.toString());
     }
 
     @Test

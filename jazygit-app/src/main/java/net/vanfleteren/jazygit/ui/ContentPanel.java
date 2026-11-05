@@ -2,11 +2,18 @@ package net.vanfleteren.jazygit.ui;
 
 import static dev.tamboui.toolkit.Toolkit.*;
 
+import dev.tamboui.buffer.Buffer;
+import dev.tamboui.buffer.Cell;
+import dev.tamboui.layout.Constraint;
+import dev.tamboui.layout.Rect;
 import dev.tamboui.style.RichTextState;
+import dev.tamboui.terminal.Frame;
 import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
 import dev.tamboui.text.Text;
 import dev.tamboui.toolkit.element.Element;
+import dev.tamboui.toolkit.element.RenderContext;
+import dev.tamboui.toolkit.element.Size;
 import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.elements.RichTextAreaElement;
 import dev.tamboui.toolkit.event.EventResult;
@@ -19,6 +26,7 @@ import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
+import io.vavr.collection.Set;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import java.time.Instant;
@@ -29,6 +37,7 @@ import java.util.Locale;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
@@ -227,9 +236,10 @@ public final class ContentPanel {
      * measures how wide every line it is given is, each frame, so a long diff would hold up every frame; it still gets
      * as many lines, for its scrollbar and how far it scrolls. The height is that of the frame before, so the lines are
      * kept that would show in an area up to twice as high, which the element scrolls up from its last line at its
-     * bottom; all of them before the area was ever drawn.
+     * bottom; all of them before the area was ever drawn. Those of them that are {@code filling} are
+     * {@link #filled} to the edge of an area {@code width} columns wide (ADR 80).
      */
-    static Text windowed(Vector<Line> lines, int column, int row, int height) {
+    static Text windowed(Vector<Line> lines, int column, int row, int height, int width, Set<Integer> filling) {
         int high = height > 0 ? 2 * height : lines.size();
         int top = Math.clamp(row, 0, Math.max(0, lines.size() - high));
         int bottom = Math.min(lines.size(), row + high);
@@ -237,9 +247,11 @@ public final class ContentPanel {
         return Text.from(new AbstractList<Line>() {
             @Override
             public Line get(int index) {
-                return index < top || index >= bottom
-                        ? BLANK
-                        : column == 0 ? lines.get(index) : sideways(lines.get(index), column);
+                if (index < top || index >= bottom) {
+                    return BLANK;
+                }
+                Line line = filling.contains(index) ? filled(lines.get(index), column + width) : lines.get(index);
+                return column == 0 ? line : sideways(line, column);
             }
 
             @Override
@@ -247,6 +259,21 @@ public final class ContentPanel {
                 return lines.size();
             }
         });
+    }
+
+    /**
+     * {@code line} as wide as {@code width}, if its last span is blank: the padding of a changed line, of the bar of a
+     * file or of the tint of the cursor, lengthened so its background goes on to the edge of the area (ADR 80).
+     */
+    static Line filled(Line line, int width) {
+        List<Span> spans = List.ofAll(line.spans());
+        int missing = width - line.width();
+        return spans.lastOption()
+                .filter(last -> missing > 0 && last.content().isBlank())
+                .map(last -> Line.from(spans.init()
+                        .append(new Span(last.content() + " ".repeat(missing), last.style()))
+                        .toJavaList()))
+                .getOrElse(line);
     }
 
     /**
@@ -437,25 +464,27 @@ public final class ContentPanel {
      */
     public StyledElement<?> render(Model model, String focusedId) {
         tabbableWhileIn(focusedId, model);
-        return element(ContentView.of(model, focusedId), model, focusedId);
+        return column(element(ContentView.of(model, focusedId), model, focusedId));
     }
 
     /**
      * How {@code shown} is drawn: a message in a panel, or the areas, where the model has them scrolled to.
      */
-    private StyledElement<?> element(Shown shown, Model model, String focusedId) {
+    private Element element(Shown shown, Model model, String focusedId) {
         return switch (shown) {
             case Shown.Message(String title, String content, Tone tone) ->
                 panel(
-                        title,
-                        switch (tone) {
-                            case DIM -> text(content).addClass(Theme.Classes.DIM);
-                            case ERROR -> text(content).addClass(Theme.Classes.ERROR);
-                        });
+                                title,
+                                switch (tone) {
+                                    case DIM -> text(content).addClass(Theme.Classes.DIM);
+                                    case ERROR -> text(content).addClass(Theme.Classes.ERROR);
+                                })
+                        .fill();
             case Shown.Area area -> area(area.area()).show(model, focusedId, area, this::bodyDrawn, styles);
             case Shown.Stacked(List<Shown.Area> stacked) ->
                 column(stacked.<Element>map(area -> element(area, model, focusedId))
-                        .toJavaArray(Element[]::new));
+                                .toJavaArray(Element[]::new))
+                        .fill();
         };
     }
 
@@ -568,6 +597,9 @@ public final class ContentPanel {
         // column it never draws at, so the area draws its lines with as many columns cut off their start itself.
         private int column = 0;
         private int columns = 0;
+        // The size the area was last drawn in, which its lines are fitted to; none before it is first drawn (ADR 80).
+        private int drawnWidth = -1;
+        private int drawnHeight = -1;
 
         ScrollArea(ContentArea area, BooleanSupplier leaveScrollArea, Consumer<String> focus, Consumer<Msg> dispatch) {
             this.area = area;
@@ -587,9 +619,24 @@ public final class ContentPanel {
         }
 
         /**
-         * The area as {@code shown}, its body as {@code style} styles it, where the model has it scrolled to.
+         * The area as {@code shown}, its body as {@code style} styles it, where the model has it scrolled to, its lines
+         * fitted to the size it is drawn in (ADR 80).
          */
-        RichTextAreaElement show(
+        Element show(
+                Model model,
+                String focusedId,
+                Shown.Area shown,
+                Function<Body, RichDiff.Drawn> style,
+                Theme.SpanStyles styles) {
+            return new Fitted(
+                    fit(model, focusedId, shown, style, styles), () -> fit(model, focusedId, shown, style, styles));
+        }
+
+        /**
+         * The text area as {@code shown}, as {@link #show} says, its lines fitted to the size the area was last drawn
+         * in, which the text area only learns while it draws.
+         */
+        private RichTextAreaElement fit(
                 Model model,
                 String focusedId,
                 Shown.Area shown,
@@ -618,11 +665,12 @@ public final class ContentPanel {
             Vector<Line> lines = cursor.filter(ignored -> focused)
                     .map(on -> on.tinted(current.lines(), styles.of(Theme.Classes.DIFF_CURSOR)))
                     .getOrElse(current.lines());
-            // The size of the area is that of the frame before, as the element only learns it while it draws.
+            // The size the element was last drawn in, which a frame in another size draws it in first (ADR 80).
             columns = Math.max(0, current.widest() - state.viewportWidth());
             column = Math.clamp(at.column(), 0, columns);
             int row = cursor.map(DiffCursor::row).getOrElse(at.row());
-            element.text(windowed(lines, column, row, state.viewportHeight())).title(shown.title());
+            element.text(windowed(lines, column, row, state.viewportHeight(), state.viewportWidth(), current.filling()))
+                    .title(shown.title());
             state.scrollToTop();
             state.scrollDown(row);
             return element.onKeyEvent(event -> keys(event, focused, content))
@@ -802,11 +850,59 @@ public final class ContentPanel {
         }
 
         /**
+         * The text area {@code fitted}, its lines fitted to the size it was last drawn in, drawn so they fit the size
+         * it is drawn in (ADR 80). The text area only learns its size while it draws, so a frame that draws it in
+         * another size, like one after the panes are resized, draws it once to let it learn it, puts back the cells
+         * that drew, and draws it {@code again}, fitted anew. Drawn twice, it is still given the events and the focus
+         * once, as TamboUI registers an element and its id once per frame.
+         */
+        private final class Fitted implements Element {
+
+            private final RichTextAreaElement fitted;
+            private final Supplier<RichTextAreaElement> again;
+
+            Fitted(RichTextAreaElement fitted, Supplier<RichTextAreaElement> again) {
+                this.fitted = fitted;
+                this.again = again;
+            }
+
+            @Override
+            public void render(Frame frame, Rect at, RenderContext context) {
+                if (at.width() == drawnWidth && at.height() == drawnHeight) {
+                    fitted.render(frame, at, context);
+                    return;
+                }
+                drawnWidth = at.width();
+                drawnHeight = at.height();
+                Buffer buffer = frame.buffer();
+                Rect cells = buffer.area().intersection(at);
+                Vector<Cell> before = Vector.range(cells.top(), cells.bottom())
+                        .flatMap(y -> Vector.range(cells.left(), cells.right()).map(x -> buffer.get(x, y)));
+                fitted.render(frame, at, context);
+                before.forEachWithIndex((cell, index) ->
+                        buffer.set(cells.left() + index % cells.width(), cells.top() + index / cells.width(), cell));
+                again.get().render(frame, at, context);
+            }
+
+            @Override
+            public Constraint constraint() {
+                return fitted.constraint();
+            }
+
+            @Override
+            public Size preferredSize(int availableWidth, int availableHeight, RenderContext context) {
+                return fitted.preferredSize(availableWidth, availableHeight, context);
+            }
+        }
+
+        /**
          * {@code body}, styled in {@code theme} as {@code lines}, with where the stops of its cursor start, if it has
          * one.
          *
          * @param indexes the index of the stop of each anchor, {@link DiffCursor#indexes}
          * @param widest  how wide the widest of {@code lines} is, which the tint of the cursor never makes wider
+         * @param filling the lines drawn to the edge of the area (ADR 80): the bar of each file, the lines of the diff
+         *                and the markers of the lines it leaves out, not the threads on them
          */
         private record Styled(
                 Body body,
@@ -814,7 +910,8 @@ public final class ContentPanel {
                 Vector<Line> lines,
                 Vector<RichDiff.Stop> stops,
                 Map<Anchor, Integer> indexes,
-                int widest) {
+                int widest,
+                Set<Integer> filling) {
 
             static Styled of(Body body, ThemeName theme, RichDiff.Drawn drawn) {
                 Vector<Line> lines = drawn.lines().toVector();
@@ -825,7 +922,13 @@ public final class ContentPanel {
                         lines,
                         stops,
                         DiffCursor.indexes(stops),
-                        lines.map(Line::width).max().getOrElse(0));
+                        lines.map(Line::width).max().getOrElse(0),
+                        stops.filter(stop -> switch (stop.mark().anchor()) {
+                                    case Anchor.File _, Anchor.OnLine _, Anchor.Gap _ -> true;
+                                    case Anchor.Lead _, Anchor.Thread _, Anchor.Comment _ -> false;
+                                })
+                                .map(RichDiff.Stop::row)
+                                .toSet());
             }
         }
     }

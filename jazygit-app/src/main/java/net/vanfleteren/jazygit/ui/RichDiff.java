@@ -169,8 +169,14 @@ final class RichDiff {
                         new Row(lines.get(at), measured.get(at), onLines.get(at), afterLast || at < lines.size() - 1));
         Vector<Vector<Row>> byHunk =
                 cut(rows, parsed.hunks().map(hunk -> hunk.lines().size()));
+        // The bar is padded in a span of its own, which the area draws as far as its edge (ADR 80).
         return List.<Pending>of(() -> List.of(new Marked(
-                                Line.from(styled(padded(bar, width), Theme.Classes.DIFF_FILE_HEADER, styles)),
+                                Line.from(
+                                        styled(bar, Theme.Classes.DIFF_FILE_HEADER, styles),
+                                        styled(
+                                                " ".repeat(Math.max(0, width - width(bar))),
+                                                Theme.Classes.DIFF_FILE_HEADER,
+                                                styles)),
                                 Option.of(new Mark(new Anchor.File(file.path()), 1, width, Option.none()))))
                         .appendAll(note(file)
                                 .map(text -> Marked.plain(Line.from(styled(text, Theme.Classes.DIM, styles))))))
@@ -305,7 +311,7 @@ final class RichDiff {
     /**
      * The line of {@code row} after its gutter, with its segments, and its tokens if it was lexed and the
      * {@code layout} colours code. Changed lines are padded to the width of the layout, so their background makes a
-     * block.
+     * block, which the area draws as far as its edge (ADR 80).
      */
     private static Line line(Row row, Layout layout) {
         DiffLine line = row.parsed().line();
@@ -433,10 +439,6 @@ final class RichDiff {
     private static String number(Option<Integer> number, int digits) {
         String text = number.map(String::valueOf).getOrElse("");
         return " ".repeat(digits - text.length()) + text;
-    }
-
-    private static String padded(String text, int width) {
-        return text + " ".repeat(Math.max(0, width - width(text)));
     }
 
     private static int width(String text) {
