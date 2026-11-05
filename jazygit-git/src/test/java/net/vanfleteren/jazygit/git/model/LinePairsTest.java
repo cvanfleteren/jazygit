@@ -1,10 +1,13 @@
 package net.vanfleteren.jazygit.git.model;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.time.Duration;
 import net.vanfleteren.jazygit.git.model.ParsedDiff.ParsedLine;
+import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
 import org.junit.jupiter.api.Test;
 
 class LinePairsTest {
@@ -112,6 +115,37 @@ class LinePairsTest {
                 """);
 
         assertEquals(List.of(List.of(0), List.of(1), List.of(2)), LinePairs.groups(lines));
+    }
+
+    @Test
+    void aBlockOfTensOfThousandsOfPairsIsCutQuickly() {
+        int pairs = 40_000;
+        List<ParsedLine> removed = List.range(0, pairs).map(at -> changed(DiffLine.Kind.REMOVED, at));
+        List<ParsedLine> added = List.range(0, pairs).map(at -> changed(DiffLine.Kind.ADDED, at));
+        List<ParsedLine> lines = removed.append(
+                        new ParsedLine(DiffLine.note("\\ No newline at end of file"), List.empty(), Option.none()))
+                .appendAll(added);
+
+        // Each line takes a step; a pass over the block for each pair took tens of seconds.
+        List<List<Integer>> groups = assertTimeoutPreemptively(Duration.ofSeconds(5), () -> LinePairs.groups(lines));
+
+        assertEquals(pairs, groups.size());
+        assertEquals(List.of(pairs - 1, 2 * pairs, pairs), groups.last());
+    }
+
+    /**
+     * A line of {@code kind} numbered {@code at}, whose one segment changed.
+     */
+    private static ParsedLine changed(DiffLine.Kind kind, int at) {
+        Option<Integer> number = Option.some(at + 1);
+        return new ParsedLine(
+                new DiffLine(
+                        kind,
+                        "line " + at,
+                        kind == DiffLine.Kind.REMOVED ? number : Option.none(),
+                        kind == DiffLine.Kind.ADDED ? number : Option.none()),
+                List.of(new WordDiff.Segment("line " + at, true)),
+                Option.none());
     }
 
     private static List<ParsedLine> lines(String hunk) {

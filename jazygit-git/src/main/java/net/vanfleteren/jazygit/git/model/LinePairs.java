@@ -77,25 +77,32 @@ public final class LinePairs {
             Vector<Integer> removedRun,
             Vector<Integer> addedRun,
             IntPredicate kept) {
-        Vector<Integer> removed = removedRun.filter(index -> lines.get(index).kind() == DiffLine.Kind.REMOVED);
-        Vector<Integer> added = addedRun.filter(index -> lines.get(index).kind() == DiffLine.Kind.ADDED);
+        Vector<List<Integer>> removed = noted(lines, removedRun);
+        Vector<List<Integer>> added = noted(lines, addedRun);
         boolean pairs = !removed.isEmpty()
                 && removed.size() == added.size()
-                && removed.zip(added).forAll(pair -> changed.get(pair._1()) || changed.get(pair._2()))
+                && removed.zip(added)
+                        .forAll(pair -> changed.get(pair._1().head())
+                                || changed.get(pair._2().head()))
                 && !removedRun.appendAll(addedRun).exists(kept::test);
         return Option.when(
                 pairs,
                 () -> removed.zip(added)
-                        .map(pair -> List.of(pair._1(), pair._2())
-                                .appendAll(notesAfter(lines, removedRun, pair._1()))
-                                .appendAll(notesAfter(lines, addedRun, pair._2())))
+                        .map(pair -> List.of(pair._1().head(), pair._2().head())
+                                .appendAll(pair._1().tail())
+                                .appendAll(pair._2().tail()))
                         .toList());
     }
 
     /**
-     * The indexes of the notes right after the line at {@code index} in {@code run}.
+     * The lines of {@code run}, a run of lines of one kind that starts with one, each with the indexes of the notes
+     * right after it: in one pass, as a block can have tens of thousands of lines.
      */
-    private static Vector<Integer> notesAfter(Vector<DiffLine> lines, Vector<Integer> run, int index) {
-        return run.dropWhile(at -> at <= index).takeWhile(at -> lines.get(at).kind() == DiffLine.Kind.NOTE);
+    private static Vector<List<Integer>> noted(Vector<DiffLine> lines, Vector<Integer> run) {
+        return run.foldLeft(
+                Vector.empty(),
+                (done, at) -> lines.get(at).kind() == DiffLine.Kind.NOTE && !done.isEmpty()
+                        ? done.update(done.size() - 1, done.last().append(at))
+                        : done.append(List.of(at)));
     }
 }
