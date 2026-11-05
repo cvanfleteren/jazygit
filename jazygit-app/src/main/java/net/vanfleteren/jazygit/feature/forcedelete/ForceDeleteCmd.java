@@ -28,7 +28,7 @@ public record ForceDeleteCmd(BranchName branch) implements GitOperationCmd {
      * it is deleted with force straight away; else whether to lose them is asked. Any other failure, and one where
      * the commits cannot be counted, is reported as it is.
      */
-    public static Msg refused(OperationCmd cmd, BranchName branch, GitFailure<?> failure, Git git) {
+    public static Msg refused(OperationCmd cmd, BranchName branch, GitFailure failure, Git git) {
         return failure.error() instanceof GitError.NotFullyMerged
                 ? git.branches()
                         .countOnlyOn(branch)
@@ -42,8 +42,7 @@ public record ForceDeleteCmd(BranchName branch) implements GitOperationCmd {
      * What {@code cmd} reports once git refused to delete {@code branch} with {@code failure}, as {@code lost} commits
      * are only on it: with none, it is deleted with force; else whether to lose them is asked.
      */
-    private static Msg forceIfNothingLost(
-            OperationCmd cmd, BranchName branch, GitFailure<?> failure, Git git, int lost) {
+    private static Msg forceIfNothingLost(OperationCmd cmd, BranchName branch, GitFailure failure, Git git, int lost) {
         return lost == 0
                 ? git.branches()
                         .forceDeleteLocal(branch)
@@ -69,7 +68,7 @@ public record ForceDeleteCmd(BranchName branch) implements GitOperationCmd {
     }
 
     @Override
-    public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
+    public Either<GitFailure, List<ExecutedCommand>> perform(Git git) {
         return git.branches().forceDeleteLocal(branch);
     }
 }

@@ -5,7 +5,6 @@ import static net.vanfleteren.jazygit.git.StubGit.ran;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.model.ConfigValue;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
@@ -16,17 +15,17 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
 public interface StubConfig extends Config {
 
     @Override
-    default Either<ProcessError, Option<String>> local(String key) {
+    default Either<GitError, Option<String>> local(String key) {
         return Either.right(Option.none());
     }
 
     @Override
-    default Either<ProcessError, List<ConfigValue>> all(String key) {
+    default Either<GitError, List<ConfigValue>> all(String key) {
         return Either.right(List.empty());
     }
 
     @Override
-    default Either<GitFailure<ProcessError>, List<ExecutedCommand>> setLocal(String key, Option<String> value) {
+    default Either<GitFailure, List<ExecutedCommand>> setLocal(String key, Option<String> value) {
         return ran();
     }
 }

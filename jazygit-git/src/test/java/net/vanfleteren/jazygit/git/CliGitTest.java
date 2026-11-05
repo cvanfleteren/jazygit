@@ -785,7 +785,7 @@ class CliGitTest {
         git("commit", "-q", "-am", "Main edit");
         git("checkout", "-q", "feature");
 
-        GitFailure<GitError> failure =
+        GitFailure failure =
                 repository.integrate().rebase(new BranchName("main")).getLeft();
 
         GitError.StoppedOnConflicts stopped = assertInstanceOf(GitError.StoppedOnConflicts.class, failure.error());
@@ -812,7 +812,7 @@ class CliGitTest {
         // Picking "Add x" would overwrite it, so the rebase stops there, without conflicts.
         Files.writeString(repo.resolve("x.txt"), "untracked\n");
 
-        GitFailure<GitError> failure =
+        GitFailure failure =
                 repository.integrate().rebase(new BranchName("main")).getLeft();
 
         assertInstanceOf(GitError.CommandFailed.class, failure.error());
@@ -826,7 +826,7 @@ class CliGitTest {
 
     @Test
     void aRebaseThatDoesNotStartIsNotAborted() {
-        GitFailure<GitError> failure =
+        GitFailure failure =
                 repository.integrate().rebase(new BranchName("nope")).getLeft();
 
         assertInstanceOf(GitError.CommandFailed.class, failure.error());
@@ -862,7 +862,7 @@ class CliGitTest {
         Files.writeString(repo.resolve("README.md"), "main\n");
         git("commit", "-q", "-am", "Main edit");
 
-        GitFailure<?> failure = repository.integrate().cherryPick(picked).getLeft();
+        GitFailure failure = repository.integrate().cherryPick(picked).getLeft();
 
         assertEquals(
                 new GitError.StoppedOnConflicts(Option.of(new InProgress.CherryPicking(picked)), 1), failure.error());
@@ -904,7 +904,7 @@ class CliGitTest {
         // Picking it would overwrite it, so git refuses before it starts.
         Files.writeString(repo.resolve("f.txt"), "untracked\n");
 
-        GitFailure<GitError> failure = repository.integrate().cherryPick(picked).getLeft();
+        GitFailure failure = repository.integrate().cherryPick(picked).getLeft();
 
         assertInstanceOf(GitError.CommandFailed.class, failure.error());
         assertEquals(
@@ -953,7 +953,7 @@ class CliGitTest {
         Files.writeString(repo.resolve("README.md"), "second\n");
         git("commit", "-q", "-am", "Second edit");
 
-        GitFailure<?> failure = repository.integrate().revert(reverted).getLeft();
+        GitFailure failure = repository.integrate().revert(reverted).getLeft();
 
         assertEquals(
                 new GitError.StoppedOnConflicts(Option.of(new InProgress.Reverting(reverted.sha())), 1),
@@ -1440,7 +1440,7 @@ class CliGitTest {
         git("branch", "other");
         gitWithEnvironment("GIT_SEQUENCE_EDITOR", "sed -i -e 's/^pick/edit/'", "rebase", "-i", "--root");
 
-        GitFailure<GitError> failure =
+        GitFailure failure =
                 repository.integrate().rebase(new BranchName("other")).getLeft();
 
         assertTrue(
@@ -1451,7 +1451,7 @@ class CliGitTest {
 
     @Test
     void aFailingRebaseIsAbortedAndReported() throws Exception {
-        GitFailure<GitError> failure = repository
+        GitFailure failure = repository
                 .commits()
                 .reword(new Sha("0123456789012345678901234567890123456789"), new CommitMessage("x", ""))
                 .getLeft();
@@ -1889,7 +1889,7 @@ class CliGitTest {
         repository.remotes().pushSettingUpstream(new BranchName("main"), shared).get();
         git("commit", "-q", "--allow-empty", "-m", "local");
 
-        GitFailure<GitError> refused = repository
+        GitFailure refused = repository
                 .remotes()
                 .push(new BranchName("main"), shared, PushMode.FAST_FORWARD)
                 .getLeft();
@@ -2026,7 +2026,7 @@ class CliGitTest {
         Files.writeString(repo.resolve("README.md"), "ours\n");
         git("commit", "-q", "-am", "ours");
 
-        GitFailure<GitError> failure = repository.remotes().pull().getLeft();
+        GitFailure failure = repository.remotes().pull().getLeft();
 
         assertInstanceOf(GitError.StoppedOnConflicts.class, failure.error());
         assertEquals(List.of("git pull --no-edit"), failure.commands().map(ExecutedCommand::line));
@@ -2040,7 +2040,7 @@ class CliGitTest {
         Files.writeString(repo.resolve("README.md"), "ours\n");
         git("commit", "-q", "-am", "ours");
 
-        GitFailure<GitError> failure = repository.remotes().pull().getLeft();
+        GitFailure failure = repository.remotes().pull().getLeft();
 
         assertInstanceOf(GitError.StoppedOnConflicts.class, failure.error());
         assertEquals(List.of("git pull --no-edit"), failure.commands().map(ExecutedCommand::line));
@@ -2152,7 +2152,7 @@ class CliGitTest {
     void deleteLocalBranchRefusesAnUnmergedBranchAndKeepsIt() throws Exception {
         commitOnTopic("topic.txt");
 
-        GitFailure<GitError> failure =
+        GitFailure failure =
                 repository.branches().deleteLocal(new BranchName("topic")).getLeft();
 
         assertInstanceOf(GitError.NotFullyMerged.class, failure.error());
@@ -2252,7 +2252,7 @@ class CliGitTest {
         assertEquals(
                 0, repository.branches().countOnlyOn(new BranchName("topic")).get());
 
-        GitFailure<GitError> failure = repository
+        GitFailure failure = repository
                 .remotes()
                 .deleteBranch(
                         new BranchName("topic"), new RemoteBranch("origin", new BranchName("topic")), DeleteScope.BOTH)
@@ -2471,7 +2471,7 @@ class CliGitTest {
 
     @Test
     void stageFailsWithGitsExplanationForAnUnknownPath() {
-        GitError.ProcessError error =
+        GitError error =
                 repository.index().stage(List.of("missing.txt")).getLeft().error();
 
         assertTrue(error instanceof GitError.CommandFailed failed && failed.says("missing.txt"), error.toString());
@@ -2499,7 +2499,7 @@ class CliGitTest {
     /**
      * The log of HEAD, from where the status says it is, as the app reads it (ADR 49).
      */
-    private io.vavr.control.Either<GitError.ProcessError, List<Commit>> commits() {
+    private io.vavr.control.Either<GitError, List<Commit>> commits() {
         return repository
                 .status()
                 .read()

@@ -10,7 +10,6 @@ import io.vavr.control.Option;
 import io.vavr.control.Try;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.UnexpectedOutput;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.InProgress;
@@ -36,7 +35,7 @@ final class CliInProgress {
     /**
      * What the repository in {@code worktree} is in the middle of, if anything. Only asked, so not logged.
      */
-    static Either<ProcessError, Option<InProgress>> read(Path worktree) {
+    static Either<GitError, Option<InProgress>> read(Path worktree) {
         return markers(worktree).map(CliInProgress::read);
     }
 
@@ -51,7 +50,7 @@ final class CliInProgress {
      * Where git keeps the files of the repository in {@code worktree} that tell what it is in the middle of. They
      * stay there, so this is asked once, and {@link #read(Markers)} then only looks at the files.
      */
-    static Either<ProcessError, Markers> markers(Path worktree) {
+    static Either<GitError, Markers> markers(Path worktree) {
         return GitProcess.read(
                 worktree,
                 reading(MARKERS.flatMap(marker -> List.of("--git-path", marker)).prepend("rev-parse")),
@@ -66,11 +65,11 @@ final class CliInProgress {
      *
      * @return the command lines that were run
      */
-    static Either<GitFailure<GitError>, List<ExecutedCommand>> continueOrAbort(
+    static Either<GitFailure, List<ExecutedCommand>> continueOrAbort(
             Path worktree, InProgress inProgress, InProgressAction action) {
         GitCommand command = git(subcommand(inProgress), option(action));
         return action == InProgressAction.ABORT
-                ? GitFailure.widen(abort(worktree, inProgress, command))
+                ? abort(worktree, inProgress, command)
                 : GitProcess.log(worktree, command.withEnvironment(HashMap.of("GIT_EDITOR", "true")))
                         .mapLeft(failure -> Unfinished.stoppedAgain(worktree, inProgress, failure));
     }
@@ -92,7 +91,7 @@ final class CliInProgress {
      * For a rebase that amends an older commit, that is the commit of the staged changes, which
      * {@code git reset --soft HEAD^} takes away again, keeping them staged. Only a rebase can be marked so.
      */
-    private static Either<GitFailure<ProcessError>, List<ExecutedCommand>> abort(
+    private static Either<GitFailure, List<ExecutedCommand>> abort(
             Path worktree, InProgress inProgress, GitCommand abort) {
         boolean amending = inProgress instanceof InProgress.Rebasing
                 && markers(worktree)

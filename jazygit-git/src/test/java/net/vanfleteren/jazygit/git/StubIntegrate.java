@@ -21,34 +21,32 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
 public interface StubIntegrate extends Integrate {
 
     @Override
-    default Either<GitFailure<GitError>, List<ExecutedCommand>> merge(BranchName branch, MergeMode mode) {
+    default Either<GitFailure, List<ExecutedCommand>> merge(BranchName branch, MergeMode mode) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<GitError>, List<ExecutedCommand>> cherryPick(Sha sha) {
+    default Either<GitFailure, List<ExecutedCommand>> cherryPick(Sha sha) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<GitError>, List<ExecutedCommand>> revert(Commit commit) {
+    default Either<GitFailure, List<ExecutedCommand>> revert(Commit commit) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<GitError>, List<ExecutedCommand>> continueOrAbort(
-            InProgress inProgress, InProgressAction action) {
+    default Either<GitFailure, List<ExecutedCommand>> continueOrAbort(InProgress inProgress, InProgressAction action) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<GitError>, List<ExecutedCommand>> rebase(BranchName onto) {
+    default Either<GitFailure, List<ExecutedCommand>> rebase(BranchName onto) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure<GitError>, List<ExecutedCommand>> rebaseStack(
-            Revision base, List<StackLayer.Commits> layers) {
+    default Either<GitFailure, List<ExecutedCommand>> rebaseStack(Revision base, List<StackLayer.Commits> layers) {
         return ran();
     }
 }

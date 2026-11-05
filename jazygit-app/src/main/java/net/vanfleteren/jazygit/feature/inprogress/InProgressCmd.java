@@ -46,7 +46,7 @@ public record InProgressCmd(InProgress inProgress, InProgressAction action) impl
     }
 
     @Override
-    public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
+    public Either<GitFailure, List<ExecutedCommand>> perform(Git git) {
         return git.integrate().continueOrAbort(inProgress, action);
     }
 }

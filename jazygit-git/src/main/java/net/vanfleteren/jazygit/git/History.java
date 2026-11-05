@@ -3,7 +3,6 @@ package net.vanfleteren.jazygit.git;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.model.Ahead;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
@@ -29,7 +28,7 @@ public interface History {
     /**
      * The log of HEAD, newest first, from {@code head}, the commit the status read last says it is at (ADR 49).
      */
-    Either<ProcessError, List<Commit>> commits(Sha head);
+    Either<GitError, List<Commit>> commits(Sha head);
 
     /**
      * The commits of the log of HEAD that {@code query} finds, newest first, as many as {@link #commits} reads at
@@ -37,14 +36,14 @@ public interface History {
      *
      * @param notOn the branch whose commits are left out, if any
      */
-    Either<ProcessError, List<Commit>> search(CommitQuery query, Option<BranchRef> notOn);
+    Either<GitError, List<Commit>> search(CommitQuery query, Option<BranchRef> notOn);
 
     /**
      * The commits from {@code tip} that are not on {@code base}, which is at {@code baseTip}: at most as many as
      * {@link #commits} reads, laid out as a log; and the commit they forked from. The tips are those the status and
      * the branches read last have, not looked up again (ADR 49).
      */
-    Either<ProcessError, Ahead> ahead(Sha tip, BranchRef base, Sha baseTip);
+    Either<GitError, Ahead> ahead(Sha tip, BranchRef base, Sha baseTip);
 
     /**
      * The log of the branch {@code branch}, local or remote-tracking, newest first.
@@ -65,7 +64,7 @@ public interface History {
     /**
      * How many commits are on {@code branch} and not on {@code base}, counting no further than {@code max}.
      */
-    Either<ProcessError, Integer> countNotOn(BranchRef branch, BranchRef base, int max);
+    Either<GitError, Integer> countNotOn(BranchRef branch, BranchRef base, int max);
 
     /**
      * The commits of the local branch {@code branch} from {@code oldest} up to its tip, and how many of them are
@@ -88,5 +87,5 @@ public interface History {
      * {@code git push --force-if-includes} asks before it pushes over the branch on the remote. A branch rewritten
      * here had what it was pushed as; one behind what someone else pushed never had that (ADR 74).
      */
-    Either<ProcessError, Boolean> everHad(BranchName branch, Revision revision);
+    Either<GitError, Boolean> everHad(BranchName branch, Revision revision);
 }

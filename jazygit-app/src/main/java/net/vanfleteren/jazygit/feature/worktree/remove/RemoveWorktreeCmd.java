@@ -71,7 +71,7 @@ public record RemoveWorktreeCmd(String location, boolean force, Option<BranchNam
     }
 
     @Override
-    public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
+    public Either<GitFailure, List<ExecutedCommand>> perform(Git git) {
         return removing(git);
     }
 
@@ -89,20 +89,16 @@ public record RemoveWorktreeCmd(String location, boolean force, Option<BranchNam
                         this::succeeded);
     }
 
-    private Either<GitFailure<GitError>, List<ExecutedCommand>> removing(Git git) {
+    private Either<GitFailure, List<ExecutedCommand>> removing(Git git) {
         Path path = WorktreeCmd.path(location);
         Worktrees worktrees = git.worktrees();
         return GitFailure.sequence(
-                () -> unlocking
-                        .map(reason -> GitFailure.<GitError, List<ExecutedCommand>>widen(worktrees.lock(path, false)))
-                        .getOrElse(GitFailure::nothing),
+                () -> unlocking.map(reason -> worktrees.lock(path, false)).getOrElse(GitFailure::nothing),
                 () -> worktrees
                         .remove(path, force)
                         .mapLeft(failure -> unlocking
                                 .map(reason -> failure.followedBy(worktrees.lock(path, reason)))
                                 .getOrElse(failure)),
-                () -> deleting.map(branch -> GitFailure.<GitError, List<ExecutedCommand>>widen(
-                                git.branches().deleteLocal(branch)))
-                        .getOrElse(GitFailure::nothing));
+                () -> deleting.map(branch -> git.branches().deleteLocal(branch)).getOrElse(GitFailure::nothing));
     }
 }

@@ -43,7 +43,6 @@ import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitError;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.StubBranches;
 import net.vanfleteren.jazygit.git.StubCheckout;
@@ -183,7 +182,7 @@ class WorktreeUpdateTest {
         java.util.List<NewBranchStart> ran = new java.util.ArrayList<>();
         Git git = StubGit.of().withWorktrees(new StubWorktrees() {
             @Override
-            public Either<GitFailure<ProcessError>, List<ExecutedCommand>> addWithNewBranch(
+            public Either<GitFailure, List<ExecutedCommand>> addWithNewBranch(
                     Path location, BranchName name, NewBranchStart start) {
                 ran.add(start);
                 return Either.right(List.empty());
@@ -295,7 +294,7 @@ class WorktreeUpdateTest {
     void theTypedStartIsResolvedByGit() {
         Git git = StubGit.of().withCheckout(new StubCheckout() {
             @Override
-            public Either<GitFailure<ProcessError>, Option<Sha>> resolve(String text) {
+            public Either<GitFailure, Option<Sha>> resolve(String text) {
                 return Either.right(Option.of(new Sha("abc123")));
             }
         });
@@ -319,8 +318,8 @@ class WorktreeUpdateTest {
     void whenGitCannotBeAskedWhatTheStartNamesThatIsSaid() {
         Git git = StubGit.of().withCheckout(new StubCheckout() {
             @Override
-            public Either<GitFailure<ProcessError>, Option<Sha>> resolve(String text) {
-                return Either.left(new GitFailure<>(
+            public Either<GitFailure, Option<Sha>> resolve(String text) {
+                return Either.left(new GitFailure(
                         new GitError.CommandFailed(Option.of("fatal: not a git repository"), 128, ""), List.empty()));
             }
         });
@@ -385,8 +384,7 @@ class WorktreeUpdateTest {
         java.util.List<String> ran = new java.util.ArrayList<>();
         Git git = StubGit.of().withWorktrees(new StubWorktrees() {
             @Override
-            public Either<GitFailure<ProcessError>, List<ExecutedCommand>> addDetached(
-                    Path location, Revision startPoint) {
+            public Either<GitFailure, List<ExecutedCommand>> addDetached(Path location, Revision startPoint) {
                 ran.add("add " + location + " " + startPoint.toArg());
                 return Either.right(StubGit.executed("git worktree add"));
             }
@@ -419,7 +417,7 @@ class WorktreeUpdateTest {
         java.util.List<String> ran = new java.util.ArrayList<>();
         Git git = StubGit.of().withWorktrees(new StubWorktrees() {
             @Override
-            public Either<GitFailure<GitError>, List<ExecutedCommand>> remove(Path location, boolean force) {
+            public Either<GitFailure, List<ExecutedCommand>> remove(Path location, boolean force) {
                 ran.add("remove " + location + " " + force);
                 return Either.right(StubGit.executed("git worktree remove --force"));
             }
@@ -445,14 +443,13 @@ class WorktreeUpdateTest {
         GitError.CommandFailed locked = new GitError.CommandFailed(Option.of("fatal: cannot remove"), 128, "");
         Git git = StubGit.of().withWorktrees(new StubWorktrees() {
             @Override
-            public Either<GitFailure<ProcessError>, List<ExecutedCommand>> addDetached(
-                    Path location, Revision startPoint) {
+            public Either<GitFailure, List<ExecutedCommand>> addDetached(Path location, Revision startPoint) {
                 return Either.right(StubGit.executed("git worktree add"));
             }
 
             @Override
-            public Either<GitFailure<GitError>, List<ExecutedCommand>> remove(Path location, boolean force) {
-                return Either.left(new GitFailure<>(locked, StubGit.executed("git worktree remove --force")));
+            public Either<GitFailure, List<ExecutedCommand>> remove(Path location, boolean force) {
+                return Either.left(new GitFailure(locked, StubGit.executed("git worktree remove --force")));
             }
         });
         StubGitHub fails = new StubGitHub() {
@@ -477,6 +474,35 @@ class WorktreeUpdateTest {
                         failure.commands(),
                         Option.of(locked)),
                 failure);
+    }
+
+    @Test
+    void whenRemovingTheWorktreeOfThePullRequestFailsForAReasonOfItsOwnThatIsSaidToo() {
+        GitError.WorktreeHasChanges changed = new GitError.WorktreeHasChanges("changed");
+        Git git = StubGit.of().withWorktrees(new StubWorktrees() {
+            @Override
+            public Either<GitFailure, List<ExecutedCommand>> addDetached(Path location, Revision startPoint) {
+                return Either.right(StubGit.executed("git worktree add"));
+            }
+
+            @Override
+            public Either<GitFailure, List<ExecutedCommand>> remove(Path location, boolean force) {
+                return Either.left(new GitFailure(changed, StubGit.executed("git worktree remove --force")));
+            }
+        });
+        StubGitHub fails = new StubGitHub() {
+            @Override
+            public Either<GhFailure, List<ExecutedCommand>> checkoutPullRequest(int number, Path in) {
+                return Either.left(new GhFailure(
+                        new GhError.CommandFailed(Option.of("no such pull request"), 1),
+                        StubGit.executed("gh pr checkout 9")));
+            }
+        };
+
+        Msg failed = new AddWorktreeCmd(new WorktreeSource.PullRequest(pullRequest()), "/repos/app-pr-9")
+                .run(new Env(git, fails));
+
+        assertEquals(Option.of(changed), ((Failure.GitHub) ((OperationMsg.Failed) failed).failure()).cleanupFailed());
     }
 
     @Test
@@ -777,7 +803,7 @@ class WorktreeUpdateTest {
         Env changed = new Env(
                 lockingGit(
                         ran,
-                        Either.left(new GitFailure<>(
+                        Either.left(new GitFailure(
                                 new GitError.WorktreeHasChanges("changed"),
                                 StubGit.executed("git worktree remove /repos/app-taken"))),
                         StubGit.ran("git worktree lock /repos/app-taken")),
@@ -806,7 +832,7 @@ class WorktreeUpdateTest {
         Env changed = new Env(
                 lockingGit(
                         new java.util.ArrayList<>(),
-                        Either.left(new GitFailure<>(new GitError.WorktreeHasChanges("changed"), List.empty())),
+                        Either.left(new GitFailure(new GitError.WorktreeHasChanges("changed"), List.empty())),
                         StubGit.refused("git worktree lock /repos/app-taken", "already locked")),
                 net.vanfleteren.jazygit.gh.StubGitHub.empty());
 
@@ -825,31 +851,31 @@ class WorktreeUpdateTest {
      */
     private static Git lockingGit(
             java.util.List<String> ran,
-            Either<GitFailure<GitError>, List<ExecutedCommand>> removed,
-            Either<GitFailure<ProcessError>, List<ExecutedCommand>> locked) {
+            Either<GitFailure, List<ExecutedCommand>> removed,
+            Either<GitFailure, List<ExecutedCommand>> locked) {
         return StubGit.of()
                 .withWorktrees(new StubWorktrees() {
                     @Override
-                    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> lock(Path location, boolean lock) {
+                    public Either<GitFailure, List<ExecutedCommand>> lock(Path location, boolean lock) {
                         ran.add((lock ? "lock " : "unlock ") + location);
                         return StubGit.ran("git worktree " + (lock ? "lock " : "unlock ") + location);
                     }
 
                     @Override
-                    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> lock(Path location, String reason) {
+                    public Either<GitFailure, List<ExecutedCommand>> lock(Path location, String reason) {
                         ran.add("lock " + location + " " + reason);
                         return locked;
                     }
 
                     @Override
-                    public Either<GitFailure<GitError>, List<ExecutedCommand>> remove(Path location, boolean force) {
+                    public Either<GitFailure, List<ExecutedCommand>> remove(Path location, boolean force) {
                         ran.add("remove " + location + " " + force);
                         return removed;
                     }
                 })
                 .withBranches(new StubBranches() {
                     @Override
-                    public Either<GitFailure<GitError>, List<ExecutedCommand>> deleteLocal(BranchName name) {
+                    public Either<GitFailure, List<ExecutedCommand>> deleteLocal(BranchName name) {
                         ran.add("delete " + name.value());
                         return Either.right(List.empty());
                     }
@@ -862,17 +888,16 @@ class WorktreeUpdateTest {
         Git git = StubGit.of()
                 .withWorktrees(new StubWorktrees() {
                     @Override
-                    public Either<GitFailure<GitError>, List<ExecutedCommand>> remove(Path location, boolean force) {
+                    public Either<GitFailure, List<ExecutedCommand>> remove(Path location, boolean force) {
                         ran.add("remove " + location + " " + force);
                         return location.toString().endsWith("changed")
-                                ? Either.left(
-                                        new GitFailure<>(new GitError.WorktreeHasChanges("changed"), List.empty()))
+                                ? Either.left(new GitFailure(new GitError.WorktreeHasChanges("changed"), List.empty()))
                                 : Either.right(List.empty());
                     }
                 })
                 .withBranches(new StubBranches() {
                     @Override
-                    public Either<GitFailure<GitError>, List<ExecutedCommand>> deleteLocal(BranchName name) {
+                    public Either<GitFailure, List<ExecutedCommand>> deleteLocal(BranchName name) {
                         ran.add("delete " + name.value());
                         return Either.right(List.empty());
                     }
@@ -894,15 +919,14 @@ class WorktreeUpdateTest {
         Git git = StubGit.of()
                 .withWorktrees(new StubWorktrees() {
                     @Override
-                    public Either<GitFailure<GitError>, List<ExecutedCommand>> remove(Path location, boolean force) {
+                    public Either<GitFailure, List<ExecutedCommand>> remove(Path location, boolean force) {
                         return StubGit.ran("git worktree remove " + location);
                     }
                 })
                 .withBranches(new StubBranches() {
                     @Override
-                    public Either<GitFailure<GitError>, List<ExecutedCommand>> deleteLocal(BranchName name) {
-                        return GitFailure.widen(
-                                StubGit.refused("git branch --delete " + name.value(), "ref is locked"));
+                    public Either<GitFailure, List<ExecutedCommand>> deleteLocal(BranchName name) {
+                        return StubGit.refused("git branch --delete " + name.value(), "ref is locked");
                     }
                 });
         RemoveWorktreeCmd remove = new RemoveWorktreeCmd("/repos/app-taken", false, Option.of(TAKEN));
@@ -910,7 +934,7 @@ class WorktreeUpdateTest {
         Msg failed = remove.run(new Env(git, net.vanfleteren.jazygit.gh.StubGitHub.empty()));
 
         assertEquals(
-                remove.failedWith(new GitFailure<>(
+                remove.failedWith(new GitFailure(
                         new GitError.CommandFailed("ref is locked", 1),
                         StubGit.executed("git worktree remove /repos/app-taken", "git branch --delete taken"))),
                 failed);

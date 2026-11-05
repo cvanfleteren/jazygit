@@ -9,8 +9,6 @@ import net.vanfleteren.jazygit.feature.worktree.WorktreeCmd;
 import net.vanfleteren.jazygit.feature.worktree.add.WorktreeSource.*;
 import net.vanfleteren.jazygit.gh.GitHub;
 import net.vanfleteren.jazygit.git.Git;
-import net.vanfleteren.jazygit.git.GitError;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Revision;
@@ -78,7 +76,7 @@ public record AddWorktreeCmd(WorktreeSource source, String location, boolean swi
         };
     }
 
-    private Msg reported(Env env, Either<GitFailure<ProcessError>, List<ExecutedCommand>> outcome) {
+    private Msg reported(Env env, Either<GitFailure, List<ExecutedCommand>> outcome) {
         return outcome.fold(this::failedWith, commands -> added(env, commands));
     }
 
@@ -90,16 +88,11 @@ public record AddWorktreeCmd(WorktreeSource source, String location, boolean swi
     private static Either<Failure, List<ExecutedCommand>> checkout(
             Git git, GitHub gitHub, Path path, int number, List<ExecutedCommand> added) {
         return gitHub.checkoutPullRequest(number, path).map(added::appendAll).mapLeft(failure -> {
-            Either<GitFailure<GitError>, List<ExecutedCommand>> removed =
-                    git.worktrees().remove(path, true);
+            Either<GitFailure, List<ExecutedCommand>> removed = git.worktrees().remove(path, true);
             return new Failure.GitHub(
                     failure.error(),
                     added.appendAll(failure.commands()).appendAll(removed.fold(GitFailure::commands, ran -> ran)),
-                    removed.swap()
-                            .toOption()
-                            .map(GitFailure::error)
-                            .flatMap(error ->
-                                    error instanceof ProcessError process ? Option.of(process) : Option.none()));
+                    removed.swap().toOption().map(GitFailure::error));
         });
     }
 

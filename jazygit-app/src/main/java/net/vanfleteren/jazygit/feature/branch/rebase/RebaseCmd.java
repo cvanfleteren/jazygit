@@ -23,7 +23,7 @@ public record RebaseCmd(BranchName branch) implements BranchCmd {
     }
 
     @Override
-    public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
+    public Either<GitFailure, List<ExecutedCommand>> perform(Git git) {
         return git.integrate().rebase(branch);
     }
 }

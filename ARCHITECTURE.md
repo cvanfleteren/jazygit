@@ -852,13 +852,13 @@ classDiagram
     }
     class CliGit {
         +open(Path) Either of GitError or Git
-        +init(Path) Either of GitFailure of GitError or Git
+        +init(Path) Either of GitFailure or Git
         +withCredentials(Git, credentials) Git
     }
     class Stashes {
         <<interface>>
-        list() Either of ProcessError or stashes
-        pop(Stash) Either of GitFailure of GitError or commands
+        list() Either of GitError or stashes
+        pop(Stash) Either of GitFailure or commands
         ...
     }
     CliGit ..> Git : gives
@@ -934,7 +934,7 @@ helpers. A test replaces the roles it needs on `StubGit.of()`, as in `StubGit.of
     discarding a file named `*.txt` discards only that file.
   - **Remotes:** a command that talks to a remote runs ssh in batch mode (`CliRemotes.toRemote`), so a
     passphrase or unknown host fails rather than prompts.
-  - It returns `Either<GitFailure<ProcessError>, Output>`. A failure's `CommandFailed` holds the line
+  - It returns `Either<GitFailure, Output>`. A failure's `CommandFailed` holds the line
     that explains it (the first `error:` or `fatal:` line, else the first line) and everything git printed.
 
 ## The GitHub layer
@@ -988,8 +988,8 @@ and gh uses its active one.
 ### Errors as values
 
 No git operation throws on purpose: one that does is a bug, which `Program.perform` reports as a
-`Failure.Bug`. A read returns `Either<E, T>`. An operation that changes the repository
-returns `Either<GitFailure<E>, List<ExecutedCommand>>`:
+`Failure.Bug`. A read returns `Either<GitError, T>`. An operation that changes the repository
+returns `Either<GitFailure, List<ExecutedCommand>>`:
 
 - On success, the right side is the commands that ran.
 - On failure, a `GitFailure` pairs the error with the commands that ran up to and including the
@@ -999,8 +999,8 @@ An `ExecutedCommand` holds the program and its arguments as they were run; `line
 type it in a shell, which is how the command log shows it. The environment is left out, so a command that
 runs with, say, `GIT_SEQUENCE_EDITOR` set does not quite do the same when typed again.
 
-`E` is `ProcessError` when the operation only runs git commands, and `GitError` when it can also fail
-in a way of its own; which ones is documented on the operation.
+Every operation fails with a `GitError` (ADR 75). The first five below are the failures that running any git
+command can have; the others are an operation's own. Which ones an operation can have is documented on it.
 
 ```mermaid
 classDiagram
@@ -1008,17 +1008,12 @@ classDiagram
     class GitError {
         <<sealed>>
     }
-    class ProcessError {
-        <<sealed>>
-    }
 
-    ProcessError --|> GitError
-
-    GitUnavailable --|> ProcessError
-    TimedOut --|> ProcessError
-    Interrupted --|> ProcessError
-    CommandFailed --|> ProcessError
-    UnexpectedOutput --|> ProcessError
+    GitUnavailable --|> GitError
+    TimedOut --|> GitError
+    Interrupted --|> GitError
+    CommandFailed --|> GitError
+    UnexpectedOutput --|> GitError
     LocalChanges --|> GitError
     WorktreeHasChanges --|> GitError
     StashNotRestored --|> GitError
@@ -1035,7 +1030,6 @@ Some helpers combine these results:
 
 - `GitFailure.sequence(...)` runs steps in order and stops at the first failure. That failure also
   carries the commands of the steps before it.
-- `GitFailure.widen(...)` views a `ProcessError` failure as a `GitError` one.
 - `GitFailure.followedBy(cleanup)` adds the commands of a cleanup, like `git rebase --abort`, and records in
   `cleanupFailed` why it failed, if it did.
 - `GitProcess.log`, `read` and `ask` run a command for its effect, to read something, or to ask a question
@@ -1052,7 +1046,7 @@ Some helpers combine these results:
     cherry-pick that is still going is aborted. `runOrStop` is the variant with nothing to undo, for merges.
 
 Parsing never throws: the parsers in `GitOutput` and the `Cli*` classes return
-`Either<UnexpectedOutput, T>`, so output git was not expected to print is a `ProcessError` like any other.
+`Either<UnexpectedOutput, T>`, so output git was not expected to print is a `GitError` like any other.
 The git package returns data, not messages; `ErrorText` in `ui` turns errors into text.
 
 ## Example: rewording a commit
@@ -1135,9 +1129,8 @@ sequenceDiagram
 
 6. **The git work**, in `CliRebase.rewordAny`.
    - `CliHistory.resolve(worktree, "HEAD")` runs `git rev-parse --verify --quiet HEAD^{commit}` to find out
-     whether the commit is `HEAD`. If that fails, it's a `ProcessError`.
+     whether the commit is `HEAD`. If that fails, it's a `CommandFailed`, or another failure of running git.
    - **The commit is `HEAD`:** `CliIndex.reword` runs `git commit --allow-empty --amend --only -m … [-m …]`.
-     Its `ProcessError` is widened to a `GitError`.
    - **An older commit:** `CliRebase.reword` does the following.
      1. `TempFiles.using` writes the new message to a temporary file. If that fails, it's a
         `TempFileFailed`.

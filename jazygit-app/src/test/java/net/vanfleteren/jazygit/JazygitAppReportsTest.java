@@ -24,7 +24,6 @@ import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.git.Branches;
 import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitError;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.Remotes;
 import net.vanfleteren.jazygit.git.StubBranches;
@@ -185,7 +184,7 @@ class JazygitAppReportsTest {
         public Branches branches() {
             return new StubBranches() {
                 @Override
-                public Either<ProcessError, List<Branch>> local() {
+                public Either<GitError, List<Branch>> local() {
                     return Either.right(List.of(Fixtures.branch(
                             MAIN,
                             true,
@@ -201,7 +200,7 @@ class JazygitAppReportsTest {
         public Remotes remotes() {
             return new StubRemotes() {
                 @Override
-                public Either<GitFailure<GitError>, List<ExecutedCommand>> pull() {
+                public Either<GitFailure, List<ExecutedCommand>> pull() {
                     try {
                         pulled.await();
                     } catch (InterruptedException interrupted) {

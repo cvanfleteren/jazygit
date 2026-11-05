@@ -25,7 +25,7 @@ import net.vanfleteren.jazygit.gh.timing.CheckHistory;
 import net.vanfleteren.jazygit.gh.timing.CheckSample;
 import net.vanfleteren.jazygit.gh.timing.CheckTimings;
 import net.vanfleteren.jazygit.gh.timing.Eta;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
+import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.git.StubRemotes;
 import net.vanfleteren.jazygit.git.model.Branch;
@@ -92,7 +92,7 @@ class BranchChecksUpdateTest {
                 .run(new Env(
                         StubGit.of().withRemotes(new StubRemotes() {
                             @Override
-                            public Either<ProcessError, Map<String, String>> urls() {
+                            public Either<GitError, Map<String, String>> urls() {
                                 return Either.right(HashMap.of(
                                         "origin",
                                         "git@github.com:me/repo.git",

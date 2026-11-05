@@ -3,7 +3,6 @@ package net.vanfleteren.jazygit.git;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import java.nio.file.Path;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
@@ -71,14 +70,14 @@ public final class StubGit {
     /**
      * A successful operation that ran {@code commands}, or nothing.
      */
-    public static <E extends GitError> Either<GitFailure<E>, List<ExecutedCommand>> ran(String... commands) {
+    public static Either<GitFailure, List<ExecutedCommand>> ran(String... commands) {
         return Either.right(executed(commands));
     }
 
     /**
      * An operation that git refused with {@code explanation}, after running {@code command}.
      */
-    public static Either<GitFailure<ProcessError>, List<ExecutedCommand>> refused(String command, String explanation) {
-        return Either.left(new GitFailure<>(new GitError.CommandFailed(explanation, 1), executed(command)));
+    public static Either<GitFailure, List<ExecutedCommand>> refused(String command, String explanation) {
+        return Either.left(new GitFailure(new GitError.CommandFailed(explanation, 1), executed(command)));
     }
 }

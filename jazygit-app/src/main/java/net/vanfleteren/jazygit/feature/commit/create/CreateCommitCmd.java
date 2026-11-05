@@ -29,7 +29,7 @@ public sealed interface CreateCommitCmd extends GitOperationCmd {
         }
 
         @Override
-        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
+        public Either<GitFailure, List<ExecutedCommand>> perform(Git git) {
             return git.index().stage(paths);
         }
 
@@ -47,7 +47,7 @@ public sealed interface CreateCommitCmd extends GitOperationCmd {
         }
 
         @Override
-        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
+        public Either<GitFailure, List<ExecutedCommand>> perform(Git git) {
             return git.commits().commit(message);
         }
     }

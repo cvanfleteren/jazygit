@@ -75,7 +75,7 @@ public sealed interface MoveCmd extends Cmd {
         }
 
         @Override
-        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
+        public Either<GitFailure, List<ExecutedCommand>> perform(Git git) {
             return switch (target) {
                 case MoveTarget.NewBranch(var branch, var onto) -> git.commits().move(from, oldest, branch, onto);
                 case MoveTarget.Existing(var branch) -> git.commits().moveTo(from, oldest, branch);

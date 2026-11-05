@@ -29,7 +29,7 @@ public record ResetCmd(ResetTarget target, ResetMode mode) implements GitOperati
     }
 
     @Override
-    public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
+    public Either<GitFailure, List<ExecutedCommand>> perform(Git git) {
         return git.commits().reset(target, mode);
     }
 }

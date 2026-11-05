@@ -23,7 +23,7 @@ public record MergeCmd(BranchName branch, MergeMode mode) implements BranchCmd {
     }
 
     @Override
-    public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
+    public Either<GitFailure, List<ExecutedCommand>> perform(Git git) {
         return git.integrate().merge(branch, mode);
     }
 }

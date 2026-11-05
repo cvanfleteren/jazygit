@@ -12,7 +12,6 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitError;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.StubBranches;
 import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.git.model.*;
@@ -34,12 +33,12 @@ class BaseDistanceUpdateTest {
     void theBranchesAreCountedWithTheParentsAndTheTipsJustRead() {
         Git git = StubGit.of().withBranches(new StubBranches() {
             @Override
-            public Either<ProcessError, AllBranches> all() {
+            public Either<GitError, AllBranches> all() {
                 return Either.right(READ);
             }
 
             @Override
-            public Either<ProcessError, Map<BranchName, BranchName>> parents() {
+            public Either<GitError, Map<BranchName, BranchName>> parents() {
                 return Either.right(PARENTS);
             }
 
@@ -64,12 +63,12 @@ class BaseDistanceUpdateTest {
     void theBranchesAreCountedWithTheParentsGitHubSays() {
         Git git = StubGit.of().withBranches(new StubBranches() {
             @Override
-            public Either<ProcessError, AllBranches> all() {
+            public Either<GitError, AllBranches> all() {
                 return Either.right(READ);
             }
 
             @Override
-            public Either<ProcessError, Map<BranchName, BranchName>> parents() {
+            public Either<GitError, Map<BranchName, BranchName>> parents() {
                 return Either.right(PARENTS);
             }
 
@@ -93,12 +92,12 @@ class BaseDistanceUpdateTest {
     void branchesWhoseParentsCannotBeReadComeBackWithoutThem() {
         Git git = StubGit.of().withBranches(new StubBranches() {
             @Override
-            public Either<ProcessError, AllBranches> all() {
+            public Either<GitError, AllBranches> all() {
                 return Either.right(READ);
             }
 
             @Override
-            public Either<ProcessError, Map<BranchName, BranchName>> parents() {
+            public Either<GitError, Map<BranchName, BranchName>> parents() {
                 return Either.left(new GitError.UnexpectedOutput("garbled"));
             }
         });

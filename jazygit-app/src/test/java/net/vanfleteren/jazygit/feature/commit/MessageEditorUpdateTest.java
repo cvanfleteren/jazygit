@@ -108,8 +108,7 @@ class MessageEditorUpdateTest {
         };
         Git git = StubGit.of().withEditor(new StubEditor() {
             @Override
-            public Either<GitFailure<GitError>, Tuple2<CommitMessage, List<ExecutedCommand>>> editMessage(
-                    CommitMessage message) {
+            public Either<GitFailure, Tuple2<CommitMessage, List<ExecutedCommand>>> editMessage(CommitMessage message) {
                 events.add("edit " + message.summary());
                 return Either.right(Tuple.of(EDITED, List.of(NVIM)));
             }
@@ -125,9 +124,8 @@ class MessageEditorUpdateTest {
     void anEditorThatFailsKeepsTheDialogAndShowsWhy() {
         Git git = StubGit.of().withEditor(new StubEditor() {
             @Override
-            public Either<GitFailure<GitError>, Tuple2<CommitMessage, List<ExecutedCommand>>> editMessage(
-                    CommitMessage message) {
-                return Either.left(new GitFailure<>(new GitError.EditorFailed("nvim", 1), List.of()));
+            public Either<GitFailure, Tuple2<CommitMessage, List<ExecutedCommand>>> editMessage(CommitMessage message) {
+                return Either.left(new GitFailure(new GitError.EditorFailed("nvim", 1), List.of()));
             }
         });
 

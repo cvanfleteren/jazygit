@@ -99,7 +99,7 @@ class CliCheckoutTest {
     void failedCheckoutPutsTheChangesBack() throws Exception {
         Files.writeString(repo.resolve("a.txt"), "changed\n");
 
-        GitFailure<GitError> failure =
+        GitFailure failure =
                 checkout().branchWithStash(new BranchName("no-such-branch")).getLeft();
 
         assertInstanceOf(CommandFailed.class, failure.error());
@@ -123,7 +123,7 @@ class CliCheckoutTest {
         git("checkout", "-q", "main");
         Files.writeString(repo.resolve("a.txt"), "main change\n");
 
-        GitFailure<GitError> failure =
+        GitFailure failure =
                 checkout().branchWithStash(new BranchName("feature")).getLeft();
 
         assertInstanceOf(StashNotRestored.class, failure.error());

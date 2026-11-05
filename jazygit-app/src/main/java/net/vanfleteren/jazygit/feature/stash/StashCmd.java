@@ -31,7 +31,7 @@ public sealed interface StashCmd extends GitOperationCmd {
         }
 
         @Override
-        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
+        public Either<GitFailure, List<ExecutedCommand>> perform(Git git) {
             return git.stashes().push(name);
         }
     }
@@ -47,7 +47,7 @@ public sealed interface StashCmd extends GitOperationCmd {
         }
 
         @Override
-        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
+        public Either<GitFailure, List<ExecutedCommand>> perform(Git git) {
             return git.stashes().drop(stash);
         }
     }
@@ -63,7 +63,7 @@ public sealed interface StashCmd extends GitOperationCmd {
         }
 
         @Override
-        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
+        public Either<GitFailure, List<ExecutedCommand>> perform(Git git) {
             return git.stashes().pop(stash);
         }
     }

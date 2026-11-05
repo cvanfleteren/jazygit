@@ -5,7 +5,6 @@ import io.vavr.control.Either;
 import net.vanfleteren.jazygit.feature.commit.amend.AmendTarget.LastCommit;
 import net.vanfleteren.jazygit.feature.commit.amend.AmendTarget.Older;
 import net.vanfleteren.jazygit.git.Git;
-import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -32,15 +31,14 @@ public record AmendCmd(AmendTarget target, List<String> stage) implements GitOpe
     }
 
     @Override
-    public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
+    public Either<GitFailure, List<ExecutedCommand>> perform(Git git) {
         return switch (target) {
             case LastCommit() ->
                 GitFailure.sequence(
                         () -> git.index().stage(stage), () -> git.commits().amendLast());
             case Older(Sha sha) ->
-                GitFailure.<GitError>sequence(
-                        () -> GitFailure.widen(git.index().stage(stage)),
-                        () -> git.commits().amend(sha));
+                GitFailure.sequence(
+                        () -> git.index().stage(stage), () -> git.commits().amend(sha));
         };
     }
 }

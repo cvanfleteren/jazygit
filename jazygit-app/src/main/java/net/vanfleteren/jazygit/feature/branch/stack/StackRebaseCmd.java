@@ -119,17 +119,17 @@ public sealed interface StackRebaseCmd extends Cmd {
         }
 
         @Override
-        public Either<GitFailure<GitError>, List<ExecutedCommand>> perform(Git git) {
-            return GitFailure.<GitError>sequence(
+        public Either<GitFailure, List<ExecutedCommand>> perform(Git git) {
+            return GitFailure.sequence(
                     () -> git.integrate().rebaseStack(rebase.base(), commits),
                     () -> rebase.back()
                             .map(branch -> git.checkout().branch(branch))
                             .getOrElse(GitFailure::nothing),
                     () -> push
-                            ? GitFailure.widen(git.remotes()
+                            ? git.remotes()
                                     .pushAll(
                                             rebase.push().remote(),
-                                            rebase.push().pushed()))
+                                            rebase.push().pushed())
                             : GitFailure.nothing());
         }
     }
@@ -165,8 +165,8 @@ public sealed interface StackRebaseCmd extends Cmd {
         }
 
         @Override
-        public Either<GitFailure<GitError>, List<ExecutedCommand>> perform(Git git) {
-            return GitFailure.widen(git.remotes().pushAll(push.remote(), push.pushed()));
+        public Either<GitFailure, List<ExecutedCommand>> perform(Git git) {
+            return git.remotes().pushAll(push.remote(), push.pushed());
         }
     }
 }

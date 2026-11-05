@@ -39,7 +39,7 @@ public sealed interface DeleteBranchCmd extends BranchCmd {
         }
 
         @Override
-        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
+        public Either<GitFailure, List<ExecutedCommand>> perform(Git git) {
             return git.remotes().deleteBranch(branch, remote, scope);
         }
 
@@ -78,7 +78,7 @@ public sealed interface DeleteBranchCmd extends BranchCmd {
         }
 
         @Override
-        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
+        public Either<GitFailure, List<ExecutedCommand>> perform(Git git) {
             return git.remotes().deleteRemoteBranch(remote);
         }
     }

@@ -56,7 +56,7 @@ class EditUpdateTest {
         };
         Git git = StubGit.of().withEditor(new StubEditor() {
             @Override
-            public Either<GitFailure<GitError>, List<ExecutedCommand>> edit(List<String> files) {
+            public Either<GitFailure, List<ExecutedCommand>> edit(List<String> files) {
                 events.add("edit " + files.mkString(" "));
                 return Either.right(List.of(NVIM));
             }
@@ -72,8 +72,8 @@ class EditUpdateTest {
     void anEditorThatFailsIsReported() {
         Git git = StubGit.of().withEditor(new StubEditor() {
             @Override
-            public Either<GitFailure<GitError>, List<ExecutedCommand>> edit(List<String> files) {
-                return Either.left(new GitFailure<>(new GitError.EditorFailed("nvim", 1), List.of(NVIM)));
+            public Either<GitFailure, List<ExecutedCommand>> edit(List<String> files) {
+                return Either.left(new GitFailure(new GitError.EditorFailed("nvim", 1), List.of(NVIM)));
             }
         });
         EditCmd cmd = new EditCmd(List.of("src/A.java"));

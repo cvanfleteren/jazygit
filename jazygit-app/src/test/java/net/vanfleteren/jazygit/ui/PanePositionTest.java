@@ -14,7 +14,6 @@ import java.util.function.Supplier;
 import net.vanfleteren.jazygit.git.Branches;
 import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitError;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.History;
 import net.vanfleteren.jazygit.git.Status;
 import net.vanfleteren.jazygit.git.StubBranches;
@@ -49,7 +48,7 @@ class PanePositionTest {
         public Status status() {
             return new StubStatus() {
                 @Override
-                public Either<ProcessError, RepoStatus> read() {
+                public Either<GitError, RepoStatus> read() {
                     return Either.right(new RepoStatus(Head.onBranch(new BranchName("main"), new Sha("aaaa")), files));
                 }
             };
@@ -58,7 +57,7 @@ class PanePositionTest {
         public Branches branches() {
             return new StubBranches() {
                 @Override
-                public Either<ProcessError, List<Branch>> local() {
+                public Either<GitError, List<Branch>> local() {
                     return Either.right(branchList);
                 }
             };
@@ -67,7 +66,7 @@ class PanePositionTest {
         public History history() {
             return new StubHistory() {
                 @Override
-                public Either<ProcessError, List<Commit>> commits(Sha head) {
+                public Either<GitError, List<Commit>> commits(Sha head) {
                     return Either.right(commitList);
                 }
 

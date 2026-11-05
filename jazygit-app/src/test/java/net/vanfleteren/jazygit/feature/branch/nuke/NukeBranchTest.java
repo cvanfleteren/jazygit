@@ -12,7 +12,6 @@ import java.nio.file.Path;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.git.Git;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.StubBranches;
 import net.vanfleteren.jazygit.git.StubGit;
@@ -211,22 +210,21 @@ class NukeBranchTest {
         Git git = StubGit.of()
                 .withWorktrees(new StubWorktrees() {
                     @Override
-                    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> removeAnyway(Path location) {
+                    public Either<GitFailure, List<ExecutedCommand>> removeAnyway(Path location) {
                         ran.add("remove " + location);
                         return StubGit.ran("git worktree remove --force --force " + location);
                     }
                 })
                 .withBranches(new StubBranches() {
                     @Override
-                    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> forceDeleteLocal(BranchName name) {
+                    public Either<GitFailure, List<ExecutedCommand>> forceDeleteLocal(BranchName name) {
                         ran.add("delete " + name.value());
                         return StubGit.ran("git branch -D " + name.value());
                     }
                 })
                 .withRemotes(new StubRemotes() {
                     @Override
-                    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteRemoteBranch(
-                            RemoteBranch remote) {
+                    public Either<GitFailure, List<ExecutedCommand>> deleteRemoteBranch(RemoteBranch remote) {
                         ran.add("delete " + remote.shortName());
                         return StubGit.ran("git push origin --delete refs/heads/"
                                 + remote.branch().value());
@@ -249,21 +247,20 @@ class NukeBranchTest {
         Git git = StubGit.of()
                 .withWorktrees(new StubWorktrees() {
                     @Override
-                    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> removeAnyway(Path location) {
+                    public Either<GitFailure, List<ExecutedCommand>> removeAnyway(Path location) {
                         return StubGit.refused("git worktree remove --force --force " + location, "Permission denied");
                     }
                 })
                 .withBranches(new StubBranches() {
                     @Override
-                    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> forceDeleteLocal(BranchName name) {
+                    public Either<GitFailure, List<ExecutedCommand>> forceDeleteLocal(BranchName name) {
                         ran.add("delete " + name.value());
                         return StubGit.ran();
                     }
                 })
                 .withRemotes(new StubRemotes() {
                     @Override
-                    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteRemoteBranch(
-                            RemoteBranch remote) {
+                    public Either<GitFailure, List<ExecutedCommand>> deleteRemoteBranch(RemoteBranch remote) {
                         ran.add("delete " + remote.shortName());
                         return StubGit.ran("git push origin --delete refs/heads/feature");
                     }

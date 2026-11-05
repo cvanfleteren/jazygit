@@ -12,7 +12,6 @@ import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.function.Supplier;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.PushRefused;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
@@ -61,7 +60,7 @@ final class CliRemotes implements Remotes {
      * The remotes {@code git fetch --all} would fetch: all of them but those with {@code skipFetchAll} set.
      */
     @Override
-    public Either<ProcessError, List<RemoteName>> list() {
+    public Either<GitError, List<RemoteName>> list() {
         return GitProcess.read(worktree, GitCommand.reading("remote"), raw -> Either.right(names(raw)))
                 .flatMap(remotes -> skippedByFetchAll().map(remotes::removeAll).mapLeft(GitFailure::error))
                 .map(remotes -> remotes.flatMap(RemoteName::parse));
@@ -74,7 +73,7 @@ final class CliRemotes implements Remotes {
     /**
      * The remotes with {@code remote.<name>.skipFetchAll} set to true.
      */
-    private Either<GitFailure<ProcessError>, List<String>> skippedByFetchAll() {
+    private Either<GitFailure, List<String>> skippedByFetchAll() {
         // git config --get-regexp exits with 1, saying nothing, when no key matches.
         return GitProcess.ask(
                         worktree,
@@ -96,14 +95,14 @@ final class CliRemotes implements Remotes {
     }
 
     @Override
-    public Either<ProcessError, Map<String, String>> urls() {
+    public Either<GitError, Map<String, String>> urls() {
         return remoteUrls(worktree);
     }
 
     /**
      * The URL of each remote, by its name. Only looked up, so not logged.
      */
-    static Either<ProcessError, Map<String, String>> remoteUrls(Path worktree) {
+    static Either<GitError, Map<String, String>> remoteUrls(Path worktree) {
         // git config --get-regexp exits with 1, saying nothing, when no key matches.
         return GitProcess.ask(worktree, GitCommand.reading("config", "--get-regexp", "^remote\\..*\\.url$"))
                 .map(answer -> answer.map(output -> parseUrls(output.stdout())).getOrElse(HashMap.empty()))
@@ -134,15 +133,14 @@ final class CliRemotes implements Remotes {
      *     pushes the branch nowhere, or has a value git does not know, before anything is pushed
      */
     @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> push(
-            BranchName name, RemoteBranch upstream, PushMode mode) {
+    public Either<GitFailure, List<ExecutedCommand>> push(BranchName name, RemoteBranch upstream, PushMode mode) {
         return CliConfig.effective(worktree, PUSH_DEFAULT)
-                .mapLeft(error -> new GitFailure<GitError>(error, List.empty()))
+                .mapLeft(error -> new GitFailure(error, List.empty()))
                 .map(setting -> setting.getOrElse(SIMPLE))
                 .flatMap(setting -> PushDefault.parse(setting)
                         .flatMap(pushDefault -> target(pushDefault, name, upstream))
-                        .toEither(() -> new GitFailure<GitError>(new PushRefused(setting, upstream), List.empty())))
-                .flatMap(target -> GitFailure.widen(run(
+                        .toEither(() -> new GitFailure(new PushRefused(setting, upstream), List.empty())))
+                .flatMap(target -> run(
                         worktree,
                         git(List.of("push")
                                 .appendAll(
@@ -151,7 +149,7 @@ final class CliRemotes implements Remotes {
                                                 : List.empty())
                                 .append(GitArgs.remote(target.remote()))
                                 .append(refspec(name, target))),
-                        credentials.get())));
+                        credentials.get()));
     }
 
     /**
@@ -175,8 +173,7 @@ final class CliRemotes implements Remotes {
      * {@code upstream}, which it then tracks. Git only sets the upstream when the push succeeds.
      */
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushSettingUpstream(
-            BranchName name, RemoteBranch upstream) {
+    public Either<GitFailure, List<ExecutedCommand>> pushSettingUpstream(BranchName name, RemoteBranch upstream) {
         return run(
                 worktree,
                 git("push", "--set-upstream", GitArgs.remote(upstream.remote()), refspec(name, upstream)),
@@ -190,7 +187,7 @@ final class CliRemotes implements Remotes {
      * background brought in what an agent pushed.
      */
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> pushAll(
+    public Either<GitFailure, List<ExecutedCommand>> pushAll(
             RemoteName remote, List<Tuple2<BranchName, BranchName>> branches) {
         return run(
                 worktree,
@@ -222,17 +219,17 @@ final class CliRemotes implements Remotes {
      * git refuses to start, as the repository is in the middle of something else, leaves that alone.
      */
     @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> pull() {
-        return GitFailure.<GitError, GitCommand>widen(toRemote(
+    public Either<GitFailure, List<ExecutedCommand>> pull() {
+        return toRemote(
                         worktree,
                         git("pull", "--no-edit").withEnvironment(HashMap.of("GIT_SEQUENCE_EDITOR", ":")),
-                        credentials.get()))
+                        credentials.get())
                 .flatMap(pull ->
                         Unfinished.runOrUndo(worktree, pull, left -> Option.when(left.rebasing(), CliRebase.ABORT)));
     }
 
     @Override
-    public Either<GitFailure<ProcessError>, Boolean> fetch(RemoteName remote) {
+    public Either<GitFailure, Boolean> fetch(RemoteName remote) {
         return fetch(worktree, remote, Option.of(System.getenv("GIT_SSH_COMMAND")), credentials.get());
     }
 
@@ -248,7 +245,7 @@ final class CliRemotes implements Remotes {
      * @param environment the value of the environment variable {@code GIT_SSH_COMMAND}, if it is set
      * @param credentials environment variables that tell the credential helper which account to use
      */
-    static Either<GitFailure<ProcessError>, Boolean> fetch(
+    static Either<GitFailure, Boolean> fetch(
             Path worktree, RemoteName remote, Option<String> environment, Map<String, String> credentials) {
         // Not --quiet, which keeps --porcelain from printing too; --porcelain prints no progress either.
         return toRemote(
@@ -266,14 +263,14 @@ final class CliRemotes implements Remotes {
      * refuses when that is not a fast-forward.
      */
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(BranchName name, BranchRef upstream) {
+    public Either<GitFailure, List<ExecutedCommand>> fastForward(BranchName name, BranchRef upstream) {
         return switch (upstream) {
             case BranchRef.Local(BranchName branch) -> fastForward(name, THIS_REPOSITORY, branch);
             case BranchRef.Remote(RemoteBranch remote) -> fastForward(name, remote.remote(), remote.branch());
         };
     }
 
-    private Either<GitFailure<ProcessError>, List<ExecutedCommand>> fastForward(
+    private Either<GitFailure, List<ExecutedCommand>> fastForward(
             BranchName name, RemoteName remote, BranchName branch) {
         return run(
                 worktree,
@@ -289,12 +286,10 @@ final class CliRemotes implements Remotes {
      * pushed to. With both, the remote one goes first, so a failure leaves the local branch in place.
      */
     @Override
-    public Either<GitFailure<GitError>, List<ExecutedCommand>> deleteBranch(
+    public Either<GitFailure, List<ExecutedCommand>> deleteBranch(
             BranchName name, RemoteBranch remote, DeleteScope scope) {
         return GitFailure.sequence(
-                () -> scope.remote()
-                        ? GitFailure.<GitError, List<ExecutedCommand>>widen(deleteRemoteBranch(remote))
-                        : GitFailure.nothing(),
+                () -> scope.remote() ? deleteRemoteBranch(remote) : GitFailure.nothing(),
                 () -> scope.local() ? CliBranches.deleteLocal(worktree, name) : GitFailure.nothing());
     }
 
@@ -303,7 +298,7 @@ final class CliRemotes implements Remotes {
      * remote, so a tag of the same name there neither makes git refuse nor is deleted instead (ADR 40).
      */
     @Override
-    public Either<GitFailure<ProcessError>, List<ExecutedCommand>> deleteRemoteBranch(RemoteBranch remote) {
+    public Either<GitFailure, List<ExecutedCommand>> deleteRemoteBranch(RemoteBranch remote) {
         return run(
                 worktree,
                 git(
@@ -315,7 +310,7 @@ final class CliRemotes implements Remotes {
     }
 
     @Override
-    public Either<ProcessError, List<CommitFile>> pullRequestFiles(PullRequestCommits commits) {
+    public Either<GitError, List<CommitFile>> pullRequestFiles(PullRequestCommits commits) {
         return CliPullRequest.files(worktree, commits, credentials.get());
     }
 
@@ -324,7 +319,7 @@ final class CliRemotes implements Remotes {
      *
      * @param credentials environment variables that tell the credential helper which account to use
      */
-    static Either<GitFailure<ProcessError>, List<ExecutedCommand>> run(
+    static Either<GitFailure, List<ExecutedCommand>> run(
             Path worktree, GitCommand command, Map<String, String> credentials) {
         return toRemote(worktree, command, credentials).flatMap(remote -> GitProcess.log(worktree, remote));
     }
@@ -336,7 +331,7 @@ final class CliRemotes implements Remotes {
      * @param environment the value of the environment variable {@code GIT_SSH_COMMAND}, if it is set
      * @param credentials environment variables that tell the credential helper which account to use
      */
-    static Either<GitFailure<ProcessError>, GitCommand> toRemote(
+    static Either<GitFailure, GitCommand> toRemote(
             Path worktree, GitCommand command, Option<String> environment, Map<String, String> credentials) {
         return configuredSsh(worktree, environment)
                 .map(ssh -> command.withEnvironment(credentials.put("GIT_SSH_COMMAND", batchMode(ssh)))
@@ -347,8 +342,7 @@ final class CliRemotes implements Remotes {
      * {@code command}, which talks to a remote, as {@link #toRemote(Path, GitCommand, Option, Map)} runs it, with
      * the ssh command of this process's environment.
      */
-    static Either<GitFailure<ProcessError>, GitCommand> toRemote(
-            Path worktree, GitCommand command, Map<String, String> credentials) {
+    static Either<GitFailure, GitCommand> toRemote(Path worktree, GitCommand command, Map<String, String> credentials) {
         return toRemote(worktree, command, Option.of(System.getenv("GIT_SSH_COMMAND")), credentials);
     }
 
@@ -356,8 +350,7 @@ final class CliRemotes implements Remotes {
      * The ssh command git would run, or none when it runs plain {@code ssh}: {@code GIT_SSH_COMMAND}, else
      * {@code core.sshCommand}. Only looked up, so not logged.
      */
-    private static Either<GitFailure<ProcessError>, Option<String>> configuredSsh(
-            Path worktree, Option<String> environment) {
+    private static Either<GitFailure, Option<String>> configuredSsh(Path worktree, Option<String> environment) {
         Option<String> set = environment.filter(command -> !command.isBlank());
         // git config --get exits with 1, saying nothing, when the key is not set.
         return set.isDefined()

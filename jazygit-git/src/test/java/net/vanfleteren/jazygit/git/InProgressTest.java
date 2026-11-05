@@ -119,7 +119,7 @@ class InProgressTest {
         write("a.txt", "resolved\n");
         git("add", "a.txt");
 
-        GitFailure<GitError> failure = git.integrate()
+        GitFailure failure = git.integrate()
                 .continueOrAbort(rebasing, InProgressAction.CONTINUE)
                 .getLeft();
 
@@ -134,7 +134,7 @@ class InProgressTest {
         gitAnyExit("merge", "conflicting");
         InProgress merging = git.status().read().get().inProgress().get();
 
-        GitFailure<GitError> failure = git.integrate()
+        GitFailure failure = git.integrate()
                 .continueOrAbort(merging, InProgressAction.CONTINUE)
                 .getLeft();
 
@@ -149,7 +149,7 @@ class InProgressTest {
         gitAnyExit("rebase", "main");
         InProgress rebasing = git.status().read().get().inProgress().get();
 
-        GitFailure<GitError> failure = git.integrate()
+        GitFailure failure = git.integrate()
                 .continueOrAbort(rebasing, InProgressAction.CONTINUE)
                 .getLeft();
 
@@ -181,7 +181,7 @@ class InProgressTest {
         write("a.txt", "amended\n");
         git("add", "a.txt");
         // The staged change is to what the last commit made of a.txt, which the first one does not have.
-        GitFailure<GitError> stop = git.commits().amend(sha("main~1")).getLeft();
+        GitFailure stop = git.commits().amend(sha("main~1")).getLeft();
         assertInstanceOf(GitError.StoppedOnConflicts.class, stop.error());
 
         assertEquals(
@@ -208,7 +208,7 @@ class InProgressTest {
         write("a.txt", "resolved\n");
         git("add", "a.txt");
         // The commit after the amended one changed a.txt too, so it stops again.
-        GitFailure<GitError> again = git.integrate()
+        GitFailure again = git.integrate()
                 .continueOrAbort(git.status().read().get().inProgress().get(), InProgressAction.CONTINUE)
                 .getLeft();
         assertInstanceOf(GitError.StoppedOnConflicts.class, again.error());

@@ -3,7 +3,6 @@ package net.vanfleteren.jazygit.git;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.GitMetadata;
 import net.vanfleteren.jazygit.git.model.MetadataStamp;
@@ -17,7 +16,7 @@ public interface Status {
     /**
      * The branch that is checked out, the changed files, and what the repository is in the middle of.
      */
-    Either<ProcessError, RepoStatus> read();
+    Either<GitError, RepoStatus> read();
 
     /**
      * Stamps of the files of the git directory that the branches, the stashes and the worktrees are read from,

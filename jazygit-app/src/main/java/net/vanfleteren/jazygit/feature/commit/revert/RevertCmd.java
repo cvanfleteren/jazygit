@@ -29,7 +29,7 @@ public record RevertCmd(Commit commit) implements GitOperationCmd {
     }
 
     @Override
-    public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
+    public Either<GitFailure, List<ExecutedCommand>> perform(Git git) {
         return git.integrate().revert(commit);
     }
 }

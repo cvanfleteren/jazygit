@@ -15,31 +15,28 @@ import net.vanfleteren.jazygit.git.model.RemoteBranch;
  */
 public sealed interface GitError {
 
-    /**
-     * A failure that running any git command can have.
-     */
-    sealed interface ProcessError extends GitError {}
+    // The failures that running any git command can have.
 
     /**
      * The {@code git} executable could not be started.
      *
      * @param cause why the process could not be started
      */
-    record GitUnavailable(IOException cause) implements ProcessError {}
+    record GitUnavailable(IOException cause) implements GitError {}
 
     /**
      * The git command did not finish in time.
      *
      * @param operation the git subcommand, e.g. {@code checkout}
      */
-    record TimedOut(String operation, Path worktree) implements ProcessError {}
+    record TimedOut(String operation, Path worktree) implements GitError {}
 
     /**
      * The git command was interrupted.
      *
      * @param operation the git subcommand, e.g. {@code checkout}
      */
-    record Interrupted(String operation) implements ProcessError {}
+    record Interrupted(String operation) implements GitError {}
 
     /**
      * Git ran, but refused.
@@ -48,7 +45,7 @@ public sealed interface GitError {
      *                    nothing
      * @param output      everything git printed on its error output
      */
-    record CommandFailed(Option<String> explanation, int exitCode, String output) implements ProcessError {
+    record CommandFailed(Option<String> explanation, int exitCode, String output) implements GitError {
 
         public CommandFailed(String explanation, int exitCode) {
             this(Option.of(explanation).filter(text -> !text.isEmpty()), exitCode, explanation);
@@ -75,7 +72,7 @@ public sealed interface GitError {
      *
      * @param output the part of the output that could not be parsed
      */
-    record UnexpectedOutput(String output) implements ProcessError {}
+    record UnexpectedOutput(String output) implements GitError {}
 
     /**
      * No git repository contains the directory.
@@ -148,7 +145,7 @@ public sealed interface GitError {
      * The branch was checked out, but the stashed changes could not be applied on it, so they stay in
      * the stash.
      */
-    record StashNotRestored(ProcessError cause) implements GitError {}
+    record StashNotRestored(GitError cause) implements GitError {}
 
     /**
      * The stash is not there anymore: it was popped or dropped since it was listed.

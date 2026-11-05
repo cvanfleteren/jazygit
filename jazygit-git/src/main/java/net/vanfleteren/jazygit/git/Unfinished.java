@@ -6,7 +6,6 @@ import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitError.StoppedOnConflicts;
 import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -24,7 +23,7 @@ record Unfinished(Option<InProgress> inProgress, int conflicts) {
     /**
      * Reads what the repository in {@code worktree} is in the middle of. Only asked, so not logged.
      */
-    static Either<ProcessError, Unfinished> read(Path worktree) {
+    static Either<GitError, Unfinished> read(Path worktree) {
         return CliInProgress.read(worktree)
                 .flatMap(inProgress ->
                         CliIntegrate.conflicts(worktree).map(conflicts -> new Unfinished(inProgress, conflicts)));
@@ -65,16 +64,16 @@ record Unfinished(Option<InProgress> inProgress, int conflicts) {
      * is unfinished is the user's. The undo's commands join the failure's, and so does why the undo failed, if it
      * did, or why what was left could not be found out.
      */
-    static Either<GitFailure<GitError>, List<ExecutedCommand>> runOrUndo(
+    static Either<GitFailure, List<ExecutedCommand>> runOrUndo(
             Path worktree, GitCommand command, Function<Unfinished, Option<GitCommand>> undo) {
         return read(worktree)
-                .<GitFailure<GitError>>mapLeft(error -> new GitFailure<>(error, List.empty()))
+                .mapLeft(error -> new GitFailure(error, List.empty()))
                 .flatMap(before -> GitProcess.log(worktree, command)
                         .mapLeft(failure -> before.any()
-                                ? GitFailure.widen(failure)
+                                ? failure
                                 : uninterrupted(() -> read(worktree)
-                                        .<GitFailure<GitError>>fold(
-                                                error -> new GitFailure<>(
+                                        .<GitFailure>fold(
+                                                error -> new GitFailure(
                                                         failure.error(), failure.commands(), Option.of(error)),
                                                 after -> left(worktree, failure, after, undo)))));
     }
@@ -82,7 +81,7 @@ record Unfinished(Option<InProgress> inProgress, int conflicts) {
     /**
      * Runs {@code command}, and leaves it as it stopped when it stops on conflicts; see {@link #runOrUndo}.
      */
-    static Either<GitFailure<GitError>, List<ExecutedCommand>> runOrStop(Path worktree, GitCommand command) {
+    static Either<GitFailure, List<ExecutedCommand>> runOrStop(Path worktree, GitCommand command) {
         return runOrUndo(worktree, command, after -> Option.none());
     }
 
@@ -90,35 +89,32 @@ record Unfinished(Option<InProgress> inProgress, int conflicts) {
      * What becomes of {@code failure}, which left {@code after} behind: a stop on conflicts, or the failure
      * followed by its {@code undo}.
      */
-    private static GitFailure<GitError> left(
-            Path worktree,
-            GitFailure<ProcessError> failure,
-            Unfinished after,
-            Function<Unfinished, Option<GitCommand>> undo) {
+    private static GitFailure left(
+            Path worktree, GitFailure failure, Unfinished after, Function<Unfinished, Option<GitCommand>> undo) {
         return after.conflicted()
                 ? after.stopped(failure)
-                : GitFailure.widen(undo.apply(after)
+                : undo.apply(after)
                         .map(cleanup -> failure.followedBy(GitProcess.log(worktree, cleanup)))
-                        .getOrElse(failure));
+                        .getOrElse(failure);
     }
 
     /**
      * {@code failure} as the stop on conflicts it is, when it got past {@code from} and stopped on the conflicts
      * of a next step; else as it is.
      */
-    static GitFailure<GitError> stoppedAgain(Path worktree, InProgress from, GitFailure<ProcessError> failure) {
+    static GitFailure stoppedAgain(Path worktree, InProgress from, GitFailure failure) {
         return read(worktree)
                 .toOption()
                 .filter(after -> after.conflicted() && after.inProgress().exists(now -> !now.equals(from)))
                 .map(after -> after.stopped(failure))
-                .getOrElse(() -> GitFailure.widen(failure));
+                .getOrElse(() -> failure);
     }
 
     /**
      * The commands of {@code failure}, as a stop on these conflicts.
      */
-    private GitFailure<GitError> stopped(GitFailure<ProcessError> failure) {
-        return new GitFailure<>(new StoppedOnConflicts(inProgress, conflicts), failure.commands());
+    private GitFailure stopped(GitFailure failure) {
+        return new GitFailure(new StoppedOnConflicts(inProgress, conflicts), failure.commands());
     }
 
     /**

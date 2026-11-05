@@ -5,7 +5,6 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.GhFailure;
 import net.vanfleteren.jazygit.git.GitError;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.settings.SettingsProblem;
@@ -15,7 +14,7 @@ import net.vanfleteren.jazygit.settings.SettingsProblem;
  */
 public sealed interface Failure {
 
-    static Failure of(GitFailure<?> failure) {
+    static Failure of(GitFailure failure) {
         return new Git(failure.error(), failure.commands(), failure.cleanupFailed());
     }
 
@@ -41,7 +40,7 @@ public sealed interface Failure {
      *
      * @param cleanupFailed why cleaning up after the failure failed too, if it did
      */
-    record Git(GitError error, List<ExecutedCommand> commands, Option<ProcessError> cleanupFailed) implements Failure {
+    record Git(GitError error, List<ExecutedCommand> commands, Option<GitError> cleanupFailed) implements Failure {
 
         public Git(GitError error) {
             this(error, List.empty(), Option.none());
@@ -53,8 +52,7 @@ public sealed interface Failure {
      *
      * @param cleanupFailed why cleaning up after the failure with git failed too, if it did
      */
-    record GitHub(GhError error, List<ExecutedCommand> commands, Option<ProcessError> cleanupFailed)
-            implements Failure {
+    record GitHub(GhError error, List<ExecutedCommand> commands, Option<GitError> cleanupFailed) implements Failure {
 
         public GitHub(GhError error) {
             this(error, List.empty(), Option.none());

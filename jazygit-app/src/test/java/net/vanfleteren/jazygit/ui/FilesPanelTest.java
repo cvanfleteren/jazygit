@@ -17,7 +17,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.Git;
-import net.vanfleteren.jazygit.git.GitError.ProcessError;
+import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.Status;
 import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.git.StubStatus;
@@ -651,7 +651,7 @@ class FilesPanelTest {
         public Status status() {
             return new StubStatus() {
                 @Override
-                public Either<ProcessError, RepoStatus> read() {
+                public Either<GitError, RepoStatus> read() {
                     return Either.right(new RepoStatus(Head.onBranch(new BranchName("main"), new Sha("aaaa")), files));
                 }
             };

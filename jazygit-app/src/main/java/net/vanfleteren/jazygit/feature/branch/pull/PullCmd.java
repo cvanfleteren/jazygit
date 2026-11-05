@@ -38,7 +38,7 @@ public sealed interface PullCmd extends BranchCmd.KeepsBranchBusy {
         }
 
         @Override
-        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
+        public Either<GitFailure, List<ExecutedCommand>> perform(Git git) {
             return git.remotes().pull();
         }
     }
@@ -54,7 +54,7 @@ public sealed interface PullCmd extends BranchCmd.KeepsBranchBusy {
         }
 
         @Override
-        public Either<? extends GitFailure<?>, List<ExecutedCommand>> perform(Git git) {
+        public Either<GitFailure, List<ExecutedCommand>> perform(Git git) {
             return git.remotes().fastForward(branch, upstream);
         }
     }
