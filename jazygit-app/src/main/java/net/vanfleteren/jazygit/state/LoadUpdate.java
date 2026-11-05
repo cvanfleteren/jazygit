@@ -62,7 +62,7 @@ public final class LoadUpdate {
             case AheadLoaded(var load, var ahead) -> AheadUpdate.aheadLoaded(done, load, ahead);
             // What the files looked like is kept, so that the diff is read again only once they change (ADR 58). Only
             // the highlighted diff is looked at, so the stamps of the diffs read before go.
-            // The files of the working tree read whole to expand them are read again with it (ADR 76).
+            // The files of the working tree read whole to expand them are read again with it (ADR 77).
             case FileDiffLoaded loaded ->
                 rereadWhole(loaded.kept(done).mapJobs(jobs -> {
                     Map<Cmd.Load, MetadataStamp> others =
@@ -91,7 +91,7 @@ public final class LoadUpdate {
 
     /**
      * Reads again, with the options now chosen, each file of the working tree read whole to expand it that the diff
-     * now read of the working tree has, and that is not being read (ADR 76).
+     * now read of the working tree has, and that is not being read (ADR 77).
      */
     private static Next rereadWhole(Model model) {
         DiffOptions options = model.preferences().diffOptions();

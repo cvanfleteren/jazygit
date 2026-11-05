@@ -298,7 +298,7 @@ public sealed interface LoadMsg extends Msg {
     }
 
     /**
-     * The diff of a file read again with the whole file as context, to show more of it (ADR 76).
+     * The diff of a file read again with the whole file as context, to show more of it (ADR 77).
      */
     record WholeFileRead(Cmd.ReadWholeFile cmd, DiffText whole) implements Read<DiffText> {
 

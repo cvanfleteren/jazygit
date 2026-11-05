@@ -9,7 +9,7 @@ import net.vanfleteren.jazygit.state.Anchor;
 import net.vanfleteren.jazygit.state.DiffCursorAt;
 
 /**
- * Showing the lines a marker of a rich diff leaves out, from its cursor (ADR 76): in every rich diff, and in the diff
+ * Showing the lines a marker of a rich diff leaves out, from its cursor (ADR 77): in every rich diff, and in the diff
  * of a pull request's files next to the keys of its review.
  */
 public final class ExpandAction {

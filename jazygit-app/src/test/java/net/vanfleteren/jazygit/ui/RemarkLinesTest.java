@@ -104,7 +104,7 @@ class RemarkLinesTest {
                         indent + "┗━",
                         "",
                         "3 3 │  three",
-                        // How many lines follow is not known until the file is read whole (ADR 76).
+                        // How many lines follow is not known until the file is read whole (ADR 77).
                         "┄┄┄ │ more ┄"),
                 lines);
     }

@@ -40,7 +40,7 @@ public sealed interface Anchor {
     /**
      * A marker of lines the file with the path {@code path} leaves out between its hunks, or around them: those of the
      * new file from {@code from} up to {@code until}, which is not one of them; none when it is not known how many
-     * follow the last hunk (ADR 76). It is found again by its path and the closest {@code from}, as expanding it moves
+     * follow the last hunk (ADR 77). It is found again by its path and the closest {@code from}, as expanding it moves
      * where it starts or ends.
      */
     record Gap(String path, int from, Option<Integer> until) implements Anchor {}

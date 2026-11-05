@@ -66,7 +66,7 @@ final class RichDiff {
     /**
      * The lines of the diff of {@code folded}, as {@link #drawn(ParsedDiff, boolean, boolean, Option,
      * Theme.SpanStyles)} draws them, with a marker for the lines each of its files leaves out, as far as
-     * {@code folded} knows them (ADR 76).
+     * {@code folded} knows them (ADR 77).
      */
     static Drawn drawn(
             Expansion.Folded folded,
@@ -222,7 +222,7 @@ final class RichDiff {
      * hunk, which reads as one of its own. A header whose numbers cannot be read, whose lines are not numbered,
      * follows the rule as git printed it. The first hunk of a file, at {@code index} 0, has no rule, as the bar of the
      * file marks where it starts, unless its header has to be shown. When lines are left out before it, {@code gap},
-     * a marker that says how many takes the place of the rule (ADR 76).
+     * a marker that says how many takes the place of the rule (ADR 77).
      */
     private static List<Pending> hunk(
             Hunk hunk, Vector<Row> rows, int index, Option<Folding.Gap> gap, Expansion.Fold fold, Layout layout) {
@@ -260,7 +260,7 @@ final class RichDiff {
     }
 
     /**
-     * The marker of {@code gap}, the lines a file leaves out, a stop of the cursor (ADR 76): the rule, and how many it
+     * The marker of {@code gap}, the lines a file leaves out, a stop of the cursor (ADR 77): the rule, and how many it
      * leaves out, or that more follow when that is not known, or that the file is being read whole, or could not be.
      */
     private static Pending marker(Folding.Gap gap, Expansion.Fold fold, Layout layout) {

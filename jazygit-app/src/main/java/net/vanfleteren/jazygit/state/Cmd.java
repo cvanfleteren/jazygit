@@ -752,7 +752,7 @@ public interface Cmd {
 
     /**
      * Reads the diff of the file with the path {@code path} again, the way {@code source} says, with the whole file
-     * as context, to show more of it than its hunks in the area {@code area} while it shows {@code content} (ADR 76).
+     * as context, to show more of it than its hunks in the area {@code area} while it shows {@code content} (ADR 77).
      * It reads with {@code options} but for the context, so what it read with options changed since is dropped.
      */
     record ReadWholeFile(String area, ScrolledContent content, Source source, String path, DiffOptions options)

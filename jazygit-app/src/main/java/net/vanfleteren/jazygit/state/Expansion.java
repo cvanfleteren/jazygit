@@ -12,7 +12,7 @@ import net.vanfleteren.jazygit.git.model.ParsedDiff;
 import net.vanfleteren.jazygit.git.model.ParsedDiff.ParsedFile;
 
 /**
- * The lines the user expanded in the diff an area of the content panel shows, around its hunks (ADR 76).
+ * The lines the user expanded in the diff an area of the content panel shows, around its hunks (ADR 77).
  *
  * @param content what the area showed when the first of them was expanded
  * @param files   what is expanded in each file, by its path

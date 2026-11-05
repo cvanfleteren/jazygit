@@ -33,7 +33,7 @@ public final class DiffStops {
      * Which of {@code stops} the cursor on {@code at} is on (ADR 60): {@code at} itself if it is one of them, a thread
      * or a comment found by its id wherever it is now. When it is gone: a line goes to the line of the same file and
      * side with the closest number, else to the bar of its file, else to the first stop; a marker of lines left out
-     * to the marker of the same file that starts closest to it, else as a line where it starts (ADR 76); a thread to
+     * to the marker of the same file that starts closest to it, else as a line where it starts (ADR 77); a thread to
      * the line it was
      * after, and from there as a line; a comment to its thread, and from there as a thread (ADR 62); a bar and the
      * lead to the first stop. None when there is no stop.

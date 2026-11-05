@@ -14,7 +14,7 @@ public sealed interface ExpandMsg extends Msg {
 
     /**
      * The user asked to show lines the marker the cursor {@code at} is on leaves out, as {@code toward} says
-     * (ADR 76).
+     * (ADR 77).
      */
     record Asked(DiffCursorAt at, Toward toward) implements ExpandMsg {}
 

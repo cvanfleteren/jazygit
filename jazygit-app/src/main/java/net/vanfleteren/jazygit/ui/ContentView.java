@@ -82,7 +82,7 @@ final class ContentView {
 
     /**
      * What the repository screen shows next to the pane {@code mirrored} has highlighted, each diff with the lines
-     * expanded in the area it is shown in (ADR 76).
+     * expanded in the area it is shown in (ADR 77).
      */
     private static Shown expanded(Model model, Mirrored mirrored) {
         return switch (repository(model, mirrored)) {
@@ -558,7 +558,7 @@ final class ContentView {
 
     /**
      * A diff as it is shown: {@code diff}, then the line {@code note}, which git did not print, if there is one, with
-     * the lines {@code expansion} expanded around its hunks, folded to {@code context} lines (ADR 76).
+     * the lines {@code expansion} expanded around its hunks, folded to {@code context} lines (ADR 77).
      */
     record ShownDiff(DiffText diff, Option<String> note, Option<Expansion> expansion, DiffContext context) {
 
@@ -570,14 +570,14 @@ final class ContentView {
         }
 
         /**
-         * This diff with the lines of {@code expanded} shown, folded to {@code folding} lines of context (ADR 76).
+         * This diff with the lines of {@code expanded} shown, folded to {@code folding} lines of context (ADR 77).
          */
         ShownDiff expanded(Option<Expansion> expanded, DiffContext folding) {
             return new ShownDiff(diff, note, expanded, folding);
         }
 
         /**
-         * The diff shown parsed, its files read whole folded, with what is known of each of them (ADR 76).
+         * The diff shown parsed, its files read whole folded, with what is known of each of them (ADR 77).
          */
         Expansion.Folded folded() {
             Expansion.Folded folded = expansion

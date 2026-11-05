@@ -368,7 +368,7 @@ only; side-by-side diffs are to follow them there.
 
 ### Showing more of one hunk
 
-See `documentation/adr/0076-showing-more-of-one-hunk.md`.
+See `documentation/adr/0077-showing-more-of-one-hunk.md`.
 
 - The rich view draws a marker in place of the rule between two hunks, above the first and after the last
   (`Folding.gaps`, from the hunk headers): how many lines it leaves out, or `more` after the last until the file is

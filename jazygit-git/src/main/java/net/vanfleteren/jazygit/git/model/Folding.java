@@ -13,7 +13,7 @@ import net.vanfleteren.jazygit.git.model.UnifiedDiff.Hunk;
 
 /**
  * The lines a file of a diff leaves out between its hunks, and a file read with the whole file as context folded to
- * the hunks git would give, with the lines the user expanded besides (ADR 76).
+ * the hunks git would give, with the lines the user expanded besides (ADR 77).
  */
 public final class Folding {
 

@@ -16,7 +16,7 @@ import net.vanfleteren.jazygit.state.ScrolledContent;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
- * Showing lines a diff leaves out around its hunks (ADR 76). The first expansion in a file reads it whole, as its diff
+ * Showing lines a diff leaves out around its hunks (ADR 77). The first expansion in a file reads it whole, as its diff
  * was read; the lines asked for show once it is, folded to the context of the moment.
  */
 public final class ExpandUpdate {

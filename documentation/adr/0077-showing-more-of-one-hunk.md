@@ -1,10 +1,10 @@
-# 76. Showing more of one hunk
+# 77. Showing more of one hunk
 
 Date: 2026-11-05
 
 ## Context
 
-ADR 75 gives every diff one amount of context. To see what one change sits in, more context for every hunk of
+ADR 76 gives every diff one amount of context. To see what one change sits in, more context for every hunk of
 every file is too much: GitHub shows more lines above or below one hunk, where the user asks for them, and two hunks
 that grow into each other become one.
 
@@ -25,7 +25,7 @@ counted without reading anything; how many follow the last hunk cannot, as git d
   files as they are, and a file whose code is lexed whole is coloured better than one lexed per hunk.
 - Folding the whole file at the amount of context gives the hunks git gives, so a file looks the same once it is read
   whole, and two hunks whose gap was expanded away are one: what is between two markers is one hunk.
-- A file read whole is cut at the 5000 lines jazygit reads of a diff (ADR 75); a file longer than that cannot be
+- A file read whole is cut at the 5000 lines jazygit reads of a diff (ADR 76); a file longer than that cannot be
   expanded past the cut.
 
 ### Markers
@@ -50,7 +50,7 @@ counted without reading anything; how many follow the last hunk cannot, as git d
 - They are shown while the area shows the same changes, read again or not (`ScrolledContent.sameChanges`), and for
   the working tree while it shows the same path. Not: dropped when another item is highlighted; coming back to the
   item before another one is expanded shows them again.
-- Changing the options, the amount of context (ADR 75) or ignoring whitespace, drops all of them.
+- Changing the options, the amount of context (ADR 76) or ignoring whitespace, drops all of them.
 - When the diff of the working tree is read again, as after a file was saved (ADR 58), the files read whole are read
   again, and the lines expanded are kept by their numbers: after an edit they may be a few lines off. While a file
   read whole does not have the changes the diff shown has, the diff is shown as git gives it.

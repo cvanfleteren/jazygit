@@ -42,7 +42,7 @@ import net.vanfleteren.jazygit.git.model.*;
  * @param closedStacks the numbers of the stacks the branches pane shows closed, as only their header; a stack
  *                     starts open (ADR 72)
  * @param expanded     the lines expanded around the hunks of the diff each area of the content panel shows, by the
- *                     id of the area (ADR 76)
+ *                     id of the area (ADR 77)
  */
 @With
 public record RepoView(

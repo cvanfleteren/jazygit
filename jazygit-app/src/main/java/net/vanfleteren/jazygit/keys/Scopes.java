@@ -27,7 +27,7 @@ public final class Scopes {
             new Scope<>("pullRequestDiff", "panel.pullRequestDiff.title");
     /**
      * The cursor of a rich diff, while the content panel has the focus on it: its keys expand the lines a marker
-     * leaves out (ADR 76).
+     * leaves out (ADR 77).
      */
     public static final Scope<DiffCursorAt> DIFF = new Scope<>("diff", "panel.diff.title");
     /**

@@ -515,7 +515,7 @@ public final class ReviewUpdate {
 
     /**
      * The lines the cursor {@code at} stops on in the diff the files of the pull request {@code view} shows, as the
-     * content panel draws it: with the lines expanded in its area (ADR 76), so that a range stays in a hunk as shown.
+     * content panel draws it: with the lines expanded in its area (ADR 77), so that a range stays in a hunk as shown.
      */
     private static DiffLines diffLines(Model model, CommitFilesView view, DiffCursorAt at) {
         Option<Expansion> expansion = model.repoView()

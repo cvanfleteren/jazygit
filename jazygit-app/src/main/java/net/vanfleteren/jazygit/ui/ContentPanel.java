@@ -684,7 +684,7 @@ public final class ContentPanel {
                                 .flatMap(drawn -> on.clicked(event.y() - drawn.top() - 1)))
                         .map(clicked -> {
                             EventResult result = moved(clicked, content);
-                            // A click on a marker shows all the lines it leaves out, as Enter on it does (ADR 76).
+                            // A click on a marker shows all the lines it leaves out, as Enter on it does (ADR 77).
                             if (clicked.anchor() instanceof Anchor.Gap) {
                                 KEYMAP.handle(
                                                 Scopes.DIFF,

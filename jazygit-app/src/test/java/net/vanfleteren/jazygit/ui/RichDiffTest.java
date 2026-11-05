@@ -50,7 +50,7 @@ class RichDiffTest {
                         " 1 file changed",
                         "",
                         " modified  a.txt ",
-                        // The first hunk has no rule, but a marker of the lines above it (ADR 76).
+                        // The first hunk has no rule, but a marker of the lines above it (ADR 77).
                         "┄┄┄┄┄ │ 8 lines hidden ┄",
                         " 9  9 │  nine",
                         // Changed lines are padded to the width of the file, so their background makes a block.
