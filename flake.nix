@@ -64,6 +64,7 @@
           default = pkgs.mkShell {
             packages = [
               jdk
+              pkgs.async-profiler
               (pkgs.maven.override { jdk_headless = jdk; })
               # The same git as CI, so a local run meets the git the tests meet there.
               pkgs.git
