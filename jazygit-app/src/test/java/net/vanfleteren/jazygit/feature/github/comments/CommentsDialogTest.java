@@ -87,6 +87,25 @@ class CommentsDialogTest {
     }
 
     @Test
+    void anImageInTheHighlightedCommentIsAPlaceholderNotItsTag() throws Exception {
+        PullRequestComment working = comment(
+                "IC_2",
+                Kind.COMMENT,
+                "claude",
+                "Claude Code is working… <img src=\"https://github.com/user-attachments/assets/5ac3\""
+                        + " width=\"14px\" height=\"14px\" style=\"vertical-align: middle; margin-left: 4px;\" />");
+        model = reading(List.of(working));
+        model = model.openPopup(model.popup(CommentsPopup.class).get().withHighlighted(Option.of(working.id())));
+        try (ToolkitTestRunner runner = start()) {
+            String screen = RenderedText.ofSize(runner, this::view, 140, 30);
+
+            assertTrue(screen.contains("Claude Code is working… [image]"), screen);
+            assertFalse(screen.contains("<img"), screen);
+            assertFalse(screen.contains("user-attachments"), screen);
+        }
+    }
+
+    @Test
     void onANarrowScreenTheListIsAboveTheComment() throws Exception {
         try (ToolkitTestRunner runner = start()) {
             String screen = RenderedText.ofSize(runner, this::view, 90, 30);
@@ -200,6 +219,9 @@ class CommentsDialogTest {
         assertEquals("Review", CommentsDialog.firstLine("<!-- marker -->\n\n## Review\n\n> quoted"));
         assertEquals("quoted", CommentsDialog.firstLine("> quoted"));
         assertEquals("item", CommentsDialog.firstLine("  - item"));
+        assertEquals(
+                "Working… [image]",
+                CommentsDialog.firstLine("Working… <img src=\"https://github.com/a.gif\" width=\"14px\" />"));
         assertEquals("", CommentsDialog.firstLine(""));
         // Only a marker followed by a space is one.
         assertEquals("**Note**: x", CommentsDialog.firstLine("**Note**: x"));

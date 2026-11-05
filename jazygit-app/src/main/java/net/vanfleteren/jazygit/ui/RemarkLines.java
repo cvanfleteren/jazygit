@@ -25,6 +25,7 @@ import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Comment;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Collapsed;
+import net.vanfleteren.jazygit.ui.widgets.MarkdownImages;
 import net.vanfleteren.jazygit.ui.widgets.MarkdownScroll;
 import org.commonmark.node.FencedCodeBlock;
 import org.commonmark.node.IndentedCodeBlock;
@@ -263,7 +264,10 @@ final class RemarkLines {
                     text,
                     styles));
         }
-        return markdown(MarkdownScroll.withoutHtmlComments(comment.body()), text, styles.markdown())
+        return markdown(
+                        MarkdownImages.asLinks(MarkdownScroll.withoutHtmlComments(comment.body())),
+                        text,
+                        styles.markdown())
                 .map(line -> Line.from(rule.appendAll(line.spans()).toJavaList()))
                 .prepend(header(branch, said, text, styles));
     }
@@ -375,10 +379,11 @@ final class RemarkLines {
     }
 
     /**
-     * The first line of {@code comment} with text, without its HTML comments.
+     * The first line of {@code comment} with text, without its HTML comments and with its images as text that says so.
      */
     private static String firstLine(Comment comment) {
-        return List.ofAll(MarkdownScroll.withoutHtmlComments(comment.body()).lines())
+        return List.ofAll(MarkdownImages.asText(MarkdownScroll.withoutHtmlComments(comment.body()))
+                        .lines())
                 .map(String::strip)
                 .find(line -> !line.isEmpty())
                 .getOrElse("");
