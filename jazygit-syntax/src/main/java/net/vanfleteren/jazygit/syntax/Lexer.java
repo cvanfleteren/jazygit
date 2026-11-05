@@ -323,8 +323,8 @@ public final class Lexer {
                     Scan code = scan.token(0, line.length(), Kind.STRING);
                     yield stripped.startsWith(fence) ? code.in(new Outside()) : code;
                 }
-                case Outside outside when indent <= 3 -> block(scan, stripped, indent);
-                default -> scan;
+                case Outside _ when indent <= 3 -> block(scan, stripped, indent);
+                case Outside _, Inside _, InTag _ -> scan;
             };
         }
 

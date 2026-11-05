@@ -33,7 +33,7 @@ public final class ExpandUpdate {
             case ExpandMsg.Asked(var at, var toward)
             when at.cursor() instanceof Anchor.Gap gap ->
                 asked(model, at.area(), at.at().content(), gap, toward);
-            case ExpandMsg.Asked elsewhere -> Next.of(model);
+            case ExpandMsg.Asked _ -> Next.of(model);
         };
     }
 
