@@ -43,15 +43,32 @@ class PreviewQueryTest {
     }
 
     @Test
+    void aDiffOfJustTheMostLinesIsWhole() {
+        String diff = "+line\n".repeat(PreviewQuery.MAX_DIFF_LINES);
+
+        assertEquals(new PullRequestPreview("main", "", diff, false), PreviewQuery.preview("main", "", diff));
+    }
+
+    @Test
     void aDiffOfLongLinesIsCutOffAtTheLastWholeLineThatFits() {
         // 1000 characters with its line end: as many fit as there are thousands in the most characters.
         String line = "+" + "x".repeat(998) + "\n";
         String fits = line.repeat(PreviewQuery.MAX_DIFF_CHARS / 1000);
 
         assertFalse(PreviewQuery.preview("main", "", fits).truncated());
-        PullRequestPreview cut = PreviewQuery.preview("main", "", fits + line + line);
+        PullRequestPreview cut = PreviewQuery.preview("main", "", fits + line);
         assertTrue(cut.truncated());
         assertEquals(fits, cut.diff());
+    }
+
+    @Test
+    void aDiffOfCrlfLinesIsCutOffAsGhWroteIt() {
+        // A \r is part of its line: counted, and kept, as gh wrote it; one in the middle of a line ends nothing.
+        String line = "+" + "x".repeat(497) + "\r" + "y".repeat(499) + "\r\n";
+        String fits = line.repeat(PreviewQuery.MAX_DIFF_CHARS / 1000);
+
+        assertEquals(new PullRequestPreview("main", "", fits, false), PreviewQuery.preview("main", "", fits));
+        assertEquals(new PullRequestPreview("main", "", fits, true), PreviewQuery.preview("main", "", fits + line));
     }
 
     @Test

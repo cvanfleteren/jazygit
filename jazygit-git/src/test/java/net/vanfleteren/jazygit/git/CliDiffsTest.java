@@ -163,6 +163,16 @@ class CliDiffsTest {
     }
 
     @Test
+    void aDiffOfCrlfLinesIsCutOffAsGitWroteIt() {
+        // A \r is part of its line: counted, and kept, as git wrote it; one in the middle of a line ends nothing.
+        String line = "+" + "x".repeat(497) + "\r" + "y".repeat(499) + "\r\n";
+        String fits = line.repeat(CliDiffs.MAX_CHARS / 1000);
+
+        assertEquals(DiffText.of(fits), CliDiffs.truncated(fits));
+        assertEquals(DiffText.of(fits, true), CliDiffs.truncated(fits + line));
+    }
+
+    @Test
     void listsTheFilesASummaryAndTheDiffOfACommitInOneCall() throws Exception {
         init();
         Files.writeString(repo.resolve("a.txt"), "one\n");

@@ -7,7 +7,8 @@ import static net.vanfleteren.jazygit.json.Decoder.string;
 
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
-import io.vavr.collection.List;
+import io.vavr.collection.Iterator;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.json.Decoder;
 
@@ -38,25 +39,29 @@ final class PreviewQuery {
     /**
      * The preview of a pull request into {@code base}, with its body and its diff, cut off after
      * {@link #MAX_DIFF_LINES} lines, or before the line that would make it longer than {@link #MAX_DIFF_CHARS}
-     * characters.
+     * characters: its text up to there as gh wrote it.
      */
     static PullRequestPreview preview(String base, String body, String diff) {
-        List<String> lines = List.of(diff.split("\n", -1));
-        return lines.size() <= MAX_DIFF_LINES && diff.length() <= MAX_DIFF_CHARS
-                ? new PullRequestPreview(base, body.stripTrailing(), diff, false)
-                : new PullRequestPreview(
-                        base, body.stripTrailing(), lines.take(kept(lines)).mkString("", "\n", "\n"), true);
+        return cut(diff)
+                .map(end -> new PullRequestPreview(base, body.stripTrailing(), diff.substring(0, end), true))
+                .getOrElse(() -> new PullRequestPreview(base, body.stripTrailing(), diff, false));
     }
 
     /**
-     * How many of the first of {@code lines} are kept: at most {@link #MAX_DIFF_LINES}, of at most
-     * {@link #MAX_DIFF_CHARS} characters with the line ends.
+     * Where {@code diff} is cut off, as git's diffs are: after the last whole line that keeps it within
+     * {@link #MAX_DIFF_LINES} lines and {@link #MAX_DIFF_CHARS} characters. Only {@code \n} ends a line. None when it
+     * is within both whole.
      */
-    private static int kept(List<String> lines) {
-        return lines.take(MAX_DIFF_LINES)
-                .scanLeft(0L, (chars, line) -> chars + line.length() + 1)
-                .tail()
-                .takeWhile(chars -> chars <= MAX_DIFF_CHARS)
-                .size();
+    private static Option<Integer> cut(String diff) {
+        long lines = diff.chars().filter(c -> c == '\n').count() + (diff.isEmpty() || diff.endsWith("\n") ? 0 : 1);
+        if (lines <= MAX_DIFF_LINES && diff.length() <= MAX_DIFF_CHARS) {
+            return Option.none();
+        }
+        return Option.of(Iterator.iterate(diff.indexOf('\n'), at -> diff.indexOf('\n', at + 1))
+                .takeWhile(at -> at >= 0)
+                .map(at -> at + 1)
+                .take(MAX_DIFF_LINES)
+                .takeWhile(end -> end <= MAX_DIFF_CHARS)
+                .foldLeft(0, (last, end) -> end));
     }
 }

@@ -5,6 +5,7 @@ import static net.vanfleteren.jazygit.git.GitCommand.reading;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.collection.HashMap;
+import io.vavr.collection.Iterator;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.collection.Vector;
@@ -253,26 +254,28 @@ final class CliDiffs implements Diffs {
 
     /**
      * {@code diff} cut off after {@link #MAX_LINES} lines, or before the line that would make it longer than
-     * {@link #MAX_CHARS} characters.
+     * {@link #MAX_CHARS} characters: its text up to there as git wrote it.
      */
     static DiffText truncated(String diff) {
-        List<String> lines = GitOutput.lines(diff);
-        if (lines.size() <= MAX_LINES && diff.length() <= MAX_CHARS) {
-            return DiffText.of(diff);
-        }
-        return DiffText.of(lines.take(kept(lines)).mkString("", "\n", "\n"), true);
+        return cut(diff).map(end -> DiffText.of(diff.substring(0, end), true)).getOrElse(() -> DiffText.of(diff));
     }
 
     /**
-     * How many of the first of {@code lines} are kept: at most {@link #MAX_LINES}, of at most {@link #MAX_CHARS}
-     * characters with the line ends.
+     * Where {@code diff} is cut off: after the last whole line that keeps it within {@link #MAX_LINES} lines and
+     * {@link #MAX_CHARS} characters. Only {@code \n} ends a line: in git's output a {@code \r} is part of one. None
+     * when it is within both whole.
      */
-    private static int kept(List<String> lines) {
-        return lines.take(MAX_LINES)
-                .scanLeft(0L, (chars, line) -> chars + line.length() + 1)
-                .tail()
-                .takeWhile(chars -> chars <= MAX_CHARS)
-                .size();
+    private static Option<Integer> cut(String diff) {
+        long lines = diff.chars().filter(c -> c == '\n').count() + (diff.isEmpty() || diff.endsWith("\n") ? 0 : 1);
+        if (lines <= MAX_LINES && diff.length() <= MAX_CHARS) {
+            return Option.none();
+        }
+        return Option.of(Iterator.iterate(diff.indexOf('\n'), at -> diff.indexOf('\n', at + 1))
+                .takeWhile(at -> at >= 0)
+                .map(at -> at + 1)
+                .take(MAX_LINES)
+                .takeWhile(end -> end <= MAX_CHARS)
+                .foldLeft(0, (last, end) -> end));
     }
 
     private static Either<GitError, String> run(Path worktree, List<String> args, Map<String, String> env) {
