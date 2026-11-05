@@ -6,6 +6,7 @@ import static dev.tamboui.toolkit.Toolkit.text;
 import static dev.tamboui.toolkit.Toolkit.textInput;
 
 import dev.tamboui.layout.Constraint;
+import dev.tamboui.style.Style;
 import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
@@ -47,6 +48,7 @@ public final class FilterLine {
                         textInput(input)
                                 .focusable(false)
                                 .cursorRequiresFocus(false)
+                                .cursorStyle(Style.EMPTY)
                                 .constraint(Constraint.fill()))
                 .length(1);
     }
