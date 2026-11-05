@@ -922,7 +922,9 @@ public final class ContentPanel {
                         lines,
                         stops,
                         DiffCursor.indexes(stops),
-                        lines.map(Line::width).max().getOrElse(0),
+                        // Measured on the threads of the common pool, as a line is measured a character at a time
+                        // and a diff can have tens of thousands; the render thread waits for it either way.
+                        lines.toJavaParallelStream().mapToInt(Line::width).max().orElse(0),
                         stops.filter(stop -> switch (stop.mark().anchor()) {
                                     case Anchor.File _, Anchor.OnLine _, Anchor.Gap _ -> true;
                                     case Anchor.Lead _, Anchor.Thread _, Anchor.Comment _ -> false;

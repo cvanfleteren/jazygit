@@ -53,6 +53,21 @@ class ThemeTest {
     }
 
     @Test
+    void theStylesOfSpansFollowTheThemeOnceTheyWereResolved() {
+        var engine = Theme.createEngine().get();
+        Theme.SpanStyles styles = Theme.spanStyles(engine);
+        var dark = styles.of(Theme.Classes.DIFF_ADDED);
+
+        Theme.activate(engine, ThemeName.DARK_COLORBLIND);
+        assertEquals(
+                java.util.Optional.of(Color.hex("#56b4e9")),
+                styles.of(Theme.Classes.DIFF_ADDED).fg());
+        Theme.activate(engine, ThemeName.DARK);
+        assertEquals(dark, styles.of(Theme.Classes.DIFF_ADDED));
+        assertNotEquals(dark.fg(), java.util.Optional.of(Color.hex("#56b4e9")));
+    }
+
+    @Test
     void everyThemeBordersPopupsLikeTheFocusedPanel() {
         for (ThemeName name : styledThemes()) {
             var engine = Theme.createEngine().get();

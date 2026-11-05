@@ -229,6 +229,57 @@ class WordDiffTest {
                 WordDiff.segments(List.of(hunk), 0));
     }
 
+    @Test
+    void aPairThatDiffersInADeletionOnlyHighlightsWhatTheRemovedLineHasMore() {
+        assertEquals(
+                Tuple.of(
+                        List.of(changed(false, "foo(a"), changed(true, ", b"), changed(false, ")")),
+                        List.of(changed(false, "foo(a)"))),
+                WordDiff.compared("foo(a, b)", "foo(a)"));
+    }
+
+    @Test
+    void aPairThatDiffersInAnIndentOnlyHighlightsTheIndent() {
+        assertEquals(
+                Tuple.of(
+                        List.of(changed(false, "line 1: the quick fox")),
+                        List.of(changed(true, " "), changed(false, "line 1: the quick fox"))),
+                WordDiff.compared("line 1: the quick fox", " line 1: the quick fox"));
+    }
+
+    @Test
+    void aPairThatDiffersInAnInsertionTwiceTheLengthOfTheShorterLineWasRewritten() {
+        assertEquals(
+                Tuple.of(List.of(changed(false, "x")), List.of(changed(false, "x + y"))),
+                WordDiff.compared("x", "x + y"));
+    }
+
+    @Test
+    void aPairThatStartsAlikeWithinAWordHighlightsTheWholeWord() {
+        assertEquals(
+                Tuple.of(
+                        List.of(changed(false, "foo("), changed(true, "a"), changed(false, ")")),
+                        List.of(changed(false, "foo("), changed(true, "ab"), changed(false, ")"))),
+                WordDiff.compared("foo(a)", "foo(ab)"));
+    }
+
+    @Test
+    void anInsertionIsHighlightedAWholeCodePointAtATime() {
+        // Both emoji start with the same surrogate, so the lines are alike for one character more than for a token.
+        assertEquals(
+                Tuple.of(
+                        List.of(changed(false, "😀😀")),
+                        List.of(changed(false, "😀"), changed(true, "😃"), changed(false, "😀"))),
+                WordDiff.compared("😀😀", "😀😃😀"));
+    }
+
+    @Test
+    void aPairOfLinesAlikeHighlightsNothing() {
+        assertEquals(
+                Tuple.of(List.of(changed(false, "same")), List.of(changed(false, "same"))),
+                WordDiff.compared("same", "same"));
+    }
+
     private static List<List<Segment>> segments(List<DiffLine> lines) {
         return WordDiff.segments(List.of(lines)).head();
     }
