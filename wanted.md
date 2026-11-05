@@ -30,7 +30,7 @@ Features to consider, roughly most valuable first.
 10. **Commit graph.** `CommitGraph` exists in the model; draw the lanes in the commits panel if it doesn't yet.
 11. **Diff options.** Ignoring whitespace is done (Ctrl+W, `DiffOptions`), and so is the rich view of the changes of
     the working tree, of a commit and of a stash, with line numbers and the changed words highlighted (Ctrl+D, ADR 44,
-    ADR 47), its code coloured by its syntax (ADR 53), and the amount of context (`{` and `}`, ADR 75). Still to do:
+    ADR 47), its code coloured by its syntax (ADR 53), and the amount of context (`{` and `}`, ADR 76). Still to do:
     side-by-side, as another field of `DiffOptions`; the rich
     view for the diff of a pull request. The pull request diff (`gh pr diff`) shows all whitespace; it could be
     filtered, or read with git when the branches are fetched.

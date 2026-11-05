@@ -3,7 +3,7 @@ package net.vanfleteren.jazygit.git.model;
 import io.vavr.collection.List;
 
 /**
- * How many lines a diff shows around a change, as {@code git diff -U<n>} reads it (ADR 75).
+ * How many lines a diff shows around a change, as {@code git diff -U<n>} reads it (ADR 76).
  *
  * @param lines the lines before and after each change; {@link #WHOLE_FILE} shows the whole file
  */

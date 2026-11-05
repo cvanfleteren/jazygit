@@ -348,7 +348,7 @@ How the diffs of the files and the commits are read is a `DiffOptions` (in `git.
 `Preferences.diffOptions()` makes of what the user chose. It says whether changes to whitespace only are left out,
 which Ctrl+W toggles anywhere outside a dialog (`feature.diff`) for the session only, and whether a merge is read
 against its first parent, which the diff style decides (below), and how many lines are shown around a change
-(`DiffContext`, ADR 75), which `}` and `{` step along 0, 1, 3, 5, 10, 20, 50 and the whole file, for the session
+(`DiffContext`, ADR 76), which `}` and `{` step along 0, 1, 3, 5, 10, 20, 50 and the whole file, for the session
 only; side-by-side diffs are to follow them there.
 
 - `Diffs.uncommitted` and `Diffs.commitChanges` take the options, which `CliDiffs.flags` turns into git's
