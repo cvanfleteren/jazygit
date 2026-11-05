@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff;
+import net.vanfleteren.jazygit.process.Limit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.zeroturnaround.exec.ProcessExecutor;
@@ -145,31 +146,37 @@ class CliDiffsTest {
     }
 
     @Test
-    void aLongDiffIsCutOffAndSaysSo() {
-        String full = List.range(0, CliDiffs.MAX_LINES).map(i -> "+" + i + "\n").mkString();
+    void aLongDiffIsReadOnlyUpToTheLimitAndSaysSo() throws Exception {
+        git("init", "-q");
+        Files.writeString(repo.resolve("big.txt"), "line\n".repeat(CliDiffs.LIMIT.lines() + 10));
 
-        assertEquals(DiffText.of(full), CliDiffs.truncated(full));
-        assertEquals(DiffText.of(full, true), CliDiffs.truncated(full + "+more\n"));
+        DiffText unstaged = diffs().uncommitted(
+                        List.of(Fixtures.fileEntry("big.txt", ChangeType.UNTRACKED)), DiffOptions.DEFAULT)
+                .get()
+                .unstaged();
+
+        assertTrue(unstaged.truncated());
+        assertEquals(CliDiffs.LIMIT.lines(), unstaged.text().lines().count());
+        assertTrue(unstaged.text().endsWith("+line\n"));
     }
 
     @Test
-    void aDiffOfLongLinesIsCutOffAtTheLastWholeLineThatFits() {
-        // 1000 characters with its line end: as many fit as there are thousands in the most characters.
-        String line = "+" + "x".repeat(998) + "\n";
-        String fits = line.repeat(CliDiffs.MAX_CHARS / 1000);
+    void aDiffOfALineLongerThanTheLimitKeepsOnlyWhatComesBeforeIt() throws Exception {
+        git("init", "-q");
+        Files.writeString(repo.resolve("long.txt"), "x".repeat(CliDiffs.LIMIT.chars()) + "\n");
 
-        assertEquals(DiffText.of(fits), CliDiffs.truncated(fits));
-        assertEquals(DiffText.of(fits, true), CliDiffs.truncated(fits + line));
+        DiffText unstaged = diffs().uncommitted(
+                        List.of(Fixtures.fileEntry("long.txt", ChangeType.UNTRACKED)), DiffOptions.DEFAULT)
+                .get()
+                .unstaged();
+
+        assertTrue(unstaged.truncated());
+        assertTrue(unstaged.text().endsWith("@@ -0,0 +1 @@\n"), unstaged.text());
     }
 
     @Test
-    void aDiffOfCrlfLinesIsCutOffAsGitWroteIt() {
-        // A \r is part of its line: counted, and kept, as git wrote it; one in the middle of a line ends nothing.
-        String line = "+" + "x".repeat(497) + "\r" + "y".repeat(499) + "\r\n";
-        String fits = line.repeat(CliDiffs.MAX_CHARS / 1000);
-
-        assertEquals(DiffText.of(fits), CliDiffs.truncated(fits));
-        assertEquals(DiffText.of(fits, true), CliDiffs.truncated(fits + line));
+    void aDiffIsReadUpTo50000LinesOr4MiB() {
+        assertEquals(new Limit(50_000, 4 * 1024 * 1024), CliDiffs.LIMIT);
     }
 
     @Test

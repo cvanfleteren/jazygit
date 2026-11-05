@@ -39,6 +39,13 @@ public sealed interface GitError {
     record Interrupted(String operation) implements GitError {}
 
     /**
+     * The git command printed more than is ever read, so it was stopped (ADR 79).
+     *
+     * @param operation the git subcommand, e.g. {@code status}
+     */
+    record TooMuchOutput(String operation) implements GitError {}
+
+    /**
      * Git ran, but refused.
      *
      * @param explanation the line git printed about why, preferring its error output; none if it printed

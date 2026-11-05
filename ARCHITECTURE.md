@@ -113,7 +113,7 @@ inside the core, the compiler does: it cannot reach the app's packages at all, n
 | `git.model` | Immutable value types describing the repository. |
 | `gh` | Everything that talks to GitHub, all through the `gh` command line. It knows nothing of `git`, and `git` knows nothing of it; the features combine them. |
 | `gh.model` | Immutable value types describing GitHub: `PullRequest`, `PullRequestDetails`, `MergeMethod`, `GhAccount`, `GhLogin`. |
-| `process` | `Exec`, the only place that starts a program, for `git` and `gh` alike, and its `ExecFailure`; `ExecutedCommand`, a command as it ran; `CommandLine`, how a command line is written. |
+| `process` | `Exec`, the only place that starts a program, for `git` and `gh` alike, and its `ExecFailure`; `Limit`, how much of its output is read (ADR 79); `ExecutedCommand`, a command as it ran; `CommandLine`, how a command line is written. |
 | `i18n` | `Messages`: the user-facing texts, from `messages.properties`. |
 | `settings` | What the user keeps from one session to the next (`Settings`, `ThemeName`), where it is kept (`SettingsPaths`) and the TOML file it is kept in (`SettingsFile`, behind `SettingsStore`); the state jazygit keeps by itself, the recent repositories (`RecentRepositoriesFile`, behind `RecentRepositories`). |
 
@@ -331,7 +331,7 @@ request. The design and the steps still to come are in `prs.md`.
   one of another repository opens in the browser, as `O` does for any (`gh pr view <url> --web`).
 - **The preview**: the content panel shows the pull request highlighted in the pane in use like a commit: a header,
   its title and description, `---`, and its diff, read with `gh pr view <url> --json baseRefName,body` and
-  `gh pr diff <url>`, so also for repositories that are not cloned; the diff is cut off as git's are, after 50 000 lines or 4 MiB
+  `gh pr diff <url>`, so also for repositories that are not cloned; the diff is read only up to where git's are cut off, 50 000 lines or 4 MiB
   (ADR 79). It is read
   again when the pull request changed (`PrOverview.preview` is keyed by its summary), and the one shown before
   stays while it is read. Enter moves the focus into it, Escape back to the pane it shows.
@@ -938,8 +938,8 @@ helpers. A test replaces the roles it needs on `StubGit.of()`, as in `StubGit.of
       itself, which saves a process. The stashes are the reflog of `refs/stash`, as git's documentation of
       `git stash` says. Without a stash there is no reflog, which `--ignore-missing` makes an empty list.
     - `CliRemotes` reads the remotes.
-    - These each have a pure parser for git's output. `CliDiffs` returns git's text, cut off when it
-      is long (after 50 000 lines or 4 MiB, ADR 79), and parses the files `--name-status -z` lists, for a commit, a range, a stash and a pull request.
+    - These each have a pure parser for git's output. `CliDiffs` returns git's text, read only up to 50 000 lines
+      or 4 MiB and cut off there (`CliDiffs.LIMIT`, ADR 79), and parses the files `--name-status -z` lists, for a commit, a range, a stash and a pull request.
   - **Writes:** `CliCheckout`, `CliBranches` (rename, delete), `CliIndex` (stage, commit, discard),
     `CliCommits`, `CliIntegrate`, `CliRebase`, `CliStashes`, `CliRemotes` (push, pull, fetch, delete on the remote) and `CliWorktrees` (add, remove).
   - **Opening:** `CliGit.open` asks `git rev-parse` whether the directory is in a repository,
@@ -957,7 +957,9 @@ helpers. A test replaces the roles it needs on `StubGit.of()`, as in `StubGit.of
   - **Remotes:** a command that talks to a remote runs ssh in batch mode (`CliRemotes.toRemote`), so a
     passphrase or unknown host fails rather than prompts.
   - It returns `Either<GitFailure, Output>`. A failure's `CommandFailed` holds the line
-    that explains it (the first `error:` or `fatal:` line, else the first line) and everything git printed.
+    that explains it (the first `error:` or `fatal:` line, else the first line) and what git printed: its output
+    up to 64 MiB, more is `TooMuchOutput`, and the first 64 KiB of its errors (ADR 79). A diff is read with
+    `GitProcess.read(worktree, command, limit)`, which stops git once it printed more than the limit.
 
 ## The GitHub layer
 

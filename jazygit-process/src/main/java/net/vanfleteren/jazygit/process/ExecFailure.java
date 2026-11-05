@@ -17,6 +17,11 @@ public sealed interface ExecFailure {
     record Interrupted() implements ExecFailure {}
 
     /**
+     * The program printed more than is ever read, so it was stopped (ADR 79).
+     */
+    record TooMuchOutput() implements ExecFailure {}
+
+    /**
      * The program ran, and exited with a non-zero code.
      */
     record NonZero(int exitCode, String stderr, String stdout) implements ExecFailure {}

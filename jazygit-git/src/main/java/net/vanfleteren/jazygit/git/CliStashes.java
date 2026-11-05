@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
+import net.vanfleteren.jazygit.process.Limited;
 
 /**
  * The {@link Stashes} of a repository, through the {@code git stash} command line tool. A checkout that takes the
@@ -100,7 +101,7 @@ final class CliStashes implements Stashes {
      */
     @Override
     public Either<GitError, DiffText> changes(Sha stash, DiffOptions options) {
-        return GitProcess.read(
+        return CliDiffs.diff(
                 worktree,
                 GitCommand.reading(List.of(
                                 "stash",
@@ -112,8 +113,7 @@ final class CliStashes implements Stashes {
                                 "--no-ext-diff")
                         .appendAll(CliDiffs.STASH_SHOW_PREFIXES)
                         .appendAll(CliDiffs.flags(options))
-                        .append(stash.value())),
-                output -> Either.right(CliDiffs.truncated(output)));
+                        .append(stash.value())));
     }
 
     /**
@@ -151,22 +151,31 @@ final class CliStashes implements Stashes {
                                         .append(stash.value())
                                         .appendAll(paths))
                                 .withLiteralPaths(),
-                        Either::right)
-                .flatMap(tracked -> GitProcess.ask(
-                                worktree, GitCommand.reading("rev-parse", "--quiet", "--verify", untracked))
-                        .mapLeft(GitFailure::error)
-                        .flatMap(parent -> parent.isEmpty()
-                                ? Either.right("")
-                                : GitProcess.read(
-                                        worktree,
-                                        GitCommand.reading(List.of("show", "--format=")
-                                                        .appendAll(flags)
-                                                        .append(untracked)
-                                                        .appendAll(paths))
-                                                .withLiteralPaths(),
-                                        Either::right))
-                        .map(tracked::concat))
-                .map(CliDiffs::truncated);
+                        CliDiffs.LIMIT)
+                .flatMap(tracked -> tracked.cut()
+                        ? Either.right(tracked)
+                        : GitProcess.ask(worktree, GitCommand.reading("rev-parse", "--quiet", "--verify", untracked))
+                                .mapLeft(GitFailure::error)
+                                .flatMap(parent -> parent.isEmpty()
+                                        ? Either.right(new Limited("", false))
+                                        : GitProcess.read(
+                                                worktree,
+                                                GitCommand.reading(List.of("show", "--format=")
+                                                                .appendAll(flags)
+                                                                .append(untracked)
+                                                                .appendAll(paths))
+                                                        .withLiteralPaths(),
+                                                CliDiffs.LIMIT))
+                                .map(added -> joined(tracked, added)))
+                .map(CliDiffs::diff);
+    }
+
+    /**
+     * {@code first}, which was not cut off, and then {@code second}, cut off again as one diff (ADR 79).
+     */
+    private static Limited joined(Limited first, Limited second) {
+        Limited both = CliDiffs.LIMIT.cut(first.text() + second.text());
+        return new Limited(both.text(), both.cut() || second.cut());
     }
 
     /**

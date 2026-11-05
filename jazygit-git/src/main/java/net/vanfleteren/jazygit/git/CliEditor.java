@@ -152,6 +152,8 @@ final class CliEditor implements Editor {
             case ExecFailure.Interrupted() -> new Interrupted(editor);
             // The editor gets as long as the user takes.
             case ExecFailure.TimedOut() -> new Interrupted(editor);
+            // Its output goes to the terminal, not to jazygit.
+            case ExecFailure.TooMuchOutput() -> new Interrupted(editor);
         };
     }
 }

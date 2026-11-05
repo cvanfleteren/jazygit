@@ -4,11 +4,14 @@ import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.function.Function;
 import net.vanfleteren.jazygit.json.Decoder;
 import net.vanfleteren.jazygit.process.Exec;
 import net.vanfleteren.jazygit.process.ExecFailure;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
+import net.vanfleteren.jazygit.process.Limit;
+import net.vanfleteren.jazygit.process.Limited;
 
 /**
  * Runs {@link GhCommand}s through the {@code gh} command line tool. The only place that starts gh.
@@ -77,6 +80,16 @@ final class GhProcess {
     }
 
     /**
+     * Runs {@code command} to read what it prints, only up to {@code limit}: once it printed more, it is stopped and
+     * what it printed is cut off (ADR 79). Reads are not logged.
+     */
+    Either<GhError, Limited> read(GhCommand command, Limit limit) {
+        return execute(
+                command,
+                (directory, line, environment, timeout) -> Exec.read(directory, line, environment, timeout, limit));
+    }
+
+    /**
      * Runs {@code command} to read the JSON it prints, which {@code decoder} decodes (ADR 42). JSON that cannot be
      * parsed or decoded is unexpected output, which says where and why.
      */
@@ -92,23 +105,28 @@ final class GhProcess {
         return decoder.parse(stdout).mapLeft(error -> new GhError.UnexpectedOutput(error.text()));
     }
 
-    /**
-     * Runs {@code command} as the configured account; once more with the token asked again, when GitHub did not
-     * accept it, as it may have been replaced since.
-     */
     private Either<GhError, Output> execute(GhCommand command) {
+        return execute(command, Exec::run).map(stdout -> new Output(stdout, command.executed()));
+    }
+
+    /**
+     * Runs {@code command} with {@code execution} as the configured account; once more with the token asked again,
+     * when GitHub did not accept it, as it may have been replaced since.
+     */
+    private <T> Either<GhError, T> execute(GhCommand command, Execution<T> execution) {
         return token.environment()
-                .flatMap(variables -> execute(command, variables)
+                .flatMap(variables -> execute(command, variables, execution)
                         .fold(
                                 // Without a configured account, gh uses its own, which asking again does not change.
                                 error -> variables.isEmpty() || !rejected(error)
                                         ? Either.left(error)
-                                        : executeAgain(command),
+                                        : executeAgain(command, execution),
                                 Either::right));
     }
 
-    private Either<GhError, Output> execute(GhCommand command, Map<String, String> variables) {
-        return Exec.run(
+    private <T> Either<GhError, T> execute(GhCommand command, Map<String, String> variables, Execution<T> execution) {
+        return execution
+                .run(
                         worktree,
                         command.commandLine(executable),
                         command.environment().merge(variables),
@@ -117,12 +135,12 @@ final class GhProcess {
                     case ExecFailure.NotStarted(var cause) -> new GhError.GhUnavailable(cause);
                     case ExecFailure.TimedOut() -> new GhError.TimedOut(command.operation());
                     case ExecFailure.Interrupted() -> new GhError.Interrupted(command.operation());
+                    case ExecFailure.TooMuchOutput() -> new GhError.TooMuchOutput(command.operation());
                     case ExecFailure.NonZero(int exitCode, String stderr, String stdout) ->
                         tooOld(stderr)
                                 ? new GhError.TooOld(SLURP_SINCE)
                                 : new GhError.CommandFailed(Exec.explanation(stderr, stdout), exitCode);
-                })
-                .map(stdout -> new Output(stdout, command.executed()));
+                });
     }
 
     /**
@@ -132,9 +150,18 @@ final class GhProcess {
         return stderr.contains("unknown flag: --slurp");
     }
 
-    private Either<GhError, Output> executeAgain(GhCommand command) {
+    private <T> Either<GhError, T> executeAgain(GhCommand command, Execution<T> execution) {
         token.forget();
-        return token.environment().flatMap(variables -> execute(command, variables));
+        return token.environment().flatMap(variables -> execute(command, variables, execution));
+    }
+
+    /**
+     * How gh is run: as {@link Exec#run}, or as {@link Exec#read} with a limit.
+     */
+    @FunctionalInterface
+    private interface Execution<T> {
+        Either<ExecFailure, T> run(
+                Path directory, List<String> commandLine, Map<String, String> environment, Duration timeout);
     }
 
     /**

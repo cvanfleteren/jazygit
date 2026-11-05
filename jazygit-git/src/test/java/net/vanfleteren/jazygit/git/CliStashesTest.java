@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
+import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff;
@@ -65,6 +66,23 @@ class CliStashesTest {
         assertFalse(tracked.contains("untracked"), tracked);
         assertTrue(untracked.contains("+u"), untracked);
         assertFalse(untracked.contains("other"), untracked);
+    }
+
+    @Test
+    void theTrackedAndUntrackedChangesOfAStashAreCutOffAsOneDiff() throws Exception {
+        init();
+        int half = CliDiffs.LIMIT.lines() / 2;
+        Files.writeString(repo.resolve("a.txt"), "tracked\n".repeat(half));
+        Files.writeString(repo.resolve("untracked.txt"), "untracked\n".repeat(half));
+        git("stash", "push", "-u", "-qm", "my work");
+
+        DiffText changes = stashes()
+                .fileChanges(stash(), stashes().files(stash()).get(), DiffOptions.DEFAULT)
+                .get();
+
+        assertTrue(changes.truncated());
+        assertEquals(CliDiffs.LIMIT.lines(), changes.text().lines().count());
+        assertTrue(changes.text().endsWith("+untracked\n"));
     }
 
     @Test

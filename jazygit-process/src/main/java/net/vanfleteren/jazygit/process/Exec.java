@@ -14,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeroturnaround.exec.ProcessExecutor;
 import org.zeroturnaround.exec.ProcessResult;
+import org.zeroturnaround.exec.listener.ProcessListener;
 
 /**
  * Runs a command line program and waits for it. The only place that starts processes.
@@ -22,6 +23,8 @@ public final class Exec {
 
     // The most of the error output that is kept: what went wrong is said at its start (ADR 79).
     static final int MAX_STDERR = 64 * 1024;
+    // The most of any output that is read, which is far more than is ever meant to be (ADR 79).
+    static final Limit MAX_OUTPUT = new Limit(Integer.MAX_VALUE, 64 * 1024 * 1024);
     // How git starts the lines that say what went wrong.
     private static final List<String> ERROR_PREFIXES = List.of("fatal:", "error:", "CONFLICT");
     // What ran, for the debug log; never the environment, which may hold a token.
@@ -37,26 +40,53 @@ public final class Exec {
     public static Either<ExecFailure, String> run(
             Path directory, List<String> commandLine, Map<String, String> environment, Duration timeout) {
         long started = System.nanoTime();
-        return logged(directory, commandLine, started, execute(directory, commandLine, environment, timeout));
+        return logged(
+                directory,
+                commandLine,
+                started,
+                execute(directory, commandLine, environment, timeout, MAX_OUTPUT)
+                        .flatMap(output -> output.cut()
+                                ? Either.left(new ExecFailure.TooMuchOutput())
+                                : Either.right(output.text())));
     }
 
-    private static Either<ExecFailure, String> execute(
-            Path directory, List<String> commandLine, Map<String, String> environment, Duration timeout) {
+    /**
+     * Runs {@code commandLine} as {@link #run} does, reading its standard output only up to {@code limit}: once it
+     * printed more, it is stopped, and what it printed is cut off, however it exited (ADR 79).
+     *
+     * @return what it printed, when it exited with 0 or was cut off
+     */
+    public static Either<ExecFailure, Limited> read(
+            Path directory, List<String> commandLine, Map<String, String> environment, Duration timeout, Limit limit) {
+        long started = System.nanoTime();
+        return logged(directory, commandLine, started, execute(directory, commandLine, environment, timeout, limit));
+    }
+
+    private static Either<ExecFailure, Limited> execute(
+            Path directory, List<String> commandLine, Map<String, String> environment, Duration timeout, Limit limit) {
         FirstBytes stderr = new FirstBytes(MAX_STDERR);
+        CutOutput stdout = new CutOutput(limit);
         try {
             ProcessResult result = new ProcessExecutor()
                     .command(commandLine.toJavaList())
                     .directory(directory.toFile())
                     .environment(environment.toJavaMap())
-                    .readOutput(true)
+                    .redirectOutput(stdout)
                     .redirectError(stderr)
+                    .addListener(new ProcessListener() {
+                        @Override
+                        public void afterStart(Process process, ProcessExecutor executor) {
+                            stdout.whenOver(() -> stop(process));
+                        }
+                    })
                     .exitValueAny()
                     .timeout(timeout.toMillis(), TimeUnit.MILLISECONDS)
                     .execute();
-            return result.getExitValue() == 0
-                    ? Either.right(result.outputUTF8())
+            Limited output = stdout.limited();
+            return output.cut() || result.getExitValue() == 0
+                    ? Either.right(output)
                     : Either.left(new ExecFailure.NonZero(
-                            result.getExitValue(), stderr.toString(StandardCharsets.UTF_8), result.outputUTF8()));
+                            result.getExitValue(), stderr.toString(StandardCharsets.UTF_8), output.text()));
         } catch (IOException e) {
             return Either.left(new ExecFailure.NotStarted(e));
         } catch (TimeoutException e) {
@@ -65,6 +95,14 @@ public final class Exec {
             Thread.currentThread().interrupt();
             return Either.left(new ExecFailure.Interrupted());
         }
+    }
+
+    /**
+     * Stops {@code process}, and what it started, which may hold its output open.
+     */
+    private static void stop(Process process) {
+        process.descendants().forEach(ProcessHandle::destroyForcibly);
+        process.destroyForcibly();
     }
 
     /**
@@ -121,6 +159,7 @@ public final class Exec {
             case ExecFailure.NotStarted(IOException cause) -> "not started: " + cause.getMessage();
             case ExecFailure.TimedOut() -> "timed out";
             case ExecFailure.Interrupted() -> "interrupted";
+            case ExecFailure.TooMuchOutput() -> "too much output";
         };
     }
 
