@@ -3,8 +3,9 @@ package net.vanfleteren.jazygit.ui;
 import dev.tamboui.style.Style;
 import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
-import dev.tamboui.text.Text;
+import io.vavr.Tuple;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.state.Anchor;
@@ -31,18 +32,37 @@ record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int stop, 
      * {@code row}, on the stop {@code at} is on now ({@link DiffStops#nearest}), or the first, with its range from
      * {@code mark} while that is a line of the hunk of the cursor; the view scrolled so it shows it. None when the diff
      * has no stop.
+     *
+     * @param indexes the index of the stop of each anchor of {@code stops}, {@link #indexes}, made once for the diff:
+     *                a frame of a long diff then finds the stop the cursor is on without going through all of them
      */
     static Option<DiffCursor> of(
-            Vector<RichDiff.Stop> stops, int lines, int height, int row, Option<Anchor> at, Option<Anchor> mark) {
-        Vector<Anchor> anchors = stops.map(stop -> stop.mark().anchor());
-        int on = at.flatMap(anchor -> DiffStops.nearest(anchors, anchor))
-                .map(anchors::indexOf)
+            Vector<RichDiff.Stop> stops,
+            Map<Anchor, Integer> indexes,
+            int lines,
+            int height,
+            int row,
+            Option<Anchor> at,
+            Option<Anchor> mark) {
+        int on = at.flatMap(anchor -> indexes.get(anchor)
+                        .orElse(() -> DiffStops.nearest(
+                                        stops.map(stop -> stop.mark().anchor()), anchor)
+                                .flatMap(indexes::get)))
                 .getOrElse(0);
         return Option.when(!stops.isEmpty(), () -> {
             DiffCursor cursor = new DiffCursor(stops, lines, Math.max(1, height), on, row, Option.none()).clamped();
-            return cursor.withMark(mark.map(anchors::indexOf).filter(index -> index >= 0 && cursor.sameHunk(index)))
+            return cursor.withMark(mark.flatMap(indexes::get).filter(cursor::sameHunk))
                     .shown();
         });
+    }
+
+    /**
+     * The index of the stop of each anchor of {@code stops}; the first, should two have the same.
+     */
+    static Map<Anchor, Integer> indexes(Vector<RichDiff.Stop> stops) {
+        return stops.zipWithIndex()
+                .reverse()
+                .toMap(stop -> Tuple.of(stop._1().mark().anchor(), stop._2()));
     }
 
     /**
@@ -261,15 +281,14 @@ record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int stop, 
     }
 
     /**
-     * {@code text} with the stop of the cursor tinted in {@code tint} (ADR 60): a bar or a line as wide as its file,
+     * {@code lines} with the stop of the cursor tinted in {@code tint} (ADR 60): a bar or a line as wide as its file,
      * the rule of a thread reversed, the lead not at all; while a range is open, each of its lines, marked {@code ┃}
      * in the gutter as the lines a thread covers are. Only those lines are drawn again.
      */
-    Text tinted(Text text, Style tint) {
+    Vector<Line> tinted(Vector<Line> lines, Style tint) {
         RichDiff.Stop on = stops.get(stop);
-        Vector<Line> lines = Vector.ofAll(text.lines());
         int first = on.row();
-        Vector<Line> drawn = mark.isDefined()
+        return mark.isDefined()
                 ? range().foldLeft(lines, (done, index) -> {
                     int at = start(index);
                     return done.update(
@@ -289,7 +308,6 @@ record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int stop, 
                     case Anchor.OnLine ignored ->
                         lines.update(first, tinted(lines.get(first), on.mark().width(), tint));
                 };
-        return Text.from(drawn.toJavaList());
     }
 
     private static Line tinted(Line line, int width, Style tint) {

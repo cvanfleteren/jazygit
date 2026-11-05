@@ -6,7 +6,6 @@ import dev.tamboui.style.Modifier;
 import dev.tamboui.style.Style;
 import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
-import dev.tamboui.text.Text;
 import io.vavr.collection.List;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
@@ -47,9 +46,16 @@ class DiffCursorTest {
         return new RichDiff.Stop(new RichDiff.Mark(anchor, 1, 8, Option.of(new DiffStops.HunkAt(0, 0))), row);
     }
 
+    /**
+     * The cursor of a diff of {@code lines} lines with {@code stops}, indexed as the area indexes them once for a diff.
+     */
+    private static Option<DiffCursor> cursor(
+            Vector<RichDiff.Stop> stops, int lines, int height, int row, Option<Anchor> at, Option<Anchor> mark) {
+        return DiffCursor.of(stops, DiffCursor.indexes(stops), lines, height, row, at, mark);
+    }
+
     private static DiffCursor on(Anchor anchor, int row) {
-        return DiffCursor.of(STOPS, 20, 5, row, Option.of(anchor), Option.none())
-                .get();
+        return cursor(STOPS, 20, 5, row, Option.of(anchor), Option.none()).get();
     }
 
     private static void assertAt(Anchor anchor, int row, DiffCursor cursor) {
@@ -59,11 +65,8 @@ class DiffCursorTest {
 
     @Test
     void itStartsOnTheFirstStopAndADiffWithoutStopsHasNone() {
-        assertAt(
-                LEAD,
-                0,
-                DiffCursor.of(STOPS, 20, 5, 0, Option.none(), Option.none()).get());
-        assertEquals(Option.none(), DiffCursor.of(Vector.empty(), 20, 5, 0, Option.none(), Option.none()));
+        assertAt(LEAD, 0, cursor(STOPS, 20, 5, 0, Option.none(), Option.none()).get());
+        assertEquals(Option.none(), cursor(Vector.empty(), 20, 5, 0, Option.none(), Option.none()));
     }
 
     @Test
@@ -186,7 +189,7 @@ class DiffCursorTest {
                 stop(LAST, 1, 5),
                 line(THREE, 6));
         DiffCursor onReply =
-                DiffCursor.of(stops, 7, 20, 0, Option.of(reply), Option.none()).get();
+                cursor(stops, 7, 20, 0, Option.of(reply), Option.none()).get();
 
         // n and N go from thread to thread, not from comment to comment (ADR 62).
         assertEquals(LAST, onReply.nextThread().get().anchor());
@@ -197,8 +200,7 @@ class DiffCursorTest {
     }
 
     private static DiffCursor onTwoThreads(Anchor anchor) {
-        return DiffCursor.of(TWO_THREADS, 6, 20, 0, Option.of(anchor), Option.none())
-                .get();
+        return cursor(TWO_THREADS, 6, 20, 0, Option.of(anchor), Option.none()).get();
     }
 
     @Test
@@ -229,49 +231,59 @@ class DiffCursorTest {
     void aMarkThatIsNotALineOfTheHunkOfTheCursorIsDropped() {
         assertEquals(
                 Option.none(),
-                DiffCursor.of(STOPS, 20, 5, 0, Option.of(TWO), Option.of(FILE))
-                        .get()
-                        .markAnchor());
+                cursor(STOPS, 20, 5, 0, Option.of(TWO), Option.of(FILE)).get().markAnchor());
         assertEquals(
                 Option.of(ONE),
-                DiffCursor.of(STOPS, 20, 5, 0, Option.of(TWO), Option.of(ONE))
-                        .get()
-                        .markAnchor());
+                cursor(STOPS, 20, 5, 0, Option.of(TWO), Option.of(ONE)).get().markAnchor());
+    }
+
+    @Test
+    void theIndexOfTheStopOfAnAnchorIsThatOfTheFirstWithIt() {
+        assertEquals(
+                io.vavr.collection.HashMap.of(FILE, 0, ONE, 1),
+                DiffCursor.indexes(Vector.of(stop(FILE, 1, 0), line(ONE, 1), line(FILE, 2))));
+    }
+
+    @Test
+    void theCursorIsOnTheStopOfItsAnchorOrTheNearest() {
+        // Line 4 is no stop: the nearest of its side of the file is line 3.
+        assertAt(
+                THREE,
+                15,
+                cursor(STOPS, 20, 5, 15, Option.of(new Anchor.OnLine("a.txt", Side.RIGHT, 4)), Option.none())
+                        .get());
+        assertAt(THREAD, 5, on(THREAD, 5));
     }
 
     @Test
     void theLinesOfARangeAreTintedAndMarkedInTheGutter() {
-        Text text = Text.from(List.range(0, 20)
-                .map(row -> Line.from(Span.raw(" 1  1 │ "), Span.raw("x" + row)))
-                .toJavaList());
-        Text tinted = on(TWO, 11).marked().get().up().tinted(text, Style.EMPTY.reversed());
+        Vector<Line> text = Vector.range(0, 20).map(row -> Line.from(Span.raw(" 1  1 │ "), Span.raw("x" + row)));
+        Vector<Line> tinted = on(TWO, 11).marked().get().up().tinted(text, Style.EMPTY.reversed());
 
-        assertEquals(" 1  1 ┃ x4", tinted.lines().get(4).rawContent());
-        assertEquals(" 1  1 ┃ x15", tinted.lines().get(15).rawContent());
-        assertEquals(" 1  1 │ x5", tinted.lines().get(5).rawContent());
+        assertEquals(" 1  1 ┃ x4", tinted.get(4).rawContent());
+        assertEquals(" 1  1 ┃ x15", tinted.get(15).rawContent());
+        assertEquals(" 1  1 │ x5", tinted.get(5).rawContent());
     }
 
     @Test
     void aBarOrALineIsTintedAsWideAsItsFileAndAThreadHasItsRuleReversed() {
-        Text text = Text.from(List.range(0, 20)
-                .map(row -> switch (row) {
-                    case 5 -> Line.from(Span.raw("  "), Span.raw("┏━"), Span.raw(" bob"));
-                    case 6 -> Line.from(Span.raw("  "), Span.raw("┃ "), Span.raw("me no like"));
-                    default -> Line.from("x" + row);
-                })
-                .toJavaList());
+        Vector<Line> text = Vector.range(0, 20).map(row -> switch (row) {
+            case 5 -> Line.from(Span.raw("  "), Span.raw("┏━"), Span.raw(" bob"));
+            case 6 -> Line.from(Span.raw("  "), Span.raw("┃ "), Span.raw("me no like"));
+            default -> Line.from("x" + row);
+        });
         Style tint = Style.EMPTY.reversed();
 
-        Line bar = on(FILE, 0).tinted(text, tint).lines().get(3);
+        Line bar = on(FILE, 0).tinted(text, tint).get(3);
         assertEquals("x3      ", bar.rawContent());
         assertTrue(bar.spans().stream()
                 .allMatch(span -> span.style().addModifiers().contains(Modifier.REVERSED)));
 
-        Line rule = on(THREAD, 5).tinted(text, tint).lines().get(5);
+        Line rule = on(THREAD, 5).tinted(text, tint).get(5);
         assertTrue(rule.spans().get(1).style().addModifiers().contains(Modifier.REVERSED));
         assertFalse(rule.spans().get(0).style().addModifiers().contains(Modifier.REVERSED));
         // Only the stroke, not the space after it.
-        Line body = on(THREAD, 5).tinted(text, tint).lines().get(6);
+        Line body = on(THREAD, 5).tinted(text, tint).get(6);
         assertEquals("  ┃ me no like", body.rawContent());
         assertEquals(
                 List.of(false, true, false, false),

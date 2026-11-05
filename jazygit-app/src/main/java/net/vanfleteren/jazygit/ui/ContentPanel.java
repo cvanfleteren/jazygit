@@ -24,6 +24,7 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.AbstractList;
 import java.util.Locale;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
@@ -65,6 +66,10 @@ public final class ContentPanel {
      * How the header lines of a diff start, before its first hunk.
      */
     private static final List<String> DIFF_HEADER_PREFIXES = List.of("+++", "---", "diff ", "index ");
+    /**
+     * What an area is given in place of a line that does not show ({@link #windowed}).
+     */
+    private static final Line BLANK = Line.from(Span.raw(""));
 
     private final Theme.SpanStyles styles;
     // The scrollable areas for the diffs, the branch log and the commit. Where they are scrolled to lives in the
@@ -214,6 +219,34 @@ public final class ContentPanel {
                 ._2()
                 .reverse()
                 .toJavaList());
+    }
+
+    /**
+     * {@code lines} as an area shows them from {@code row}, in an area {@code height} lines high: the lines that show,
+     * scrolled {@code column} columns sideways, and a blank one in place of each of the others. TamboUI's text area
+     * measures how wide every line it is given is, each frame, so a long diff would hold up every frame; it still gets
+     * as many lines, for its scrollbar and how far it scrolls. The height is that of the frame before, so the lines are
+     * kept that would show in an area up to twice as high, which the element scrolls up from its last line at its
+     * bottom; all of them before the area was ever drawn.
+     */
+    static Text windowed(Vector<Line> lines, int column, int row, int height) {
+        int high = height > 0 ? 2 * height : lines.size();
+        int top = Math.clamp(row, 0, Math.max(0, lines.size() - high));
+        int bottom = Math.min(lines.size(), row + high);
+        // Text copies the lines it is given, so each line that shows is cut once.
+        return Text.from(new AbstractList<Line>() {
+            @Override
+            public Line get(int index) {
+                return index < top || index >= bottom
+                        ? BLANK
+                        : column == 0 ? lines.get(index) : sideways(lines.get(index), column);
+            }
+
+            @Override
+            public int size() {
+                return lines.size();
+            }
+        });
     }
 
     /**
@@ -573,18 +606,23 @@ public final class ContentPanel {
             shownAt = known;
             RichTextState state = element.state();
             cursor = DiffCursor.of(
-                    current.stops(), current.text().height(), state.viewportHeight(), at.row(), at.cursor(), at.mark());
+                    current.stops(),
+                    current.indexes(),
+                    current.lines().size(),
+                    state.viewportHeight(),
+                    at.row(),
+                    at.cursor(),
+                    at.mark());
             review = shown.body() instanceof Body.Diff(var diff, var look, var remarks) && remarks.isDefined();
             boolean focused = id.equals(focusedId);
-            Text text = cursor.filter(ignored -> focused)
-                    .map(on -> on.tinted(current.text(), styles.of(Theme.Classes.DIFF_CURSOR)))
-                    .getOrElse(current.text());
+            Vector<Line> lines = cursor.filter(ignored -> focused)
+                    .map(on -> on.tinted(current.lines(), styles.of(Theme.Classes.DIFF_CURSOR)))
+                    .getOrElse(current.lines());
             // The size of the area is that of the frame before, as the element only learns it while it draws.
             columns = Math.max(0, current.widest() - state.viewportWidth());
             column = Math.clamp(at.column(), 0, columns);
             int row = cursor.map(DiffCursor::row).getOrElse(at.row());
-            element.text(column == 0 ? text : sideways(text, column, row, state.viewportHeight()))
-                    .title(shown.title());
+            element.text(windowed(lines, column, row, state.viewportHeight())).title(shown.title());
             state.scrollToTop();
             state.scrollDown(row);
             return element.onKeyEvent(event -> keys(event, focused, content))
@@ -741,21 +779,6 @@ public final class ContentPanel {
         }
 
         /**
-         * {@code text} scrolled {@code column} columns sideways, at {@code row} in an area {@code height} lines high:
-         * the lines that show without their first columns. The height is that of the frame before, so the lines are
-         * cut that would show in an area up to twice as high, which the element scrolls up from its last line at its
-         * bottom; all of them before the area was ever drawn.
-         */
-        private static Text sideways(Text text, int column, int row, int height) {
-            Vector<Line> lines = Vector.ofAll(text.lines());
-            int high = height > 0 ? 2 * height : lines.size();
-            int top = Math.clamp(row, 0, Math.max(0, lines.size() - high));
-            return Text.from(Vector.range(top, Math.min(lines.size(), row + high))
-                    .foldLeft(lines, (done, at) -> done.update(at, ContentPanel.sideways(done.get(at), column)))
-                    .toJavaList());
-        }
-
-        /**
          * Tells the model where the area showing {@code content} is scrolled to now.
          */
         private EventResult scrolled(ScrolledContent content) {
@@ -779,21 +802,30 @@ public final class ContentPanel {
         }
 
         /**
-         * {@code body}, styled in {@code theme} as {@code text}, with where the stops of its cursor start, if it has
+         * {@code body}, styled in {@code theme} as {@code lines}, with where the stops of its cursor start, if it has
          * one.
          *
-         * @param widest how wide the widest line of {@code text} is, which the tint of the cursor never makes wider
+         * @param indexes the index of the stop of each anchor, {@link DiffCursor#indexes}
+         * @param widest  how wide the widest of {@code lines} is, which the tint of the cursor never makes wider
          */
-        private record Styled(Body body, ThemeName theme, Text text, Vector<RichDiff.Stop> stops, int widest) {
+        private record Styled(
+                Body body,
+                ThemeName theme,
+                Vector<Line> lines,
+                Vector<RichDiff.Stop> stops,
+                Map<Anchor, Integer> indexes,
+                int widest) {
 
             static Styled of(Body body, ThemeName theme, RichDiff.Drawn drawn) {
-                Text text = styledText(drawn.lines());
+                Vector<Line> lines = drawn.lines().toVector();
+                Vector<RichDiff.Stop> stops = drawn.stops().toVector();
                 return new Styled(
                         body,
                         theme,
-                        text,
-                        drawn.stops().toVector(),
-                        List.ofAll(text.lines()).map(Line::width).max().getOrElse(0));
+                        lines,
+                        stops,
+                        DiffCursor.indexes(stops),
+                        lines.map(Line::width).max().getOrElse(0));
             }
         }
     }
