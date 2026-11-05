@@ -14,9 +14,11 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Duration;
 import java.util.stream.Collectors;
+import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.git.model.ParsedDiff;
 import net.vanfleteren.jazygit.git.model.WordDiff.Segment;
 import net.vanfleteren.jazygit.state.Anchor;
+import net.vanfleteren.jazygit.state.DiffStops;
 import net.vanfleteren.jazygit.state.Expansion;
 import net.vanfleteren.jazygit.syntax.Lexer;
 import net.vanfleteren.jazygit.syntax.Token;
@@ -80,7 +82,7 @@ class RichDiffTest {
         Expansion.Folded reading = new Expansion.Folded(
                 diff, HashMap.of("a.txt", new Expansion.Fold(Option.none(), Expansion.Read.READING)));
 
-        RichDiff.Drawn drawn = RichDiff.drawn(known, true, true, Option.none(), Theme.SpanStyles.NONE);
+        RichDiff.Drawn drawn = RichDiff.drawn(known, true, true, Option.none(), Option.none(), Theme.SpanStyles.NONE);
 
         assertEquals(
                 List.of(
@@ -96,7 +98,7 @@ class RichDiffTest {
                 drawn.stops().map(stop -> stop.mark().anchor()).filter(Anchor.Gap.class::isInstance));
         assertEquals(
                 List.of("┄┄┄┄┄ │ reading the whole file ┄", "┄┄┄┄┄ │ reading the whole file ┄"),
-                text(RichDiff.drawn(reading, true, true, Option.none(), Theme.SpanStyles.NONE)
+                text(RichDiff.drawn(reading, true, true, Option.none(), Option.none(), Theme.SpanStyles.NONE)
                                 .lines())
                         .filter(line -> line.startsWith("┄")));
     }
@@ -135,9 +137,80 @@ class RichDiffTest {
      * The markers {@code folded} is drawn with.
      */
     private static List<String> markers(Expansion.Folded folded) {
-        return text(RichDiff.drawn(folded, true, true, Option.none(), Theme.SpanStyles.NONE)
+        return text(RichDiff.drawn(folded, true, true, Option.none(), Option.none(), Theme.SpanStyles.NONE)
                         .lines())
                 .filter(line -> line.startsWith("┄"));
+    }
+
+    private static final String VERSIONS = """
+            diff --git a/pom.xml b/pom.xml
+            --- a/pom.xml
+            +++ b/pom.xml
+            @@ -43,4 +43,4 @@
+             <spotless>3.10.4</spotless>
+            -<checkstyle>14.3.0</checkstyle>
+            -<errorprone>2.51.0</errorprone>
+            -<native>1.1.17</native>
+            +<checkstyle>14.4.0</checkstyle>
+            +<errorprone>2.52.0</errorprone>
+            +<native>1.1.18</native>
+            """;
+
+    @Test
+    void changedLinesAreShownInPairsAndTheCursorStopsOnThemInThatOrder() {
+        RichDiff.Drawn drawn =
+                RichDiff.drawn(ParsedDiff.of(VERSIONS), true, true, Option.none(), Theme.SpanStyles.NONE);
+
+        assertEquals(
+                List.of(
+                        " modified  pom.xml",
+                        "┄┄┄┄┄ │ 42 lines hidden ┄",
+                        "43 43 │  <spotless>3.10.4</spotless>",
+                        // Each removed line is followed by the line it became (ADR 83).
+                        "44    │ -<checkstyle>14.3.0</checkstyle>",
+                        "   44 │ +<checkstyle>14.4.0</checkstyle>",
+                        "45    │ -<errorprone>2.51.0</errorprone>",
+                        "   45 │ +<errorprone>2.52.0</errorprone>",
+                        "46    │ -<native>1.1.17</native>",
+                        "   46 │ +<native>1.1.18</native>",
+                        "┄┄┄┄┄ │ more ┄"),
+                text(drawn.lines()).map(String::stripTrailing));
+        assertEquals(
+                List.of(
+                        new Anchor.OnLine("pom.xml", Side.LEFT, 44),
+                        new Anchor.OnLine("pom.xml", Side.RIGHT, 44),
+                        new Anchor.OnLine("pom.xml", Side.LEFT, 45),
+                        new Anchor.OnLine("pom.xml", Side.RIGHT, 45),
+                        new Anchor.OnLine("pom.xml", Side.LEFT, 46),
+                        new Anchor.OnLine("pom.xml", Side.RIGHT, 46)),
+                drawn.stops()
+                        .map(stop -> stop.mark().anchor())
+                        .filter(anchor ->
+                                anchor instanceof Anchor.OnLine(var path, var side, int number) && number > 43));
+    }
+
+    @Test
+    void theHunkARangeIsOpenInIsShownAsGitGivesIt() {
+        List<String> lines = text(RichDiff.drawn(
+                                Expansion.Folded.of(ParsedDiff.of(VERSIONS)),
+                                true,
+                                true,
+                                Option.none(),
+                                Option.of(new DiffStops.HunkAt(0, 0)),
+                                Theme.SpanStyles.NONE)
+                        .lines())
+                .filter(line -> line.contains("│ -") || line.contains("│ +"))
+                .map(String::stripTrailing);
+
+        assertEquals(
+                List.of(
+                        "44    │ -<checkstyle>14.3.0</checkstyle>",
+                        "45    │ -<errorprone>2.51.0</errorprone>",
+                        "46    │ -<native>1.1.17</native>",
+                        "   44 │ +<checkstyle>14.4.0</checkstyle>",
+                        "   45 │ +<errorprone>2.52.0</errorprone>",
+                        "   46 │ +<native>1.1.18</native>"),
+                lines);
     }
 
     @Test

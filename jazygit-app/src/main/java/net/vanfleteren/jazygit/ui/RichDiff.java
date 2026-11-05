@@ -14,6 +14,7 @@ import java.util.function.Function;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Folding;
+import net.vanfleteren.jazygit.git.model.LinePairs;
 import net.vanfleteren.jazygit.git.model.ParsedDiff;
 import net.vanfleteren.jazygit.git.model.ParsedDiff.ParsedFile;
 import net.vanfleteren.jazygit.git.model.ParsedDiff.ParsedHunk;
@@ -53,6 +54,7 @@ final class RichDiff {
      * line, which the gutter marks, one about a whole file under its bar, and the ones that cannot be placed at the
      * end of their file. It comes with where each stop of the cursor starts in the lines (ADR 60): the bar of each
      * file, each line that has a side and a number, each thread, and each comment of an open thread but its first.
+     * The lines of a hunk are shown in pairs where they can be (ADR 83, {@link LinePairs}).
      */
     static Drawn drawn(
             ParsedDiff diff,
@@ -60,19 +62,21 @@ final class RichDiff {
             boolean words,
             Option<ContentView.ShownRemarks> remarks,
             Theme.SpanStyles styles) {
-        return drawn(Expansion.Folded.of(diff), syntax, words, remarks, styles);
+        return drawn(Expansion.Folded.of(diff), syntax, words, remarks, Option.none(), styles);
     }
 
     /**
      * The lines of the diff of {@code folded}, as {@link #drawn(ParsedDiff, boolean, boolean, Option,
      * Theme.SpanStyles)} draws them, with a marker for the lines each of its files leaves out, as far as
-     * {@code folded} knows them (ADR 77).
+     * {@code folded} knows them (ADR 77), and the lines of {@code asGiven}, the hunk a range is open in, as git gives
+     * them, not in pairs (ADR 83).
      */
     static Drawn drawn(
             Expansion.Folded folded,
             boolean syntax,
             boolean words,
             Option<ContentView.ShownRemarks> remarks,
+            Option<DiffStops.HunkAt> asGiven,
             Theme.SpanStyles styles) {
         ParsedDiff diff = folded.diff();
         UnifiedDiff parsed = diff.diff();
@@ -94,6 +98,7 @@ final class RichDiff {
                                 file._1()._2(),
                                 file._2(),
                                 folded.fold(file._1()._1().file().path()),
+                                asGiven.filter(hunk -> hunk.file() == file._2()).map(DiffStops.HunkAt::hunk),
                                 syntax,
                                 words,
                                 style,
@@ -129,13 +134,16 @@ final class RichDiff {
      * The lines still to be drawn of {@code parsed}, with the review threads {@code remarks} on it, its code coloured
      * by its syntax if {@code syntax}, its changed words highlighted if {@code words}, its threads drawn as {@code style} says: its bar, the threads on it, each of its
      * lines with those after it, once the width of its gutter and its lines is known, and the threads that cannot be
-     * placed. The threads on a line are followed by a blank line, unless nothing follows them in the file.
+     * placed. The threads on a line are followed by a blank line, unless nothing follows them in the file. The lines of
+     * its hunk {@code asGiven}, and of a block a thread on several lines covers, are shown as git gives them, else in
+     * pairs where they can be (ADR 83).
      */
     private static List<Pending> file(
             ParsedFile parsed,
             Option<FileRemarks> remarks,
             int index,
             Expansion.Fold fold,
+            Option<Integer> asGiven,
             boolean syntax,
             boolean words,
             RemarkLines.RemarkStyle style,
@@ -164,11 +172,17 @@ final class RichDiff {
                 gaps.find(gap -> gap.before() == parsed.hunks().size());
         boolean unplaced = remarks.exists(placed -> !placed.unplaced().isEmpty());
         boolean afterLast = unplaced || trailing.isDefined();
-        Vector<Row> rows = Vector.range(0, lines.size())
-                .map(at ->
-                        new Row(lines.get(at), measured.get(at), onLines.get(at), afterLast || at < lines.size() - 1));
+        Vector<Row> rows =
+                Vector.range(0, lines.size()).map(at -> new Row(lines.get(at), measured.get(at), onLines.get(at)));
         Vector<Vector<Row>> byHunk =
                 cut(rows, parsed.hunks().map(hunk -> hunk.lines().size()));
+        // A block a thread covers stays as git gives it, so its gutter marks the lines the thread is on in a run.
+        List<List<List<Integer>>> groups = parsed.hunks()
+                .zipWithIndex((hunk, at) -> asGiven.contains(at)
+                        ? List.range(0, hunk.lines().size()).map(List::of)
+                        : LinePairs.groups(
+                                hunk.lines(),
+                                line -> byHunk.get(at).get(line).remarks().covered()));
         // The bar is padded in a span of its own, which the area draws as far as its edge (ADR 80).
         return List.<Pending>of(() -> List.of(new Marked(
                                 Line.from(
@@ -185,7 +199,14 @@ final class RichDiff {
                                 placed.onFile(), Option.none(), !file.hunks().isEmpty() || unplaced, styles)))
                 .appendAll(parsed.hunks()
                         .zipWithIndex((hunk, at) -> hunk(
-                                hunk.hunk(), byHunk.get(at), at, gaps.find(gap -> gap.before() == at), fold, layout))
+                                hunk.hunk(),
+                                byHunk.get(at),
+                                groups.get(at),
+                                at,
+                                afterLast || at < parsed.hunks().size() - 1,
+                                gaps.find(gap -> gap.before() == at),
+                                fold,
+                                layout))
                         .flatMap(hunk -> hunk))
                 .appendAll(trailing.toList().map(gap -> marker(gap, fold, layout)))
                 .appendAll(remarks.toList().<Pending>map(placed -> () -> blocks.unplaced(placed.unplaced(), styles)));
@@ -222,8 +243,10 @@ final class RichDiff {
     }
 
     /**
-     * The lines still to be drawn of {@code hunk}, its {@code rows}, each with the threads after it, under a rule that
-     * marks where it starts unless it has no header. The rule stands in for git's {@code @@ -a,b +c,d @@}, whose
+     * The lines still to be drawn of {@code hunk}, its {@code rows} cut into {@code groups} ({@link LinePairs}), each
+     * group followed by the threads after its lines, under a rule that marks where it starts unless it has no header.
+     * The threads after its last group are followed by a blank line if the hunk is {@code followed} by anything in its
+     * file. The rule stands in for git's {@code @@ -a,b +c,d @@}, whose
      * numbers the gutter shows already. Not the section heading git gives after them: it is a line from above the
      * hunk, which reads as one of its own. A header whose numbers cannot be read, whose lines are not numbered,
      * follows the rule as git printed it. The first hunk of a file, at {@code index} 0, has no rule, as the bar of the
@@ -231,7 +254,14 @@ final class RichDiff {
      * a marker that says how many takes the place of the rule (ADR 77).
      */
     private static List<Pending> hunk(
-            Hunk hunk, Vector<Row> rows, int index, Option<Folding.Gap> gap, Expansion.Fold fold, Layout layout) {
+            Hunk hunk,
+            Vector<Row> rows,
+            List<List<Integer>> groups,
+            int index,
+            boolean followed,
+            Option<Folding.Gap> gap,
+            Expansion.Fold fold,
+            Layout layout) {
         boolean first = index == 0;
         Theme.SpanStyles styles = layout.styles();
         Span rule = rule(layout);
@@ -243,17 +273,28 @@ final class RichDiff {
                                 hunk.numbered()
                                         ? Line.from(rule)
                                         : Line.from(rule, styled(hunk.header(), Theme.Classes.DIFF_HUNK, styles)))));
-        return header.appendAll(rows.<Pending>map(row -> () -> {
-            Option<Anchor.OnLine> anchor = Anchor.of(layout.path(), row.parsed().line());
-            return layout.blocks()
-                    .threads(row.remarks().threads(), anchor, row.followed(), styles)
-                    .prepend(new Marked(
+        return header.appendAll(groups.zipWithIndex().<Pending>map(group -> () -> {
+            List<Row> members = group._1().map(rows::get);
+            List<Row> threaded = members.filter(row -> !row.remarks().threads().isEmpty());
+            return members.map(row -> new Marked(
                             line(row, layout),
-                            anchor.map(on -> new Mark(
-                                    on,
-                                    1,
-                                    layout.fileWidth(),
-                                    Option.of(new DiffStops.HunkAt(layout.file(), index))))));
+                            Anchor.of(layout.path(), row.parsed().line())
+                                    .map(on -> new Mark(
+                                            on,
+                                            1,
+                                            layout.fileWidth(),
+                                            Option.of(new DiffStops.HunkAt(layout.file(), index))))))
+                    .appendAll(threaded.zipWithIndex()
+                            .flatMap(row -> layout.blocks()
+                                    .threads(
+                                            row._1().remarks().threads(),
+                                            Anchor.of(
+                                                    layout.path(),
+                                                    row._1().parsed().line()),
+                                            followed
+                                                    || group._2() < groups.size() - 1
+                                                    || row._2() < threaded.size() - 1,
+                                            styles)));
         }));
     }
 
@@ -550,10 +591,9 @@ final class RichDiff {
 
     /**
      * A line of a file with what drawing it takes besides the layout of its file: how many columns its text was
-     * {@code measured} at, the review threads on it, and whether anything in its file follows them, which a blank
-     * line then sets them apart from.
+     * {@code measured} at, and the review threads on it.
      */
-    private record Row(ParsedLine parsed, int measured, LineRemarks remarks, boolean followed) {}
+    private record Row(ParsedLine parsed, int measured, LineRemarks remarks) {}
 
     /**
      * How a changed line is drawn: its marker, the class of the line and that of its changed words.

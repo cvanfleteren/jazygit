@@ -7,10 +7,11 @@ import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
 import net.vanfleteren.jazygit.state.DiffStops.HunkAt;
 
 /**
- * The lines of a diff the cursor of the rich view stops on, in the order it draws them (ADR 60): each line of a hunk
- * that has a side and a number, with its hunk. It is what a key of the review needs to start a thread on a range of
- * lines, or to quote the lines of one: the threads are not placed for it, as the stops between two lines that are not
- * lines are left out of a range anyway.
+ * The lines of a diff the cursor of the rich view stops on, in the order of the diff (ADR 60): each line of a hunk
+ * that has a side and a number, with its hunk. That is the order the rich view draws the hunk a range is open in,
+ * which it otherwise draws in pairs where it can (ADR 83). It is what a key of the review needs to start a thread on a
+ * range of lines, or to quote the lines of one: the threads are not placed for it, as the stops between two lines
+ * that are not lines are left out of a range anyway.
  *
  * @param lines the lines, in order
  */
