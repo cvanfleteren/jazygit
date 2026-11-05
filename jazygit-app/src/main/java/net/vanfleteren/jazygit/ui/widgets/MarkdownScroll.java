@@ -35,10 +35,11 @@ public final class MarkdownScroll {
     }
 
     /**
-     * {@code markdown}, without its HTML comments, scrolled as far as it was, filling the area it gets.
+     * {@code markdown}, without its HTML comments and with its images as links that say so (ADR 82), scrolled as far
+     * as it was, filling the area it gets.
      */
     public Element render(String markdown) {
-        return new Scrolled(MarkdownElement.markdown(withoutHtmlComments(markdown)));
+        return new Scrolled(MarkdownElement.markdown(MarkdownImages.asLinks(withoutHtmlComments(markdown))));
     }
 
     /**
