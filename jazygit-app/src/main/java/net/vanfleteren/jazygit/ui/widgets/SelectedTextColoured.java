@@ -8,6 +8,7 @@ import dev.tamboui.terminal.Frame;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.RenderContext;
 import dev.tamboui.toolkit.element.Size;
+import net.vanfleteren.jazygit.ui.KittyGraphics;
 import net.vanfleteren.jazygit.ui.Theme.SelectedText;
 
 /**
@@ -26,7 +27,10 @@ public record SelectedTextColoured(Element content, SelectedText selectedText) i
         for (int y = coloured.top(); y < coloured.bottom(); y++) {
             for (int x = coloured.left(); x < coloured.right(); x++) {
                 Cell cell = buffer.get(x, y);
-                buffer.set(x, y, cell.style(selectedText.of(cell.style())));
+                // A cell of an image says which image it is by its colour (ADR 86).
+                if (!KittyGraphics.isPlaceholder(cell)) {
+                    buffer.set(x, y, cell.style(selectedText.of(cell.style())));
+                }
             }
         }
     }

@@ -401,8 +401,13 @@ final class RemarkLines {
                 return Tuple.of(done._1().append(cell), done._2());
             }
             int at = done._2().get(index).getOrElse(0);
+            Picture picture = pictures.get(index);
             return Tuple.of(
-                    done._1().append(HalfBlocks.cell(pictures.get(index), at)),
+                    done._1()
+                            .append(
+                                    KittyGraphics.ENABLED && KittyGraphics.draws(picture)
+                                            ? KittyGraphics.cell(picture, at)
+                                            : HalfBlocks.cell(picture, at)),
                     done._2().put(index, at + 1));
         });
     }
