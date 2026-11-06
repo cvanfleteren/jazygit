@@ -13,6 +13,11 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
 public interface GitHub {
 
     /**
+     * The most bytes of an image that are read (ADR 84): more than a screenshot of a large screen takes.
+     */
+    int MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+
+    /**
      * The version of the gh at {@code executable}, as {@code gh --version} prints it first.
      */
     Either<GhError, String> version(String executable);
@@ -78,6 +83,12 @@ public interface GitHub {
      * sees, are left out, and so is a thread of only those.
      */
     Either<GhError, ReviewRemarks> reviewRemarks(int number);
+
+    /**
+     * What is at {@code url}, an image GitHub keeps, as bytes, up to {@link #MAX_IMAGE_BYTES}: more is too much
+     * output (ADR 84).
+     */
+    Either<GhError, byte[]> image(String url);
 
     /**
      * Creates a pull request from the remote branch {@code head} into {@code base}, as {@code pullRequest} says.

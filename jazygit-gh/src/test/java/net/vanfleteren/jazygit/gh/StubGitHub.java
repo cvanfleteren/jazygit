@@ -110,6 +110,14 @@ public interface StubGitHub extends GitHub {
     }
 
     /**
+     * No bytes, which is no image.
+     */
+    @Override
+    default Either<GhError, byte[]> image(String url) {
+        return Either.right(new byte[0]);
+    }
+
+    /**
      * An open pull request {@code number} from branch {@code feature} into {@code main}, with nothing else to it.
      */
     @Override

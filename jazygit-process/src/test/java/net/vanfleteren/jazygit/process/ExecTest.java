@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.process;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -41,6 +42,43 @@ class ExecTest {
                         .getLeft();
 
         assertEquals("x".repeat(Exec.MAX_STDERR), failed.stderr());
+    }
+
+    @Test
+    void bytesAreReadAsTheyArePrintedNotAsText() {
+        Either<ExecFailure, byte[]> read = Exec.readBytes(
+                dir, List.of("printf", "\\211PNG\\000\\377"), HashMap.empty(), Duration.ofSeconds(30), 1 << 20);
+
+        assertArrayEquals(new byte[] {(byte) 0x89, 'P', 'N', 'G', 0, (byte) 0xff}, read.get());
+    }
+
+    @Test
+    void bytesPastTheLimitAreTooMuchOutputAndStopTheProgram() {
+        long started = System.nanoTime();
+
+        Either<ExecFailure, byte[]> read =
+                Exec.readBytes(dir, List.of("yes"), HashMap.empty(), Duration.ofSeconds(30), 1000);
+
+        assertEquals(new ExecFailure.TooMuchOutput(), read.getLeft());
+        assertTrue(Duration.ofNanos(System.nanoTime() - started).compareTo(Duration.ofSeconds(10)) < 0);
+        assertEquals(
+                3,
+                Exec.readBytes(dir, List.of("printf", "abc"), HashMap.empty(), Duration.ofSeconds(30), 3)
+                        .get()
+                        .length);
+    }
+
+    @Test
+    void aProgramThatFailsWhileBytesAreReadKeepsItsErrorOutput() {
+        assertEquals(
+                Either.left(new ExecFailure.NonZero(2, "nope\n", "")),
+                Exec.readBytes(
+                                dir,
+                                List.of("sh", "-c", "echo nope >&2; exit 2"),
+                                HashMap.empty(),
+                                Duration.ofSeconds(30),
+                                100)
+                        .map(bytes -> bytes.length));
     }
 
     @Test

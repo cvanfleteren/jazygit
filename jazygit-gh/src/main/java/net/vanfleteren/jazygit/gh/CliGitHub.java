@@ -199,6 +199,11 @@ public final class CliGitHub implements GitHub {
     }
 
     @Override
+    public Either<GhError, byte[]> image(String url) {
+        return process.readBytes(GhCommand.gh("api", url), MAX_IMAGE_BYTES);
+    }
+
+    @Override
     public Either<GhFailure, Created> createPullRequest(GhBranch head, GhBranch base, NewPullRequest pullRequest) {
         return process.run(createCommand(head, base, pullRequest))
                 .map(output -> new Created(createdNumber(output.stdout()), output.log()));

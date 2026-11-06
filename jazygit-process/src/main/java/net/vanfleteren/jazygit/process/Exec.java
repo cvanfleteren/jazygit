@@ -5,11 +5,13 @@ import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeroturnaround.exec.ProcessExecutor;
@@ -65,6 +67,29 @@ public final class Exec {
     }
 
     /**
+     * Runs {@code commandLine} as {@link #run} does, reading its standard output as bytes, not text, up to
+     * {@code maxBytes}: once it printed more, it is stopped, and that is a failure, {@link ExecFailure.TooMuchOutput}.
+     *
+     * @return what it printed, when it exited with 0
+     */
+    public static Either<ExecFailure, byte[]> readBytes(
+            Path directory, List<String> commandLine, Map<String, String> environment, Duration timeout, int maxBytes) {
+        long started = System.nanoTime();
+        FirstBytes stdout = new FirstBytes(maxBytes);
+        return logged(
+                directory,
+                commandLine,
+                started,
+                started(directory, commandLine, environment, timeout, stdout, stdout::whenOver)
+                        .flatMap(exited -> stdout.over()
+                                ? Either.left(new ExecFailure.TooMuchOutput())
+                                : exited.exitCode() == 0
+                                        ? Either.right(stdout.toByteArray())
+                                        : Either.left(
+                                                new ExecFailure.NonZero(exited.exitCode(), exited.stderr(), ""))));
+    }
+
+    /**
      * Runs {@code commandLine}, reading its output up to {@code limit}; when it takes too long, what it printed until
      * then is kept, if {@code keepWhenLate}.
      */
@@ -75,8 +100,38 @@ public final class Exec {
             Duration timeout,
             Limit limit,
             boolean keepWhenLate) {
-        FirstBytes stderr = new FirstBytes(MAX_STDERR);
         CutOutput stdout = new CutOutput(limit);
+        return started(directory, commandLine, environment, timeout, stdout, stdout::whenOver)
+                .fold(
+                        failure -> {
+                            Limited printed = stdout.wholeLines();
+                            return failure instanceof ExecFailure.TimedOut
+                                            && keepWhenLate
+                                            && !printed.text().isEmpty()
+                                    ? Either.right(printed)
+                                    : Either.left(failure);
+                        },
+                        exited -> {
+                            Limited output = stdout.limited();
+                            return output.cut() || exited.exitCode() == 0
+                                    ? Either.right(output)
+                                    : Either.left(
+                                            new ExecFailure.NonZero(exited.exitCode(), exited.stderr(), output.text()));
+                        });
+    }
+
+    /**
+     * Runs {@code commandLine}, its standard output going to {@code stdout}, which is handed what stops it, to stop it
+     * when it printed too much; how it exited, with the start of its error output.
+     */
+    private static Either<ExecFailure, Exited> started(
+            Path directory,
+            List<String> commandLine,
+            Map<String, String> environment,
+            Duration timeout,
+            OutputStream stdout,
+            Consumer<Runnable> whenOver) {
+        FirstBytes stderr = new FirstBytes(MAX_STDERR);
         try {
             ProcessResult result = new ProcessExecutor()
                     .command(commandLine.toJavaList())
@@ -87,24 +142,17 @@ public final class Exec {
                     .addListener(new ProcessListener() {
                         @Override
                         public void afterStart(Process process, ProcessExecutor executor) {
-                            stdout.whenOver(() -> stop(process));
+                            whenOver.accept(() -> stop(process));
                         }
                     })
                     .exitValueAny()
                     .timeout(timeout.toMillis(), TimeUnit.MILLISECONDS)
                     .execute();
-            Limited output = stdout.limited();
-            return output.cut() || result.getExitValue() == 0
-                    ? Either.right(output)
-                    : Either.left(new ExecFailure.NonZero(
-                            result.getExitValue(), stderr.toString(StandardCharsets.UTF_8), output.text()));
+            return Either.right(new Exited(result.getExitValue(), stderr.toString(StandardCharsets.UTF_8)));
         } catch (IOException e) {
             return Either.left(new ExecFailure.NotStarted(e));
         } catch (TimeoutException e) {
-            Limited printed = stdout.wholeLines();
-            return keepWhenLate && !printed.text().isEmpty()
-                    ? Either.right(printed)
-                    : Either.left(new ExecFailure.TimedOut());
+            return Either.left(new ExecFailure.TimedOut());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             return Either.left(new ExecFailure.Interrupted());
@@ -223,4 +271,9 @@ public final class Exec {
     private static List<String> lines(String output) {
         return List.of(output.split("\\R")).map(String::strip).filter(line -> !line.isEmpty());
     }
+
+    /**
+     * How a program exited: its exit code, and the start of its error output.
+     */
+    private record Exited(int exitCode, String stderr) {}
 }

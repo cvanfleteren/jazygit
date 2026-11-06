@@ -3,10 +3,13 @@ package net.vanfleteren.jazygit.feature.diff;
 import static net.vanfleteren.jazygit.state.TestModels.loaded;
 import static org.junit.jupiter.api.Assertions.*;
 
+import io.vavr.collection.HashMap;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
+import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.gh.model.CommentRights;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
@@ -18,6 +21,7 @@ import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Stash;
+import net.vanfleteren.jazygit.image.Picture;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.state.Cmd;
@@ -215,6 +219,57 @@ class CommitFilesUpdateTest {
                         read, new CommitFilesMsg.RemarksFailed(7, new Failure.Bug(new Exception()), HashSet.empty(), 0))
                 .model();
         assertEquals(List.of(THREAD), failed.repoView().commitFiles().get().threads());
+    }
+
+    @Test
+    void theImagesOnGitHubOfTheReviewThreadsReadAreReadOnceToShowThem() {
+        String icon = "https://raw.githubusercontent.com/o/r/assets/icon.png";
+        String pasted = "https://github.com/user-attachments/assets/5ac3";
+        ReviewThread withImages = THREAD.withComments(List.of(
+                new ReviewThread.Comment(
+                        "cvf",
+                        Instant.EPOCH,
+                        "Working… <img src=\"" + icon + "\" width=\"14\" /> and ![x](https://example.com/track.png)",
+                        Option.none(),
+                        "C1",
+                        "1",
+                        CommentRights.ALL),
+                new ReviewThread.Comment(
+                        "cvf",
+                        Instant.EPOCH,
+                        "<img alt=\"shot\" src=\"" + pasted + "\">\n\n![again](" + icon + ")",
+                        Option.none(),
+                        "C2",
+                        "2",
+                        CommentRights.ALL)));
+        ReviewRemarks remarks = new ReviewRemarks(
+                PullRequestDetails.State.OPEN,
+                GhCommit.parse("a".repeat(40)),
+                GhCommit.parse("b".repeat(40)),
+                List.of(withImages));
+
+        Next read =
+                Update.update(openedPullRequest(), new CommitFilesMsg.RemarksLoaded(7, remarks, HashSet.empty(), 0));
+
+        // Each once, and not one elsewhere, which would tell its server who reads the comment.
+        assertEquals(
+                List.of(new CommitFilesCmd.LoadPicture(7, icon), new CommitFilesCmd.LoadPicture(7, pasted)),
+                read.cmds());
+        assertEquals(
+                HashMap.of(icon, Option.none(), pasted, Option.none()),
+                read.model().repoView().commitFiles().get().pictures());
+        // Read again, they are not read again.
+        assertEquals(
+                List.empty(),
+                Update.update(read.model(), new CommitFilesMsg.RemarksLoaded(7, remarks, HashSet.empty(), 0))
+                        .cmds());
+
+        Picture picture = new Picture(1, 2, Vector.of(0xffff0000, 0xff00ff00));
+        Model shown = Update.update(read.model(), new CommitFilesMsg.PictureLoaded(7, icon, Option.of(picture)))
+                .model();
+        assertEquals(
+                Option.of(Option.of(picture)),
+                shown.repoView().commitFiles().get().pictures().get(icon));
     }
 
     @Test
