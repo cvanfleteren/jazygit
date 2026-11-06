@@ -22,6 +22,7 @@ import java.time.Instant;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.function.Function;
+import net.vanfleteren.jazygit.gh.model.Reactions;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Comment;
 import net.vanfleteren.jazygit.i18n.Messages;
@@ -270,7 +271,31 @@ final class RemarkLines {
                 MarkdownImages.drawn(MarkdownScroll.withoutHtmlComments(comment.body()), style.pictures(), text);
         return markdown(drawn.markdown(), text, styles.markdown(), drawn.pictures())
                 .map(line -> Line.from(rule.appendAll(line.spans()).toJavaList()))
-                .prepend(header(branch, said, text, styles));
+                .prepend(header(branch, said, text, styles))
+                .appendAll(reactions(comment.reactions(), rule, styles));
+    }
+
+    /**
+     * The reactions given to a comment, on a line of their own under its text after {@code rule}: each with how often,
+     * those the viewer gave standing out from the others (ADR 86). No line when nobody reacted.
+     */
+    private static List<Line> reactions(Reactions reactions, List<Span> rule, Theme.SpanStyles styles) {
+        return reactions.groups().isEmpty()
+                ? List.empty()
+                : List.of(Line.from(rule.appendAll(reactions
+                                .groups()
+                                .zipWithIndex()
+                                .flatMap(group -> List.of(
+                                                Span.raw(group._2() == 0 ? "" : "  "),
+                                                styled(
+                                                        group._1().reaction().emoji() + " "
+                                                                + group._1().count(),
+                                                        group._1().viewer()
+                                                                ? Theme.Classes.DIFF_THREAD_AUTHOR
+                                                                : Theme.Classes.DIM,
+                                                        styles))
+                                        .filter(span -> span.width() > 0)))
+                        .toJavaList()));
     }
 
     /**

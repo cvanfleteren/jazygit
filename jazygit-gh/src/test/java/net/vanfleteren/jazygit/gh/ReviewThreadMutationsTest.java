@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.NewReviewThread;
+import net.vanfleteren.jazygit.gh.model.Reaction;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
 import org.junit.jupiter.api.Test;
 
@@ -114,5 +115,25 @@ class ReviewThreadMutationsTest {
     void anEditedCommentGivesTheBodyGitHubHolds() {
         assertEquals("Fixed", ReviewThreadMutations.EDITED.parse("""
                                 {"data": {"updatePullRequestReviewComment": {"pullRequestReviewComment": {"body": "Fixed"}}}}""").get());
+    }
+
+    @Test
+    void aReactionIsGivenOrTakenBackByTheNodeIdOfTheComment() {
+        List<String> given = args(ReviewThreadMutations.react("PRRC_1", Reaction.THUMBS_UP, true));
+        List<String> taken = args(ReviewThreadMutations.react("PRRC_1", Reaction.THUMBS_UP, false));
+
+        assertEquals(
+                List.of(
+                        "gh",
+                        "api",
+                        "graphql",
+                        "-f",
+                        "query=" + ReviewThreadMutations.ADD_REACTION,
+                        "-f",
+                        "subject=PRRC_1",
+                        "-f",
+                        "content=THUMBS_UP"),
+                given);
+        assertEquals("query=" + ReviewThreadMutations.REMOVE_REACTION, taken.get(4));
     }
 }

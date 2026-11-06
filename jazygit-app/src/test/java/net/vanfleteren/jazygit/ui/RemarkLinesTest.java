@@ -16,6 +16,8 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import net.vanfleteren.jazygit.gh.model.CommentRights;
+import net.vanfleteren.jazygit.gh.model.Reaction;
+import net.vanfleteren.jazygit.gh.model.Reactions;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Comment;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
@@ -978,5 +980,27 @@ class RemarkLinesTest {
 
     private static List<String> text(List<Line> lines) {
         return lines.map(line -> line.spans().stream().map(Span::content).collect(Collectors.joining()));
+    }
+
+    @Test
+    void theReactionsToACommentAreALineUnderItsText() {
+        ReviewThread plain = thread(2, false, "Why?");
+        ReviewThread reacted = plain.withComments(plain.comments()
+                .map(comment -> comment.withReactions(new Reactions(List.of(
+                        new Reactions.Group(Reaction.THUMBS_UP, 2, true),
+                        new Reactions.Group(Reaction.EYES, 1, false))))));
+        String indent = " ".repeat(8);
+
+        List<String> lines = text(RemarkLines.threads(
+                        List.of(reacted),
+                        8,
+                        RemarkLines.MIN_WIDTH,
+                        new RemarkLines.RemarkStyle(Collapsed.NONE, HashSet.empty(), HashSet.empty(), NOW),
+                        Theme.SpanStyles.NONE))
+                .map(String::stripTrailing);
+
+        assertEquals(
+                List.of(indent + "┏━ bob · 2h ago", indent + "┃  Why?", indent + "┃  👍 2  👀 1", indent + "┗━"),
+                lines);
     }
 }

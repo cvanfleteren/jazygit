@@ -366,7 +366,15 @@ public sealed interface AppError {
             /**
              * An edit does not empty a comment: deleting it does (ADR 65).
              */
-            EMPTY
+            EMPTY,
+            /**
+             * GitHub does not let the viewer react to the comment, as on a locked conversation (ADR 86).
+             */
+            NO_REACT,
+            /**
+             * A reaction to the comment is being sent (ADR 86).
+             */
+            REACTING
         }
     }
 

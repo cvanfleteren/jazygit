@@ -147,6 +147,7 @@ public final class CommitFilesUpdate {
                                         .withCollapsed(read.collapsed())
                                         .withSending(read.sending())
                                         .withDeleting(read.deleting())
+                                        .withReacting(read.reacting())
                                         .withVersion(read.version())
                                         .withPictures(read.pictures());
                                 return pictures(
