@@ -198,6 +198,39 @@ public final class Exec {
     }
 
     /**
+     * Starts {@code commandLine} in {@code directory} and leaves it running, like a browser (ADR 85): with its input
+     * closed and its output thrown away, so it takes nothing from the terminal. It is waited for only {@code settle}:
+     * still running by then, it is taken to have started well.
+     *
+     * @return the command as it was run, when it is still running after {@code settle}, or exited with 0
+     */
+    public static Either<ExecFailure, ExecutedCommand> launch(
+            Path directory, List<String> commandLine, Duration settle) {
+        long started = System.nanoTime();
+        return logged(directory, commandLine, started, detach(directory, commandLine, settle));
+    }
+
+    private static Either<ExecFailure, ExecutedCommand> detach(
+            Path directory, List<String> commandLine, Duration settle) {
+        try {
+            Process process = new ProcessBuilder(commandLine.toJavaList())
+                    .directory(directory.toFile())
+                    .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+                    .redirectError(ProcessBuilder.Redirect.DISCARD)
+                    .start();
+            process.getOutputStream().close();
+            return !process.waitFor(settle.toMillis(), TimeUnit.MILLISECONDS) || process.exitValue() == 0
+                    ? Either.right(new ExecutedCommand(commandLine))
+                    : Either.left(new ExecFailure.NonZero(process.exitValue(), "", ""));
+        } catch (IOException e) {
+            return Either.left(new ExecFailure.NotStarted(e));
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return Either.left(new ExecFailure.Interrupted());
+        }
+    }
+
+    /**
      * Writes {@code commandLine}, which started at {@code started} in {@code directory}, to the debug log with how
      * it ended in {@code result}.
      */

@@ -41,6 +41,12 @@ public sealed interface ReviewMsg extends Msg {
     record ThreadToggled(DiffCursorAt at) implements ReviewMsg {}
 
     /**
+     * The user asked to open the pull request in the browser, on the comment of the cursor {@code at}, if it is on one
+     * (ADR 85).
+     */
+    record OpenAsked(DiffCursorAt at) implements ReviewMsg {}
+
+    /**
      * The user pressed a key the cursor is not on the right stop for, as {@code why} says.
      */
     record Refused(AppError.CannotReview.Why why) implements ReviewMsg {}

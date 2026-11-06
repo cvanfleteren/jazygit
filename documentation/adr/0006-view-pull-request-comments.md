@@ -99,3 +99,5 @@ request.
 Amended by ADR 64: `d` deletes a comment of the conversation.
 
 Amended by ADR 65: `e` edits a comment of the conversation.
+
+Amended by ADR 85: jazygit starts a browser of its own, to open a review remark of the diff of a pull request.

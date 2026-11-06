@@ -12,6 +12,7 @@ import io.vavr.control.Option;
 import java.util.function.Function;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesCmd;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesCmd.LoadReviewRemarks;
+import net.vanfleteren.jazygit.feature.github.browse.BrowseRemarkCmd;
 import net.vanfleteren.jazygit.feature.github.review.ReviewCmd.DeleteComment;
 import net.vanfleteren.jazygit.feature.github.review.ReviewCmd.EditComment;
 import net.vanfleteren.jazygit.feature.github.review.ReviewCmd.Resolve;
@@ -20,6 +21,7 @@ import net.vanfleteren.jazygit.feature.github.review.ReviewPopup.Target;
 import net.vanfleteren.jazygit.feature.github.review.ReviewPopup.Where;
 import net.vanfleteren.jazygit.gh.model.NewReviewThread;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
+import net.vanfleteren.jazygit.gh.model.PullRequestLink;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
@@ -79,6 +81,12 @@ public final class ReviewUpdate {
                         .fold(
                                 why -> Next.of(why == Why.NOT_ON_THREAD ? model : refused(model, why)),
                                 found -> toggled(model, found, at.cursor()));
+            // Opening only reads: it is never refused, whatever the pull request or its threads are at (ADR 85).
+            case ReviewMsg.OpenAsked(DiffCursorAt at) ->
+                pullRequestFiles(model)
+                        .flatMap(view -> link(view, at.cursor()))
+                        .map(link -> Update.start(model.clearError(), new BrowseRemarkCmd(link)))
+                        .getOrElse(() -> Next.of(model));
             case ReviewMsg.Refused(Why why) -> Next.of(refused(model, why));
             // While it is being sent, the comment stays as it is sent.
             case ReviewMsg.Edited(String text) -> Next.of(changed(model, popup -> popup.withText(text), true));
@@ -565,6 +573,23 @@ public final class ReviewUpdate {
                         ? List.of(new CommitFilesCmd.SaveCollapsed(
                                 commits.repository(), commits.number(), collapsed.toggled(), model.now()))
                         : List.empty());
+    }
+
+    /**
+     * Where the pull request {@code view} lists the files of is on GitHub, on the comment the cursor {@code on} is on,
+     * if any: the reply it names, or the first of its thread (ADR 85).
+     */
+    private static Option<PullRequestLink> link(CommitFilesView view, Anchor on) {
+        return view.of() instanceof Changes.OfPullRequest(PullRequestCommits commits)
+                ? Option.of(new PullRequestLink(
+                        commits.host(),
+                        commits.repository(),
+                        commits.number(),
+                        thread(view, on)
+                                .toOption()
+                                .flatMap(found -> comment(found._2(), on))
+                                .map(ReviewThread.Comment::restId)))
+                : Option.none();
     }
 
     private static Option<CommitFilesView> pullRequestFiles(Model model) {
