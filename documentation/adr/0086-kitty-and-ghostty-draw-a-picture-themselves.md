@@ -58,3 +58,5 @@ other.
 - A cell of an image is drawn as such only in a terminal that has the placeholders; one that is told it has, with
   `JAZYGIT_IMAGES=kitty`, but has not, shows characters of the private use area.
 - Over ssh, `TERM` comes along, and the terminal at the other end draws the images, if it can.
+
+Amended by ADR 87: with `JAZYGIT_IMAGES=sixel`, the placeholder cells also tell Sixel where to paint a picture.

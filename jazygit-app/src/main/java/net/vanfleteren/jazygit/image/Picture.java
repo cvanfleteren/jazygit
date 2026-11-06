@@ -138,27 +138,36 @@ public record Picture(int width, int height, Vector<Integer> argb, Option<Sharp>
      * how opaque they are.
      */
     private static int[] shrunk(Raster raster, int width, int height) {
+        return resized(raster.argb(), raster.width(), raster.height(), width, height);
+    }
+
+    /**
+     * {@code argb}, {@code fromWidth} by {@code fromHeight} pixels row by row, at {@code width} by {@code height}: each
+     * pixel the average of the pixels it covers, weighed by how opaque they are; made larger, each is the pixel it is
+     * on.
+     */
+    public static int[] resized(int[] argb, int fromWidth, int fromHeight, int width, int height) {
         int[] out = new int[width * height];
         for (int y = 0; y < height; y++) {
-            int top = (int) ((long) y * raster.height() / height);
-            int bottom = Math.max(top + 1, (int) ((long) (y + 1) * raster.height() / height));
+            int top = (int) ((long) y * fromHeight / height);
+            int bottom = Math.max(top + 1, (int) ((long) (y + 1) * fromHeight / height));
             for (int x = 0; x < width; x++) {
-                int left = (int) ((long) x * raster.width() / width);
-                int right = Math.max(left + 1, (int) ((long) (x + 1) * raster.width() / width));
-                out[y * width + x] = average(raster, left, right, top, bottom);
+                int left = (int) ((long) x * fromWidth / width);
+                int right = Math.max(left + 1, (int) ((long) (x + 1) * fromWidth / width));
+                out[y * width + x] = average(argb, fromWidth, left, right, top, bottom);
             }
         }
         return out;
     }
 
-    private static int average(Raster raster, int left, int right, int top, int bottom) {
+    private static int average(int[] argb, int stride, int left, int right, int top, int bottom) {
         long alpha = 0;
         long red = 0;
         long green = 0;
         long blue = 0;
         for (int y = top; y < bottom; y++) {
             for (int x = left; x < right; x++) {
-                int pixel = raster.argb()[y * raster.width() + x];
+                int pixel = argb[y * stride + x];
                 int a = pixel >>> 24;
                 alpha += a;
                 red += (long) (pixel >> 16 & 0xff) * a;

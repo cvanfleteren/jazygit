@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.image;
 import java.io.ByteArrayOutputStream;
 import java.util.Base64;
 import java.util.zip.DeflaterOutputStream;
+import java.util.zip.InflaterInputStream;
 
 /**
  * An image as the Kitty graphics protocol is sent it (ADR 86): its pixels as RGBA, 8 bits each, row by row,
@@ -37,5 +38,27 @@ public record Sharp(int width, int height, String rgba) {
             throw new java.io.UncheckedIOException(e);
         }
         return new Sharp(width, height, Base64.getEncoder().encodeToString(bytes.toByteArray()));
+    }
+
+    /**
+     * Its pixels as ARGB, row by row, as they were before they were compressed.
+     */
+    public int[] argb() {
+        byte[] rgba;
+        try (InflaterInputStream zlib = new InflaterInputStream(
+                new java.io.ByteArrayInputStream(Base64.getDecoder().decode(this.rgba)))) {
+            rgba = zlib.readAllBytes();
+        } catch (java.io.IOException e) {
+            // Only what of() compressed is inflated.
+            throw new java.io.UncheckedIOException(e);
+        }
+        int[] argb = new int[width * height];
+        for (int i = 0; i < argb.length && i * 4 + 3 < rgba.length; i++) {
+            argb[i] = (rgba[i * 4 + 3] & 0xff) << 24
+                    | (rgba[i * 4] & 0xff) << 16
+                    | (rgba[i * 4 + 1] & 0xff) << 8
+                    | rgba[i * 4 + 2] & 0xff;
+        }
+        return argb;
     }
 }

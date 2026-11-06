@@ -34,18 +34,6 @@ import net.vanfleteren.jazygit.image.Sharp;
 public final class KittyGraphics {
 
     /**
-     * Whether pictures are drawn with the Kitty graphics protocol: when {@code JAZYGIT_IMAGES} says {@code kitty}, or,
-     * unless it says {@code halfblocks}, in Kitty and Ghostty outside tmux and screen, which do not pass the protocol
-     * on without being told to.
-     */
-    public static final boolean ENABLED = enabled(
-            Option.of(System.getenv("JAZYGIT_IMAGES")),
-            Option.of(System.getenv("TERM")),
-            Option.of(System.getenv("TERM_PROGRAM")),
-            Option.of(System.getenv("TMUX")).isDefined()
-                    || Option.of(System.getenv("STY")).isDefined());
-
-    /**
      * Deletes every image of the terminal, and what it keeps of them.
      */
     public static final String DELETE_ALL = "\u001b_Ga=D,d=A,q=2\u001b\\";
@@ -88,15 +76,6 @@ public final class KittyGraphics {
 
     // The ids of the images sent to the terminal, and not deleted since. Only touched on the render thread.
     private Set<Integer> sent = HashSet.empty();
-
-    static boolean enabled(Option<String> asked, Option<String> term, Option<String> program, boolean multiplexed) {
-        return asked.map(String::strip)
-                .filter(what -> !what.isEmpty() && !what.equalsIgnoreCase("auto"))
-                .map(what -> what.equalsIgnoreCase("kitty"))
-                .getOrElse(() -> !multiplexed
-                        && (term.exists(t -> t.equals("xterm-kitty") || t.equals("xterm-ghostty"))
-                                || program.exists(p -> p.equalsIgnoreCase("ghostty"))));
-    }
 
     /**
      * Whether {@code picture} can be drawn as an image of the terminal: it has a sharp image, and its id can tell how
@@ -158,11 +137,10 @@ public final class KittyGraphics {
         if (wanted.isEmpty()) {
             return;
         }
-        wanted.forEach(id -> shown.find(sharp -> hash(sharp) == id >>> SIZE_BITS)
-                .forEach(sharp -> {
-                    terminal.accept(transmission(id, sharp));
-                    sent = sent.add(id);
-                }));
+        wanted.forEach(id -> imageOf(id, shown).forEach(sharp -> {
+            terminal.accept(transmission(id, sharp));
+            sent = sent.add(id);
+        }));
     }
 
     /**
@@ -200,6 +178,46 @@ public final class KittyGraphics {
     }
 
     /**
+     * Where {@code cell} is in an image, if it is a cell of one: the image's id, and the row and the column of the cell
+     * in it.
+     */
+    static Option<Spot> spotOf(Cell cell) {
+        if (!isPlaceholder(cell)) {
+            return Option.none();
+        }
+        Vector<Integer> marks = Vector.ofAll(cell.symbol()
+                        .substring(PLACEHOLDER.length())
+                        .codePoints()
+                        .boxed()
+                        .toList())
+                .map(mark -> DIACRITICS.indexOf(Character.toString(mark)));
+        return marks.size() == 3 && !marks.contains(-1)
+                ? idOf(cell).map(id -> new Spot(id, marks.get(0), marks.get(1)))
+                : Option.none();
+    }
+
+    /**
+     * How many columns image {@code id} is drawn in.
+     */
+    static int columnsOf(int id) {
+        return (id >>> ROW_BITS & (1 << COLUMN_BITS) - 1) + 1;
+    }
+
+    /**
+     * How many rows image {@code id} is drawn in.
+     */
+    static int rowsOf(int id) {
+        return (id & (1 << ROW_BITS) - 1) + 1;
+    }
+
+    /**
+     * The image of {@code shown} that image {@code id} is, by the hash of its pixels.
+     */
+    static Option<Sharp> imageOf(int id, Traversable<Sharp> shown) {
+        return shown.find(sharp -> hash(sharp) == id >>> SIZE_BITS);
+    }
+
+    /**
      * The sequences that send {@code sharp} as image {@code id}, and place it virtually, in as many cells as the id
      * says: {@code a=T,U=1}, its RGBA pixels compressed with zlib, in chunks, and without the terminal answering,
      * {@code q=2}, which would be read as keys typed.
@@ -207,8 +225,8 @@ public final class KittyGraphics {
     static String transmission(int id, Sharp sharp) {
         String data = sharp.rgba();
         int chunks = Math.max(1, Math.ceilDiv(data.length(), CHUNK));
-        int columns = (id >>> ROW_BITS & (1 << COLUMN_BITS) - 1) + 1;
-        int rows = (id & (1 << ROW_BITS) - 1) + 1;
+        int columns = columnsOf(id);
+        int rows = rowsOf(id);
         return List.range(0, chunks)
                 .map(chunk -> {
                     String part = data.substring(chunk * CHUNK, Math.min(data.length(), (chunk + 1) * CHUNK));
@@ -227,4 +245,9 @@ public final class KittyGraphics {
                 })
                 .mkString();
     }
+
+    /**
+     * A cell of an image: the image's id, and the cell's row and column in it.
+     */
+    record Spot(int id, int row, int column) {}
 }

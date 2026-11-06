@@ -35,20 +35,6 @@ class KittyGraphicsTest {
     private static final String PLACEHOLDER = "􎻮";
 
     @Test
-    void kittyAndGhosttyDrawImagesOutsideAMultiplexerUnlessToldOtherwise() {
-        Option<String> none = Option.none();
-        assertTrue(KittyGraphics.enabled(none, Option.of("xterm-kitty"), none, false));
-        assertTrue(KittyGraphics.enabled(none, Option.of("xterm-ghostty"), none, false));
-        assertTrue(KittyGraphics.enabled(none, Option.of("xterm-256color"), Option.of("ghostty"), false));
-        assertTrue(KittyGraphics.enabled(Option.of("auto"), Option.of("xterm-kitty"), none, false));
-        assertFalse(KittyGraphics.enabled(none, Option.of("xterm-kitty"), none, true));
-        assertFalse(KittyGraphics.enabled(none, Option.of("xterm-256color"), Option.of("WezTerm"), false));
-        assertFalse(KittyGraphics.enabled(none, none, none, false));
-        assertFalse(KittyGraphics.enabled(Option.of("halfblocks"), Option.of("xterm-kitty"), none, false));
-        assertTrue(KittyGraphics.enabled(Option.of("kitty"), Option.of("screen"), none, true));
-    }
-
-    @Test
     void aCellIsThePlaceholderWithItsRowColumnAndTheHighByteOfItsIdInTheColourOfTheRest() {
         Picture picture = picture(3, 4);
         int id = KittyGraphics.id(picture.sharp().get(), 3, 2);
@@ -198,7 +184,7 @@ class KittyGraphicsTest {
      * A picture as one read from an image {@code width} by {@code height} pixels of a picture large, each
      * {@link Picture#SCALE} pixels of {@code 0xff112233}.
      */
-    private static Picture picture(int width, int height) {
+    static Picture picture(int width, int height) {
         return Picture.of(png(width * Picture.SCALE, height * Picture.SCALE)).get();
     }
 
