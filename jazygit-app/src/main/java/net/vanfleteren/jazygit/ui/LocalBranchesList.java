@@ -27,7 +27,7 @@ import net.vanfleteren.jazygit.state.*;
  * A stack of pull requests on GitHub with a local branch is one node: a header, and its pull requests under it in
  * GitHub's order, indented (ADR 72). Enter on the header opens or closes it; the keys of a branch do nothing there.
  * A pull request of it whose branch is not checked out shows the log of its remote-tracking branch, once that is
- * fetched. S lists the branches of the stacks as any other branch, and shows the stacks again (ADR 86).
+ * fetched. S lists the branches of the stacks as any other branch, and shows the stacks again (ADR 87).
  */
 class LocalBranchesList implements BranchesTabList {
 
