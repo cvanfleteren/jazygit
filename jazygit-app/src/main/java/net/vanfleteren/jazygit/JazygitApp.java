@@ -23,6 +23,8 @@ import java.time.Instant;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.feature.branch.tabs.BranchesTabMsg;
 import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.image.Picture;
+import net.vanfleteren.jazygit.image.Sharp;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.settings.*;
 import net.vanfleteren.jazygit.state.*;
@@ -206,6 +208,7 @@ public class JazygitApp extends ToolkitApp {
 
     @Override
     protected void onStop() {
+        terminal.deleteImages();
         session.close();
     }
 
@@ -252,7 +255,20 @@ public class JazygitApp extends ToolkitApp {
         // What is behind an open popup is dimmed, so the popup stands out, unless the popup previews its choices there.
         Element behind = shown.dimsBehind() ? new Dimmed(layout, Theme.backdrop(styleEngine)) : layout;
         Element screen = shown.dialog().<Element>map(d -> stack(behind, d)).getOrElse(layout);
-        return new SelectedTextColoured(screen, Theme.selectedText(styleEngine));
+        return terminal.withImages(
+                new SelectedTextColoured(screen, Theme.selectedText(styleEngine)), sharpPictures(model));
+    }
+
+    /**
+     * The sharp images of the pictures {@code model} has read, which the terminal may be sent to draw (ADR 86).
+     */
+    private static List<Sharp> sharpPictures(Model model) {
+        return model.repoView()
+                .commitFiles()
+                .toList()
+                .flatMap(view -> view.pictures().values())
+                .flatMap(picture -> picture)
+                .flatMap(Picture::sharp);
     }
 
     /**

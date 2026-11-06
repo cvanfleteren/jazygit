@@ -2,17 +2,22 @@ package net.vanfleteren.jazygit.image;
 
 import io.vavr.collection.Vector;
 import io.vavr.control.Either;
+import io.vavr.control.Option;
 import io.vavr.control.Try;
 
 /**
  * An image as the terminal draws it, in half blocks (ADR 84): a pixel is half a cell, so a cell is a pixel wide and
  * two high. Its pixels are ARGB, row by row; one less than half opaque is not drawn.
  *
+ * <p>A picture read from an image also keeps it {@link #sharp}, at as many pixels as a cell has, for a terminal that
+ * draws images itself, with the Kitty graphics protocol (ADR 86).
+ *
  * @param width  how many pixels wide, as many columns
  * @param height how many pixels high, twice as many rows, rounded up
  * @param argb   its pixels, row by row
+ * @param sharp  the image at as many pixels as the screen shows it at, if it was read from one
  */
-public record Picture(int width, int height, Vector<Integer> argb) {
+public record Picture(int width, int height, Vector<Integer> argb, Option<Sharp> sharp) {
 
     /**
      * How many pixels of an image, as a browser shows it, a pixel of its picture is, wide and high: a cell is about 8
@@ -29,6 +34,16 @@ public record Picture(int width, int height, Vector<Integer> argb) {
     public static final int MAX_ROWS = 24;
     // The most pixels read from an image, which a 4K screenshot has.
     private static final long MAX_PIXELS = 4096L * 4096L;
+    // How many pixels of the screen a cell is about, wide and high, which the sharp image is kept at at most.
+    private static final int CELL_WIDTH = 8;
+    private static final int CELL_HEIGHT = 16;
+
+    /**
+     * A picture of only its half-block pixels.
+     */
+    public Picture(int width, int height, Vector<Integer> argb) {
+        this(width, height, argb, Option.none());
+    }
 
     /**
      * {@code bytes}, a PNG or the first frame of a GIF, as a picture as large as it shows in a browser, with a pixel
@@ -56,7 +71,8 @@ public record Picture(int width, int height, Vector<Integer> argb) {
                 .map(raster -> {
                     int width = Math.ceilDiv(raster.width(), SCALE);
                     int height = Math.ceilDiv(raster.height(), SCALE);
-                    return fitted(raster, width, height, MAX_COLUMNS, MAX_ROWS * 2);
+                    Picture picture = fitted(raster, width, height, MAX_COLUMNS, MAX_ROWS * 2);
+                    return new Picture(picture.width, picture.height, picture.argb, Option.of(sharp(raster)));
                 })
                 .toEither()
                 .mapLeft(failure -> failure.getMessage() == null ? failure.toString() : failure.getMessage());
@@ -71,7 +87,25 @@ public record Picture(int width, int height, Vector<Integer> argb) {
                 this.width,
                 this.height,
                 argb.toJavaStream().mapToInt(Integer::intValue).toArray());
-        return fitted(raster, Math.min(width, this.width), Math.min(height, this.height), columns, rows * 2);
+        Picture fitted = fitted(raster, Math.min(width, this.width), Math.min(height, this.height), columns, rows * 2);
+        return new Picture(fitted.width, fitted.height, fitted.argb, sharp);
+    }
+
+    /**
+     * {@code raster} no larger than the most cells a picture takes, at as many pixels as they have: the terminal
+     * shrinks it further to the cells it is drawn in.
+     */
+    private static Sharp sharp(Raster raster) {
+        double shrink = Math.min(
+                1,
+                Math.min(
+                        (double) MAX_COLUMNS * CELL_WIDTH / raster.width(),
+                        (double) MAX_ROWS * CELL_HEIGHT / raster.height()));
+        int width = Math.max(1, (int) Math.round(raster.width() * shrink));
+        int height = Math.max(1, (int) Math.round(raster.height() * shrink));
+        int[] pixels =
+                width == raster.width() && height == raster.height() ? raster.argb() : shrunk(raster, width, height);
+        return Sharp.of(width, height, pixels);
     }
 
     /**
