@@ -42,7 +42,7 @@ import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
- * Opening and closing a stack in the branches pane (ADR 72), showing the stacks or not (ADR 86), and making one
+ * Opening and closing a stack in the branches pane (ADR 72), showing the stacks or not (ADR 87), and making one
  * (ADR 73). Whether a stack is open, and whether the stacks show, is view state, as the cursors are, and is not kept.
  */
 public final class StackUpdate {

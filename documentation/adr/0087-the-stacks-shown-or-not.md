@@ -1,4 +1,4 @@
-# 86. The stacks shown or not
+# 87. The stacks shown or not
 
 Date: 2026-11-06
 
