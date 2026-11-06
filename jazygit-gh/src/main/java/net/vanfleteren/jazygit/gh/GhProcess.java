@@ -90,6 +90,16 @@ final class GhProcess {
     }
 
     /**
+     * Runs {@code command} to read what it prints as bytes, up to {@code maxBytes}: more is too much output.
+     */
+    Either<GhError, byte[]> readBytes(GhCommand command, int maxBytes) {
+        return execute(
+                command,
+                (directory, line, environment, timeout) ->
+                        Exec.readBytes(directory, line, environment, timeout, maxBytes));
+    }
+
+    /**
      * Runs {@code command} to read the JSON it prints, which {@code decoder} decodes (ADR 42). JSON that cannot be
      * parsed or decoded is unexpected output, which says where and why.
      */
@@ -156,7 +166,7 @@ final class GhProcess {
     }
 
     /**
-     * How gh is run: as {@link Exec#run}, or as {@link Exec#read} with a limit.
+     * How gh is run: as {@link Exec#run}, as {@link Exec#read} with a limit, or as {@link Exec#readBytes}.
      */
     @FunctionalInterface
     private interface Execution<T> {

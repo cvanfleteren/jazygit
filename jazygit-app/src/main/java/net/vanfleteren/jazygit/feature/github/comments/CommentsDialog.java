@@ -36,6 +36,7 @@ import net.vanfleteren.jazygit.ui.TimeText;
 import net.vanfleteren.jazygit.ui.widgets.DialogFrame;
 import net.vanfleteren.jazygit.ui.widgets.LargeDialog;
 import net.vanfleteren.jazygit.ui.widgets.ListKeys;
+import net.vanfleteren.jazygit.ui.widgets.MarkdownImages;
 import net.vanfleteren.jazygit.ui.widgets.MarkdownScroll;
 import net.vanfleteren.jazygit.ui.widgets.PopupView;
 
@@ -241,7 +242,8 @@ public final class CommentsDialog implements PopupView {
      * followed by a space, so {@code **Note**} and {@code +1} keep theirs.
      */
     static String firstLine(String markdown) {
-        return List.of(MarkdownScroll.withoutHtmlComments(markdown).split("\\R"))
+        return List.of(MarkdownImages.asText(MarkdownScroll.withoutHtmlComments(markdown))
+                        .split("\\R"))
                 .map(line -> line.replaceFirst("^\\s*(?:(?:#{1,6}|>|[*+-])\\s+)*", "")
                         .strip())
                 .find(line -> !line.isEmpty())

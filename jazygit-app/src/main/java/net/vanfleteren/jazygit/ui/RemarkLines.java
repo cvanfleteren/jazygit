@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.ui;
 
 import dev.tamboui.buffer.Buffer;
-import dev.tamboui.buffer.Cell;
 import dev.tamboui.layout.Rect;
 import dev.tamboui.markdown.MarkdownView;
 import dev.tamboui.style.Style;
@@ -10,9 +9,11 @@ import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
+import io.vavr.collection.HashMap;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.Iterator;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.collection.Set;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
@@ -24,7 +25,9 @@ import java.util.function.Function;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Comment;
 import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.image.Picture;
 import net.vanfleteren.jazygit.state.Collapsed;
+import net.vanfleteren.jazygit.ui.widgets.MarkdownImages;
 import net.vanfleteren.jazygit.ui.widgets.MarkdownScroll;
 import org.commonmark.node.FencedCodeBlock;
 import org.commonmark.node.IndentedCodeBlock;
@@ -263,7 +266,9 @@ final class RemarkLines {
                     text,
                     styles));
         }
-        return markdown(MarkdownScroll.withoutHtmlComments(comment.body()), text, styles.markdown())
+        MarkdownImages.Drawn drawn =
+                MarkdownImages.drawn(MarkdownScroll.withoutHtmlComments(comment.body()), style.pictures(), text);
+        return markdown(drawn.markdown(), text, styles.markdown(), drawn.pictures())
                 .map(line -> Line.from(rule.appendAll(line.spans()).toJavaList()))
                 .prepend(header(branch, said, text, styles));
     }
@@ -276,13 +281,22 @@ final class RemarkLines {
      * to, with the text around it still {@code width} wide and a blank line between them.
      */
     static List<Line> markdown(String markdown, int width, StylePropertyResolver resolver) {
+        return markdown(markdown, width, resolver, List.empty());
+    }
+
+    /**
+     * {@code markdown} drawn as {@link #markdown(String, int, StylePropertyResolver)} draws it, with each cell of a
+     * character {@link MarkdownImages#PICTURE} the next cell of the first of {@code pictures}, of the character after
+     * it the next of the second, and so on (ADR 84).
+     */
+    static List<Line> markdown(String markdown, int width, StylePropertyResolver resolver, List<Picture> pictures) {
         if (markdown.isBlank()) {
             return List.empty();
         }
         List<Piece> pieces = pieces(markdown, width);
         return pieces.forAll(piece -> piece.width() == width)
-                ? drawn(markdown, width, resolver)
-                : pieces.map(piece -> drawn(piece.markdown(), piece.width(), resolver))
+                ? drawn(markdown, width, resolver, pictures)
+                : pieces.map(piece -> drawn(piece.markdown(), piece.width(), resolver, pictures))
                         // A piece of only link definitions draws nothing, and takes no blank line.
                         .filter(drawn -> !drawn.isEmpty())
                         .intersperse(List.of(Line.from("")))
@@ -347,38 +361,76 @@ final class RemarkLines {
                 .getOrElse(width);
     }
 
-    private static List<Line> drawn(String markdown, int width, StylePropertyResolver resolver) {
+    private static List<Line> drawn(
+            String markdown, int width, StylePropertyResolver resolver, List<Picture> pictures) {
         MarkdownView view =
                 MarkdownView.builder().source(markdown).styleResolver(resolver).build();
         int height = view.computeHeight(width);
         Rect area = new Rect(0, 0, width, height);
         Buffer buffer = Buffer.empty(area);
         view.render(area, buffer);
-        return List.range(0, height).map(row -> row(buffer, row, width));
+        // The lines, and how many cells of each picture they have drawn.
+        return List.range(0, height)
+                .foldLeft(Tuple.<List<Line>, Map<Integer, Integer>>of(List.empty(), HashMap.empty()), (done, row) -> {
+                    Tuple2<Vector<Tuple2<Style, String>>, Map<Integer, Integer>> painted =
+                            painted(row(buffer, row, width), pictures, done._2());
+                    return Tuple.of(done._1().append(line(painted._1())), painted._2());
+                })
+                ._1();
     }
 
-    private static Line row(Buffer buffer, int row, int width) {
-        Vector<Cell> cells =
-                Vector.range(0, width).map(column -> buffer.get(column, row)).filter(cell -> !cell.isContinuation());
+    /**
+     * The style and symbol of each cell of a {@code row}.
+     */
+    private static Vector<Tuple2<Style, String>> row(Buffer buffer, int row, int width) {
+        return Vector.range(0, width)
+                .map(column -> buffer.get(column, row))
+                .filter(cell -> !cell.isContinuation())
+                .map(cell -> Tuple.of(cell.style(), cell.symbol()));
+    }
+
+    /**
+     * {@code cells} with each that stands for a cell of one of {@code pictures} that cell, the next after as many as
+     * {@code drawn} says are drawn of it; and how many are drawn of each then.
+     */
+    private static Tuple2<Vector<Tuple2<Style, String>>, Map<Integer, Integer>> painted(
+            Vector<Tuple2<Style, String>> cells, List<Picture> pictures, Map<Integer, Integer> drawn) {
+        return cells.foldLeft(Tuple.of(Vector.empty(), drawn), (done, cell) -> {
+            int index = cell._2().length() == 1 ? cell._2().charAt(0) - MarkdownImages.PICTURE : -1;
+            if (index < 0 || index >= pictures.size()) {
+                return Tuple.of(done._1().append(cell), done._2());
+            }
+            int at = done._2().get(index).getOrElse(0);
+            return Tuple.of(
+                    done._1().append(HalfBlocks.cell(pictures.get(index), at)),
+                    done._2().put(index, at + 1));
+        });
+    }
+
+    /**
+     * {@code cells} as a line: each run of cells of one style a span, without the blank cells at its end.
+     */
+    private static Line line(Vector<Tuple2<Style, String>> cells) {
         int used = cells.lastIndexWhere(
-                        cell -> !cell.symbol().isBlank() || cell.style().bg().isPresent())
+                        cell -> !cell._2().isBlank() || cell._1().bg().isPresent())
                 + 1;
         List<Tuple2<Style, String>> runs = cells.take(used)
                 .foldLeft(
                         List.<Tuple2<Style, String>>empty(),
                         (done, cell) -> done.headOption()
-                                .filter(last -> last._1().equals(cell.style()))
-                                .map(last -> done.tail().prepend(Tuple.of(last._1(), last._2() + cell.symbol())))
-                                .getOrElse(() -> done.prepend(Tuple.of(cell.style(), cell.symbol()))))
+                                .filter(last -> last._1().equals(cell._1()))
+                                .map(last -> done.tail().prepend(Tuple.of(last._1(), last._2() + cell._2())))
+                                .getOrElse(() -> done.prepend(cell)))
                 .reverse();
         return Line.from(runs.map(run -> Span.styled(run._2(), run._1())).toJavaList());
     }
 
     /**
-     * The first line of {@code comment} with text, without its HTML comments.
+     * The first line of {@code comment} with text, without its HTML comments and with its images as text that says so.
      */
     private static String firstLine(Comment comment) {
-        return List.ofAll(MarkdownScroll.withoutHtmlComments(comment.body()).lines())
+        return List.ofAll(MarkdownImages.asText(MarkdownScroll.withoutHtmlComments(comment.body()))
+                        .lines())
                 .map(String::strip)
                 .find(line -> !line.isEmpty())
                 .getOrElse("");
@@ -446,11 +498,21 @@ final class RemarkLines {
      * @param sending   the ids of the threads a reply or a resolving is sent for (ADR 60)
      * @param deleting  the ids of the comments being deleted (ADR 64)
      * @param now       the time it is
+     * @param pictures  the pictures of the images that were read, by where they are (ADR 84)
      */
-    record RemarkStyle(Collapsed collapsed, Set<String> sending, Set<String> deleting, Instant now) {
+    record RemarkStyle(
+            Collapsed collapsed,
+            Set<String> sending,
+            Set<String> deleting,
+            Instant now,
+            Map<String, Picture> pictures) {
 
         RemarkStyle(Instant now) {
             this(Collapsed.NONE, HashSet.empty(), HashSet.empty(), now);
+        }
+
+        RemarkStyle(Collapsed collapsed, Set<String> sending, Set<String> deleting, Instant now) {
+            this(collapsed, sending, deleting, now, HashMap.empty());
         }
 
         /**

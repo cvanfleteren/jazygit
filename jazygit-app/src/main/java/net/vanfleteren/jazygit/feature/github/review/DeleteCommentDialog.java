@@ -5,6 +5,7 @@ import java.time.Duration;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.ui.TimeText;
 import net.vanfleteren.jazygit.ui.widgets.ConfirmDialog;
+import net.vanfleteren.jazygit.ui.widgets.MarkdownImages;
 import net.vanfleteren.jazygit.ui.widgets.MarkdownScroll;
 
 /**
@@ -34,10 +35,12 @@ public final class DeleteCommentDialog {
     }
 
     /**
-     * The first line of {@code body} with text, without its HTML comments, as a collapsed comment shows it.
+     * The first line of {@code body} with text, without its HTML comments and with its images as text that says so,
+     * as a collapsed comment shows it.
      */
     private static String firstLine(String body) {
-        return List.ofAll(MarkdownScroll.withoutHtmlComments(body).lines())
+        return List.ofAll(MarkdownImages.asText(MarkdownScroll.withoutHtmlComments(body))
+                        .lines())
                 .map(String::strip)
                 .find(line -> !line.isEmpty())
                 .getOrElse("");

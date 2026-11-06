@@ -10,6 +10,7 @@ import dev.tamboui.text.Span;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
+import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import java.time.Instant;
 import java.util.Optional;
@@ -21,6 +22,7 @@ import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Subject;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.ParsedDiff;
+import net.vanfleteren.jazygit.image.Picture;
 import net.vanfleteren.jazygit.settings.DiffLook;
 import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.state.Anchor;
@@ -30,6 +32,7 @@ import net.vanfleteren.jazygit.state.Expansion;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.ui.ContentView.ShownDiff;
 import net.vanfleteren.jazygit.ui.ContentView.ShownRemarks;
+import net.vanfleteren.jazygit.ui.widgets.MarkdownImages;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -648,6 +651,67 @@ class RemarkLinesTest {
 
         assertTrue(lines.forAll(line -> TextWidth.of(line) <= RemarkLines.MIN_WIDTH), lines.mkString("\n"));
         assertTrue(lines.count(line -> line.contains("word")) > 1, lines.mkString("\n"));
+    }
+
+    @Test
+    void anImageInACommentIsAPlaceholderNotItsTag() {
+        String body = "Claude Code is working… <img src=\"https://github.com/user-attachments/assets/5ac3\""
+                + " width=\"14px\" height=\"14px\" style=\"vertical-align: middle; margin-left: 4px;\" />";
+
+        List<String> lines = rich(shown(Collapsed.NONE, thread(2, false, body)));
+
+        assertTrue(lines.exists(line -> line.endsWith("Claude Code is working… [image]")), lines.mkString("\n"));
+        assertTrue(lines.forAll(line -> !line.contains("<img") && !line.contains("user-attachments")));
+    }
+
+    @Test
+    void anImageThatWasReadIsDrawnInHalfBlocksInItsPlaceAndOneThatWasNotIsAPlaceholder() {
+        String url = "https://github.com/user-attachments/assets/shot";
+        int red = 0xffff0000;
+        int blue = 0xff0000ff;
+        // Three pixels wide, three high: two rows, the last half of the last row empty, and one pixel transparent.
+        Picture picture = new Picture(3, 3, Vector.of(red, 0, red, blue, blue, blue, red, red, 0));
+        String body = "Look:\n\n![shot](" + url + ")\n\nand ![other](https://github.com/other.png)";
+
+        List<Line> lines = RemarkLines.threads(
+                List.of(thread(2, false, body)),
+                0,
+                RemarkLines.MIN_WIDTH,
+                new RemarkLines.RemarkStyle(
+                        Collapsed.NONE, HashSet.empty(), HashSet.empty(), NOW, HashMap.of(url, picture)),
+                Theme.SpanStyles.NONE);
+
+        List<String> text = text(lines);
+        int first = text.indexWhere(line -> line.endsWith("▀▄▀"));
+        assertTrue(first > 0, text.mkString("\n"));
+        assertTrue(text.get(first + 1).endsWith("▀▀"), text.mkString("\n"));
+        assertTrue(text.exists(line -> line.endsWith("and [image: other]")), text.mkString("\n"));
+        List<Span> cells = List.ofAll(lines.get(first).spans()).takeRight(2);
+        assertEquals(Style.EMPTY.fg(Color.rgb(0, 0, 255)), cells.head().style());
+        assertEquals(
+                Style.EMPTY.fg(Color.rgb(255, 0, 0)).bg(Color.rgb(0, 0, 255)),
+                cells.last().style());
+    }
+
+    @Test
+    void aPictureInAQuoteOrListIsDrawnWholeInTheRoomTheyLeaveIt() {
+        Picture picture = new Picture(10, 4, Vector.fill(40, 0xffff0000));
+
+        for (String markdown : List.of("> ![](a.png)", "- ![](a.png)", "1. ![](a.png)", "> > ![](a.png)")) {
+            MarkdownImages.Drawn drawn = MarkdownImages.drawn(markdown, HashMap.of("a.png", picture), 10);
+            List<String> lines =
+                    text(RemarkLines.markdown(drawn.markdown(), 10, StylePropertyResolver.empty(), drawn.pictures()));
+
+            // Each row of the picture is one line of all its cells, never wrapped onto the next; two quotes leave it
+            // room for one row only.
+            List<Integer> cells = lines.map(
+                            line -> (int) line.chars().filter(c -> c == '▀').count())
+                    .filter(count -> count > 0);
+            Picture fitted = drawn.pictures().head();
+            assertEquals(fitted.rows(), cells.size(), markdown + "\n" + lines.mkString("\n"));
+            assertTrue(cells.forAll(count -> count == fitted.width()), markdown + "\n" + lines.mkString("\n"));
+            assertTrue(lines.forAll(line -> TextWidth.of(line) <= 10), markdown + "\n" + lines.mkString("\n"));
+        }
     }
 
     @Test
