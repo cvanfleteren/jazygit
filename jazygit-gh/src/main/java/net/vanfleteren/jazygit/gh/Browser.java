@@ -49,44 +49,48 @@ final class Browser {
      * or double quotes, nor where a backslash escapes it. Nothing is expanded.
      */
     static List<String> words(String line) {
-        List<String> words = List.empty();
-        StringBuilder word = new StringBuilder();
-        boolean inWord = false;
-        char quote = 0;
-        for (int i = 0; i < line.length(); i++) {
-            char c = line.charAt(i);
-            if (quote == '\'') {
-                if (c == '\'') {
-                    quote = 0;
-                } else {
-                    word.append(c);
-                }
-            } else if (quote == '"') {
-                if (c == '"') {
-                    quote = 0;
-                } else if (c == '\\' && i + 1 < line.length() && "\"\\$`".indexOf(line.charAt(i + 1)) >= 0) {
-                    word.append(line.charAt(++i));
-                } else {
-                    word.append(c);
-                }
-            } else if (Character.isWhitespace(c)) {
-                if (inWord) {
-                    words = words.append(word.toString());
-                    word.setLength(0);
-                    inWord = false;
-                }
-            } else {
-                inWord = true;
-                if (c == '\'' || c == '"') {
-                    quote = c;
-                } else if (c == '\\' && i + 1 < line.length()) {
-                    word.append(line.charAt(++i));
-                } else {
-                    word.append(c);
-                }
-            }
+        return words(line, 0, Option.none(), Option.none(), List.empty());
+    }
+
+    /**
+     * @param at    the index of the next character of {@code line}
+     * @param quote the quote the text is inside, if any
+     * @param word  the word being read, none between words (an empty quoted word is still a word)
+     * @param done  the words read so far
+     */
+    private static List<String> words(
+            String line, int at, Option<Character> quote, Option<String> word, List<String> done) {
+        if (at >= line.length()) {
+            return word.map(done::append).getOrElse(done);
         }
-        return inWord ? words.append(word.toString()) : words;
+        char c = line.charAt(at);
+        char next = at + 1 < line.length() ? line.charAt(at + 1) : 0;
+        String current = word.getOrElse("");
+        return switch (quote.getOrElse((char) 0)) {
+            case '\'' ->
+                c == '\''
+                        ? words(line, at + 1, Option.none(), Option.of(current), done)
+                        : words(line, at + 1, quote, Option.of(current + c), done);
+            case '"' ->
+                c == '"'
+                        ? words(line, at + 1, Option.none(), Option.of(current), done)
+                        : c == '\\' && "\"\\$`".indexOf(next) >= 0 && next != 0
+                                ? words(line, at + 2, quote, Option.of(current + next), done)
+                                : words(line, at + 1, quote, Option.of(current + c), done);
+            default ->
+                Character.isWhitespace(c)
+                        ? words(
+                                line,
+                                at + 1,
+                                Option.none(),
+                                Option.none(),
+                                word.map(done::append).getOrElse(done))
+                        : c == '\'' || c == '"'
+                                ? words(line, at + 1, Option.of(c), Option.of(current), done)
+                                : c == '\\' && next != 0
+                                        ? words(line, at + 2, Option.none(), Option.of(current + next), done)
+                                        : words(line, at + 1, Option.none(), Option.of(current + c), done);
+        };
     }
 
     private static Option<String> set(Option<String> value) {

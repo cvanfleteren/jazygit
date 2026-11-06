@@ -239,11 +239,12 @@ public final class CliGitHub implements GitHub {
         List<String> commandLine = Browser.commandLine(browser, url);
         return Exec.launch(worktree, commandLine, Browser.SETTLE)
                 .mapLeft(failure -> new GhFailure(
-                        new GhError.BrowserFailed(
-                                browser,
-                                failure instanceof ExecFailure.NonZero(int exitCode, var stderr, var stdout)
-                                        ? Option.of(exitCode)
-                                        : Option.none()),
+                        switch (failure) {
+                            case ExecFailure.Interrupted() -> new GhError.Interrupted("browser");
+                            case ExecFailure.NonZero(int exitCode, var stderr, var stdout) ->
+                                new GhError.BrowserFailed(browser, Option.of(exitCode));
+                            default -> new GhError.BrowserFailed(browser, Option.none());
+                        },
                         List.of(new ExecutedCommand(commandLine))))
                 .map(List::of);
     }
