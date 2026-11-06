@@ -348,6 +348,12 @@ public final class CliGitHub implements GitHub {
     }
 
     @Override
+    public Either<GhFailure, List<ExecutedCommand>> reactToReviewComment(
+            String comment, Reaction reaction, boolean given) {
+        return process.log(ReviewThreadMutations.react(comment, reaction, given));
+    }
+
+    @Override
     public Either<GhFailure, Edited> editReviewComment(String comment, String body) {
         return edit(ReviewThreadMutations.edit(comment, body), ReviewThreadMutations.EDITED);
     }

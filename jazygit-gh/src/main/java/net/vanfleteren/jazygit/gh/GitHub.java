@@ -207,6 +207,12 @@ public interface GitHub {
     Either<GhFailure, List<ExecutedCommand>> deletePullRequestComment(String comment);
 
     /**
+     * Gives {@code reaction} to the comment of a review thread with node id {@code comment} when {@code given}, else
+     * takes it back (ADR 86).
+     */
+    Either<GhFailure, List<ExecutedCommand>> reactToReviewComment(String comment, Reaction reaction, boolean given);
+
+    /**
      * Changes the comment of a review thread with node id {@code comment} to {@code body} (ADR 65).
      */
     Either<GhFailure, Edited> editReviewComment(String comment, String body);

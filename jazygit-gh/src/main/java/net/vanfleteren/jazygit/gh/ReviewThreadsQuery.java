@@ -23,6 +23,8 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.CommentRights;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
+import net.vanfleteren.jazygit.gh.model.Reaction;
+import net.vanfleteren.jazygit.gh.model.Reactions;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Comment;
@@ -49,7 +51,8 @@ final class ReviewThreadsQuery {
             nodes { id path diffSide line startLine startDiffSide originalLine isResolved isOutdated subjectType \
             viewerCanReply viewerCanResolve viewerCanUnresolve \
             comments(first: %d) { totalCount nodes { id fullDatabaseId author { login } createdAt body state isMinimized \
-            minimizedReason viewerCanUpdate viewerCanDelete } } } } } } }""".formatted(COMMENTS);
+            minimizedReason viewerCanUpdate viewerCanDelete \
+            reactionGroups { content viewerHasReacted reactors { totalCount } } } } } } } } }""".formatted(COMMENTS);
 
     // Who wrote it; empty when GitHub does not say, as for a deleted account.
     static final Decoder<String> AUTHOR = field("author", nullable(field("login", nullable(string()))))
@@ -59,13 +62,27 @@ final class ReviewThreadsQuery {
     static final Decoder<CommentRights> COMMENT_RIGHTS =
             map2(field("viewerCanUpdate", bool()), field("viewerCanDelete", bool()), CommentRights::new);
 
+    // One reaction: GitHub lists each kind, also those nobody gave.
+    static final Decoder<Reactions.Group> REACTION_GROUP = map3(
+            field("content", enumOf(Reaction.class)),
+            at("reactors.totalCount", integer()),
+            field("viewerHasReacted", bool()),
+            Reactions.Group::new);
+
+    // The reactions given to a comment, in the order GitHub's site shows them; none when GitHub does not say.
+    static final Decoder<Reactions> REACTIONS = field("reactionGroups", nullable(list(REACTION_GROUP)))
+            .map(groups -> new Reactions(groups.getOrElse(List.empty())
+                    .filter(group -> group.count() > 0)
+                    .sortBy(group -> group.reaction().ordinal())));
+
     // A comment; none for one of a review that is not submitted yet, which only its author sees.
-    static final Decoder<Option<Comment>> COMMENT = map4(
+    static final Decoder<Option<Comment>> COMMENT = map5(
             map3(AUTHOR, field("createdAt", instant()), field("body", string()), Tuple::of),
             field("state", string()),
             map2(field("isMinimized", bool()), field("minimizedReason", nullable(string())), Tuple::of),
             map3(field("id", string()), field("fullDatabaseId", string()), COMMENT_RIGHTS, Tuple::of),
-            (written, state, hidden, ids) -> Option.when(
+            REACTIONS,
+            (written, state, hidden, ids, reactions) -> Option.when(
                     !state.equals("PENDING"),
                     () -> new Comment(
                             written._1(),
@@ -74,7 +91,8 @@ final class ReviewThreadsQuery {
                             Option.when(hidden._1(), () -> hidden._2().getOrElse("")),
                             ids._1(),
                             ids._2(),
-                            ids._3())));
+                            ids._3(),
+                            reactions)));
 
     // What the viewer may do with a thread.
     static final Decoder<ReviewThread.Rights> RIGHTS = map3(

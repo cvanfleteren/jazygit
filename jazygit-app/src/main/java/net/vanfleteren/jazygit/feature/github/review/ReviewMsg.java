@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.github.review;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.gh.model.Reaction;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.DiffCursorAt;
@@ -11,7 +12,8 @@ import net.vanfleteren.jazygit.state.Update;
 
 /**
  * Commenting on the lines of the diff of a pull request's files, from its cursor (ADR 60): starting a review thread,
- * replying to one, resolving it, opening or closing it, and editing (ADR 65) or deleting a comment of it (ADR 64).
+ * replying to one, resolving it, opening or closing it, editing (ADR 65) or deleting a comment of it (ADR 64), and
+ * reacting to one (ADR 86).
  */
 public sealed interface ReviewMsg extends Msg {
 
@@ -124,4 +126,24 @@ public sealed interface ReviewMsg extends Msg {
      * Deleting the comment failed.
      */
     record DeleteFailed(ReviewCmd.DeleteComment cmd, Failure failure) implements ReviewMsg {}
+
+    /**
+     * The user asked to react to the comment of the cursor {@code at} (ADR 86).
+     */
+    record ReactAsked(DiffCursorAt at) implements ReviewMsg {}
+
+    /**
+     * The user chose {@code reaction}: to give it, or to take it back when they gave it.
+     */
+    record ReactionChosen(Reaction reaction) implements ReviewMsg {}
+
+    /**
+     * The reaction was given or taken back by running {@code commands}.
+     */
+    record Reacted(ReviewCmd.React cmd, List<ExecutedCommand> commands) implements ReviewMsg {}
+
+    /**
+     * Giving or taking back the reaction failed.
+     */
+    record ReactFailed(ReviewCmd.React cmd, Failure failure) implements ReviewMsg {}
 }

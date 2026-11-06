@@ -8,6 +8,7 @@ import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import lombok.With;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
+import net.vanfleteren.jazygit.gh.model.Reaction;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.model.BranchName;
@@ -132,6 +133,29 @@ public record CommitFilesView(
                 .map(read -> {
                     List<ReviewThread> threads =
                             read.threads().map(thread -> has(thread, comment) ? edited(thread, comment, body) : thread);
+                    return withRemarks(Option.of(new Loadable.Loaded<>(read.withThreads(threads))))
+                            .withVersion(version + 1);
+                })
+                .getOrElse(this);
+    }
+
+    /**
+     * These with {@code reaction} given to the comment with the id {@code comment} by the viewer when {@code given},
+     * else taken back, as GitHub holds it once it took that (ADR 86). Changed so, they are of a newer version, which a
+     * read started before is older than.
+     */
+    public CommitFilesView withReacted(String comment, Reaction reaction, boolean given) {
+        return remarks.flatMap(Loadable::toOption)
+                .filter(read -> read.threads().exists(thread -> has(thread, comment)))
+                .map(read -> {
+                    List<ReviewThread> threads = read.threads()
+                            .map(thread -> has(thread, comment)
+                                    ? thread.withComments(thread.comments()
+                                            .map(each -> each.id().equals(comment)
+                                                    ? each.withReactions(
+                                                            each.reactions().withViewer(reaction, given))
+                                                    : each))
+                                    : thread);
                     return withRemarks(Option.of(new Loadable.Loaded<>(read.withThreads(threads))))
                             .withVersion(version + 1);
                 })

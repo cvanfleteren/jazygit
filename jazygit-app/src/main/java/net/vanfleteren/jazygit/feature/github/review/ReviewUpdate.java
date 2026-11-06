@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.feature.diff.CommitFilesCmd.LoadReviewRemarks;
 import net.vanfleteren.jazygit.feature.github.browse.BrowseRemarkCmd;
 import net.vanfleteren.jazygit.feature.github.review.ReviewCmd.DeleteComment;
 import net.vanfleteren.jazygit.feature.github.review.ReviewCmd.EditComment;
+import net.vanfleteren.jazygit.feature.github.review.ReviewCmd.React;
 import net.vanfleteren.jazygit.feature.github.review.ReviewCmd.Resolve;
 import net.vanfleteren.jazygit.feature.github.review.ReviewCmd.Send;
 import net.vanfleteren.jazygit.feature.github.review.ReviewPopup.Target;
@@ -22,6 +23,7 @@ import net.vanfleteren.jazygit.feature.github.review.ReviewPopup.Where;
 import net.vanfleteren.jazygit.gh.model.NewReviewThread;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestLink;
+import net.vanfleteren.jazygit.gh.model.Reaction;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
@@ -163,6 +165,39 @@ public final class ReviewUpdate {
                         deleted,
                         unread ? done.cmds().append(remarksLoad(deleted, cmd.number(), HashSet.empty())) : done.cmds());
             }
+            // Reacting needs no right: anyone who can read a comment may react to it, at whatever commits (ADR 86).
+            case ReviewMsg.ReactAsked(DiffCursorAt at) ->
+                chosen(model, at.cursor())
+                        .fold(
+                                why -> Next.of(refused(model, why)),
+                                found -> Update.ask(
+                                        model,
+                                        new ReactionPopup(
+                                                number(found._1()),
+                                                found._2().id(),
+                                                found._3().id(),
+                                                found._3().reactions())));
+            case ReviewMsg.ReactionChosen(Reaction reaction) ->
+                Update.confirm(
+                        model,
+                        ReactionPopup.class,
+                        popup -> Option.of(new React(
+                                popup.number(),
+                                popup.comment(),
+                                reaction,
+                                !popup.reactions().viewerGave(reaction))));
+            // Not read again: what GitHub did is known, as for an edit (ADR 65).
+            case ReviewMsg.Reacted(React cmd, var commands) -> {
+                Next done = OperationUpdate.succeeded(model, cmd, commands);
+                yield new Next(
+                        mapPullRequest(
+                                done.model(),
+                                cmd.number(),
+                                view -> view.withReacted(cmd.comment(), cmd.reaction(), cmd.given())),
+                        done.cmds());
+            }
+            case ReviewMsg.ReactFailed(React cmd, Failure failure) ->
+                OperationUpdate.update(model, new OperationMsg.Failed(cmd, failure));
             case ReviewMsg.DeleteFailed(DeleteComment cmd, Failure failure) -> {
                 Next failed = OperationUpdate.update(model, new OperationMsg.Failed(cmd, failure));
                 yield new Next(

@@ -97,7 +97,7 @@ def threads(head: str, base: str) -> list:
                 "viewerCanReply": True, "viewerCanResolve": not resolved, "viewerCanUnresolve": resolved,
                 "comments": {"totalCount": 1, "nodes": [
                     {"id": f"IC_{body}", "fullDatabaseId": str(len(body)), "author": {"login": "reviewer"}, "createdAt": DATE, "body": body, "state": "SUBMITTED",
-                     "isMinimized": False, "minimizedReason": None, "viewerCanUpdate": True, "viewerCanDelete": True}]}}
+                     "isMinimized": False, "minimizedReason": None, "viewerCanUpdate": True, "viewerCanDelete": True, "reactionGroups": []}]}}
     return [{"data": {"repository": {"pullRequest": {
         "state": "OPEN", "headRefOid": head, "baseRefOid": base,
         "reviewThreads": {"pageInfo": {"hasNextPage": False, "endCursor": None},
@@ -231,7 +231,7 @@ def replied(head: str, base: str) -> list:
         return {"id": f"IC_{body}", "fullDatabaseId": str(len(body)), "author": {"login": "reviewer"},
                 "createdAt": DATE, "body": body, "state": "SUBMITTED",
                 "isMinimized": hidden, "minimizedReason": "SPAM" if hidden else None,
-                "viewerCanUpdate": True, "viewerCanDelete": True}
+                "viewerCanUpdate": True, "viewerCanDelete": True, "reactionGroups": []}
     return [{"data": {"repository": {"pullRequest": {
         "state": "OPEN", "headRefOid": head, "baseRefOid": base,
         "reviewThreads": {"pageInfo": {"hasNextPage": False, "endCursor": None}, "nodes": [{
@@ -419,4 +419,45 @@ def test_a_comment_of_a_thread_is_edited_from_its_body_and_shows_what_github_hol
     assert len(calls_with(gh, EDIT)) == 1
     assert "comment=IC_Because" in calls_with(gh, EDIT)[0]
     assert "body=Because of a " in calls_with(gh, EDIT)[0]
+    assert len(calls_with(gh, THREADS)) == read
+
+
+REACT = "addReaction("
+
+
+def test_a_comment_of_a_thread_shows_its_reactions_and_is_reacted_to_without_reading_the_threads_again(
+        repo, origin, clone, gh, jazygit):
+    pull_request(repo, origin, clone, gh)
+    head = origin("rev-parse", "refs/pull/1/head").strip()
+    read_threads = threads(head, repo("rev-parse", "main").strip())
+    first = read_threads[0]["data"]["repository"]["pullRequest"]["reviewThreads"]["nodes"][0]
+    first["comments"]["nodes"][0]["reactionGroups"] = [
+        {"content": "EYES", "viewerHasReacted": False, "reactors": {"totalCount": 2}}]
+    gh.answer(
+        (THREADS, read_threads),
+        (REACT, {"data": {"addReaction": {"reaction": {"content": "THUMBS_UP"}}}}))
+    ui = jazygit()
+    ui.branches.select("feature")
+    ui.app.press("o")
+    # The action shows dimmed until the details are read, and does nothing then: wait for them.
+    ui.app.wait_for("in 2 files, 2 commits")
+    ui.app.press("F")
+    ui.app.wait_in("Files", "💬1")
+    ui.app.move_cursor("Files", "b.txt")
+    ui.app.press("ctrl+d")
+    ui.app.wait_for("┃  👀 2")
+    ui.app.press("enter")
+
+    # To the thread, a reaction chosen by its number (ADR 86).
+    ui.app.press("n")
+    ui.app.eventually(lambda: reversed_at(ui.app, "┏━ reviewer"), "the cursor on the thread")
+    ui.app.press("+")
+    ui.app.wait_for("React to a comment")
+    read = len(calls_with(gh, THREADS))
+    ui.app.press("1")
+
+    ui.app.wait_for("┃  👍 1  👀 2")
+    assert len(calls_with(gh, REACT)) == 1
+    assert "subject=IC_Why **b**?" in calls_with(gh, REACT)[0]
+    assert "content=THUMBS_UP" in calls_with(gh, REACT)[0]
     assert len(calls_with(gh, THREADS)) == read

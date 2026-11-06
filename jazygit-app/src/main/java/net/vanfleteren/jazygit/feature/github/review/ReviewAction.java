@@ -8,11 +8,13 @@ import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.AppError.CannotReview.Why;
 import net.vanfleteren.jazygit.state.DiffCursorAt;
 import net.vanfleteren.jazygit.ui.PopupSlot;
+import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
 import net.vanfleteren.jazygit.ui.widgets.ConfirmDialog;
 
 /**
  * Commenting on the lines of the diff of a pull request's files from its cursor (ADR 60): the keys of that diff, the
- * popup that writes or edits a comment (ADR 65), and the one that asks to delete one (ADR 64).
+ * popup that writes or edits a comment (ADR 65), the one that asks to delete one (ADR 64), and the one that picks a
+ * reaction to one (ADR 86).
  */
 public final class ReviewAction {
 
@@ -26,6 +28,7 @@ public final class ReviewAction {
                     Binding.onSelected("e", "help.pullRequestDiff.edit", ReviewMsg.EditAsked::new),
                     Binding.onSelected("d", "help.pullRequestDiff.delete", ReviewMsg.DeleteAsked::new),
                     Binding.onSelected("o", "help.pullRequestDiff.open", ReviewMsg.OpenAsked::new),
+                    Binding.onSelected("+", "help.pullRequestDiff.react", ReviewMsg.ReactAsked::new),
                     new Binding<DiffCursorAt>(
                             "v",
                             "help.pullRequestDiff.range",
@@ -37,7 +40,8 @@ public final class ReviewAction {
                     Binding.always("R", "help.commitFiles.refresh", CommitFilesMsg.RemarksRefreshed::new)),
             dispatch -> List.of(
                     PopupSlot.returningToFocus(new ReviewDialog(dispatch)),
-                    PopupSlot.returningToFocus(new ConfirmDialog<>(DeleteCommentDialog.SPEC, dispatch))));
+                    PopupSlot.returningToFocus(new ConfirmDialog<>(DeleteCommentDialog.SPEC, dispatch)),
+                    PopupSlot.returningToFocus(new ChoiceDialog<>(ReactionDialog.SPEC, dispatch))));
 
     private ReviewAction() {}
 }

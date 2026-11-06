@@ -18,6 +18,8 @@ import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.NewReviewThread;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestLink;
+import net.vanfleteren.jazygit.gh.model.Reaction;
+import net.vanfleteren.jazygit.gh.model.Reactions;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Comment;
@@ -1131,5 +1133,66 @@ class ReviewUpdateTest {
         assertEquals(List.of(new CommitFilesCmd.LoadReviewRemarks(7, HashSet.empty(), 1)), stale.cmds());
         assertEquals(
                 "Yes!", view(stale.model()).threads().head().comments().last().body());
+    }
+
+    @Test
+    void aReactionIsChosenInAPopupAndCountedOnceGitHubTookItWithoutReadingTheThreadsAgain() {
+        Model asked = Update.update(files(), new ReviewMsg.ReactAsked(at(onComment("R1", "T1"))))
+                .model();
+        ReactionPopup popup = asked.popup(ReactionPopup.class).get();
+        assertEquals(new ReactionPopup(7, "T1", "R1", Reactions.NONE), popup);
+
+        Next chosen = Update.update(asked, new ReviewMsg.ReactionChosen(Reaction.EYES));
+        ReviewCmd.React react = new ReviewCmd.React(7, "R1", Reaction.EYES, true);
+        assertEquals(List.of(react), chosen.cmds());
+        assertTrue(chosen.model().popup(ReactionPopup.class).isEmpty());
+
+        Next reacted = Update.update(chosen.model(), new ReviewMsg.Reacted(react, List.empty()));
+        assertFalse(reacted.cmds().exists(cmd -> cmd instanceof CommitFilesCmd.LoadReviewRemarks));
+        assertEquals(
+                new Reactions(List.of(new Reactions.Group(Reaction.EYES, 1, true))), reactions(reacted.model(), "R1"));
+        assertEquals(1, view(reacted.model()).version());
+    }
+
+    @Test
+    void aReactionTheViewerGaveIsTakenBackWhenChosenAgain() {
+        Model reacted = Update.update(
+                        files(),
+                        new ReviewMsg.Reacted(new ReviewCmd.React(7, "C1", Reaction.HEART, true), List.empty()))
+                .model();
+        Model asked = Update.update(reacted, new ReviewMsg.ReactAsked(at(onThread("T1"))))
+                .model();
+
+        Next chosen = Update.update(asked, new ReviewMsg.ReactionChosen(Reaction.HEART));
+
+        ReviewCmd.React unreact = new ReviewCmd.React(7, "C1", Reaction.HEART, false);
+        assertEquals(List.of(unreact), chosen.cmds());
+        assertEquals(
+                Reactions.NONE,
+                reactions(
+                        Update.update(chosen.model(), new ReviewMsg.Reacted(unreact, List.empty()))
+                                .model(),
+                        "C1"));
+    }
+
+    @Test
+    void aReactionThatFailedLeavesTheComment() {
+        ReviewCmd.React react = new ReviewCmd.React(7, "R1", Reaction.ROCKET, true);
+
+        Model failed = Update.update(
+                        files(), new ReviewMsg.ReactFailed(react, new Failure.Bug(new RuntimeException("offline"))))
+                .model();
+
+        assertEquals(Reactions.NONE, reactions(failed, "R1"));
+        assertTrue(error(failed).isDefined());
+    }
+
+    private static Reactions reactions(Model model, String comment) {
+        return view(model)
+                .threads()
+                .flatMap(ReviewThread::comments)
+                .find(each -> each.id().equals(comment))
+                .map(Comment::reactions)
+                .get();
     }
 }
