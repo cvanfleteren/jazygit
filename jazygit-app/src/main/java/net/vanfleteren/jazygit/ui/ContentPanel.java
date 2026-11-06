@@ -687,7 +687,7 @@ public final class ContentPanel {
             // The hunk a range is open in is shown as git gives it, so a range holds the lines it shows (ADR 83). A new
             // body has its hunk looked up in its diff, so it is drawn once, in the order it is shown in.
             Option<DiffStops.HunkAt> asGiven = told.mark()
-                    .flatMap(mark -> last.flatMap(before -> before.hunk(mark)).orElse(() -> markedHunk(body, mark)));
+                    .flatMap(mark -> last.map(before -> before.hunk(mark)).getOrElse(() -> markedHunk(body, mark)));
             Styled current = last.filter(before -> before.asGiven().equals(asGiven))
                     .getOrElse(() -> Styled.of(body, theme, asGiven, style.apply(body, asGiven)));
             styled = Option.of(current);
