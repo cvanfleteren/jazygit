@@ -1,7 +1,9 @@
 package net.vanfleteren.jazygit.state;
 
+import io.vavr.collection.HashMap;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import lombok.With;
@@ -14,6 +16,7 @@ import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.image.Picture;
 
 /**
  * The files a commit, a stash, a pull request or a branch changed, which the files pane lists as a tree in place of
@@ -33,6 +36,8 @@ import net.vanfleteren.jazygit.git.model.Sha;
  * @param deleting the ids of the comments of review threads being deleted, until GitHub took it or refused (ADR 64)
  * @param version  how often the review threads were changed here rather than read, as when a comment was deleted: a
  *                 read started before is older than they are, and is read again (ADR 64)
+ * @param pictures the images of the review threads that are read to be shown, by where they are: none while one is
+ *                 read, or when it could not be (ADR 84)
  */
 @With
 public record CommitFilesView(
@@ -46,7 +51,8 @@ public record CommitFilesView(
         Collapsed collapsed,
         Set<String> sending,
         Set<String> deleting,
-        int version) {
+        int version,
+        Map<String, Option<Picture>> pictures) {
 
     /**
      * The view of the files of {@code of}, opened from the pane {@code pane} and listed in {@code listedIn}, while
@@ -64,7 +70,8 @@ public record CommitFilesView(
                 Collapsed.NONE,
                 HashSet.empty(),
                 HashSet.empty(),
-                0);
+                0,
+                HashMap.empty());
     }
 
     /**

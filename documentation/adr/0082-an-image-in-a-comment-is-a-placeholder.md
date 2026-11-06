@@ -34,3 +34,5 @@ repository, and decoded with AWT, which the native image does not have yet; it i
 - What the image shows is not seen in jazygit; the link, or GitHub, shows it.
 - Showing the image itself, with `tamboui-image`, can replace the placeholder where the terminal can, and keep it
   where the image cannot be read.
+
+Amended by ADR 84: an image in a review remark is drawn in half blocks, read without AWT or `tamboui-image`.
