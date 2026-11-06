@@ -10,7 +10,7 @@ import net.vanfleteren.jazygit.state.Msg;
 /**
  * Opening and closing the stack whose header is highlighted in the branches pane (ADR 72), and the menu of what can be
  * done with the stack of a branch or with a stack (ADR 73); and showing the stacks or listing their branches as any other
- * branch (ADR 86).
+ * branch (ADR 87).
  */
 public final class StackAction {
 

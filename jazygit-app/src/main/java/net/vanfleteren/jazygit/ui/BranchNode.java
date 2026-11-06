@@ -27,7 +27,7 @@ sealed interface BranchNode {
      * a header and, when the stack is open, its pull requests under it, the bottom one first; at the first of its
      * branches, so a stack sits where the one of its branches that saw activity last does, and the checked out
      * branch's stack comes first. Unless {@code stacked}, every branch is a node of its own, also one in a stack
-     * (ADR 86).
+     * (ADR 87).
      *
      * @param pullRequest the open pull request of a branch, if it has one
      * @param stacked     whether the stacks show

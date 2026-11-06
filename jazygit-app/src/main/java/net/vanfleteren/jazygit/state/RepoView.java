@@ -42,7 +42,7 @@ import net.vanfleteren.jazygit.git.model.*;
  * @param closedStacks the numbers of the stacks the branches pane shows closed, as only their header; a stack
  *                     starts open (ADR 72)
  * @param unstacked    whether the branches pane lists the branches of a stack as any other branch, by when they last
- *                     saw activity, with no header (ADR 86); it starts showing the stacks
+ *                     saw activity, with no header (ADR 87); it starts showing the stacks
  * @param expanded     the lines expanded around the hunks of the diff each area of the content panel shows, by the
  *                     id of the area (ADR 77)
  */
