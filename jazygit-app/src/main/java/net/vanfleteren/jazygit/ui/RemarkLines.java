@@ -430,7 +430,7 @@ final class RemarkLines {
             return Tuple.of(
                     done._1()
                             .append(
-                                    KittyGraphics.ENABLED && KittyGraphics.draws(picture)
+                                    PictureMode.CURRENT.placeholders() && KittyGraphics.draws(picture)
                                             ? KittyGraphics.cell(picture, at)
                                             : HalfBlocks.cell(picture, at)),
                     done._2().put(index, at + 1));

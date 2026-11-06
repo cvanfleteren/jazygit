@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit;
 
+import dev.tamboui.buffer.DiffResult;
 import dev.tamboui.toolkit.app.ToolkitRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.TuiConfig;
@@ -13,6 +14,8 @@ import net.vanfleteren.jazygit.image.Sharp;
 import net.vanfleteren.jazygit.state.Terminal;
 import net.vanfleteren.jazygit.ui.ImagesSent;
 import net.vanfleteren.jazygit.ui.KittyGraphics;
+import net.vanfleteren.jazygit.ui.PictureMode;
+import net.vanfleteren.jazygit.ui.SixelImages;
 
 /**
  * The terminal the app is shown on, which it hands over to a program the user works with, like an editor, through a
@@ -30,6 +33,8 @@ final class TerminalHandOver implements Terminal {
     private Option<String> title = Option.none();
     // The images sent to the terminal, with the Kitty graphics protocol (ADR 86); only touched on the render thread.
     private final KittyGraphics graphics = new KittyGraphics();
+    // The images painted with Sixel (ADR 87); only touched on the render thread.
+    private final SixelImages sixel = new SixelImages();
 
     /**
      * @param runner        the runner of the app, once it is started
@@ -55,6 +60,19 @@ final class TerminalHandOver implements Terminal {
         // Frames are drawn when something changed, not on ticks.
         TuiConfig.Builder builder = TuiConfig.builder().mouseCapture(true).noTick();
         config = backend.map(builder::backend).getOrElse(builder).build();
+        if (PictureMode.CURRENT == PictureMode.SIXEL) {
+            backend.forEach(handing -> handing.afterDraw(new HandOverBackend.AfterDraw() {
+                @Override
+                public void drawn(DiffResult diff) {
+                    sixel.drawn(diff);
+                }
+
+                @Override
+                public Option<String> beforeEnd() {
+                    return sixel.paint();
+                }
+            }));
+        }
         return config;
     }
 
@@ -77,6 +95,7 @@ final class TerminalHandOver implements Terminal {
                     Try.run(() -> handing.comeBack(config)).get();
                     // What frames drawn meanwhile sent was dropped.
                     graphics.forget();
+                    sixel.forget();
                     // The program may have titled the window too.
                     title.forEach(this::showTitle);
                     runner.get().tuiRunner().terminal().clear();
@@ -88,10 +107,18 @@ final class TerminalHandOver implements Terminal {
 
     /**
      * {@code screen}, with the images of {@code shown} it has cells of sent to the terminal first, when it draws them
-     * itself (ADR 86).
+     * itself (ADR 86), or painted with Sixel once it is written (ADR 87).
      */
     Element withImages(Element screen, Traversable<Sharp> shown) {
-        return KittyGraphics.ENABLED ? new ImagesSent(screen, shown, graphics, this::writeRaw) : screen;
+        return switch (PictureMode.CURRENT) {
+            case KITTY -> new ImagesSent(screen, frame -> graphics.sendFor(frame.buffer(), shown, this::writeRaw));
+            case SIXEL ->
+                new ImagesSent(screen, frame -> {
+                    sixel.plan(frame.buffer(), shown, CellSize.now());
+                    frame.renderWidget(SixelImages.WRITTEN, SixelImages.NOWHERE);
+                });
+            case HALF_BLOCKS -> screen;
+        };
     }
 
     /**
@@ -99,7 +126,7 @@ final class TerminalHandOver implements Terminal {
      * thread, or once the app stopped.
      */
     void deleteImages() {
-        if (KittyGraphics.ENABLED) {
+        if (PictureMode.CURRENT == PictureMode.KITTY) {
             writeRaw(KittyGraphics.DELETE_ALL);
             backend.forEach(handing -> Try.run(handing::flush).onFailure(BugLog::log));
             graphics.forget();

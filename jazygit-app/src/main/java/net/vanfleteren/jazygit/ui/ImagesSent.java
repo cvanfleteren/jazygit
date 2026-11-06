@@ -6,22 +6,19 @@ import dev.tamboui.terminal.Frame;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.RenderContext;
 import dev.tamboui.toolkit.element.Size;
-import io.vavr.collection.Traversable;
 import java.util.function.Consumer;
-import net.vanfleteren.jazygit.image.Sharp;
 
 /**
- * {@code content}, and the images of {@code shown} its cells are of sent to {@code terminal} with the Kitty graphics
- * protocol, those that were not yet (ADR 86): it is to be the whole screen, so that a cell covered by a popup or changed
- * after it is drawn is as it is shown.
+ * {@code content}, after which {@code images} is given the frame, to see which images its cells are of: to send them
+ * with the Kitty graphics protocol (ADR 86), or to paint them with Sixel once the frame is written (ADR 87). It is to
+ * be the whole screen, so that a cell covered by a popup or changed after it is drawn is as it is shown.
  */
-public record ImagesSent(Element content, Traversable<Sharp> shown, KittyGraphics graphics, Consumer<String> terminal)
-        implements Element {
+public record ImagesSent(Element content, Consumer<Frame> images) implements Element {
 
     @Override
     public void render(Frame frame, Rect area, RenderContext context) {
         content.render(frame, area, context);
-        graphics.sendFor(frame.buffer(), shown, terminal);
+        images.accept(frame);
     }
 
     @Override
