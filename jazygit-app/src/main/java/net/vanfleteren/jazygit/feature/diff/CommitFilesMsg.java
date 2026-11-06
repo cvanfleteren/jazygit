@@ -2,7 +2,9 @@ package net.vanfleteren.jazygit.feature.diff;
 
 import io.vavr.collection.Map;
 import io.vavr.collection.Set;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
+import net.vanfleteren.jazygit.image.Picture;
 import net.vanfleteren.jazygit.state.CommitFilesView;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
@@ -38,6 +40,12 @@ public sealed interface CommitFilesMsg extends Msg {
      * {@code settled}, by a read started at {@code version} of them (ADR 64).
      */
     record RemarksFailed(int number, Failure failure, Set<String> settled, int version) implements CommitFilesMsg {}
+
+    /**
+     * The image at {@code url}, in a review thread of pull request {@code number}, was read as {@code picture}, or
+     * could not be (ADR 84).
+     */
+    record PictureLoaded(int number, String url, Option<Picture> picture) implements CommitFilesMsg {}
 
     /**
      * The user asked to list the next of the files of a pull request: all of them, those with an unresolved review

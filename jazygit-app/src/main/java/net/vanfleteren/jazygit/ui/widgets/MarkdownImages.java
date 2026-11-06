@@ -1,32 +1,32 @@
 package net.vanfleteren.jazygit.ui.widgets;
 
-import io.vavr.collection.Iterator;
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
+import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
 import io.vavr.control.Option;
-import java.util.Objects;
-import java.util.regex.MatchResult;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 import net.vanfleteren.jazygit.i18n.Messages;
-import org.commonmark.node.HtmlBlock;
-import org.commonmark.node.HtmlInline;
-import org.commonmark.node.Image;
-import org.commonmark.node.Link;
-import org.commonmark.node.Node;
-import org.commonmark.node.SourceSpan;
-import org.commonmark.node.Text;
-import org.commonmark.parser.IncludeSourceSpans;
-import org.commonmark.parser.Parser;
+import net.vanfleteren.jazygit.image.MarkdownImage;
+import net.vanfleteren.jazygit.image.Picture;
 
 /**
- * The images of Markdown, which the terminal does not show, as a short text that says one is there: {@code [image]},
- * or {@code [image: …]} with its alt text, in place of the URL that tamboui shows of an image and the tag it shows of
- * an {@code <img>} (ADR 82). Only what Markdown reads as an image is replaced, not what is in code.
+ * The images of Markdown, which the terminal does not show as such: a picture of one that was read, drawn in half
+ * blocks (ADR 84), or else a short text that says one is there, {@code [image]}, or {@code [image: …]} with its alt
+ * text, in place of the URL that tamboui shows of an image and the tag it shows of an {@code <img>} (ADR 82). Only
+ * what Markdown reads as an image is replaced, not what is in code.
  */
 public final class MarkdownImages {
 
-    private static final Pattern IMG = Pattern.compile("<img\\b[^>]*>", Pattern.CASE_INSENSITIVE);
-    private static final Pattern ATTRIBUTE =
-            Pattern.compile("\\s([a-z-]+)\\s*=\\s*(?:\"([^\"]*)\"|'([^']*)'|([^\\s\"'>]+))", Pattern.CASE_INSENSITIVE);
+    /**
+     * The first of the characters that stand for the cells of a picture while tamboui draws the Markdown: one of the
+     * Unicode private use area, a column wide, the first for the first picture, the next for the next.
+     */
+    public static final char PICTURE = '';
+    // As many pictures at most, so the characters stay in the private use area.
+    private static final int MAX_PICTURES = 1024;
     // What Markdown could read as more than text in the text of a link.
     private static final Pattern SPECIAL = Pattern.compile("[\\\\`*_\\[\\]<>!&~]");
     // The alt text GitHub gives an image that is pasted, which says no more than the placeholder does.
@@ -38,7 +38,7 @@ public final class MarkdownImages {
      * {@code markdown} with each image a link to it that says it is an image.
      */
     public static String asLinks(String markdown) {
-        return replaced(markdown, As.LINK);
+        return drawn(markdown, HashMap.empty(), 0).markdown();
     }
 
     /**
@@ -46,118 +46,104 @@ public final class MarkdownImages {
      * it is written.
      */
     public static String asText(String markdown) {
-        return replaced(markdown, As.TEXT);
+        return replaced(markdown, image -> said(image.alt()));
     }
 
-    private static String replaced(String markdown, As as) {
-        Node document = Parser.builder()
-                .includeSourceSpans(IncludeSourceSpans.BLOCKS_AND_INLINES)
-                .build()
-                .parse(markdown);
-        // From the end, so what is replaced first leaves where the others are as it was.
-        return replacements(document, markdown, as)
-                .sortBy(Replacement::start)
+    /**
+     * {@code markdown} with each image of which {@code pictures} has a picture, by where it is, that picture as large
+     * as its tag says it is shown, or as the image is, but no wider than {@code columns}: a line of characters
+     * {@link #PICTURE} for each row of cells, in a paragraph of its own if it is more than one high, which only an
+     * image that is all there is of its paragraph can be. Each other image is a link that says it is one.
+     */
+    public static Drawn drawn(String markdown, Map<String, Picture> pictures, int columns) {
+        List<MarkdownImage> images = MarkdownImage.in(markdown);
+        List<Option<Picture>> shown = images.map(image -> image.source()
+                .flatMap(pictures::get)
+                .map(picture -> fitted(image, picture, columns))
+                .filter(picture -> image.alone() || picture.rows() == 1));
+        // Each picture its own character, in the order they are in: the text of each image, and how many came before.
+        List<String> texts = images.zip(shown)
+                .foldLeft(
+                        Tuple.of(List.<String>empty(), 0),
+                        (done, image) -> image._2()
+                                .filter(picture -> done._2() < MAX_PICTURES)
+                                .map(picture -> Tuple.of(
+                                        done._1().append(cells(image._1(), picture, done._2())), done._2() + 1))
+                                .getOrElse(() -> Tuple.of(done._1().append(link(image._1())), done._2())))
+                ._1();
+        return new Drawn(
+                replace(markdown, images.zip(texts)),
+                shown.flatMap(Function.identity()).take(MAX_PICTURES));
+    }
+
+    private static String replaced(String markdown, Function<MarkdownImage, String> text) {
+        return replace(markdown, MarkdownImage.in(markdown).map(image -> Tuple.of(image, text.apply(image))));
+    }
+
+    // From the end, so what is replaced first leaves where the others are as it was.
+    private static String replace(String markdown, List<Tuple2<MarkdownImage, String>> replaced) {
+        return replaced.sortBy(image -> image._1().start())
                 .reverse()
                 .foldLeft(
                         markdown,
-                        (text, replacement) -> text.substring(0, replacement.start())
-                                + replacement.text()
-                                + text.substring(replacement.end()));
+                        (text, image) -> text.substring(0, image._1().start())
+                                + image._2()
+                                + text.substring(image._1().end()));
     }
 
     /**
-     * The images under {@code node}, parsed from {@code markdown}, with what replaces them {@code as} it says; in a
-     * link no link, as no link can be in another.
+     * {@code picture} as large as {@code image} says it is shown, the side it leaves out as the picture has it, or as
+     * it is, no wider than {@code columns} less what quotes and lists indent it by, and no higher than
+     * {@link Picture#MAX_ROWS}.
      */
-    private static List<Replacement> replacements(Node node, String markdown, As as) {
-        return List.ofAll(Iterator.iterate(node.getFirstChild(), Node::getNext).takeWhile(Objects::nonNull))
-                .flatMap(child -> switch (child) {
-                    case Image image -> whole(image, placeholder(alt(image), Option.of(image.getDestination()), as));
-                    case HtmlInline html
-                    when IMG.matcher(html.getLiteral()).matches() -> whole(html, tagPlaceholder(html.getLiteral(), as));
-                    case HtmlBlock html
-                    when IMG.matcher(html.getLiteral()).replaceAll("").isBlank() -> tags(html, markdown, as);
-                    default -> replacements(child, markdown, child instanceof Link && as == As.LINK ? As.MARKDOWN : as);
-                });
+    private static Picture fitted(MarkdownImage image, Picture picture, int columns) {
+        Option<Integer> tagWidth = image.width().map(pixels -> Math.ceilDiv(pixels, Picture.SCALE));
+        Option<Integer> tagHeight = image.height().map(pixels -> Math.ceilDiv(pixels, Picture.SCALE));
+        int width = tagWidth.getOrElse(() -> tagHeight
+                .map(height -> Math.max(1, (int) Math.round((double) height * picture.width() / picture.height())))
+                .getOrElse(picture.width()));
+        int height = tagHeight.getOrElse(() -> tagWidth.isDefined()
+                ? Math.max(1, (int) Math.round((double) width * picture.height() / picture.width()))
+                : picture.height());
+        return picture.fit(width, height, Math.max(1, columns - image.indent()), Picture.MAX_ROWS);
     }
 
     /**
-     * {@code node}, from where its source starts to where it ends, replaced by {@code text}.
+     * The characters that stand for the cells of {@code picture}, the {@code index}th: a row of them for each row of
+     * cells, each row a line of its own. A block of HTML at the top becomes a paragraph of its own; in a quote or a
+     * list it stays in its item, and a line of its own keeps it apart from an image on the next line.
      */
-    private static List<Replacement> whole(Node node, String text) {
-        List<SourceSpan> spans = List.ofAll(node.getSourceSpans());
-        return spans.isEmpty()
-                ? List.empty()
-                : List.of(new Replacement(
-                        spans.head().getInputIndex(),
-                        spans.last().getInputIndex() + spans.last().getLength(),
-                        text));
-    }
-
-    /**
-     * Each {@code <img>} of a block of HTML in {@code markdown} that has nothing else: a line of only those becomes a
-     * paragraph.
-     */
-    private static List<Replacement> tags(HtmlBlock html, String markdown, As as) {
-        return List.ofAll(html.getSourceSpans())
-                .flatMap(span -> List.ofAll(IMG.matcher(markdown)
-                                .region(span.getInputIndex(), span.getInputIndex() + span.getLength())
-                                .results()
-                                .toList())
-                        .map(tag -> new Replacement(tag.start(), tag.end(), tagPlaceholder(tag.group(), as))));
-    }
-
-    /**
-     * The placeholder of an {@code <img>} {@code tag}, from its alt text and where it is.
-     */
-    private static String tagPlaceholder(String tag, As as) {
-        List<MatchResult> attributes =
-                List.ofAll(ATTRIBUTE.matcher(tag).results().toList());
-        return placeholder(attribute(attributes, "alt").getOrElse(""), attribute(attributes, "src"), as);
-    }
-
-    private static Option<String> attribute(List<MatchResult> attributes, String name) {
-        return attributes
-                .find(attribute -> attribute.group(1).equalsIgnoreCase(name))
-                .map(attribute -> Option.of(attribute.group(2))
-                        .orElse(() -> Option.of(attribute.group(3)))
-                        .getOrElse(() -> attribute.group(4)));
-    }
-
-    /**
-     * What says an image with {@code alt} text is there, {@code as} it says: a link to its {@code source}, when it can
-     * be one.
-     */
-    private static String placeholder(String alt, Option<String> source, As as) {
-        String said = alt.isBlank() || alt.strip().equalsIgnoreCase(IMAGE)
-                ? Messages.get("markdown.image")
-                : Messages.get("markdown.imageAlt", alt.strip().replaceAll("\\s+", " "));
-        if (as == As.TEXT) {
-            return said;
+    private static String cells(MarkdownImage image, Picture picture, int index) {
+        String row = String.valueOf((char) (PICTURE + index)).repeat(picture.width());
+        String rows = List.fill(picture.rows(), row).mkString("\\\n");
+        if (image.block() && image.indent() == 0) {
+            return "\n\n" + rows + "\n\n";
         }
-        String escaped = SPECIAL.matcher(said).replaceAll("\\\\$0");
-        return source.filter(url -> as == As.LINK && !url.isBlank() && !url.matches("(?s).*[<>\\n].*"))
+        return image.breakAfter() ? rows + "\\" : rows;
+    }
+
+    /**
+     * What says {@code image} is there: a link to it, unless it is in a link already or is nowhere.
+     */
+    private static String link(MarkdownImage image) {
+        String escaped = SPECIAL.matcher(said(image.alt())).replaceAll("\\\\$0");
+        return image.source()
+                .filter(url -> !image.inLink() && !url.isBlank() && !url.matches("(?s).*[<>\\n].*"))
                 .map(url -> "[" + escaped + "](<" + url + ">)")
                 .getOrElse(escaped);
     }
 
-    /**
-     * The alt text of {@code image}: the text it holds.
-     */
-    private static String alt(Node image) {
-        return List.ofAll(Iterator.iterate(image.getFirstChild(), Node::getNext).takeWhile(Objects::nonNull))
-                .map(child -> child instanceof Text text ? text.getLiteral() : alt(child))
-                .mkString();
+    private static String said(String alt) {
+        return alt.isBlank() || alt.strip().equalsIgnoreCase(IMAGE)
+                ? Messages.get("markdown.image")
+                : Messages.get("markdown.imageAlt", alt.strip().replaceAll("\\s+", " "));
     }
 
     /**
-     * What an image is replaced by: a link to it, Markdown that only says it is there, or text that does.
+     * Markdown with pictures in it, as {@link #drawn} makes it.
+     *
+     * @param markdown the Markdown, a run of characters for each row of cells of a picture
+     * @param pictures the pictures, the first for {@link #PICTURE}, the next for the character after it
      */
-    private enum As {
-        LINK,
-        MARKDOWN,
-        TEXT
-    }
-
-    private record Replacement(int start, int end, String text) {}
+    public record Drawn(String markdown, List<Picture> pictures) {}
 }
