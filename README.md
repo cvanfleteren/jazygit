@@ -13,7 +13,7 @@ Git and your pull requests, their reviews and their CI, in one terminal UI. In t
 - **Pull requests on the branches.** Every branch shows its pull request: draft or not, its review (approved,
   changes requested, to review), its CI (passed, failed, running, queued), whether it is merging or in the merge
   queue, and how far it is ahead of and behind its base.
-- **Stacked pull requests,** shown as a stack and merged together with the ones below them.
+- **Stacked pull requests,** shown as a stack (or, with `S`, among the other branches) and merged together with the ones below them.
 - **CI checks, one by one:** how long each took, or how long a running one should still take, estimated from how
   long it took before.
 - **Rewrite history in a keystroke:** reword or amend any commit, squash, fixup, drop or revert one, move commits

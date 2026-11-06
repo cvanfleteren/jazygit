@@ -47,7 +47,8 @@ class BranchNodeTest {
     }
 
     private static List<String> keys(List<Branch> branches, Map<String, PullRequest> byBranch, Set<Integer> closed) {
-        return BranchNode.of(branches, branch -> byBranch.get(branch.name().value()), closed, head -> Option.none())
+        return BranchNode.of(
+                        branches, branch -> byBranch.get(branch.name().value()), true, closed, head -> Option.none())
                 .map(BranchNode::key);
     }
 
@@ -86,6 +87,7 @@ class BranchNodeTest {
         List<BranchNode> nodes = BranchNode.of(
                 List.of(branch("feat/b")),
                 branch -> Option.of(stacked(97, "feat/b", 3, entries)),
+                true,
                 HashSet.empty(),
                 head -> Option.none());
 
@@ -97,6 +99,23 @@ class BranchNodeTest {
                         .take(2)
                         .map(node ->
                                 LocalBranchesList.other((BranchNode.Other) node).text()));
+    }
+
+    @Test
+    void unstackedEveryBranchIsANodeOfItsOwnInItsOrder() {
+        List<Branch> branches = List.of(branch("feat/c"), branch("feat/x"), branch("feat/a"), branch("feat/b"));
+        Map<String, PullRequest> prs = HashMap.of(
+                "feat/a", stacked(96, "feat/a", 1, ENTRIES),
+                "feat/b", stacked(97, "feat/b", 2, ENTRIES),
+                "feat/c", stacked(98, "feat/c", 3, ENTRIES));
+
+        List<BranchNode> nodes = BranchNode.of(
+                branches, branch -> prs.get(branch.name().value()), false, HashSet.of(12), head -> Option.none());
+
+        assertEquals(
+                List.of("branch:feat/c", "branch:feat/x", "branch:feat/a", "branch:feat/b"),
+                nodes.map(BranchNode::key));
+        assertEquals(List.of(false, false, false, false), nodes.map(node -> ((BranchNode.Leaf) node).inStack()));
     }
 
     @Test
@@ -117,6 +136,7 @@ class BranchNodeTest {
                                 branch.name().value().equals("feat/a")
                                         ? stacked(96, "feat/a", 1, ENTRIES)
                                         : stacked(97, "feat/b", 2, ENTRIES)),
+                        true,
                         HashSet.empty(),
                         head -> Option.none())
                 .head();

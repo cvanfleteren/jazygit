@@ -24,6 +24,11 @@ public sealed interface StackMsg extends Msg {
     record Toggled(int stack) implements StackMsg {}
 
     /**
+     * The user switched the branches pane between showing the stacks and listing their branches as any other (ADR 86).
+     */
+    record ViewToggled() implements StackMsg {}
+
+    /**
      * The user asked what can be done with the stack of the highlighted branch, or of the highlighted stack
      * {@code stack} (ADR 73).
      */
