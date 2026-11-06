@@ -39,7 +39,34 @@ class StackUpdateTest {
         assertEquals(
                 List.of(
                         Option.of(new StackMsg.Toggled(12)),
-                        Option.of(new StackMsg.MenuRequested(Option.none(), Option.of(12)))),
+                        Option.of(new StackMsg.MenuRequested(Option.none(), Option.of(12))),
+                        Option.of(new StackMsg.ViewToggled())),
                 Keymap.standard().actions(Scopes.STACKS, Option.of(12)));
+    }
+
+    @Test
+    void theStacksShowAtFirstAndSHidesAndShowsThem() {
+        Model loaded = TestModels.loaded();
+        assertEquals(false, loaded.repoView().unstacked());
+
+        Update.Next unstacked = Update.update(loaded, new StackMsg.ViewToggled());
+        assertEquals(true, unstacked.model().repoView().unstacked());
+        assertEquals(List.empty(), unstacked.cmds());
+
+        assertEquals(
+                false,
+                Update.update(unstacked.model(), new StackMsg.ViewToggled())
+                        .model()
+                        .repoView()
+                        .unstacked());
+    }
+
+    @Test
+    void aBranchHasTheKeyThatHidesTheStacksToo() {
+        assertEquals(
+                true,
+                Keymap.standard()
+                        .actions(Scopes.BRANCHES, Option.none())
+                        .contains(Option.of(new StackMsg.ViewToggled())));
     }
 }

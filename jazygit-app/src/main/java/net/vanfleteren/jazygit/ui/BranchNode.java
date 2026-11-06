@@ -26,19 +26,22 @@ sealed interface BranchNode {
      * The nodes of {@code branches}, in their order (ADR 41): a branch in a stack on GitHub brings in its whole stack,
      * a header and, when the stack is open, its pull requests under it, the bottom one first; at the first of its
      * branches, so a stack sits where the one of its branches that saw activity last does, and the checked out
-     * branch's stack comes first.
+     * branch's stack comes first. Unless {@code stacked}, every branch is a node of its own, also one in a stack
+     * (ADR 86).
      *
      * @param pullRequest the open pull request of a branch, if it has one
+     * @param stacked     whether the stacks show
      * @param closed      the numbers of the stacks shown closed
      * @param fetched     the remote-tracking branch on GitHub of a branch a pull request merges from, if it was fetched
      */
     static List<BranchNode> of(
             List<Branch> branches,
             Function<Branch, Option<PullRequest>> pullRequest,
+            boolean stacked,
             Set<Integer> closed,
             Function<String, Option<RemoteBranch>> fetched) {
-        List<Option<PullRequestStack>> stacks =
-                branches.map(branch -> pullRequest.apply(branch).flatMap(PullRequest::stack));
+        List<Option<PullRequestStack>> stacks = branches.map(branch ->
+                stacked ? pullRequest.apply(branch).flatMap(PullRequest::stack) : Option.<PullRequestStack>none());
         return branches.zip(stacks)
                 .zipWithIndex()
                 .flatMap(indexed -> indexed._1()

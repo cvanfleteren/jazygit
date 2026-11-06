@@ -42,8 +42,8 @@ import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
- * Opening and closing a stack in the branches pane (ADR 72), and making one (ADR 73). Whether a stack is open is view
- * state, as the cursors are, and is not kept.
+ * Opening and closing a stack in the branches pane (ADR 72), showing the stacks or not (ADR 86), and making one
+ * (ADR 73). Whether a stack is open, and whether the stacks show, is view state, as the cursors are, and is not kept.
  */
 public final class StackUpdate {
 
@@ -59,6 +59,8 @@ public final class StackUpdate {
                         repoView.closedStacks().contains(stack)
                                 ? repoView.closedStacks().remove(stack)
                                 : repoView.closedStacks().add(stack))));
+            case StackMsg.ViewToggled() ->
+                Next.of(model.mapRepoView(repoView -> repoView.withUnstacked(!repoView.unstacked())));
             case MenuRequested(Option<BranchName> branch, Option<Integer> stack) -> menu(model, branch, stack);
             case MakeChosen() -> make(model);
             case AddChosen() -> add(model);
