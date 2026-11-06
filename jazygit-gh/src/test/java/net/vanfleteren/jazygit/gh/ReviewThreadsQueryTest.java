@@ -9,6 +9,8 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.CommentRights;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
+import net.vanfleteren.jazygit.gh.model.Reaction;
+import net.vanfleteren.jazygit.gh.model.Reactions;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Comment;
@@ -55,7 +57,7 @@ class ReviewThreadsQueryTest {
             String author, String state, String minimized, String body, String update, String delete) {
         return """
                 { "id": "IC_1", "fullDatabaseId": "101", "author": %s, "createdAt": "%s", "body": "%s", "state": "%s", "isMinimized": %b,
-                  "minimizedReason": %s, "viewerCanUpdate": %s, "viewerCanDelete": %s }""".formatted(author, AT, body, state, !minimized.equals("null"), minimized, update, delete);
+                  "minimizedReason": %s, "viewerCanUpdate": %s, "viewerCanDelete": %s, "viewerCanReact": %s, "reactionGroups": [] }""".formatted(author, AT, body, state, !minimized.equals("null"), minimized, update, delete, update);
     }
 
     private static ReviewThread onLine12(List<Comment> comments, int more) {
@@ -213,6 +215,58 @@ class ReviewThreadsQueryTest {
         assertEquals(
                 List.of(CommentRights.NONE, CommentRights.ALL),
                 read.threads().head().comments().map(Comment::rights));
-        assertTrue(ReviewThreadsQuery.QUERY.contains("viewerCanUpdate viewerCanDelete"));
+        assertTrue(ReviewThreadsQuery.QUERY.contains("viewerCanUpdate viewerCanDelete viewerCanReact"));
+    }
+
+    @Test
+    void theReactionsGivenToEachCommentAreReadInTheOrderOfGitHubsSite() {
+        String reacted =
+                comment("{ \"login\": \"bob\" }", "SUBMITTED", "null", "Hm").replace("\"reactionGroups\": []", """
+                        "reactionGroups": [
+                          { "content": "EYES", "viewerHasReacted": false, "reactors": { "totalCount": 2 } },
+                          { "content": "LAUGH", "viewerHasReacted": false, "reactors": { "totalCount": 0 } },
+                          { "content": "THUMBS_UP", "viewerHasReacted": true, "reactors": { "totalCount": 1 } }
+                        ]""");
+
+        ReviewRemarks read =
+                read(page("\"abc123\"", thread(onLine(12), 1, reacted))).get();
+
+        assertEquals(
+                new Reactions(List.of(
+                        new Reactions.Group(Reaction.THUMBS_UP, 1, true),
+                        new Reactions.Group(Reaction.EYES, 2, false))),
+                read.threads().head().comments().head().reactions());
+        assertTrue(ReviewThreadsQuery.QUERY.contains(
+                "reactionGroups { content viewerHasReacted reactors { totalCount } }"));
+    }
+
+    @Test
+    void whetherTheViewerMayReactToACommentIsReadApartFromTheirOtherRights() {
+        String locked = comment("{ \"login\": \"me\" }", "SUBMITTED", "null", "Hm", "true", "true")
+                .replace("\"viewerCanReact\": true", "\"viewerCanReact\": false");
+
+        ReviewRemarks read =
+                read(page("\"abc123\"", thread(onLine(12), 1, locked))).get();
+
+        assertEquals(
+                new CommentRights(true, true, false),
+                read.threads().head().comments().head().rights());
+    }
+
+    @Test
+    void aReactionOfAKindJazygitDoesNotKnowIsLeftOutRatherThanFailingTheRead() {
+        String reacted =
+                comment("{ \"login\": \"bob\" }", "SUBMITTED", "null", "Hm").replace("\"reactionGroups\": []", """
+                        "reactionGroups": [
+                          { "content": "SPARKLES", "viewerHasReacted": true, "reactors": { "totalCount": 3 } },
+                          { "content": "ROCKET", "viewerHasReacted": false, "reactors": { "totalCount": 1 } }
+                        ]""");
+
+        ReviewRemarks read =
+                read(page("\"abc123\"", thread(onLine(12), 1, reacted))).get();
+
+        assertEquals(
+                new Reactions(List.of(new Reactions.Group(Reaction.ROCKET, 1, false))),
+                read.threads().head().comments().head().reactions());
     }
 }

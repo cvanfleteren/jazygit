@@ -36,6 +36,13 @@ public sealed interface Failure {
     }
 
     /**
+     * Whether GitHub no longer has what gh acted on, as a comment someone deleted meanwhile.
+     */
+    default boolean gone() {
+        return this instanceof GitHub(GhError.Gone gone, var commands, var cleanupFailed);
+    }
+
+    /**
      * Git failed.
      *
      * @param cleanupFailed why cleaning up after the failure failed too, if it did

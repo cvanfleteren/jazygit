@@ -6,8 +6,10 @@ import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
+import java.util.function.Function;
 import lombok.With;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
+import net.vanfleteren.jazygit.gh.model.Reaction;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.model.BranchName;
@@ -34,6 +36,8 @@ import net.vanfleteren.jazygit.image.Picture;
  * @param sending  the ids of the review threads a reply or a resolving is sent for, until the threads are read again
  *                 after it was sent, or the send failed (ADR 60)
  * @param deleting the ids of the comments of review threads being deleted, until GitHub took it or refused (ADR 64)
+ * @param reacting the ids of the comments of review threads a reaction is sent for, until GitHub took it or refused
+ *                 (ADR 86)
  * @param version  how often the review threads were changed here rather than read, as when a comment was deleted: a
  *                 read started before is older than they are, and is read again (ADR 64)
  * @param pictures the images of the review threads that are read to be shown, by where they are: none while one is
@@ -51,6 +55,7 @@ public record CommitFilesView(
         Collapsed collapsed,
         Set<String> sending,
         Set<String> deleting,
+        Set<String> reacting,
         int version,
         Map<String, Option<Picture>> pictures) {
 
@@ -68,6 +73,7 @@ public record CommitFilesView(
                 Option.when(of instanceof Changes.OfPullRequest, Loadable::loading),
                 Listed.ALL,
                 Collapsed.NONE,
+                HashSet.empty(),
                 HashSet.empty(),
                 HashSet.empty(),
                 0,
@@ -127,11 +133,32 @@ public record CommitFilesView(
      * (ADR 65). Changed so, they are of a newer version, which a read started before is older than.
      */
     public CommitFilesView withEdited(String comment, String body) {
+        return withComment(comment, each -> each.withBody(body));
+    }
+
+    /**
+     * These with {@code reaction} given to the comment with the id {@code comment} by the viewer when {@code given},
+     * else taken back, as GitHub holds it once it took that (ADR 86). Changed so, they are of a newer version, which a
+     * read started before is older than.
+     */
+    public CommitFilesView withReacted(String comment, Reaction reaction, boolean given) {
+        return withComment(comment, each -> each.withReactions(each.reactions().withViewer(reaction, given)));
+    }
+
+    /**
+     * These with the comment with the id {@code comment} as {@code change} makes it, as GitHub holds it once it took
+     * what was sent for it, at a newer version, which a read started before is older than (ADR 64); these as they are
+     * when no thread read has it.
+     */
+    private CommitFilesView withComment(String comment, Function<ReviewThread.Comment, ReviewThread.Comment> change) {
         return remarks.flatMap(Loadable::toOption)
                 .filter(read -> read.threads().exists(thread -> has(thread, comment)))
                 .map(read -> {
-                    List<ReviewThread> threads =
-                            read.threads().map(thread -> has(thread, comment) ? edited(thread, comment, body) : thread);
+                    List<ReviewThread> threads = read.threads()
+                            .map(thread -> has(thread, comment)
+                                    ? thread.withComments(thread.comments()
+                                            .map(each -> each.id().equals(comment) ? change.apply(each) : each))
+                                    : thread);
                     return withRemarks(Option.of(new Loadable.Loaded<>(read.withThreads(threads))))
                             .withVersion(version + 1);
                 })
@@ -144,11 +171,6 @@ public record CommitFilesView(
 
     private static ReviewThread without(ReviewThread thread, String comment) {
         return thread.withComments(thread.comments().filter(each -> !each.id().equals(comment)));
-    }
-
-    private static ReviewThread edited(ReviewThread thread, String comment, String body) {
-        return thread.withComments(
-                thread.comments().map(each -> each.id().equals(comment) ? each.withBody(body) : each));
     }
 
     /**

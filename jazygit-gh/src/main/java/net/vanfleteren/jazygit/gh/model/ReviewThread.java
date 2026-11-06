@@ -98,7 +98,8 @@ public record ReviewThread(
      * @param hidden why GitHub hides it (outdated, resolved, off-topic, spam…), if it does
      * @param id     its node id, which editing or deleting it takes (ADR 60)
      * @param restId its id as REST numbers it, which a reply to the thread it starts is sent to (ADR 60)
-     * @param rights what the viewer may do with it (ADR 64)
+     * @param rights    what the viewer may do with it (ADR 64)
+     * @param reactions the reactions given to it (ADR 86)
      */
     public record Comment(
             String author,
@@ -107,13 +108,35 @@ public record ReviewThread(
             Option<String> hidden,
             String id,
             String restId,
-            CommentRights rights) {
+            CommentRights rights,
+            Reactions reactions) {
+
+        /**
+         * A comment nobody reacted to.
+         */
+        public Comment(
+                String author,
+                Instant at,
+                String body,
+                Option<String> hidden,
+                String id,
+                String restId,
+                CommentRights rights) {
+            this(author, at, body, hidden, id, restId, rights, Reactions.NONE);
+        }
 
         /**
          * This comment saying {@code body}, as when it was edited (ADR 65).
          */
         public Comment withBody(String body) {
-            return new Comment(author, at, body, hidden, id, restId, rights);
+            return new Comment(author, at, body, hidden, id, restId, rights, reactions);
+        }
+
+        /**
+         * This comment with {@code reactions} in place of its own, as when the viewer reacted to it (ADR 86).
+         */
+        public Comment withReactions(Reactions reactions) {
+            return new Comment(author, at, body, hidden, id, restId, rights, reactions);
         }
     }
 

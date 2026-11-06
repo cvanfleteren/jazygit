@@ -6,11 +6,12 @@ import static net.vanfleteren.jazygit.json.Decoder.string;
 
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.gh.model.NewReviewThread;
+import net.vanfleteren.jazygit.gh.model.Reaction;
 import net.vanfleteren.jazygit.json.Decoder;
 
 /**
- * Starting a review thread on a pull request, replying to one, resolving it, and editing or deleting a comment of it
- * (ADR 60, ADR 64, ADR 65). A thread is started and
+ * Starting a review thread on a pull request, replying to one, resolving it, editing or deleting a comment of it, and
+ * reacting to one (ADR 60, ADR 64, ADR 65, ADR 86). A thread is started and
  * replied to with REST's review comments, which GitHub publishes at once, as its "Add single comment" does: GraphQL's
  * {@code addPullRequestReviewThread} and {@code addPullRequestReviewThreadReply} add them to the viewer's pending
  * review instead, which only they see until it is submitted. A thread is resolved with GraphQL, which REST cannot,
@@ -35,6 +36,14 @@ final class ReviewThreadMutations {
                 pullRequestReviewComment { body }
               }
             }""";
+
+    static final String ADD_REACTION = """
+            mutation($subject: ID!, $content: ReactionContent!) { \
+            addReaction(input: { subjectId: $subject, content: $content }) { reaction { content } } }""";
+
+    static final String REMOVE_REACTION = """
+            mutation($subject: ID!, $content: ReactionContent!) { \
+            removeReaction(input: { subjectId: $subject, content: $content }) { reaction { content } } }""";
 
     // The body of the comment, as GitHub holds it once it is edited.
     static final Decoder<String> EDITED =
@@ -95,6 +104,23 @@ final class ReviewThreadMutations {
      */
     static GhCommand edit(String comment, String body) {
         return gh(List.of("api", "graphql", "-f", "query=" + EDIT, "-f", "comment=" + comment, "-f", "body=" + body)
+                .toJavaArray(String[]::new));
+    }
+
+    /**
+     * The command that gives {@code reaction} to the comment with node id {@code comment} when {@code given}, else
+     * takes it back (ADR 86).
+     */
+    static GhCommand react(String comment, Reaction reaction, boolean given) {
+        return gh(List.of(
+                        "api",
+                        "graphql",
+                        "-f",
+                        "query=" + (given ? ADD_REACTION : REMOVE_REACTION),
+                        "-f",
+                        "subject=" + comment,
+                        "-f",
+                        "content=" + reaction.name())
                 .toJavaArray(String[]::new));
     }
 

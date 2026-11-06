@@ -13,11 +13,14 @@ import net.vanfleteren.jazygit.feature.diff.CommitFilesCmd;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.feature.github.browse.BrowseRemarkCmd;
 import net.vanfleteren.jazygit.feature.github.review.ReviewPopup.Target;
+import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.model.CommentRights;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.NewReviewThread;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestLink;
+import net.vanfleteren.jazygit.gh.model.Reaction;
+import net.vanfleteren.jazygit.gh.model.Reactions;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Comment;
@@ -756,7 +759,7 @@ class ReviewUpdateTest {
 
     @Test
     void aCommentIsDeletedOnlyWithTheRightTo() {
-        Model theirs = withRights(files(), new CommentRights(true, false));
+        Model theirs = withRights(files(), new CommentRights(true, false, true));
 
         Next refused = Update.update(theirs, new ReviewMsg.DeleteAsked(at(onComment("R1", "T1"))));
 
@@ -1061,7 +1064,7 @@ class ReviewUpdateTest {
         assertEquals(
                 Option.of(new AppError.CannotReview(Why.NO_EDIT)),
                 error(Update.update(
-                                withRights(files(), new CommentRights(false, true)),
+                                withRights(files(), new CommentRights(false, true, true)),
                                 new ReviewMsg.EditAsked(at(onComment("R1", "T1"))))
                         .model()));
         assertEquals(
@@ -1131,5 +1134,169 @@ class ReviewUpdateTest {
         assertEquals(List.of(new CommitFilesCmd.LoadReviewRemarks(7, HashSet.empty(), 1)), stale.cmds());
         assertEquals(
                 "Yes!", view(stale.model()).threads().head().comments().last().body());
+    }
+
+    @Test
+    void aReactionIsChosenInAPopupAndCountedOnceGitHubTookItWithoutReadingTheThreadsAgain() {
+        Model asked = Update.update(files(), new ReviewMsg.ReactAsked(at(onComment("R1", "T1"))))
+                .model();
+        ReactionPopup popup = asked.popup(ReactionPopup.class).get();
+        assertEquals(new ReactionPopup(7, "T1", "R1", Reactions.NONE), popup);
+
+        Next chosen = Update.update(asked, new ReviewMsg.ReactionChosen(Reaction.EYES));
+        ReviewCmd.React react = new ReviewCmd.React(7, "T1", "R1", Reaction.EYES, true);
+        assertEquals(List.of(react), chosen.cmds());
+        assertTrue(chosen.model().popup(ReactionPopup.class).isEmpty());
+        assertEquals(HashSet.of("R1"), view(chosen.model()).reacting());
+
+        Next reacted = Update.update(chosen.model(), new ReviewMsg.Reacted(react, List.empty()));
+        assertFalse(reacted.cmds().exists(cmd -> cmd instanceof CommitFilesCmd.LoadReviewRemarks));
+        assertEquals(
+                new Reactions(List.of(new Reactions.Group(Reaction.EYES, 1, true))), reactions(reacted.model(), "R1"));
+        assertEquals(HashSet.empty(), view(reacted.model()).reacting());
+        assertEquals(1, view(reacted.model()).version());
+    }
+
+    @Test
+    void aReactionTheViewerGaveIsTakenBackWhenChosenAgain() {
+        Model reacted = Update.update(
+                        files(),
+                        new ReviewMsg.Reacted(new ReviewCmd.React(7, "T1", "C1", Reaction.HEART, true), List.empty()))
+                .model();
+        Model asked = Update.update(reacted, new ReviewMsg.ReactAsked(at(onThread("T1"))))
+                .model();
+
+        Next chosen = Update.update(asked, new ReviewMsg.ReactionChosen(Reaction.HEART));
+
+        ReviewCmd.React unreact = new ReviewCmd.React(7, "T1", "C1", Reaction.HEART, false);
+        assertEquals(List.of(unreact), chosen.cmds());
+        assertEquals(
+                Reactions.NONE,
+                reactions(
+                        Update.update(chosen.model(), new ReviewMsg.Reacted(unreact, List.empty()))
+                                .model(),
+                        "C1"));
+    }
+
+    @Test
+    void whileAReactionIsSentTheCommentTakesNoOther() {
+        Model sending = Update.update(
+                        Update.update(files(), new ReviewMsg.ReactAsked(at(onComment("R1", "T1"))))
+                                .model(),
+                        new ReviewMsg.ReactionChosen(Reaction.THUMBS_UP))
+                .model();
+
+        Next again = Update.update(sending, new ReviewMsg.ReactAsked(at(onComment("R1", "T1"))));
+
+        assertTrue(again.model().popup(ReactionPopup.class).isEmpty());
+        assertEquals(Option.of(new AppError.CannotReview(Why.REACTING)), error(again.model()));
+        // Another comment takes one meanwhile.
+        assertTrue(Update.update(sending, new ReviewMsg.ReactAsked(at(onComment("C1", "T1"))))
+                .model()
+                .popup(ReactionPopup.class)
+                .isDefined());
+    }
+
+    @Test
+    void aReactionIsGivenOrTakenBackAsTheCommentHasItWhenChosenNotAsThePopupOpenedOnIt() {
+        Model asked = Update.update(files(), new ReviewMsg.ReactAsked(at(onComment("C1", "T1"))))
+                .model();
+        // Meanwhile the viewer's heart arrives, as from a read of the threads.
+        Model meanwhile = Update.update(
+                        asked,
+                        new ReviewMsg.Reacted(new ReviewCmd.React(7, "T1", "C1", Reaction.HEART, true), List.empty()))
+                .model();
+        assertEquals(Reactions.NONE, meanwhile.popup(ReactionPopup.class).get().reactions());
+
+        Next chosen = Update.update(meanwhile, new ReviewMsg.ReactionChosen(Reaction.HEART));
+
+        assertEquals(List.of(new ReviewCmd.React(7, "T1", "C1", Reaction.HEART, false)), chosen.cmds());
+    }
+
+    @Test
+    void aCommentGoneBeforeItsReactionIsChosenTakesNone() {
+        Model asked = Update.update(files(), new ReviewMsg.ReactAsked(at(onComment("R1", "T1"))))
+                .model();
+        Model deleted = Update.update(
+                        asked, new ReviewMsg.CommentDeleted(new ReviewCmd.DeleteComment(7, "T1", "R1"), List.empty()))
+                .model();
+
+        Next chosen = Update.update(deleted, new ReviewMsg.ReactionChosen(Reaction.EYES));
+
+        assertEquals(List.empty(), chosen.cmds());
+        assertTrue(chosen.model().popup(ReactionPopup.class).isEmpty());
+        assertTrue(error(chosen.model()).isDefined());
+    }
+
+    @Test
+    void aCommentGoneFromTheThreadsReadAgainBeforeItsReactionIsChosenTakesNone() {
+        Model asked = Update.update(files(), new ReviewMsg.ReactAsked(at(onComment("R1", "T1"))))
+                .model();
+        // Read again, the thread has only its first comment: the reply was deleted elsewhere.
+        Model read = Update.update(
+                        asked,
+                        readAgain(
+                                HashSet.empty(),
+                                OPEN.withComments(OPEN.comments().take(1))))
+                .model();
+        assertTrue(read.popup(ReactionPopup.class).isDefined());
+
+        Next chosen = Update.update(read, new ReviewMsg.ReactionChosen(Reaction.EYES));
+
+        assertEquals(List.empty(), chosen.cmds());
+        assertTrue(chosen.model().popup(ReactionPopup.class).isEmpty());
+        assertEquals(Option.of(new AppError.CannotReview(Why.NOT_ON_THREAD)), error(chosen.model()));
+        assertEquals(HashSet.empty(), view(chosen.model()).reacting());
+    }
+
+    @Test
+    void aCommentIsReactedToOnlyWithTheRightTo() {
+        Model locked = withRights(files(), new CommentRights(true, true, false));
+
+        Next refused = Update.update(locked, new ReviewMsg.ReactAsked(at(onComment("R1", "T1"))));
+
+        assertTrue(refused.model().popup(ReactionPopup.class).isEmpty());
+        assertEquals(Option.of(new AppError.CannotReview(Why.NO_REACT)), error(refused.model()));
+    }
+
+    @Test
+    void aReactionThatFailedLeavesTheCommentAndTakesAnotherAgain() {
+        Model sending = Update.update(
+                        Update.update(files(), new ReviewMsg.ReactAsked(at(onComment("R1", "T1"))))
+                                .model(),
+                        new ReviewMsg.ReactionChosen(Reaction.ROCKET))
+                .model();
+        ReviewCmd.React react = new ReviewCmd.React(7, "T1", "R1", Reaction.ROCKET, true);
+
+        Model failed = Update.update(
+                        sending, new ReviewMsg.ReactFailed(react, new Failure.Bug(new RuntimeException("offline"))))
+                .model();
+
+        assertEquals(Reactions.NONE, reactions(failed, "R1"));
+        assertEquals(HashSet.empty(), view(failed).reacting());
+        assertTrue(error(failed).isDefined());
+        assertEquals(List.of("C1", "R1"), comments(failed, "T1"));
+    }
+
+    @Test
+    void aReactionToACommentGitHubNoLongerHasTakesItOutOfItsThreadAndSaysSo() {
+        ReviewCmd.React react = new ReviewCmd.React(7, "T1", "R1", Reaction.ROCKET, true);
+
+        Next failed = Update.update(
+                files(), new ReviewMsg.ReactFailed(react, new Failure.GitHub(new GhError.Gone(), List.empty())));
+
+        assertEquals(List.of("C1"), comments(failed.model(), "T1"));
+        assertEquals(1, view(failed.model()).version());
+        assertTrue(error(failed.model()).isDefined());
+        assertFalse(failed.cmds().exists(cmd -> cmd instanceof CommitFilesCmd.LoadReviewRemarks));
+    }
+
+    private static Reactions reactions(Model model, String comment) {
+        return view(model)
+                .threads()
+                .flatMap(ReviewThread::comments)
+                .find(each -> each.id().equals(comment))
+                .map(Comment::reactions)
+                .get();
     }
 }

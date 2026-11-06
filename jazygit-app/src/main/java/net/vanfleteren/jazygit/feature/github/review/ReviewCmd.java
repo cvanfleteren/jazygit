@@ -4,6 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.github.review.ReviewPopup.Target;
 import net.vanfleteren.jazygit.gh.model.NewReviewThread;
+import net.vanfleteren.jazygit.gh.model.Reaction;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Env;
@@ -14,7 +15,8 @@ import net.vanfleteren.jazygit.state.OperationCmd;
 
 /**
  * Writing a comment on the lines of a pull request in the editor, sending it, resolving a thread (ADR 60), and
- * editing (ADR 65) or deleting a comment (ADR 64). None keeps a branch busy: they do not touch one.
+ * editing (ADR 65), deleting (ADR 64) or reacting to a comment (ADR 86). None keeps a branch busy: they do not touch
+ * one.
  */
 public sealed interface ReviewCmd extends Cmd {
 
@@ -33,6 +35,10 @@ public sealed interface ReviewCmd extends Cmd {
     Operation UPDATE_COMMENT = Operation.of("log.title.updateReviewComment", "error.updateReviewComment.failed");
 
     Operation DELETE_COMMENT = Operation.of("log.title.deleteReviewComment", "error.deleteReviewComment.failed");
+
+    Operation REACT = Operation.of("log.title.reactReviewComment", "error.reactReviewComment.failed");
+
+    Operation UNREACT = Operation.of("log.title.unreactReviewComment", "error.unreactReviewComment.failed");
 
     /**
      * The file the comment is written in, in the editor; editors take it for Markdown, as GitHub does.
@@ -167,6 +173,39 @@ public sealed interface ReviewCmd extends Cmd {
         @Override
         public Msg failed(Failure failure) {
             return new ReviewMsg.DeleteFailed(this, failure);
+        }
+    }
+
+    /**
+     * Gives {@code reaction} to the comment with the id {@code comment} of the thread with the id {@code thread} of
+     * pull request {@code number} when {@code given}, else takes it back (ADR 86).
+     */
+    record React(int number, String thread, String comment, Reaction reaction, boolean given)
+            implements ReviewCmd, OperationCmd {
+
+        @Override
+        public Operation operation() {
+            return given ? REACT : UNREACT;
+        }
+
+        @Override
+        public Option<String> subject() {
+            return Option.of("#" + number);
+        }
+
+        @Override
+        public Msg run(Env env) {
+            return env.gitHub().reactToReviewComment(comment, reaction, given).fold(this::failedWith, this::succeeded);
+        }
+
+        @Override
+        public Msg succeeded(List<ExecutedCommand> commands) {
+            return new ReviewMsg.Reacted(this, commands);
+        }
+
+        @Override
+        public Msg failed(Failure failure) {
+            return new ReviewMsg.ReactFailed(this, failure);
         }
     }
 }

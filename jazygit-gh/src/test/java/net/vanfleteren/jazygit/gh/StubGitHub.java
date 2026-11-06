@@ -252,6 +252,13 @@ public interface StubGitHub extends GitHub {
     }
 
     @Override
+    default Either<GhFailure, List<ExecutedCommand>> reactToReviewComment(
+            String comment, Reaction reaction, boolean given) {
+        return Either.right(
+                List.of(ReviewThreadMutations.react(comment, reaction, given).executed()));
+    }
+
+    @Override
     default Either<GhFailure, Edited> editReviewComment(String comment, String body) {
         return Either.right(new Edited(
                 body, List.of(ReviewThreadMutations.edit(comment, body).executed())));
