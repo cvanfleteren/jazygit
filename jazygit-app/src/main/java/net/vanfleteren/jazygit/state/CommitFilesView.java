@@ -6,6 +6,7 @@ import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
+import java.util.function.Function;
 import lombok.With;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.Reaction;
@@ -132,15 +133,7 @@ public record CommitFilesView(
      * (ADR 65). Changed so, they are of a newer version, which a read started before is older than.
      */
     public CommitFilesView withEdited(String comment, String body) {
-        return remarks.flatMap(Loadable::toOption)
-                .filter(read -> read.threads().exists(thread -> has(thread, comment)))
-                .map(read -> {
-                    List<ReviewThread> threads =
-                            read.threads().map(thread -> has(thread, comment) ? edited(thread, comment, body) : thread);
-                    return withRemarks(Option.of(new Loadable.Loaded<>(read.withThreads(threads))))
-                            .withVersion(version + 1);
-                })
-                .getOrElse(this);
+        return withComment(comment, each -> each.withBody(body));
     }
 
     /**
@@ -149,16 +142,22 @@ public record CommitFilesView(
      * read started before is older than.
      */
     public CommitFilesView withReacted(String comment, Reaction reaction, boolean given) {
+        return withComment(comment, each -> each.withReactions(each.reactions().withViewer(reaction, given)));
+    }
+
+    /**
+     * These with the comment with the id {@code comment} as {@code change} makes it, as GitHub holds it once it took
+     * what was sent for it, at a newer version, which a read started before is older than (ADR 64); these as they are
+     * when no thread read has it.
+     */
+    private CommitFilesView withComment(String comment, Function<ReviewThread.Comment, ReviewThread.Comment> change) {
         return remarks.flatMap(Loadable::toOption)
                 .filter(read -> read.threads().exists(thread -> has(thread, comment)))
                 .map(read -> {
                     List<ReviewThread> threads = read.threads()
                             .map(thread -> has(thread, comment)
                                     ? thread.withComments(thread.comments()
-                                            .map(each -> each.id().equals(comment)
-                                                    ? each.withReactions(
-                                                            each.reactions().withViewer(reaction, given))
-                                                    : each))
+                                            .map(each -> each.id().equals(comment) ? change.apply(each) : each))
                                     : thread);
                     return withRemarks(Option.of(new Loadable.Loaded<>(read.withThreads(threads))))
                             .withVersion(version + 1);
@@ -172,11 +171,6 @@ public record CommitFilesView(
 
     private static ReviewThread without(ReviewThread thread, String comment) {
         return thread.withComments(thread.comments().filter(each -> !each.id().equals(comment)));
-    }
-
-    private static ReviewThread edited(ReviewThread thread, String comment, String body) {
-        return thread.withComments(
-                thread.comments().map(each -> each.id().equals(comment) ? each.withBody(body) : each));
     }
 
     /**

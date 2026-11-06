@@ -1229,6 +1229,27 @@ class ReviewUpdateTest {
     }
 
     @Test
+    void aCommentGoneFromTheThreadsReadAgainBeforeItsReactionIsChosenTakesNone() {
+        Model asked = Update.update(files(), new ReviewMsg.ReactAsked(at(onComment("R1", "T1"))))
+                .model();
+        // Read again, the thread has only its first comment: the reply was deleted elsewhere.
+        Model read = Update.update(
+                        asked,
+                        readAgain(
+                                HashSet.empty(),
+                                OPEN.withComments(OPEN.comments().take(1))))
+                .model();
+        assertTrue(read.popup(ReactionPopup.class).isDefined());
+
+        Next chosen = Update.update(read, new ReviewMsg.ReactionChosen(Reaction.EYES));
+
+        assertEquals(List.empty(), chosen.cmds());
+        assertTrue(chosen.model().popup(ReactionPopup.class).isEmpty());
+        assertEquals(Option.of(new AppError.CannotReview(Why.NOT_ON_THREAD)), error(chosen.model()));
+        assertEquals(HashSet.empty(), view(chosen.model()).reacting());
+    }
+
+    @Test
     void aCommentIsReactedToOnlyWithTheRightTo() {
         Model locked = withRights(files(), new CommentRights(true, true, false));
 

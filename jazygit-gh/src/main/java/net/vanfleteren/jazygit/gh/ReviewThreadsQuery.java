@@ -65,16 +65,18 @@ final class ReviewThreadsQuery {
             field("viewerCanReact", bool()),
             CommentRights::new);
 
-    // One reaction: GitHub lists each kind, also those nobody gave.
-    static final Decoder<Reactions.Group> REACTION_GROUP = map3(
-            field("content", enumOf(Reaction.class)),
+    // One reaction: GitHub lists each kind, also those nobody gave. None for a kind jazygit does not know, as one
+    // GitHub adds later: an unknown kind is left out rather than failing the read of every thread (ADR 86).
+    static final Decoder<Option<Reactions.Group>> REACTION_GROUP = map3(
+            field("content", string()).map(ReviewThreadsQuery::reaction),
             at("reactors.totalCount", integer()),
             field("viewerHasReacted", bool()),
-            Reactions.Group::new);
+            (reaction, count, viewer) -> reaction.map(known -> new Reactions.Group(known, count, viewer)));
 
     // The reactions given to a comment, in the order GitHub's site shows them; none when GitHub does not say.
     static final Decoder<Reactions> REACTIONS = field("reactionGroups", nullable(list(REACTION_GROUP)))
             .map(groups -> new Reactions(groups.getOrElse(List.empty())
+                    .flatMap(group -> group)
                     .filter(group -> group.count() > 0)
                     .sortBy(group -> group.reaction().ordinal())));
 
@@ -165,6 +167,11 @@ final class ReviewThreadsQuery {
                     .getOrElse(ReviewRemarks::none));
 
     private ReviewThreadsQuery() {}
+
+    // The reaction GitHub names name, if jazygit knows it.
+    private static Option<Reaction> reaction(String name) {
+        return List.of(Reaction.values()).find(reaction -> reaction.name().equals(name));
+    }
 
     static GhCommand command(int number) {
         return gh(

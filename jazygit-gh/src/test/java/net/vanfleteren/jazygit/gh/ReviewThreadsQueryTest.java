@@ -252,4 +252,21 @@ class ReviewThreadsQueryTest {
                 new CommentRights(true, true, false),
                 read.threads().head().comments().head().rights());
     }
+
+    @Test
+    void aReactionOfAKindJazygitDoesNotKnowIsLeftOutRatherThanFailingTheRead() {
+        String reacted =
+                comment("{ \"login\": \"bob\" }", "SUBMITTED", "null", "Hm").replace("\"reactionGroups\": []", """
+                        "reactionGroups": [
+                          { "content": "SPARKLES", "viewerHasReacted": true, "reactors": { "totalCount": 3 } },
+                          { "content": "ROCKET", "viewerHasReacted": false, "reactors": { "totalCount": 1 } }
+                        ]""");
+
+        ReviewRemarks read =
+                read(page("\"abc123\"", thread(onLine(12), 1, reacted))).get();
+
+        assertEquals(
+                new Reactions(List.of(new Reactions.Group(Reaction.ROCKET, 1, false))),
+                read.threads().head().comments().head().reactions());
+    }
 }

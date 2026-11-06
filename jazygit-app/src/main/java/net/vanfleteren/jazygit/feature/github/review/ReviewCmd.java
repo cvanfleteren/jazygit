@@ -15,7 +15,8 @@ import net.vanfleteren.jazygit.state.OperationCmd;
 
 /**
  * Writing a comment on the lines of a pull request in the editor, sending it, resolving a thread (ADR 60), and
- * editing (ADR 65), deleting (ADR 64) or reacting to a comment (ADR 86). None keeps a branch busy: they do not touch one.
+ * editing (ADR 65), deleting (ADR 64) or reacting to a comment (ADR 86). None keeps a branch busy: they do not touch
+ * one.
  */
 public sealed interface ReviewCmd extends Cmd {
 

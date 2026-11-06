@@ -22,6 +22,8 @@ back one not given, changes nothing.
 - `ReviewThreadsQuery` reads `reactionGroups` of each comment into `Reactions`: the kinds someone gave, in the order
   GitHub's site shows them, each with its count and whether the viewer gave it. It costs a field of a query that is
   made anyway.
+- A kind of reaction jazygit does not know, as one GitHub adds later, is left out: not decoded as an enum that fails
+  on it, which would fail the read of every thread for what is only shown beside them.
 - It reads `viewerCanReact` too, into a third right of a comment, `react`, beside `edit` and `delete` (ADR 64). GitHub
   refuses a reaction on a locked conversation or in an archived repository, also to who may read the comment. In the
   conversation, which `gh pr view` reads without it, the viewer is taken to have it.
