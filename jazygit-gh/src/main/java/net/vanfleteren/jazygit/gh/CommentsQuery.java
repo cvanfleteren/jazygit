@@ -51,7 +51,8 @@ final class CommentsQuery {
 
     /*
      * A comment, hidden for the reason GitHub gives when it is minimized. gh gives no rights of it, only whether the
-     * viewer wrote it, who may then edit and delete it (ADR 64).
+     * viewer wrote it, who may then edit and delete it (ADR 64); nor whether they may react, which they are taken to
+     * (ADR 86).
      */
     static final Decoder<PullRequestComment> COMMENT = map7(
             field("id", string()),
@@ -69,7 +70,7 @@ final class CommentsQuery {
                     written._1(),
                     edited,
                     Option.when(minimized, () -> reason.getOrElse("")),
-                    new CommentRights(written._2(), written._2())));
+                    new CommentRights(written._2(), written._2(), true)));
 
     /*
      * A review; none for a pending one, which is not submitted yet, and for one that only commented and has no text,

@@ -35,6 +35,8 @@ import net.vanfleteren.jazygit.image.Picture;
  * @param sending  the ids of the review threads a reply or a resolving is sent for, until the threads are read again
  *                 after it was sent, or the send failed (ADR 60)
  * @param deleting the ids of the comments of review threads being deleted, until GitHub took it or refused (ADR 64)
+ * @param reacting the ids of the comments of review threads a reaction is sent for, until GitHub took it or refused
+ *                 (ADR 86)
  * @param version  how often the review threads were changed here rather than read, as when a comment was deleted: a
  *                 read started before is older than they are, and is read again (ADR 64)
  * @param pictures the images of the review threads that are read to be shown, by where they are: none while one is
@@ -52,6 +54,7 @@ public record CommitFilesView(
         Collapsed collapsed,
         Set<String> sending,
         Set<String> deleting,
+        Set<String> reacting,
         int version,
         Map<String, Option<Picture>> pictures) {
 
@@ -69,6 +72,7 @@ public record CommitFilesView(
                 Option.when(of instanceof Changes.OfPullRequest, Loadable::loading),
                 Listed.ALL,
                 Collapsed.NONE,
+                HashSet.empty(),
                 HashSet.empty(),
                 HashSet.empty(),
                 0,

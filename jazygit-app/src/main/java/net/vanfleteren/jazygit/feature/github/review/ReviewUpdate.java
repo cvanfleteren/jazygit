@@ -151,23 +151,19 @@ public final class ReviewUpdate {
             // a reply goes to, is not known until the threads are read again.
             case ReviewMsg.CommentDeleted(DeleteComment cmd, var commands) -> {
                 Next done = OperationUpdate.succeeded(model, cmd, commands);
-                Model deleted = mapPullRequest(
-                        done.model(),
+                yield gone(
+                        mapPullRequest(
+                                done.model(),
+                                cmd.number(),
+                                view -> view.withDeleting(view.deleting().remove(cmd.comment()))),
+                        done.cmds(),
                         cmd.number(),
-                        view -> view.withoutComment(cmd.comment())
-                                .withDeleting(view.deleting().remove(cmd.comment())));
-                boolean unread = pullRequestFiles(deleted)
-                        .filter(view -> view.pullRequest().contains(cmd.number()))
-                        .exists(view -> view.threads()
-                                .exists(thread -> thread.id().equals(cmd.thread())
-                                        && thread.comments().isEmpty()));
-                yield new Next(
-                        deleted,
-                        unread ? done.cmds().append(remarksLoad(deleted, cmd.number(), HashSet.empty())) : done.cmds());
+                        cmd.thread(),
+                        cmd.comment());
             }
-            // Reacting needs no right: anyone who can read a comment may react to it, at whatever commits (ADR 86).
+            // Reacting does not number a line: it is done at whatever commits, on a merged pull request too (ADR 86).
             case ReviewMsg.ReactAsked(DiffCursorAt at) ->
-                chosen(model, at.cursor())
+                reactable(model, at.cursor())
                         .fold(
                                 why -> Next.of(refused(model, why)),
                                 found -> Update.ask(
@@ -178,14 +174,9 @@ public final class ReviewUpdate {
                                                 found._3().id(),
                                                 found._3().reactions())));
             case ReviewMsg.ReactionChosen(Reaction reaction) ->
-                Update.confirm(
-                        model,
-                        ReactionPopup.class,
-                        popup -> Option.of(new React(
-                                popup.number(),
-                                popup.comment(),
-                                reaction,
-                                !popup.reactions().viewerGave(reaction))));
+                model.popup(ReactionPopup.class)
+                        .map(popup -> reactionChosen(model, popup, reaction))
+                        .getOrElse(() -> Next.of(model));
             // Not read again: what GitHub did is known, as for an edit (ADR 65).
             case ReviewMsg.Reacted(React cmd, var commands) -> {
                 Next done = OperationUpdate.succeeded(model, cmd, commands);
@@ -193,11 +184,22 @@ public final class ReviewUpdate {
                         mapPullRequest(
                                 done.model(),
                                 cmd.number(),
-                                view -> view.withReacted(cmd.comment(), cmd.reaction(), cmd.given())),
+                                view -> view.withReacted(cmd.comment(), cmd.reaction(), cmd.given())
+                                        .withReacting(view.reacting().remove(cmd.comment()))),
                         done.cmds());
             }
-            case ReviewMsg.ReactFailed(React cmd, Failure failure) ->
-                OperationUpdate.update(model, new OperationMsg.Failed(cmd, failure));
+            // A comment GitHub no longer has was deleted, as by someone else: it leaves the threads, as one deleted
+            // here does (ADR 64), and the failure says so.
+            case ReviewMsg.ReactFailed(React cmd, Failure failure) -> {
+                Next failed = OperationUpdate.update(model, new OperationMsg.Failed(cmd, failure));
+                Model done = mapPullRequest(
+                        failed.model(),
+                        cmd.number(),
+                        view -> view.withReacting(view.reacting().remove(cmd.comment())));
+                yield failure.gone()
+                        ? gone(done, failed.cmds(), cmd.number(), cmd.thread(), cmd.comment())
+                        : new Next(done, failed.cmds());
+            }
             case ReviewMsg.DeleteFailed(DeleteComment cmd, Failure failure) -> {
                 Next failed = OperationUpdate.update(model, new OperationMsg.Failed(cmd, failure));
                 yield new Next(
@@ -481,6 +483,61 @@ public final class ReviewUpdate {
                         .map(comment -> Tuple.of(found._1(), found._2(), comment)))
                 .filterOrElse(
                         found -> !found._1().deleting().contains(found._3().id()), found -> Why.DELETING);
+    }
+
+    /**
+     * {@code model}, then {@code cmds}, once the comment {@code comment} of the thread {@code thread} of pull request
+     * {@code number} is gone from GitHub: taken out of the threads without reading them again (ADR 64). Unless it was
+     * the last comment read of a thread GitHub has more of: which of those is its first now, that a reply goes to, is
+     * not known until the threads are read again.
+     */
+    private static Next gone(Model model, List<Cmd> cmds, int number, String thread, String comment) {
+        Model deleted = mapPullRequest(model, number, view -> view.withoutComment(comment));
+        boolean unread = pullRequestFiles(deleted)
+                .filter(view -> view.pullRequest().contains(number))
+                .exists(view -> view.threads()
+                        .exists(each ->
+                                each.id().equals(thread) && each.comments().isEmpty()));
+        return new Next(deleted, unread ? cmds.append(remarksLoad(deleted, number, HashSet.empty())) : cmds);
+    }
+
+    /**
+     * The comment the cursor {@code on} is on, with its thread and the files listed, if the viewer may react to it now
+     * (ADR 86): chosen as for an edit or a delete, and not while a reaction to it is sent, which a second one, chosen
+     * from what was read before, could undo.
+     */
+    private static Either<Why, Tuple3<CommitFilesView, ReviewThread, ReviewThread.Comment>> reactable(
+            Model model, Anchor on) {
+        return chosen(model, on)
+                .filterOrElse(found -> found._3().rights().react(), found -> Why.NO_REACT)
+                .filterOrElse(
+                        found -> !found._1().reacting().contains(found._3().id()), found -> Why.REACTING);
+    }
+
+    /**
+     * {@code reaction} chosen in {@code popup}: asked again as the comment is now, as the threads may have been read
+     * again, the comment gone, or something be sent for it meanwhile. Whether it is given or taken back is told from
+     * the reactions it has now, not those the popup opened with.
+     */
+    private static Next reactionChosen(Model model, ReactionPopup popup, Reaction reaction) {
+        Anchor on = new Anchor.Comment(popup.comment(), new Anchor.Thread(popup.thread(), Option.none()));
+        return reactable(model, on)
+                .filterOrElse(found -> found._1().pullRequest().contains(popup.number()), found -> Why.NOT_READ)
+                .fold(why -> Next.of(refused(model.withoutPopup(ReactionPopup.class), why)), found -> {
+                    React react = new React(
+                            popup.number(),
+                            popup.thread(),
+                            popup.comment(),
+                            reaction,
+                            !found._3().reactions().viewerGave(reaction));
+                    Next started = Update.confirm(model, ReactionPopup.class, open -> Option.of(react));
+                    return new Next(
+                            mapPullRequest(
+                                    started.model(),
+                                    popup.number(),
+                                    view -> view.withReacting(view.reacting().add(popup.comment()))),
+                            started.cmds());
+                });
     }
 
     /**

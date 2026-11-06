@@ -208,7 +208,7 @@ public interface GitHub {
 
     /**
      * Gives {@code reaction} to the comment of a review thread with node id {@code comment} when {@code given}, else
-     * takes it back (ADR 86).
+     * takes it back (ADR 86); a comment GitHub no longer has fails as {@link GhError.Gone}.
      */
     Either<GhFailure, List<ExecutedCommand>> reactToReviewComment(String comment, Reaction reaction, boolean given);
 

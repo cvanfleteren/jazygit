@@ -80,7 +80,7 @@ class CommentsQueryTest {
                                 "Old",
                                 false,
                                 Option.of("outdated"),
-                                CommentRights.NONE),
+                                new CommentRights(false, false, true)),
                         new PullRequestComment(
                                 new PullRequestComment.Id("PRR_2"),
                                 Kind.APPROVED,

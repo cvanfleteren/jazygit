@@ -51,7 +51,7 @@ final class ReviewThreadsQuery {
             nodes { id path diffSide line startLine startDiffSide originalLine isResolved isOutdated subjectType \
             viewerCanReply viewerCanResolve viewerCanUnresolve \
             comments(first: %d) { totalCount nodes { id fullDatabaseId author { login } createdAt body state isMinimized \
-            minimizedReason viewerCanUpdate viewerCanDelete \
+            minimizedReason viewerCanUpdate viewerCanDelete viewerCanReact \
             reactionGroups { content viewerHasReacted reactors { totalCount } } } } } } } } }""".formatted(COMMENTS);
 
     // Who wrote it; empty when GitHub does not say, as for a deleted account.
@@ -59,8 +59,11 @@ final class ReviewThreadsQuery {
             .map(author -> author.flatMap(login -> login).getOrElse(""));
 
     // What the viewer may do with a comment.
-    static final Decoder<CommentRights> COMMENT_RIGHTS =
-            map2(field("viewerCanUpdate", bool()), field("viewerCanDelete", bool()), CommentRights::new);
+    static final Decoder<CommentRights> COMMENT_RIGHTS = map3(
+            field("viewerCanUpdate", bool()),
+            field("viewerCanDelete", bool()),
+            field("viewerCanReact", bool()),
+            CommentRights::new);
 
     // One reaction: GitHub lists each kind, also those nobody gave.
     static final Decoder<Reactions.Group> REACTION_GROUP = map3(

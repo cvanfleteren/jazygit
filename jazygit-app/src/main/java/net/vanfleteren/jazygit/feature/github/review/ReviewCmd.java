@@ -176,10 +176,11 @@ public sealed interface ReviewCmd extends Cmd {
     }
 
     /**
-     * Gives {@code reaction} to the comment with the id {@code comment} of pull request {@code number} when
-     * {@code given}, else takes it back (ADR 86).
+     * Gives {@code reaction} to the comment with the id {@code comment} of the thread with the id {@code thread} of
+     * pull request {@code number} when {@code given}, else takes it back (ADR 86).
      */
-    record React(int number, String comment, Reaction reaction, boolean given) implements ReviewCmd, OperationCmd {
+    record React(int number, String thread, String comment, Reaction reaction, boolean given)
+            implements ReviewCmd, OperationCmd {
 
         @Override
         public Operation operation() {

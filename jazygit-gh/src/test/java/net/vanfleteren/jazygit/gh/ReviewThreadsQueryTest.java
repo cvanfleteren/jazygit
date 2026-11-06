@@ -57,7 +57,7 @@ class ReviewThreadsQueryTest {
             String author, String state, String minimized, String body, String update, String delete) {
         return """
                 { "id": "IC_1", "fullDatabaseId": "101", "author": %s, "createdAt": "%s", "body": "%s", "state": "%s", "isMinimized": %b,
-                  "minimizedReason": %s, "viewerCanUpdate": %s, "viewerCanDelete": %s, "reactionGroups": [] }""".formatted(author, AT, body, state, !minimized.equals("null"), minimized, update, delete);
+                  "minimizedReason": %s, "viewerCanUpdate": %s, "viewerCanDelete": %s, "viewerCanReact": %s, "reactionGroups": [] }""".formatted(author, AT, body, state, !minimized.equals("null"), minimized, update, delete, update);
     }
 
     private static ReviewThread onLine12(List<Comment> comments, int more) {
@@ -215,7 +215,7 @@ class ReviewThreadsQueryTest {
         assertEquals(
                 List.of(CommentRights.NONE, CommentRights.ALL),
                 read.threads().head().comments().map(Comment::rights));
-        assertTrue(ReviewThreadsQuery.QUERY.contains("viewerCanUpdate viewerCanDelete"));
+        assertTrue(ReviewThreadsQuery.QUERY.contains("viewerCanUpdate viewerCanDelete viewerCanReact"));
     }
 
     @Test
@@ -238,5 +238,18 @@ class ReviewThreadsQueryTest {
                 read.threads().head().comments().head().reactions());
         assertTrue(ReviewThreadsQuery.QUERY.contains(
                 "reactionGroups { content viewerHasReacted reactors { totalCount } }"));
+    }
+
+    @Test
+    void whetherTheViewerMayReactToACommentIsReadApartFromTheirOtherRights() {
+        String locked = comment("{ \"login\": \"me\" }", "SUBMITTED", "null", "Hm", "true", "true")
+                .replace("\"viewerCanReact\": true", "\"viewerCanReact\": false");
+
+        ReviewRemarks read =
+                read(page("\"abc123\"", thread(onLine(12), 1, locked))).get();
+
+        assertEquals(
+                new CommentRights(true, true, false),
+                read.threads().head().comments().head().rights());
     }
 }

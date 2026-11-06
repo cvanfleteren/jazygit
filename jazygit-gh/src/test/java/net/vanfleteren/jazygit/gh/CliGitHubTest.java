@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.*;
 import net.vanfleteren.jazygit.gh.model.PullRequestEdit;
+import net.vanfleteren.jazygit.gh.model.Reaction;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -347,5 +348,23 @@ class CliGitHubTest {
         assertEquals(
                 new GhError.CommandFailed(Option.of(other + " pr checkout 9"), 1),
                 outcome.getLeft().error());
+    }
+
+    @Test
+    void aReactionToACommentThatIsGoneFailsAsGone(@TempDir Path dir) throws Exception {
+        assumeTrue(Files.isExecutable(Path.of("/bin/sh")), "no POSIX shell");
+
+        assertEquals(
+                new GhError.Gone(),
+                failing(dir, true)
+                        .reactToReviewComment("PRRC_1", Reaction.EYES, true)
+                        .getLeft()
+                        .error());
+        assertEquals(
+                new GhError.CommandFailed(Option.of("gh: Resource not accessible by integration"), 1),
+                failing(dir, false)
+                        .reactToReviewComment("PRRC_1", Reaction.EYES, false)
+                        .getLeft()
+                        .error());
     }
 }
