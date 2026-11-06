@@ -11,11 +11,13 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesCmd;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesMsg;
+import net.vanfleteren.jazygit.feature.github.browse.BrowseRemarkCmd;
 import net.vanfleteren.jazygit.feature.github.review.ReviewPopup.Target;
 import net.vanfleteren.jazygit.gh.model.CommentRights;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.NewReviewThread;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
+import net.vanfleteren.jazygit.gh.model.PullRequestLink;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Comment;
@@ -237,6 +239,33 @@ class ReviewUpdateTest {
 
         assertEquals(List.empty(), refused.cmds());
         assertEquals(Option.of(new AppError.CannotReview(Why.NO_UNRESOLVE)), error(refused.model()));
+    }
+
+    @Test
+    void theBrowserOpensOnTheCommentOfTheCursorOrElseOnThePullRequest() {
+        assertEquals(
+                List.of(new BrowseRemarkCmd(new PullRequestLink("", "owner/repo", 7, Option.of("1")))),
+                Update.update(files(), new ReviewMsg.OpenAsked(at(onThread("T1"))))
+                        .cmds());
+        assertEquals(
+                List.of(new BrowseRemarkCmd(new PullRequestLink("", "owner/repo", 7, Option.of("2")))),
+                Update.update(files(), new ReviewMsg.OpenAsked(at(new Anchor.Comment("R1", (Anchor.Thread)
+                                onThread("T1")))))
+                        .cmds());
+        assertEquals(
+                List.of(new BrowseRemarkCmd(new PullRequestLink("", "owner/repo", 7, Option.none()))),
+                Update.update(files(), new ReviewMsg.OpenAsked(at(line(Side.RIGHT, 2))))
+                        .cmds());
+    }
+
+    @Test
+    void theBrowserOpensWhateverThePullRequestIsAt() {
+        Next opened = Update.update(
+                files(PullRequestDetails.State.MERGED, "c".repeat(40)), new ReviewMsg.OpenAsked(at(onThread("T1"))));
+
+        assertEquals(
+                List.of(new BrowseRemarkCmd(new PullRequestLink("", "owner/repo", 7, Option.of("1")))), opened.cmds());
+        assertEquals(Option.none(), error(opened.model()));
     }
 
     @Test
