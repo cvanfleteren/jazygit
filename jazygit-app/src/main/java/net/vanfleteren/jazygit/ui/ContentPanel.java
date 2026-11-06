@@ -34,9 +34,9 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.AbstractList;
 import java.util.Locale;
+import java.util.function.BiFunction;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
@@ -49,6 +49,8 @@ import net.vanfleteren.jazygit.settings.DiffLook;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.Anchor;
 import net.vanfleteren.jazygit.state.DiffCursorAt;
+import net.vanfleteren.jazygit.state.DiffLines;
+import net.vanfleteren.jazygit.state.DiffStops;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Scrolled;
@@ -142,6 +144,20 @@ public final class ContentPanel {
      */
     static RichDiff.Drawn diffDrawn(
             ShownDiff diff, DiffLook look, Option<ShownRemarks> remarks, Theme.SpanStyles styles) {
+        return diffDrawn(diff, look, remarks, Option.none(), styles);
+    }
+
+    /**
+     * The lines of {@link #diffText(ShownDiff, DiffLook, Option, Theme.SpanStyles)}, with the stops of the cursor in
+     * the rich view (ADR 60), and the lines of {@code asGiven}, the hunk a range is open in, as git gives them (ADR
+     * 83).
+     */
+    static RichDiff.Drawn diffDrawn(
+            ShownDiff diff,
+            DiffLook look,
+            Option<ShownRemarks> remarks,
+            Option<DiffStops.HunkAt> asGiven,
+            Theme.SpanStyles styles) {
         List<Line> failed = remarks.flatMap(ShownRemarks::failed)
                 .map(failure -> Line.from(styled(
                         Messages.get("content.remarks.failed", Placeholders.error(failure)),
@@ -153,7 +169,7 @@ public final class ContentPanel {
                 RichDiff.Drawn.plain(remarks.filter(shown -> !shown.threads().isEmpty())
                         .map(shown -> counted(diff, shown.threads(), styles))
                         .getOrElse(() -> changeLines(diff, look, styles)));
-            case RICH -> RichDiff.drawn(diff.folded(), look.syntax(), look.words(), remarks, styles);
+            case RICH -> RichDiff.drawn(diff.folded(), look.syntax(), look.words(), remarks, asGiven, styles);
         };
         return drawn.after(failed).withLead();
     }
@@ -421,7 +437,8 @@ public final class ContentPanel {
     private static RichDiff.Drawn changeDrawn(ShownDiff changes, DiffLook look, Theme.SpanStyles styles) {
         return switch (look.style()) {
             case PLAIN -> RichDiff.Drawn.plain(lines(changes.text()).map(line -> diffLine(line, styles)));
-            case RICH -> RichDiff.drawn(changes.folded(), look.syntax(), look.words(), Option.none(), styles);
+            case RICH ->
+                RichDiff.drawn(changes.folded(), look.syntax(), look.words(), Option.none(), Option.none(), styles);
         };
     }
 
@@ -489,11 +506,13 @@ public final class ContentPanel {
     }
 
     /**
-     * {@code body}, styled, with the stops of the cursor of a rich diff (ADR 60).
+     * {@code body}, styled, with the stops of the cursor of a rich diff (ADR 60), the lines of {@code asGiven}, the
+     * hunk a range is open in, as git gives them (ADR 83). Only the diff of a pull request's files has ranges.
      */
-    private RichDiff.Drawn bodyDrawn(Body body) {
+    private RichDiff.Drawn bodyDrawn(Body body, Option<DiffStops.HunkAt> asGiven) {
         return switch (body) {
-            case Body.Diff(ShownDiff diff, DiffLook look, var remarks) -> diffDrawn(diff, look, remarks, styles);
+            case Body.Diff(ShownDiff diff, DiffLook look, var remarks) ->
+                diffDrawn(diff, look, remarks, asGiven, styles);
             case Body.BranchLog(List<Commit> commits, AheadView ahead) ->
                 plain(logText(commits, ZoneId.systemDefault(), ahead, styles));
             case Body.CommitChanges(Commit commit, ShownDiff changes, DiffLook look) ->
@@ -503,6 +522,21 @@ public final class ContentPanel {
             case Body.PullRequest(PullRequestSummary pullRequest, PullRequestPreview preview) ->
                 plain(pullRequestText(pullRequest, preview, styles));
         };
+    }
+
+    /**
+     * The hunk of the line {@code mark} in {@code body}, found in its diff without drawing it: the hunk a range from
+     * that line is open in (ADR 83). Numbered as the rich view numbers them, among the hunks of the diff as its lines
+     * left out are shown (ADR 77). None unless {@code body} is a diff with that line: only the diff of a pull request's
+     * files has ranges.
+     */
+    static Option<DiffStops.HunkAt> markedHunk(Body body, Anchor mark) {
+        return body instanceof Body.Diff(ShownDiff diff, var look, var remarks)
+                ? DiffLines.of(diff.folded().diff().diff())
+                        .lines()
+                        .find(line -> line.anchor().equals(mark))
+                        .map(DiffLines.Line::hunk)
+                : Option.none();
     }
 
     private static RichDiff.Drawn plain(Text text) {
@@ -626,7 +660,7 @@ public final class ContentPanel {
                 Model model,
                 String focusedId,
                 Shown.Area shown,
-                Function<Body, RichDiff.Drawn> style,
+                BiFunction<Body, Option<DiffStops.HunkAt>, RichDiff.Drawn> style,
                 Theme.SpanStyles styles) {
             return new Fitted(
                     fit(model, focusedId, shown, style, styles), () -> fit(model, focusedId, shown, style, styles));
@@ -640,17 +674,41 @@ public final class ContentPanel {
                 Model model,
                 String focusedId,
                 Shown.Area shown,
-                Function<Body, RichDiff.Drawn> style,
+                BiFunction<Body, Option<DiffStops.HunkAt>, RichDiff.Drawn> style,
                 Theme.SpanStyles styles) {
             ThemeName theme = model.preferences().theme();
-            Styled current = styled.filter(last -> last.body().equals(shown.body()) && last.theme() == theme)
-                    .getOrElse(() -> Styled.of(shown.body(), theme, style.apply(shown.body())));
-            styled = Option.of(current);
             ScrolledContent content = shown.content();
             Scrolled known = model.scrolled(id, content);
             sent = sent.filter(told -> told._1().equals(known));
-            Scrolled at = sent.map(Tuple2::_2).getOrElse(known);
+            Scrolled told = sent.map(Tuple2::_2).getOrElse(known);
             shownAt = known;
+            Body body = shown.body();
+            Option<Styled> last = styled.filter(before -> before.body().equals(body) && before.theme() == theme);
+            // The hunk a range is open in is shown as git gives it, so a range holds the lines it shows (ADR 83). A new
+            // body has its hunk looked up in its diff, so it is drawn once, in the order it is shown in.
+            Option<DiffStops.HunkAt> asGiven = told.mark()
+                    .flatMap(mark -> last.map(before -> before.hunk(mark)).getOrElse(() -> markedHunk(body, mark)));
+            Styled current = last.filter(before -> before.asGiven().equals(asGiven))
+                    .getOrElse(() -> Styled.of(body, theme, asGiven, style.apply(body, asGiven)));
+            styled = Option.of(current);
+            // Shown in another order, the line of the cursor stays where it was on the screen: the view moves by as
+            // much as it does, which the model learns with the next move (ADR 83).
+            Scrolled at = last.filter(before -> before != current)
+                    .flatMap(before -> told.cursor()
+                            .flatMap(cursorAt -> before.row(cursorAt)
+                                    .flatMap(was -> current.row(cursorAt).map(is -> is - was))))
+                    .filter(shift -> shift != 0)
+                    .map(shift -> {
+                        Scrolled shifted = new Scrolled(
+                                told.content(),
+                                Math.max(0, told.row() + shift),
+                                told.column(),
+                                told.cursor(),
+                                told.mark());
+                        sent = Option.of(Tuple.of(known, shifted));
+                        return shifted;
+                    })
+                    .getOrElse(told);
             RichTextState state = element.state();
             cursor = DiffCursor.of(
                     current.stops(),
@@ -899,6 +957,7 @@ public final class ContentPanel {
          * {@code body}, styled in {@code theme} as {@code lines}, with where the stops of its cursor start, if it has
          * one.
          *
+         * @param asGiven the hunk shown as git gives it, as a range is open in it (ADR 83)
          * @param indexes the index of the stop of each anchor, {@link DiffCursor#indexes}
          * @param widest  how wide the widest of {@code lines} is, which the tint of the cursor never makes wider
          * @param filling the lines drawn to the edge of the area (ADR 80): the bar of each file, the lines of the diff
@@ -907,18 +966,20 @@ public final class ContentPanel {
         private record Styled(
                 Body body,
                 ThemeName theme,
+                Option<DiffStops.HunkAt> asGiven,
                 Vector<Line> lines,
                 Vector<RichDiff.Stop> stops,
                 Map<Anchor, Integer> indexes,
                 int widest,
                 Set<Integer> filling) {
 
-            static Styled of(Body body, ThemeName theme, RichDiff.Drawn drawn) {
+            static Styled of(Body body, ThemeName theme, Option<DiffStops.HunkAt> asGiven, RichDiff.Drawn drawn) {
                 Vector<Line> lines = drawn.lines().toVector();
                 Vector<RichDiff.Stop> stops = drawn.stops().toVector();
                 return new Styled(
                         body,
                         theme,
+                        asGiven,
                         lines,
                         stops,
                         DiffCursor.indexes(stops),
@@ -931,6 +992,21 @@ public final class ContentPanel {
                                 })
                                 .map(RichDiff.Stop::row)
                                 .toSet());
+            }
+
+            /**
+             * The hunk of the line {@code anchor}, if it is a line of this body.
+             */
+            Option<DiffStops.HunkAt> hunk(Anchor anchor) {
+                return indexes.get(anchor)
+                        .flatMap(index -> stops.get(index).mark().hunk());
+            }
+
+            /**
+             * The line the stop {@code anchor} starts on, if it is a stop of this body.
+             */
+            Option<Integer> row(Anchor anchor) {
+                return indexes.get(anchor).map(index -> stops.get(index).row());
             }
         }
     }

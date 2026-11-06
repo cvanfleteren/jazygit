@@ -1072,6 +1072,74 @@ class ContentPanelTest {
         assertEquals(1, leaves.get());
     }
 
+    @Test
+    void aRangeShowsItsHunkAsGitGivesItWithTheLineOfTheCursorWhereItWas() throws Exception {
+        // The model takes where the area is scrolled to, as the app's does.
+        java.util.concurrent.atomic.AtomicReference<Model> model = new java.util.concurrent.atomic.AtomicReference<>(
+                pullRequestDiff("Why?", """
+                        diff --git a/a.txt b/a.txt
+                        --- a/a.txt
+                        +++ b/a.txt
+                        @@ -1,42 +1,42 @@
+                        """ + " context\n".repeat(40) + """
+                                -int count = 1;
+                                -int total = 2;
+                                +int count = 42;
+                                +int total = 43;
+                                """));
+        ContentPanel reviewing = new ContentPanel(
+                Theme.SpanStyles.NONE,
+                () -> false,
+                id -> {},
+                msg -> model.set(Update.update(model.get(), msg).model()));
+        String area = reviewing.areaOfPane(model.get(), FilesPanel.ID).get();
+
+        String paired;
+        String ranged;
+        String dropped;
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> reviewing.render(model.get(), area))) {
+            SettledPilot.focus(testRunner, area);
+            RenderedText.ofLarge(testRunner, () -> reviewing.render(model.get(), area));
+            // To the end of the diff, scrolled down, and up from its marker to the second removed line.
+            SettledPilot.of(testRunner).press(KeyCode.END);
+            SettledPilot.of(testRunner).pause();
+            RenderedText.ofLarge(testRunner, () -> reviewing.render(model.get(), area));
+            for (int step = 0; step < 2; step++) {
+                SettledPilot.of(testRunner).press('k');
+                SettledPilot.of(testRunner).pause();
+                RenderedText.ofLarge(testRunner, () -> reviewing.render(model.get(), area));
+            }
+            paired = RenderedText.ofLarge(testRunner, () -> reviewing.render(model.get(), area));
+            SettledPilot.of(testRunner).press('v');
+            SettledPilot.of(testRunner).pause();
+            RenderedText.ofLarge(testRunner, () -> reviewing.render(model.get(), area));
+            ranged = RenderedText.ofLarge(testRunner, () -> reviewing.render(model.get(), area));
+            SettledPilot.of(testRunner).press(KeyCode.ESCAPE);
+            SettledPilot.of(testRunner).pause();
+            RenderedText.ofLarge(testRunner, () -> reviewing.render(model.get(), area));
+            dropped = RenderedText.ofLarge(testRunner, () -> reviewing.render(model.get(), area));
+        }
+
+        assertTrue(
+                row(paired, "-int count") < row(paired, "+int count")
+                        && row(paired, "+int count") < row(paired, "-int total"),
+                paired);
+        assertTrue(
+                row(ranged, "-int count") < row(ranged, "-int total")
+                        && row(ranged, "-int total") < row(ranged, "+int count"),
+                ranged);
+        assertEquals(row(paired, "-int total"), row(ranged, "-int total"), paired + ranged);
+        assertEquals(row(paired, "-int total"), row(dropped, "-int total"), paired + dropped);
+        assertTrue(row(dropped, "+int count") < row(dropped, "-int total"), dropped);
+    }
+
+    /**
+     * The row of {@code screen} that shows {@code text}.
+     */
+    private static int row(String screen, String text) {
+        return List.of(screen.split("\n")).indexWhere(line -> line.contains(text));
+    }
+
     /**
      * A pull request's files open in the files pane, in the rich view, its one file selected: a diff of one added
      * line, with a thread on it.
@@ -1084,6 +1152,19 @@ class ContentPanelTest {
      * {@link #pullRequestDiff()}, the one comment of its thread saying {@code body}.
      */
     private static Model pullRequestDiff(String body) {
+        return pullRequestDiff(body, """
+                diff --git a/a.txt b/a.txt
+                --- a/a.txt
+                +++ b/a.txt
+                @@ -0,0 +1 @@
+                +a
+                """);
+    }
+
+    /**
+     * {@link #pullRequestDiff(String)}, of the diff {@code diff}, with the thread on the first line of the new file.
+     */
+    private static Model pullRequestDiff(String body, String diff) {
         CommitFilesView.Changes of = new CommitFilesView.Changes.OfPullRequest(
                 new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
         CommitFile file = new CommitFile("a.txt", ChangeType.MODIFIED);
@@ -1134,13 +1215,7 @@ class ContentPanelTest {
                         Update.update(open, new SelectionMsg.CommitFilesSelected(List.of(file)))
                                 .model(),
                         new LoadMsg.CommitFileDiffLoaded(
-                                of, List.of(file), rich.preferences().diffOptions(), DiffText.of("""
-                                diff --git a/a.txt b/a.txt
-                                --- a/a.txt
-                                +++ b/a.txt
-                                @@ -0,0 +1 @@
-                                +a
-                                """)))
+                                of, List.of(file), rich.preferences().diffOptions(), DiffText.of(diff)))
                 .model();
     }
 

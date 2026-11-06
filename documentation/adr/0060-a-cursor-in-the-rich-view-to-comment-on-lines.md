@@ -193,3 +193,5 @@ Amended by ADR 64: `d` deletes a comment of a thread.
 Amended by ADR 65: `e` edits a comment of a thread.
 
 Amended by ADR 78: the cursor tints the lines of its stop only, not a copy of all of them each frame.
+
+Amended by ADR 83: the cursor stops on paired lines in the order they are shown; the hunk a range is open in is shown as git gives it.

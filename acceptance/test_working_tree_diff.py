@@ -41,3 +41,27 @@ def test_the_diff_with_the_focus_is_bordered_like_the_pane_with_it(repo, jazygit
 
     ui.app.eventually(lambda: ui.app.colour_at("╭Unstaged changes") == focused, "the diff to be bordered as focused")
     assert ui.app.focused_pane() is None
+
+
+def test_a_removed_line_is_followed_by_the_line_it_became(repo, jazygit):
+    """Changed lines are shown in pairs (ADR 83)."""
+    repo.commit("Add versions", **{"versions.txt": "checkstyle = 14.3.0\nerrorprone = 2.51.0\nnative = 1.1.17\n"})
+    repo.write("versions.txt", "checkstyle = 14.4.0\nerrorprone = 2.52.0\nnative = 1.1.18\n")
+    ui = jazygit()
+    ui.files.select("versions.txt")
+    ui.app.wait_for("diff --git a/versions.txt b/versions.txt")
+
+    ui.app.press("ctrl+d")
+
+    ui.app.wait_for("modified  versions.txt")
+    rows = ui.app.text().splitlines()
+    order = [
+        "1   │ -checkstyle = 14.3.0",
+        "  1 │ +checkstyle = 14.4.0",
+        "2   │ -errorprone = 2.51.0",
+        "  2 │ +errorprone = 2.52.0",
+        "3   │ -native = 1.1.17",
+        "  3 │ +native = 1.1.18",
+    ]
+    found = [next(at for at, row in enumerate(rows) if line in row) for line in order]
+    assert found == sorted(found), ui.app.text()
