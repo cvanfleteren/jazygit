@@ -125,3 +125,5 @@ Amended by ADR 55: the tree lists the files a pull request changes too, read wit
 Amended by ADR 60: the rich view has a cursor, which stops on the lines, the bars of the files and the threads.
 
 Amended by ADR 80: a changed line, the bar and the tint of the cursor go on to the edge of the area.
+
+Amended by ADR 83: a removed line is followed by the line it became, where the words of each pair were compared.

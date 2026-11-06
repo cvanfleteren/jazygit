@@ -404,7 +404,8 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
 - **The rich view** is drawn by `ui.RichDiff` from a `ParsedDiff`, one tree of files, hunks and lines, each line with
   its words and its tokens (ADR 56): `UnifiedDiff`, the diff parsed into files, hunks and numbered lines, which
   `ParsedDiff.diff()` gives back, and `WordDiff`, which pairs the removed and added lines of a block and finds the words that
-  changed in a pair, with the whitespace between two changed words highlighted with them (ADR 54). All are pure, in `git.model`. A `DiffText` is parsed where it is made, on the thread that read it
+  changed in a pair, with the whitespace between two changed words highlighted with them (ADR 54), and `LinePairs`,
+  which shows a block whose pairs all have changed words a pair at a time (ADR 83). All are pure, in `git.model`. A `DiffText` is parsed where it is made, on the thread that read it
   from git (ADR 50), so the render thread only styles it; the line the content panel adds after a diff, that it is
   truncated or that only whitespace changed, is added as a note (`ParsedDiff.withNote`). The content panel styles a
   body only when it changes, not on every frame. It styles it in parallel on the common pool, while the render thread
