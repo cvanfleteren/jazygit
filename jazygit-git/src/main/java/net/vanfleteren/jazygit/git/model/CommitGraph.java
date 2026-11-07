@@ -91,8 +91,21 @@ public final class CommitGraph {
      * @param joins   the rails that end at the commit, as they waited for it too
      * @param opens   the rails that go on below to the other parents of a merge: a {@code passing} one already
      *                waiting for that parent, or a free one, which can be one of the {@code joins}
+     * @param meets   the rails that from this commit on wait for the same commit as a rail to their left, which
+     *                {@code git log --graph} ends right away rather than where they join
      */
-    public record Node(Commit commit, int column, List<Integer> passing, List<Integer> joins, List<Integer> opens) {}
+    public record Node(
+            Commit commit,
+            int column,
+            List<Integer> passing,
+            List<Integer> joins,
+            List<Integer> opens,
+            List<Meet> meets) {}
+
+    /**
+     * A rail that waits for the same commit as the rail {@code into}, the leftmost one waiting for it.
+     */
+    public record Meet(int rail, int into) {}
 
     /**
      * The rails below the nodes laid out so far, by column, with the commit each waits for, and those nodes, last
@@ -114,9 +127,21 @@ public final class CommitGraph {
             Opened opened = commit.parents()
                     .drop(1)
                     .foldLeft(new Opened(kept, List.empty()), (state, parent) -> state.open(parent, column));
+            List<Option<Sha>> below =
+                    opened.rails().reverse().dropWhile(Option::isEmpty).reverse();
+            List<Meet> meets = List.range(0, below.size())
+                    .filter(at -> doubled(below, at)
+                            && !(doubled(rails, at) && rails.get(at).equals(below.get(at))))
+                    .map(at -> new Meet(at, below.indexOf(below.get(at))));
             return new Laid(
-                    opened.rails().reverse().dropWhile(Option::isEmpty).reverse(),
-                    latestFirst.prepend(new Node(commit, column, passing, joins, opened.opens())));
+                    below, latestFirst.prepend(new Node(commit, column, passing, joins, opened.opens(), meets)));
+        }
+
+        /**
+         * Whether the rail {@code at} waits for the same commit as a rail to its left.
+         */
+        private static boolean doubled(List<Option<Sha>> rails, int at) {
+            return at < rails.size() && rails.get(at).isDefined() && rails.indexOf(rails.get(at)) < at;
         }
     }
 

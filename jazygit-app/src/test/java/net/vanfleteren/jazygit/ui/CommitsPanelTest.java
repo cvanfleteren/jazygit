@@ -238,8 +238,8 @@ class CommitsPanelTest {
                 List.empty(),
                 List.of(new Tag("v1"), new Tag("v1.1")));
 
-        LoadableList.Row row =
-                CommitsPanel.row(new CommitGraph.Node(tagged, 0, List.empty(), List.empty(), List.empty()));
+        LoadableList.Row row = CommitsPanel.row(
+                new CommitGraph.Node(tagged, 0, List.empty(), List.empty(), List.empty(), List.empty()));
 
         assertEquals("abcdef0 Ad ○ [v1] [v1.1] Release", row.text());
         assertEquals(

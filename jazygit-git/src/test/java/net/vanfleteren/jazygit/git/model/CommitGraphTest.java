@@ -29,7 +29,20 @@ class CommitGraphTest {
 
     private static CommitGraph.Node node(
             Commit commit, int column, List<Integer> passing, List<Integer> joins, List<Integer> opens) {
-        return new CommitGraph.Node(commit, column, passing, joins, opens);
+        return new CommitGraph.Node(commit, column, passing, joins, opens, List.empty());
+    }
+
+    /**
+     * {@code node}, after which its rail {@code rail} waits for the same commit as the rail {@code into}.
+     */
+    private static CommitGraph.Node meeting(CommitGraph.Node node, int rail, int into) {
+        return new CommitGraph.Node(
+                node.commit(),
+                node.column(),
+                node.passing(),
+                node.joins(),
+                node.opens(),
+                List.of(new CommitGraph.Meet(rail, into)));
     }
 
     @Test
@@ -62,7 +75,7 @@ class CommitGraphTest {
                         node(m, 0, List.empty(), List.empty(), List.of(1)),
                         node(f2, 1, List.of(0)),
                         node(f1, 1, List.of(0)),
-                        node(b, 0, List.of(1)),
+                        meeting(node(b, 0, List.of(1)), 1, 0),
                         node(a, 0, List.empty(), List.of(1), List.empty())),
                 CommitGraph.layout(arranged));
     }
@@ -91,11 +104,11 @@ class CommitGraphTest {
                         node(m2, 1, List.of(0), List.empty(), List.of(2)),
                         node(m3, 2, List.of(0, 1), List.empty(), List.of(3)),
                         node(s3, 3, List.of(0, 1, 2)),
-                        node(w2, 2, List.of(0, 1, 3)),
+                        meeting(node(w2, 2, List.of(0, 1, 3)), 3, 2),
                         node(s2, 2, List.of(0, 1), List.of(3), List.empty()),
-                        node(w1, 1, List.of(0, 2)),
+                        meeting(node(w1, 1, List.of(0, 2)), 2, 1),
                         node(s1, 1, List.of(0), List.of(2), List.empty()),
-                        node(r, 0, List.of(1)),
+                        meeting(node(r, 0, List.of(1)), 1, 0),
                         node(a, 0, List.empty(), List.of(1), List.empty())),
                 CommitGraph.layout(arranged));
     }
@@ -118,8 +131,8 @@ class CommitGraphTest {
                         node(outer, 0, List.empty(), List.empty(), List.of(1)),
                         node(f, 1, List.of(0), List.empty(), List.of(2)),
                         node(g, 2, List.of(0, 1)),
-                        node(e, 1, List.of(0, 2)),
-                        node(b, 0, List.of(1, 2)),
+                        meeting(node(e, 1, List.of(0, 2)), 2, 1),
+                        meeting(node(b, 0, List.of(1, 2)), 1, 0),
                         node(a, 0, List.empty(), List.of(1, 2), List.empty())),
                 CommitGraph.layout(arranged));
     }
@@ -139,8 +152,8 @@ class CommitGraphTest {
                 List.of(
                         node(m, 0, List.empty(), List.empty(), List.of(1)),
                         node(f, 1, List.of(0)),
-                        node(n, 0, List.of(1), List.empty(), List.of(2)),
-                        node(g, 2, List.of(0, 1)),
+                        meeting(node(n, 0, List.of(1), List.empty(), List.of(2)), 1, 0),
+                        meeting(node(g, 2, List.of(0, 1)), 2, 0),
                         node(b, 0, List.empty(), List.of(1, 2), List.empty())),
                 CommitGraph.layout(arranged));
     }
@@ -159,9 +172,9 @@ class CommitGraphTest {
         assertEquals(
                 List.of(
                         node(m, 0, List.empty(), List.empty(), List.of(1)),
-                        node(f, 1, List.of(0)),
+                        meeting(node(f, 1, List.of(0)), 1, 0),
                         node(n, 0, List.empty(), List.of(1), List.of(1)),
-                        node(g, 1, List.of(0)),
+                        meeting(node(g, 1, List.of(0)), 1, 0),
                         node(b, 0, List.empty(), List.of(1), List.empty())),
                 CommitGraph.layout(arranged));
     }
@@ -180,7 +193,7 @@ class CommitGraphTest {
                         node(m, 0, List.empty(), List.empty(), List.of(1)),
                         node(k, 1, List.of(0)),
                         node(c, 0, List.of(1), List.empty(), List.of(1)),
-                        node(p, 1, List.of(0)),
+                        meeting(node(p, 1, List.of(0)), 1, 0),
                         node(q, 0, List.empty(), List.of(1), List.empty())),
                 CommitGraph.layout(List.of(m, k, c, p, q)));
     }

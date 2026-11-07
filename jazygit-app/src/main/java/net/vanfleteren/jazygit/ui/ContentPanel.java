@@ -208,9 +208,9 @@ public final class ContentPanel {
      */
     static Text logText(List<Commit> commits, ZoneId zone, AheadView ahead, Theme.SpanStyles styles) {
         DateTimeFormatter dateTime = dateTime(zone);
-        return styledText(CommitGraph.layout(commits).flatMap(node -> {
-            Sha sha = node.commit().sha();
-            List<String> lines = logLines(node, dateTime, ahead.mark(sha));
+        return styledText(drawn(commits).flatMap(node -> {
+            Sha sha = node._1.commit().sha();
+            List<String> lines = logLines(node._1, node._2, dateTime, ahead.mark(sha));
             return ahead.dimmed(sha)
                     ? lines.map(line -> Line.from(styled(line, Theme.Classes.DIM, styles)))
                     : lines.map(line -> line.startsWith("* ")
@@ -318,13 +318,15 @@ public final class ContentPanel {
      */
     static List<String> logLines(List<Commit> commits, ZoneId zone) {
         DateTimeFormatter dateTime = dateTime(zone);
-        return CommitGraph.layout(commits).flatMap(node -> logLines(node, dateTime, Option.none()));
+        return drawn(commits).flatMap(node -> logLines(node._1, node._2, dateTime, Option.none()));
     }
 
     /**
-     * The lines of the commit of {@code node} in {@link #logLines(List, ZoneId)}, with {@code mark} after its sha.
+     * The lines of the commit of {@code node} in {@link #logLines(List, ZoneId)}, drawn with {@code gutter}, with
+     * {@code mark} after its sha.
      */
-    private static List<String> logLines(CommitGraph.Node node, DateTimeFormatter dateTime, Option<String> mark) {
+    private static List<String> logLines(
+            CommitGraph.Node node, LogGraph.Gutter gutter, DateTimeFormatter dateTime, Option<String> mark) {
         Commit c = node.commit();
         List<String> lines = List.of(
                         Messages.get("content.commitSha", c.shortSha())
@@ -334,11 +336,17 @@ public final class ContentPanel {
                         "")
                 .appendAll(messageLines(c))
                 .append("");
-        return LogGraph.gutter(node)
-                .draw(
-                        lines,
-                        Messages.get(
-                                "content.merge", c.parents().map(Sha::shortSha).mkString(" ")));
+        return gutter.draw(
+                lines,
+                Messages.get("content.merge", c.parents().map(Sha::shortSha).mkString(" ")));
+    }
+
+    /**
+     * The nodes of the graph of {@code commits}, each with the gutter its lines are drawn with.
+     */
+    private static List<Tuple2<CommitGraph.Node, LogGraph.Gutter>> drawn(List<Commit> commits) {
+        List<CommitGraph.Node> nodes = CommitGraph.layout(commits);
+        return nodes.zip(LogGraph.gutters(nodes));
     }
 
     /**
