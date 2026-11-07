@@ -105,11 +105,29 @@ class LocalBranchesListTest {
     }
 
     @Test
-    void aLongParentIsCutSoWhatComesAfterItStaysInView() {
-        assertEquals(
-                List.of(" on feature/a-very-long…"),
-                BranchSegs.parent(Option.of(new BranchName("feature/a-very-long-name")))
-                        .map(LoadableList.Seg::text));
+    void aLongParentShowsWholeWhereItFits() throws Exception {
+        assertEquals("2d on feature/a-very-long-name #42", onLongParent(40).strip());
+    }
+
+    @Test
+    void aLongParentIsCutWhereItDoesNotFitSoWhatComesAfterItStaysInView() throws Exception {
+        assertEquals("2d on feature/a-v... #42", onLongParent(24));
+    }
+
+    /**
+     * Line 2 of a branch on a long parent with a pull request after it, drawn {@code width} columns wide.
+     */
+    private static String onLongParent(int width) throws Exception {
+        LoadableList.Row row = LoadableList.Row.of("feature")
+                .withDetail(List.of(LoadableList.Seg.of("2d"))
+                        .appendAll(BranchSegs.parent(Option.of(new BranchName("feature/a-very-long-name"))))
+                        .append(LoadableList.Seg.styled(" #42", Theme.Classes.PULL_REQUEST)));
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(row::element)) {
+            return RenderedText.ofSize(runner, row::element, width, 2)
+                    .lines()
+                    .toList()
+                    .get(1);
+        }
     }
 
     private static final BranchName FEATURE = new BranchName("feature");

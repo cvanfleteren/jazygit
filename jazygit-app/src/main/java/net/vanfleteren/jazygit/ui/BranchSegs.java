@@ -21,11 +21,6 @@ import net.vanfleteren.jazygit.state.*;
  */
 final class BranchSegs {
 
-    /**
-     * How wide the name of the parent of a branch is at most, so that what comes after it on its line stays in view.
-     */
-    static final int PARENT_WIDTH = 20;
-
     private BranchSegs() {}
 
     /**
@@ -103,13 +98,13 @@ final class BranchSegs {
     }
 
     /**
-     * The parent of a branch, {@code on feat/a}, dimmed and with a leading space, its name cut with an ellipsis past
-     * {@link #PARENT_WIDTH} columns; nothing for none (ADR 72).
+     * The parent of a branch, {@code on feat/a}, dimmed and with a leading space, cut first when its line does not
+     * fit, so that what comes after it stays in view; nothing for none (ADR 72).
      */
     static List<LoadableList.Seg> parent(Option<BranchName> parent) {
         return parent.map(name -> LoadableList.Seg.styled(
-                        " " + Messages.get("branches.on", TextWidth.cut(name.value(), PARENT_WIDTH)),
-                        Theme.Classes.DIM))
+                                " " + Messages.get("branches.on", name.value()), Theme.Classes.DIM)
+                        .shrinking())
                 .toList();
     }
 
@@ -118,9 +113,7 @@ final class BranchSegs {
      * no segs (ADR 45).
      */
     static List<LoadableList.Seg> group(List<LoadableList.Seg> segs) {
-        return segs.isEmpty()
-                ? segs
-                : segs.update(0, first -> new LoadableList.Seg(" " + first.text(), first.cssClass()));
+        return segs.isEmpty() ? segs : segs.update(0, first -> first.prefixed(" "));
     }
 
     /**
