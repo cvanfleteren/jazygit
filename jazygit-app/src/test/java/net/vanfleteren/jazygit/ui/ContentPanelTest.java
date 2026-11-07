@@ -1408,7 +1408,17 @@ class ContentPanelTest {
         assertTrue(lines.contains("*   commit m"));
         assertTrue(lines.contains("|\\  Merge: b f"));
         assertTrue(lines.contains("| * commit f"));
+        assertTrue(lines.contains("* | commit b"));
         assertTrue(lines.contains("|/  Ada <a@e.com>"));
+        assertTrue(lines.contains("* commit a"));
+    }
+
+    @Test
+    void logLinesShowTheParentsOfAMergeWhoseOtherParentIsNotListed() {
+        List<String> lines =
+                ContentPanel.logLines(List.of(merge("f2", "f1", "mm"), plain("f1", "base")), ZoneOffset.UTC);
+
+        assertEquals("| Merge: f1 mm", lines.get(lines.indexOf("* commit f2") + 1));
     }
 
     @Test

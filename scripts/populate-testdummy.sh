@@ -7,6 +7,7 @@
 # Result:
 #   main          yaml, sql, json and ts files; big.txt with 20000 lines, a commit indenting every line of it,
 #                 a commit appending one line; a merge train of nested merges 5 levels deep
+#   catch-up      a branch that merged main in twice to catch up while main moved on
 #   feat/a..e     a stack of 5 branches, each with an open PR based on the previous one (feat/a on main)
 #   🚀-launch/✨-sparkles-🎉   a branch with emojis in its name
 set -euo pipefail
@@ -185,6 +186,27 @@ commit -m "Mention the merge train in the README"
 merge train/1 -m "Merge train/1 into main"
 git branch -q -D train/1 train/2 train/3 train/4 train/5
 
+echo "== Catch-up branch"
+# catch-up branches off main and merges main in twice to catch up while main moves on, so its divergence from main
+# has merges whose other parent is on main, outside the commits only on the branch.
+git switch -q -c catch-up
+mkdir -p catch-up
+for round in 1 2; do
+  git switch -q main
+  echo "- main moved on (${round})" >> README.md
+  git add README.md
+  commit -m "Main moves on while catch-up is open (${round})"
+  git switch -q catch-up
+  echo "round ${round}" >> catch-up/notes.txt
+  git add catch-up/notes.txt
+  commit -m "Catch-up: work before catching up (${round})"
+  merge main -m "Merge main into catch-up (${round})"
+done
+echo "done" >> catch-up/notes.txt
+git add catch-up/notes.txt
+commit -m "Catch-up: work after catching up"
+git switch -q main
+
 echo "== Stack feat/a..feat/e"
 base=main
 for name in a b c d e; do
@@ -215,7 +237,7 @@ git switch -q main
 
 echo "== Pushing"
 git push -q --force origin main
-git push -q --force origin feat/a feat/b feat/c feat/d feat/e "$EMOJI_BRANCH"
+git push -q --force origin catch-up feat/a feat/b feat/c feat/d feat/e "$EMOJI_BRANCH"
 
 echo "== Opening stacked PRs"
 base=main
