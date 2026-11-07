@@ -106,22 +106,34 @@ class LocalBranchesListTest {
 
     @Test
     void aLongParentShowsWholeWhereItFits() throws Exception {
-        assertEquals("2d on feature/a-very-long-name #42", onLongParent(40).strip());
+        assertEquals(
+                "  2d  on feature/a-very-long-name  ✓ #42  +", onLongParent(50).stripTrailing());
     }
 
     @Test
     void aLongParentIsCutWhereItDoesNotFitSoWhatComesAfterItStaysInView() throws Exception {
-        assertEquals("2d on feature/a-v... #42", onLongParent(24));
+        assertEquals("  2d  on fe...  ✓ #42  +", onLongParent(24));
+    }
+
+    @Test
+    void aLongParentGoesBeforeThePullRequestIsCut() throws Exception {
+        assertEquals("  2d    ✓ #42  +", onLongParent(16));
     }
 
     /**
-     * Line 2 of a branch on a long parent with a pull request after it, drawn {@code width} columns wide.
+     * Line 2 of a branch on a long parent with a pull request after it, drawn {@code width} columns wide. The branch
+     * is level with its base, so the parent comes first in its group, which puts a space before it: what a row is
+     * most often, and where the parent has to keep being the first to be cut.
      */
     private static String onLongParent(int width) throws Exception {
-        LoadableList.Row row = LoadableList.Row.of("feature")
-                .withDetail(List.of(LoadableList.Seg.of("2d"))
-                        .appendAll(BranchSegs.parent(Option.of(new BranchName("feature/a-very-long-name"))))
-                        .append(LoadableList.Seg.styled(" #42", Theme.Classes.PULL_REQUEST)));
+        LoadableList.Row row = LocalBranchesList.row(
+                Fixtures.branch(new BranchName("feat/b"), false, new Sha("1")),
+                Duration.ofDays(2),
+                Option.none(),
+                Option.of(new BranchName("feature/a-very-long-name")),
+                BranchSegs.gitHub(
+                        Option.of(new PullRequest(42, "b", false, Checks.PASSING, Review.APPROVED)), Option.none()),
+                Option.none());
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(row::element)) {
             return RenderedText.ofSize(runner, row::element, width, 2)
                     .lines()
