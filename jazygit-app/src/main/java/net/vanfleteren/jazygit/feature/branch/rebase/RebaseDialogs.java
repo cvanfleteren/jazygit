@@ -25,21 +25,23 @@ public final class RebaseDialogs {
                     popup -> Messages.get("dialog.rebase.title", popup.branch().value()),
                     List.of(
                             new Choice<RebasePopup>(
-                                    's',
-                                    popup -> Messages.get(
-                                            "dialog.rebase.simple",
-                                            popup.highlighted().value()),
-                                    () -> new RebaseMsg.Chosen(RebaseMsg.Target.ONTO),
-                                    (model, popup) -> RebaseUpdate.onto(model, popup, RebaseMsg.Target.ONTO)
-                                            .isDefined()),
+                                            's',
+                                            popup -> Messages.get(
+                                                    "dialog.rebase.simple",
+                                                    popup.highlighted().value()),
+                                            () -> new RebaseMsg.Chosen(RebaseMsg.Target.ONTO),
+                                            (model, popup) -> RebaseUpdate.onto(model, popup, RebaseMsg.Target.ONTO)
+                                                    .isDefined())
+                                    .withDetails("dialog.rebase.simple.details"),
                             new Choice<RebasePopup>(
-                                    'b',
-                                    popup -> popup.base()
-                                            .map(base -> Messages.get("dialog.rebase.base", base.value()))
-                                            .getOrElse(() -> Messages.get("dialog.rebase.noBase")),
-                                    () -> new RebaseMsg.Chosen(RebaseMsg.Target.BASE),
-                                    (model, popup) -> RebaseUpdate.onto(model, popup, RebaseMsg.Target.BASE)
-                                            .isDefined())))
+                                            'b',
+                                            popup -> popup.base()
+                                                    .map(base -> Messages.get("dialog.rebase.base", base.value()))
+                                                    .getOrElse(() -> Messages.get("dialog.rebase.noBase")),
+                                            () -> new RebaseMsg.Chosen(RebaseMsg.Target.BASE),
+                                            (model, popup) -> RebaseUpdate.onto(model, popup, RebaseMsg.Target.BASE)
+                                                    .isDefined())
+                                    .withDetails("dialog.rebase.base.details")))
             .openingAt(popup -> popup.onto().isEmpty() ? Option.of('b') : Option.none());
 
     private RebaseDialogs() {}

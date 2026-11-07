@@ -17,6 +17,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 import net.vanfleteren.jazygit.feature.github.comment.CommentMsg;
 import net.vanfleteren.jazygit.feature.github.comments.CommentsMsg;
@@ -39,6 +40,7 @@ import net.vanfleteren.jazygit.gh.timing.CheckHistory;
 import net.vanfleteren.jazygit.gh.timing.CheckSample;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.state.CheckTimes;
+import net.vanfleteren.jazygit.state.CursorFeedback;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Reading;
@@ -802,6 +804,72 @@ class PullRequestDialogTest {
         assertEquals(
                 java.util.List.of(new PullRequestMsg.OpenConfirmed(), new Msg.PopupDismissed(PullRequestPopup.class)),
                 dispatched);
+    }
+
+    @Test
+    void whatTheHighlightedActionDoesShowsUnderTheDialogAcrossTheColumns() throws Exception {
+        java.util.List<String> screens = movingRight(READY, 120, 50);
+
+        // Opening in the browser tells nothing more; merging, in the other column, does.
+        assertFalse(screens.get(0).contains("Merges it on GitHub with a merge commit."), screens.get(0));
+        assertTrue(screens.get(1).contains("Merges it on GitHub with a merge commit."), screens.get(1));
+        assertFalse(screens.get(1).contains("below it in its stack"), screens.get(1));
+        assertFalse(screens.get(2).contains("Merges it on GitHub with a merge commit."), screens.get(2));
+    }
+
+    @Test
+    void mergingInAStackTellsTheOnesBelowAreMergedToo() throws Exception {
+        PullRequestDetails stacked = stacked(new PullRequestStack(
+                96,
+                3,
+                3,
+                List.of(
+                        new PullRequestStack.Entry(1, 40, State.OPEN),
+                        new PullRequestStack.Entry(2, 41, State.OPEN),
+                        new PullRequestStack.Entry(3, 42, State.OPEN))));
+
+        String merging = movingRight(stacked, 120, 50).get(1);
+
+        // The box wraps the sentence.
+        assertTrue(merging.contains("The open pull requests below it in"), merging);
+        assertTrue(merging.contains("its stack are merged too."), merging);
+    }
+
+    @Test
+    void onAFortyRowScreenTheWholeDialogShowsAndWhatAnActionDoesWaits() throws Exception {
+        java.util.List<String> screens = movingRight(READY, 120, 40);
+
+        for (String screen : screens) {
+            assertTrue(hintLine(screen) >= 0, screen);
+            assertTrue(screen.contains("(R) Refresh"), screen);
+        }
+        assertFalse(screens.get(1).contains("Merges it on GitHub"), screens.get(1));
+    }
+
+    /**
+     * The screens, {@code width} by {@code height}, of the dialog showing {@code details}: as it opens, after Right,
+     * and after Left again.
+     */
+    private java.util.List<String> movingRight(PullRequestDetails details, int width, int height) throws Exception {
+        CursorFeedback cursor = new CursorFeedback(dispatched::add);
+        PullRequestDialog moving = new PullRequestDialog(cursor, Clock.fixed(NOW, ZoneOffset.UTC));
+        Model model = TestModels.loaded()
+                .withNow(NOW)
+                .openPopup(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                        .with(Either.right(details), 0));
+        Supplier<Element> view =
+                () -> stack(text("background"), moving.render(cursor.on(model)).get());
+        java.util.List<String> screens = new ArrayList<>();
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(view)) {
+            SettledPilot.focus(runner, PullRequestDialog.ID);
+            screens.add(RenderedText.ofSize(runner, view, width, height));
+            for (KeyCode key : new KeyCode[] {KeyCode.RIGHT, KeyCode.LEFT}) {
+                SettledPilot.of(runner).press(key);
+                SettledPilot.of(runner).pause();
+                screens.add(RenderedText.ofSize(runner, view, width, height));
+            }
+        }
+        return screens;
     }
 
     private String screen(PullRequestPopup popup) throws Exception {

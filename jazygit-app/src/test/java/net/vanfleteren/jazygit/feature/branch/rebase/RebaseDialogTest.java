@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.branch.rebase;
 import static dev.tamboui.toolkit.Toolkit.stack;
 import static dev.tamboui.toolkit.Toolkit.text;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
@@ -80,6 +81,26 @@ class RebaseDialogTest {
         assertEquals(
                 List.of(new RebaseMsg.Chosen(RebaseMsg.Target.BASE)),
                 pressing(r -> SettledPilot.of(r).press(KeyCode.ENTER)));
+    }
+
+    @Test
+    void onTheCheckedOutRowWhatRebasingOnTheBaseDoesShowsFirst() throws Exception {
+        open = open.openPopup(new RebasePopup(
+                new BranchName("main"), new BranchName("main"), Option.of(new BranchName("feature/jgit-backend"))));
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view())) {
+            String screen = RenderedText.ofLarge(runner, () -> view());
+            assertTrue(screen.contains("on top of its base branch"), screen);
+            assertFalse(screen.contains("on top of the highlighted branch"), screen);
+        }
+    }
+
+    @Test
+    void elsewhereWhatASimpleRebaseDoesShowsFirst() throws Exception {
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view())) {
+            String screen = RenderedText.ofLarge(runner, () -> view());
+            assertTrue(screen.contains("on top of the highlighted branch"), screen);
+            assertFalse(screen.contains("on top of its base branch"), screen);
+        }
     }
 
     @Test

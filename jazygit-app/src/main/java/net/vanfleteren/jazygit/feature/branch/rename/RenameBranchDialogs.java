@@ -40,19 +40,21 @@ public final class RenameBranchDialogs {
                     popup.branch().value(),
                     popup.newName().value()),
             List.of(
-                    new Choice<>(
-                            'l',
-                            popup -> Messages.get(
-                                    "dialog.renameUpstream.local",
-                                    popup.upstream().shortName()),
-                            RenameBranchMsg.LocallyChosen::new),
-                    new Choice<>(
-                            'r',
-                            popup -> Messages.get(
-                                    "dialog.renameUpstream.remote",
-                                    popup.upstream().shortName(),
-                                    popup.renamed().shortName()),
-                            RenameBranchMsg.WithUpstreamChosen::new)));
+                    new Choice<RenameUpstreamPopup>(
+                                    'l',
+                                    popup -> Messages.get(
+                                            "dialog.renameUpstream.local",
+                                            popup.upstream().shortName()),
+                                    RenameBranchMsg.LocallyChosen::new)
+                            .withDetails("dialog.renameUpstream.local.details"),
+                    new Choice<RenameUpstreamPopup>(
+                                    'r',
+                                    popup -> Messages.get(
+                                            "dialog.renameUpstream.remote",
+                                            popup.upstream().shortName(),
+                                            popup.renamed().shortName()),
+                                    RenameBranchMsg.WithUpstreamChosen::new)
+                            .withDetails("dialog.renameUpstream.remote.details")));
 
     private RenameBranchDialogs() {}
 

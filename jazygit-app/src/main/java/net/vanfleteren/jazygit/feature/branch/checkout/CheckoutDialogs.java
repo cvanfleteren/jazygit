@@ -50,14 +50,17 @@ public final class CheckoutDialogs {
                             "dialog.checkoutWhere.title", popup.request().label()),
                     List.of(
                             new Choice<CheckoutWherePopup>(
-                                    'h',
-                                    CheckoutDialogs::hereLabel,
-                                    CheckoutMsg.HereChosen::new,
-                                    (model, popup) -> !popup.here().isLocked()),
+                                            'h',
+                                            CheckoutDialogs::hereLabel,
+                                            CheckoutMsg.HereChosen::new,
+                                            (model, popup) -> !popup.here().isLocked())
+                                    .withDetails("dialog.checkoutWhere.here.details"),
                             new Choice<CheckoutWherePopup>('m', CheckoutDialogs::mainLabel, CheckoutMsg.MainChosen::new)
-                                    .shownWhen((model, popup) -> popup.main().isDefined()),
+                                    .shownWhen((model, popup) -> popup.main().isDefined())
+                                    .withDetails("dialog.checkoutWhere.main.details"),
                             new Choice<CheckoutWherePopup>(
-                                    'n', "dialog.checkoutWhere.newWorktree", CheckoutMsg.NewWorktreeChosen::new)))
+                                            'n', "dialog.checkoutWhere.newWorktree", CheckoutMsg.NewWorktreeChosen::new)
+                                    .withDetails("dialog.checkoutWhere.newWorktree.details")))
             .openingAt(popup -> Option.of(popup.main().isDefined() ? 'm' : 'n'));
 
     private CheckoutDialogs() {}

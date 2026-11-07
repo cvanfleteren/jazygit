@@ -31,17 +31,23 @@ public final class StackDialogs {
                             menu.branch().map(branch -> branch.name().value()).getOrElse(""))),
             List.of(
                     new Choice<StackPopups.Menu>('m', "dialog.stack.make", StackMsg.MakeChosen::new)
-                            .shownWhen((model, menu) -> menu.canMake()),
+                            .shownWhen((model, menu) -> menu.canMake())
+                            .withDetails("dialog.stack.make.details"),
                     new Choice<StackPopups.Menu>('o', "dialog.stack.stackOn", StackMsg.StackOnChosen::new)
-                            .shownWhen((model, menu) -> menu.canStackOn()),
+                            .shownWhen((model, menu) -> menu.canStackOn())
+                            .withDetails("dialog.stack.stackOn.details"),
                     new Choice<StackPopups.Menu>('a', "dialog.stack.add", StackMsg.AddChosen::new)
-                            .shownWhen((model, menu) -> menu.canAdd()),
+                            .shownWhen((model, menu) -> menu.canAdd())
+                            .withDetails("dialog.stack.add.details"),
                     new Choice<StackPopups.Menu>('r', "dialog.stack.rebase", StackMsg.RebaseChosen::new)
-                            .shownWhen((model, menu) -> menu.canUnstack()),
+                            .shownWhen((model, menu) -> menu.canUnstack())
+                            .withDetails("dialog.stack.rebase.details"),
                     new Choice<StackPopups.Menu>('p', "dialog.stack.push", StackMsg.PushChosen::new)
-                            .shownWhen((model, menu) -> menu.canUnstack()),
+                            .shownWhen((model, menu) -> menu.canUnstack())
+                            .withDetails("dialog.stack.push.details"),
                     new Choice<StackPopups.Menu>('u', "dialog.stack.unstack", StackMsg.UnstackChosen::new)
-                            .shownWhen((model, menu) -> menu.canUnstack())));
+                            .shownWhen((model, menu) -> menu.canUnstack())
+                            .withDetails("dialog.stack.unstack.details")));
 
     /**
      * The pull requests the one of the branch can be stacked on: in no stack, or on the top of one.
