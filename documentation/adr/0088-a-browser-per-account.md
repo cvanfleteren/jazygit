@@ -5,7 +5,7 @@ Date: 2026-11-07
 ## Context
 
 A repository can be configured to use one of the GitHub accounts gh is logged in to, as `jazygit.githubUser` in its
-git configuration (ADR 69); gh and git then run as that account, with its token in their environment. A user with a
+git configuration (ADR 29, ADR 70); gh and git then run as that account, with its token in their environment. A user with a
 work and a personal account mostly has a browser, or a profile of one, logged in to each. But every link opens in the
 one browser gh would start (ADR 85): a pull request of the work account opens in the browser that is logged in as the
 personal one.
@@ -28,12 +28,21 @@ to another account should open its links where that account is logged in.
   cvf = "chromium --profile-directory=Acme"
   ```
 
-- The host is the one the remotes give, as `GhToken` resolves it: an ssh alias such as `github-work` counts as the host
-  ssh names for it, so one setting holds for every alias of a host. A blank value is not set.
+- The host is the one the remotes give, resolved as `GhToken` resolves the host of a configured account: an ssh alias
+  such as `github-work` counts as the host `ssh -G` names for it, so one setting holds for every alias of a host. It is
+  resolved for every repository, also one that uses gh's active account, so the lookup is shared with `GhToken` rather
+  than kept inside it.
+- The host and the login are matched as GitHub matches them, without regard to case: `CVanfleteren` in
+  `jazygit.githubUser` finds `cvanfleteren` in `settings.toml`, and `GitHub.com` finds `github.com`. They are written
+  as gh gives them.
+- A blank value is not set.
 - The value is a command line as gh's `browser` setting is: split into words as a shell would (`Browser.words`), with
   the link added as its last argument. There is no placeholder for the link.
 - The account is the one the repository is configured to use; when it is configured to use none, gh's active account on
   the host, read when a link opens with `gh config get user -h {host}`, which reads gh's own files and not GitHub.
+- When jazygit's own environment holds `GH_TOKEN` (or `GH_ENTERPRISE_TOKEN` for the host) and the repository is
+  configured to use no account, gh runs as that token's account, which its files do not name: the account is then not
+  known. A configured account is known still, as `GhToken` puts its token in the place of the inherited one.
 
 ### It comes first
 
@@ -71,5 +80,6 @@ to another account should open its links where that account is logged in.
 ## Consequences
 
 - Links of a repository open where its account is logged in, and follow the account when the repository switches.
-- Opening a link of a repository that uses gh's active account runs one more gh command, to read that account.
+- Opening a link of a repository that uses gh's active account runs one more gh command, to read that account, and
+  for a remote with an ssh alias `ssh -G`, to resolve the host.
 - `settings.toml` holds logins of the user's accounts.
