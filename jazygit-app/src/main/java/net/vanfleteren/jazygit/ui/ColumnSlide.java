@@ -7,8 +7,8 @@ import net.vanfleteren.jazygit.state.Screen;
 
 /**
  * How many columns the left column of {@code screen} takes on a screen {@code width} columns wide, on its way from
- * {@code from} columns to {@code to} since {@code start} (ADR 81): it eases out, fast at first and slowing down, and
- * is there after {@link #LENGTH}. At rest, it is as many columns from and to.
+ * {@code from} columns to {@code to} since {@code start}, as a {@link Slide} gets there (ADR 81). At rest, it is as
+ * many columns from and to.
  *
  * @param screen the screen whose left column it is
  * @param width  how many columns wide the screen is
@@ -21,7 +21,7 @@ public record ColumnSlide(Screen screen, int width, int from, int to, Instant st
     /**
      * How long the column takes to get where it is going.
      */
-    public static final Duration LENGTH = Duration.ofMillis(150);
+    public static final Duration LENGTH = Slide.LENGTH;
 
     /**
      * The left column of {@code screen} in a frame drawn at {@code now} on a screen {@code width} columns wide, after
@@ -65,9 +65,7 @@ public record ColumnSlide(Screen screen, int width, int from, int to, Instant st
      * How many columns the column takes at {@code now}.
      */
     public int columnsAt(Instant now) {
-        double elapsed = Duration.between(start, now).toNanos() / (double) LENGTH.toNanos();
-        double eased = 1 - Math.pow(1 - Math.clamp(elapsed, 0, 1), 3);
-        return (int) Math.round(from + (to - from) * eased);
+        return Slide.at(from, to, start, now);
     }
 
     /**

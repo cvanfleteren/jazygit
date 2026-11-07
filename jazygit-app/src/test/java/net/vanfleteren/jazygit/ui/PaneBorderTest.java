@@ -6,6 +6,7 @@ import dev.tamboui.layout.Rect;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.settings.Settings;
+import net.vanfleteren.jazygit.state.LeftPanes;
 import org.junit.jupiter.api.Test;
 
 class PaneBorderTest {
@@ -49,7 +50,7 @@ class PaneBorderTest {
         List<Integer> heights = Settings.DEFAULT_REPOSITORY_HEIGHTS;
         List.rangeClosed(20, 100).forEach(height -> {
             Rect column = new Rect(0, 0, 30, height);
-            List<Integer> rows = LeftColumn.paneRows(heights, height);
+            List<Integer> rows = LeftPanes.rows(heights, height);
             List<Rect> panes = drawn(rows);
             List.range(0, heights.size())
                     .forEach(pane -> panes.forEach(dragTo -> {
@@ -57,7 +58,7 @@ class PaneBorderTest {
                         int bottom = PaneBorder.bottom(column, panes, y).get();
                         List<Integer> resized = Settings.resizedHeights(
                                 heights, pane, bottom - heights.take(pane).sum().intValue());
-                        List<Integer> borders = bottoms(drawn(LeftColumn.paneRows(resized, height)));
+                        List<Integer> borders = bottoms(drawn(LeftPanes.rows(resized, height)));
                         List<Integer> before = bottoms(panes);
                         String what = "pane " + pane + " to row " + y + " of " + height;
                         List.range(0, borders.size())

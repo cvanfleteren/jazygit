@@ -1,6 +1,10 @@
 package net.vanfleteren.jazygit.state;
 
+import io.vavr.collection.HashMap;
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
+import io.vavr.collection.Map;
+import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import lombok.With;
 import net.vanfleteren.jazygit.git.model.DiffContext;
@@ -23,6 +27,10 @@ import net.vanfleteren.jazygit.settings.ThemeName;
  * @param dragged       the width the left column of a screen is dragged to, which is kept once it is let go
  * @param draggedHeights the heights the panes of the left column of a screen are dragged to, which are kept once
  *                       they are let go
+ * @param columnRows    how many rows the left column has, as the last frame drew it, if one was (ADR 92)
+ * @param maximizedPanes the pane of the left column of each screen that is maximized, counted from the first under
+ *                       the status, for this session only (ADR 92)
+ * @param maximizedContents the screens whose content panel is maximized, for this session only (ADR 92)
  */
 @With
 public record Preferences(
@@ -32,7 +40,10 @@ public record Preferences(
         boolean ignoreWhitespace,
         DiffContext context,
         Option<Dragged> dragged,
-        Option<DraggedHeights> draggedHeights) {
+        Option<DraggedHeights> draggedHeights,
+        Option<Integer> columnRows,
+        Map<Screen, Integer> maximizedPanes,
+        Set<Screen> maximizedContents) {
 
     public static final Preferences DEFAULT = new Preferences(
             Settings.DEFAULT,
@@ -41,7 +52,10 @@ public record Preferences(
             false,
             DiffContext.DEFAULT,
             Option.none(),
-            Option.none());
+            Option.none(),
+            Option.none(),
+            HashMap.empty(),
+            HashSet.empty());
 
     /**
      * How the diffs of the files and the commits are read: a merge against its first parent when changes are drawn
@@ -67,13 +81,41 @@ public record Preferences(
     }
 
     /**
-     * How wide the left column of {@code screen} is, in percent of the width: where it is dragged to, else the
-     * width kept.
+     * How wide the left column of {@code screen} is, in percent of the width: where it is dragged to, else as narrow
+     * as it gets while the content panel is maximized, else the width kept.
      */
     public int leftWidth(Screen screen) {
         return dragged.filter(drag -> drag.screen() == screen)
                 .map(Dragged::width)
-                .getOrElse(() -> keptWidth(screen));
+                .getOrElse(() -> contentMaximized(screen) ? Settings.MIN_WIDTH : keptWidth(screen));
+    }
+
+    /**
+     * The pane of the left column of {@code screen} that is maximized, counted from the first under the status.
+     */
+    public Option<Integer> maximizedPane(Screen screen) {
+        return maximizedPanes.get(screen);
+    }
+
+    /**
+     * These preferences with pane {@code pane} of the left column of {@code screen} maximized, or none.
+     */
+    public Preferences withMaximizedPane(Screen screen, Option<Integer> pane) {
+        return withMaximizedPanes(pane.fold(() -> maximizedPanes.remove(screen), at -> maximizedPanes.put(screen, at)));
+    }
+
+    /**
+     * Whether the content panel of {@code screen} is maximized.
+     */
+    public boolean contentMaximized(Screen screen) {
+        return maximizedContents.contains(screen);
+    }
+
+    /**
+     * These preferences with the content panel of {@code screen} maximized, or not.
+     */
+    public Preferences withContentMaximized(Screen screen, boolean maximized) {
+        return withMaximizedContents(maximized ? maximizedContents.add(screen) : maximizedContents.remove(screen));
     }
 
     /**

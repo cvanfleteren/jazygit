@@ -22,6 +22,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.feature.branch.tabs.BranchesTabMsg;
+import net.vanfleteren.jazygit.feature.layout.LayoutMsg;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.settings.*;
@@ -40,7 +41,7 @@ public class JazygitApp extends ToolkitApp {
 
     // Rows of the command log panel, borders included.
     private static final int COMMAND_LOG_HEIGHT = CommandLogPanel.VISIBLE_LINES + 2;
-    // How long after a frame of the left column on its way the next one is drawn (ADR 81).
+    // How long after a frame of the left column or its panes on their way the next one is drawn (ADR 81, 92).
     private static final Duration SLIDE_FRAME = Duration.ofMillis(16);
 
     private final SettingsStore.Loaded settings;
@@ -62,9 +63,11 @@ public class JazygitApp extends ToolkitApp {
     private final BorderDrag borderDrag = new BorderDrag(dispatch);
     // Whether a Redraw is queued that no frame has been drawn since; only touched on the render thread.
     private boolean redrawPending;
-    // The left column as the frame before drew it, maybe on its way to the width chosen (ADR 81), and whether a frame
-    // that moves it on is asked for; only touched on the render thread.
+    // The left column as the frame before drew it, maybe on its way to the width chosen (ADR 81), its panes, maybe on
+    // their way to the heights chosen (ADR 92), and whether a frame that moves them on is asked for; only touched on
+    // the render thread.
     private Option<ColumnSlide> leftSlide = Option.none();
+    private Option<PaneSlide> paneSlide = Option.none();
     private boolean slideFramePending;
 
     /**
@@ -223,11 +226,9 @@ public class JazygitApp extends ToolkitApp {
         Theme.activate(styleEngine, model.preferences().theme());
         String focusedId = focus.settle(model);
         String activeId = focus.activePane(model, focusedId);
-        // The left column is the screen without the fetch line.
-        Option<Integer> leftHeight = Try.of(
-                        () -> runner().tuiRunner().backend().size().height() - FetchLine.HEIGHT)
-                .toOption();
-        LeftColumn.Rendered rendered = leftColumn.render(model, focusedId, activeId, leftHeight);
+        // In rows, which the panes slide through, once the height of the screen is known (ADR 92).
+        Option<List<Integer>> paneRows = leftHeight().map(column -> paneRows(model, column));
+        LeftColumn.Rendered rendered = leftColumn.render(model, focusedId, activeId, paneRows);
         // In columns, which the column slides through, once the width of the screen is known (ADR 81).
         Column left = Try.of(() -> runner().tuiRunner().backend().size().width())
                 .toOption()
@@ -265,7 +266,18 @@ public class JazygitApp extends ToolkitApp {
         String focusedId = focus.focusedId();
         return leftColumn
                 .selectionChanges(model, focus.activePane(model, focusedId))
-                .appendAll(focus.report(model, focusedId));
+                .appendAll(focus.report(model, focusedId))
+                .appendAll(leftHeight()
+                        .filter(rows -> !model.preferences().columnRows().contains(rows))
+                        .map(LayoutMsg.Measured::new));
+    }
+
+    /**
+     * The rows of the left column, which is the screen without the fetch line; none while that is not known.
+     */
+    private Option<Integer> leftHeight() {
+        return Try.of(() -> runner().tuiRunner().backend().size().height() - FetchLine.HEIGHT)
+                .toOption();
     }
 
     /**
@@ -293,7 +305,37 @@ public class JazygitApp extends ToolkitApp {
                 model.preferences().dragged().isDefined(),
                 now);
         leftSlide = Option.of(shown);
-        if (shown.moving(now) && !slideFramePending) {
+        slideOn(shown.moving(now));
+        return shown.columnsAt(now);
+    }
+
+    /**
+     * How many rows each pane of the left column takes in a frame drawn now in a column {@code column} rows tall, as
+     * {@link PaneSlide#next} says (ADR 92), asking for the frame that moves them on while they are on their way.
+     */
+    private List<Integer> paneRows(Model model, int column) {
+        Instant now = clock.instant();
+        Screen screen = model.screen();
+        Preferences preferences = model.preferences();
+        PaneSlide shown = PaneSlide.next(
+                paneSlide,
+                screen,
+                column,
+                new PaneSlide.Chosen(preferences.leftHeights(screen), preferences.maximizedPane(screen)),
+                LeftPanes.shown(model, screen, column),
+                preferences.settings().animations(),
+                preferences.draggedHeights().isDefined(),
+                now);
+        paneSlide = Option.of(shown);
+        slideOn(shown.moving(now));
+        return shown.rowsAt(now);
+    }
+
+    /**
+     * Asks for a frame a moment after this one while something is still {@code moving} on its way, one at a time.
+     */
+    private void slideOn(boolean moving) {
+        if (moving && !slideFramePending) {
             slideFramePending = true;
             runner().schedule(
                             () -> runner().runOnRenderThread(() -> {
@@ -302,7 +344,6 @@ public class JazygitApp extends ToolkitApp {
                             }),
                             SLIDE_FRAME);
         }
-        return shown.columnsAt(now);
     }
 
     /**

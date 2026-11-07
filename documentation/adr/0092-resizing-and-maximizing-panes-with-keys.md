@@ -12,8 +12,9 @@ stash is as tall as its stashes, up to its share. The status pane is always 3 ro
 
 There is also no way to give one pane, or the content panel, all the room for a while: a long log or a wide diff.
 
-Which pane has the focus is view state, kept in TamboUI (ADR 2): no update reads it. A global key is a
-`Supplier<Msg>`, which does not see it either.
+Where the focus is, is TamboUI's (ADR 2), but the model keeps which pane or area of the content panel had it last,
+outside the popups (`Model.shownPane`), which a closing popup gives it back to. The model does not know how many rows
+the left column has: only the frame does.
 
 `{` and `}` widen and narrow the context of the diff. `+` reacts on a comment in the diff of a pull request.
 
@@ -31,14 +32,16 @@ Which pane has the focus is view state, kept in TamboUI (ADR 2): no update reads
 - On the repository screen, the share of the stash is first the rows it is shown with, but no less than
   `MIN_HEIGHT`: a stash that shows all its stashes is not made taller, and the commits made shorter give rows the
   stash can show.
-- Nothing changes when a pane would get under `MIN_HEIGHT`, when the status, the content panel or nothing on the left
-  has the focus, or while a popup is open.
+- No pane gets shorter than `MIN_HEIGHT`: a step stops there. Nothing changes when no step changes the rows of the
+  pane, as the panes around it are as short as they get or the stash shows all its stashes; when the content panel or
+  nothing on the left had the focus last; or while a popup is open.
 - A key saves the heights at once and ends a drag whose release the terminal did not report, as `<` and `>` do.
-- The key turns the focus into a pane, and sends `LayoutMsg.PaneStepped(screen, pane, by, columnRows)` with how many
-  rows the column has, if that is known yet; else a step is 5 percent. A global key that sees the focus is a new kind
-  of `Keymap.Global`, whose action takes the focused element. The update reads neither the focus nor the terminal.
-- The help lists `+`, `-` and `Z` with the other global keys, and runs them on the pane that had the focus when the
-  help opened: the help works out their messages when it opens, as it does for the keys of the panel.
+- The keys send `LayoutMsg.PaneStepped(by)`, as `<` and `>` send `Stepped(by)`. The update steps the pane that had
+  the focus last, `Model.shownPane`. Each frame reports how many rows the left column has when the model does not know
+  yet (`LayoutMsg.Measured`), as the panes report what they highlight; until then a step is 5 percent. The update
+  reads neither the focus nor the terminal.
+- The help lists `+`, `-` and `Z` with the other global keys. Run from the help, they act on the pane that had the
+  focus when it opened, which the model keeps while it is open.
 - The heights kept always pass what the settings file is read with (`Settings.heights`): each pane, the last one
   too, at least `MIN_HEIGHT`.
 - Not: `+` and `_`, which are next to each other on QWERTY only. Not: `{` and `}`, which are taken. Not: ctrl or alt
