@@ -5,7 +5,7 @@ import net.vanfleteren.jazygit.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.keys.Scopes;
 
 /**
- * Rebasing the checked out branch onto the selected one.
+ * Rebasing the checked out branch onto the selected one, or on its base branch (ADR 91).
  */
 public final class RebaseAction {
 

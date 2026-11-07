@@ -139,6 +139,38 @@ def test_rebase_onto_a_branch_puts_the_commits_of_the_checked_out_one_on_top_of_
     assert repo.status() == {}
 
 
+def test_rebase_on_the_base_branch_from_the_checked_out_row_puts_it_on_the_main_branch(repo, jazygit):
+    rebase_ready(repo)
+    main = repo("rev-parse", "main")
+    ui = jazygit()
+
+    ui.branches.rebase_on_base("main")
+
+    assert repo.in_progress() is None
+    assert repo.current_branch() == "feature"
+    assert repo.subjects() == ["Add four", "Add two", "Add three", "Add one"]
+    assert repo("merge-base", "feature", "main") == main
+
+
+def test_rebase_on_the_base_branch_puts_it_on_the_branch_it_was_made_from(repo, jazygit):
+    rebase_ready(repo)
+    repo("switch", "-c", "child")
+    repo.commit("Add five", **{"five.txt": "five\n"})
+    repo("config", "branch.child.gh-merge-base", "feature")
+    repo("switch", "feature")
+    repo.commit("Add six", **{"six.txt": "six\n"})
+    feature = repo("rev-parse", "feature")
+    repo("switch", "child")
+    ui = jazygit()
+
+    ui.branches.rebase_on_base("feature")
+
+    assert repo.in_progress() is None
+    assert repo.current_branch() == "child"
+    assert repo.subjects()[:2] == ["Add five", "Add six"]
+    assert repo("merge-base", "child", "feature") == feature
+
+
 def test_rebase_brings_the_uncommitted_changes_back_afterwards(repo, jazygit):
     rebase_ready(repo)
     main = repo("rev-parse", "main")

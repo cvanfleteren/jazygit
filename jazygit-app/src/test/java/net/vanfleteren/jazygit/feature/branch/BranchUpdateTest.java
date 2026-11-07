@@ -1040,13 +1040,13 @@ class BranchUpdateTest {
         Next next = Update.update(model, new RebaseMsg.Requested(new BranchName("feature")));
 
         assertEquals(
-                Option.of(new RebasePopup(new BranchName("main"), new BranchName("feature"))),
+                Option.of(new RebasePopup(new BranchName("main"), new BranchName("feature"), Option.none())),
                 next.model().popup(RebasePopup.class));
         assertEquals(List.of(), next.cmds());
     }
 
     @Test
-    void theCheckedOutBranchAndUnknownBranchesCannotBeRebasedOnto() {
+    void unknownBranchesCannotBeRebasedOnto() {
         Model model = localBranchesRead(
                         loaded(),
                         List.of(
@@ -1054,11 +1054,6 @@ class BranchUpdateTest {
                                 Fixtures.branch(new BranchName("feature"), false, new Sha("2"))))
                 .model();
 
-        assertEquals(
-                Option.none(),
-                Update.update(model, new RebaseMsg.Requested(new BranchName("main")))
-                        .model()
-                        .popup(RebasePopup.class));
         assertEquals(
                 Option.none(),
                 Update.update(model, new RebaseMsg.Requested(new BranchName("nope")))
@@ -1077,7 +1072,7 @@ class BranchUpdateTest {
         open = Update.update(open, new RebaseMsg.Requested(new BranchName("feature")))
                 .model();
 
-        Next next = Update.update(open, new Msg.PopupConfirmed(RebasePopup.class));
+        Next next = Update.update(open, new RebaseMsg.Chosen(RebaseMsg.Target.ONTO));
 
         assertEquals(List.of(new RebaseCmd(new BranchName("feature"))), next.cmds());
         assertEquals(Option.none(), next.model().popup(RebasePopup.class));

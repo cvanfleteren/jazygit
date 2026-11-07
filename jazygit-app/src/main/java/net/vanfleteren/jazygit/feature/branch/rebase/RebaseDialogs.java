@@ -1,8 +1,11 @@
 package net.vanfleteren.jazygit.feature.branch.rebase;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import java.util.function.Consumer;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.ui.BranchesPanel;
 import net.vanfleteren.jazygit.ui.PopupSlot;
@@ -10,25 +13,42 @@ import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog.Choice;
 
 /**
- * The popup of rebasing onto a branch.
+ * The popup of rebasing the checked out branch.
  */
 public final class RebaseDialogs {
 
     /**
-     * Asks how to rebase the checked out branch onto the highlighted one.
+     * Asks where to rebase the checked out branch: onto the highlighted one, or on its base branch (ADR 91). An
+     * option that does not apply is shown disabled; on the checked out row the dialog opens on the base branch.
      */
     public static final ChoiceDialog.Spec<RebasePopup> REBASE = new ChoiceDialog.Spec<>(
-            "rebase",
-            RebasePopup.class,
-            popup -> Messages.get("dialog.rebase.title", popup.branch().value()),
-            List.of(new Choice<RebasePopup>(
-                    's',
-                    popup -> Messages.get("dialog.rebase.simple", popup.onto().value()),
-                    () -> new Msg.PopupConfirmed(RebasePopup.class))));
+                    "rebase",
+                    RebasePopup.class,
+                    popup -> Messages.get("dialog.rebase.title", popup.branch().value()),
+                    List.of(
+                            new Choice<RebasePopup>(
+                                    's',
+                                    popup -> Messages.get(
+                                            "dialog.rebase.simple",
+                                            popup.highlighted().value()),
+                                    () -> new RebaseMsg.Chosen(RebaseMsg.Target.ONTO),
+                                    (model, popup) -> idle(model, popup.onto())),
+                            new Choice<RebasePopup>(
+                                    'b',
+                                    popup -> popup.base()
+                                            .map(base -> Messages.get("dialog.rebase.base", base.value()))
+                                            .getOrElse(() -> Messages.get("dialog.rebase.noBase")),
+                                    () -> new RebaseMsg.Chosen(RebaseMsg.Target.BASE),
+                                    (model, popup) -> idle(model, popup.base()))))
+            .openingAt(popup -> popup.onto().isEmpty() ? Option.of('b') : Option.none());
 
     private RebaseDialogs() {}
 
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
         return List.of(PopupSlot.returningTo(BranchesPanel.ID, new ChoiceDialog<>(REBASE, dispatch)));
+    }
+
+    private static boolean idle(Model model, Option<BranchName> branch) {
+        return branch.exists(name -> model.idleBranch(name).isDefined());
     }
 }

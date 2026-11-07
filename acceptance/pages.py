@@ -621,6 +621,13 @@ class BranchesPane:
         self.ui.changing_repo(f"{checked_out} rebased onto {branch}", lambda: (
             self.app.press("r"), self.ui.confirm(f"Rebase '{checked_out}'", key="s")))
 
+    def rebase_on_base(self, base: str):
+        """Rebases the checked out branch on its base branch, from its own row."""
+        checked_out = self.repo.current_branch()
+        self.select(checked_out)
+        self.ui.changing_repo(f"{checked_out} rebased on {base}", lambda: (
+            self.app.press("r"), self.ui.confirm(f"Rebase '{checked_out}'", key="b")))
+
     def reset_onto_upstream(self, mode: str = "hard"):
         """Resets the checked out branch onto its upstream, keeping the changes since "soft" (staged), "mixed"
         (unstaged) or not at all ("hard")."""
