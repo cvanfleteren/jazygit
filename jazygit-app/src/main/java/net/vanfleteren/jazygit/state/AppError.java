@@ -107,6 +107,14 @@ public sealed interface AppError {
     record UpstreamGone(BranchName branch, String upstream) implements AppError {}
 
     /**
+     * Renaming the upstream of the branch too was chosen, but the branch no longer follows that upstream, or it is no
+     * longer on the remote, as the branches were read again while the dialog was open (ADR 90).
+     *
+     * @param upstream the short name of the upstream the dialog named, e.g. {@code origin/feature}
+     */
+    record UpstreamChanged(BranchName branch, String upstream) implements AppError {}
+
+    /**
      * Comparing a branch with the main branch was asked for, but there is no main branch to compare it with:
      * none is known, or it is gone.
      */

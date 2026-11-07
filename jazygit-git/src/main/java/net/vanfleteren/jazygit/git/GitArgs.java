@@ -44,6 +44,28 @@ final class GitArgs {
     }
 
     /**
+     * {@code :<target>}: the refspec that deletes {@code target}.
+     */
+    static String deletion(BranchRef target) {
+        return ":" + target.toArg();
+    }
+
+    /**
+     * {@code --force-with-lease=<target>}: a push only updates {@code target} on the remote while it is where its
+     * remote-tracking branch says.
+     */
+    static String lease(BranchRef target) {
+        return "--force-with-lease=" + target.toArg();
+    }
+
+    /**
+     * {@code --force-with-lease=<target>:}: a push only creates {@code target} on the remote while it is not there.
+     */
+    static String leaseAbsent(BranchRef target) {
+        return lease(target) + ":";
+    }
+
+    /**
      * {@code branch}'s name, where git takes the name of a branch rather than a commit: the one to create, rename,
      * delete or check out, or in its configuration. A name cannot start with {@code -}.
      */

@@ -92,6 +92,19 @@ public interface Remotes {
      */
     Either<GitFailure, List<ExecutedCommand>> deleteRemoteBranch(RemoteBranch remote);
 
+    // Renaming a branch on its remote.
+
+    /**
+     * Renames {@code upstream}, which the local branch {@code branch} follows, to {@code branch}'s name on its remote,
+     * as it is there: both or neither, and only while the new name is not taken there and {@code upstream} did not
+     * move since it was fetched. {@code branch} then follows the renamed one; its own commits are not pushed.
+     *
+     * @return the command lines that were run, or why not: a {@link GitError.UpstreamNotRenamed} with why git failed,
+     *     a {@link GitError.UpstreamNotOnRemote} when {@code upstream} is gone, and else why {@code branch} could not
+     *     be made to follow the renamed one, which then happened
+     */
+    Either<GitFailure, List<ExecutedCommand>> renameUpstream(BranchName branch, RemoteBranch upstream);
+
     // What a pull request on GitHub changes, as GitHub shows it (ADR 55).
 
     /**

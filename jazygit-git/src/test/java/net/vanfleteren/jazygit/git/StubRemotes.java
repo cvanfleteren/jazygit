@@ -77,6 +77,11 @@ public interface StubRemotes extends Remotes {
     }
 
     @Override
+    default Either<GitFailure, List<ExecutedCommand>> renameUpstream(BranchName branch, RemoteBranch upstream) {
+        return ran();
+    }
+
+    @Override
     default Either<GitError, List<CommitFile>> pullRequestFiles(PullRequestCommits commits) {
         return Either.right(List.empty());
     }
