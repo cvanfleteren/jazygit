@@ -2,8 +2,10 @@
   description = "jazygit, a terminal UI for git";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+  # Pinned to the nixpkgs commit that ships git 2.45.1, for the dev shell's git.
+  inputs.nixpkgs-git.url = "github:NixOS/nixpkgs/4284c2b73c8bce4b46a6adf23e16d9e2ec8da4bb";
 
-  outputs = { self, nixpkgs, ... }:
+  outputs = { self, nixpkgs, nixpkgs-git, ... }:
     let
       systems = [ "x86_64-linux" "aarch64-linux" ];
       forAllSystems = f: nixpkgs.lib.genAttrs systems (system: f nixpkgs.legacyPackages.${system});
@@ -59,14 +61,16 @@
       overlays.default = final: prev: { jazygit = jazygit final; };
 
       devShells = forAllSystems (pkgs:
-        let jdk = pkgs.graalvmPackages.graalvm-ce;
+        let
+          jdk = pkgs.graalvmPackages.graalvm-ce;
+          git = nixpkgs-git.legacyPackages.${pkgs.stdenv.hostPlatform.system}.git;
         in {
           default = pkgs.mkShell {
             packages = [
               jdk
               (pkgs.maven.override { jdk_headless = jdk; })
               # The same git as CI, so a local run meets the git the tests meet there.
-              pkgs.git
+              git
               # For the acceptance tests in acceptance/.
               (pkgs.python3.withPackages (p: [ p.pexpect p.pyte p.pytest p.pytest-xdist ]))
             ];
