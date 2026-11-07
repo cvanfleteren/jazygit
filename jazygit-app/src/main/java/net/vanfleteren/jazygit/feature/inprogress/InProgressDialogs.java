@@ -27,18 +27,23 @@ public final class InProgressDialogs {
             popup -> Messages.get("dialog.inProgress.title", InProgressText.kind(popup.inProgress())),
             List.of(
                     new Choice<InProgressPopup>(
-                            'c',
-                            popup -> popup.conflicts() > 0
-                                    ? Messages.get("dialog.inProgress.continueConflicts", popup.conflicts())
-                                    : Messages.get("dialog.inProgress.continue"),
-                            () -> new InProgressMsg.Chosen(InProgressAction.CONTINUE)),
-                    new Choice<>(
-                            'a', "dialog.inProgress.abort", () -> new InProgressMsg.Chosen(InProgressAction.ABORT)),
-                    new Choice<>(
-                            's',
-                            "dialog.inProgress.skip",
-                            () -> new InProgressMsg.Chosen(InProgressAction.SKIP),
-                            (model, popup) -> popup.inProgress().skippable())));
+                                    'c',
+                                    popup -> popup.conflicts() > 0
+                                            ? Messages.get("dialog.inProgress.continueConflicts", popup.conflicts())
+                                            : Messages.get("dialog.inProgress.continue"),
+                                    () -> new InProgressMsg.Chosen(InProgressAction.CONTINUE))
+                            .withDetails("dialog.inProgress.continue.details"),
+                    new Choice<InProgressPopup>(
+                                    'a',
+                                    "dialog.inProgress.abort",
+                                    () -> new InProgressMsg.Chosen(InProgressAction.ABORT))
+                            .withDetails("dialog.inProgress.abort.details"),
+                    new Choice<InProgressPopup>(
+                                    's',
+                                    "dialog.inProgress.skip",
+                                    () -> new InProgressMsg.Chosen(InProgressAction.SKIP),
+                                    (model, popup) -> popup.inProgress().skippable())
+                            .withDetails("dialog.inProgress.skip.details")));
 
     /**
      * Asks to confirm aborting or skipping, which throws work away.

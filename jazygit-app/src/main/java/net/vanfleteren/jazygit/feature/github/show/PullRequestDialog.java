@@ -39,6 +39,7 @@ import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog.Choice;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceList;
 import net.vanfleteren.jazygit.ui.widgets.DialogFrame;
 import net.vanfleteren.jazygit.ui.widgets.PopupView;
+import net.vanfleteren.jazygit.ui.widgets.WithDetails;
 
 /**
  * Popup showing the pull request of a branch: its title, state, branches, review and checks, as labelled
@@ -110,22 +111,24 @@ public final class PullRequestDialog implements PopupView {
                                 PullRequestMsg.FilesChosen::new,
                                 (model, popup) -> popup.commits().isDefined()),
                         // Before merging, which a draft has to wait for.
-                        new Choice<>(
-                                'd',
-                                popup -> Messages.get(
-                                        popup.draft().getOrElse(false)
-                                                ? "dialog.pullRequest.ready"
-                                                : "dialog.pullRequest.toDraft"),
-                                PullRequestMsg.DraftChosen::new,
-                                PullRequestUpdate::draftChangeable),
+                        new Choice<PullRequestPopup>(
+                                        'd',
+                                        popup -> Messages.get(
+                                                popup.draft().getOrElse(false)
+                                                        ? "dialog.pullRequest.ready"
+                                                        : "dialog.pullRequest.toDraft"),
+                                        PullRequestMsg.DraftChosen::new,
+                                        PullRequestUpdate::draftChangeable)
+                                .withDetails("dialog.pullRequest.draft.details"),
                         merge('m', "dialog.pullRequest.merge", MergeMethod.MERGE),
                         merge('s', "dialog.pullRequest.squash", MergeMethod.SQUASH),
                         merge('r', "dialog.pullRequest.rebase", MergeMethod.REBASE),
-                        new Choice<>(
-                                'x',
-                                "dialog.pullRequest.close",
-                                PullRequestMsg.CloseChosen::new,
-                                (model, popup) -> popup.open()),
+                        new Choice<PullRequestPopup>(
+                                        'x',
+                                        "dialog.pullRequest.close",
+                                        PullRequestMsg.CloseChosen::new,
+                                        (model, popup) -> popup.open())
+                                .withDetails("dialog.pullRequest.close.details"),
                         new Choice<>(
                                 'R',
                                 "dialog.pullRequest.refresh",
@@ -141,14 +144,18 @@ public final class PullRequestDialog implements PopupView {
      * below it in its stack says how many it merges, as it merges those too.
      */
     private static Choice<PullRequestPopup> merge(char key, String labelKey, MergeMethod method) {
-        return new Choice<>(
-                key,
-                popup -> popup.stack()
-                        .filter(stack -> stack.below() > 0)
-                        .map(stack -> Messages.get(labelKey + ".stack", String.valueOf(stack.below() + 1)))
-                        .getOrElse(() -> Messages.get(labelKey)),
-                () -> new PullRequestMsg.MergeChosen(method),
-                PullRequestUpdate::mergeable);
+        return new Choice<PullRequestPopup>(
+                        key,
+                        popup -> popup.stack()
+                                .filter(stack -> stack.below() > 0)
+                                .map(stack -> Messages.get(labelKey + ".stack", String.valueOf(stack.below() + 1)))
+                                .getOrElse(() -> Messages.get(labelKey)),
+                        () -> new PullRequestMsg.MergeChosen(method),
+                        PullRequestUpdate::mergeable)
+                .withDetails(popup -> popup.stack().exists(stack -> stack.below() > 0)
+                        ? Messages.get(labelKey + ".details") + " "
+                                + Messages.get("dialog.pullRequest.merge.stack.details")
+                        : Messages.get(labelKey + ".details"));
     }
 
     /**
@@ -292,7 +299,7 @@ public final class PullRequestDialog implements PopupView {
                                             .filter(times -> times.repository().equals(pr.repository())))))
                     .getOrElse(() -> loading(popup));
             int blanks = CONTENT_HEIGHT - lines.map(Line::height).sum().intValue();
-            return DialogFrame.withHint(
+            Element dialog = DialogFrame.withHint(
                             title(popup),
                             WIDTH,
                             "dialog.hint.selectCancel",
@@ -302,6 +309,8 @@ public final class PullRequestDialog implements PopupView {
                                     .append(actions.render(model, popup)))
                     // The lines, a blank line, the actions, the blank line and the hint, plus the border.
                     .length(CONTENT_HEIGHT + 1 + actions.height(model, popup) + 2 + 2);
+            return new WithDetails(
+                    dialog, actions.highlightedDetails(model, popup, Option.none()), actions.details(model, popup));
         });
     }
 

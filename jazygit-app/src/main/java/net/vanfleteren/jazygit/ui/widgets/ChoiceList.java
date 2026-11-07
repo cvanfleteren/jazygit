@@ -227,6 +227,28 @@ public final class ChoiceList<P extends Popup> {
     }
 
     /**
+     * What choosing the option highlighted for {@code popup} does, if it tells; until the user moves, the option of
+     * {@code opensAt}, or the first.
+     */
+    public Option<String> highlightedDetails(Model model, P popup, Option<Character> opensAt) {
+        return view(rows(model, popup), model.listCursor(), opensAt)
+                .highlighted()
+                .flatMap(ChoiceList::index)
+                .flatMap(index -> choices.get(index).details())
+                .map(details -> details.apply(popup));
+    }
+
+    /**
+     * What choosing each option shown for {@code popup} does, of those that tell, to leave room for the longest.
+     */
+    public List<String> details(Model model, P popup) {
+        List<Row> rows = rows(model, popup);
+        return visible(rows, Option.none())
+                .flatMap(index -> choices.get(index).details())
+                .map(details -> details.apply(popup));
+    }
+
+    /**
      * The line to type the filter in, while {@code cursor} has it open.
      */
     public Option<StyledElement<?>> filterField(ListCursor cursor) {

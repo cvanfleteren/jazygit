@@ -28,21 +28,24 @@ public final class DeleteBranchDialogs {
             DeleteBranchPopup.class,
             popup -> Messages.get("dialog.deleteBranch.title", popup.branch().value()),
             List.of(
-                    new Choice<>(
-                            'd',
-                            "dialog.deleteBranch.local",
-                            () -> new DeleteBranchMsg.Chosen(DeleteScope.LOCAL),
-                            DeleteBranchDialogs::localDeletable),
-                    new Choice<>(
-                            'r',
-                            popup -> remoteLabel("dialog.deleteBranch.remote", popup),
-                            () -> new DeleteBranchMsg.Chosen(DeleteScope.REMOTE),
-                            DeleteBranchDialogs::remoteDeletable),
-                    new Choice<>(
-                            'b',
-                            popup -> remoteLabel("dialog.deleteBranch.both", popup),
-                            () -> new DeleteBranchMsg.Chosen(DeleteScope.BOTH),
-                            (model, popup) -> localDeletable(model, popup) && remoteDeletable(model, popup)),
+                    new Choice<DeleteBranchPopup>(
+                                    'd',
+                                    "dialog.deleteBranch.local",
+                                    () -> new DeleteBranchMsg.Chosen(DeleteScope.LOCAL),
+                                    DeleteBranchDialogs::localDeletable)
+                            .withDetails("dialog.deleteBranch.local.details"),
+                    new Choice<DeleteBranchPopup>(
+                                    'r',
+                                    popup -> remoteLabel("dialog.deleteBranch.remote", popup),
+                                    () -> new DeleteBranchMsg.Chosen(DeleteScope.REMOTE),
+                                    DeleteBranchDialogs::remoteDeletable)
+                            .withDetails("dialog.deleteBranch.remote.details"),
+                    new Choice<DeleteBranchPopup>(
+                                    'b',
+                                    popup -> remoteLabel("dialog.deleteBranch.both", popup),
+                                    () -> new DeleteBranchMsg.Chosen(DeleteScope.BOTH),
+                                    (model, popup) -> localDeletable(model, popup) && remoteDeletable(model, popup))
+                            .withDetails("dialog.deleteBranch.both.details"),
                     new Choice<DeleteBranchPopup>(
                                     'w',
                                     popup -> Messages.get(
@@ -51,7 +54,8 @@ public final class DeleteBranchDialogs {
                                     DeleteBranchMsg.WithWorktreeChosen::new,
                                     (model, popup) -> DeleteBranchUpdate.removableWorktree(model, popup.branch())
                                             .isDefined())
-                            .shownWhen((model, popup) -> popup.worktree().isDefined())));
+                            .shownWhen((model, popup) -> popup.worktree().isDefined())
+                            .withDetails("dialog.deleteBranch.withWorktree.details")));
 
     /**
      * Asks whether to unlock the locked worktree that has the branch checked out, to remove it and delete the

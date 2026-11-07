@@ -17,7 +17,8 @@ import net.vanfleteren.jazygit.ui.TextWidth;
 /**
  * The standard popup offering a choice between several options, as a {@link ChoiceList} that {@code /} filters.
  * Whether the popup is open lives in the {@link Model}, as a popup of type {@code P}, and so does where the user is in
- * its options.
+ * its options. When options tell what choosing them does, that of the highlighted one shows in a box under the dialog,
+ * as the help does.
  *
  * @param <P> the popup that makes this dialog show
  */
@@ -54,9 +55,16 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
                             Math.max(list.width(model, popup), list.hintWidth()) + DialogFrame.FRAME,
                             TextWidth.of(title) + 2));
             List<StyledElement<?>> filter = list.filterField(model.listCursor()).toList();
-            return DialogFrame.withHint(title, width, list.hintKey(model.listCursor()), filter.append(rows))
+            Element dialog = DialogFrame.withHint(title, width, list.hintKey(model.listCursor()), filter.append(rows))
                     // The filter, the options whatever the filter, the blank line and the hint, plus the border.
                     .length(filter.size() + list.height(model, popup) + 2 + 2);
+            List<String> details = list.details(model, popup);
+            return details.isEmpty()
+                    ? dialog
+                    : new WithDetails(
+                            dialog,
+                            list.highlightedDetails(model, popup, spec.opensAt().apply(popup)),
+                            details);
         });
     }
 
@@ -71,6 +79,7 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
      * @param onHighlight the message for highlighting it with the arrow keys, if it shows what choosing it does
      * @param shown       whether it is in the list at all, given the model and the open popup; one that is not
      *                    takes no line and cannot be chosen
+     * @param details     what choosing it does, given the open popup, shown under the dialog while it is highlighted
      */
     public record Choice<P>(
             char key,
@@ -79,13 +88,14 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
             BiPredicate<Model, P> enabled,
             Option<String> heading,
             Option<Supplier<Msg>> onHighlight,
-            BiPredicate<Model, P> shown) {
+            BiPredicate<Model, P> shown,
+            Option<Function<P, String>> details) {
 
         /**
          * An option with a text that depends on the popup, without a heading.
          */
         public Choice(char key, Function<P, String> label, Supplier<Msg> msg, BiPredicate<Model, P> enabled) {
-            this(key, label, msg, enabled, Option.none(), Option.none(), (model, popup) -> true);
+            this(key, label, msg, enabled, Option.none(), Option.none(), (model, popup) -> true, Option.none());
         }
 
         /**
@@ -113,14 +123,14 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
          * This option, starting a group of options under the heading with the message key {@code headingKey}.
          */
         public Choice<P> withHeading(String headingKey) {
-            return new Choice<>(key, label, msg, enabled, Option.of(headingKey), onHighlight, shown);
+            return new Choice<>(key, label, msg, enabled, Option.of(headingKey), onHighlight, shown, details);
         }
 
         /**
          * This option, sending {@code preview} when it is highlighted, so what choosing it does shows before.
          */
         public Choice<P> withPreview(Supplier<Msg> preview) {
-            return new Choice<>(key, label, msg, enabled, heading, Option.of(preview), shown);
+            return new Choice<>(key, label, msg, enabled, heading, Option.of(preview), shown, details);
         }
 
         /**
@@ -128,7 +138,21 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
          * popups rather than not applying for now.
          */
         public Choice<P> shownWhen(BiPredicate<Model, P> shown) {
-            return new Choice<>(key, label, msg, enabled, heading, onHighlight, shown);
+            return new Choice<>(key, label, msg, enabled, heading, onHighlight, shown, details);
+        }
+
+        /**
+         * This option, telling what choosing it does in the text with the message key {@code detailsKey}.
+         */
+        public Choice<P> withDetails(String detailsKey) {
+            return withDetails(popup -> Messages.get(detailsKey));
+        }
+
+        /**
+         * This option, telling what choosing it does in the text {@code details} gives for the open popup.
+         */
+        public Choice<P> withDetails(Function<P, String> details) {
+            return new Choice<>(key, label, msg, enabled, heading, onHighlight, shown, Option.of(details));
         }
     }
 

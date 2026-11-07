@@ -20,12 +20,14 @@ public final class DiscardDialog {
             DiscardPopup.class,
             popup -> Messages.get("dialog.discard.title"),
             List.of(
-                    new Choice<>('x', "dialog.discard.all", () -> new DiscardMsg.Chosen(Scope.ALL)),
-                    new Choice<>(
-                            'u',
-                            "dialog.discard.unstaged",
-                            () -> new DiscardMsg.Chosen(Scope.UNSTAGED),
-                            (model, popup) -> popup.hasUnstaged())));
+                    new Choice<DiscardPopup>('x', "dialog.discard.all", () -> new DiscardMsg.Chosen(Scope.ALL))
+                            .withDetails("dialog.discard.all.details"),
+                    new Choice<DiscardPopup>(
+                                    'u',
+                                    "dialog.discard.unstaged",
+                                    () -> new DiscardMsg.Chosen(Scope.UNSTAGED),
+                                    (model, popup) -> popup.hasUnstaged())
+                            .withDetails("dialog.discard.unstaged.details")));
 
     private DiscardDialog() {}
 
