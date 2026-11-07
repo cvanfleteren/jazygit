@@ -68,6 +68,7 @@ ListElement-item:selected, TreeElement-node:selected, .selection {
 .checks-passed { color: $added; }
 .checks-failed { color: $removed; }
 .checks-running { color: $warn; }
+.checks-progress { color: $hunk; }
 .review-approved { color: $added; }
 .review-changes { color: $removed; }
 .repo-branch { color: $hunk; }

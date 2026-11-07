@@ -156,12 +156,14 @@ class ChecksDialogTest {
 
         assertTrue(screen.contains("Checks of main"), screen);
         assertTrue(screen.contains("✗ 1 failed · ● 1 running · ✓ 2 passed · done in ?"), screen);
-        // The names on the left, how each is doing or how long it took on the right.
-        assertTrue(screen.contains("✗ lint" + " ".repeat(53) + "failed after 1m 30s│"), screen);
+        // The names on the left, how each is doing or how long it took on the right; while one is not done, a bar
+        // after it, of 16 columns after 2 spaces: dashed when how far it is is not known.
+        assertTrue(screen.contains("✗ lint" + " ".repeat(55) + "failed after 1m 30s" + " ".repeat(18) + "│"), screen);
         assertTrue(
-                screen.contains("● verify" + " ".repeat(40) + "running 2m 30s  · " + " ".repeat(6) + "? left│"),
+                screen.contains("● verify" + " ".repeat(42) + "running 2m 30s  · " + " ".repeat(6) + "? left  "
+                        + "╌".repeat(16) + "│"),
                 screen);
-        assertTrue(screen.contains("✓ package" + " ".repeat(67) + "1m│"), screen);
+        assertTrue(screen.contains("✓ package" + " ".repeat(69) + "1m" + " ".repeat(18) + "│"), screen);
         assertTrue(screen.contains("✓ ci/status"), screen);
         // Failed, running, then passed.
         assertTrue(screen.indexOf("lint") < screen.indexOf("verify"), screen);
@@ -215,22 +217,22 @@ class ChecksDialogTest {
 
     @Test
     void aLongNameIsCutToLeaveRoomForTheTimingAtTheBorder() throws Exception {
-        String longName = "x".repeat(80);
+        String longName = "x".repeat(100);
         String screen = screen(read(List.of(check(longName, Checks.PASSING, 300, Option.of(60)))));
 
-        // 78 columns: the symbol takes 1, a space 1, the name 72 of which the last is the ellipsis, then 2 and "1m".
-        assertFalse(screen.contains("x".repeat(72)), screen);
-        assertTrue(screen.contains("✓ " + "x".repeat(71) + "…  1m│"), screen);
+        // 98 columns: the symbol takes 1, a space 1, the name 92 of which the last is the ellipsis, then 2 and "1m".
+        assertFalse(screen.contains("x".repeat(92)), screen);
+        assertTrue(screen.contains("✓ " + "x".repeat(91) + "…  1m│"), screen);
     }
 
     @Test
     void aLongNameOfACheckNotTimedIsCutAtTheBorder() throws Exception {
-        String longName = "y".repeat(90);
+        String longName = "y".repeat(110);
         String screen = screen(read(List.of(new Check(longName, Checks.PASSING))));
 
         assertFalse(screen.contains(longName), screen);
-        // 78 columns: the symbol takes 1, a space 1, so the name keeps 76 of which the last is the ellipsis.
-        assertTrue(screen.contains("✓ " + "y".repeat(75) + "…│"), screen);
+        // 98 columns: the symbol takes 1, a space 1, so the name keeps 96 of which the last is the ellipsis.
+        assertTrue(screen.contains("✓ " + "y".repeat(95) + "…│"), screen);
     }
 
     @Test
@@ -245,10 +247,10 @@ class ChecksDialogTest {
         String top = screen(model);
         String scrolled = screen(model.withListCursor(ListCursor.START.at(1)));
 
-        // 78 columns: the symbol takes 1, a space 1, then the name 58 of which the last is the ellipsis, 2, and the
+        // 98 columns: the symbol takes 1, a space 1, then the name 78 of which the last is the ellipsis, 2, and the
         // timings 16, as wide as "failed after 10m" also when it is not shown.
-        String checkb = "checkb" + "z".repeat(51) + "…" + " ".repeat(2 + 14) + "1m│";
-        assertTrue(top.contains("checka" + " ".repeat(54) + "failed after 10m│"), top);
+        String checkb = "checkb" + "z".repeat(71) + "…" + " ".repeat(2 + 14) + "1m│";
+        assertTrue(top.contains("checka" + " ".repeat(74) + "failed after 10m│"), top);
         assertTrue(top.contains(checkb), top);
         assertFalse(scrolled.contains("checka"), scrolled);
         assertTrue(scrolled.contains(checkb), scrolled);
@@ -279,6 +281,66 @@ class ChecksDialogTest {
         assertTrue(queued.forAll(piece -> piece.cssClasses().contains(Theme.Classes.DIM)));
         assertFalse(running.head().cssClasses().contains(Theme.Classes.DIM));
         assertTrue(running.last().cssClasses().contains(Theme.Classes.DIM));
+    }
+
+    @Test
+    void aBarShowsHowFarTheChecksAreTowardsWhenTheyAreExpectedAndEachRunningOneToo() throws Exception {
+        // verify runs 150s of 300s: from its run, created 152s ago, 152s of 302s.
+        String screen =
+                screen(timed(300).openPopup(read(List.of(check("verify", Checks.PENDING, 150, Option.none())))));
+
+        // 93 columns of bar: 95% of 152/302 of them, then how far that is.
+        assertTrue(screen.contains("│" + "━".repeat(44) + "─".repeat(49) + "  47%│"), screen);
+        // 16 columns: 95% of half of them.
+        assertTrue(screen.contains("~2m 30s left  " + "━".repeat(7) + "─".repeat(9) + "│"), screen);
+    }
+
+    @Test
+    void theBarIsFullOnlyOnceTheChecksAreDone() throws Exception {
+        List<Check> late = List.of(check("verify", Checks.PENDING, 3000, Option.none()));
+        List<Check> done = List.of(check("verify", Checks.PASSING, 300, Option.of(290)));
+
+        // Long past when it was expected, it is not full.
+        assertTrue(screen(timed(300).openPopup(read(late))).contains("  98%│"));
+        assertTrue(screen(timed(300).openPopup(read(done))).contains("│" + "━".repeat(93) + " 100%│"));
+    }
+
+    @Test
+    void theBarIsRedOnceOneFailedGreenOnceAllPassedYellowWhenLateAndDimmedWhenNotKnown() {
+        CheckTimes times = times(300);
+        List<Check> running = List.of(check("verify", Checks.PENDING, 150, Option.none()));
+        List<Check> late = List.of(check("verify", Checks.PENDING, 600, Option.none()));
+        List<Check> failed = running.append(check("lint", Checks.FAILING, 150, Option.of(30)));
+        List<Check> passed = List.of(check("verify", Checks.PASSING, 300, Option.of(290)));
+
+        assertEquals(Theme.Classes.CHECKS_PROGRESS, barClass(running, Option.of(times)));
+        assertEquals(Theme.Classes.CHECKS_RUNNING, barClass(late, Option.of(times)));
+        assertEquals(Theme.Classes.CHECKS_FAILED, barClass(failed, Option.of(times)));
+        assertEquals(Theme.Classes.CHECKS_PASSED, barClass(passed, Option.of(times)));
+        assertEquals(Theme.Classes.DIM, barClass(running, Option.none()));
+    }
+
+    @Test
+    void theBarDoesNotGoBackWhenTheChecksAreExpectedLaterOnceReadAgain() {
+        List<Check> checks = List.of(check("verify", Checks.PENDING, 150, Option.none()));
+        Model before = timed(300);
+        ChecksPopup popup = read(checks);
+        double shown = popup.progress(before);
+        // Read again, the checks are learned to take twice as long.
+        Model after = timed(600);
+        ChecksPopup again = popup.with(
+                Either.right(new PendingChecks("owner/repo", HashMap.of(new BranchName("main"), checks))), before);
+
+        assertTrue(popup.progress(after) < shown);
+        assertEquals(shown, again.progress(after.withNow(NOW.plusSeconds(1))), 1e-9);
+        // Checks that started again start the bar again.
+        ChecksPopup rerun = again.with(
+                Either.right(new PendingChecks(
+                        "owner/repo",
+                        HashMap.of(
+                                new BranchName("main"), List.of(check("verify", Checks.PENDING, 10, Option.none()))))),
+                after);
+        assertTrue(rerun.progress(after) < shown);
     }
 
     @Test
@@ -344,6 +406,29 @@ class ChecksDialogTest {
                         new Msg.PopupDismissed(ChecksPopup.class),
                         new Msg.PopupDismissed(ChecksPopup.class)),
                 dispatched);
+    }
+
+    /**
+     * What was learned of check {@code Build/verify}: it runs {@code seconds}, done 2s more after its run was created.
+     */
+    private static CheckTimes times(int seconds) {
+        List<CheckSample> samples = List.range(0, 3)
+                .map(i -> new CheckSample(
+                        "Build/verify", i, Duration.ofSeconds(seconds), Duration.ofSeconds(seconds + 2), "push", NOW));
+        return CheckTimes.of("owner/repo", CheckHistory.EMPTY.with(samples, NOW), Option.none());
+    }
+
+    private static Model timed(int seconds) {
+        return TestModels.loaded().withNow(NOW).mapGitHub(gitHub -> gitHub.withCheckTimes(Option.of(times(seconds))));
+    }
+
+    /**
+     * The class of the part done of the bar of how far {@code checks} are together, as {@code times} tell.
+     */
+    private static String barClass(List<Check> checks, Option<CheckTimes> times) {
+        return ChecksDialog.gauge(checks, times, 0.5, NOW).head().cssClasses().stream()
+                .findFirst()
+                .orElseThrow();
     }
 
     private static ChecksPopup many() {

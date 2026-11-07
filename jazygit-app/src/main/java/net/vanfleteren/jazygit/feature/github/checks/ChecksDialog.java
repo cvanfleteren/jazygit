@@ -16,8 +16,11 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.function.Consumer;
+import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Check;
+import net.vanfleteren.jazygit.gh.timing.CheckProgress;
 import net.vanfleteren.jazygit.gh.timing.CheckSpan;
+import net.vanfleteren.jazygit.gh.timing.Eta;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.i18n.Messages;
@@ -30,6 +33,8 @@ import net.vanfleteren.jazygit.state.Reading;
 import net.vanfleteren.jazygit.ui.CheckRows;
 import net.vanfleteren.jazygit.ui.CheckTimesText;
 import net.vanfleteren.jazygit.ui.ErrorText;
+import net.vanfleteren.jazygit.ui.ProgressBar;
+import net.vanfleteren.jazygit.ui.TextWidth;
 import net.vanfleteren.jazygit.ui.Theme;
 import net.vanfleteren.jazygit.ui.TimeText;
 import net.vanfleteren.jazygit.ui.widgets.DialogFrame;
@@ -37,8 +42,10 @@ import net.vanfleteren.jazygit.ui.widgets.PopupView;
 
 /**
  * Popup listing the checks on the tip of a branch one by one (ADR 32): how many are in each state and when they are
- * expected to be done; when they started and ended, and how long they took together (ADR 37); then each, the failed ones first, then the running, the queued and the passed ones, with how
- * long it took, or runs and is expected to take still. It scrolls when they do not all fit. While they are read
+ * expected to be done; when they started and ended, and how long they took together (ADR 37); a bar of how far they
+ * are together (ADR 89); then each, the failed ones first, then the running, the queued and the passed ones, with how
+ * long it took, or runs and is expected to take still, and while one is not done a bar of how far each is. It scrolls
+ * when they do not all fit. While they are read
  * again, they stay shown, with a spinner in the title when the user asked for that (ADR 34); when that fails, the
  * title says they are stale.
  */
@@ -46,14 +53,18 @@ public final class ChecksDialog implements PopupView {
 
     public static final String ID = "checks";
 
-    private static final int WIDTH = 80;
+    private static final int WIDTH = 100;
     // The columns inside the border, which the checks take to line up how they are doing on the right.
     private static final int CONTENT_WIDTH = DialogFrame.contentWidth(WIDTH);
+    // How wide the bar of each check is, after how it is doing and two spaces, while one is not done.
+    private static final int CHECK_BAR = 16;
+    // How wide how far they are together is written, after their bar and a space: "100%".
+    private static final int PERCENT = 4;
     // The checks listed at once; the others are scrolled to.
     private static final int VISIBLE_CHECKS = 16;
-    // The counts, when they started and ended, a blank line and the checks. The dialog is always this high, so it keeps
-    // its size when they arrive.
-    private static final int CONTENT_HEIGHT = 1 + 1 + 1 + VISIBLE_CHECKS;
+    // The counts, when they started and ended, how far they are, a blank line and the checks. The dialog is always this
+    // high, so it keeps its size when they arrive.
+    private static final int CONTENT_HEIGHT = 1 + 1 + 1 + 1 + VISIBLE_CHECKS;
     // A time of day, of today; one of another day has its date before it.
     private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm:ss");
     private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -90,14 +101,11 @@ public final class ChecksDialog implements PopupView {
             ListCursor cursor = model.listCursor();
             int last = Math.max(0, all.size() - VISIBLE_CHECKS);
             int first = Math.clamp(cursor.line().getOrElse(0), 0, last);
-            Option<CheckTimes> times = popup.checks()
-                    .flatMap(read -> read.toOption())
-                    .flatMap(read -> model.gitHub()
-                            .checkTimes()
-                            .filter(known -> known.repository().equals(read.repository())));
+            Option<CheckTimes> times = popup.times(model);
             List<StyledElement<?>> lines = popup.checks()
                     .map(read -> read.fold(
-                            ChecksDialog::failed, checks -> checks(all, first, times, model.now(), clock.getZone())))
+                            ChecksDialog::failed,
+                            checks -> checks(all, first, times, popup.progress(model), model.now(), clock.getZone())))
                     .getOrElse(this::loading);
             int blanks = CONTENT_HEIGHT - lines.size();
             return DialogFrame.withHint(
@@ -154,23 +162,64 @@ public final class ChecksDialog implements PopupView {
     }
 
     /**
-     * The counts, when they started and ended, and the checks that fit from the {@code first} one shown.
+     * The counts, when they started and ended, how far they are, {@code progress}, and the checks that fit from the
+     * {@code first} one shown.
      */
     private static List<StyledElement<?>> checks(
-            List<Check> all, int first, Option<CheckTimes> times, Instant now, ZoneId zone) {
+            List<Check> all, int first, Option<CheckTimes> times, double progress, Instant now, ZoneId zone) {
         if (all.isEmpty()) {
             return List.of(text(Messages.get("dialog.checks.none")).addClass(Theme.Classes.DIM));
         }
         List<Check> ordered = CheckRows.order(all, all, times);
         // Over all the checks, not only those shown, so the column keeps its width while they scroll.
         int doingWidth = CheckRows.doingWidth(ordered, all, times, now, true);
+        // The bars of the checks only while one is not done; once they all are, their names get the room.
+        boolean running = all.exists(check -> !check.done());
+        int width = running ? CONTENT_WIDTH - 2 - CHECK_BAR : CONTENT_WIDTH;
         return List.<StyledElement<?>>of(row(CheckRows.counts(all, times, now).toJavaArray(StyledElement[]::new)))
                 .appendAll(CheckSpan.of(all).map(span -> span(span, now, zone)))
+                .append(row(gauge(all, times, progress, now).toJavaArray(StyledElement[]::new)))
                 .append(text(""))
                 .appendAll(ordered.drop(first)
                         .take(VISIBLE_CHECKS)
-                        .map(check -> row(CheckRows.filling(check, all, times, now, CONTENT_WIDTH, doingWidth, true)
+                        .map(check -> row(CheckRows.filling(check, all, times, now, width, doingWidth, true)
+                                .appendAll(check.done() ? List.empty() : bar(check, all, times, now))
                                 .toJavaArray(StyledElement[]::new))));
+    }
+
+    /**
+     * A bar of how far the checks {@code all} are together, {@code progress}, across the dialog, and how far that is:
+     * {@code ━━━━━━━━━━━──────── 62%}. Red once one failed, green once they all passed, yellow while they take longer
+     * than usual, and dimmed while when they are done is not known, as it then counts the checks done.
+     */
+    static List<StyledElement<?>> gauge(List<Check> all, Option<CheckTimes> times, double progress, Instant now) {
+        Eta eta = CheckRows.eta(all, times);
+        String done = all.exists(check -> check.state() == Checks.FAILING)
+                ? Theme.Classes.CHECKS_FAILED
+                : switch (eta) {
+                    case Eta.Done passed -> Theme.Classes.CHECKS_PASSED;
+                    case Eta.Unknown unknown -> Theme.Classes.DIM;
+                    case Eta.Expected expected when expected.overdue(now) -> Theme.Classes.CHECKS_RUNNING;
+                    case Eta.Expected expected -> Theme.Classes.CHECKS_PROGRESS;
+                };
+        String percent = Messages.get("dialog.checks.progress", String.valueOf(ProgressBar.percent(progress)));
+        return ProgressBar.of(progress, CONTENT_WIDTH - 1 - PERCENT, done)
+                .append(text(" " + TextWidth.alignRight(percent, PERCENT)));
+    }
+
+    /**
+     * A bar of how far {@code check}, one of the checks {@code all} that is not done, is at {@code now}, after two
+     * spaces: yellow once it is overdue, dashed while how far it is is not known.
+     */
+    private static List<StyledElement<?>> bar(Check check, List<Check> all, Option<CheckTimes> times, Instant now) {
+        Eta eta = CheckRows.eta(check, all, times);
+        String done = eta instanceof Eta.Expected expected && expected.overdue(now)
+                ? Theme.Classes.CHECKS_RUNNING
+                : Theme.Classes.CHECKS_PROGRESS;
+        return CheckProgress.of(check, eta, now)
+                .map(progress -> ProgressBar.of(progress, CHECK_BAR, done))
+                .getOrElse(() -> List.of(ProgressBar.unknown(CHECK_BAR)))
+                .prepend(text("  "));
     }
 
     /**
