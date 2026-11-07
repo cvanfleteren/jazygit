@@ -1408,7 +1408,9 @@ class ContentPanelTest {
         assertTrue(lines.contains("*   commit m"));
         assertTrue(lines.contains("|\\  Merge: b f"));
         assertTrue(lines.contains("| * commit f"));
+        assertTrue(lines.contains("* | commit b"));
         assertTrue(lines.contains("|/  Ada <a@e.com>"));
+        assertTrue(lines.contains("* commit a"));
     }
 
     @Test

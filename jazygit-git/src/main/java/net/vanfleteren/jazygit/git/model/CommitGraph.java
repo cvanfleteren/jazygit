@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.git.model;
 
 import io.vavr.collection.*;
+import io.vavr.control.Option;
 
 /**
  * Lays out a commit log with its merges: the commits a merge brought in follow it, so they can be shown
@@ -42,20 +43,28 @@ public final class CommitGraph {
     }
 
     /**
-     * The nodes for commits in the order of {@link #arrange}.
+     * The nodes for commits in the order of {@link #arrange}. Each rail waits for a commit: the parent of a commit
+     * above. A commit is on the leftmost rail waiting for it, else on the first free one, and the other rails
+     * waiting for it join it there. Its rail then waits for its first parent; a merge puts each other parent on a
+     * rail to its right: one already waiting for that parent, else the first free one. Only parents in the list get
+     * a rail, so a list of part of the history, as a range, has no rails waiting for commits it does not show.
      */
     public static List<Node> layout(List<Commit> arranged) {
-        Map<Sha, Commit> bySha = index(arranged);
-        Map<Sha, Integer> position = arranged.zipWithIndex().toMap(entry -> entry._1.sha(), entry -> entry._2);
-        List<Set<Sha>> brought = arranged.filter(Commit::isMerge).map(merge -> broughtIn(merge, bySha));
-        // The last commit of each merged branch closes it; nested branches can all end at the same commit.
-        List<Integer> closing =
-                brought.flatMap(shas -> shas.flatMap(position::get).max());
-        return arranged.zipWithIndex()
-                .map(entry -> new Node(
-                        entry._1,
-                        brought.count(shas -> shas.contains(entry._1.sha())),
-                        closing.count(entry._2::equals)));
+        Set<Sha> listed = arranged.map(Commit::sha).toSet();
+        return arranged.foldLeft(
+                        new Laid(List.empty(), List.empty()),
+                        (laid, commit) -> laid.next(commit, commit.parents().filter(listed::contains)))
+                .latestFirst()
+                .reverse();
+    }
+
+    /**
+     * The first column from {@code from} on without a rail.
+     */
+    private static int free(List<Option<Sha>> rails, int from) {
+        return List.range(from, rails.size())
+                .find(at -> rails.get(at).isEmpty())
+                .getOrElse(Math.max(from, rails.size()));
     }
 
     private static Map<Sha, Commit> index(List<Commit> commits) {
@@ -79,13 +88,81 @@ public final class CommitGraph {
     }
 
     /**
-     * A commit, and where it stands in the branches of merges.
+     * A commit, and the rails on its row, by their column.
      *
-     * @param depth  in how many merged branches the commit is
-     * @param closes of how many of those branches it is the last commit: the innermost ones, as a branch merged
-     *               into another branch can end at the same commit as that one
+     * @param column  the rail the commit is on
+     * @param passing the other rails that go on past the commit, waiting for other commits
+     * @param joins   the rails that end at the commit, as they waited for it too
+     * @param opens   the rails that go on below to the other parents of a merge: a {@code passing} one already
+     *                waiting for that parent, or a free one, which can be one of the {@code joins}
+     * @param meets   the rails that from this commit on wait for the same commit as a rail to their left, which
+     *                {@code git log --graph} ends right away rather than where they join
      */
-    public record Node(Commit commit, int depth, int closes) {}
+    public record Node(
+            Commit commit,
+            int column,
+            List<Integer> passing,
+            List<Integer> joins,
+            List<Integer> opens,
+            List<Meet> meets) {}
+
+    /**
+     * A rail that waits for the same commit as the rail {@code into}, the leftmost one waiting for it.
+     */
+    public record Meet(int rail, int into) {}
+
+    /**
+     * The rails below the nodes laid out so far, by column, with the commit each waits for, and those nodes, last
+     * laid out first.
+     */
+    private record Laid(List<Option<Sha>> rails, List<Node> latestFirst) {
+
+        /**
+         * @param parents the parents of {@code commit} that get a rail
+         */
+        Laid next(Commit commit, List<Sha> parents) {
+            Option<Sha> sha = Option.of(commit.sha());
+            int column = rails.contains(sha) ? rails.indexOf(sha) : free(rails, 0);
+            List<Integer> joins = List.range(column + 1, rails.size())
+                    .filter(at -> rails.get(at).equals(sha));
+            List<Integer> passing = List.range(0, rails.size())
+                    .filter(at -> at != column && rails.get(at).isDefined() && !joins.contains(at));
+            List<Option<Sha>> kept = List.range(0, Math.max(rails.size(), column + 1))
+                    .map(at -> at == column
+                            ? parents.headOption()
+                            : joins.contains(at) ? Option.<Sha>none() : rails.get(at));
+            Opened opened = parents.drop(1)
+                    .foldLeft(new Opened(kept, List.empty()), (state, parent) -> state.open(parent, column));
+            List<Option<Sha>> below =
+                    opened.rails().reverse().dropWhile(Option::isEmpty).reverse();
+            List<Meet> meets = List.range(0, below.size())
+                    .filter(at -> doubled(below, at)
+                            && !(doubled(rails, at) && rails.get(at).equals(below.get(at))))
+                    .map(at -> new Meet(at, below.indexOf(below.get(at))));
+            return new Laid(
+                    below, latestFirst.prepend(new Node(commit, column, passing, joins, opened.opens(), meets)));
+        }
+
+        /**
+         * Whether the rail {@code at} waits for the same commit as a rail to its left.
+         */
+        private static boolean doubled(List<Option<Sha>> rails, int at) {
+            return at < rails.size() && rails.get(at).isDefined() && rails.indexOf(rails.get(at)) < at;
+        }
+    }
+
+    /**
+     * The rails while the other parents of a merge get theirs, and the columns they got so far.
+     */
+    private record Opened(List<Option<Sha>> rails, List<Integer> opens) {
+
+        Opened open(Sha parent, int column) {
+            int at = List.range(column + 1, rails.size())
+                    .find(waiting -> rails.get(waiting).contains(parent) && !opens.contains(waiting))
+                    .getOrElse(() -> free(rails, column + 1));
+            return new Opened(rails.padTo(at + 1, Option.none()).update(at, Option.of(parent)), opens.append(at));
+        }
+    }
 
     /**
      * The shas placed so far, and the commits in the order they were placed, last placed first.
