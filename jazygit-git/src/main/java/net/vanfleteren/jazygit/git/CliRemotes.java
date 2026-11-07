@@ -309,6 +309,45 @@ final class CliRemotes implements Remotes {
                 credentials.get());
     }
 
+    /**
+     * Fetches {@code upstream}'s remote, so that the rename starts from what is there now, then runs
+     * {@code git push --atomic --force-with-lease=refs/heads/<branch>: --force-with-lease=refs/heads/<old> <remote>
+     * refs/remotes/<remote>/<old>:refs/heads/<branch> :refs/heads/<old>}: it pushes the commit the remote-tracking
+     * branch has, not the local branch, and git refuses all of it when the new name is taken or the old one moved.
+     * Last, {@code git branch --set-upstream-to} has {@code branch} follow the renamed one, which the push made known.
+     */
+    @Override
+    public Either<GitFailure, List<ExecutedCommand>> renameUpstream(BranchName branch, RemoteBranch upstream) {
+        RemoteBranch renamed = new RemoteBranch(upstream.remote(), branch);
+        BranchRef.Local old = new BranchRef.Local(upstream.branch());
+        BranchRef.Local target = new BranchRef.Local(branch);
+        return GitFailure.sequence(
+                        () -> run(
+                                worktree,
+                                git("fetch", "--prune", "--no-write-fetch-head", GitArgs.remote(upstream.remote())),
+                                credentials.get()),
+                        () -> run(
+                                worktree,
+                                git(
+                                        "push",
+                                        "--atomic",
+                                        GitArgs.leaseAbsent(target),
+                                        GitArgs.lease(old),
+                                        GitArgs.remote(upstream.remote()),
+                                        GitArgs.refspec(upstream.tracking(), target),
+                                        GitArgs.deletion(old)),
+                                credentials.get()),
+                        () -> GitProcess.log(
+                                worktree,
+                                git(
+                                        "branch",
+                                        "--set-upstream-to=" + GitArgs.revision(renamed.tracking()),
+                                        "--",
+                                        GitArgs.name(branch))))
+                .mapLeft(failure -> new GitFailure(
+                        new GitError.UpstreamNotRenamed(upstream, branch, failure.error()), failure.commands()));
+    }
+
     @Override
     public Either<GitError, List<CommitFile>> pullRequestFiles(PullRequestCommits commits) {
         return CliPullRequest.files(worktree, commits, credentials.get());

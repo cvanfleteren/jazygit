@@ -1860,6 +1860,83 @@ class CliGitTest {
     }
 
     @Test
+    void renamingTheUpstreamMovesItOnTheRemoteWithoutTheUnpushedCommits() throws Exception {
+        java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
+        git("init", "-q", "--bare", "-b", "main", bare.toString());
+        git("remote", "add", "origin", bare.toString());
+        RemoteBranch feature = new RemoteBranch("origin", new BranchName("feature"));
+        git("branch", "feature");
+        repository
+                .remotes()
+                .pushSettingUpstream(new BranchName("feature"), feature)
+                .get();
+        Sha pushed = tip("feature");
+        git("checkout", "-q", "feature");
+        git("commit", "-q", "--allow-empty", "-m", "unpushed");
+        git("branch", "--move", "feature", "topic");
+
+        assertEquals(
+                List.of(
+                        "git fetch --prune --no-write-fetch-head origin",
+                        "git push --atomic --force-with-lease=refs/heads/topic: --force-with-lease=refs/heads/feature"
+                                + " origin refs/remotes/origin/feature:refs/heads/topic :refs/heads/feature",
+                        "git branch --set-upstream-to=refs/remotes/origin/topic -- topic"),
+                repository
+                        .remotes()
+                        .renameUpstream(new BranchName("topic"), feature)
+                        .get()
+                        .map(ExecutedCommand::line));
+        assertFalse(gitSucceedsIn(repo, "ls-remote", "--exit-code", "origin", "refs/heads/feature"));
+        assertEquals(
+                pushed.value(), gitIn(bare, "rev-parse", "refs/heads/topic").strip());
+        assertEquals(
+                Option.of(new BranchRef.Remote(new RemoteBranch("origin", new BranchName("topic")))),
+                repository
+                        .branches()
+                        .all()
+                        .map(AllBranches::local)
+                        .get()
+                        .find(branch -> branch.name().value().equals("topic"))
+                        .flatMap(Branch::upstream)
+                        .map(Upstream::branch));
+        assertEquals(List.of(1, 0), counts("topic"));
+    }
+
+    @Test
+    void renamingTheUpstreamOntoABranchOnTheRemoteChangesNothing() throws Exception {
+        java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
+        git("init", "-q", "--bare", "-b", "main", bare.toString());
+        git("remote", "add", "origin", bare.toString());
+        RemoteBranch feature = new RemoteBranch("origin", new BranchName("feature"));
+        git("branch", "feature");
+        repository
+                .remotes()
+                .pushSettingUpstream(new BranchName("feature"), feature)
+                .get();
+        git("commit", "-q", "--allow-empty", "-m", "other");
+        git("push", "-q", "origin", "HEAD:refs/heads/topic");
+        git("branch", "--move", "feature", "topic");
+
+        GitFailure failure = repository
+                .remotes()
+                .renameUpstream(new BranchName("topic"), feature)
+                .getLeft();
+
+        assertTrue(
+                failure.error() instanceof GitError.UpstreamNotRenamed(var upstream, var newName, var cause)
+                        && upstream.equals(feature)
+                        && newName.value().equals("topic"),
+                failure.error()::toString);
+        assertTrue(gitSucceedsIn(repo, "ls-remote", "--exit-code", "origin", "refs/heads/feature"));
+        assertEquals(
+                tip("main").value(),
+                gitIn(bare, "rev-parse", "refs/heads/topic").strip());
+        assertEquals(
+                "refs/heads/feature",
+                git("config", "--get", "branch.topic.merge").strip());
+    }
+
+    @Test
     void aTagOfTheSameNameDoesNotKeepABranchFromBeingPushed() throws Exception {
         java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
         git("init", "-q", "--bare", "-b", "main", bare.toString());

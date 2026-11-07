@@ -319,10 +319,56 @@ def test_rename_a_branch_keeps_its_upstream(repo, origin, jazygit):
     published(repo, origin)
     ui = jazygit()
 
-    ui.branches.rename("feature", "feat")
+    ui.branches.rename("feature", "feat", where="local")
 
     assert repo.branches() == ["feat", "main"]
     assert repo.upstream("feat") == "origin/feature"
+    assert origin.branches() == ["feature", "main"]
+
+
+def test_rename_a_branch_on_the_remote_too_leaves_its_unpushed_commits_unpushed(repo, origin, jazygit):
+    published(repo, origin)
+    pushed = origin("rev-parse", "feature")
+    repo("switch", "feature")
+    repo.commit("Add unpushed", **{"unpushed.txt": "unpushed\n"})
+    repo("switch", "main")
+    ui = jazygit()
+
+    ui.branches.rename("feature", "feat", where="remote")
+
+    assert repo.branches() == ["feat", "main"]
+    assert origin.branches() == ["feat", "main"]
+    assert origin("rev-parse", "feat") == pushed
+    assert repo.upstream("feat") == "origin/feat"
+    assert repo.sync("feat") == "ahead 1"
+
+
+def test_renaming_on_the_remote_onto_a_branch_there_leaves_the_remote_as_it_was(repo, origin, jazygit):
+    published(repo, origin)
+    repo("push", "origin", "main:feat")
+    ui = jazygit()
+
+    ui.branches.select("feature")
+    ui.app.press("R")
+    ui.enter_text("Rename branch feature", "feat")
+    ui.confirm("Rename feature to feat", key="r")
+
+    ui.app.wait_for("origin/feature was not renamed on the remote")
+    assert repo.branches() == ["feat", "main"]
+    assert repo.upstream("feat") == "origin/feature"
+    assert origin.branches() == ["feat", "feature", "main"]
+    assert origin("rev-parse", "feat") == origin("rev-parse", "main")
+
+
+def test_a_branch_following_one_of_another_name_is_renamed_without_asking(repo, origin, jazygit):
+    published(repo, origin)
+    repo("branch", "--set-upstream-to", "origin/main", "feature")
+    ui = jazygit()
+
+    ui.branches.rename("feature", "feat")
+
+    assert repo.branches() == ["feat", "main"]
+    assert repo.upstream("feat") == "origin/main"
     assert origin.branches() == ["feature", "main"]
 
 

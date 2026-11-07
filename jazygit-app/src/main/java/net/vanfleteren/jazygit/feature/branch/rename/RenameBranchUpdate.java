@@ -1,14 +1,19 @@
 package net.vanfleteren.jazygit.feature.branch.rename;
 
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.rename.RenameBranchMsg.Confirmed;
+import net.vanfleteren.jazygit.feature.branch.rename.RenameBranchMsg.LocallyChosen;
 import net.vanfleteren.jazygit.feature.branch.rename.RenameBranchMsg.Requested;
+import net.vanfleteren.jazygit.feature.branch.rename.RenameBranchMsg.WithUpstreamChosen;
+import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
- * Renaming a local branch.
+ * Renaming a local branch, and its upstream on its remote too when the user chooses so (ADR 90).
  */
 public final class RenameBranchUpdate {
 
@@ -19,6 +24,20 @@ public final class RenameBranchUpdate {
             case Requested(BranchName branch) ->
                 Update.ask(model, model.idleBranch(branch).map(known -> new RenameBranchPopup(branch)));
             case Confirmed() -> confirmed(model);
+            case LocallyChosen() ->
+                Update.confirm(
+                        model,
+                        RenameUpstreamPopup.class,
+                        popup -> Option.of(new RenameBranchCmd(popup.branch(), popup.newName())));
+            // Only while the upstream is still the one the dialog named.
+            case WithUpstreamChosen() ->
+                Update.confirm(
+                        model,
+                        RenameUpstreamPopup.class,
+                        popup -> renamableUpstream(model, popup.branch())
+                                .filter(popup.upstream()::equals)
+                                .map(upstream ->
+                                        new RenameBranchCmd(popup.branch(), popup.newName(), Option.of(upstream))));
         };
     }
 
@@ -26,13 +45,32 @@ public final class RenameBranchUpdate {
         // The name it already has leaves it as it is.
         boolean unchanged = model.popup(RenameBranchPopup.class)
                 .exists(popup -> BranchName.parse(popup.name()).contains(popup.branch()));
+        // A branch with an upstream that can be renamed with it is asked whether to rename that too.
+        Option<RenameUpstreamPopup> withUpstream = model.popup(RenameBranchPopup.class)
+                .flatMap(popup -> BranchName.parse(popup.name())
+                        .flatMap(newName -> renamableUpstream(model, popup.branch())
+                                .map(upstream -> new RenameUpstreamPopup(popup.branch(), newName, upstream))));
         // A name that is no branch name, like a blank one, keeps the dialog open.
         return unchanged
                 ? Next.of(model.withoutPopup(RenameBranchPopup.class))
-                : Update.confirm(
-                        model,
-                        RenameBranchPopup.class,
-                        popup -> BranchName.parse(popup.name())
-                                .map(newName -> new RenameBranchCmd(popup.branch(), newName)));
+                : withUpstream
+                        .map(popup -> Update.ask(model.withoutPopup(RenameBranchPopup.class), popup))
+                        .getOrElse(() -> Update.confirm(
+                                model,
+                                RenameBranchPopup.class,
+                                popup -> BranchName.parse(popup.name())
+                                        .map(newName -> new RenameBranchCmd(popup.branch(), newName))));
+    }
+
+    /**
+     * The upstream of {@code branch} that can be renamed with it: one of the same name, on a remote, that is there;
+     * not that of the default branch, which would break every clone.
+     */
+    private static Option<RemoteBranch> renamableUpstream(Model model, BranchName branch) {
+        return model.repo()
+                .branch(branch)
+                .filter(Branch::remoteDeletable)
+                .flatMap(Branch::remoteUpstream)
+                .filter(upstream -> upstream.branch().equals(branch));
     }
 }

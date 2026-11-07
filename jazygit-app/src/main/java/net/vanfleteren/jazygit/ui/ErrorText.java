@@ -187,6 +187,14 @@ public final class ErrorText {
                 Messages.get("git.stackBranchCheckedOutElsewhere", branch.value(), worktree);
             case GitError.PushRefused(String pushDefault, RemoteBranch upstream) ->
                 Messages.get("git.pushRefused", pushDefault, upstream.shortName());
+            case GitError.UpstreamNotRenamed(RemoteBranch upstream, BranchName newName, var cause) ->
+                Messages.get(
+                        "git.upstreamNotRenamed",
+                        upstream.shortName(),
+                        newName.value(),
+                        of(cause),
+                        upstream.remote().value(),
+                        upstream.branch().value());
             case GitError.StoppedOnConflicts(var inProgress, int conflicts) ->
                 Messages.get("git.stoppedOnConflicts", conflicts);
             case GitError.TempFileFailed(Throwable cause) -> Messages.get("git.tempFileFailed", reason(cause));
