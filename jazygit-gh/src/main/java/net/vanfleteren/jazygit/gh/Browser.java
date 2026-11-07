@@ -6,6 +6,8 @@ import java.time.Duration;
 import java.util.Locale;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import net.vanfleteren.jazygit.gh.model.ChosenBrowser;
+import net.vanfleteren.jazygit.gh.model.ChosenBrowser.Source;
 
 /**
  * The browser gh opens links in, which jazygit starts itself for a link gh would cut short (ADR 85).
@@ -29,12 +31,15 @@ final class Browser {
      * @param configured  gh's {@code browser} setting, read only when {@code $GH_BROWSER} is not set
      * @param os          the name of the system, as {@code os.name} says it
      */
-    static Option<String> chosen(
+    static Option<ChosenBrowser> chosen(
             Function<String, Option<String>> environment, Supplier<Option<String>> configured, String os) {
         return set(environment.apply("GH_BROWSER"))
-                .orElse(() -> set(configured.get()))
-                .orElse(() -> set(environment.apply("BROWSER")))
-                .orElse(() -> Option.when(os.toLowerCase(Locale.ROOT).contains("linux"), XDG_OPEN));
+                .map(browser -> new ChosenBrowser(browser, Source.GH_BROWSER))
+                .orElse(() -> set(configured.get()).map(browser -> new ChosenBrowser(browser, Source.GH_SETTING)))
+                .orElse(() ->
+                        set(environment.apply("BROWSER")).map(browser -> new ChosenBrowser(browser, Source.BROWSER)))
+                .orElse(() -> Option.when(
+                        os.toLowerCase(Locale.ROOT).contains("linux"), new ChosenBrowser(XDG_OPEN, Source.DESKTOP)));
     }
 
     /**
@@ -93,7 +98,7 @@ final class Browser {
         };
     }
 
-    private static Option<String> set(Option<String> value) {
+    static Option<String> set(Option<String> value) {
         return value.map(String::strip).filter(set -> !set.isEmpty());
     }
 }

@@ -1,5 +1,7 @@
 """The files a pull request changes, as a tree in the files pane, read with git (ADR 55)."""
 
+from pathlib import Path
+
 DATE = "2026-01-01T00:00:00Z"
 # What the calls that read pull requests contain.
 LISTED = "pullRequests(states: OPEN"
@@ -171,6 +173,40 @@ def test_o_opens_the_browser_on_the_remark_of_the_cursor_or_else_on_the_pull_req
     ui.app.press("o")
     ui.app.eventually(lambda: opened.read_text().count("\n") == 2, "the browser to open the thread")
     assert opened.read_text().splitlines()[1] == f"{pull}#discussion_r10"
+
+
+def test_o_opens_the_browser_set_for_the_account_rather_than_the_one_gh_would(
+        repo, origin, clone, gh, jazygit, env, tmp_path):
+    repository = pull_request(repo, origin, clone, gh)
+    head = origin("rev-parse", "refs/pull/1/head").strip()
+    # gh's active account is alice, whose browser is set in the settings (ADR 88).
+    gh.answer((THREADS, threads(head, repo("rev-parse", "main").strip())), ("config get user -h github.com", "alice"))
+    opened = tmp_path / "opened"
+    browser = tmp_path / "work browser"
+    browser.write_text(f"#!/bin/sh\necho \"$@\" >> '{opened}'\n")
+    browser.chmod(0o755)
+    other = tmp_path / "other"
+    other.write_text(f"#!/bin/sh\necho other >> '{opened}'\n")
+    other.chmod(0o755)
+    env["BROWSER"] = str(other)
+    config = Path(env["XDG_CONFIG_HOME"]) / "jazygit" / "config.toml"
+    with config.open("a") as file:
+        file.write(f'\n[github.browsers."github.com"]\nAlice = "\'{browser}\' -P work"\n')
+    ui = jazygit()
+    ui.branches.select("feature")
+    ui.app.press("o")
+    ui.app.wait_for("in 2 files, 2 commits")
+    ui.app.press("F")
+    ui.app.wait_in("Files", "💬1")
+    ui.app.move_cursor("Files", "b.txt")
+    ui.app.press("ctrl+d")
+    ui.app.wait_for("Why b?")
+    ui.app.press("enter")
+
+    ui.app.press("o")
+
+    ui.app.eventually(lambda: opened.exists(), "the account's browser to open the pull request")
+    assert opened.read_text() == f"-P work https://github.com/{repository}/pull/1\n"
 
 
 def test_only_the_files_of_a_pull_request_with_remarks_can_be_listed(repo, origin, clone, gh, jazygit):

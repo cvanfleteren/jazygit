@@ -207,6 +207,68 @@ class SettingsFileTest {
     }
 
     @Test
+    void readsTheBrowserOfEachAccountMatchingHostAndLoginWithoutRegardToCase() throws IOException {
+        write("""
+                [github.browsers."github.com"]
+                cvf-work = "firefox -P work"
+                CVanfleteren = "firefox -P personal"
+                blank = " "
+
+                [github.browsers."GHE.acme.com"]
+                cvf = "chromium --profile-directory=Acme"
+                """);
+
+        Loaded loaded = settingsFile().load();
+        AccountBrowsers browsers = loaded.settings().browsers();
+
+        assertEquals(Option.none(), loaded.problem());
+        assertEquals(Option.of("firefox -P work"), browsers.of("github.com", "cvf-work"));
+        assertEquals(Option.of("firefox -P personal"), browsers.of("GitHub.com", "cvanfleteren"));
+        assertEquals(Option.of("chromium --profile-directory=Acme"), browsers.of("ghe.acme.com", "CVF"));
+        assertEquals(Option.none(), browsers.of("github.com", "blank"));
+        assertEquals(Option.none(), browsers.of("github.com", "cvf"));
+    }
+
+    @Test
+    void aBrowserThatIsNoTextIsInvalid() throws IOException {
+        write("""
+                [github.browsers."github.com"]
+                cvf = 3
+                """);
+
+        Loaded loaded = settingsFile().load();
+
+        assertEquals(AccountBrowsers.NONE, loaded.settings().browsers());
+        assertEquals(Option.of(new SettingsProblem.Invalid(file(), List.of("github.browsers"))), loaded.problem());
+    }
+
+    @Test
+    void savingABrowserKeepsTheOthersAndTakingTheLastAwayLeavesNoTable() throws IOException {
+        write("""
+                [github]
+                executable = "/opt/gh"
+
+                [github.browsers."github.com"]
+                # by hand
+                cvf = "firefox -P personal"
+                """);
+        Settings read = settingsFile().load().settings();
+        Settings work = read.withBrowsers(read.browsers().with("github.com", "cvf-work", Option.of("firefox -P work")));
+
+        settingsFile().save(read, work);
+
+        assertEquals(work, settingsFile().load().settings());
+        assertTrue(Files.readString(file()).contains("# by hand"), Files.readString(file()));
+
+        Settings none = work.withBrowsers(
+                work.browsers().with("github.com", "CVF", Option.none()).with("github.com", "cvf-work", Option.none()));
+        settingsFile().save(work, none);
+
+        assertFalse(Files.readString(file()).contains("browsers"), Files.readString(file()));
+        assertEquals(none, settingsFile().load().settings());
+    }
+
+    @Test
     void aFileThatIsNoTomlIsNotOverwritten() throws IOException {
         write("theme = ");
 

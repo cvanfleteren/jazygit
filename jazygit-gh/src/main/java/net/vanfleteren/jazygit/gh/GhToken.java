@@ -3,15 +3,12 @@ package net.vanfleteren.jazygit.gh;
 import static net.vanfleteren.jazygit.gh.GhCommand.gh;
 
 import io.vavr.collection.HashMap;
-import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.gh.model.GhAccount;
-import net.vanfleteren.jazygit.process.Exec;
 
 /**
  * The token of the account a repository is configured to use with gh, as the environment variables that make gh,
@@ -28,8 +25,6 @@ public final class GhToken {
      */
     public static final GhToken NONE = new GhToken(Path.of(""), "gh", Option::none);
 
-    private static final Duration SSH_TIMEOUT = Duration.ofSeconds(5);
-
     private final Path worktree;
     private final String executable;
     private final Supplier<Option<GhAccount>> account;
@@ -44,17 +39,6 @@ public final class GhToken {
         this.worktree = worktree;
         this.executable = executable;
         this.account = account;
-    }
-
-    /**
-     * The {@code hostname} that {@code ssh -G} prints.
-     */
-    static Option<String> sshHostName(String raw) {
-        return List.of(raw.split("\\R"))
-                .map(String::strip)
-                .find(line -> line.startsWith("hostname "))
-                .map(line -> line.substring("hostname ".length()).strip())
-                .filter(name -> !name.isEmpty());
     }
 
     /**
@@ -79,6 +63,13 @@ public final class GhToken {
     }
 
     /**
+     * The account the repository is configured to use, if any, on the host as its remotes give it.
+     */
+    public Option<GhAccount> configured() {
+        return account.get();
+    }
+
+    /**
      * Forgets the token, so the next {@link #environment()} asks gh again: for when GitHub did not accept it.
      */
     public synchronized void forget() {
@@ -86,7 +77,7 @@ public final class GhToken {
     }
 
     private Either<GhError, Map<String, String>> fetch(GhAccount configured) {
-        String host = resolve(configured.host());
+        String host = SshHost.resolve(worktree, configured.host());
         GhAccount resolved = new GhAccount(host, configured.user());
         return new GhProcess(worktree, executable, NONE)
                 .read(
@@ -96,18 +87,5 @@ public final class GhToken {
                                 .toEither(() -> new GhError.UnexpectedOutput(raw)))
                 .map(token -> variables(host, token))
                 .mapLeft(cause -> new GhError.TokenUnavailable(resolved, cause));
-    }
-
-    /**
-     * The host that {@code host} stands for: itself, or the host name the ssh configuration gives an alias such
-     * as {@code github-work}, as gh resolves it too. Asking ssh is left out for GitHub itself.
-     */
-    private String resolve(String host) {
-        return GhAccount.isGitHubCom(host)
-                ? host
-                : Exec.run(worktree, List.of("ssh", "-G", host), HashMap.empty(), SSH_TIMEOUT)
-                        .toOption()
-                        .flatMap(GhToken::sshHostName)
-                        .getOrElse(host);
     }
 }

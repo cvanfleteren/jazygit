@@ -158,6 +158,16 @@ public interface StubGitHub extends GitHub {
     }
 
     @Override
+    default Option<GhAccount> account() {
+        return Option.none();
+    }
+
+    @Override
+    default Option<ChosenBrowser> ghBrowser(String host) {
+        return Option.of(new ChosenBrowser(Browser.XDG_OPEN, ChosenBrowser.Source.DESKTOP));
+    }
+
+    @Override
     default Either<GhFailure, List<ExecutedCommand>> browse(GhBranch branch) {
         return Either.right(List.of(ExecutedCommand.of("gh", "browse", "--branch", branch.name())));
     }

@@ -106,11 +106,25 @@ public interface GitHub {
     Either<GhFailure, List<ExecutedCommand>> openPullRequest(String url);
 
     /**
-     * Opens the pull request, or the review comment, {@code link} is to in the browser gh would open it in, started
-     * by jazygit, as gh drops the anchor of a link (ADR 85). Without a browser set, on another system than Linux, gh
-     * opens the pull request, without the anchor; so does it when the host is not known.
+     * Opens the pull request, or the review comment, {@code link} is to in the browser set for the account the
+     * repository uses (ADR 88), else the one gh would open it in, started by jazygit, as gh drops the anchor of a link
+     * (ADR 85). Without a browser set, on another system than Linux, gh opens the pull request, without the anchor;
+     * so does it when the host is not known.
      */
     Either<GhFailure, List<ExecutedCommand>> openInBrowser(PullRequestLink link);
+
+    /**
+     * The account gh runs as for the repository now, on the host its remotes give, an ssh alias resolved: the one it
+     * is configured to use, else gh's active one; none when that is not known, as when a token in the environment
+     * makes gh run as another (ADR 88).
+     */
+    Option<GhAccount> account();
+
+    /**
+     * The browser gh would open a link to {@code host} in, and what chose it; none when gh would leave it to the
+     * system (ADR 85).
+     */
+    Option<ChosenBrowser> ghBrowser(String host);
 
     /**
      * Opens {@code branch}, as it is named on the remote, in the browser.

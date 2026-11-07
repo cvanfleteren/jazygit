@@ -7,6 +7,7 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import net.vanfleteren.jazygit.gh.GhError.UnexpectedOutput;
@@ -43,6 +44,11 @@ public final class CliGitHub implements GitHub {
     private final GhProcess process;
     // As gh's own active accounts: with a token in the environment, gh only knows of that one.
     private final GhProcess unconfigured;
+    private final GhToken token;
+    // The GitHub host of the remotes, which can be an ssh alias.
+    private final Supplier<String> host;
+    // The browser set for an account, if any (ADR 88).
+    private final Function<GhAccount, Option<String>> browsers;
     // The environment and the system the browser is chosen by, as gh chooses it (ADR 85).
     private final Function<String, Option<String>> environment;
     private final String os;
@@ -52,7 +58,27 @@ public final class CliGitHub implements GitHub {
      * {@code token}.
      */
     public CliGitHub(Path worktree, String executable, GhToken token) {
-        this(worktree, executable, token, name -> Option.of(System.getenv(name)), System.getProperty("os.name", ""));
+        this(worktree, executable, token, () -> GhAccount.GITHUB, account -> Option.none());
+    }
+
+    /**
+     * GitHub as {@link #CliGitHub(Path, String, GhToken)}, for a repository whose remotes are on {@code host}, opening
+     * links in the browser {@code browsers} gives the account the repository uses, if any (ADR 88).
+     */
+    public CliGitHub(
+            Path worktree,
+            String executable,
+            GhToken token,
+            Supplier<String> host,
+            Function<GhAccount, Option<String>> browsers) {
+        this(
+                worktree,
+                executable,
+                token,
+                host,
+                browsers,
+                name -> Option.of(System.getenv(name)),
+                System.getProperty("os.name", ""));
     }
 
     /**
@@ -61,9 +87,27 @@ public final class CliGitHub implements GitHub {
      */
     CliGitHub(
             Path worktree, String executable, GhToken token, Function<String, Option<String>> environment, String os) {
+        this(worktree, executable, token, () -> GhAccount.GITHUB, account -> Option.none(), environment, os);
+    }
+
+    /**
+     * GitHub as {@link #CliGitHub(Path, String, GhToken, Supplier, Function)}, choosing the browser by the variables
+     * {@code environment} gives and the system {@code os}.
+     */
+    CliGitHub(
+            Path worktree,
+            String executable,
+            GhToken token,
+            Supplier<String> host,
+            Function<GhAccount, Option<String>> browsers,
+            Function<String, Option<String>> environment,
+            String os) {
         this.worktree = worktree;
         this.process = new GhProcess(worktree, executable, token);
         this.unconfigured = new GhProcess(worktree, executable, GhToken.NONE);
+        this.token = token;
+        this.host = host;
+        this.browsers = browsers;
         this.environment = environment;
         this.os = os;
     }
@@ -211,22 +255,68 @@ public final class CliGitHub implements GitHub {
 
     @Override
     public Either<GhFailure, List<ExecutedCommand>> openPullRequest(int number) {
-        return process.log(gh("pr", "view", String.valueOf(number), "--web"));
+        return web(gh("pr", "view", String.valueOf(number), "--web"), accountBrowser());
     }
 
     @Override
     public Either<GhFailure, List<ExecutedCommand>> openPullRequest(String url) {
-        return process.log(gh("pr", "view", url, "--web"));
+        return web(gh("pr", "view", url, "--web"), accountBrowser());
     }
 
     @Override
     public Either<GhFailure, List<ExecutedCommand>> openInBrowser(PullRequestLink link) {
+        Option<String> account = accountBrowser();
         if (link.host().isEmpty()) {
-            return openPullRequest(link.number());
+            return web(gh("pr", "view", String.valueOf(link.number()), "--web"), account);
         }
-        return Browser.chosen(environment, () -> configuredBrowser(link.host()), os)
+        return account.orElse(() -> ghBrowser(link.host()).map(ChosenBrowser::command))
                 .map(browser -> launch(browser, link.url()))
-                .getOrElse(() -> openPullRequest(link.pullRequest()));
+                .getOrElse(() -> web(gh("pr", "view", link.pullRequest(), "--web"), account));
+    }
+
+    @Override
+    public Option<GhAccount> account() {
+        return token.configured()
+                .map(configured -> new GhAccount(SshHost.resolve(worktree, configured.host()), configured.user()))
+                .orElse(() -> activeAccount(SshHost.resolve(worktree, host.get())));
+    }
+
+    @Override
+    public Option<ChosenBrowser> ghBrowser(String host) {
+        return Browser.chosen(environment, () -> configuredBrowser(host), os);
+    }
+
+    /**
+     * gh's active account on {@code host}, as its own files name it; none when a token in the environment makes gh
+     * run as the account of that token instead, which its files do not name, or when gh names none.
+     */
+    private Option<GhAccount> activeAccount(String host) {
+        List<String> tokens = GhAccount.isGitHubCom(host)
+                ? List.of("GH_TOKEN", "GITHUB_TOKEN")
+                : List.of("GH_ENTERPRISE_TOKEN", "GITHUB_ENTERPRISE_TOKEN");
+        if (tokens.exists(name -> environment.apply(name).exists(value -> !value.isBlank()))) {
+            return Option.none();
+        }
+        return unconfigured
+                .read(gh("config", "get", "user", "-h", host), raw -> Either.right(raw.strip()))
+                .toOption()
+                .filter(user -> !user.isEmpty())
+                .map(user -> new GhAccount(host, user));
+    }
+
+    /**
+     * The browser set for the account the repository uses now, if any (ADR 88).
+     */
+    private Option<String> accountBrowser() {
+        return account().flatMap(browsers).map(String::strip).filter(browser -> !browser.isEmpty());
+    }
+
+    /**
+     * Runs {@code command}, which opens something in the browser, in {@code browser} when one is set for the account.
+     */
+    private Either<GhFailure, List<ExecutedCommand>> web(GhCommand command, Option<String> browser) {
+        return process.log(
+                browser.map(set -> command.withEnvironment("GH_BROWSER", set)).getOrElse(command));
     }
 
     /**
@@ -256,7 +346,7 @@ public final class CliGitHub implements GitHub {
 
     @Override
     public Either<GhFailure, List<ExecutedCommand>> browse(GhBranch branch) {
-        return process.log(browseCommand(branch));
+        return web(browseCommand(branch), accountBrowser());
     }
 
     @Override

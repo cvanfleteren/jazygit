@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.feature.settings;
 
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.gh.model.GhAccount;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Label;
 
@@ -12,8 +13,8 @@ public sealed interface SettingsPanelCmd extends Cmd {
 
     /**
      * Reads how gh is set up for the repository: the version of the gh at {@code executable}, the account the
-     * repository is configured to use, and the accounts gh is logged in to. In the background, as gh talks to
-     * GitHub to check the accounts.
+     * repository is configured to use, the accounts gh is logged in to, the account gh runs as and the browser gh
+     * would open its links in. In the background, as gh talks to GitHub to check the accounts.
      */
     record ReadGitHub(String executable) implements SettingsPanelCmd {
 
@@ -29,17 +30,20 @@ public sealed interface SettingsPanelCmd extends Cmd {
 
         @Override
         public Msg run(Env env) {
+            Option<GhAccount> account = env.gitHub().account();
             return new SettingsPanelMsg.GitHubRead(new GitHubSetup(
                     env.gitHub().version(executable).mapLeft(Failure.GitHub::new),
                     GitHubAccount.host(env.git()),
                     env.git().config().local(GitHubAccount.USER_KEY).getOrElse(Option.none()),
-                    env.gitHub().logins().mapLeft(Failure.GitHub::new)));
+                    env.gitHub().logins().mapLeft(Failure.GitHub::new),
+                    account,
+                    account.flatMap(known -> env.gitHub().ghBrowser(known.host()))));
         }
 
         @Override
         public Msg failed(Failure failure) {
-            return new SettingsPanelMsg.GitHubRead(
-                    new GitHubSetup(Either.left(failure), "", Option.none(), Either.left(failure)));
+            return new SettingsPanelMsg.GitHubRead(new GitHubSetup(
+                    Either.left(failure), "", Option.none(), Either.left(failure), Option.none(), Option.none()));
         }
     }
 
