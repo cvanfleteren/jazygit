@@ -171,6 +171,18 @@ public sealed interface GitError {
     record PushRefused(String pushDefault, RemoteBranch upstream) implements GitError {}
 
     /**
+     * The branch was renamed to {@code newName}, but its upstream could not be renamed with it on its remote, so it
+     * still follows {@code upstream}.
+     */
+    record UpstreamNotRenamed(RemoteBranch upstream, BranchName newName, GitError cause) implements GitError {}
+
+    /**
+     * The branch was renamed to {@code newName}, but {@code upstream}, which it follows, was no longer on its remote
+     * to be renamed with it.
+     */
+    record UpstreamNotOnRemote(RemoteBranch upstream, BranchName newName) implements GitError {}
+
+    /**
      * A temporary file git needed could not be written.
      */
     record TempFileFailed(Throwable cause) implements GitError {}

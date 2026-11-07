@@ -440,10 +440,23 @@ class BranchesPane:
             self.app.press("n"), self.ui.enter_text(f"New branch from {remote}", name)),
                               lambda: self.repo.parent(name) == remote.split("/", 1)[1])
 
-    def rename(self, branch: str, name: str):
+    def rename(self, branch: str, name: str, where: str = None):
+        """Renames the branch to name. A branch that follows a branch of its own name on a remote is asked where:
+        "local" renames only it, "remote" renames that one too, which it then follows; no other is asked."""
         self.select(branch)
-        self.ui.changing_repo(f"{branch} renamed to {name}", lambda: (
-            self.app.press("R"), self.ui.enter_text(f"Rename branch {branch}", name)))
+        upstream = self.repo.upstream(branch)
+
+        def keys():
+            self.app.press("R")
+            self.ui.enter_text(f"Rename branch {branch}", name)
+            if where is not None:
+                self.ui.confirm(f"Rename {branch} to {name}", key={"local": "l", "remote": "r"}[where])
+
+        # Renaming on the remote too takes a git command for each step, the local rename first.
+        def done():
+            return where != "remote" or self.repo.upstream(name) == f"{upstream.split('/')[0]}/{name}"
+
+        self.ui.changing_repo(f"{branch} renamed to {name}", keys, done)
 
     def try_to_rename(self, branch: str, name: str):
         """Asks to rename the branch to name, for when the app is to refuse it: it does not wait for the repository

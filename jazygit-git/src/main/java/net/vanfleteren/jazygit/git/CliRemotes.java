@@ -309,6 +309,66 @@ final class CliRemotes implements Remotes {
                 credentials.get());
     }
 
+    /**
+     * Fetches {@code upstream}'s remote, so that the rename starts from what is there now, then runs
+     * {@code git push --atomic --force-with-lease=refs/heads/<branch>: --force-with-lease=refs/heads/<old> <remote>
+     * refs/remotes/<remote>/<old>:refs/heads/<branch> :refs/heads/<old>}: it pushes the commit the remote-tracking
+     * branch has, not the local branch, and git refuses all of it when the new name is taken or the old one moved.
+     * An upstream the fetch pruned is not pushed at all. Last, {@code git config branch.<branch>.merge
+     * refs/heads/<branch>} has {@code branch} follow the renamed one; its remote stays. Not {@code git branch
+     * --set-upstream-to}, which needs the remote-tracking branch, which the push does not make when the remote's fetch
+     * refspec leaves it out. That step is no part of the rename on the remote, which happened when it fails.
+     */
+    @Override
+    public Either<GitFailure, List<ExecutedCommand>> renameUpstream(BranchName branch, RemoteBranch upstream) {
+        BranchRef.Local old = new BranchRef.Local(upstream.branch());
+        BranchRef.Local target = new BranchRef.Local(branch);
+        return GitFailure.sequence(
+                        () -> run(
+                                worktree,
+                                git("fetch", "--prune", "--no-write-fetch-head", GitArgs.remote(upstream.remote())),
+                                credentials.get()),
+                        () -> stillOnRemote(upstream, branch),
+                        () -> run(
+                                worktree,
+                                git(
+                                        "push",
+                                        "--atomic",
+                                        GitArgs.leaseAbsent(target),
+                                        GitArgs.lease(old),
+                                        GitArgs.remote(upstream.remote()),
+                                        GitArgs.refspec(upstream.tracking(), target),
+                                        GitArgs.deletion(old)),
+                                credentials.get()))
+                .mapLeft(failure -> failure.error() instanceof GitError.UpstreamNotOnRemote
+                        ? failure
+                        : new GitFailure(
+                                new GitError.UpstreamNotRenamed(upstream, branch, failure.error()), failure.commands()))
+                .flatMap(renamed -> GitProcess.log(
+                                worktree,
+                                git(
+                                        "config",
+                                        "--local",
+                                        "branch." + GitArgs.name(branch) + ".merge",
+                                        GitArgs.revision(target)))
+                        .map(renamed::appendAll)
+                        .mapLeft(failure -> failure.after(renamed)));
+    }
+
+    /**
+     * Whether {@code upstream} is still on its remote, as its remote-tracking branch tells after a fetch; when not,
+     * {@link GitError.UpstreamNotOnRemote}. Only looked up, so not logged.
+     */
+    private Either<GitFailure, List<ExecutedCommand>> stillOnRemote(RemoteBranch upstream, BranchName branch) {
+        return GitProcess.ask(
+                        worktree,
+                        GitCommand.reading("rev-parse", "--verify", "--quiet", GitArgs.revision(upstream.tracking())))
+                .flatMap(answer -> answer.isDefined()
+                        ? GitFailure.nothing()
+                        : Either.left(
+                                new GitFailure(new GitError.UpstreamNotOnRemote(upstream, branch), List.empty())));
+    }
+
     @Override
     public Either<GitError, List<CommitFile>> pullRequestFiles(PullRequestCommits commits) {
         return CliPullRequest.files(worktree, commits, credentials.get());

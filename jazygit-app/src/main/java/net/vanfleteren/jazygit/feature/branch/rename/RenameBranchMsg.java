@@ -21,4 +21,14 @@ public sealed interface RenameBranchMsg extends Msg {
      * The user confirmed the new name typed in the popup.
      */
     record Confirmed() implements RenameBranchMsg {}
+
+    /**
+     * The user chose to rename the branch only locally, so that it still follows its upstream.
+     */
+    record LocallyChosen() implements RenameBranchMsg {}
+
+    /**
+     * The user chose to rename the branch's upstream on its remote too.
+     */
+    record WithUpstreamChosen() implements RenameBranchMsg {}
 }
