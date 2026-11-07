@@ -24,13 +24,19 @@ public final class MergeDialogs {
             popup -> Messages.get(
                     "dialog.merge.title", popup.branch().value(), popup.into().value()),
             List.of(
-                    new Choice<>('m', "dialog.merge.fastForward", () -> new MergeMsg.Chosen(MergeMode.FAST_FORWARD)),
-                    new Choice<>('n', "dialog.merge.mergeCommit", () -> new MergeMsg.Chosen(MergeMode.MERGE_COMMIT)),
-                    new Choice<>('s', "dialog.merge.squash", () -> new MergeMsg.Chosen(MergeMode.SQUASH)),
-                    new Choice<>(
-                            'S',
-                            "dialog.merge.squashAndCommit",
-                            () -> new MergeMsg.Chosen(MergeMode.SQUASH_AND_COMMIT))));
+                    new Choice<MergePopup>(
+                                    'm', "dialog.merge.fastForward", () -> new MergeMsg.Chosen(MergeMode.FAST_FORWARD))
+                            .withDetails("dialog.merge.fastForward.details"),
+                    new Choice<MergePopup>(
+                                    'n', "dialog.merge.mergeCommit", () -> new MergeMsg.Chosen(MergeMode.MERGE_COMMIT))
+                            .withDetails("dialog.merge.mergeCommit.details"),
+                    new Choice<MergePopup>('s', "dialog.merge.squash", () -> new MergeMsg.Chosen(MergeMode.SQUASH))
+                            .withDetails("dialog.merge.squash.details"),
+                    new Choice<MergePopup>(
+                                    'S',
+                                    "dialog.merge.squashAndCommit",
+                                    () -> new MergeMsg.Chosen(MergeMode.SQUASH_AND_COMMIT))
+                            .withDetails("dialog.merge.squashAndCommit.details")));
 
     private MergeDialogs() {}
 

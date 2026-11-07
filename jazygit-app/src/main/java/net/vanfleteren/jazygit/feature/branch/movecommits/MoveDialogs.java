@@ -87,19 +87,21 @@ public final class MoveDialogs {
                             .getOrElse("")),
             List.of(
                     new Choice<MovePushedPopup>(
-                            'f',
-                            popup -> Messages.get(
-                                    popup.request().fromIsDefault()
-                                            ? "dialog.moveCommitsPushed.forcePushDefault"
-                                            : "dialog.moveCommitsPushed.forcePush",
-                                    popup.request().from().value()),
-                            () -> new MoveMsg.PushedConfirmed(true)),
+                                    'f',
+                                    popup -> Messages.get(
+                                            popup.request().fromIsDefault()
+                                                    ? "dialog.moveCommitsPushed.forcePushDefault"
+                                                    : "dialog.moveCommitsPushed.forcePush",
+                                            popup.request().from().value()),
+                                    () -> new MoveMsg.PushedConfirmed(true))
+                            .withDetails("dialog.moveCommitsPushed.forcePush.details"),
                     new Choice<MovePushedPopup>(
-                            'm',
-                            popup -> Messages.get(
-                                    "dialog.moveCommitsPushed.moveOnly",
-                                    popup.request().from().value()),
-                            () -> new MoveMsg.PushedConfirmed(false))));
+                                    'm',
+                                    popup -> Messages.get(
+                                            "dialog.moveCommitsPushed.moveOnly",
+                                            popup.request().from().value()),
+                                    () -> new MoveMsg.PushedConfirmed(false))
+                            .withDetails("dialog.moveCommitsPushed.moveOnly.details")));
 
     private MoveDialogs() {}
 

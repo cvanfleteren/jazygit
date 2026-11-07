@@ -26,11 +26,13 @@ public final class FixupDialogs {
                     popup.commit().sha().shortSha(),
                     popup.into().shortSha()),
             List.of(
-                    new Choice<>('f', "dialog.fixup.fixup", () -> new FixupMsg.Chosen(SquashMode.FIXUP)),
-                    new Choice<>(
-                            'C',
-                            "dialog.fixup.keepMessage",
-                            () -> new FixupMsg.Chosen(SquashMode.FIXUP_KEEP_MESSAGE))));
+                    new Choice<FixupPopup>('f', "dialog.fixup.fixup", () -> new FixupMsg.Chosen(SquashMode.FIXUP))
+                            .withDetails("dialog.fixup.fixup.details"),
+                    new Choice<FixupPopup>(
+                                    'C',
+                                    "dialog.fixup.keepMessage",
+                                    () -> new FixupMsg.Chosen(SquashMode.FIXUP_KEEP_MESSAGE))
+                            .withDetails("dialog.fixup.keepMessage.details")));
 
     private FixupDialogs() {}
 

@@ -309,6 +309,77 @@ class ChoiceDialogTest {
         SettledPilot.of(runner).pause();
     }
 
+    /**
+     * The view of a dialog whose first two options tell what they do, and whose third does not.
+     */
+    private Supplier<Element> telling() {
+        ChoiceDialog<PickPopup> telling = new ChoiceDialog<>(
+                new ChoiceDialog.Spec<>(
+                        "pick",
+                        PickPopup.class,
+                        popup -> "Pick one",
+                        List.of(
+                                new Choice<PickPopup>('a', "dialog.discard.all", () -> new Picked("a"))
+                                        .withDetails(popup -> "Throws everything away."),
+                                new Choice<PickPopup>('b', "dialog.discard.unstaged", () -> new Picked("b"))
+                                        .withDetails(popup -> "Keeps what is staged."),
+                                new Choice<>('c', "dialog.reset.mixed", () -> new Picked("c")))),
+                cursor);
+        return () ->
+                stack(text("background"), telling.render(cursor.on(open(true))).get());
+    }
+
+    @Test
+    void whileTheFilterMatchesNothingNoDetailsShowAndTheDialogStaysWhereItWas() throws Exception {
+        Supplier<Element> view = telling();
+
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(view)) {
+            SettledPilot.focus(runner, "pick");
+            String before = RenderedText.ofLarge(runner, view);
+            SettledPilot.of(runner).press('/');
+            for (char letter : "zzz".toCharArray()) {
+                SettledPilot.of(runner).press(letter);
+            }
+            SettledPilot.of(runner).pause();
+            String filtered = RenderedText.ofLarge(runner, view);
+
+            assertTrue(filtered.contains("zzz"), filtered);
+            assertFalse(filtered.contains("Throws everything away."), filtered);
+            assertFalse(filtered.contains("Keeps what is staged."), filtered);
+            assertEquals(
+                    before.lines().filter(line -> line.contains("Pick one")).toList(),
+                    filtered.lines().filter(line -> line.contains("Pick one")).toList());
+        }
+    }
+
+    @Test
+    void whatTheHighlightedOptionDoesShowsUnderTheDialog() throws Exception {
+        Supplier<Element> view = telling();
+
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(view)) {
+            SettledPilot.focus(runner, "pick");
+            String first = RenderedText.ofLarge(runner, view);
+            assertTrue(first.indexOf("(esc) cancel") < first.indexOf("Throws everything away."), first);
+            assertFalse(first.contains("Keeps what is staged."), first);
+
+            SettledPilot.of(runner).press(KeyCode.DOWN);
+            SettledPilot.of(runner).pause();
+            String second = RenderedText.ofLarge(runner, view);
+            assertTrue(second.contains("Keeps what is staged."), second);
+            assertFalse(second.contains("Throws everything away."), second);
+            // The dialog stays where it was.
+            assertEquals(
+                    first.lines().filter(line -> line.contains("Pick one")).toList(),
+                    second.lines().filter(line -> line.contains("Pick one")).toList());
+
+            SettledPilot.of(runner).press(KeyCode.DOWN);
+            SettledPilot.of(runner).pause();
+            String third = RenderedText.ofLarge(runner, view);
+            assertFalse(third.contains("Keeps what is staged."), third);
+            assertFalse(third.contains("Throws everything away."), third);
+        }
+    }
+
     private ToolkitTestRunner start(boolean second) throws Exception {
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(second));
         SettledPilot.focus(runner, "pick");

@@ -30,19 +30,22 @@ public final class UpstreamDialogs {
                     .getOrElse(() -> Messages.get("dialog.upstream.titleDetached")),
             List.of(
                     new Choice<UpstreamPopup>(
-                            'v',
-                            popup -> Messages.get("dialog.upstream.divergence", upstreamName(popup.branch())),
-                            UpstreamMsg.UpstreamDivergenceChosen::new),
+                                    'v',
+                                    popup -> Messages.get("dialog.upstream.divergence", upstreamName(popup.branch())),
+                                    UpstreamMsg.UpstreamDivergenceChosen::new)
+                            .withDetails("dialog.upstream.divergence.details"),
                     new Choice<UpstreamPopup>(
-                            'b',
-                            popup -> popup.base()
-                                    .map(base -> Messages.get("dialog.upstream.baseDivergence", base.name()))
-                                    .getOrElse(() -> Messages.get("dialog.upstream.baseDivergenceUnknown")),
-                            UpstreamMsg.BaseDivergenceChosen::new),
+                                    'b',
+                                    popup -> popup.base()
+                                            .map(base -> Messages.get("dialog.upstream.baseDivergence", base.name()))
+                                            .getOrElse(() -> Messages.get("dialog.upstream.baseDivergenceUnknown")),
+                                    UpstreamMsg.BaseDivergenceChosen::new)
+                            .withDetails("dialog.upstream.baseDivergence.details"),
                     new Choice<UpstreamPopup>(
-                            'g',
-                            popup -> Messages.get("dialog.upstream.reset", upstreamName(popup.checkedOut())),
-                            UpstreamMsg.ResetChosen::new)));
+                                    'g',
+                                    popup -> Messages.get("dialog.upstream.reset", upstreamName(popup.checkedOut())),
+                                    UpstreamMsg.ResetChosen::new)
+                            .withDetails("dialog.upstream.reset.details")));
 
     private UpstreamDialogs() {}
 

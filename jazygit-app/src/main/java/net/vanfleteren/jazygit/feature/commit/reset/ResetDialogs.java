@@ -26,9 +26,12 @@ public final class ResetDialogs {
                     ? Messages.get("dialog.reset.titleDropping", popup.target().label(), popup.dropped())
                     : Messages.get("dialog.reset.title", popup.target().label()),
             List.of(
-                    new Choice<>('m', "dialog.reset.mixed", () -> new ResetMsg.Chosen(ResetMode.MIXED)),
-                    new Choice<>('s', "dialog.reset.soft", () -> new ResetMsg.Chosen(ResetMode.SOFT)),
-                    new Choice<>('h', "dialog.reset.hard", () -> new ResetMsg.Chosen(ResetMode.HARD))));
+                    new Choice<ResetPopup>('m', "dialog.reset.mixed", () -> new ResetMsg.Chosen(ResetMode.MIXED))
+                            .withDetails("dialog.reset.mixed.details"),
+                    new Choice<ResetPopup>('s', "dialog.reset.soft", () -> new ResetMsg.Chosen(ResetMode.SOFT))
+                            .withDetails("dialog.reset.soft.details"),
+                    new Choice<ResetPopup>('h', "dialog.reset.hard", () -> new ResetMsg.Chosen(ResetMode.HARD))
+                            .withDetails("dialog.reset.hard.details")));
 
     /**
      * Asks to confirm a hard reset, which discards the uncommitted changes.
