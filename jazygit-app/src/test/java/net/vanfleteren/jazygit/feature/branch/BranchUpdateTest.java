@@ -152,7 +152,7 @@ class BranchUpdateTest {
     }
 
     @Test
-    void aBusyBranchIsNotCheckedOutMergedRebasedOrBranchedFrom() {
+    void aBusyBranchIsNotCheckedOutMergedRebasedOntoOrBranchedFrom() {
         Model pushing = TestModels.busy(tracking(), new BranchRef.Local(new BranchName("feature")), PushCmd.PUSH);
 
         assertEquals(
@@ -164,11 +164,13 @@ class BranchUpdateTest {
                 Update.update(pushing, new MergeMsg.Requested(new BranchName("feature")))
                         .model()
                         .popup());
+        // The rebase popup opens, for the base branch, but does not rebase onto the busy one (ADR 91).
+        Model rebasing = Update.update(pushing, new RebaseMsg.Requested(new BranchName("feature")))
+                .model();
         assertEquals(
-                Option.none(),
-                Update.update(pushing, new RebaseMsg.Requested(new BranchName("feature")))
-                        .model()
-                        .popup());
+                List.of(),
+                Update.update(rebasing, new RebaseMsg.Chosen(RebaseMsg.Target.ONTO))
+                        .cmds());
         assertEquals(
                 Option.none(),
                 Update.update(pushing, new NewBranchMsg.Requested(new BranchName("feature")))

@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.feature.branch.rebase;
 
 import static net.vanfleteren.jazygit.state.TestModels.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.HashMap;
 import io.vavr.collection.HashSet;
@@ -106,6 +107,36 @@ class RebaseUpdateTest {
                 List.of(),
                 Update.update(pushing, new RebaseMsg.Chosen(RebaseMsg.Target.BASE))
                         .cmds());
+    }
+
+    @Test
+    void aBusyHighlightedBranchStillLetsTheBaseBeChosen() {
+        Model model = withParents(checkedOut(CHILD), HashMap.of(CHILD, PARENT));
+        Model pushing = TestModels.busy(model, new BranchRef.Local(OTHER), PushCmd.PUSH);
+
+        Model open = Update.update(pushing, new RebaseMsg.Requested(OTHER)).model();
+
+        assertEquals(
+                List.of(),
+                Update.update(open, new RebaseMsg.Chosen(RebaseMsg.Target.ONTO)).cmds());
+        assertEquals(
+                List.of(new RebaseCmd(PARENT)),
+                Update.update(open, new RebaseMsg.Chosen(RebaseMsg.Target.BASE)).cmds());
+    }
+
+    @Test
+    void aBusyCheckedOutBranchOpensThePopupButIsNotRebased() {
+        Model pushing = TestModels.busy(checkedOut(CHILD), new BranchRef.Local(CHILD), PushCmd.PUSH);
+
+        Model open = Update.update(pushing, new RebaseMsg.Requested(OTHER)).model();
+
+        assertTrue(open.popup(RebasePopup.class).isDefined());
+        assertEquals(
+                List.of(),
+                Update.update(open, new RebaseMsg.Chosen(RebaseMsg.Target.ONTO)).cmds());
+        assertEquals(
+                List.of(),
+                Update.update(open, new RebaseMsg.Chosen(RebaseMsg.Target.BASE)).cmds());
     }
 
     private static RebasePopup popup(Model model, BranchName highlighted) {

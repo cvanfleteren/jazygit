@@ -74,6 +74,15 @@ class RebaseDialogTest {
     }
 
     @Test
+    void enterOnTheCheckedOutRowChoosesTheBase() throws Exception {
+        open = open.openPopup(new RebasePopup(
+                new BranchName("main"), new BranchName("main"), Option.of(new BranchName("feature/jgit-backend"))));
+        assertEquals(
+                List.of(new RebaseMsg.Chosen(RebaseMsg.Target.BASE)),
+                pressing(r -> SettledPilot.of(r).press(KeyCode.ENTER)));
+    }
+
+    @Test
     void theBaseBranchIsNamed() throws Exception {
         open = withBase(new BranchName("feature/jgit-backend"));
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view())) {

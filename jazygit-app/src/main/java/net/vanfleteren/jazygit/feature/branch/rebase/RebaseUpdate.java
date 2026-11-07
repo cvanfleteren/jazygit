@@ -24,24 +24,32 @@ public final class RebaseUpdate {
                 Update.confirm(
                         model,
                         RebasePopup.class,
-                        popup -> popup.target(target)
-                                .filter(onto -> model.idleBranch(onto).isDefined())
-                                .map(RebaseCmd::new));
+                        popup -> onto(model, popup, target).map(RebaseCmd::new));
         };
     }
 
     /**
-     * Asks where to rebase the checked out branch, when it and {@code highlighted} are known branches no operation
-     * runs on; {@code highlighted} can be the checked out branch itself (ADR 91).
+     * Asks where to rebase the checked out branch, when it and {@code highlighted} are known branches;
+     * {@code highlighted} can be the checked out branch itself. An option that does not apply, also while an
+     * operation runs on a branch it takes, is disabled rather than keeping the popup closed (ADR 91).
      */
     private static Next requested(Model model, BranchName highlighted) {
         return Update.ask(
                 model,
                 model.repo()
                         .currentBranch()
-                        .flatMap(current -> model.idleBranch(current.name()))
-                        .filter(current -> model.idleBranch(highlighted).isDefined())
+                        .filter(current -> model.repo().branch(highlighted).isDefined())
                         .map(current -> new RebasePopup(current.name(), highlighted, base(model, current))));
+    }
+
+    /**
+     * Where {@code target} of {@code popup} rebases onto, when it applies: there is such a branch, and no operation
+     * runs on it nor on the checked out branch.
+     */
+    static Option<BranchName> onto(Model model, RebasePopup popup, RebaseMsg.Target target) {
+        return popup.target(target)
+                .filter(onto -> model.idleBranch(onto).isDefined()
+                        && model.idleBranch(popup.branch()).isDefined());
     }
 
     /**
