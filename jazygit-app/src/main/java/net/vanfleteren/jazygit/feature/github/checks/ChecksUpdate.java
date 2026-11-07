@@ -82,12 +82,13 @@ public final class ChecksUpdate {
     }
 
     /**
-     * {@code model} showing what was read of the checks on {@code branch}; unchanged when they are no longer shown.
+     * {@code model} showing what was read of the checks on {@code branch}, no less far than they were shown to be
+     * (ADR 89); unchanged when they are no longer shown.
      */
     private static Model shown(Model model, RemoteBranch branch, Either<Failure, PendingChecks> read) {
         return model.popup(ChecksPopup.class)
                 .filter(popup -> popup.onGitHub().equals(branch))
-                .map(popup -> model.openPopup(popup.with(read)))
+                .map(popup -> model.openPopup(popup.with(read, model)))
                 .getOrElse(model);
     }
 }

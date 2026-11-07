@@ -36,6 +36,26 @@ class CheckSpanTest {
     }
 
     @Test
+    void theChecksNotDoneAreCurrentFromTheStartOfTheirRunsAReRunFromItsOwn() {
+        // lint's run was created at T0 and is done; verify's run was run again 50 minutes later.
+        List<Check> checks = List.of(
+                check("lint", 1, 1, Option.of(5), Option.of(40)),
+                check("verify", 2, 2, Option.of(3000), Option.none()));
+
+        assertEquals(Option.of(at(3000)), CheckSpan.current(checks));
+        assertEquals(Option.of(T0), CheckSpan.of(checks).map(CheckSpan::start));
+    }
+
+    @Test
+    void onceAllAreDoneTheyAreCurrentFromWhenTheyAllStarted() {
+        List<Check> checks = List.of(
+                check("lint", 1, 1, Option.of(5), Option.of(40)),
+                check("verify", 2, 2, Option.of(3000), Option.of(3100)));
+
+        assertEquals(Option.of(T0), CheckSpan.current(checks));
+    }
+
+    @Test
     void aReRunOfWhichNoneStartedIsNotTimed() {
         assertEquals(Option.none(), CheckSpan.of(List.of(check("verify", 1, 2, Option.none(), Option.none()))));
     }
