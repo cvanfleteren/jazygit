@@ -9,6 +9,7 @@ import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.model.SampleData;
@@ -29,7 +30,7 @@ class RebaseDialogTest {
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     private final ChoiceDialog<RebasePopup> dialog =
             new net.vanfleteren.jazygit.ui.widgets.ChoiceDialog<>(RebaseDialogs.REBASE, dispatched::add);
-    private final Model open = Update.update(
+    private Model open = Update.update(
                     TestModels.loaded(SampleData.git()),
                     new RebaseMsg.Requested(new BranchName("feature/initial-layout")))
             .model();
@@ -37,14 +38,14 @@ class RebaseDialogTest {
     @Test
     void sChoosesASimpleRebase() throws Exception {
         assertEquals(
-                List.of(new Msg.PopupConfirmed(RebasePopup.class)),
+                List.of(new RebaseMsg.Chosen(RebaseMsg.Target.ONTO)),
                 pressing(r -> SettledPilot.of(r).press('s')));
     }
 
     @Test
     void enterChoosesTheFirstLine() throws Exception {
         assertEquals(
-                List.of(new Msg.PopupConfirmed(RebasePopup.class)),
+                List.of(new RebaseMsg.Chosen(RebaseMsg.Target.ONTO)),
                 pressing(r -> SettledPilot.of(r).press(KeyCode.ENTER)));
     }
 
@@ -62,6 +63,57 @@ class RebaseDialogTest {
             assertTrue(screen.contains("Rebase 'main'"), screen);
             assertTrue(screen.contains("(s) simple rebase onto feature/initial-layout"), screen);
         }
+    }
+
+    @Test
+    void bChoosesTheBaseBranchWhenThereIsOne() throws Exception {
+        open = withBase(new BranchName("feature/jgit-backend"));
+        assertEquals(
+                List.of(new RebaseMsg.Chosen(RebaseMsg.Target.BASE)),
+                pressing(r -> SettledPilot.of(r).press('b')));
+    }
+
+    @Test
+    void enterOnTheCheckedOutRowChoosesTheBase() throws Exception {
+        open = open.openPopup(new RebasePopup(
+                new BranchName("main"), new BranchName("main"), Option.of(new BranchName("feature/jgit-backend"))));
+        assertEquals(
+                List.of(new RebaseMsg.Chosen(RebaseMsg.Target.BASE)),
+                pressing(r -> SettledPilot.of(r).press(KeyCode.ENTER)));
+    }
+
+    @Test
+    void theBaseBranchIsNamed() throws Exception {
+        open = withBase(new BranchName("feature/jgit-backend"));
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view())) {
+            String screen = RenderedText.ofLarge(runner, () -> view());
+            assertTrue(screen.contains("(b) rebase on base branch (feature/jgit-backend)"), screen);
+        }
+    }
+
+    @Test
+    void onTheCheckedOutRowNeitherAppliesWithoutABaseButBothShow() throws Exception {
+        open = Update.update(TestModels.loaded(SampleData.git()), new RebaseMsg.Requested(new BranchName("main")))
+                .model();
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view())) {
+            String screen = RenderedText.ofLarge(runner, () -> view());
+            assertTrue(screen.contains("(s) simple rebase onto main"), screen);
+            assertTrue(screen.contains("(b) rebase on base branch (none)"), screen);
+        }
+        dispatched.clear();
+        assertEquals(List.of(), pressing(r -> {
+            SettledPilot.of(r).press('s');
+            SettledPilot.of(r).press('b');
+            SettledPilot.of(r).press(KeyCode.ENTER);
+        }));
+    }
+
+    /**
+     * The popup as opened on {@code feature/initial-layout}, with {@code base} as the base of {@code main}.
+     */
+    private Model withBase(BranchName base) {
+        return open.openPopup(
+                new RebasePopup(new BranchName("main"), new BranchName("feature/initial-layout"), Option.of(base)));
     }
 
     private List<Msg> pressing(Keys keys) throws Exception {
