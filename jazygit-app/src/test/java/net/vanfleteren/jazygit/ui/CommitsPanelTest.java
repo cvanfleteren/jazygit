@@ -56,13 +56,46 @@ class CommitsPanelTest {
                         "mmmmmmm Ad ◎─╮ msg mmmmmmm",
                         "fffff02 Ad │ ○ msg fffff02",
                         "fffff01 Ad │ ○ msg fffff01",
-                        "bbbbbbb Ad ○─╯ msg bbbbbbb",
-                        "aaaaaaa Ad ○ msg aaaaaaa"),
+                        "bbbbbbb Ad ○ │ msg bbbbbbb",
+                        "aaaaaaa Ad ○─╯ msg aaaaaaa"),
                 rows.map(LoadableList.Row::text).toList());
     }
 
     @Test
-    void theCommitAfterAStackOfMergedBranchesJoinsThemAll() {
+    void eachBranchOfAMergeTrainJoinsTheStartOfTheBranchItWasMergedInto() {
+        // Each train starts from the start of the one before, which goes on with work of its own; each train is
+        // merged into the one before, the first one into main.
+        List<Commit> log = CommitGraph.arrange(List.of(
+                commit("mmmmmm1", "rrrrrrr", "mmmmmm2"),
+                commit("mmmmmm2", "wwwwww1", "mmmmmm3"),
+                commit("mmmmmm3", "wwwwww2", "ssssss3"),
+                commit("ssssss3", "ssssss2"),
+                commit("wwwwww2", "ssssss2"),
+                commit("ssssss2", "ssssss1"),
+                commit("wwwwww1", "ssssss1"),
+                commit("ssssss1", "aaaaaaa"),
+                commit("rrrrrrr", "aaaaaaa"),
+                commit("aaaaaaa")));
+
+        List<LoadableList.Row> rows = CommitsPanel.rows(CommitGraph.layout(log));
+
+        assertEquals(
+                List.of(
+                        "mmmmmm1 Ad ◎─╮ msg mmmmmm1",
+                        "mmmmmm2 Ad │ ◎─╮ msg mmmmmm2",
+                        "mmmmmm3 Ad │ │ ◎─╮ msg mmmmmm3",
+                        "ssssss3 Ad │ │ │ ○ msg ssssss3",
+                        "wwwwww2 Ad │ │ ○ │ msg wwwwww2",
+                        "ssssss2 Ad │ │ ○─╯ msg ssssss2",
+                        "wwwwww1 Ad │ ○ │ msg wwwwww1",
+                        "ssssss1 Ad │ ○─╯ msg ssssss1",
+                        "rrrrrrr Ad ○ │ msg rrrrrrr",
+                        "aaaaaaa Ad ○─╯ msg aaaaaaa"),
+                rows.map(LoadableList.Row::text).toList());
+    }
+
+    @Test
+    void aStackOfMergedBranchesJoinsWhereEachForked() {
         // x is merged into y, y's branch into w and w's branch into main: all three branches end at x.
         List<Commit> log = CommitGraph.arrange(List.of(
                 commit("mmmmmmm", "ccccccc", "vvvvvvv"),
@@ -85,9 +118,9 @@ class CommitsPanelTest {
                         "zzzzzzz Ad │ │ ○ msg zzzzzzz",
                         "yyyyyyy Ad │ │ ◎─╮ msg yyyyyyy",
                         "xxxxxxx Ad │ │ │ ○ msg xxxxxxx",
-                        "ccccccc Ad ○─┴─┴─╯ msg ccccccc",
-                        "bbbbbbb Ad ○ msg bbbbbbb",
-                        "aaaaaaa Ad ○ msg aaaaaaa"),
+                        "ccccccc Ad ○ │ │ │ msg ccccccc",
+                        "bbbbbbb Ad ○─╯ │ │ msg bbbbbbb",
+                        "aaaaaaa Ad ○───┴─╯ msg aaaaaaa"),
                 rows.map(LoadableList.Row::text).toList());
     }
 
@@ -117,18 +150,18 @@ class CommitsPanelTest {
                         "yyyyyyy Ad │ │ ◎─╮ msg yyyyyyy",
                         "xxxxxxx Ad │ │ │ ○ msg xxxxxxx",
                         "uuuuuuu Ad │ ○─┴─╯ msg uuuuuuu",
-                        "ccccccc Ad ○─╯ msg ccccccc",
-                        "bbbbbbb Ad ○ msg bbbbbbb",
-                        "aaaaaaa Ad ○ msg aaaaaaa"),
+                        "ccccccc Ad ○ │ msg ccccccc",
+                        "bbbbbbb Ad ○ │ msg bbbbbbb",
+                        "aaaaaaa Ad ○─╯ msg aaaaaaa"),
                 rows.map(LoadableList.Row::text).toList());
     }
 
     @Test
-    void aMergeRightAfterAMergedBranchEndsJoinsItWhereItOpensItsOwn() {
-        // f is merged into m, g into n: f's branch ends at n.
+    void aMergeWhereAMergedBranchForkedJoinsItWhereItOpensItsOwn() {
+        // f forked from n and is merged into m; g is merged into n.
         List<Commit> log = CommitGraph.arrange(List.of(
                 commit("mmmmmmm", "nnnnnnn", "fffffff"),
-                commit("fffffff", "bbbbbbb"),
+                commit("fffffff", "nnnnnnn"),
                 commit("nnnnnnn", "bbbbbbb", "ggggggg"),
                 commit("ggggggg", "bbbbbbb"),
                 commit("bbbbbbb")));
@@ -146,8 +179,30 @@ class CommitsPanelTest {
     }
 
     @Test
-    void aMergeRightAfterAStackOfMergedBranchesEndsJoinsThemAll() {
-        // x is merged into w, w's branch into m, g into n: both branches end at n.
+    void aMergeWhileARailGoesOnCrossesItToOpenItsOwn() {
+        // f is merged into m, g into n; both forked from b.
+        List<Commit> log = CommitGraph.arrange(List.of(
+                commit("mmmmmmm", "nnnnnnn", "fffffff"),
+                commit("fffffff", "bbbbbbb"),
+                commit("nnnnnnn", "bbbbbbb", "ggggggg"),
+                commit("ggggggg", "bbbbbbb"),
+                commit("bbbbbbb")));
+
+        List<LoadableList.Row> rows = CommitsPanel.rows(CommitGraph.layout(log));
+
+        assertEquals(
+                List.of(
+                        "mmmmmmm Ad ◎─╮ msg mmmmmmm",
+                        "fffffff Ad │ ○ msg fffffff",
+                        "nnnnnnn Ad ◎─┼─╮ msg nnnnnnn",
+                        "ggggggg Ad │ │ ○ msg ggggggg",
+                        "bbbbbbb Ad ○─┴─╯ msg bbbbbbb"),
+                rows.map(LoadableList.Row::text).toList());
+    }
+
+    @Test
+    void aMergeWhileAStackOfMergedBranchesGoesOnCrossesThemAll() {
+        // x is merged into w, w's branch into m, g into n: all forked from b.
         List<Commit> log = CommitGraph.arrange(List.of(
                 commit("mmmmmmm", "nnnnnnn", "wwwwwww"),
                 commit("wwwwwww", "bbbbbbb", "xxxxxxx"),
@@ -164,9 +219,9 @@ class CommitsPanelTest {
                         "mmmmmmm Ad ◎─╮ msg mmmmmmm",
                         "wwwwwww Ad │ ◎─╮ msg wwwwwww",
                         "xxxxxxx Ad │ │ ○ msg xxxxxxx",
-                        "nnnnnnn Ad ◎─┼─╯ msg nnnnnnn",
-                        "ggggggg Ad │ ○ msg ggggggg",
-                        "bbbbbbb Ad ○─╯ msg bbbbbbb",
+                        "nnnnnnn Ad ◎─┼─┼─╮ msg nnnnnnn",
+                        "ggggggg Ad │ │ │ ○ msg ggggggg",
+                        "bbbbbbb Ad ○─┴─┴─╯ msg bbbbbbb",
                         "aaaaaaa Ad ○ msg aaaaaaa"),
                 rows.map(LoadableList.Row::text).toList());
     }
@@ -183,7 +238,8 @@ class CommitsPanelTest {
                 List.empty(),
                 List.of(new Tag("v1"), new Tag("v1.1")));
 
-        LoadableList.Row row = CommitsPanel.row(new CommitGraph.Node(tagged, 0, 0), 0);
+        LoadableList.Row row =
+                CommitsPanel.row(new CommitGraph.Node(tagged, 0, List.empty(), List.empty(), List.empty()));
 
         assertEquals("abcdef0 Ad ○ [v1] [v1.1] Release", row.text());
         assertEquals(

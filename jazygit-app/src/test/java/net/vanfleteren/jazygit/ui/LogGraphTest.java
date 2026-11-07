@@ -33,22 +33,22 @@ class LogGraphTest {
         assertEquals(
                 List.of(
                         List.of("*   first", "|\\  Merge", "| | second", "| | third"),
-                        List.of("| * first", "|/  second", "|   third"),
-                        List.of("* first", "| second", "| third"),
-                        List.of("* first", "| second", "| third")),
+                        List.of("| * first", "| | second", "| | third"),
+                        List.of("* | first", "| | second", "| | third"),
+                        List.of("|/", "* first", "| second", "| third")),
                 nodes.map(node -> LogGraph.gutter(node).draw(lines, "Merge")).toList());
     }
 
     @Test
     void aMergeWithoutLinesDrawsNone() {
-        CommitGraph.Node merge = new CommitGraph.Node(commit("m", "b", "f"), 0, 0);
+        CommitGraph.Node merge = new CommitGraph.Node(commit("m", "b", "f"), 0, List.empty(), List.empty(), List.of(1));
 
         assertEquals(List.empty(), LogGraph.gutter(merge).draw(List.empty(), "Merge"));
     }
 
     @Test
-    void theLastCommitOfAStackOfMergedBranchesClosesEachOnALineOfItsOwnAddingBlankOnes() {
-        // x is merged into y, y's branch into w and w's branch into main: all three branches end at x.
+    void eachRailThatJoinsACommitEndsOnALineOfItsOwnBeforeItTheOutermostFirst() {
+        // x is merged into y, y's branch into w and w's branch into main; c and b are on main.
         List<CommitGraph.Node> nodes = CommitGraph.layout(CommitGraph.arrange(List.of(
                 commit("m", "c", "v"),
                 commit("v", "w"),
@@ -59,51 +59,34 @@ class LogGraphTest {
                 commit("c", "b"),
                 commit("b", "a"),
                 commit("a"))));
-        List<String> lines = List.of("first", "second", "third");
+        List<String> lines = List.of("first", "second");
 
         assertEquals(
                 List.of(
-                        List.of("*   first", "|\\  Merge", "| | second", "| | third"),
-                        List.of("| * first", "| | second", "| | third"),
-                        List.of("| *   first", "| |\\  Merge", "| | | second", "| | | third"),
-                        List.of("| | * first", "| | | second", "| | | third"),
-                        List.of("| | *   first", "| | |\\  Merge", "| | | | second", "| | | | third"),
-                        List.of("| | | * first", "| | |/  second", "| |/    third", "|/      "),
-                        List.of("* first", "| second", "| third"),
-                        List.of("* first", "| second", "| third"),
-                        List.of("* first", "| second", "| third")),
-                nodes.map(node -> LogGraph.gutter(node).draw(lines, "Merge")).toList());
-    }
-
-    @Test
-    void closingTheInnerBranchesOfAStackKeepsTheRailsOfTheOuterOnes() {
-        // x is merged into y, y's branch into w, both onto u; w's branch, which goes on to u, into main.
-        List<CommitGraph.Node> nodes = CommitGraph.layout(CommitGraph.arrange(List.of(
-                commit("m", "c", "v"),
-                commit("v", "w"),
-                commit("w", "u", "z"),
-                commit("z", "y"),
-                commit("y", "u", "x"),
-                commit("x", "u"),
-                commit("u", "a"),
-                commit("c", "b"),
-                commit("b", "a"),
-                commit("a"))));
-        List<String> lines = List.of("first", "second", "third", "fourth");
-
-        assertEquals(
-                List.of(
-                        List.of("| | | * first", "| | |/  second", "| |/    third", "| |     fourth"),
-                        List.of("| * first", "|/  second", "|   third", "|   fourth")),
-                List.of(nodes.get(5), nodes.get(6))
+                        List.of("| | *   first", "| | |\\  Merge", "| | | | second"),
+                        List.of("| | | * first", "| | | | second"),
+                        List.of("* | | | first", "| | | | second"),
+                        List.of("|/  | |", "*   | | first", "|   | | second"),
+                        List.of("|   |/", "|__/", "* first", "| second")),
+                nodes.drop(4)
                         .map(node -> LogGraph.gutter(node).draw(lines, "Merge"))
                         .toList());
     }
 
     @Test
-    void aOneLineCommitThatClosesABranchGetsABlankLineToCloseItOn() {
-        CommitGraph.Node closing = new CommitGraph.Node(commit("f", "a"), 1, 1);
+    void aMergeOpensItsRailPastTheRailsThatGoOn() {
+        // f is merged into m, g into n; both forked from b.
+        List<CommitGraph.Node> nodes = CommitGraph.layout(CommitGraph.arrange(List.of(
+                commit("m", "n", "f"), commit("f", "b"), commit("n", "b", "g"), commit("g", "b"), commit("b"))));
+        List<String> lines = List.of("first", "second");
 
-        assertEquals(List.of("| * only", "|/  "), LogGraph.gutter(closing).draw(List.of("only"), "Merge"));
+        assertEquals(
+                List.of(
+                        List.of("* |   first", "|-|\\  Merge", "| | | second"),
+                        List.of("| | * first", "| | | second"),
+                        List.of("| |/", "|/", "* first", "| second")),
+                nodes.drop(2)
+                        .map(node -> LogGraph.gutter(node).draw(lines, "Merge"))
+                        .toList());
     }
 }
