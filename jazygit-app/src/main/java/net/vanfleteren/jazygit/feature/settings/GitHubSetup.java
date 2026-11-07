@@ -3,6 +3,8 @@ package net.vanfleteren.jazygit.feature.settings;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.gh.model.ChosenBrowser;
+import net.vanfleteren.jazygit.gh.model.GhAccount;
 import net.vanfleteren.jazygit.gh.model.GhLogin;
 import net.vanfleteren.jazygit.state.Failure;
 
@@ -13,9 +15,18 @@ import net.vanfleteren.jazygit.state.Failure;
  * @param host    the GitHub host of the repository's remotes
  * @param user    the account the repository is configured to use, if any
  * @param logins  the accounts gh is logged in to, on every host, or why they could not be listed
+ * @param account the account gh runs as for the repository, on its host with an ssh alias resolved; none when that is
+ *                not known (ADR 88)
+ * @param browser the browser gh would open a link of the account's host in, and what chose it; none when gh leaves it
+ *                to the system
  */
 public record GitHubSetup(
-        Either<Failure, String> version, String host, Option<String> user, Either<Failure, List<GhLogin>> logins) {
+        Either<Failure, String> version,
+        String host,
+        Option<String> user,
+        Either<Failure, List<GhLogin>> logins,
+        Option<GhAccount> account,
+        Option<ChosenBrowser> browser) {
 
     /**
      * The accounts gh is logged in to on the repository's host.

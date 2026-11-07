@@ -24,6 +24,7 @@ import lombok.With;
  *                            the status takes but the last, which takes what is left, in percent
  * @param animations          whether what moves on the screen, like the left column stepped wider or narrower,
  *                            moves there smoothly, rather than at once (ADR 81)
+ * @param browsers            the browser set for each GitHub account (ADR 88)
  */
 @With
 public record Settings(
@@ -36,7 +37,8 @@ public record Settings(
         boolean diffWords,
         List<Integer> repositoryHeights,
         List<Integer> pullRequestsHeights,
-        boolean animations) {
+        boolean animations,
+        AccountBrowsers browsers) {
 
     /**
      * The narrowest the left column may get, in percent of the width.
@@ -79,7 +81,8 @@ public record Settings(
             true,
             DEFAULT_REPOSITORY_HEIGHTS,
             DEFAULT_PULL_REQUESTS_HEIGHTS,
-            true);
+            true,
+            AccountBrowsers.NONE);
 
     /**
      * The key of the theme in the settings file.
@@ -121,6 +124,10 @@ public record Settings(
      * The key of whether what moves on the screen moves there smoothly in the settings file (ADR 81).
      */
     static final String ANIMATIONS = "ui.animations";
+    /**
+     * The key of the table of the browser of each GitHub account in the settings file (ADR 88).
+     */
+    static final String BROWSERS = "github.browsers";
 
     /**
      * {@code width} brought within the widths the left column may have.
@@ -182,6 +189,8 @@ public record Settings(
         Option<Object> animations = value.apply(ANIMATIONS);
         Option<Boolean> validAnimations =
                 animations.filter(Boolean.class::isInstance).map(Boolean.class::cast);
+        Option<Object> browsers = value.apply(BROWSERS);
+        Option<AccountBrowsers> validBrowsers = browsers.flatMap(AccountBrowsers::read);
         return new Read(
                 new Settings(
                         validTheme.getOrElse(DEFAULT.theme),
@@ -193,7 +202,8 @@ public record Settings(
                         validDiffWords.getOrElse(DEFAULT.diffWords),
                         validRepositoryHeights.getOrElse(DEFAULT_REPOSITORY_HEIGHTS),
                         validPullRequestsHeights.getOrElse(DEFAULT_PULL_REQUESTS_HEIGHTS),
-                        validAnimations.getOrElse(DEFAULT.animations)),
+                        validAnimations.getOrElse(DEFAULT.animations),
+                        validBrowsers.getOrElse(DEFAULT.browsers)),
                 Option.when(theme.isDefined() && validTheme.isEmpty(), THEME)
                         .toList()
                         .appendAll(Option.when(gh.isDefined() && validGh.isEmpty(), GH_EXECUTABLE))
@@ -209,7 +219,8 @@ public record Settings(
                         .appendAll(Option.when(
                                 pullRequestsHeights.isDefined() && validPullRequestsHeights.isEmpty(),
                                 PULL_REQUESTS_HEIGHTS))
-                        .appendAll(Option.when(animations.isDefined() && validAnimations.isEmpty(), ANIMATIONS)));
+                        .appendAll(Option.when(animations.isDefined() && validAnimations.isEmpty(), ANIMATIONS))
+                        .appendAll(Option.when(browsers.isDefined() && validBrowsers.isEmpty(), BROWSERS)));
     }
 
     /**
@@ -247,10 +258,17 @@ public record Settings(
     }
 
     /**
-     * The settings as they are kept in the settings file, by their dotted key; a setting left at its default
-     * has none.
+     * The settings as they are kept in the settings file, by the path of their key, each name of a table it is in
+     * and then its own; a setting left at its default has none.
      */
-    Map<String, Object> entries() {
+    Map<List<String>, Object> entries() {
+        return dotted().mapKeys(key -> List.of(key.split("\\."))).merge(browsers.entries());
+    }
+
+    /**
+     * The settings with a key of their own, by their dotted key.
+     */
+    private Map<String, Object> dotted() {
         return LinkedHashMap.<String, Object>of(THEME, theme.id())
                 .merge(ghExecutable
                         .map(path -> LinkedHashMap.<String, Object>of(GH_EXECUTABLE, path))

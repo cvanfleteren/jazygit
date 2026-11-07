@@ -17,6 +17,8 @@ import net.vanfleteren.jazygit.feature.theme.ThemePopup;
 import net.vanfleteren.jazygit.feature.theme.ThemeScope;
 import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.gh.model.ChosenBrowser;
+import net.vanfleteren.jazygit.gh.model.GhAccount;
 import net.vanfleteren.jazygit.gh.model.GhLogin;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
@@ -24,6 +26,7 @@ import net.vanfleteren.jazygit.git.StubConfig;
 import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.git.StubRemotes;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
+import net.vanfleteren.jazygit.settings.AccountBrowsers;
 import net.vanfleteren.jazygit.settings.RecentRepositories;
 import net.vanfleteren.jazygit.settings.Settings;
 import net.vanfleteren.jazygit.settings.SettingsStore;
@@ -41,9 +44,11 @@ class SettingsPanelUpdateTest {
             Option.none(),
             Either.right(List.of(
                     new GhLogin("github.com", "alice", true, true),
-                    new GhLogin("github.com", "alice-work", false, true))));
-    private static final SettingsPanelPopup READ =
-            new SettingsPanelPopup(ThemeName.DARK, RepositoryTheme.NONE, Option.none(), Option.of(SETUP), true);
+                    new GhLogin("github.com", "alice-work", false, true))),
+            Option.of(new GhAccount("github.com", "alice")),
+            Option.of(new ChosenBrowser("xdg-open", ChosenBrowser.Source.DESKTOP)));
+    private static final SettingsPanelPopup READ = new SettingsPanelPopup(
+            ThemeName.DARK, RepositoryTheme.NONE, Option.none(), Option.of(SETUP), true, AccountBrowsers.NONE);
 
     @Test
     void requestingShowsTheSettingsAndReadsHowGhIsSetUp() {
@@ -51,7 +56,12 @@ class SettingsPanelUpdateTest {
 
         assertEquals(
                 Option.of(new SettingsPanelPopup(
-                        ThemeName.DARK, RepositoryTheme.NONE, Option.none(), Option.none(), true)),
+                        ThemeName.DARK,
+                        RepositoryTheme.NONE,
+                        Option.none(),
+                        Option.none(),
+                        true,
+                        AccountBrowsers.NONE)),
                 next.model().popup(SettingsPanelPopup.class));
         assertEquals(List.of(new SettingsPanelCmd.ReadGitHub("gh")), next.cmds());
     }
@@ -239,7 +249,12 @@ class SettingsPanelUpdateTest {
     void theAccountCannotBeChosenWhileTheAccountsAreRead() {
         Model reading = TestModels.loaded()
                 .openPopup(new SettingsPanelPopup(
-                        ThemeName.DARK, RepositoryTheme.NONE, Option.none(), Option.none(), true));
+                        ThemeName.DARK,
+                        RepositoryTheme.NONE,
+                        Option.none(),
+                        Option.none(),
+                        true,
+                        AccountBrowsers.NONE));
 
         assertEquals(
                 reading,
@@ -261,6 +276,66 @@ class SettingsPanelUpdateTest {
 
         assertTrue(on.model().preferences().settings().animations());
         assertEquals(Option.of(READ), on.model().popup(SettingsPanelPopup.class));
+    }
+
+    @Test
+    void theBrowserOfTheAccountIsAskedWithTheOneSetNow() {
+        Model open = TestModels.loaded()
+                .openPopup(READ.withBrowsers(
+                        AccountBrowsers.NONE.with("github.com", "alice", Option.of("firefox -P personal"))));
+
+        Model asking =
+                Update.update(open, new SettingsPanelMsg.BrowserRequested()).model();
+
+        assertEquals(
+                Option.of(new AccountBrowserPopup(new GhAccount("github.com", "alice"), "firefox -P personal")),
+                asking.popup(AccountBrowserPopup.class));
+    }
+
+    @Test
+    void theBrowserCannotBeSetWhileTheAccountIsNotKnown() {
+        Model unknown = TestModels.loaded()
+                .openPopup(READ.withGitHub(Option.of(new GitHubSetup(
+                        SETUP.version(), SETUP.host(), SETUP.user(), SETUP.logins(), Option.none(), Option.none()))));
+        Model reading = TestModels.loaded().openPopup(READ.withGitHub(Option.none()));
+
+        assertEquals(
+                unknown,
+                Update.update(unknown, new SettingsPanelMsg.BrowserRequested()).model());
+        assertEquals(
+                reading,
+                Update.update(reading, new SettingsPanelMsg.BrowserRequested()).model());
+    }
+
+    @Test
+    void anEnteredBrowserIsKeptForTheAccount() {
+        GhAccount alice = new GhAccount("github.com", "alice");
+        Settings kept = TestModels.PLAIN.settings();
+        Settings chosen = kept.withBrowsers(AccountBrowsers.NONE.with("github.com", "alice", Option.of("firefox")));
+
+        Next next = Update.update(
+                typed(TestModels.loaded().openPopup(new AccountBrowserPopup(alice, "")), " firefox "),
+                new SettingsPanelMsg.BrowserEntered());
+
+        assertEquals(Option.none(), next.model().popup());
+        assertEquals(chosen, next.model().preferences().settings());
+        assertEquals(List.of(new Cmd.SaveSettings(kept, chosen)), next.cmds());
+    }
+
+    @Test
+    void anEmptyBrowserTakesTheAccountsAway() {
+        GhAccount alice = new GhAccount("github.com", "alice");
+        Model set = TestModels.loaded()
+                .mapPreferences(preferences -> preferences.withSettings(preferences
+                        .settings()
+                        .withBrowsers(AccountBrowsers.NONE.with("github.com", "alice", Option.of("firefox")))));
+        Settings kept = set.preferences().settings();
+
+        Next next = Update.update(
+                set.openPopup(new AccountBrowserPopup(alice, "  ")), new SettingsPanelMsg.BrowserEntered());
+
+        assertEquals(AccountBrowsers.NONE, next.model().preferences().settings().browsers());
+        assertEquals(List.of(new Cmd.SaveSettings(kept, kept.withBrowsers(AccountBrowsers.NONE))), next.cmds());
     }
 
     @Test
@@ -300,7 +375,12 @@ class SettingsPanelUpdateTest {
 
         assertEquals(
                 new SettingsPanelMsg.GitHubRead(new GitHubSetup(
-                        Either.right("2.102.0"), "github.com", Option.of("alice-work"), SETUP.logins())),
+                        Either.right("2.102.0"),
+                        "github.com",
+                        Option.of("alice-work"),
+                        SETUP.logins(),
+                        Option.none(),
+                        Option.none())),
                 read);
     }
 

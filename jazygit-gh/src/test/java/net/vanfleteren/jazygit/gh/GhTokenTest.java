@@ -170,7 +170,7 @@ class GhTokenTest {
 
     @Test
     void theHostNameOfAnSshAlias() {
-        assertEquals(Option.of("github.com"), GhToken.sshHostName("user git\nhostname github.com\nport 22\n"));
-        assertEquals(Option.none(), GhToken.sshHostName("user git\n"));
+        assertEquals(Option.of("github.com"), SshHost.hostName("user git\nhostname github.com\nport 22\n"));
+        assertEquals(Option.none(), SshHost.hostName("user git\n"));
     }
 }

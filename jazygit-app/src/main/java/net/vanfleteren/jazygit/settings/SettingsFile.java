@@ -1,6 +1,9 @@
 package net.vanfleteren.jazygit.settings;
 
 import com.electronwill.nightconfig.core.CommentedConfig;
+import com.electronwill.nightconfig.core.UnmodifiableConfig;
+import io.vavr.Tuple;
+import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
@@ -28,7 +31,8 @@ public final class SettingsFile implements SettingsStore {
             return Loaded.DEFAULT;
         }
         return TomlFile.read(file)
-                .map(config -> Settings.read(key -> Option.ofOptional(config.getOptional(key))))
+                .map(config -> Settings.read(
+                        key -> Option.ofOptional(config.getOptional(key)).map(SettingsFile::plain)))
                 .fold(
                         cause -> new Loaded(
                                 Settings.DEFAULT,
@@ -54,17 +58,40 @@ public final class SettingsFile implements SettingsStore {
         return current.map(config -> next.entries()
                         .filter(entry -> !previous.entries().contains(entry))
                         .foldLeft(config, (changed, entry) -> {
-                            changed.set(entry._1, entry._2);
+                            changed.set(entry._1.toJavaList(), entry._2);
                             return changed;
                         }))
-                // A setting back at its default has no entry anymore.
+                // A setting back at its default has no entry anymore, nor a table it leaves empty.
                 .map(config -> previous.entries()
                         .keySet()
                         .removeAll(next.entries().keySet())
                         .foldLeft(config, (changed, key) -> {
-                            changed.remove(key);
-                            return changed;
+                            changed.remove(key.toJavaList());
+                            return withoutEmptyTables(changed, key.dropRight(1));
                         }))
                 .flatMap(config -> TomlFile.write(file, config));
+    }
+
+    /**
+     * {@code config} without the table at {@code path}, nor the tables it is in, once they are empty.
+     */
+    private static CommentedConfig withoutEmptyTables(CommentedConfig config, List<String> path) {
+        if (path.nonEmpty() && config.get(path.toJavaList()) instanceof UnmodifiableConfig table && table.isEmpty()) {
+            config.remove(path.toJavaList());
+            return withoutEmptyTables(config, path.dropRight(1));
+        }
+        return config;
+    }
+
+    /**
+     * {@code value} as read, with a table as a {@link java.util.Map}, so the settings know nothing of the TOML library.
+     */
+    private static Object plain(Object value) {
+        return value instanceof UnmodifiableConfig table
+                ? List.ofAll(table.valueMap().entrySet())
+                        .toJavaMap(
+                                java.util.LinkedHashMap::new,
+                                entry -> Tuple.of(entry.getKey(), plain(entry.getValue())))
+                : value;
     }
 }

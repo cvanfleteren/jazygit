@@ -41,7 +41,13 @@ final class RepositoryEnv {
         // Without the token, git still talks to the remotes, as the credential helper's own account.
         return new Env(
                 CliGit.withCredentials(git, () -> token.environment().getOrElse(HashMap.empty())),
-                new CliGitHub(git.worktree(), settings.gh(), token),
+                // The browser of an account is read as a link opens, so one set since holds (ADR 88).
+                new CliGitHub(
+                        git.worktree(),
+                        settings.gh(),
+                        token,
+                        () -> GitHubAccount.host(git),
+                        account -> store.load().settings().browsers().of(account.host(), account.user())),
                 store,
                 recent,
                 unseen,

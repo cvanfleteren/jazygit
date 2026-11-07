@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.feature.settings;
 
 import io.vavr.control.Option;
 import lombok.With;
+import net.vanfleteren.jazygit.settings.AccountBrowsers;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.Popup;
 import net.vanfleteren.jazygit.state.RepositoryTheme;
@@ -14,6 +15,7 @@ import net.vanfleteren.jazygit.state.RepositoryTheme;
  * @param ghExecutable    the gh executable chosen, if not the one on the PATH
  * @param gitHub          how gh is set up for the repository; none while it is read
  * @param animations      whether what moves on the screen moves there smoothly (ADR 81)
+ * @param browsers        the browser set for each GitHub account (ADR 88)
  */
 @With
 public record SettingsPanelPopup(
@@ -21,5 +23,6 @@ public record SettingsPanelPopup(
         RepositoryTheme repositoryTheme,
         Option<String> ghExecutable,
         Option<GitHubSetup> gitHub,
-        boolean animations)
+        boolean animations,
+        AccountBrowsers browsers)
         implements Popup {}
