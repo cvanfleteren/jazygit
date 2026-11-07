@@ -28,14 +28,19 @@ Which pane has the focus is view state, kept in TamboUI (ADR 2): no update reads
 - A step is 5 percent of the column (`LayoutUpdate.STEP`), or more when 5 percent would not change the rows the pane
   is shown with: a press always moves a border by at least a row. The rows are counted with the rounding the column is
   laid out with, one helper for both.
-- On the repository screen, the share of the stash is first the rows it is shown with: a stash that shows all its
-  stashes is not made taller, and the commits made shorter give rows the stash can show.
+- On the repository screen, the share of the stash is first the rows it is shown with, but no less than
+  `MIN_HEIGHT`: a stash that shows all its stashes is not made taller, and the commits made shorter give rows the
+  stash can show.
 - Nothing changes when a pane would get under `MIN_HEIGHT`, when the status, the content panel or nothing on the left
   has the focus, or while a popup is open.
 - A key saves the heights at once and ends a drag whose release the terminal did not report, as `<` and `>` do.
 - The key turns the focus into a pane, and sends `LayoutMsg.PaneStepped(screen, pane, by, columnRows)` with how many
   rows the column has, if that is known yet; else a step is 5 percent. A global key that sees the focus is a new kind
-  of `Keymap.Global`. The update reads neither the focus nor the terminal.
+  of `Keymap.Global`, whose action takes the focused element. The update reads neither the focus nor the terminal.
+- The help lists `+`, `-` and `Z` with the other global keys, and runs them on the pane that had the focus when the
+  help opened: the help works out their messages when it opens, as it does for the keys of the panel.
+- The heights kept always pass what the settings file is read with (`Settings.heights`): each pane, the last one
+  too, at least `MIN_HEIGHT`.
 - Not: `+` and `_`, which are next to each other on QWERTY only. Not: `{` and `}`, which are taken. Not: ctrl or alt
   with the arrows, which terminals and multiplexers take for themselves.
 
@@ -54,6 +59,9 @@ Which pane has the focus is view state, kept in TamboUI (ADR 2): no update reads
   It is not saved: the next session starts with nothing maximized.
 - `+`, `-` or a drag of a bottom border ends the maximized pane; `<`, `>` or a drag of the column border ends the
   maximized content panel. Then the heights or the width shown are kept, and the step or the drag goes on from there.
+  The panes of 3 rows can be under `MIN_HEIGHT`, on a column over 30 rows: each is first raised to `MIN_HEIGHT`, with
+  the rows taken from the pane that was maximized.
+- Not: going back to the heights from before the maximize, which moves the borders away from where they are shown.
 - A column too short for 3 rows a pane and 3 for the maximized one is laid out as if nothing were maximized, until the
   terminal is taller.
 - Not: maximizing the pane with the focus, wherever it goes. Not: `Z` hiding the left column: that is a mode for the
