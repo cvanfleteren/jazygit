@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.ui;
 
 import static dev.tamboui.toolkit.Toolkit.*;
 
+import dev.tamboui.layout.Constraint;
 import dev.tamboui.layout.Rect;
 import dev.tamboui.style.Overflow;
 import dev.tamboui.text.Line;
@@ -242,9 +243,14 @@ final class LoadableList<T> {
     }
 
     /**
-     * A piece of a row, in a colour of its own when it has one.
+     * A piece of a row, in a colour of its own when it has one. One that {@code shrinks} is the first to be cut when
+     * its line does not fit, so that the pieces after it stay in view.
      */
-    record Seg(String text, Option<String> cssClass) {
+    record Seg(String text, Option<String> cssClass, boolean shrinks) {
+
+        Seg(String text, Option<String> cssClass) {
+            this(text, cssClass, false);
+        }
 
         static Seg of(String text) {
             return new Seg(text, Option.none());
@@ -252,6 +258,20 @@ final class LoadableList<T> {
 
         static Seg styled(String text, String cssClass) {
             return new Seg(text, Option.of(cssClass));
+        }
+
+        /**
+         * This piece, the first to be cut when its line does not fit.
+         */
+        Seg shrinking() {
+            return new Seg(text, cssClass, true);
+        }
+
+        /**
+         * This piece with {@code text} before it.
+         */
+        Seg prefixed(String text) {
+            return new Seg(text + this.text, cssClass, shrinks);
         }
     }
 
@@ -324,6 +344,11 @@ final class LoadableList<T> {
                 TextElement text = ellipsis
                         ? Toolkit.text(seg.text()).ellipsis()
                         : Toolkit.text(seg.text()).overflow(Overflow.CLIP);
+                if (seg.shrinks()) {
+                    // At most as wide as it is, where the others are as wide as they are: a line that does not fit
+                    // takes its columns from this one first.
+                    text.constraint(Constraint.max(TextWidth.of(seg.text())));
+                }
                 return seg.cssClass()
                         .orElse(plain)
                         .<StyledElement<?>>map(text::addClass)
