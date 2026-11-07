@@ -167,6 +167,7 @@ class BranchUpdateTest {
         // The rebase popup opens, for the base branch, but does not rebase onto the busy one (ADR 91).
         Model rebasing = Update.update(pushing, new RebaseMsg.Requested(new BranchName("feature")))
                 .model();
+        assertTrue(rebasing.popup(RebasePopup.class).isDefined());
         assertEquals(
                 List.of(),
                 Update.update(rebasing, new RebaseMsg.Chosen(RebaseMsg.Target.ONTO))
