@@ -37,8 +37,9 @@ class InProgressDialogsTest {
     }
 
     @Test
-    void continuingACherryPickCommitsIt() throws Exception {
-        assertContinuing(new InProgress.CherryPicking(new Sha("cccc")), "Commits the cherry-picked commit");
+    void continuingACherryPickCommitsItAndGoesOnWithTheNext() throws Exception {
+        // Moving commits cherry-picks a range of them.
+        assertContinuing(new InProgress.CherryPicking(new Sha("cccc")), "Commits the cherry-picked commit and goes on");
     }
 
     @Test
