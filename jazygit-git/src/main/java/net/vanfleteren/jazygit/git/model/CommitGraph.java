@@ -46,10 +46,14 @@ public final class CommitGraph {
      * The nodes for commits in the order of {@link #arrange}. Each rail waits for a commit: the parent of a commit
      * above. A commit is on the leftmost rail waiting for it, else on the first free one, and the other rails
      * waiting for it join it there. Its rail then waits for its first parent; a merge puts each other parent on a
-     * rail to its right: one already waiting for that parent, else the first free one.
+     * rail to its right: one already waiting for that parent, else the first free one. Only parents in the list get
+     * a rail, so a list of part of the history, as a range, has no rails waiting for commits it does not show.
      */
     public static List<Node> layout(List<Commit> arranged) {
-        return arranged.foldLeft(new Laid(List.empty(), List.empty()), Laid::next)
+        Set<Sha> listed = arranged.map(Commit::sha).toSet();
+        return arranged.foldLeft(
+                        new Laid(List.empty(), List.empty()),
+                        (laid, commit) -> laid.next(commit, commit.parents().filter(listed::contains)))
                 .latestFirst()
                 .reverse();
     }
@@ -113,7 +117,10 @@ public final class CommitGraph {
      */
     private record Laid(List<Option<Sha>> rails, List<Node> latestFirst) {
 
-        Laid next(Commit commit) {
+        /**
+         * @param parents the parents of {@code commit} that get a rail
+         */
+        Laid next(Commit commit, List<Sha> parents) {
             Option<Sha> sha = Option.of(commit.sha());
             int column = rails.contains(sha) ? rails.indexOf(sha) : free(rails, 0);
             List<Integer> joins = List.range(column + 1, rails.size())
@@ -122,10 +129,9 @@ public final class CommitGraph {
                     .filter(at -> at != column && rails.get(at).isDefined() && !joins.contains(at));
             List<Option<Sha>> kept = List.range(0, Math.max(rails.size(), column + 1))
                     .map(at -> at == column
-                            ? commit.parents().headOption()
+                            ? parents.headOption()
                             : joins.contains(at) ? Option.<Sha>none() : rails.get(at));
-            Opened opened = commit.parents()
-                    .drop(1)
+            Opened opened = parents.drop(1)
                     .foldLeft(new Opened(kept, List.empty()), (state, parent) -> state.open(parent, column));
             List<Option<Sha>> below =
                     opened.rails().reverse().dropWhile(Option::isEmpty).reverse();

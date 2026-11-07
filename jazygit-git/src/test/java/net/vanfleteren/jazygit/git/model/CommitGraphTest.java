@@ -197,4 +197,36 @@ class CommitGraphTest {
                         node(q, 0, List.empty(), List.of(1), List.empty())),
                 CommitGraph.layout(List.of(m, k, c, p, q)));
     }
+
+    @Test
+    void aMergeOfACommitTheListLeavesOutOpensNoRail() {
+        // The commits of a branch only, which merged main's mm and later mm2 to catch up; main is left out.
+        Commit f4 = commit("f4", "f3");
+        Commit f3 = commit("f3", "f2", "mm2");
+        Commit f2 = commit("f2", "f1", "mm");
+        Commit f1 = commit("f1", "base");
+
+        assertEquals(
+                List.of(
+                        node(f4, 0, List.empty()),
+                        node(f3, 0, List.empty()),
+                        node(f2, 0, List.empty()),
+                        node(f1, 0, List.empty())),
+                CommitGraph.layout(CommitGraph.arrange(List.of(f4, f3, f2, f1))));
+    }
+
+    @Test
+    void aRailWaitingForACommitTheListLeavesOutEndsAtTheCommitBefore() {
+        // m merges g into f; both forked from base, which is left out.
+        Commit m = commit("m", "f", "g");
+        Commit g = commit("g", "base");
+        Commit f = commit("f", "base");
+
+        assertEquals(
+                List.of(
+                        node(m, 0, List.empty(), List.empty(), List.of(1)),
+                        node(g, 1, List.of(0)),
+                        node(f, 0, List.empty())),
+                CommitGraph.layout(CommitGraph.arrange(List.of(m, g, f))));
+    }
 }

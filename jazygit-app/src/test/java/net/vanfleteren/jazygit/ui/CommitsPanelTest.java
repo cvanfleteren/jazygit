@@ -227,6 +227,38 @@ class CommitsPanelTest {
     }
 
     @Test
+    void anOctopusMergeOpensARailForEachOtherParent() {
+        List<Commit> log = CommitGraph.arrange(List.of(
+                commit("ooooooo", "aaaaaaa", "bbbbbbb", "ccccccc"),
+                commit("bbbbbbb", "aaaaaaa"),
+                commit("ccccccc", "aaaaaaa"),
+                commit("aaaaaaa")));
+
+        assertEquals(
+                List.of(
+                        "ooooooo Ad ◎─┬─╮ msg ooooooo",
+                        "bbbbbbb Ad │ ○ │ msg bbbbbbb",
+                        "ccccccc Ad │ │ ○ msg ccccccc",
+                        "aaaaaaa Ad ○─┴─╯ msg aaaaaaa"),
+                CommitsPanel.rows(CommitGraph.layout(log))
+                        .map(LoadableList.Row::text)
+                        .toList());
+    }
+
+    @Test
+    void aMergeOfACommitTheListLeavesOutHasNoRail() {
+        // The commits of a branch only, which merged main's mm00001 to catch up; main is left out.
+        List<Commit> log = CommitGraph.arrange(List.of(
+                commit("ffff003", "ffff002"), commit("ffff002", "ffff001", "mm00001"), commit("ffff001", "bbbbbbb")));
+
+        assertEquals(
+                List.of("ffff003 Ad ○ msg ffff003", "ffff002 Ad ◎ msg ffff002", "ffff001 Ad ○ msg ffff001"),
+                CommitsPanel.rows(CommitGraph.layout(log))
+                        .map(LoadableList.Row::text)
+                        .toList());
+    }
+
+    @Test
     void tagsComeBeforeTheMessageInTheirOwnColour() {
         Commit tagged = new Commit(
                 new Sha("abcdef0"),

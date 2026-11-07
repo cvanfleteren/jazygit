@@ -113,4 +113,17 @@ class LogGraphTest {
         assertEquals(
                 List.of("|/", "* only"), LogGraph.gutter(joined, List.empty()).draw(List.of("only"), "Merge"));
     }
+
+    @Test
+    void anOctopusMergeOpensARailForEachOtherParentOnOneLine() {
+        assertEquals(
+                List.of(
+                        List.of("*     first", "|\\-\\  Merge", "| | | second"),
+                        List.of("| * | first", "|/  | second"),
+                        List.of("|   * first", "|__/  second"),
+                        List.of("* first", "| second")),
+                drawn(
+                        List.of(commit("o", "a", "b", "c"), commit("b", "a"), commit("c", "a"), commit("a")),
+                        List.of("first", "second")));
+    }
 }
