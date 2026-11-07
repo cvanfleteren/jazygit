@@ -26,14 +26,15 @@ public final class CheckProgress {
 
     /**
      * How far the checks {@code all} of a commit are at {@code now}, expected to be done together at {@code eta}:
-     * from their start (ADR 37) as the time goes by. While that is not known, or they have no start, as only commit
-     * statuses do, as far as the share of them that is done.
+     * from the start of those that are not done (ADR 89) as the time goes by, so a workflow run again starts from 0.
+     * While that is not known, or they have no start, as only commit statuses do, as far as the share of them that is
+     * done.
      */
     public static double of(List<Check> all, Eta eta, Instant now) {
         return switch (eta) {
             case Eta.Done done -> 1;
             case Eta.Expected(Instant at) ->
-                CheckSpan.of(all).map(span -> towards(span.start(), at, now)).getOrElse(() -> counted(all));
+                CheckSpan.current(all).map(start -> towards(start, at, now)).getOrElse(() -> counted(all));
             case Eta.Unknown unknown -> counted(all);
         };
     }

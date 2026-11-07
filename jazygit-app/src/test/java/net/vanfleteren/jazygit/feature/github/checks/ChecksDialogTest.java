@@ -27,12 +27,15 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.CheckTimes;
+import net.vanfleteren.jazygit.state.CheckTimesMsg;
+import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.ListCursor;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.PendingChecks;
 import net.vanfleteren.jazygit.state.Reading;
 import net.vanfleteren.jazygit.state.TestModels;
+import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.ui.CheckRows;
 import net.vanfleteren.jazygit.ui.CheckTimesText;
 import net.vanfleteren.jazygit.ui.RenderedText;
@@ -73,6 +76,26 @@ class ChecksDialogTest {
     }
 
     /**
+     * A check of workflow {@code Build} run again, its second attempt, running since {@code started} seconds before
+     * NOW, of a run created long before.
+     */
+    private static Check rerun(String name, int started) {
+        return new Check(
+                name,
+                Checks.PENDING,
+                Option.of(new CheckRun(
+                        name.hashCode(),
+                        "Build",
+                        "",
+                        Option.of(NOW.minusSeconds(started)),
+                        Option.none(),
+                        2,
+                        NOW.minusSeconds(86_400),
+                        2,
+                        "push")));
+    }
+
+    /**
      * A check of workflow {@code Build} that waits to be started.
      */
     private static Check queued(String name) {
@@ -92,7 +115,11 @@ class ChecksDialogTest {
     }
 
     private static ChecksPopup read(List<Check> checks) {
-        return LOADING.with(Either.right(new PendingChecks("owner/repo", HashMap.of(new BranchName("main"), checks))));
+        return LOADING.with(readOf(checks));
+    }
+
+    private static Either<Failure, PendingChecks> readOf(List<Check> checks) {
+        return Either.right(new PendingChecks("owner/repo", HashMap.of(new BranchName("main"), checks)));
     }
 
     @Test
@@ -331,19 +358,59 @@ class ChecksDialogTest {
         double shown = popup.progress(before);
         // Read again, the checks are learned to take twice as long.
         Model after = timed(600);
-        ChecksPopup again = popup.with(
-                Either.right(new PendingChecks("owner/repo", HashMap.of(new BranchName("main"), checks))), before);
+        ChecksPopup again = popup.with(readOf(checks), before);
 
         assertTrue(popup.progress(after) < shown);
         assertEquals(shown, again.progress(after.withNow(NOW.plusSeconds(1))), 1e-9);
-        // Checks that started again start the bar again.
-        ChecksPopup rerun = again.with(
-                Either.right(new PendingChecks(
-                        "owner/repo",
-                        HashMap.of(
-                                new BranchName("main"), List.of(check("verify", Checks.PENDING, 10, Option.none()))))),
-                after);
+        // Checks run again start the bar again.
+        ChecksPopup rerun = again.with(readOf(List.of(rerun("verify", 10))), after);
         assertTrue(rerun.progress(after) < shown);
+    }
+
+    @Test
+    void aWorkflowRunAgainStartsTheBarAgainFromWhereItWasDoneOrLate() {
+        Model model = timed(300);
+        Check lint = check("lint", Checks.PASSING, 7200, Option.of(30));
+        ChecksPopup done = read(List.of(lint, check("verify", Checks.PASSING, 7200, Option.of(290))));
+        ChecksPopup late = read(List.of(lint, check("verify", Checks.PENDING, 3000, Option.none())));
+        List<Check> again = List.of(lint, rerun("verify", 150));
+        double fresh = read(again).progress(model);
+
+        assertTrue(late.progress(model) > 0.98, String.valueOf(late.progress(model)));
+        assertEquals(fresh, done.with(readOf(again), model).progress(model), 1e-9);
+        assertEquals(fresh, late.with(readOf(again), model).progress(model), 1e-9);
+        // From the start of the run again, not of lint two hours before.
+        assertTrue(fresh < 0.5, String.valueOf(fresh));
+    }
+
+    @Test
+    void theBarDoesNotGoBackWhenHowLongTheChecksTakeIsLearnedWhileItIsOpen() {
+        // 3 of 4 done, how long they take not known yet: 95% of 3/4.
+        Model model = TestModels.loaded()
+                .withNow(NOW)
+                .openPopup(read(List.of(
+                        check("package", Checks.PASSING, 300, Option.of(60)),
+                        check("lint", Checks.PASSING, 300, Option.of(60)),
+                        check("build", Checks.PASSING, 300, Option.of(60)),
+                        check("verify", Checks.PENDING, 10, Option.none()))));
+        double shown = model.popup(ChecksPopup.class).get().progress(model);
+
+        Model learned = Update.update(
+                        model,
+                        new CheckTimesMsg.Recorded("owner/repo", times(300).history(), Option.none(), false))
+                .model();
+
+        assertEquals(0.95 * 3 / 4, shown, 1e-9);
+        assertEquals(shown, learned.popup(ChecksPopup.class).get().progress(learned), 1e-9);
+    }
+
+    @Test
+    void takingLongerThanUsualOfAWorkflowRunAgainSaysHowLongItUsuallyTakes() throws Exception {
+        // verify, run again 600s ago, usually takes 302s from the start of its run; lint ran two hours before.
+        String screen = screen(timed(300)
+                .openPopup(read(List.of(check("lint", Checks.PASSING, 7200, Option.of(30)), rerun("verify", 600)))));
+
+        assertTrue(screen.contains("taking longer than usual (~5m)"), screen);
     }
 
     @Test

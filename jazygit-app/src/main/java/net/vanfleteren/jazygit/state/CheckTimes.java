@@ -90,4 +90,20 @@ public record CheckTimes(String repository, CheckHistory history, boolean toppin
     public Eta eta(List<Check> all) {
         return Eta.of(all, history);
     }
+
+    /**
+     * When {@code check}, one of the checks {@code all} of a commit, is expected to be done, as far as {@code times}
+     * tell; as far as the checks themselves tell while how long they take is not learned.
+     */
+    public static Eta eta(Option<CheckTimes> times, Check check, List<Check> all) {
+        return times.map(known -> known.eta(check, all)).getOrElse(() -> Eta.of(check, all, CheckHistory.EMPTY));
+    }
+
+    /**
+     * When the checks {@code all} of a commit are expected to be done together, as far as {@code times} tell; as far
+     * as the checks themselves tell while how long they take is not learned.
+     */
+    public static Eta eta(Option<CheckTimes> times, List<Check> all) {
+        return times.map(known -> known.eta(all)).getOrElse(() -> Eta.of(all, CheckHistory.EMPTY));
+    }
 }

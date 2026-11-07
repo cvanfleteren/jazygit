@@ -10,7 +10,6 @@ import java.time.Duration;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Check;
-import net.vanfleteren.jazygit.gh.timing.CheckHistory;
 import net.vanfleteren.jazygit.gh.timing.CheckProgress;
 import net.vanfleteren.jazygit.gh.timing.CheckSpan;
 import net.vanfleteren.jazygit.gh.timing.Eta;
@@ -40,8 +39,7 @@ public final class CheckRows {
                         count(all, Checks.FAILING, "dialog.pullRequest.checks.failed"),
                         count(all, Checks.PENDING, "dialog.pullRequest.checks.running"),
                         count(all, Checks.PASSING, "dialog.pullRequest.checks.passed"),
-                        CheckTimesText.together(
-                                        eta(all, times), CheckSpan.of(all).map(CheckSpan::start), learning(times), now)
+                        CheckTimesText.together(eta(all, times), CheckSpan.current(all), learning(times), now)
                                 .map(together -> List.<StyledElement<?>>of(text(together))))
                 .flatMap(o -> o)
                 .zipWithIndex()
@@ -223,14 +221,14 @@ public final class CheckRows {
      * When {@code check}, one of the checks {@code all} of a commit, is expected to be done, as far as was learned.
      */
     public static Eta eta(Check check, List<Check> all, Option<CheckTimes> times) {
-        return times.map(known -> known.eta(check, all)).getOrElse(() -> Eta.of(check, all, CheckHistory.EMPTY));
+        return CheckTimes.eta(times, check, all);
     }
 
     /**
      * When the checks {@code all} of a commit are expected to be done together, as far as was learned.
      */
     public static Eta eta(List<Check> all, Option<CheckTimes> times) {
-        return times.map(known -> known.eta(all)).getOrElse(() -> Eta.of(all, CheckHistory.EMPTY));
+        return CheckTimes.eta(times, all);
     }
 
     private static boolean learning(Option<CheckTimes> times) {

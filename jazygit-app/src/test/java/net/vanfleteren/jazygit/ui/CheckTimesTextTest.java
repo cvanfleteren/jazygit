@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.ui;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.control.Option;
 import java.time.Duration;
@@ -142,6 +143,73 @@ class CheckTimesTextTest {
                 "queued 2m       ·       ? left",
                 CheckTimesText.lined(check(Option.none()), new Eta.Unknown(), false, NOW));
         assertEquals("queued          ·       ? left", CheckTimesText.lined(rerun, new Eta.Unknown(), false, NOW));
+    }
+
+    @Test
+    void aRunningCheckSaysHowLongItRunsOfHowLongItIsExpectedToTakeInAll() {
+        Check running = check(Option.of(NOW.minusSeconds(59)));
+
+        assertEquals("59s/~1m 30s", CheckTimesText.ofTotal(running, new Eta.Expected(NOW.plusSeconds(31)), false, NOW));
+        assertEquals("59s/?", CheckTimesText.ofTotal(running, new Eta.Unknown(), false, NOW));
+        assertEquals("59s/…", CheckTimesText.ofTotal(running, new Eta.Unknown(), true, NOW));
+        // Once it takes longer, it runs longer than it takes in all.
+        assertEquals(
+                "4m 2s/~3m",
+                CheckTimesText.ofTotal(
+                        check(Option.of(NOW.minusSeconds(242))), new Eta.Expected(NOW.minusSeconds(62)), false, NOW));
+        // From 5m on, the estimate is to the minute.
+        assertEquals(
+                "1m/~8m",
+                CheckTimesText.ofTotal(
+                        check(Option.of(NOW.minusSeconds(60))), new Eta.Expected(NOW.plusSeconds(440)), false, NOW));
+    }
+
+    @Test
+    void aQueuedCheckSaysHowLongItIsQueuedAndACommitStatusThatItRuns() {
+        Check rerun = new Check(
+                "verify",
+                Checks.PENDING,
+                Option.of(new CheckRun(
+                        1, "Build", "", Option.none(), Option.none(), 1, NOW.minusSeconds(200), 2, "push")));
+        Check status = new Check("ci/status", Checks.PENDING);
+
+        assertEquals("queued 2m", CheckTimesText.ofTotal(check(Option.none()), new Eta.Expected(NOW), false, NOW));
+        assertEquals("queued", CheckTimesText.ofTotal(rerun, new Eta.Unknown(), false, NOW));
+        assertEquals("running", CheckTimesText.ofTotal(status, new Eta.Unknown(), false, NOW));
+    }
+
+    @Test
+    void howLongACheckRunsOfItsTotalIsNeverWiderThanAtItsWidest() {
+        Check longest = check(Option.of(NOW.minusSeconds(3599)));
+        int widest = TextWidth.of(CheckTimesText.widestOfTotal());
+
+        assertEquals("59m 59s/~4m 55s", CheckTimesText.widestOfTotal());
+        for (Eta eta : java.util.List.of(
+                new Eta.Expected(NOW.minusSeconds(3599 - 297)),
+                new Eta.Expected(NOW.plusSeconds(1)),
+                new Eta.Unknown())) {
+            for (boolean learning : new boolean[] {false, true}) {
+                assertTrue(TextWidth.of(CheckTimesText.ofTotal(longest, eta, learning, NOW)) <= widest);
+            }
+        }
+        assertTrue(TextWidth.of(CheckTimesText.ofTotal(
+                        new Check(
+                                "verify",
+                                Checks.PENDING,
+                                Option.of(new CheckRun(
+                                        1,
+                                        "Build",
+                                        "",
+                                        Option.none(),
+                                        Option.none(),
+                                        1,
+                                        NOW.minusSeconds(3599),
+                                        1,
+                                        "push"))),
+                        new Eta.Unknown(),
+                        false,
+                        NOW))
+                <= widest);
     }
 
     /**

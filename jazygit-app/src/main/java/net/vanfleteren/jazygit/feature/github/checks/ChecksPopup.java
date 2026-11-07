@@ -1,15 +1,15 @@
 package net.vanfleteren.jazygit.feature.github.checks;
 
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
 import io.vavr.collection.List;
+import io.vavr.collection.Set;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Check;
-import net.vanfleteren.jazygit.gh.timing.CheckHistory;
 import net.vanfleteren.jazygit.gh.timing.CheckProgress;
-import net.vanfleteren.jazygit.gh.timing.CheckSpan;
 import net.vanfleteren.jazygit.gh.timing.CheckTimings;
-import net.vanfleteren.jazygit.gh.timing.Eta;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.CheckTimes;
@@ -30,8 +30,9 @@ import net.vanfleteren.jazygit.state.Reading;
  * @param refreshFailed why reading them again failed the last time, so the checks shown are stale; nothing once a
  *                      read succeeds
  * @param readAt        when the last read of them started
- * @param reached       how far the checks were shown to be when they were last read again, so they are not shown
- *                      going back when they are expected later than before; nothing before that
+ * @param reached       how far the checks were shown to be when they were last read again, or what was learned of
+ *                      how long they take changed, so they are not shown going back when they are expected later
+ *                      than before; nothing before that, or once they were done
  */
 public record ChecksPopup(
         BranchRef branch,
@@ -64,10 +65,36 @@ public record ChecksPopup(
      * The popup showing {@code read}, as it is shown in {@code model}: how far the checks it shows were stays reached.
      */
     public ChecksPopup with(Either<Failure, PendingChecks> read, Model model) {
-        Option<Reached> shown = CheckSpan.of(checksRead())
-                .map(span -> new Reached(span.start(), progress(model)))
-                .orElse(reached);
-        return new ChecksPopup(branch, onGitHub, checks, reading, refreshFailed, readAt, shown).with(read);
+        return reaching(model).with(read);
+    }
+
+    /**
+     * Once what was learned of how long checks take changes from what {@code before} knows, how far the checks were
+     * shown to be in it stays reached, as when they are read again.
+     */
+    @Override
+    public Popup checkTimesChanging(Model before) {
+        return reaching(before);
+    }
+
+    /**
+     * The popup keeping how far its checks are shown to be in {@code model}, as reached by those same checks; nothing
+     * once they are done, as they are then shown full anyway; as it is while none are read.
+     */
+    private ChecksPopup reaching(Model model) {
+        List<Check> all = checksRead();
+        if (all.isEmpty()) {
+            return this;
+        }
+        double shown = progress(model);
+        return new ChecksPopup(
+                branch,
+                onGitHub,
+                checks,
+                reading,
+                refreshFailed,
+                readAt,
+                Option.when(shown < 1, () -> new Reached(Reached.runs(all), shown)));
     }
 
     /**
@@ -124,14 +151,13 @@ public record ChecksPopup(
 
     /**
      * How far the checks read are together in {@code model}: at least as far as they were reached to be, while they
-     * are the same checks, started at the same time.
+     * are the same checks, of the same attempts of the same workflow runs. A workflow run again, or the checks of
+     * another commit, start from 0.
      */
     public double progress(Model model) {
         List<Check> all = checksRead();
-        Eta eta = times(model).map(known -> known.eta(all)).getOrElse(() -> Eta.of(all, CheckHistory.EMPTY));
-        double progress = CheckProgress.of(all, eta, model.now());
-        Option<Instant> start = CheckSpan.of(all).map(CheckSpan::start);
-        return reached.filter(before -> start.contains(before.start()))
+        double progress = CheckProgress.of(all, CheckTimes.eta(times(model), all), model.now());
+        return reached.filter(before -> before.runs().equals(Reached.runs(all)))
                 .map(before -> Math.max(before.progress(), progress))
                 .getOrElse(progress);
     }
@@ -141,7 +167,19 @@ public record ChecksPopup(
     }
 
     /**
-     * How far the checks that started at {@code start} were shown to be.
+     * How far the checks of the attempts {@code runs} of workflow runs were shown to be.
+     *
+     * @param runs the id of each workflow run, and its attempt
      */
-    public record Reached(Instant start, double progress) {}
+    public record Reached(Set<Tuple2<Long, Integer>> runs, double progress) {
+
+        /**
+         * The attempts of the workflow runs that the checks {@code all} are of.
+         */
+        static Set<Tuple2<Long, Integer>> runs(List<Check> all) {
+            return all.flatMap(Check::run)
+                    .map(run -> Tuple.of(run.runId(), run.runAttempt()))
+                    .toSet();
+        }
+    }
 }

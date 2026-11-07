@@ -27,6 +27,19 @@ public record CheckSpan(Instant start, Option<Instant> end) {
     }
 
     /**
+     * When the checks among {@code all} that are not done started: the earliest start of the workflow runs that have
+     * one of them, so a workflow run again is timed from its own start, not from runs done long before (ADR 89). Once
+     * they are all done, or only commit statuses are not, when they all started; none when none of them is timed.
+     */
+    public static Option<Instant> current(List<Check> all) {
+        return all.filter(check -> !check.done())
+                .flatMap(Check::run)
+                .flatMap(run -> runStart(run, all))
+                .min()
+                .orElse(() -> of(all).map(CheckSpan::start));
+    }
+
+    /**
      * When the workflow run of {@code run} started: when it was created, for its first attempt; for a re-run, when
      * the first of its checks among {@code all} started, as GitHub does not say when an attempt started.
      */

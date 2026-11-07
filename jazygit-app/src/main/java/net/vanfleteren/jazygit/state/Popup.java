@@ -13,4 +13,12 @@ public interface Popup {
     default boolean holdsInput() {
         return false;
     }
+
+    /**
+     * This popup once what was learned of how long checks take changes from what {@code before} knows; as it is,
+     * unless it shows something it learned from them.
+     */
+    default Popup checkTimesChanging(Model before) {
+        return this;
+    }
 }

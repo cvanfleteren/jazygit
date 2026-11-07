@@ -54,8 +54,11 @@ done, and goes past that only slowly, never reaching 99%. It is full only once G
 
 ### How far
 
-- From the start of the checks (ADR 37) to when they are expected to be done together (ADR 32), the bar goes from 0
-  to 95% as the time goes by.
+- From the start of the checks that are not done to when they are expected to be done together (ADR 32), the bar goes
+  from 0 to 95% as the time goes by. That start is the earliest of the workflow runs that have a check not done, as
+  ADR 37 tells the start of a run; once all are done, the start of them all. So a workflow run again goes from its own
+  start, not from runs done hours before, which would put it at 95% at once. `started 14:02:10` still says when they
+  all started (ADR 37).
 - Past that, it goes on as `95% + 4% × (1 − e^(−late / expected))`, where `late` is how long past it is and `expected`
   how long they were expected to take. So it still moves, slower the later it is, and it stays under 99%: the label
   says 98% at most.
@@ -64,10 +67,16 @@ done, and goes past that only slowly, never reaching 99%. It is full only once G
   95% of the share of the checks that are done.
 - A check that runs goes from its own start to when it is expected to be done, in the same way. A queued check is at
   0, a done one has no bar.
-- It does not go back. When the checks are read again and turn out to be expected later, the bar keeps how far it
-  had come and fills more slowly from there. The popup keeps that, with the start of the checks it was for, so the
-  bar starts again from 0 when the checks start again: a re-run, or the checks of a new commit. Only the bar
-  together keeps it; a check's own bar can go back when it is expected later, which is rare.
+- It does not go back. When the checks are read again and turn out to be expected later, or what was learned of how
+  long they take changes while the popup is open, as when the history is first read and the bar goes from counting
+  checks to the time, the bar keeps how far it had come and fills more slowly from there.
+  - The popup keeps that with the attempts of the workflow runs it was for, each run's id and attempt. When those
+    differ, the bar starts again from 0: a workflow run again, or the checks of a new commit. Not: the start of the
+    checks, which stays the same when one of several workflows is run again, so a full bar would stay full while it
+    runs.
+  - Once the checks are all done it keeps nothing, as the bar is full anyway: a workflow run again after that starts
+    from 0, also when its attempt would not tell.
+  - Only the bar together keeps it; a check's own bar can go back when it is expected later, which is rare.
 
 ### Colours
 
@@ -77,21 +86,29 @@ done, and goes past that only slowly, never reaching 99%. It is full only once G
   passed, `checks-passed`.
 - More than a minute past when they were expected (`GRACE`, ADR 32), `checks-running`, yellow in most themes, the
   moment the counts say `taking longer than usual`. A check's own bar does the same once it is overdue.
+- While when they are done is not known, the bar together is dimmed, as it then counts checks instead of time.
 
 ### Taking longer than usual
 
 - The counts say how long the checks usually take together, once they take longer: `taking longer than usual (~4m)`,
   from their start to when they were expected done, rounded as an estimate. In the pull request dialog too, which
   shares the counts. Without a start, as of only commit statuses, it says `taking longer than usual` as before.
-- While when they are done is not known, the bar together is dimmed, as it then counts checks instead of time.
+- The start is that of the checks that are not done, as for the bar: of a workflow run again, its own, so it says
+  `(~5m)` for a workflow of 5m, not the hours since the runs done before it.
 
 ## Consequences
 
 - Built in one step.
 - `CheckProgress` in `jazygit-gh` tells how far the checks are, beside `Eta` and `CheckSpan`; `ProgressBar` draws a
   bar.
+- A popup is told when what was learned of how long checks take changes, by `Popup.checkTimesChanging`, which the
+  checks popup uses to keep how far it was; `CheckTimesUpdate` calls it, as the core does not know the features.
+- When the checks of a commit are expected, as far as was learned or not, is told in one place,
+  `CheckTimes.eta(times, …)`, for the bar and its colour alike.
 - Tested: 0 to 95% with time, slowing past that without reaching 99%, full only when done; the share done while it is
   not known when; a check from its own start, a queued one empty, one not known with no bar; the bars on the screen,
   98% long past the estimate and 100% when done; the bar after the name and how long a check runs of how long it
-  takes; how long they usually take once they take longer; each colour; the bar together not going back when the checks are
-  expected later, and starting again when they start again; and the rows lined up in the wider popup.
+  takes, in each of its forms, never wider than at its widest; how long they usually take once they take longer, of a
+  workflow run again too; each colour; the bar together not going back when the checks are expected later, nor when
+  how long they take is learned while the popup is open; a workflow run again, after the checks were done or late,
+  starting from 0 and from its own start; and the rows lined up in the wider popup.
