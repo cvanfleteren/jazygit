@@ -26,12 +26,6 @@ public final class LayoutUpdate {
      */
     public static final int STEP = 5;
 
-    // The panes of the left column of each screen under the status, top to bottom, by the id of their element.
-    private static final List<String> REPOSITORY_PANES =
-            List.of(Scopes.FILES.id(), Scopes.BRANCHES.id(), Scopes.COMMITS.id(), Scopes.STASH.id());
-    private static final List<String> PULL_REQUESTS_PANES =
-            List.of(Scopes.PR_REPOSITORY.id(), Scopes.PR_REVIEW_REQUESTED.id(), Scopes.PR_AUTHORED.id());
-
     private LayoutUpdate() {}
 
     public static Next update(Model model, LayoutMsg msg) {
@@ -98,7 +92,7 @@ public final class LayoutUpdate {
      * status; none when the content panel had it.
      */
     private static Option<Integer> focusedPane(Model model) {
-        List<String> panes = model.screen() == Screen.REPOSITORY ? REPOSITORY_PANES : PULL_REQUESTS_PANES;
+        List<String> panes = Scopes.leftPanes(model.screen());
         return model.shownPane().map(panes::indexOf).filter(pane -> pane >= 0);
     }
 

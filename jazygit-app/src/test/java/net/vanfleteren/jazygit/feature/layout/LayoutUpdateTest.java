@@ -308,6 +308,19 @@ class LayoutUpdateTest {
     }
 
     @Test
+    void theKeysWorkOnTheFocusedPaneOfThePullRequestsScreen() {
+        Model reviewRequested = focused(model.withScreen(Screen.PULL_REQUESTS), Scopes.PR_REVIEW_REQUESTED.id());
+
+        Next taller = Update.update(reviewRequested, new LayoutMsg.PaneStepped(5));
+
+        assertEquals(List.of(32, 37), taller.model().preferences().leftHeights(Screen.PULL_REQUESTS));
+        assertEquals(
+                Settings.DEFAULT_REPOSITORY_HEIGHTS,
+                taller.model().preferences().leftHeights(Screen.REPOSITORY));
+        assertEquals(Option.of(1), toggled(reviewRequested).preferences().maximizedPane(Screen.PULL_REQUESTS));
+    }
+
+    @Test
     void zOnAnotherPaneMaximizesThatOneInstead() {
         Model maximized = toggled(focused(model, Scopes.COMMITS.id()));
 
