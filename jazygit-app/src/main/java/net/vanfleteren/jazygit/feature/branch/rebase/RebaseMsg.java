@@ -13,7 +13,20 @@ public sealed interface RebaseMsg extends Msg {
     }
 
     /**
-     * The user asked to rebase the checked out branch onto {@code onto}; how is still to be chosen.
+     * Where the checked out branch is rebased onto: the highlighted branch, or its base branch (ADR 91).
      */
-    record Requested(BranchName onto) implements RebaseMsg {}
+    enum Target {
+        ONTO,
+        BASE
+    }
+
+    /**
+     * The user asked to rebase the checked out branch, on {@code highlighted}; where onto is still to be chosen.
+     */
+    record Requested(BranchName highlighted) implements RebaseMsg {}
+
+    /**
+     * The user chose where to rebase onto.
+     */
+    record Chosen(Target target) implements RebaseMsg {}
 }
