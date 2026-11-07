@@ -126,4 +126,12 @@ class LogGraphTest {
                         List.of(commit("o", "a", "b", "c"), commit("b", "a"), commit("c", "a"), commit("a")),
                         List.of("first", "second")));
     }
+
+    @Test
+    void aMergeWhoseOtherParentIsNotListedStillGetsItsMergeLine() {
+        // The commits of a branch only, which merged main's mm to catch up; main is left out.
+        assertEquals(
+                List.of(List.of("* first", "| Merge", "| second"), List.of("* first", "| second")),
+                drawn(List.of(commit("f2", "f1", "mm"), commit("f1", "base")), List.of("first", "second")));
+    }
 }

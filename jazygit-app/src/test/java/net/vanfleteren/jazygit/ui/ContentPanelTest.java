@@ -1414,6 +1414,14 @@ class ContentPanelTest {
     }
 
     @Test
+    void logLinesShowTheParentsOfAMergeWhoseOtherParentIsNotListed() {
+        List<String> lines =
+                ContentPanel.logLines(List.of(merge("f2", "f1", "mm"), plain("f1", "base")), ZoneOffset.UTC);
+
+        assertEquals("| Merge: f1 mm", lines.get(lines.indexOf("* commit f2") + 1));
+    }
+
+    @Test
     void logLinesWithoutExtendedMessageEndAfterTheSubject() {
         List<Commit> commits = List.of(
                 Fixtures.commit(

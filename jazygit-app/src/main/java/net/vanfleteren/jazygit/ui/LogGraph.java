@@ -56,7 +56,7 @@ final class LogGraph {
                         meet._1.into(),
                         below.removeAll(meets.take(meet._2 + 1).map(CommitGraph.Meet::rail))));
         String first = line(width, at -> at % 2 == 1 ? " " : at / 2 == column ? "*" : rail(through, at));
-        Option<String> opening = Option.when(node.opens().nonEmpty(), () -> opening(node, through, width));
+        Option<String> opening = Option.when(node.commit().isMerge(), () -> opening(node, through, width));
         String rest = line(width, at -> rail(below.removeAll(meets.map(CommitGraph.Meet::rail)), at));
         return new Gutter(joining, first, opening, meeting, rest);
     }
@@ -74,10 +74,11 @@ final class LogGraph {
     }
 
     /**
-     * The line on which a merge opens the rails of its other parents, while {@code rails} go on.
+     * The line on which a merge opens the rails of its other parents, while {@code rails} go on; when none of those
+     * parents is listed, it opens none.
      */
     private static String opening(CommitGraph.Node node, List<Integer> rails, int width) {
-        int reach = node.opens().max().get();
+        int reach = node.opens().max().getOrElse(node.column());
         return line(
                 width,
                 at -> node.opens().contains((at + 1) / 2) && at % 2 == 1
