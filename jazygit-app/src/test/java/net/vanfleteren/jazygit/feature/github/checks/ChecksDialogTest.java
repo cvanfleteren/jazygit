@@ -27,12 +27,15 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.CheckTimes;
+import net.vanfleteren.jazygit.state.CheckTimesMsg;
+import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.ListCursor;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.PendingChecks;
 import net.vanfleteren.jazygit.state.Reading;
 import net.vanfleteren.jazygit.state.TestModels;
+import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.ui.CheckRows;
 import net.vanfleteren.jazygit.ui.CheckTimesText;
 import net.vanfleteren.jazygit.ui.RenderedText;
@@ -73,6 +76,26 @@ class ChecksDialogTest {
     }
 
     /**
+     * A check of workflow {@code Build} run again, its second attempt, running since {@code started} seconds before
+     * NOW, of a run created long before.
+     */
+    private static Check rerun(String name, int started) {
+        return new Check(
+                name,
+                Checks.PENDING,
+                Option.of(new CheckRun(
+                        name.hashCode(),
+                        "Build",
+                        "",
+                        Option.of(NOW.minusSeconds(started)),
+                        Option.none(),
+                        2,
+                        NOW.minusSeconds(86_400),
+                        2,
+                        "push")));
+    }
+
+    /**
      * A check of workflow {@code Build} that waits to be started.
      */
     private static Check queued(String name) {
@@ -92,7 +115,11 @@ class ChecksDialogTest {
     }
 
     private static ChecksPopup read(List<Check> checks) {
-        return LOADING.with(Either.right(new PendingChecks("owner/repo", HashMap.of(new BranchName("main"), checks))));
+        return LOADING.with(readOf(checks));
+    }
+
+    private static Either<Failure, PendingChecks> readOf(List<Check> checks) {
+        return Either.right(new PendingChecks("owner/repo", HashMap.of(new BranchName("main"), checks)));
     }
 
     @Test
@@ -156,12 +183,12 @@ class ChecksDialogTest {
 
         assertTrue(screen.contains("Checks of main"), screen);
         assertTrue(screen.contains("✗ 1 failed · ● 1 running · ✓ 2 passed · done in ?"), screen);
-        // The names on the left, how each is doing or how long it took on the right.
-        assertTrue(screen.contains("✗ lint" + " ".repeat(53) + "failed after 1m 30s│"), screen);
+        // While one is not done: the names on the left, then a bar of 24 columns, dashed when how far it is is not
+        // known, then how long each runs of how long it is expected to take, or how long it took, on the right.
+        assertTrue(screen.contains("✗ lint" + " ".repeat(73) + "failed after 1m 30s│"), screen);
         assertTrue(
-                screen.contains("● verify" + " ".repeat(40) + "running 2m 30s  · " + " ".repeat(6) + "? left│"),
-                screen);
-        assertTrue(screen.contains("✓ package" + " ".repeat(67) + "1m│"), screen);
+                screen.contains("● verify" + " ".repeat(45) + "╌".repeat(24) + " ".repeat(13) + "2m 30s/?│"), screen);
+        assertTrue(screen.contains("✓ package" + " ".repeat(87) + "1m│"), screen);
         assertTrue(screen.contains("✓ ci/status"), screen);
         // Failed, running, then passed.
         assertTrue(screen.indexOf("lint") < screen.indexOf("verify"), screen);
@@ -215,22 +242,22 @@ class ChecksDialogTest {
 
     @Test
     void aLongNameIsCutToLeaveRoomForTheTimingAtTheBorder() throws Exception {
-        String longName = "x".repeat(80);
+        String longName = "x".repeat(100);
         String screen = screen(read(List.of(check(longName, Checks.PASSING, 300, Option.of(60)))));
 
-        // 78 columns: the symbol takes 1, a space 1, the name 72 of which the last is the ellipsis, then 2 and "1m".
-        assertFalse(screen.contains("x".repeat(72)), screen);
-        assertTrue(screen.contains("✓ " + "x".repeat(71) + "…  1m│"), screen);
+        // 98 columns: the symbol takes 1, a space 1, the name 92 of which the last is the ellipsis, then 2 and "1m".
+        assertFalse(screen.contains("x".repeat(92)), screen);
+        assertTrue(screen.contains("✓ " + "x".repeat(91) + "…  1m│"), screen);
     }
 
     @Test
     void aLongNameOfACheckNotTimedIsCutAtTheBorder() throws Exception {
-        String longName = "y".repeat(90);
+        String longName = "y".repeat(110);
         String screen = screen(read(List.of(new Check(longName, Checks.PASSING))));
 
         assertFalse(screen.contains(longName), screen);
-        // 78 columns: the symbol takes 1, a space 1, so the name keeps 76 of which the last is the ellipsis.
-        assertTrue(screen.contains("✓ " + "y".repeat(75) + "…│"), screen);
+        // 98 columns: the symbol takes 1, a space 1, so the name keeps 96 of which the last is the ellipsis.
+        assertTrue(screen.contains("✓ " + "y".repeat(95) + "…│"), screen);
     }
 
     @Test
@@ -245,10 +272,10 @@ class ChecksDialogTest {
         String top = screen(model);
         String scrolled = screen(model.withListCursor(ListCursor.START.at(1)));
 
-        // 78 columns: the symbol takes 1, a space 1, then the name 58 of which the last is the ellipsis, 2, and the
+        // 98 columns: the symbol takes 1, a space 1, then the name 78 of which the last is the ellipsis, 2, and the
         // timings 16, as wide as "failed after 10m" also when it is not shown.
-        String checkb = "checkb" + "z".repeat(51) + "…" + " ".repeat(2 + 14) + "1m│";
-        assertTrue(top.contains("checka" + " ".repeat(54) + "failed after 10m│"), top);
+        String checkb = "checkb" + "z".repeat(71) + "…" + " ".repeat(2 + 14) + "1m│";
+        assertTrue(top.contains("checka" + " ".repeat(74) + "failed after 10m│"), top);
         assertTrue(top.contains(checkb), top);
         assertFalse(scrolled.contains("checka"), scrolled);
         assertTrue(scrolled.contains(checkb), scrolled);
@@ -279,6 +306,129 @@ class ChecksDialogTest {
         assertTrue(queued.forAll(piece -> piece.cssClasses().contains(Theme.Classes.DIM)));
         assertFalse(running.head().cssClasses().contains(Theme.Classes.DIM));
         assertTrue(running.last().cssClasses().contains(Theme.Classes.DIM));
+    }
+
+    @Test
+    void aBarShowsHowFarTheChecksAreTowardsWhenTheyAreExpectedAndEachRunningOneToo() throws Exception {
+        // verify runs 150s of 300s: from its run, created 152s ago, 152s of 302s.
+        String screen =
+                screen(timed(300).openPopup(read(List.of(check("verify", Checks.PENDING, 150, Option.none())))));
+
+        // 93 columns of bar: 95% of 152/302 of them, then how far that is.
+        assertTrue(screen.contains("│" + "━".repeat(44) + "─".repeat(49) + "  47%│"), screen);
+        // After the name, 24 columns: 95% of half of them; then how long it runs of the 300s it usually takes.
+        assertTrue(
+                screen.contains(
+                        "● verify" + " ".repeat(49) + "━".repeat(11) + "─".repeat(13) + " ".repeat(7) + "2m 30s/~5m│"),
+                screen);
+    }
+
+    @Test
+    void theBarIsFullOnlyOnceTheChecksAreDone() throws Exception {
+        List<Check> late = List.of(check("verify", Checks.PENDING, 3000, Option.none()));
+        List<Check> done = List.of(check("verify", Checks.PASSING, 300, Option.of(290)));
+
+        // Long past when it was expected, it is not full, and says how long they usually take.
+        String lateScreen = screen(timed(300).openPopup(read(late)));
+        assertTrue(lateScreen.contains("  98%│"), lateScreen);
+        assertTrue(lateScreen.contains("● 1 running · taking longer than usual (~5m)"), lateScreen);
+        assertTrue(screen(timed(300).openPopup(read(done))).contains("│" + "━".repeat(93) + " 100%│"));
+    }
+
+    @Test
+    void theBarIsRedOnceOneFailedGreenOnceAllPassedYellowWhenLateAndDimmedWhenNotKnown() {
+        CheckTimes times = times(300);
+        List<Check> running = List.of(check("verify", Checks.PENDING, 150, Option.none()));
+        List<Check> late = List.of(check("verify", Checks.PENDING, 600, Option.none()));
+        List<Check> failed = running.append(check("lint", Checks.FAILING, 150, Option.of(30)));
+        List<Check> passed = List.of(check("verify", Checks.PASSING, 300, Option.of(290)));
+
+        assertEquals(Theme.Classes.CHECKS_PROGRESS, barClass(running, Option.of(times)));
+        assertEquals(Theme.Classes.CHECKS_RUNNING, barClass(late, Option.of(times)));
+        assertEquals(Theme.Classes.CHECKS_FAILED, barClass(failed, Option.of(times)));
+        assertEquals(Theme.Classes.CHECKS_PASSED, barClass(passed, Option.of(times)));
+        assertEquals(Theme.Classes.DIM, barClass(running, Option.none()));
+    }
+
+    @Test
+    void theBarDoesNotGoBackWhenTheChecksAreExpectedLaterOnceReadAgain() {
+        List<Check> checks = List.of(check("verify", Checks.PENDING, 150, Option.none()));
+        Model before = timed(300);
+        ChecksPopup popup = read(checks);
+        double shown = popup.progress(before);
+        // Read again, the checks are learned to take twice as long.
+        Model after = timed(600);
+        ChecksPopup again = popup.with(readOf(checks), before);
+
+        assertTrue(popup.progress(after) < shown);
+        assertEquals(shown, again.progress(after.withNow(NOW.plusSeconds(1))), 1e-9);
+        // Checks run again start the bar again.
+        ChecksPopup rerun = again.with(readOf(List.of(rerun("verify", 10))), after);
+        assertTrue(rerun.progress(after) < shown);
+    }
+
+    @Test
+    void aWorkflowRunAgainStartsTheBarAgainFromWhereItWasDoneOrLate() {
+        Model model = timed(300);
+        Check lint = check("lint", Checks.PASSING, 7200, Option.of(30));
+        ChecksPopup done = read(List.of(lint, check("verify", Checks.PASSING, 7200, Option.of(290))));
+        ChecksPopup late = read(List.of(lint, check("verify", Checks.PENDING, 3000, Option.none())));
+        List<Check> again = List.of(lint, rerun("verify", 150));
+        double fresh = read(again).progress(model);
+
+        assertTrue(late.progress(model) > 0.98, String.valueOf(late.progress(model)));
+        assertEquals(fresh, done.with(readOf(again), model).progress(model), 1e-9);
+        assertEquals(fresh, late.with(readOf(again), model).progress(model), 1e-9);
+        // From the start of the run again, not of lint two hours before.
+        assertTrue(fresh < 0.5, String.valueOf(fresh));
+    }
+
+    @Test
+    void commitStatusesOfAnotherCommitStartTheBarAgain() {
+        Model model = TestModels.loaded().withNow(NOW);
+        ChecksPopup old = read(List.of(
+                new Check("ci/build", Checks.PASSING),
+                new Check("ci/lint", Checks.PASSING),
+                new Check("ci/test", Checks.PASSING),
+                new Check("ci/deploy", Checks.PENDING)));
+        List<Check> next = List.of(
+                new Check("ci/build", Checks.PENDING),
+                new Check("ci/lint", Checks.PENDING),
+                new Check("ci/test", Checks.PENDING),
+                new Check("ci/deploy", Checks.PENDING));
+
+        assertEquals(0.95 * 3 / 4, old.progress(model), 1e-9);
+        assertEquals(0, old.with(readOf(next), model).progress(model), 1e-9);
+    }
+
+    @Test
+    void theBarDoesNotGoBackWhenHowLongTheChecksTakeIsLearnedWhileItIsOpen() {
+        // 3 of 4 done, how long they take not known yet: 95% of 3/4.
+        Model model = TestModels.loaded()
+                .withNow(NOW)
+                .openPopup(read(List.of(
+                        check("package", Checks.PASSING, 300, Option.of(60)),
+                        check("lint", Checks.PASSING, 300, Option.of(60)),
+                        check("build", Checks.PASSING, 300, Option.of(60)),
+                        check("verify", Checks.PENDING, 10, Option.none()))));
+        double shown = model.popup(ChecksPopup.class).get().progress(model);
+
+        Model learned = Update.update(
+                        model,
+                        new CheckTimesMsg.Recorded("owner/repo", times(300).history(), Option.none(), false))
+                .model();
+
+        assertEquals(0.95 * 3 / 4, shown, 1e-9);
+        assertEquals(shown, learned.popup(ChecksPopup.class).get().progress(learned), 1e-9);
+    }
+
+    @Test
+    void takingLongerThanUsualOfAWorkflowRunAgainSaysHowLongItUsuallyTakes() throws Exception {
+        // verify, run again 600s ago, usually takes 302s from the start of its run; lint ran two hours before.
+        String screen = screen(timed(300)
+                .openPopup(read(List.of(check("lint", Checks.PASSING, 7200, Option.of(30)), rerun("verify", 600)))));
+
+        assertTrue(screen.contains("taking longer than usual (~5m)"), screen);
     }
 
     @Test
@@ -344,6 +494,29 @@ class ChecksDialogTest {
                         new Msg.PopupDismissed(ChecksPopup.class),
                         new Msg.PopupDismissed(ChecksPopup.class)),
                 dispatched);
+    }
+
+    /**
+     * What was learned of check {@code Build/verify}: it runs {@code seconds}, done 2s more after its run was created.
+     */
+    private static CheckTimes times(int seconds) {
+        List<CheckSample> samples = List.range(0, 3)
+                .map(i -> new CheckSample(
+                        "Build/verify", i, Duration.ofSeconds(seconds), Duration.ofSeconds(seconds + 2), "push", NOW));
+        return CheckTimes.of("owner/repo", CheckHistory.EMPTY.with(samples, NOW), Option.none());
+    }
+
+    private static Model timed(int seconds) {
+        return TestModels.loaded().withNow(NOW).mapGitHub(gitHub -> gitHub.withCheckTimes(Option.of(times(seconds))));
+    }
+
+    /**
+     * The class of the part done of the bar of how far {@code checks} are together, as {@code times} tell.
+     */
+    private static String barClass(List<Check> checks, Option<CheckTimes> times) {
+        return ChecksDialog.gauge(checks, times, 0.5, NOW).head().cssClasses().stream()
+                .findFirst()
+                .orElseThrow();
     }
 
     private static ChecksPopup many() {

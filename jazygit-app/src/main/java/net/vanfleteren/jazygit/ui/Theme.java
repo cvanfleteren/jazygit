@@ -188,6 +188,8 @@ public final class Theme {
         public static final String CHECKS_PASSED = "checks-passed";
         public static final String CHECKS_FAILED = "checks-failed";
         public static final String CHECKS_RUNNING = "checks-running";
+        // The filled part of a bar of how far checks are (ADR 89).
+        public static final String CHECKS_PROGRESS = "checks-progress";
         public static final String REVIEW_APPROVED = "review-approved";
         public static final String REVIEW_CHANGES = "review-changes";
         public static final String DIFF_HEADER = "diff-header";

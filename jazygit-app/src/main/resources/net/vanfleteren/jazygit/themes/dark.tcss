@@ -54,6 +54,7 @@ ListElement-item:selected, TreeElement-node:selected, .selection {
 .checks-passed { color: green; }
 .checks-failed { color: red; }
 .checks-running { color: yellow; }
+.checks-progress { color: cyan; }
 .review-approved { color: green; }
 .review-changes { color: red; }
 .repo-branch { color: cyan; }

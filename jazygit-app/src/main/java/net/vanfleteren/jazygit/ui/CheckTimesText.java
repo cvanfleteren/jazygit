@@ -129,15 +129,20 @@ public final class CheckTimesText {
     }
 
     /**
-     * How the checks of a commit are expected to be done together, {@code eta}, at {@code now}: "done in ~3m",
-     * "done any moment" once that is due, "done in ?", or "…" for the estimate while the checks that ran lately are
-     * read; nothing when they are done.
+     * How the checks of a commit that started at {@code start} are expected to be done together, {@code eta}, at
+     * {@code now}: "done in ~3m", "done any moment" once that is due, "taking longer than usual (~4m)" once they take
+     * longer than they were expected to take from their start (ADR 89), "done in ?", or "…" for the estimate while the
+     * checks that ran lately are read; nothing when they are done.
      */
-    public static Option<String> together(Eta eta, boolean learning, Instant now) {
+    public static Option<String> together(Eta eta, Option<Instant> start, boolean learning, Instant now) {
         return switch (eta) {
             case Eta.Done done -> Option.none();
             case Eta.Unknown unknown -> Option.of(Messages.get("checks.doneIn", unknown(learning)));
-            case Eta.Expected expected when expected.overdue(now) -> Option.of(Messages.get("checks.longerThanUsual"));
+            case Eta.Expected expected
+            when expected.overdue(now) ->
+                Option.of(start.map(from ->
+                                Messages.get("checks.longerThanUsualOf", left(Duration.between(from, expected.at()))))
+                        .getOrElse(() -> Messages.get("checks.longerThanUsual")));
             case Eta.Expected expected when due(expected.left(now)) -> Option.of(Messages.get("checks.doneAnyMoment"));
             case Eta.Expected expected -> Option.of(Messages.get("checks.doneIn", left(expected.left(now))));
         };
@@ -205,6 +210,40 @@ public final class CheckTimesText {
             case Eta.Unknown u -> Option.of(Messages.get("checks.left", unknown(learning)));
             case Eta.Done done -> Option.none();
         };
+    }
+
+    /**
+     * How long {@code check}, which is not done, runs at {@code now}, of how long it is expected to take in all,
+     * as {@code eta} tells (ADR 89): {@code 59s/~1m 30s}, {@code 4m 2s/~3m} once it takes longer, {@code 59s/?}, or
+     * {@code 59s/…} while the checks that ran lately are read. A queued one, which runs no time yet, how long it is
+     * queued, {@code queued 2m}; only {@code running} for a commit status, which is not timed.
+     */
+    public static String ofTotal(Check check, Eta eta, boolean learning, Instant now) {
+        if (check.queued()) {
+            return queued(check, now);
+        }
+        return check.run()
+                .flatMap(CheckRun::startedAt)
+                .map(started -> duration(Duration.between(started, now))
+                        + "/"
+                        + (eta instanceof Eta.Expected(Instant at)
+                                ? left(Duration.between(started, at))
+                                : unknown(learning)))
+                .getOrElse(() -> Messages.get("checks.running"));
+    }
+
+    /**
+     * How {@link #ofTotal} shows a check that is not done at its widest, {@code 59m 59s/~4m 55s}, so a column of them
+     * can keep its width while their seconds move on.
+     */
+    public static String widestOfTotal() {
+        String widest = duration(Duration.ofSeconds(3599));
+        return widest(List.of(
+                widest + "/" + left(Duration.ofSeconds(297)),
+                widest + "/" + unknown(false),
+                widest + "/" + unknown(true),
+                Messages.get("checks.queuedFor", widest),
+                Messages.get("checks.running")));
     }
 
     /**

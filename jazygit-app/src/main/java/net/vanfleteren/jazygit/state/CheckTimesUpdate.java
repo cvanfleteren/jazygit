@@ -21,6 +21,24 @@ public final class CheckTimesUpdate {
     private CheckTimesUpdate() {}
 
     public static Next update(Model model, CheckTimesMsg msg) {
+        return told(model, learn(model, msg));
+    }
+
+    /**
+     * {@code next}, after {@code model}: when what it knows of how long checks take changed, the popup that is open is
+     * told, so it can keep what it showed with what was known before (ADR 89).
+     */
+    private static Next told(Model model, Next next) {
+        Model after = next.model();
+        return after.gitHub().checkTimes().equals(model.gitHub().checkTimes())
+                ? next
+                : after.popup()
+                        .map(popup ->
+                                new Next(after.openPopup(popup.checkTimesChanging(model)), next.cmds(), next.quit()))
+                        .getOrElse(next);
+    }
+
+    private static Next learn(Model model, CheckTimesMsg msg) {
         return switch (msg) {
             case CheckTimesMsg.Recorded(
                     String repository,
