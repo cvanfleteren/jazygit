@@ -37,3 +37,4 @@ The column was laid out as a percent of the width, which TamboUI's layout solver
 - Each frame of a slide changes the width of the content panel, which then draws its lines twice (ADR 80).
 - A left column at rest can be a column narrower or wider than the percent the solver laid out before.
 - What else moves on the screen later can follow the same setting.
+- The heights of the panes slide the same way, with the same setting (ADR 92).
