@@ -60,22 +60,29 @@ class CheckTimesTextTest {
 
     @Test
     void whenTheChecksAreDoneTogether() {
-        assertEquals(Option.none(), CheckTimesText.together(new Eta.Done(), false, NOW));
-        assertEquals(Option.of("done in ?"), CheckTimesText.together(new Eta.Unknown(), false, NOW));
-        assertEquals(Option.of("done in …"), CheckTimesText.together(new Eta.Unknown(), true, NOW));
+        assertEquals(Option.none(), CheckTimesText.together(new Eta.Done(), Option.none(), false, NOW));
+        assertEquals(Option.of("done in ?"), CheckTimesText.together(new Eta.Unknown(), Option.none(), false, NOW));
+        assertEquals(Option.of("done in …"), CheckTimesText.together(new Eta.Unknown(), Option.none(), true, NOW));
         assertEquals(
-                Option.of("done in ~3m"), CheckTimesText.together(new Eta.Expected(NOW.plusSeconds(180)), false, NOW));
+                Option.of("done in ~3m"),
+                CheckTimesText.together(new Eta.Expected(NOW.plusSeconds(180)), Option.none(), false, NOW));
         assertEquals(
-                Option.of("done in ~5s"), CheckTimesText.together(new Eta.Expected(NOW.plusSeconds(3)), false, NOW));
+                Option.of("done in ~5s"),
+                CheckTimesText.together(new Eta.Expected(NOW.plusSeconds(3)), Option.none(), false, NOW));
         assertEquals(
                 Option.of("done any moment"),
-                CheckTimesText.together(new Eta.Expected(NOW.plusSeconds(2)), false, NOW));
+                CheckTimesText.together(new Eta.Expected(NOW.plusSeconds(2)), Option.none(), false, NOW));
         assertEquals(
                 Option.of("done any moment"),
-                CheckTimesText.together(new Eta.Expected(NOW.minusSeconds(60)), false, NOW));
+                CheckTimesText.together(new Eta.Expected(NOW.minusSeconds(60)), Option.none(), false, NOW));
         assertEquals(
                 Option.of("taking longer than usual"),
-                CheckTimesText.together(new Eta.Expected(NOW.minusSeconds(61)), false, NOW));
+                CheckTimesText.together(new Eta.Expected(NOW.minusSeconds(61)), Option.none(), false, NOW));
+        // Started 4m 1s ago, expected to take 3m.
+        assertEquals(
+                Option.of("taking longer than usual (~3m)"),
+                CheckTimesText.together(
+                        new Eta.Expected(NOW.minusSeconds(61)), Option.of(NOW.minusSeconds(241)), false, NOW));
     }
 
     @Test

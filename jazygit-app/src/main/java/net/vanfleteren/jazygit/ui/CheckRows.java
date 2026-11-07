@@ -11,6 +11,8 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.gh.timing.CheckHistory;
+import net.vanfleteren.jazygit.gh.timing.CheckProgress;
+import net.vanfleteren.jazygit.gh.timing.CheckSpan;
 import net.vanfleteren.jazygit.gh.timing.Eta;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.CheckTimes;
@@ -38,7 +40,8 @@ public final class CheckRows {
                         count(all, Checks.FAILING, "dialog.pullRequest.checks.failed"),
                         count(all, Checks.PENDING, "dialog.pullRequest.checks.running"),
                         count(all, Checks.PASSING, "dialog.pullRequest.checks.passed"),
-                        CheckTimesText.together(eta(all, times), learning(times), now)
+                        CheckTimesText.together(
+                                        eta(all, times), CheckSpan.of(all).map(CheckSpan::start), learning(times), now)
                                 .map(together -> List.<StyledElement<?>>of(text(together))))
                 .flatMap(o -> o)
                 .zipWithIndex()
@@ -127,6 +130,78 @@ public final class CheckRows {
         return check.done()
                 ? Option.when(took, () -> took(check)).flatMap(o -> o)
                 : Option.of(CheckTimesText.lined(check, eta(check, all, times), learning(times), now));
+    }
+
+    /**
+     * {@code check}, one of the checks {@code all} of a commit, taking {@code width} columns, with a bar of how far it
+     * is after its name (ADR 89): its symbol and its name on the left, cut to leave room, then the bar,
+     * {@code barWidth} wide, and how long it runs of how long it is expected to take, or how long it took, on the right,
+     * in a column {@code doingWidth} wide, lined up on the right:
+     * {@code ● acceptance  ━━━━━━────────  1m 35s/~3m 40s}. A check that is done has no bar; a queued one has an empty
+     * one, and is dimmed all along.
+     */
+    public static List<StyledElement<?>> barred(
+            Check check,
+            List<Check> all,
+            Option<CheckTimes> times,
+            Instant now,
+            int width,
+            int barWidth,
+            int doingWidth) {
+        List<PullRequestSymbols.Symbol> symbols =
+                PullRequestSymbols.check(check).toList();
+        int name = width
+                - symbols.map(symbol -> TextWidth.of(symbol.text())).sum().intValue()
+                - 1
+                - 2
+                - barWidth
+                - 2
+                - doingWidth;
+        TextElement named = text(" " + padded(check.name(), name) + "  ");
+        String doing = barredDoing(check, all, times, now).getOrElse("");
+        return symbols.<StyledElement<?>>map(CheckRows::symbol)
+                .append(check.queued() ? named.addClass(Theme.Classes.DIM) : named)
+                .appendAll(check.done() ? List.of(text(" ".repeat(barWidth))) : bar(check, all, times, now, barWidth))
+                .append(text("  " + TextWidth.alignRight(doing, doingWidth)).addClass(Theme.Classes.DIM));
+    }
+
+    /**
+     * How wide the column {@link #barred} shows how {@code listed}, some of the checks {@code all} of a commit, are
+     * doing in is: as wide as the widest, and while one is not done as wide as one that runs can get, so the names do
+     * not move as the seconds do.
+     */
+    public static int barredDoingWidth(List<Check> listed, List<Check> all, Option<CheckTimes> times, Instant now) {
+        return listed.flatMap(check -> barredDoing(check, all, times, now))
+                .map(TextWidth::of)
+                .appendAll(Option.when(
+                        listed.exists(check -> !check.done()), () -> TextWidth.of(CheckTimesText.widestOfTotal())))
+                .max()
+                .getOrElse(0);
+    }
+
+    /**
+     * How long {@code check}, one of the checks {@code all} of a commit, runs of how long it is expected to take, or
+     * how long it took.
+     */
+    private static Option<String> barredDoing(Check check, List<Check> all, Option<CheckTimes> times, Instant now) {
+        return check.done()
+                ? took(check)
+                : Option.of(CheckTimesText.ofTotal(check, eta(check, all, times), learning(times), now));
+    }
+
+    /**
+     * A bar {@code width} wide of how far {@code check}, one of the checks {@code all} that is not done, is at
+     * {@code now}: yellow once it is overdue, dashed while how far it is is not known.
+     */
+    private static List<StyledElement<?>> bar(
+            Check check, List<Check> all, Option<CheckTimes> times, Instant now, int width) {
+        Eta eta = eta(check, all, times);
+        String done = eta instanceof Eta.Expected expected && expected.overdue(now)
+                ? Theme.Classes.CHECKS_RUNNING
+                : Theme.Classes.CHECKS_PROGRESS;
+        return CheckProgress.of(check, eta, now)
+                .map(progress -> ProgressBar.of(progress, width, done))
+                .getOrElse(() -> List.of(ProgressBar.unknown(width)));
     }
 
     /**

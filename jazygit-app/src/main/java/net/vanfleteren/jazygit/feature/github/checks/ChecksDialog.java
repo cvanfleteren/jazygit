@@ -18,7 +18,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Check;
-import net.vanfleteren.jazygit.gh.timing.CheckProgress;
 import net.vanfleteren.jazygit.gh.timing.CheckSpan;
 import net.vanfleteren.jazygit.gh.timing.Eta;
 import net.vanfleteren.jazygit.git.model.BranchName;
@@ -44,8 +43,8 @@ import net.vanfleteren.jazygit.ui.widgets.PopupView;
  * Popup listing the checks on the tip of a branch one by one (ADR 32): how many are in each state and when they are
  * expected to be done; when they started and ended, and how long they took together (ADR 37); a bar of how far they
  * are together (ADR 89); then each, the failed ones first, then the running, the queued and the passed ones, with how
- * long it took, or runs and is expected to take still, and while one is not done a bar of how far each is. It scrolls
- * when they do not all fit. While they are read
+ * long it took, or runs and is expected to take still; while one is not done, with a bar of how far each is after its
+ * name, and how long it runs of how long it is expected to take. It scrolls when they do not all fit. While they are read
  * again, they stay shown, with a spinner in the title when the user asked for that (ADR 34); when that fails, the
  * title says they are stale.
  */
@@ -56,8 +55,8 @@ public final class ChecksDialog implements PopupView {
     private static final int WIDTH = 100;
     // The columns inside the border, which the checks take to line up how they are doing on the right.
     private static final int CONTENT_WIDTH = DialogFrame.contentWidth(WIDTH);
-    // How wide the bar of each check is, after how it is doing and two spaces, while one is not done.
-    private static final int CHECK_BAR = 16;
+    // How wide the bar of each check is, after its name, while one is not done.
+    private static final int CHECK_BAR = 24;
     // How wide how far they are together is written, after their bar and a space: "100%".
     private static final int PERCENT = 4;
     // The checks listed at once; the others are scrolled to.
@@ -171,19 +170,21 @@ public final class ChecksDialog implements PopupView {
             return List.of(text(Messages.get("dialog.checks.none")).addClass(Theme.Classes.DIM));
         }
         List<Check> ordered = CheckRows.order(all, all, times);
-        // Over all the checks, not only those shown, so the column keeps its width while they scroll.
-        int doingWidth = CheckRows.doingWidth(ordered, all, times, now, true);
         // The bars of the checks only while one is not done; once they all are, their names get the room.
         boolean running = all.exists(check -> !check.done());
-        int width = running ? CONTENT_WIDTH - 2 - CHECK_BAR : CONTENT_WIDTH;
+        // Over all the checks, not only those shown, so the column keeps its width while they scroll.
+        int doingWidth = running
+                ? CheckRows.barredDoingWidth(ordered, all, times, now)
+                : CheckRows.doingWidth(ordered, all, times, now, true);
         return List.<StyledElement<?>>of(row(CheckRows.counts(all, times, now).toJavaArray(StyledElement[]::new)))
                 .appendAll(CheckSpan.of(all).map(span -> span(span, now, zone)))
                 .append(row(gauge(all, times, progress, now).toJavaArray(StyledElement[]::new)))
                 .append(text(""))
                 .appendAll(ordered.drop(first)
                         .take(VISIBLE_CHECKS)
-                        .map(check -> row(CheckRows.filling(check, all, times, now, width, doingWidth, true)
-                                .appendAll(check.done() ? List.empty() : bar(check, all, times, now))
+                        .map(check -> row((running
+                                        ? CheckRows.barred(check, all, times, now, CONTENT_WIDTH, CHECK_BAR, doingWidth)
+                                        : CheckRows.filling(check, all, times, now, CONTENT_WIDTH, doingWidth, true))
                                 .toJavaArray(StyledElement[]::new))));
     }
 
@@ -205,21 +206,6 @@ public final class ChecksDialog implements PopupView {
         String percent = Messages.get("dialog.checks.progress", String.valueOf(ProgressBar.percent(progress)));
         return ProgressBar.of(progress, CONTENT_WIDTH - 1 - PERCENT, done)
                 .append(text(" " + TextWidth.alignRight(percent, PERCENT)));
-    }
-
-    /**
-     * A bar of how far {@code check}, one of the checks {@code all} that is not done, is at {@code now}, after two
-     * spaces: yellow once it is overdue, dashed while how far it is is not known.
-     */
-    private static List<StyledElement<?>> bar(Check check, List<Check> all, Option<CheckTimes> times, Instant now) {
-        Eta eta = CheckRows.eta(check, all, times);
-        String done = eta instanceof Eta.Expected expected && expected.overdue(now)
-                ? Theme.Classes.CHECKS_RUNNING
-                : Theme.Classes.CHECKS_PROGRESS;
-        return CheckProgress.of(check, eta, now)
-                .map(progress -> ProgressBar.of(progress, CHECK_BAR, done))
-                .getOrElse(() -> List.of(ProgressBar.unknown(CHECK_BAR)))
-                .prepend(text("  "));
     }
 
     /**

@@ -156,14 +156,12 @@ class ChecksDialogTest {
 
         assertTrue(screen.contains("Checks of main"), screen);
         assertTrue(screen.contains("✗ 1 failed · ● 1 running · ✓ 2 passed · done in ?"), screen);
-        // The names on the left, how each is doing or how long it took on the right; while one is not done, a bar
-        // after it, of 16 columns after 2 spaces: dashed when how far it is is not known.
-        assertTrue(screen.contains("✗ lint" + " ".repeat(55) + "failed after 1m 30s" + " ".repeat(18) + "│"), screen);
+        // While one is not done: the names on the left, then a bar of 24 columns, dashed when how far it is is not
+        // known, then how long each runs of how long it is expected to take, or how long it took, on the right.
+        assertTrue(screen.contains("✗ lint" + " ".repeat(73) + "failed after 1m 30s│"), screen);
         assertTrue(
-                screen.contains("● verify" + " ".repeat(42) + "running 2m 30s  · " + " ".repeat(6) + "? left  "
-                        + "╌".repeat(16) + "│"),
-                screen);
-        assertTrue(screen.contains("✓ package" + " ".repeat(69) + "1m" + " ".repeat(18) + "│"), screen);
+                screen.contains("● verify" + " ".repeat(45) + "╌".repeat(24) + " ".repeat(13) + "2m 30s/?│"), screen);
+        assertTrue(screen.contains("✓ package" + " ".repeat(87) + "1m│"), screen);
         assertTrue(screen.contains("✓ ci/status"), screen);
         // Failed, running, then passed.
         assertTrue(screen.indexOf("lint") < screen.indexOf("verify"), screen);
@@ -291,8 +289,11 @@ class ChecksDialogTest {
 
         // 93 columns of bar: 95% of 152/302 of them, then how far that is.
         assertTrue(screen.contains("│" + "━".repeat(44) + "─".repeat(49) + "  47%│"), screen);
-        // 16 columns: 95% of half of them.
-        assertTrue(screen.contains("~2m 30s left  " + "━".repeat(7) + "─".repeat(9) + "│"), screen);
+        // After the name, 24 columns: 95% of half of them; then how long it runs of the 300s it usually takes.
+        assertTrue(
+                screen.contains(
+                        "● verify" + " ".repeat(49) + "━".repeat(11) + "─".repeat(13) + " ".repeat(7) + "2m 30s/~5m│"),
+                screen);
     }
 
     @Test
@@ -300,8 +301,10 @@ class ChecksDialogTest {
         List<Check> late = List.of(check("verify", Checks.PENDING, 3000, Option.none()));
         List<Check> done = List.of(check("verify", Checks.PASSING, 300, Option.of(290)));
 
-        // Long past when it was expected, it is not full.
-        assertTrue(screen(timed(300).openPopup(read(late))).contains("  98%│"));
+        // Long past when it was expected, it is not full, and says how long they usually take.
+        String lateScreen = screen(timed(300).openPopup(read(late)));
+        assertTrue(lateScreen.contains("  98%│"), lateScreen);
+        assertTrue(lateScreen.contains("● 1 running · taking longer than usual (~5m)"), lateScreen);
         assertTrue(screen(timed(300).openPopup(read(done))).contains("│" + "━".repeat(93) + " 100%│"));
     }
 

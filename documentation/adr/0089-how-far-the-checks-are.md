@@ -16,7 +16,8 @@ TamboUI has a `LineGauge`, but the popup draws its lines as rows of styled text,
 ## Decision
 
 The checks popup shows a bar of how far the checks are together, across the dialog under when they started, and a
-smaller one after each check that is not done. A bar fills with time up to 95% when the checks are expected to be
+smaller one after the name of each check that is not done, which then says how long it runs of how long it usually
+takes. A bar fills with time up to 95% when the checks are expected to be
 done, and goes past that only slowly, never reaching 99%. It is full only once GitHub says they are done.
 
 ### Shown
@@ -28,17 +29,23 @@ done, and goes past that only slowly, never reaching 99%. It is full only once G
   started 14:02:10 · running 4m 31s
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━──────────────────────────────────────  58%
 
-  ✗ lint                                     failed after 1m 12s
-  ● acceptance                running 1m 35s ·       ~2m 5s left  ━━━━━━━━────────
-  ◌ deploy-preview            queued 2m      ·       ~3m 5s left  ────────────────
-  ✓ build                                                2m 41s
+  ✗ lint                                                                       failed after 1m 12s
+  ● acceptance                       ━━━━━━━━━━━━━───────────                     1m 35s/~3m 40s
+  ◌ deploy-preview                   ────────────────────────                          queued 2m
+  ✓ build                                                                                 2m 41s
   ```
 
   The part done is a thick line, the rest a thin dimmed one, then how far that is in whole percents, rounded down.
   The dialog is one line higher, so it still lists 16 checks.
-- The bar of a check, 16 columns, comes after how it is doing, two spaces apart. Only checks that are not done have
-  one. A queued one is empty, and one of which how far it is is not known is dashed, `╌╌╌╌`. The bars of the checks
-  take room only while one is not done; once they all are, the names get it back.
+- The bar of a check, 24 columns, comes right after its name, so the eye goes from the name to how far it is. Only
+  checks that are not done have one. A queued one is empty, and one of which how far it is is not known is dashed,
+  `╌╌╌╌`. The bars of the checks take room only while one is not done; once they all are, the names get it back.
+- With the bars, a check that runs says how long it runs of how long it is expected to take in all, from its own
+  start to when it is expected done: `1m 35s/~3m 40s`, the first exact (ADR 37), the second an estimate rounded as
+  ADR 34 has it. Not known: `1m 35s/?`, or `1m 35s/…` while the history is read. Past it, `4m 2s/~3m` and a yellow
+  bar say it is late, without the word. A queued one, which runs no time yet, says how long it is queued,
+  `queued 2m`; a done one how long it took, as before. Not: `running 1m 35s · ~2m 5s left`, which says in words what
+  the bar shows. The pull request dialog, which has no bars, keeps it.
 - The popup is 100 columns wide, not 80, so the names keep as much room as before next to the bars. Other popups
   are 110 wide.
 - Not: the bar as a `LineGauge`. Text rows keep the popup one list of rows, styled by the themes' classes and read by
@@ -70,6 +77,12 @@ done, and goes past that only slowly, never reaching 99%. It is full only once G
   passed, `checks-passed`.
 - More than a minute past when they were expected (`GRACE`, ADR 32), `checks-running`, yellow in most themes, the
   moment the counts say `taking longer than usual`. A check's own bar does the same once it is overdue.
+
+### Taking longer than usual
+
+- The counts say how long the checks usually take together, once they take longer: `taking longer than usual (~4m)`,
+  from their start to when they were expected done, rounded as an estimate. In the pull request dialog too, which
+  shares the counts. Without a start, as of only commit statuses, it says `taking longer than usual` as before.
 - While when they are done is not known, the bar together is dimmed, as it then counts checks instead of time.
 
 ## Consequences
@@ -79,5 +92,6 @@ done, and goes past that only slowly, never reaching 99%. It is full only once G
   bar.
 - Tested: 0 to 95% with time, slowing past that without reaching 99%, full only when done; the share done while it is
   not known when; a check from its own start, a queued one empty, one not known with no bar; the bars on the screen,
-  98% long past the estimate and 100% when done; each colour; the bar together not going back when the checks are
+  98% long past the estimate and 100% when done; the bar after the name and how long a check runs of how long it
+  takes; how long they usually take once they take longer; each colour; the bar together not going back when the checks are
   expected later, and starting again when they start again; and the rows lined up in the wider popup.
