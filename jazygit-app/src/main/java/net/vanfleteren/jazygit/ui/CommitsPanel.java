@@ -92,10 +92,7 @@ public class CommitsPanel {
      * @param copied the commit copied to cherry-pick, whose sha stands out
      */
     static List<LoadableList.Row> rows(List<CommitGraph.Node> nodes, Option<Sha> copied) {
-        // Each commit joins the branches that the commit before it closes.
-        return nodes.zipWith(
-                nodes.map(CommitGraph.Node::closes).prepend(0),
-                (node, joins) -> row(node, joins, copied.contains(node.commit().sha())));
+        return nodes.map(node -> row(node, copied.contains(node.commit().sha())));
     }
 
     /**
@@ -107,24 +104,20 @@ public class CommitsPanel {
     }
 
     /**
-     * The row of a commit. Commits brought in by a merge are drawn on a rail beside the merge, which opens
-     * it with {@code ◎─╮}; the commit after the branch, where it joins the main line, is {@code ○─╯}, with a
-     * {@code ─┴} more for each nested branch that ends with it. A merge right after branches end both joins and
-     * opens on the first rail: {@code ◎─┤}, or {@code ◎─┼} followed by the joins of the nested branches.
-     *
-     * @param joins how many branches before this commit join it
+     * The row of a commit, a {@code ○}, or a {@code ◎} for a merge, on its rail. A merge opens a rail for the
+     * branch it brought in with {@code ◎─╮}; the rail goes on as {@code │} until the commit the branch forked from,
+     * where it joins with {@code ○─╯}, and further rails joining there with {@code ─┴} on the way. A merge that
+     * opens a rail on one that joins it, or that goes on, draws {@code ┤}, and one it crosses {@code ┼}.
      */
-    static LoadableList.Row row(CommitGraph.Node node, int joins) {
-        return row(node, joins, false);
+    static LoadableList.Row row(CommitGraph.Node node) {
+        return row(node, false);
     }
 
     /**
      * @param copied whether the commit is copied to cherry-pick, which shows in its sha
      */
-    static LoadableList.Row row(CommitGraph.Node node, int joins, boolean copied) {
-        Commit commit = node.commit();
-        String rails = "│ ".repeat(node.depth());
-        return row(commit, rails + (commit.isMerge() ? mergeGraph(joins) : commitGraph(joins)), copied);
+    static LoadableList.Row row(CommitGraph.Node node, boolean copied) {
+        return row(node.commit(), graph(node), copied);
     }
 
     /**
@@ -140,12 +133,33 @@ public class CommitsPanel {
         return new LoadableList.Row(prefix.appendAll(tags).append(LoadableList.Seg.of(commit.message())));
     }
 
-    private static String mergeGraph(int joins) {
-        return joins == 0 ? "◎─╮ " : joins == 1 ? "◎─┤ " : "◎─┼" + "─┴".repeat(joins - 2) + "─╯ ";
+    /**
+     * The rails of the row of {@code node}, each followed by a {@code ─} where the line from the commit to the
+     * rails it joins and opens goes on, else a space.
+     */
+    private static String graph(CommitGraph.Node node) {
+        List<Integer> line = node.joins().appendAll(node.opens()).append(node.column());
+        int reach = line.max().get();
+        int width = line.appendAll(node.passing()).max().get() + 1;
+        return List.range(0, width)
+                .map(at -> rail(node, reach, at) + (at >= node.column() && at < reach ? "─" : " "))
+                .mkString();
     }
 
-    private static String commitGraph(int joins) {
-        return joins == 0 ? "○ " : "○" + "─┴".repeat(joins - 1) + "─╯ ";
+    /**
+     * The rail in column {@code at} of the row of {@code node}, whose line reaches to the column {@code reach}.
+     */
+    private static String rail(CommitGraph.Node node, int reach, int at) {
+        if (at == node.column()) {
+            return node.commit().isMerge() ? "◎" : "○";
+        }
+        boolean up = node.passing().contains(at) || node.joins().contains(at);
+        boolean down = node.passing().contains(at) || node.opens().contains(at);
+        if (at < node.column() || at > reach) {
+            return up ? "│" : " ";
+        }
+        boolean on = at < reach;
+        return up && down ? (on ? "┼" : "┤") : up ? (on ? "┴" : "╯") : down ? (on ? "┬" : "╮") : "─";
     }
 
     /**

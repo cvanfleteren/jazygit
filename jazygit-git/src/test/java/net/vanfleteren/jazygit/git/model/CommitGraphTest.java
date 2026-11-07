@@ -23,18 +23,43 @@ class CommitGraphTest {
         return commits.map(c -> c.sha().value()).toList();
     }
 
-    @Test
-    void aLinearLogKeepsItsOrderAndHasNoBranches() {
-        List<Commit> log = List.of(commit("c", "b"), commit("b", "a"), commit("a"));
+    private static CommitGraph.Node node(Commit commit, int column, List<Integer> passing) {
+        return node(commit, column, passing, List.empty(), List.empty());
+    }
 
-        assertEquals(log, CommitGraph.arrange(log));
-        assertEquals(
-                List.of(0, 0, 0),
-                CommitGraph.layout(log).map(CommitGraph.Node::depth).toList());
+    private static CommitGraph.Node node(
+            Commit commit, int column, List<Integer> passing, List<Integer> joins, List<Integer> opens) {
+        return new CommitGraph.Node(commit, column, passing, joins, opens, List.empty());
+    }
+
+    /**
+     * {@code node}, after which its rail {@code rail} waits for the same commit as the rail {@code into}.
+     */
+    private static CommitGraph.Node meeting(CommitGraph.Node node, int rail, int into) {
+        return new CommitGraph.Node(
+                node.commit(),
+                node.column(),
+                node.passing(),
+                node.joins(),
+                node.opens(),
+                List.of(new CommitGraph.Meet(rail, into)));
     }
 
     @Test
-    void theCommitsAMergeBroughtInFollowItAndTheLastOneClosesTheBranch() {
+    void aLinearLogKeepsItsOrderOnOneRail() {
+        Commit c = commit("c", "b");
+        Commit b = commit("b", "a");
+        Commit a = commit("a");
+        List<Commit> log = List.of(c, b, a);
+
+        assertEquals(log, CommitGraph.arrange(log));
+        assertEquals(
+                List.of(node(c, 0, List.empty()), node(b, 0, List.empty()), node(a, 0, List.empty())),
+                CommitGraph.layout(log));
+    }
+
+    @Test
+    void theCommitsAMergeBroughtInFollowItOnARailThatJoinsWhereTheirBranchForked() {
         // main: a - b - m (merges f2), feature: a - f1 - f2; by date the feature commits interleave.
         Commit m = commit("m", "b", "f2");
         Commit f2 = commit("f2", "f1");
@@ -45,9 +70,47 @@ class CommitGraphTest {
         List<Commit> arranged = CommitGraph.arrange(List.of(m, f2, b, f1, a));
 
         assertEquals(List.of("m", "f2", "f1", "b", "a"), shas(arranged));
-        List<CommitGraph.Node> nodes = CommitGraph.layout(arranged);
-        assertEquals(List.of(0, 1, 1, 0, 0), nodes.map(CommitGraph.Node::depth).toList());
-        assertEquals(List.of(0, 0, 1, 0, 0), nodes.map(CommitGraph.Node::closes).toList());
+        assertEquals(
+                List.of(
+                        node(m, 0, List.empty(), List.empty(), List.of(1)),
+                        node(f2, 1, List.of(0)),
+                        node(f1, 1, List.of(0)),
+                        meeting(node(b, 0, List.of(1)), 1, 0),
+                        node(a, 0, List.empty(), List.of(1), List.empty())),
+                CommitGraph.layout(arranged));
+    }
+
+    @Test
+    void eachBranchOfAMergeTrainJoinsTheStartOfTheBranchItWasMergedInto() {
+        // Each train starts from the start of the one before, which goes on with work of its own; each train is
+        // merged into the one before, the first one into main.
+        Commit m1 = commit("m1", "r", "m2");
+        Commit m2 = commit("m2", "w1", "m3");
+        Commit m3 = commit("m3", "w2", "s3");
+        Commit s3 = commit("s3", "s2");
+        Commit w2 = commit("w2", "s2");
+        Commit s2 = commit("s2", "s1");
+        Commit w1 = commit("w1", "s1");
+        Commit s1 = commit("s1", "a");
+        Commit r = commit("r", "a");
+        Commit a = commit("a");
+
+        List<Commit> arranged = CommitGraph.arrange(List.of(m1, m2, m3, s3, w2, s2, w1, s1, r, a));
+
+        assertEquals(List.of("m1", "m2", "m3", "s3", "w2", "s2", "w1", "s1", "r", "a"), shas(arranged));
+        assertEquals(
+                List.of(
+                        node(m1, 0, List.empty(), List.empty(), List.of(1)),
+                        node(m2, 1, List.of(0), List.empty(), List.of(2)),
+                        node(m3, 2, List.of(0, 1), List.empty(), List.of(3)),
+                        node(s3, 3, List.of(0, 1, 2)),
+                        meeting(node(w2, 2, List.of(0, 1, 3)), 3, 2),
+                        node(s2, 2, List.of(0, 1), List.of(3), List.empty()),
+                        meeting(node(w1, 1, List.of(0, 2)), 2, 1),
+                        node(s1, 1, List.of(0), List.of(2), List.empty()),
+                        meeting(node(r, 0, List.of(1)), 1, 0),
+                        node(a, 0, List.empty(), List.of(1), List.empty())),
+                CommitGraph.layout(arranged));
     }
 
     @Test
@@ -64,56 +127,106 @@ class CommitGraphTest {
 
         assertEquals(List.of("m", "f", "g", "e", "b", "a"), shas(arranged));
         assertEquals(
-                List.of(0, 1, 2, 1, 0, 0),
-                CommitGraph.layout(arranged).map(CommitGraph.Node::depth).toList());
+                List.of(
+                        node(outer, 0, List.empty(), List.empty(), List.of(1)),
+                        node(f, 1, List.of(0), List.empty(), List.of(2)),
+                        node(g, 2, List.of(0, 1)),
+                        meeting(node(e, 1, List.of(0, 2)), 2, 1),
+                        meeting(node(b, 0, List.of(1, 2)), 1, 0),
+                        node(a, 0, List.empty(), List.of(1, 2), List.empty())),
+                CommitGraph.layout(arranged));
     }
 
     @Test
-    void theLastCommitOfAStackOfMergedBranchesClosesThemAll() {
-        // x is merged into y, y's branch into w and w's branch into main: all three branches end at x.
-        List<Commit> arranged = CommitGraph.arrange(List.of(
-                commit("m", "c", "v"),
-                commit("v", "w"),
-                commit("w", "b", "z"),
-                commit("z", "y"),
-                commit("y", "a", "x"),
-                commit("x", "a"),
-                commit("c", "b"),
-                commit("b", "a"),
-                commit("a")));
+    void aMergeWhileARailPassesOpensOneFurtherOut() {
+        // f is merged into m, g into n; both forked from b.
+        Commit m = commit("m", "n", "f");
+        Commit f = commit("f", "b");
+        Commit n = commit("n", "b", "g");
+        Commit g = commit("g", "b");
+        Commit b = commit("b");
 
-        assertEquals(List.of("m", "v", "w", "z", "y", "x", "c", "b", "a"), shas(arranged));
-        List<CommitGraph.Node> nodes = CommitGraph.layout(arranged);
+        List<Commit> arranged = CommitGraph.arrange(List.of(m, f, n, g, b));
+
         assertEquals(
-                List.of(0, 1, 1, 2, 2, 3, 0, 0, 0),
-                nodes.map(CommitGraph.Node::depth).toList());
-        assertEquals(
-                List.of(0, 0, 0, 0, 0, 3, 0, 0, 0),
-                nodes.map(CommitGraph.Node::closes).toList());
+                List.of(
+                        node(m, 0, List.empty(), List.empty(), List.of(1)),
+                        node(f, 1, List.of(0)),
+                        meeting(node(n, 0, List.of(1), List.empty(), List.of(2)), 1, 0),
+                        meeting(node(g, 2, List.of(0, 1)), 2, 0),
+                        node(b, 0, List.empty(), List.of(1, 2), List.empty())),
+                CommitGraph.layout(arranged));
     }
 
     @Test
-    void aCommitCanCloseTheInnerBranchesOfAStackWhileAnOuterOneGoesOn() {
-        // x is merged into y, y's branch into w, both onto u; w's branch, which goes on to u, into main.
-        List<Commit> arranged = CommitGraph.arrange(List.of(
-                commit("m", "c", "v"),
-                commit("v", "w"),
-                commit("w", "u", "z"),
-                commit("z", "y"),
-                commit("y", "u", "x"),
-                commit("x", "u"),
-                commit("u", "a"),
-                commit("c", "b"),
-                commit("b", "a"),
-                commit("a")));
+    void aMergeWhereABranchForkedOpensOnTheRailThatJoinsIt() {
+        // f forked from n and is merged into m; n merges g.
+        Commit m = commit("m", "n", "f");
+        Commit f = commit("f", "n");
+        Commit n = commit("n", "b", "g");
+        Commit g = commit("g", "b");
+        Commit b = commit("b");
 
-        assertEquals(List.of("m", "v", "w", "z", "y", "x", "u", "c", "b", "a"), shas(arranged));
-        List<CommitGraph.Node> nodes = CommitGraph.layout(arranged);
+        List<Commit> arranged = CommitGraph.arrange(List.of(m, f, n, g, b));
+
         assertEquals(
-                List.of(0, 1, 1, 2, 2, 3, 1, 0, 0, 0),
-                nodes.map(CommitGraph.Node::depth).toList());
+                List.of(
+                        node(m, 0, List.empty(), List.empty(), List.of(1)),
+                        meeting(node(f, 1, List.of(0)), 1, 0),
+                        node(n, 0, List.empty(), List.of(1), List.of(1)),
+                        meeting(node(g, 1, List.of(0)), 1, 0),
+                        node(b, 0, List.empty(), List.of(1), List.empty())),
+                CommitGraph.layout(arranged));
+    }
+
+    @Test
+    void aMergeOfACommitARailWaitsForAlreadyOpensOnThatRail() {
+        // m merges k, which is on p; c, on m's own line, merges p too.
+        Commit m = commit("m", "c", "k");
+        Commit k = commit("k", "p");
+        Commit c = commit("c", "q", "p");
+        Commit p = commit("p", "q");
+        Commit q = commit("q");
+
         assertEquals(
-                List.of(0, 0, 0, 0, 0, 2, 1, 0, 0, 0),
-                nodes.map(CommitGraph.Node::closes).toList());
+                List.of(
+                        node(m, 0, List.empty(), List.empty(), List.of(1)),
+                        node(k, 1, List.of(0)),
+                        node(c, 0, List.of(1), List.empty(), List.of(1)),
+                        meeting(node(p, 1, List.of(0)), 1, 0),
+                        node(q, 0, List.empty(), List.of(1), List.empty())),
+                CommitGraph.layout(List.of(m, k, c, p, q)));
+    }
+
+    @Test
+    void aMergeOfACommitTheListLeavesOutOpensNoRail() {
+        // The commits of a branch only, which merged main's mm and later mm2 to catch up; main is left out.
+        Commit f4 = commit("f4", "f3");
+        Commit f3 = commit("f3", "f2", "mm2");
+        Commit f2 = commit("f2", "f1", "mm");
+        Commit f1 = commit("f1", "base");
+
+        assertEquals(
+                List.of(
+                        node(f4, 0, List.empty()),
+                        node(f3, 0, List.empty()),
+                        node(f2, 0, List.empty()),
+                        node(f1, 0, List.empty())),
+                CommitGraph.layout(CommitGraph.arrange(List.of(f4, f3, f2, f1))));
+    }
+
+    @Test
+    void aRailWaitingForACommitTheListLeavesOutEndsAtTheCommitBefore() {
+        // m merges g into f; both forked from base, which is left out.
+        Commit m = commit("m", "f", "g");
+        Commit g = commit("g", "base");
+        Commit f = commit("f", "base");
+
+        assertEquals(
+                List.of(
+                        node(m, 0, List.empty(), List.empty(), List.of(1)),
+                        node(g, 1, List.of(0)),
+                        node(f, 0, List.empty())),
+                CommitGraph.layout(CommitGraph.arrange(List.of(m, g, f))));
     }
 }
