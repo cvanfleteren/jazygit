@@ -309,8 +309,10 @@ class ChoiceDialogTest {
         SettledPilot.of(runner).pause();
     }
 
-    @Test
-    void whatTheHighlightedOptionDoesShowsUnderTheDialog() throws Exception {
+    /**
+     * The view of a dialog whose first two options tell what they do, and whose third does not.
+     */
+    private Supplier<Element> telling() {
         ChoiceDialog<PickPopup> telling = new ChoiceDialog<>(
                 new ChoiceDialog.Spec<>(
                         "pick",
@@ -323,8 +325,36 @@ class ChoiceDialogTest {
                                         .withDetails(popup -> "Keeps what is staged."),
                                 new Choice<>('c', "dialog.reset.mixed", () -> new Picked("c")))),
                 cursor);
-        Supplier<Element> view = () ->
+        return () ->
                 stack(text("background"), telling.render(cursor.on(open(true))).get());
+    }
+
+    @Test
+    void whileTheFilterMatchesNothingNoDetailsShowAndTheDialogStaysWhereItWas() throws Exception {
+        Supplier<Element> view = telling();
+
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(view)) {
+            SettledPilot.focus(runner, "pick");
+            String before = RenderedText.ofLarge(runner, view);
+            SettledPilot.of(runner).press('/');
+            for (char letter : "zzz".toCharArray()) {
+                SettledPilot.of(runner).press(letter);
+            }
+            SettledPilot.of(runner).pause();
+            String filtered = RenderedText.ofLarge(runner, view);
+
+            assertTrue(filtered.contains("zzz"), filtered);
+            assertFalse(filtered.contains("Throws everything away."), filtered);
+            assertFalse(filtered.contains("Keeps what is staged."), filtered);
+            assertEquals(
+                    before.lines().filter(line -> line.contains("Pick one")).toList(),
+                    filtered.lines().filter(line -> line.contains("Pick one")).toList());
+        }
+    }
+
+    @Test
+    void whatTheHighlightedOptionDoesShowsUnderTheDialog() throws Exception {
+        Supplier<Element> view = telling();
 
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(view)) {
             SettledPilot.focus(runner, "pick");

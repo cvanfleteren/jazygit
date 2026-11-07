@@ -309,7 +309,8 @@ public final class PullRequestDialog implements PopupView {
                                     .append(actions.render(model, popup)))
                     // The lines, a blank line, the actions, the blank line and the hint, plus the border.
                     .length(CONTENT_HEIGHT + 1 + actions.height(model, popup) + 2 + 2);
-            return new WithDetails(
+            // The tallest popup: what the actions do shows only when there is room for it under the whole popup.
+            return WithDetails.uncut(
                     dialog, actions.highlightedDetails(model, popup, Option.none()), actions.details(model, popup));
         });
     }
