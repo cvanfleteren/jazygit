@@ -13,8 +13,8 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
- * Looking at the settings and changing them: the theme, whether what moves moves smoothly, the gh executable, and
- * the account gh and git use for the repository. A change to how gh runs shows the repository again, as if the app
+ * Looking at the settings and changing them: the theme, whether what moves moves smoothly, the gh executable, the
+ * account gh and git use for the repository, and the browser of that account. A change to how gh runs shows the repository again, as if the app
  * had been started with it.
  */
 public final class SettingsPanelUpdate {
@@ -32,7 +32,8 @@ public final class SettingsPanelUpdate {
                                 model.preferences().repositoryTheme(),
                                 model.preferences().settings().ghExecutable(),
                                 Option.none(),
-                                model.preferences().settings().animations())),
+                                model.preferences().settings().animations(),
+                                model.preferences().settings().browsers())),
                         new SettingsPanelCmd.ReadGitHub(
                                 model.preferences().settings().gh()));
             // Read for a panel that may be closed already, or open on another gh executable.
@@ -76,6 +77,20 @@ public final class SettingsPanelUpdate {
                         .filter(gitHub -> gitHub.logins().isRight())
                         .map(gitHub -> model.openPopup(new GitHubAccountPopup(gitHub)))
                         .getOrElse(model));
+            case SettingsPanelMsg.BrowserRequested() ->
+                Next.of(model.popup(SettingsPanelPopup.class)
+                        .flatMap(panel -> panel.gitHub()
+                                .flatMap(GitHubSetup::account)
+                                .map(account -> model.openPopup(new AccountBrowserPopup(
+                                        account,
+                                        panel.browsers()
+                                                .of(account.host(), account.user())
+                                                .getOrElse("")))))
+                        .getOrElse(model));
+            case SettingsPanelMsg.BrowserEntered() ->
+                model.popup(AccountBrowserPopup.class)
+                        .map(popup -> useBrowser(model.withoutPopup(AccountBrowserPopup.class), popup))
+                        .getOrElse(() -> Next.of(model));
             case SettingsPanelMsg.AccountChosen(Option<String> user) ->
                 model.popup(GitHubAccountPopup.class)
                         .map(popup -> popup.gitHub().user().equals(user)
@@ -105,6 +120,24 @@ public final class SettingsPanelUpdate {
                 model.mapPreferences(preferences -> preferences.withSettings(chosen))
                         .openPopup(panel.withAnimations(chosen.animations())),
                 List.of(new Cmd.SaveSettings(kept, chosen)));
+    }
+
+    /**
+     * Opens the links of the account of {@code popup} in the browser typed in it from now on, none when it is blank,
+     * keeping that for the next session (ADR 88).
+     */
+    private static Next useBrowser(Model model, AccountBrowserPopup popup) {
+        Settings kept = model.preferences().settings();
+        Settings chosen = kept.withBrowsers(kept.browsers()
+                .with(
+                        popup.account().host(),
+                        popup.account().user(),
+                        Option.of(popup.browser().strip()).filter(browser -> !browser.isEmpty())));
+        return chosen.equals(kept)
+                ? Next.of(model)
+                : new Next(
+                        model.mapPreferences(preferences -> preferences.withSettings(chosen)),
+                        List.of(new Cmd.SaveSettings(kept, chosen)));
     }
 
     /**

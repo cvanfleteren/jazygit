@@ -52,6 +52,16 @@ public sealed interface SettingsPanelMsg extends Msg {
     record AccountRequested() implements SettingsPanelMsg {}
 
     /**
+     * The user asked to set the browser of the account the repository uses (ADR 88).
+     */
+    record BrowserRequested() implements SettingsPanelMsg {}
+
+    /**
+     * The user confirmed the browser typed in the popup; blank for none.
+     */
+    record BrowserEntered() implements SettingsPanelMsg {}
+
+    /**
      * The user chose the account the repository uses; none for gh's active one.
      */
     record AccountChosen(Option<String> user) implements SettingsPanelMsg {}

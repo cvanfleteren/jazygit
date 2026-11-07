@@ -10,6 +10,7 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import net.vanfleteren.jazygit.gh.model.ChosenBrowser;
 import net.vanfleteren.jazygit.gh.model.PullRequestLink;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import org.junit.jupiter.api.Test;
@@ -26,7 +27,7 @@ class BrowserTest {
     Path dir;
 
     private static Option<String> chosen(Map<String, String> environment, Option<String> configured, String os) {
-        return Browser.chosen(environment::get, () -> configured, os);
+        return Browser.chosen(environment::get, () -> configured, os).map(ChosenBrowser::command);
     }
 
     @Test

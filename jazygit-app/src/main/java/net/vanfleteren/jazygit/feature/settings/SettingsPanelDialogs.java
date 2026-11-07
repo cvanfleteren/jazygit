@@ -4,6 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.feature.theme.ThemeDialog;
+import net.vanfleteren.jazygit.gh.model.ChosenBrowser;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.Msg;
@@ -29,6 +30,19 @@ public final class SettingsPanelDialogs {
             popup -> Messages.get("dialog.settings.gh.title"),
             Option.of(Messages.get("dialog.settings.gh.placeholder")),
             SettingsPanelMsg.GhExecutableEntered::new);
+    /**
+     * Asks which browser links open in for the account the repository uses; left empty, none is set for it, and the
+     * one gh would choose opens them (ADR 88).
+     */
+    public static final TextInputDialog.Spec<AccountBrowserPopup> BROWSER = new TextInputDialog.Spec<>(
+            "settings-browser",
+            AccountBrowserPopup.class,
+            popup -> Messages.get(
+                    "dialog.settings.browser.title",
+                    popup.account().user(),
+                    popup.account().host()),
+            Option.of(Messages.get("dialog.settings.browser.placeholder")),
+            SettingsPanelMsg.BrowserEntered::new);
     /**
      * Asks which account the repository uses: gh's active one, or one of the others gh is logged in to on the
      * repository's host.
@@ -73,7 +87,13 @@ public final class SettingsPanelDialogs {
                             SettingsPanelDialogs::account,
                             SettingsPanelMsg.AccountRequested::new,
                             (model, popup) -> popup.gitHub()
-                                    .exists(gitHub -> gitHub.logins().isRight()))),
+                                    .exists(gitHub -> gitHub.logins().isRight())),
+                    new Choice<>(
+                            'b',
+                            SettingsPanelDialogs::browser,
+                            SettingsPanelMsg.BrowserRequested::new,
+                            (model, popup) -> popup.gitHub()
+                                    .exists(gitHub -> gitHub.account().isDefined()))),
             WIDTH);
     // How a warning starts.
     private static final String WARNING = "⚠ ";
@@ -87,6 +107,7 @@ public final class SettingsPanelDialogs {
         return List.of(
                 PopupSlot.returningToFocus(new ChoiceDialog<>(PANEL, dispatch)),
                 PopupSlot.returningToFocus(new TextInputDialog<>(GH_EXECUTABLE, dispatch)),
+                PopupSlot.returningToFocus(new TextInputDialog<>(BROWSER, dispatch)),
                 PopupSlot.returningToFocus(new PickDialog<>(ACCOUNT, dispatch)));
     }
 
@@ -127,6 +148,34 @@ public final class SettingsPanelDialogs {
                         gitHub.logins().fold(failure -> WARNING + ErrorText.of(failure), logins -> chosen(gitHub))))
                 .getOrElse(
                         () -> Messages.get("dialog.settings.account.reading", Messages.get("dialog.settings.reading")));
+    }
+
+    /**
+     * The browser of the account the repository uses, as the settings show it: the one set for it, else what opens
+     * instead and why (ADR 88).
+     */
+    static String browser(SettingsPanelPopup popup) {
+        return popup.gitHub()
+                .map(gitHub -> gitHub.account()
+                        .map(account -> Messages.get(
+                                "dialog.settings.browser",
+                                account.user(),
+                                account.host(),
+                                popup.browsers()
+                                        .of(account.host(), account.user())
+                                        .getOrElse(() -> instead(gitHub.browser()))))
+                        .getOrElse(() -> Messages.get("dialog.settings.browser.unknown")))
+                .getOrElse(
+                        () -> Messages.get("dialog.settings.browser.reading", Messages.get("dialog.settings.reading")));
+    }
+
+    private static String instead(Option<ChosenBrowser> chosen) {
+        return chosen.map(browser -> Messages.get(
+                        "dialog.settings.browser.instead",
+                        browser.command(),
+                        Messages.get("dialog.settings.browser.source."
+                                + browser.source().name())))
+                .getOrElse(() -> Messages.get("dialog.settings.browser.system"));
     }
 
     /**

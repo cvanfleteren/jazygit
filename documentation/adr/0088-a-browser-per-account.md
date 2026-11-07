@@ -40,7 +40,8 @@ to another account should open its links where that account is logged in.
   the link added as its last argument. There is no placeholder for the link.
 - The account is the one the repository is configured to use; when it is configured to use none, gh's active account on
   the host, read when a link opens with `gh config get user -h {host}`, which reads gh's own files and not GitHub.
-- When jazygit's own environment holds `GH_TOKEN` (or `GH_ENTERPRISE_TOKEN` for the host) and the repository is
+- When jazygit's own environment holds `GH_TOKEN` or `GITHUB_TOKEN` (`GH_ENTERPRISE_TOKEN` or
+  `GITHUB_ENTERPRISE_TOKEN` for an enterprise host), which gh takes in that order, and the repository is
   configured to use no account, gh runs as that token's account, which its files do not name: the account is then not
   known. A configured account is known still, as `GhToken` puts its token in the place of the inherited one.
 

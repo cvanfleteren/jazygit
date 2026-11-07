@@ -13,7 +13,10 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.util.ArrayList;
 import java.util.function.Supplier;
+import net.vanfleteren.jazygit.gh.model.ChosenBrowser;
+import net.vanfleteren.jazygit.gh.model.GhAccount;
 import net.vanfleteren.jazygit.gh.model.GhLogin;
+import net.vanfleteren.jazygit.settings.AccountBrowsers;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.CursorFeedback;
 import net.vanfleteren.jazygit.state.Msg;
@@ -32,7 +35,13 @@ class SettingsPanelDialogsTest {
             new GhLogin("ghe.corp", "alice", true, true));
 
     private static GitHubSetup setup(Option<String> user) {
-        return new GitHubSetup(Either.right("2.102.0"), "github.com", user, Either.right(LOGINS));
+        return new GitHubSetup(
+                Either.right("2.102.0"),
+                "github.com",
+                user,
+                Either.right(LOGINS),
+                Option.of(new GhAccount("github.com", user.getOrElse("alice"))),
+                Option.of(new ChosenBrowser("xdg-open", ChosenBrowser.Source.DESKTOP)));
     }
 
     @Test
@@ -63,10 +72,51 @@ class SettingsPanelDialogsTest {
     }
 
     @Test
+    void theBrowserOfTheAccountIsTheOneSetElseWhatOpensInsteadAndWhy() {
+        SettingsPanelPopup popup = new SettingsPanelPopup(
+                ThemeName.DARK,
+                RepositoryTheme.NONE,
+                Option.none(),
+                Option.of(setup(Option.of("alice-work"))),
+                true,
+                AccountBrowsers.NONE);
+
+        assertEquals(
+                "Browser for alice-work on github.com: firefox -P work",
+                SettingsPanelDialogs.browser(popup.withBrowsers(
+                        AccountBrowsers.NONE.with("GitHub.com", "Alice-Work", Option.of("firefox -P work")))));
+        assertEquals(
+                "Browser for alice-work on github.com: none, xdg-open from the desktop",
+                SettingsPanelDialogs.browser(popup));
+        assertEquals(
+                "Browser for alice-work on github.com: none, w3m from $BROWSER",
+                SettingsPanelDialogs.browser(popup.withGitHub(popup.gitHub()
+                        .map(gitHub -> new GitHubSetup(
+                                gitHub.version(),
+                                gitHub.host(),
+                                gitHub.user(),
+                                gitHub.logins(),
+                                gitHub.account(),
+                                Option.of(new ChosenBrowser("w3m", ChosenBrowser.Source.BROWSER)))))));
+        assertEquals(
+                "Browser for the account: not known which account gh runs as",
+                SettingsPanelDialogs.browser(popup.withGitHub(popup.gitHub()
+                        .map(gitHub -> new GitHubSetup(
+                                gitHub.version(),
+                                gitHub.host(),
+                                gitHub.user(),
+                                gitHub.logins(),
+                                Option.none(),
+                                Option.none())))));
+        assertEquals(
+                "Browser for the account: reading…", SettingsPanelDialogs.browser(popup.withGitHub(Option.none())));
+    }
+
+    @Test
     void theThemeOfTheRepositoryIsItsOwnElseTheOneItInherits() {
         RepositoryTheme.Inherited work = new RepositoryTheme.Inherited(ThemeName.LIGHT, "/etc/gitconfig-work");
-        SettingsPanelPopup popup =
-                new SettingsPanelPopup(ThemeName.DARK, RepositoryTheme.NONE, Option.none(), Option.none(), true);
+        SettingsPanelPopup popup = new SettingsPanelPopup(
+                ThemeName.DARK, RepositoryTheme.NONE, Option.none(), Option.none(), true, AccountBrowsers.NONE);
 
         assertEquals(
                 "Theme for this repository: ember, blues and oranges",
@@ -85,8 +135,8 @@ class SettingsPanelDialogsTest {
     void showsThatGhIsReadWhileItIs() throws Exception {
         ChoiceDialog<SettingsPanelPopup> dialog =
                 new ChoiceDialog<>(SettingsPanelDialogs.PANEL, new ArrayList<Msg>()::add);
-        SettingsPanelPopup popup =
-                new SettingsPanelPopup(ThemeName.DARK, RepositoryTheme.NONE, Option.of("/opt/gh"), Option.none(), true);
+        SettingsPanelPopup popup = new SettingsPanelPopup(
+                ThemeName.DARK, RepositoryTheme.NONE, Option.of("/opt/gh"), Option.none(), true, AccountBrowsers.NONE);
         Element view = stack(
                 text("background"),
                 dialog.render(TestModels.loaded().openPopup(popup)).get());
@@ -107,7 +157,8 @@ class SettingsPanelDialogsTest {
                 RepositoryTheme.NONE,
                 Option.none(),
                 Option.of(setup(Option.of("alice-work"))),
-                true);
+                true,
+                AccountBrowsers.NONE.with("github.com", "alice-work", Option.of("firefox -P work")));
         Element view = stack(
                 text("background"),
                 dialog.render(TestModels.loaded().openPopup(popup)).get());
@@ -118,12 +169,13 @@ class SettingsPanelDialogsTest {
             assertTrue(screen.contains("(t) Theme for all repositories: darcula"), screen);
             assertTrue(screen.contains("(r) Theme for this repository: none, the one for all repositories"), screen);
             assertTrue(screen.contains("(a) Account for this repository on github.com: ⚠ alice-work"), screen);
+            assertTrue(screen.contains("(b) Browser for alice-work on github.com: firefox -P work"), screen);
             assertTrue(screen.contains("(m) Animations: on"), screen);
             List<String> lines = List.of(screen.split("\n")).map(String::strip);
             assertEquals(
-                    List.of("Appearance", "(t)", "(r)", "(m)", "", "GitHub", "(g)", "(a)"),
+                    List.of("Appearance", "(t)", "(r)", "(m)", "", "GitHub", "(g)", "(a)", "(b)"),
                     lines.dropWhile(line -> !line.contains("Appearance"))
-                            .take(8)
+                            .take(9)
                             .map(line -> line.replaceAll("^│", "").strip())
                             .map(line -> line.startsWith("(")
                                     ? line.substring(0, 3)
@@ -137,7 +189,12 @@ class SettingsPanelDialogsTest {
         CursorFeedback cursor = new CursorFeedback(dispatched::add);
         ChoiceDialog<SettingsPanelPopup> dialog = new ChoiceDialog<>(SettingsPanelDialogs.PANEL, cursor);
         SettingsPanelPopup popup = new SettingsPanelPopup(
-                ThemeName.DARK, RepositoryTheme.NONE, Option.none(), Option.of(setup(Option.none())), true);
+                ThemeName.DARK,
+                RepositoryTheme.NONE,
+                Option.none(),
+                Option.of(setup(Option.none())),
+                true,
+                AccountBrowsers.NONE);
         Supplier<Element> view = () -> stack(
                 text("background"),
                 dialog.render(cursor.on(TestModels.loaded().openPopup(popup))).get());

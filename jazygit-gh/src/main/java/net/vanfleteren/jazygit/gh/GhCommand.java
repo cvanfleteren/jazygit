@@ -26,6 +26,13 @@ record GhCommand(List<String> args, Map<String, String> environment, Duration ti
     }
 
     /**
+     * The same command, with {@code name} set to {@code value} in its environment too.
+     */
+    GhCommand withEnvironment(String name, String value) {
+        return new GhCommand(args, environment.put(name, value), timeout);
+    }
+
+    /**
      * The command line that runs this command with the gh at {@code executable}.
      */
     List<String> commandLine(String executable) {
