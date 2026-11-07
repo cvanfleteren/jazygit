@@ -177,6 +177,12 @@ public sealed interface GitError {
     record UpstreamNotRenamed(RemoteBranch upstream, BranchName newName, GitError cause) implements GitError {}
 
     /**
+     * The branch was renamed to {@code newName}, but {@code upstream}, which it follows, was no longer on its remote
+     * to be renamed with it.
+     */
+    record UpstreamNotOnRemote(RemoteBranch upstream, BranchName newName) implements GitError {}
+
+    /**
      * A temporary file git needed could not be written.
      */
     record TempFileFailed(Throwable cause) implements GitError {}

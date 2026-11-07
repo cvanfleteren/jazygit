@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.feature.branch.rename.RenameBranchMsg.WithUpstrea
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -29,16 +30,25 @@ public final class RenameBranchUpdate {
                         model,
                         RenameUpstreamPopup.class,
                         popup -> Option.of(new RenameBranchCmd(popup.branch(), popup.newName())));
-            // Only while the upstream is still the one the dialog named.
-            case WithUpstreamChosen() ->
-                Update.confirm(
+            case WithUpstreamChosen() -> withUpstreamChosen(model);
+        };
+    }
+
+    /**
+     * Renames the branch and its upstream, only while that is still the one the dialog named. When it is not, as the
+     * branches were read again meanwhile, nothing is renamed and the dialog closes, saying so.
+     */
+    private static Next withUpstreamChosen(Model model) {
+        return model.popup(RenameUpstreamPopup.class)
+                .filter(popup -> !renamableUpstream(model, popup.branch()).contains(popup.upstream()))
+                .map(popup -> Next.of(model.withoutPopup(RenameUpstreamPopup.class)
+                        .fail(new AppError.UpstreamChanged(
+                                popup.branch(), popup.upstream().shortName()))))
+                .getOrElse(() -> Update.confirm(
                         model,
                         RenameUpstreamPopup.class,
-                        popup -> renamableUpstream(model, popup.branch())
-                                .filter(popup.upstream()::equals)
-                                .map(upstream ->
-                                        new RenameBranchCmd(popup.branch(), popup.newName(), Option.of(upstream))));
-        };
+                        popup -> Option.of(
+                                new RenameBranchCmd(popup.branch(), popup.newName(), Option.of(popup.upstream())))));
     }
 
     private static Next confirmed(Model model) {

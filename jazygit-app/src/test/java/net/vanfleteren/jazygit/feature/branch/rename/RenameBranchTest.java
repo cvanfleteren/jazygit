@@ -115,7 +115,7 @@ class RenameBranchTest {
     }
 
     @Test
-    void anUpstreamThatChangedMeanwhileIsNotRenamed() {
+    void anUpstreamThatChangedMeanwhileIsNotRenamedAndTheDialogClosesSayingSo() {
         Model asked =
                 renamed(following(Option.of(ORIGIN_FEATURE)), FEATURE, "topic").model();
         Model changed = localBranchesRead(asked, branches(Option.none())).model();
@@ -123,6 +123,11 @@ class RenameBranchTest {
         Next next = Update.update(changed, new RenameBranchMsg.WithUpstreamChosen());
 
         assertEquals(List.of(), next.cmds());
+        assertEquals(Option.none(), next.model().popup(RenameUpstreamPopup.class));
+        assertEquals(
+                Option.of("Nothing was renamed: feature no longer follows origin/feature on the remote, as it did when"
+                        + " asked. Rename it again to see what it follows now"),
+                errorText(next.model()));
     }
 
     @Test
@@ -200,7 +205,22 @@ class RenameBranchTest {
                 Option.of("Renaming branch feature failed: it is now topic, but origin/feature was not renamed on the"
                         + " remote and topic still follows it: stale info. To rename it there yourself: git push"
                         + " --atomic origin refs/remotes/origin/feature:refs/heads/topic :refs/heads/feature, then"
-                        + " git branch -u origin/topic topic"),
+                        + " git config branch.topic.merge refs/heads/topic"),
+                errorText(failed));
+    }
+
+    @Test
+    void anUpstreamNoLongerOnTheRemoteSaysThereWasNothingToRenameThere() {
+        Model failed = Update.update(
+                        loaded(),
+                        new OperationMsg.Failed(
+                                new RenameBranchCmd(FEATURE, TOPIC, Option.of(ORIGIN_FEATURE)),
+                                new Failure.Git(new GitError.UpstreamNotOnRemote(ORIGIN_FEATURE, TOPIC))))
+                .model();
+
+        assertEquals(
+                Option.of("Renaming branch feature failed: it is now topic, but origin/feature is no longer on the"
+                        + " remote, so there was nothing to rename there; topic still follows it"),
                 errorText(failed));
     }
 }

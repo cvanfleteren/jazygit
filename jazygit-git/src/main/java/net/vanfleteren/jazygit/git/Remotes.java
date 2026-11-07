@@ -99,7 +99,9 @@ public interface Remotes {
      * as it is there: both or neither, and only while the new name is not taken there and {@code upstream} did not
      * move since it was fetched. {@code branch} then follows the renamed one; its own commits are not pushed.
      *
-     * @return the command lines that were run, or a {@link GitError.UpstreamNotRenamed} with why git failed
+     * @return the command lines that were run, or why not: a {@link GitError.UpstreamNotRenamed} with why git failed,
+     *     a {@link GitError.UpstreamNotOnRemote} when {@code upstream} is gone, and else why {@code branch} could not
+     *     be made to follow the renamed one, which then happened
      */
     Either<GitFailure, List<ExecutedCommand>> renameUpstream(BranchName branch, RemoteBranch upstream);
 

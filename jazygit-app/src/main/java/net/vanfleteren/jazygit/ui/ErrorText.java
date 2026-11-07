@@ -49,6 +49,8 @@ public final class ErrorText {
             case AppError.NoUpstream(BranchName branch) -> Messages.get("error.upstream.none", branch.value());
             case AppError.UpstreamGone(BranchName branch, String upstream) ->
                 Messages.get("error.upstream.gone", branch.value(), upstream);
+            case AppError.UpstreamChanged(BranchName branch, String upstream) ->
+                Messages.get("error.upstream.changed", branch.value(), upstream);
             case AppError.NoBaseBranch(BranchName branch) -> Messages.get("error.divergence.noBase", branch.value());
             case AppError.IsBaseBranch(BranchName branch) -> Messages.get("error.divergence.isBase", branch.value());
             case AppError.NoBranchCheckedOut() -> Messages.get("error.detached");
@@ -195,6 +197,8 @@ public final class ErrorText {
                         of(cause),
                         upstream.remote().value(),
                         upstream.branch().value());
+            case GitError.UpstreamNotOnRemote(RemoteBranch upstream, BranchName newName) ->
+                Messages.get("git.upstreamNotOnRemote", upstream.shortName(), newName.value());
             case GitError.StoppedOnConflicts(var inProgress, int conflicts) ->
                 Messages.get("git.stoppedOnConflicts", conflicts);
             case GitError.TempFileFailed(Throwable cause) -> Messages.get("git.tempFileFailed", reason(cause));

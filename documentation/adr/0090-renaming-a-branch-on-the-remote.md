@@ -48,20 +48,29 @@ is left for later: a branch with a pull request is treated as any other.
 - `r` runs `RenameBranchCmd` with the upstream, one operation (`Remotes.renameUpstream`):
   1. `git branch --move -- feature topic`, as for `l`;
   2. `git fetch --prune --no-write-fetch-head origin`, so that what is renamed is what is there now;
-  3. `git push --atomic --force-with-lease=refs/heads/topic: --force-with-lease=refs/heads/feature origin
+  3. `git rev-parse --verify --quiet refs/remotes/origin/feature`, unlogged: an upstream the fetch pruned, as it was
+     deleted on the remote, is not pushed, and the error (`GitError.UpstreamNotOnRemote`) says there was nothing to
+     rename there. Not: letting the push fail on a source that does not match, whose error would suggest renaming a
+     branch that is not there;
+  4. `git push --atomic --force-with-lease=refs/heads/topic: --force-with-lease=refs/heads/feature origin
      refs/remotes/origin/feature:refs/heads/topic :refs/heads/feature`;
-  4. `git branch --set-upstream-to=refs/remotes/origin/topic -- topic`.
+  5. `git config --local branch.topic.merge refs/heads/topic`: `topic` follows the renamed one on the same remote.
+     Not: `git branch --set-upstream-to=origin/topic`, which needs the remote-tracking branch, which the push does not
+     make when the remote's fetch refspec leaves it out, as a clone with `--single-branch` has.
 - The push pushes the commit of the remote-tracking branch, not of the local branch: the branch on the remote is
   renamed as it is, and commits only the local branch has stay unpushed, for the next push. Not: pushing the local
   branch under the new name, which would push them along, or be refused when the local branch is behind or diverged.
 - `--atomic` renames both or neither. The first lease refuses a new name that is taken on the remote; the second
   refuses an old one that moved since the fetch, as when a teammate pushed to it. Either way the remote stays as it was.
   A new name already on the remote at the very same commit is no conflict, and git renames.
-- The local branch is renamed first. When the remote steps fail, it is renamed and still follows the old upstream, as
-  with `l`, and the error (`GitError.UpstreamNotRenamed`) says so, with the commands that rename it there. Not: the
-  remote first, which a refused local rename, of a name that is taken, would leave with a new branch on the remote
-  and none here.
-- Confirming checks that the upstream is still the one the dialog named; when not, nothing starts.
+- The local branch is renamed first. When the fetch or the push fails, it is renamed and still follows the old
+  upstream, as with `l`, and the error (`GitError.UpstreamNotRenamed`) says so, with the commands that rename it there.
+  Not: the remote first, which a refused local rename, of a name that is taken, would leave with a new branch on the
+  remote and none here. A failure of the last step, after the push, is said as it is: the branch was renamed on the
+  remote then.
+- Confirming checks that the upstream is still the one the dialog named. When not, as the branches were read again
+  while the dialog was open, nothing is renamed, and the dialog closes with an error saying so
+  (`AppError.UpstreamChanged`). Not: keeping the dialog open, where `r` would then do nothing without saying why.
 - The operation guards the remote refs (`Guard.REMOTE_REFS`), as a push or a fetch does, and reads the pull requests
   again afterwards (`changesGitHub`).
 
