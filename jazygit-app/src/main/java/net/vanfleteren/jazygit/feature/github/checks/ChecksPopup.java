@@ -79,7 +79,9 @@ public record ChecksPopup(
 
     /**
      * The popup keeping how far its checks are shown to be in {@code model}, as reached by those same checks; nothing
-     * once they are done, as they are then shown full anyway; as it is while none are read.
+     * once they are done, as they are then shown full anyway, nor when they are only commit statuses, which no
+     * workflow run tells apart from those of another commit, and which are counted, so do not go back; as it is while
+     * none are read.
      */
     private ChecksPopup reaching(Model model) {
         List<Check> all = checksRead();
@@ -87,6 +89,7 @@ public record ChecksPopup(
             return this;
         }
         double shown = progress(model);
+        Set<Tuple2<Long, Integer>> runs = Reached.runs(all);
         return new ChecksPopup(
                 branch,
                 onGitHub,
@@ -94,7 +97,7 @@ public record ChecksPopup(
                 reading,
                 refreshFailed,
                 readAt,
-                Option.when(shown < 1, () -> new Reached(Reached.runs(all), shown)));
+                Option.when(shown < 1 && !runs.isEmpty(), () -> new Reached(runs, shown)));
     }
 
     /**

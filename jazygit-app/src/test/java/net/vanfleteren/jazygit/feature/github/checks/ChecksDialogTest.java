@@ -384,6 +384,24 @@ class ChecksDialogTest {
     }
 
     @Test
+    void commitStatusesOfAnotherCommitStartTheBarAgain() {
+        Model model = TestModels.loaded().withNow(NOW);
+        ChecksPopup old = read(List.of(
+                new Check("ci/build", Checks.PASSING),
+                new Check("ci/lint", Checks.PASSING),
+                new Check("ci/test", Checks.PASSING),
+                new Check("ci/deploy", Checks.PENDING)));
+        List<Check> next = List.of(
+                new Check("ci/build", Checks.PENDING),
+                new Check("ci/lint", Checks.PENDING),
+                new Check("ci/test", Checks.PENDING),
+                new Check("ci/deploy", Checks.PENDING));
+
+        assertEquals(0.95 * 3 / 4, old.progress(model), 1e-9);
+        assertEquals(0, old.with(readOf(next), model).progress(model), 1e-9);
+    }
+
+    @Test
     void theBarDoesNotGoBackWhenHowLongTheChecksTakeIsLearnedWhileItIsOpen() {
         // 3 of 4 done, how long they take not known yet: 95% of 3/4.
         Model model = TestModels.loaded()

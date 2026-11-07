@@ -76,6 +76,9 @@ done, and goes past that only slowly, never reaching 99%. It is full only once G
     runs.
   - Once the checks are all done it keeps nothing, as the bar is full anyway: a workflow run again after that starts
     from 0, also when its attempt would not tell.
+  - Of checks that are only commit statuses it keeps nothing either: they have no workflow run, so those of another
+    commit could not be told apart from them. Nor do they need it: no history is learned of them, so the bar counts
+    them, and that only goes back when one is set back to pending.
   - Only the bar together keeps it; a check's own bar can go back when it is expected later, which is rare.
 
 ### Colours
