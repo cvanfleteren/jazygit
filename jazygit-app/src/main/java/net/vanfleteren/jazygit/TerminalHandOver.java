@@ -4,6 +4,8 @@ import dev.tamboui.toolkit.app.ToolkitRunner;
 import dev.tamboui.tui.TuiConfig;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -71,6 +73,30 @@ final class TerminalHandOver implements Terminal {
                 });
             }
         });
+    }
+
+    /**
+     * Asks the terminal to copy {@code text} with OSC 52, on the render thread between two frames, and waits for that
+     * to be written; called on the thread of a command (ADR 94). Without a backend of its own, nothing is written.
+     */
+    @Override
+    public boolean copy(String text) {
+        return backend.exists(writing -> CompletableFuture.supplyAsync(
+                        () -> Try.run(() -> {
+                                    writing.writeRaw(osc52(text));
+                                    writing.flush();
+                                })
+                                .onFailure(BugLog::log)
+                                .isSuccess(),
+                        runner.get()::runOnRenderThread)
+                .join());
+    }
+
+    /**
+     * The OSC 52 sequence that asks a terminal to put {@code text} on the clipboard.
+     */
+    static String osc52(String text) {
+        return "\u001b]52;c;" + Base64.getEncoder().encodeToString(text.getBytes(StandardCharsets.UTF_8)) + "\u0007";
     }
 
     /**

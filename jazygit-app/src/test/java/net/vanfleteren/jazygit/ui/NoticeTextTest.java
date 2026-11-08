@@ -59,4 +59,11 @@ class NoticeTextTest {
                 "Stack #1234 was not rebased, as another dialog was open: rebase it from the stack menu (s).",
                 NoticeText.of(new Notice.StackNotAsked(1234)));
     }
+
+    @Test
+    void aCopySaysHowManyLinesOrWhichPath() {
+        assertEquals("Copied 1 line to the clipboard.", NoticeText.of(new Notice.Copied(1)));
+        assertEquals("Copied 3 lines to the clipboard.", NoticeText.of(new Notice.Copied(3)));
+        assertEquals("Copied src/A.java to the clipboard.", NoticeText.of(new Notice.PathCopied("src/A.java")));
+    }
 }

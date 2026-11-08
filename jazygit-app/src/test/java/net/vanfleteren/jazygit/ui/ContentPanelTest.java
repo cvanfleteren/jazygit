@@ -169,6 +169,49 @@ class ContentPanelTest {
     }
 
     @Test
+    void yAsksToCopyWhatTheCursorIsOn() throws Exception {
+        java.util.List<Msg> dispatched = new java.util.ArrayList<>();
+        ContentPanel copying = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, dispatched::add);
+        Model shown = showingCommit("""
+                diff --git a/a.txt b/a.txt
+                --- a/a.txt
+                +++ b/a.txt
+                @@ -9,2 +9,2 @@
+                 nine
+                -ten
+                +TEN
+                """)
+                .mapPreferences(preferences ->
+                        preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
+        String area = copying.areaOfPane(shown, CommitsPanel.ID).get();
+        ScrolledContent content = ContentView.of(shown, area).areas().head().content();
+        Anchor.OnLine added = new Anchor.OnLine("a.txt", net.vanfleteren.jazygit.gh.model.ReviewThread.Side.RIGHT, 10);
+        Model onLine = shown.withScrolled(
+                io.vavr.collection.HashMap.of(area, new Scrolled(content, 0, 0, Option.of(added), Option.none())));
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> copying.render(onLine, area))) {
+            RenderedText.ofLarge(testRunner, () -> copying.render(onLine, area));
+            SettledPilot.focus(testRunner, area);
+            SettledPilot.of(testRunner).press('y');
+            SettledPilot.of(testRunner).press('v');
+            SettledPilot.of(testRunner).pause();
+        }
+
+        List<net.vanfleteren.jazygit.feature.copy.CopyMsg.Asked> asked = List.ofAll(dispatched)
+                .filter(net.vanfleteren.jazygit.feature.copy.CopyMsg.Asked.class::isInstance)
+                .map(net.vanfleteren.jazygit.feature.copy.CopyMsg.Asked.class::cast);
+        assertEquals(List.of(added), asked.map(msg -> msg.at().cursor()));
+        assertEquals(List.of(area), asked.map(msg -> msg.at().area()));
+        // v opens a range in the diff of a commit too, which y then copies.
+        assertEquals(
+                List.of(Option.of(added)),
+                List.ofAll(dispatched)
+                        .filter(Msg.ContentScrolled.class::isInstance)
+                        .map(Msg.ContentScrolled.class::cast)
+                        .map(scrolled -> scrolled.to().mark()));
+    }
+
+    @Test
     void aFocusedAreaScrollsSidewaysLeavesOnEscapeAndLeavesOtherKeysToTheApp() throws Exception {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
         java.util.List<KeyEvent> global = new java.util.ArrayList<>();

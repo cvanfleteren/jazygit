@@ -18,4 +18,12 @@ public interface Terminal {
      * and no key is read meanwhile.
      */
     <T> T handOver(Supplier<T> program);
+
+    /**
+     * Asks the terminal to copy {@code text} to the clipboard (ADR 94), and says whether it could ask: whether the
+     * terminal did copy cannot be told. One the app does not own copies nothing.
+     */
+    default boolean copy(String text) {
+        return false;
+    }
 }

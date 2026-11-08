@@ -26,6 +26,9 @@ public final class NoticeText {
             case Notice.StackNotListed(int pullRequest) ->
                 Messages.get("notice.stackNotListed", String.valueOf(pullRequest));
             case Notice.StackNotAsked(int stack) -> Messages.get("notice.stackNotAsked", String.valueOf(stack));
+            case Notice.Copied(int lines) -> Messages.get("notice.copied", lines);
+            case Notice.PathCopied(var path) -> Messages.get("notice.pathCopied", path);
+            case Notice.NotCopied() -> Messages.get("notice.notCopied");
         };
     }
 
