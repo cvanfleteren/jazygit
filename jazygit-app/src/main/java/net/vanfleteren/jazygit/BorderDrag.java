@@ -9,6 +9,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.feature.layout.LayoutMsg;
+import net.vanfleteren.jazygit.state.LeftPanes;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Screen;
@@ -127,10 +128,10 @@ final class BorderDrag {
 
     /**
      * Where the bottom border of pane {@code pane} of the left column of {@code screen} of {@code model} is, in percent
-     * of the height of the column below the top of the first pane.
+     * of the height of the column below the top of the first pane, as the panes are shown, a maximized one too.
      */
     private static int bottom(Model model, Screen screen, int pane) {
-        return model.preferences().leftHeights(screen).take(pane + 1).sum().intValue();
+        return LeftPanes.shownHeights(model, screen).take(pane + 1).sum().intValue();
     }
 
     /**

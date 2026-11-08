@@ -38,4 +38,21 @@ public sealed interface LayoutMsg extends Msg {
      * The user let go of the bottom border of a pane of the left column of {@code screen}.
      */
     record PaneSettled(Screen screen) implements LayoutMsg {}
+
+    /**
+     * The user asked for the pane of the left column that had the focus last to be {@code by} percent of the height
+     * of the column taller, or shorter when it is negative (ADR 92).
+     */
+    record PaneStepped(int by) implements LayoutMsg {}
+
+    /**
+     * The user asked for the pane of the left column, or the content panel, that had the focus last to be maximized,
+     * or no longer to be if it is (ADR 92).
+     */
+    record MaximizeToggled() implements LayoutMsg {}
+
+    /**
+     * The left column was drawn {@code rows} rows tall, which the steps of the heights of its panes go by (ADR 92).
+     */
+    record Measured(int rows) implements LayoutMsg {}
 }

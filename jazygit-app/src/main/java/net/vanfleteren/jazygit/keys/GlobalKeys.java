@@ -77,6 +77,19 @@ final class GlobalKeys {
                         "help.global.wider",
                         event -> isChar(event, '>'),
                         () -> new LayoutMsg.Stepped(LayoutUpdate.STEP)))
+                // Characters, not places on the keyboard: + and - are on every layout, and on the numpad (ADR 92).
+                .global(new Keymap.Global.Dispatching(
+                        "+",
+                        "help.global.taller",
+                        event -> isChar(event, '+'),
+                        () -> new LayoutMsg.PaneStepped(LayoutUpdate.STEP)))
+                .global(new Keymap.Global.Dispatching(
+                        "-",
+                        "help.global.shorter",
+                        event -> isChar(event, '-'),
+                        () -> new LayoutMsg.PaneStepped(-LayoutUpdate.STEP)))
+                .global(new Keymap.Global.Dispatching(
+                        "Z", "help.global.maximize", event -> isChar(event, 'Z'), LayoutMsg.MaximizeToggled::new))
                 .global(new Keymap.Global.Dispatching("q", "help.global.quit", GlobalKeys::isQuitKey, Msg.Quit::new));
     }
 

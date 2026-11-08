@@ -84,6 +84,18 @@ class KeymapTest {
     }
 
     @Test
+    void plusMinusAndShiftZResizeAndMaximizeTheFocusedPane() {
+        assertEquals(Option.of(new LayoutMsg.PaneStepped(5)), keymap.handleGlobal(KeyEvent.ofChar('+')));
+        assertEquals(Option.of(new LayoutMsg.PaneStepped(-5)), keymap.handleGlobal(KeyEvent.ofChar('-')));
+        assertEquals(Option.of(new LayoutMsg.MaximizeToggled()), keymap.handleGlobal(KeyEvent.ofChar('Z')));
+        // Lazygit users press z for undo, which must not maximize a pane.
+        assertEquals(Option.none(), keymap.handleGlobal(KeyEvent.ofChar('z')));
+        assertEquals(Option.none(), keymap.handleGlobal(KeyEvent.ofChar('-', dev.tamboui.tui.event.KeyModifiers.ALT)));
+        assertEquals(Option.none(), keymap.handleGlobal(KeyEvent.ofChar('z', dev.tamboui.tui.event.KeyModifiers.CTRL)));
+        assertTrue(keymap.globals().exists(global -> global.label().equals("Z")));
+    }
+
+    @Test
     void aKeyCannotBeBoundTwiceInAPanel() {
         Keymap once = Keymap.empty()
                 .add(Scopes.BRANCHES, Keymap.Binding.onSelected("x", "help.global.quit", CheckoutMsg.Requested::new));

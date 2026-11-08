@@ -24,6 +24,7 @@ import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Failure;
+import net.vanfleteren.jazygit.state.LeftPanes;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Screen;
@@ -37,7 +38,7 @@ public final class StatusPanel {
     /**
      * Rows of the panel, borders included.
      */
-    public static final int HEIGHT = 3;
+    public static final int HEIGHT = LeftPanes.STATUS_ROWS;
 
     private static final String SEPARATOR = " · ";
     private static final String TITLE_SEPARATOR = " │ ";
