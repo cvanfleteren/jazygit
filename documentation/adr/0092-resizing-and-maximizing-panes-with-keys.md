@@ -88,3 +88,6 @@ the left column has: only the frame does.
 - The width and the heights shown can differ from the kept ones while something is maximized; only what is kept is
   saved.
 - A pane of 3 rows shows one row, which its cursor moves through.
+
+Amended by ADR 93: `+` takes from the panes under the pane, then from the ones above, and once they are as short as
+they get, maximizes it.

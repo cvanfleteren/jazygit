@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.feature.layout;
 
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.collection.Stream;
 import io.vavr.control.Option;
@@ -99,19 +101,62 @@ public final class LayoutUpdate {
     /**
      * Makes pane {@code pane} of the left column of the screen shown {@code by} percent taller, or more if that does
      * not show it a row taller, or shorter when it is negative, and keeps the heights. It ends a drag of a border and
-     * a maximized pane, from the heights the panes are shown with. Nothing changes when no step changes the rows of
-     * the pane, as the panes around it are as short as they get, or the stash shows all its stashes.
+     * a maximized pane, from the heights the panes are shown with. When the other panes are as short as they get, a
+     * step taller maximizes the pane instead, which a step taller then leaves as it is. Nothing changes when no step
+     * changes the rows of the pane, as the panes around it are as short as they get, or the stash shows all its
+     * stashes.
      */
     private static Next stepPane(Model model, int pane, int by) {
         Screen screen = model.screen();
+        if (by > 0 && maximizedShown(model, screen, pane)) {
+            return Next.of(model);
+        }
         List<Integer> shown = LeftPanes.shownHeights(model, screen);
         boolean maximized = model.preferences().maximizedPane(screen).isDefined();
         Model ended = model.mapPreferences(
                 preferences -> preferences.withDraggedHeights(Option.none()).withMaximizedPane(screen, Option.none()));
-        return stepped(ended, screen, stashShown(ended, screen, shown, pane), pane, by)
-                .orElse(Option.when(maximized, shown))
-                .map(heights -> keep(ended, ended.preferences().keepingHeights(screen, heights)))
+        List<Integer> heights = stashShown(ended, screen, shown, pane);
+        return stepped(ended, screen, heights, pane, by)
+                .map(stepped -> keep(ended, ended.preferences().keepingHeights(screen, stepped)))
+                .orElse(() -> Option.when(by > 0, () -> maximizing(ended, screen, heights, pane))
+                        .flatMap(maximizing -> maximizing)
+                        .map(maximizing ->
+                                keep(maximizing, maximizing.preferences().keepingHeights(screen, heights))))
+                .orElse(() -> Option.when(
+                        maximized, () -> keep(ended, ended.preferences().keepingHeights(screen, shown))))
                 .getOrElse(() -> Next.of(model));
+    }
+
+    /**
+     * Whether pane {@code pane} of the left column of {@code screen} of {@code model} is maximized and shown so, in
+     * the column the last frame drew.
+     */
+    private static boolean maximizedShown(Model model, Screen screen, int pane) {
+        return model.preferences().maximizedPane(screen).contains(pane)
+                && model.preferences()
+                        .columnRows()
+                        .flatMap(column -> LeftPanes.maximized(model, screen, column))
+                        .isDefined();
+    }
+
+    /**
+     * {@code model} with pane {@code pane} of the left column of {@code screen} maximized, when the panes are
+     * {@code heights} tall and the others are as short as a step makes them: it then gets the rows of the others but
+     * the 3 each keeps. None when that shows it no taller, or when it is a stash that shows all its stashes.
+     */
+    private static Option<Model> maximizing(Model model, Screen screen, List<Integer> heights, int pane) {
+        Model maximizing = model.mapPreferences(preferences -> preferences.withMaximizedPane(screen, Option.of(pane)));
+        return model.preferences().columnRows().flatMap(column -> {
+            List<Integer> rows = LeftPanes.sized(model, screen, heights, column);
+            List<Integer> most = LeftPanes.sized(model, screen, moved(heights, pane, 100), column);
+            boolean stash = screen == Screen.REPOSITORY && pane == heights.size();
+            boolean blocked = rows.removeAt(pane).equals(most.removeAt(pane));
+            return LeftPanes.maximized(maximizing, screen, column)
+                    .filter(maximized -> blocked
+                            && !(stash && rows.get(pane) >= LeftPanes.stashRows(model))
+                            && maximized.get(pane) > rows.get(pane))
+                    .map(maximized -> maximizing);
+        });
     }
 
     /**
@@ -133,15 +178,26 @@ public final class LayoutUpdate {
     }
 
     /**
-     * {@code heights} with pane {@code pane} {@code by} percent taller: its bottom border moved, as a drag of it does,
-     * or for the last pane, which has none of its own, the border above it. No pane gets shorter than
-     * {@link Settings#MIN_HEIGHT}.
+     * {@code heights} with pane {@code pane} {@code by} percent taller, taken from the panes under it, the nearest
+     * first, and when they are as short as they get, from the panes above it, the nearest first: it grows as far as a
+     * maximized pane does. Shorter, it moves its bottom border, as a drag of it does, or for the last pane, which has
+     * none of its own, the border above it. No pane gets shorter than {@link Settings#MIN_HEIGHT}.
      */
     private static List<Integer> moved(List<Integer> heights, int pane, int by) {
         int last = heights.size();
-        return pane < last
-                ? Settings.resizedHeights(heights, pane, heights.get(pane) + by)
-                : Settings.resizedHeights(heights, last - 1, heights.get(last - 1) - by);
+        if (by < 0) {
+            return pane < last
+                    ? Settings.resizedHeights(heights, pane, heights.get(pane) + by)
+                    : Settings.resizedHeights(heights, last - 1, heights.get(last - 1) - by);
+        }
+        List<Integer> all = heights.append(100 - heights.sum().intValue());
+        List<Integer> givers =
+                List.rangeClosed(pane + 1, last).appendAll(List.range(0, pane).reverse());
+        Tuple2<List<Integer>, Integer> given = givers.foldLeft(Tuple.of(all, by), (taking, giver) -> {
+            int give = Math.clamp(taking._1.get(giver) - Settings.MIN_HEIGHT, 0, taking._2);
+            return Tuple.of(taking._1.update(giver, taking._1.get(giver) - give), taking._2 - give);
+        });
+        return given._1.update(pane, given._1.get(pane) + by - given._2).init();
     }
 
     /**

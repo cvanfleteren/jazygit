@@ -208,6 +208,50 @@ class LayoutUpdateTest {
     }
 
     @Test
+    void plusTakesFromThePanesUnderThePaneFirstAndThenFromThePanesAboveIt() {
+        Model branches = focused(model, Scopes.BRANCHES.id());
+
+        // The commits give 20 percent, the stash 15, the files 15: each keeps its least height.
+        assertEquals(List.of(25, 40, 10), heights(stepped(branches, 4)));
+        assertEquals(List.of(25, 55, 10), heights(stepped(branches, 7)));
+        assertEquals(List.of(10, 70, 10), heights(stepped(branches, 10)));
+        assertEquals(List.of(10, 70, 10), heights(stepped(branches, 11)));
+    }
+
+    @Test
+    void plusMaximizesThePaneWhenTheOthersAreAsShortAsTheyGet() {
+        // In 100 rows, the others are 10 rows each at their least height, 3 maximized.
+        Model branches = measured(focused(model, Scopes.BRANCHES.id()), 100);
+        Model tallest = stepped(branches, 10).model();
+        assertEquals(List.of(10, 70, 10), tallest.preferences().leftHeights(Screen.REPOSITORY));
+        assertEquals(Option.none(), tallest.preferences().maximizedPane(Screen.REPOSITORY));
+
+        Model maximized = Update.update(tallest, new LayoutMsg.PaneStepped(5)).model();
+
+        assertEquals(Option.of(1), maximized.preferences().maximizedPane(Screen.REPOSITORY));
+        assertEquals(Next.of(maximized), Update.update(maximized, new LayoutMsg.PaneStepped(5)));
+        Next shorter = Update.update(maximized, new LayoutMsg.PaneStepped(-5));
+        assertEquals(Option.none(), shorter.model().preferences().maximizedPane(Screen.REPOSITORY));
+        assertEquals(List.of(10, 65, 15), heights(shorter));
+    }
+
+    @Test
+    void plusDoesNotMaximizeAColumnTooShortForItToShowTaller() {
+        // In 20 rows, the least height is 2 rows, under the 3 a pane keeps while another is maximized.
+        Model tallest =
+                stepped(measured(focused(model, Scopes.BRANCHES.id()), 20), 15).model();
+
+        assertEquals(Next.of(tallest), Update.update(tallest, new LayoutMsg.PaneStepped(5)));
+    }
+
+    private static Next stepped(Model model, int times) {
+        return List.range(1, times)
+                .foldLeft(
+                        Update.update(model, new LayoutMsg.PaneStepped(5)),
+                        (next, time) -> Update.update(next.model(), new LayoutMsg.PaneStepped(5)));
+    }
+
+    @Test
     void aStepIsBigEnoughToShowThePaneARowTallerOrShorter() {
         // In a column of 10 rows, 5 percent is half a row: the branches take rows 3 to 4 until their bottom border is
         // 55 percent below the top of the files, at 5.5 rows.

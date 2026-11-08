@@ -54,12 +54,19 @@ public final class LeftPanes {
         if (screen != Screen.REPOSITORY) {
             return rows;
         }
-        int stashes = Math.max(1, model.repo().stashes().getOrElse(List.empty()).size());
         int share = rows.last();
-        int stash = Math.max(COLLAPSED_ROWS, Math.min(stashes + 2, share));
+        int stash = Math.max(COLLAPSED_ROWS, Math.min(stashRows(model), share));
         int commits = rows.size() - 2;
         return rows.update(commits, Math.max(0, rows.get(commits) + share - stash))
                 .update(rows.size() - 1, stash);
+    }
+
+    /**
+     * How many rows the stash of the repository screen of {@code model} needs to show all its stashes, in a border:
+     * an empty one shows a blank line.
+     */
+    public static int stashRows(Model model) {
+        return Math.max(1, model.repo().stashes().getOrElse(List.empty()).size()) + 2;
     }
 
     /**
