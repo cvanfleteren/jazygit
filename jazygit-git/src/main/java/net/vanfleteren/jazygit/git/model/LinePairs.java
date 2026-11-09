@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.git.model;
 
 import io.vavr.Tuple;
+import io.vavr.collection.Iterator;
 import io.vavr.collection.List;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
@@ -61,9 +62,11 @@ public final class LinePairs {
         if (at >= lines.size() || lines.get(at).kind() != kind) {
             return Vector.empty();
         }
-        return Vector.range(at, lines.size())
+        // Through an iterator, as a range of the rest of the hunk for each block of it is quadratic in a long one.
+        return Iterator.range(at, lines.size())
                 .takeWhile(index ->
-                        lines.get(index).kind() == kind || lines.get(index).kind() == DiffLine.Kind.NOTE);
+                        lines.get(index).kind() == kind || lines.get(index).kind() == DiffLine.Kind.NOTE)
+                .toVector();
     }
 
     /**

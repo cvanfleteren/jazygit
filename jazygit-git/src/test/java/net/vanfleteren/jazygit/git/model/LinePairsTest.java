@@ -133,6 +133,30 @@ class LinePairsTest {
         assertEquals(List.of(pairs - 1, 2 * pairs, pairs), groups.last());
     }
 
+    @Test
+    void aHunkOfTensOfThousandsOfShortBlocksIsCutQuickly() {
+        int blocks = 20_000;
+        List<ParsedLine> lines = List.range(0, blocks)
+                .flatMap(at ->
+                        List.of(context(at), changed(DiffLine.Kind.REMOVED, at), changed(DiffLine.Kind.ADDED, at)));
+
+        // Each block takes a step; a pass over the rest of the hunk for each block took tens of seconds.
+        List<List<Integer>> groups = assertTimeoutPreemptively(Duration.ofSeconds(5), () -> LinePairs.groups(lines));
+
+        assertEquals(2 * blocks, groups.size());
+        assertEquals(List.of(3 * blocks - 2, 3 * blocks - 1), groups.last());
+    }
+
+    /**
+     * A context line numbered {@code at}.
+     */
+    private static ParsedLine context(int at) {
+        return new ParsedLine(
+                new DiffLine(DiffLine.Kind.CONTEXT, "same " + at, Option.some(at + 1), Option.some(at + 1)),
+                List.of(new WordDiff.Segment("same " + at, false)),
+                Option.none());
+    }
+
     /**
      * A line of {@code kind} numbered {@code at}, whose one segment changed.
      */
