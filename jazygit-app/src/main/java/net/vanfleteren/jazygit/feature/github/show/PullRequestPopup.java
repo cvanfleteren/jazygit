@@ -22,6 +22,8 @@ import net.vanfleteren.jazygit.state.Reading;
  * Showing the pull request of {@code branch}.
  *
  * @param pullRequest   what is known of it from the list of pull requests
+ * @param fromFork      whether it comes from a fork, as one opened on the pull requests screen can: its head branch
+ *                      is not a branch of this repository, whatever it is called
  * @param details       what was read about it, or why that failed; nothing while it is first being read
  * @param reading       whether it is being read again, while {@code details} stay shown, and why
  * @param refreshFailed why reading it again failed the last time, so the details shown are stale; nothing once a
@@ -36,6 +38,7 @@ import net.vanfleteren.jazygit.state.Reading;
 public record PullRequestPopup(
         BranchName branch,
         PullRequest pullRequest,
+        boolean fromFork,
         Option<Either<Failure, PullRequestDetails>> details,
         Reading reading,
         Option<Failure> refreshFailed,
@@ -50,14 +53,23 @@ public record PullRequestPopup(
      */
     public static PullRequestPopup loading(BranchName branch, PullRequest pullRequest, Instant now, long read) {
         return new PullRequestPopup(
-                branch, pullRequest, Option.none(), Reading.NOT, Option.none(), now, read, false, Option.none());
+                branch, pullRequest, false, Option.none(), Reading.NOT, Option.none(), now, read, false, Option.none());
+    }
+
+    /**
+     * The popup of a pull request that comes from a fork.
+     */
+    public PullRequestPopup ofFork() {
+        return new PullRequestPopup(
+                branch, pullRequest, true, details, reading, refreshFailed, readAt, read, filesWanted, reached);
     }
 
     /**
      * The popup while its details are being read, to show the files it changes in its place once they are.
      */
     public PullRequestPopup wantingFiles() {
-        return new PullRequestPopup(branch, pullRequest, details, reading, refreshFailed, readAt, read, true, reached);
+        return new PullRequestPopup(
+                branch, pullRequest, fromFork, details, reading, refreshFailed, readAt, read, true, reached);
     }
 
     /**
@@ -75,6 +87,7 @@ public record PullRequestPopup(
                         ? new PullRequestPopup(
                                 branch,
                                 pullRequest,
+                                fromFork,
                                 details,
                                 Reading.NOT,
                                 Option.of(result.getLeft()),
@@ -85,6 +98,7 @@ public record PullRequestPopup(
                         : new PullRequestPopup(
                                 branch,
                                 pullRequest,
+                                fromFork,
                                 Option.of(result.map(this::keepingBehindBase)),
                                 Reading.NOT,
                                 Option.none(),
@@ -101,7 +115,16 @@ public record PullRequestPopup(
     PullRequestPopup notTaken(long id) {
         return id == read
                 ? new PullRequestPopup(
-                        branch, pullRequest, details, Reading.NOT, refreshFailed, readAt, read, false, reached)
+                        branch,
+                        pullRequest,
+                        fromFork,
+                        details,
+                        Reading.NOT,
+                        refreshFailed,
+                        readAt,
+                        read,
+                        false,
+                        reached)
                 : this;
     }
 
@@ -127,7 +150,7 @@ public record PullRequestPopup(
      */
     public PullRequestPopup readingAgain(Reading reading, Instant now, long id) {
         return new PullRequestPopup(
-                branch, pullRequest, details, reading, refreshFailed, now, id, filesWanted, reached);
+                branch, pullRequest, fromFork, details, reading, refreshFailed, now, id, filesWanted, reached);
     }
 
     /**
@@ -135,7 +158,16 @@ public record PullRequestPopup(
      */
     PullRequestPopup asked() {
         return new PullRequestPopup(
-                branch, pullRequest, details, Reading.ASKED, refreshFailed, readAt, read, filesWanted, reached);
+                branch,
+                pullRequest,
+                fromFork,
+                details,
+                Reading.ASKED,
+                refreshFailed,
+                readAt,
+                read,
+                filesWanted,
+                reached);
     }
 
     /**
@@ -164,6 +196,7 @@ public record PullRequestPopup(
         return new PullRequestPopup(
                 branch,
                 pullRequest,
+                fromFork,
                 details.map(read -> read.map(pr -> pr.withDraft(draft))),
                 reading,
                 refreshFailed,
@@ -265,6 +298,7 @@ public record PullRequestPopup(
                 .map(pr -> new PullRequestPopup(
                         branch,
                         pullRequest,
+                        fromFork,
                         details,
                         reading,
                         refreshFailed,

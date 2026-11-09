@@ -83,13 +83,14 @@ public final class ChecksUpdate {
 
     /**
      * The branch on GitHub the pull request of {@code dialog} merges from, whose checks it shows, once its details are
-     * read; none when it has no checks. Every remote on GitHub is of the same repository, so has the same checks.
+     * read; none when it has no checks, or comes from a fork, whose branch is not one of this repository, though one
+     * here may have its name. Every remote on GitHub is of the same repository, so has the same checks.
      */
     public static Option<RemoteBranch> ofPullRequest(Model model, PullRequestPopup dialog) {
         BranchName head = new BranchName(dialog.pullRequest().headBranch());
         return model.gitHub()
                 .branchChecks()
-                .filter(checks -> dialog.detailsRead())
+                .filter(checks -> dialog.detailsRead() && !dialog.fromFork())
                 .toList()
                 .flatMap(checks -> checks.remotes().toList().sorted())
                 .map(remote -> new RemoteBranch(remote, head))

@@ -2348,12 +2348,14 @@ class PullRequestUpdateTest {
 
         Next shown = Update.update(ofOwnerRepo, new PullRequestMsg.SummaryRequested(summary));
 
+        // From a fork, so its head branch is not the branch of that name here.
         assertEquals(
                 Option.of(PullRequestPopup.loading(
-                        new BranchName("patch-1"),
-                        new PullRequest(9, "patch-1", true, Checks.FAILING, Review.REQUIRED),
-                        Instant.EPOCH,
-                        0)),
+                                new BranchName("patch-1"),
+                                new PullRequest(9, "patch-1", true, Checks.FAILING, Review.REQUIRED),
+                                Instant.EPOCH,
+                                0)
+                        .ofFork()),
                 shown.model().popup(PullRequestPopup.class));
         assertEquals(List.of(new LoadPullRequestDetails(9, lastRead(shown.model()))), shown.cmds());
     }

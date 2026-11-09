@@ -342,6 +342,14 @@ class ChecksUpdateTest {
     }
 
     @Test
+    void aPullRequestFromAForkShowsNoChecksThoughABranchHereHasItsName() {
+        Model fork = model(Checks.PENDING).openPopup(DIALOG.ofFork());
+
+        assertEquals(Option.none(), ChecksUpdate.ofPullRequest(fork, DIALOG.ofFork()));
+        assertEquals(Next.of(fork), Update.update(fork, new ChecksMsg.PullRequestChecksRequested()));
+    }
+
+    @Test
     void whatIsReadOfThePullRequestChangesTheDialogTheChecksGoBackTo() {
         PullRequestPopup loading = PullRequestPopup.loading(new BranchName("mine"), FEATURE_PR, Instant.EPOCH, 0);
         Model checks = model(Checks.PENDING)
