@@ -9,6 +9,9 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesCmd;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestCmd;
 import net.vanfleteren.jazygit.feature.settings.SettingsPanelCmd;
+import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
+import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
+import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.state.prs.LoadMyPullRequests;
 import net.vanfleteren.jazygit.state.prs.LoadPullRequestPreview;
 import org.junit.jupiter.api.Test;
@@ -19,11 +22,24 @@ import org.junit.jupiter.api.Test;
  */
 class BackgroundCmdTest {
 
+    private static final PullRequestSummary PULL_REQUEST = new PullRequestSummary(
+            "owner/repo",
+            7,
+            "Pull request 7",
+            "alice",
+            "feature",
+            false,
+            false,
+            Checks.NONE,
+            Review.NONE,
+            Instant.EPOCH,
+            "https://github.com/owner/repo/pull/7");
+
     @Test
     void readingFromGitHubRunsInTheBackground() {
         List<Cmd> reads = List.of(
                 new LoadMyPullRequests(),
-                new LoadPullRequestPreview(null),
+                new LoadPullRequestPreview(PULL_REQUEST),
                 new PullRequestCmd.CheckMerge(7, "PR_1"),
                 new LoadBranchCheckRuns(List.empty()),
                 new CommitFilesCmd.LoadReviewRemarks(7, HashSet.empty(), 0),

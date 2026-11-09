@@ -340,9 +340,6 @@
                             <value>-Duser.country=US</value>
                         </jvmArgs>
                         <threads>${pitest.threads}</threads>
-                        <!-- Most mutants that time out return null in the UI and loop; PIT's 4s on top of each test's
-                             own time made them most of the run. -->
-                        <timeoutConstant>1000</timeoutConstant>
                         <timestampedReports>false</timestampedReports>
                         <outputFormats>
                             <param>HTML</param>
