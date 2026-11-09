@@ -283,30 +283,27 @@ record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int stop, 
     /**
      * {@code lines} with the stop of the cursor tinted in {@code tint} (ADR 60): a bar or a line as wide as its file,
      * the rule of a thread reversed, the lead not at all; while a range is open, each of its lines, marked {@code ┃}
-     * in the gutter as the lines a thread covers are. Only those lines are drawn again.
+     * in the gutter as the lines a thread covers are. Only those lines are drawn again, once they show.
      */
-    Vector<Line> tinted(Vector<Line> lines, Style tint) {
+    Rows tinted(Rows lines, Style tint) {
         RichDiff.Stop on = stops.get(stop);
         int first = on.row();
+        int width = on.mark().width();
         return mark.isDefined()
-                ? range().foldLeft(lines, (done, index) -> {
-                    int at = start(index);
-                    return done.update(
-                            at, tinted(gutterMarked(done.get(at)), on.mark().width(), tint));
-                })
+                ? range().foldLeft(
+                                lines,
+                                (done, index) ->
+                                        done.update(start(index), line -> tinted(gutterMarked(line), width, tint)))
                 : switch (on.mark().anchor()) {
                     case Anchor.Lead ignored -> lines;
                     case Anchor.Thread _, Anchor.Comment _ ->
                         List.range(
                                         first,
                                         Math.min(lines.size(), first + on.mark().lines()))
-                                .foldLeft(lines, (done, at) -> done.update(at, ruled(done.get(at))));
-                    case Anchor.File ignored ->
-                        lines.update(first, tinted(lines.get(first), on.mark().width(), tint));
-                    case Anchor.Gap ignored ->
-                        lines.update(first, tinted(lines.get(first), on.mark().width(), tint));
-                    case Anchor.OnLine ignored ->
-                        lines.update(first, tinted(lines.get(first), on.mark().width(), tint));
+                                .foldLeft(lines, (done, at) -> done.update(at, DiffCursor::ruled));
+                    case Anchor.File ignored -> lines.update(first, line -> tinted(line, width, tint));
+                    case Anchor.Gap ignored -> lines.update(first, line -> tinted(line, width, tint));
+                    case Anchor.OnLine ignored -> lines.update(first, line -> tinted(line, width, tint));
                 };
     }
 

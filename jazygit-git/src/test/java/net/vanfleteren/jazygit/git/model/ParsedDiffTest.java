@@ -1,7 +1,9 @@
 package net.vanfleteren.jazygit.git.model;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
+import io.vavr.collection.Array;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.ParsedDiff.ParsedFile;
@@ -125,10 +127,31 @@ class ParsedDiffTest {
         assertEquals(
                 List.of(
                         List.of(
-                                Option.of(List.of(new Token(0, 3, Token.Kind.KEYWORD))),
-                                Option.of(List.of(new Token(0, 4, Token.Kind.KEYWORD)))),
-                        List.of(Option.<List<Token>>none(), Option.<List<Token>>none())),
+                                Option.of(Array.of(new Token(0, 3, Token.Kind.KEYWORD))),
+                                Option.of(Array.of(new Token(0, 4, Token.Kind.KEYWORD)))),
+                        List.of(Option.<Array<Token>>none(), Option.<Array<Token>>none())),
                 diff.files().flatMap(ParsedFile::hunks).map(hunk -> hunk.lines().map(ParsedLine::tokens)));
+    }
+
+    @Test
+    void theTokensOfAFileThatAreEqualAreOneToken() {
+        List<List<Option<List<Token>>>> lexed = List.of(
+                List.of(Option.of(List.of(new Token(0, 3, Token.Kind.KEYWORD), new Token(4, 2, Token.Kind.NUMBER)))),
+                List.of(Option.none(), Option.of(List.of(new Token(0, 3, Token.Kind.KEYWORD)))));
+
+        List<List<Option<Array<Token>>>> shared = ParsedDiff.shared(lexed);
+
+        assertEquals(lexed.map(hunk -> hunk.map(line -> line.map(Array::ofAll))), shared);
+        assertSame(shared.head().head().get().head(), shared.last().last().get().head());
+    }
+
+    @Test
+    void theLexedLinesWithoutATokenShareOneEmptyArray() {
+        List<List<Option<Array<Token>>>> shared =
+                ParsedDiff.shared(List.of(List.of(Option.of(List.empty()), Option.of(List.empty()))));
+
+        assertSame(Array.empty(), shared.head().head().get());
+        assertSame(Array.empty(), shared.head().last().get());
     }
 
     @Test

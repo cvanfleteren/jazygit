@@ -258,7 +258,7 @@ class DiffCursorTest {
     @Test
     void aLineAsWideAsItsFileIsTintedWithPaddingTheAreaDrawsToItsEdge() {
         // Line 1 is a context line as wide as its file: it ends in its text, not in padding.
-        Vector<Line> text = Vector.range(0, 20).map(row -> Line.from(Span.raw(" 1 │ "), Span.raw("abc")));
+        Rows text = Rows.of(Vector.range(0, 20).map(row -> Line.from(Span.raw(" 1 │ "), Span.raw("abc"))));
         Style tint = Style.EMPTY.reversed();
 
         Line tinted = on(ONE, 4).tinted(text, tint).get(4);
@@ -271,8 +271,8 @@ class DiffCursorTest {
 
     @Test
     void theLinesOfARangeAreTintedAndMarkedInTheGutter() {
-        Vector<Line> text = Vector.range(0, 20).map(row -> Line.from(Span.raw(" 1  1 │ "), Span.raw("x" + row)));
-        Vector<Line> tinted = on(TWO, 11).marked().get().up().tinted(text, Style.EMPTY.reversed());
+        Rows text = Rows.of(Vector.range(0, 20).map(row -> Line.from(Span.raw(" 1  1 │ "), Span.raw("x" + row))));
+        Rows tinted = on(TWO, 11).marked().get().up().tinted(text, Style.EMPTY.reversed());
 
         assertEquals(" 1  1 ┃ x4", tinted.get(4).rawContent());
         assertEquals(" 1  1 ┃ x15", tinted.get(15).rawContent());
@@ -281,11 +281,11 @@ class DiffCursorTest {
 
     @Test
     void aBarOrALineIsTintedAsWideAsItsFileAndAThreadHasItsRuleReversed() {
-        Vector<Line> text = Vector.range(0, 20).map(row -> switch (row) {
+        Rows text = Rows.of(Vector.range(0, 20).map(row -> switch (row) {
             case 5 -> Line.from(Span.raw("  "), Span.raw("┏━"), Span.raw(" bob"));
             case 6 -> Line.from(Span.raw("  "), Span.raw("┃ "), Span.raw("me no like"));
             default -> Line.from("x" + row);
-        });
+        }));
         Style tint = Style.EMPTY.reversed();
 
         Line bar = on(FILE, 0).tinted(text, tint).get(3);

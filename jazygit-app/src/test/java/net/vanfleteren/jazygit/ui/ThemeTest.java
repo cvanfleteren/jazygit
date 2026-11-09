@@ -53,6 +53,32 @@ class ThemeTest {
     }
 
     @Test
+    void codeInAChangedLineTakesTheBackgroundOfTheLineAndTheColourOfTheToken() {
+        var engine = Theme.createEngine().get();
+        Theme.SpanStyles styles = Theme.spanStyles(engine);
+
+        Style code = styles.code(Theme.Classes.DIFF_ADDED_LINE, Theme.Classes.SYNTAX_KEYWORD);
+
+        assertEquals(styles.of(Theme.Classes.DIFF_ADDED_LINE).bg(), code.bg());
+        assertEquals(styles.of(Theme.Classes.SYNTAX_KEYWORD).fg(), code.fg());
+        assertEquals(
+                Theme.SpanStyles.NONE.code(Theme.Classes.DIFF_ADDED_LINE, Theme.Classes.SYNTAX_KEYWORD), Style.EMPTY);
+    }
+
+    @Test
+    void codeInAChangedLineSharesOneStyleForEachPairOfClassesAndFollowsTheTheme() {
+        var engine = Theme.createEngine().get();
+        Theme.SpanStyles styles = Theme.spanStyles(engine);
+        Style dark = styles.code(Theme.Classes.DIFF_ADDED_LINE, Theme.Classes.SYNTAX_KEYWORD);
+
+        assertSame(dark, styles.code(Theme.Classes.DIFF_ADDED_LINE, Theme.Classes.SYNTAX_KEYWORD));
+        Theme.activate(engine, ThemeName.LIGHT);
+        assertNotEquals(dark, styles.code(Theme.Classes.DIFF_ADDED_LINE, Theme.Classes.SYNTAX_KEYWORD));
+        Theme.activate(engine, ThemeName.DARK);
+        assertSame(dark, styles.code(Theme.Classes.DIFF_ADDED_LINE, Theme.Classes.SYNTAX_KEYWORD));
+    }
+
+    @Test
     void theStylesOfSpansFollowTheThemeOnceTheyWereResolved() {
         var engine = Theme.createEngine().get();
         Theme.SpanStyles styles = Theme.spanStyles(engine);

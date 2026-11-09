@@ -1,16 +1,18 @@
 package net.vanfleteren.jazygit.ui;
 
-import dev.tamboui.style.Style;
 import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
+import io.vavr.collection.Array;
 import io.vavr.collection.Iterator;
 import io.vavr.collection.List;
+import io.vavr.collection.Seq;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import java.time.Instant;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Folding;
@@ -106,7 +108,7 @@ final class RichDiff {
                 .intersperse(List.of(BLANK))
                 .flatMap(file -> file);
         return Drawn.of(parsed.preamble()
-                .map(line -> Marked.plain(Line.from(Span.raw(line))))
+                .map(line -> new Marked(() -> Line.from(Span.raw(line)), Option.none()))
                 .appendAll(inParallel(pending, Pending::draw).flatMap(lines -> lines)));
     }
 
@@ -185,12 +187,12 @@ final class RichDiff {
                                 line -> byHunk.get(at).get(line).remarks().covered()));
         // The bar is padded in a span of its own, which the area draws as far as its edge (ADR 80).
         return List.<Pending>of(() -> List.of(new Marked(
-                                Line.from(
+                                Rows.kept(Line.from(
                                         styled(bar, Theme.Classes.DIFF_FILE_HEADER, styles),
                                         styled(
                                                 " ".repeat(Math.max(0, width - width(bar))),
                                                 Theme.Classes.DIFF_FILE_HEADER,
-                                                styles)),
+                                                styles))),
                                 Option.of(new Mark(new Anchor.File(file.path()), 1, width, Option.none()))))
                         .appendAll(note(file)
                                 .map(text -> Marked.plain(Line.from(styled(text, Theme.Classes.DIM, styles))))))
@@ -265,6 +267,8 @@ final class RichDiff {
         boolean first = index == 0;
         Theme.SpanStyles styles = layout.styles();
         Span rule = rule(layout);
+        // One for the hunk, which each of its lines holds: a long hunk has tens of thousands.
+        Option<DiffStops.HunkAt> at = Option.of(new DiffStops.HunkAt(layout.file(), index));
         List<Pending> header = gap.isDefined()
                 ? gap.toList().map(before -> marker(before, fold, layout))
                 : hunk.header().isEmpty() || (first && hunk.numbered())
@@ -277,13 +281,9 @@ final class RichDiff {
             List<Row> members = group._1().map(rows::get);
             List<Row> threaded = members.filter(row -> !row.remarks().threads().isEmpty());
             return members.map(row -> new Marked(
-                            line(row, layout),
+                            () -> line(row, layout),
                             Anchor.of(layout.path(), row.parsed().line())
-                                    .map(on -> new Mark(
-                                            on,
-                                            1,
-                                            layout.fileWidth(),
-                                            Option.of(new DiffStops.HunkAt(layout.file(), index))))))
+                                    .map(on -> new Mark(on, 1, layout.fileWidth(), at))))
                     .appendAll(threaded.zipWithIndex()
                             .flatMap(row -> layout.blocks()
                                     .threads(
@@ -324,7 +324,7 @@ final class RichDiff {
                                 Messages.get(fold.pastTheCut(gap.from()) ? "content.gap.tooLong" : "content.gap.more"));
         };
         return () -> List.of(new Marked(
-                Line.from(rule(layout), styled(says + " ┄", Theme.Classes.DIFF_HUNK, layout.styles())),
+                Rows.kept(Line.from(rule(layout), styled(says + " ┄", Theme.Classes.DIFF_HUNK, layout.styles()))),
                 Option.of(new Mark(
                         new Anchor.Gap(layout.path(), gap.from(), gap.until()),
                         1,
@@ -357,7 +357,7 @@ final class RichDiff {
     private static Line line(Row row, Layout layout) {
         DiffLine line = row.parsed().line();
         List<Span> gutter = gutter(row, layout);
-        Option<List<Token>> tokens = layout.syntax() ? row.parsed().tokens() : Option.none();
+        Option<Array<Token>> tokens = layout.syntax() ? row.parsed().tokens() : Option.none();
         return switch (line.kind()) {
             case CONTEXT ->
                 tokens.map(lexed -> Line.from(Iterator.concat(
@@ -383,11 +383,11 @@ final class RichDiff {
      * {@code tokens} if it was lexed, unless the line class gives it no background: then its colour is what tells it
      * is changed, and a line of tokens only would look like context.
      */
-    private static Line changed(Row row, List<Span> gutter, Option<List<Token>> tokens, Change change, Layout layout) {
+    private static Line changed(Row row, List<Span> gutter, Option<Array<Token>> tokens, Change change, Layout layout) {
         Theme.SpanStyles styles = layout.styles();
-        Option<List<Token>> coloured =
+        Option<Array<Token>> coloured =
                 tokens.filter(ignored -> styles.of(change.lineClass()).bg().isPresent());
-        List<Piece> pieces = pieces(row.parsed().words(), coloured.getOrElse(List.empty()));
+        List<Piece> pieces = pieces(row.parsed().words(), coloured.getOrElse(Array.empty()));
         // Each piece is drawn as a span by itself, and pieces cut from a grapheme, like an emoji from its variation
         // selector, are narrower together than their text: only a line of one piece is as wide as it was measured.
         int used = 1
@@ -423,21 +423,9 @@ final class RichDiff {
      * gives it one.
      */
     private static Span changedCode(Piece piece, String diffClass, Theme.SpanStyles styles) {
-        Style diff = styles.of(diffClass);
-        Style text = styles.of(piece.kind().map(RichDiff::syntaxClass).getOrElse(Theme.Classes.SYNTAX_TEXT));
         return Span.styled(
-                piece.text(), Option.ofOptional(text.fg()).map(diff::fg).getOrElse(() -> withoutFg(diff)));
-    }
-
-    /**
-     * {@code style} without a colour of its own, so its text takes the terminal's.
-     */
-    private static Style withoutFg(Style style) {
-        Style background = style.bg().map(Style.EMPTY::bg).orElse(Style.EMPTY);
-        return List.ofAll(style.subModifiers())
-                .foldLeft(
-                        List.ofAll(style.addModifiers()).foldLeft(background, Style::addModifier),
-                        Style::removeModifier);
+                piece.text(),
+                styles.code(diffClass, piece.kind().map(RichDiff::syntaxClass).getOrElse(Theme.Classes.SYNTAX_TEXT)));
     }
 
     /**
@@ -446,7 +434,7 @@ final class RichDiff {
      * segment and the token of each piece are found by going on from those of the piece before it: a minified file
      * has a line of thousands of tokens.
      */
-    static List<Piece> pieces(List<Segment> segments, List<Token> tokens) {
+    static List<Piece> pieces(List<Segment> segments, Seq<Token> tokens) {
         if (tokens.isEmpty()) {
             return segments.map(segment -> new Piece(segment.text(), segment.changed(), Option.none()));
         }
@@ -505,12 +493,12 @@ final class RichDiff {
     }
 
     /**
-     * A line drawn, and the stop of the cursor that starts on it, if one does.
+     * What draws a line, and the stop of the cursor that starts on it, if one does.
      */
-    private record Marked(Line line, Option<Mark> mark) {
+    private record Marked(Supplier<Line> line, Option<Mark> mark) {
 
         static Marked plain(Line line) {
-            return new Marked(line, Option.none());
+            return new Marked(Rows.kept(line), Option.none());
         }
     }
 
@@ -534,13 +522,14 @@ final class RichDiff {
     record Stop(Mark mark, int row) {}
 
     /**
-     * The lines of a diff, and where each stop of the cursor in them starts, in order.
+     * The lines of a diff, each drawn when it shows ({@link Rows}), and where each stop of the cursor in them starts, in
+     * order.
      */
-    record Drawn(List<Line> lines, List<Stop> stops) {
+    record Drawn(Rows rows, List<Stop> stops) {
 
         private static Drawn of(List<Marked> marked) {
             return new Drawn(
-                    marked.map(Marked::line),
+                    Rows.drawn(marked.map(Marked::line)),
                     marked.zipWithIndex().flatMap(line -> line._1().mark().map(mark -> new Stop(mark, line._2()))));
         }
 
@@ -548,7 +537,21 @@ final class RichDiff {
          * {@code lines}, without a stop: what has no cursor.
          */
         static Drawn plain(List<Line> lines) {
-            return new Drawn(lines, List.empty());
+            return plain(Rows.of(lines));
+        }
+
+        /**
+         * {@code rows}, without a stop: what has no cursor.
+         */
+        static Drawn plain(Rows rows) {
+            return new Drawn(rows, List.empty());
+        }
+
+        /**
+         * All the lines, drawn.
+         */
+        List<Line> lines() {
+            return rows.all();
         }
 
         /**
@@ -556,7 +559,7 @@ final class RichDiff {
          */
         Drawn after(List<Line> before) {
             return new Drawn(
-                    lines.prependAll(before), stops.map(stop -> new Stop(stop.mark(), stop.row() + before.size())));
+                    rows.after(Rows.of(before)), stops.map(stop -> new Stop(stop.mark(), stop.row() + before.size())));
         }
 
         /**
@@ -566,7 +569,7 @@ final class RichDiff {
             return stops.headOption()
                     .filter(first -> first.row() > 0)
                     .map(first -> new Drawn(
-                            lines,
+                            rows,
                             stops.prepend(new Stop(new Mark(new Anchor.Lead(), first.row(), 0, Option.none()), 0))))
                     .getOrElse(this);
         }
@@ -642,7 +645,7 @@ final class RichDiff {
                             .flatMap(part -> part._2()
                                     .zipWithIndex()
                                     .map(drawn -> new Marked(
-                                            drawn._1(),
+                                            Rows.kept(drawn._1()),
                                             Option.when(
                                                     drawn._2() == 0,
                                                     () -> new Mark(

@@ -252,13 +252,16 @@ public final class ContentPanel {
      * measures how wide every line it is given is, each frame, so a long diff would hold up every frame; it still gets
      * as many lines, for its scrollbar and how far it scrolls. The height is that of the frame before, so the lines are
      * kept that would show in an area up to twice as high, which the element scrolls up from its last line at its
-     * bottom; all of them before the area was ever drawn. Those of them that are {@code filling} are
-     * {@link #filled} to the edge of an area {@code width} columns wide (ADR 80).
+     * bottom; none before the area was ever drawn, as that frame is only drawn to learn its size and then drawn again
+     * ({@code Fitted}), and drawing every line of a long diff for it took as long as styling it. Those of them that are
+     * {@code filling} are
+     * {@link #filled} to the edge of an area {@code width} columns wide (ADR 80). Only the lines that show are drawn
+     * ({@link Rows}).
      */
-    static Text windowed(Vector<Line> lines, int column, int row, int height, int width, Set<Integer> filling) {
-        int high = height > 0 ? 2 * height : lines.size();
-        int top = Math.clamp(row, 0, Math.max(0, lines.size() - high));
-        int bottom = Math.min(lines.size(), row + high);
+    static Text windowed(Rows lines, int column, int row, int height, int width, Set<Integer> filling) {
+        Tuple2<Integer, Integer> window = window(lines.size(), row, height);
+        int top = window._1();
+        int bottom = window._2();
         // Text copies the lines it is given, so each line that shows is cut once.
         return Text.from(new AbstractList<Line>() {
             @Override
@@ -266,7 +269,8 @@ public final class ContentPanel {
                 if (index < top || index >= bottom) {
                     return BLANK;
                 }
-                Line line = filling.contains(index) ? filled(lines.get(index), column + width) : lines.get(index);
+                Line drawn = lines.get(index);
+                Line line = filling.contains(index) ? filled(drawn, column + width) : drawn;
                 return column == 0 ? line : sideways(line, column);
             }
 
@@ -275,6 +279,16 @@ public final class ContentPanel {
                 return lines.size();
             }
         });
+    }
+
+    /**
+     * The lines of {@code size} that {@link #windowed} shows from {@code row} in an area {@code height} lines high: from
+     * the first up to, not with, the second; none at {@code row} while the area was never drawn, its height 0.
+     */
+    static Tuple2<Integer, Integer> window(int size, int row, int height) {
+        int high = Math.max(0, 2 * height);
+        int top = Math.clamp(row, 0, Math.max(0, size - high));
+        return Tuple.of(top, Math.max(top, Math.min(size, row + high)));
     }
 
     /**
@@ -444,7 +458,8 @@ public final class ContentPanel {
      */
     private static RichDiff.Drawn changeDrawn(ShownDiff changes, DiffLook look, Theme.SpanStyles styles) {
         return switch (look.style()) {
-            case PLAIN -> RichDiff.Drawn.plain(lines(changes.text()).map(line -> diffLine(line, styles)));
+            case PLAIN ->
+                RichDiff.Drawn.plain(Rows.drawn(lines(changes.text()).map(line -> () -> diffLine(line, styles))));
             case RICH ->
                 RichDiff.drawn(changes.folded(), look.syntax(), look.words(), Option.none(), Option.none(), styles);
         };
@@ -729,13 +744,17 @@ public final class ContentPanel {
                     at.mark());
             review = shown.body() instanceof Body.Diff(var diff, var look, var remarks) && remarks.isDefined();
             boolean focused = id.equals(focusedId);
-            Vector<Line> lines = cursor.filter(ignored -> focused)
-                    .map(on -> on.tinted(current.lines(), styles.of(Theme.Classes.DIFF_CURSOR)))
-                    .getOrElse(current.lines());
             // The size the element was last drawn in, which a frame in another size draws it in first (ADR 80).
             columns = Math.max(0, current.widest() - state.viewportWidth());
             column = Math.clamp(at.column(), 0, columns);
             int row = cursor.map(DiffCursor::row).getOrElse(at.row());
+            // The lines that show are kept drawn for the frames after, and only they ({@link Rows}).
+            Tuple2<Integer, Integer> window = window(current.lines().size(), row, state.viewportHeight());
+            Rows kept = current.lines().keeping(window._1(), window._2());
+            styled = Option.of(current.withLines(kept));
+            Rows lines = cursor.filter(ignored -> focused)
+                    .map(on -> on.tinted(kept, styles.of(Theme.Classes.DIFF_CURSOR)))
+                    .getOrElse(kept);
             element.text(windowed(lines, column, row, state.viewportHeight(), state.viewportWidth(), current.filling()))
                     .title(shown.title());
             state.scrollToTop();
@@ -963,8 +982,8 @@ public final class ContentPanel {
         }
 
         /**
-         * {@code body}, styled in {@code theme} as {@code lines}, with where the stops of its cursor start, if it has
-         * one.
+         * {@code body}, styled in {@code theme} as {@code lines}, each drawn when it shows ({@link Rows}), with where
+         * the stops of its cursor start, if it has one.
          *
          * @param asGiven the hunk shown as git gives it, as a range is open in it (ADR 83)
          * @param indexes the index of the stop of each anchor, {@link DiffCursor#indexes}
@@ -976,14 +995,14 @@ public final class ContentPanel {
                 Body body,
                 ThemeName theme,
                 Option<DiffStops.HunkAt> asGiven,
-                Vector<Line> lines,
+                Rows lines,
                 Vector<RichDiff.Stop> stops,
                 Map<Anchor, Integer> indexes,
                 int widest,
                 Set<Integer> filling) {
 
             static Styled of(Body body, ThemeName theme, Option<DiffStops.HunkAt> asGiven, RichDiff.Drawn drawn) {
-                Vector<Line> lines = drawn.lines().toVector();
+                Rows lines = drawn.rows();
                 Vector<RichDiff.Stop> stops = drawn.stops().toVector();
                 return new Styled(
                         body,
@@ -992,15 +1011,21 @@ public final class ContentPanel {
                         lines,
                         stops,
                         DiffCursor.indexes(stops),
-                        // Measured on the threads of the common pool, as a line is measured a character at a time
-                        // and a diff can have tens of thousands; the render thread waits for it either way.
-                        lines.toJavaParallelStream().mapToInt(Line::width).max().orElse(0),
+                        // The render thread waits for it, as it does for the lines to be drawn.
+                        lines.widest(),
                         stops.filter(stop -> switch (stop.mark().anchor()) {
                                     case Anchor.File _, Anchor.OnLine _, Anchor.Gap _ -> true;
                                     case Anchor.Lead _, Anchor.Thread _, Anchor.Comment _ -> false;
                                 })
                                 .map(RichDiff.Stop::row)
                                 .toSet());
+            }
+
+            /**
+             * This body with {@code kept}, its lines with others kept drawn.
+             */
+            Styled withLines(Rows kept) {
+                return new Styled(body, theme, asGiven, kept, stops, indexes, widest, filling);
             }
 
             /**
