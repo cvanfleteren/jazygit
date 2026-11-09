@@ -291,6 +291,30 @@ class CommentsDialogTest {
         assertEquals(java.util.List.of(), dispatched);
     }
 
+    @Test
+    void clickingALinkInTheCommentOpensIt() throws Exception {
+        model = reading(List.of(comment(
+                "IC_1",
+                Kind.COMMENT,
+                "bob",
+                "See [the docs](https://example.com/docs), [below](#notes) or plain text")));
+        try (ToolkitTestRunner runner = start(WIDE)) {
+            String screen = RenderedText.ofSize(runner, this::view, WIDE.width(), WIDE.height());
+            // In the comment, not in its row of the list, which shows the Markdown as it is written.
+            int[] shown = at(screen, "││See the docs, below or plain text");
+            int start = shown[0] + "││".length();
+            int y = shown[1];
+
+            SettledPilot.of(runner).mousePress(MouseButton.LEFT, start + "See the d".length(), y);
+            SettledPilot.of(runner).mousePress(MouseButton.LEFT, start + "See the docs, b".length(), y);
+            SettledPilot.of(runner).mousePress(MouseButton.LEFT, start + "See the docs, below or p".length(), y);
+            SettledPilot.of(runner).pause();
+        }
+
+        // A link within the page, which a browser would not know where to find, opens nothing; nor does plain text.
+        assertEquals(java.util.List.of(new CommentsMsg.LinkChosen("https://example.com/docs")), dispatched);
+    }
+
     private static String line(String screen, String containing) {
         return List.of(screen.split("\n"))
                 .find(text -> text.contains(containing))

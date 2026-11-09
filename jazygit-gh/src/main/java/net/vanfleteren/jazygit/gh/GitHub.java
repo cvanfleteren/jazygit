@@ -114,6 +114,13 @@ public interface GitHub {
     Either<GhFailure, List<ExecutedCommand>> openInBrowser(PullRequestLink link);
 
     /**
+     * Opens {@code url}, a link to anywhere, in the browser set for the account the repository uses (ADR 88), else the
+     * one gh would open a link to the repository's host in, started by jazygit (ADR 96). gh opens no link of its own
+     * choosing, so without either it fails with {@link GhError.NoBrowser}.
+     */
+    Either<GhFailure, List<ExecutedCommand>> openLink(String url);
+
+    /**
      * The account gh runs as for the repository now, on the host its remotes give, an ssh alias resolved: the one it
      * is configured to use, else gh's active one; none when that is not known, as when a token in the environment
      * makes gh run as another (ADR 88).

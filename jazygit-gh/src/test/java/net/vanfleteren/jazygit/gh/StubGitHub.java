@@ -158,6 +158,11 @@ public interface StubGitHub extends GitHub {
     }
 
     @Override
+    default Either<GhFailure, List<ExecutedCommand>> openLink(String url) {
+        return Either.right(List.of(ExecutedCommand.of(Browser.XDG_OPEN, url)));
+    }
+
+    @Override
     default Option<GhAccount> account() {
         return Option.none();
     }
