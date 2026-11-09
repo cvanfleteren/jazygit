@@ -22,9 +22,10 @@ core instead of 1 %, for as long as the app ran.
 
 ## Decision
 
-1. **Every 30th tick, `Update.tick` also asks for `Cmd.RefreshIndex`,** which runs `git update-index -q --refresh`:
-   it writes into the index what the files are like now, where it no longer says so, and leaves it alone otherwise. A
-   file that changed stays changed; `-q` keeps git from failing on it.
+1. **Every 30th tick, `Update.tick` also asks for `Cmd.RefreshIndex`,** which runs
+   `git update-index -q --unmerged --refresh`: it writes into the index what the files are like now, where it no
+   longer says so, and leaves it alone otherwise. A file that changed stays changed, and one in conflict stays
+   unmerged: `-q` and `--unmerged` keep git from failing on them, so a failure means the index was locked.
 2. **Only while the terminal has the focus.** Then the user is not likely to be running git in another terminal, which
    could find the index locked for the moment the refresh holds it. While away, the ticks read the status every 15 s
    (ADR 67), and the index is left as it is.

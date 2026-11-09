@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.git;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.vavr.collection.List;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
@@ -31,6 +32,34 @@ class CliStatusIndexTest {
 
         assertEquals("", git("--no-optional-locks", "diff-files", "--name-only"));
         assertEquals(0, status().read().get().files().size());
+    }
+
+    @Test
+    void aConflictDoesNotKeepTheOtherFilesFromBeingWrittenIntoTheIndex() throws Exception {
+        init();
+        Files.writeString(repo.resolve("b.txt"), "b\n");
+        git("add", "b.txt");
+        git("commit", "-qm", "b");
+        git("checkout", "-qb", "other");
+        Files.writeString(repo.resolve("a.txt"), "other\n");
+        git("commit", "-qam", "other");
+        git("checkout", "-q", "main");
+        Files.writeString(repo.resolve("a.txt"), "main\n");
+        git("commit", "-qam", "main");
+        new ProcessExecutor()
+                .command("git", "merge", "other")
+                .directory(repo.toFile())
+                .execute();
+        Files.setLastModifiedTime(
+                repo.resolve("b.txt"), FileTime.from(Instant.now().plusSeconds(60)));
+
+        assertTrue(status().refreshIndex().isRight());
+
+        // Only the conflicted file is left, once per side, as it is not merged.
+        assertEquals(
+                List.of("a.txt"),
+                List.of(git("--no-optional-locks", "diff-files", "--name-only").split("\n"))
+                        .distinct());
     }
 
     @Test

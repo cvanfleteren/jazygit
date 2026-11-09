@@ -52,7 +52,8 @@ final class CliStatus implements Status {
     @Override
     public Either<GitFailure, List<ExecutedCommand>> refreshIndex() {
         return GitProcess.log(
-                worktree, GitCommand.git("update-index", "-q", "--refresh").withTimeout(TIMEOUT));
+                worktree,
+                GitCommand.git("update-index", "-q", "--unmerged", "--refresh").withTimeout(TIMEOUT));
     }
 
     @Override

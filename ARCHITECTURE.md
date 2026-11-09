@@ -633,7 +633,7 @@ while away counts as the focus being back. See `documentation/adr/0058-less-read
 
 The status of a tick takes no optional locks, so it never writes back what it refreshed of the index: files a checkout
 just wrote, or a tool touched, would be hashed again on every tick. Every 30th tick while the terminal has the focus,
-and no operation runs, `Update.tick` therefore also asks for `Cmd.RefreshIndex`, `git update-index -q --refresh`, which
+and no operation runs, `Update.tick` therefore also asks for `Cmd.RefreshIndex`, `git update-index -q --unmerged --refresh`, which
 locks the index for a moment; that it could not changes nothing shown. See
 `documentation/adr/0093-the-index-written-anew-now-and-then.md`.
 
@@ -959,7 +959,7 @@ helpers. A test replaces the roles it needs on `StubGit.of()`, as in `StubGit.of
     terminal the TUI owns; a command that is to edit something says how).
   - **Timeouts and locks:** a command that changes the repository gets 5 minutes, for its hooks. A read
     (`GitCommand.reading`) gets 30 seconds and takes no optional locks, so it never writes the index it refreshed:
-    `Cmd.RefreshIndex` (`git update-index -q --refresh`) does that every 30th tick while the terminal has the
+    `Cmd.RefreshIndex` (`git update-index -q --unmerged --refresh`) does that every 30th tick while the terminal has the
     focus (ADR 93).
   - **Paths:** a command on paths takes them literally (`withLiteralPaths`), never as patterns, so
     discarding a file named `*.txt` discards only that file.
