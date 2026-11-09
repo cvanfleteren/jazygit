@@ -86,7 +86,9 @@ final class CliMetadata {
                 .append(common.resolve("worktrees"))
                 .appendAll(worktrees.flatMap(
                         worktree -> List.of(worktree.resolve("gitdir"), worktree.resolve("locked")))));
-        return new GitMetadata(settled(branches, now), settled(stashes, now), settled(worktreeList, now));
+        MetadataStamp index = stamp(List.of(at.gitDir().resolve("index")));
+        return new GitMetadata(
+                settled(branches, now), settled(stashes, now), settled(worktreeList, now), settled(index, now));
     }
 
     /**

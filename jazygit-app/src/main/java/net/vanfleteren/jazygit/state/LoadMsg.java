@@ -66,9 +66,18 @@ public sealed interface LoadMsg extends Msg {
 
     /**
      * What each of the loads that {@link Cmd.CheckMetadata} guards is read from looks like now; none when that
-     * cannot be told, and the load is then to run anyway.
+     * cannot be told, and the load is then to run anyway. And what the index looks like, which is written anew once it
+     * changed (ADR 96); none when that cannot be told yet.
      */
-    record MetadataChecked(List<Tuple2<Cmd.Load, Option<MetadataStamp>>> stamps) implements LoadMsg {
+    record MetadataChecked(List<Tuple2<Cmd.Load, Option<MetadataStamp>>> stamps, Option<MetadataStamp> index)
+            implements LoadMsg {
+
+        /**
+         * The stamps of the loads, without one of the index.
+         */
+        public MetadataChecked(List<Tuple2<Cmd.Load, Option<MetadataStamp>>> stamps) {
+            this(stamps, Option.none());
+        }
 
         @Override
         public Cmd.CheckMetadata cmd() {
