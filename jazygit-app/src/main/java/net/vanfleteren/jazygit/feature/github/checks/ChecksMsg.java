@@ -25,6 +25,16 @@ public sealed interface ChecksMsg extends Msg {
     record Requested(BranchRef branch) implements ChecksMsg {}
 
     /**
+     * The user asked, in the pull request dialog, for the checks of the pull request it shows.
+     */
+    record PullRequestChecksRequested() implements ChecksMsg {}
+
+    /**
+     * The user closed the checks: back to the pull request dialog they were opened from, if they were.
+     */
+    record Closed() implements ChecksMsg {}
+
+    /**
      * The checks on {@code branch} on GitHub were read.
      */
     record Loaded(RemoteBranch branch, PendingChecks checks) implements ChecksMsg {}

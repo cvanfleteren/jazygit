@@ -489,10 +489,7 @@ class ChecksDialogTest {
         }
 
         assertEquals(
-                java.util.List.of(
-                        new ChecksMsg.RefreshChosen(),
-                        new Msg.PopupDismissed(ChecksPopup.class),
-                        new Msg.PopupDismissed(ChecksPopup.class)),
+                java.util.List.of(new ChecksMsg.RefreshChosen(), new ChecksMsg.Closed(), new ChecksMsg.Closed()),
                 dispatched);
     }
 

@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.feature.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesUpdate;
 import net.vanfleteren.jazygit.feature.fetch.FetchUpdate;
 import net.vanfleteren.jazygit.feature.github.browse.BrowsePullRequestCmd;
+import net.vanfleteren.jazygit.feature.github.checks.ChecksPopup;
 import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestUpdate;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestCmd.*;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
@@ -237,22 +238,27 @@ public final class PullRequestUpdate {
     }
 
     /**
-     * {@code model} showing what read {@code read} brought about pull request {@code number}; unchanged when it is
-     * no longer shown, as the user closed it, or opened another one, while it was being read.
+     * {@code model} showing what read {@code read} brought about pull request {@code number}, its checks no less far
+     * than they were shown to be (ADR 89); unchanged when it is no longer shown, as the user closed it, or opened
+     * another one, while it was being read.
      */
     private static Model shown(Model model, int number, long read, Either<Failure, PullRequestDetails> result) {
-        return mapShown(model, number, popup -> popup.with(result, read));
+        return mapShown(model, number, popup -> popup.reaching(model).with(result, read));
     }
 
     /**
      * {@code model} with the dialog of pull request {@code number} as {@code change} makes it: the one that is open,
-     * or the one the open popup goes back to, like a comment on it, so that one is not out of date then. Unchanged
-     * when no popup shows it.
+     * or the one the open popup goes back to, like a comment on it or its checks, so that one is not out of date
+     * then. Unchanged when no popup shows it.
      */
     private static Model mapShown(Model model, int number, Function<PullRequestPopup, PullRequestPopup> change) {
         return model.popup(ShowsPullRequest.class)
                 .filter(popup -> popup.number() == number)
                 .map(popup -> model.openPopup(popup.withPullRequestPopup(change.apply(popup.pullRequestPopup()))))
+                .orElse(() -> model.popup(ChecksPopup.class)
+                        .flatMap(checks -> checks.from()
+                                .filter(dialog -> dialog.pullRequest().number() == number)
+                                .map(dialog -> model.openPopup(checks.withFrom(change.apply(dialog))))))
                 .getOrElse(model);
     }
 

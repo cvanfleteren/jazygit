@@ -16,10 +16,8 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.function.Consumer;
-import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.gh.timing.CheckSpan;
-import net.vanfleteren.jazygit.gh.timing.Eta;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.i18n.Messages;
@@ -32,8 +30,6 @@ import net.vanfleteren.jazygit.state.Reading;
 import net.vanfleteren.jazygit.ui.CheckRows;
 import net.vanfleteren.jazygit.ui.CheckTimesText;
 import net.vanfleteren.jazygit.ui.ErrorText;
-import net.vanfleteren.jazygit.ui.ProgressBar;
-import net.vanfleteren.jazygit.ui.TextWidth;
 import net.vanfleteren.jazygit.ui.Theme;
 import net.vanfleteren.jazygit.ui.TimeText;
 import net.vanfleteren.jazygit.ui.widgets.DialogFrame;
@@ -57,8 +53,6 @@ public final class ChecksDialog implements PopupView {
     private static final int CONTENT_WIDTH = DialogFrame.contentWidth(WIDTH);
     // How wide the bar of each check is, after its name, while one is not done.
     private static final int CHECK_BAR = 24;
-    // How wide how far they are together is written, after their bar and a space: "100%".
-    private static final int PERCENT = 4;
     // The checks listed at once; the others are scrolled to.
     private static final int VISIBLE_CHECKS = 16;
     // The counts, when they started and ended, how far they are, a blank line and the checks. The dialog is always this
@@ -194,18 +188,7 @@ public final class ChecksDialog implements PopupView {
      * than usual, and dimmed while when they are done is not known, as it then counts the checks done.
      */
     static List<StyledElement<?>> gauge(List<Check> all, Option<CheckTimes> times, double progress, Instant now) {
-        Eta eta = CheckRows.eta(all, times);
-        String done = all.exists(check -> check.state() == Checks.FAILING)
-                ? Theme.Classes.CHECKS_FAILED
-                : switch (eta) {
-                    case Eta.Done passed -> Theme.Classes.CHECKS_PASSED;
-                    case Eta.Unknown unknown -> Theme.Classes.DIM;
-                    case Eta.Expected expected when expected.overdue(now) -> Theme.Classes.CHECKS_RUNNING;
-                    case Eta.Expected expected -> Theme.Classes.CHECKS_PROGRESS;
-                };
-        String percent = Messages.get("dialog.checks.progress", String.valueOf(ProgressBar.percent(progress)));
-        return ProgressBar.of(progress, CONTENT_WIDTH - 1 - PERCENT, done)
-                .append(text(" " + TextWidth.alignRight(percent, PERCENT)));
+        return CheckRows.gauge(all, times, progress, now, CONTENT_WIDTH);
     }
 
     /**
@@ -250,7 +233,7 @@ public final class ChecksDialog implements PopupView {
      */
     private EventResult keys(KeyEvent event, ListCursor cursor, int first, int last) {
         if (event.code() == KeyCode.ESCAPE || event.code() == KeyCode.ENTER) {
-            dispatch.accept(new Msg.PopupDismissed(ChecksPopup.class));
+            dispatch.accept(new ChecksMsg.Closed());
         } else if (event.isChar('R')) {
             dispatch.accept(new ChecksMsg.RefreshChosen());
         } else if (event.isChar('j') || event.code() == KeyCode.DOWN) {

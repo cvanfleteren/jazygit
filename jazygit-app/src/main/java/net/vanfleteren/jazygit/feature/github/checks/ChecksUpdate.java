@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.github.checks;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.util.function.Predicate;
+import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
@@ -33,6 +34,23 @@ public final class ChecksUpdate {
                                         .model(),
                                 new LoadChecks(remote)))
                         .getOrElse(() -> Next.of(model));
+            // Once its details are read, as viewing its comments; Escape goes back to it.
+            case ChecksMsg.PullRequestChecksRequested() ->
+                model.popup(PullRequestPopup.class)
+                        .flatMap(dialog -> ofPullRequest(model, dialog)
+                                .map(remote -> Next.of(
+                                        Update.ask(
+                                                        model,
+                                                        ChecksPopup.loading(
+                                                                remote.tracking(), remote, model.now(), dialog))
+                                                .model(),
+                                        new LoadChecks(remote))))
+                        .getOrElse(() -> Next.of(model));
+            case ChecksMsg.Closed() ->
+                Next.of(model.popup(ChecksPopup.class)
+                        .flatMap(ChecksPopup::from)
+                        .map(model::openPopup)
+                        .getOrElse(() -> model.withoutPopup(ChecksPopup.class)));
             // How long checks take is learned from them too.
             case ChecksMsg.Loaded(RemoteBranch branch, PendingChecks checks) ->
                 CheckTimesUpdate.read(
@@ -61,6 +79,21 @@ public final class ChecksUpdate {
                 .map(popup -> Next.of(
                         model.openPopup(popup.readingAgain(reading, model.now())), new LoadChecks(popup.onGitHub())))
                 .getOrElse(() -> Next.of(model));
+    }
+
+    /**
+     * The branch on GitHub the pull request of {@code dialog} merges from, whose checks it shows, once its details are
+     * read; none when it has no checks. Every remote on GitHub is of the same repository, so has the same checks.
+     */
+    public static Option<RemoteBranch> ofPullRequest(Model model, PullRequestPopup dialog) {
+        BranchName head = new BranchName(dialog.pullRequest().headBranch());
+        return model.gitHub()
+                .branchChecks()
+                .filter(checks -> dialog.detailsRead())
+                .toList()
+                .flatMap(checks -> checks.remotes().toList().sorted())
+                .map(remote -> new RemoteBranch(remote, head))
+                .find(remote -> model.gitHub().checks(remote).exists(state -> state != Checks.NONE));
     }
 
     /**
