@@ -125,6 +125,7 @@ public final class ExpandUpdate {
     private static Option<CommitFile> changed(DiffText diff, String path) {
         return diff.parsed()
                 .files()
+                .iterator()
                 .map(file -> file.file())
                 .find(file -> file.path().equals(path))
                 .map(file -> new CommitFile(file.path(), file.type(), file.origin()));

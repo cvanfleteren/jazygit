@@ -64,6 +64,7 @@ final class CliBaseDistance {
                 .flatMap(ref -> GitOutput.after(ref, HEADS))
                 .map(BranchName::new)
                 .flatMap(branch -> BranchRef.bases(Option.of(branch), parents.get(branch), main)
+                        .iterator()
                         .flatMap(base -> refs.get(GitArgs.revision(base)).map(sha -> new Base(base, sha)))
                         .headOption()
                         .map(base -> Tuple.of(branch, base)));

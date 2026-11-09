@@ -4,6 +4,7 @@ import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
+import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
@@ -95,7 +96,7 @@ public final class LoadUpdate {
      */
     private static Next rereadWhole(Model model) {
         DiffOptions options = model.preferences().diffOptions();
-        List<String> shown = model.repoView()
+        Set<String> shown = model.repoView()
                 .fileDiff()
                 .flatMap(preview -> preview.value().toOption())
                 .toList()
@@ -103,14 +104,16 @@ public final class LoadUpdate {
                         .parsed()
                         .files()
                         .appendAll(diffs.unstaged().parsed().files()))
-                .map(file -> file.file().path());
+                .map(file -> file.file().path())
+                .toSet();
         List<Cmd.ReadWholeFile> reads = model.repoView()
                 .expanded()
                 .values()
                 .filter(expansion -> expansion.content() instanceof ScrolledContent.Diff)
                 .flatMap(expansion -> expansion.files().values())
+                .filter(file -> shown.contains(file.read().path()))
                 .map(file -> file.read().withOptions(options))
-                .filter(read -> shown.contains(read.path()) && !model.jobs().runs(read))
+                .filter(read -> !model.jobs().runs(read))
                 .toList();
         return new Next(model, List.narrow(reads));
     }

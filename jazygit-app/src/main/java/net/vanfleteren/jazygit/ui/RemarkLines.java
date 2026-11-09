@@ -454,8 +454,9 @@ final class RemarkLines {
      * The first line of {@code comment} with text, without its HTML comments and with its images as text that says so.
      */
     private static String firstLine(Comment comment) {
-        return List.ofAll(MarkdownImages.asText(MarkdownScroll.withoutHtmlComments(comment.body()))
-                        .lines())
+        return Iterator.ofAll(MarkdownImages.asText(MarkdownScroll.withoutHtmlComments(comment.body()))
+                        .lines()
+                        .iterator())
                 .map(String::strip)
                 .find(line -> !line.isEmpty())
                 .getOrElse("");

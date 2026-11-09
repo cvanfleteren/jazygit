@@ -144,6 +144,7 @@ public final class AheadUpdate {
                                 named,
                                 named.flatMap(name -> model.repo().parents().get(name)),
                                 main(model))
+                        .iterator()
                         .flatMap(base -> LoadUpdate.tipOf(model, base)
                                 .flatMap(found -> found)
                                 .map(at -> new Cmd.LoadAhead.Base(base, at)))
