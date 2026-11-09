@@ -72,13 +72,6 @@ public sealed interface LoadMsg extends Msg {
     record MetadataChecked(List<Tuple2<Cmd.Load, Option<MetadataStamp>>> stamps, Option<MetadataStamp> index)
             implements LoadMsg {
 
-        /**
-         * The stamps of the loads, without one of the index.
-         */
-        public MetadataChecked(List<Tuple2<Cmd.Load, Option<MetadataStamp>>> stamps) {
-            this(stamps, Option.none());
-        }
-
         @Override
         public Cmd.CheckMetadata cmd() {
             return new Cmd.CheckMetadata();
