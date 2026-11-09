@@ -417,14 +417,18 @@ class ContentPanelTest {
     }
 
     @Test
-    void anAreaIsGivenAllTheLinesButMeasuresOnlyThoseThatShow() {
-        io.vavr.collection.Vector<Line> lines =
-                io.vavr.collection.Vector.range(0, 100).map(i -> Line.from("%03d".formatted(i)));
+    void anAreaIsGivenAllTheLinesButDrawsAndMeasuresOnlyThoseThatShow() {
+        java.util.concurrent.atomic.AtomicInteger drawn = new java.util.concurrent.atomic.AtomicInteger();
+        Rows lines = Rows.drawn(io.vavr.collection.Vector.range(0, 100).map(i -> () -> {
+            drawn.incrementAndGet();
+            return Line.from("%03d".formatted(i));
+        }));
 
         java.util.List<Line> windowed =
                 ContentPanel.windowed(lines, 1, 40, 10, 0, HashSet.empty()).lines();
 
         assertEquals(100, windowed.size());
+        assertEquals(20, drawn.get());
         // From where it is scrolled to, as many lines as an area twice as high shows, cut sideways.
         assertEquals("40", windowed.get(40).rawContent());
         assertEquals("59", windowed.get(59).rawContent());
@@ -461,8 +465,9 @@ class ContentPanelTest {
     @Test
     void onlyTheLinesThatFillAreDrawnToTheEdgeAndThenScrolledSideways() {
         Style green = Style.EMPTY.bg(Color.GREEN);
-        io.vavr.collection.Vector<Line> lines = io.vavr.collection.Vector.of(
-                Line.from(Span.raw("ab"), Span.styled(" ", green)), Line.from(Span.raw("ab"), Span.styled(" ", green)));
+        Rows lines = Rows.of(io.vavr.collection.Vector.of(
+                Line.from(Span.raw("ab"), Span.styled(" ", green)),
+                Line.from(Span.raw("ab"), Span.styled(" ", green))));
 
         java.util.List<Line> windowed =
                 ContentPanel.windowed(lines, 1, 0, 10, 6, HashSet.of(0)).lines();

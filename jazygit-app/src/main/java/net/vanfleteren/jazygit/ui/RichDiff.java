@@ -12,6 +12,7 @@ import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import java.time.Instant;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.Folding;
@@ -107,7 +108,7 @@ final class RichDiff {
                 .intersperse(List.of(BLANK))
                 .flatMap(file -> file);
         return Drawn.of(parsed.preamble()
-                .map(line -> Marked.plain(Line.from(Span.raw(line))))
+                .map(line -> new Marked(() -> Line.from(Span.raw(line)), Option.none()))
                 .appendAll(inParallel(pending, Pending::draw).flatMap(lines -> lines)));
     }
 
@@ -186,12 +187,12 @@ final class RichDiff {
                                 line -> byHunk.get(at).get(line).remarks().covered()));
         // The bar is padded in a span of its own, which the area draws as far as its edge (ADR 80).
         return List.<Pending>of(() -> List.of(new Marked(
-                                Line.from(
+                                Rows.kept(Line.from(
                                         styled(bar, Theme.Classes.DIFF_FILE_HEADER, styles),
                                         styled(
                                                 " ".repeat(Math.max(0, width - width(bar))),
                                                 Theme.Classes.DIFF_FILE_HEADER,
-                                                styles)),
+                                                styles))),
                                 Option.of(new Mark(new Anchor.File(file.path()), 1, width, Option.none()))))
                         .appendAll(note(file)
                                 .map(text -> Marked.plain(Line.from(styled(text, Theme.Classes.DIM, styles))))))
@@ -280,7 +281,7 @@ final class RichDiff {
             List<Row> members = group._1().map(rows::get);
             List<Row> threaded = members.filter(row -> !row.remarks().threads().isEmpty());
             return members.map(row -> new Marked(
-                            line(row, layout),
+                            () -> line(row, layout),
                             Anchor.of(layout.path(), row.parsed().line())
                                     .map(on -> new Mark(on, 1, layout.fileWidth(), at))))
                     .appendAll(threaded.zipWithIndex()
@@ -323,7 +324,7 @@ final class RichDiff {
                                 Messages.get(fold.pastTheCut(gap.from()) ? "content.gap.tooLong" : "content.gap.more"));
         };
         return () -> List.of(new Marked(
-                Line.from(rule(layout), styled(says + " ┄", Theme.Classes.DIFF_HUNK, layout.styles())),
+                Rows.kept(Line.from(rule(layout), styled(says + " ┄", Theme.Classes.DIFF_HUNK, layout.styles()))),
                 Option.of(new Mark(
                         new Anchor.Gap(layout.path(), gap.from(), gap.until()),
                         1,
@@ -492,12 +493,12 @@ final class RichDiff {
     }
 
     /**
-     * A line drawn, and the stop of the cursor that starts on it, if one does.
+     * What draws a line, and the stop of the cursor that starts on it, if one does.
      */
-    private record Marked(Line line, Option<Mark> mark) {
+    private record Marked(Supplier<Line> line, Option<Mark> mark) {
 
         static Marked plain(Line line) {
-            return new Marked(line, Option.none());
+            return new Marked(Rows.kept(line), Option.none());
         }
     }
 
@@ -521,13 +522,14 @@ final class RichDiff {
     record Stop(Mark mark, int row) {}
 
     /**
-     * The lines of a diff, and where each stop of the cursor in them starts, in order.
+     * The lines of a diff, each drawn when it shows ({@link Rows}), and where each stop of the cursor in them starts, in
+     * order.
      */
-    record Drawn(List<Line> lines, List<Stop> stops) {
+    record Drawn(Rows rows, List<Stop> stops) {
 
         private static Drawn of(List<Marked> marked) {
             return new Drawn(
-                    marked.map(Marked::line),
+                    Rows.drawn(marked.map(Marked::line)),
                     marked.zipWithIndex().flatMap(line -> line._1().mark().map(mark -> new Stop(mark, line._2()))));
         }
 
@@ -535,7 +537,21 @@ final class RichDiff {
          * {@code lines}, without a stop: what has no cursor.
          */
         static Drawn plain(List<Line> lines) {
-            return new Drawn(lines, List.empty());
+            return plain(Rows.of(lines));
+        }
+
+        /**
+         * {@code rows}, without a stop: what has no cursor.
+         */
+        static Drawn plain(Rows rows) {
+            return new Drawn(rows, List.empty());
+        }
+
+        /**
+         * All the lines, drawn.
+         */
+        List<Line> lines() {
+            return rows.all();
         }
 
         /**
@@ -543,7 +559,7 @@ final class RichDiff {
          */
         Drawn after(List<Line> before) {
             return new Drawn(
-                    lines.prependAll(before), stops.map(stop -> new Stop(stop.mark(), stop.row() + before.size())));
+                    rows.after(Rows.of(before)), stops.map(stop -> new Stop(stop.mark(), stop.row() + before.size())));
         }
 
         /**
@@ -553,7 +569,7 @@ final class RichDiff {
             return stops.headOption()
                     .filter(first -> first.row() > 0)
                     .map(first -> new Drawn(
-                            lines,
+                            rows,
                             stops.prepend(new Stop(new Mark(new Anchor.Lead(), first.row(), 0, Option.none()), 0))))
                     .getOrElse(this);
         }
@@ -629,7 +645,7 @@ final class RichDiff {
                             .flatMap(part -> part._2()
                                     .zipWithIndex()
                                     .map(drawn -> new Marked(
-                                            drawn._1(),
+                                            Rows.kept(drawn._1()),
                                             Option.when(
                                                     drawn._2() == 0,
                                                     () -> new Mark(
