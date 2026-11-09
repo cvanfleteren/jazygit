@@ -48,8 +48,10 @@ public record DivergenceView(
         return commits.toOption()
                 .flatMap(read -> read.ahead()
                         .commits()
-                        .appendAll(read.behind().commits())
-                        .find(commit -> commit.sha().equals(sha)));
+                        .find(commit -> commit.sha().equals(sha))
+                        .orElse(() -> read.behind()
+                                .commits()
+                                .find(commit -> commit.sha().equals(sha))));
     }
 
     /**

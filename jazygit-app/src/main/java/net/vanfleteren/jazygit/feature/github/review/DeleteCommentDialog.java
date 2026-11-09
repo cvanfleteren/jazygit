@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.feature.github.review;
 
-import io.vavr.collection.List;
+import io.vavr.collection.Iterator;
 import java.time.Duration;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.ui.TimeText;
@@ -39,8 +39,9 @@ public final class DeleteCommentDialog {
      * as a collapsed comment shows it.
      */
     private static String firstLine(String body) {
-        return List.ofAll(MarkdownImages.asText(MarkdownScroll.withoutHtmlComments(body))
-                        .lines())
+        return Iterator.ofAll(MarkdownImages.asText(MarkdownScroll.withoutHtmlComments(body))
+                        .lines()
+                        .iterator())
                 .map(String::strip)
                 .find(line -> !line.isEmpty())
                 .getOrElse("");

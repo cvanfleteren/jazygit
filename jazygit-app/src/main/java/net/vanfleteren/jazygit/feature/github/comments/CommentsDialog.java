@@ -15,6 +15,7 @@ import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.MouseEvent;
 import dev.tamboui.tui.event.MouseEventKind;
+import io.vavr.collection.Iterator;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Clock;
@@ -243,7 +244,7 @@ public final class CommentsDialog implements PopupView {
      * followed by a space, so {@code **Note**} and {@code +1} keep theirs.
      */
     static String firstLine(String markdown) {
-        return List.of(MarkdownImages.asText(MarkdownScroll.withoutHtmlComments(markdown))
+        return Iterator.of(MarkdownImages.asText(MarkdownScroll.withoutHtmlComments(markdown))
                         .split("\\R"))
                 .map(line -> line.replaceFirst("^\\s*(?:(?:#{1,6}|>|[*+-])\\s+)*", "")
                         .strip())

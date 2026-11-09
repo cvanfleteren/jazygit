@@ -477,6 +477,7 @@ public final class ContentPanel {
     public Option<String> areaOfPane(Model model, String paneId) {
         return ContentView.of(model, paneId)
                 .areas()
+                .iterator()
                 .map(Shown.Area::area)
                 .find(area -> area.pane(model).equals(paneId))
                 .map(ContentArea::id);

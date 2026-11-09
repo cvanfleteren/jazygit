@@ -197,9 +197,9 @@ final class CliRebase {
                                         GitOutput.nonBlankLines(refs.stdout()).map(line -> GitOutput.fields(line, 3)))
                                 .mapLeft(error -> new GitFailure(error, refs.log()))
                                 .map(read -> List.ofAll(read).toMap(fields -> fields.get(0), fields -> fields.tail()))
-                                .map(read -> layers.map(layer -> changed(layer, read, head))
-                                        .find(Option::isDefined)
-                                        .flatMap(why -> why))));
+                                .map(read -> layers.iterator()
+                                        .flatMap(layer -> changed(layer, read, head))
+                                        .headOption())));
     }
 
     /**

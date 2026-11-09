@@ -72,11 +72,11 @@ public record StackRebase(
         }
         StackPush push = planned.get();
         Option<StackPush.Refused> unmovable = push.branches()
+                .iterator()
                 .map(Tuple2::_1)
                 .zip(entries.filter(StackRebase::open))
-                .map(branch -> unmovable(branch._1(), branch._2()))
-                .find(Option::isDefined)
-                .flatMap(why -> why);
+                .flatMap(branch -> unmovable(branch._1(), branch._2()))
+                .headOption();
         if (unmovable.isDefined()) {
             return refused(stack, unmovable.get());
         }

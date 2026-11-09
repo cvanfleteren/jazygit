@@ -281,9 +281,9 @@ class LocalBranchesList implements BranchesTabList {
                                 header,
                                 diverged(model, header),
                                 header.branches()
-                                        .map(b -> spinnerOf.apply(new BranchRef.Local(b.name())))
-                                        .find(Option::isDefined)
-                                        .flatMap(spinner -> spinner));
+                                        .iterator()
+                                        .flatMap(b -> spinnerOf.apply(new BranchRef.Local(b.name())))
+                                        .headOption());
                     case BranchNode.Other other -> other(other);
                 }),
                 focused,
@@ -299,6 +299,7 @@ class LocalBranchesList implements BranchesTabList {
                 .remoteBranches()
                 .toOption()
                 .getOrElse(List.empty())
+                .iterator()
                 .map(RemoteRef::branch)
                 .find(remote ->
                         remote.branch().value().equals(head) && model.gitHub().mayBeOnGitHub(remote));
