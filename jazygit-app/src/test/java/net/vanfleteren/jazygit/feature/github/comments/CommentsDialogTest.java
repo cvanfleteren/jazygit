@@ -317,6 +317,42 @@ class CommentsDialogTest {
     }
 
     @Test
+    void clickingAReferenceOrABareURLInTheCommentOpensIt() throws Exception {
+        PullRequestPopup ofRepository = SHOWN.with(
+                Either.right(StubGitHub.empty()
+                        .pullRequestDetails(42)
+                        .get()
+                        .withRepository("owner/repo")
+                        .withUrl("https://github.com/owner/repo")),
+                0);
+        model = TestModels.loaded()
+                .openPopup(CommentsPopup.loading(ofRepository)
+                        .read(Either.right(List.of(comment(
+                                "IC_1", Kind.COMMENT, "bob", "Fixed in #381, see https://example.com/docs.")))));
+        try (ToolkitTestRunner runner = start(WIDE)) {
+            String screen = RenderedText.ofSize(runner, this::view, WIDE.width(), WIDE.height());
+            // Each shows as it is written.
+            int[] shown = at(screen, "││Fixed in #381, see https://example.com/docs.");
+            int start = shown[0] + "││".length();
+            int y = shown[1];
+
+            SettledPilot.of(runner).mousePress(MouseButton.LEFT, start + "Fixed in #3".length(), y);
+            SettledPilot.of(runner).mousePress(MouseButton.LEFT, start + "Fixed in #381, see https://ex".length(), y);
+            // The full stop after the URL is not part of it.
+            SettledPilot.of(runner)
+                    .mousePress(MouseButton.LEFT, start + "Fixed in #381, see https://example.com/docs".length(), y);
+            SettledPilot.of(runner).pause();
+        }
+
+        // GitHub sends /issues/381 on to /pull/381 when it is a pull request (ADR 98).
+        assertEquals(
+                java.util.List.of(
+                        new CommentsMsg.LinkChosen("https://github.com/owner/repo/issues/381"),
+                        new CommentsMsg.LinkChosen("https://example.com/docs")),
+                dispatched);
+    }
+
+    @Test
     void aLinkWrappedOverLinesOpensFromItsNextLine() throws Exception {
         String text = "alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu nu xi omicron pi rho "
                 + "sigma tau upsilon phi chi psi omega";
