@@ -1,4 +1,4 @@
-# 93. A taller pane grows as far as a maximized one
+# 95. A taller pane grows as far as a maximized one
 
 Date: 2026-11-08
 

@@ -89,5 +89,5 @@ the left column has: only the frame does.
   saved.
 - A pane of 3 rows shows one row, which its cursor moves through.
 
-Amended by ADR 93: `+` takes from the panes under the pane, then from the ones above, and once they are as short as
+Amended by ADR 95: `+` takes from the panes under the pane, then from the ones above, and once they are as short as
 they get, maximizes it.
