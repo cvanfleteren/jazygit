@@ -12,6 +12,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.function.Consumer;
+import net.vanfleteren.jazygit.feature.github.checks.ChecksMsg;
+import net.vanfleteren.jazygit.feature.github.checks.ChecksUpdate;
 import net.vanfleteren.jazygit.feature.github.comment.CommentMsg;
 import net.vanfleteren.jazygit.feature.github.comments.CommentsMsg;
 import net.vanfleteren.jazygit.feature.github.edit.EditPullRequestMsg;
@@ -43,7 +45,7 @@ import net.vanfleteren.jazygit.ui.widgets.WithDetails;
 
 /**
  * Popup showing the pull request of a branch: its title, state, branches, review and checks, as labelled
- * rows, and under them, in two columns (ADR 66), what can be done with it: open it in the browser, comment on it, edit it, read its comments, mark it
+ * rows, and under them, in two columns (ADR 66), what can be done with it: open it in the browser, comment on it, edit it, read its comments or see its checks, mark it
  * ready for review or turn it into a draft, merge it or close it, or read it again. While it is read again, the
  * details stay shown, with a spinner in the title; when that fails, the title says they are stale. Whether it is
  * open lives in the {@link Model}.
@@ -59,16 +61,18 @@ public final class PullRequestDialog implements PopupView {
     // A check listed after the indent takes the rest of the line, how it is doing lined up on the right.
     private static final int CHECK_WIDTH = DialogFrame.contentWidth(WIDTH) - INDENT.length();
     // The failed and running checks listed one by one; the rest are counted.
-    private static final int LISTED_CHECKS = 8;
+    private static final int LISTED_CHECKS = 7;
+    // How wide the bar of each check is, after its name, while one is not done: half that of the checks popup.
+    private static final int CHECK_BAR = 12;
     // A longer title is cut.
     private static final int TITLE_LINES = 3;
     /*
      * The most lines the details take: the title and a blank line; state, author, branch, stack, created, pushed,
      * changes and mergeable, and a blank line; review, reviewers, comments, threads and labels, and a blank line; the
-     * checks counted, listed, and how many more there are. The dialog is always this high, so it keeps its size
-     * when the details arrive.
+     * checks counted, how far they are, listed, and how many more there are. The dialog is always this high, so it
+     * keeps its size when the details arrive.
      */
-    private static final int CONTENT_HEIGHT = TITLE_LINES + 1 + 8 + 1 + 5 + 1 + 1 + LISTED_CHECKS + 1;
+    private static final int CONTENT_HEIGHT = TITLE_LINES + 1 + 8 + 1 + 5 + 1 + 1 + 1 + LISTED_CHECKS + 1;
 
     private final Clock clock;
     private final ChoiceList<PullRequestPopup> actions;
@@ -105,6 +109,12 @@ public final class PullRequestDialog implements PopupView {
                                 "dialog.pullRequest.viewComments",
                                 CommentsMsg.Requested::new,
                                 (model, popup) -> popup.detailsRead()),
+                        new Choice<>(
+                                'C',
+                                "dialog.pullRequest.viewChecks",
+                                ChecksMsg.PullRequestChecksRequested::new,
+                                (model, popup) ->
+                                        ChecksUpdate.ofPullRequest(model, popup).isDefined()),
                         new Choice<>(
                                 'F',
                                 "dialog.pullRequest.files",
@@ -241,11 +251,13 @@ public final class PullRequestDialog implements PopupView {
     }
 
     /**
-     * How many checks failed, are running and passed, and when they are expected to be done; then the failed ones
-     * by name, and the ones not done with how long they run and are expected to take still: the running ones before
-     * the queued ones, each the soonest done first (ADR 32), lined up on the right as in the checks popup.
+     * How many checks failed, are running and passed, and when they are expected to be done; a bar of how far they
+     * are together, {@code progress}, as in the checks popup; then the failed ones by name, and the ones not done: the
+     * running ones before the queued ones, each the soonest done first (ADR 32). While one is not done, each has a bar
+     * of how far it is after its name, and how long it runs of how long it is expected to take, or how long it took,
+     * lined up on the right as in the checks popup.
      */
-    private static List<Line> checks(List<Check> checks, Option<CheckTimes> times, Instant now) {
+    private static List<Line> checks(List<Check> checks, Option<CheckTimes> times, double progress, Instant now) {
         if (checks.isEmpty()) {
             return List.of(Line.labelled(
                     "dialog.pullRequest.checks",
@@ -253,11 +265,22 @@ public final class PullRequestDialog implements PopupView {
         }
         List<Check> notPassed = checks.filter(check -> check.state() != Checks.PASSING);
         List<Check> listed = CheckRows.order(notPassed, checks, times).take(LISTED_CHECKS);
-        int doingWidth = CheckRows.doingWidth(listed, checks, times, now, false);
-        return List.of(Line.pieces(List.<StyledElement<?>>of(label("dialog.pullRequest.checks"))
-                        .appendAll(CheckRows.counts(checks, times, now))))
+        boolean running = listed.exists(check -> !check.done());
+        int doingWidth = running
+                ? CheckRows.barredDoingWidth(listed, checks, times, now)
+                : CheckRows.doingWidth(listed, checks, times, now, false);
+        return List.of(
+                        Line.pieces(List.<StyledElement<?>>of(label("dialog.pullRequest.checks"))
+                                .appendAll(CheckRows.counts(checks, times, now))),
+                        Line.pieces(List.<StyledElement<?>>of(text(INDENT))
+                                .appendAll(CheckRows.gauge(checks, times, progress, now, CHECK_WIDTH))))
                 .appendAll(listed.map(check -> Line.pieces(List.<StyledElement<?>>of(text(INDENT))
-                        .appendAll(CheckRows.filling(check, checks, times, now, CHECK_WIDTH, doingWidth, false)))))
+                        .appendAll(
+                                running
+                                        ? CheckRows.barred(
+                                                check, checks, times, now, CHECK_WIDTH, CHECK_BAR, doingWidth)
+                                        : CheckRows.filling(
+                                                check, checks, times, now, CHECK_WIDTH, doingWidth, false)))))
                 .appendAll(Option.when(
                         notPassed.size() > LISTED_CHECKS,
                         () -> Line.of(text(INDENT
@@ -291,12 +314,7 @@ public final class PullRequestDialog implements PopupView {
             List<Line> lines = popup.details()
                     .map(read -> read.fold(
                             PullRequestDialog::failed,
-                            pr -> details(
-                                    pr,
-                                    model.now(),
-                                    model.gitHub()
-                                            .checkTimes()
-                                            .filter(times -> times.repository().equals(pr.repository())))))
+                            pr -> details(pr, model.now(), PullRequestPopup.times(model, pr), popup.progress(model))))
                     .getOrElse(() -> loading(popup));
             int blanks = CONTENT_HEIGHT - lines.map(Line::height).sum().intValue();
             Element dialog = DialogFrame.withHint(
@@ -339,7 +357,7 @@ public final class PullRequestDialog implements PopupView {
                         text(TimeText.spinnerFrame(clock.instant())).addClass(Theme.Classes.SPINNER))));
     }
 
-    private List<Line> details(PullRequestDetails pr, Instant now, Option<CheckTimes> times) {
+    private List<Line> details(PullRequestDetails pr, Instant now, Option<CheckTimes> times, double progress) {
         return List.of(
                         Line.wrapped(pr.title(), Theme.Classes.BOLD, TITLE_LINES),
                         Line.blank(),
@@ -391,7 +409,7 @@ public final class PullRequestDialog implements PopupView {
                                 "dialog.pullRequest.labels",
                                 text(pr.conversation().labels().mkString(", ")))))
                 .append(Line.blank())
-                .appendAll(checks(pr.checks(), times, now));
+                .appendAll(checks(pr.checks(), times, progress, now));
     }
 
     private static String threads(ReviewThreads threads) {

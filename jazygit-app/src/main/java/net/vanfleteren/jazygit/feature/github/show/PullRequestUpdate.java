@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.feature.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesUpdate;
 import net.vanfleteren.jazygit.feature.fetch.FetchUpdate;
 import net.vanfleteren.jazygit.feature.github.browse.BrowsePullRequestCmd;
+import net.vanfleteren.jazygit.feature.github.checks.ChecksPopup;
 import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestUpdate;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestCmd.*;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
@@ -40,13 +41,22 @@ public final class PullRequestUpdate {
             // while it is not known yet which repository this is, which does no harm.
             case PullRequestMsg.SummaryRequested(var pullRequest)
             when model.prOverview().ofThisRepository(pullRequest).getOrElse(false) ->
-                show(model, new BranchName(pullRequest.headBranch()), pullRequest.pullRequest(), false);
+                show(
+                        model,
+                        new BranchName(pullRequest.headBranch()),
+                        pullRequest.pullRequest(),
+                        pullRequest.fromFork(),
+                        false);
             case PullRequestMsg.SummaryRequested(var pullRequest) ->
                 Update.start(model.clearError(), new BrowsePullRequestCmd(pullRequest));
             // Its files are listed in the files pane, which only has those of this repository.
             case PullRequestMsg.SummaryFilesRequested(var pullRequest)
             when model.prOverview().ofThisRepository(pullRequest).getOrElse(false) ->
-                files(model.clearError(), new BranchName(pullRequest.headBranch()), pullRequest.pullRequest());
+                files(
+                        model.clearError(),
+                        new BranchName(pullRequest.headBranch()),
+                        pullRequest.pullRequest(),
+                        pullRequest.fromFork());
             case PullRequestMsg.SummaryFilesRequested(var pullRequest) ->
                 Update.start(model.clearError(), new BrowsePullRequestCmd(pullRequest));
             // The branches pane shows the pull request as it was just read too, also when the dialog is closed.
@@ -237,22 +247,27 @@ public final class PullRequestUpdate {
     }
 
     /**
-     * {@code model} showing what read {@code read} brought about pull request {@code number}; unchanged when it is
-     * no longer shown, as the user closed it, or opened another one, while it was being read.
+     * {@code model} showing what read {@code read} brought about pull request {@code number}, its checks no less far
+     * than they were shown to be (ADR 89); unchanged when it is no longer shown, as the user closed it, or opened
+     * another one, while it was being read.
      */
     private static Model shown(Model model, int number, long read, Either<Failure, PullRequestDetails> result) {
-        return mapShown(model, number, popup -> popup.with(result, read));
+        return mapShown(model, number, popup -> popup.reaching(model).with(result, read));
     }
 
     /**
      * {@code model} with the dialog of pull request {@code number} as {@code change} makes it: the one that is open,
-     * or the one the open popup goes back to, like a comment on it, so that one is not out of date then. Unchanged
-     * when no popup shows it.
+     * or the one the open popup goes back to, like a comment on it or its checks, so that one is not out of date
+     * then. Unchanged when no popup shows it.
      */
     private static Model mapShown(Model model, int number, Function<PullRequestPopup, PullRequestPopup> change) {
         return model.popup(ShowsPullRequest.class)
                 .filter(popup -> popup.number() == number)
                 .map(popup -> model.openPopup(popup.withPullRequestPopup(change.apply(popup.pullRequestPopup()))))
+                .orElse(() -> model.popup(ChecksPopup.class)
+                        .flatMap(checks -> checks.from()
+                                .filter(dialog -> dialog.pullRequest().number() == number)
+                                .map(dialog -> model.openPopup(checks.withFrom(change.apply(dialog))))))
                 .getOrElse(model);
     }
 
@@ -265,7 +280,7 @@ public final class PullRequestUpdate {
         return model.idleBranch(branch)
                 .map(known -> model.gitHub()
                         .pullRequest(known)
-                        .map(pr -> show(model, branch, pr, false))
+                        .map(pr -> show(model, branch, pr, false, false))
                         // Without the pull requests it is unknown whether there is one to open.
                         .getOrElse(() -> model.gitHub().pullRequestsFailure().isDefined()
                                         || model.gitHub().pullRequests().isEmpty()
@@ -286,21 +301,21 @@ public final class PullRequestUpdate {
         return cleared.repo()
                 .branch(branch)
                 .flatMap(known -> cleared.gitHub().pullRequest(known))
-                .map(pr -> files(cleared, branch, pr))
+                .map(pr -> files(cleared, branch, pr, false))
                 .getOrElse(() -> CommitFilesUpdate.againstBase(cleared, branch));
     }
 
     /**
-     * Shows the files {@code pullRequest}, of {@code branch}, changes: at the commits it was listed with; when those
-     * are not known, once its dialog read them, which it shows meanwhile, and which stays, to say so, when they cannot
-     * be shown.
+     * Shows the files {@code pullRequest}, of {@code branch}, of a fork when {@code fromFork}, changes: at the commits
+     * it was listed with; when those are not known, once its dialog read them, which it shows meanwhile, and which
+     * stays, to say so, when they cannot be shown.
      */
-    private static Next files(Model model, BranchName branch, PullRequest pullRequest) {
+    private static Next files(Model model, BranchName branch, PullRequest pullRequest, boolean fromFork) {
         return pullRequest
                 .commits()
                 .flatMap(listed -> commits(pullRequest.number(), listed))
                 .map(commits -> files(model, commits))
-                .getOrElse(() -> show(model, branch, pullRequest, true));
+                .getOrElse(() -> show(model, branch, pullRequest, fromFork, true));
     }
 
     /**
@@ -340,12 +355,13 @@ public final class PullRequestUpdate {
     }
 
     /**
-     * Shows {@code pullRequest}, from {@code branch}, reading what there is to know about it; then the files it
-     * changes in its place when {@code files}.
+     * Shows {@code pullRequest}, from {@code branch}, of a fork when {@code fromFork}, reading what there is to know
+     * about it; then the files it changes in its place when {@code files}.
      */
-    private static Next show(Model model, BranchName branch, PullRequest pullRequest, boolean files) {
+    private static Next show(Model model, BranchName branch, PullRequest pullRequest, boolean fromFork, boolean files) {
         return read(model, pullRequest.number()).apply((given, load) -> {
-            PullRequestPopup loading = PullRequestPopup.loading(branch, pullRequest, model.now(), load.read());
+            PullRequestPopup opened = PullRequestPopup.loading(branch, pullRequest, model.now(), load.read());
+            PullRequestPopup loading = fromFork ? opened.ofFork() : opened;
             return Next.of(
                     Update.ask(given, files ? loading.wantingFiles() : loading).model(), load);
         });

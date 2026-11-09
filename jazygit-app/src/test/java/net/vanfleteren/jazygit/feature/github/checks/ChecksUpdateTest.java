@@ -10,8 +10,14 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.feature.github.show.PullRequestMsg;
+import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
+import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.CheckRun;
+import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
+import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.gh.timing.CheckSample;
 import net.vanfleteren.jazygit.git.model.Branch;
@@ -80,6 +86,15 @@ class ChecksUpdateTest {
                                 new GitHubChecks(HashSet.of("origin"), HashMap.of(new BranchName("feature"), checks))))
                 .model();
     }
+
+    // The pull request from feature, shown in its dialog once its details are read.
+    private static final PullRequest FEATURE_PR =
+            new PullRequest(42, "feature", false, Checks.PENDING, Review.APPROVED);
+    private static final PullRequestDetails DETAILS =
+            StubGitHub.empty().pullRequestDetails(42).get();
+    private static final PullRequestPopup DIALOG = PullRequestPopup.loading(
+                    new BranchName("mine"), FEATURE_PR, Instant.EPOCH, 0)
+            .with(Either.right(DETAILS), 0);
 
     private static Model shown() {
         return Update.update(model(Checks.PENDING), new ChecksMsg.Requested(MINE))
@@ -294,5 +309,57 @@ class ChecksUpdateTest {
                 Update.update(shown(), new Msg.PopupDismissed(ChecksPopup.class))
                         .model()
                         .popup(ChecksPopup.class));
+    }
+
+    @Test
+    void closingTheChecksOfABranchHidesThem() {
+        assertEquals(
+                Option.none(),
+                Update.update(shown(), new ChecksMsg.Closed()).model().popup());
+    }
+
+    @Test
+    void thePullRequestDialogShowsTheChecksOfItsBranchOnGitHubAndClosingThemGoesBackToIt() {
+        Next next = Update.update(model(Checks.PENDING).openPopup(DIALOG), new ChecksMsg.PullRequestChecksRequested());
+
+        assertEquals(
+                Option.of(ChecksPopup.loading(new BranchRef.Remote(FEATURE), FEATURE, Instant.EPOCH, DIALOG)),
+                next.model().popup(ChecksPopup.class));
+        assertEquals(List.of(new LoadChecks(FEATURE)), next.cmds());
+        assertEquals(
+                Option.of(DIALOG),
+                Update.update(next.model(), new ChecksMsg.Closed()).model().popup());
+    }
+
+    @Test
+    void aPullRequestWithoutChecksOrNotReadYetShowsNone() {
+        Model noChecks = model(Checks.NONE).openPopup(DIALOG);
+        Model loading = model(Checks.PENDING)
+                .openPopup(PullRequestPopup.loading(new BranchName("mine"), FEATURE_PR, Instant.EPOCH, 0));
+
+        assertEquals(Next.of(noChecks), Update.update(noChecks, new ChecksMsg.PullRequestChecksRequested()));
+        assertEquals(Next.of(loading), Update.update(loading, new ChecksMsg.PullRequestChecksRequested()));
+    }
+
+    @Test
+    void aPullRequestFromAForkShowsNoChecksThoughABranchHereHasItsName() {
+        Model fork = model(Checks.PENDING).openPopup(DIALOG.ofFork());
+
+        assertEquals(Option.none(), ChecksUpdate.ofPullRequest(fork, DIALOG.ofFork()));
+        assertEquals(Next.of(fork), Update.update(fork, new ChecksMsg.PullRequestChecksRequested()));
+    }
+
+    @Test
+    void whatIsReadOfThePullRequestChangesTheDialogTheChecksGoBackTo() {
+        PullRequestPopup loading = PullRequestPopup.loading(new BranchName("mine"), FEATURE_PR, Instant.EPOCH, 0);
+        Model checks = model(Checks.PENDING)
+                .openPopup(ChecksPopup.loading(new BranchRef.Remote(FEATURE), FEATURE, Instant.EPOCH, loading));
+
+        Model read = Update.update(checks, new PullRequestMsg.DetailsLoaded(42, 0, DETAILS))
+                .model();
+
+        assertEquals(
+                Option.of(DETAILS),
+                read.popup(ChecksPopup.class).flatMap(ChecksPopup::from).flatMap(PullRequestPopup::readDetails));
     }
 }

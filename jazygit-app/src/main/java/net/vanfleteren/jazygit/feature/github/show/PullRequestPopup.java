@@ -11,13 +11,19 @@ import net.vanfleteren.jazygit.gh.timing.CheckTimings;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.state.CheckTimes;
+import net.vanfleteren.jazygit.state.ChecksReached;
 import net.vanfleteren.jazygit.state.Failure;
+import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Popup;
 import net.vanfleteren.jazygit.state.Reading;
 
 /**
  * Showing the pull request of {@code branch}.
  *
  * @param pullRequest   what is known of it from the list of pull requests
+ * @param fromFork      whether it comes from a fork, as one opened on the pull requests screen can: its head branch
+ *                      is not a branch of this repository, whatever it is called
  * @param details       what was read about it, or why that failed; nothing while it is first being read
  * @param reading       whether it is being read again, while {@code details} stay shown, and why
  * @param refreshFailed why reading it again failed the last time, so the details shown are stale; nothing once a
@@ -26,30 +32,44 @@ import net.vanfleteren.jazygit.state.Reading;
  * @param read          the id of the last read of it that it started, which it waits for while it reads (ADR 34)
  * @param filesWanted   whether the files it changes are shown in its place once its details are read, as f on its
  *                      branch asks; the read it waits for, taken or not, ends that
+ * @param reached       how far its checks were shown to be when its details were last read again, or what was
+ *                      learned of how long checks take changed, so they are not shown going back (ADR 89)
  */
 public record PullRequestPopup(
         BranchName branch,
         PullRequest pullRequest,
+        boolean fromFork,
         Option<Either<Failure, PullRequestDetails>> details,
         Reading reading,
         Option<Failure> refreshFailed,
         Instant readAt,
         long read,
-        boolean filesWanted)
+        boolean filesWanted,
+        Option<ChecksReached> reached)
         implements ShowsPullRequest {
 
     /**
      * The popup while its details are being read, from {@code now}, by read {@code read}.
      */
     public static PullRequestPopup loading(BranchName branch, PullRequest pullRequest, Instant now, long read) {
-        return new PullRequestPopup(branch, pullRequest, Option.none(), Reading.NOT, Option.none(), now, read, false);
+        return new PullRequestPopup(
+                branch, pullRequest, false, Option.none(), Reading.NOT, Option.none(), now, read, false, Option.none());
+    }
+
+    /**
+     * The popup of a pull request that comes from a fork.
+     */
+    public PullRequestPopup ofFork() {
+        return new PullRequestPopup(
+                branch, pullRequest, true, details, reading, refreshFailed, readAt, read, filesWanted, reached);
     }
 
     /**
      * The popup while its details are being read, to show the files it changes in its place once they are.
      */
     public PullRequestPopup wantingFiles() {
-        return new PullRequestPopup(branch, pullRequest, details, reading, refreshFailed, readAt, read, true);
+        return new PullRequestPopup(
+                branch, pullRequest, fromFork, details, reading, refreshFailed, readAt, read, true, reached);
     }
 
     /**
@@ -67,21 +87,25 @@ public record PullRequestPopup(
                         ? new PullRequestPopup(
                                 branch,
                                 pullRequest,
+                                fromFork,
                                 details,
                                 Reading.NOT,
                                 Option.of(result.getLeft()),
                                 readAt,
                                 read,
-                                false)
+                                false,
+                                reached)
                         : new PullRequestPopup(
                                 branch,
                                 pullRequest,
+                                fromFork,
                                 Option.of(result.map(this::keepingBehindBase)),
                                 Reading.NOT,
                                 Option.none(),
                                 readAt,
                                 read,
-                                false);
+                                false,
+                                reached);
     }
 
     /**
@@ -90,7 +114,17 @@ public record PullRequestPopup(
      */
     PullRequestPopup notTaken(long id) {
         return id == read
-                ? new PullRequestPopup(branch, pullRequest, details, Reading.NOT, refreshFailed, readAt, read, false)
+                ? new PullRequestPopup(
+                        branch,
+                        pullRequest,
+                        fromFork,
+                        details,
+                        Reading.NOT,
+                        refreshFailed,
+                        readAt,
+                        read,
+                        false,
+                        reached)
                 : this;
     }
 
@@ -115,7 +149,8 @@ public record PullRequestPopup(
      * The popup while its details are read again from {@code now} by read {@code id}, as {@code reading} tells.
      */
     public PullRequestPopup readingAgain(Reading reading, Instant now, long id) {
-        return new PullRequestPopup(branch, pullRequest, details, reading, refreshFailed, now, id, filesWanted);
+        return new PullRequestPopup(
+                branch, pullRequest, fromFork, details, reading, refreshFailed, now, id, filesWanted, reached);
     }
 
     /**
@@ -123,7 +158,16 @@ public record PullRequestPopup(
      */
     PullRequestPopup asked() {
         return new PullRequestPopup(
-                branch, pullRequest, details, Reading.ASKED, refreshFailed, readAt, read, filesWanted);
+                branch,
+                pullRequest,
+                fromFork,
+                details,
+                Reading.ASKED,
+                refreshFailed,
+                readAt,
+                read,
+                filesWanted,
+                reached);
     }
 
     /**
@@ -152,12 +196,14 @@ public record PullRequestPopup(
         return new PullRequestPopup(
                 branch,
                 pullRequest,
+                fromFork,
                 details.map(read -> read.map(pr -> pr.withDraft(draft))),
                 reading,
                 refreshFailed,
                 readAt,
                 read,
-                filesWanted);
+                filesWanted,
+                reached);
     }
 
     /**
@@ -223,6 +269,53 @@ public record PullRequestPopup(
      */
     public Option<PullRequestStack> stack() {
         return readDetails().map(PullRequestDetails::stack).getOrElse(pullRequest::stack);
+    }
+
+    /**
+     * How far its checks are together in {@code model}, no less far than they were shown to be (ADR 89); 0 before its
+     * details are read.
+     */
+    public double progress(Model model) {
+        return readDetails()
+                .map(pr -> ChecksReached.progress(reached, pr.checks(), times(model, pr), model.now()))
+                .getOrElse(0.0);
+    }
+
+    /**
+     * How long checks take, as learned in {@code model}, of the repository of {@code pr}.
+     */
+    public static Option<CheckTimes> times(Model model, PullRequestDetails pr) {
+        return model.gitHub().checkTimes().filter(times -> times.repository().equals(pr.repository()));
+    }
+
+    /**
+     * The popup keeping how far its checks are shown to be in {@code model}, as the checks popup does (ADR 89); as it
+     * is while its details are not read, or it has no checks.
+     */
+    public PullRequestPopup reaching(Model model) {
+        return readDetails()
+                .filter(pr -> !pr.checks().isEmpty())
+                .map(pr -> new PullRequestPopup(
+                        branch,
+                        pullRequest,
+                        fromFork,
+                        details,
+                        reading,
+                        refreshFailed,
+                        readAt,
+                        read,
+                        filesWanted,
+                        ChecksReached.keeping(pr.checks(), progress(model))))
+                .getOrElse(this);
+    }
+
+    /**
+     * Once what was learned of how long checks take changes from what {@code before} knows, how far its checks were
+     * shown to be in it stays reached, as when its details are read again.
+     */
+    @Override
+    public Popup checkTimesChanging(Model before) {
+        return reaching(before);
     }
 
     @Override

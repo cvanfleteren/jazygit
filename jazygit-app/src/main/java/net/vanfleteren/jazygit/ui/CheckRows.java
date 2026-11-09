@@ -27,6 +27,8 @@ public final class CheckRows {
     private static final int RUNNING = 1;
     private static final int QUEUED = 2;
     private static final int PASSED = 3;
+    // How wide how far the checks are together is written, after their bar and a space: "100%".
+    private static final int PERCENT = 4;
 
     private CheckRows() {}
 
@@ -215,6 +217,27 @@ public final class CheckRows {
                 ? Option.of(duration.map(took -> Messages.get("checks.failedAfter", took))
                         .getOrElse(() -> Messages.get("checks.failed")))
                 : duration;
+    }
+
+    /**
+     * A bar of how far the checks {@code all} are together, {@code progress}, and how far that is, {@code width} wide
+     * in all: {@code ━━━━━━━━━━━──────── 62%}. Red once one failed, green once they all passed, yellow while they take
+     * longer than usual, and dimmed while when they are done is not known, as it then counts the checks done (ADR 89).
+     */
+    public static List<StyledElement<?>> gauge(
+            List<Check> all, Option<CheckTimes> times, double progress, Instant now, int width) {
+        Eta eta = eta(all, times);
+        String done = all.exists(check -> check.state() == Checks.FAILING)
+                ? Theme.Classes.CHECKS_FAILED
+                : switch (eta) {
+                    case Eta.Done passed -> Theme.Classes.CHECKS_PASSED;
+                    case Eta.Unknown unknown -> Theme.Classes.DIM;
+                    case Eta.Expected expected when expected.overdue(now) -> Theme.Classes.CHECKS_RUNNING;
+                    case Eta.Expected expected -> Theme.Classes.CHECKS_PROGRESS;
+                };
+        String percent = Messages.get("dialog.checks.progress", String.valueOf(ProgressBar.percent(progress)));
+        return ProgressBar.of(progress, width - 1 - PERCENT, done)
+                .append(text(" " + TextWidth.alignRight(percent, PERCENT)));
     }
 
     /**

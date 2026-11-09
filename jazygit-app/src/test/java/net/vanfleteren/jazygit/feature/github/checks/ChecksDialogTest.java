@@ -18,8 +18,14 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import net.vanfleteren.jazygit.feature.github.show.PullRequestMsg;
+import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
+import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.CheckRun;
+import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
+import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.gh.timing.CheckHistory;
 import net.vanfleteren.jazygit.gh.timing.CheckSample;
@@ -423,6 +429,66 @@ class ChecksDialogTest {
     }
 
     @Test
+    void thePullRequestDialogsBarDoesNotGoBackWhenItsDetailsAreReadAgain() {
+        Model model = TestModels.loaded()
+                .withNow(NOW)
+                .openPopup(pullRequestDialog(threeOfFourDone()).readingAgain(Reading.BY_ITSELF, NOW, 1));
+        double shown = model.popup(PullRequestPopup.class).get().progress(model);
+        // Read again, fewer are done, which counts as further from done.
+        List<Check> twoDone = List.of(
+                check("package", Checks.PASSING, 300, Option.of(60)),
+                check("lint", Checks.PASSING, 300, Option.of(60)),
+                check("build", Checks.PENDING, 300, Option.none()),
+                check("verify", Checks.PENDING, 10, Option.none()));
+
+        Model again = Update.update(model, new PullRequestMsg.DetailsLoaded(42, 1, pullRequest(twoDone)))
+                .model();
+
+        assertEquals(0.95 * 3 / 4, shown, 1e-9);
+        assertEquals(shown, again.popup(PullRequestPopup.class).get().progress(again), 1e-9);
+        // Checks run again start the bar again.
+        Model rerun =
+                again.openPopup(again.popup(PullRequestPopup.class).get().readingAgain(Reading.BY_ITSELF, NOW, 2));
+        Model reread = Update.update(
+                        rerun, new PullRequestMsg.DetailsLoaded(42, 2, pullRequest(List.of(rerun("verify", 10)))))
+                .model();
+        assertEquals(0, reread.popup(PullRequestPopup.class).get().progress(reread), 1e-9);
+    }
+
+    @Test
+    void thePullRequestDialogsBarDoesNotGoBackWhenHowLongTheChecksTakeIsLearnedWhileItIsOpen() {
+        Model model = TestModels.loaded().withNow(NOW).openPopup(pullRequestDialog(threeOfFourDone()));
+        double shown = model.popup(PullRequestPopup.class).get().progress(model);
+
+        Model learned = Update.update(
+                        model,
+                        new CheckTimesMsg.Recorded("owner/repo", times(300).history(), Option.none(), false))
+                .model();
+
+        assertEquals(0.95 * 3 / 4, shown, 1e-9);
+        assertEquals(shown, learned.popup(PullRequestPopup.class).get().progress(learned), 1e-9);
+    }
+
+    @Test
+    void theBarOfThePullRequestDialogTheChecksGoBackToDoesNotGoBackWhenHowLongTheyTakeIsLearned() {
+        PullRequestPopup dialog = pullRequestDialog(threeOfFourDone());
+        Model model = TestModels.loaded()
+                .withNow(NOW)
+                .openPopup(ChecksPopup.loading(new BranchRef.Remote(MAIN), MAIN, NOW, dialog));
+        double shown = dialog.progress(model);
+
+        Model learned = Update.update(
+                        model,
+                        new CheckTimesMsg.Recorded("owner/repo", times(300).history(), Option.none(), false))
+                .model();
+
+        assertEquals(0.95 * 3 / 4, shown, 1e-9);
+        assertEquals(
+                Option.of(shown),
+                learned.popup(ChecksPopup.class).flatMap(ChecksPopup::from).map(back -> back.progress(learned)));
+    }
+
+    @Test
     void takingLongerThanUsualOfAWorkflowRunAgainSaysHowLongItUsuallyTakes() throws Exception {
         // verify, run again 600s ago, usually takes 302s from the start of its run; lint ran two hours before.
         String screen = screen(timed(300)
@@ -489,10 +555,7 @@ class ChecksDialogTest {
         }
 
         assertEquals(
-                java.util.List.of(
-                        new ChecksMsg.RefreshChosen(),
-                        new Msg.PopupDismissed(ChecksPopup.class),
-                        new Msg.PopupDismissed(ChecksPopup.class)),
+                java.util.List.of(new ChecksMsg.RefreshChosen(), new ChecksMsg.Closed(), new ChecksMsg.Closed()),
                 dispatched);
     }
 
@@ -504,6 +567,48 @@ class ChecksDialogTest {
                 .map(i -> new CheckSample(
                         "Build/verify", i, Duration.ofSeconds(seconds), Duration.ofSeconds(seconds + 2), "push", NOW));
         return CheckTimes.of("owner/repo", CheckHistory.EMPTY.with(samples, NOW), Option.none());
+    }
+
+    /**
+     * Three of four checks done; how long verify, which runs, takes is not known yet.
+     */
+    private static List<Check> threeOfFourDone() {
+        return List.of(
+                check("package", Checks.PASSING, 300, Option.of(60)),
+                check("lint", Checks.PASSING, 300, Option.of(60)),
+                check("build", Checks.PASSING, 300, Option.of(60)),
+                check("verify", Checks.PENDING, 10, Option.none()));
+    }
+
+    /**
+     * Pull request 42 of owner/repo, from main, with the checks {@code checks}.
+     */
+    private static PullRequestDetails pullRequest(List<Check> checks) {
+        PullRequestDetails stub = StubGitHub.empty().pullRequestDetails(42).get();
+        return new PullRequestDetails(
+                42,
+                stub.title(),
+                stub.author(),
+                stub.status(),
+                stub.branches(),
+                stub.activity(),
+                stub.size(),
+                stub.conversation(),
+                checks,
+                Option.none(),
+                "owner/repo");
+    }
+
+    /**
+     * The pull request dialog showing pull request 42 with the checks {@code checks}, read by read 0.
+     */
+    private static PullRequestPopup pullRequestDialog(List<Check> checks) {
+        return PullRequestPopup.loading(
+                        new BranchName("main"),
+                        new PullRequest(42, "main", false, Checks.PENDING, Review.APPROVED),
+                        NOW,
+                        0)
+                .with(Either.right(pullRequest(checks)), 0);
     }
 
     private static Model timed(int seconds) {

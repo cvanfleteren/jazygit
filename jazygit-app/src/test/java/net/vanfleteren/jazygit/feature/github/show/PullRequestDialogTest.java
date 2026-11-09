@@ -9,6 +9,8 @@ import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.tui.event.KeyCode;
+import io.vavr.collection.HashMap;
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
@@ -19,6 +21,7 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
+import net.vanfleteren.jazygit.feature.github.checks.ChecksMsg;
 import net.vanfleteren.jazygit.feature.github.comment.CommentMsg;
 import net.vanfleteren.jazygit.feature.github.comments.CommentsMsg;
 import net.vanfleteren.jazygit.feature.github.edit.EditPullRequestMsg;
@@ -39,12 +42,15 @@ import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.gh.timing.CheckHistory;
 import net.vanfleteren.jazygit.gh.timing.CheckSample;
 import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.state.BranchChecksMsg;
 import net.vanfleteren.jazygit.state.CheckTimes;
 import net.vanfleteren.jazygit.state.CursorFeedback;
+import net.vanfleteren.jazygit.state.GitHubChecks;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Reading;
 import net.vanfleteren.jazygit.state.TestModels;
+import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.ui.CheckRows;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
@@ -519,9 +525,9 @@ class PullRequestDialogTest {
         String screen = screen(PullRequestPopup.loading(new BranchName("a"), PR, Instant.EPOCH, 0)
                 .with(Either.right(details), 0));
 
-        assertTrue(screen.contains("check7"), screen);
-        assertFalse(screen.contains("check8"), screen);
-        assertTrue(screen.contains("… 3 more"), screen);
+        assertTrue(screen.contains("check6"), screen);
+        assertFalse(screen.contains("check7"), screen);
+        assertTrue(screen.contains("… 4 more"), screen);
         assertFalse(screen.contains("Author"), screen);
         assertFalse(screen.contains("Reviewers"), screen);
         assertFalse(screen.contains("Labels"), screen);
@@ -539,13 +545,18 @@ class PullRequestDialogTest {
 
         // verify and the status are not known, so neither is when they are all done.
         assertTrue(screen.contains("Checks  ● 4 running · done in ?"), screen);
+        // Under the counts, how far they are together, as in the checks popup; each after its name, with how long it
+        // runs of how long it is expected to take.
+        assertTrue(screen.contains(" ".repeat(13) + "─".repeat(60) + "   0%│"), screen);
         assertTrue(
-                screen.contains("● package" + " ".repeat(26) + "running 1m 58s  · " + " ".repeat(9) + "due│"), screen);
-        assertTrue(
-                screen.contains("● verify" + " ".repeat(27) + "running 30s     · " + " ".repeat(6) + "? left│"),
+                screen.contains("● package" + " ".repeat(27) + "━".repeat(11) + "─" + " ".repeat(7) + "1m 58s/~1m│"),
                 screen);
-        assertTrue(screen.contains("● ci/status" + " ".repeat(24) + "running" + " ".repeat(23) + "│"), screen);
-        assertTrue(screen.contains("◌ acceptance" + " ".repeat(23) + "queued 2m       · ~2m 15s left│"), screen);
+        assertTrue(screen.contains("● verify" + " ".repeat(28) + "╌".repeat(12) + " ".repeat(12) + "30s/?│"), screen);
+        assertTrue(
+                screen.contains("● ci/status" + " ".repeat(25) + "╌".repeat(12) + " ".repeat(10) + "running│"), screen);
+        assertTrue(
+                screen.contains("◌ acceptance" + " ".repeat(24) + "─".repeat(12) + " ".repeat(8) + "queued 2m│"),
+                screen);
         // Running before queued, the soonest done first, those not known last.
         assertTrue(screen.indexOf("package") < screen.indexOf("verify"), screen);
         assertTrue(screen.indexOf("ci/status") < screen.indexOf("acceptance"), screen);
@@ -572,10 +583,8 @@ class PullRequestDialogTest {
                 List.of(new Check("integration-tests-windows", Checks.FAILING), timed("verify", 120, Option.of(30))),
                 learned());
 
-        assertTrue(screen.contains("✗ integration-tests-windows"), screen);
-        assertTrue(
-                screen.contains("● verify" + " ".repeat(27) + "running 30s     · " + " ".repeat(6) + "? left│"),
-                screen);
+        assertTrue(screen.contains("✗ integration-tests-windows" + " ".repeat(32) + "failed│"), screen);
+        assertTrue(screen.contains("● verify" + " ".repeat(28) + "╌".repeat(12) + " ".repeat(12) + "30s/?│"), screen);
     }
 
     @Test
@@ -600,9 +609,8 @@ class PullRequestDialogTest {
         String screen = timedScreen(List.of(timed("acceptance", 500, Option.of(400))), learned());
 
         assertTrue(screen.contains("Checks  ● 1 running · taking longer than usual"), screen);
-        assertTrue(
-                screen.contains("● acceptance" + " ".repeat(23) + "running 6m 40s  · " + " ".repeat(5) + "overdue│"),
-                screen);
+        assertTrue(screen.contains("━".repeat(58) + "──  97%│"), screen);
+        assertTrue(screen.contains("● acceptance" + " ".repeat(24) + "━".repeat(11) + "─   6m 40s/~3m 10s│"), screen);
     }
 
     @Test
@@ -611,9 +619,7 @@ class PullRequestDialogTest {
                 List.of(timed("verify", 120, Option.of(30))), learned().withTopUp(NOW));
 
         assertTrue(screen.contains("Checks  ● 1 running · done in …"), screen);
-        assertTrue(
-                screen.contains("● verify" + " ".repeat(27) + "running 30s     · " + " ".repeat(6) + "… left│"),
-                screen);
+        assertTrue(screen.contains("● verify" + " ".repeat(28) + "╌".repeat(12) + " ".repeat(12) + "30s/…│"), screen);
     }
 
     @Test
@@ -674,11 +680,30 @@ class PullRequestDialogTest {
                                 .with(Either.right(READY), 0))
                         .split("\n"));
 
-        for (String pair : List.of("(o)|(m)", "(c)|(s)", "(e)|(r)", "(v)|(x)", "(F)|(R)")) {
+        for (String pair : List.of("(o)|(d)", "(c)|(m)", "(e)|(s)", "(v)|(r)", "(C)|(x)", "(F)|(R)")) {
             String[] options = pair.split("\\|");
             String line = lines.find(text -> text.contains(options[0])).getOrElse("");
             assertTrue(line.indexOf(options[0]) < line.indexOf(options[1]), lines.mkString("\n"));
         }
+    }
+
+    @Test
+    void capitalCShowsTheChecksOnceItsBranchHasThemOnGitHub() throws Exception {
+        PullRequestPopup ready = PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                .with(Either.right(READY), 0);
+        Model withChecks = Update.update(
+                        TestModels.loaded(),
+                        new BranchChecksMsg.Loaded(new GitHubChecks(
+                                HashSet.of("origin"), HashMap.of(new BranchName("support_rename"), Checks.FAILING))))
+                .model();
+        for (Model model : List.of(TestModels.loaded(), withChecks)) {
+            try (ToolkitTestRunner runner = start(model.openPopup(ready))) {
+                SettledPilot.of(runner).press('C');
+                SettledPilot.of(runner).pause();
+            }
+        }
+
+        assertEquals(java.util.List.of(new ChecksMsg.PullRequestChecksRequested()), dispatched);
     }
 
     @Test
@@ -810,7 +835,7 @@ class PullRequestDialogTest {
     void whatTheHighlightedActionDoesShowsUnderTheDialogAcrossTheColumns() throws Exception {
         java.util.List<String> screens = movingRight(READY, 120, 50);
 
-        // Opening in the browser tells nothing more; merging, in the other column, does.
+        // Commenting tells nothing more; merging, in the other column, does.
         assertFalse(screens.get(0).contains("Merges it on GitHub with a merge commit."), screens.get(0));
         assertTrue(screens.get(1).contains("Merges it on GitHub with a merge commit."), screens.get(1));
         assertFalse(screens.get(1).contains("below it in its stack"), screens.get(1));
@@ -847,8 +872,8 @@ class PullRequestDialogTest {
     }
 
     /**
-     * The screens, {@code width} by {@code height}, of the dialog showing {@code details}: as it opens, after Right,
-     * and after Left again.
+     * The screens, {@code width} by {@code height}, of the dialog showing {@code details}: on Comment, after Right, on
+     * Merge, and after Left again.
      */
     private java.util.List<String> movingRight(PullRequestDetails details, int width, int height) throws Exception {
         CursorFeedback cursor = new CursorFeedback(dispatched::add);
@@ -862,6 +887,8 @@ class PullRequestDialogTest {
         java.util.List<String> screens = new ArrayList<>();
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(view)) {
             SettledPilot.focus(runner, PullRequestDialog.ID);
+            SettledPilot.of(runner).press(KeyCode.DOWN);
+            SettledPilot.of(runner).pause();
             screens.add(RenderedText.ofSize(runner, view, width, height));
             for (KeyCode key : new KeyCode[] {KeyCode.RIGHT, KeyCode.LEFT}) {
                 SettledPilot.of(runner).press(key);

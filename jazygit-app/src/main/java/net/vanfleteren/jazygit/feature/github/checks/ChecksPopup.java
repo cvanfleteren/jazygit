@@ -1,18 +1,16 @@
 package net.vanfleteren.jazygit.feature.github.checks;
 
-import io.vavr.Tuple;
-import io.vavr.Tuple2;
 import io.vavr.collection.List;
-import io.vavr.collection.Set;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Check;
-import net.vanfleteren.jazygit.gh.timing.CheckProgress;
 import net.vanfleteren.jazygit.gh.timing.CheckTimings;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.CheckTimes;
+import net.vanfleteren.jazygit.state.ChecksReached;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.PendingChecks;
@@ -33,6 +31,8 @@ import net.vanfleteren.jazygit.state.Reading;
  * @param reached       how far the checks were shown to be when they were last read again, or what was learned of
  *                      how long they take changed, so they are not shown going back when they are expected later
  *                      than before; nothing before that, or once they were done
+ * @param from          the pull request dialog they were opened from, which Escape goes back to; kept up to date as
+ *                      its details are read meanwhile
  */
 public record ChecksPopup(
         BranchRef branch,
@@ -41,14 +41,32 @@ public record ChecksPopup(
         Reading reading,
         Option<Failure> refreshFailed,
         Instant readAt,
-        Option<Reached> reached)
+        Option<ChecksReached> reached,
+        Option<PullRequestPopup> from)
         implements Popup {
 
     /**
      * The popup while the checks are first read, from {@code now}.
      */
     public static ChecksPopup loading(BranchRef branch, RemoteBranch onGitHub, Instant now) {
-        return new ChecksPopup(branch, onGitHub, Option.none(), Reading.NOT, Option.none(), now, Option.none());
+        return new ChecksPopup(
+                branch, onGitHub, Option.none(), Reading.NOT, Option.none(), now, Option.none(), Option.none());
+    }
+
+    /**
+     * The popup while the checks are first read, opened from the pull request dialog {@code from}, which it goes back
+     * to.
+     */
+    public static ChecksPopup loading(BranchRef branch, RemoteBranch onGitHub, Instant now, PullRequestPopup from) {
+        return new ChecksPopup(
+                branch, onGitHub, Option.none(), Reading.NOT, Option.none(), now, Option.none(), Option.of(from));
+    }
+
+    /**
+     * The popup going back to {@code dialog}, the pull request dialog it was opened from.
+     */
+    public ChecksPopup withFrom(PullRequestPopup dialog) {
+        return new ChecksPopup(branch, onGitHub, checks, reading, refreshFailed, readAt, reached, Option.of(dialog));
     }
 
     /**
@@ -57,8 +75,9 @@ public record ChecksPopup(
      */
     public ChecksPopup with(Either<Failure, PendingChecks> read) {
         return read.isLeft() && wasRead()
-                ? new ChecksPopup(branch, onGitHub, checks, Reading.NOT, Option.of(read.getLeft()), readAt, reached)
-                : new ChecksPopup(branch, onGitHub, Option.of(read), Reading.NOT, Option.none(), readAt, reached);
+                ? new ChecksPopup(
+                        branch, onGitHub, checks, Reading.NOT, Option.of(read.getLeft()), readAt, reached, from)
+                : new ChecksPopup(branch, onGitHub, Option.of(read), Reading.NOT, Option.none(), readAt, reached, from);
     }
 
     /**
@@ -70,11 +89,12 @@ public record ChecksPopup(
 
     /**
      * Once what was learned of how long checks take changes from what {@code before} knows, how far the checks were
-     * shown to be in it stays reached, as when they are read again.
+     * shown to be in it stays reached, as when they are read again; in the pull request dialog it goes back to too.
      */
     @Override
     public Popup checkTimesChanging(Model before) {
-        return reaching(before);
+        ChecksPopup reaching = reaching(before);
+        return from.map(dialog -> reaching.withFrom(dialog.reaching(before))).getOrElse(reaching);
     }
 
     /**
@@ -88,8 +108,6 @@ public record ChecksPopup(
         if (all.isEmpty()) {
             return this;
         }
-        double shown = progress(model);
-        Set<Tuple2<Long, Integer>> runs = Reached.runs(all);
         return new ChecksPopup(
                 branch,
                 onGitHub,
@@ -97,14 +115,15 @@ public record ChecksPopup(
                 reading,
                 refreshFailed,
                 readAt,
-                Option.when(shown < 1 && !runs.isEmpty(), () -> new Reached(runs, shown)));
+                ChecksReached.keeping(all, progress(model)),
+                from);
     }
 
     /**
      * The popup while its checks are read again from {@code now}, as {@code reading} tells.
      */
     public ChecksPopup readingAgain(Reading reading, Instant now) {
-        return new ChecksPopup(branch, onGitHub, checks, reading, refreshFailed, now, reached);
+        return new ChecksPopup(branch, onGitHub, checks, reading, refreshFailed, now, reached, from);
     }
 
     /**
@@ -158,31 +177,10 @@ public record ChecksPopup(
      * another commit, start from 0.
      */
     public double progress(Model model) {
-        List<Check> all = checksRead();
-        double progress = CheckProgress.of(all, CheckTimes.eta(times(model), all), model.now());
-        return reached.filter(before -> before.runs().equals(Reached.runs(all)))
-                .map(before -> Math.max(before.progress(), progress))
-                .getOrElse(progress);
+        return ChecksReached.progress(reached, checksRead(), times(model), model.now());
     }
 
     private boolean wasRead() {
         return checks.exists(Either::isRight);
-    }
-
-    /**
-     * How far the checks of the attempts {@code runs} of workflow runs were shown to be.
-     *
-     * @param runs the id of each workflow run, and its attempt
-     */
-    public record Reached(Set<Tuple2<Long, Integer>> runs, double progress) {
-
-        /**
-         * The attempts of the workflow runs that the checks {@code all} are of.
-         */
-        static Set<Tuple2<Long, Integer>> runs(List<Check> all) {
-            return all.flatMap(Check::run)
-                    .map(run -> Tuple.of(run.runId(), run.runAttempt()))
-                    .toSet();
-        }
     }
 }
