@@ -63,4 +63,9 @@ public sealed interface Notice {
      * Nothing could be copied, as the app has no terminal of its own to ask (ADR 94).
      */
     record NotCopied() implements Notice {}
+
+    /**
+     * Nothing was copied, as the terminal could not be written to (ADR 94).
+     */
+    record CopyFailed() implements Notice {}
 }

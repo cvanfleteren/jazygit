@@ -29,6 +29,7 @@ public final class NoticeText {
             case Notice.Copied(int lines) -> Messages.get("notice.copied", lines);
             case Notice.PathCopied(var path) -> Messages.get("notice.pathCopied", path);
             case Notice.NotCopied() -> Messages.get("notice.notCopied");
+            case Notice.CopyFailed() -> Messages.get("notice.copyFailed");
         };
     }
 

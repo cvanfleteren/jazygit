@@ -31,10 +31,11 @@ not answer, so whether it copied cannot be told.
 - The range stays open after `y`, as it does after `c`: `v` or Escape drops it.
 - The update works the text out, from the diff the area shows and what is expanded in it, and asks for a command that
   copies it: `CopyCmd`. Copying is IO, as it writes to the terminal.
-- `state.Terminal` gets `copy`, which says whether it asked a terminal to copy. `TerminalHandOver` writes the OSC 52
-  sequence through the backend of the app on the render thread, between two frames, so it never lands in the middle of
-  one. Without a backend of its own it copies nothing, nor does `Terminal.NONE`.
-- The command log says what was copied, how many lines or which path, or that nothing could be, as a notice.
+- `state.Terminal` gets `copy`, which says whether it asked a terminal to copy, owns none, or could not write to it.
+  `TerminalHandOver` writes the OSC 52 sequence through the backend of the app on the render thread, between two
+  frames, so it never lands in the middle of one. Without a backend of its own it copies nothing, nor does `Terminal.NONE`.
+- The command log says what was copied, how many lines or which path, as a notice. When nothing was, it says why:
+  the app owns no terminal, or the terminal could not be written to.
 - Not: selecting with the mouse. A drag would have to tell itself from a click that moves the cursor, and select
   within a line; that is left for later. The plain view (Ctrl+D), the log of a branch and the lead have no cursor on
   their lines, and copy nothing yet.

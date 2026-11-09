@@ -14,11 +14,16 @@ public record CopyCmd(String text, Notice copied) implements Cmd {
 
     @Override
     public Msg run(Env env) {
-        return new CopyMsg.Done(env.terminal().copy(text) ? copied : new Notice.NotCopied());
+        return new CopyMsg.Done(
+                switch (env.terminal().copy(text)) {
+                    case ASKED -> copied;
+                    case NOT_OWNED -> new Notice.NotCopied();
+                    case FAILED -> new Notice.CopyFailed();
+                });
     }
 
     @Override
     public Msg failed(Failure failure) {
-        return new CopyMsg.Done(new Notice.NotCopied());
+        return new CopyMsg.Done(new Notice.CopyFailed());
     }
 }

@@ -619,19 +619,10 @@ public final class ReviewUpdate {
      * content panel draws it: with the lines expanded in its area (ADR 77), so that a range stays in a hunk as shown.
      */
     private static DiffLines diffLines(Model model, CommitFilesView view, DiffCursorAt at) {
-        Option<Expansion> expansion = model.repoView()
-                .expanded()
-                .get(at.area())
-                .filter(kept -> kept.holdsFor(at.at().content()));
-        return view.diff()
-                .flatMap(preview -> preview.shown().value().toOption())
-                .map(text -> expansion
-                        .map(expanded -> expanded.folded(
-                                        text.parsed(), model.preferences().context())
-                                .diff())
-                        .getOrElse(text.parsed()))
-                .map(parsed -> DiffLines.of(parsed.diff()))
-                .getOrElse(() -> new DiffLines(Vector.empty()));
+        return DiffLines.shown(
+                model,
+                at,
+                view.diff().flatMap(preview -> preview.shown().value().toOption()));
     }
 
     /**

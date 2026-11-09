@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.state.Anchor;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.DiffCursorAt;
 import net.vanfleteren.jazygit.state.Env;
+import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Notice;
@@ -120,9 +121,9 @@ class CopyUpdateTest {
             }
 
             @Override
-            public boolean copy(String text) {
+            public Copy copy(String text) {
                 copied.add(text);
-                return true;
+                return Copy.ASKED;
             }
         };
 
@@ -137,6 +138,37 @@ class CopyUpdateTest {
         var done = new CopyCmd("line9", new Notice.Copied(1)).run(env(Terminal.NONE));
 
         assertEquals(new CopyMsg.Done(new Notice.NotCopied()), done);
+    }
+
+    @Test
+    void whenTheTerminalCannotBeWrittenToTheCopyFailed() {
+        Terminal broken = new Terminal() {
+            @Override
+            public <T> T handOver(Supplier<T> program) {
+                return program.get();
+            }
+
+            @Override
+            public Copy copy(String text) {
+                return Copy.FAILED;
+            }
+        };
+        CopyCmd copy = new CopyCmd("line9", new Notice.Copied(1));
+
+        assertEquals(new CopyMsg.Done(new Notice.CopyFailed()), copy.run(env(broken)));
+        assertEquals(
+                new CopyMsg.Done(new Notice.CopyFailed()),
+                copy.failed(new Failure.Bug(new IllegalStateException("boom"))));
+    }
+
+    @Test
+    void aRangeWhoseMarkIsNoLongerInTheDiffCopiesNothing() {
+        Model model = loaded();
+
+        Next next = Update.update(model, new CopyMsg.Asked(at(right(10), Option.of(right(99)))));
+
+        assertEquals(List.of(), next.cmds());
+        assertSame(model, next.model());
     }
 
     /**

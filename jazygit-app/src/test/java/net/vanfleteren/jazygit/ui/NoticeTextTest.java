@@ -66,4 +66,13 @@ class NoticeTextTest {
         assertEquals("Copied 3 lines to the clipboard.", NoticeText.of(new Notice.Copied(3)));
         assertEquals("Copied src/A.java to the clipboard.", NoticeText.of(new Notice.PathCopied("src/A.java")));
     }
+
+    @Test
+    void whenNothingWasCopiedItSaysWhy() {
+        assertEquals(
+                "Nothing was copied: jazygit has no terminal of its own to copy with.",
+                NoticeText.of(new Notice.NotCopied()));
+        assertEquals(
+                "Nothing was copied: the terminal could not be written to.", NoticeText.of(new Notice.CopyFailed()));
+    }
 }

@@ -1036,6 +1036,47 @@ class ContentPanelTest {
     }
 
     @Test
+    void inTheDiffOfAPullRequestYCopiesAndVStaysTheKeyOfTheReview() throws Exception {
+        java.util.List<Msg> dispatched = new java.util.ArrayList<>();
+        ContentPanel reviewing = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, dispatched::add);
+        Model model = pullRequestDiff();
+        String area = reviewing.areaOfPane(model, FilesPanel.ID).get();
+        Anchor.OnLine line = new Anchor.OnLine("a.txt", net.vanfleteren.jazygit.gh.model.ReviewThread.Side.RIGHT, 1);
+
+        java.util.concurrent.atomic.AtomicReference<Model> drawn =
+                new java.util.concurrent.atomic.AtomicReference<>(model);
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> reviewing.render(drawn.get(), area))) {
+            SettledPilot.focus(testRunner, area);
+            RenderedText.ofLarge(testRunner, () -> reviewing.render(drawn.get(), area));
+            SettledPilot.of(testRunner).press('n');
+            SettledPilot.of(testRunner).pause();
+            drawn.set(Update.update(model, dispatched.getLast()).model());
+            RenderedText.ofLarge(testRunner, () -> reviewing.render(drawn.get(), area));
+
+            // On a thread, v is the review's: it says why no range opens, where the key of every rich diff says
+            // nothing.
+            SettledPilot.of(testRunner).press('v');
+            SettledPilot.of(testRunner).pause();
+            assertEquals(
+                    new net.vanfleteren.jazygit.feature.github.review.ReviewMsg.Refused(
+                            net.vanfleteren.jazygit.state.AppError.CannotReview.Why.NOT_ON_LINE),
+                    dispatched.getLast());
+
+            SettledPilot.of(testRunner).press('k');
+            SettledPilot.of(testRunner).pause();
+            RenderedText.ofLarge(testRunner, () -> reviewing.render(drawn.get(), area));
+            SettledPilot.of(testRunner).press('y');
+            SettledPilot.of(testRunner).pause();
+        }
+
+        List<net.vanfleteren.jazygit.feature.copy.CopyMsg.Asked> asked = List.ofAll(dispatched)
+                .filter(net.vanfleteren.jazygit.feature.copy.CopyMsg.Asked.class::isInstance)
+                .map(net.vanfleteren.jazygit.feature.copy.CopyMsg.Asked.class::cast);
+        assertEquals(List.of(line), asked.map(msg -> msg.at().cursor()));
+        assertEquals(List.of(area), asked.map(msg -> msg.at().area()));
+    }
+
+    @Test
     void lScrollsTheDiffOfAPullRequestSidewaysWithItsCursorOnAThreadToAWideSuggestion() throws Exception {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
         // The model takes where the area is scrolled to, as the app's does.

@@ -80,16 +80,15 @@ final class TerminalHandOver implements Terminal {
      * to be written; called on the thread of a command (ADR 94). Without a backend of its own, nothing is written.
      */
     @Override
-    public boolean copy(String text) {
-        return backend.exists(writing -> CompletableFuture.supplyAsync(
-                        () -> Try.run(() -> {
-                                    writing.writeRaw(osc52(text));
-                                    writing.flush();
-                                })
-                                .onFailure(BugLog::log)
-                                .isSuccess(),
-                        runner.get()::runOnRenderThread)
-                .join());
+    public Copy copy(String text) {
+        return backend.map(writing -> onRenderThread(() -> Try.run(() -> {
+                            writing.writeRaw(osc52(text));
+                            writing.flush();
+                        })
+                        .onFailure(BugLog::log)
+                        .map(written -> Copy.ASKED)
+                        .getOrElse(Copy.FAILED)))
+                .getOrElse(Copy.NOT_OWNED);
     }
 
     /**
@@ -119,6 +118,17 @@ final class TerminalHandOver implements Terminal {
      * Runs {@code action} on the render thread, between two frames, and waits for it.
      */
     private void onRenderThread(Runnable action) {
-        CompletableFuture.runAsync(action, runner.get()::runOnRenderThread).join();
+        var _ = onRenderThread(() -> {
+            action.run();
+            return null;
+        });
+    }
+
+    /**
+     * Works out {@code action} on the render thread, between two frames, and waits for what it gives.
+     */
+    private <T> T onRenderThread(Supplier<T> action) {
+        return CompletableFuture.supplyAsync(action, runner.get()::runOnRenderThread)
+                .join();
     }
 }
