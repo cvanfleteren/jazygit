@@ -65,6 +65,10 @@ class CliStatusIndexTest {
     @Test
     void anIndexAnotherCommandHoldsIsLeftAlone() throws Exception {
         init();
+        // git only takes the lock when the refresh has something to write: without this, a.txt is only stale
+        // when it happened to be committed in the same second it was written.
+        Files.setLastModifiedTime(
+                repo.resolve("a.txt"), FileTime.from(Instant.now().plusSeconds(60)));
         Files.writeString(repo.resolve(".git/index.lock"), "");
 
         assertTrue(status().refreshIndex().isLeft());
