@@ -226,10 +226,10 @@ public interface Cmd {
     }
 
     /**
-     * Writes into the index what the files in the working tree are like now, where it no longer says so (ADR 93): the
-     * status that every tick reads takes no optional locks, so it never does, and compares the contents of those files
-     * again every time. That it could not, as another git command held the index, only goes to the debug log: a later
-     * one does it.
+     * Writes into the index what the files in the working tree are like now, where it no longer says so (ADR 93, ADR 97):
+     * the status that every tick reads takes no optional locks, so it never does, and compares the contents of those
+     * files again every time. That it could not, as another git command held the index, only goes to the debug log:
+     * the next change of the index, or the next one anyway, tries again.
      */
     record RefreshIndex() implements Cmd {
 
@@ -240,13 +240,13 @@ public interface Cmd {
 
         @Override
         public Msg run(Env env) {
-            return env.git().status().refreshIndex().fold(this::failedWith, done -> new Msg.IndexRefreshed());
+            return env.git().status().refreshIndex().fold(this::failedWith, done -> new Msg.IndexRefreshed(true));
         }
 
         @Override
         public Msg failed(Failure failure) {
             LoggerFactory.getLogger(RefreshIndex.class).debug("The index was not refreshed: {}", failure);
-            return new Msg.IndexRefreshed();
+            return new Msg.IndexRefreshed(false);
         }
     }
 
@@ -338,10 +338,12 @@ public interface Cmd {
         @Override
         public Msg run(Env env) {
             Option<GitMetadata> metadata = env.git().status().metadata();
-            return new LoadMsg.MetadataChecked(List.of(
-                    Tuple.of((Load) LoadBranches.LISTED, metadata.flatMap(GitMetadata::branches)),
-                    Tuple.of(new LoadStashes(), metadata.flatMap(GitMetadata::stashes)),
-                    Tuple.of(new LoadWorktrees(), metadata.flatMap(GitMetadata::worktrees))));
+            return new LoadMsg.MetadataChecked(
+                    List.of(
+                            Tuple.of((Load) LoadBranches.LISTED, metadata.flatMap(GitMetadata::branches)),
+                            Tuple.of(new LoadStashes(), metadata.flatMap(GitMetadata::stashes)),
+                            Tuple.of(new LoadWorktrees(), metadata.flatMap(GitMetadata::worktrees))),
+                    metadata.flatMap(GitMetadata::index));
         }
     }
 

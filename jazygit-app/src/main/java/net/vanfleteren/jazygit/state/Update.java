@@ -30,11 +30,6 @@ public final class Update {
     static final Duration WORKTREE_CHANGES_INTERVAL = Duration.ofSeconds(3);
 
     /**
-     * How many ticks the index is written anew after, at most, while the terminal has the focus (ADR 93).
-     */
-    static final int INDEX_REFRESH_TICKS = 30;
-
-    /**
      * Loads that reading the repository again repeats. They are skipped while a previous one is still running.
      */
     private static final List<Cmd.Load> PERIODIC =
@@ -245,24 +240,7 @@ public final class Update {
      */
     public static Next tick(Model model) {
         Model ticked = model.mapJobs(Jobs::ticked);
-        Next reloaded = reload(ticked, TICKED, ticked.jobs()::retryDue);
-        return new Next(reloaded.model(), reloaded.cmds().appendAll(refreshIndex(ticked)));
-    }
-
-    /**
-     * Writes the index anew once every {@link #INDEX_REFRESH_TICKS} ticks (ADR 93): the status
-     * of every tick takes no optional locks, so where the index no longer matches the files, as right after a
-     * checkout, it would compare their contents again on every tick. Only while the terminal has the focus, when the
-     * user is not likely to run git elsewhere, and while no operation of the app runs, as it locks the index a moment.
-     */
-    private static List<Cmd> refreshIndex(Model model) {
-        Jobs jobs = model.jobs();
-        return Option.<Cmd>when(
-                        !jobs.away()
-                                && jobs.ticks() % INDEX_REFRESH_TICKS == 0
-                                && !jobs.runs(cmd -> cmd instanceof OperationCmd || cmd instanceof RefreshIndex),
-                        new RefreshIndex())
-                .toList();
+        return reload(ticked, TICKED, ticked.jobs()::retryDue);
     }
 
     /**

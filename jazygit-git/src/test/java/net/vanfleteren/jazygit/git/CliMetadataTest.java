@@ -99,7 +99,26 @@ class CliMetadataTest {
         Files.writeString(main.resolve("b.txt"), "new");
         git(main, "add", "a.txt");
 
-        assertEquals(before, metadata(main));
+        GitMetadata after = metadata(main);
+        assertEquals(before.branches(), after.branches());
+        assertEquals(before.stashes(), after.stashes());
+        assertEquals(before.worktrees(), after.worktrees());
+    }
+
+    @Test
+    void whatIsAddedOrCheckedOutChangesTheIndex() throws Exception {
+        GitMetadata before = metadata(main);
+        Files.writeString(main.resolve("a.txt"), "changed");
+        GitMetadata edited = metadata(main);
+
+        git(main, "add", "a.txt");
+        GitMetadata added = metadata(main);
+        git(main, "checkout", "-q", "HEAD", "--", "a.txt");
+
+        assertTrue(before.index().isDefined());
+        assertEquals(before.index(), edited.index());
+        assertNotEquals(edited.index(), added.index());
+        assertNotEquals(added.index(), metadata(main).index());
     }
 
     @Test

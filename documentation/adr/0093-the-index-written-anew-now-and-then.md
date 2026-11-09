@@ -1,5 +1,8 @@
 # 93. The index written anew now and then
 
+Amended by ADR 97 (`0097-the-index-written-anew-once-it-changed.md`): the index is written anew once it changed,
+and every 5 minutes anyway, rather than every 30th tick.
+
 Date: 2026-11-09
 
 ## Context

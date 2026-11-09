@@ -49,6 +49,7 @@ import net.vanfleteren.jazygit.git.model.MetadataStamp;
  *                   handled again once it waited its {@link Msg.Periodic#whileAway()} since (ADR 67)
  * @param onArrival  what the repository shown is to do once its status, branches and worktrees are read, as the
  *                   {@link Landing} it was opened with said: handled once, then forgotten (ADR 68)
+ * @param indexRefresh when the index was last written anew, and what it looked like then (ADR 97)
  */
 @With
 public record Jobs(
@@ -67,7 +68,8 @@ public record Jobs(
         boolean away,
         Set<Msg> missed,
         Map<Msg.Periodic, Instant> awayAt,
-        Option<Msg> onArrival) {
+        Option<Msg> onArrival,
+        IndexRefresh indexRefresh) {
 
     public static final Jobs IDLE = new Jobs(
             HashSet.empty(),
@@ -85,7 +87,8 @@ public record Jobs(
             false,
             LinkedHashSet.empty(),
             HashMap.empty(),
-            Option.none());
+            Option.none(),
+            IndexRefresh.NONE);
 
     /**
      * How long a command runs before it shows: the reads that take a few milliseconds, on every key and every tick,

@@ -41,7 +41,7 @@ public final class LoadUpdate {
                     return bases.fold(
                             () -> read, of -> read.withParents(of.parents()).withBaseDistance(of.counts()));
                 }));
-            case MetadataChecked(var stamps) -> metadataChecked(done, stamps);
+            case MetadataChecked(var stamps, var index) -> IndexUpdate.checked(metadataChecked(done, stamps), index);
             // The files of a stash that is dropped close, as its name is now that of another stash.
             case StashesLoaded loaded ->
                 Next.of(loaded.kept(done)

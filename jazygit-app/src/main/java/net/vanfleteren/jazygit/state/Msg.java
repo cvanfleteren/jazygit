@@ -87,14 +87,14 @@ public interface Msg {
     }
 
     /**
-     * The index was written anew where it no longer matched the working tree, or could not be: either way, nothing
-     * shown changes (ADR 93).
+     * The index was written anew where it no longer matched the working tree, or could not be ({@code written} false):
+     * either way, nothing shown changes (ADR 93, ADR 97).
      */
-    record IndexRefreshed() implements Msg {
+    record IndexRefreshed(boolean written) implements Msg {
 
         @Override
         public Update.Next apply(Model model) {
-            return Update.Next.of(model);
+            return IndexUpdate.refreshed(model, written);
         }
     }
 

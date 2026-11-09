@@ -31,10 +31,12 @@ class MetadataGuardTest {
     }
 
     private static Msg checked(String branches, String stashes, String worktrees) {
-        return new LoadMsg.MetadataChecked(List.of(
-                Tuple.of(BRANCHES, Option.of(stamp(branches))),
-                Tuple.of(STASHES, Option.of(stamp(stashes))),
-                Tuple.of(WORKTREES, Option.of(stamp(worktrees)))));
+        return new LoadMsg.MetadataChecked(
+                List.of(
+                        Tuple.of(BRANCHES, Option.of(stamp(branches))),
+                        Tuple.of(STASHES, Option.of(stamp(stashes))),
+                        Tuple.of(WORKTREES, Option.of(stamp(worktrees)))),
+                Option.none());
     }
 
     // Nothing running, so a tick asks for the check.
@@ -117,7 +119,8 @@ class MetadataGuardTest {
 
     @Test
     void whatCannotBeToldIsReadEveryTime() {
-        Msg unknown = new LoadMsg.MetadataChecked(CheckMetadata.GUARDED.map(load -> Tuple.of(load, Option.none())));
+        Msg unknown = new LoadMsg.MetadataChecked(
+                CheckMetadata.GUARDED.map(load -> Tuple.of(load, Option.none())), Option.none());
 
         Next first = TestModels.stepped(idle(), unknown);
         Next second = TestModels.stepped(finished(first), unknown);
@@ -158,6 +161,7 @@ class MetadataGuardTest {
         assertEquals(model.drawn(), read.drawn());
         assertEquals(
                 List.of(),
-                Update.update(read, new LoadMsg.MetadataChecked(none)).cmds());
+                Update.update(read, new LoadMsg.MetadataChecked(none, Option.none()))
+                        .cmds());
     }
 }

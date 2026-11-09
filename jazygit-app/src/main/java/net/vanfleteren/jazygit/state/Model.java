@@ -172,7 +172,8 @@ public record Model(
                                         && !operation.busyBranches().isEmpty()))
                         .withNextId(0)
                         .withMissed(LinkedHashSet.empty())
-                        .withAwayAt(HashMap.empty()))
+                        .withAwayAt(HashMap.empty())
+                        .withIndexRefresh(IndexRefresh.NONE))
                 .withNow(jobs.away() ? awayClock(now) : now.truncatedTo(ChronoUnit.SECONDS));
     }
 
