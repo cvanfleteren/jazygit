@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.Commit;
@@ -29,6 +30,19 @@ public sealed interface ScrolledContent {
                         && same.sameAs(of)
                         && those.map(CommitFile::path).equals(files.map(CommitFile::path));
             default -> equals(other);
+        };
+    }
+
+    /**
+     * The diff this shows, if it is one the rich view draws.
+     */
+    default Option<DiffText> richDiff() {
+        return switch (this) {
+            case Diff(DiffText diff) -> Option.of(diff);
+            case CommitChanges(var commit, DiffText changes) -> Option.of(changes);
+            case StashChanges(var sha, DiffText changes) -> Option.of(changes);
+            case FileChanges(var of, var files, DiffText diff) -> Option.of(diff);
+            case BranchLog _, PullRequest _ -> Option.none();
         };
     }
 

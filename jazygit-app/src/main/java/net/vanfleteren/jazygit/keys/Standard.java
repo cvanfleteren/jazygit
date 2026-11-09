@@ -5,6 +5,7 @@ import java.util.function.UnaryOperator;
 import net.vanfleteren.jazygit.feature.branch.BranchFeature;
 import net.vanfleteren.jazygit.feature.cherrypick.CherryPickKeys;
 import net.vanfleteren.jazygit.feature.commit.CommitFeature;
+import net.vanfleteren.jazygit.feature.copy.CopyAction;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesAction;
 import net.vanfleteren.jazygit.feature.diff.ExpandAction;
 import net.vanfleteren.jazygit.feature.discard.DiscardKeys;
@@ -31,6 +32,7 @@ final class Standard {
                     WorktreeFeature::register,
                     CommitFilesAction.ACTION.keys(),
                     ExpandAction.ACTION.keys(),
+                    CopyAction.ACTION.keys(),
                     GlobalKeys::register)
             .foldLeft(Keymap.empty(), (keymap, feature) -> feature.apply(keymap));
 

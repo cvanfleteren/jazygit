@@ -18,4 +18,30 @@ public interface Terminal {
      * and no key is read meanwhile.
      */
     <T> T handOver(Supplier<T> program);
+
+    /**
+     * Asks the terminal to copy {@code text} to the clipboard (ADR 94), and says how that went: whether the terminal
+     * did copy cannot be told. One the app does not own copies nothing.
+     */
+    default Copy copy(String text) {
+        return Copy.NOT_OWNED;
+    }
+
+    /**
+     * How asking the terminal to copy went (ADR 94).
+     */
+    enum Copy {
+        /**
+         * The terminal was asked to copy; whether it did cannot be told.
+         */
+        ASKED,
+        /**
+         * The app owns no terminal, so it could not ask one.
+         */
+        NOT_OWNED,
+        /**
+         * The terminal could not be written to.
+         */
+        FAILED
+    }
 }

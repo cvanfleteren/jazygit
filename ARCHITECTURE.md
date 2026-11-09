@@ -385,6 +385,19 @@ See `documentation/adr/0077-showing-more-of-one-hunk.md`.
 - Changing the options drops every expansion (`DiffOptionsUpdate`); a diff of the working tree read again reads its
   files read whole again (`LoadUpdate`).
 
+### Copying lines of a diff
+
+See `documentation/adr/0094-copying-lines-of-a-diff.md`.
+
+- `y` (`Scopes.DIFF` and `Scopes.PULL_REQUEST_DIFF`; `feature.copy.CopyAction`) sends `CopyMsg.Asked` with the
+  `DiffCursorAt`. `CopyAction` also binds `v` in `Scopes.DIFF` to `DiffCursorAt.marked`, so every rich diff has
+  ranges; in `Scopes.PULL_REQUEST_DIFF` the review binds it.
+- `CopyUpdate` works the text out from the diff the area shows, folded with its expansion, through `DiffLines`: the
+  line of the cursor or the lines of its range, without their markers, or the path on the bar of a file. It asks for
+  `CopyCmd`, which reports `CopyMsg.Done` with a `Notice` for the command log.
+- `Env.terminal().copy` asks the terminal: `TerminalHandOver` writes an OSC 52 sequence through `HandOverBackend` on the
+  render thread, between two frames; `Terminal.NONE` copies nothing.
+
 ### The diff style and the files of a commit
 
 See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and

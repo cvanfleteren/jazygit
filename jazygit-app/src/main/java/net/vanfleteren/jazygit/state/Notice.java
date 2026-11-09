@@ -48,4 +48,24 @@ public sealed interface Notice {
      * it was not rebased (ADR 74).
      */
     record StackNotAsked(int stack) implements Notice {}
+
+    /**
+     * The terminal was asked to copy {@code lines} lines of a diff to the clipboard (ADR 94).
+     */
+    record Copied(int lines) implements Notice {}
+
+    /**
+     * The terminal was asked to copy the path {@code path} to the clipboard (ADR 94).
+     */
+    record PathCopied(String path) implements Notice {}
+
+    /**
+     * Nothing could be copied, as the app has no terminal of its own to ask (ADR 94).
+     */
+    record NotCopied() implements Notice {}
+
+    /**
+     * Nothing was copied, as the terminal could not be written to (ADR 94).
+     */
+    record CopyFailed() implements Notice {}
 }
