@@ -45,7 +45,15 @@ class MarkdownAutolinksTest {
 
     @Test
     void whatOnlyLooksLikeAReferenceStaysText() {
-        unchanged("page#12 #12abc a/b/c#3 #0 #012 #1234567890 \\#5 &#35; snake_#7 #8_x");
+        unchanged("page#12 #12abc a/b/c#3 #0 #012 #1234567890 \\#5 &#35; snake_#7 #8_x my.org/repo#1 -org/repo#2");
+    }
+
+    @Test
+    void aRepositoryWithADotInItsNameIsOne() {
+        // As a path with an anchor is, docs/file.md#12: GitHub links only a repository that is there (ADR 98).
+        assertEquals(
+                "Like [vercel/next.js#123](<https://github.com/vercel/next.js/issues/123>)",
+                linked("Like vercel/next.js#123"));
     }
 
     @Test
@@ -75,13 +83,22 @@ class MarkdownAutolinksTest {
     }
 
     @Test
+    void aURLLinksAsABrowserReadsItNotOnlyAsJavaDoes() {
+        assertEquals(
+                "[https://api.github.com/repos/{owner}/x](<https://api.github.com/repos/{owner}/x>)"
+                        + " [https://my\\_host.example/a^b%zz](<https://my_host.example/a^b%zz>)"
+                        + " [https://café.example/x](<https://café.example/x>)",
+                linked("https://api.github.com/repos/{owner}/x https://my_host.example/a^b%zz https://café.example/x"));
+    }
+
+    @Test
     void aReferenceInAURLIsPartOfTheURL() {
         assertEquals("[https://x.io/page#12](<https://x.io/page#12>)", linked("https://x.io/page#12"));
     }
 
     @Test
     void whatOnlyLooksLikeAURLStaysText() {
-        unchanged("xhttps://x.io https:// `https://x.io` <https://x.io> [x](https://x.io)");
+        unchanged("xhttps://x.io https:// https:///x `https://x.io` <https://x.io> [x](https://x.io)");
     }
 
     @Test

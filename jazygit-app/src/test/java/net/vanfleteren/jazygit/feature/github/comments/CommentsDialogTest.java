@@ -21,6 +21,7 @@ import net.vanfleteren.jazygit.feature.github.comment.CommentMsg;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.CommentRights;
+import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -350,6 +351,61 @@ class CommentsDialogTest {
                         new CommentsMsg.LinkChosen("https://github.com/owner/repo/issues/381"),
                         new CommentsMsg.LinkChosen("https://example.com/docs")),
                 dispatched);
+    }
+
+    @Test
+    void beforeItsDetailsAreReadAReferenceIsToTheRepositoryAsItWasListed() throws Exception {
+        PullRequestPopup listed = PullRequestPopup.loading(
+                new BranchName("feature"),
+                new PullRequest(
+                        42,
+                        "feature",
+                        "main",
+                        false,
+                        Checks.PASSING,
+                        Review.APPROVED,
+                        Option.none(),
+                        PullRequest.Commits.of(
+                                "owner/repo",
+                                "https://github.com/owner/repo/pull/42",
+                                Option.of(new GhCommit("b".repeat(40))),
+                                Option.of(new GhCommit("h".repeat(40))))),
+                Instant.EPOCH,
+                0);
+
+        clickReferenceAndURL(listed);
+
+        assertEquals(
+                java.util.List.of(
+                        new CommentsMsg.LinkChosen("https://github.com/owner/repo/issues/381"),
+                        new CommentsMsg.LinkChosen("https://example.com/docs")),
+                dispatched);
+    }
+
+    @Test
+    void withoutARepositoryAReferenceOpensNothingButAURLDoes() throws Exception {
+        // The stub's details say no repository, nor does the pull request as it was listed.
+        clickReferenceAndURL(SHOWN);
+
+        assertEquals(java.util.List.of(new CommentsMsg.LinkChosen("https://example.com/docs")), dispatched);
+    }
+
+    // Clicks #381, then the bare URL, of a comment on the pull request of shown.
+    private void clickReferenceAndURL(PullRequestPopup shown) throws Exception {
+        model = TestModels.loaded()
+                .openPopup(CommentsPopup.loading(shown)
+                        .read(Either.right(List.of(comment(
+                                "IC_1", Kind.COMMENT, "bob", "Fixed in #381, see https://example.com/docs.")))));
+        try (ToolkitTestRunner runner = start(WIDE)) {
+            String screen = RenderedText.ofSize(runner, this::view, WIDE.width(), WIDE.height());
+            int[] shownAt = at(screen, "││Fixed in #381, see https://example.com/docs.");
+            int start = shownAt[0] + "││".length();
+
+            SettledPilot.of(runner).mousePress(MouseButton.LEFT, start + "Fixed in #3".length(), shownAt[1]);
+            SettledPilot.of(runner)
+                    .mousePress(MouseButton.LEFT, start + "Fixed in #381, see https://ex".length(), shownAt[1]);
+            SettledPilot.of(runner).pause();
+        }
     }
 
     @Test

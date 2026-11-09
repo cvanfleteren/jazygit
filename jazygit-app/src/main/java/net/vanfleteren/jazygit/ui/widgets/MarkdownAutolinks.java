@@ -3,8 +3,6 @@ package net.vanfleteren.jazygit.ui.widgets;
 import io.vavr.collection.Iterator;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import io.vavr.control.Try;
-import java.net.URI;
 import java.util.Objects;
 import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
@@ -31,15 +29,15 @@ public final class MarkdownAutolinks {
     private static final Pattern URL =
             Pattern.compile("(?<![^\\s*_~(\"'])https?://[^\\s<>|\\[\\]`\\\\]+", Pattern.CASE_INSENSITIVE);
     /*
-     * #N or owner/repo#N, not after a word, a path, an escape or an entity, and with no word right after it. An _
-     * between it and a word keeps it a word, as an _ that opens or closes emphasis does not.
+     * #N or owner/repo#N, not after a word, a path, a host, an escape or an entity, and with no word right after it.
+     * An _ between it and a word keeps it a word, as an _ that opens or closes emphasis does not.
      */
-    private static final Pattern REFERENCE = Pattern.compile("(?<![\\p{L}\\p{N}/\\\\&#]|[\\p{L}\\p{N}]_)"
+    private static final Pattern REFERENCE = Pattern.compile("(?<![\\p{L}\\p{N}/\\\\&#.-]|[\\p{L}\\p{N}]_)"
             + "(?:([A-Za-z0-9][A-Za-z0-9-]{0,38})/([A-Za-z0-9._-]{1,100}))?#([1-9][0-9]{0,8})"
             + "(?![\\p{L}\\p{N}]|_[\\p{L}\\p{N}])");
     private static final String TRAILING = "?!.,:;*_~'\"";
-    // What Markdown could read as more than text in the text of a link.
-    private static final Pattern SPECIAL = Pattern.compile("[\\\\`*_\\[\\]<>!&~]");
+    // Something after the scheme, before a path, query, fragment or port: a host, however a browser reads it.
+    private static final Pattern HAS_HOST = Pattern.compile("https?://[^/?#:@]+.*", Pattern.CASE_INSENSITIVE);
 
     private MarkdownAutolinks() {}
 
@@ -52,19 +50,17 @@ public final class MarkdownAutolinks {
                 .includeSourceSpans(IncludeSourceSpans.BLOCKS_AND_INLINES)
                 .build()
                 .parse(markdown);
-        List<Found> found = texts(document).flatMap(span -> in(markdown, span, repository));
-        StringBuilder linked = new StringBuilder(markdown.length());
-        int end = found.foldLeft(0, (from, link) -> {
-            linked.append(markdown, from, link.start())
-                    .append('[')
-                    .append(SPECIAL.matcher(markdown.substring(link.start(), link.end()))
-                            .replaceAll("\\\\$0"))
-                    .append("](<")
-                    .append(link.url())
-                    .append(">)");
-            return link.end();
-        });
-        return linked.append(markdown, end, markdown.length()).toString();
+        // From the end, so what is replaced first leaves where the others are as it was.
+        return texts(document)
+                .flatMap(span -> in(markdown, span, repository))
+                .sortBy(Found::start)
+                .reverse()
+                .foldLeft(
+                        markdown,
+                        (text, link) -> text.substring(0, link.start())
+                                + "[" + MarkdownImages.escaped(markdown.substring(link.start(), link.end()))
+                                + "](<" + link.url() + ">)"
+                                + text.substring(link.end()));
     }
 
     /**
@@ -120,10 +116,7 @@ public final class MarkdownAutolinks {
                 .find(at -> at <= match.start() || !trailing(markdown.substring(match.start(), at)))
                 .get();
         String url = markdown.substring(match.start(), end);
-        return Try.of(() -> URI.create(url).getHost())
-                .toOption()
-                .flatMap(Option::of)
-                .map(host -> new Found(match.start(), end, url));
+        return Option.when(HAS_HOST.matcher(url).matches(), () -> new Found(match.start(), end, url));
     }
 
     // Whether url ends with what is not taken as part of it: punctuation, or a ) that no ( in it opens.

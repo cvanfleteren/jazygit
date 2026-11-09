@@ -21,11 +21,13 @@ sends `/<owner>/<repo>/issues/<n>` on to `/pull/<n>` when it is a pull request.
   - a bare `http` or `https` URL, to itself.
 - Each shows as it is written, as any other link (ADR 96), and a click opens it as ADR 96 has it.
 - `N` is 1 to 9 digits, without a leading zero. `owner` is letters, digits and `-`, at most 39; `repo` is letters,
-  digits, `.`, `_` and `-`. A reference does not follow a letter, a digit, `/`, `\`, `&` or `#`, nor is its number
-  followed by a letter or a digit: `page#12`, `#12abc` and `&#35;` stay text. An `_` between it and a word does the same.
+  digits, `.`, `_` and `-`. A reference does not follow a letter, a digit, `/`, `\`, `&`, `#`, `.` or `-`, nor is its
+  number followed by a letter or a digit: `page#12`, `#12abc`, `&#35;` and `my.org/repo#1` stay text. An `_` between it
+  and a word does the same.
 - A bare URL ends as GitHub's autolinks end: at a space, `<`, `>`, `|`, `[`, `]`, `` ` `` or `\`, without the `.`, `,`,
   `:`, `;`, `!`, `?`, `*`, `_`, `~` and quotes it ends with, and without a `)` that no `(` in it opens. It follows the
-  start of a line, a space, `*`, `_`, `~`, `(` or a quote, and has a host.
+  start of a line, a space, `*`, `_`, `~`, `(` or a quote, and has something after its `://` for a host, as a browser
+  takes it: braces, `^` or an `_` in the host do not keep it from being linked.
 - Only text is linked, as commonmark reads it: not code, a code block, HTML, a link or the text of an image.
 - When the repository of the pull request is not known, `#N` and `owner/repo#N` stay text; a bare URL is still linked.
 - The Markdown is rewritten before it is drawn, as its images are (ADR 82), by where commonmark read its text.
@@ -38,5 +40,8 @@ sends `/<owner>/<repo>/issues/<n>` on to `/pull/<n>` when it is a pull request.
 
 - `#N`, `owner/repo#N` and bare URLs in a comment open with a click, also when a URL is wrapped over lines.
 - A reference to a number that is neither opens GitHub's page that says so.
+- A path with a numbered anchor, `docs/file.md#12`, is taken for `owner/repo#N`, and opens a page that is not there.
+  GitHub links `owner/repo#N` only when the repository is there, which jazygit does not ask; a repository can have a
+  `.` in its name, as `vercel/next.js` has.
 - A reference to a repository on another host, written as a URL, is a bare URL; as `owner/repo#N` it is taken to be
   on the host of the pull request.
