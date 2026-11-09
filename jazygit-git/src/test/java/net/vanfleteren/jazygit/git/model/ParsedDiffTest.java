@@ -146,6 +146,15 @@ class ParsedDiffTest {
     }
 
     @Test
+    void theLexedLinesWithoutATokenShareOneEmptyArray() {
+        List<List<Option<Array<Token>>>> shared =
+                ParsedDiff.shared(List.of(List.of(Option.of(List.empty()), Option.of(List.empty()))));
+
+        assertSame(Array.empty(), shared.head().head().get());
+        assertSame(Array.empty(), shared.head().last().get());
+    }
+
+    @Test
     void aDiffIsParsedWhereItsTextIsMade() {
         DiffText diff = DiffText.of("""
                 diff --git a/a.txt b/a.txt
