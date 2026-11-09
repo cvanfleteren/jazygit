@@ -226,9 +226,13 @@ class LayoutUpdateTest {
         assertEquals(List.of(10, 70, 10), tallest.preferences().leftHeights(Screen.REPOSITORY));
         assertEquals(Option.none(), tallest.preferences().maximizedPane(Screen.REPOSITORY));
 
-        Model maximized = Update.update(tallest, new LayoutMsg.PaneStepped(5)).model();
+        Next maximizing = Update.update(tallest, new LayoutMsg.PaneStepped(5));
+        Model maximized = maximizing.model();
 
         assertEquals(Option.of(1), maximized.preferences().maximizedPane(Screen.REPOSITORY));
+        // The heights from before the press are kept, and were saved by it.
+        assertEquals(List.of(10, 70, 10), heights(maximizing));
+        assertEquals(List.empty(), maximizing.cmds());
         assertEquals(Next.of(maximized), Update.update(maximized, new LayoutMsg.PaneStepped(5)));
         Next shorter = Update.update(maximized, new LayoutMsg.PaneStepped(-5));
         assertEquals(Option.none(), shorter.model().preferences().maximizedPane(Screen.REPOSITORY));
@@ -242,6 +246,47 @@ class LayoutUpdateTest {
                 stepped(measured(focused(model, Scopes.BRANCHES.id()), 20), 15).model();
 
         assertEquals(Next.of(tallest), Update.update(tallest, new LayoutMsg.PaneStepped(5)));
+    }
+
+    @Test
+    void plusMaximizesThePaneWhenTheLastRowItCanTakeLandsInAPaneBetween() {
+        // In 53 rows a step is not a whole row: the last percent the files give moves the border between the files
+        // and the branches, but not the one between the branches and the commits.
+        Next next = stepped(measured(focused(model, Scopes.COMMITS.id()), 53), 20);
+
+        assertEquals(Option.of(2), next.model().preferences().maximizedPane(Screen.REPOSITORY));
+    }
+
+    @Test
+    void plusOnTheLastPaneTakesFromThePanesAboveItAndThenMaximizesIt() {
+        // 100 stashes need more rows than the stash gets in a column of 100 rows.
+        Model stash = measured(focused(withStashes(100), Scopes.STASH.id()), 100);
+
+        Next maximized = stepped(stash, 20);
+
+        assertEquals(Option.of(3), maximized.model().preferences().maximizedPane(Screen.REPOSITORY));
+        assertEquals(List.of(10, 10, 10), heights(maximized));
+    }
+
+    @Test
+    void plusWhileAnotherPaneIsMaximizedEndsItAndStepsFromTheHeightsShown() {
+        // In 40 rows, the maximized files are shown 65 percent tall raised to the least heights, (65, 10, 10): the
+        // commits under the branches give nothing, so the stash gives 5.
+        Model maximized = toggled(measured(focused(model, Scopes.FILES.id()), 40));
+
+        Next next = Update.update(focused(maximized, Scopes.BRANCHES.id()), new LayoutMsg.PaneStepped(5));
+
+        assertEquals(Option.none(), next.model().preferences().maximizedPane(Screen.REPOSITORY));
+        assertEquals(List.of(65, 15, 10), heights(next));
+    }
+
+    @Test
+    void plusOnAMaximizedPaneInAColumnTooShortToShowItSoEndsTheMaximizedPane() {
+        Model maximized = toggled(measured(focused(model, Scopes.FILES.id()), 10));
+
+        Next next = Update.update(maximized, new LayoutMsg.PaneStepped(5));
+
+        assertEquals(Option.none(), next.model().preferences().maximizedPane(Screen.REPOSITORY));
     }
 
     private static Next stepped(Model model, int times) {

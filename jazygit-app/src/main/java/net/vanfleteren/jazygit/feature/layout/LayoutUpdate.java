@@ -118,10 +118,9 @@ public final class LayoutUpdate {
         List<Integer> heights = stashShown(ended, screen, shown, pane);
         return stepped(ended, screen, heights, pane, by)
                 .map(stepped -> keep(ended, ended.preferences().keepingHeights(screen, stepped)))
-                .orElse(() -> Option.when(by > 0, () -> maximizing(ended, screen, heights, pane))
-                        .flatMap(maximizing -> maximizing)
-                        .map(maximizing ->
-                                keep(maximizing, maximizing.preferences().keepingHeights(screen, heights))))
+                .orElse(() -> (by > 0 ? maximizing(ended, screen, heights, pane) : Option.<Model>none())
+                        .map(oneMaximized ->
+                                keep(oneMaximized, oneMaximized.preferences().keepingHeights(screen, heights))))
                 .orElse(() -> Option.when(
                         maximized, () -> keep(ended, ended.preferences().keepingHeights(screen, shown))))
                 .getOrElse(() -> Next.of(model));
@@ -145,17 +144,14 @@ public final class LayoutUpdate {
      * the 3 each keeps. None when that shows it no taller, or when it is a stash that shows all its stashes.
      */
     private static Option<Model> maximizing(Model model, Screen screen, List<Integer> heights, int pane) {
-        Model maximizing = model.mapPreferences(preferences -> preferences.withMaximizedPane(screen, Option.of(pane)));
+        Model maximized = model.mapPreferences(preferences -> preferences.withMaximizedPane(screen, Option.of(pane)));
         return model.preferences().columnRows().flatMap(column -> {
             List<Integer> rows = LeftPanes.sized(model, screen, heights, column);
-            List<Integer> most = LeftPanes.sized(model, screen, moved(heights, pane, 100), column);
             boolean stash = screen == Screen.REPOSITORY && pane == heights.size();
-            boolean blocked = rows.removeAt(pane).equals(most.removeAt(pane));
-            return LeftPanes.maximized(maximizing, screen, column)
-                    .filter(maximized -> blocked
-                            && !(stash && rows.get(pane) >= LeftPanes.stashRows(model))
-                            && maximized.get(pane) > rows.get(pane))
-                    .map(maximized -> maximizing);
+            return LeftPanes.maximized(maximized, screen, column)
+                    .filter(shown -> !(stash && rows.get(pane) >= LeftPanes.stashRows(model))
+                            && shown.get(pane) > rows.get(pane))
+                    .map(shown -> maximized);
         });
     }
 
