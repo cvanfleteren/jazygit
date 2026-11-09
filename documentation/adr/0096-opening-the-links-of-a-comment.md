@@ -49,3 +49,5 @@ account it uses (ADR 88): the one that is logged in to GitHub as that account.
 - Links in comments open with a click in any terminal, logged in as the repository's account.
 - Opening a link runs gh to read its active account and its browser setting, as opening a review comment does.
 - A link opened by mistake opens a browser; there is no confirmation.
+
+Amended by ADR 98: a reference such as `#381`, and a URL that is only text, are links of a comment too.

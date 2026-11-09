@@ -25,6 +25,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.feature.github.comment.CommentMsg;
+import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.gh.model.PullRequestComment;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Model;
@@ -37,6 +38,7 @@ import net.vanfleteren.jazygit.ui.TimeText;
 import net.vanfleteren.jazygit.ui.widgets.DialogFrame;
 import net.vanfleteren.jazygit.ui.widgets.LargeDialog;
 import net.vanfleteren.jazygit.ui.widgets.ListKeys;
+import net.vanfleteren.jazygit.ui.widgets.MarkdownAutolinks;
 import net.vanfleteren.jazygit.ui.widgets.MarkdownImages;
 import net.vanfleteren.jazygit.ui.widgets.MarkdownScroll;
 import net.vanfleteren.jazygit.ui.widgets.PopupView;
@@ -164,7 +166,8 @@ public final class CommentsDialog implements PopupView {
                                         Integer.MAX_VALUE)
                                 .addClass(Theme.Classes.ERROR),
                         comments -> highlighted
-                                .<Element>map(comment -> scroll.render(body(comment)))
+                                .<Element>map(comment ->
+                                        scroll.render(MarkdownAutolinks.linked(body(comment), repository(popup))))
                                 .getOrElse(() -> text(Messages.get("dialog.comments.none"))
                                         .addClass(Theme.Classes.DIM))))
                 .getOrElse(() -> row(
@@ -172,6 +175,19 @@ public final class CommentsDialog implements PopupView {
                         text(TimeText.spinnerFrame(clock.instant())).addClass(Theme.Classes.SPINNER)));
         Panel pane = panel(content).rounded();
         return highlighted.map(comment -> pane.title(title(comment))).getOrElse(pane);
+    }
+
+    /**
+     * The repository of the pull request, which a reference to an issue or pull request without one is to (ADR 98):
+     * as its details were read, else as it was listed.
+     */
+    private static Option<MarkdownAutolinks.Repository> repository(CommentsPopup popup) {
+        PullRequestPopup shown = popup.shown();
+        return shown.readDetails()
+                .flatMap(read -> MarkdownAutolinks.Repository.of(read.host(), read.repository()))
+                .orElse(() -> shown.pullRequest()
+                        .commits()
+                        .flatMap(commits -> MarkdownAutolinks.Repository.of(commits.host(), commits.repository())));
     }
 
     private static String body(PullRequestComment comment) {

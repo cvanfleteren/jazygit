@@ -126,11 +126,18 @@ public final class MarkdownImages {
      * What says {@code image} is there: a link to it, unless it is in a link already or is nowhere.
      */
     private static String link(MarkdownImage image) {
-        String escaped = SPECIAL.matcher(said(image.alt())).replaceAll("\\\\$0");
+        String escaped = escaped(said(image.alt()));
         return image.source()
                 .filter(url -> !image.inLink() && !url.isBlank() && !url.matches("(?s).*[<>\\n].*"))
                 .map(url -> "[" + escaped + "](<" + url + ">)")
                 .getOrElse(escaped);
+    }
+
+    /**
+     * {@code text} as the text of a link, where Markdown reads it as only text.
+     */
+    static String escaped(String text) {
+        return SPECIAL.matcher(text).replaceAll("\\\\$0");
     }
 
     private static String said(String alt) {
