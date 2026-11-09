@@ -26,6 +26,7 @@ public record Ahead(Sha tip, BranchRef base, List<Commit> commits, boolean more,
      * The commit {@code sha}, if it is one of the commits read or the fork point.
      */
     public Option<Commit> commit(Sha sha) {
-        return commits.appendAll(forkPoint).find(commit -> commit.sha().equals(sha));
+        return commits.find(commit -> commit.sha().equals(sha))
+                .orElse(() -> forkPoint.filter(commit -> commit.sha().equals(sha)));
     }
 }

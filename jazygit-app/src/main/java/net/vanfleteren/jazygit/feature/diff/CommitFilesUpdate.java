@@ -171,12 +171,15 @@ public final class CommitFilesUpdate {
      * to show them (ADR 84).
      */
     private static Next pictures(Model model, CommitFilesView view, int number, List<Cmd> cmds) {
+        // Lazily, so that the comments are parsed only until there are enough images.
         List<String> urls = view.threads()
+                .iterator()
                 .flatMap(ReviewThread::comments)
                 .flatMap(comment -> MarkdownImage.onGitHub(comment.body()))
                 .distinct()
                 .filter(url -> !view.pictures().containsKey(url))
-                .take(Math.max(0, MAX_PICTURES - view.pictures().size()));
+                .take(Math.max(0, MAX_PICTURES - view.pictures().size()))
+                .toList();
         return new Next(
                 mapPullRequest(
                         model,
