@@ -252,7 +252,9 @@ public final class ContentPanel {
      * measures how wide every line it is given is, each frame, so a long diff would hold up every frame; it still gets
      * as many lines, for its scrollbar and how far it scrolls. The height is that of the frame before, so the lines are
      * kept that would show in an area up to twice as high, which the element scrolls up from its last line at its
-     * bottom; all of them before the area was ever drawn. Those of them that are {@code filling} are
+     * bottom; none before the area was ever drawn, as that frame is only drawn to learn its size and then drawn again
+     * ({@code Fitted}), and drawing every line of a long diff for it took as long as styling it. Those of them that are
+     * {@code filling} are
      * {@link #filled} to the edge of an area {@code width} columns wide (ADR 80). Only the lines that show are drawn
      * ({@link Rows}).
      */
@@ -281,11 +283,12 @@ public final class ContentPanel {
 
     /**
      * The lines of {@code size} that {@link #windowed} shows from {@code row} in an area {@code height} lines high: from
-     * the first up to, not with, the second.
+     * the first up to, not with, the second; none at {@code row} while the area was never drawn, its height 0.
      */
     static Tuple2<Integer, Integer> window(int size, int row, int height) {
-        int high = height > 0 ? 2 * height : size;
-        return Tuple.of(Math.clamp(row, 0, Math.max(0, size - high)), Math.min(size, row + high));
+        int high = Math.max(0, 2 * height);
+        int top = Math.clamp(row, 0, Math.max(0, size - high));
+        return Tuple.of(top, Math.max(top, Math.min(size, row + high)));
     }
 
     /**

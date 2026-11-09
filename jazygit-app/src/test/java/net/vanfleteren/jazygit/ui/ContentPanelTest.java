@@ -439,13 +439,13 @@ class ContentPanelTest {
                 ContentPanel.windowed(lines, 0, 95, 10, 0, HashSet.empty()).lines();
         assertEquals("080", atEnd.get(80).rawContent());
         assertEquals("", atEnd.get(79).rawContent());
-        // Before the area was ever drawn, all of them.
-        assertEquals(
-                "000",
-                ContentPanel.windowed(lines, 0, 50, 0, 0, HashSet.empty())
-                        .lines()
-                        .get(0)
-                        .rawContent());
+        // Before the area was ever drawn, none of them, though it still gets as many.
+        int before = drawn.get();
+        java.util.List<Line> undrawn =
+                ContentPanel.windowed(lines, 0, 50, 0, 0, HashSet.empty()).lines();
+        assertEquals(100, undrawn.size());
+        assertEquals("", undrawn.get(50).rawContent());
+        assertEquals(before, drawn.get());
     }
 
     @Test
@@ -882,6 +882,61 @@ class ContentPanelTest {
         int inLight = styled.get();
         counting.render(other, CommitsPanel.ID);
         assertTrue(styled.get() > inLight, "restyled for another body");
+    }
+
+    @Test
+    void aLongRichDiffIsMeasuredOnceAndThenOnlyTheLinesThatShowAreDrawn() throws Exception {
+        // Each line of the diff resolves the class of its gutter once each time it is drawn.
+        java.util.concurrent.atomic.AtomicInteger gutters = new java.util.concurrent.atomic.AtomicInteger();
+        java.util.List<Msg> dispatched = new java.util.ArrayList<>();
+        ContentPanel counting = new ContentPanel(
+                cssClass -> {
+                    if (cssClass.equals(Theme.Classes.DIFF_LINE_NUMBER)) {
+                        gutters.incrementAndGet();
+                    }
+                    return dev.tamboui.style.Style.EMPTY;
+                },
+                () -> false,
+                id -> {},
+                dispatched::add);
+        int lines = 2_000;
+        Model rich = TestModels.loaded()
+                .mapPreferences(preferences ->
+                        preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
+        Model model = Update.update(
+                        Update.update(rich, new SelectionMsg.CommitSelected(new Sha("aaaa")))
+                                .model(),
+                        new LoadMsg.CommitDetailLoaded(
+                                new Sha("aaaa"),
+                                rich.preferences().diffOptions(),
+                                DiffText.of("diff --git a/a.txt b/a.txt\n--- /dev/null\n+++ b/a.txt\n@@ -0,0 +1,"
+                                        + lines + " @@\n"
+                                        + List.range(0, lines)
+                                                .map(i -> "+line " + i)
+                                                .mkString("\n") + "\n")))
+                .model();
+        String area = counting.areaOfPane(model, CommitsPanel.ID).get();
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> counting.render(model, area))) {
+            SettledPilot.focus(testRunner, area);
+            String screen = RenderedText.ofLarge(testRunner, () -> counting.render(model, area));
+            assertTrue(screen.contains("+line 0"), screen);
+            // Measured once, all of them; drawn, only those of an area up to twice as high as the screen: not all of
+            // them again for the frame the area is first drawn in only to learn its size.
+            int shown = gutters.get();
+            assertTrue(shown >= lines && shown <= lines + 2 * 30, "drew " + shown);
+
+            // In the size the runner draws in, which can show more lines than the screen above.
+            SettledPilot.of(testRunner).pause();
+            int settled = gutters.get();
+            SettledPilot.of(testRunner).press(KeyCode.DOWN);
+            SettledPilot.of(testRunner).pause();
+            Msg.ContentScrolled down = (Msg.ContentScrolled) dispatched.getLast();
+            assertEquals(Option.of(new Anchor.File("a.txt")), down.to().cursor());
+            assertEquals(0, down.to().row());
+            // The cursor moved over lines kept drawn: none is drawn again.
+            assertEquals(settled, gutters.get());
+        }
     }
 
     @Test
