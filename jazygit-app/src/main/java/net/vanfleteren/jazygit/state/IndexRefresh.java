@@ -6,7 +6,7 @@ import lombok.With;
 import net.vanfleteren.jazygit.git.model.MetadataStamp;
 
 /**
- * When the index was last written anew, and what it looked like then, to tell when it changed since (ADR 96).
+ * When the index was last written anew, and what it looked like then, to tell when it changed since (ADR 97).
  *
  * @param seen  what the index looked like when it was last written anew, or once that was done; none before that, or
  *              when it could not be, so that the next look writes it anew

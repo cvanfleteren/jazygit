@@ -651,7 +651,7 @@ terminal has the focus and no operation runs, `IndexUpdate.checked` asks for `Cm
 `git update-index -q --unmerged --refresh`. `Jobs.indexRefresh` keeps what the index looked like then; the first stamp
 after a refresh that wrote it is taken as what that refresh left, not as a change. A refresh that could not lock the
 index changes nothing shown. See `documentation/adr/0093-the-index-written-anew-now-and-then.md` and
-`documentation/adr/0096-the-index-written-anew-once-it-changed.md`.
+`documentation/adr/0097-the-index-written-anew-once-it-changed.md`.
 
 A read that failed is tried again on a tick only once it waited 1, 2, 4… up to 64 ticks after each failure in a row
 (`Jobs.retries`, `Jobs.retryDue`); `Update.refresh` tries it at once. The previews (a branch's log, a commit's or a
@@ -976,7 +976,7 @@ helpers. A test replaces the roles it needs on `StubGit.of()`, as in `StubGit.of
   - **Timeouts and locks:** a command that changes the repository gets 5 minutes, for its hooks. A read
     (`GitCommand.reading`) gets 30 seconds and takes no optional locks, so it never writes the index it refreshed:
     `Cmd.RefreshIndex` (`git update-index -q --unmerged --refresh`) does that once the index changed, while the
-    terminal has the focus (ADR 93, ADR 96).
+    terminal has the focus (ADR 93, ADR 97).
   - **Paths:** a command on paths takes them literally (`withLiteralPaths`), never as patterns, so
     discarding a file named `*.txt` discards only that file.
   - **Remotes:** a command that talks to a remote runs ssh in batch mode (`CliRemotes.toRemote`), so a

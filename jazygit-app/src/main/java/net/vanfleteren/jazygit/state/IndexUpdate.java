@@ -6,7 +6,7 @@ import net.vanfleteren.jazygit.git.model.MetadataStamp;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
- * When the index is written anew (ADR 96): once it changed and settled, as after a checkout, and every
+ * When the index is written anew (ADR 97): once it changed and settled, as after a checkout, and every
  * {@link #FALLBACK} anyway, for files that were touched without the index changing.
  */
 public final class IndexUpdate {

@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * The index is written anew once it changed, and every so often anyway, as the status every tick reads takes no
- * optional locks (ADR 93, ADR 96).
+ * optional locks (ADR 93, ADR 97).
  */
 class IndexRefreshUpdateTest {
 

@@ -12,7 +12,7 @@ import io.vavr.control.Option;
  * @param stashes   the stashes
  * @param worktrees the worktrees, with the branch or the detached commit each has checked out, but not the commit
  *                  that branch is at
- * @param index     the index of the working tree, which is written anew after it changed (ADR 96)
+ * @param index     the index of the working tree, which is written anew after it changed (ADR 97)
  */
 public record GitMetadata(
         Option<MetadataStamp> branches,

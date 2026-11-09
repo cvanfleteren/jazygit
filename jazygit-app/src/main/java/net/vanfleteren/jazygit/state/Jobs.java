@@ -49,7 +49,7 @@ import net.vanfleteren.jazygit.git.model.MetadataStamp;
  *                   handled again once it waited its {@link Msg.Periodic#whileAway()} since (ADR 67)
  * @param onArrival  what the repository shown is to do once its status, branches and worktrees are read, as the
  *                   {@link Landing} it was opened with said: handled once, then forgotten (ADR 68)
- * @param indexRefresh when the index was last written anew, and what it looked like then (ADR 96)
+ * @param indexRefresh when the index was last written anew, and what it looked like then (ADR 97)
  */
 @With
 public record Jobs(

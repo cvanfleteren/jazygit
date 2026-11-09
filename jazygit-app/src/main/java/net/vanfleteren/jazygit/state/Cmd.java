@@ -226,7 +226,7 @@ public interface Cmd {
     }
 
     /**
-     * Writes into the index what the files in the working tree are like now, where it no longer says so (ADR 93, ADR 96):
+     * Writes into the index what the files in the working tree are like now, where it no longer says so (ADR 93, ADR 97):
      * the status that every tick reads takes no optional locks, so it never does, and compares the contents of those
      * files again every time. That it could not, as another git command held the index, only goes to the debug log:
      * the next change of the index, or the next one anyway, tries again.

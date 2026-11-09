@@ -88,7 +88,7 @@ public interface Msg {
 
     /**
      * The index was written anew where it no longer matched the working tree, or could not be ({@code written} false):
-     * either way, nothing shown changes (ADR 93, ADR 96).
+     * either way, nothing shown changes (ADR 93, ADR 97).
      */
     record IndexRefreshed(boolean written) implements Msg {
 

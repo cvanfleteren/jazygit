@@ -1,4 +1,4 @@
-# 96. The index written anew once it changed
+# 97. The index written anew once it changed
 
 Date: 2026-11-09
 
