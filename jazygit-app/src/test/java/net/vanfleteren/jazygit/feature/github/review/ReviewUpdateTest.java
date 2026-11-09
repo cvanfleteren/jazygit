@@ -874,6 +874,13 @@ class ReviewUpdateTest {
      * {@code thread} with only its first comment read, and {@code more} that GitHub has besides.
      */
     private static ReviewThread firstOnly(ReviewThread thread, int more) {
+        return withMore(thread.withComments(thread.comments().take(1)), more);
+    }
+
+    /**
+     * {@code thread} with {@code more} comments that GitHub has besides those read.
+     */
+    private static ReviewThread withMore(ReviewThread thread, int more) {
         return new ReviewThread(
                 thread.path(),
                 thread.side(),
@@ -884,7 +891,7 @@ class ReviewUpdateTest {
                 thread.resolved(),
                 thread.outdated(),
                 thread.subject(),
-                thread.comments().take(1),
+                thread.comments(),
                 more,
                 thread.id(),
                 thread.rights());
@@ -905,6 +912,12 @@ class ReviewUpdateTest {
         assertEquals(
                 Option.of(new AppError.CannotReview(Why.COLLAPSED)),
                 error(Update.update(more, new ReviewMsg.DeleteAsked(at(onThread("T2"))))
+                        .model()));
+        // Both comments read, and one more on GitHub.
+        Model bothAndMore = files(PullRequestDetails.State.OPEN, HEAD, List.of(OPEN, withMore(SETTLED, 1)));
+        assertEquals(
+                Option.of(new AppError.CannotReview(Why.COLLAPSED)),
+                error(Update.update(bothAndMore, new ReviewMsg.DeleteAsked(at(onThread("T2"))))
                         .model()));
     }
 
@@ -1289,6 +1302,131 @@ class ReviewUpdateTest {
         assertEquals(1, view(failed.model()).version());
         assertTrue(error(failed.model()).isDefined());
         assertFalse(failed.cmds().exists(cmd -> cmd instanceof CommitFilesCmd.LoadReviewRemarks));
+    }
+
+    @Test
+    void nothingIsCommentedOnEditedNorDeletedUntilTheThreadsAreRead() {
+        Model reading = Update.update(
+                        loaded(), new CommitFilesMsg.Opened(new Changes.OfPullRequest(COMMITS), Scopes.BRANCHES.id()))
+                .model();
+        Model failed = Update.update(
+                        reading,
+                        new CommitFilesMsg.RemarksFailed(
+                                7, new Failure.Bug(new RuntimeException("offline")), HashSet.empty(), 0))
+                .model();
+        List<ReviewMsg> asked = List.of(
+                new ReviewMsg.StartAsked(at(line(Side.RIGHT, 2))),
+                new ReviewMsg.ReplyAsked(at(onThread("T1"))),
+                new ReviewMsg.EditAsked(at(onComment("R1", "T1"))),
+                new ReviewMsg.DeleteAsked(at(onComment("R1", "T1"))));
+
+        for (Model model : List.of(reading, failed)) {
+            for (ReviewMsg msg : asked) {
+                Next refused = Update.update(model, msg);
+                assertEquals(List.empty(), refused.cmds());
+                assertEquals(Option.of(new AppError.CannotReview(Why.NOT_READ)), error(refused.model()));
+            }
+        }
+    }
+
+    @Test
+    void aThreadIsRepliedToOnlyWithTheRightTo() {
+        Model locked = files(
+                PullRequestDetails.State.OPEN,
+                HEAD,
+                List.of(thread("T1", false, new ReviewThread.Rights(false, true, true))));
+
+        Next refused = Update.update(locked, new ReviewMsg.ReplyAsked(at(onThread("T1"))));
+
+        assertTrue(refused.model().popup(ReviewPopup.class).isEmpty());
+        assertEquals(Option.of(new AppError.CannotReview(Why.NO_REPLY)), error(refused.model()));
+    }
+
+    @Test
+    void theThreadsOfAPullRequestNotListedAreReadAgainAtTheFirstVersion() {
+        Model deleted = Update.update(
+                        deleting(files(), onComment("R1", "T1")).model(),
+                        new ReviewMsg.CommentDeleted(new ReviewCmd.DeleteComment(7, "T1", "R1"), List.empty()))
+                .model();
+        assertEquals(1, view(deleted).version());
+
+        Next resolved =
+                Update.update(deleted, new ReviewMsg.Resolved(new ReviewCmd.Resolve(8, "T9", true), List.empty()));
+
+        assertTrue(resolved.cmds().contains(new CommitFilesCmd.LoadReviewRemarks(8, HashSet.of("T9"), 0)));
+    }
+
+    @Test
+    void aDeleteOrAReactionConfirmedForAnotherPullRequestIsNotSent() {
+        Model deleteOther = files().openPopup(
+                        new DeleteCommentPopup(8, "T1", OPEN.comments().last(), Instant.EPOCH));
+        Next deleted = Update.update(deleteOther, new ReviewMsg.DeleteConfirmed());
+        assertEquals(List.empty(), deleted.cmds());
+        assertTrue(deleted.model().popup(DeleteCommentPopup.class).isEmpty());
+        assertEquals(HashSet.empty(), view(deleted.model()).deleting());
+        assertEquals(Option.of(new AppError.CannotReview(Why.NOT_READ)), error(deleted.model()));
+
+        Model reactOther = files().openPopup(new ReactionPopup(8, "T1", "R1", Reactions.NONE));
+        Next reacted = Update.update(reactOther, new ReviewMsg.ReactionChosen(Reaction.EYES));
+        assertEquals(List.empty(), reacted.cmds());
+        assertTrue(reacted.model().popup(ReactionPopup.class).isEmpty());
+        assertEquals(HashSet.empty(), view(reacted.model()).reacting());
+        assertEquals(Option.of(new AppError.CannotReview(Why.NOT_READ)), error(reacted.model()));
+
+        // Without its popup open, confirming does nothing.
+        assertEquals(
+                List.empty(),
+                Update.update(files(), new ReviewMsg.DeleteConfirmed()).cmds());
+        assertEquals(
+                List.empty(),
+                Update.update(files(), new ReviewMsg.ReactionChosen(Reaction.EYES))
+                        .cmds());
+    }
+
+    @Test
+    void whileItsCommentIsSentThePopupKeepsItAndTakesNoKey() {
+        Model asked = Update.update(files(), new ReviewMsg.ReplyAsked(at(onThread("T1"))))
+                .model();
+        Model sending = Update.update(
+                        Update.update(asked, new ReviewMsg.Edited("Because")).model(), new ReviewMsg.Confirmed())
+                .model();
+
+        Model typed =
+                Update.update(sending, new ReviewMsg.Edited("Because not")).model();
+        assertEquals("Because", typed.popup(ReviewPopup.class).get().text());
+        assertEquals(
+                List.empty(), Update.update(sending, new ReviewMsg.Confirmed()).cmds());
+        assertTrue(Update.update(sending, new ReviewMsg.Cancelled())
+                .model()
+                .popup(ReviewPopup.class)
+                .isDefined());
+        assertEquals(
+                List.empty(),
+                Update.update(sending, new ReviewMsg.EditorRequested()).cmds());
+    }
+
+    @Test
+    void aCommentIsWrittenInTheEditorTooUnlessItsPopupWasCancelledMeanwhile() {
+        Model typed = Update.update(
+                        Update.update(files(), new ReviewMsg.ReplyAsked(at(onThread("T1"))))
+                                .model(),
+                        new ReviewMsg.Edited("Bec"))
+                .model();
+
+        Next editing = Update.update(typed, new ReviewMsg.EditorRequested());
+        assertEquals(List.of(new ReviewCmd.EditComment("Bec")), editing.cmds());
+
+        Model written = Update.update(editing.model(), new ReviewMsg.EditorClosed("Because", List.empty()))
+                .model();
+        assertEquals("Because", written.popup(ReviewPopup.class).get().text());
+
+        Model cancelled =
+                Update.update(editing.model(), new ReviewMsg.Cancelled()).model();
+        assertTrue(cancelled.popup(ReviewPopup.class).isEmpty());
+        assertTrue(Update.update(cancelled, new ReviewMsg.EditorClosed("Because", List.empty()))
+                .model()
+                .popup(ReviewPopup.class)
+                .isEmpty());
     }
 
     private static Reactions reactions(Model model, String comment) {

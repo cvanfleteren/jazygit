@@ -228,7 +228,9 @@ class CliGitHubTest {
                 gh version 2.102.0 (2026-09-30)
                 https://github.com/cli/cli/releases/tag/v2.102.0
                 """));
-        assertTrue(CliGitHub.parseVersion("Usage: something else").isLeft());
+        assertEquals(
+                Either.left(new GhError.UnexpectedOutput("Usage: something else")),
+                CliGitHub.parseVersion("Usage: something else"));
     }
 
     @Test
