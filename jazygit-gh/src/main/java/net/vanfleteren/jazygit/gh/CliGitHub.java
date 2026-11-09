@@ -278,6 +278,7 @@ public final class CliGitHub implements GitHub {
     public Either<GhFailure, List<ExecutedCommand>> openLink(String url) {
         return accountBrowser()
                 .orElse(() -> ghBrowser(SshHost.resolve(worktree, host.get())).map(ChosenBrowser::command))
+                .orElse(() -> Browser.desktop(os))
                 .map(browser -> launch(browser, url))
                 .getOrElse(() -> Either.left(new GhFailure(new GhError.NoBrowser(), List.empty())));
     }

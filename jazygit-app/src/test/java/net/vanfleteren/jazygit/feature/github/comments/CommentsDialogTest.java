@@ -297,7 +297,7 @@ class CommentsDialogTest {
                 "IC_1",
                 Kind.COMMENT,
                 "bob",
-                "See [the docs](https://example.com/docs), [below](#notes) or plain text")));
+                "See [the docs](HTTPS://example.com/docs), [below](#notes) or plain text")));
         try (ToolkitTestRunner runner = start(WIDE)) {
             String screen = RenderedText.ofSize(runner, this::view, WIDE.width(), WIDE.height());
             // In the comment, not in its row of the list, which shows the Markdown as it is written.
@@ -311,7 +311,49 @@ class CommentsDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        // A link within the page, which a browser would not know where to find, opens nothing; nor does plain text.
+        // A scheme is the same in any case. A link within the page, which a browser would not know where to find,
+        // opens nothing; nor does plain text.
+        assertEquals(java.util.List.of(new CommentsMsg.LinkChosen("HTTPS://example.com/docs")), dispatched);
+    }
+
+    @Test
+    void aLinkWrappedOverLinesOpensFromItsNextLine() throws Exception {
+        String text = "alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu nu xi omicron pi rho "
+                + "sigma tau upsilon phi chi psi omega";
+        model = reading(List.of(comment("IC_1", Kind.COMMENT, "bob", "See [" + text + "](https://example.com/long)")));
+        try (ToolkitTestRunner runner = start(NARROW)) {
+            String screen = RenderedText.ofSize(runner, this::view, NARROW.width(), NARROW.height());
+            int[] first = at(screen, "│See alpha");
+            int[] last = at(screen, "omega");
+            assertTrue(last[1] > first[1], screen);
+
+            SettledPilot.of(runner).mousePress(MouseButton.LEFT, last[0] + 1, last[1]);
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(java.util.List.of(new CommentsMsg.LinkChosen("https://example.com/long")), dispatched);
+    }
+
+    @Test
+    void aLinkOpensFromWhereTheScrolledCommentShowsIt() throws Exception {
+        String body = "Intro\n\nMore\n\n[the docs](https://example.com/docs)\n\n"
+                + List.range(1, 61).map(i -> "Paragraph " + i).mkString("\n\n");
+        model = reading(List.of(comment("IC_1", Kind.COMMENT, "bob", body)));
+        try (ToolkitTestRunner runner = start(WIDE)) {
+            int[] before = at(RenderedText.ofSize(runner, this::view, WIDE.width(), WIDE.height()), "││the docs");
+
+            SettledPilot.of(runner).press('J');
+            SettledPilot.of(runner).press('J');
+            String scrolled = RenderedText.ofSize(runner, this::view, WIDE.width(), WIDE.height());
+            int[] after = at(scrolled, "││the docs");
+            assertEquals(before[1] - 2, after[1], scrolled);
+
+            // Where the link was before, the comment now shows a paragraph.
+            SettledPilot.of(runner).mousePress(MouseButton.LEFT, before[0] + 4, before[1]);
+            SettledPilot.of(runner).mousePress(MouseButton.LEFT, after[0] + 4, after[1]);
+            SettledPilot.of(runner).pause();
+        }
+
         assertEquals(java.util.List.of(new CommentsMsg.LinkChosen("https://example.com/docs")), dispatched);
     }
 

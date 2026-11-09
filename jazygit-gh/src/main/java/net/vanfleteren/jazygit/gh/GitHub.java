@@ -115,8 +115,9 @@ public interface GitHub {
 
     /**
      * Opens {@code url}, a link to anywhere, in the browser set for the account the repository uses (ADR 88), else the
-     * one gh would open a link to the repository's host in, started by jazygit (ADR 96). gh opens no link of its own
-     * choosing, so without either it fails with {@link GhError.NoBrowser}.
+     * one gh would open a link to the repository's host in, else the one the desktop is set to, started by jazygit
+     * (ADR 96). gh opens no link of its own choosing, so on a system without a desktop it knows it fails with
+     * {@link GhError.NoBrowser}.
      */
     Either<GhFailure, List<ExecutedCommand>> openLink(String url);
 

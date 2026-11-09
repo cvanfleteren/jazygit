@@ -140,9 +140,20 @@ class BrowserTest {
     }
 
     @Test
-    void withoutABrowserSetOffLinuxALinkCannotBeOpened() throws Exception {
+    void withoutABrowserSetALinkOpensWhereTheDesktopIsSetTo() {
+        assertEquals(Option.of("xdg-open"), Browser.desktop("Linux"));
+        assertEquals(Option.of("open"), Browser.desktop("Mac OS X"));
+        assertEquals(Option.of("rundll32 url.dll,FileProtocolHandler"), Browser.desktop("Windows 11"));
+        assertEquals(
+                List.of("rundll32", "url.dll,FileProtocolHandler", "https://x.org/?a=1&b=2"),
+                Browser.commandLine(Browser.desktop("Windows 11").get(), "https://x.org/?a=1&b=2"));
+        assertEquals(Option.none(), Browser.desktop("FreeBSD"));
+    }
+
+    @Test
+    void withoutABrowserSetOnASystemWithoutAKnownDesktopALinkCannotBeOpened() throws Exception {
         Either<GhFailure, List<ExecutedCommand>> result =
-                github(HashMap.empty(), "Mac OS X").openLink("https://x.org");
+                github(HashMap.empty(), "FreeBSD").openLink("https://x.org");
 
         assertEquals(new GhError.NoBrowser(), result.getLeft().error());
         assertEquals(List.empty(), result.getLeft().commands());

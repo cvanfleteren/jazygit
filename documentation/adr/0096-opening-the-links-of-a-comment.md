@@ -20,11 +20,15 @@ account it uses (ADR 88): the one that is logged in to GitHub as that account.
 
 - A left click on a link in the comment of the comments dialog opens it in the browser, from jazygit.
 - The browser is the one for the account the repository uses (ADR 88), else the one gh would open a link to the
-  repository's host in, in gh's order (ADR 85), started by jazygit as it starts one for a review comment. gh opens no
-  link of its own choosing, unlike a pull request: without a browser, on another system than Linux without one set,
-  opening it fails with an error that says how to set one.
-- Only a link to the web, `http` or `https`, opens. A link within the page (`#notes`), a relative one or a `mailto:`
-  opens nothing; it is clicked on as text.
+  repository's host in, in gh's order (ADR 85), started by jazygit as it starts one for a review comment.
+- gh opens no link of its own choosing, unlike a pull request, where it falls back on the desktop itself. So without a
+  browser set, jazygit opens the link where the desktop is set to: `xdg-open` on Linux, `open` on macOS, and
+  `rundll32 url.dll,FileProtocolHandler` on Windows, as `cmd /c start` takes an `&` in the link for the end of the
+  command. On another system, opening it fails with an error that says how to set one.
+- This fallback is only for such a link: `Browser.chosen`, gh's order, stays as ADR 85 has it, also for what the
+  settings panel says opens the account's links.
+- Only a link to the web, `http` or `https` in any case, opens. A link within the page (`#notes`), a relative one or a
+  `mailto:` opens nothing; it is clicked on as text.
 - `MarkdownScroll` keeps where it drew each link, from the cells its markdown drew, when it renders: view state, as
   how far it is scrolled is. It forgets them when another comment, or none, is shown.
 - The click is a `CommentsMsg.LinkChosen`, with the link; the update starts an `OpenLinkCmd`, through

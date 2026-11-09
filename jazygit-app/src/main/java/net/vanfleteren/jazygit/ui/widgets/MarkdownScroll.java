@@ -3,7 +3,6 @@ package net.vanfleteren.jazygit.ui.widgets;
 import dev.tamboui.buffer.Buffer;
 import dev.tamboui.layout.Constraint;
 import dev.tamboui.layout.Rect;
-import dev.tamboui.style.Hyperlink;
 import dev.tamboui.terminal.Frame;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.RenderContext;
@@ -12,9 +11,12 @@ import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.toolkit.markdown.MarkdownElement;
 import dev.tamboui.tui.event.MouseEvent;
 import dev.tamboui.tui.event.MouseEventKind;
+import io.vavr.Tuple;
 import io.vavr.collection.HashMap;
+import io.vavr.collection.Iterator;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
+import java.util.Locale;
 import java.util.regex.Pattern;
 
 /**
@@ -100,26 +102,22 @@ public final class MarkdownScroll {
         return links.get(new Spot(x, y)).filter(MarkdownScroll::isWeb);
     }
 
+    // A scheme is the same in any case (RFC 3986): HTTPS://… is a link to the web too.
     private static boolean isWeb(String url) {
-        return url.startsWith("https://") || url.startsWith("http://");
+        String scheme = url.toLowerCase(Locale.ROOT);
+        return scheme.startsWith("https://") || scheme.startsWith("http://");
     }
 
     /**
-     * The links drawn in {@code area} of {@code buffer}, by where they are.
+     * The links drawn in {@code area} of {@code buffer}, by where they are. It is looked through on every render, so
+     * only a cell with a link makes an entry.
      */
     private static Map<Spot, String> linksIn(Buffer buffer, Rect area) {
         Rect drawn = area.intersection(buffer.area());
-        Map<Spot, String> found = HashMap.empty();
-        for (int y = drawn.top(); y < drawn.bottom(); y++) {
-            for (int x = drawn.left(); x < drawn.right(); x++) {
-                Option<Hyperlink> link =
-                        Option.ofOptional(buffer.get(x, y).style().hyperlink());
-                if (link.isDefined()) {
-                    found = found.put(new Spot(x, y), link.get().url());
-                }
-            }
-        }
-        return found;
+        return HashMap.ofEntries(Iterator.range(drawn.top(), drawn.bottom())
+                .flatMap(y -> Iterator.range(drawn.left(), drawn.right())
+                        .flatMap(x -> Option.ofOptional(buffer.get(x, y).style().hyperlink())
+                                .map(link -> Tuple.of(new Spot(x, y), link.url())))));
     }
 
     private record Spot(int x, int y) {}
