@@ -269,19 +269,17 @@ public record UnifiedDiff(List<String> preamble, List<FileDiff> files) {
             return switch (kind) {
                 case ' ' ->
                     new Numbering(
-                            lines.prepend(new DiffLine(
-                                    DiffLine.Kind.CONTEXT, text, Option.of(oldNumber), Option.of(newNumber))),
+                            lines.prepend(new DiffLine(DiffLine.Kind.CONTEXT, text, oldNumber, newNumber)),
                             oldNumber + 1,
                             newNumber + 1);
                 case '-' ->
                     new Numbering(
-                            lines.prepend(
-                                    new DiffLine(DiffLine.Kind.REMOVED, text, Option.of(oldNumber), Option.none())),
+                            lines.prepend(new DiffLine(DiffLine.Kind.REMOVED, text, oldNumber, DiffLine.NONE)),
                             oldNumber + 1,
                             newNumber);
                 case '+' ->
                     new Numbering(
-                            lines.prepend(new DiffLine(DiffLine.Kind.ADDED, text, Option.none(), Option.of(newNumber))),
+                            lines.prepend(new DiffLine(DiffLine.Kind.ADDED, text, DiffLine.NONE, newNumber)),
                             oldNumber,
                             newNumber + 1);
                 default -> new Numbering(lines.prepend(DiffLine.note(line)), oldNumber, newNumber);
@@ -350,18 +348,43 @@ public record UnifiedDiff(List<String> preamble, List<FileDiff> files) {
     public record Covered(int from, int until) {}
 
     /**
-     * A line of a hunk, without its marker.
+     * A line of a hunk, without its marker. Its numbers are kept as {@code int}s rather than as
+     * {@code Option<Integer>}s, as a long diff has tens of thousands of lines and each boxed number took an
+     * {@code Integer} and a {@code Some}; {@link #oldNumber} and {@link #newNumber} give them as options.
      *
-     * @param oldNumber its number in the old file, unless it was added
-     * @param newNumber its number in the new file, unless it was removed
+     * @param oldLine its number in the old file, or {@link #NONE} when it was added
+     * @param newLine its number in the new file, or {@link #NONE} when it was removed
      */
-    public record DiffLine(Kind kind, String text, Option<Integer> oldNumber, Option<Integer> newNumber) {
+    public record DiffLine(Kind kind, String text, int oldLine, int newLine) {
+
+        /**
+         * The number of a line that is not in a file: git's numbers are never negative.
+         */
+        public static final int NONE = -1;
+
+        public DiffLine(Kind kind, String text, Option<Integer> oldNumber, Option<Integer> newNumber) {
+            this(kind, text, oldNumber.getOrElse(NONE), newNumber.getOrElse(NONE));
+        }
 
         /**
          * A line that is shown as it is, unnumbered.
          */
         static DiffLine note(String line) {
-            return new DiffLine(Kind.NOTE, line, Option.none(), Option.none());
+            return new DiffLine(Kind.NOTE, line, NONE, NONE);
+        }
+
+        /**
+         * Its number in the old file, unless it was added.
+         */
+        public Option<Integer> oldNumber() {
+            return Option.when(oldLine != NONE, oldLine);
+        }
+
+        /**
+         * Its number in the new file, unless it was removed.
+         */
+        public Option<Integer> newNumber() {
+            return Option.when(newLine != NONE, newLine);
         }
 
         public enum Kind {

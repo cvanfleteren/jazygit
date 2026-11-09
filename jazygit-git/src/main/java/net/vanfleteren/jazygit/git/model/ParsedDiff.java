@@ -1,6 +1,9 @@
 package net.vanfleteren.jazygit.git.model;
 
 import io.vavr.Tuple;
+import io.vavr.Tuple2;
+import io.vavr.collection.Array;
+import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
@@ -52,13 +55,45 @@ public record ParsedDiff(List<String> preamble, List<ParsedFile> files) {
                 file,
                 file.hunks()
                         .zipWith(
-                                words.zip(HIGHLIGHTER.tokens(file)),
+                                words.zip(shared(HIGHLIGHTER.tokens(file))),
                                 (hunk, marks) -> new ParsedHunk(
                                         hunk,
                                         hunk.lines()
                                                 .zipWith(
                                                         marks._1.zip(marks._2),
                                                         (line, mark) -> new ParsedLine(line, mark._1, mark._2)))));
+    }
+
+    /**
+     * {@code tokens}, those of each line of each hunk of a file, each line's in an array, and each token that equals
+     * one before it that one: a long file has hundreds of thousands of tokens, but few that differ, and they are
+     * kept as long as the diff is.
+     */
+    static List<List<Option<Array<Token>>>> shared(List<List<Option<List<Token>>>> tokens) {
+        return tokens.foldLeft(
+                        Tuple.of(HashMap.<Token, Token>empty(), List.<List<Option<Array<Token>>>>empty()),
+                        (done, hunk) -> {
+                            Tuple2<HashMap<Token, Token>, List<Option<Array<Token>>>> lines = hunk.foldLeft(
+                                    Tuple.of(done._1, List.<Option<Array<Token>>>empty()),
+                                    (inHunk, line) -> line.map(lexed -> shared(inHunk._1, lexed))
+                                            .map(same -> Tuple.of(same._1, inHunk._2.prepend(Option.some(same._2))))
+                                            .getOrElse(() -> Tuple.of(inHunk._1, inHunk._2.prepend(Option.none()))));
+                            return Tuple.of(lines._1, done._2.prepend(lines._2.reverse()));
+                        })
+                ._2
+                .reverse();
+    }
+
+    /**
+     * {@code tokens} in an array, each one that is in {@code seen} that one, and {@code seen} with the others.
+     */
+    private static Tuple2<HashMap<Token, Token>, Array<Token>> shared(HashMap<Token, Token> seen, List<Token> tokens) {
+        Tuple2<HashMap<Token, Token>, List<Token>> done = tokens.foldLeft(
+                Tuple.of(seen, List.<Token>empty()),
+                (sofar, token) -> sofar._1
+                        .computeIfAbsent(token, same -> same)
+                        .map((one, all) -> Tuple.of(all, sofar._2.prepend(one))));
+        return Tuple.of(done._1, Array.ofAll(done._2.reverse()));
     }
 
     /**
@@ -117,7 +152,8 @@ public record ParsedDiff(List<String> preamble, List<ParsedFile> files) {
 
     /**
      * A line of a hunk, with its segments as {@link WordDiff#segments} has them, and its tokens as the
-     * {@link Highlighter} found them, or none when it was not lexed.
+     * {@link Highlighter} found them, or none when it was not lexed: in an array, which takes less than a list of
+     * them, each token shared with the lines of its file that have it too ({@link #shared}).
      */
-    public record ParsedLine(DiffLine line, List<Segment> words, Option<List<Token>> tokens) {}
+    public record ParsedLine(DiffLine line, List<Segment> words, Option<Array<Token>> tokens) {}
 }

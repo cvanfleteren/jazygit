@@ -4,8 +4,10 @@ import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
+import io.vavr.collection.Array;
 import io.vavr.collection.Iterator;
 import io.vavr.collection.List;
+import io.vavr.collection.Seq;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import java.time.Instant;
@@ -264,6 +266,8 @@ final class RichDiff {
         boolean first = index == 0;
         Theme.SpanStyles styles = layout.styles();
         Span rule = rule(layout);
+        // One for the hunk, which each of its lines holds: a long hunk has tens of thousands.
+        Option<DiffStops.HunkAt> at = Option.of(new DiffStops.HunkAt(layout.file(), index));
         List<Pending> header = gap.isDefined()
                 ? gap.toList().map(before -> marker(before, fold, layout))
                 : hunk.header().isEmpty() || (first && hunk.numbered())
@@ -278,11 +282,7 @@ final class RichDiff {
             return members.map(row -> new Marked(
                             line(row, layout),
                             Anchor.of(layout.path(), row.parsed().line())
-                                    .map(on -> new Mark(
-                                            on,
-                                            1,
-                                            layout.fileWidth(),
-                                            Option.of(new DiffStops.HunkAt(layout.file(), index))))))
+                                    .map(on -> new Mark(on, 1, layout.fileWidth(), at))))
                     .appendAll(threaded.zipWithIndex()
                             .flatMap(row -> layout.blocks()
                                     .threads(
@@ -356,7 +356,7 @@ final class RichDiff {
     private static Line line(Row row, Layout layout) {
         DiffLine line = row.parsed().line();
         List<Span> gutter = gutter(row, layout);
-        Option<List<Token>> tokens = layout.syntax() ? row.parsed().tokens() : Option.none();
+        Option<Array<Token>> tokens = layout.syntax() ? row.parsed().tokens() : Option.none();
         return switch (line.kind()) {
             case CONTEXT ->
                 tokens.map(lexed -> Line.from(Iterator.concat(
@@ -382,11 +382,11 @@ final class RichDiff {
      * {@code tokens} if it was lexed, unless the line class gives it no background: then its colour is what tells it
      * is changed, and a line of tokens only would look like context.
      */
-    private static Line changed(Row row, List<Span> gutter, Option<List<Token>> tokens, Change change, Layout layout) {
+    private static Line changed(Row row, List<Span> gutter, Option<Array<Token>> tokens, Change change, Layout layout) {
         Theme.SpanStyles styles = layout.styles();
-        Option<List<Token>> coloured =
+        Option<Array<Token>> coloured =
                 tokens.filter(ignored -> styles.of(change.lineClass()).bg().isPresent());
-        List<Piece> pieces = pieces(row.parsed().words(), coloured.getOrElse(List.empty()));
+        List<Piece> pieces = pieces(row.parsed().words(), coloured.getOrElse(Array.empty()));
         // Each piece is drawn as a span by itself, and pieces cut from a grapheme, like an emoji from its variation
         // selector, are narrower together than their text: only a line of one piece is as wide as it was measured.
         int used = 1
@@ -433,7 +433,7 @@ final class RichDiff {
      * segment and the token of each piece are found by going on from those of the piece before it: a minified file
      * has a line of thousands of tokens.
      */
-    static List<Piece> pieces(List<Segment> segments, List<Token> tokens) {
+    static List<Piece> pieces(List<Segment> segments, Seq<Token> tokens) {
         if (tokens.isEmpty()) {
             return segments.map(segment -> new Piece(segment.text(), segment.changed(), Option.none()));
         }
