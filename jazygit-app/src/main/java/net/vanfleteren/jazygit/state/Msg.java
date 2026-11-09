@@ -87,6 +87,18 @@ public interface Msg {
     }
 
     /**
+     * The index was written anew where it no longer matched the working tree, or could not be: either way, nothing
+     * shown changes (ADR 93).
+     */
+    record IndexRefreshed() implements Msg {
+
+        @Override
+        public Update.Next apply(Model model) {
+            return Update.Next.of(model);
+        }
+    }
+
+    /**
      * The command {@code id} is done (ADR 33), and what it reported, if anything: one that a newer one for its slot
      * cancelled may report nothing.
      */

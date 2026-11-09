@@ -11,6 +11,7 @@ import java.time.Instant;
 import java.util.function.Function;
 import net.vanfleteren.jazygit.git.GitError.UnexpectedOutput;
 import net.vanfleteren.jazygit.git.model.*;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
  * The {@link Status} of a repository: the working tree status through the {@code git status} command line tool, and
@@ -46,6 +47,12 @@ final class CliStatus implements Status {
                                 .withTimeout(TIMEOUT),
                         CliStatus::parse)
                 .map(status -> status.withInProgress(CliInProgress.read(markers)));
+    }
+
+    @Override
+    public Either<GitFailure, List<ExecutedCommand>> refreshIndex() {
+        return GitProcess.log(
+                worktree, GitCommand.git("update-index", "-q", "--refresh").withTimeout(TIMEOUT));
     }
 
     @Override

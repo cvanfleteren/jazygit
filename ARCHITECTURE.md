@@ -631,6 +631,12 @@ the focus; `HandOverBackend` takes the reports out of the keys, which TamboUI re
 while away counts as the focus being back. See `documentation/adr/0058-less-reading-in-the-background.md` and
 `documentation/adr/0067-reading-less-rather-than-nothing-in-the-background.md`.
 
+The status of a tick takes no optional locks, so it never writes back what it refreshed of the index: files a checkout
+just wrote, or a tool touched, would be hashed again on every tick. Every 30th tick while the terminal has the focus,
+and no operation runs, `Update.tick` therefore also asks for `Cmd.RefreshIndex`, `git update-index -q --refresh`, which
+locks the index for a moment; that it could not changes nothing shown. See
+`documentation/adr/0093-the-index-written-anew-now-and-then.md`.
+
 A read that failed is tried again on a tick only once it waited 1, 2, 4… up to 64 ticks after each failure in a row
 (`Jobs.retries`, `Jobs.retryDue`); `Update.refresh` tries it at once. The previews (a branch's log, a commit's or a
 stash's changes, the files' diff) each take a slot, so highlighting faster than git answers only reads the last item;
@@ -952,7 +958,9 @@ helpers. A test replaces the roles it needs on `StubGit.of()`, as in `StubGit.of
     (fail rather than wait for credentials) and `GIT_EDITOR=false` (fail rather than open an editor on the
     terminal the TUI owns; a command that is to edit something says how).
   - **Timeouts and locks:** a command that changes the repository gets 5 minutes, for its hooks. A read
-    (`GitCommand.reading`) gets 30 seconds and takes no optional locks.
+    (`GitCommand.reading`) gets 30 seconds and takes no optional locks, so it never writes the index it refreshed:
+    `Cmd.RefreshIndex` (`git update-index -q --refresh`) does that every 30th tick while the terminal has the
+    focus (ADR 93).
   - **Paths:** a command on paths takes them literally (`withLiteralPaths`), never as patterns, so
     discarding a file named `*.txt` discards only that file.
   - **Remotes:** a command that talks to a remote runs ssh in batch mode (`CliRemotes.toRemote`), so a

@@ -30,6 +30,7 @@ import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.git.model.Worktree;
 import net.vanfleteren.jazygit.settings.Settings;
+import org.slf4j.LoggerFactory;
 
 /**
  * IO that {@link Update} asks for. Commands are immutable data that know how to run themselves and
@@ -221,6 +222,31 @@ public interface Cmd {
         @Override
         public Msg failed(Failure failure) {
             return new SettingsMsg.NotSaved(failure);
+        }
+    }
+
+    /**
+     * Writes into the index what the files in the working tree are like now, where it no longer says so (ADR 93): the
+     * status that every tick reads takes no optional locks, so it never does, and compares the contents of those files
+     * again every time. That it could not, as another git command held the index, only goes to the debug log: a later
+     * one does it.
+     */
+    record RefreshIndex() implements Cmd {
+
+        @Override
+        public Option<Label> label() {
+            return Option.of(Label.of("work.status"));
+        }
+
+        @Override
+        public Msg run(Env env) {
+            return env.git().status().refreshIndex().fold(this::failedWith, done -> new Msg.IndexRefreshed());
+        }
+
+        @Override
+        public Msg failed(Failure failure) {
+            LoggerFactory.getLogger(RefreshIndex.class).debug("The index was not refreshed: {}", failure);
+            return new Msg.IndexRefreshed();
         }
     }
 
