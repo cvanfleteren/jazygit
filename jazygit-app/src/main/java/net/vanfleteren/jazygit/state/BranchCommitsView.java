@@ -42,12 +42,9 @@ public record BranchCommitsView(BranchRef branch, Option<Preview<Sha, DiffText>>
      * what of it is not on its base and the fork point, which are listed in its place.
      */
     public Option<Commit> commit(Model model, Sha sha) {
-        List<Commit> ahead = AheadUpdate.branch(model, branch)
-                .map(read -> read.commits().appendAll(read.forkPoint()))
-                .getOrElse(List.empty());
         return commits(model)
                 .toOption()
-                .flatMap(commits ->
-                        commits.appendAll(ahead).find(commit -> commit.sha().equals(sha)));
+                .flatMap(commits -> commits.find(commit -> commit.sha().equals(sha))
+                        .orElse(() -> AheadUpdate.branch(model, branch).flatMap(ahead -> ahead.commit(sha))));
     }
 }
