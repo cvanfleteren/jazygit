@@ -83,6 +83,21 @@ class AccountBrowserTest {
     }
 
     @Test
+    void aLinkToAnywhereOpensInTheAccountsBrowserToo() throws Exception {
+        Path opened = dir.resolve("opened");
+        Path browser = script("work-browser", "echo \"$@\" > '" + opened + "'\n");
+
+        Either<GhFailure, List<ExecutedCommand>> result = github(
+                        GhToken.NONE, HashMap.of("BROWSER", "elsewhere"), browserOf(ACTIVE, browser + " -P work"))
+                .openLink("https://example.com");
+
+        assertEquals(
+                Either.right(List.of(ExecutedCommand.of(browser.toString(), "-P", "work", "https://example.com"))),
+                result);
+        assertEquals("-P work https://example.com\n", Files.readString(opened));
+    }
+
+    @Test
     void anAccountsBrowserThatFailsIsNotFollowedByAnother() throws Exception {
         Path browser = script("work-browser", "exit 4\n");
 

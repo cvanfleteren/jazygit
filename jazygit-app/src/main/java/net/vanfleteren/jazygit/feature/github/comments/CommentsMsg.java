@@ -40,6 +40,11 @@ public sealed interface CommentsMsg extends Msg {
     record OpenChosen() implements CommentsMsg {}
 
     /**
+     * The user clicked on a link to {@code url} in the comment (ADR 96).
+     */
+    record LinkChosen(String url) implements CommentsMsg {}
+
+    /**
      * The user went back to the pull request dialog.
      */
     record Closed() implements CommentsMsg {}

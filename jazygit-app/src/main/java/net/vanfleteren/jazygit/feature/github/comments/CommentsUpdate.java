@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.github.comments;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.util.function.UnaryOperator;
+import net.vanfleteren.jazygit.feature.github.browse.OpenLinkCmd;
 import net.vanfleteren.jazygit.feature.github.comment.CommentPopup;
 import net.vanfleteren.jazygit.feature.github.comments.CommentsCmd.LoadComments;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestCmd.OpenPullRequest;
@@ -45,6 +46,11 @@ public final class CommentsUpdate {
                         .map(popup -> Update.start(
                                 model.clearError(),
                                 new OpenPullRequest(popup.shown().branch(), popup.number())))
+                        .getOrElse(() -> Next.of(model));
+            // As opening the pull request: the popup stays open.
+            case CommentsMsg.LinkChosen(String url) ->
+                model.popup(CommentsPopup.class)
+                        .map(popup -> Update.start(model.clearError(), new OpenLinkCmd(url)))
                         .getOrElse(() -> Next.of(model));
             case CommentsMsg.Closed() ->
                 Next.of(model.popup(CommentsPopup.class)

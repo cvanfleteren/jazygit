@@ -79,4 +79,10 @@ public sealed interface GhError {
      * @param exitCode what it exited with; none when it could not be started
      */
     record BrowserFailed(String browser, Option<Integer> exitCode) implements GhError {}
+
+    /**
+     * No browser is set to open a link in that gh cannot open itself: none for the account, nor in gh's order, on a
+     * system whose desktop jazygit does not know (ADR 96).
+     */
+    record NoBrowser() implements GhError {}
 }

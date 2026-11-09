@@ -9,6 +9,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.feature.github.browse.OpenLinkCmd;
 import net.vanfleteren.jazygit.feature.github.comment.CommentMsg;
 import net.vanfleteren.jazygit.feature.github.comment.CommentPopup;
 import net.vanfleteren.jazygit.feature.github.comments.CommentsCmd.LoadComments;
@@ -156,6 +157,16 @@ class CommentsUpdateTest {
         Next next = Update.update(reading, new CommentsMsg.OpenChosen());
 
         assertEquals(List.of(new OpenPullRequest(FEATURE, 42)), next.cmds());
+        assertEquals(reading.popup(), next.model().popup());
+    }
+
+    @Test
+    void aLinkChosenInTheCommentsOpensInTheBrowserAndTheyStay() {
+        Model reading = reading(CONVERSATION);
+
+        Next next = Update.update(reading, new CommentsMsg.LinkChosen("https://example.com"));
+
+        assertEquals(List.of(new OpenLinkCmd("https://example.com")), next.cmds());
         assertEquals(reading.popup(), next.model().popup());
     }
 
