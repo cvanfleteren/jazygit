@@ -128,6 +128,44 @@ class LexerTest {
     }
 
     @Test
+    void aListMarkerHasAtMostNineDigitsAndASpaceOrTheEndOfTheLineAfterIt() {
+        assertEquals(List.of("KEYWORD 123456789."), tokens(Language.MARKDOWN, "123456789. nine"));
+        assertEquals(List.of(), tokens(Language.MARKDOWN, "1234567890. ten"));
+        assertEquals(List.of("KEYWORD 12)"), tokens(Language.MARKDOWN, "12)"));
+        assertEquals(List.of("KEYWORD -"), tokens(Language.MARKDOWN, "-"));
+        assertEquals(List.of("KEYWORD >"), tokens(Language.MARKDOWN, ">"));
+        assertEquals(List.of(), tokens(Language.MARKDOWN, "12"));
+        assertEquals(List.of(), tokens(Language.MARKDOWN, "12.x"));
+        assertEquals(List.of(), tokens(Language.MARKDOWN, ". x"));
+        assertEquals(
+                List.of("KEYWORD >", "KEYWORD >", "KEYWORD >", "KEYWORD >", "KEYWORD 1."),
+                tokens(Language.MARKDOWN, "> > > > 1. x"));
+        assertEquals(List.of("KEYWORD # Title"), tokens(Language.MARKDOWN, "# Title"));
+        assertEquals(List.of("KEYWORD ######"), tokens(Language.MARKDOWN, "######"));
+        assertEquals(List.of(), tokens(Language.MARKDOWN, "####### seven"));
+    }
+
+    @Test
+    void aBlockStartsIndentedAtMostThreeSpacesAndNotInsideAComment() {
+        assertEquals(List.of("KEYWORD -"), tokens(Language.MARKDOWN, "   - three"));
+        assertEquals(List.of(), tokens(Language.MARKDOWN, "    - four"));
+
+        Lexed open = line(Language.MARKDOWN, new Outside(), "<!-- a");
+        assertEquals(
+                List.of("COMMENT - no item -->"),
+                shown("- no item --> after", line(Language.MARKDOWN, open.state(), "- no item --> after")));
+    }
+
+    @Test
+    void inlineCodeEndsWithARunOfAsManyBackticksAsItStartedWith() {
+        assertEquals(List.of("STRING `a`"), tokens(Language.MARKDOWN, "`a`"));
+        assertEquals(List.of("STRING ``a`b``"), tokens(Language.MARKDOWN, "``a`b``"));
+        assertEquals(List.of("STRING `a``b`"), tokens(Language.MARKDOWN, "`a``b`"));
+        assertEquals(List.of("STRING ``a``` y ``"), tokens(Language.MARKDOWN, "x ``a``` y ``b``"));
+        assertEquals(List.of(), tokens(Language.MARKDOWN, "``a```"));
+    }
+
+    @Test
     void aFencedCodeBlockIsAStringUntilItsFence() {
         Lexed open = line(Language.MARKDOWN, new Outside(), "```java");
         Lexed code = line(Language.MARKDOWN, open.state(), "## not a heading");

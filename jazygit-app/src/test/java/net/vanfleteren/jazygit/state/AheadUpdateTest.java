@@ -7,6 +7,8 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.git.model.*;
 import org.junit.jupiter.api.Test;
 
@@ -145,6 +147,17 @@ class AheadUpdateTest {
                 Either.right(Option.none()),
                 new Cmd.LoadAhead(Option.none(), Option.none(), Option.of(new Cmd.LoadAhead.Base(origin("main"), HEAD)))
                         .read(null));
+    }
+
+    @Test
+    void theCommitsAheadAreReadFromGitAndSaidToBeLoadedForTheLoadThatAskedForThem() {
+        Cmd.LoadAhead load = new Cmd.LoadAhead(
+                Option.none(), Option.of(FEATURE_TIP), Option.of(new Cmd.LoadAhead.Base(origin("main"), HEAD)));
+
+        assertEquals(
+                new LoadMsg.AheadLoaded(
+                        load, Option.of(new Ahead(FEATURE_TIP, origin("main"), List.empty(), false, Option.none()))),
+                load.run(new Env(StubGit.of(), StubGitHub.empty())));
     }
 
     @Test
