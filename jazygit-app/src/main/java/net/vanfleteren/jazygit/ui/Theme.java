@@ -8,6 +8,7 @@ import dev.tamboui.style.Style;
 import dev.tamboui.style.StylePropertyResolver;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
+import io.vavr.Tuple3;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
@@ -61,6 +62,9 @@ public final class Theme {
         // Resolving a class goes over every rule of the theme, and a diff has spans of a few classes on each of its
         // lines, drawn on many threads at once: each class is resolved once for each theme, which only changes whole.
         Map<Tuple2<Option<String>, String>, Style> resolved = new ConcurrentHashMap<>();
+        // A piece of code in a changed line takes the background of its line and the colour of its token: one style
+        // for each pair of them, not one for each piece, which a long diff has hundreds of thousands of.
+        Map<Tuple3<Option<String>, String, String>, Style> code = new ConcurrentHashMap<>();
         return new SpanStyles() {
             @Override
             public Style of(String cssClass) {
@@ -68,6 +72,13 @@ public final class Theme {
                         Tuple.of(Option.ofOptional(engine.getActiveStylesheet()), cssClass),
                         key -> engine.resolve(new Node("Span", Set.of(cssClass)))
                                 .toStyle());
+            }
+
+            @Override
+            public Style code(String lineClass, String codeClass) {
+                return code.computeIfAbsent(
+                        Tuple.of(Option.ofOptional(engine.getActiveStylesheet()), lineClass, codeClass),
+                        key -> SpanStyles.super.code(lineClass, codeClass));
             }
 
             @Override
@@ -157,6 +168,30 @@ public final class Theme {
         SpanStyles NONE = cssClass -> Style.EMPTY;
 
         Style of(String cssClass);
+
+        /**
+         * The style of code in a line of {@code lineClass}: its background and attributes, in the colour of
+         * {@code codeClass}, or without a colour of its own, so its text takes the terminal's, when that class gives
+         * it none.
+         */
+        default Style code(String lineClass, String codeClass) {
+            return combined(of(lineClass), of(codeClass));
+        }
+
+        /**
+         * {@code line} in the colour of {@code code}, or without a colour of its own when {@code code} has none.
+         */
+        private static Style combined(Style line, Style code) {
+            return Option.ofOptional(code.fg()).map(line::fg).getOrElse(() -> withoutFg(line));
+        }
+
+        private static Style withoutFg(Style style) {
+            Style background = style.bg().map(Style.EMPTY::bg).orElse(Style.EMPTY);
+            return List.ofAll(style.subModifiers())
+                    .foldLeft(
+                            List.ofAll(style.addModifiers()).foldLeft(background, Style::addModifier),
+                            Style::removeModifier);
+        }
 
         /**
          * How Markdown that is drawn as text is styled: as the theme styles {@code MarkdownElement}, the comments of a

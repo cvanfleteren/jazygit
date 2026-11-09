@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.ui;
 
-import dev.tamboui.style.Style;
 import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
 import io.vavr.Tuple;
@@ -423,21 +422,9 @@ final class RichDiff {
      * gives it one.
      */
     private static Span changedCode(Piece piece, String diffClass, Theme.SpanStyles styles) {
-        Style diff = styles.of(diffClass);
-        Style text = styles.of(piece.kind().map(RichDiff::syntaxClass).getOrElse(Theme.Classes.SYNTAX_TEXT));
         return Span.styled(
-                piece.text(), Option.ofOptional(text.fg()).map(diff::fg).getOrElse(() -> withoutFg(diff)));
-    }
-
-    /**
-     * {@code style} without a colour of its own, so its text takes the terminal's.
-     */
-    private static Style withoutFg(Style style) {
-        Style background = style.bg().map(Style.EMPTY::bg).orElse(Style.EMPTY);
-        return List.ofAll(style.subModifiers())
-                .foldLeft(
-                        List.ofAll(style.addModifiers()).foldLeft(background, Style::addModifier),
-                        Style::removeModifier);
+                piece.text(),
+                styles.code(diffClass, piece.kind().map(RichDiff::syntaxClass).getOrElse(Theme.Classes.SYNTAX_TEXT)));
     }
 
     /**
