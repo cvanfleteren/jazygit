@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.ui.widgets;
 
+import dev.tamboui.buffer.Buffer;
 import dev.tamboui.layout.Constraint;
 import dev.tamboui.layout.Rect;
 import dev.tamboui.terminal.Frame;
@@ -10,11 +11,18 @@ import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.toolkit.markdown.MarkdownElement;
 import dev.tamboui.tui.event.MouseEvent;
 import dev.tamboui.tui.event.MouseEventKind;
+import io.vavr.Tuple;
+import io.vavr.collection.HashMap;
+import io.vavr.collection.Iterator;
+import io.vavr.collection.Map;
+import io.vavr.control.Option;
+import java.util.Locale;
 import java.util.regex.Pattern;
 
 /**
  * Markdown that scrolls, as far as its end: how far that is is only known once it is rendered, at a width. Where it
- * is scrolled to is view state, kept here; {@link #toTop()} starts it over, as for other text.
+ * is scrolled to is view state, kept here; {@link #toTop()} starts it over, as for other text. So is where its links
+ * were drawn, for a click to open them (ADR 96).
  */
 public final class MarkdownScroll {
 
@@ -26,6 +34,8 @@ public final class MarkdownScroll {
     // As far as it scrolled, and how many lines it showed, when it was last rendered.
     private int furthest;
     private int page = 1;
+    // The link drawn in each cell that has one, by where it is on the screen, when it was last rendered.
+    private Map<Spot, String> links = HashMap.empty();
 
     /**
      * {@code markdown} without its HTML comments.
@@ -56,8 +66,12 @@ public final class MarkdownScroll {
         scrollBy(pages * Math.max(1, page - 1));
     }
 
+    /**
+     * Starts over at the top, for other markdown, and forgets the links drawn, until it is rendered again.
+     */
     public void toTop() {
         offset = 0;
+        links = HashMap.empty();
     }
 
     /**
@@ -81,6 +95,34 @@ public final class MarkdownScroll {
     }
 
     /**
+     * The link to the web, http or https, drawn at column {@code x} and row {@code y} of the screen when it was last
+     * rendered; none where it drew no link, or one to elsewhere, which a browser would not know where to find.
+     */
+    public Option<String> linkAt(int x, int y) {
+        return links.get(new Spot(x, y)).filter(MarkdownScroll::isWeb);
+    }
+
+    // A scheme is the same in any case (RFC 3986): HTTPS://… is a link to the web too.
+    private static boolean isWeb(String url) {
+        String scheme = url.toLowerCase(Locale.ROOT);
+        return scheme.startsWith("https://") || scheme.startsWith("http://");
+    }
+
+    /**
+     * The links drawn in {@code area} of {@code buffer}, by where they are. It is looked through on every render, so
+     * only a cell with a link makes an entry.
+     */
+    private static Map<Spot, String> linksIn(Buffer buffer, Rect area) {
+        Rect drawn = area.intersection(buffer.area());
+        return HashMap.ofEntries(Iterator.range(drawn.top(), drawn.bottom())
+                .flatMap(y -> Iterator.range(drawn.left(), drawn.right())
+                        .flatMap(x -> Option.ofOptional(buffer.get(x, y).style().hyperlink())
+                                .map(link -> Tuple.of(new Spot(x, y), link.url())))));
+    }
+
+    private record Spot(int x, int y) {}
+
+    /**
      * The markdown, measured at the width it gets, so it scrolls no further than its end.
      */
     private final class Scrolled implements Element {
@@ -99,6 +141,7 @@ public final class MarkdownScroll {
             page = area.height();
             offset = Math.min(offset, furthest);
             context.renderChild(markdown.scroll(offset), frame, area);
+            links = linksIn(frame.buffer(), area);
         }
 
         @Override

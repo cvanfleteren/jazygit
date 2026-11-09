@@ -44,8 +44,9 @@ import net.vanfleteren.jazygit.ui.widgets.PopupView;
  * Popup showing the conversation on a pull request, as big as the screen allows: a list of its description, comments
  * and reviews on the left, and the highlighted one in full on the right, as Markdown. On a narrow screen the list is
  * above it instead. j/k and the arrows move through the list, J/K and Page Up/Down scroll the comment, c comments,
- * o opens the pull request in the browser and Escape goes back to the pull request dialog. The comments and which one
- * is highlighted live in the {@link Model}, as a {@link CommentsPopup}; how far the comment is scrolled lives here.
+ * o opens the pull request in the browser, a click on a link opens the link, and Escape goes back to the pull request
+ * dialog. The comments and which one is highlighted live in the {@link Model}, as a {@link CommentsPopup}; how far the
+ * comment is scrolled, and where its links were drawn, live here.
  */
 public final class CommentsDialog implements PopupView {
 
@@ -131,7 +132,7 @@ public final class CommentsDialog implements PopupView {
                 .selected(highlightedIndex)
                 .onMouseEvent(event -> listMouse(popup, event));
         StyledElement<?> listPane = panel(list).rounded();
-        StyledElement<?> comment = comment(popup).onMouseEvent(scroll::wheel);
+        StyledElement<?> comment = comment(popup).onMouseEvent(this::commentMouse);
         Element body = narrow
                 ? column(
                                 listPane.length(Math.min(Math.max(1, all.size()), contentHeight / 3) + PANE_BORDER),
@@ -297,6 +298,19 @@ public final class CommentsDialog implements PopupView {
                     highlight(popup, line);
                     return EventResult.HANDLED;
                 });
+    }
+
+    /**
+     * The wheel scrolls the comment; a left click on a link opens it (ADR 96).
+     */
+    private EventResult commentMouse(MouseEvent event) {
+        if (event.kind() != MouseEventKind.PRESS || !event.isLeftButton()) {
+            return scroll.wheel(event);
+        }
+        return scroll.linkAt(event.x(), event.y()).fold(() -> EventResult.UNHANDLED, url -> {
+            dispatch.accept(new CommentsMsg.LinkChosen(url));
+            return EventResult.HANDLED;
+        });
     }
 
     private void highlight(CommentsPopup popup, int line) {

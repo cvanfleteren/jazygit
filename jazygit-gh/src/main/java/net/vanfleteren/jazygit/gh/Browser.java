@@ -20,7 +20,26 @@ final class Browser {
     // What opens a link in the browser the desktop is set to, on Linux.
     static final String XDG_OPEN = "xdg-open";
 
+    // What opens a link in the browser the desktop is set to, on macOS and on Windows; not cmd's start, which takes an
+    // & in the link for the end of the command.
+    static final String MAC_OPEN = "open";
+    static final String WINDOWS_OPEN = "rundll32 url.dll,FileProtocolHandler";
+
     private Browser() {}
+
+    /**
+     * What opens a link in the browser the desktop of {@code os} is set to, as {@code os.name} names it: on Linux
+     * {@code xdg-open}, on macOS {@code open}, on Windows the URL handler of the shell; none on another system. gh
+     * does so itself for what it opens; jazygit, for a link that gh cannot open (ADR 96).
+     */
+    static Option<String> desktop(String os) {
+        String name = os.toLowerCase(Locale.ROOT);
+        return name.contains("linux")
+                ? Option.of(XDG_OPEN)
+                : name.contains("mac")
+                        ? Option.of(MAC_OPEN)
+                        : name.contains("windows") ? Option.of(WINDOWS_OPEN) : Option.none();
+    }
 
     /**
      * The browser gh would start, in gh's order: {@code $GH_BROWSER}, gh's {@code browser} setting,
