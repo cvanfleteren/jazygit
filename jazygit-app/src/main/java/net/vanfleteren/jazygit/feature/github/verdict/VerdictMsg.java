@@ -9,7 +9,7 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
 
 /**
- * Approving a pull request, or asking for changes (ADR 99): asking for it, writing its text, in the popup or in the
+ * Approving a pull request, or asking for changes (ADR 100): asking for it, writing its text, in the popup or in the
  * editor, and sending it.
  */
 public sealed interface VerdictMsg extends Msg {

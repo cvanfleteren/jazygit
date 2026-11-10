@@ -149,7 +149,7 @@ final class ReviewThreadsQuery {
                             id,
                             rights)));
 
-    // One page: its state, the commits, its threads, and what the viewer needs to review it (ADR 99).
+    // One page: its state, the commits, its threads, and what the viewer needs to review it (ADR 100).
     static final Decoder<ReviewRemarks> PAGE = at(
             "data.repository.pullRequest",
             map6(

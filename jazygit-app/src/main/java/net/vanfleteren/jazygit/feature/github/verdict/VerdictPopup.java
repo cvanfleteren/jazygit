@@ -9,7 +9,7 @@ import net.vanfleteren.jazygit.gh.model.Verdict;
 import net.vanfleteren.jazygit.state.Popup;
 
 /**
- * Asking for a review of a pull request, which approves it or asks for changes (ADR 99), from its dialog or from the
+ * Asking for a review of a pull request, which approves it or asks for changes (ADR 100), from its dialog or from the
  * diff of its files. Only one popup is open at a time, so one from the dialog keeps the dialog to go back to; one from
  * the diff goes back to the diff.
  *

@@ -64,7 +64,7 @@ public final class CommentComposer {
      * The popup that writes {@code comment}, titled {@code title}, under {@code fields}, which come first and choose
      * how it is sent, then {@code quoted} and then {@code notice}, which stands out; sending what the user does as
      * {@code actions} makes it, with {@code hints} below it. The fields take their keys before {@link #keys}. With
-     * {@code textTitle}, the text is in a box of its own under that title, set apart from the fields (ADR 99).
+     * {@code textTitle}, the text is in a box of its own under that title, set apart from the fields (ADR 100).
      */
     public Element render(
             Model model,

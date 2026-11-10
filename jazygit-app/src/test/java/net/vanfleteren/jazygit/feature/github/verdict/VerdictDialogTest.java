@@ -25,7 +25,7 @@ import net.vanfleteren.jazygit.ui.SettledPilot;
 import org.junit.jupiter.api.Test;
 
 /**
- * The popup asking for a review of a pull request (ADR 99): a choice of approving or asking for changes above the
+ * The popup asking for a review of a pull request (ADR 100): a choice of approving or asking for changes above the
  * text, which Tab goes through and Space chooses from, and a draft that says so.
  */
 class VerdictDialogTest {

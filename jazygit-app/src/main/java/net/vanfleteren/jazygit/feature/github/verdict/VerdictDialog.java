@@ -19,7 +19,7 @@ import net.vanfleteren.jazygit.ui.Theme;
 import net.vanfleteren.jazygit.ui.widgets.PopupView;
 
 /**
- * Popup asking for a review of a pull request (ADR 99), as a {@link CommentComposer} under a choice of what it says,
+ * Popup asking for a review of a pull request (ADR 100), as a {@link CommentComposer} under a choice of what it says,
  * in a box of its own: {@code (•) Approve  ( ) Request changes}. The text is in a box too, whose title says whether
  * the verdict chosen needs it. The choices are one stop of the focus, as a group of radio buttons is: their box takes
  * it, and shows it by its border, as the box of the text does, and the arrow keys choose. The focus starts there, on approve; Tab goes on to the text. Ctrl+S sends it, Ctrl+O opens the text in

@@ -30,7 +30,7 @@ import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
- * Approving a pull request, or asking for changes (ADR 99), from its dialog or from the diff of its files. Only an
+ * Approving a pull request, or asking for changes (ADR 100), from its dialog or from the diff of its files. Only an
  * open pull request is reviewed, not by who opened it, nor while they have a pending review; the dialog leaves its
  * choice out when it may not be, but for a pending review, which it does not know of until it is asked. The text is
  * written in a popup of its own, or in the editor, and sent from that popup, which stays open until it is sent, so a

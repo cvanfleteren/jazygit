@@ -1,4 +1,4 @@
-"""Approving a pull request, or asking for changes, from its dialog (ADR 99)."""
+"""Approving a pull request, or asking for changes, from its dialog (ADR 100)."""
 
 from test_pull_request_files import pull_request
 

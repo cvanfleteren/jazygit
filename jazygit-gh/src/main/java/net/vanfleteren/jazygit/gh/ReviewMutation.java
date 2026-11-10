@@ -5,7 +5,7 @@ import static net.vanfleteren.jazygit.gh.GhCommand.gh;
 import net.vanfleteren.jazygit.gh.model.Verdict;
 
 /**
- * Approving a pull request, or asking for changes (ADR 99), with GraphQL's {@code addPullRequestReview}, as
+ * Approving a pull request, or asking for changes (ADR 100), with GraphQL's {@code addPullRequestReview}, as
  * {@code gh pr review} does: one call that adds a review and submits it. Not {@code gh pr review} itself, so that a
  * pending review can later be submitted here with {@code submitPullRequestReview} instead. The text is passed as a
  * string ({@code -f}), never as {@code -F}, which reads a value starting with {@code @} from a file.

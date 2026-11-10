@@ -13,7 +13,7 @@ import io.vavr.control.Option;
  * @param base    the commit its base branch is at
  * @param threads   its review threads, those of a review not submitted yet left out
  * @param draft     whether it is still a draft
- * @param reviewing what the viewer needs to approve it or ask for changes from its diff (ADR 99)
+ * @param reviewing what the viewer needs to approve it or ask for changes from its diff (ADR 100)
  */
 public record ReviewRemarks(
         PullRequestDetails.State state,

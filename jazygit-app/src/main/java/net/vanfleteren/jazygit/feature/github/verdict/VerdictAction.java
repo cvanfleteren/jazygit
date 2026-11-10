@@ -7,7 +7,7 @@ import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.ui.PopupSlot;
 
 /**
- * Approving a pull request, or asking for changes (ADR 99): {@code a} in the diff of its files, and the popup that
+ * Approving a pull request, or asking for changes (ADR 100): {@code a} in the diff of its files, and the popup that
  * writes the review, which the pull request dialog opens too.
  */
 public final class VerdictAction {

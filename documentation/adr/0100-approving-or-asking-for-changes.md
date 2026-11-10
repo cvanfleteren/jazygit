@@ -1,4 +1,4 @@
-# 99. Approving a pull request, or asking for changes
+# 100. Approving a pull request, or asking for changes
 
 Date: 2026-11-10
 
