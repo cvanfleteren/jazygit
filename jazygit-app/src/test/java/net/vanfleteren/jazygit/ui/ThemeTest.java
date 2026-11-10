@@ -110,6 +110,27 @@ class ThemeTest {
     }
 
     @Test
+    void everyThemeBordersAFocusedBoxOfChoicesLikeAFocusedTextArea() {
+        for (ThemeName name : ThemeName.values()) {
+            var engine = Theme.createEngine().get();
+            Theme.activate(engine, name);
+
+            var text = engine.resolve(
+                    new Node("TextAreaElement", Set.of()), PseudoClassState.ofFocused(), java.util.List.of());
+            var choices = engine.resolve(
+                    new Node("Panel", Set.of(Theme.Classes.CHOICES)),
+                    PseudoClassState.ofFocused(),
+                    java.util.List.of());
+            var unfocused = engine.resolve(new Node("Panel", Set.of(Theme.Classes.CHOICES)));
+            assertEquals(text.borderColor(), choices.borderColor(), name.id());
+            assertEquals(text.borderType(), choices.borderType(), name.id());
+            if (text.borderColor().isPresent()) {
+                assertNotEquals(text.borderColor(), unfocused.borderColor(), name.id());
+            }
+        }
+    }
+
+    @Test
     void everyThemeBordersTheFocusedContentAreaLikeTheFocusedPanel() {
         for (ThemeName name : ThemeName.values()) {
             var engine = Theme.createEngine().get();

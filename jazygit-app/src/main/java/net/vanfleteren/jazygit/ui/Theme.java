@@ -207,6 +207,8 @@ public final class Theme {
      */
     public static final class Classes {
         public static final String FOCUSED = "focused";
+        // A box of choices in a popup, which takes the focus itself and is then shown as a field with it (ADR 99).
+        public static final String CHOICES = "choices";
         public static final String BOLD = "bold";
         public static final String DIM = "dim";
         public static final String ERROR = "error";

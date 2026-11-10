@@ -10,26 +10,25 @@ import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
-import net.vanfleteren.jazygit.feature.github.create.NewPullRequestDialog;
 import net.vanfleteren.jazygit.gh.model.Verdict;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.ui.CommentComposer;
+import net.vanfleteren.jazygit.ui.Theme;
 import net.vanfleteren.jazygit.ui.widgets.PopupView;
 
 /**
  * Popup asking for a review of a pull request (ADR 99), as a {@link CommentComposer} under a choice of what it says,
  * in a box of its own: {@code (•) Approve  ( ) Request changes}. The text is in a box too, whose title says whether
- * the verdict chosen needs it. The choices are one stop of the focus, as a group of radio buttons is: the focus is
- * on the mark of the one chosen, which the themes show by reversing it, and the arrow keys choose the other, the focus
- * going along. The focus starts there, on approve; Tab goes on to the text. Ctrl+S sends it, Ctrl+O opens the text in
+ * the verdict chosen needs it. The choices are one stop of the focus, as a group of radio buttons is: their box takes
+ * it, and shows it by its border, as the box of the text does, and the arrow keys choose. The focus starts there, on approve; Tab goes on to the text. Ctrl+S sends it, Ctrl+O opens the text in
  * the editor and Escape goes back, from the choices as from the text. A draft says so, above the text. The review lives in the {@link Model}, as a {@link VerdictPopup}.
  */
 public final class VerdictDialog implements PopupView {
 
     public static final String ID = "pull-request-verdict";
-    // The mark of the choice made, wherever it is, so the focus goes along with what is chosen.
+    // The box of the choices, one stop of the focus.
     public static final String CHOICES_ID = "pull-request-verdict-choices";
 
     private static final CommentComposer.Actions ACTIONS = new CommentComposer.Actions(
@@ -93,6 +92,7 @@ public final class VerdictDialog implements PopupView {
     private Element choices(Verdict chosen) {
         String approve = " " + Messages.get("dialog.verdict.approve");
         String changes = " " + Messages.get("dialog.verdict.requestChanges");
+        // The box takes the focus, so its border shows it as that of the text does.
         return panel(row(
                         mark(Verdict.APPROVE, chosen),
                         text(approve).length(approve.length()),
@@ -100,21 +100,18 @@ public final class VerdictDialog implements PopupView {
                         mark(Verdict.REQUEST_CHANGES, chosen),
                         text(changes).length(changes.length())))
                 .title(Messages.get("dialog.verdict.choices"))
+                .id(CHOICES_ID)
+                .addClass(Theme.Classes.CHOICES)
+                .focusable()
+                .onKeyEvent(this::keys)
                 .length(BOX_HEIGHT);
     }
 
     /**
-     * The mark of the choice of {@code verdict}: filled, and taking the focus, when it is {@code chosen}.
+     * The mark of the choice of {@code verdict}, filled when it is {@code chosen}.
      */
-    private Element mark(Verdict verdict, Verdict chosen) {
-        return verdict == chosen
-                ? text("(•)")
-                        .id(CHOICES_ID)
-                        .addClass(NewPullRequestDialog.CHECKBOX)
-                        .focusable()
-                        .length(MARK_WIDTH)
-                        .onKeyEvent(this::keys)
-                : text("( )").length(MARK_WIDTH);
+    private static Element mark(Verdict verdict, Verdict chosen) {
+        return text(verdict == chosen ? "(•)" : "( )").length(MARK_WIDTH);
     }
 
     /**

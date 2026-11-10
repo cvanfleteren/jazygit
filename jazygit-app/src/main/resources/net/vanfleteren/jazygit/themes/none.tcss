@@ -8,7 +8,7 @@
  * The pane in use, the area of the content panel that has the focus, and the field of a popup that has it: a double
  * border.
  */
-Panel.focused, RichTextAreaElement:focus, TextInputElement:focus, TextAreaElement:focus {
+Panel.focused, Panel.choices:focus, RichTextAreaElement:focus, TextInputElement:focus, TextAreaElement:focus {
     border-type: double;
 }
 
