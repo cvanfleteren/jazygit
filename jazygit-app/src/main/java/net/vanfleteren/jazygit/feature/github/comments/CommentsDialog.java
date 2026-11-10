@@ -134,7 +134,7 @@ public final class CommentsDialog implements PopupView {
         list.elements(rows.toJavaArray(StyledElement[]::new))
                 .selected(highlightedIndex)
                 .onMouseEvent(event -> listMouse(popup, event));
-        StyledElement<?> listPane = panel(list).rounded();
+        StyledElement<?> listPane = panel(list);
         StyledElement<?> comment = comment(popup).onMouseEvent(this::commentMouse);
         Element body = narrow
                 ? column(
@@ -173,7 +173,7 @@ public final class CommentsDialog implements PopupView {
                 .getOrElse(() -> row(
                         text(Messages.get("dialog.comments.loading") + " ").addClass(Theme.Classes.DIM),
                         text(TimeText.spinnerFrame(clock.instant())).addClass(Theme.Classes.SPINNER)));
-        Panel pane = panel(content).rounded();
+        Panel pane = panel(content);
         return highlighted.map(comment -> pane.title(title(comment))).getOrElse(pane);
     }
 

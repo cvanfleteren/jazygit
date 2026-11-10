@@ -131,6 +131,19 @@ class ThemeTest {
     }
 
     @Test
+    void everyThemeBordersAPopupLikeAPane() {
+        for (ThemeName name : ThemeName.values()) {
+            var engine = Theme.createEngine().get();
+            Theme.activate(engine, name);
+
+            assertEquals(
+                    engine.resolve(new Node("Panel", Set.of())).borderType(),
+                    engine.resolve(new Node("DialogElement", Set.of())).borderType(),
+                    name.id());
+        }
+    }
+
+    @Test
     void everyThemeBordersTheFocusedContentAreaLikeTheFocusedPanel() {
         for (ThemeName name : ThemeName.values()) {
             var engine = Theme.createEngine().get();

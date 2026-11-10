@@ -78,11 +78,12 @@ class NewPullRequestDialogTest {
             assertTrue(screen.contains("Add login"), screen);
             assertTrue(screen.indexOf("Title") < screen.indexOf("Body"), screen);
             assertTrue(screen.indexOf("Body") < screen.indexOf("[ ] Draft?"), screen);
-            // The keys are told in the border of the popup, under the draft box.
+            // The keys are told in the border of the popup, under the draft box; its corners are the theme's.
             assertTrue(
                     screen.lines()
-                            .anyMatch(line -> line.strip().startsWith("╰")
-                                    && line.contains("─tab: next field  ↑↓: base  type: filter  space: tick draft╯")),
+                            .map(String::strip)
+                            .anyMatch(line -> line.matches(
+                                    "[╰└]─*tab: next field  ↑↓: base  type: filter  space: tick draft[╯┘]")),
                     screen);
             assertTrue(screen.indexOf("[ ] Draft?") < screen.indexOf("tab: next field"), screen);
         }

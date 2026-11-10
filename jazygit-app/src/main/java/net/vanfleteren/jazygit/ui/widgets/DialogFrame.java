@@ -13,7 +13,7 @@ import net.vanfleteren.jazygit.ui.TextWidth;
 import net.vanfleteren.jazygit.ui.Theme;
 
 /**
- * The frame every popup is drawn in: a rounded border with the title, and optionally a dimmed hint
+ * The frame every popup is drawn in: the theme's border with the title, and optionally a dimmed hint
  * about the keys under the content.
  */
 public final class DialogFrame {
@@ -60,7 +60,15 @@ public final class DialogFrame {
      * A popup showing {@code content}.
      */
     public static DialogElement of(String title, int width, Element... content) {
-        return dialog(title, content).rounded().width(width);
+        return themed(dialog(title, content)).width(width);
+    }
+
+    /**
+     * {@code dialog} with the border the theme gives popups. A popup draws a plain border unless told otherwise, and
+     * what it is told goes before the stylesheet; told nothing, it takes the theme's.
+     */
+    public static DialogElement themed(DialogElement dialog) {
+        return dialog.borderType(null);
     }
 
     /**

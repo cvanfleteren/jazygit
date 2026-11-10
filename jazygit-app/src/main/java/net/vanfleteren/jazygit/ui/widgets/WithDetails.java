@@ -47,8 +47,7 @@ public record WithDetails(Element dialog, Option<String> shown, List<String> pos
     }
 
     private static Element box(String text, int width, int height) {
-        return Toolkit.dialog(DialogFrame.wrapped(text, width, Integer.MAX_VALUE))
-                .rounded()
+        return DialogFrame.themed(Toolkit.dialog(DialogFrame.wrapped(text, width, Integer.MAX_VALUE)))
                 .width(width)
                 .length(height);
     }

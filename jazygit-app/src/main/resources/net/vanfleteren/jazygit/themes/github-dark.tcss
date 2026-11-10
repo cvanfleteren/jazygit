@@ -31,8 +31,9 @@ Panel.focused, Panel.choices:focus, RichTextAreaElement:focus, TextInputElement:
     border-color: $accent;
 }
 
-/* Popups, which otherwise take the terminal's own colour. */
+/* Popups, whose border is otherwise square and in the terminal's own colour. */
 DialogElement {
+    border-type: rounded;
     border-color: $accent;
 }
 
