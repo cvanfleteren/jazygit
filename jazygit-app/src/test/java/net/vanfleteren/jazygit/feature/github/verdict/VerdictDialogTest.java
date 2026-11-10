@@ -55,6 +55,20 @@ class VerdictDialogTest {
     }
 
     @Test
+    void theChoicesAndTheTextAreInBoxesOfTheirOwnWhoseTitleSaysWhetherTheTextIsNeeded() throws Exception {
+        try (ToolkitTestRunner runner = start()) {
+            String approving = RenderedText.ofLarge(runner, this::view);
+            assertTrue(approving.contains("┌Verdict"), approving);
+            assertTrue(approving.contains("│(•) Approve   ( ) Request changes"), approving);
+            assertTrue(approving.contains("┌Comment (optional)"), approving);
+
+            model = model.openPopup(REVIEW.withVerdict(Verdict.REQUEST_CHANGES));
+            String asking = RenderedText.ofLarge(runner, this::view);
+            assertTrue(asking.contains("┌Reason (required)"), asking);
+        }
+    }
+
+    @Test
     void tabGoesToAskingForChangesWhichSpaceChoosesAndOnToTheText() throws Exception {
         try (ToolkitTestRunner runner = start()) {
             SettledPilot.of(runner).press(KeyCode.TAB);

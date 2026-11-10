@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.github.verdict;
 
+import static dev.tamboui.toolkit.Toolkit.panel;
 import static dev.tamboui.toolkit.Toolkit.row;
 import static dev.tamboui.toolkit.Toolkit.text;
 
@@ -19,8 +20,9 @@ import net.vanfleteren.jazygit.ui.CommentComposer;
 import net.vanfleteren.jazygit.ui.widgets.PopupView;
 
 /**
- * Popup asking for a review of a pull request (ADR 99), as a {@link CommentComposer} under a choice of what it says:
- * {@code (•) Approve  ( ) Request changes}. Each choice takes the focus, which the themes show by reversing its mark,
+ * Popup asking for a review of a pull request (ADR 99), as a {@link CommentComposer} under a choice of what it says,
+ * in a box of its own: {@code (•) Approve  ( ) Request changes}. The text is in a box too, whose title says whether
+ * the verdict chosen needs it. Each choice takes the focus, which the themes show by reversing its mark,
  * and Space or Enter chooses it; Tab goes from one to the other and on to the text, where the focus starts on approve.
  * Ctrl+S sends it, Ctrl+O opens the text in the editor and Escape goes back, from any of them. A draft says so, above
  * the text. The review lives in the {@link Model}, as a {@link VerdictPopup}.
@@ -41,6 +43,8 @@ public final class VerdictDialog implements PopupView {
             new CommentComposer.Hints("dialog.verdict.hint", "dialog.verdict.sending");
 
     private static final int MARK_WIDTH = 3;
+    // The box of the choices: their row and its borders.
+    private static final int BOX_HEIGHT = 3;
     // Between the label of the first choice and the mark of the second.
     private static final int GAP = 3;
 
@@ -74,21 +78,30 @@ public final class VerdictDialog implements PopupView {
                         List.of(choices(popup.verdict())),
                         List.empty(),
                         Option.when(popup.draft(), () -> Messages.get("dialog.verdict.draft")),
+                        // Whether a text is needed, as the verdict chosen says.
+                        Option.of(Messages.get(
+                                popup.verdict().needsText()
+                                        ? "dialog.verdict.textRequired"
+                                        : "dialog.verdict.textOptional")),
                         new CommentComposer.Comment(popup.text(), popup.sending()),
                         ACTIONS,
                         HINTS));
     }
 
+    /**
+     * The choices, in a box of their own, set apart from the text, as the fields of the pull request dialogs are.
+     */
     private Element choices(Verdict chosen) {
         String approve = " " + Messages.get("dialog.verdict.approve");
         String changes = " " + Messages.get("dialog.verdict.requestChanges");
-        return row(
+        return panel(row(
                         mark(APPROVE_ID, Verdict.APPROVE, chosen),
                         text(approve).length(approve.length()),
                         text("").length(GAP),
                         mark(CHANGES_ID, Verdict.REQUEST_CHANGES, chosen),
-                        text(changes).length(changes.length()))
-                .length(1);
+                        text(changes).length(changes.length())))
+                .title(Messages.get("dialog.verdict.choices"))
+                .length(BOX_HEIGHT);
     }
 
     /**
