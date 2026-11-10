@@ -254,6 +254,42 @@ class VerdictUpdateTest {
     }
 
     @Test
+    void thePopupFollowsAPendingReviewBeingDroppedAndTheErrorThatSaidSoGoes() {
+        Model pending = Update.update(
+                        loaded().openPopup(dialog(OPEN, new Reviewing("PR_42", false, true))),
+                        new VerdictMsg.DialogAsked())
+                .model();
+        VerdictPopup was = pending.popup(VerdictPopup.class).get();
+
+        VerdictPopup now = was.following(SHOWN);
+        Model followed = VerdictUpdate.followed(pending, was, now);
+
+        assertFalse(now.pending());
+        assertEquals(Option.none(), error(followed));
+        assertEquals(
+                List.of(new SubmitReview(42, "PR_42", Verdict.APPROVE, "")),
+                Update.update(followed, new VerdictMsg.Confirmed()).cmds());
+    }
+
+    @Test
+    void thePopupFollowsAPendingReviewStartedMeanwhile() {
+        VerdictPopup now =
+                VerdictPopup.of(SHOWN, BY_A_REVIEWER).following(dialog(OPEN, new Reviewing("PR_42", false, true)));
+
+        assertTrue(now.pending());
+    }
+
+    @Test
+    void anotherErrorStaysWhenThePopupFollowsTheDialog() {
+        Model failed = reviewing(Verdict.REQUEST_CHANGES, "").fail(new AppError.CannotReview(Why.NO_REASON));
+        VerdictPopup was = failed.popup(VerdictPopup.class).get();
+
+        Model followed = VerdictUpdate.followed(failed, was, was.following(SHOWN));
+
+        assertEquals(Option.of(new AppError.CannotReview(Why.NO_REASON)), error(followed));
+    }
+
+    @Test
     void theDiffOpensAReviewOfItsPullRequest() {
         Model asked = Update.update(
                         diff(remarks(State.OPEN, true, new Reviewing("PR_7", false, false))),

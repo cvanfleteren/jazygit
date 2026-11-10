@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.feature.github.checks.ChecksPopup;
 import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestUpdate;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestCmd.*;
 import net.vanfleteren.jazygit.feature.github.verdict.VerdictPopup;
+import net.vanfleteren.jazygit.feature.github.verdict.VerdictUpdate;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
@@ -273,7 +274,8 @@ public final class PullRequestUpdate {
                 .orElse(() -> model.popup(VerdictPopup.class)
                         .flatMap(review -> review.from()
                                 .filter(from -> from.number() == number)
-                                .map(from -> model.openPopup(review.following(change.apply(from.pullRequestPopup()))))))
+                                .map(from -> VerdictUpdate.followed(
+                                        model, review, review.following(change.apply(from.pullRequestPopup()))))))
                 .getOrElse(model);
     }
 

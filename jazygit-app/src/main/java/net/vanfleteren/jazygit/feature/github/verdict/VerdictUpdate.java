@@ -89,6 +89,17 @@ public final class VerdictUpdate {
     }
 
     /**
+     * {@code model} with the review popup {@code was} as the dialog behind it changed it, {@code now}. Once the viewer
+     * no longer has a pending review, the error that said they had goes, so the review can be sent.
+     */
+    public static Model followed(Model model, VerdictPopup was, VerdictPopup now) {
+        boolean settled = was.pending()
+                && !now.pending()
+                && model.outcome().error().contains(new AppError.CannotReview(Why.PENDING_REVIEW));
+        return (settled ? model.clearError() : model).openPopup(now);
+    }
+
+    /**
      * The popup asking for a review from the dialog, which tells why it cannot be sent while the viewer has a pending
      * review: the dialog shows no error of its own.
      */
@@ -168,22 +179,8 @@ public final class VerdictUpdate {
                                         done.cmds().append(load))))
                         .getOrElse(() -> new Next(
                                 changed.withoutPopup(VerdictPopup.class),
-                                done.cmds().append(remarksLoad(changed, cmd.number())))))
+                                done.cmds().append(LoadReviewRemarks.after(changed, cmd.number(), HashSet.empty())))))
                 .getOrElse(() -> new Next(changed, done.cmds()));
-    }
-
-    /**
-     * The read of the review threads of pull request {@code number}, at the version they are at (ADR 64).
-     */
-    private static LoadReviewRemarks remarksLoad(Model model, int number) {
-        return new LoadReviewRemarks(
-                number,
-                HashSet.empty(),
-                model.repoView()
-                        .commitFiles()
-                        .filter(view -> view.pullRequest().contains(number))
-                        .map(CommitFilesView::version)
-                        .getOrElse(0));
     }
 
     /**

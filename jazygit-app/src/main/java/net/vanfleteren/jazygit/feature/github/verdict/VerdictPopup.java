@@ -59,12 +59,16 @@ public record VerdictPopup(
     }
 
     /**
-     * This popup going back to {@code dialog}, changed as it is now, and a draft or not as it says.
+     * This popup going back to {@code dialog}, changed as it is now: a draft or not, and with a pending review of the
+     * viewer or not, as its details say once read.
      */
     public VerdictPopup following(PullRequestPopup dialog) {
         return from.map(shown -> shown.withPullRequestPopup(dialog))
-                .map(shown ->
-                        withFrom(Option.of(shown)).withDraft(dialog.draft().getOrElse(draft)))
+                .map(shown -> withFrom(Option.of(shown))
+                        .withDraft(dialog.draft().getOrElse(draft))
+                        .withPending(dialog.readDetails()
+                                .map(read -> read.conversation().reviewing().pending())
+                                .getOrElse(pending)))
                 .getOrElse(this);
     }
 

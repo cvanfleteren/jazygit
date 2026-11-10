@@ -128,7 +128,8 @@ public final class ReviewUpdate {
                 Next done = OperationUpdate.succeeded(model, cmd, commands);
                 yield new Next(
                         done.model(),
-                        done.cmds().append(remarksLoad(done.model(), cmd.number(), HashSet.of(cmd.thread()))));
+                        done.cmds()
+                                .append(LoadReviewRemarks.after(done.model(), cmd.number(), HashSet.of(cmd.thread()))));
             }
             case ReviewMsg.ResolveFailed(Resolve cmd, Failure failure) -> {
                 Next failed = OperationUpdate.update(model, new OperationMsg.Failed(cmd, failure));
@@ -414,7 +415,7 @@ public final class ReviewUpdate {
                 .getOrElse(closed);
         Set<String> settled =
                 cmd.target() instanceof Target.Reply(String thread, var comment) ? HashSet.of(thread) : HashSet.empty();
-        return new Next(moved, done.cmds().append(remarksLoad(moved, cmd.number(), settled)));
+        return new Next(moved, done.cmds().append(LoadReviewRemarks.after(moved, cmd.number(), settled)));
     }
 
     /**
@@ -433,20 +434,6 @@ public final class ReviewUpdate {
                         ? mapPullRequest(closed, cmd.number(), view -> view.withEdited(comment, body))
                         : closed,
                 done.cmds());
-    }
-
-    /**
-     * The read of the review threads of pull request {@code number} after what was sent for the threads
-     * {@code settled}, at the version they are at (ADR 64).
-     */
-    private static LoadReviewRemarks remarksLoad(Model model, int number, Set<String> settled) {
-        return new LoadReviewRemarks(
-                number,
-                settled,
-                pullRequestFiles(model)
-                        .filter(view -> view.pullRequest().contains(number))
-                        .map(CommitFilesView::version)
-                        .getOrElse(0));
     }
 
     /**
@@ -498,7 +485,8 @@ public final class ReviewUpdate {
                 .exists(view -> view.threads()
                         .exists(each ->
                                 each.id().equals(thread) && each.comments().isEmpty()));
-        return new Next(deleted, unread ? cmds.append(remarksLoad(deleted, number, HashSet.empty())) : cmds);
+        return new Next(
+                deleted, unread ? cmds.append(LoadReviewRemarks.after(deleted, number, HashSet.empty())) : cmds);
     }
 
     /**
