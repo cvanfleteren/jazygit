@@ -31,6 +31,7 @@ import net.vanfleteren.jazygit.state.CheckTimes;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.PopupMsg;
 import net.vanfleteren.jazygit.state.Reading;
 import net.vanfleteren.jazygit.ui.CheckRows;
 import net.vanfleteren.jazygit.ui.ErrorText;
@@ -158,7 +159,7 @@ public final class PullRequestDialog implements PopupView {
                                         PullRequestMsg.RefreshChosen::new,
                                         PullRequestUpdate::refreshChoosable)
                                 .withDetails("dialog.pullRequest.refresh.details")),
-                () -> new Msg.PopupDismissed(PullRequestPopup.class),
+                () -> new PopupMsg.Dismissed(PullRequestPopup.class),
                 dispatch,
                 DialogFrame.contentWidth(WIDTH));
     }

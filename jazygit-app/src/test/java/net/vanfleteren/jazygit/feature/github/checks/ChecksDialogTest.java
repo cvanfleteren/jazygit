@@ -39,6 +39,7 @@ import net.vanfleteren.jazygit.state.ListCursor;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.PendingChecks;
+import net.vanfleteren.jazygit.state.PopupMsg;
 import net.vanfleteren.jazygit.state.Reading;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
@@ -644,7 +645,7 @@ class ChecksDialogTest {
             SettledPilot.of(runner).pause();
         }
         return List.ofAll(dispatched)
-                .map(msg -> ((Msg.ListCursorChanged) msg).cursor().line().get());
+                .map(msg -> ((PopupMsg.ListCursorChanged) msg).cursor().line().get());
     }
 
     private String screen(ChecksPopup popup) throws Exception {

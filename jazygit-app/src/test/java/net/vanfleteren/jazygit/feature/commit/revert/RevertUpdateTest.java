@@ -11,7 +11,7 @@ import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.PopupMsg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -70,7 +70,7 @@ class RevertUpdateTest {
 
     @Test
     void confirmingReverts() {
-        Next next = Update.update(asked(), new Msg.PopupConfirmed(RevertPopup.class));
+        Next next = Update.update(asked(), new PopupMsg.Confirmed(RevertPopup.class));
 
         assertEquals(Option.none(), next.model().popup(RevertPopup.class));
         assertEquals(new RevertCmd(FIRST), next.cmds().head());
@@ -78,7 +78,7 @@ class RevertUpdateTest {
 
     @Test
     void cancellingClosesThePopup() {
-        Next next = Update.update(asked(), new Msg.PopupDismissed(RevertPopup.class));
+        Next next = Update.update(asked(), new PopupMsg.Dismissed(RevertPopup.class));
 
         assertEquals(Option.none(), next.model().popup(RevertPopup.class));
         assertEquals(List.of(), next.cmds());
@@ -86,7 +86,7 @@ class RevertUpdateTest {
 
     @Test
     void aFailureShowsTheError() {
-        Model running = Update.update(asked(), new Msg.PopupConfirmed(RevertPopup.class))
+        Model running = Update.update(asked(), new PopupMsg.Confirmed(RevertPopup.class))
                 .model();
 
         Model next = Update.update(running, failed(new RevertCmd(FIRST), "nothing to commit"))

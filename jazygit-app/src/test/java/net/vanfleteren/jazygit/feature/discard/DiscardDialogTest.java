@@ -17,6 +17,7 @@ import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.state.CursorFeedback;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.PopupMsg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.ui.RenderedText;
@@ -67,7 +68,7 @@ class DiscardDialogTest {
     @Test
     void escapeCancels() throws Exception {
         assertEquals(
-                List.of(new Msg.PopupDismissed(DiscardPopup.class)),
+                List.of(new PopupMsg.Dismissed(DiscardPopup.class)),
                 pressing(open(MODIFIED), r -> SettledPilot.of(r).press(KeyCode.ESCAPE)));
     }
 

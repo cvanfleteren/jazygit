@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.PopupMsg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.ui.RenderedText;
@@ -43,7 +44,7 @@ class StashCheckoutDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new Msg.PopupConfirmed(StashCheckoutPopup.class)), dispatched);
+        assertEquals(java.util.List.of(new PopupMsg.Confirmed(StashCheckoutPopup.class)), dispatched);
     }
 
     @Test
@@ -53,7 +54,7 @@ class StashCheckoutDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new Msg.PopupDismissed(StashCheckoutPopup.class)), dispatched);
+        assertEquals(java.util.List.of(new PopupMsg.Dismissed(StashCheckoutPopup.class)), dispatched);
     }
 
     @Test

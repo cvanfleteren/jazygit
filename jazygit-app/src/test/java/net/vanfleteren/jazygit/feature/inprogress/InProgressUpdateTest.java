@@ -17,7 +17,7 @@ import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.PopupMsg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -104,7 +104,7 @@ class InProgressUpdateTest {
         Model confirming = Update.update(asked, new InProgressMsg.Chosen(InProgressAction.ABORT))
                 .model();
 
-        Next next = Update.update(confirming, new Msg.PopupConfirmed(InProgressConfirmPopup.class));
+        Next next = Update.update(confirming, new PopupMsg.Confirmed(InProgressConfirmPopup.class));
 
         assertEquals(Option.none(), next.model().popup(InProgressConfirmPopup.class));
         assertEquals(List.of(new InProgressCmd(REBASING, InProgressAction.ABORT)), next.cmds());
@@ -117,8 +117,8 @@ class InProgressUpdateTest {
         Model confirming = Update.update(asked, new InProgressMsg.Chosen(InProgressAction.ABORT))
                 .model();
 
-        Next cancelled = Update.update(asked, new Msg.PopupDismissed(InProgressPopup.class));
-        Next notConfirmed = Update.update(confirming, new Msg.PopupDismissed(InProgressConfirmPopup.class));
+        Next cancelled = Update.update(asked, new PopupMsg.Dismissed(InProgressPopup.class));
+        Next notConfirmed = Update.update(confirming, new PopupMsg.Dismissed(InProgressConfirmPopup.class));
 
         assertEquals(Option.none(), cancelled.model().popup(InProgressPopup.class));
         assertEquals(List.of(), cancelled.cmds());

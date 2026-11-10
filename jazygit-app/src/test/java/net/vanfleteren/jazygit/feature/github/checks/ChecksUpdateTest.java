@@ -32,8 +32,8 @@ import net.vanfleteren.jazygit.state.CheckTimesCmd;
 import net.vanfleteren.jazygit.state.GitHubChecks;
 import net.vanfleteren.jazygit.state.ListCursor;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.PendingChecks;
+import net.vanfleteren.jazygit.state.PopupMsg;
 import net.vanfleteren.jazygit.state.Reading;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
@@ -169,7 +169,7 @@ class ChecksUpdateTest {
 
     @Test
     void whatIsReadAfterClosingIsLearnedFromWithoutShowingItAgain() {
-        Model closed = Update.update(shown(), new Msg.PopupDismissed(ChecksPopup.class))
+        Model closed = Update.update(shown(), new PopupMsg.Dismissed(ChecksPopup.class))
                 .model();
 
         Next next = Update.update(closed, new ChecksMsg.Loaded(FEATURE, READ));
@@ -189,7 +189,7 @@ class ChecksUpdateTest {
         Model scrolled = Update.update(
                         Update.update(shown(), new ChecksMsg.Loaded(FEATURE, READ))
                                 .model(),
-                        new Msg.ListCursorChanged(ListCursor.START.at(3)))
+                        new PopupMsg.ListCursorChanged(ListCursor.START.at(3)))
                 .model();
 
         Model readAgain = Update.update(
@@ -199,7 +199,7 @@ class ChecksUpdateTest {
         assertEquals(ListCursor.START.at(3), readAgain.listCursor());
 
         Model shownAgain = Update.update(
-                        Update.update(readAgain, new Msg.PopupDismissed(ChecksPopup.class))
+                        Update.update(readAgain, new PopupMsg.Dismissed(ChecksPopup.class))
                                 .model(),
                         new ChecksMsg.Requested(MINE))
                 .model();
@@ -306,7 +306,7 @@ class ChecksUpdateTest {
     void closingHidesThePopup() {
         assertEquals(
                 Option.none(),
-                Update.update(shown(), new Msg.PopupDismissed(ChecksPopup.class))
+                Update.update(shown(), new PopupMsg.Dismissed(ChecksPopup.class))
                         .model()
                         .popup(ChecksPopup.class));
     }

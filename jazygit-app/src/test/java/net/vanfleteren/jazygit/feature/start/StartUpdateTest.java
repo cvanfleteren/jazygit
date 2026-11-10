@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.settings.Settings;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.PopupMsg;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
@@ -55,7 +56,7 @@ class StartUpdateTest {
 
     @Test
     void anotherFolderIsOpenedFromTheOneAskedAbout() {
-        Model typed = after(starting(), new StartMsg.OpenFolderChosen(), new Msg.TextEdited(" ../code "));
+        Model typed = after(starting(), new StartMsg.OpenFolderChosen(), new PopupMsg.TextEdited(" ../code "));
 
         Next next = Update.update(typed, new StartMsg.FolderConfirmed());
 
@@ -80,7 +81,7 @@ class StartUpdateTest {
 
     @Test
     void aPathToNoFolderIsSaidUnderItAndEditingItClearsThat() {
-        Model typed = after(starting(), new StartMsg.OpenFolderChosen(), new Msg.TextEdited("typo"));
+        Model typed = after(starting(), new StartMsg.OpenFolderChosen(), new PopupMsg.TextEdited("typo"));
 
         Model notFound = after(typed, new StartMsg.NoRepository("/home/me/notes/typo", false));
 
@@ -89,12 +90,12 @@ class StartUpdateTest {
                 notFound.popup(OpenFolderPopup.class));
         assertEquals(
                 Option.of(new OpenFolderPopup(OUTSIDE, "typos", Option.none(), Option.none())),
-                after(notFound, new Msg.TextEdited("typos")).popup(OpenFolderPopup.class));
+                after(notFound, new PopupMsg.TextEdited("typos")).popup(OpenFolderPopup.class));
     }
 
     @Test
     void aPathGitRefusesIsSaidUnderItAndEditingItClearsThat() {
-        Model typed = after(starting(), new StartMsg.OpenFolderChosen(), new Msg.TextEdited("/srv/bare.git"));
+        Model typed = after(starting(), new StartMsg.OpenFolderChosen(), new PopupMsg.TextEdited("/srv/bare.git"));
 
         Model failed = after(typed, new StartMsg.Failed(FAILED));
 
@@ -103,12 +104,12 @@ class StartUpdateTest {
                 failed.popup(OpenFolderPopup.class));
         assertEquals(
                 Option.of(new OpenFolderPopup(OUTSIDE, "/srv/bare", Option.none(), Option.none())),
-                after(failed, new Msg.TextEdited("/srv/bare")).popup(OpenFolderPopup.class));
+                after(failed, new PopupMsg.TextEdited("/srv/bare")).popup(OpenFolderPopup.class));
     }
 
     @Test
     void aFolderInNoRepositoryIsAskedAboutInstead() {
-        Model typed = after(starting(), new StartMsg.OpenFolderChosen(), new Msg.TextEdited("/tmp/new"));
+        Model typed = after(starting(), new StartMsg.OpenFolderChosen(), new PopupMsg.TextEdited("/tmp/new"));
 
         Model asked = after(typed, new StartMsg.NoRepository("/tmp/new", true));
 

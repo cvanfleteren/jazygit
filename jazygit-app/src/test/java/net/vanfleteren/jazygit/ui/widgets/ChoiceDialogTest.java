@@ -97,7 +97,7 @@ class ChoiceDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new Msg.PopupDismissed(PickPopup.class)), dispatched);
+        assertEquals(java.util.List.of(new PopupMsg.Dismissed(PickPopup.class)), dispatched);
     }
 
     @Test
@@ -230,7 +230,7 @@ class ChoiceDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new Msg.PopupDismissed(PickPopup.class)), dispatched);
+        assertEquals(java.util.List.of(new PopupMsg.Dismissed(PickPopup.class)), dispatched);
     }
 
     @Test

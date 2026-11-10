@@ -11,7 +11,7 @@ import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.PopupMsg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -106,7 +106,7 @@ class DropUpdateTest {
         Model open = Update.update(withCommits(TIP, MIDDLE, ROOT), new DropMsg.Requested(MIDDLE.sha()))
                 .model();
 
-        Next next = Update.update(open, new Msg.PopupConfirmed(DropPopup.class));
+        Next next = Update.update(open, new PopupMsg.Confirmed(DropPopup.class));
 
         assertEquals(List.of(new DropCmd(new Sha("c2"))), next.cmds());
         assertEquals(Option.none(), next.model().popup(DropPopup.class));
@@ -117,7 +117,7 @@ class DropUpdateTest {
         Model open = Update.update(withCommits(TIP, MIDDLE, ROOT), new DropMsg.Requested(MIDDLE.sha()))
                 .model();
 
-        Next next = Update.update(open, new Msg.PopupDismissed(DropPopup.class));
+        Next next = Update.update(open, new PopupMsg.Dismissed(DropPopup.class));
 
         assertEquals(List.of(), next.cmds());
         assertEquals(Option.none(), next.model().popup(DropPopup.class));

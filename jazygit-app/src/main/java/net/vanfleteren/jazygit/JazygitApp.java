@@ -51,7 +51,7 @@ public class JazygitApp extends ToolkitApp {
     private final Clock clock = Clock.systemUTC();
     // The terminal the app is shown on, which it hands over to an editor.
     private final TerminalHandOver terminal =
-            new TerminalHandOver(this::runner, this::requestRedraw, focused -> send(new Msg.TerminalFocused(focused)));
+            new TerminalHandOver(this::runner, this::requestRedraw, focused -> send(new TerminalMsg.Focused(focused)));
     private final RepositorySession session;
     // Quitting is up to the model, which may refuse; the runner stops on what the update returns.
     private final Consumer<Msg> dispatch = this::send;

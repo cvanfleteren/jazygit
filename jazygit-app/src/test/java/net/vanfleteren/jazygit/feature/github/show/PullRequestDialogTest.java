@@ -48,6 +48,7 @@ import net.vanfleteren.jazygit.state.CursorFeedback;
 import net.vanfleteren.jazygit.state.GitHubChecks;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.PopupMsg;
 import net.vanfleteren.jazygit.state.Reading;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
@@ -827,7 +828,7 @@ class PullRequestDialogTest {
         }
 
         assertEquals(
-                java.util.List.of(new PullRequestMsg.OpenConfirmed(), new Msg.PopupDismissed(PullRequestPopup.class)),
+                java.util.List.of(new PullRequestMsg.OpenConfirmed(), new PopupMsg.Dismissed(PullRequestPopup.class)),
                 dispatched);
     }
 

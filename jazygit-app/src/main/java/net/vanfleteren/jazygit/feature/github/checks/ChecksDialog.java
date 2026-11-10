@@ -26,6 +26,7 @@ import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.ListCursor;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.PopupMsg;
 import net.vanfleteren.jazygit.state.Reading;
 import net.vanfleteren.jazygit.ui.CheckRows;
 import net.vanfleteren.jazygit.ui.CheckTimesText;
@@ -251,6 +252,6 @@ public final class ChecksDialog implements PopupView {
     }
 
     private void scroll(ListCursor cursor, int first, int last) {
-        dispatch.accept(new Msg.ListCursorChanged(cursor.at(Math.clamp(first, 0, last))));
+        dispatch.accept(new PopupMsg.ListCursorChanged(cursor.at(Math.clamp(first, 0, last))));
     }
 }

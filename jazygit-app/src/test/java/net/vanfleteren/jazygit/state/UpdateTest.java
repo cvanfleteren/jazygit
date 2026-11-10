@@ -16,7 +16,7 @@ import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.state.Loadable.Failed;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Loadable.Loading;
-import net.vanfleteren.jazygit.state.Msg.Tick;
+import net.vanfleteren.jazygit.state.TimerMsg.Tick;
 import net.vanfleteren.jazygit.state.Update.Launch;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.Update.Step;
@@ -109,7 +109,7 @@ class UpdateTest {
         Model model = loaded();
         Instant now = Instant.parse("2026-10-22T10:00:00Z");
 
-        Step step = Update.step(model, new Msg.Clock(), now);
+        Step step = Update.step(model, new TimerMsg.Clock(), now);
 
         assertEquals(model.withNow(now), step.model());
         assertEquals(List.empty(), step.launches());
@@ -323,7 +323,7 @@ class UpdateTest {
     void confirmingAnotherPopupLeavesTheOpenOneAlone() {
         Model asking = loaded().openPopup(new OtherPopup());
 
-        Next next = Update.update(asking, new Msg.PopupConfirmed(EmptyPopup.class));
+        Next next = Update.update(asking, new PopupMsg.Confirmed(EmptyPopup.class));
 
         assertEquals(List.of(), next.cmds());
         assertEquals(asking.popup(), next.model().popup());
@@ -333,7 +333,7 @@ class UpdateTest {
     void aPopupThatAsksAboutNothingAsItStandsStaysOpen() {
         Model asking = loaded().openPopup(new EmptyPopup());
 
-        Next next = Update.update(asking, new Msg.PopupConfirmed(EmptyPopup.class));
+        Next next = Update.update(asking, new PopupMsg.Confirmed(EmptyPopup.class));
 
         assertEquals(List.of(), next.cmds());
         assertEquals(asking.popup(), next.model().popup());

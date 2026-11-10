@@ -32,8 +32,8 @@ import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.git.StubStatus;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.state.Env;
-import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Screen;
+import net.vanfleteren.jazygit.state.TimerMsg;
 import net.vanfleteren.jazygit.state.prs.PrOverviewMsg;
 import net.vanfleteren.jazygit.ui.CommitsPanel;
 import net.vanfleteren.jazygit.ui.FilesPanel;
@@ -81,8 +81,8 @@ class JazygitAppWiringTest {
     void theTimeTheRepositoryTheRemotesAndGitHubAreEachReadEverySoOften() {
         assertEquals(
                 List.of(
-                        Tuple.of(TimeText.CLOCK_INTERVAL, Msg.Clock.class),
-                        Tuple.of(Timers.REFRESH_INTERVAL, Msg.Tick.class),
+                        Tuple.of(TimeText.CLOCK_INTERVAL, TimerMsg.Clock.class),
+                        Tuple.of(Timers.REFRESH_INTERVAL, TimerMsg.Tick.class),
                         Tuple.of(Duration.ofMinutes(1), FetchMsg.Tick.class),
                         Tuple.of(Duration.ofMinutes(1), PrOverviewMsg.Tick.class),
                         Tuple.of(Duration.ofSeconds(10), PullRequestMsg.Tick.class),

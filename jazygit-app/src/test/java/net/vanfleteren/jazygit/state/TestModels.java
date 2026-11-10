@@ -273,7 +273,7 @@ public final class TestModels {
      * {@code model} after the user typed {@code text} in the open {@link TextPopup}.
      */
     public static Model typed(Model model, String text) {
-        return Update.update(model, new Msg.TextEdited(text)).model();
+        return Update.update(model, new PopupMsg.TextEdited(text)).model();
     }
 
     /**

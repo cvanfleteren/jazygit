@@ -71,7 +71,7 @@ class ForcePushDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new Msg.PopupDismissed(ForcePushPopup.class)), dispatched);
+        assertEquals(java.util.List.of(new PopupMsg.Dismissed(ForcePushPopup.class)), dispatched);
     }
 
     @Test

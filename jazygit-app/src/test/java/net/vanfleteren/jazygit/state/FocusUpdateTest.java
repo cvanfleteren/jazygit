@@ -18,9 +18,9 @@ class FocusUpdateTest {
 
     @Test
     void awayATickReadsNothing() {
-        Model away = Update.update(loaded(), new Msg.TerminalFocused(false)).model();
+        Model away = Update.update(loaded(), new TerminalMsg.Focused(false)).model();
 
-        Next ticked = Update.update(away, new Msg.Tick());
+        Next ticked = Update.update(away, new TimerMsg.Tick());
 
         assertEquals(List.empty(), ticked.cmds());
         assertTrue(ticked.model().jobs().away());
@@ -28,80 +28,83 @@ class FocusUpdateTest {
 
     @Test
     void backAgainWhatTheTimersAskedForMeanwhileIsReadOnce() {
-        Model away = Update.update(loaded(), new Msg.TerminalFocused(false)).model();
-        away = Update.update(away, new Msg.Tick()).model();
+        Model away = Update.update(loaded(), new TerminalMsg.Focused(false)).model();
+        away = Update.update(away, new TimerMsg.Tick()).model();
         away = Update.update(away, new FetchMsg.Tick()).model();
-        away = Update.update(away, new Msg.Tick()).model();
+        away = Update.update(away, new TimerMsg.Tick()).model();
 
-        Next back = Update.update(away, new Msg.TerminalFocused(true));
+        Next back = Update.update(away, new TerminalMsg.Focused(true));
 
-        Next expected = Update.update(Update.update(loaded(), new Msg.Tick()).model(), new FetchMsg.Tick());
-        assertEquals(Update.update(loaded(), new Msg.Tick()).cmds().appendAll(expected.cmds()), back.cmds());
+        Next expected =
+                Update.update(Update.update(loaded(), new TimerMsg.Tick()).model(), new FetchMsg.Tick());
+        assertEquals(Update.update(loaded(), new TimerMsg.Tick()).cmds().appendAll(expected.cmds()), back.cmds());
         assertFalse(back.model().jobs().away());
         assertTrue(back.model().jobs().missed().isEmpty());
     }
 
     @Test
     void whatTheUserDoesIsHandledWhileAway() {
-        Model away = Update.update(loaded(), new Msg.TerminalFocused(false)).model();
+        Model away = Update.update(loaded(), new TerminalMsg.Focused(false)).model();
 
         assertEquals(
-                Update.update(loaded(), new Msg.Clock()).model().screen(),
-                Update.update(away, new Msg.Clock()).model().screen());
+                Update.update(loaded(), new TimerMsg.Clock()).model().screen(),
+                Update.update(away, new TimerMsg.Clock()).model().screen());
         assertTrue(Update.update(away, new Msg.Quit()).quit());
     }
 
     @Test
     void backWithoutAnyTimerMeanwhileReadsNothing() {
-        Model away = Update.update(loaded(), new Msg.TerminalFocused(false)).model();
+        Model away = Update.update(loaded(), new TerminalMsg.Focused(false)).model();
 
         assertEquals(
-                List.empty(), Update.update(away, new Msg.TerminalFocused(true)).cmds());
+                List.empty(), Update.update(away, new TerminalMsg.Focused(true)).cmds());
     }
 
     private static final Instant AWAY_AT = Instant.parse("2026-10-31T20:00:00Z");
 
     @Test
     void awayATickIsHandledOnceItWaited() {
-        Model away = Update.update(loaded().withNow(AWAY_AT), new Msg.TerminalFocused(false))
+        Model away = Update.update(loaded().withNow(AWAY_AT), new TerminalMsg.Focused(false))
                 .model();
-        away = Update.update(away, new Msg.Tick()).model();
-        away = Update.update(at(away, Msg.Tick.WHILE_AWAY.minusSeconds(1)), new Msg.Tick())
+        away = Update.update(away, new TimerMsg.Tick()).model();
+        away = Update.update(at(away, TimerMsg.Tick.WHILE_AWAY.minusSeconds(1)), new TimerMsg.Tick())
                 .model();
 
-        Next ticked = Update.update(at(away, Msg.Tick.WHILE_AWAY), new Msg.Tick());
+        Next ticked = Update.update(at(away, TimerMsg.Tick.WHILE_AWAY), new TimerMsg.Tick());
 
         assertEquals(
-                Update.update(at(loaded().withNow(AWAY_AT), Msg.Tick.WHILE_AWAY), new Msg.Tick())
+                Update.update(at(loaded().withNow(AWAY_AT), TimerMsg.Tick.WHILE_AWAY), new TimerMsg.Tick())
                         .cmds(),
                 ticked.cmds());
         assertFalse(ticked.cmds().isEmpty());
         assertTrue(ticked.model().jobs().away());
-        assertFalse(ticked.model().jobs().missed().contains(new Msg.Tick()));
+        assertFalse(ticked.model().jobs().missed().contains(new TimerMsg.Tick()));
     }
 
     @Test
     void awayATickWaitsAnewOnceHandled() {
-        Model away = Update.update(loaded().withNow(AWAY_AT), new Msg.TerminalFocused(false))
+        Model away = Update.update(loaded().withNow(AWAY_AT), new TerminalMsg.Focused(false))
                 .model();
-        away = Update.update(away, new Msg.Tick()).model();
-        away = Update.update(at(away, Msg.Tick.WHILE_AWAY), new Msg.Tick()).model();
+        away = Update.update(away, new TimerMsg.Tick()).model();
+        away = Update.update(at(away, TimerMsg.Tick.WHILE_AWAY), new TimerMsg.Tick())
+                .model();
 
-        Next ticked = Update.update(at(away, Msg.Tick.WHILE_AWAY.multipliedBy(2).minusSeconds(1)), new Msg.Tick());
+        Next ticked =
+                Update.update(at(away, TimerMsg.Tick.WHILE_AWAY.multipliedBy(2).minusSeconds(1)), new TimerMsg.Tick());
 
         assertEquals(List.empty(), ticked.cmds());
-        assertTrue(ticked.model().jobs().missed().contains(new Msg.Tick()));
+        assertTrue(ticked.model().jobs().missed().contains(new TimerMsg.Tick()));
     }
 
     @Test
     void awayAFetchWaitsItsOwnWhile() {
-        Model away = Update.update(loaded().withNow(AWAY_AT), new Msg.TerminalFocused(false))
+        Model away = Update.update(loaded().withNow(AWAY_AT), new TerminalMsg.Focused(false))
                 .model();
         away = Update.update(away, new FetchMsg.Tick()).model();
 
         assertEquals(
                 List.empty(),
-                Update.update(at(away, Msg.Tick.WHILE_AWAY), new FetchMsg.Tick())
+                Update.update(at(away, TimerMsg.Tick.WHILE_AWAY), new FetchMsg.Tick())
                         .cmds());
         Next fetched = Update.update(at(away, FetchMsg.Tick.WHILE_AWAY), new FetchMsg.Tick());
         assertEquals(
@@ -114,31 +117,31 @@ class FocusUpdateTest {
 
     @Test
     void awayATickThatComesAFewMillisecondsEarlyIsHandled() {
-        Model away = Update.update(loaded().withNow(AWAY_AT), new Msg.TerminalFocused(false))
+        Model away = Update.update(loaded().withNow(AWAY_AT), new TerminalMsg.Focused(false))
                 .model();
-        away = Update.update(away, new Msg.Tick()).model();
+        away = Update.update(away, new TimerMsg.Tick()).model();
 
-        assertFalse(Update.update(at(away, Msg.Tick.WHILE_AWAY.minusMillis(20)), new Msg.Tick())
+        assertFalse(Update.update(at(away, TimerMsg.Tick.WHILE_AWAY.minusMillis(20)), new TimerMsg.Tick())
                 .cmds()
                 .isEmpty());
     }
 
     @Test
     void losingTheFocusAgainDoesNotStartTheWaitsAnew() {
-        Model away = Update.update(loaded().withNow(AWAY_AT), new Msg.TerminalFocused(false))
+        Model away = Update.update(loaded().withNow(AWAY_AT), new TerminalMsg.Focused(false))
                 .model();
-        away = Update.update(away, new Msg.Tick()).model();
-        away = Update.update(at(away, Duration.ofSeconds(10)), new Msg.TerminalFocused(false))
+        away = Update.update(away, new TimerMsg.Tick()).model();
+        away = Update.update(at(away, Duration.ofSeconds(10)), new TerminalMsg.Focused(false))
                 .model();
 
-        assertFalse(Update.update(at(away, Msg.Tick.WHILE_AWAY), new Msg.Tick())
+        assertFalse(Update.update(at(away, TimerMsg.Tick.WHILE_AWAY), new TimerMsg.Tick())
                 .cmds()
                 .isEmpty());
     }
 
     @Test
     void awayTheClockIsDrawnEveryFiveSeconds() {
-        Model away = Update.update(loaded().withNow(AWAY_AT), new Msg.TerminalFocused(false))
+        Model away = Update.update(loaded().withNow(AWAY_AT), new TerminalMsg.Focused(false))
                 .model();
 
         assertEquals(away.drawn(), at(away, Model.AWAY_CLOCK.minusMillis(1)).drawn());
@@ -149,10 +152,11 @@ class FocusUpdateTest {
 
     @Test
     void awayWhatTheTimersKeepIsNotDrawn() {
-        Model away = Update.update(loaded().withNow(AWAY_AT), new Msg.TerminalFocused(false))
+        Model away = Update.update(loaded().withNow(AWAY_AT), new TerminalMsg.Focused(false))
                 .model();
 
-        assertEquals(away.drawn(), Update.update(away, new Msg.Tick()).model().drawn());
+        assertEquals(
+                away.drawn(), Update.update(away, new TimerMsg.Tick()).model().drawn());
     }
 
     private static Model at(Model model, Duration later) {

@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.feature.layout.LayoutUpdate;
 import net.vanfleteren.jazygit.feature.repos.RecentReposMsg;
 import net.vanfleteren.jazygit.feature.settings.SettingsPanelMsg;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.PopupMsg;
 import net.vanfleteren.jazygit.state.prs.PrOverviewMsg;
 
 /**
@@ -26,7 +27,7 @@ final class GlobalKeys {
                         Keymap.HELP_KEY,
                         "help.global.help",
                         event -> false,
-                        () -> new Msg.PopupDismissed(HelpPopup.class)))
+                        () -> new PopupMsg.Dismissed(HelpPopup.class)))
                 .global(new Keymap.Global.Dispatching(
                         "ctrl+r",
                         "help.global.recentRepos",

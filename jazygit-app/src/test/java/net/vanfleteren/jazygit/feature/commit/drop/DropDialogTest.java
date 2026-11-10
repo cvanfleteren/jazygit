@@ -47,7 +47,7 @@ class DropDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new Msg.PopupConfirmed(DropPopup.class)), dispatched);
+        assertEquals(java.util.List.of(new PopupMsg.Confirmed(DropPopup.class)), dispatched);
     }
 
     @Test
@@ -57,7 +57,7 @@ class DropDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new Msg.PopupDismissed(DropPopup.class)), dispatched);
+        assertEquals(java.util.List.of(new PopupMsg.Dismissed(DropPopup.class)), dispatched);
     }
 
     @Test

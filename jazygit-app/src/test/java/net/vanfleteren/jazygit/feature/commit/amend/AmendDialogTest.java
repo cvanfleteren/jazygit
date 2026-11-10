@@ -81,7 +81,7 @@ class AmendDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new Msg.PopupDismissed(AmendPopup.class)), dispatched);
+        assertEquals(java.util.List.of(new PopupMsg.Dismissed(AmendPopup.class)), dispatched);
     }
 
     @Test
@@ -118,7 +118,7 @@ class AmendDialogTest {
         }
 
         assertEquals(
-                java.util.List.of(new AmendMsg.StageAllConfirmed(), new Msg.PopupDismissed(AmendStageAllPopup.class)),
+                java.util.List.of(new AmendMsg.StageAllConfirmed(), new PopupMsg.Dismissed(AmendStageAllPopup.class)),
                 dispatched);
     }
 

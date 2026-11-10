@@ -64,7 +64,7 @@ class MetadataGuardTest {
 
     @Test
     void aTickChecksTheFilesInsteadOfReadingWhatTheyGuard() {
-        List<Cmd> cmds = Update.update(idle(), new Msg.Tick()).cmds();
+        List<Cmd> cmds = Update.update(idle(), new TimerMsg.Tick()).cmds();
 
         assertTrue(cmds.contains(new CheckMetadata()));
         assertFalse(cmds.exists(List.<Cmd>narrow(CheckMetadata.GUARDED)::contains));
@@ -72,12 +72,12 @@ class MetadataGuardTest {
 
     @Test
     void aTickChecksAgainOnceTheLastCheckCameBack() {
-        Next checking = TestModels.stepped(idle(), new Msg.Tick());
+        Next checking = TestModels.stepped(idle(), new TimerMsg.Tick());
 
-        assertFalse(Update.update(checking.model(), new Msg.Tick()).cmds().contains(new CheckMetadata()));
+        assertFalse(Update.update(checking.model(), new TimerMsg.Tick()).cmds().contains(new CheckMetadata()));
 
         Model answered = finished(TestModels.done(checking.model(), new CheckMetadata(), checked("b1", "s1", "w1")));
-        assertTrue(Update.update(answered, new Msg.Tick()).cmds().contains(new CheckMetadata()));
+        assertTrue(Update.update(answered, new TimerMsg.Tick()).cmds().contains(new CheckMetadata()));
     }
 
     @Test

@@ -366,13 +366,13 @@ class ProgramTest {
                 Runnable::run,
                 Runnable::run,
                 changes::incrementAndGet);
-        told.dispatch(new Msg.Focused("commits", false));
+        told.dispatch(new ViewMsg.Focused("commits", false));
         int focused = changes.get();
 
-        told.dispatch(new Msg.Focused("commits", false));
+        told.dispatch(new ViewMsg.Focused("commits", false));
         assertEquals(focused, changes.get());
 
-        told.dispatch(new Msg.Focused("files", false));
+        told.dispatch(new ViewMsg.Focused("files", false));
         assertEquals(focused + 1, changes.get());
     }
 
@@ -386,12 +386,12 @@ class ProgramTest {
                 queued::add,
                 queued::add,
                 changes::incrementAndGet);
-        told.dispatch(new Msg.Tick());
+        told.dispatch(new TimerMsg.Tick());
         drain(queued);
         int loaded = changes.get();
 
         // Starting the periodic loads and their finishing only changes which loads run.
-        told.dispatch(new Msg.Tick());
+        told.dispatch(new TimerMsg.Tick());
         drain(queued);
 
         assertEquals(loaded, changes.get());
@@ -404,7 +404,7 @@ class ProgramTest {
         repo.status = new RepoStatus(
                 Head.onBranch(new BranchName("main"), new Sha("aaaa")),
                 List.of(Fixtures.fileEntry("a.txt", ChangeType.UNTRACKED)));
-        program.dispatch(new Msg.Tick());
+        program.dispatch(new TimerMsg.Tick());
         settle();
 
         assertEquals(new Loaded<>(repo.status), program.model().repo().status());
@@ -416,7 +416,7 @@ class ProgramTest {
         settle();
 
         repo.status = new RepoStatus(Head.onBranch(new BranchName("main"), new Sha("bbbb")), List.of());
-        program.dispatch(new Msg.Tick());
+        program.dispatch(new TimerMsg.Tick());
         settle();
 
         assertEquals(2, repo.commitLoads);
@@ -438,7 +438,7 @@ class ProgramTest {
                 program.model().repo().status());
 
         repo.statusError = null;
-        program.dispatch(new Msg.Tick());
+        program.dispatch(new TimerMsg.Tick());
         settle();
         assertEquals(new Loaded<>(repo.status), program.model().repo().status());
     }
@@ -472,7 +472,7 @@ class ProgramTest {
         settle();
 
         program.dispatch(new NewBranchMsg.Requested(new BranchName("other")));
-        program.dispatch(new Msg.TextEdited("topic"));
+        program.dispatch(new PopupMsg.TextEdited("topic"));
         program.dispatch(new NewBranchMsg.Confirmed());
         settle();
 
@@ -494,7 +494,7 @@ class ProgramTest {
         repo.checkoutError = "fatal: exists";
 
         program.dispatch(new NewBranchMsg.Requested(new BranchName("other")));
-        program.dispatch(new Msg.TextEdited("topic"));
+        program.dispatch(new PopupMsg.TextEdited("topic"));
         program.dispatch(new NewBranchMsg.Confirmed());
         settle();
 
@@ -544,7 +544,7 @@ class ProgramTest {
         assertEquals(true, program.model().popup(CommitPopup.class).isDefined());
 
         program.dispatch(new MessageEdited(new CommitMessage("summary", "more")));
-        program.dispatch(new Msg.PopupConfirmed(CommitPopup.class));
+        program.dispatch(new PopupMsg.Confirmed(CommitPopup.class));
         settle();
 
         assertEquals(java.util.List.of("summary|more"), repo.commits);
@@ -576,7 +576,7 @@ class ProgramTest {
         program.dispatch(new RewordMsg.Requested(
                 program.model().repo().commits().toOption().get().head().sha()));
         program.dispatch(new MessageEdited(new CommitMessage("new summary", "new body")));
-        program.dispatch(new Msg.PopupConfirmed(RewordPopup.class));
+        program.dispatch(new PopupMsg.Confirmed(RewordPopup.class));
         settle();
 
         assertEquals(java.util.List.of("reword new summary|new body"), repo.commits);
@@ -594,7 +594,7 @@ class ProgramTest {
 
         program.dispatch(new CommitMsg.Requested());
         program.dispatch(new MessageEdited(new CommitMessage("summary", "")));
-        program.dispatch(new Msg.PopupConfirmed(CommitPopup.class));
+        program.dispatch(new PopupMsg.Confirmed(CommitPopup.class));
         settle();
 
         assertEquals(Option.of("Commit failed: boom"), errorText(program.model()));
@@ -996,7 +996,7 @@ class ProgramTest {
         int loaded = changes.get();
 
         clock.at(start.plusMillis(200));
-        timed.dispatch(new Msg.Tick());
+        timed.dispatch(new TimerMsg.Tick());
         assertTrue(timed.model().jobs().running().nonEmpty());
         assertTrue(timed.model()
                 .jobs()
@@ -1013,7 +1013,7 @@ class ProgramTest {
         assertEquals(HashMap.empty(), timed.model().jobs().running());
 
         clock.at(start.plusMillis(1100));
-        timed.dispatch(new Msg.Clock());
+        timed.dispatch(new TimerMsg.Clock());
 
         assertEquals(loaded + 1, changes.get());
     }

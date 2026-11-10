@@ -48,6 +48,7 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Notice;
 import net.vanfleteren.jazygit.state.OperationMsg;
+import net.vanfleteren.jazygit.state.PopupMsg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import org.junit.jupiter.api.Test;
@@ -390,7 +391,7 @@ class RebaseStackTest {
         // Enter rebases and pushes; l only rebases.
         assertEquals(
                 List.of(popup.cmd()),
-                Update.update(asking, new Msg.PopupConfirmed(StackPopups.RebaseConfirm.class))
+                Update.update(asking, new PopupMsg.Confirmed(StackPopups.RebaseConfirm.class))
                         .cmds());
         assertEquals(
                 List.of(popup.cmd().locally()),

@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.ListCursor;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.PopupMsg;
 import net.vanfleteren.jazygit.ui.TextWidth;
 import net.vanfleteren.jazygit.ui.Theme;
 import net.vanfleteren.jazygit.ui.widgets.DialogFrame;
@@ -153,7 +154,7 @@ final class StackPickDialog implements PopupView {
 
     private EventResult keys(KeyEvent event, ListCursor cursor, int line, int rows) {
         if (event.code() == KeyCode.ESCAPE) {
-            dispatch.accept(new Msg.PopupDismissed(StackPopups.Pick.class));
+            dispatch.accept(new PopupMsg.Dismissed(StackPopups.Pick.class));
         } else if (event.code() == KeyCode.ENTER) {
             dispatch.accept(new StackMsg.PickConfirmed());
         } else if (event.isChar('b')) {
@@ -161,9 +162,9 @@ final class StackPickDialog implements PopupView {
         } else if (event.isChar('t')) {
             dispatch.accept(new StackMsg.TopChosen(line));
         } else if (event.isChar('j') || event.code() == KeyCode.DOWN) {
-            dispatch.accept(new Msg.ListCursorChanged(cursor.at(Math.min(rows - 1, line + 1))));
+            dispatch.accept(new PopupMsg.ListCursorChanged(cursor.at(Math.min(rows - 1, line + 1))));
         } else if (event.isChar('k') || event.code() == KeyCode.UP) {
-            dispatch.accept(new Msg.ListCursorChanged(cursor.at(Math.max(0, line - 1))));
+            dispatch.accept(new PopupMsg.ListCursorChanged(cursor.at(Math.max(0, line - 1))));
         } else {
             return EventResult.UNHANDLED;
         }

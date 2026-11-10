@@ -63,7 +63,7 @@ class PickDialogTest {
         }
 
         assertEquals(
-                java.util.List.of(new Picked("main"), new Picked("release"), new Msg.PopupDismissed(BranchPopup.class)),
+                java.util.List.of(new Picked("main"), new Picked("release"), new PopupMsg.Dismissed(BranchPopup.class)),
                 dispatched);
     }
 
@@ -93,7 +93,7 @@ class PickDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new Msg.PopupDismissed(BranchPopup.class)), dispatched);
+        assertEquals(java.util.List.of(new PopupMsg.Dismissed(BranchPopup.class)), dispatched);
     }
 
     @Test
@@ -243,7 +243,7 @@ class PickDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new Msg.PopupDismissed(BranchPopup.class)), dispatched);
+        assertEquals(java.util.List.of(new PopupMsg.Dismissed(BranchPopup.class)), dispatched);
     }
 
     private static void type(ToolkitTestRunner runner, String keys) {

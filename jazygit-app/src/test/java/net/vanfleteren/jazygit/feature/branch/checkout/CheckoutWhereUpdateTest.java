@@ -31,7 +31,7 @@ import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.LoadStatus;
 import net.vanfleteren.jazygit.state.LoadWorktrees;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.PopupMsg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -193,7 +193,7 @@ class CheckoutWhereUpdateTest {
                 Option.of(new NewWorktreePopup(new WorktreeSource.Existing(FEATURE), "/repos/app-feature", true)),
                 where.popup());
 
-        Next confirmed = Update.update(where, new Msg.PopupConfirmed(NewWorktreePopup.class));
+        Next confirmed = Update.update(where, new PopupMsg.Confirmed(NewWorktreePopup.class));
         AddWorktreeCmd add = new AddWorktreeCmd(new WorktreeSource.Existing(FEATURE), "/repos/app-feature", true);
         assertEquals(List.of(add), confirmed.cmds());
 

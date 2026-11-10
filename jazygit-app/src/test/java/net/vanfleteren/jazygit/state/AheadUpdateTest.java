@@ -213,7 +213,7 @@ class AheadUpdateTest {
 
         assertEquals(Option.of(COMMITS), model.repo().commits().toOption());
         assertInstanceOf(Loadable.Failed.class, model.repo().ahead());
-        assertTrue(Update.update(model, new Msg.Tick()).cmds().contains(load));
+        assertTrue(Update.update(model, new TimerMsg.Tick()).cmds().contains(load));
     }
 
     @Test
@@ -325,7 +325,7 @@ class AheadUpdateTest {
                         loaded().mapRepo(repo -> repo.withAhead(Loadable.loading())),
                         new LoadMsg.Failed(load, refused("boom")))
                 .model();
-        Model retrying = TestModels.stepped(failed, new Msg.Tick()).model();
+        Model retrying = TestModels.stepped(failed, new TimerMsg.Tick()).model();
         assertTrue(retrying.jobs().runs(load));
 
         Model retried = TestModels.done(

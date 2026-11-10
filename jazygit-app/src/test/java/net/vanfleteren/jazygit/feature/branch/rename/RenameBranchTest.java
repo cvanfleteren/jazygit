@@ -32,6 +32,7 @@ import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.OperationMsg;
+import net.vanfleteren.jazygit.state.PopupMsg;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
@@ -135,7 +136,7 @@ class RenameBranchTest {
         Model asked =
                 renamed(following(Option.of(ORIGIN_FEATURE)), FEATURE, "topic").model();
 
-        Next cancelled = Update.update(asked, new Msg.PopupDismissed(RenameUpstreamPopup.class));
+        Next cancelled = Update.update(asked, new PopupMsg.Dismissed(RenameUpstreamPopup.class));
 
         assertEquals(List.of(), cancelled.cmds());
         assertEquals(Option.none(), cancelled.model().popup());

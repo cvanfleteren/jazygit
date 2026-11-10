@@ -13,6 +13,7 @@ import java.util.function.Supplier;
 import net.vanfleteren.jazygit.state.ConfirmablePopup;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.PopupMsg;
 import net.vanfleteren.jazygit.ui.widgets.DialogFrame;
 import net.vanfleteren.jazygit.ui.widgets.PopupView;
 
@@ -60,9 +61,9 @@ final class KeyedConfirmDialog<P extends ConfirmablePopup> implements PopupView 
 
     private EventResult keys(KeyEvent event, boolean offered) {
         if (event.code() == KeyCode.ENTER) {
-            dispatch.accept(new Msg.PopupConfirmed(spec.popupType()));
+            dispatch.accept(new PopupMsg.Confirmed(spec.popupType()));
         } else if (event.code() == KeyCode.ESCAPE) {
-            dispatch.accept(new Msg.PopupDismissed(spec.popupType()));
+            dispatch.accept(new PopupMsg.Dismissed(spec.popupType()));
         } else if (offered && event.isChar(spec.key())) {
             dispatch.accept(spec.other().get());
         } else {

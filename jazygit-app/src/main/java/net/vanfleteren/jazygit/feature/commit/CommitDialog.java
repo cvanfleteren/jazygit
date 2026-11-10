@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.PopupMsg;
 import net.vanfleteren.jazygit.ui.LineEditInput;
 import net.vanfleteren.jazygit.ui.SubmittableTextArea;
 import net.vanfleteren.jazygit.ui.widgets.PopupView;
@@ -156,7 +157,7 @@ public final class CommitDialog implements PopupView {
 
     private void confirm() {
         // A blank summary keeps the popup open, see CommitPopup.confirm and RewordPopup.confirm.
-        dispatch.accept(new Msg.PopupConfirmed(popupType));
+        dispatch.accept(new PopupMsg.Confirmed(popupType));
     }
 
     /**
@@ -199,6 +200,6 @@ public final class CommitDialog implements PopupView {
     }
 
     private void cancel() {
-        dispatch.accept(new Msg.PopupDismissed(popupType));
+        dispatch.accept(new PopupMsg.Dismissed(popupType));
     }
 }

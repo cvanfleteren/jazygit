@@ -50,7 +50,7 @@ class IndexRefreshUpdateTest {
         Update.Next changed = checked(checkedOut, COMMITTED);
         assertTrue(refreshes(changed));
 
-        Model refreshed = new Msg.IndexRefreshed(true).apply(changed.model()).model();
+        Model refreshed = new IndexMsg.Refreshed(true).apply(changed.model()).model();
         // The refresh wrote the index: it is too recent to tell, then looks as the refresh left it.
         assertFalse(refreshes(checked(refreshed, RECENT)));
         Model adopted = checked(refreshed, REFRESHED).model();
@@ -71,7 +71,7 @@ class IndexRefreshUpdateTest {
     @Test
     void aRefreshThatCouldNotWriteIsTriedAgainOnceTheIndexChanges() {
         Update.Next changed = checked(refreshedAt(CHECKED_OUT, NOW), COMMITTED);
-        Model failed = new Msg.IndexRefreshed(false).apply(changed.model()).model();
+        Model failed = new IndexMsg.Refreshed(false).apply(changed.model()).model();
 
         assertFalse(refreshes(checked(failed, COMMITTED)));
         assertTrue(refreshes(checked(failed, CHECKED_OUT)));
@@ -80,7 +80,7 @@ class IndexRefreshUpdateTest {
     @Test
     void awayWhileAnOperationRunsOrWhileARefreshRunsTheIndexIsLeftAlone() {
         Model model = refreshedAt(CHECKED_OUT, NOW);
-        Model away = Update.update(model, new Msg.TerminalFocused(false)).model();
+        Model away = Update.update(model, new TerminalMsg.Focused(false)).model();
 
         assertFalse(refreshes(checked(away, COMMITTED)));
         assertFalse(refreshes(checked(TestModels.running(model, MERGE), COMMITTED)));
@@ -92,11 +92,11 @@ class IndexRefreshUpdateTest {
         Model model = refreshedAt(CHECKED_OUT, NOW);
 
         assertEquals(
-                model.drawn(), new Msg.IndexRefreshed(true).apply(model).model().drawn());
+                model.drawn(), new IndexMsg.Refreshed(true).apply(model).model().drawn());
         assertEquals(model.drawn(), checked(model, COMMITTED).model().drawn());
-        assertEquals(new Msg.IndexRefreshed(true), new RefreshIndex().run(env(StubGit.of())));
+        assertEquals(new IndexMsg.Refreshed(true), new RefreshIndex().run(env(StubGit.of())));
         assertEquals(
-                new Msg.IndexRefreshed(false),
+                new IndexMsg.Refreshed(false),
                 new RefreshIndex().run(env(StubGit.of().withStatus(new StubStatus() {
                     @Override
                     public Either<GitFailure, List<ExecutedCommand>> refreshIndex() {

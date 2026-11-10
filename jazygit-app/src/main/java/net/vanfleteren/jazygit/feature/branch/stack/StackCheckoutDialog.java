@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.feature.branch.stack.StackCheckout.Landing;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.PopupMsg;
 import net.vanfleteren.jazygit.ui.widgets.DialogFrame;
 import net.vanfleteren.jazygit.ui.widgets.PopupView;
 
@@ -57,7 +58,7 @@ final class StackCheckoutDialog implements PopupView {
 
     private EventResult keys(KeyEvent event, StackCheckout checkout) {
         if (event.code() == KeyCode.ESCAPE || (!checkout.startable() && event.code() == KeyCode.ENTER)) {
-            dispatch.accept(new Msg.PopupDismissed(StackPopups.Checkout.class));
+            dispatch.accept(new PopupMsg.Dismissed(StackPopups.Checkout.class));
             return EventResult.HANDLED;
         }
         Option<Landing> landing = landing(event, checkout);

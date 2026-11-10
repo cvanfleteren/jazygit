@@ -17,13 +17,14 @@ import net.vanfleteren.jazygit.state.ConfirmablePopup;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Popup;
+import net.vanfleteren.jazygit.state.PopupMsg;
 import net.vanfleteren.jazygit.state.TextPopup;
 import net.vanfleteren.jazygit.ui.LineEditInput;
 
 /**
  * The standard popup asking for one line of text. Enter confirms it, Escape cancels. Whether it is open, and the
  * text as far as it was typed, live in the {@link Model}, as a popup of type {@code P}: the input shows the popup's
- * text, and sends a {@link Msg.TextEdited} for every change. Only the input's caret is kept here.
+ * text, and sends a {@link PopupMsg.TextEdited} for every change. Only the input's caret is kept here.
  *
  * @param <P> the popup that makes this dialog show
  */
@@ -79,7 +80,7 @@ public final class TextInputDialog<P extends TextPopup> implements PopupView {
                 .onSubmit(this::confirm)
                 .onKeyEvent(event -> event.code() == KeyCode.ESCAPE ? cancelled() : EventResult.UNHANDLED);
         return new LineEditInput(spec.placeholder().map(field::placeholder).getOrElse(field), input, spec.id())
-                .onChange(text -> dispatch.accept(new Msg.TextEdited(text)));
+                .onChange(text -> dispatch.accept(new PopupMsg.TextEdited(text)));
     }
 
     private void confirm() {
@@ -104,7 +105,7 @@ public final class TextInputDialog<P extends TextPopup> implements PopupView {
      * @param placeholder what the input shows while it is empty, if anything
      * @param onConfirm   the message for Enter; its update reads the text from the popup, and decides whether it
      *                    closes
-     * @param onCancel    the message for Escape; by default a {@link Msg.PopupDismissed}
+     * @param onCancel    the message for Escape; by default a {@link PopupMsg.Dismissed}
      * @param width       the width of the dialog, borders included; by default {@value #WIDTH}
      */
     public record Spec<P extends Popup>(
@@ -135,7 +136,7 @@ public final class TextInputDialog<P extends TextPopup> implements PopupView {
                 Function<P, String> title,
                 Option<String> placeholder,
                 Supplier<Msg> onConfirm) {
-            this(id, popupType, title, placeholder, onConfirm, () -> new Msg.PopupDismissed(popupType));
+            this(id, popupType, title, placeholder, onConfirm, () -> new PopupMsg.Dismissed(popupType));
         }
 
         /**
@@ -144,7 +145,7 @@ public final class TextInputDialog<P extends TextPopup> implements PopupView {
          */
         public static <P extends ConfirmablePopup> Spec<P> confirming(
                 String id, Class<P> popupType, Function<P, String> title, Option<String> placeholder) {
-            return new Spec<>(id, popupType, title, placeholder, () -> new Msg.PopupConfirmed(popupType));
+            return new Spec<>(id, popupType, title, placeholder, () -> new PopupMsg.Confirmed(popupType));
         }
 
         /**

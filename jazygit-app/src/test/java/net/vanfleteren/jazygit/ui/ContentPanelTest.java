@@ -109,7 +109,7 @@ class ContentPanelTest {
             SettledPilot.of(testRunner).press(dev.tamboui.tui.event.KeyCode.DOWN);
             SettledPilot.of(testRunner).pause();
         }
-        Msg.ContentScrolled down = (Msg.ContentScrolled) dispatched.getLast();
+        ViewMsg.ContentScrolled down = (ViewMsg.ContentScrolled) dispatched.getLast();
         assertEquals(area, down.area());
         assertEquals(1, down.to().row());
 
@@ -206,8 +206,8 @@ class ContentPanelTest {
         assertEquals(
                 List.of(Option.of(added)),
                 List.ofAll(dispatched)
-                        .filter(Msg.ContentScrolled.class::isInstance)
-                        .map(Msg.ContentScrolled.class::cast)
+                        .filter(ViewMsg.ContentScrolled.class::isInstance)
+                        .map(ViewMsg.ContentScrolled.class::cast)
                         .map(scrolled -> scrolled.to().mark()));
     }
 
@@ -248,7 +248,7 @@ class ContentPanelTest {
                 java.util.List.of('x'),
                 List.ofAll(global).map(KeyEvent::character).toJavaList());
         assertEquals(1, leaves.get());
-        Msg.ContentScrolled right = (Msg.ContentScrolled) dispatched.getLast();
+        ViewMsg.ContentScrolled right = (ViewMsg.ContentScrolled) dispatched.getLast();
         assertEquals(
                 new Scrolled(right.to().content(), 0, 1, io.vavr.control.Option.none(), io.vavr.control.Option.none()),
                 right.to());
@@ -282,7 +282,7 @@ class ContentPanelTest {
             SettledPilot.of(testRunner).pause();
         }
 
-        List<Scrolled> at = List.ofAll(dispatched).map(msg -> ((Msg.ContentScrolled) msg).to());
+        List<Scrolled> at = List.ofAll(dispatched).map(msg -> ((ViewMsg.ContentScrolled) msg).to());
         int bottom = at.get(0).row();
         int page = at.get(4).row();
         assertTrue(bottom > 0 && page > 1, at.toString());
@@ -314,7 +314,7 @@ class ContentPanelTest {
         assertEquals(
                 List.of(1, 2, 1),
                 List.ofAll(dispatched)
-                        .map(msg -> ((Msg.ContentScrolled) msg).to().column()));
+                        .map(msg -> ((ViewMsg.ContentScrolled) msg).to().column()));
         // What shows is scrolled too, not only where the model has it.
         assertTrue(screen.contains("│0123456789x"), screen);
         assertFalse(screen.contains("+0123456789"), screen);
@@ -344,7 +344,7 @@ class ContentPanelTest {
         }
 
         List<Integer> columns = List.ofAll(dispatched)
-                .map(msg -> ((Msg.ContentScrolled) msg).to().column());
+                .map(msg -> ((ViewMsg.ContentScrolled) msg).to().column());
         int last = columns.last();
         assertTrue(last > 0 && last < 40, columns.toString());
         assertEquals(List.fill(40 - columns.indexOf(last), last), columns.drop(columns.indexOf(last)));
@@ -674,7 +674,7 @@ class ContentPanelTest {
         assertEquals(
                 List.of(1, 0, 0),
                 List.ofAll(dispatched)
-                        .map(msg -> ((Msg.ContentScrolled) msg).to().column()));
+                        .map(msg -> ((ViewMsg.ContentScrolled) msg).to().column()));
     }
 
     @Test
@@ -768,7 +768,7 @@ class ContentPanelTest {
             SettledPilot.of(testRunner).pause();
         }
         ScrolledContent shown =
-                ((Msg.ContentScrolled) dispatched.getLast()).to().content();
+                ((ViewMsg.ContentScrolled) dispatched.getLast()).to().content();
 
         // TamboUI does not draw the columns scrolled past, so the next scroll tells where the area was.
         Model scrolled = selected.withScrolled(io.vavr.collection.HashMap.of(
@@ -781,7 +781,7 @@ class ContentPanelTest {
         }
         assertEquals(
                 new Scrolled(shown, 1, 11, io.vavr.control.Option.none(), io.vavr.control.Option.none()),
-                ((Msg.ContentScrolled) dispatched.getLast()).to());
+                ((ViewMsg.ContentScrolled) dispatched.getLast()).to());
     }
 
     @Test
@@ -931,7 +931,7 @@ class ContentPanelTest {
             int settled = gutters.get();
             SettledPilot.of(testRunner).press(KeyCode.DOWN);
             SettledPilot.of(testRunner).pause();
-            Msg.ContentScrolled down = (Msg.ContentScrolled) dispatched.getLast();
+            ViewMsg.ContentScrolled down = (ViewMsg.ContentScrolled) dispatched.getLast();
             assertEquals(Option.of(new Anchor.File("a.txt")), down.to().cursor());
             assertEquals(0, down.to().row());
             // The cursor moved over lines kept drawn: none is drawn again.
@@ -979,7 +979,7 @@ class ContentPanelTest {
             SettledPilot.of(testRunner).pause();
 
             // From the header of the commit, its lead, to the bar of its file.
-            Msg.ContentScrolled down = (Msg.ContentScrolled) dispatched.getLast();
+            ViewMsg.ContentScrolled down = (ViewMsg.ContentScrolled) dispatched.getLast();
             assertEquals(Option.of(new Anchor.File("a.txt")), down.to().cursor());
             assertEquals(0, down.to().row());
             Model moved = Update.update(model, down).model();
@@ -1022,7 +1022,7 @@ class ContentPanelTest {
             dev.tamboui.layout.Rect drawn = SettledPilot.of(testRunner).findElement(area);
 
             SettledPilot.of(testRunner).mousePress(MouseButton.LEFT, drawn.x() + 3, beta);
-            Msg.ContentScrolled clicked = (Msg.ContentScrolled) dispatched.getLast();
+            ViewMsg.ContentScrolled clicked = (ViewMsg.ContentScrolled) dispatched.getLast();
             assertEquals(
                     Option.of(new Anchor.OnLine("a.txt", net.vanfleteren.jazygit.gh.model.ReviewThread.Side.RIGHT, 2)),
                     clicked.to().cursor());
@@ -1065,7 +1065,7 @@ class ContentPanelTest {
             RenderedText.ofLarge(testRunner, () -> reviewing.render(drawn.get(), area));
             SettledPilot.of(testRunner).press('n');
             SettledPilot.of(testRunner).pause();
-            Msg.ContentScrolled next = (Msg.ContentScrolled) dispatched.getLast();
+            ViewMsg.ContentScrolled next = (ViewMsg.ContentScrolled) dispatched.getLast();
             Anchor onThread = new Anchor.Thread(
                     "T1",
                     Option.of(new Anchor.OnLine("a.txt", net.vanfleteren.jazygit.gh.model.ReviewThread.Side.RIGHT, 1)));
@@ -1160,7 +1160,7 @@ class ContentPanelTest {
             screen = RenderedText.ofLarge(testRunner, () -> reviewing.render(model.get(), area));
         }
 
-        assertEquals(1, ((Msg.ContentScrolled) dispatched.getLast()).to().column(), dispatched.toString());
+        assertEquals(1, ((ViewMsg.ContentScrolled) dispatched.getLast()).to().column(), dispatched.toString());
         // The whole diff shows a column further, its bar too, which starts with a blank.
         assertTrue(screen.contains("│modified  a.txt"), screen);
         assertTrue(screen.contains("│0123456789x"), screen);
@@ -1198,7 +1198,8 @@ class ContentPanelTest {
             RenderedText.ofLarge(testRunner, () -> reviewing.render(model.get(), area));
             SettledPilot.of(testRunner).press('v');
             SettledPilot.of(testRunner).pause();
-            assertTrue(((Msg.ContentScrolled) dispatched.getLast()).to().mark().isDefined());
+            assertTrue(
+                    ((ViewMsg.ContentScrolled) dispatched.getLast()).to().mark().isDefined());
 
             RenderedText.ofLarge(testRunner, () -> reviewing.render(model.get(), area));
             SettledPilot.of(testRunner).press(KeyCode.LEFT);
@@ -1206,7 +1207,7 @@ class ContentPanelTest {
             assertEquals(0, leaves.get());
             assertEquals(
                     Option.none(),
-                    ((Msg.ContentScrolled) dispatched.getLast()).to().mark());
+                    ((ViewMsg.ContentScrolled) dispatched.getLast()).to().mark());
 
             RenderedText.ofLarge(testRunner, () -> reviewing.render(model.get(), area));
             SettledPilot.of(testRunner).press(KeyCode.LEFT);

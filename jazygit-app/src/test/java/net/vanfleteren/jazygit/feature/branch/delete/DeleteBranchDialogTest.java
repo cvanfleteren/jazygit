@@ -63,7 +63,7 @@ class DeleteBranchDialogTest {
     @Test
     void escapeCancels() throws Exception {
         assertEquals(
-                List.of(new Msg.PopupDismissed(DeleteBranchPopup.class)),
+                List.of(new PopupMsg.Dismissed(DeleteBranchPopup.class)),
                 pressing(r -> SettledPilot.of(r).press(KeyCode.ESCAPE)));
     }
 

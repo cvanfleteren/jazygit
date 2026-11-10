@@ -21,6 +21,7 @@ import net.vanfleteren.jazygit.state.ListCursor;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Popup;
+import net.vanfleteren.jazygit.state.PopupMsg;
 import net.vanfleteren.jazygit.ui.TextWidth;
 import net.vanfleteren.jazygit.ui.Theme;
 
@@ -194,7 +195,7 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
     }
 
     private void moved(ListCursor cursor) {
-        dispatch.accept(new Msg.ListCursorChanged(cursor));
+        dispatch.accept(new PopupMsg.ListCursorChanged(cursor));
     }
 
     /**
@@ -256,7 +257,7 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
      * @param title     the title, from the popup
      * @param rows      the rows to pick from, from the popup
      * @param onPick    the message for picking a row, from what it stands for
-     * @param onCancel  the message for cancelling, by Escape; by default a {@link Msg.PopupDismissed}
+     * @param onCancel  the message for cancelling, by Escape; by default a {@link PopupMsg.Dismissed}
      * @param emptyKey  the message key of the line shown when there are no rows to pick, if any
      */
     public record Spec<P extends Popup, T>(
@@ -278,7 +279,7 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
                 Function<P, List<Row<T>>> rows,
                 Function<T, Msg> onPick,
                 Option<String> emptyKey) {
-            this(id, popupType, title, rows, onPick, () -> new Msg.PopupDismissed(popupType), emptyKey);
+            this(id, popupType, title, rows, onPick, () -> new PopupMsg.Dismissed(popupType), emptyKey);
         }
 
         /**
