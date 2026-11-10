@@ -11,10 +11,25 @@ import io.vavr.control.Option;
  * @param head    the commit its branch is at, which GitHub keeps after the branch is deleted; none when it cannot be
  *                read
  * @param base    the commit its base branch is at
- * @param threads its review threads, those of a review not submitted yet left out
+ * @param threads   its review threads, those of a review not submitted yet left out
+ * @param draft     whether it is still a draft
+ * @param reviewing what the viewer needs to approve it or ask for changes from its diff (ADR 99)
  */
 public record ReviewRemarks(
-        PullRequestDetails.State state, Option<GhCommit> head, Option<GhCommit> base, List<ReviewThread> threads) {
+        PullRequestDetails.State state,
+        Option<GhCommit> head,
+        Option<GhCommit> base,
+        List<ReviewThread> threads,
+        boolean draft,
+        PullRequestDetails.Reviewing reviewing) {
+
+    /**
+     * Remarks of a pull request that is no draft, which nothing is known to review by.
+     */
+    public ReviewRemarks(
+            PullRequestDetails.State state, Option<GhCommit> head, Option<GhCommit> base, List<ReviewThread> threads) {
+        this(state, head, base, threads, false, PullRequestDetails.Reviewing.UNKNOWN);
+    }
 
     /**
      * No threads, of an open pull request whose commits are not known.
@@ -27,6 +42,6 @@ public record ReviewRemarks(
      * These remarks with {@code threads} in place of their own, as when a comment of one was edited or deleted.
      */
     public ReviewRemarks withThreads(List<ReviewThread> threads) {
-        return new ReviewRemarks(state, head, base, threads);
+        return new ReviewRemarks(state, head, base, threads, draft, reviewing);
     }
 }

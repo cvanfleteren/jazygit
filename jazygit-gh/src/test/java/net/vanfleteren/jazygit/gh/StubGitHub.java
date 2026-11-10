@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Branches;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Conversation;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Size;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Status;
+import net.vanfleteren.jazygit.gh.model.Verdict;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
@@ -235,6 +236,12 @@ public interface StubGitHub extends GitHub {
     @Override
     default Either<GhFailure, List<ExecutedCommand>> commentOnPullRequest(int number, String body) {
         return Either.right(List.of(CliGitHub.commentCommand(number, body).executed()));
+    }
+
+    @Override
+    default Either<GhFailure, List<ExecutedCommand>> submitReview(String pullRequest, Verdict verdict, String body) {
+        return Either.right(
+                List.of(ReviewMutation.submit(pullRequest, verdict, body).executed()));
     }
 
     @Override

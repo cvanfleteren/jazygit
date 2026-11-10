@@ -25,6 +25,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Mergeable;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.ReviewThreads;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Reviewer;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.ReviewerState;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Reviewing;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Size;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Status;
@@ -60,6 +61,9 @@ class DetailsQueryTest {
             Tuple.of("changedFiles", "1"),
             Tuple.of("mergeable", "\"UNKNOWN\""),
             Tuple.of("reviewDecision", "null"),
+            Tuple.of("id", "\"\""),
+            Tuple.of("viewerDidAuthor", "false"),
+            Tuple.of("viewerLatestReview", "null"),
             Tuple.of("comments", "{ \"totalCount\": 0 }"),
             Tuple.of("labels", "{ \"nodes\": [] }"),
             Tuple.of("latestReviews", "{ \"nodes\": [] }"),
@@ -330,5 +334,25 @@ class DetailsQueryTest {
                 Either.left(new GhError.UnexpectedOutput(
                         "data.repository.pullRequest.state: expected one of OPEN, CLOSED, MERGED, got \"DRAFT\"")),
                 read(MERGED.put("state", "\"DRAFT\"")));
+    }
+
+    @Test
+    void whatTheViewerNeedsToReviewIt() {
+        assertEquals(
+                Either.right(new Reviewing("PR_kw1", true, false)),
+                read(MERGED.put("id", "\"PR_kw1\"").put("viewerDidAuthor", "true"))
+                        .map(details -> details.conversation().reviewing()));
+    }
+
+    @Test
+    void aPendingReviewOfTheViewerIsTold() {
+        assertEquals(
+                Either.right(true),
+                read(MERGED.put("viewerLatestReview", "{ \"state\": \"PENDING\" }"))
+                        .map(details -> details.conversation().reviewing().pending()));
+        assertEquals(
+                Either.right(false),
+                read(MERGED.put("viewerLatestReview", "{ \"state\": \"APPROVED\" }"))
+                        .map(details -> details.conversation().reviewing().pending()));
     }
 }

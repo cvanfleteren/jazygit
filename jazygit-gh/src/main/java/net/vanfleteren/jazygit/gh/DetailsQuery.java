@@ -13,6 +13,7 @@ import static net.vanfleteren.jazygit.json.Decoder.map2;
 import static net.vanfleteren.jazygit.json.Decoder.map3;
 import static net.vanfleteren.jazygit.json.Decoder.map4;
 import static net.vanfleteren.jazygit.json.Decoder.map5;
+import static net.vanfleteren.jazygit.json.Decoder.map6;
 import static net.vanfleteren.jazygit.json.Decoder.map8;
 import static net.vanfleteren.jazygit.json.Decoder.nullable;
 import static net.vanfleteren.jazygit.json.Decoder.string;
@@ -36,6 +37,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Mergeable;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.ReviewThreads;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Reviewer;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.ReviewerState;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Reviewing;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Size;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Status;
@@ -56,6 +58,7 @@ final class DetailsQuery {
             repository(owner: $owner, name: $name) { \
             nameWithOwner url pullRequest(number: $number) { number title body author { login } state isDraft headRefName \
             baseRefName headRefOid baseRefOid baseRef { %s } %s createdAt additions deletions changedFiles mergeable reviewDecision \
+            id viewerDidAuthor viewerLatestReview { state } \
             comments { totalCount } \
             labels(first: 100) { nodes { name } } latestReviews(first: 100) { nodes { author { login } state } } \
             reviewRequests(first: 100) { nodes { requestedReviewer { __typename ... on User { login } \
@@ -167,12 +170,20 @@ final class DetailsQuery {
                     threads.count(thread -> !thread._1()),
                     threads.map(thread -> thread._2()).sum().intValue()));
 
-    static final Decoder<Conversation> CONVERSATION = map5(
+    // What the viewer needs to review it: its node id, whether it is theirs, and whether they have a pending review.
+    static final Decoder<Reviewing> REVIEWING = map3(
+            field("id", string()),
+            field("viewerDidAuthor", bool()),
+            field("viewerLatestReview", nullable(field("state", string()))).map(state -> state.contains("PENDING")),
+            Reviewing::new);
+
+    static final Decoder<Conversation> CONVERSATION = map6(
             field("reviewDecision", nullable(string())).map(decision -> CliGitHub.review(decision.getOrElse(""))),
             REVIEWERS,
             at("comments.totalCount", integer()),
             field("reviewThreads", THREADS),
             at("labels.nodes", list(field("name", string()))),
+            REVIEWING,
             Conversation::new);
 
     // The checks on its latest commit, and the workflow runs on it that wait to start; none without a commit.

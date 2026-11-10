@@ -33,7 +33,8 @@ def details(repository: str, branch: str, head: str, base: str) -> dict:
         "headRefName": branch, "baseRefName": "main", "headRefOid": head, "baseRefOid": base,
         "baseRef": {"compare": {"behindBy": 0}},
         "stackEntry": None, "stack": None, "createdAt": DATE, "additions": 2, "deletions": 0, "changedFiles": 2,
-        "mergeable": "MERGEABLE", "reviewDecision": None, "comments": {"totalCount": 0},
+        "mergeable": "MERGEABLE", "reviewDecision": None, "id": "PR_1", "viewerDidAuthor": False,
+        "viewerLatestReview": None, "comments": {"totalCount": 0},
         "labels": {"nodes": []}, "latestReviews": {"nodes": []}, "reviewRequests": {"nodes": []},
         "timelineItems": {"nodes": []},
         "commits": {"totalCount": 2, "nodes": [
@@ -101,7 +102,8 @@ def threads(head: str, base: str) -> list:
                     {"id": f"IC_{body}", "fullDatabaseId": str(len(body)), "author": {"login": "reviewer"}, "createdAt": DATE, "body": body, "state": "SUBMITTED",
                      "isMinimized": False, "minimizedReason": None, "viewerCanUpdate": True, "viewerCanDelete": True, "viewerCanReact": True, "reactionGroups": []}]}}
     return [{"data": {"repository": {"pullRequest": {
-        "state": "OPEN", "headRefOid": head, "baseRefOid": base,
+        "state": "OPEN", "headRefOid": head, "baseRefOid": base, "isDraft": False, "id": "PR_1",
+        "viewerDidAuthor": False, "viewerLatestReview": None,
         "reviewThreads": {"pageInfo": {"hasNextPage": False, "endCursor": None},
                           "nodes": [thread(False, "Why **b**?"), thread(True, "Settled already")]},
     }}}}]
@@ -269,7 +271,8 @@ def replied(head: str, base: str) -> list:
                 "isMinimized": hidden, "minimizedReason": "SPAM" if hidden else None,
                 "viewerCanUpdate": True, "viewerCanDelete": True, "viewerCanReact": True, "reactionGroups": []}
     return [{"data": {"repository": {"pullRequest": {
-        "state": "OPEN", "headRefOid": head, "baseRefOid": base,
+        "state": "OPEN", "headRefOid": head, "baseRefOid": base, "isDraft": False, "id": "PR_1",
+        "viewerDidAuthor": False, "viewerLatestReview": None,
         "reviewThreads": {"pageInfo": {"hasNextPage": False, "endCursor": None}, "nodes": [{
             "id": "PRRT_1", "path": "b.txt", "diffSide": "RIGHT", "line": 1, "startLine": None,
             "startDiffSide": None, "originalLine": 1, "isResolved": False, "isOutdated": False, "subjectType": "LINE",

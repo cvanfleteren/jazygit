@@ -200,6 +200,12 @@ public interface GitHub {
     Either<GhFailure, List<ExecutedCommand>> commentOnPullRequest(int number, String body);
 
     /**
+     * Submits a review saying {@code verdict}, with {@code body}, which may be empty to approve, on the pull request
+     * with node id {@code pullRequest} (ADR 99).
+     */
+    Either<GhFailure, List<ExecutedCommand>> submitReview(String pullRequest, Verdict verdict, String body);
+
+    /**
      * Starts {@code thread} on pull request {@code number}, at its head commit {@code commit}, published at once
      * (ADR 60).
      */

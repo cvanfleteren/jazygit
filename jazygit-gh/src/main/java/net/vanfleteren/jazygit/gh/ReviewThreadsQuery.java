@@ -10,8 +10,8 @@ import static net.vanfleteren.jazygit.json.Decoder.integer;
 import static net.vanfleteren.jazygit.json.Decoder.list;
 import static net.vanfleteren.jazygit.json.Decoder.map2;
 import static net.vanfleteren.jazygit.json.Decoder.map3;
-import static net.vanfleteren.jazygit.json.Decoder.map4;
 import static net.vanfleteren.jazygit.json.Decoder.map5;
+import static net.vanfleteren.jazygit.json.Decoder.map6;
 import static net.vanfleteren.jazygit.json.Decoder.map8;
 import static net.vanfleteren.jazygit.json.Decoder.nullable;
 import static net.vanfleteren.jazygit.json.Decoder.string;
@@ -47,6 +47,7 @@ final class ReviewThreadsQuery {
     static final String QUERY = """
             query($owner: String!, $name: String!, $number: Int!, $endCursor: String) { \
             repository(owner: $owner, name: $name) { pullRequest(number: $number) { state headRefOid baseRefOid \
+            isDraft id viewerDidAuthor viewerLatestReview { state } \
             reviewThreads(first: 100, after: $endCursor) { pageInfo { hasNextPage endCursor } \
             nodes { id path diffSide line startLine startDiffSide originalLine isResolved isOutdated subjectType \
             viewerCanReply viewerCanResolve viewerCanUnresolve \
@@ -148,22 +149,23 @@ final class ReviewThreadsQuery {
                             id,
                             rights)));
 
-    // One page: its state, the commits, and its threads.
+    // One page: its state, the commits, its threads, and what the viewer needs to review it (ADR 99).
     static final Decoder<ReviewRemarks> PAGE = at(
             "data.repository.pullRequest",
-            map4(
+            map6(
                     field("state", enumOf(PullRequestDetails.State.class)),
                     field("headRefOid", nullable(string())).map(oid -> oid.flatMap(GhCommit::parse)),
                     field("baseRefOid", nullable(string())).map(oid -> oid.flatMap(GhCommit::parse)),
                     at("reviewThreads.nodes", list(THREAD)),
-                    (state, head, base, threads) ->
-                            new ReviewRemarks(state, head, base, threads.flatMap(thread -> thread))));
+                    field("isDraft", bool()),
+                    DetailsQuery.REVIEWING,
+                    (state, head, base, threads, draft, reviewing) ->
+                            new ReviewRemarks(state, head, base, threads.flatMap(thread -> thread), draft, reviewing)));
 
-    // All pages, as one array: the state and the commits as the first page has them, and the threads of all.
+    // All pages, as one array: the pull request as the first page has it, and the threads of all.
     static final Decoder<ReviewRemarks> DECODER = list(PAGE)
             .map(pages -> pages.headOption()
-                    .map(first -> new ReviewRemarks(
-                            first.state(), first.head(), first.base(), pages.flatMap(ReviewRemarks::threads)))
+                    .map(first -> first.withThreads(pages.flatMap(ReviewRemarks::threads)))
                     .getOrElse(ReviewRemarks::none));
 
     private ReviewThreadsQuery() {}
