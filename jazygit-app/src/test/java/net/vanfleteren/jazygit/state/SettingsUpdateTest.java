@@ -18,7 +18,7 @@ class SettingsUpdateTest {
 
     private static final Path FILE = Path.of("/config/jazygit/config.toml");
     private static final Settings DARCULA = Settings.DEFAULT.withTheme(ThemeName.DARCULA);
-    private static final Cmd.SaveSettings SAVE = new Cmd.SaveSettings(Settings.DEFAULT, DARCULA);
+    private static final SaveSettings SAVE = new SaveSettings(Settings.DEFAULT, DARCULA);
 
     private static Env env(SettingsStore settings) {
         return new Env(StubGit.of(), StubGitHub.empty(), settings);

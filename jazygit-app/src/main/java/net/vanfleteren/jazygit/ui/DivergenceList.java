@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.LoadDivergence;
 import net.vanfleteren.jazygit.ui.widgets.Pane;
 
 /**
@@ -25,7 +26,7 @@ class DivergenceList {
     // The highlighted row at the last render, which tells which way the highlight moved.
     private int selected;
     // Which divergence was listed at the last render, by the load that reads it.
-    private Option<Cmd.LoadDivergence> shown = Option.none();
+    private Option<LoadDivergence> shown = Option.none();
 
     /**
      * @param id         the id of the pane the divergence is listed in
@@ -104,7 +105,7 @@ class DivergenceList {
      * Remembers which divergence is shown; one just opened starts at its first commit.
      */
     private void follow(Option<DivergenceView> divergence) {
-        Option<Cmd.LoadDivergence> now = divergence.map(DivergenceView::load);
+        Option<LoadDivergence> now = divergence.map(DivergenceView::load);
         if (now.isDefined() && !now.equals(shown)) {
             list.select(0);
             selected = 0;

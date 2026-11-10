@@ -33,7 +33,7 @@ class TargetTest {
     @Test
     void whatTheRepositoryHoldsStaysWhenReadingItAgainFails() {
         Model loaded = TestModels.loaded();
-        Target<?> status = new Cmd.LoadStatus().target();
+        Target<?> status = new LoadStatus().target();
 
         assertEquals(
                 loaded.repo().status(), status.failed(loaded, FAILURE).repo().status());
@@ -43,7 +43,7 @@ class TargetTest {
     @Test
     void readingWhatIsAlreadyHeldKeepsTheSameModel() {
         Model loaded = TestModels.loaded();
-        Cmd.LoadStatus status = new Cmd.LoadStatus();
+        LoadStatus status = new LoadStatus();
 
         assertSame(
                 loaded,
@@ -53,7 +53,7 @@ class TargetTest {
     @Test
     void whatAViewShowsIsReplacedByAFailure() {
         Model shown = withStashDetail(TestModels.loaded(), SHA, new Loadable.Loaded<>(CHANGES));
-        Target<DiffText> detail = new Cmd.LoadStashDetail(SHA, options(shown)).target();
+        Target<DiffText> detail = new LoadStashDetail(SHA, options(shown)).target();
 
         Model failed = detail.failed(shown, FAILURE);
 
@@ -64,7 +64,7 @@ class TargetTest {
     @Test
     void whatIsReadForAnotherItemThanTheOneShownIsDropped() {
         Model shown = withStashDetail(TestModels.loaded(), new Sha("other"), Loadable.loading());
-        Target<DiffText> detail = new Cmd.LoadStashDetail(SHA, options(shown)).target();
+        Target<DiffText> detail = new LoadStashDetail(SHA, options(shown)).target();
 
         assertFalse(detail.wanted(shown));
         assertSame(shown, detail.reload(shown, CHANGES));
@@ -74,8 +74,7 @@ class TargetTest {
     @Test
     void whatIsReadForACommitAndThatReadingItFailedGoToEveryPreviewOfIt() {
         Model shown = everyPreviewOf(SHA, Loadable.loading());
-        Target<DiffText> ofBranch =
-                new Cmd.LoadCommitDetail(SHA, options(shown), Cmd.Slot.BRANCH_COMMITS_DETAIL).target();
+        Target<DiffText> ofBranch = new LoadCommitDetail(SHA, options(shown), Cmd.Slot.BRANCH_COMMITS_DETAIL).target();
 
         Model read = ofBranch.reload(shown, CHANGES);
         Model failed = ofBranch.failed(shown, FAILURE);
@@ -87,11 +86,9 @@ class TargetTest {
     @Test
     void eachPreviewOfACommitIsReadAgainOnlyWhenItsOwnFailed() {
         Model shown = everyPreviewOf(SHA, new Loadable.Loaded<>(CHANGES));
-        Target<DiffText> ofCommits = new Cmd.LoadCommitDetail(SHA, options(shown)).target();
-        Target<DiffText> ofDivergence =
-                new Cmd.LoadCommitDetail(SHA, options(shown), Cmd.Slot.DIVERGENCE_DETAIL).target();
-        Target<DiffText> ofBranch =
-                new Cmd.LoadCommitDetail(SHA, options(shown), Cmd.Slot.BRANCH_COMMITS_DETAIL).target();
+        Target<DiffText> ofCommits = new LoadCommitDetail(SHA, options(shown)).target();
+        Target<DiffText> ofDivergence = new LoadCommitDetail(SHA, options(shown), Cmd.Slot.DIVERGENCE_DETAIL).target();
+        Target<DiffText> ofBranch = new LoadCommitDetail(SHA, options(shown), Cmd.Slot.BRANCH_COMMITS_DETAIL).target();
         Option<Preview<Sha, DiffText>> failed = Option.of(new Preview<>(SHA, new Loadable.Failed<>(FAILURE)));
 
         Model commitsFailed = shown.mapRepoView(repoView -> repoView.withCommitDetail(failed));

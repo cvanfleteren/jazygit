@@ -67,6 +67,11 @@ import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.LoadAhead;
+import net.vanfleteren.jazygit.state.LoadBranches;
+import net.vanfleteren.jazygit.state.LoadCommitFiles;
+import net.vanfleteren.jazygit.state.LoadStatus;
+import net.vanfleteren.jazygit.state.LoadWorktrees;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.prs.LoadRepositoryPullRequests;
@@ -1383,7 +1388,7 @@ class PullRequestUpdateTest {
                     opened.model().repoView().commitFiles());
             assertEquals(
                     List.of(
-                            new Cmd.LoadCommitFiles(of),
+                            new LoadCommitFiles(of),
                             new CommitFilesCmd.LoadReviewRemarks(42, HashSet.empty(), 0),
                             new CommitFilesCmd.LoadCollapsed("owner/repo", 42)),
                     opened.cmds());
@@ -1439,7 +1444,7 @@ class PullRequestUpdateTest {
                 opened.model().repoView().commitFiles());
         assertTrue(opened.cmds()
                 .containsAll(List.of(
-                        new Cmd.LoadCommitFiles(of), new CommitFilesCmd.LoadReviewRemarks(42, HashSet.empty(), 0))));
+                        new LoadCommitFiles(of), new CommitFilesCmd.LoadReviewRemarks(42, HashSet.empty(), 0))));
     }
 
     @Test
@@ -1490,7 +1495,7 @@ class PullRequestUpdateTest {
                 opened.model().repoView().commitFiles());
         assertEquals(
                 List.of(
-                        new Cmd.LoadCommitFiles(of),
+                        new LoadCommitFiles(of),
                         new CommitFilesCmd.LoadReviewRemarks(42, HashSet.empty(), 0),
                         new CommitFilesCmd.LoadCollapsed("owner/repo", 42)),
                 opened.cmds());
@@ -1499,7 +1504,7 @@ class PullRequestUpdateTest {
     @Test
     void shiftFOnABranchWithoutAPullRequestShowsItsFilesAgainstItsBase() {
         CommitFilesView.Changes of = new CommitFilesView.Changes.OfBranch(
-                UNPUSHED.name(), new Cmd.LoadAhead.Base(new BranchRef.Local(MAIN.name()), MAIN.tip()), UNPUSHED.tip());
+                UNPUSHED.name(), new LoadAhead.Base(new BranchRef.Local(MAIN.name()), MAIN.tip()), UNPUSHED.tip());
         // Also when it is not known whether it has one: the pull requests are not read yet, or reading them failed.
         for (Model shown : List.of(
                 withPr(),
@@ -1511,7 +1516,7 @@ class PullRequestUpdateTest {
             assertEquals(
                     Option.of(CommitFilesView.of(of, "branches", "files")),
                     opened.model().repoView().commitFiles());
-            assertEquals(List.of(new Cmd.LoadCommitFiles(of)), opened.cmds());
+            assertEquals(List.of(new LoadCommitFiles(of)), opened.cmds());
             assertFalse(opened.cmds().head().background());
         }
     }
@@ -1557,7 +1562,7 @@ class PullRequestUpdateTest {
 
         assertEquals(Option.none(), read.model().repoView().commitFiles());
         assertEquals(Option.none(), read.model().popup(PullRequestPopup.class));
-        assertFalse(read.cmds().exists(cmd -> cmd instanceof Cmd.LoadCommitFiles));
+        assertFalse(read.cmds().exists(cmd -> cmd instanceof LoadCommitFiles));
     }
 
     @Test
@@ -2414,7 +2419,7 @@ class PullRequestUpdateTest {
         assertEquals(
                 Option.of(CommitFilesView.of(of, "branches", "files")),
                 opened.model().repoView().commitFiles());
-        assertTrue(opened.cmds().contains(new Cmd.LoadCommitFiles(of)));
+        assertTrue(opened.cmds().contains(new LoadCommitFiles(of)));
     }
 
     @Test
@@ -2445,7 +2450,7 @@ class PullRequestUpdateTest {
         assertEquals(
                 Option.of(CommitFilesView.of(of, "branches", "files")),
                 opened.model().repoView().commitFiles());
-        assertTrue(opened.cmds().contains(new Cmd.LoadCommitFiles(of)));
+        assertTrue(opened.cmds().contains(new LoadCommitFiles(of)));
     }
 
     @Test
@@ -2669,17 +2674,17 @@ class PullRequestUpdateTest {
                 .model();
         Next branches = TestModels.done(
                 model,
-                Cmd.LoadBranches.LISTED,
+                LoadBranches.LISTED,
                 TestModels.branchesLoaded(new AllBranches(TestModels.BRANCHES, List.empty())));
         Next worktrees = TestModels.done(
                 TestModels.started(branches).model(),
-                new Cmd.LoadWorktrees(),
+                new LoadWorktrees(),
                 new LoadMsg.WorktreesLoaded(List.of(new Worktree(
                         java.nio.file.Path.of("/repos/app"), Option.none(), true, true, Option.none(), false))));
 
         Next status = TestModels.done(
                 TestModels.started(worktrees).model(),
-                new Cmd.LoadStatus(),
+                new LoadStatus(),
                 new LoadMsg.StatusLoaded(new RepoStatus(
                         Head.onBranch(new BranchName("main"), new Sha("aaaa")),
                         List.of(Fixtures.fileEntry("a.txt", ChangeType.MODIFIED)))));

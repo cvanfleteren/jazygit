@@ -33,6 +33,7 @@ import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.RepositoryTheme;
+import net.vanfleteren.jazygit.state.SaveSettings;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
 
@@ -174,7 +175,7 @@ class SettingsPanelUpdateTest {
         assertEquals(Option.none(), latest.model().preferences().settings().ghExecutable());
         assertEquals(
                 List.of(
-                        new Cmd.SaveSettings(saved, TestModels.PLAIN.settings()),
+                        new SaveSettings(saved, TestModels.PLAIN.settings()),
                         new SettingsPanelCmd.Reopen(Landing.START)),
                 latest.cmds());
     }
@@ -199,7 +200,7 @@ class SettingsPanelUpdateTest {
         assertEquals(chosen, next.model().preferences().settings());
         assertEquals(
                 List.of(
-                        new Cmd.SaveSettings(TestModels.PLAIN.settings(), chosen),
+                        new SaveSettings(TestModels.PLAIN.settings(), chosen),
                         new SettingsPanelCmd.Reopen(Landing.START)),
                 next.cmds());
     }
@@ -270,7 +271,7 @@ class SettingsPanelUpdateTest {
 
         assertFalse(off.model().preferences().settings().animations());
         assertEquals(Option.of(READ.withAnimations(false)), off.model().popup(SettingsPanelPopup.class));
-        assertEquals(List.of(new Cmd.SaveSettings(kept, kept.withAnimations(false))), off.cmds());
+        assertEquals(List.of(new SaveSettings(kept, kept.withAnimations(false))), off.cmds());
 
         Next on = Update.update(off.model(), new SettingsPanelMsg.AnimationsToggled());
 
@@ -319,7 +320,7 @@ class SettingsPanelUpdateTest {
 
         assertEquals(Option.none(), next.model().popup());
         assertEquals(chosen, next.model().preferences().settings());
-        assertEquals(List.of(new Cmd.SaveSettings(kept, chosen)), next.cmds());
+        assertEquals(List.of(new SaveSettings(kept, chosen)), next.cmds());
     }
 
     @Test
@@ -335,7 +336,7 @@ class SettingsPanelUpdateTest {
                 set.openPopup(new AccountBrowserPopup(alice, "  ")), new SettingsPanelMsg.BrowserEntered());
 
         assertEquals(AccountBrowsers.NONE, next.model().preferences().settings().browsers());
-        assertEquals(List.of(new Cmd.SaveSettings(kept, kept.withBrowsers(AccountBrowsers.NONE))), next.cmds());
+        assertEquals(List.of(new SaveSettings(kept, kept.withBrowsers(AccountBrowsers.NONE))), next.cmds());
     }
 
     @Test

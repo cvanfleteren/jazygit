@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Label;
 import net.vanfleteren.jazygit.state.Operation;
 
@@ -72,7 +73,7 @@ public sealed interface PullRequestCmd extends Cmd {
 
         @Override
         public Msg run(Env env) {
-            return env.gitHub().openPullRequest(number).fold(this::failedWith, this::succeeded);
+            return env.gitHub().openPullRequest(number).mapLeft(Failure::of).fold(this::failed, this::succeeded);
         }
     }
 
@@ -92,8 +93,9 @@ public sealed interface PullRequestCmd extends Cmd {
         public Msg run(Env env) {
             return env.gitHub()
                     .mergePullRequest(number, head, method)
+                    .mapLeft(Failure::of)
                     .fold(
-                            this::failedWith,
+                            this::failed,
                             merging -> new PullRequestMsg.MergeAsked(this, merging.status(), merging.commands()));
         }
     }
@@ -117,7 +119,8 @@ public sealed interface PullRequestCmd extends Cmd {
         public Msg run(Env env) {
             return env.gitHub()
                     .mergeStatus(number, id)
-                    .fold(this::failedWith, status -> new PullRequestMsg.MergeChecked(number, id, status));
+                    .mapLeft(Failure::of)
+                    .fold(this::failed, status -> new PullRequestMsg.MergeChecked(number, id, status));
         }
 
         @Override
@@ -138,7 +141,7 @@ public sealed interface PullRequestCmd extends Cmd {
 
         @Override
         public Msg run(Env env) {
-            return env.gitHub().closePullRequest(number).fold(this::failedWith, this::succeeded);
+            return env.gitHub().closePullRequest(number).mapLeft(Failure::of).fold(this::failed, this::succeeded);
         }
     }
 
@@ -170,7 +173,7 @@ public sealed interface PullRequestCmd extends Cmd {
 
         @Override
         public Msg run(Env env) {
-            return env.gitHub().setDraft(number, draft).fold(this::failedWith, this::succeeded);
+            return env.gitHub().setDraft(number, draft).mapLeft(Failure::of).fold(this::failed, this::succeeded);
         }
 
         @Override
@@ -194,7 +197,8 @@ public sealed interface PullRequestCmd extends Cmd {
         public Msg run(Env env) {
             return env.gitHub()
                     .pullRequestDetails(number)
-                    .fold(this::failedWith, details -> new PullRequestMsg.DetailsLoaded(number, read, details));
+                    .mapLeft(Failure::of)
+                    .fold(this::failed, details -> new PullRequestMsg.DetailsLoaded(number, read, details));
         }
 
         @Override

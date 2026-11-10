@@ -20,17 +20,17 @@ public sealed interface LoadMsg extends Msg {
     /**
      * The load this is the outcome of.
      */
-    Cmd.Load cmd();
+    Load cmd();
 
     /**
-     * What a {@link Cmd.Targeted} load read, to keep in its {@link Target}.
+     * What a {@link Targeted} load read, to keep in its {@link Target}.
      *
      * @param <T> what the load read
      */
     sealed interface Read<T> extends LoadMsg {
 
         @Override
-        Cmd.Targeted<T> cmd();
+        Targeted<T> cmd();
 
         /**
          * What the load read.
@@ -53,8 +53,8 @@ public sealed interface LoadMsg extends Msg {
         }
 
         @Override
-        public Cmd.LoadStatus cmd() {
-            return new Cmd.LoadStatus();
+        public LoadStatus cmd() {
+            return new LoadStatus();
         }
     }
 
@@ -62,19 +62,19 @@ public sealed interface LoadMsg extends Msg {
      * The local and the remote-tracking branches, read at the same moment, with the parents of the branches and how
      * far each is from its base, read right after; none when the parents could not be read.
      */
-    record BranchesLoaded(Cmd.LoadBranches cmd, AllBranches branches, Option<Bases> bases) implements LoadMsg {}
+    record BranchesLoaded(LoadBranches cmd, AllBranches branches, Option<Bases> bases) implements LoadMsg {}
 
     /**
-     * What each of the loads that {@link Cmd.CheckMetadata} guards is read from looks like now; none when that
+     * What each of the loads that {@link CheckMetadata} guards is read from looks like now; none when that
      * cannot be told, and the load is then to run anyway. And what the index looks like, which is written anew once it
      * changed (ADR 97); none when that cannot be told yet.
      */
-    record MetadataChecked(List<Tuple2<Cmd.Load, Option<MetadataStamp>>> stamps, Option<MetadataStamp> index)
+    record MetadataChecked(List<Tuple2<Load, Option<MetadataStamp>>> stamps, Option<MetadataStamp> index)
             implements LoadMsg {
 
         @Override
-        public Cmd.CheckMetadata cmd() {
-            return new Cmd.CheckMetadata();
+        public CheckMetadata cmd() {
+            return new CheckMetadata();
         }
     }
 
@@ -86,8 +86,8 @@ public sealed interface LoadMsg extends Msg {
         }
 
         @Override
-        public Cmd.LoadStashes cmd() {
-            return new Cmd.LoadStashes();
+        public LoadStashes cmd() {
+            return new LoadStashes();
         }
     }
 
@@ -99,8 +99,8 @@ public sealed interface LoadMsg extends Msg {
         }
 
         @Override
-        public Cmd.LoadWorktrees cmd() {
-            return new Cmd.LoadWorktrees();
+        public LoadWorktrees cmd() {
+            return new LoadWorktrees();
         }
     }
 
@@ -110,8 +110,8 @@ public sealed interface LoadMsg extends Msg {
     record WorktreeChangesLoaded(List<String> worktrees, Map<String, Boolean> changes) implements LoadMsg {
 
         @Override
-        public Cmd.LoadWorktreeChanges cmd() {
-            return new Cmd.LoadWorktreeChanges(worktrees);
+        public LoadWorktreeChanges cmd() {
+            return new LoadWorktreeChanges(worktrees);
         }
     }
 
@@ -127,7 +127,7 @@ public sealed interface LoadMsg extends Msg {
     /**
      * The log of HEAD, with what {@code load} read of it after.
      */
-    record CommitsLoaded(List<Commit> commits, Cmd.LoadAhead load, Either<Failure, Option<Ahead>> ahead)
+    record CommitsLoaded(List<Commit> commits, LoadAhead load, Either<Failure, Option<Ahead>> ahead)
             implements Read<List<Commit>> {
 
         @Override
@@ -136,8 +136,8 @@ public sealed interface LoadMsg extends Msg {
         }
 
         @Override
-        public Cmd.LoadCommits cmd() {
-            return new Cmd.LoadCommits(load);
+        public LoadCommits cmd() {
+            return new LoadCommits(load);
         }
     }
 
@@ -150,18 +150,18 @@ public sealed interface LoadMsg extends Msg {
         }
 
         @Override
-        public Cmd.SearchCommits cmd() {
-            return new Cmd.SearchCommits(query, notOn);
+        public SearchCommits cmd() {
+            return new SearchCommits(query, notOn);
         }
     }
 
     /**
      * The commits {@code load} read: none when there was no base to compare with.
      */
-    record AheadLoaded(Cmd.LoadAhead load, Option<Ahead> ahead) implements LoadMsg {
+    record AheadLoaded(LoadAhead load, Option<Ahead> ahead) implements LoadMsg {
 
         @Override
-        public Cmd.LoadAhead cmd() {
+        public LoadAhead cmd() {
             return load;
         }
     }
@@ -169,8 +169,7 @@ public sealed interface LoadMsg extends Msg {
     /**
      * The log of {@code branch}, with what {@code load} read of it after.
      */
-    record BranchLogLoaded(
-            BranchRef branch, List<Commit> commits, Cmd.LoadAhead load, Either<Failure, Option<Ahead>> ahead)
+    record BranchLogLoaded(BranchRef branch, List<Commit> commits, LoadAhead load, Either<Failure, Option<Ahead>> ahead)
             implements Read<List<Commit>> {
 
         @Override
@@ -179,8 +178,8 @@ public sealed interface LoadMsg extends Msg {
         }
 
         @Override
-        public Cmd.LoadBranchLog cmd() {
-            return new Cmd.LoadBranchLog(branch, load);
+        public LoadBranchLog cmd() {
+            return new LoadBranchLog(branch, load);
         }
     }
 
@@ -192,8 +191,8 @@ public sealed interface LoadMsg extends Msg {
         }
 
         @Override
-        public Cmd.LoadDivergence cmd() {
-            return new Cmd.LoadDivergence(branch, other);
+        public LoadDivergence cmd() {
+            return new LoadDivergence(branch, other);
         }
     }
 
@@ -217,8 +216,8 @@ public sealed interface LoadMsg extends Msg {
         }
 
         @Override
-        public Cmd.LoadCommitDetail cmd() {
-            return new Cmd.LoadCommitDetail(sha, options, preview);
+        public LoadCommitDetail cmd() {
+            return new LoadCommitDetail(sha, options, preview);
         }
     }
 
@@ -230,8 +229,8 @@ public sealed interface LoadMsg extends Msg {
         }
 
         @Override
-        public Cmd.LoadStashDetail cmd() {
-            return new Cmd.LoadStashDetail(sha, options);
+        public LoadStashDetail cmd() {
+            return new LoadStashDetail(sha, options);
         }
     }
 
@@ -255,8 +254,8 @@ public sealed interface LoadMsg extends Msg {
         }
 
         @Override
-        public Cmd.LoadFileDiff cmd() {
-            return new Cmd.LoadFileDiff(files, options);
+        public LoadFileDiff cmd() {
+            return new LoadFileDiff(files, options);
         }
     }
 
@@ -264,11 +263,11 @@ public sealed interface LoadMsg extends Msg {
      * What the files the diff {@code load} is read from look like now; none when that cannot be told, and it is then
      * to be read anyway.
      */
-    record FileDiffChecked(Cmd.LoadFileDiff load, Option<MetadataStamp> stamp) implements LoadMsg {
+    record FileDiffChecked(LoadFileDiff load, Option<MetadataStamp> stamp) implements LoadMsg {
 
         @Override
-        public Cmd.CheckFileDiff cmd() {
-            return new Cmd.CheckFileDiff(load);
+        public CheckFileDiff cmd() {
+            return new CheckFileDiff(load);
         }
     }
 
@@ -280,8 +279,8 @@ public sealed interface LoadMsg extends Msg {
         }
 
         @Override
-        public Cmd.LoadCommitFiles cmd() {
-            return new Cmd.LoadCommitFiles(of);
+        public LoadCommitFiles cmd() {
+            return new LoadCommitFiles(of);
         }
     }
 
@@ -294,15 +293,15 @@ public sealed interface LoadMsg extends Msg {
         }
 
         @Override
-        public Cmd.LoadCommitFileDiff cmd() {
-            return new Cmd.LoadCommitFileDiff(of, files, options);
+        public LoadCommitFileDiff cmd() {
+            return new LoadCommitFileDiff(of, files, options);
         }
     }
 
     /**
      * The diff of a file read again with the whole file as context, to show more of it (ADR 77).
      */
-    record WholeFileRead(Cmd.ReadWholeFile cmd, DiffText whole) implements Read<DiffText> {
+    record WholeFileRead(ReadWholeFile cmd, DiffText whole) implements Read<DiffText> {
 
         @Override
         public DiffText value() {
@@ -310,10 +309,5 @@ public sealed interface LoadMsg extends Msg {
         }
     }
 
-    record Failed(Cmd.Load cmd, Failure failure) implements LoadMsg {}
-
-    /**
-     * {@code cmd} did not run: a newer load for its {@link Cmd#slot() slot} was asked for before it started.
-     */
-    record Skipped(Cmd.Load cmd) implements LoadMsg {}
+    record Failed(Load cmd, Failure failure) implements LoadMsg {}
 }

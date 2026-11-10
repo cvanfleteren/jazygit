@@ -212,15 +212,15 @@ public record CommitFilesView(
     /**
      * The load of the files.
      */
-    public Cmd.LoadCommitFiles load() {
-        return new Cmd.LoadCommitFiles(of);
+    public LoadCommitFiles load() {
+        return new LoadCommitFiles(of);
     }
 
     /**
      * The load of the diff of {@code files}, read with {@code options}.
      */
-    public Cmd.LoadCommitFileDiff diffLoad(List<CommitFile> files, DiffOptions options) {
-        return new Cmd.LoadCommitFileDiff(of, files, options);
+    public LoadCommitFileDiff diffLoad(List<CommitFile> files, DiffOptions options) {
+        return new LoadCommitFileDiff(of, files, options);
     }
 
     /**
@@ -295,7 +295,7 @@ public record CommitFilesView(
          * @param base   the base of ADR 20 it is compared with, and the commit that was at
          * @param sha    the commit the branch was at
          */
-        record OfBranch(BranchName branch, Cmd.LoadAhead.Base base, Sha sha) implements Changes {}
+        record OfBranch(BranchName branch, LoadAhead.Base base, Sha sha) implements Changes {}
 
         /**
          * The changes of a pull request on GitHub, as GitHub shows them: its head against the merge base of its head

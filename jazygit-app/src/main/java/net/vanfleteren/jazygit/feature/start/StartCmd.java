@@ -53,7 +53,7 @@ public sealed interface StartCmd extends Cmd {
 
         @Override
         public Msg run() {
-            return CliGit.init(Path.of(directory)).fold(this::failedWith, StartCmd::opened);
+            return CliGit.init(Path.of(directory)).mapLeft(Failure::of).fold(this::failed, StartCmd::opened);
         }
     }
 
@@ -69,7 +69,7 @@ public sealed interface StartCmd extends Cmd {
                     .fold(
                             error -> error instanceof GitError.NotARepository
                                     ? new StartMsg.NoRepository(directory.toString(), Files.isDirectory(directory))
-                                    : failedWith(error),
+                                    : failed(Failure.of(error)),
                             StartCmd::opened);
         }
     }

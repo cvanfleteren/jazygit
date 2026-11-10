@@ -18,13 +18,16 @@ import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Sha;
-import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.DivergenceView;
+import net.vanfleteren.jazygit.state.LoadCommitDetail;
+import net.vanfleteren.jazygit.state.LoadFileDiff;
 import net.vanfleteren.jazygit.state.LoadMsg;
+import net.vanfleteren.jazygit.state.LoadStashDetail;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Loadable.Loading;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Preview;
+import net.vanfleteren.jazygit.state.SaveSettings;
 import net.vanfleteren.jazygit.state.SelectionMsg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
@@ -44,8 +47,7 @@ class DiffOptionsUpdateTest {
 
         assertEquals(IGNORING, next.model().preferences().diffOptions());
         assertEquals(
-                List.of(new Cmd.LoadFileDiff(DIRTY.files(), IGNORING), new Cmd.LoadCommitDetail(SHA, IGNORING)),
-                next.cmds());
+                List.of(new LoadFileDiff(DIRTY.files(), IGNORING), new LoadCommitDetail(SHA, IGNORING)), next.cmds());
         Preview<List<FileEntry>, Diffs> diff =
                 next.model().repoView().fileDiff().get();
         assertEquals(new Loading<>(), diff.value());
@@ -69,8 +71,7 @@ class DiffOptionsUpdateTest {
         Next next = Update.update(shown(), new DiffOptionsMsg.ContextWidened());
 
         assertEquals(wider, next.model().preferences().diffOptions());
-        assertEquals(
-                List.of(new Cmd.LoadFileDiff(DIRTY.files(), wider), new Cmd.LoadCommitDetail(SHA, wider)), next.cmds());
+        assertEquals(List.of(new LoadFileDiff(DIRTY.files(), wider), new LoadCommitDetail(SHA, wider)), next.cmds());
         assertEquals(
                 DiffOptions.DEFAULT,
                 Update.update(next.model(), new DiffOptionsMsg.ContextNarrowed())
@@ -101,7 +102,7 @@ class DiffOptionsUpdateTest {
 
         assertFalse(next.model().preferences().diffLook().words());
         assertEquals(
-                List.of(new Cmd.SaveSettings(
+                List.of(new SaveSettings(
                         model.preferences().settings(),
                         model.preferences().settings().withDiffWords(false))),
                 next.cmds());
@@ -136,8 +137,8 @@ class DiffOptionsUpdateTest {
                 Update.update(shown(), new DiffOptionsMsg.WhitespaceToggled()).model();
 
         assertDropped(
-                toggled, new LoadMsg.Failed(new Cmd.LoadFileDiff(DIRTY.files(), DiffOptions.DEFAULT), refused("boom")));
-        assertDropped(toggled, new LoadMsg.Failed(new Cmd.LoadCommitDetail(SHA, DiffOptions.DEFAULT), refused("boom")));
+                toggled, new LoadMsg.Failed(new LoadFileDiff(DIRTY.files(), DiffOptions.DEFAULT), refused("boom")));
+        assertDropped(toggled, new LoadMsg.Failed(new LoadCommitDetail(SHA, DiffOptions.DEFAULT), refused("boom")));
         assertDropped(toggled, new LoadMsg.CommitDetailLoaded(SHA, DiffOptions.DEFAULT, DiffText.of("stale")));
     }
 
@@ -154,7 +155,7 @@ class DiffOptionsUpdateTest {
         Model toggled =
                 Update.update(model, new DiffOptionsMsg.WhitespaceToggled()).model();
 
-        assertDropped(toggled, new LoadMsg.Failed(new Cmd.LoadCommitDetail(SHA, DiffOptions.DEFAULT), refused("boom")));
+        assertDropped(toggled, new LoadMsg.Failed(new LoadCommitDetail(SHA, DiffOptions.DEFAULT), refused("boom")));
         assertDropped(toggled, new LoadMsg.CommitDetailLoaded(SHA, DiffOptions.DEFAULT, DiffText.of("stale")));
     }
 
@@ -164,10 +165,10 @@ class DiffOptionsUpdateTest {
                 Update.update(loaded(), new DiffOptionsMsg.WhitespaceToggled()).model();
 
         assertEquals(
-                List.of(new Cmd.LoadCommitDetail(SHA, IGNORING)),
+                List.of(new LoadCommitDetail(SHA, IGNORING)),
                 Update.update(toggled, new SelectionMsg.CommitSelected(SHA)).cmds());
         assertEquals(
-                List.of(new Cmd.LoadFileDiff(DIRTY.files(), IGNORING)),
+                List.of(new LoadFileDiff(DIRTY.files(), IGNORING)),
                 Update.update(toggled, new SelectionMsg.FilesSelected(DIRTY.files()))
                         .cmds());
     }
@@ -182,7 +183,7 @@ class DiffOptionsUpdateTest {
 
         Next next = Update.update(model, new DiffOptionsMsg.WhitespaceToggled());
 
-        assertEquals(List.of(new Cmd.LoadStashDetail(stash, IGNORING)), next.cmds());
+        assertEquals(List.of(new LoadStashDetail(stash, IGNORING)), next.cmds());
         Preview<Sha, DiffText> detail = next.model().repoView().stashDetail().get();
         assertEquals(new Loading<>(), detail.value());
         assertEquals(new Loaded<>(DiffText.of("changes")), detail.shown().value());
@@ -198,7 +199,7 @@ class DiffOptionsUpdateTest {
                         .value());
 
         assertDropped(
-                next.model(), new LoadMsg.Failed(new Cmd.LoadStashDetail(stash, DiffOptions.DEFAULT), refused("boom")));
+                next.model(), new LoadMsg.Failed(new LoadStashDetail(stash, DiffOptions.DEFAULT), refused("boom")));
     }
 
     @Test

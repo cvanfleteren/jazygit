@@ -39,7 +39,8 @@ public sealed interface EditPullRequestCmd extends Cmd {
         public Msg run(Env env) {
             return env.terminal()
                     .handOver(() -> env.git().editor().editText(FILE_NAME, text))
-                    .fold(this::failedWith, edited -> new EditPullRequestMsg.EditorClosed(edited._1, edited._2));
+                    .mapLeft(Failure::of)
+                    .fold(this::failed, edited -> new EditPullRequestMsg.EditorClosed(edited._1, edited._2));
         }
 
         @Override
@@ -78,14 +79,15 @@ public sealed interface EditPullRequestCmd extends Cmd {
         public Msg run(Env env) {
             Either<GhFailure, List<ExecutedCommand>> saved =
                     edit.changes() ? env.gitHub().editPullRequest(number, edit) : Either.right(List.empty());
-            return saved.fold(
-                    this::failedWith,
-                    edited -> draft.map(drafting -> env.gitHub()
-                                    .setDraft(number, drafting)
-                                    .fold(
-                                            failure -> partly(edited, failure),
-                                            drafted -> succeeded(edited.appendAll(drafted))))
-                            .getOrElse(() -> succeeded(edited)));
+            return saved.mapLeft(Failure::of)
+                    .fold(
+                            this::failed,
+                            edited -> draft.map(drafting -> env.gitHub()
+                                            .setDraft(number, drafting)
+                                            .fold(
+                                                    failure -> partly(edited, failure),
+                                                    drafted -> succeeded(edited.appendAll(drafted))))
+                                    .getOrElse(() -> succeeded(edited)));
         }
 
         /**

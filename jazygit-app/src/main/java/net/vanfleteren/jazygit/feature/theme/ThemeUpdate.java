@@ -7,11 +7,11 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.settings.Settings;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.AppError;
-import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.CommandLog;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.RepositoryTheme;
+import net.vanfleteren.jazygit.state.SaveSettings;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
@@ -78,8 +78,7 @@ public final class ThemeUpdate {
                 preferences -> preferences.withSettings(chosen).withThemeOverride(Option.none()));
         return chosen.equals(model.preferences().settings())
                 ? Next.of(shown)
-                : new Next(
-                        shown, List.of(new Cmd.SaveSettings(model.preferences().settings(), chosen)));
+                : new Next(shown, List.of(new SaveSettings(model.preferences().settings(), chosen)));
     }
 
     /**

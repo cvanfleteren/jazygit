@@ -69,15 +69,16 @@ public record AddWorktreeCmd(WorktreeSource source, String location, boolean swi
             case PullRequest(var pullRequest) ->
                 git.worktrees()
                         .addDetached(path, new Revision.Head())
+                        .mapLeft(Failure::of)
                         .fold(
-                                this::failedWith,
+                                this::failed,
                                 added -> checkout(git, env.gitHub(), path, pullRequest.number(), added)
                                         .fold(this::failed, all -> added(env, all)));
         };
     }
 
     private Msg reported(Env env, Either<GitFailure, List<ExecutedCommand>> outcome) {
-        return outcome.fold(this::failedWith, commands -> added(env, commands));
+        return outcome.mapLeft(Failure::of).fold(this::failed, commands -> added(env, commands));
     }
 
     /**

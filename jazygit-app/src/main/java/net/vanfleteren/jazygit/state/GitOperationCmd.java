@@ -27,7 +27,7 @@ public interface GitOperationCmd extends OperationCmd {
                         failure -> failure.error() instanceof GitError.StoppedOnConflicts(var inProgress, int conflicts)
                                 ? new OperationMsg.Stopped(
                                         this, failure.commands(), new Notice.StoppedOnConflicts(inProgress, conflicts))
-                                : failedWith(failure),
+                                : failed(Failure.of(failure)),
                         this::succeeded);
     }
 }

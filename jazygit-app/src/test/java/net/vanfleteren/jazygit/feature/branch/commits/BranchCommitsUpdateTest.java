@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.feature.branch.tabs.BranchesTabMsg;
 import net.vanfleteren.jazygit.feature.diff.DiffOptionsMsg;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.LoadCommitDetail;
 import net.vanfleteren.jazygit.state.TestModels;
 import org.junit.jupiter.api.Test;
 
@@ -106,7 +107,7 @@ class BranchCommitsUpdateTest {
                 .model();
 
         assertEquals(
-                List.of(new Cmd.LoadCommitDetail(
+                List.of(new LoadCommitDetail(
                         FEATURE_TIP, open.preferences().diffOptions(), Cmd.Slot.BRANCH_COMMITS_DETAIL)),
                 selected.cmds());
         assertEquals(
@@ -125,7 +126,7 @@ class BranchCommitsUpdateTest {
 
         assertTrue(
                 ignoring.cmds()
-                        .contains(new Cmd.LoadCommitDetail(
+                        .contains(new LoadCommitDetail(
                                 FEATURE_TIP,
                                 ignoring.model().preferences().diffOptions(),
                                 Cmd.Slot.BRANCH_COMMITS_DETAIL)),
@@ -171,8 +172,8 @@ class BranchCommitsUpdateTest {
     void whatAHighlightedCommitChangedThatFailedToBeReadIsReadAgainOnTheNextTick() {
         Model selected = Update.update(opened(featureLogRead()), new SelectionMsg.BranchCommitSelected(FEATURE_TIP))
                 .model();
-        Cmd.LoadCommitDetail load = new Cmd.LoadCommitDetail(
-                FEATURE_TIP, selected.preferences().diffOptions(), Cmd.Slot.BRANCH_COMMITS_DETAIL);
+        LoadCommitDetail load =
+                new LoadCommitDetail(FEATURE_TIP, selected.preferences().diffOptions(), Cmd.Slot.BRANCH_COMMITS_DETAIL);
 
         Model failed = Update.update(selected, new LoadMsg.Failed(load, refused("boom")))
                 .model();

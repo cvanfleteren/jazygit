@@ -5,9 +5,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.settings.ThemeName;
-import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.RepositoryTheme;
+import net.vanfleteren.jazygit.state.SaveSettings;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -69,7 +69,7 @@ class ThemeUpdateTest {
         assertEquals(ThemeName.LIGHT, chosen.model().preferences().theme());
         assertEquals(Option.none(), chosen.model().preferences().themeOverride());
         assertEquals(
-                List.of(new Cmd.SaveSettings(
+                List.of(new SaveSettings(
                         TestModels.PLAIN.settings(), TestModels.PLAIN.settings().withTheme(ThemeName.LIGHT))),
                 chosen.cmds());
     }
@@ -103,7 +103,7 @@ class ThemeUpdateTest {
         assertEquals(Option.none(), chosen.model().popup(ThemePopup.class));
         assertEquals(ThemeName.DARCULA, chosen.model().preferences().settings().theme());
         assertEquals(
-                List.of(new Cmd.SaveSettings(
+                List.of(new SaveSettings(
                         TestModels.PLAIN.settings(), TestModels.PLAIN.settings().withTheme(ThemeName.DARCULA))),
                 chosen.cmds());
     }
@@ -152,7 +152,7 @@ class ThemeUpdateTest {
         assertEquals(Option.none(), chosen.model().preferences().themeOverride());
         assertEquals(ThemeName.LIGHT, chosen.model().preferences().theme());
         assertEquals(
-                List.of(new Cmd.SaveSettings(
+                List.of(new SaveSettings(
                         TestModels.PLAIN.settings(), TestModels.PLAIN.settings().withTheme(ThemeName.LIGHT))),
                 chosen.cmds());
     }

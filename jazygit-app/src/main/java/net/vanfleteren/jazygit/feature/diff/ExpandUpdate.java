@@ -7,11 +7,12 @@ import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Folding;
 import net.vanfleteren.jazygit.state.Anchor;
 import net.vanfleteren.jazygit.state.Cmd;
-import net.vanfleteren.jazygit.state.Cmd.ReadWholeFile.Source;
 import net.vanfleteren.jazygit.state.Expansion;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Preview;
+import net.vanfleteren.jazygit.state.ReadWholeFile;
+import net.vanfleteren.jazygit.state.ReadWholeFile.Source;
 import net.vanfleteren.jazygit.state.ScrolledContent;
 import net.vanfleteren.jazygit.state.Update.Next;
 
@@ -50,9 +51,9 @@ public final class ExpandUpdate {
                 .getOrElse(() -> Expansion.of(content));
         Option<Expansion.Expanded> before = expansion.files().get(gap.path());
         boolean reads = before.forAll(file -> file.whole().isFailed());
-        Option<Cmd.ReadWholeFile> read = reads
+        Option<ReadWholeFile> read = reads
                 ? source(model, content, gap.path())
-                        .map(source -> new Cmd.ReadWholeFile(
+                        .map(source -> new ReadWholeFile(
                                 area,
                                 expansion.content(),
                                 source,

@@ -10,9 +10,6 @@ import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
-import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
-import net.vanfleteren.jazygit.state.Cmd.LoadCommits;
-import net.vanfleteren.jazygit.state.Cmd.LoadFileDiff;
 import net.vanfleteren.jazygit.state.LoadMsg.*;
 import net.vanfleteren.jazygit.state.Update.Next;
 
@@ -28,8 +25,6 @@ public final class LoadUpdate {
         Model done = model.mapJobs(
                 jobs -> jobs.withoutFailedRead(msg.cmd()).withRead(msg.cmd(), msg instanceof LoadMsg.Failed));
         return switch (msg) {
-            // A skipped load read nothing, and is not a failure to try again later.
-            case Skipped skipped -> Next.of(model);
             // What was read with other diff options than the ones now chosen is dropped, whatever came of it.
             case LoadMsg m when stale(done, m.cmd()) -> Next.of(done);
             case StatusLoaded loaded -> statusLoaded(model, loaded.kept(done));
@@ -66,22 +61,21 @@ public final class LoadUpdate {
             // The files of the working tree read whole to expand them are read again with it (ADR 77).
             case FileDiffLoaded loaded ->
                 rereadWhole(loaded.kept(done).mapJobs(jobs -> {
-                    Map<Cmd.Load, MetadataStamp> others =
-                            jobs.readAt().filterKeys(load -> !(load instanceof LoadFileDiff));
+                    Map<Load, MetadataStamp> others = jobs.readAt().filterKeys(load -> !(load instanceof LoadFileDiff));
                     return jobs.withReadAt(loaded.stamp().fold(() -> others, now -> others.put(msg.cmd(), now)));
                 }));
             // Only the diff that is still shown, with the options now chosen, is read again.
             case FileDiffChecked(var load, var stamp) ->
                 Update.shownDiff(done).contains(load)
-                        ? metadataChecked(done, List.of(Tuple.of((Cmd.Load) load, stamp)))
+                        ? metadataChecked(done, List.of(Tuple.of((Load) load, stamp)))
                         : Next.of(done);
             // What arrives after another search was run or another item was highlighted, or for a view closed since,
             // finds no target, and is dropped.
             case Read<?> read -> Next.of(read.kept(done));
             // Without the files to tell, the loads they guard run, as they would without them.
-            case LoadMsg.Failed(Cmd.CheckMetadata cmd, var failure) ->
-                metadataChecked(done, Cmd.CheckMetadata.GUARDED.map(load -> Tuple.of(load, Option.none())));
-            case LoadMsg.Failed(Cmd.Load cmd, Failure failure) ->
+            case LoadMsg.Failed(CheckMetadata cmd, var failure) ->
+                metadataChecked(done, CheckMetadata.GUARDED.map(load -> Tuple.of(load, Option.none())));
+            case LoadMsg.Failed(Load cmd, Failure failure) ->
                 Next.of(failed(
                         done.mapJobs(jobs ->
                                 jobs.withReadAt(jobs.readAt().remove(cmd)).withFailedRead(cmd)),
@@ -106,7 +100,7 @@ public final class LoadUpdate {
                         .appendAll(diffs.unstaged().parsed().files()))
                 .map(file -> file.file().path())
                 .toSet();
-        List<Cmd.ReadWholeFile> reads = model.repoView()
+        List<ReadWholeFile> reads = model.repoView()
                 .expanded()
                 .values()
                 .filter(expansion -> expansion.content() instanceof ScrolledContent.Diff)
@@ -135,8 +129,8 @@ public final class LoadUpdate {
     /**
      * Whether {@code load} read with other diff options than the ones now chosen, so that what came of it is outdated.
      */
-    private static boolean stale(Model model, Cmd.Load load) {
-        return load instanceof Cmd.DiffLoad diff
+    private static boolean stale(Model model, Load load) {
+        return load instanceof DiffLoad diff
                 && !diff.options().equals(model.preferences().diffOptions());
     }
 
@@ -145,23 +139,23 @@ public final class LoadUpdate {
      * keeps what their files look like now. One that still runs is left alone, with what it was started with: it may
      * have read before the change, so the next tick looks again.
      */
-    private static Next metadataChecked(Model model, List<Tuple2<Cmd.Load, Option<MetadataStamp>>> listed) {
+    private static Next metadataChecked(Model model, List<Tuple2<Load, Option<MetadataStamp>>> listed) {
         // The branches are read as GitHub now says they are built on: when that changed, they are read again, and
         // what the files looked like for the load told something else is of no use anymore.
-        List<Tuple2<Cmd.Load, Option<MetadataStamp>>> stamps =
-                listed.map(stamp -> stamp.map1(load -> Cmd.LoadBranches.current(model, load)));
-        Cmd.Load branches = Cmd.LoadBranches.current(model, Cmd.LoadBranches.LISTED);
+        List<Tuple2<Load, Option<MetadataStamp>>> stamps =
+                listed.map(stamp -> stamp.map1(load -> LoadBranches.current(model, load)));
+        Load branches = LoadBranches.current(model, LoadBranches.LISTED);
         Model current = model.mapJobs(jobs -> jobs.withReadAt(
-                jobs.readAt().filterKeys(load -> !(load instanceof Cmd.LoadBranches) || load.equals(branches))));
+                jobs.readAt().filterKeys(load -> !(load instanceof LoadBranches) || load.equals(branches))));
         return started(current, stamps);
     }
 
-    private static Next started(Model model, List<Tuple2<Cmd.Load, Option<MetadataStamp>>> stamps) {
-        List<Tuple2<Cmd.Load, Option<MetadataStamp>>> changed = stamps.filter(
+    private static Next started(Model model, List<Tuple2<Load, Option<MetadataStamp>>> stamps) {
+        List<Tuple2<Load, Option<MetadataStamp>>> changed = stamps.filter(
                         stamp -> !model.jobs().runs(stamp._1()))
                 .filter(stamp -> stamp._2().isEmpty()
                         || !model.jobs().readAt().get(stamp._1()).equals(stamp._2()));
-        List<Cmd.Load> loads = changed.map(Tuple2::_1);
+        List<Load> loads = changed.map(Tuple2::_1);
         return new Next(
                 model.mapJobs(jobs -> jobs.withReadAt(changed.foldLeft(
                         jobs.readAt(),
@@ -311,20 +305,20 @@ public final class LoadUpdate {
      * {@code model} with {@code cmd} having failed: in its {@link Target}, or as each load that is not targeted keeps
      * what it reads.
      */
-    private static Model failed(Model model, Cmd.Load cmd, Failure failure) {
+    private static Model failed(Model model, Load cmd, Failure failure) {
         return switch (cmd) {
-            case Cmd.Targeted<?> targeted -> targeted.target().failed(model, failure);
+            case Targeted<?> targeted -> targeted.target().failed(model, failure);
             // The parents and the counts read before stay, as they would while reading again (ADR 46).
-            case Cmd.LoadBranches _ ->
+            case LoadBranches _ ->
                 model.mapRepo(repo -> repo.withBranches(repo.branches().failed(failure))
                         .withRemoteBranches(repo.remoteBranches().failed(failure)));
             // Which worktrees have changes is a detail: when the whole read fails, what was read before stays, and
             // a later tick tries again. A single worktree that cannot be read is left out of a read that succeeds.
-            case Cmd.LoadWorktreeChanges _ -> worktreeChangesRead(model);
-            case Cmd.LoadAhead load -> AheadUpdate.failed(model, load, failure);
+            case LoadWorktreeChanges _ -> worktreeChangesRead(model);
+            case LoadAhead load -> AheadUpdate.failed(model, load, failure);
             // What the files look like is kept by Jobs: when looking at them fails, the next status looks again.
-            case Cmd.CheckMetadata() -> model;
-            case Cmd.CheckFileDiff ignored -> model;
+            case CheckMetadata() -> model;
+            case CheckFileDiff ignored -> model;
         };
     }
 

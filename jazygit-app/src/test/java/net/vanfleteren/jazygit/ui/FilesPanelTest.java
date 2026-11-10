@@ -22,8 +22,8 @@ import net.vanfleteren.jazygit.git.Status;
 import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.git.StubStatus;
 import net.vanfleteren.jazygit.git.model.*;
-import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.CommitFilesView;
+import net.vanfleteren.jazygit.state.LoadAhead;
 import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
@@ -336,7 +336,7 @@ class FilesPanelTest {
     void theFilesOfABranchNameTheBaseTheyAreComparedWith() throws Exception {
         CommitFilesView.Changes of = new CommitFilesView.Changes.OfBranch(
                 new BranchName("feature"),
-                new Cmd.LoadAhead.Base(
+                new LoadAhead.Base(
                         new BranchRef.Remote(new RemoteBranch("origin", new BranchName("main"))), new Sha("bbbb")),
                 new Sha("aaaa"));
         Model open = Update.update(

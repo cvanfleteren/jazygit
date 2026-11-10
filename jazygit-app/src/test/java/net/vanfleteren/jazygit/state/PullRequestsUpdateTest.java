@@ -222,11 +222,11 @@ class PullRequestsUpdateTest {
 
         Next read = Update.update(loaded(), new PullRequestsMsg.Loaded(List.of(onA)));
         assertEquals(
-                List.of(new Cmd.LoadBranches(GitHubBases.of(read.model().gitHub()))),
-                read.cmds().filter(Cmd.LoadBranches.class::isInstance));
+                List.of(new LoadBranches(GitHubBases.of(read.model().gitHub()))),
+                read.cmds().filter(LoadBranches.class::isInstance));
 
         Next same = Update.update(read.model(), new PullRequestsMsg.Loaded(List.of(onA)));
-        assertEquals(List.empty(), same.cmds().filter(Cmd.LoadBranches.class::isInstance));
+        assertEquals(List.empty(), same.cmds().filter(LoadBranches.class::isInstance));
     }
 
     @Test
@@ -234,7 +234,7 @@ class PullRequestsUpdateTest {
         Next read = Update.update(TestModels.loaded(), new PullRequestsMsg.ProtectedLoaded(List.of("develop")));
 
         assertEquals(
-                List.of(new Cmd.LoadBranches(GitHubBases.of(read.model().gitHub()))),
-                read.cmds().filter(Cmd.LoadBranches.class::isInstance));
+                List.of(new LoadBranches(GitHubBases.of(read.model().gitHub()))),
+                read.cmds().filter(LoadBranches.class::isInstance));
     }
 }

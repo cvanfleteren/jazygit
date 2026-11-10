@@ -10,10 +10,6 @@ import io.vavr.control.Option;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.model.AllBranches;
 import net.vanfleteren.jazygit.git.model.MetadataStamp;
-import net.vanfleteren.jazygit.state.Cmd.CheckMetadata;
-import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
-import net.vanfleteren.jazygit.state.Cmd.LoadStashes;
-import net.vanfleteren.jazygit.state.Cmd.LoadWorktrees;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
 
@@ -153,7 +149,7 @@ class MetadataGuardTest {
     @Test
     void theStampsAreNotDrawn() {
         Model model = idle();
-        List<Tuple2<Cmd.Load, Option<MetadataStamp>>> none = List.empty();
+        List<Tuple2<Load, Option<MetadataStamp>>> none = List.empty();
 
         Model read = Update.update(model, checked("b1", "s1", "w1")).model();
 

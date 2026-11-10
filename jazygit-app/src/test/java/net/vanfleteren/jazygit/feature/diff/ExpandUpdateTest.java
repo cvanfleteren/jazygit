@@ -14,13 +14,13 @@ import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.Folding;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Anchor;
-import net.vanfleteren.jazygit.state.Cmd;
-import net.vanfleteren.jazygit.state.Cmd.ReadWholeFile.Source;
 import net.vanfleteren.jazygit.state.DiffCursorAt;
 import net.vanfleteren.jazygit.state.Expansion;
 import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.ReadWholeFile;
+import net.vanfleteren.jazygit.state.ReadWholeFile.Source;
 import net.vanfleteren.jazygit.state.Scrolled;
 import net.vanfleteren.jazygit.state.ScrolledContent;
 import net.vanfleteren.jazygit.state.SelectionMsg;
@@ -55,7 +55,7 @@ class ExpandUpdateTest {
 
         Next next = Update.update(model, new ExpandMsg.Asked(at(ABOVE), ExpandMsg.Toward.ALL));
 
-        Cmd.ReadWholeFile read = read(model);
+        ReadWholeFile read = read(model);
         assertEquals(List.of(read), next.cmds());
         assertEquals(
                 Option.of(new Expansion.Expanded(read, Loadable.loading(), List.of(new Folding.Lines(1, 6)))),
@@ -89,7 +89,7 @@ class ExpandUpdateTest {
     @Test
     void aFileThatCouldNotBeReadWholeIsReadAgainOnTheNextExpansion() {
         Next asked = Update.update(loaded(), new ExpandMsg.Asked(at(ABOVE), ExpandMsg.Toward.ALL));
-        Cmd.ReadWholeFile read = read(loaded());
+        ReadWholeFile read = read(loaded());
         Model failed = TestModels.done(
                         TestModels.running(asked.model(), read), read, new LoadMsg.Failed(read, refused("boom")))
                 .model();
@@ -163,7 +163,7 @@ class ExpandUpdateTest {
 
         Next asked = Update.update(model, new ExpandMsg.Asked(at, ExpandMsg.Toward.DOWN));
 
-        Cmd.ReadWholeFile read = new Cmd.ReadWholeFile(
+        ReadWholeFile read = new ReadWholeFile(
                 "diff-unstaged",
                 shown,
                 new Source.WorkingTree(DIRTY.files().head(), false),
@@ -198,8 +198,8 @@ class ExpandUpdateTest {
     /**
      * How the file is read whole from the stash, with the options of {@code model}.
      */
-    private static Cmd.ReadWholeFile read(Model model) {
-        return new Cmd.ReadWholeFile(
+    private static ReadWholeFile read(Model model) {
+        return new ReadWholeFile(
                 AREA,
                 CONTENT,
                 new Source.OfStash(STASH, new CommitFile("a.txt", ChangeType.MODIFIED, Option.none())),
@@ -211,7 +211,7 @@ class ExpandUpdateTest {
      * {@code asked} once the file it reads whole is read.
      */
     private static Model readWhole(Next asked) {
-        Cmd.ReadWholeFile read = (Cmd.ReadWholeFile) asked.cmds().head();
+        ReadWholeFile read = (ReadWholeFile) asked.cmds().head();
         return TestModels.done(TestModels.running(asked.model(), read), read, new LoadMsg.WholeFileRead(read, WHOLE))
                 .model();
     }

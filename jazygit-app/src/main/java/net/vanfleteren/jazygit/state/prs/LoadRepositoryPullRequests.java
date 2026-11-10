@@ -27,8 +27,9 @@ public record LoadRepositoryPullRequests() implements Cmd {
     public Msg run(Env env) {
         return env.gitHub()
                 .repositoryPullRequests()
+                .mapLeft(Failure::of)
                 .fold(
-                        this::failedWith,
+                        this::failed,
                         read -> new PrOverviewMsg.RepositoryLoaded(
                                 read, env.unseen().load(read.repository())));
     }

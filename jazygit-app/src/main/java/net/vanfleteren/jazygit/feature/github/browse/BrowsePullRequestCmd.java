@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.github.browse;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.state.Env;
+import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Operation;
 import net.vanfleteren.jazygit.state.OperationCmd;
@@ -29,6 +30,9 @@ public record BrowsePullRequestCmd(PullRequestSummary pullRequest) implements Op
 
     @Override
     public Msg run(Env env) {
-        return env.gitHub().openPullRequest(pullRequest.url()).fold(this::failedWith, this::succeeded);
+        return env.gitHub()
+                .openPullRequest(pullRequest.url())
+                .mapLeft(Failure::of)
+                .fold(this::failed, this::succeeded);
     }
 }

@@ -68,7 +68,7 @@ class BranchChecksUpdateTest {
      * The reads {@code next} starts, apart from reading the branches again as the remotes on GitHub became known.
      */
     private static List<Cmd> reads(Next next) {
-        return next.cmds().filter(cmd -> !(cmd instanceof Cmd.LoadBranches));
+        return next.cmds().filter(cmd -> !(cmd instanceof LoadBranches));
     }
 
     private static Model withChecks() {
@@ -79,11 +79,11 @@ class BranchChecksUpdateTest {
     void theBranchesAreReadAgainWhenTheRemotesOnGitHubAreRead() {
         Next read = Update.update(loaded(), new BranchChecksMsg.Loaded(ON_ORIGIN));
         assertEquals(
-                List.of(new Cmd.LoadBranches(GitHubBases.of(read.model().gitHub()))),
-                read.cmds().filter(Cmd.LoadBranches.class::isInstance));
+                List.of(new LoadBranches(GitHubBases.of(read.model().gitHub()))),
+                read.cmds().filter(LoadBranches.class::isInstance));
 
         Next same = Update.update(read.model(), new BranchChecksMsg.Loaded(ON_ORIGIN));
-        assertEquals(List.empty(), same.cmds().filter(Cmd.LoadBranches.class::isInstance));
+        assertEquals(List.empty(), same.cmds().filter(LoadBranches.class::isInstance));
     }
 
     @Test

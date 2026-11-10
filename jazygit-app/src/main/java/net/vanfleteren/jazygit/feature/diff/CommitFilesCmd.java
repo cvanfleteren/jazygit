@@ -57,9 +57,8 @@ public sealed interface CommitFilesCmd extends Cmd {
         public Msg run(Env env) {
             return env.gitHub()
                     .reviewRemarks(number)
-                    .fold(
-                            this::failedWith,
-                            remarks -> new CommitFilesMsg.RemarksLoaded(number, remarks, settled, version));
+                    .mapLeft(Failure::of)
+                    .fold(this::failed, remarks -> new CommitFilesMsg.RemarksLoaded(number, remarks, settled, version));
         }
 
         @Override
@@ -89,8 +88,9 @@ public sealed interface CommitFilesCmd extends Cmd {
         public Msg run(Env env) {
             return env.gitHub()
                     .image(url)
+                    .mapLeft(Failure::of)
                     .fold(
-                            this::failedWith,
+                            this::failed,
                             bytes -> new CommitFilesMsg.PictureLoaded(
                                     number, url, Picture.of(bytes).toOption()));
         }

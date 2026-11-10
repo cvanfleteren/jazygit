@@ -120,3 +120,5 @@ run, on the right of `FetchLine`, before how fresh the screen is: `⠋ fetching 
   `Program` reports `Done` for a result, a bug and a skipped and a cancelled command; which command the indicator
   shows, `+N`, the 300 ms before and after, and cutting it on a narrow screen; `drawn()` to the second; the ages
   counted from exact times.
+
+Amended by ADR 101: a command that a newer one for its slot cancelled reports nothing; `Cmd.skipped()` is gone.

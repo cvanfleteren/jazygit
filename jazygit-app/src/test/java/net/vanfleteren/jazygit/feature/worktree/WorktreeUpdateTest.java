@@ -52,6 +52,8 @@ import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.Failure;
+import net.vanfleteren.jazygit.state.LoadWorktrees;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -577,7 +579,7 @@ class WorktreeUpdateTest {
 
         assertEquals(BranchesTab.WORKTREES, next.model().repoView().branchesTab());
         assertEquals(Option.none(), next.model().jobs().busy().get(new BranchRef.Local(FEATURE)));
-        assertTrue(next.cmds().contains(new Cmd.LoadWorktrees()), next.cmds().toString());
+        assertTrue(next.cmds().contains(new LoadWorktrees()), next.cmds().toString());
         assertEquals(
                 Option.of(new SwitchToAddedPopup("feature", "/repos/app-feature")),
                 next.model().popup());
@@ -934,9 +936,9 @@ class WorktreeUpdateTest {
         Msg failed = remove.run(new Env(git, net.vanfleteren.jazygit.gh.StubGitHub.empty()));
 
         assertEquals(
-                remove.failedWith(new GitFailure(
+                remove.failed(Failure.of(new GitFailure(
                         new GitError.CommandFailed("ref is locked", 1),
-                        StubGit.executed("git worktree remove /repos/app-taken", "git branch --delete taken"))),
+                        StubGit.executed("git worktree remove /repos/app-taken", "git branch --delete taken")))),
                 failed);
         assertEquals(
                 Option.of("Removing the worktree /repos/app-taken and deleting its branch failed: ref is locked"),

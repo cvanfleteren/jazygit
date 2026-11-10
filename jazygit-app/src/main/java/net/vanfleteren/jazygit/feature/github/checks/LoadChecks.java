@@ -25,7 +25,8 @@ public record LoadChecks(RemoteBranch branch) implements Cmd {
     public Msg run(Env env) {
         return env.gitHub()
                 .branchCheckRuns(List.of(branch.branch().value()))
-                .fold(this::failedWith, runs -> new ChecksMsg.Loaded(branch, PendingChecks.of(runs)));
+                .mapLeft(Failure::of)
+                .fold(this::failed, runs -> new ChecksMsg.Loaded(branch, PendingChecks.of(runs)));
     }
 
     @Override

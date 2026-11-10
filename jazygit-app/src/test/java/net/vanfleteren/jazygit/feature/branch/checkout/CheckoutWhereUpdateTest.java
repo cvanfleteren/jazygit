@@ -25,9 +25,11 @@ import net.vanfleteren.jazygit.feature.worktree.add.WorktreeSource;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.state.BranchesTab;
-import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Landing;
+import net.vanfleteren.jazygit.state.LoadBranches;
 import net.vanfleteren.jazygit.state.LoadMsg;
+import net.vanfleteren.jazygit.state.LoadStatus;
+import net.vanfleteren.jazygit.state.LoadWorktrees;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
@@ -280,11 +282,11 @@ class CheckoutWhereUpdateTest {
                 .model();
         Next branches = done(
                 model,
-                Cmd.LoadBranches.LISTED,
+                LoadBranches.LISTED,
                 TestModels.branchesLoaded(new AllBranches(TestModels.BRANCHES, List.empty())));
         Next worktrees = done(
                 started(branches).model(),
-                new Cmd.LoadWorktrees(),
+                new LoadWorktrees(),
                 new LoadMsg.WorktreesLoaded(
                         List.of(new Worktree(MAIN.path(), MAIN.head(), true, true, Option.none(), false))));
         // The status, which tells what changes a checkout would take along, is not read yet: it waits.
@@ -293,8 +295,7 @@ class CheckoutWhereUpdateTest {
                 .filter(Checkout.class::isInstance)
                 .isEmpty());
 
-        Next status =
-                done(started(worktrees).model(), new Cmd.LoadStatus(), new LoadMsg.StatusLoaded(TestModels.CLEAN));
+        Next status = done(started(worktrees).model(), new LoadStatus(), new LoadMsg.StatusLoaded(TestModels.CLEAN));
 
         assertTrue(status.cmds().contains(new Checkout(FEATURE)));
         assertEquals(Option.none(), status.model().jobs().onArrival());

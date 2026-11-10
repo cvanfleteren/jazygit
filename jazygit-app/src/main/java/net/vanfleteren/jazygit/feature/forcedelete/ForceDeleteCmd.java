@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
+import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.GitOperationCmd;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Operation;
@@ -33,9 +34,9 @@ public record ForceDeleteCmd(BranchName branch) implements GitOperationCmd {
                 ? git.branches()
                         .countOnlyOn(branch)
                         .fold(
-                                uncounted -> cmd.failedWith(failure),
+                                uncounted -> cmd.failed(Failure.of(failure)),
                                 lost -> forceIfNothingLost(cmd, branch, failure, git, lost))
-                : cmd.failedWith(failure);
+                : cmd.failed(Failure.of(failure));
     }
 
     /**
@@ -47,7 +48,7 @@ public record ForceDeleteCmd(BranchName branch) implements GitOperationCmd {
                 ? git.branches()
                         .forceDeleteLocal(branch)
                         .fold(
-                                forced -> cmd.failedWith(forced.after(failure.commands())),
+                                forced -> cmd.failed(Failure.of(forced.after(failure.commands()))),
                                 forced -> cmd.succeeded(failure.commands().appendAll(forced)))
                 : new ForceDeleteMsg.NotFullyMerged(cmd, branch, lost, failure.commands());
     }

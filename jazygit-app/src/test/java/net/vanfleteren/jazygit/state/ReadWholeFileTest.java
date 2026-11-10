@@ -20,7 +20,7 @@ import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.Sha;
-import net.vanfleteren.jazygit.state.Cmd.ReadWholeFile.Source;
+import net.vanfleteren.jazygit.state.ReadWholeFile.Source;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -48,7 +48,7 @@ class ReadWholeFileTest {
                 read(new Source.OfFiles(
                         new CommitFilesView.Changes.OfBranch(
                                 new BranchName("feature"),
-                                new Cmd.LoadAhead.Base(new BranchRef.Local(new BranchName("main")), BASE),
+                                new LoadAhead.Base(new BranchRef.Local(new BranchName("main")), BASE),
                                 SHA),
                         FILE)));
         assertEquals(
@@ -66,7 +66,7 @@ class ReadWholeFileTest {
      * What reading the file whole from {@code source} read: which read of git it was, and with what context.
      */
     private static String read(Source source) {
-        Cmd.ReadWholeFile read = new Cmd.ReadWholeFile(
+        ReadWholeFile read = new ReadWholeFile(
                 "area", new ScrolledContent.Diff(DiffText.of("")), source, "a.txt", DiffOptions.DEFAULT);
         LoadMsg.WholeFileRead msg = (LoadMsg.WholeFileRead) read.run(new Env(git(), StubGitHub.empty()));
         assertEquals(read, msg.cmd());

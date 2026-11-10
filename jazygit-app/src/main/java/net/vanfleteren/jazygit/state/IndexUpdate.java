@@ -20,7 +20,7 @@ public final class IndexUpdate {
     private IndexUpdate() {}
 
     /**
-     * {@code next}, which handled the stamps that {@link Cmd.CheckMetadata} took, also writing the index anew if it
+     * {@code next}, which handled the stamps that {@link CheckMetadata} took, also writing the index anew if it
      * looks other than {@code index} since it was last written anew, which the first stamp that can be told always does,
      * or that was {@link #FALLBACK} ago. Only while the
      * terminal has the focus, when the user is not likely to run git elsewhere, and while no operation of the app
@@ -35,12 +35,12 @@ public final class IndexUpdate {
         boolean due = changed || last.at().exists(at -> !model.now().isBefore(at.plus(FALLBACK)));
         boolean free = !jobs.away()
                 && !last.adopt()
-                && !jobs.runs(cmd -> cmd instanceof OperationCmd || cmd instanceof Cmd.RefreshIndex);
+                && !jobs.runs(cmd -> cmd instanceof OperationCmd || cmd instanceof RefreshIndex);
         return due && free
                 ? new Next(
                         model.mapJobs(those ->
                                 those.withIndexRefresh(new IndexRefresh(index, Option.of(model.now()), false))),
-                        next.cmds().append(new Cmd.RefreshIndex()),
+                        next.cmds().append(new RefreshIndex()),
                         next.quit())
                 : new Next(model.mapJobs(those -> those.withIndexRefresh(last)), next.cmds(), next.quit());
     }

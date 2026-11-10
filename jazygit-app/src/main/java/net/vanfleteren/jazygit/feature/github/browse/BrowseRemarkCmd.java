@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.github.browse;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.PullRequestLink;
 import net.vanfleteren.jazygit.state.Env;
+import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Operation;
 import net.vanfleteren.jazygit.state.OperationCmd;
@@ -25,6 +26,6 @@ public record BrowseRemarkCmd(PullRequestLink link) implements OperationCmd {
 
     @Override
     public Msg run(Env env) {
-        return env.gitHub().openInBrowser(link).fold(this::failedWith, this::succeeded);
+        return env.gitHub().openInBrowser(link).mapLeft(Failure::of).fold(this::failed, this::succeeded);
     }
 }

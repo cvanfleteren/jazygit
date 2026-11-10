@@ -688,7 +688,7 @@ class ProgramTest {
     @Test
     void aReloadThatIsSkippedForANewerHighlightIsNoLongerRunning() {
         settle();
-        Cmd.LoadBranchLog reload = TestModels.loadBranchLog(new BranchRef.Local(new BranchName("main")));
+        LoadBranchLog reload = TestModels.loadBranchLog(new BranchRef.Local(new BranchName("main")));
 
         program.dispatch(new Refreshing(reload));
         program.dispatch(new SelectionMsg.BranchSelected(new BranchRef.Local(new BranchName("other"))));
@@ -732,7 +732,7 @@ class ProgramTest {
     /**
      * Asks for {@code load} as a periodic reload does: it is running until it reports.
      */
-    private record Refreshing(Cmd.Load load) implements Msg {
+    private record Refreshing(Load load) implements Msg {
 
         @Override
         public Update.Next apply(Model model) {

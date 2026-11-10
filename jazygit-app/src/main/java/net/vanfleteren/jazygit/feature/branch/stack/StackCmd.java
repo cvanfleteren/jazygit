@@ -65,7 +65,7 @@ public sealed interface StackCmd extends OperationCmd {
 
         @Override
         public Msg run(Env env) {
-            return env.gitHub().unstack(stack).fold(this::failedWith, this::succeeded);
+            return env.gitHub().unstack(stack).mapLeft(Failure::of).fold(this::failed, this::succeeded);
         }
 
         @Override
@@ -131,7 +131,8 @@ public sealed interface StackCmd extends OperationCmd {
                             stack.fold(
                                     () -> gitHub.createStack(pullRequests),
                                     number -> gitHub.addToStack(number, pullRequests))))
-                    .fold(this::failedWith, this::succeeded);
+                    .mapLeft(Failure::of)
+                    .fold(this::failed, this::succeeded);
         }
 
         /**

@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.edit;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.state.Env;
+import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Operation;
 import net.vanfleteren.jazygit.state.OperationCmd;
@@ -27,6 +28,9 @@ public record EditCmd(List<String> files) implements OperationCmd {
 
     @Override
     public Msg run(Env env) {
-        return env.terminal().handOver(() -> env.git().editor().edit(files)).fold(this::failedWith, this::succeeded);
+        return env.terminal()
+                .handOver(() -> env.git().editor().edit(files))
+                .mapLeft(Failure::of)
+                .fold(this::failed, this::succeeded);
     }
 }

@@ -48,3 +48,6 @@ that is gone, ran a git process on every tick for as long as it was highlighted.
   highlights another item and comes back, or an operation refreshes.
 
 Amended by ADR 52: the tick comes every second, so a failed read waits up to 64 s.
+
+Amended by ADR 101: `Msg.Done` already takes a cancelled load out of what runs, so it reports nothing and
+`Cmd.skipped()` and `LoadMsg.Skipped` are gone.

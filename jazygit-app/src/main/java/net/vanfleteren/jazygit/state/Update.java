@@ -32,14 +32,13 @@ public final class Update {
     /**
      * Loads that reading the repository again repeats. They are skipped while a previous one is still running.
      */
-    private static final List<Cmd.Load> PERIODIC =
-            List.<Cmd.Load>of(new LoadStatus()).appendAll(CheckMetadata.GUARDED);
+    private static final List<Load> PERIODIC = List.<Load>of(new LoadStatus()).appendAll(CheckMetadata.GUARDED);
 
     /**
      * Loads that a tick repeats: the status, and those that {@link CheckMetadata} guards only once their files
      * changed.
      */
-    private static final List<Cmd.Load> TICKED = List.of(new LoadStatus(), new CheckMetadata());
+    private static final List<Load> TICKED = List.of(new LoadStatus(), new CheckMetadata());
 
     private Update() {}
 
@@ -246,10 +245,10 @@ public final class Update {
     /**
      * @param due whether to try a load that failed again now
      */
-    private static Next reload(Model model, List<Cmd.Load> periodic, Predicate<Cmd.Load> due) {
-        List<Cmd.Load> retries = retries(model);
-        List<Cmd.Load> loads = periodic.appendAll(retries.filter(due))
-                .map(load -> Cmd.LoadBranches.current(model, load))
+    private static Next reload(Model model, List<Load> periodic, Predicate<Load> due) {
+        List<Load> retries = retries(model);
+        List<Load> loads = periodic.appendAll(retries.filter(due))
+                .map(load -> LoadBranches.current(model, load))
                 .filter(cmd -> !model.jobs().runs(cmd))
                 .appendAll(worktreeChanges(model)
                         .filter(load -> model.jobs()
@@ -261,9 +260,9 @@ public final class Update {
     /**
      * The loads to run again as they failed, while their failure is still shown.
      */
-    private static List<Cmd.Load> retries(Model model) {
+    private static List<Load> retries(Model model) {
         LoadCommits commits = new LoadCommits(AheadUpdate.ofHead(model));
-        return Option.<Cmd.Load>when(
+        return Option.<Load>when(
                         commits.target().failedIn(model) || model.jobs().commitsFailed(), commits)
                 .toList()
                 .appendAll(AheadUpdate.retries(model))
@@ -274,10 +273,10 @@ public final class Update {
      * The loads that read what the views that are open show, as the model would ask for them now. The diff of the
      * files highlighted is not one of them: every status reads it again when its files changed (ADR 58).
      */
-    public static List<Cmd.Targeted<?>> shown(Model model) {
+    public static List<Targeted<?>> shown(Model model) {
         RepoView repoView = model.repoView();
         DiffOptions options = model.preferences().diffOptions();
-        return List.<Cmd.Targeted<?>>empty()
+        return List.<Targeted<?>>empty()
                 .appendAll(repoView.commitSearch().map(CommitSearch::load))
                 .appendAll(repoView.branchLog()
                         .map(log -> new LoadBranchLog(log.key(), AheadUpdate.of(model, log.key()))))
@@ -290,7 +289,7 @@ public final class Update {
                 .appendAll(repoView.branchCommits()
                         .flatMap(BranchCommitsView::detail)
                         .map(detail -> new LoadCommitDetail(detail.key(), options, Slot.BRANCH_COMMITS_DETAIL)))
-                .appendAll(repoView.stashDetail().map(detail -> new Cmd.LoadStashDetail(detail.key(), options)))
+                .appendAll(repoView.stashDetail().map(detail -> new LoadStashDetail(detail.key(), options)))
                 .appendAll(repoView.commitFiles().map(CommitFilesView::load))
                 .appendAll(repoView.commitFiles()
                         .flatMap(view -> view.diff().map(diff -> view.diffLoad(diff.key(), options))));
@@ -308,9 +307,9 @@ public final class Update {
      * The load of which other worktrees have changes, while the branches pane shows the worktrees on screen: none
      * while it runs already, even for other worktrees, or when there are no others.
      */
-    private static Option<Cmd.Load> worktreeChanges(Model model) {
+    private static Option<Load> worktreeChanges(Model model) {
         List<String> others = model.repo().otherWorktrees();
-        return Option.<Cmd.Load>of(new LoadWorktreeChanges(others))
+        return Option.<Load>of(new LoadWorktreeChanges(others))
                 .filter(load -> model.screen() == Screen.REPOSITORY
                         && model.repoView().branchesTab() == BranchesTab.WORKTREES
                         && others.nonEmpty()
@@ -326,8 +325,8 @@ public final class Update {
      */
     static Next reloadDiff(Model model, List<Cmd> cmds, boolean headMoved) {
         return shownDiff(model)
-                .filter(load -> !model.jobs().runs(load) && !model.jobs().runs(new Cmd.CheckFileDiff(load)))
-                .map(load -> new Next(model, cmds.append(headMoved ? load : new Cmd.CheckFileDiff(load))))
+                .filter(load -> !model.jobs().runs(load) && !model.jobs().runs(new CheckFileDiff(load)))
+                .map(load -> new Next(model, cmds.append(headMoved ? load : new CheckFileDiff(load))))
                 .getOrElse(() -> new Next(model, cmds));
     }
 

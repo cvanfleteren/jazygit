@@ -36,7 +36,8 @@ public sealed interface CommentCmd extends Cmd {
         public Msg run(Env env) {
             return env.terminal()
                     .handOver(() -> env.git().editor().editText(FILE_NAME, text))
-                    .fold(this::failedWith, edited -> new CommentMsg.EditorClosed(edited._1, edited._2));
+                    .mapLeft(Failure::of)
+                    .fold(this::failed, edited -> new CommentMsg.EditorClosed(edited._1, edited._2));
         }
 
         @Override
@@ -62,7 +63,10 @@ public sealed interface CommentCmd extends Cmd {
 
         @Override
         public Msg run(Env env) {
-            return env.gitHub().commentOnPullRequest(number, body).fold(this::failedWith, this::succeeded);
+            return env.gitHub()
+                    .commentOnPullRequest(number, body)
+                    .mapLeft(Failure::of)
+                    .fold(this::failed, this::succeeded);
         }
 
         @Override

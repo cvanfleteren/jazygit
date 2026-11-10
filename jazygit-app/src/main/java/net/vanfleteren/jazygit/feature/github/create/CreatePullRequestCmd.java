@@ -21,6 +21,7 @@ import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Label;
 import net.vanfleteren.jazygit.state.Operation;
 
@@ -274,8 +275,9 @@ public sealed interface CreatePullRequestCmd extends Cmd {
         public Msg run(Env env) {
             return env.gitHub()
                     .createPullRequest(OnGitHub.branch(head), OnGitHub.branch(base), pullRequest)
+                    .mapLeft(Failure::of)
                     .fold(
-                            this::failedWith,
+                            this::failed,
                             created -> new CreatePullRequestMsg.Created(
                                     this,
                                     created.number()

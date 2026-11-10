@@ -27,9 +27,6 @@ import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
-import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
-import net.vanfleteren.jazygit.state.Cmd.LoadStashes;
-import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.prs.LoadRepositoryPullRequests;
 import org.junit.jupiter.api.Test;
@@ -58,7 +55,7 @@ class OperationUpdateTest {
                         new LoadStatus(),
                         LoadBranches.LISTED,
                         new LoadStashes(),
-                        new Cmd.LoadWorktrees(),
+                        new LoadWorktrees(),
                         new LoadProtectedBranches(),
                         new LoadRepositoryPullRequests(),
                         new LoadBranchChecks()),
@@ -72,8 +69,7 @@ class OperationUpdateTest {
         Next next = Update.update(loaded(), succeeded(pull, "git pull"));
 
         assertEquals(
-                List.of(new LoadStatus(), LoadBranches.LISTED, new LoadStashes(), new Cmd.LoadWorktrees()),
-                next.cmds());
+                List.of(new LoadStatus(), LoadBranches.LISTED, new LoadStashes(), new LoadWorktrees()), next.cmds());
     }
 
     @Test
@@ -185,8 +181,7 @@ class OperationUpdateTest {
         assertEquals(Option.none(), next.model().outcome().error());
         assertEquals(Option.of(notice), next.model().outcome().notice());
         assertEquals(
-                List.of(new LoadStatus(), LoadBranches.LISTED, new LoadStashes(), new Cmd.LoadWorktrees()),
-                next.cmds());
+                List.of(new LoadStatus(), LoadBranches.LISTED, new LoadStashes(), new LoadWorktrees()), next.cmds());
     }
 
     @Test

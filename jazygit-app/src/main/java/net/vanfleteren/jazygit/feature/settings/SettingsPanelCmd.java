@@ -4,6 +4,7 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.GhAccount;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Label;
 
 /**
@@ -87,8 +88,10 @@ public sealed interface SettingsPanelCmd extends Cmd {
                     .setLocal(GitHubAccount.USER_KEY, user)
                     .map(commands -> env.repositories()
                             .switchTo(env.git().worktree(), landing)
-                            .fold(this::failedWith, reopened -> new SettingsPanelMsg.AccountSet()))
-                    .getOrElseGet(this::failedWith);
+                            .mapLeft(Failure::of)
+                            .fold(this::failed, reopened -> new SettingsPanelMsg.AccountSet()))
+                    .mapLeft(Failure::of)
+                    .getOrElseGet(this::failed);
         }
 
         @Override
@@ -107,7 +110,8 @@ public sealed interface SettingsPanelCmd extends Cmd {
         public Msg run(Env env) {
             return env.repositories()
                     .switchTo(env.git().worktree(), landing)
-                    .fold(this::failedWith, reopened -> new SettingsPanelMsg.Reopened());
+                    .mapLeft(Failure::of)
+                    .fold(this::failed, reopened -> new SettingsPanelMsg.Reopened());
         }
 
         @Override

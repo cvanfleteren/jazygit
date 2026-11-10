@@ -188,7 +188,7 @@ public final class Program {
     /**
      * Performs the command of {@code launch} on its executor, once it holds its guard, if it names one, and reports
      * it {@link Msg.Done done} with what it reported. One that takes a slot cancels the one that took it before, if
-     * that one has not started yet: it is skipped, and reports only {@link Cmd#skipped()}, if anything.
+     * that one has not started yet: it is skipped, and done without reporting anything.
      */
     private void launch(Launch launch) {
         Cmd cmd = launch.cmd();
@@ -199,7 +199,7 @@ public final class Program {
                 .flatMap(slot -> Option.of(latest.put(slot, Tuple.of(launch, task))))
                 .filter(older -> older._2().cancel(false))
                 .map(Tuple2::_1)
-                .forEach(older -> done(older, older.cmd().skipped()));
+                .forEach(older -> done(older, Option.none()));
         // Once the app stops, the executors take nothing anymore, and what is left is dropped.
         Try.run(() -> (cmd.background() ? background : io).execute(task));
     }
