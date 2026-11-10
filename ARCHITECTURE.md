@@ -636,8 +636,8 @@ leaves a model that already has its value as it is. This is the only way the vie
 no message from a user's event did.
 
 Every `jazygit.refreshInterval` (1 s by default, ADR 52) a `TimerMsg.Tick` triggers `Update.tick`, which re-reads the
-status, and checks the files of the git directory that the local and remote branches (one load, `LoadBranches`), the stashes
-and the worktrees are read from (`CheckMetadata`). That check runs no git: it stamps the HEADs, the config,
+status, and checks the files of the git directory that the local and remote branches (one load, `LoadBranches`), the
+stashes and the worktrees are read from (`CheckMetadata`). That check runs no git: it stamps the HEADs, the config,
 `packed-refs`, the directories of the local refs, the files of the remote-tracking refs, the stash reflog, the
 worktrees' admin files, and in a reftable repository its tables (`GitMetadata`). Only a load whose stamp differs from
 the one it was last started with (`Jobs.readAt`) runs again, so an idle app runs one git process per tick instead of
@@ -675,10 +675,10 @@ a load cancelled that way reports nothing, and is only done (ADR 101). See
 
 Every message is handled at the time it is: `Program` hands it to `Update.step(model, msg, now)`, which sets
 `Model.now` before the message is applied. `TimerMsg.Clock` comes every second, apart from that, only to wake the
-model up when nothing else happens, so the ages move on. The view rounds them: in minutes ("now" under one), and how long ago
-the remotes were fetched, or the pull requests read, in steps of 10 s under a minute. `Model.drawn()` takes the time
-to the second, so an idle app draws a frame a second, and every 5 s while the terminal does not have the focus. See
-`documentation/adr/0021-a-clock-apart-from-the-refresh.md`,
+model up when nothing else happens, so the ages move on. The view rounds them: in minutes ("now" under one), and how
+long ago the remotes were fetched, or the pull requests read, in steps of 10 s under a minute. `Model.drawn()` takes
+the time to the second, so an idle app draws a frame a second, and every 5 s while the terminal does not have the
+focus. See `documentation/adr/0021-a-clock-apart-from-the-refresh.md`,
 `documentation/adr/0022-fetched-ago-in-steps-of-10s.md` and `documentation/adr/0033-show-that-work-is-being-done.md`.
 
 `Update.step` also stamps the commands the message asks for: each gets the next id (`Jobs.nextId`) and runs, in
