@@ -56,6 +56,9 @@ The updates, messages, popups and the model are pure. Pure code:
   panel. Enter, Escape, Tab and clicks move focus too.
 - Pane cursors and focus are view state, kept by the TamboUI widgets; the model holds what an update reads (ADR 2). The
   rich diff's cursor is the exception: updates act on it, so it lives in the model.
+- Help texts (`help.*.details`) are one sentence saying what the key does, in the third person ("Lists…", "Adds…"),
+  under ~120 characters. Add a second sentence only for a warning that matters, such as lost work. Leave out what the
+  popup's own choices explain, how conflicts or diffs are handled (that is the same everywhere), and rare edge cases.
 
 ## TamboUI gotchas
 - A style value set in code wins over CSS; CSS only fills properties the code leaves null. `DialogElement` sets a border
