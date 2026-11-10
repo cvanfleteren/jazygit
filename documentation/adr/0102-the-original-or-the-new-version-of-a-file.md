@@ -35,7 +35,10 @@ file of about 3000 lines whole takes git a few milliseconds.
   never as git's combined diff.
 - The lines that changed keep their tint in a version, and their changed words their highlight while Ctrl+E has them
   on: the added lines in the new version, the removed ones in the original. So a version shows where the changes sit
-  in it. The gutter has one column, the numbers of that version. Whether the tint stays is to be seen in use.
+  in it. Whether the tint stays is to be seen in use.
+- The gutter keeps the two columns of the diff, as wide: the numbers of the new version in the column of the new file,
+  those of the original in that of the old one, the other column blank. So switching moves neither the code nor the
+  numbers sideways. Not: one column, which shifted the code left as the version showed.
 - The bar of the file says which version shows: `new version  src/Foo.java`, `original  src/Foo.java`. For a renamed
   file, each names its own path: `original  old/Foo.java`, `new version  src/Foo.java`. The title of the area does
   not change.

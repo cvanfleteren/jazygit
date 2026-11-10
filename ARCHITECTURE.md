@@ -406,7 +406,8 @@ See `documentation/adr/0102-the-original-or-the-new-version-of-a-file.md`.
   drops every version (`SelectionUpdate.selected`); a diff of the working tree read again reads its versions again.
 - `ContentView` gives each diff shown the version of its area (`ShownDiff.versioned`); `Version.applied` puts
   `FileVersion.of` the file read whole in place of the file, with an `Expansion.Fold` that names the version.
-  `RichDiff` then draws its bar, one column of numbers, no markers, and no stops in a hunk, so no range is started.
+  `RichDiff` then draws its bar, its numbers in their column of the diff's gutter, the other blank, no markers, and
+  no stops in a hunk, so no range is started.
 - `Version.moved` takes the cursor to the line of the version shown: from `VersionUpdate`, or from `LoadUpdate` once the
   read arrives. `ContentPanel` keeps the row of the cursor on the screen from the line it was drawn on. `DiffLines`
   shows the version too, so `y` copies its lines, and the review refuses to start a thread in it (`Why.IN_VERSION`).

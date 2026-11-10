@@ -136,33 +136,40 @@ class RichDiffTest {
     }
 
     @Test
-    void aVersionIsDrawnUnderItsOwnBarWithOneColumnOfNumbersAndNoMarkers() {
-        ParsedDiff.ParsedFile whole = ParsedDiff.of("""
-                        diff --git a/old.txt b/new.txt
-                        similarity index 50%
-                        rename from old.txt
-                        rename to new.txt
-                        --- a/old.txt
-                        +++ b/new.txt
-                        @@ -1,3 +1,3 @@
-                         one
-                        -two
-                        +TWO
-                         three
-                        """).files().head();
+    void aVersionIsDrawnUnderItsOwnBarWithItsNumbersInItsColumnOfTheDiffsAndNoMarkers() {
+        String renamed = """
+                diff --git a/old.txt b/new.txt
+                similarity index 50%
+                rename from old.txt
+                rename to new.txt
+                --- a/old.txt
+                +++ b/new.txt
+                @@ -1,3 +1,3 @@
+                 one
+                -two
+                +TWO
+                 three
+                """;
+        ParsedDiff.ParsedFile whole = ParsedDiff.of(renamed).files().head();
 
         RichDiff.Drawn added = drawn(whole, FileVersion.NEW, false);
         RichDiff.Drawn original = drawn(whole, FileVersion.ORIGINAL, true);
 
         assertEquals(
-                List.of(" new version  new.txt", "1 │  one", "2 │ +TWO", "3 │  three"),
+                List.of(" new version  new.txt", "  1 │  one", "  2 │ +TWO", "  3 │  three"),
                 text(added.lines()).map(String::stripTrailing));
+        // The gutter is as wide as the diff's, so switching does not move the code sideways.
+        assertEquals(
+                text(lines(ParsedDiff.of(renamed), false, Theme.SpanStyles.NONE))
+                        .get(1)
+                        .indexOf("│"),
+                text(added.lines()).get(1).indexOf("│"));
         assertEquals(
                 List.of(
                         " original  old.txt",
-                        "1 │  one",
-                        "2 │ -two",
-                        "3 │  three",
+                        "1   │  one",
+                        "2   │ -two",
+                        "3   │  three",
                         "the file is too long to show the rest of"),
                 text(original.lines()).map(String::stripTrailing));
         // Its lines are stops, but in no hunk: a range is of the diff.

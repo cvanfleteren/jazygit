@@ -154,17 +154,13 @@ final class RichDiff {
         FileDiff file = parsed.file();
         Option<FileVersion> version = fold.version();
         Vector<ParsedLine> lines = parsed.hunks().flatMap(ParsedHunk::lines).toVector();
-        int digits = lines.flatMap(
-                        line -> version.map(shown -> shown.number(line.line()).toList())
-                                .getOrElse(() -> line.line()
-                                        .oldNumber()
-                                        .toList()
-                                        .appendAll(line.line().newNumber())))
+        int digits = lines.flatMap(line ->
+                        line.line().oldNumber().toList().appendAll(line.line().newNumber()))
                 .max()
                 .map(number -> String.valueOf(number).length())
                 .getOrElse(1);
-        // A version has one column of numbers, its own (ADR 102).
-        int gutter = (version.isDefined() ? digits : 2 * digits + 1) + GUTTER_END.length();
+        // A version keeps both columns, so its code does not move sideways from the diff's (ADR 102).
+        int gutter = 2 * digits + 1 + GUTTER_END.length();
         String bar = version.map(shown -> bar(file, shown)).getOrElse(() -> bar(file));
         // Each line is measured once, here: its width also tells how far a changed line is padded.
         Vector<Integer> measured =
@@ -370,10 +366,16 @@ final class RichDiff {
         DiffLine line = row.parsed().line();
         LineRemarks remarks = row.remarks();
         Theme.SpanStyles styles = layout.styles();
-        String numbers = layout.version()
-                .map(version -> number(version.number(line), layout.digits()))
-                .getOrElse(() ->
-                        number(line.oldNumber(), layout.digits()) + " " + number(line.newNumber(), layout.digits()));
+        // A version shows its numbers in its own column of the diff's, the other one blank (ADR 102).
+        Option<Integer> old =
+                layout.version().map(version -> version == FileVersion.ORIGINAL).getOrElse(true)
+                        ? line.oldNumber()
+                        : Option.none();
+        Option<Integer> neu =
+                layout.version().map(version -> version == FileVersion.NEW).getOrElse(true)
+                        ? line.newNumber()
+                        : Option.none();
+        String numbers = number(old, layout.digits()) + " " + number(neu, layout.digits());
         return !remarks.threads().isEmpty() || remarks.covered()
                 ? List.of(
                         styled(numbers + " ", Theme.Classes.DIFF_LINE_NUMBER, styles),
