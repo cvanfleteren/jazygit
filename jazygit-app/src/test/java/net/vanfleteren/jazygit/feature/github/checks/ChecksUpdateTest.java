@@ -155,6 +155,26 @@ class ChecksUpdateTest {
     }
 
     @Test
+    void theBranchShowsHowTheChecksReadAreDoing() {
+        Model passed =
+                Update.update(shown(), new ChecksMsg.Loaded(FEATURE, READ)).model();
+        Model running = Update.update(model(Checks.PASSING), new ChecksMsg.Loaded(FEATURE, RUNNING))
+                .model();
+
+        assertEquals(Option.of(Checks.PASSING), passed.gitHub().checks(FEATURE));
+        assertEquals(Option.of(Checks.PENDING), running.gitHub().checks(FEATURE));
+    }
+
+    @Test
+    void checksReadOfABranchNotOnGitHubLeaveTheBranchesAsTheyAre() {
+        RemoteBranch fork = new RemoteBranch("fork", new BranchName("feature"));
+
+        Model read = Update.update(shown(), new ChecksMsg.Loaded(fork, READ)).model();
+
+        assertEquals(shown().gitHub(), read.gitHub());
+    }
+
+    @Test
     void whatWasReadOfAnotherBranchLeavesThePopupAsItIs() {
         RemoteBranch other = new RemoteBranch("origin", new BranchName("other"));
 
