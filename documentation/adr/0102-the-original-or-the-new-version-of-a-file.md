@@ -58,9 +58,9 @@ file of about 3000 lines whole takes git a few milliseconds.
 
 ### When the file is read
 
-- The first Ctrl+O on a file reads it whole, unless an expansion already did with whitespace not ignored. The diff shows until it is read, then
-  the version; nothing says it is loading: it takes milliseconds for a file of code, and up to a few hundred for one
-  near the limit. A press while it is read moves the cycle on, and the area shows where the cycle is once it is read.
+- The first Ctrl+O on a file reads it whole, unless an expansion already did with whitespace not ignored. The diff
+  shows until it is read, then the version; nothing says it is loading: it takes milliseconds for a file of code, and
+  up to a few hundred for one near the limit. A press while it is read moves the cycle on, and the area shows where the cycle is once it is read.
 
 ### What the version is kept with
 
