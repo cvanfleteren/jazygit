@@ -705,6 +705,10 @@ public final class ContentPanel {
             Scrolled known = model.scrolled(id, content);
             sent = sent.filter(told -> told._1().equals(known));
             Scrolled told = sent.map(Tuple2::_2).getOrElse(known);
+            // What was drawn before, for the same changes drawn anew, as when a version of the file shows in place of
+            // its diff (ADR 102): the line of the cursor stays where it was on the screen then too.
+            Option<Styled> sameChanges = styled.filter(
+                    before -> before.theme() == theme && shownAt.content().sameChanges(content));
             shownAt = known;
             Body body = shown.body();
             Option<Styled> last = styled.filter(before -> before.body().equals(body) && before.theme() == theme);
@@ -715,12 +719,13 @@ public final class ContentPanel {
             Styled current = last.filter(before -> before.asGiven().equals(asGiven))
                     .getOrElse(() -> Styled.of(body, theme, asGiven, style.apply(body, asGiven)));
             styled = Option.of(current);
-            // Shown in another order, the line of the cursor stays where it was on the screen: the view moves by as
-            // much as it does, which the model learns with the next move (ADR 83). A line the cursor was moved to that
-            // was not shown before, as when a version of the file shows in place of its diff, takes the place of the
-            // line the cursor was drawn on (ADR 102).
+            // Shown in another order, or as another version of the file, the line of the cursor stays where it was on
+            // the screen: the view moves by as much as it does, which the model learns with the next move (ADR 83,
+            // 102). A line the cursor was moved to that was not drawn before takes the place of the line the cursor
+            // was drawn on.
             Option<Anchor> drawnOn = cursor.map(DiffCursor::anchor);
-            Scrolled at = last.filter(before -> before != current)
+            Scrolled at = last.orElse(sameChanges)
+                    .filter(before -> before != current)
                     .flatMap(before -> told.cursor()
                             .flatMap(cursorAt -> before.row(cursorAt)
                                     .orElse(() -> drawnOn.flatMap(before::row))

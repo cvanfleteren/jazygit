@@ -228,6 +228,18 @@ class ContentPanelTest {
                 screens.last().mkString("\n"));
     }
 
+    @Test
+    void theLineOfTheCursorStaysWhereItWasOnTheScreenAsTheVersionShows() throws Exception {
+        List<List<String>> screens = beforeAndAfterTheVersion();
+
+        int was = screens.head().indexWhere(row -> row.contains(" 39 │  line39"));
+        assertTrue(was > 0, screens.head().mkString("\n"));
+        assertEquals(
+                was,
+                screens.last().indexWhere(row -> row.contains(" 39 │  line39")),
+                screens.last().mkString("\n"));
+    }
+
     /**
      * The screen of a panel with the cursor on line 39 of a diff around line 41, and then, in the same panel, once the
      * new version of the file of 60 lines is read in place of it.
