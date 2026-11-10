@@ -68,32 +68,41 @@ public final class SettingsPanelDialogs {
                                     't',
                                     popup -> Messages.get("dialog.settings.theme", themeLabel(popup.theme())),
                                     SettingsPanelMsg.ThemeRequested::new)
-                            .withHeading("dialog.settings.group.appearance"),
+                            .withHeading("dialog.settings.group.appearance")
+                            .withDetails("dialog.settings.theme.details"),
                     new Choice<SettingsPanelPopup>(
-                            'r', SettingsPanelDialogs::repositoryTheme, SettingsPanelMsg.RepositoryThemeRequested::new),
+                                    'r',
+                                    SettingsPanelDialogs::repositoryTheme,
+                                    SettingsPanelMsg.RepositoryThemeRequested::new)
+                            .withDetails("dialog.settings.repositoryTheme.details"),
                     new Choice<SettingsPanelPopup>(
-                            'm',
-                            popup -> Messages.get(
-                                    "dialog.settings.animations",
-                                    Messages.get(popup.animations() ? "dialog.settings.on" : "dialog.settings.off")),
-                            SettingsPanelMsg.AnimationsToggled::new),
+                                    'm',
+                                    popup -> Messages.get(
+                                            "dialog.settings.animations",
+                                            Messages.get(
+                                                    popup.animations() ? "dialog.settings.on" : "dialog.settings.off")),
+                                    SettingsPanelMsg.AnimationsToggled::new)
+                            .withDetails("dialog.settings.animations.details"),
                     new Choice<SettingsPanelPopup>(
                                     'g',
                                     SettingsPanelDialogs::ghExecutable,
                                     SettingsPanelMsg.GhExecutableRequested::new)
-                            .withHeading("dialog.settings.group.github"),
-                    new Choice<>(
-                            'a',
-                            SettingsPanelDialogs::account,
-                            SettingsPanelMsg.AccountRequested::new,
-                            (model, popup) -> popup.gitHub()
-                                    .exists(gitHub -> gitHub.logins().isRight())),
-                    new Choice<>(
-                            'b',
-                            SettingsPanelDialogs::browser,
-                            SettingsPanelMsg.BrowserRequested::new,
-                            (model, popup) -> popup.gitHub()
-                                    .exists(gitHub -> gitHub.account().isDefined()))),
+                            .withHeading("dialog.settings.group.github")
+                            .withDetails("dialog.settings.gh.details"),
+                    new Choice<SettingsPanelPopup>(
+                                    'a',
+                                    SettingsPanelDialogs::account,
+                                    SettingsPanelMsg.AccountRequested::new,
+                                    (model, popup) -> popup.gitHub()
+                                            .exists(gitHub -> gitHub.logins().isRight()))
+                            .withDetails("dialog.settings.account.details"),
+                    new Choice<SettingsPanelPopup>(
+                                    'b',
+                                    SettingsPanelDialogs::browser,
+                                    SettingsPanelMsg.BrowserRequested::new,
+                                    (model, popup) -> popup.gitHub()
+                                            .exists(gitHub -> gitHub.account().isDefined()))
+                            .withDetails("dialog.settings.browser.details")),
             WIDTH);
     // How a warning starts.
     private static final String WARNING = "⚠ ";
