@@ -22,6 +22,7 @@ import net.vanfleteren.jazygit.ui.LineEditInput;
 import net.vanfleteren.jazygit.ui.SubmittableTextArea;
 import net.vanfleteren.jazygit.ui.Theme;
 import net.vanfleteren.jazygit.ui.widgets.DialogFrame;
+import net.vanfleteren.jazygit.ui.widgets.FocusBordered;
 import net.vanfleteren.jazygit.ui.widgets.HintedDialog;
 import net.vanfleteren.jazygit.ui.widgets.PopupView;
 
@@ -128,18 +129,22 @@ public final class NewPullRequestDialog implements PopupView {
                                     .onChange(text -> edited(pullRequest.draft()))
                                     .rows(BODY_HEIGHT)
                                     .onKeyEvent(this::keys),
-                            // The box itself takes the focus, which the themes show by reversing it, as a cursor.
-                            panel(row(List.<StyledElement<?>>of(
-                                                    text(box(pullRequest.draft()))
-                                                            .id(DRAFT_ID)
-                                                            .addClass(CHECKBOX)
-                                                            .focusable()
-                                                            .length(BOX_WIDTH)
-                                                            .onKeyEvent(event -> draftKeys(event, pullRequest.draft())),
-                                                    text(" " + Messages.get("dialog.newPullRequest.draft")))
-                                            .appendAll(stack(model, open))
-                                            .toJavaArray(StyledElement[]::new)))
-                                    .length(INPUT_HEIGHT)),
+                            // The box itself takes the focus, which the themes show by reversing it, as a cursor,
+                            // and in the border, as for the other fields.
+                            new FocusBordered(
+                                    panel(row(List.<StyledElement<?>>of(
+                                                            text(box(pullRequest.draft()))
+                                                                    .id(DRAFT_ID)
+                                                                    .addClass(CHECKBOX)
+                                                                    .focusable()
+                                                                    .length(BOX_WIDTH)
+                                                                    .onKeyEvent(event ->
+                                                                            draftKeys(event, pullRequest.draft())),
+                                                            text(" " + Messages.get("dialog.newPullRequest.draft")))
+                                                    .appendAll(stack(model, open))
+                                                    .toJavaArray(StyledElement[]::new)))
+                                            .length(INPUT_HEIGHT),
+                                    List.of(DRAFT_ID, STACK_ID))),
                     Messages.get("dialog.newPullRequest.hint"));
         });
     }
