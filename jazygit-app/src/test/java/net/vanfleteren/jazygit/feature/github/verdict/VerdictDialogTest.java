@@ -49,7 +49,7 @@ class VerdictDialogTest {
 
             assertTrue(screen.contains("Review pull request #42"), screen);
             assertTrue(screen.contains("(•) Approve   ( ) Request changes"), screen);
-            assertTrue(screen.contains("tab: next field · space: choose"), screen);
+            assertTrue(screen.contains("←→: approve or request changes · tab: next field"), screen);
             assertFalse(screen.contains("still a draft"), screen);
         }
     }
@@ -69,13 +69,20 @@ class VerdictDialogTest {
     }
 
     @Test
-    void tabGoesToAskingForChangesWhichSpaceChoosesAndOnToTheText() throws Exception {
+    void theArrowsChooseAndTabGoesOnToTheText() throws Exception {
         try (ToolkitTestRunner runner = start()) {
-            SettledPilot.of(runner).press(KeyCode.TAB);
-            SettledPilot.of(runner).press(' ');
+            SettledPilot.of(runner).press(KeyCode.RIGHT);
             SettledPilot.of(runner).pause();
             String chosen = RenderedText.ofLarge(runner, this::view);
             assertTrue(chosen.contains("( ) Approve   (•) Request changes"), chosen);
+
+            // The focus went along with the mark: the arrows still choose.
+            SettledPilot.of(runner).press(KeyCode.LEFT);
+            SettledPilot.of(runner).pause();
+            String back = RenderedText.ofLarge(runner, this::view);
+            assertTrue(back.contains("(•) Approve   ( ) Request changes"), back);
+            SettledPilot.of(runner).press(KeyCode.DOWN);
+            SettledPilot.of(runner).pause();
 
             SettledPilot.of(runner).press(KeyCode.TAB);
             for (char c : "Rename it".toCharArray()) {
@@ -131,7 +138,7 @@ class VerdictDialogTest {
 
     private ToolkitTestRunner start() throws Exception {
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
-        SettledPilot.focus(runner, VerdictDialog.APPROVE_ID);
+        SettledPilot.focus(runner, VerdictDialog.CHOICES_ID);
         RenderedText.ofLarge(runner, this::view);
         return runner;
     }

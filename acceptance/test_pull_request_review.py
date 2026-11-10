@@ -42,9 +42,8 @@ def test_asking_for_changes_needs_a_reason(repo, origin, clone, gh, jazygit):
     ui = jazygit()
     review_from_the_dialog(ui)
 
-    # From approving to asking for changes, chosen with space.
-    ui.app.press("tab")
-    ui.app.press("space")
+    # From approving to asking for changes, with the arrow, as through radio buttons.
+    ui.app.press("right")
     ui.app.wait_for("( ) Approve   (•) Request changes")
     ui.app.press("ctrl+s")
     ui.app.wait_for("Say what should change")

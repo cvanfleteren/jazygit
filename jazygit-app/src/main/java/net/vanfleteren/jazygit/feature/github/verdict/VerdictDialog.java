@@ -6,7 +6,6 @@ import static dev.tamboui.toolkit.Toolkit.text;
 
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.event.EventResult;
-import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
@@ -22,16 +21,16 @@ import net.vanfleteren.jazygit.ui.widgets.PopupView;
 /**
  * Popup asking for a review of a pull request (ADR 99), as a {@link CommentComposer} under a choice of what it says,
  * in a box of its own: {@code (•) Approve  ( ) Request changes}. The text is in a box too, whose title says whether
- * the verdict chosen needs it. Each choice takes the focus, which the themes show by reversing its mark,
- * and Space or Enter chooses it; Tab goes from one to the other and on to the text, where the focus starts on approve.
- * Ctrl+S sends it, Ctrl+O opens the text in the editor and Escape goes back, from any of them. A draft says so, above
- * the text. The review lives in the {@link Model}, as a {@link VerdictPopup}.
+ * the verdict chosen needs it. The choices are one stop of the focus, as a group of radio buttons is: the focus is
+ * on the mark of the one chosen, which the themes show by reversing it, and the arrow keys choose the other, the focus
+ * going along. The focus starts there, on approve; Tab goes on to the text. Ctrl+S sends it, Ctrl+O opens the text in
+ * the editor and Escape goes back, from the choices as from the text. A draft says so, above the text. The review lives in the {@link Model}, as a {@link VerdictPopup}.
  */
 public final class VerdictDialog implements PopupView {
 
     public static final String ID = "pull-request-verdict";
-    public static final String APPROVE_ID = "pull-request-verdict-approve";
-    public static final String CHANGES_ID = "pull-request-verdict-changes";
+    // The mark of the choice made, wherever it is, so the focus goes along with what is chosen.
+    public static final String CHOICES_ID = "pull-request-verdict-choices";
 
     private static final CommentComposer.Actions ACTIONS = new CommentComposer.Actions(
             VerdictMsg.Edited::new,
@@ -64,7 +63,7 @@ public final class VerdictDialog implements PopupView {
      */
     @Override
     public List<String> ids() {
-        return List.of(APPROVE_ID, CHANGES_ID, ID);
+        return List.of(CHOICES_ID, ID);
     }
 
     @Override
@@ -95,35 +94,43 @@ public final class VerdictDialog implements PopupView {
         String approve = " " + Messages.get("dialog.verdict.approve");
         String changes = " " + Messages.get("dialog.verdict.requestChanges");
         return panel(row(
-                        mark(APPROVE_ID, Verdict.APPROVE, chosen),
+                        mark(Verdict.APPROVE, chosen),
                         text(approve).length(approve.length()),
                         text("").length(GAP),
-                        mark(CHANGES_ID, Verdict.REQUEST_CHANGES, chosen),
+                        mark(Verdict.REQUEST_CHANGES, chosen),
                         text(changes).length(changes.length())))
                 .title(Messages.get("dialog.verdict.choices"))
                 .length(BOX_HEIGHT);
     }
 
     /**
-     * The mark of the choice of {@code verdict}, filled when it is {@code chosen}, which takes the focus.
+     * The mark of the choice of {@code verdict}: filled, and taking the focus, when it is {@code chosen}.
      */
-    private Element mark(String id, Verdict verdict, Verdict chosen) {
-        return text(verdict == chosen ? "(•)" : "( )")
-                .id(id)
-                .addClass(NewPullRequestDialog.CHECKBOX)
-                .focusable()
-                .length(MARK_WIDTH)
-                .onKeyEvent(event -> keys(event, verdict));
+    private Element mark(Verdict verdict, Verdict chosen) {
+        return verdict == chosen
+                ? text("(•)")
+                        .id(CHOICES_ID)
+                        .addClass(NewPullRequestDialog.CHECKBOX)
+                        .focusable()
+                        .length(MARK_WIDTH)
+                        .onKeyEvent(this::keys)
+                : text("( )").length(MARK_WIDTH);
     }
 
     /**
-     * Chooses {@code verdict} on Space or Enter; the other keys are those of the text.
+     * Chooses approving on Left or Up and asking for changes on Right or Down, as the arrows go through a group of
+     * radio buttons; the other keys are those of the text.
      */
-    private EventResult keys(KeyEvent event, Verdict verdict) {
-        if (event.code() == KeyCode.ENTER || (event.isChar(' ') && !event.hasCtrl() && !event.hasAlt())) {
-            dispatch.accept(new VerdictMsg.Chosen(verdict));
-            return EventResult.HANDLED;
-        }
-        return composer.keys(event, ACTIONS);
+    private EventResult keys(KeyEvent event) {
+        return switch (event.code()) {
+            case LEFT, UP -> chosen(Verdict.APPROVE);
+            case RIGHT, DOWN -> chosen(Verdict.REQUEST_CHANGES);
+            default -> composer.keys(event, ACTIONS);
+        };
+    }
+
+    private EventResult chosen(Verdict verdict) {
+        dispatch.accept(new VerdictMsg.Chosen(verdict));
+        return EventResult.HANDLED;
     }
 }
