@@ -51,10 +51,11 @@ public final class ChecksUpdate {
                         .flatMap(ChecksPopup::from)
                         .map(model::openPopup)
                         .getOrElse(() -> model.withoutPopup(ChecksPopup.class)));
-            // How long checks take is learned from them too.
+            // How long checks take is learned from them too, and the branch shows how they are doing as the popup does.
             case ChecksMsg.Loaded(RemoteBranch branch, PendingChecks checks) ->
                 CheckTimesUpdate.read(
-                        Next.of(shown(model, branch, Either.right(checks))),
+                        Next.of(shown(model, branch, Either.right(checks))
+                                .mapGitHub(gitHub -> gitHub.withChecksRead(branch, checks.of(branch.branch())))),
                         checks.repository(),
                         checks.of(branch.branch()));
             case ChecksMsg.Failed(RemoteBranch branch, Failure failure) ->

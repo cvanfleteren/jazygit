@@ -167,6 +167,19 @@ public record GitHubState(
     }
 
     /**
+     * This state with the checks on {@code remote}, a branch on GitHub, doing as {@code checks}, just read one by one,
+     * do together, so the branch shows what the checks popup shows without waiting for the next read of the branch
+     * checks. Unchanged when none were read, or {@code remote} is not on GitHub.
+     */
+    public GitHubState withChecksRead(RemoteBranch remote, List<Check> checks) {
+        return checks.isEmpty() || !onGitHub(remote)
+                ? this
+                : withBranchChecks(branchChecks.map(read -> new GitHubChecks(
+                        read.remotes(),
+                        read.byBranch().put(remote.branch(), Checks.combined(checks.map(Check::state))))));
+    }
+
+    /**
      * The open pull request from {@code branch}: the one from the branch it follows on the remote, else from
      * the branch of the same name; none when it follows a branch on a remote other than GitHub.
      */
