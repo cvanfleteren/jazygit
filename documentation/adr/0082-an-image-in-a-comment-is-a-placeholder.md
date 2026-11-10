@@ -8,7 +8,8 @@ A comment, a review remark or the description of a pull request may hold images:
 `<img>` tags, which GitHub writes for an image that is pasted in and which bots use for icons. The terminal shows none
 of them. tamboui draws a Markdown image as `[image: alt](url)`, the whole URL, and an `<img>` as the tag it is, which
 is often longer than the text around it: the status icon of a bot,
-`<img src="https://github.com/user-attachments/assets/…" width="14px" height="14px" style="vertical-align: middle; margin-left: 4px;" />`,
+`<img src="https://github.com/user-attachments/assets/…" width="14px" height="14px" style="vertical-align: middle;
+margin-left: 4px;" />`,
 took three lines after one line of text.
 
 `tamboui-image` can draw images, with the Kitty, iTerm2 and Sixel protocols where the terminal has one and with

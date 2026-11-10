@@ -1,0 +1,15 @@
+// Markdown prose wraps at 120 columns, as the code does. Only that rule is checked.
+// Tables, code blocks and headings may be wider, and so may a line whose part past 120 has no space (a long link).
+{
+  "config": {
+    "default": false,
+    "MD013": {
+      "line_length": 120,
+      "tables": false,
+      "code_blocks": false,
+      "headings": false
+    }
+  },
+  "globs": ["**/*.md"],
+  "ignores": ["**/target/**", "**/node_modules/**", ".claude/**"]
+}

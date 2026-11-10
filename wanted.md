@@ -51,7 +51,8 @@ Features to consider, roughly most valuable first.
     - **More of the review remarks** in the diff of a pull request (ADR 55, ADR 60): a pending review, gathering
       comments to submit them with an approval or a request for changes (ADR 100 approves and asks for changes on their
       own; what is left: reading the viewer's pending review and showing its comments, writing the comments of the
-      diff into it, submitting or dropping it, editing its comments, and a review that only comments); editing the text of a review (ADR 65);
+      diff into it, submitting or dropping it, editing its comments, and a review that only comments); editing the text
+      of a review (ADR 65);
       deleting the comments of others as an admin, from the comments popup (ADR 64); the diff, and its remarks, of a
       merged pull request, read against the commit it was merged with; the remarks in the preview of the pull requests
       screen, for a pull request of another repository.

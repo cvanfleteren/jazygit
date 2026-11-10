@@ -31,7 +31,8 @@ two children forks it.
 ### The stack menu
 
 `s` on a branch or on the header of a stack opens a menu of what can be done with its stack, with only the choices
-that apply: make a stack, add to the stack, stack on…, unstack, and rebase and push the stack (ADR 74). `s` is free on the branches
+that apply: make a stack, add to the stack, stack on…, unstack, and rebase and push the stack (ADR 74). `s` is free on
+the branches
 pane, and a menu leaves the other free keys for later, as `u` does for the upstream.
 
 ### Making a stack

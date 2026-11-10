@@ -1,0 +1,28 @@
+name: Markdown
+
+# Checks that Markdown prose wraps at 120 columns (.markdownlint-cli2.jsonc). build.yml skips pull requests that only
+# change documentation, so this runs on its own.
+on:
+  pull_request:
+    paths:
+      - '**.md'
+      - '.markdownlint-cli2.jsonc'
+      - '.github/workflows/markdown.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  line-length:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+
+      # The markdownlint-cli2 of the flake's nixpkgs, the one the dev shell has.
+      - name: Lint
+        run: nix run --inputs-from . nixpkgs#markdownlint-cli2

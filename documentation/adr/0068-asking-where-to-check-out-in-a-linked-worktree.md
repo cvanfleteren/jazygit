@@ -21,7 +21,8 @@ user chose it to.
    and creating a branch, which switches to it (`NewBranchCmd`): each moves HEAD and changes the files. The main
    worktree does not ask: checking out there stays one key. Next to a bare repository, where there is no main
    worktree, every worktree is a linked one, so every checkout asks. Moving commits, which also leaves another branch
-   checked out, is not a checkout the user asks for, and does not ask. What leaves the branch checked out here as it is does not ask either (5).
+   checked out, is not a checkout the user asks for, and does not ask. What leaves the branch checked out here as it is
+   does not ask either (5).
 2. **The choices are: here, in the main worktree, or in a new worktree.** Each shows what it changes: the worktree
    and the branch it has checked out, whether the main one has changes, and why the one shown is locked, if it is.
    Checking out in another linked worktree is not offered: that is where the next sandbox is most likely to be.
@@ -53,11 +54,13 @@ user chose it to.
 5. **Which worktree asks is decided where the checkout would start.** One function, `CheckoutUpdate.place`, takes
    the checkout asked for, a `CheckoutRequest`, and either starts it or opens the dialog; the checkouts of (1) all go
    through it. A `CheckoutRequest` says how it is checked out here, how a new worktree for it is asked for, with the
-   checks adding one makes, and how it is asked for again. It is an interface rather than a sealed one, as checking out a pull request is one too, of the
+   checks adding one makes, and how it is asked for again. It is an interface rather than a sealed one, as checking out
+   a pull request is one too, of the
    GitHub feature, which the branch feature does not use. A branch that another worktree has checked out still offers
    to switch to that one first, for a pull request too: that moves no HEAD. A pull request whose branch this
    worktree has checked out is checked out here without asking, as checking out the branch checked out here is: that
-   switches no branch, and no other worktree could have it. Until the worktrees are read it is not known which one is shown,
+   switches no branch, and no other worktree could have it. Until the worktrees are read it is not known which one is
+   shown,
    and it is checked out here, as before; they are read with the branches, which a checkout needs too.
 
    Creating a branch went through `Msg.PopupConfirmed`, which starts what the popup confirms without a message of the

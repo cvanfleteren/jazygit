@@ -49,7 +49,8 @@ editor, Escape drops it, a failed send says why under the text. In the pull requ
 ### When it may
 
 - On an open pull request, a draft too. Not on a closed or merged one.
-- Not on the viewer's own: the dialog dims `a`, as it dims merging what cannot be merged; in the diff, `a` says so without asking GitHub, as ADR 60 does
+- Not on the viewer's own: the dialog dims `a`, as it dims merging what cannot be merged; in the diff, `a` says so
+  without asking GitHub, as ADR 60 does
   for the rights of a thread. Not: offering only a review that comments, which is left out.
 - Not while the viewer has a pending review: `a` says to submit or drop it in the browser, without asking GitHub; from
   the dialog, which shows no error of its own, under the text of the popup, which then sends nothing. Not: submitting
@@ -77,7 +78,8 @@ editor, Escape drops it, a failed send says why under the text. In the pull requ
   stop is one Tab less to the text. Not: the focus on the mark of the choice made, reversed, which left the box
   unmarked while the box of the text showed its focus: TamboUI has no `:focus-within` for a box to show the focus of
   what is in it.
-- A draft says so in the title, `Review pull request #<n> · draft`, and above the text, in the colour of a warning: the author may
+- A draft says so in the title, `Review pull request #<n> · draft`, and above the text, in the colour of a warning: the
+  author may
   not want it reviewed yet. Not: asking to confirm. It follows the details of the dialog it came from, as the comment
   popup does (ADR 5), so a pull request made a draft or ready while it is open shows so.
 - Ctrl+S on an empty or blank text approves. To ask for changes, it does nothing, as on a blank comment (ADR 5), and
@@ -87,7 +89,8 @@ editor, Escape drops it, a failed send says why under the text. In the pull requ
 
 ### Sending
 
-- `GitHub.submitReview(pullRequest, verdict, body)`, by the node id of the pull request, with GraphQL's `addPullRequestReview`, its command in the log. Not:
+- `GitHub.submitReview(pullRequest, verdict, body)`, by the node id of the pull request, with GraphQL's
+  `addPullRequestReview`, its command in the log. Not:
   `gh pr review`, which would have to be replaced by the call to `submitPullRequestReview` once there is a pending
   review.
 - The popup stays open while it is sent, saying so; meanwhile it cannot be changed, sent again or left. The branch of
@@ -100,6 +103,7 @@ editor, Escape drops it, a failed send says why under the text. In the pull requ
 
 1. This ADR, and in `wanted.md` and `prs.md`: approving and asking for changes are done; the pending review, with the
    review that only comments, is what is left.
-2. The node id, `viewerDidAuthor` and `viewerLatestReview` in `DetailsQuery` and `ReviewThreadsQuery`, and `GitHub.submitReview`.
+2. The node id, `viewerDidAuthor` and `viewerLatestReview` in `DetailsQuery` and `ReviewThreadsQuery`, and
+   `GitHub.submitReview`.
 3. The popup, `a` in the dialog and in the diff with when it may, reading again once sent, and an acceptance test
    against a fake gh that approves, and asks for changes with a blank text and then with one.

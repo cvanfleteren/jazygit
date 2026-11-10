@@ -5,7 +5,8 @@ Date: 2026-11-07
 ## Context
 
 A repository can be configured to use one of the GitHub accounts gh is logged in to, as `jazygit.githubUser` in its
-git configuration (ADR 29, ADR 70); gh and git then run as that account, with its token in their environment. A user with a
+git configuration (ADR 29, ADR 70); gh and git then run as that account, with its token in their environment. A user
+with a
 work and a personal account mostly has a browser, or a profile of one, logged in to each. But every link opens in the
 one browser gh would start (ADR 85): a pull request of the work account opens in the browser that is logged in as the
 personal one.
