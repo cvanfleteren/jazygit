@@ -76,7 +76,8 @@ Ctrl+O opens it in the editor, Escape goes back; a failed send says why under th
   shown again, as when its node of the tree is highlighted again, puts it back on its last anchor while that is still
   in the diff, as its scroll is kept now.
 - The rows of the cursor are tinted as wide as their file, in the colour of the new class `diff-cursor`, which every
-  theme has; `mono` and `none` reverse them. On a thread, the strokes of the `┃` rule of the thread are reversed, not the spaces beside them. The cursor is drawn
+  theme has; `mono` and `none` reverse them. On a thread, the strokes of the `┃` rule of the thread are reversed, not
+  the spaces beside them. The cursor is drawn
   only while the panel has the focus. The tint is laid over the text `ScrollArea` keeps: only the rows of the cursor
   and of a range are drawn again, the diff is not styled again. Not: the cursor as part of what is styled, which would
   style a whole diff, syntax and threads, on each `j`.
@@ -183,7 +184,8 @@ Ctrl+O opens it in the editor, Escape goes back; a failed send says why under th
 - Reading the remarks reads a few more fields: the ids of threads and comments, and the viewer's rights.
 - Staging hunks and lines (`wanted.md` 1) can build on the cursor and its ranges.
 
-Amended by ADR 62: each comment of an open thread is a stop, and `Space` collapses or opens it, or its thread, against its own default rather than against `t`, which is gone.
+Amended by ADR 62: each comment of an open thread is a stop, and `Space` collapses or opens it, or its thread, against
+its own default rather than against `t`, which is gone.
 
 `Space` off a thread or a comment does nothing rather than say why: it toggles what is there, so a press off one is
 noise, not a mistake to explain.
@@ -194,4 +196,5 @@ Amended by ADR 65: `e` edits a comment of a thread.
 
 Amended by ADR 78: the cursor tints the lines of its stop only, not a copy of all of them each frame.
 
-Amended by ADR 83: the cursor stops on paired lines in the order they are shown; the hunk a range is open in is shown as git gives it.
+Amended by ADR 83: the cursor stops on paired lines in the order they are shown; the hunk a range is open in is shown as
+git gives it.

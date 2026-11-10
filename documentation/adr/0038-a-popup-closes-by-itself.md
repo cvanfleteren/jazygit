@@ -5,7 +5,8 @@ Date: 2026-10-27
 ## Context
 
 Every feature that asks something in a popup declares a message for Escape, and a case that handles it. Of the 48
-cases for a `Cancelled` message, 43 only closed their popup: `case XCancelled() -> Next.of(model.withoutPopup(X.class))`.
+cases for a `Cancelled` message, 43 only closed their popup:
+`case XCancelled() -> Next.of(model.withoutPopup(X.class))`.
 The error, help, checks, pull request and settings popups did the same under other names (`Dismissed`, `Closed`,
 `InfoClosed`). Each was a record, a case in the update, the message handed to the dialog's spec, and a test of the
 update, in 48 places; a new popup added one more.

@@ -32,7 +32,8 @@ The packages keep their names (`net.vanfleteren.jazygit.git`, ...), whichever mo
 cannot see the application, TamboUI, picocli or night-config, and git and gh cannot see each other, so the compiler
 stops any such dependency. The rules inside the core (the models are pure, failures are values) are in
 `CoreRules` and `ModelRules`, which `ProcessArchitectureTest`, `GitArchitectureTest` and `GhArchitectureTest` take
-in. The test-jars of git and gh share `StubGit` with a stub of each role, `SampleData` and `StubGitHub` with the app's tests.
+in. The test-jars of git and gh share `StubGit` with a stub of each role, `SampleData` and `StubGitHub` with the app's
+tests.
 `jazygit-json` knows nothing of jazygit; only its `JsonReader` uses Parsson, and the core and the app do not use it
 at all (`JsonArchitectureTest`, `CoreRules`, `ArchitectureTest`). `jazygit-syntax` knows nothing of jazygit either,
 not even of a diff: it lexes a line from where the line before it left the scanner, and uses only the JDK and vavr
@@ -98,7 +99,8 @@ inside the core, the compiler does: it cannot reach the app's packages at all, n
   - The dialogs of a feature use the widgets of `ui`.
   - `ui` uses `git` and `gh` only for the errors, which `ErrorText` describes.
   - Nothing in `ui`, `keys` or a dialog runs git or gh.
-- **`git` and `gh` know nothing of each other**, nor of anything above them: they live in `jazygit-git` and `jazygit-gh`.
+- **`git` and `gh` know nothing of each other**, nor of anything above them: they live in `jazygit-git` and
+  `jazygit-gh`.
 - **Only views use `i18n`.** `state` does not.
 - **`settings` knows nothing of the application**, and is the only part that reads or writes TOML.
 
@@ -148,7 +150,8 @@ Ctrl+S shows the settings (`feature.settings`): the gh executable, the theme, an
 repository. The keys in `config.toml` are `ui.theme`, `ui.diff-style` (which Ctrl+D switches, ADR 44),
 `ui.diff-syntax` (`false` draws the code of the rich view in one colour, ADR 53), `ui.diff-words` (which Ctrl+E
 switches; `false` draws a changed line of the rich view in its line colour alone, its changed words not highlighted) and
-`github.executable`, the gh to run when it is not the one on the PATH; a new one is only kept once `<executable> --version` runs. Changing the gh executable or the
+`github.executable`, the gh to run when it is not the one on the PATH; a new one is only kept once
+`<executable> --version` runs. Changing the gh executable or the
 account shows the repository again through `Env.repositories()`, as switching to a recent repository does, so a
 new `Env` runs gh as the settings say now.
 
@@ -251,7 +254,8 @@ highlighted branch diverged (`feature.branch`, `UpstreamUpdate`):
 
 - **From its upstream** (`v`): the branch it follows, `Upstream.branch`: the remote-tracking one, or the local one
   for an upstream in the repository itself.
-- **From the base branch** (`b`): `origin/<main>`, else the local `<main>`, where `<main>` is the branch `Branch.isDefault`
+- **From the base branch** (`b`): `origin/<main>`, else the local `<main>`, where `<main>` is the branch
+  `Branch.isDefault`
   marks. The main branch itself has no base.
 
 `Model.divergence` (`state.DivergenceView`) holds the two branches, the commits only on either of them, read with
@@ -319,7 +323,8 @@ request. The design and the steps still to come are in `prs.md`.
 - They are read when the screen is shown, every minute while it is shown (`PrOverviewMsg.Tick`, from `Timers`),
   with `r`, and after a pull request was merged, closed or turned into a draft. Failing to read them again keeps the
   ones read; `PrOverview.freshness` keeps when they were last read and which read failed since, which the line at the
-  bottom says on this screen ("read 2m ago · last read failed"). gh runs as the account of the repository, so the lists are that account's.
+  bottom says on this screen ("read 2m ago · last read failed"). gh runs as the account of the repository, so the lists
+  are that account's.
 - **This repo** is the read of the pull requests the branches show too (`LoadRepositoryPullRequests`, all pages):
   the branches take those that are not from a fork (`RepositoryPullRequests.ofBranches`, ADR 58). So it is read at
   the start, after every fetch, push or change on GitHub, also while the screen is hidden; a tick of the screen only
@@ -331,12 +336,14 @@ request. The design and the steps still to come are in `prs.md`.
   one of another repository opens in the browser, as `O` does for any (`gh pr view <url> --web`).
 - **The preview**: the content panel shows the pull request highlighted in the pane in use like a commit: a header,
   its title and description, `---`, and its diff, read with `gh pr view <url> --json baseRefName,body` and
-  `gh pr diff <url>`, so also for repositories that are not cloned; the diff is read only up to where git's are cut off, 50 000 lines or 4 MiB
+  `gh pr diff <url>`, so also for repositories that are not cloned; the diff is read only up to where git's are cut off,
+  50 000 lines or 4 MiB
   (ADR 79). It is read
   again when the pull request changed (`PrOverview.preview` is keyed by its summary), and the one shown before
   stays while it is read. Enter moves the focus into it, Escape back to the pane it shows.
 - **Checking out**: space checks out a pull request of the repository in place, from a fork too, with
-  `gh pr checkout <n>` (`CheckoutPullRequestCmd.CHECKOUT_PR`), which waits until the repository is in the middle of nothing. It is
+  `gh pr checkout <n>` (`CheckoutPullRequestCmd.CHECKOUT_PR`), which waits until the repository is in the middle of
+  nothing. It is
   refused up front when the working tree has changes, untracked files apart (`AppError.ChangesBeforeCheckout`), and
   for a pull request of another repository (`AppError.OtherRepository`). Which repository this is is known once its
   pull requests were read; until then, checking out says they are still being read, or why they could not be.
@@ -353,7 +360,8 @@ against its first parent, which the diff style decides (below), and how many lin
 only; side-by-side diffs are to follow them there.
 
 - `Diffs.uncommitted` and `Diffs.commitChanges` take the options, which `CliDiffs.flags` turns into git's
-  (`-U<n>`, always, so the user's `diff.context` does not count, and `--ignore-all-space`). A file whose changes are all whitespace is then left out of the diff entirely, also from
+  (`-U<n>`, always, so the user's `diff.context` does not count, and `--ignore-all-space`). A file whose changes are all
+  whitespace is then left out of the diff entirely, also from
   the files `git show --stat` lists.
 - `Cmd.LoadFileDiff`, `Cmd.LoadCommitDetail` and `Cmd.LoadStashDetail` carry the options, and so do the messages
   they send back. They are the `Cmd.DiffLoad`s: what one of them read with other options than the model's, or
@@ -416,9 +424,11 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
   as the words were compared when they were read.
 - **The rich view** is drawn by `ui.RichDiff` from a `ParsedDiff`, one tree of files, hunks and lines, each line with
   its words and its tokens (ADR 56): `UnifiedDiff`, the diff parsed into files, hunks and numbered lines, which
-  `ParsedDiff.diff()` gives back, and `WordDiff`, which pairs the removed and added lines of a block and finds the words that
+  `ParsedDiff.diff()` gives back, and `WordDiff`, which pairs the removed and added lines of a block and finds the words
+  that
   changed in a pair, with the whitespace between two changed words highlighted with them (ADR 54), and `LinePairs`,
-  which shows a block whose pairs all have changed words a pair at a time (ADR 83). All are pure, in `git.model`. A `DiffText` is parsed where it is made, on the thread that read it
+  which shows a block whose pairs all have changed words a pair at a time (ADR 83). All are pure, in `git.model`. A
+  `DiffText` is parsed where it is made, on the thread that read it
   from git (ADR 50), so the render thread only styles it; the line the content panel adds after a diff, that it is
   truncated or that only whitespace changed, is added as a note (`ParsedDiff.withNote`). The content panel styles a
   body only when it changes, not on every frame. It styles it in parallel on the common pool, while the render thread
@@ -479,8 +489,10 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
   number, a thread by its id, a comment of an open thread), and `state.DiffStops`, pure, says where it goes when its
   stop is gone (`DiffStops.nearest`). `RichDiff.drawn` works out the stops as it draws the diff and marks the row each
   starts on (`RichDiff.Drawn`); a key of the review needs only the lines among them, which `state.DiffLines` works
-  out from the diff alone, without placing the threads. `ui.DiffCursor` moves it: `j`/`k` and the arrows, through a stop higher than the view before
-  the next one, the pages and the wheel pulling it along, a click on a row, a range of one hunk with `v`, the next thread with `n`. The
+  out from the diff alone, without placing the threads. `ui.DiffCursor` moves it: `j`/`k` and the arrows, through a stop
+  higher than the view before
+  the next one, the pages and the wheel pulling it along, a click on a row, a range of one hunk with `v`, the next
+  thread with `n`. The
   area sends where it moved it and the view in one `Msg.ContentScrolled`: `Scrolled` holds the anchor of the cursor and
   of the other end of its range, and keeps the cursor when the same changes are read again
   (`ScrolledContent.sameChanges`). Until the model has it, the area draws where it told it, so a key right after
@@ -592,7 +604,8 @@ TamboUI's own 40 ms tick is turned off (`noTick()`), so a frame is only drawn wh
 - **A model that draws differently**: `Program` calls `modelChanged` when a message leaves a model whose
   `Model.drawn()` differs from the one before. `Model.drawn()` leaves out what only starts loads
   (`Jobs.readAt`, `Jobs.worktreeChangesRead`) and the commands that run (`Jobs.running`), but for the operations
-  that keep a branch busy, whose spinner shows at once; and it takes the time to the second, so the periodic loads of an idle app draw nothing. This covers
+  that keep a branch busy, whose spinner shows at once; and it takes the time to the second, so the periodic loads of an
+  idle app draw nothing. This covers
   the outcome of commands, the model's ticks and the reports of the widgets.
 - **`JazygitApp.requestRedraw()`**, for what the model does not see: a turning spinner (every 120 ms while
   `Spinners.shown`), a frame that moved the focus (`redrawIfFocusMoves`), a mouse press (a click on nothing clears
@@ -629,7 +642,8 @@ and the worktrees are read from (`Cmd.CheckMetadata`). That check runs no git: i
 worktrees' admin files, and in a reftable repository its tables (`GitMetadata`). Only a load whose stamp differs from
 the one it was last started with (`Jobs.readAt`) runs again, so an idle app runs one git process per tick instead of
 four. The highlighted diff is guarded the same way after each status (`Cmd.CheckFileDiff`, which stamps its files and
-the index), as a file can change without its status changing (ADR 58). An operation that is done reads all of them at once
+the index), as a file can change without its status changing (ADR 58). An operation that is done reads all of them at
+once
 (`Update.refresh`), without waiting for the files to tell. That keeps the screen in sync with changes made outside
 the app. A periodic load is skipped while an equal one is still running (`Jobs.runs`). See
 `documentation/adr/0015-check-metadata-before-loading.md`.
@@ -663,7 +677,8 @@ Every message is handled at the time it is: `Program` hands it to `Update.step(m
 `Model.now` before the message is applied. `Msg.Clock` comes every second, apart from that, only to wake the model up
 when nothing else happens, so the ages move on. The view rounds them: in minutes ("now" under one), and how long ago
 the remotes were fetched, or the pull requests read, in steps of 10 s under a minute. `Model.drawn()` takes the time
-to the second, so an idle app draws a frame a second, and every 5 s while the terminal does not have the focus. See `documentation/adr/0021-a-clock-apart-from-the-refresh.md`,
+to the second, so an idle app draws a frame a second, and every 5 s while the terminal does not have the focus. See
+`documentation/adr/0021-a-clock-apart-from-the-refresh.md`,
 `documentation/adr/0022-fetched-ago-in-steps-of-10s.md` and `documentation/adr/0033-show-that-work-is-being-done.md`.
 
 `Update.step` also stamps the commands the message asks for: each gets the next id (`Jobs.nextId`) and runs, in
@@ -690,7 +705,8 @@ runs or a label lingers. See `documentation/adr/0033-show-that-work-is-being-don
 Every minute a `FetchMsg.Tick` fetches from the remotes in the background, unless the previous fetch is
 still running. `FetchUpdate` lists the remotes (those `git fetch --all` would fetch) and fetches them one after
 the other with `git fetch --porcelain --prune <remote>`, so branches deleted on the remote show as gone, whatever
-`fetch.prune` says; `--porcelain` tells whether a remote-tracking branch changed (`Jobs.fetchChanged`). Each `FetchCmd.Fetch` carries the remotes still to fetch from after it, and its
+`fetch.prune` says; `--porcelain` tells whether a remote-tracking branch changed (`Jobs.fetchChanged`). Each
+`FetchCmd.Fetch` carries the remotes still to fetch from after it, and its
 message hands them back; the one that runs shows at the bottom of the screen as its label. When none are left, the
 repository is read again, if the fetch changed a remote-tracking branch (ADR 58).
 `Model.lastFetch` (a `Freshness`) holds when a remote was last fetched from, as `FetchCmd.Fetch` timed it, and the
@@ -816,7 +832,8 @@ classDiagram
   dialog that matches it and moves the focus into it, then back to the pane it came from once
   the popup closes. Each feature lists its dialogs, with the pane they give the focus back to, as
   `PopupSlot`s in `XxxDialogs.popups(dispatch)`; `Popups` only names the features.
-  A popup that comes up by itself (`Model.openPopupIfFree`), like the outcome of a command or the theme key, does not replace a dialog the user is typing in.
+  A popup that comes up by itself (`Model.openPopupIfFree`), like the outcome of a command or the theme key, does not
+  replace a dialog the user is typing in.
 - **The cursors of the panes and the focus are view state.** The highlighted row of a pane lives in its TamboUI
   list, not in the `Model`: no update needs to know where it is. What the model needs is the item highlighted,
   which the view reports back as a `SelectionMsg` ([The view reports back](#the-view-reports-back)). The cursor of
@@ -936,7 +953,8 @@ package-private `Cli` class that holds the code, such as `CliStashes`. A `Git` r
 worktree and the name of the repository (`git.stashes().pop(stash)`), and `CliGit` gives the one of a real
 repository; an ArchUnit rule keeps the application away from the other `Cli` classes. What a `Cli` class calls in
 another stays a static method of that one. The `Cli*` classes the diagram points to with a dotted arrow are static
-helpers. A test replaces the roles it needs on `StubGit.of()`, as in `StubGit.of().withBranches(new StubBranches() { … })`.
+helpers. A test replaces the roles it needs on `StubGit.of()`, as in
+`StubGit.of().withBranches(new StubBranches() { … })`.
 
 - **Everything goes through the `git` command line**, so the repository is read and changed exactly as
   git itself does: its configuration, hooks, credentials and repository formats included.
@@ -962,9 +980,11 @@ helpers. A test replaces the roles it needs on `StubGit.of()`, as in `StubGit.of
       `git stash` says. Without a stash there is no reflog, which `--ignore-missing` makes an empty list.
     - `CliRemotes` reads the remotes.
     - These each have a pure parser for git's output. `CliDiffs` returns git's text, read only up to 50 000 lines
-      or 4 MiB and cut off there (`CliDiffs.LIMIT`, ADR 79), and parses the files `--name-status -z` lists, for a commit, a range, a stash and a pull request.
+      or 4 MiB and cut off there (`CliDiffs.LIMIT`, ADR 79), and parses the files `--name-status -z` lists, for a
+      commit, a range, a stash and a pull request.
   - **Writes:** `CliCheckout`, `CliBranches` (rename, delete), `CliIndex` (stage, commit, discard),
-    `CliCommits`, `CliIntegrate`, `CliRebase`, `CliStashes`, `CliRemotes` (push, pull, fetch, delete on the remote) and `CliWorktrees` (add, remove).
+    `CliCommits`, `CliIntegrate`, `CliRebase`, `CliStashes`, `CliRemotes` (push, pull, fetch, delete on the remote) and
+    `CliWorktrees` (add, remove).
   - **Opening:** `CliGit.open` asks `git rev-parse` whether the directory is in a repository,
     whether that is bare, where its working tree is, and where git keeps the files that tell what it is in the
     middle of.
@@ -997,7 +1017,8 @@ the GitHub repository from the git remotes itself. It mirrors the git layer with
   `Decoder` of `jazygit-json` (ADR 42). Each read is a class of its own, with its command, its GraphQL and its
   decoder: `RepositoryPullRequestsQuery`, `MyPullRequestsQuery`, `DetailsQuery` (which also tells how far a pull
   request is behind its base, ADR 58), `BranchesQuery`, `BranchCheckRunsQuery`, `RecentChecksQuery`, `CommentsQuery`,
-  `ReviewThreadsQuery`, `PreviewQuery`, `LoginsQuery` and `MergeQuery`. What several share is a fragment, its GraphQL next to its decoder:
+  `ReviewThreadsQuery`, `PreviewQuery`, `LoginsQuery` and `MergeQuery`. What several share is a fragment, its GraphQL
+  next to its decoder:
   `CheckFragment` (a check, and how the states of checks fold into one: failing, else pending, else passing),
   `SuiteFragment` (the workflow runs that wait to start, ADR 35), `StackFragment` and `SummaryFragment`. A node of
   a union asks for its `__typename`, by which it is decoded. What cannot be decoded is `GhError.UnexpectedOutput`,
@@ -1150,7 +1171,8 @@ sequenceDiagram
 ### Step by step
 
 1. **Key press.**
-   - `RewordAction` registered `Binding.onSelected("r", "help.commits.reword", commit -> new RewordMsg.Requested(commit.sha()))`
+   - `RewordAction` registered `Binding.onSelected("r", "help.commits.reword", commit -> new
+     RewordMsg.Requested(commit.sha()))`
      in the `COMMITS` scope.
    - `CommitsPanel` asks the `Keymap` to handle the key with the selected commit. That yields
      `RewordMsg.Requested(sha)`, which the panel dispatches. It names the commit, not its row, so a log that

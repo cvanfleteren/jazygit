@@ -106,7 +106,8 @@ app stops.
 `Keymap.standard()` returns `Standard.KEYMAP`, which is built by folding each feature's `register` over
 `Keymap.empty()`: `StageKeys`, `CommitFeature`, `CherryPickKeys`, `DiscardKeys`, `EditKeys`, `StashKeys`,
 `BranchFeature`, `GitHubFeature`, `WorktreeFeature` and `GlobalKeys`. An `XxxFeature` registers the keys of each
-of its operations, in the order it lists them. A feature adds its panel keys with `Keymap.add(scope, bindings...)`, which refuses a key bound
+of its operations, in the order it lists them. A feature adds its panel keys with `Keymap.add(scope, bindings...)`,
+which refuses a key bound
 twice in the same panel, and adds its global keys with `Keymap.global(...)`. The panels and the help dialog read
 the same keymap, so the help always lists the keys that work.
 

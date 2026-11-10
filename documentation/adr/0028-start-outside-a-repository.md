@@ -41,10 +41,12 @@ empty on an unborn HEAD, and the acceptance tests start it on a plain `git init`
   of its own:
   - **i: init here.** A plain `git init` in the start directory, as the user's git config has it (the initial
     branch, templates); no initial commit. Then the repository opens. When it fails, git's error shows in a box
-    under the dialog, which stays. Not offered when the path does not exist: no creating the folder, as a typo would create
+    under the dialog, which stays. Not offered when the path does not exist: no creating the folder, as a typo would
+    create
     one.
   - **o: open another folder…** A path is typed: relative to the folder the dialog is about, the start directory
-    at first, `~` for the home directory, no tab completion. A folder inside a repository opens it, searching upwards as git does. A folder outside one
+    at first, `~` for the home directory, no tab completion. A folder inside a repository opens it, searching upwards as
+    git does. A folder outside one
     shows the dialog again, for that folder, so it can be initialised there. A path that does not exist shows an
     error in a box under the input, which keeps what was typed. Esc goes back to the options.
   - **r: recent repositories.** The list of the recent repositories, with the rows the app shows (`RecentRepo`).

@@ -56,15 +56,18 @@ jazygit-app
 
 ### 1. The JLine backend: ~1.26 MB (done)
 
-No code imported JLine; it was only listed as a backend provider in `META-INF/services/dev.tamboui.terminal.BackendProvider`,
+No code imported JLine; it was only listed as a backend provider in
+`META-INF/services/dev.tamboui.terminal.BackendProvider`,
 next to Panama, and listed first. Only `run.sh` and the acceptance tests pinned `-Dtamboui.backend=panama`, so a plain
-`java -jar` of the fat jar picked JLine, which breaks handing the terminal over to an editor: its reader thread takes the
+`java -jar` of the fat jar picked JLine, which breaks handing the terminal over to an editor: its reader thread takes
+the
 first key typed there (`review.md`, item 7). The jar also carried JLine's native libraries for about 15 platforms, its
 line reader, console and builtins, none of which jazygit uses.
 
 `tamboui-jline3-backend` is removed from `jazygit-app/pom.xml`, so the fat jar now only has the Panama backend, which
 also fixes the hand-over for `java -jar`. `run.sh --jdwp` no longer falls back to `jline3`, and the comment on
-`--enable-native-access` in the `native` profile now names Panama. To check: that tamboui's Panama backend works on every
+`--enable-native-access` in the `native` profile now names Panama. To check: that tamboui's Panama backend works on
+every
 platform jazygit is meant to run on (Windows in particular).
 
 ### 2. zt-exec and slf4j: ~110 KB, and fewer classes loaded at startup

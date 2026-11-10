@@ -97,7 +97,8 @@ Then check the repository with git: `repo.subjects()`, `repo.branches()`, `repo.
 `repo.find("subject")`, `repo.status()` (each changed path with its `git status --short` code, such as `"M "` for
 staged or `"??"` for untracked), `repo.stashes()`, `repo.read("file")`, `repo.worktrees()` (each worktree's path with
 the branch it has checked out, `None` on no branch), `repo.locked_worktrees()`, `repo.in_progress()` (`"merge"`,
-`"rebase"`, `"cherry-pick"`, `"revert"` or `None`), `repo.conflicts()`, `repo.parents()` and plain `repo(...)`. Assert on git
+`"rebase"`, `"cherry-pick"`, `"revert"` or `None`), `repo.conflicts()`, `repo.parents()` and plain `repo(...)`. Assert
+on git
 state rather than on the screen where you can: it survives layout changes.
 
 ### Worktrees
@@ -167,7 +168,8 @@ objects take it for running only without that.
 
 `pages.py` has a page object per pane of the left column, `ui.files`, `ui.branches`, `ui.commits` and `ui.stash`,
 and `ui.worktrees` for the worktrees tab of the branches pane,
-with the operations that pane has keys for, named the way a person says them and taking commits by subject and branches by
+with the operations that pane has keys for, named the way a person says them and taking commits by subject and branches
+by
 name. The keys and dialog titles they take are only there, so a change to the UI is a change to that file. A new
 operation goes on the pane it is done from.
 
@@ -199,5 +201,6 @@ screen when it times out.
 
 `test_files.py` (staging and discarding), `test_stash.py`, `test_commits.py`, `test_reset.py`, `test_branches.py`,
 `test_remotes.py`, `test_worktrees.py` and `test_conflicts.py` (operations that stop on conflicts, and continuing,
-skipping or aborting them) try one operation each, from a repository set up with git; `test_scenario.py` chains them in one session: from an empty repository to a tidied history on three
+skipping or aborting them) try one operation each, from a repository set up with git; `test_scenario.py` chains them in
+one session: from an empty repository to a tidied history on three
 branches, and a feature worked on with a teammate through origin.

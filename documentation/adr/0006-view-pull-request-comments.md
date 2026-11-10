@@ -36,7 +36,8 @@ view` gives a bot's login without `[bot]`, so they cannot be told apart without 
 
 It is read with one `gh pr view <number> --json body,author,createdAt,comments,reviews` each time the popup opens (the
 author and date are those of the description), and not kept: the pull request details are read as fast as before,
-and the comments are always current. While they are read, the right of the popup says so, with a spinner. When reading fails, it shows why; Escape goes back, and `v` tries again.
+and the comments are always current. While they are read, the right of the popup says so, with a spinner. When reading
+fails, it shows why; Escape goes back, and `v` tries again.
 
 ### Layout
 

@@ -81,9 +81,9 @@ overrides, from the status to stashes, checkout, push, the index and commits.
    this one only moves code.
 6. **Each role has a stub, and a fake overrides only what its test needs.** The test-jar has a `StubX` per role, whose
    operations all succeed without running anything, as `StubGitProvider` does today. `StubGit.of()` gives a `Git`
-   with every stub, and holds `ran`, `refused` and `executed`. A test replaces a role with `StubGit.of().withBranches(new
-   StubBranches() { … })`. A fake that spans roles becomes one fake per role around state kept in its own test, as
-   `ProgramTest` will with a `FakeRepo` of its own; there is no shared fake git.
+   with every stub, and holds `ran`, `refused` and `executed`. A test replaces a role with
+   `StubGit.of().withBranches(new StubBranches() { … })`. A fake that spans roles becomes one fake per role around
+   state kept in its own test, as `ProgramTest` will with a `FakeRepo` of its own; there is no shared fake git.
 7. **The tests of the `Cli` classes are split per role**, out of `CliGitInfoProviderTest`, around a shared temporary
    repository. They still run real git, through `CliGit.open`.
 8. **`GitHub`, `CliGitHub` and `StubGitHub` stay as they are.** With 30 operations the gain is smaller; it is

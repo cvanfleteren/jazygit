@@ -11,7 +11,8 @@ jazygit copies nothing yet; ADR 6 left that for a decision of its own, which SHA
 
 The rich view has a cursor, on the lines of a diff, the bar of each file and more, in every rich diff (ADR 60). In the
 diff of a pull request's files, `v` opens a range from it in one hunk; elsewhere the cursor only moves, though the
-content panel draws and keeps a range in any rich diff. Its keys reach the features as a `DiffCursorAt`, with the area, what it shows and the anchors of
+content panel draws and keeps a range in any rich diff. Its keys reach the features as a `DiffCursorAt`, with the area,
+what it shows and the anchors of
 the cursor and the mark; `DiffLines` gives the lines the cursor stops on in the order of the diff, as the review
 quotes a range from them, also those expanded in the area (ADR 77). A line of a hunk has its text without its marker.
 
@@ -33,7 +34,8 @@ not answer, so whether it copied cannot be told.
   copies it: `CopyCmd`. Copying is IO, as it writes to the terminal.
 - `state.Terminal` gets `copy`, which says whether it asked a terminal to copy, owns none, or could not write to it.
   `TerminalHandOver` writes the OSC 52 sequence through the backend of the app on the render thread, between two
-  frames, so it never lands in the middle of one. Without a backend of its own it copies nothing, nor does `Terminal.NONE`.
+  frames, so it never lands in the middle of one. Without a backend of its own it copies nothing, nor does
+  `Terminal.NONE`.
 - The command log says what was copied, how many lines or which path, as a notice. When nothing was, it says why:
   the app owns no terminal, or the terminal could not be written to.
 - Not: selecting with the mouse. A drag would have to tell itself from a click that moves the cursor, and select

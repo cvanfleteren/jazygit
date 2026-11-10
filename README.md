@@ -3,7 +3,8 @@
 Git and your pull requests, their reviews and their CI, in one terminal UI. In the spirit of
 [lazygit](https://github.com/jesseduffield/lazygit), written in Java on [TamboUI](https://github.com/tamboui).
 
-![jazygit showing the files, branches, commits and stash of a repository, with the rich diff of a changed file](documentation/images/jazygit-diff.png)
+![jazygit showing the files, branches, commits and stash of a repository, with the rich diff of a changed
+file](documentation/images/jazygit-diff.png)
 
 ![jazygit showing Pr details](documentation/images/jazygit-pr.png)
 
@@ -13,7 +14,8 @@ Git and your pull requests, their reviews and their CI, in one terminal UI. In t
 - **Pull requests on the branches.** Every branch shows its pull request: draft or not, its review (approved,
   changes requested, to review), its CI (passed, failed, running, queued), whether it is merging or in the merge
   queue, and how far it is ahead of and behind its base.
-- **Stacked pull requests,** shown as a stack (or, with `S`, among the other branches) and merged together with the ones below them.
+- **Stacked pull requests,** shown as a stack (or, with `S`, among the other branches) and merged together with the ones
+  below them.
 - **CI checks, one by one:** how long each took, or how long a running one should still take, estimated from how
   long it took before.
 - **Rewrite history in a keystroke:** reword or amend any commit, squash, fixup, drop or revert one, move commits
