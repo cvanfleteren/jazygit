@@ -103,26 +103,30 @@ public final class PullRequestDialog implements PopupView {
                                 (model, popup) -> popup.detailsRead()),
                         // Not on the viewer's own, nor on one that is not open (ADR 100).
                         new Choice<PullRequestPopup>(
-                                'a',
-                                "dialog.pullRequest.approve",
-                                VerdictMsg.DialogAsked::new,
-                                (model, popup) -> VerdictUpdate.reviewable(popup)),
-                        new Choice<>(
-                                'e',
-                                "dialog.pullRequest.edit",
-                                EditPullRequestMsg.Requested::new,
-                                (model, popup) -> popup.detailsRead()),
-                        new Choice<>(
-                                'v',
-                                "dialog.pullRequest.viewComments",
-                                CommentsMsg.Requested::new,
-                                (model, popup) -> popup.detailsRead()),
-                        new Choice<>(
-                                'C',
-                                "dialog.pullRequest.viewChecks",
-                                ChecksMsg.PullRequestChecksRequested::new,
-                                (model, popup) ->
-                                        ChecksUpdate.ofPullRequest(model, popup).isDefined()),
+                                        'a',
+                                        "dialog.pullRequest.approve",
+                                        VerdictMsg.DialogAsked::new,
+                                        (model, popup) -> VerdictUpdate.reviewable(popup))
+                                .withDetails("dialog.pullRequest.approve.details"),
+                        new Choice<PullRequestPopup>(
+                                        'e',
+                                        "dialog.pullRequest.edit",
+                                        EditPullRequestMsg.Requested::new,
+                                        (model, popup) -> popup.detailsRead())
+                                .withDetails("dialog.pullRequest.edit.details"),
+                        new Choice<PullRequestPopup>(
+                                        'v',
+                                        "dialog.pullRequest.viewComments",
+                                        CommentsMsg.Requested::new,
+                                        (model, popup) -> popup.detailsRead())
+                                .withDetails("dialog.pullRequest.viewComments.details"),
+                        new Choice<PullRequestPopup>(
+                                        'C',
+                                        "dialog.pullRequest.viewChecks",
+                                        ChecksMsg.PullRequestChecksRequested::new,
+                                        (model, popup) -> ChecksUpdate.ofPullRequest(model, popup)
+                                                .isDefined())
+                                .withDetails("dialog.pullRequest.viewChecks.details"),
                         new Choice<PullRequestPopup>(
                                         'F',
                                         "dialog.pullRequest.files",
@@ -148,11 +152,12 @@ public final class PullRequestDialog implements PopupView {
                                         PullRequestMsg.CloseChosen::new,
                                         (model, popup) -> popup.open())
                                 .withDetails("dialog.pullRequest.close.details"),
-                        new Choice<>(
-                                'R',
-                                "dialog.pullRequest.refresh",
-                                PullRequestMsg.RefreshChosen::new,
-                                PullRequestUpdate::refreshChoosable)),
+                        new Choice<PullRequestPopup>(
+                                        'R',
+                                        "dialog.pullRequest.refresh",
+                                        PullRequestMsg.RefreshChosen::new,
+                                        PullRequestUpdate::refreshChoosable)
+                                .withDetails("dialog.pullRequest.refresh.details")),
                 () -> new Msg.PopupDismissed(PullRequestPopup.class),
                 dispatch,
                 DialogFrame.contentWidth(WIDTH));
