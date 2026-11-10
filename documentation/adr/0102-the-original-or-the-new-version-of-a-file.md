@@ -40,7 +40,9 @@ file of about 3000 lines whole takes git a few milliseconds.
   theme without a background for changed lines, as `mono`, it stays, as nothing else tells the line changed.
 - The gutter keeps the two columns of the diff, as wide: the numbers of the new version in the column of the new file,
   those of the original in that of the old one, the other column blank. So switching moves neither the code nor the
-  numbers sideways. Not: one column, which shifted the code left as the version showed.
+  numbers sideways. Not: one column, which shifted the code left as the version showed. It stays as wide when the
+  file has more digits than the lines of its diff, as a file of 120 lines changed at line 93: the new version's
+  number ends where the gutter does, the original's runs on into the blank column.
 - The bar of the file says which version shows: `new version  src/Foo.java`, `original  src/Foo.java`. For a renamed
   file, each names its own path: `original  old/Foo.java`, `new version  src/Foo.java`.
 - The title of the area says it too, from the moment Ctrl+O is pressed: `Files of #403 · new version`, `… · original`,

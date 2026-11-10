@@ -160,12 +160,22 @@ final class RichDiff {
         FileDiff file = parsed.file();
         Option<FileVersion> version = fold.version();
         Vector<ParsedLine> lines = parsed.hunks().flatMap(ParsedHunk::lines).toVector();
-        int digits = lines.flatMap(line ->
-                        line.line().oldNumber().toList().appendAll(line.line().newNumber()))
-                .max()
-                .map(number -> String.valueOf(number).length())
-                .getOrElse(1);
-        // A version keeps both columns, so its code does not move sideways from the diff's (ADR 102).
+        // A version keeps the gutter of the diff it is shown in place of, as wide, so its code does not move sideways
+        // (ADR 102): its numbers, of the whole file, may be longer than the diff's, but fit in both of its columns.
+        int digits = version.map(shown -> {
+                    int own = lines.flatMap(line -> shown.number(line.line()))
+                            .max()
+                            .map(number -> String.valueOf(number).length())
+                            .getOrElse(1);
+                    return Math.max(fold.digits(), own / 2);
+                })
+                .getOrElse(() -> lines.flatMap(line -> line.line()
+                                .oldNumber()
+                                .toList()
+                                .appendAll(line.line().newNumber()))
+                        .max()
+                        .map(number -> String.valueOf(number).length())
+                        .getOrElse(1));
         int gutter = 2 * digits + 1 + GUTTER_END.length();
         String bar = version.map(shown -> bar(file, shown)).getOrElse(() -> bar(file));
         // Each line is measured once, here: its width also tells how far a changed line is padded.
@@ -373,16 +383,10 @@ final class RichDiff {
         DiffLine line = row.parsed().line();
         LineRemarks remarks = row.remarks();
         Theme.SpanStyles styles = layout.styles();
-        // A version shows its numbers in its own column of the diff's, the other one blank (ADR 102).
-        Option<Integer> old =
-                layout.version().map(version -> version == FileVersion.ORIGINAL).getOrElse(true)
-                        ? line.oldNumber()
-                        : Option.none();
-        Option<Integer> neu =
-                layout.version().map(version -> version == FileVersion.NEW).getOrElse(true)
-                        ? line.newNumber()
-                        : Option.none();
-        String numbers = number(old, layout.digits()) + " " + number(neu, layout.digits());
+        String numbers = layout.version()
+                .map(version -> versionNumber(version, line, layout.digits()))
+                .getOrElse(() ->
+                        number(line.oldNumber(), layout.digits()) + " " + number(line.newNumber(), layout.digits()));
         return !remarks.threads().isEmpty() || remarks.covered()
                 ? List.of(
                         styled(numbers + " ", Theme.Classes.DIFF_LINE_NUMBER, styles),
@@ -509,6 +513,21 @@ final class RichDiff {
             case COMMENT -> Theme.Classes.SYNTAX_COMMENT;
             case NUMBER -> Theme.Classes.SYNTAX_NUMBER;
         };
+    }
+
+    /**
+     * The number of {@code line} in {@code version}, in the column of the diff's gutter it is in there, the other one
+     * blank (ADR 102): the new version's ends where the gutter does, the original's where its first column does,
+     * running on into the blank one when it is longer.
+     */
+    static String versionNumber(FileVersion version, DiffLine line, int digits) {
+        String text = version.number(line).map(String::valueOf).getOrElse("");
+        int width = 2 * digits + 1;
+        return version == FileVersion.NEW
+                ? " ".repeat(Math.max(0, width - text.length())) + text
+                : " ".repeat(Math.max(0, digits - text.length()))
+                        + text
+                        + " ".repeat(Math.max(0, width - Math.max(digits, text.length())));
     }
 
     private static String number(Option<Integer> number, int digits) {

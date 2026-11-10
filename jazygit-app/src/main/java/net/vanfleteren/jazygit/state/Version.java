@@ -79,8 +79,29 @@ public record Version(
                                 .put(
                                         path,
                                         Expansion.Fold.of(
-                                                version, this.whole.toOption().exists(DiffText::truncated))))))
+                                                version,
+                                                this.whole.toOption().exists(DiffText::truncated),
+                                                folded.diff()
+                                                        .files()
+                                                        .find(file -> file.file()
+                                                                .path()
+                                                                .equals(path))
+                                                        .map(Version::digits)
+                                                        .getOrElse(1))))))
                 .getOrElse(folded);
+    }
+
+    /**
+     * How many digits the widest line number of {@code file}, old or new, has: what the gutter of its diff is made for.
+     */
+    static int digits(ParsedFile file) {
+        return file.hunks()
+                .flatMap(ParsedHunk::lines)
+                .flatMap(line ->
+                        line.line().oldNumber().toList().appendAll(line.line().newNumber()))
+                .max()
+                .map(number -> String.valueOf(number).length())
+                .getOrElse(1);
     }
 
     /**

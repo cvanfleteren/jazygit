@@ -63,7 +63,7 @@ class VersionTest {
                         .head()
                         .lines()
                         .map(line -> line.line().text()));
-        assertEquals(Expansion.Fold.of(FileVersion.NEW, false), shown.fold("a.txt"));
+        assertEquals(Expansion.Fold.of(FileVersion.NEW, false, 1), shown.fold("a.txt"));
         assertSame(diff, version(Option.none(), new Loadable.Loaded<>(WHOLE)).applied(diff));
     }
 

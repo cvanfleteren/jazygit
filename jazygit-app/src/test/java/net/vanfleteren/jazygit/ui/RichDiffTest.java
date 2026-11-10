@@ -180,6 +180,31 @@ class RichDiffTest {
     }
 
     @Test
+    void aVersionOfMoreLinesThanItsDiffNumbersKeepsTheGutterOfTheDiff() {
+        // The diff ends at line 95, two digits; the file has 120 lines, three.
+        ParsedDiff.ParsedFile whole = ParsedDiff.of("diff --git a/a.txt b/a.txt\n--- a/a.txt\n+++ b/a.txt\n"
+                        + "@@ -1,120 +1,120 @@\n"
+                        + List.rangeClosed(1, 120)
+                                .map(n -> n == 93 ? "-old\n+new\n" : " line" + n + "\n")
+                                .mkString())
+                .files()
+                .head();
+        // Two columns of two digits and a space between them, then a space: as in the diff.
+        int bar = "93 93 │".indexOf('│');
+
+        RichDiff.Drawn added = drawn(whole, FileVersion.NEW, false, 2, Theme.SpanStyles.NONE);
+        RichDiff.Drawn original = drawn(whole, FileVersion.ORIGINAL, false, 2, Theme.SpanStyles.NONE);
+
+        assertTrue(
+                text(added.lines()).tail().forAll(line -> line.indexOf('│') == bar),
+                text(added.lines()).mkString("\n"));
+        assertTrue(text(original.lines()).tail().forAll(line -> line.indexOf('│') == bar));
+        assertEquals("  120 │   line120", text(added.lines()).last().stripTrailing());
+        assertEquals("120   │   line120", text(original.lines()).last().stripTrailing());
+        assertEquals("   93 │ + new", text(added.lines()).get(93).stripTrailing());
+    }
+
+    @Test
     void aVersionLeavesTheMarkerOfAChangedLineBlankWhenTheThemeTintsTheLine() {
         ParsedDiff.ParsedFile whole = ParsedDiff.of("""
                         diff --git a/a.md b/a.md
@@ -209,10 +234,15 @@ class RichDiffTest {
 
     private static RichDiff.Drawn drawn(
             ParsedDiff.ParsedFile whole, FileVersion version, boolean cut, Theme.SpanStyles styles) {
+        return drawn(whole, version, cut, 1, styles);
+    }
+
+    private static RichDiff.Drawn drawn(
+            ParsedDiff.ParsedFile whole, FileVersion version, boolean cut, int digits, Theme.SpanStyles styles) {
         return RichDiff.drawn(
                 new Expansion.Folded(
                         new ParsedDiff(List.empty(), List.of(version.of(whole))),
-                        HashMap.of(whole.file().path(), Expansion.Fold.of(version, cut))),
+                        HashMap.of(whole.file().path(), Expansion.Fold.of(version, cut, digits))),
                 true,
                 true,
                 Option.none(),

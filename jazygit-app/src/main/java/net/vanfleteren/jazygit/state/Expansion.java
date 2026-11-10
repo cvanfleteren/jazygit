@@ -114,9 +114,11 @@ public record Expansion(ScrolledContent content, Map<String, Expanded> files) {
     /**
      * What is known of a file of a diff: how many lines its new file has, once it was read whole, how far it was read
      * whole, and, when its read was {@link Read#CUT cut}, how many lines of its new file the read has: up to there,
-     * what it leaves out can still be shown; and the version of it shown in place of its diff, if one is (ADR 102).
+     * what it leaves out can still be shown; and the version of it shown in place of its diff, if one is, with how many
+     * digits the line numbers of that diff have, so the gutter of the version is as wide (ADR 102).
      */
-    public record Fold(Option<Integer> length, Read read, Option<Integer> reach, Option<FileVersion> version) {
+    public record Fold(
+            Option<Integer> length, Read read, Option<Integer> reach, Option<FileVersion> version, int digits) {
 
         public static final Fold UNKNOWN = new Fold(Option.none(), Read.NOT);
 
@@ -131,14 +133,15 @@ public record Expansion(ScrolledContent content, Map<String, Expanded> files) {
          * What is known of a file shown as its diff.
          */
         public Fold(Option<Integer> length, Read read, Option<Integer> reach) {
-            this(length, read, reach, Option.none());
+            this(length, read, reach, Option.none(), 0);
         }
 
         /**
-         * A file shown as {@code version}, read whole up to a cut if {@code cut}: it leaves no line out.
+         * A file shown as {@code version}, read whole up to a cut if {@code cut}, in place of a diff whose line numbers
+         * have {@code digits} digits: it leaves no line out.
          */
-        public static Fold of(FileVersion version, boolean cut) {
-            return new Fold(Option.none(), cut ? Read.CUT : Read.WHOLE, Option.none(), Option.of(version));
+        public static Fold of(FileVersion version, boolean cut, int digits) {
+            return new Fold(Option.none(), cut ? Read.CUT : Read.WHOLE, Option.none(), Option.of(version), digits);
         }
 
         /**
