@@ -138,14 +138,14 @@ class RemarkLinesTest {
         assertEquals(
                 List.of(
                         " modified  a.txt",
-                        "1   ● -int count = 1;",
-                        "  1 │ +int count = 42;",
+                        "1   ● - int count = 1;",
+                        "  1 │ + int count = 42;",
                         indent + "┏━ bob · 2h ago",
                         indent + "┃  Why?",
                         indent + "┗━",
                         "",
-                        "2   │ -int total = 2;",
-                        "  2 │ +int total = 43;",
+                        "2   │ - int total = 2;",
+                        "  2 │ + int total = 43;",
                         "┄┄┄ │ more ┄"),
                 lines);
     }
@@ -160,8 +160,8 @@ class RemarkLinesTest {
         assertEquals(
                 List.of(
                         " modified  a.txt",
-                        "1   ● -int count = 1;",
-                        "  1 ● +int count = 42;",
+                        "1   ● - int count = 1;",
+                        "  1 ● + int count = 42;",
                         indent + "┏━ bob · 2h ago",
                         indent + "┃  Why?",
                         indent + "┗━",
@@ -170,8 +170,8 @@ class RemarkLinesTest {
                         indent + "┃  Why?",
                         indent + "┗━",
                         "",
-                        "2   │ -int total = 2;",
-                        "  2 │ +int total = 43;",
+                        "2   │ - int total = 2;",
+                        "  2 │ + int total = 43;",
                         "┄┄┄ │ more ┄"),
                 lines);
     }
@@ -182,10 +182,10 @@ class RemarkLinesTest {
         String indent = " ".repeat(8);
         List<String> pair = List.of(
                 " modified  a.txt",
-                "1   │ -int count = 1;",
-                "  1 │ +int count = 42;",
-                "2   ● -int total = 2;",
-                "  2 │ +int total = 43;",
+                "1   │ - int count = 1;",
+                "  1 │ + int count = 42;",
+                "2   ● - int total = 2;",
+                "  2 │ + int total = 43;",
                 indent + "┏━ bob · 2h ago",
                 indent + "┃  Why?",
                 indent + "┗━");
@@ -223,10 +223,10 @@ class RemarkLinesTest {
 
         assertEquals(
                 List.of(
-                        "1   ┃ -int count = 1;",
-                        "2   ┃ -int total = 2;",
-                        "  1 ● +int count = 42;",
-                        "  2 │ +int total = 43;"),
+                        "1   ┃ - int count = 1;",
+                        "2   ┃ - int total = 2;",
+                        "  1 ● + int count = 42;",
+                        "  2 │ + int total = 43;"),
                 diffLines(lines));
     }
 
@@ -238,9 +238,9 @@ class RemarkLinesTest {
         assertEquals(
                 List.of(
                         " modified  a.txt",
-                        "1 1 │  one",
-                        "2   │ -two",
-                        "  2 ● +TWO",
+                        "1 1 │   one",
+                        "2   │ - two",
+                        "  2 ● + TWO",
                         indent + "┏━ bob · 2h ago",
                         indent + "┃  Why upper case?",
                         indent + "┃",
@@ -248,7 +248,7 @@ class RemarkLinesTest {
                         indent + "┃  Shouting.",
                         indent + "┗━",
                         "",
-                        "3 3 │  three",
+                        "3 3 │   three",
                         // How many lines follow is not known until the file is read whole (ADR 77).
                         "┄┄┄ │ more ┄"),
                 lines);
@@ -459,8 +459,8 @@ class RemarkLinesTest {
 
         List<String> lines = rich(shown(Collapsed.NONE, several, outdated));
 
-        assertTrue(lines.contains("1 1 ┃  one"), lines.mkString("\n"));
-        assertTrue(lines.contains("3 3 ●  three"), lines.mkString("\n"));
+        assertTrue(lines.contains("1 1 ┃   one"), lines.mkString("\n"));
+        assertTrue(lines.contains("3 3 ●   three"), lines.mkString("\n"));
         assertTrue(lines.contains(" ".repeat(8) + "┏━ ghost · just now"), lines.mkString("\n"));
         assertTrue(lines.contains(" ".repeat(8) + "┃  2 more on GitHub"), lines.mkString("\n"));
         assertEquals(
@@ -486,7 +486,7 @@ class RemarkLinesTest {
         String indent = " ".repeat(8);
         assertEquals(
                 List.of(
-                        "  2 ● +TWO",
+                        "  2 ● + TWO",
                         indent + "┏━ bob · 2h ago",
                         indent + "┃  One",
                         indent + "┗━",
@@ -495,7 +495,7 @@ class RemarkLinesTest {
                         indent + "┃  Two",
                         indent + "┗━",
                         "",
-                        "3 3 │  three",
+                        "3 3 │   three",
                         "┄┄┄ │ more ┄"),
                 lines.drop(3));
     }
@@ -519,7 +519,7 @@ class RemarkLinesTest {
         String indent = " ".repeat(8);
         assertEquals(
                 List.of(
-                        "3 3 ●  three",
+                        "3 3 ●   three",
                         indent + "┏━ bob · 2h ago",
                         indent + "┃  End of a",
                         indent + "┗━",
@@ -527,8 +527,8 @@ class RemarkLinesTest {
                         "┄┄┄ │ more ┄",
                         "",
                         " modified  b.txt",
-                        "1   │ -x",
-                        "  1 ● +y",
+                        "1   │ - x",
+                        "  1 ● + y",
                         indent + "┏━ bob · 2h ago",
                         indent + "┃  End of b",
                         indent + "┗━",
@@ -560,7 +560,7 @@ class RemarkLinesTest {
         assertEquals(
                 List.of(" modified  a.txt", " ".repeat(8) + "┏━ bob · 2h ago", " ".repeat(8) + "┃  Split this file"),
                 lines.take(3));
-        assertEquals(List.of(" ".repeat(8) + "┗━", "", "1 1 │  one"), lines.slice(3, 6));
+        assertEquals(List.of(" ".repeat(8) + "┗━", "", "1 1 │   one"), lines.slice(3, 6));
     }
 
     @Test
@@ -603,7 +603,7 @@ class RemarkLinesTest {
 
         List<String> lines = rich(elsewhere);
 
-        assertTrue(lines.contains("  2   +TWO") || lines.contains("  2 │ +TWO"), lines.mkString("\n"));
+        assertTrue(lines.contains("  2   +TWO") || lines.contains("  2 │ + TWO"), lines.mkString("\n"));
         assertFalse(lines.exists(line -> line.contains("●")), lines.mkString("\n"));
         assertEquals(
                 " ".repeat(8) + "Not on a line of this diff",

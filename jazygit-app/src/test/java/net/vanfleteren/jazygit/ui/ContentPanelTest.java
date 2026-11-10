@@ -200,7 +200,7 @@ class ContentPanelTest {
             String screen = RenderedText.ofLarge(testRunner, () -> reading.render(asked.model(), area));
             // The title says what is coming while the diff still shows.
             assertTrue(screen.contains("· new version (reading)"), screen);
-            assertTrue(screen.contains("-ten"), screen);
+            assertTrue(screen.contains("- ten"), screen);
         }
         DiffText whole = DiffText.of(header + "@@ -8,4 +8,4 @@\n eight\n nine\n-ten\n+TEN\n eleven\n");
         Model version = TestModels.done(
@@ -213,9 +213,9 @@ class ContentPanelTest {
             assertTrue(screen.contains("new version  a.txt"), screen);
             assertTrue(screen.contains("· new version"), screen);
             assertFalse(screen.contains("(reading)"), screen);
-            assertTrue(screen.contains("11 │  eleven"), screen);
-            assertTrue(screen.contains("10 │ +TEN"), screen);
-            assertFalse(screen.contains("-ten"), screen);
+            assertTrue(screen.contains("11 │   eleven"), screen);
+            assertTrue(screen.contains("10 │ + TEN"), screen);
+            assertFalse(screen.contains("- ten"), screen);
         }
     }
 
@@ -224,7 +224,7 @@ class ContentPanelTest {
         List<List<String>> screens = beforeAndAfterTheVersion();
 
         assertTrue(
-                screens.last().exists(row -> row.contains(" 39 │  line39")),
+                screens.last().exists(row -> row.contains(" 39 │   line39")),
                 screens.last().mkString("\n"));
     }
 
@@ -232,11 +232,11 @@ class ContentPanelTest {
     void theLineOfTheCursorStaysWhereItWasOnTheScreenAsTheVersionShows() throws Exception {
         List<List<String>> screens = beforeAndAfterTheVersion();
 
-        int was = screens.head().indexWhere(row -> row.contains(" 39 │  line39"));
+        int was = screens.head().indexWhere(row -> row.contains(" 39 │   line39"));
         assertTrue(was > 0, screens.head().mkString("\n"));
         assertEquals(
                 was,
-                screens.last().indexWhere(row -> row.contains(" 39 │  line39")),
+                screens.last().indexWhere(row -> row.contains(" 39 │   line39")),
                 screens.last().mkString("\n"));
     }
 
@@ -601,7 +601,7 @@ class ContentPanelTest {
             dev.tamboui.buffer.Buffer buffer = drawn(testRunner, () -> filling.render(model, area), 100);
             // From its marker to the scrollbar, past the widest line of the file, not just as wide as that: from the
             // first frame, though the area only learns how wide it is while it draws.
-            assertBackgroundTo(Color.GREEN, "+short", 97, buffer);
+            assertBackgroundTo(Color.GREEN, "+ short", 97, buffer);
             // The bar of the file too.
             assertBackgroundTo(Color.BLUE, "added  schema.sql", 97, buffer);
         }
@@ -631,9 +631,9 @@ class ContentPanelTest {
                 ToolkitTestRunner.runTest(() -> filling.render(model, area), new dev.tamboui.layout.Size(100, 30))) {
             drawn(testRunner, () -> filling.render(model, area), 60);
             // Wider, as when the left column is made narrower: on to the new edge, not that of the frame before.
-            assertBackgroundTo(Color.GREEN, "+short", 97, drawn(testRunner, () -> filling.render(model, area), 100));
+            assertBackgroundTo(Color.GREEN, "+ short", 97, drawn(testRunner, () -> filling.render(model, area), 100));
             // Narrower again: nothing left of the frame before, like a column for a scrollbar.
-            assertBackgroundTo(Color.GREEN, "+short", 57, drawn(testRunner, () -> filling.render(model, area), 60));
+            assertBackgroundTo(Color.GREEN, "+ short", 57, drawn(testRunner, () -> filling.render(model, area), 60));
         }
     }
 
@@ -1033,7 +1033,7 @@ class ContentPanelTest {
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> counting.render(model, area))) {
             SettledPilot.focus(testRunner, area);
             String screen = RenderedText.ofLarge(testRunner, () -> counting.render(model, area));
-            assertTrue(screen.contains("+line 0"), screen);
+            assertTrue(screen.contains("+ line 0"), screen);
             // Measured once, all of them; drawn, only those of an area up to twice as high as the screen: not all of
             // them again for the frame the area is first drawn in only to learn its size.
             int shown = gutters.get();
@@ -1378,16 +1378,16 @@ class ContentPanelTest {
         }
 
         assertTrue(
-                row(paired, "-int count") < row(paired, "+int count")
-                        && row(paired, "+int count") < row(paired, "-int total"),
+                row(paired, "- int count") < row(paired, "+ int count")
+                        && row(paired, "+ int count") < row(paired, "- int total"),
                 paired);
         assertTrue(
-                row(ranged, "-int count") < row(ranged, "-int total")
-                        && row(ranged, "-int total") < row(ranged, "+int count"),
+                row(ranged, "- int count") < row(ranged, "- int total")
+                        && row(ranged, "- int total") < row(ranged, "+ int count"),
                 ranged);
-        assertEquals(row(paired, "-int total"), row(ranged, "-int total"), paired + ranged);
-        assertEquals(row(paired, "-int total"), row(dropped, "-int total"), paired + dropped);
-        assertTrue(row(dropped, "+int count") < row(dropped, "-int total"), dropped);
+        assertEquals(row(paired, "- int total"), row(ranged, "- int total"), paired + ranged);
+        assertEquals(row(paired, "- int total"), row(dropped, "- int total"), paired + dropped);
+        assertTrue(row(dropped, "+ int count") < row(dropped, "- int total"), dropped);
     }
 
     /**

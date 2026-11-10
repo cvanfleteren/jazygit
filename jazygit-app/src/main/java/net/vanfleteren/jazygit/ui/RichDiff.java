@@ -44,6 +44,12 @@ import net.vanfleteren.jazygit.syntax.Token;
 final class RichDiff {
 
     private static final String GUTTER_END = " │ ";
+    /**
+     * What sets the text of a line apart from its marker, as GitHub does: {@code + - item} reads as a list item that
+     * was added, where {@code +- item} reads as neither.
+     */
+    private static final String MARGIN = " ";
+
     private static final LineRemarks NO_REMARKS = new LineRemarks(List.empty(), false);
     private static final Pending BLANK = () -> List.of(Marked.plain(Line.from("")));
 
@@ -166,7 +172,8 @@ final class RichDiff {
         Vector<Integer> measured =
                 inParallel(lines.toList(), line -> width(line.line().text())).toVector();
         int width = Math.max(
-                width(bar), gutter + measured.max().map(text -> text + 1).getOrElse(0));
+                width(bar),
+                gutter + measured.max().map(text -> text + 1 + MARGIN.length()).getOrElse(0));
         Blocks blocks = new Blocks(gutter + 2, RemarkLines.blockWidth(width), style);
         Layout layout =
                 new Layout(file.path(), index, digits, width - gutter, width, blocks, syntax, words, styles, version);
@@ -397,13 +404,14 @@ final class RichDiff {
             case CONTEXT ->
                 tokens.map(lexed -> Line.from(Iterator.concat(
                                         gutter,
-                                        List.of(Span.raw(" ")),
+                                        List.of(Span.raw(" " + MARGIN)),
                                         pieces(row.parsed().words(), lexed)
                                                 .iterator()
                                                 .map(piece -> context(piece, layout.styles())))
                                 .toJavaList()))
-                        .getOrElse(() -> Line.from(Iterator.concat(gutter, List.of(Span.raw(" " + line.text())))
-                                .toJavaList()));
+                        .getOrElse(() ->
+                                Line.from(Iterator.concat(gutter, List.of(Span.raw(" " + MARGIN + line.text())))
+                                        .toJavaList()));
             case NOTE ->
                 Line.from(Iterator.concat(gutter, List.of(styled(line.text(), Theme.Classes.DIM, layout.styles())))
                         .toJavaList());
@@ -428,12 +436,13 @@ final class RichDiff {
         // Each piece is drawn as a span by itself, and pieces cut from a grapheme, like an emoji from its variation
         // selector, are narrower together than their text: only a line of one piece is as wide as it was measured.
         int used = 1
+                + MARGIN.length()
                 + (pieces.size() == 1
                         ? row.measured()
                         : pieces.map(piece -> width(piece.text())).sum().intValue());
         return Line.from(Iterator.concat(
                         gutter,
-                        List.of(styled(marker, change.lineClass(), styles)),
+                        List.of(styled(marker + MARGIN, change.lineClass(), styles)),
                         pieces.iterator().map(piece -> {
                             String cssClass =
                                     piece.changed() && layout.words() ? change.wordClass() : change.lineClass();
