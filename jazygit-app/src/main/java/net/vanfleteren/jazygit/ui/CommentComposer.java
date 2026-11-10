@@ -31,9 +31,6 @@ public final class CommentComposer {
     private static final char CONFIRM_KEY = 's';
     // With Ctrl held, opens the comment in the editor.
     private static final char EDITOR_KEY = 'o';
-    // With Ctrl held, switches what the comment is sent as, where it can be (ADR 99). Not Tab, which TamboUI takes to
-    // move the focus before any element sees it.
-    private static final char SWITCH_KEY = 't';
     private static final int WIDTH = 110;
     private static final int ROWS = 12;
     private static final int ERROR_LINES = 3;
@@ -58,16 +55,18 @@ public final class CommentComposer {
      * {@code actions} makes it.
      */
     public Element render(Model model, String title, List<String> quoted, Comment comment, Actions actions) {
-        return render(model, title, quoted, Option.none(), comment, actions, Hints.COMMENT);
+        return render(model, title, List.empty(), quoted, Option.none(), comment, actions, Hints.COMMENT);
     }
 
     /**
-     * The popup that writes {@code comment}, titled {@code title}, under {@code quoted} and then {@code notice}, which
-     * stands out, sending what the user does as {@code actions} makes it, with {@code hints} below it.
+     * The popup that writes {@code comment}, titled {@code title}, under {@code fields}, which come first and choose
+     * how it is sent, then {@code quoted} and then {@code notice}, which stands out; sending what the user does as
+     * {@code actions} makes it, with {@code hints} below it. The fields take their keys before {@link #keys}.
      */
     public Element render(
             Model model,
             String title,
+            List<Element> fields,
             List<String> quoted,
             Option<String> notice,
             Comment comment,
@@ -91,7 +90,8 @@ public final class CommentComposer {
                 ? quoted.take(QUOTED).append("…").map(line -> about(line))
                 : quoted.map(CommentComposer::about);
         // The error of sending it, or of the editor; a new try clears it.
-        List<Element> content = about.appendAll(notice.map(
+        List<Element> content = fields.appendAll(about)
+                .appendAll(notice.map(
                         line -> DialogFrame.wrapped(line, WIDTH, ERROR_LINES).addClass(Theme.Classes.NOTICE)))
                 .append(area)
                 .appendAll(model.outcome()
@@ -109,11 +109,11 @@ public final class CommentComposer {
     }
 
     /**
-     * Goes back on Escape, sends on {@link #CONFIRM_KEY}, opens the comment in the editor on {@link #EDITOR_KEY} and
-     * switches what it is sent as on {@link #SWITCH_KEY}.
-     * The dialog around the text area only gets keys after the global handlers, and those take Escape and Ctrl+S too.
+     * Goes back on Escape, sends on {@link #CONFIRM_KEY} and opens the comment in the editor on {@link #EDITOR_KEY},
+     * from the text area or from a field above it. The dialog around them only gets keys after the global handlers,
+     * and those take Escape and Ctrl+S too.
      */
-    private EventResult keys(KeyEvent event, Actions actions) {
+    public EventResult keys(KeyEvent event, Actions actions) {
         if (event.code() == KeyCode.ESCAPE) {
             dispatch.accept(actions.cancelled().get());
             return EventResult.HANDLED;
@@ -125,10 +125,6 @@ public final class CommentComposer {
         }
         if (event.hasCtrl() && event.isChar(EDITOR_KEY)) {
             dispatch.accept(actions.editor().get());
-            return EventResult.HANDLED;
-        }
-        if (event.hasCtrl() && event.isChar(SWITCH_KEY) && actions.switched().isDefined()) {
-            dispatch.accept(actions.switched().get().get());
             return EventResult.HANDLED;
         }
         return EventResult.UNHANDLED;
@@ -149,23 +145,9 @@ public final class CommentComposer {
      * @param confirmed send it
      * @param cancelled go back
      * @param editor    write it in the editor
-     * @param switched  switch what it is sent as, where it can be (ADR 99)
      */
     public record Actions(
-            Function<String, Msg> edited,
-            Supplier<Msg> confirmed,
-            Supplier<Msg> cancelled,
-            Supplier<Msg> editor,
-            Option<Supplier<Msg>> switched) {
-
-        /**
-         * The actions of a popup that sends what it holds as one thing only.
-         */
-        public Actions(
-                Function<String, Msg> edited, Supplier<Msg> confirmed, Supplier<Msg> cancelled, Supplier<Msg> editor) {
-            this(edited, confirmed, cancelled, editor, Option.none());
-        }
-    }
+            Function<String, Msg> edited, Supplier<Msg> confirmed, Supplier<Msg> cancelled, Supplier<Msg> editor) {}
 
     /**
      * The keys of the hints below the popup.

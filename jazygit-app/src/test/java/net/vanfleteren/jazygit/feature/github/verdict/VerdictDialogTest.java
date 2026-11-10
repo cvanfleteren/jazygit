@@ -6,6 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
+import dev.tamboui.toolkit.event.EventResult;
+import dev.tamboui.tui.event.KeyCode;
+import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.KeyModifiers;
 import io.vavr.control.Option;
 import java.util.ArrayList;
@@ -22,8 +25,8 @@ import net.vanfleteren.jazygit.ui.SettledPilot;
 import org.junit.jupiter.api.Test;
 
 /**
- * The popup asking for a review of a pull request (ADR 99): its title says what it does, Ctrl+T switches it, and a
- * draft says so.
+ * The popup asking for a review of a pull request (ADR 99): a choice of approving or asking for changes above the
+ * text, which Tab goes through and Space chooses from, and a draft that says so.
  */
 class VerdictDialogTest {
 
@@ -31,39 +34,63 @@ class VerdictDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     private Model model = TestModels.loaded().openPopup(REVIEW);
-    // As in the app, what is dispatched changes the model the popup shows.
+    // As in the app, what is chosen or typed changes the model the popup shows; the other messages are only kept.
     private final VerdictDialog dialog = new VerdictDialog(msg -> {
         dispatched.add(msg);
-        if (msg instanceof VerdictMsg.Edited || msg instanceof VerdictMsg.Switched) {
+        if (msg instanceof VerdictMsg.Edited || msg instanceof VerdictMsg.Chosen) {
             model = Update.update(model, msg).model();
         }
     });
 
     @Test
-    void itSaysWhatItSendsAndTheKeys() throws Exception {
+    void itShowsTheChoiceApprovingAndTheKeys() throws Exception {
         try (ToolkitTestRunner runner = start()) {
             String screen = RenderedText.ofLarge(runner, this::view);
 
-            assertTrue(screen.contains("Review pull request #42 · approve"), screen);
-            assertTrue(screen.contains("ctrl+t: approve or request changes"), screen);
+            assertTrue(screen.contains("Review pull request #42"), screen);
+            assertTrue(screen.contains("(•) Approve   ( ) Request changes"), screen);
+            assertTrue(screen.contains("tab: next field · space: choose"), screen);
             assertFalse(screen.contains("still a draft"), screen);
         }
     }
 
     @Test
-    void ctrlTSwitchesToAskingForChanges() throws Exception {
+    void tabGoesToAskingForChangesWhichSpaceChoosesAndOnToTheText() throws Exception {
         try (ToolkitTestRunner runner = start()) {
-            SettledPilot.of(runner).press('t', KeyModifiers.CTRL);
+            SettledPilot.of(runner).press(KeyCode.TAB);
+            SettledPilot.of(runner).press(' ');
             SettledPilot.of(runner).pause();
-            assertEquals(java.util.List.of(new VerdictMsg.Switched()), dispatched);
-            String screen = RenderedText.ofLarge(runner, this::view);
+            String chosen = RenderedText.ofLarge(runner, this::view);
+            assertTrue(chosen.contains("( ) Approve   (•) Request changes"), chosen);
 
-            assertTrue(screen.contains("Review pull request #42 · request changes"), screen);
+            SettledPilot.of(runner).press(KeyCode.TAB);
+            for (char c : "Rename it".toCharArray()) {
+                SettledPilot.of(runner).press(c);
+            }
+            SettledPilot.of(runner).pause();
         }
 
+        assertEquals(new VerdictMsg.Chosen(Verdict.REQUEST_CHANGES), dispatched.getFirst());
         assertEquals(
                 Option.of(Verdict.REQUEST_CHANGES),
                 model.popup(VerdictPopup.class).map(VerdictPopup::verdict));
+        assertEquals(Option.of("Rename it"), model.popup(VerdictPopup.class).map(VerdictPopup::text));
+    }
+
+    @Test
+    void ctrlSSendsItFromAChoice() throws Exception {
+        try (ToolkitTestRunner runner = start()) {
+            // The app's global Ctrl+S opens the settings, after the focused part had its chance.
+            runner.runner()
+                    .eventRouter()
+                    .addGlobalHandler(event -> event instanceof KeyEvent key && key.hasCtrl() && key.isChar('s')
+                            ? EventResult.HANDLED
+                            : EventResult.UNHANDLED);
+            SettledPilot.of(runner).press('s', KeyModifiers.CTRL);
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(java.util.List.of(new VerdictMsg.Confirmed()), dispatched);
     }
 
     @Test
@@ -72,7 +99,7 @@ class VerdictDialogTest {
         try (ToolkitTestRunner runner = start()) {
             String screen = RenderedText.ofLarge(runner, this::view);
 
-            assertTrue(screen.contains("Review pull request #42 · draft · approve"), screen);
+            assertTrue(screen.contains("Review pull request #42 · draft"), screen);
             assertTrue(screen.contains("This pull request is still a draft"), screen);
         }
     }
@@ -90,7 +117,7 @@ class VerdictDialogTest {
 
     private ToolkitTestRunner start() throws Exception {
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
-        SettledPilot.focus(runner, VerdictDialog.ID);
+        SettledPilot.focus(runner, VerdictDialog.APPROVE_ID);
         RenderedText.ofLarge(runner, this::view);
         return runner;
     }

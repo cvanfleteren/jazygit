@@ -61,10 +61,14 @@ editor, Escape drops it, a failed send says why under the text. In the pull requ
 
 ### The popup
 
-- A `CommentComposer`, titled `review #<n>` with the verdict: `approve` or `request changes`. It starts on approve,
-  whatever the viewer's last review said; Ctrl+T switches between the two. Not: Tab, which TamboUI's router takes
-  to move the focus before any element or handler sees it; Ctrl+T is free in the text area and in the app.
-- A draft says so in the title, `review #<n> · draft`, and above the text, in the colour of a warning: the author may
+- A `CommentComposer`, titled `Review pull request #<n>`, under a choice of the verdict:
+  `(•) Approve   ( ) Request changes`. Each choice takes the focus, as the draft box of the pull request dialogs does,
+  and Space or Enter chooses it; Tab goes from approve to request changes and on to the text. The focus starts on
+  approve, whatever the viewer's last review said, so approving is `a` and Ctrl+S. Ctrl+S, Ctrl+O and Escape do the
+  same from a choice as from the text. Not: a key that switches the verdict from the text, as Ctrl+T first did,
+  which only the hint told of; nor Tab for it, which TamboUI's router takes to move the focus before any element sees
+  it.
+- A draft says so in the title, `Review pull request #<n> · draft`, and above the text, in the colour of a warning: the author may
   not want it reviewed yet. Not: asking to confirm. It follows the details of the dialog it came from, as the comment
   popup does (ADR 5), so a pull request made a draft or ready while it is open shows so.
 - Ctrl+S on an empty or blank text approves. To ask for changes, it does nothing, as on a blank comment (ADR 5), and

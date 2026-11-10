@@ -17,7 +17,7 @@ def review_from_the_dialog(ui):
     # The action shows dimmed until the details are read, and does nothing then: wait for them.
     ui.app.wait_for("in 2 files, 2 commits")
     ui.app.press("a")
-    ui.app.wait_for("Review pull request #1 · approve")
+    ui.app.wait_for("(•) Approve   ( ) Request changes")
 
 
 def test_a_pull_request_is_approved_without_a_text(repo, origin, clone, gh, jazygit):
@@ -42,12 +42,16 @@ def test_asking_for_changes_needs_a_reason(repo, origin, clone, gh, jazygit):
     ui = jazygit()
     review_from_the_dialog(ui)
 
-    ui.app.press("ctrl+t")
-    ui.app.wait_for("Review pull request #1 · request changes")
+    # From approving to asking for changes, chosen with space.
+    ui.app.press("tab")
+    ui.app.press("space")
+    ui.app.wait_for("( ) Approve   (•) Request changes")
     ui.app.press("ctrl+s")
     ui.app.wait_for("Say what should change")
     assert reviews(gh) == []
 
+    # On to the text.
+    ui.app.press("tab")
     ui.app.type("Rename b")
     ui.app.press("ctrl+s")
 

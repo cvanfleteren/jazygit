@@ -72,13 +72,6 @@ public record VerdictPopup(
                 .getOrElse(this);
     }
 
-    /**
-     * The other verdict.
-     */
-    VerdictPopup switched() {
-        return withVerdict(verdict == Verdict.APPROVE ? Verdict.REQUEST_CHANGES : Verdict.APPROVE);
-    }
-
     @Override
     public boolean holdsInput() {
         return !text.isBlank();

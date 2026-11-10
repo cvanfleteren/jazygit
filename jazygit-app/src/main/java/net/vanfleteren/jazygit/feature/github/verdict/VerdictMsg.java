@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.github.verdict;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.gh.model.Verdict;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
@@ -29,9 +30,9 @@ public sealed interface VerdictMsg extends Msg {
     record DiffAsked() implements VerdictMsg {}
 
     /**
-     * The user switched between approving and asking for changes.
+     * The user chose what the review says: to approve, or to ask for changes.
      */
-    record Switched() implements VerdictMsg {}
+    record Chosen(Verdict verdict) implements VerdictMsg {}
 
     /**
      * The user changed the text of the review to {@code text}.

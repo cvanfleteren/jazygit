@@ -152,10 +152,11 @@ class VerdictUpdateTest {
     }
 
     @Test
-    void itSwitchesBetweenApprovingAndAskingForChanges() {
-        Model switched = Update.update(reviewing(Verdict.APPROVE, ""), new VerdictMsg.Switched())
+    void eitherVerdictIsChosen() {
+        Model switched = Update.update(reviewing(Verdict.APPROVE, ""), new VerdictMsg.Chosen(Verdict.REQUEST_CHANGES))
                 .model();
-        Model back = Update.update(switched, new VerdictMsg.Switched()).model();
+        Model back =
+                Update.update(switched, new VerdictMsg.Chosen(Verdict.APPROVE)).model();
 
         assertEquals(
                 Option.of(Verdict.REQUEST_CHANGES),
@@ -189,7 +190,10 @@ class VerdictUpdateTest {
 
         assertEquals(
                 sending, Update.update(sending, new VerdictMsg.Edited("Other")).model());
-        assertEquals(sending, Update.update(sending, new VerdictMsg.Switched()).model());
+        assertEquals(
+                sending,
+                Update.update(sending, new VerdictMsg.Chosen(Verdict.REQUEST_CHANGES))
+                        .model());
         assertEquals(
                 List.empty(), Update.update(sending, new VerdictMsg.Confirmed()).cmds());
         assertEquals(sending, Update.update(sending, new VerdictMsg.Cancelled()).model());

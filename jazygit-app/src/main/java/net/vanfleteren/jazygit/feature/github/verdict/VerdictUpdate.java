@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.feature.github.verdict.VerdictCmd.SubmitReview;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Reviewing;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
+import net.vanfleteren.jazygit.gh.model.Verdict;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.AppError.CannotReview.Why;
@@ -48,7 +49,8 @@ public final class VerdictUpdate {
                         .getOrElse(() -> Next.of(model));
             case VerdictMsg.DiffAsked() ->
                 fromDiff(model).fold(why -> Next.of(refused(model, why)), popup -> Update.ask(model, popup));
-            case VerdictMsg.Switched() -> Next.of(changed(model, VerdictPopup::switched, true));
+            case VerdictMsg.Chosen(Verdict verdict) ->
+                Next.of(changed(model, popup -> popup.withVerdict(verdict), true));
             // While it is being sent, the text stays as it is sent.
             case VerdictMsg.Edited(String text) -> Next.of(changed(model, popup -> popup.withText(text), true));
             case VerdictMsg.Confirmed() ->
