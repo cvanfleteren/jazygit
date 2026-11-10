@@ -64,16 +64,24 @@ class HelpDialogTest {
         String screen = screen(Scopes.FILES.id());
         assertTrue(screen.contains("Keybindings: Files"), screen);
         assertTrue(screen.contains("       space Stage/unstage"), screen);
-        assertTrue(screen.contains("           c Commit"), screen);
-        assertTrue(screen.contains("           A Amend last commit"), screen);
+        assertTrue(screen.contains("           c Commit…"), screen);
+        assertTrue(screen.contains("           A Amend last commit…"), screen);
+    }
+
+    @Test
+    void onlyAKeyThatAsksSomethingFirstEndsInAnEllipsis() throws Exception {
+        List<String> lines = List.of(screen(Scopes.FILES.id()).split("\n"));
+        assertTrue(lines.find(line -> line.contains("s Stash changes")).get().contains("Stash changes…"));
+        assertFalse(
+                lines.find(line -> line.contains("space Stage/unstage")).get().contains("…"));
     }
 
     @Test
     void listsTheKeysOfTheBranchesPanel() throws Exception {
         String screen = screen(Scopes.BRANCHES.id());
         assertTrue(screen.contains("       space Checkout branch"), screen);
-        assertTrue(screen.contains("           n New branch"), screen);
-        assertTrue(screen.contains("           d Delete branch"), screen);
+        assertTrue(screen.contains("           n New branch…"), screen);
+        assertTrue(screen.contains("           d Delete branch…"), screen);
     }
 
     @Test
@@ -91,7 +99,7 @@ class HelpDialogTest {
 
     @Test
     void listsTheKeysOfTheCommitsPanel() throws Exception {
-        assertTrue(screen(Scopes.COMMITS.id()).contains("           r Reword commit"));
+        assertTrue(screen(Scopes.COMMITS.id()).contains("           r Reword commit…"));
     }
 
     @Test
@@ -99,7 +107,7 @@ class HelpDialogTest {
         for (String scope : List.of(Scopes.FILES.id(), Scopes.BRANCHES.id(), Scopes.COMMITS.id(), Scopes.STASH.id())) {
             String screen = screen(scope);
             assertTrue(screen.contains("Global"), screen);
-            assertTrue(screen.contains("      ctrl+s Show the settings"), screen);
+            assertTrue(screen.contains("      ctrl+s Show the settings…"), screen);
         }
     }
 

@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import dev.tamboui.layout.Rect;
+import dev.tamboui.style.Color;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.event.EventResult;
@@ -15,6 +17,7 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Optional;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
@@ -30,6 +33,7 @@ import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
+import net.vanfleteren.jazygit.ui.ThemedBorders;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -39,6 +43,7 @@ import org.junit.jupiter.api.Test;
  */
 class EditPullRequestDialogTest {
 
+    private static final Rect THEMED_AREA = new Rect(0, 0, 120, 30);
     private static final RemoteBranch MAIN = new RemoteBranch("origin", new BranchName("main"));
     private static final RemoteBranch RELEASE = new RemoteBranch("origin", new BranchName("release"));
     private static final PullRequestDetails DETAILS =
@@ -204,6 +209,17 @@ class EditPullRequestDialogTest {
 
             assertTrue(screen.contains("Saving the pull request…"), screen);
         }
+    }
+
+    @Test
+    void theDraftBoxIsBorderedAsThePaneInUseWhenItHasTheFocus() {
+        ThemedBorders title = ThemedBorders.render(view(), THEMED_AREA, EditPullRequestDialog.ID);
+        ThemedBorders draft = ThemedBorders.render(view(), THEMED_AREA, EditPullRequestDialog.DRAFT_ID);
+
+        assertEquals(Optional.of(Color.CYAN), title.borderLeftOf("Title"));
+        assertEquals(Optional.of(Color.DARK_GRAY), title.borderLeftOf("[ ] Draft?"));
+        assertEquals(Optional.of(Color.CYAN), draft.borderLeftOf("[ ] Draft?"));
+        assertEquals(Optional.of(Color.DARK_GRAY), draft.borderLeftOf("Title"));
     }
 
     private ToolkitTestRunner start() throws Exception {
