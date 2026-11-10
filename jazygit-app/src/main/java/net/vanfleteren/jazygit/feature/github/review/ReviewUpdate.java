@@ -256,6 +256,11 @@ public final class ReviewUpdate {
 
     private static Either<Why, ReviewPopup> startIn(Model model, CommitFilesView view, DiffCursorAt at) {
         String commit = view.of().sha().value();
+        if (Version.in(model, at.area(), at.at().content())
+                .flatMap(Version::showing)
+                .isDefined()) {
+            return Either.left(Why.IN_VERSION);
+        }
         if (at.mark().isEmpty() && at.cursor() instanceof Anchor.File(String path)) {
             return Either.right(popup(
                     view,

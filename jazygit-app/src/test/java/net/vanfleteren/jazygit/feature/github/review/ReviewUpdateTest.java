@@ -28,6 +28,7 @@ import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.DiffText;
+import net.vanfleteren.jazygit.git.model.FileVersion;
 import net.vanfleteren.jazygit.git.model.Folding;
 import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -574,6 +575,28 @@ class ReviewUpdateTest {
                 error(Update.update(
                                 expanded,
                                 new ReviewMsg.StartAsked(at(line(Side.RIGHT, 13), Option.of(line(Side.RIGHT, 20)))))
+                        .model()));
+    }
+
+    @Test
+    void aThreadIsNotStartedInAVersionOfTheFile() {
+        ReadVersion read = ReadVersion.of(
+                AREA,
+                CONTENT,
+                new ReadWholeFile.Source.OfFiles(new Changes.OfPullRequest(COMMITS), A),
+                "a.txt",
+                files().preferences().diffOptions());
+        Version shown = new Version(CONTENT, "a.txt", Option.of(FileVersion.NEW), read, new Loadable.Loaded<>(DIFF));
+        Model inVersion =
+                files().mapRepoView(view -> view.withVersions(view.versions().put(AREA, shown)));
+
+        assertEquals(
+                Option.of(new AppError.CannotReview(Why.IN_VERSION)),
+                error(Update.update(inVersion, new ReviewMsg.StartAsked(at(line(Side.RIGHT, 10))))
+                        .model()));
+        assertEquals(
+                Option.of(new AppError.CannotReview(Why.IN_VERSION)),
+                error(Update.update(inVersion, new ReviewMsg.StartAsked(at(new Anchor.File("a.txt"))))
                         .model()));
     }
 

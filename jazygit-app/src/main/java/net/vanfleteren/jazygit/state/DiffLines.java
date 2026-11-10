@@ -36,20 +36,21 @@ public record DiffLines(Vector<Line> lines) {
 
     /**
      * The lines of {@code diff} as the content panel draws it in the area of the cursor {@code at}: with the lines
-     * expanded in that area (ADR 77), folded as the view folds them, so that a range stays in a hunk as shown. None
-     * without a diff.
+     * expanded in that area (ADR 77), folded as the view folds them, so that a range stays in a hunk as shown, or the
+     * version of its file shown in place of it (ADR 102). None without a diff.
      */
     public static DiffLines shown(Model model, DiffCursorAt at, Option<DiffText> diff) {
         Option<Expansion> expansion = model.repoView()
                 .expanded()
                 .get(at.area())
                 .filter(kept -> kept.holdsFor(at.at().content()));
+        Option<Version> version = Version.in(model, at.area(), at.at().content());
         return diff.map(text -> expansion
                         .map(expanded -> expanded.folded(
-                                        text.parsed(), model.preferences().context())
-                                .diff())
-                        .getOrElse(text.parsed()))
-                .map(parsed -> of(parsed.diff()))
+                                text.parsed(), model.preferences().context()))
+                        .getOrElse(() -> Expansion.Folded.of(text.parsed())))
+                .map(folded -> version.map(shown -> shown.applied(folded)).getOrElse(folded))
+                .map(folded -> of(folded.diff().diff()))
                 .getOrElse(() -> new DiffLines(Vector.empty()));
     }
 

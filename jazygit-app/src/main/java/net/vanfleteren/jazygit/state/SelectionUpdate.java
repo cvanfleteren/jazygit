@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.state;
 
+import io.vavr.collection.HashMap;
 import io.vavr.control.Option;
 import java.util.function.Function;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -97,7 +98,8 @@ public final class SelectionUpdate {
     }
 
     /**
-     * Loads the preview of {@code key}, unless it is the one already shown.
+     * Loads the preview of {@code key}, unless it is the one already shown. Another item highlighted drops the versions
+     * of the files shown in place of their diffs (ADR 102): coming back to one shows its diff.
      *
      * @param shown the preview that is shown
      * @param with  the model with another preview shown
@@ -111,6 +113,9 @@ public final class SelectionUpdate {
             Function<K, Load> load) {
         return shown.exists(preview -> preview.key().equals(key))
                 ? Next.of(model)
-                : Next.of(with.apply(Option.of(Preview.loading(key, shown))), load.apply(key));
+                : Next.of(
+                        with.apply(Option.of(Preview.loading(key, shown)))
+                                .mapRepoView(view -> view.withVersions(HashMap.empty())),
+                        load.apply(key));
     }
 }

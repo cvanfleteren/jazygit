@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
 import io.vavr.collection.List;
+import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.DiffContext;
@@ -57,6 +58,14 @@ public record ReadWholeFile(String area, ScrolledContent content, Source source,
 
     @Override
     public Msg run(Env env) {
+        return read(env, source, options).fold(this::failed, text -> new LoadMsg.WholeFileRead(this, text));
+    }
+
+    /**
+     * The diff of the file of {@code source}, read the way {@code source} says, with {@code options} but for the
+     * context: the whole file is.
+     */
+    static Either<Failure, DiffText> read(Env env, Source source, DiffOptions options) {
         DiffOptions whole = options.withContext(DiffContext.WHOLE_FILE);
         return (switch (source) {
                     case Source.WorkingTree(FileEntry file, boolean staged) ->
@@ -80,8 +89,7 @@ public record ReadWholeFile(String area, ScrolledContent content, Source source,
                                 env.git().diffs().pullRequestFileChanges(commits, List.of(file), whole);
                         };
                 })
-                .mapLeft(Failure::of)
-                .fold(this::failed, text -> new LoadMsg.WholeFileRead(this, text));
+                .mapLeft(Failure::of);
     }
 
     /**

@@ -137,6 +137,36 @@ class ContentViewTest {
     }
 
     @Test
+    void theTitleSaysWhichVersionShowsWhileItIsReadAndWhenItCouldNotBe() {
+        String header = "diff --git a/a.txt b/a.txt\n--- a/a.txt\n+++ b/a.txt\n";
+        DiffText changes = DiffText.of(header + "@@ -1 +1 @@\n-a\n+b\n");
+        ScrolledContent content = new ScrolledContent.StashChanges(new Sha("5555"), changes);
+        ReadVersion read = ReadVersion.of(
+                "stash-changes",
+                content,
+                new ReadWholeFile.Source.OfStash(
+                        new Sha("5555"), new CommitFile("a.txt", ChangeType.MODIFIED, Option.none())),
+                "a.txt",
+                DiffOptions.DEFAULT);
+        Version asked = new Version(content, "a.txt", Option.of(FileVersion.NEW), read, Loadable.loading());
+
+        assertEquals("Stash · new version (reading)", ContentView.versioned("Stash", asked));
+        assertEquals(
+                "Stash · original",
+                ContentView.versioned(
+                        "Stash",
+                        asked.withShown(Option.of(FileVersion.ORIGINAL)).withWhole(new Loadable.Loaded<>(changes))));
+        assertEquals(
+                "Stash · new version (could not be read)",
+                ContentView.versioned("Stash", asked.withWhole(new Loadable.Failed<>(TestModels.refused("boom")))));
+        // Read, but without the file: the diff shows, and the title says the version could not be read.
+        assertEquals(
+                "Stash · new version (could not be read)",
+                ContentView.versioned("Stash", asked.withWhole(new Loadable.Loaded<>(DiffText.of("")))));
+        assertEquals("Stash", ContentView.versioned("Stash", asked.withShown(Option.none())));
+    }
+
+    @Test
     void withoutChangedFilesTheFilesSaySoInsteadOfLoading() {
         assertEquals(dim("Diff", "No changed files"), ContentView.of(TestModels.loaded(), FilesPanel.ID));
     }

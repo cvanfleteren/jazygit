@@ -15,6 +15,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.model.ChangeType;
+import net.vanfleteren.jazygit.git.model.FileVersion;
 import net.vanfleteren.jazygit.git.model.Folding;
 import net.vanfleteren.jazygit.git.model.LinePairs;
 import net.vanfleteren.jazygit.git.model.ParsedDiff;
@@ -43,6 +44,12 @@ import net.vanfleteren.jazygit.syntax.Token;
 final class RichDiff {
 
     private static final String GUTTER_END = " │ ";
+    /**
+     * What sets the text of a line apart from its marker, as GitHub does: {@code + - item} reads as a list item that
+     * was added, where {@code +- item} reads as neither.
+     */
+    private static final String MARGIN = " ";
+
     private static final LineRemarks NO_REMARKS = new LineRemarks(List.empty(), false);
     private static final Pending BLANK = () -> List.of(Marked.plain(Line.from("")));
 
@@ -151,28 +158,47 @@ final class RichDiff {
             RemarkLines.RemarkStyle style,
             Theme.SpanStyles styles) {
         FileDiff file = parsed.file();
+        Option<FileVersion> version = fold.version();
         Vector<ParsedLine> lines = parsed.hunks().flatMap(ParsedHunk::lines).toVector();
-        int digits = lines.flatMap(line ->
-                        line.line().oldNumber().toList().appendAll(line.line().newNumber()))
-                .max()
-                .map(number -> String.valueOf(number).length())
-                .getOrElse(1);
+        // A version keeps the gutter of the diff it is shown in place of, as wide, so its code does not move sideways
+        // (ADR 102): its numbers, of the whole file, may be longer than the diff's, but fit in both of its columns.
+        int digits = version.map(shown -> {
+                    int own = lines.flatMap(line -> shown.number(line.line()))
+                            .max()
+                            .map(number -> String.valueOf(number).length())
+                            .getOrElse(1);
+                    return Math.max(fold.digits(), own / 2);
+                })
+                .getOrElse(() -> lines.flatMap(line -> line.line()
+                                .oldNumber()
+                                .toList()
+                                .appendAll(line.line().newNumber()))
+                        .max()
+                        .map(number -> String.valueOf(number).length())
+                        .getOrElse(1));
         int gutter = 2 * digits + 1 + GUTTER_END.length();
-        String bar = bar(file);
+        String bar = version.map(shown -> bar(file, shown)).getOrElse(() -> bar(file));
         // Each line is measured once, here: its width also tells how far a changed line is padded.
         Vector<Integer> measured =
                 inParallel(lines.toList(), line -> width(line.line().text())).toVector();
         int width = Math.max(
-                width(bar), gutter + measured.max().map(text -> text + 1).getOrElse(0));
+                width(bar),
+                gutter + measured.max().map(text -> text + 1 + MARGIN.length()).getOrElse(0));
         Blocks blocks = new Blocks(gutter + 2, RemarkLines.blockWidth(width), style);
-        Layout layout = new Layout(file.path(), index, digits, width - gutter, width, blocks, syntax, words, styles);
+        Layout layout =
+                new Layout(file.path(), index, digits, width - gutter, width, blocks, syntax, words, styles, version);
         Vector<LineRemarks> onLines = remarks.map(
                         placed -> placed.lines().flatMap(hunk -> hunk).toVector())
                 .getOrElse(() -> Vector.fill(lines.size(), () -> NO_REMARKS));
-        List<Folding.Gap> gaps = Folding.gaps(file, fold.length());
+        // A version leaves no line out; the threads on the other version's lines are not shown with it.
+        List<Folding.Gap> gaps = version.isDefined() ? List.empty() : Folding.gaps(file, fold.length());
         Option<Folding.Gap> trailing =
                 gaps.find(gap -> gap.before() == parsed.hunks().size());
-        boolean unplaced = remarks.exists(placed -> !placed.unplaced().isEmpty());
+        boolean unplaced =
+                version.isEmpty() && remarks.exists(placed -> !placed.unplaced().isEmpty());
+        Option<String> cut = Option.when(
+                version.isDefined() && fold.read() == Expansion.Read.CUT,
+                () -> Messages.get("content.file.versionCut"));
         boolean afterLast = unplaced || trailing.isDefined();
         Vector<Row> rows =
                 Vector.range(0, lines.size()).map(at -> new Row(lines.get(at), measured.get(at), onLines.get(at)));
@@ -180,7 +206,7 @@ final class RichDiff {
                 cut(rows, parsed.hunks().map(hunk -> hunk.lines().size()));
         // A block a thread covers stays as git gives it, so its gutter marks the lines the thread is on in a run.
         List<List<List<Integer>>> groups = parsed.hunks()
-                .zipWithIndex((hunk, at) -> asGiven.contains(at)
+                .zipWithIndex((hunk, at) -> asGiven.contains(at) || version.isDefined()
                         ? List.range(0, hunk.lines().size()).map(List::of)
                         : LinePairs.groups(
                                 hunk.lines(),
@@ -211,7 +237,22 @@ final class RichDiff {
                                 layout))
                         .flatMap(hunk -> hunk))
                 .appendAll(trailing.toList().map(gap -> marker(gap, fold, layout)))
-                .appendAll(remarks.toList().<Pending>map(placed -> () -> blocks.unplaced(placed.unplaced(), styles)));
+                .appendAll(cut.toList()
+                        .<Pending>map(text ->
+                                () -> List.of(Marked.plain(Line.from(styled(text, Theme.Classes.DIM, styles))))))
+                .appendAll(remarks.filter(ignored -> version.isEmpty())
+                        .toList()
+                        .<Pending>map(placed -> () -> blocks.unplaced(placed.unplaced(), styles)));
+    }
+
+    /**
+     * What the bar of {@code file} says while {@code version} of it is shown in place of its diff (ADR 102): which
+     * version, and its path in it, the one it had before a rename for the original.
+     */
+    private static String bar(FileDiff file, FileVersion version) {
+        String path = version == FileVersion.ORIGINAL ? file.origin().getOrElse(file.path()) : file.path();
+        String what = Messages.get(version == FileVersion.NEW ? "content.file.newVersion" : "content.file.original");
+        return " " + what + "  " + path + " ";
     }
 
     /**
@@ -267,8 +308,10 @@ final class RichDiff {
         boolean first = index == 0;
         Theme.SpanStyles styles = layout.styles();
         Span rule = rule(layout);
-        // One for the hunk, which each of its lines holds: a long hunk has tens of thousands.
-        Option<DiffStops.HunkAt> at = Option.of(new DiffStops.HunkAt(layout.file(), index));
+        // One for the hunk, which each of its lines holds: a long hunk has tens of thousands. The lines of a version
+        // have none, so no range is started on them: a range is of the diff (ADR 102).
+        Option<DiffStops.HunkAt> at =
+                Option.when(layout.version().isEmpty(), () -> new DiffStops.HunkAt(layout.file(), index));
         List<Pending> header = gap.isDefined()
                 ? gap.toList().map(before -> marker(before, fold, layout))
                 : hunk.header().isEmpty() || (first && hunk.numbered())
@@ -340,7 +383,10 @@ final class RichDiff {
         DiffLine line = row.parsed().line();
         LineRemarks remarks = row.remarks();
         Theme.SpanStyles styles = layout.styles();
-        String numbers = number(line.oldNumber(), layout.digits()) + " " + number(line.newNumber(), layout.digits());
+        String numbers = layout.version()
+                .map(version -> versionNumber(version, line, layout.digits()))
+                .getOrElse(() ->
+                        number(line.oldNumber(), layout.digits()) + " " + number(line.newNumber(), layout.digits()));
         return !remarks.threads().isEmpty() || remarks.covered()
                 ? List.of(
                         styled(numbers + " ", Theme.Classes.DIFF_LINE_NUMBER, styles),
@@ -362,13 +408,14 @@ final class RichDiff {
             case CONTEXT ->
                 tokens.map(lexed -> Line.from(Iterator.concat(
                                         gutter,
-                                        List.of(Span.raw(" ")),
+                                        List.of(Span.raw(" " + MARGIN)),
                                         pieces(row.parsed().words(), lexed)
                                                 .iterator()
                                                 .map(piece -> context(piece, layout.styles())))
                                 .toJavaList()))
-                        .getOrElse(() -> Line.from(Iterator.concat(gutter, List.of(Span.raw(" " + line.text())))
-                                .toJavaList()));
+                        .getOrElse(() ->
+                                Line.from(Iterator.concat(gutter, List.of(Span.raw(" " + MARGIN + line.text())))
+                                        .toJavaList()));
             case NOTE ->
                 Line.from(Iterator.concat(gutter, List.of(styled(line.text(), Theme.Classes.DIM, layout.styles())))
                         .toJavaList());
@@ -381,22 +428,25 @@ final class RichDiff {
      * The changed line of {@code row}: its marker and its unchanged parts in the line class of {@code change}, its
      * changed words in its word class if the {@code layout} highlights them, padded to the width of the {@code layout}. Its code is coloured by its
      * {@code tokens} if it was lexed, unless the line class gives it no background: then its colour is what tells it
-     * is changed, and a line of tokens only would look like context.
+     * is changed, and a line of tokens only would look like context. In a version of the file, its marker is blank
+     * when the line class gives it a background, which tells it is changed already (ADR 102).
      */
     private static Line changed(Row row, List<Span> gutter, Option<Array<Token>> tokens, Change change, Layout layout) {
         Theme.SpanStyles styles = layout.styles();
-        Option<Array<Token>> coloured =
-                tokens.filter(ignored -> styles.of(change.lineClass()).bg().isPresent());
+        boolean tinted = styles.of(change.lineClass()).bg().isPresent();
+        Option<Array<Token>> coloured = tokens.filter(ignored -> tinted);
+        String marker = tinted && layout.version().isDefined() ? " " : change.marker();
         List<Piece> pieces = pieces(row.parsed().words(), coloured.getOrElse(Array.empty()));
         // Each piece is drawn as a span by itself, and pieces cut from a grapheme, like an emoji from its variation
         // selector, are narrower together than their text: only a line of one piece is as wide as it was measured.
         int used = 1
+                + MARGIN.length()
                 + (pieces.size() == 1
                         ? row.measured()
                         : pieces.map(piece -> width(piece.text())).sum().intValue());
         return Line.from(Iterator.concat(
                         gutter,
-                        List.of(styled(change.marker(), change.lineClass(), styles)),
+                        List.of(styled(marker + MARGIN, change.lineClass(), styles)),
                         pieces.iterator().map(piece -> {
                             String cssClass =
                                     piece.changed() && layout.words() ? change.wordClass() : change.lineClass();
@@ -463,6 +513,21 @@ final class RichDiff {
             case COMMENT -> Theme.Classes.SYNTAX_COMMENT;
             case NUMBER -> Theme.Classes.SYNTAX_NUMBER;
         };
+    }
+
+    /**
+     * The number of {@code line} in {@code version}, in the column of the diff's gutter it is in there, the other one
+     * blank (ADR 102): the new version's ends where the gutter does, the original's where its first column does,
+     * running on into the blank one when it is longer.
+     */
+    static String versionNumber(FileVersion version, DiffLine line, int digits) {
+        String text = version.number(line).map(String::valueOf).getOrElse("");
+        int width = 2 * digits + 1;
+        return version == FileVersion.NEW
+                ? " ".repeat(Math.max(0, width - text.length())) + text
+                : " ".repeat(Math.max(0, digits - text.length()))
+                        + text
+                        + " ".repeat(Math.max(0, width - Math.max(digits, text.length())));
     }
 
     private static String number(Option<Integer> number, int digits) {
@@ -578,8 +643,8 @@ final class RichDiff {
     /**
      * What drawing each line of a file takes from the file: how many {@code digits} its numbers have, how many
      * columns after the gutter its changed lines are padded to, its {@code width}, how the threads on its lines are
-     * drawn, whether its code is coloured by its syntax, whether the changed words of a line are highlighted, and the
-     * styles of the theme.
+     * drawn, whether its code is coloured by its syntax, whether the changed words of a line are highlighted, the
+     * styles of the theme, and the version of the file shown in place of its diff, if one is (ADR 102).
      */
     private record Layout(
             String path,
@@ -590,7 +655,8 @@ final class RichDiff {
             Blocks blocks,
             boolean syntax,
             boolean words,
-            Theme.SpanStyles styles) {}
+            Theme.SpanStyles styles,
+            Option<FileVersion> version) {}
 
     /**
      * A line of a file with what drawing it takes besides the layout of its file: how many columns its text was

@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.feature.commit.CommitFeature;
 import net.vanfleteren.jazygit.feature.copy.CopyAction;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesAction;
 import net.vanfleteren.jazygit.feature.diff.ExpandAction;
+import net.vanfleteren.jazygit.feature.diff.VersionAction;
 import net.vanfleteren.jazygit.feature.discard.DiscardKeys;
 import net.vanfleteren.jazygit.feature.edit.EditKeys;
 import net.vanfleteren.jazygit.feature.github.GitHubFeature;
@@ -32,6 +33,7 @@ final class Standard {
                     WorktreeFeature::register,
                     CommitFilesAction.ACTION.keys(),
                     ExpandAction.ACTION.keys(),
+                    VersionAction.ACTION.keys(),
                     CopyAction.ACTION.keys(),
                     GlobalKeys::register)
             .foldLeft(Keymap.empty(), (keymap, feature) -> feature.apply(keymap));

@@ -1,0 +1,53 @@
+package net.vanfleteren.jazygit.state;
+
+import io.vavr.control.Option;
+import net.vanfleteren.jazygit.git.model.DiffOptions;
+import net.vanfleteren.jazygit.git.model.DiffText;
+
+/**
+ * Reads the diff of the file with the path {@code path} again, the way {@code source} says, with the whole file as
+ * context, to show a version of it in the area {@code area} while it shows {@code content} (ADR 102). It reads with
+ * {@code options}, whose whitespace is never ignored: git prints a line whose whitespace only changed as it is in the
+ * new file, and the original would have it so. So it is no {@link DiffLoad}: what it reads is not dropped when the
+ * options change.
+ */
+public record ReadVersion(
+        String area, ScrolledContent content, ReadWholeFile.Source source, String path, DiffOptions options)
+        implements Targeted<DiffText> {
+
+    /**
+     * The read of the file with the path {@code path} as {@code source} says, with {@code options} but whitespace
+     * not ignored.
+     */
+    public static ReadVersion of(
+            String area, ScrolledContent content, ReadWholeFile.Source source, String path, DiffOptions options) {
+        return new ReadVersion(area, content, source, path, options.withIgnoreWhitespace(false));
+    }
+
+    @Override
+    public Option<Label> label() {
+        return Option.of(Label.of("work.wholeFile", path));
+    }
+
+    /**
+     * The file read whole of the version of the area, while it is read this way.
+     */
+    @Override
+    public Target<DiffText> target() {
+        return Target.inView(new Lens<RepoView, Loadable<DiffText>>(
+                view -> version(view).map(Version::whole),
+                (view, change) -> version(view)
+                        .map(version -> view.withVersions(
+                                view.versions().put(area, version.withWhole(change.apply(version.whole())))))
+                        .getOrElse(view)));
+    }
+
+    private Option<Version> version(RepoView view) {
+        return view.versions().get(area).filter(version -> version.read().equals(this));
+    }
+
+    @Override
+    public Msg run(Env env) {
+        return ReadWholeFile.read(env, source, options).fold(this::failed, text -> new LoadMsg.VersionRead(this, text));
+    }
+}

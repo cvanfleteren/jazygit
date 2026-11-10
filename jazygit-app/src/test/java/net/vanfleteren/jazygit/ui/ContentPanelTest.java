@@ -169,6 +169,119 @@ class ContentPanelTest {
     }
 
     @Test
+    void ctrlOShowsTheNewVersionOfTheFileInPlaceOfItsDiffOnceItIsRead() throws Exception {
+        java.util.List<Msg> dispatched = new java.util.ArrayList<>();
+        ContentPanel versions = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, dispatched::add);
+        String header = "diff --git a/a.txt b/a.txt\n--- a/a.txt\n+++ b/a.txt\n";
+        Model shown = showingCommit(header + "@@ -9,2 +9,2 @@\n nine\n-ten\n+TEN\n")
+                .mapPreferences(preferences ->
+                        preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
+        String area = versions.areaOfPane(shown, CommitsPanel.ID).get();
+        ScrolledContent content = ContentView.of(shown, area).areas().head().content();
+        Anchor.OnLine removed = new Anchor.OnLine("a.txt", net.vanfleteren.jazygit.gh.model.ReviewThread.Side.LEFT, 10);
+        Model onLine = shown.withScrolled(
+                io.vavr.collection.HashMap.of(area, new Scrolled(content, 0, 0, Option.of(removed), Option.none())));
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> versions.render(onLine, area))) {
+            RenderedText.ofLarge(testRunner, () -> versions.render(onLine, area));
+            SettledPilot.focus(testRunner, area);
+            SettledPilot.of(testRunner).press('o', dev.tamboui.tui.event.KeyModifiers.CTRL);
+            SettledPilot.of(testRunner).pause();
+        }
+        List<net.vanfleteren.jazygit.feature.diff.VersionMsg.Cycled> cycled = List.ofAll(dispatched)
+                .filter(net.vanfleteren.jazygit.feature.diff.VersionMsg.Cycled.class::isInstance)
+                .map(net.vanfleteren.jazygit.feature.diff.VersionMsg.Cycled.class::cast);
+        assertEquals(List.of(removed), cycled.map(msg -> msg.at().cursor()));
+
+        Update.Next asked = Update.update(onLine, cycled.head());
+        ReadVersion read = (ReadVersion) asked.cmds().head();
+        ContentPanel reading = new ContentPanel(Theme.SpanStyles.NONE, () -> false);
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> reading.render(asked.model(), area))) {
+            String screen = RenderedText.ofLarge(testRunner, () -> reading.render(asked.model(), area));
+            // The title says what is coming while the diff still shows.
+            assertTrue(screen.contains("· new version (reading)"), screen);
+            assertTrue(screen.contains("- ten"), screen);
+        }
+        DiffText whole = DiffText.of(header + "@@ -8,4 +8,4 @@\n eight\n nine\n-ten\n+TEN\n eleven\n");
+        Model version = TestModels.done(
+                        TestModels.running(asked.model(), read), read, new LoadMsg.VersionRead(read, whole))
+                .model();
+
+        ContentPanel drawing = new ContentPanel(Theme.SpanStyles.NONE, () -> false);
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> drawing.render(version, area))) {
+            String screen = RenderedText.ofLarge(testRunner, () -> drawing.render(version, area));
+            assertTrue(screen.contains("new version  a.txt"), screen);
+            assertTrue(screen.contains("· new version"), screen);
+            assertFalse(screen.contains("(reading)"), screen);
+            assertTrue(screen.contains("11 │   eleven"), screen);
+            assertTrue(screen.contains("10 │ + TEN"), screen);
+            assertFalse(screen.contains("- ten"), screen);
+        }
+    }
+
+    @Test
+    void aVersionLongerThanTheDiffIsDrawnAtOnceAtItsCursor() throws Exception {
+        List<List<String>> screens = beforeAndAfterTheVersion();
+
+        assertTrue(
+                screens.last().exists(row -> row.contains(" 39 │   line39")),
+                screens.last().mkString("\n"));
+    }
+
+    @Test
+    void theLineOfTheCursorStaysWhereItWasOnTheScreenAsTheVersionShows() throws Exception {
+        List<List<String>> screens = beforeAndAfterTheVersion();
+
+        int was = screens.head().indexWhere(row -> row.contains(" 39 │   line39"));
+        assertTrue(was > 0, screens.head().mkString("\n"));
+        assertEquals(
+                was,
+                screens.last().indexWhere(row -> row.contains(" 39 │   line39")),
+                screens.last().mkString("\n"));
+    }
+
+    /**
+     * The screen of a panel with the cursor on line 39 of a diff around line 41, and then, in the same panel, once the
+     * new version of the file of 60 lines is read in place of it.
+     */
+    private static List<List<String>> beforeAndAfterTheVersion() throws Exception {
+        String header = "diff --git a/a.txt b/a.txt\n--- a/a.txt\n+++ b/a.txt\n";
+        java.util.function.IntFunction<String> line = n -> n == 41 ? "-line41\n+changed\n" : " line" + n + "\n";
+        Model shown = showingCommit(header + "@@ -38,7 +38,7 @@\n"
+                        + List.rangeClosed(38, 44).map(line::apply).mkString())
+                .mapPreferences(preferences ->
+                        preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
+        ContentPanel panel = new ContentPanel(Theme.SpanStyles.NONE, () -> false);
+        String area = panel.areaOfPane(shown, CommitsPanel.ID).get();
+        ScrolledContent content = ContentView.of(shown, area).areas().head().content();
+        Anchor.OnLine on = new Anchor.OnLine("a.txt", net.vanfleteren.jazygit.gh.model.ReviewThread.Side.RIGHT, 39);
+        Model onLine = shown.withScrolled(
+                io.vavr.collection.HashMap.of(area, new Scrolled(content, 0, 0, Option.of(on), Option.none())));
+        DiffCursorAt at =
+                new DiffCursorAt(area, onLine.scrolled(area, content), on, Option.none(), Option.none(), Option.none());
+        Update.Next asked = Update.update(onLine, new net.vanfleteren.jazygit.feature.diff.VersionMsg.Cycled(at));
+        ReadVersion read = (ReadVersion) asked.cmds().head();
+        DiffText whole = DiffText.of(header + "@@ -1,60 +1,60 @@\n"
+                + List.rangeClosed(1, 60).map(line::apply).mkString());
+        Model version = TestModels.done(
+                        TestModels.running(asked.model(), read), read, new LoadMsg.VersionRead(read, whole))
+                .model();
+        java.util.concurrent.atomic.AtomicReference<Model> model =
+                new java.util.concurrent.atomic.AtomicReference<>(onLine);
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model.get(), area))) {
+            List<String> before = List.of(RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), area))
+                    .split("\n"));
+            model.set(version);
+            List<String> after = List.of(RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), area))
+                    .split("\n"));
+
+            assertTrue(after.exists(row -> row.contains("· new version")), after.mkString("\n"));
+            return List.of(before, after);
+        }
+    }
+
+    @Test
     void yAsksToCopyWhatTheCursorIsOn() throws Exception {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
         ContentPanel copying = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, dispatched::add);
@@ -488,7 +601,7 @@ class ContentPanelTest {
             dev.tamboui.buffer.Buffer buffer = drawn(testRunner, () -> filling.render(model, area), 100);
             // From its marker to the scrollbar, past the widest line of the file, not just as wide as that: from the
             // first frame, though the area only learns how wide it is while it draws.
-            assertBackgroundTo(Color.GREEN, "+short", 97, buffer);
+            assertBackgroundTo(Color.GREEN, "+ short", 97, buffer);
             // The bar of the file too.
             assertBackgroundTo(Color.BLUE, "added  schema.sql", 97, buffer);
         }
@@ -518,9 +631,9 @@ class ContentPanelTest {
                 ToolkitTestRunner.runTest(() -> filling.render(model, area), new dev.tamboui.layout.Size(100, 30))) {
             drawn(testRunner, () -> filling.render(model, area), 60);
             // Wider, as when the left column is made narrower: on to the new edge, not that of the frame before.
-            assertBackgroundTo(Color.GREEN, "+short", 97, drawn(testRunner, () -> filling.render(model, area), 100));
+            assertBackgroundTo(Color.GREEN, "+ short", 97, drawn(testRunner, () -> filling.render(model, area), 100));
             // Narrower again: nothing left of the frame before, like a column for a scrollbar.
-            assertBackgroundTo(Color.GREEN, "+short", 57, drawn(testRunner, () -> filling.render(model, area), 60));
+            assertBackgroundTo(Color.GREEN, "+ short", 57, drawn(testRunner, () -> filling.render(model, area), 60));
         }
     }
 
@@ -920,7 +1033,7 @@ class ContentPanelTest {
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> counting.render(model, area))) {
             SettledPilot.focus(testRunner, area);
             String screen = RenderedText.ofLarge(testRunner, () -> counting.render(model, area));
-            assertTrue(screen.contains("+line 0"), screen);
+            assertTrue(screen.contains("+ line 0"), screen);
             // Measured once, all of them; drawn, only those of an area up to twice as high as the screen: not all of
             // them again for the frame the area is first drawn in only to learn its size.
             int shown = gutters.get();
@@ -1266,16 +1379,16 @@ class ContentPanelTest {
         }
 
         assertTrue(
-                row(paired, "-int count") < row(paired, "+int count")
-                        && row(paired, "+int count") < row(paired, "-int total"),
+                row(paired, "- int count") < row(paired, "+ int count")
+                        && row(paired, "+ int count") < row(paired, "- int total"),
                 paired);
         assertTrue(
-                row(ranged, "-int count") < row(ranged, "-int total")
-                        && row(ranged, "-int total") < row(ranged, "+int count"),
+                row(ranged, "- int count") < row(ranged, "- int total")
+                        && row(ranged, "- int total") < row(ranged, "+ int count"),
                 ranged);
-        assertEquals(row(paired, "-int total"), row(ranged, "-int total"), paired + ranged);
-        assertEquals(row(paired, "-int total"), row(dropped, "-int total"), paired + dropped);
-        assertTrue(row(dropped, "+int count") < row(dropped, "-int total"), dropped);
+        assertEquals(row(paired, "- int total"), row(ranged, "- int total"), paired + ranged);
+        assertEquals(row(paired, "- int total"), row(dropped, "- int total"), paired + dropped);
+        assertTrue(row(dropped, "+ int count") < row(dropped, "- int total"), dropped);
     }
 
     /**

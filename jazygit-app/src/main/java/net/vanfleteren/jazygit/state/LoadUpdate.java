@@ -69,6 +69,9 @@ public final class LoadUpdate {
                 Update.shownDiff(done).contains(load)
                         ? metadataChecked(done, List.of(Tuple.of((Load) load, stamp)))
                         : Next.of(done);
+            // The cursor goes from the diff, which showed while the file was read, to the version asked for (ADR 102).
+            case VersionRead read ->
+                Next.of(versionShown(read.kept(done), read.cmd().area()));
             // What arrives after another search was run or another item was highlighted, or for a view closed since,
             // finds no target, and is dropped.
             case Read<?> read -> Next.of(read.kept(done));
@@ -109,7 +112,37 @@ public final class LoadUpdate {
                 .map(file -> file.read().withOptions(options))
                 .filter(read -> !model.jobs().runs(read))
                 .toList();
-        return new Next(model, List.narrow(reads));
+        // A version of a file of the working tree is read again too, as it was read, whitespace not ignored (ADR 102).
+        List<ReadVersion> versions = model.repoView()
+                .versions()
+                .values()
+                .filter(version -> version.content() instanceof ScrolledContent.Diff)
+                .map(Version::read)
+                .filter(read -> shown.contains(read.path()) && !model.jobs().runs(read))
+                .toList();
+        return new Next(model, List.<Cmd>narrow(reads).appendAll(versions));
+    }
+
+    /**
+     * {@code model} with the cursor of the area {@code area} moved onto the version it shows, if it shows one and its
+     * cursor is in the diff of it (ADR 102).
+     */
+    static Model versionShown(Model model, String area) {
+        return model.repoView()
+                .versions()
+                .get(area)
+                .filter(version -> version.showing().isDefined())
+                .flatMap(version -> model.scrolled()
+                        .get(area)
+                        .filter(at -> version.holdsFor(at.content()))
+                        .map(at -> new Scrolled(
+                                at.content(),
+                                at.row(),
+                                at.column(),
+                                at.cursor().map(on -> version.moved(on, version.shown())),
+                                Option.none())))
+                .map(at -> model.withScrolled(model.scrolled().put(area, at)))
+                .getOrElse(model);
     }
 
     /**

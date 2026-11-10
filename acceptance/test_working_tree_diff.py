@@ -19,12 +19,12 @@ def test_ctrl_d_draws_the_staged_and_unstaged_changes_rich(repo, jazygit):
     text = ui.app.text()
     assert "Staged changes" in text
     assert "Unstaged changes" in text
-    assert "1   │ -count = 1" in text
-    assert "  1 │ +count = 2" in text
+    assert "1   │ - count = 1" in text
+    assert "  1 │ + count = 2" in text
     assert "modified  two.txt" in text
-    assert "1   │ -size = 1" in text
+    assert "1   │ - size = 1" in text
     assert "added  new.txt" in text
-    assert "  1 │ +brand new" in text
+    assert "  1 │ + brand new" in text
     assert "diff --git" not in text
 
 
@@ -56,12 +56,12 @@ def test_a_removed_line_is_followed_by_the_line_it_became(repo, jazygit):
     ui.app.wait_for("modified  versions.txt")
     rows = ui.app.text().splitlines()
     order = [
-        "1   │ -checkstyle = 14.3.0",
-        "  1 │ +checkstyle = 14.4.0",
-        "2   │ -errorprone = 2.51.0",
-        "  2 │ +errorprone = 2.52.0",
-        "3   │ -native = 1.1.17",
-        "  3 │ +native = 1.1.18",
+        "1   │ - checkstyle = 14.3.0",
+        "  1 │ + checkstyle = 14.4.0",
+        "2   │ - errorprone = 2.51.0",
+        "  2 │ + errorprone = 2.52.0",
+        "3   │ - native = 1.1.17",
+        "  3 │ + native = 1.1.18",
     ]
     found = [next(at for at, row in enumerate(rows) if line in row) for line in order]
     assert found == sorted(found), ui.app.text()

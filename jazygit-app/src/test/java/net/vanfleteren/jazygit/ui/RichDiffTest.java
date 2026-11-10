@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.ui;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.tamboui.style.Color;
 import dev.tamboui.style.Style;
@@ -15,6 +16,7 @@ import io.vavr.control.Option;
 import java.time.Duration;
 import java.util.stream.Collectors;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
+import net.vanfleteren.jazygit.git.model.FileVersion;
 import net.vanfleteren.jazygit.git.model.ParsedDiff;
 import net.vanfleteren.jazygit.git.model.WordDiff.Segment;
 import net.vanfleteren.jazygit.state.Anchor;
@@ -54,10 +56,10 @@ class RichDiffTest {
                         " modified  a.txt ",
                         // The first hunk has no rule, but a marker of the lines above it (ADR 77).
                         "┄┄┄┄┄ │ 8 lines hidden ┄",
-                        " 9  9 │  nine",
+                        " 9  9 │   nine",
                         // Changed lines are padded to the width of the file, so their background makes a block.
-                        "10    │ -ten = 1 ",
-                        "   10 │ +ten = 2 ",
+                        "10    │ - ten = 1",
+                        "   10 │ + ten = 2",
                         // How many lines follow is not known until the file is read whole.
                         "┄┄┄┄┄ │ more ┄",
                         "",
@@ -88,9 +90,9 @@ class RichDiffTest {
                 List.of(
                         " modified  a.txt",
                         "┄┄┄┄┄ │ 8 lines hidden ┄",
-                        " 9  9 │  nine",
-                        "10    │ -ten",
-                        "   10 │ +TEN",
+                        " 9  9 │   nine",
+                        "10    │ - ten",
+                        "   10 │ + TEN",
                         "┄┄┄┄┄ │ 2 lines hidden ┄"),
                 text(drawn.lines()).map(String::stripTrailing));
         assertEquals(
@@ -133,6 +135,121 @@ class RichDiffTest {
                 markers(tooLong));
     }
 
+    @Test
+    void aVersionIsDrawnUnderItsOwnBarWithItsNumbersInItsColumnOfTheDiffsAndNoMarkers() {
+        String renamed = """
+                diff --git a/old.txt b/new.txt
+                similarity index 50%
+                rename from old.txt
+                rename to new.txt
+                --- a/old.txt
+                +++ b/new.txt
+                @@ -1,3 +1,3 @@
+                 one
+                -two
+                +TWO
+                 three
+                """;
+        ParsedDiff.ParsedFile whole = ParsedDiff.of(renamed).files().head();
+
+        RichDiff.Drawn added = drawn(whole, FileVersion.NEW, false);
+        RichDiff.Drawn original = drawn(whole, FileVersion.ORIGINAL, true);
+
+        assertEquals(
+                List.of(" new version  new.txt", "  1 │   one", "  2 │ + TWO", "  3 │   three"),
+                text(added.lines()).map(String::stripTrailing));
+        // The gutter is as wide as the diff's, so switching does not move the code sideways.
+        assertEquals(
+                text(lines(ParsedDiff.of(renamed), false, Theme.SpanStyles.NONE))
+                        .get(1)
+                        .indexOf("│"),
+                text(added.lines()).get(1).indexOf("│"));
+        assertEquals(
+                List.of(
+                        " original  old.txt",
+                        "1   │   one",
+                        "2   │ - two",
+                        "3   │   three",
+                        "the file is too long to show the rest of"),
+                text(original.lines()).map(String::stripTrailing));
+        // Its lines are stops, but in no hunk: a range is of the diff.
+        assertTrue(added.stops()
+                .filter(stop -> stop.mark().anchor() instanceof Anchor.OnLine)
+                .forAll(stop -> stop.mark().hunk().isEmpty()));
+        assertEquals(4, added.stops().size());
+    }
+
+    @Test
+    void aVersionOfMoreLinesThanItsDiffNumbersKeepsTheGutterOfTheDiff() {
+        // The diff ends at line 95, two digits; the file has 120 lines, three.
+        ParsedDiff.ParsedFile whole = ParsedDiff.of("diff --git a/a.txt b/a.txt\n--- a/a.txt\n+++ b/a.txt\n"
+                        + "@@ -1,120 +1,120 @@\n"
+                        + List.rangeClosed(1, 120)
+                                .map(n -> n == 93 ? "-old\n+new\n" : " line" + n + "\n")
+                                .mkString())
+                .files()
+                .head();
+        // Two columns of two digits and a space between them, then a space: as in the diff.
+        int bar = "93 93 │".indexOf('│');
+
+        RichDiff.Drawn added = drawn(whole, FileVersion.NEW, false, 2, Theme.SpanStyles.NONE);
+        RichDiff.Drawn original = drawn(whole, FileVersion.ORIGINAL, false, 2, Theme.SpanStyles.NONE);
+
+        assertTrue(
+                text(added.lines()).tail().forAll(line -> line.indexOf('│') == bar),
+                text(added.lines()).mkString("\n"));
+        assertTrue(text(original.lines()).tail().forAll(line -> line.indexOf('│') == bar));
+        assertEquals("  120 │   line120", text(added.lines()).last().stripTrailing());
+        assertEquals("120   │   line120", text(original.lines()).last().stripTrailing());
+        assertEquals("   93 │ + new", text(added.lines()).get(93).stripTrailing());
+    }
+
+    @Test
+    void aVersionLeavesTheMarkerOfAChangedLineBlankWhenTheThemeTintsTheLine() {
+        ParsedDiff.ParsedFile whole = ParsedDiff.of("""
+                        diff --git a/a.md b/a.md
+                        --- a/a.md
+                        +++ b/a.md
+                        @@ -1,2 +1,2 @@
+                         # Title
+                        -- old item
+                        +- new item
+                        """).files().head();
+
+        List<String> tinted = text(drawn(whole, FileVersion.NEW, false, SYNTAX_STYLES)
+                        .lines())
+                .map(String::stripTrailing);
+        List<String> untinted = text(drawn(whole, FileVersion.NEW, false, Theme.SpanStyles.NONE)
+                        .lines())
+                .map(String::stripTrailing);
+
+        assertEquals(List.of(" new version  a.md", "  1 │   # Title", "  2 │   - new item"), tinted);
+        // Without a background, the marker is all that tells the line changed.
+        assertEquals("  2 │ + - new item", untinted.last());
+    }
+
+    private static RichDiff.Drawn drawn(ParsedDiff.ParsedFile whole, FileVersion version, boolean cut) {
+        return drawn(whole, version, cut, Theme.SpanStyles.NONE);
+    }
+
+    private static RichDiff.Drawn drawn(
+            ParsedDiff.ParsedFile whole, FileVersion version, boolean cut, Theme.SpanStyles styles) {
+        return drawn(whole, version, cut, 1, styles);
+    }
+
+    private static RichDiff.Drawn drawn(
+            ParsedDiff.ParsedFile whole, FileVersion version, boolean cut, int digits, Theme.SpanStyles styles) {
+        return RichDiff.drawn(
+                new Expansion.Folded(
+                        new ParsedDiff(List.empty(), List.of(version.of(whole))),
+                        HashMap.of(whole.file().path(), Expansion.Fold.of(version, cut, digits))),
+                true,
+                true,
+                Option.none(),
+                Option.none(),
+                styles);
+    }
+
     /**
      * The markers {@code folded} is drawn with.
      */
@@ -165,14 +282,14 @@ class RichDiffTest {
                 List.of(
                         " modified  pom.xml",
                         "┄┄┄┄┄ │ 42 lines hidden ┄",
-                        "43 43 │  <spotless>3.10.4</spotless>",
+                        "43 43 │   <spotless>3.10.4</spotless>",
                         // Each removed line is followed by the line it became (ADR 83).
-                        "44    │ -<checkstyle>14.3.0</checkstyle>",
-                        "   44 │ +<checkstyle>14.4.0</checkstyle>",
-                        "45    │ -<errorprone>2.51.0</errorprone>",
-                        "   45 │ +<errorprone>2.52.0</errorprone>",
-                        "46    │ -<native>1.1.17</native>",
-                        "   46 │ +<native>1.1.18</native>",
+                        "44    │ - <checkstyle>14.3.0</checkstyle>",
+                        "   44 │ + <checkstyle>14.4.0</checkstyle>",
+                        "45    │ - <errorprone>2.51.0</errorprone>",
+                        "   45 │ + <errorprone>2.52.0</errorprone>",
+                        "46    │ - <native>1.1.17</native>",
+                        "   46 │ + <native>1.1.18</native>",
                         "┄┄┄┄┄ │ more ┄"),
                 text(drawn.lines()).map(String::stripTrailing));
         assertEquals(
@@ -204,12 +321,12 @@ class RichDiffTest {
 
         assertEquals(
                 List.of(
-                        "44    │ -<checkstyle>14.3.0</checkstyle>",
-                        "45    │ -<errorprone>2.51.0</errorprone>",
-                        "46    │ -<native>1.1.17</native>",
-                        "   44 │ +<checkstyle>14.4.0</checkstyle>",
-                        "   45 │ +<errorprone>2.52.0</errorprone>",
-                        "   46 │ +<native>1.1.18</native>"),
+                        "44    │ - <checkstyle>14.3.0</checkstyle>",
+                        "45    │ - <errorprone>2.51.0</errorprone>",
+                        "46    │ - <native>1.1.17</native>",
+                        "   44 │ + <checkstyle>14.4.0</checkstyle>",
+                        "   45 │ + <errorprone>2.52.0</errorprone>",
+                        "   46 │ + <native>1.1.18</native>"),
                 lines);
     }
 
@@ -245,7 +362,7 @@ class RichDiffTest {
                         " conflicted  g.txt ",
                         "",
                         // The bar is as wide as the widest line of the file.
-                        " conflicted  f.txt   ",
+                        " conflicted  f.txt    ",
                         "┄┄┄ │ @@@ -1,2 -1,2 +1,3 @@@",
                         "    │   a",
                         "    │ ++<<<<<<< HEAD",
@@ -270,10 +387,10 @@ class RichDiffTest {
         assertEquals(
                 List.of(
                         " modified  a.txt ",
-                        "1   │ -one       ",
-                        "  1 │ +two       ",
+                        "1   │ - one      ",
+                        "  1 │ + two      ",
                         "┄┄┄ │ 3 lines hidden ┄",
-                        "5   │ -five      ",
+                        "5   │ - five     ",
                         "┄┄┄ │ more ┄"),
                 lines);
     }
@@ -336,7 +453,7 @@ class RichDiffTest {
 
         assertEquals(
                 List.of(
-                        Tuple.of(" ", Style.EMPTY),
+                        Tuple.of("  ", Style.EMPTY),
                         Tuple.of("return", Style.EMPTY.fg(Color.BLUE)),
                         Tuple.of(" x;", Style.EMPTY)),
                 List.ofAll(lines.get(1).spans()).drop(1).map(span -> Tuple.of(span.content(), span.style())));
@@ -481,7 +598,7 @@ class RichDiffTest {
                 List.range(0, files)
                         .flatMap(file -> List.of(" modified  f%d.txt".formatted(file))
                                 .appendAll(List.rangeClosed(1, lines)
-                                        .map(line -> "%3d %3d │  f%d line %d".formatted(line, line, file, line)))
+                                        .map(line -> "%3d %3d │   f%d line %d".formatted(line, line, file, line)))
                                 .append("┄┄┄┄┄┄┄ │ more ┄")
                                 .prependAll(file > 0 ? List.of("") : List.empty())),
                 drawn);
