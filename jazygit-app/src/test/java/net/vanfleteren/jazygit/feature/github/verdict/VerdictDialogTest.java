@@ -49,7 +49,10 @@ class VerdictDialogTest {
 
             assertTrue(screen.contains("Review pull request #42"), screen);
             assertTrue(screen.contains("(•) Approve   ( ) Request changes"), screen);
-            assertTrue(screen.contains("←→: approve or request changes · tab: next field"), screen);
+            assertTrue(
+                    screen.contains(
+                            "←→ in Verdict: choose · tab: next field · ctrl+s: submit · ctrl+o: open in editor"),
+                    screen);
             assertFalse(screen.contains("still a draft"), screen);
         }
     }

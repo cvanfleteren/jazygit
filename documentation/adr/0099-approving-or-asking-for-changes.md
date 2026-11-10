@@ -61,13 +61,22 @@ editor, Escape drops it, a failed send says why under the text. In the pull requ
 
 ### The popup
 
-- A `CommentComposer`, titled `Review pull request #<n>`, under a choice of the verdict:
-  `(•) Approve   ( ) Request changes`. Each choice takes the focus, as the draft box of the pull request dialogs does,
-  and Space or Enter chooses it; Tab goes from approve to request changes and on to the text. The focus starts on
-  approve, whatever the viewer's last review said, so approving is `a` and Ctrl+S. Ctrl+S, Ctrl+O and Escape do the
-  same from a choice as from the text. Not: a key that switches the verdict from the text, as Ctrl+T first did,
-  which only the hint told of; nor Tab for it, which TamboUI's router takes to move the focus before any element sees
-  it.
+- A `CommentComposer`, titled `Review pull request #<n>`, with two boxes, as the fields of the pull request dialogs
+  are, so the choice and the text are set apart:
+  - `Verdict`, the choice: `(•) Approve   ( ) Request changes`.
+  - The text, titled by whether the verdict chosen needs it: `Comment (optional)` to approve, `Reason (required)` to
+    ask for changes.
+- The choice is one stop of the focus, as a group of radio buttons is: its box takes the focus, and shows it by its
+  border, as the box of the text does, in every theme (`Panel.choices:focus`). Left or Up chooses approve, Right or
+  Down asks for changes. Tab goes on to the text, Shift+Tab back. The focus starts on the choice, on approve,
+  whatever the viewer's last review said, so approving is `a` and Ctrl+S. Ctrl+S, Ctrl+O and Escape do the same from
+  the choice as from the text. The hint says the arrows choose in `Verdict`, as in the text they move the cursor.
+- Not: a key that switches the verdict from the text, as Ctrl+T first did, which only the hint told of; nor Tab for
+  it, which TamboUI's router takes to move the focus before any element sees it. Not: each choice a stop of the focus
+  of its own, chosen with Space, as first built: the arrows are how a group of radio buttons is gone through, and one
+  stop is one Tab less to the text. Not: the focus on the mark of the choice made, reversed, which left the box
+  unmarked while the box of the text showed its focus: TamboUI has no `:focus-within` for a box to show the focus of
+  what is in it.
 - A draft says so in the title, `Review pull request #<n> · draft`, and above the text, in the colour of a warning: the author may
   not want it reviewed yet. Not: asking to confirm. It follows the details of the dialog it came from, as the comment
   popup does (ADR 5), so a pull request made a draft or ready while it is open shows so.
