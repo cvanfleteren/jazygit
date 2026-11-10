@@ -4,6 +4,7 @@ import static dev.tamboui.toolkit.Toolkit.text;
 import static dev.tamboui.toolkit.Toolkit.textArea;
 
 import dev.tamboui.toolkit.element.Element;
+import dev.tamboui.toolkit.elements.TextAreaElement;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
@@ -55,13 +56,15 @@ public final class CommentComposer {
      * {@code actions} makes it.
      */
     public Element render(Model model, String title, List<String> quoted, Comment comment, Actions actions) {
-        return render(model, title, List.empty(), quoted, Option.none(), comment, actions, Hints.COMMENT);
+        return render(
+                model, title, List.empty(), quoted, Option.none(), Option.none(), comment, actions, Hints.COMMENT);
     }
 
     /**
      * The popup that writes {@code comment}, titled {@code title}, under {@code fields}, which come first and choose
      * how it is sent, then {@code quoted} and then {@code notice}, which stands out; sending what the user does as
-     * {@code actions} makes it, with {@code hints} below it. The fields take their keys before {@link #keys}.
+     * {@code actions} makes it, with {@code hints} below it. The fields take their keys before {@link #keys}. With
+     * {@code textTitle}, the text is in a box of its own under that title, set apart from the fields (ADR 100).
      */
     public Element render(
             Model model,
@@ -69,6 +72,7 @@ public final class CommentComposer {
             List<Element> fields,
             List<String> quoted,
             Option<String> notice,
+            Option<String> textTitle,
             Comment comment,
             Actions actions,
             Hints hints) {
@@ -78,8 +82,9 @@ public final class CommentComposer {
             text.moveCursorToEnd();
         }
         // Without a title, the text area has no border of its own: the dialog's is enough.
+        TextAreaElement plain = textArea(text).placeholder(Messages.get("dialog.comment.placeholder"));
         Element area = new SubmittableTextArea(
-                        textArea(text).placeholder(Messages.get("dialog.comment.placeholder")),
+                        textTitle.map(plain::title).getOrElse(plain),
                         text,
                         id,
                         () -> dispatch.accept(actions.confirmed().get()))

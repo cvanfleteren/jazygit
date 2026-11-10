@@ -246,7 +246,7 @@ public record PullRequestDetails(
      * @param comments      how many comments it has
      * @param reviewThreads its review threads, on lines of the diff
      * @param labels        its labels
-     * @param reviewing     what the viewer needs to review it (ADR 99)
+     * @param reviewing     what the viewer needs to review it (ADR 100)
      */
     public record Conversation(
             Review review,
@@ -270,7 +270,7 @@ public record PullRequestDetails(
     }
 
     /**
-     * What the viewer needs to approve a pull request or ask for changes (ADR 99).
+     * What the viewer needs to approve a pull request or ask for changes (ADR 100).
      *
      * @param pullRequest the node id of the pull request, which a review is added to; empty when not known
      * @param authored    whether the viewer opened it, which GitHub does not let them review

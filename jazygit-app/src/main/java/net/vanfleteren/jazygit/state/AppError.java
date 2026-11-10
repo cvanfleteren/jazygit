@@ -384,19 +384,19 @@ public sealed interface AppError {
              */
             REACTING,
             /**
-             * GitHub does not let the viewer approve their own pull request, nor ask for changes on it (ADR 99).
+             * GitHub does not let the viewer approve their own pull request, nor ask for changes on it (ADR 100).
              */
             OWN_PULL_REQUEST,
             /**
-             * The viewer has a pending review, started in the browser, which stops another (ADR 99).
+             * The viewer has a pending review, started in the browser, which stops another (ADR 100).
              */
             PENDING_REVIEW,
             /**
-             * Only an open pull request is approved, or asked for changes on (ADR 99).
+             * Only an open pull request is approved, or asked for changes on (ADR 100).
              */
             NOT_OPEN,
             /**
-             * Asking for changes needs a reason (ADR 99).
+             * Asking for changes needs a reason (ADR 100).
              */
             NO_REASON
         }

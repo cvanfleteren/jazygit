@@ -45,7 +45,7 @@ import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
 
 /**
- * Approving a pull request, or asking for changes (ADR 99), from its dialog and from the diff of its files.
+ * Approving a pull request, or asking for changes (ADR 100), from its dialog and from the diff of its files.
  */
 class VerdictUpdateTest {
 

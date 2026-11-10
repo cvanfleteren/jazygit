@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.gh.model;
 
 /**
- * What a review says of a pull request, as GraphQL's {@code PullRequestReviewEvent} names it (ADR 99).
+ * What a review says of a pull request, as GraphQL's {@code PullRequestReviewEvent} names it (ADR 100).
  */
 public enum Verdict {
     APPROVE,

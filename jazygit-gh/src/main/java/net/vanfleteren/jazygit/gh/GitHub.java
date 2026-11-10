@@ -201,7 +201,7 @@ public interface GitHub {
 
     /**
      * Submits a review saying {@code verdict}, with {@code body}, which may be empty to approve, on the pull request
-     * with node id {@code pullRequest} (ADR 99).
+     * with node id {@code pullRequest} (ADR 100).
      */
     Either<GhFailure, List<ExecutedCommand>> submitReview(String pullRequest, Verdict verdict, String body);
 

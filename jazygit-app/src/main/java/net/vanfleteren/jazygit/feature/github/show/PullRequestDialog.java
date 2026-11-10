@@ -101,7 +101,7 @@ public final class PullRequestDialog implements PopupView {
                                 "dialog.pullRequest.comment",
                                 CommentMsg.Requested::new,
                                 (model, popup) -> popup.detailsRead()),
-                        // Not on the viewer's own, nor on one that is not open (ADR 99).
+                        // Not on the viewer's own, nor on one that is not open (ADR 100).
                         new Choice<PullRequestPopup>(
                                 'a',
                                 "dialog.pullRequest.approve",

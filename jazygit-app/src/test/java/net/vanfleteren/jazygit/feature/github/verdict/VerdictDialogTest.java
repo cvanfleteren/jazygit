@@ -25,7 +25,7 @@ import net.vanfleteren.jazygit.ui.SettledPilot;
 import org.junit.jupiter.api.Test;
 
 /**
- * The popup asking for a review of a pull request (ADR 99): a choice of approving or asking for changes above the
+ * The popup asking for a review of a pull request (ADR 100): a choice of approving or asking for changes above the
  * text, which Tab goes through and Space chooses from, and a draft that says so.
  */
 class VerdictDialogTest {
@@ -49,19 +49,43 @@ class VerdictDialogTest {
 
             assertTrue(screen.contains("Review pull request #42"), screen);
             assertTrue(screen.contains("(•) Approve   ( ) Request changes"), screen);
-            assertTrue(screen.contains("tab: next field · space: choose"), screen);
+            assertTrue(
+                    screen.contains(
+                            "←→ in Verdict: choose · tab: next field · ctrl+s: submit · ctrl+o: open in editor"),
+                    screen);
             assertFalse(screen.contains("still a draft"), screen);
         }
     }
 
     @Test
-    void tabGoesToAskingForChangesWhichSpaceChoosesAndOnToTheText() throws Exception {
+    void theChoicesAndTheTextAreInBoxesOfTheirOwnWhoseTitleSaysWhetherTheTextIsNeeded() throws Exception {
         try (ToolkitTestRunner runner = start()) {
-            SettledPilot.of(runner).press(KeyCode.TAB);
-            SettledPilot.of(runner).press(' ');
+            String approving = RenderedText.ofLarge(runner, this::view);
+            assertTrue(approving.contains("┌Verdict"), approving);
+            assertTrue(approving.contains("│(•) Approve   ( ) Request changes"), approving);
+            assertTrue(approving.contains("┌Comment (optional)"), approving);
+
+            model = model.openPopup(REVIEW.withVerdict(Verdict.REQUEST_CHANGES));
+            String asking = RenderedText.ofLarge(runner, this::view);
+            assertTrue(asking.contains("┌Reason (required)"), asking);
+        }
+    }
+
+    @Test
+    void theArrowsChooseAndTabGoesOnToTheText() throws Exception {
+        try (ToolkitTestRunner runner = start()) {
+            SettledPilot.of(runner).press(KeyCode.RIGHT);
             SettledPilot.of(runner).pause();
             String chosen = RenderedText.ofLarge(runner, this::view);
             assertTrue(chosen.contains("( ) Approve   (•) Request changes"), chosen);
+
+            // The focus went along with the mark: the arrows still choose.
+            SettledPilot.of(runner).press(KeyCode.LEFT);
+            SettledPilot.of(runner).pause();
+            String back = RenderedText.ofLarge(runner, this::view);
+            assertTrue(back.contains("(•) Approve   ( ) Request changes"), back);
+            SettledPilot.of(runner).press(KeyCode.DOWN);
+            SettledPilot.of(runner).pause();
 
             SettledPilot.of(runner).press(KeyCode.TAB);
             for (char c : "Rename it".toCharArray()) {
@@ -117,7 +141,7 @@ class VerdictDialogTest {
 
     private ToolkitTestRunner start() throws Exception {
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
-        SettledPilot.focus(runner, VerdictDialog.APPROVE_ID);
+        SettledPilot.focus(runner, VerdictDialog.CHOICES_ID);
         RenderedText.ofLarge(runner, this::view);
         return runner;
     }

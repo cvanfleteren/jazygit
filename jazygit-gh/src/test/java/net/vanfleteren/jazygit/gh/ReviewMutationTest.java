@@ -9,7 +9,7 @@ import net.vanfleteren.jazygit.gh.model.Verdict;
 import org.junit.jupiter.api.Test;
 
 /**
- * The command that approves a pull request or asks for changes (ADR 99).
+ * The command that approves a pull request or asks for changes (ADR 100).
  */
 class ReviewMutationTest {
 

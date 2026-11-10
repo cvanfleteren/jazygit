@@ -12,7 +12,7 @@ import net.vanfleteren.jazygit.state.Operation;
 import net.vanfleteren.jazygit.state.OperationCmd;
 
 /**
- * Writing the text of a review in the editor, and submitting the review (ADR 99).
+ * Writing the text of a review in the editor, and submitting the review (ADR 100).
  */
 public sealed interface VerdictCmd extends Cmd {
 

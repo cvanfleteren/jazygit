@@ -270,7 +270,7 @@ public final class PullRequestUpdate {
                         .flatMap(checks -> checks.from()
                                 .filter(dialog -> dialog.pullRequest().number() == number)
                                 .map(dialog -> model.openPopup(checks.withFrom(change.apply(dialog))))))
-                // A review opened from the dialog, which follows whether it is a draft (ADR 99).
+                // A review opened from the dialog, which follows whether it is a draft (ADR 100).
                 .orElse(() -> model.popup(VerdictPopup.class)
                         .flatMap(review -> review.from()
                                 .filter(from -> from.number() == number)
