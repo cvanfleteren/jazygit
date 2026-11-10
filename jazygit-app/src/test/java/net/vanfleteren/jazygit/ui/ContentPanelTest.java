@@ -220,6 +220,56 @@ class ContentPanelTest {
     }
 
     @Test
+    void aVersionLongerThanTheDiffIsDrawnAtOnceAtItsCursor() throws Exception {
+        List<List<String>> screens = beforeAndAfterTheVersion();
+
+        assertTrue(
+                screens.last().exists(row -> row.contains(" 39 │  line39")),
+                screens.last().mkString("\n"));
+    }
+
+    /**
+     * The screen of a panel with the cursor on line 39 of a diff around line 41, and then, in the same panel, once the
+     * new version of the file of 60 lines is read in place of it.
+     */
+    private static List<List<String>> beforeAndAfterTheVersion() throws Exception {
+        String header = "diff --git a/a.txt b/a.txt\n--- a/a.txt\n+++ b/a.txt\n";
+        java.util.function.IntFunction<String> line = n -> n == 41 ? "-line41\n+changed\n" : " line" + n + "\n";
+        Model shown = showingCommit(header + "@@ -38,7 +38,7 @@\n"
+                        + List.rangeClosed(38, 44).map(line::apply).mkString())
+                .mapPreferences(preferences ->
+                        preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
+        ContentPanel panel = new ContentPanel(Theme.SpanStyles.NONE, () -> false);
+        String area = panel.areaOfPane(shown, CommitsPanel.ID).get();
+        ScrolledContent content = ContentView.of(shown, area).areas().head().content();
+        Anchor.OnLine on = new Anchor.OnLine("a.txt", net.vanfleteren.jazygit.gh.model.ReviewThread.Side.RIGHT, 39);
+        Model onLine = shown.withScrolled(
+                io.vavr.collection.HashMap.of(area, new Scrolled(content, 0, 0, Option.of(on), Option.none())));
+        DiffCursorAt at =
+                new DiffCursorAt(area, onLine.scrolled(area, content), on, Option.none(), Option.none(), Option.none());
+        Update.Next asked = Update.update(onLine, new net.vanfleteren.jazygit.feature.diff.VersionMsg.Cycled(at));
+        ReadVersion read = (ReadVersion) asked.cmds().head();
+        DiffText whole = DiffText.of(header + "@@ -1,60 +1,60 @@\n"
+                + List.rangeClosed(1, 60).map(line::apply).mkString());
+        Model version = TestModels.done(
+                        TestModels.running(asked.model(), read), read, new LoadMsg.VersionRead(read, whole))
+                .model();
+        java.util.concurrent.atomic.AtomicReference<Model> model =
+                new java.util.concurrent.atomic.AtomicReference<>(onLine);
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model.get(), area))) {
+            List<String> before = List.of(RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), area))
+                    .split("\n"));
+            model.set(version);
+            List<String> after = List.of(RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), area))
+                    .split("\n"));
+
+            assertTrue(after.exists(row -> row.contains("· new version")), after.mkString("\n"));
+            return List.of(before, after);
+        }
+    }
+
+    @Test
     void yAsksToCopyWhatTheCursorIsOn() throws Exception {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
         ContentPanel copying = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, dispatched::add);

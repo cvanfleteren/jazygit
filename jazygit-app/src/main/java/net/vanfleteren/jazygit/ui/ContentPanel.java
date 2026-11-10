@@ -761,6 +761,9 @@ public final class ContentPanel {
                     .getOrElse(kept);
             element.text(windowed(lines, column, row, state.viewportHeight(), state.viewportWidth(), current.filling()))
                     .title(shown.title());
+            // The state clamps a scroll to the lines it was last drawn with: a longer body, as a version of the file
+            // in place of its diff, would show only the blank lines around where it was cut off (ADR 78, 102).
+            state.setContentHeight(current.lines().size());
             state.scrollToTop();
             state.scrollDown(row);
             return element.onKeyEvent(event -> keys(event, focused, content))
