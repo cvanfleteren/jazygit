@@ -4,17 +4,11 @@ import static dev.tamboui.toolkit.Toolkit.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import dev.tamboui.buffer.Buffer;
 import dev.tamboui.layout.Rect;
 import dev.tamboui.style.Color;
-import dev.tamboui.terminal.Frame;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
-import dev.tamboui.toolkit.element.DefaultRenderContext;
 import dev.tamboui.toolkit.element.Element;
-import dev.tamboui.toolkit.element.ElementRegistry;
 import dev.tamboui.toolkit.event.EventResult;
-import dev.tamboui.toolkit.event.EventRouter;
-import dev.tamboui.toolkit.focus.FocusManager;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.KeyModifiers;
@@ -33,6 +27,7 @@ import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import net.vanfleteren.jazygit.ui.Theme;
+import net.vanfleteren.jazygit.ui.ThemedBorders;
 import net.vanfleteren.jazygit.ui.widgets.Dimmed;
 import org.junit.jupiter.api.Test;
 
@@ -317,47 +312,24 @@ class NewPullRequestDialogTest {
 
     @Test
     void theFieldWithTheFocusIsBorderedAsThePaneInUse() {
-        Buffer title = themed(NewPullRequestDialog.ID);
-        Buffer bases = themed(NewPullRequestDialog.BASES_ID);
+        ThemedBorders title = themed(NewPullRequestDialog.ID);
+        ThemedBorders bases = themed(NewPullRequestDialog.BASES_ID);
+        ThemedBorders draft = themed(NewPullRequestDialog.DRAFT_ID);
 
-        assertEquals(Optional.of(Color.CYAN), border(title, "Title"));
-        assertEquals(Optional.of(Color.DARK_GRAY), border(title, "Into: main"));
-        assertEquals(Optional.of(Color.CYAN), border(bases, "Into: main"));
-        assertEquals(Optional.of(Color.DARK_GRAY), border(bases, "Title"));
+        assertEquals(Optional.of(Color.CYAN), title.borderLeftOf("Title"));
+        assertEquals(Optional.of(Color.DARK_GRAY), title.borderLeftOf("Into: main"));
+        assertEquals(Optional.of(Color.DARK_GRAY), title.borderLeftOf("[ ] Draft?"));
+        assertEquals(Optional.of(Color.CYAN), bases.borderLeftOf("Into: main"));
+        assertEquals(Optional.of(Color.DARK_GRAY), bases.borderLeftOf("Title"));
+        assertEquals(Optional.of(Color.CYAN), draft.borderLeftOf("[ ] Draft?"));
+        assertEquals(Optional.of(Color.DARK_GRAY), draft.borderLeftOf("Title"));
     }
 
     /**
      * The popup in the dark theme, while {@code focused} has the focus.
      */
-    private Buffer themed(String focused) {
-        FocusManager focus = new FocusManager();
-        focus.setFocus(focused);
-        DefaultRenderContext context = new DefaultRenderContext(focus, new EventRouter(focus, new ElementRegistry()));
-        context.setStyleEngine(Theme.createEngine().get());
-        Buffer buffer = Buffer.empty(THEMED_AREA);
-        view().render(Frame.forTesting(buffer), THEMED_AREA, context);
-        return buffer;
-    }
-
-    private static Optional<Color> border(Buffer buffer, String title) {
-        return cornerBefore(buffer, THEMED_AREA, title).style().fg();
-    }
-
-    /**
-     * The cell left of where {@code text} starts on the screen: the corner of the border it is the title of.
-     */
-    private static dev.tamboui.buffer.Cell cornerBefore(Buffer buffer, Rect area, String text) {
-        for (int y = 0; y < area.height(); y++) {
-            StringBuilder line = new StringBuilder();
-            for (int x = 0; x < area.width(); x++) {
-                line.append(buffer.get(x, y).symbol());
-            }
-            int at = line.indexOf(text);
-            if (at > 0) {
-                return buffer.get(at - 1, y);
-            }
-        }
-        throw new AssertionError(text + " not shown");
+    private ThemedBorders themed(String focused) {
+        return ThemedBorders.render(view(), THEMED_AREA, focused);
     }
 
     private Element view() {

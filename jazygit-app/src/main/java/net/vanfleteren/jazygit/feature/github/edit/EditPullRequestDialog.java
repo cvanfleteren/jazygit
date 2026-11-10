@@ -22,6 +22,7 @@ import net.vanfleteren.jazygit.ui.LineEditInput;
 import net.vanfleteren.jazygit.ui.SubmittableTextArea;
 import net.vanfleteren.jazygit.ui.Theme;
 import net.vanfleteren.jazygit.ui.widgets.DialogFrame;
+import net.vanfleteren.jazygit.ui.widgets.FocusBordered;
 import net.vanfleteren.jazygit.ui.widgets.HintedDialog;
 import net.vanfleteren.jazygit.ui.widgets.PopupView;
 
@@ -150,8 +151,8 @@ public final class EditPullRequestDialog implements PopupView {
     }
 
     /**
-     * The draft box, which takes the focus, as a cursor that the themes show by reversing it; dimmed and without the
-     * focus when it cannot be changed.
+     * The draft box, which takes the focus, as a cursor that the themes show by reversing it, in a border that shows
+     * the focus as those of the other fields do; dimmed and without the focus when it cannot be changed.
      */
     private Element draft(EditPullRequestPopup popup) {
         boolean ticked = popup.fields().draft();
@@ -168,7 +169,7 @@ public final class EditPullRequestDialog implements PopupView {
         Element label = popup.draftChangeable()
                 ? text(" " + Messages.get("dialog.newPullRequest.draft"))
                 : text(" " + Messages.get("dialog.newPullRequest.draft")).addClass(Theme.Classes.DIM);
-        return panel(row(box, label)).length(INPUT_HEIGHT);
+        return new FocusBordered(panel(row(box, label)).length(INPUT_HEIGHT), DRAFT_ID);
     }
 
     /**
