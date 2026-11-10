@@ -73,6 +73,8 @@
               git
               # For the acceptance tests in acceptance/.
               (pkgs.python3.withPackages (p: [ p.pexpect p.pyte p.pytest p.pytest-xdist ]))
+              # Checks that Markdown wraps at 120 columns, as CI does.
+              pkgs.markdownlint-cli2
             ];
             JAVA_HOME = jdk.home;
           };

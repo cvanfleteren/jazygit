@@ -77,8 +77,8 @@ The updates, messages, popups and the model are pure. Pure code:
 - Decisions with a big impact on the architecture or were impactful design decisions had to be made are recorded in an
   ADR (Architecture Decision Record) in `documentation/adr`. Each ADR is a markdown file with a name like `0001-foo.md`
   (Context / Decision / Consequences), where the number is the next available integer.
-- The next number is the next free one on `origin/main` (after `git fetch`) *and* in the open PRs (`gh pr list`, `gh pr
-  view N --json files`): parallel branches claim numbers all the time. Check again before opening the PR.
+- The next number is the next free one on `origin/main` (after `git fetch`) *and* in the open PRs (`gh pr list`,
+  `gh pr view N --json files`): parallel branches claim numbers all the time. Check again before opening the PR.
 - A plan settled in a grilling session becomes an ADR before implementation starts.
 - View tweaks, visual rearrangements and shortcut changes need no ADR, even when an older ADR spelled out the old
   detail: change the code and Javadoc.
@@ -107,3 +107,5 @@ The updates, messages, popups and the model are pure. Pure code:
    only checks them. Commit what it reformatted; after any later edit, run `./mvnw spotless:apply`.
 2. After a UI change (pane layout, row text): `python3 -m pytest acceptance -q -n 8`, against the jar verify built. CI
    runs these; verify does not.
+3. After a Markdown change: `markdownlint-cli2` (in the dev shell). Prose wraps at 120 columns; tables, code blocks,
+   headings and long links may be wider.
