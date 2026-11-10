@@ -35,7 +35,9 @@ file of about 3000 lines whole takes git a few milliseconds.
   never as git's combined diff.
 - The lines that changed keep their tint in a version, and their changed words their highlight while Ctrl+E has them
   on: the added lines in the new version, the removed ones in the original. So a version shows where the changes sit
-  in it. Whether the tint stays is to be seen in use.
+  in it. Whether the tint stays is to be seen in use. The `+` or `-` before a changed line is blank when the theme
+  tints the line, as it says nothing the tint does not, and makes a line of Markdown like `+- item` hard to read; in a
+  theme without a background for changed lines, as `mono`, it stays, as nothing else tells the line changed.
 - The gutter keeps the two columns of the diff, as wide: the numbers of the new version in the column of the new file,
   those of the original in that of the old one, the other column blank. So switching moves neither the code nor the
   numbers sideways. Not: one column, which shifted the code left as the version showed.

@@ -416,12 +416,14 @@ final class RichDiff {
      * The changed line of {@code row}: its marker and its unchanged parts in the line class of {@code change}, its
      * changed words in its word class if the {@code layout} highlights them, padded to the width of the {@code layout}. Its code is coloured by its
      * {@code tokens} if it was lexed, unless the line class gives it no background: then its colour is what tells it
-     * is changed, and a line of tokens only would look like context.
+     * is changed, and a line of tokens only would look like context. In a version of the file, its marker is blank
+     * when the line class gives it a background, which tells it is changed already (ADR 102).
      */
     private static Line changed(Row row, List<Span> gutter, Option<Array<Token>> tokens, Change change, Layout layout) {
         Theme.SpanStyles styles = layout.styles();
-        Option<Array<Token>> coloured =
-                tokens.filter(ignored -> styles.of(change.lineClass()).bg().isPresent());
+        boolean tinted = styles.of(change.lineClass()).bg().isPresent();
+        Option<Array<Token>> coloured = tokens.filter(ignored -> tinted);
+        String marker = tinted && layout.version().isDefined() ? " " : change.marker();
         List<Piece> pieces = pieces(row.parsed().words(), coloured.getOrElse(Array.empty()));
         // Each piece is drawn as a span by itself, and pieces cut from a grapheme, like an emoji from its variation
         // selector, are narrower together than their text: only a line of one piece is as wide as it was measured.
@@ -431,7 +433,7 @@ final class RichDiff {
                         : pieces.map(piece -> width(piece.text())).sum().intValue());
         return Line.from(Iterator.concat(
                         gutter,
-                        List.of(styled(change.marker(), change.lineClass(), styles)),
+                        List.of(styled(marker, change.lineClass(), styles)),
                         pieces.iterator().map(piece -> {
                             String cssClass =
                                     piece.changed() && layout.words() ? change.wordClass() : change.lineClass();

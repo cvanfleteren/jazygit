@@ -179,7 +179,36 @@ class RichDiffTest {
         assertEquals(4, added.stops().size());
     }
 
+    @Test
+    void aVersionLeavesTheMarkerOfAChangedLineBlankWhenTheThemeTintsTheLine() {
+        ParsedDiff.ParsedFile whole = ParsedDiff.of("""
+                        diff --git a/a.md b/a.md
+                        --- a/a.md
+                        +++ b/a.md
+                        @@ -1,2 +1,2 @@
+                         # Title
+                        -- old item
+                        +- new item
+                        """).files().head();
+
+        List<String> tinted = text(drawn(whole, FileVersion.NEW, false, SYNTAX_STYLES)
+                        .lines())
+                .map(String::stripTrailing);
+        List<String> untinted = text(drawn(whole, FileVersion.NEW, false, Theme.SpanStyles.NONE)
+                        .lines())
+                .map(String::stripTrailing);
+
+        assertEquals(List.of(" new version  a.md", "  1 │  # Title", "  2 │  - new item"), tinted);
+        // Without a background, the marker is all that tells the line changed.
+        assertEquals("  2 │ +- new item", untinted.last());
+    }
+
     private static RichDiff.Drawn drawn(ParsedDiff.ParsedFile whole, FileVersion version, boolean cut) {
+        return drawn(whole, version, cut, Theme.SpanStyles.NONE);
+    }
+
+    private static RichDiff.Drawn drawn(
+            ParsedDiff.ParsedFile whole, FileVersion version, boolean cut, Theme.SpanStyles styles) {
         return RichDiff.drawn(
                 new Expansion.Folded(
                         new ParsedDiff(List.empty(), List.of(version.of(whole))),
@@ -188,7 +217,7 @@ class RichDiffTest {
                 true,
                 Option.none(),
                 Option.none(),
-                Theme.SpanStyles.NONE);
+                styles);
     }
 
     /**
