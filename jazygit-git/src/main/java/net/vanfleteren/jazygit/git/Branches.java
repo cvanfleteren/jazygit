@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.git.model.AllBranches;
 import net.vanfleteren.jazygit.git.model.BaseDistance;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.CaughtUpBranch;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
@@ -43,6 +44,14 @@ public interface Branches {
      * branch is called {@code newName} already.
      */
     Either<GitFailure, List<ExecutedCommand>> rename(BranchName name, BranchName newName);
+
+    /**
+     * Has each of {@code branches} at its branch on the remote, as that was last fetched (ADR 99): makes the ones
+     * to make, following it, with their parent recorded, and fast-forwards the others. Either all of them are moved or
+     * none: git refuses all of them when one is no fast-forward any more, or is checked out in a worktree. Following and
+     * recording the parent come after, and are not undone when they fail.
+     */
+    Either<GitFailure, List<ExecutedCommand>> catchUp(List<CaughtUpBranch> branches);
 
     /**
      * The branch {@code branch} was made from, if that was recorded: as {@code gh} does, in

@@ -66,6 +66,8 @@ public record PullRequestStack(int number, int position, int size, List<Entry> e
      * @param baseBranch the branch it merges into, empty when not known
      * @param headOid    the commit its branch was at last, as GitHub has it: where a merged one was (ADR 74)
      * @param queued     whether it is in a merge queue, where rewriting its branch takes it out (ADR 74)
+     * @param fork       whether its branch is in another repository than its base, a fork, which checking out the stack
+     *                   leaves out (ADR 99)
      */
     public record Entry(
             int position,
@@ -74,20 +76,35 @@ public record PullRequestStack(int number, int position, int size, List<Entry> e
             String headBranch,
             String baseBranch,
             Option<String> headOid,
-            boolean queued) {
+            boolean queued,
+            boolean fork) {
+
+        /**
+         * One whose branch is in the repository of its base.
+         */
+        public Entry(
+                int position,
+                int number,
+                State state,
+                String headBranch,
+                String baseBranch,
+                Option<String> headOid,
+                boolean queued) {
+            this(position, number, state, headBranch, baseBranch, headOid, queued, false);
+        }
 
         /**
          * One whose head commit and queue are not known.
          */
         public Entry(int position, int number, State state, String headBranch, String baseBranch) {
-            this(position, number, state, headBranch, baseBranch, Option.none(), false);
+            this(position, number, state, headBranch, baseBranch, Option.none(), false, false);
         }
 
         /**
          * One whose branches are not known.
          */
         public Entry(int position, int number, State state) {
-            this(position, number, state, "", "", Option.none(), false);
+            this(position, number, state, "", "", Option.none(), false, false);
         }
 
         /**

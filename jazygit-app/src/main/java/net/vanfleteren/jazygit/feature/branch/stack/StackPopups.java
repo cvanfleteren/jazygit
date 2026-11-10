@@ -29,6 +29,9 @@ public final class StackPopups {
      * @param top         the local branch of the top of the stack, if it is checked out
      * @param root        whether the branch is a root, which is never stacked
      * @param targets     the branches the pull request of the branch can be stacked on
+     * @param on          the number of the pull request it was opened on: that of the branch, or the one highlighted
+     *                    on the pull requests screen; none on the header of a stack
+     * @param checkout    what the branches of the stack are, which says whether it is checked out or updated (ADR 99)
      */
     public record Menu(
             Option<Branch> branch,
@@ -36,8 +39,19 @@ public final class StackPopups {
             Option<PullRequestStack> stack,
             Option<Branch> top,
             boolean root,
-            List<Target> targets)
+            List<Target> targets,
+            Option<Integer> on,
+            StackCheckout.Status checkout)
             implements Popup {
+
+        /**
+         * Whether the stack can be checked out, or its branches updated: some of them is not here, or may not be where
+         * GitHub has it (ADR 99).
+         */
+        public boolean canCheckOut() {
+            return stack.isDefined()
+                    && (checkout == StackCheckout.Status.CHECK_OUT || checkout == StackCheckout.Status.UPDATE);
+        }
 
         /**
          * Whether a stack can be made from the branch: one in no stack that is no root.
@@ -149,6 +163,12 @@ public final class StackPopups {
             return stack.entries().count(PullRequestStack.Entry::staysWhenUnstacked);
         }
     }
+
+    /**
+     * Asking before checking out a stack: what happens to the branch of each of its open pull requests, and which of
+     * them is checked out (ADR 99).
+     */
+    public record Checkout(StackCheckout checkout) implements Popup {}
 
     /**
      * Asking before rebasing a stack and pushing it as {@code cmd} does: which branches, onto what, and the merges it

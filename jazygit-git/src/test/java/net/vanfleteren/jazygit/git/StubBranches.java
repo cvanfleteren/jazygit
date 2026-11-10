@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.git.model.BaseDistance;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.CaughtUpBranch;
 import net.vanfleteren.jazygit.git.model.RemoteRef;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -75,5 +76,10 @@ public interface StubBranches extends Branches {
     default Map<BranchName, BaseDistance> baseDistance(
             Map<BranchRef, Sha> tips, Map<BranchName, BranchName> parents, Option<BranchName> main) {
         return HashMap.empty();
+    }
+
+    @Override
+    default Either<GitFailure, List<ExecutedCommand>> catchUp(List<CaughtUpBranch> branches) {
+        return ran();
     }
 }

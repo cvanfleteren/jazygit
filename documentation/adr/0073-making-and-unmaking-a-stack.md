@@ -146,3 +146,6 @@ branches pane shows them.
 - The Stacks REST API is used through `gh api`, as `merge-async` is (ADR 24).
 - `.git/gh-stack` is neither read nor written: a stack made with `gh-stack` shows through GitHub, and one made in
   jazygit is not in `gh-stack`'s own list until `gh stack checkout` reads it from GitHub.
+
+Amended by ADR 99: the stack menu checks out a stack, or updates its branches, also from the pull requests screen; that
+entry is disabled, with why, where it does not apply.

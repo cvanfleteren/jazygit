@@ -9,7 +9,7 @@ import static net.vanfleteren.jazygit.json.Decoder.integer;
 import static net.vanfleteren.jazygit.json.Decoder.list;
 import static net.vanfleteren.jazygit.json.Decoder.map2;
 import static net.vanfleteren.jazygit.json.Decoder.map3;
-import static net.vanfleteren.jazygit.json.Decoder.map6;
+import static net.vanfleteren.jazygit.json.Decoder.map7;
 import static net.vanfleteren.jazygit.json.Decoder.nullable;
 import static net.vanfleteren.jazygit.json.Decoder.optionalField;
 import static net.vanfleteren.jazygit.json.Decoder.string;
@@ -32,14 +32,14 @@ final class StackFragment {
     static final String FIELDS = """
             stackEntry { position } stack { number size \
             entries(first: 100) { nodes { position pullRequest { number state headRefName baseRefName headRefOid \
-            isInMergeQueue } } } }""";
+            isInMergeQueue isCrossRepository } } } }""";
 
     // A pull request of a stack; none when its pull request cannot be read.
     static final Decoder<Option<PullRequestStack.Entry>> ENTRY = nullable(map2(
                     field("position", integer()),
                     field(
                             "pullRequest",
-                            nullable(map6(
+                            nullable(map7(
                                     field("number", integer()),
                                     field("state", enumOf(State.class)),
                                     field("headRefName", string()),
@@ -48,9 +48,11 @@ final class StackFragment {
                                     optionalField("headRefOid", nullable(string()))
                                             .map(oid -> oid.flatMap(read -> read)),
                                     optionalField("isInMergeQueue", bool()).map(queued -> queued.getOrElse(false)),
+                                    // Read since ADR 99.
+                                    optionalField("isCrossRepository", bool()).map(fork -> fork.getOrElse(false)),
                                     Tuple::of))),
                     (position, pullRequest) -> pullRequest.map(pr -> new PullRequestStack.Entry(
-                            position, pr._1(), pr._2(), pr._3(), pr._4(), pr._5(), pr._6()))))
+                            position, pr._1(), pr._2(), pr._3(), pr._4(), pr._5(), pr._6(), pr._7()))))
             .map(entry -> entry.flatMap(readable -> readable));
 
     // The number, the size and the pull requests of a stack.

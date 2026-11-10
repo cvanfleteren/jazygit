@@ -226,3 +226,34 @@ def test_a_pull_request_is_stacked_on_another_from_the_menu_after_changing_its_b
         "the stack made on GitHub")
     edits = [call for call in gh.calls() if call[:2] == ["pr", "edit"]]
     assert edits and edits[0][2:] == ["3", "--base", "feat/a"], edits
+
+
+def test_a_stack_with_a_branch_not_here_is_checked_out_from_the_menu(repo, origin, gh, jazygit):
+    repository = two_pushed_branches(repo, origin)
+    # Only feat/a is here, one commit behind its branch on the remote; feat/b is only on the remote.
+    repo("checkout", "--quiet", "feat/a")
+    repo.commit("Add a2", **{"a2.txt": "a2\n"})
+    repo("push", "--quiet", "origin", "feat/a")
+    repo("reset", "--quiet", "--hard", "HEAD~1")
+    repo("checkout", "--quiet", "main")
+    repo("branch", "--quiet", "-D", "feat/b")
+    stack = stacked(repository, [(1, "feat/a"), (2, "feat/b")])
+    gh.answer((LISTED, listed(repository, [node(repository, 2, "feat/b", "feat/a", stack, 2),
+                                           node(repository, 1, "feat/a", "main", stack, 1)])))
+    ui = jazygit()
+    ui.app.eventually(lambda: "#2 not checked out" in ui.app.text(), "the stack shown")
+    ui.branches.select("feat/a")
+
+    ui.app.press("s")
+    ui.app.wait_for("(c) check out the stack")
+    ui.app.press("c")
+    ui.app.wait_for("Check out stack #12")
+    assert "fast-forwarded by 1 commit" in ui.app.text()
+    assert "new, following origin/feat/b" in ui.app.text()
+    ui.app.press("t")
+
+    ui.app.eventually(
+        lambda: repo("rev-parse", "--abbrev-ref", "HEAD") == "feat/b", "the top of the stack checked out")
+    assert repo("rev-parse", "feat/a") == origin("rev-parse", "feat/a"), "feat/a fast-forwarded"
+    assert repo("rev-parse", "--abbrev-ref", "feat/b@{upstream}") == "origin/feat/b"
+    assert repo("config", "branch.feat/b.gh-merge-base") == "feat/a"

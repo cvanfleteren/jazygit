@@ -61,6 +61,11 @@ public interface StubRemotes extends Remotes {
     }
 
     @Override
+    default Either<GitFailure, List<ExecutedCommand>> fetchBranches(RemoteName remote, List<BranchName> branches) {
+        return ran();
+    }
+
+    @Override
     default Either<GitFailure, List<ExecutedCommand>> fastForward(BranchName branch, BranchRef upstream) {
         return ran();
     }

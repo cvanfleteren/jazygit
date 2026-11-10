@@ -76,6 +76,20 @@ class StackFragmentTest {
     }
 
     @Test
+    void anEntrySaysWhetherItsBranchIsInAFork() {
+        Option<PullRequestStack> read = stack("""
+                        { "stackEntry": { "position": 1 }, "stack": { "number": 7, "size": 1, "entries": { "nodes": [
+                          { "position": 1, "pullRequest": { "number": 94, "state": "OPEN",
+                            "headRefName": "feat/a", "baseRefName": "main", "headRefOid": "abc123",
+                            "isInMergeQueue": false, "isCrossRepository": true } } ] } } }""").get();
+
+        assertEquals(
+                Option.of(List.of(new PullRequestStack.Entry(
+                        1, 94, State.OPEN, "feat/a", "main", Option.of("abc123"), false, true))),
+                read.map(PullRequestStack::entries));
+    }
+
+    @Test
     void anEntryWhosePullRequestCannotBeReadIsLeftOut() {
         assertEquals(
                 Either.right(Option.of(
