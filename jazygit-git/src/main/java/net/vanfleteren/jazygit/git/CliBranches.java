@@ -16,6 +16,7 @@ import io.vavr.control.Try;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Comparator;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import net.vanfleteren.jazygit.git.GitError.UnexpectedOutput;
 import net.vanfleteren.jazygit.git.model.*;
@@ -146,6 +147,33 @@ final class CliBranches implements Branches {
                         "--branches",
                         "--remotes",
                         "--tags"));
+    }
+
+    /**
+     * Runs {@code git fetch --atomic --no-write-fetch-head . refs/remotes/<remote>/<upstream>:refs/heads/<branch>…},
+     * which makes the branches that are not there and fast-forwards the others, all of them or none: without a
+     * {@code +}, git refuses a refspec that is no fast-forward, and it refuses a branch checked out in any worktree.
+     * Then {@code git branch --set-upstream-to=<remote>/<upstream> <branch>} for each one made, and records its
+     * parent.
+     */
+    @Override
+    public Either<GitFailure, List<ExecutedCommand>> catchUp(List<CaughtUpBranch> branches) {
+        List<CaughtUpBranch> made = branches.filter(CaughtUpBranch::made);
+        return GitFailure.sequence(List.<Supplier<Either<GitFailure, List<ExecutedCommand>>>>of(() -> GitProcess.log(
+                        worktree,
+                        git(List.of("fetch", "--atomic", "--no-write-fetch-head", ".")
+                                .appendAll(branches.map(branch -> GitArgs.refspec(
+                                        branch.upstream().tracking(), new BranchRef.Local(branch.branch())))))))
+                .appendAll(made.map(branch -> () -> GitProcess.log(
+                        worktree,
+                        git(
+                                "branch",
+                                "--set-upstream-to="
+                                        + GitArgs.revision(branch.upstream().tracking()),
+                                "--",
+                                GitArgs.name(branch.branch())))))
+                .appendAll(made.flatMap(branch ->
+                        branch.parent().map(parent -> () -> setParent(worktree, branch.branch(), parent)))));
     }
 
     /**

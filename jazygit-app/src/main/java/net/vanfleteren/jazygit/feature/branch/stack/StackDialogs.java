@@ -39,6 +39,14 @@ public final class StackDialogs {
                     new Choice<StackPopups.Menu>('a', "dialog.stack.add", StackMsg.AddChosen::new)
                             .shownWhen((model, menu) -> menu.canAdd())
                             .withDetails("dialog.stack.add.details"),
+                    // Disabled, with why, when there is nothing to check out or update (ADR 99).
+                    new Choice<StackPopups.Menu>(
+                                    'c',
+                                    StackDialogs::checkoutLabel,
+                                    StackMsg.CheckoutChosen::new,
+                                    (model, menu) -> menu.canCheckOut())
+                            .shownWhen((model, menu) -> menu.canUnstack())
+                            .withDetails(StackDialogs::checkoutDetails),
                     new Choice<StackPopups.Menu>('r', "dialog.stack.rebase", StackMsg.RebaseChosen::new)
                             .shownWhen((model, menu) -> menu.canUnstack())
                             .withDetails("dialog.stack.rebase.details"),
@@ -120,14 +128,117 @@ public final class StackDialogs {
 
     private StackDialogs() {}
 
+    // The menu, and what it asks for a stack, open from the pull requests screen too (ADR 99): they give the focus back
+    // to where it was. Making a stack and stacking on start from a branch.
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
         return List.of(
-                PopupSlot.returningTo(BranchesPanel.ID, new ChoiceDialog<>(MENU, dispatch)),
+                PopupSlot.returningToFocus(new ChoiceDialog<>(MENU, dispatch)),
                 PopupSlot.returningTo(BranchesPanel.ID, new StackPickDialog(dispatch)),
                 PopupSlot.returningTo(BranchesPanel.ID, new KeyedConfirmDialog<>(LINK, dispatch)),
                 PopupSlot.returningTo(BranchesPanel.ID, new PickDialog<>(STACK_ON, dispatch)),
-                PopupSlot.returningTo(BranchesPanel.ID, new ConfirmDialog<>(UNSTACK, dispatch)),
-                PopupSlot.returningTo(BranchesPanel.ID, new KeyedConfirmDialog<>(REBASE, dispatch)));
+                PopupSlot.returningToFocus(new ConfirmDialog<>(UNSTACK, dispatch)),
+                PopupSlot.returningToFocus(new KeyedConfirmDialog<>(REBASE, dispatch)),
+                PopupSlot.returningToFocus(new StackCheckoutDialog(dispatch)));
+    }
+
+    /**
+     * The label of checking out a stack in its menu: checking it out while a pull request of it has no branch here,
+     * else updating its branches (ADR 99).
+     */
+    static String checkoutLabel(StackPopups.Menu menu) {
+        return Messages.get(
+                menu.checkout() == StackCheckout.Status.CHECK_OUT || menu.checkout() == StackCheckout.Status.NOTHING
+                        ? "dialog.stack.checkout"
+                        : "dialog.stack.update");
+    }
+
+    /**
+     * What checking out a stack does, or why it is disabled.
+     */
+    static String checkoutDetails(StackPopups.Menu menu) {
+        return Messages.get(
+                switch (menu.checkout()) {
+                    case CHECK_OUT -> "dialog.stack.checkout.details";
+                    case UPDATE -> "dialog.stack.update.details";
+                    case UP_TO_DATE -> "dialog.stack.update.upToDate";
+                    case NOTHING -> "dialog.stack.checkout.nothing";
+                });
+    }
+
+    /**
+     * What checking out a stack does to the branch of each of its open pull requests, one per line, the bottom first;
+     * the pull requests left out; then which branch can be checked out, the one Enter checks out marked.
+     */
+    static String checkedOut(StackCheckout checkout) {
+        int width = checkout.lines()
+                .map(line -> line.branch().value().length())
+                .max()
+                .getOrElse(0);
+        int numbers = checkout.lines()
+                .map(line -> String.valueOf(line.number()).length() + 1)
+                .max()
+                .getOrElse(0);
+        List<String> lines = checkout.lines()
+                .map(line -> pad("#" + line.number(), numbers) + "  "
+                        + pad(line.branch().value(), width) + "  "
+                        + Messages.get(
+                                "dialog.checkoutStack." + kindKey(line.kind()),
+                                line.commits(),
+                                line.upstream().shortName()));
+        List<String> skipped = Option.when(
+                        !checkout.skipped().isEmpty(),
+                        () -> Messages.get(
+                                "dialog.checkoutStack.skipped",
+                                checkout.skipped().map(number -> "#" + number).mkString(", ")))
+                .toList();
+        return List.of(lines.appendAll(skipped).mkString("\n"), landings(checkout))
+                .mkString("\n\n");
+    }
+
+    /**
+     * Which branch can be checked out once done, each after its key, the one Enter checks out marked; or why nothing
+     * is done.
+     */
+    private static String landings(StackCheckout checkout) {
+        if (!checkout.startable()) {
+            return Messages.get("dialog.checkoutStack.refused");
+        }
+        StackCheckout.Landing preferred = checkout.preferred();
+        List<String> options = checkout.top()
+                .map(top -> marked(
+                        Messages.get("dialog.checkoutStack.top", top.value()), preferred == StackCheckout.Landing.TOP))
+                .toList()
+                .appendAll(checkout.asked()
+                        .map(asked -> marked(
+                                Messages.get(
+                                        "dialog.checkoutStack.asked",
+                                        String.valueOf(checkout.on().get()),
+                                        asked.value()),
+                                preferred == StackCheckout.Landing.ASKED)))
+                .append(Messages.get("dialog.checkoutStack.stay"));
+        return Messages.get("dialog.checkoutStack.then") + "\n" + options.mkString("\n");
+    }
+
+    private static String marked(String option, boolean preferred) {
+        return preferred ? option + "  " + Messages.get("dialog.checkoutStack.enter") : option;
+    }
+
+    private static String pad(String text, int width) {
+        return text + " ".repeat(Math.max(0, width - text.length()));
+    }
+
+    private static String kindKey(StackCheckout.Kind kind) {
+        return switch (kind) {
+            case MADE -> "made";
+            case FAST_FORWARDED -> "fastForwarded";
+            case UP_TO_DATE -> "upToDate";
+            case OWN_COMMITS -> "ownCommits";
+            case CHECKED_OUT_HERE -> "checkedOutHere";
+            case OTHER_WORKTREE -> "otherWorktree";
+            case FORK -> "fork";
+            case NO_UPSTREAM -> "noUpstream";
+            case OTHER_UPSTREAM -> "otherUpstream";
+        };
     }
 
     /**

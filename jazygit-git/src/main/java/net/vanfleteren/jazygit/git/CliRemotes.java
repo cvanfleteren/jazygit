@@ -258,6 +258,22 @@ final class CliRemotes implements Remotes {
     }
 
     /**
+     * Runs {@code git fetch --no-write-fetch-head <remote> +refs/heads/<branch>:refs/remotes/<remote>/<branch>…}: the
+     * branches are fetched by refspecs of their own, as the remote's fetch refspec may leave them out. It does not
+     * prune, as the other branches are not looked at.
+     */
+    @Override
+    public Either<GitFailure, List<ExecutedCommand>> fetchBranches(RemoteName remote, List<BranchName> branches) {
+        return run(
+                worktree,
+                git(List.of("fetch", "--no-write-fetch-head", GitArgs.remote(remote))
+                        .appendAll(branches.map(branch -> "+"
+                                + GitArgs.refspec(
+                                        new BranchRef.Local(branch), new RemoteBranch(remote, branch).tracking())))),
+                credentials.get());
+    }
+
+    /**
      * Runs {@code git fetch <remote> refs/heads/<upstream>:refs/heads/<name>}: fast-forwards {@code name}, which
      * is not checked out, to {@code upstream}, the branch it tracks; the remote is {@code .} for a local one. Git
      * refuses when that is not a fast-forward.

@@ -9,6 +9,9 @@ import java.time.Duration;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
+import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutMsg;
+import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutRequest;
+import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutUpdate;
 import net.vanfleteren.jazygit.feature.branch.stack.StackMsg.AddChosen;
 import net.vanfleteren.jazygit.feature.branch.stack.StackMsg.BottomChosen;
 import net.vanfleteren.jazygit.feature.branch.stack.StackMsg.Changed;
@@ -24,6 +27,7 @@ import net.vanfleteren.jazygit.feature.branch.stack.StackMsg.UnstackChosen;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
+import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -161,7 +165,93 @@ public final class StackUpdate {
                         model,
                         StackPopups.RebaseConfirm.class,
                         popup -> Option.of(popup.cmd().locally()));
+            case StackMsg.PullRequestMenuRequested(PullRequestSummary pullRequest) ->
+                pullRequestMenu(model, pullRequest);
+            case StackMsg.CheckoutChosen() ->
+                chosen(
+                        model,
+                        menu -> menu.canCheckOut()
+                                ? Update.start(
+                                        model.withoutPopup(StackPopups.Menu.class)
+                                                .clearError(),
+                                        new StackCheckoutCmd.Fetch(
+                                                menu.stack().get(),
+                                                StackCheckout.remote(
+                                                        model, menu.stack().get()),
+                                                menu.on()))
+                                : Next.of(model));
+            // Asked about once fetched; not in the place of a dialog opened meanwhile.
+            case StackMsg.StackFetched(var cmd, var commands, StackCheckout checkout) -> {
+                Next done = OperationUpdate.succeeded(model, cmd, commands);
+                yield new Next(done.model().openPopupIfFree(new StackPopups.Checkout(checkout)), done.cmds());
+            }
+            case StackMsg.CheckoutConfirmed(StackCheckout.Landing landing) ->
+                model.popup(StackPopups.Checkout.class)
+                        .map(StackPopups.Checkout::checkout)
+                        .filter(StackCheckout::startable)
+                        .filter(checkout -> landing == StackCheckout.Landing.STAY
+                                || checkout.target(landing).isDefined())
+                        .map(checkout -> Update.start(
+                                model.withoutPopup(StackPopups.Checkout.class).clearError(),
+                                new StackCheckoutCmd.CatchUp(checkout, landing)))
+                        .getOrElse(() -> Next.of(model));
+            case StackMsg.CaughtUp(var cmd, var commands) -> caughtUp(model, cmd, commands);
         };
+    }
+
+    /**
+     * The menu of the stack of {@code pullRequest}, highlighted on the pull requests screen (ADR 99): only for one of
+     * this repository, and in a stack.
+     */
+    private static Next pullRequestMenu(Model model, PullRequestSummary pullRequest) {
+        if (pullRequest.stack().isEmpty()) {
+            return Next.of(model);
+        }
+        PullRequestStack stack = pullRequest.stack().get();
+        return model.prOverview()
+                .ofThisRepository(pullRequest)
+                .fold(
+                        unknown -> Next.of(model.fail(unknown)),
+                        ofThis -> ofThis
+                                ? Update.ask(
+                                        model,
+                                        new StackPopups.Menu(
+                                                Option.none(),
+                                                Option.none(),
+                                                Option.of(stack),
+                                                top(model, local(model), stack),
+                                                false,
+                                                List.empty(),
+                                                Option.of(pullRequest.number()),
+                                                StackCheckout.status(model, stack)))
+                                : Next.of(model.fail(new AppError.OtherRepository(
+                                        pullRequest.repository() + "#" + pullRequest.number()))));
+    }
+
+    /**
+     * Once the branches of a stack are made and fast-forwarded: says what was done, then checks out the branch the
+     * user chose, as any checkout of a local branch goes (ADR 68), where the user chose one. One the model knew of
+     * before goes as asked for from the branches pane, which switches to the worktree that has it checked out, if
+     * another has.
+     */
+    private static Next caughtUp(Model model, StackCheckoutCmd.CatchUp cmd, List<ExecutedCommand> commands) {
+        StackCheckout checkout = cmd.checkout();
+        Next done = OperationUpdate.succeeded(model, cmd, commands);
+        Next switched = checkout.target(cmd.landing())
+                .map(branch -> model.repo().branch(branch).isDefined()
+                        ? CheckoutUpdate.update(done.model(), new CheckoutMsg.Requested(branch))
+                        : CheckoutUpdate.place(done.model(), new CheckoutRequest.Local(branch)))
+                .getOrElse(() -> Next.of(done.model()));
+        // Said once the checkout is started, which clears what was said; not in the place of why it was refused.
+        Model said = switched.model().outcome().error().isDefined()
+                ? switched.model()
+                : switched.model()
+                        .inform(new Notice.StackCheckedOut(
+                                checkout.stack(),
+                                checkout.count(StackCheckout.Kind.MADE),
+                                checkout.count(StackCheckout.Kind.FAST_FORWARDED),
+                                checkout.kept()));
+        return new Next(said, done.cmds().appendAll(switched.cmds()));
     }
 
     /**
@@ -238,7 +328,9 @@ public final class StackUpdate {
                 stacked,
                 stacked.flatMap(on -> top(model, local, on)),
                 highlighted.exists(b -> root(model).test(b.name())),
-                highlighted.map(b -> targets(model, local, b)).getOrElse(List.empty()));
+                highlighted.map(b -> targets(model, local, b)).getOrElse(List.empty()),
+                pullRequest.map(PullRequest::number),
+                stacked.map(on -> StackCheckout.status(model, on)).getOrElse(StackCheckout.Status.NOTHING));
         // Nothing opens where nothing applies, as on a root.
         return Update.ask(model, Option.of(menu).filter(StackPopups.Menu::anyApplies));
     }

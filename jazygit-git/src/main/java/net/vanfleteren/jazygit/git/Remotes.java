@@ -73,6 +73,12 @@ public interface Remotes {
     Either<GitFailure, Boolean> fetch(RemoteName remote);
 
     /**
+     * Fetches only {@code branches} from {@code remote}, each into its remote-tracking branch, whatever the fetch
+     * refspec of the remote says, and moves those also when that is no fast-forward, as a fetch does (ADR 99).
+     */
+    Either<GitFailure, List<ExecutedCommand>> fetchBranches(RemoteName remote, List<BranchName> branches);
+
+    /**
      * Fast-forwards the local branch {@code branch}, which is not checked out, to {@code upstream}, the branch it
      * tracks. Fails when that is not a fast-forward.
      */

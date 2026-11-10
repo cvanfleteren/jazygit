@@ -50,6 +50,12 @@ public sealed interface Notice {
     record StackNotAsked(int stack) implements Notice {}
 
     /**
+     * The branches of stack {@code stack} were checked out (ADR 99): {@code made} were made, {@code fastForwarded}
+     * fast-forwarded, and {@code kept} kept as they were, though not where their branch on the remote is.
+     */
+    record StackCheckedOut(int stack, int made, int fastForwarded, int kept) implements Notice {}
+
+    /**
      * The terminal was asked to copy {@code lines} lines of a diff to the clipboard (ADR 94).
      */
     record Copied(int lines) implements Notice {}

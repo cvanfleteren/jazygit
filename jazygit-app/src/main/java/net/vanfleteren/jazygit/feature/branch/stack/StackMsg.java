@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.feature.branch.stack;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.StackLayer;
@@ -33,6 +34,34 @@ public sealed interface StackMsg extends Msg {
      * {@code stack} (ADR 73).
      */
     record MenuRequested(Option<BranchName> branch, Option<Integer> stack) implements StackMsg {}
+
+    /**
+     * The user asked what can be done with the stack of {@code pullRequest}, highlighted on the pull requests screen
+     * (ADR 99).
+     */
+    record PullRequestMenuRequested(PullRequestSummary pullRequest) implements StackMsg {}
+
+    /**
+     * The user chose to check out the stack of the menu, or to update its branches (ADR 99).
+     */
+    record CheckoutChosen() implements StackMsg {}
+
+    /**
+     * {@code cmd} fetched the branches of its stack, running {@code commands}; {@code checkout} says what checking it
+     * out does to each.
+     */
+    record StackFetched(StackCheckoutCmd.Fetch cmd, List<ExecutedCommand> commands, StackCheckout checkout)
+            implements StackMsg {}
+
+    /**
+     * The user confirmed checking out the stack asked about, landing where {@code landing} says.
+     */
+    record CheckoutConfirmed(StackCheckout.Landing landing) implements StackMsg {}
+
+    /**
+     * {@code cmd} made and fast-forwarded the branches of its stack, running {@code commands}.
+     */
+    record CaughtUp(StackCheckoutCmd.CatchUp cmd, List<ExecutedCommand> commands) implements StackMsg {}
 
     /**
      * {@code cmd} changed the stacks on GitHub, running {@code commands} (ADR 73).
