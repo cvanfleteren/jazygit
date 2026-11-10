@@ -31,8 +31,9 @@ public final class VersionUpdate {
 
     /**
      * Shows the next of the diff, the new version and the original of the one file of the area the cursor {@code at}
-     * is in, those it has, reading the file whole first if it is not, or failed to be. Nothing happens in an area of
-     * several files, or of a file that has no versions to show ({@link FileVersion#shown}).
+     * is in, those it has, reading the file whole first if it is not. When it failed to be, it is read again for the
+     * version asked for before, which stays. Nothing happens in an area of several files, or of a file that has no
+     * versions to show ({@link FileVersion#shown}).
      */
     private static Next cycled(Model model, DiffCursorAt at) {
         ScrolledContent content = at.at().content();
@@ -42,7 +43,8 @@ public final class VersionUpdate {
     private static Option<Next> cycled(Model model, DiffCursorAt at, ScrolledContent content, ParsedFile file) {
         String path = file.file().path();
         Option<Version> before = Version.in(model, at.area(), content);
-        boolean reads = before.forAll(version -> version.whole().isFailed());
+        boolean failed = before.exists(Version::failed);
+        boolean reads = before.isEmpty() || failed;
         Option<ReadVersion> read = reads
                 ? ExpandUpdate.source(model, content, path)
                         .map(source -> ReadVersion.of(
@@ -57,8 +59,11 @@ public final class VersionUpdate {
             Loadable<DiffText> whole = reused.orElse(
                             () -> before.filter(ignored -> !reads).map(Version::whole))
                     .getOrElse(Loadable::loading);
-            Option<FileVersion> next = FileVersion.after(
-                    before.flatMap(Version::shown), file.file().type());
+            // A version that could not be read is read again, not passed by.
+            Option<FileVersion> asked = before.flatMap(Version::shown);
+            Option<FileVersion> next = failed && asked.isDefined()
+                    ? asked
+                    : FileVersion.after(asked, file.file().type());
             Version version = before.map(
                             kept -> kept.withShown(next).withRead(how).withWhole(whole))
                     .getOrElse(() -> new Version(content, path, next, how, whole));

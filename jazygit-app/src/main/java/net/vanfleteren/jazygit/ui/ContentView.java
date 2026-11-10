@@ -128,11 +128,12 @@ final class ContentView {
         return version.shown()
                 .map(shown ->
                         Messages.get(shown == FileVersion.NEW ? "panel.version.new" : "panel.version.original", title))
-                .map(named -> switch (version.whole()) {
-                    case Loadable.Loading<DiffText>() -> Messages.get("panel.version.reading", named);
-                    case Loadable.Failed<DiffText> _ -> Messages.get("panel.version.failed", named);
-                    case Loadable.Loaded<DiffText> _ -> named;
-                })
+                // A read that has no such file shows the diff, as a failed one does, and says so as well.
+                .map(named -> version.failed()
+                        ? Messages.get("panel.version.failed", named)
+                        : version.whole() instanceof Loadable.Loading<DiffText>
+                                ? Messages.get("panel.version.reading", named)
+                                : named)
                 .getOrElse(title);
     }
 

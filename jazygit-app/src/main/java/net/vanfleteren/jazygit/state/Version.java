@@ -57,6 +57,14 @@ public record Version(
     }
 
     /**
+     * Whether reading the file whole failed, or read no such file, as when git printed nothing: then there is no
+     * version to show, and asking for one again reads it again.
+     */
+    public boolean failed() {
+        return whole.isFailed() || (whole.toOption().isDefined() && file().isEmpty());
+    }
+
+    /**
      * The version shown, once the file is read whole; none while the diff is shown, or the file is still read.
      */
     public Option<FileVersion> showing() {

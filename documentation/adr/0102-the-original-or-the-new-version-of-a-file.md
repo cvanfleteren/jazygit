@@ -70,6 +70,8 @@ file of about 3000 lines whole takes git a few milliseconds.
 - The first Ctrl+O on a file reads it whole, unless an expansion already did with whitespace not ignored. The diff
   shows until it is read, then the version, and the title says it is being read. A press while it is read moves the
   cycle on, and the area shows where the cycle is once it is read.
+- A read that failed, or found no such file, shows the diff, and the title says the version could not be read. The
+  next Ctrl+O reads it again for the same version, rather than going on to the next one.
 
 ### What the version is kept with
 

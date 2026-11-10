@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.diff;
 
+import static net.vanfleteren.jazygit.state.TestModels.DIRTY;
 import static net.vanfleteren.jazygit.state.TestModels.loaded;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -9,6 +10,7 @@ import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.DiffText;
+import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.FileVersion;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Anchor;
@@ -124,6 +126,92 @@ class VersionUpdateTest {
 
         assertSame(model, next.model());
         assertEquals(List.of(), next.cmds());
+    }
+
+    @Test
+    void aVersionThatCouldNotBeReadIsReadAgainNotPassedBy() {
+        Next asked = Update.update(loaded(), new VersionMsg.Cycled(at(REMOVED)));
+        ReadVersion read = (ReadVersion) asked.cmds().head();
+        Model failed = TestModels.done(
+                        TestModels.running(asked.model(), read),
+                        read,
+                        new LoadMsg.Failed(read, TestModels.refused("boom")))
+                .model();
+        assertTrue(version(failed).get().failed());
+
+        Next again = Update.update(failed, new VersionMsg.Cycled(at(REMOVED)));
+
+        assertEquals(List.of(read), again.cmds());
+        assertEquals(Option.of(FileVersion.NEW), version(again.model()).flatMap(Version::shown));
+    }
+
+    @Test
+    void aReadWithoutTheFileIsReadAgainToo() {
+        Next asked = Update.update(loaded(), new VersionMsg.Cycled(at(REMOVED)));
+        ReadVersion read = (ReadVersion) asked.cmds().head();
+        Model empty = TestModels.done(
+                        TestModels.running(asked.model(), read), read, new LoadMsg.VersionRead(read, DiffText.of("")))
+                .model();
+        assertTrue(version(empty).get().failed());
+
+        Next again = Update.update(empty, new VersionMsg.Cycled(at(REMOVED)));
+
+        assertEquals(List.of(read), again.cmds());
+        assertEquals(Option.of(FileVersion.NEW), version(again.model()).flatMap(Version::shown));
+    }
+
+    @Test
+    void aFileReadWholeToExpandItWithWhitespaceIgnoredIsReadAgainWithout() {
+        Model ignoring =
+                Update.update(loaded(), new DiffOptionsMsg.WhitespaceToggled()).model();
+        Next expanded = Update.update(
+                ignoring, new ExpandMsg.Asked(at(new Anchor.Gap("a.txt", 1, Option.of(7))), ExpandMsg.Toward.ALL));
+        ReadWholeFile whole = (ReadWholeFile) expanded.cmds().head();
+        assertTrue(whole.options().ignoreWhitespace());
+        Model read = TestModels.done(
+                        TestModels.running(expanded.model(), whole), whole, new LoadMsg.WholeFileRead(whole, WHOLE))
+                .model();
+
+        Next next = Update.update(read, new VersionMsg.Cycled(at(REMOVED)));
+
+        assertEquals(List.of(read(read)), next.cmds());
+        assertEquals(Loadable.loading(), version(next.model()).get().whole());
+    }
+
+    @Test
+    void aVersionOfAFileOfTheWorkingTreeIsReadAgainWhenItsDiffIs() {
+        DiffText unstaged = DiffText.of(HEADER + "@@ -1,2 +1,2 @@\n one\n-two\n+TWO\n");
+        Model model = Update.update(loaded(), new SelectionMsg.FilesSelected(DIRTY.files()))
+                .model();
+        model = Update.update(
+                        model,
+                        new LoadMsg.FileDiffLoaded(
+                                DIRTY.files(), model.preferences().diffOptions(), new Diffs("", unstaged.text())))
+                .model();
+        ScrolledContent shown = new ScrolledContent.Diff(unstaged);
+        Anchor.OnLine two = new Anchor.OnLine("a.txt", Side.RIGHT, 2);
+        DiffCursorAt at = new DiffCursorAt(
+                "diff-unstaged",
+                new Scrolled(shown, 0, 0, Option.of(two), Option.none()),
+                two,
+                Option.none(),
+                Option.none(),
+                Option.none());
+
+        Next asked = Update.update(model, new VersionMsg.Cycled(at));
+
+        ReadVersion read = (ReadVersion) asked.cmds().head();
+        assertEquals(new Source.WorkingTree(DIRTY.files().head(), false), read.source());
+        Model whole = TestModels.done(
+                        TestModels.running(asked.model(), read), read, new LoadMsg.VersionRead(read, unstaged))
+                .model();
+
+        Next reread = Update.update(
+                whole,
+                new LoadMsg.FileDiffLoaded(
+                        DIRTY.files(), whole.preferences().diffOptions(), new Diffs("", unstaged.text() + "+three\n")));
+
+        assertTrue(reread.cmds().contains(read), reread.cmds().mkString("\n"));
     }
 
     @Test
