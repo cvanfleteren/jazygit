@@ -843,6 +843,16 @@ class PullRequestDialogTest {
     }
 
     @Test
+    void filesChangedTellsWhereTheFilesShow() throws Exception {
+        // Down from Open in browser to Files changed, at the bottom of the first column.
+        java.util.List<String> screens = pressing(
+                READY, 120, 50, KeyCode.DOWN, KeyCode.DOWN, KeyCode.DOWN, KeyCode.DOWN, KeyCode.DOWN, KeyCode.DOWN);
+
+        assertFalse(screens.get(4).contains("lists the files the pull request changes"), screens.get(4));
+        assertTrue(screens.get(5).contains("lists the files the pull request changes"), screens.get(5));
+    }
+
+    @Test
     void mergingInAStackTellsTheOnesBelowAreMergedToo() throws Exception {
         PullRequestDetails stacked = stacked(new PullRequestStack(
                 96,
@@ -876,6 +886,14 @@ class PullRequestDialogTest {
      * Merge, and after Left again.
      */
     private java.util.List<String> movingRight(PullRequestDetails details, int width, int height) throws Exception {
+        return pressing(details, width, height, KeyCode.DOWN, KeyCode.RIGHT, KeyCode.LEFT);
+    }
+
+    /**
+     * The screen after each of {@code keys}, pressed in turn in the dialog showing {@code details}.
+     */
+    private java.util.List<String> pressing(PullRequestDetails details, int width, int height, KeyCode... keys)
+            throws Exception {
         CursorFeedback cursor = new CursorFeedback(dispatched::add);
         PullRequestDialog moving = new PullRequestDialog(cursor, Clock.fixed(NOW, ZoneOffset.UTC));
         Model model = TestModels.loaded()
@@ -887,10 +905,7 @@ class PullRequestDialogTest {
         java.util.List<String> screens = new ArrayList<>();
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(view)) {
             SettledPilot.focus(runner, PullRequestDialog.ID);
-            SettledPilot.of(runner).press(KeyCode.DOWN);
-            SettledPilot.of(runner).pause();
-            screens.add(RenderedText.ofSize(runner, view, width, height));
-            for (KeyCode key : new KeyCode[] {KeyCode.RIGHT, KeyCode.LEFT}) {
+            for (KeyCode key : keys) {
                 SettledPilot.of(runner).press(key);
                 SettledPilot.of(runner).pause();
                 screens.add(RenderedText.ofSize(runner, view, width, height));

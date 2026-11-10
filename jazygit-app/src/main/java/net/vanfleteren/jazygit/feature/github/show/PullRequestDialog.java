@@ -123,11 +123,12 @@ public final class PullRequestDialog implements PopupView {
                                 ChecksMsg.PullRequestChecksRequested::new,
                                 (model, popup) ->
                                         ChecksUpdate.ofPullRequest(model, popup).isDefined()),
-                        new Choice<>(
-                                'F',
-                                "dialog.pullRequest.files",
-                                PullRequestMsg.FilesChosen::new,
-                                (model, popup) -> popup.commits().isDefined()),
+                        new Choice<PullRequestPopup>(
+                                        'F',
+                                        "dialog.pullRequest.files",
+                                        PullRequestMsg.FilesChosen::new,
+                                        (model, popup) -> popup.commits().isDefined())
+                                .withDetails("dialog.pullRequest.files.details"),
                         // Before merging, which a draft has to wait for.
                         new Choice<PullRequestPopup>(
                                         'd',
