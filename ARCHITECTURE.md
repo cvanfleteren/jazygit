@@ -135,7 +135,7 @@ file never stops the app:
 - A file that cannot be read, or a value that is not valid, gives the defaults, and the command log says so.
 - Keys jazygit does not know are ignored.
 
-A change in the app, like choosing a theme, updates the `Model` and returns a `Cmd.SaveSettings` with the
+A change in the app, like choosing a theme, updates the `Model` and returns a `SaveSettings` with the
 settings before and after. It writes only the settings that changed, so a hand edit made while jazygit runs
 stays. Saving keeps the other keys, their order and their comments. It writes a temporary file and moves it
 over the old one, and leaves a file that is not valid TOML alone. A symlinked `config.toml` stays a link: the
@@ -237,7 +237,7 @@ one and one whose directory is gone.
 
 A local branch shows how many commits it has that its base does not, and how many of its base it does not have,
 `⇡1 ⇣58`, the base being that of ADR 20: its parent, else the main branch, from `origin` when it is there.
-A branch whose base is its upstream shows only `↑`/`↓`. Every read of the branches (`Cmd.LoadBranches`) reads the
+A branch whose base is its upstream shows only `↑`/`↓`. Every read of the branches (`LoadBranches`) reads the
 parents with them (`Branches.parents`, one `git config --get-regexp`) and counts the distances against the tips
 and the main branch it just read (`Branches.baseDistance`, `CliBaseDistance`: one
 `for-each-ref --format=%(ahead-behind:<commit>)` for every base at once), and comes back with all three in
@@ -299,8 +299,8 @@ operations find the commits it found through `Model.commit`, also those older th
 The commits pane and the log of the highlighted branch dim the commits that are on the base of their branch: the
 branch it was made from (`gh-merge-base`), else the main branch, `origin/` first. Their titles count the others.
 `b`, in either pane, lists only those and the fork point (`RepoView.onlyAhead`), and a search then leaves the base
-out. `Cmd.LoadAhead` reads it into `Repo.ahead` for HEAD and `RepoView.branchAhead` for the highlighted branch:
-together with the log it goes with (`Cmd.LoadCommits`, `Cmd.LoadBranchLog`), so that a log is never shown undimmed
+out. `LoadAhead` reads it into `Repo.ahead` for HEAD and `RepoView.branchAhead` for the highlighted branch:
+together with the log it goes with (`LoadCommits`, `LoadBranchLog`), so that a log is never shown undimmed
 first, and on its own again when the base moves; `state.AheadUpdate` decides what to read, and
 `ui.AheadView` how the panes show it. `feature.ahead` only declares the keys. See ADR 20.
 
@@ -363,8 +363,8 @@ only; side-by-side diffs are to follow them there.
   (`-U<n>`, always, so the user's `diff.context` does not count, and `--ignore-all-space`). A file whose changes are all
   whitespace is then left out of the diff entirely, also from
   the files `git show --stat` lists.
-- `Cmd.LoadFileDiff`, `Cmd.LoadCommitDetail` and `Cmd.LoadStashDetail` carry the options, and so do the messages
-  they send back. They are the `Cmd.DiffLoad`s: what one of them read with other options than the model's, or
+- `LoadFileDiff`, `LoadCommitDetail` and `LoadStashDetail` carry the options, and so do the messages
+  they send back. They are the `DiffLoad`s: what one of them read with other options than the model's, or
   failed to, arrives too late and is dropped by `LoadUpdate.update` in one place, as what was read for another
   highlighted item is.
 - Toggling reads the diffs shown again (the files, the commit, the commit of a divergence and the commit of a
@@ -385,7 +385,7 @@ See `documentation/adr/0077-showing-more-of-one-hunk.md`.
 - On a marker, `]`, `[` and Enter (`Scopes.DIFF`, and `Scopes.PULL_REQUEST_DIFF` next to the keys of the review;
   `feature.diff.ExpandAction`) send `ExpandMsg.Asked` with the `DiffCursorAt`; a click on one is Enter.
 - `ExpandUpdate` keeps the lines asked for in `RepoView.expanded`, by the id of the area, as an `Expansion` of what the
-  area showed. The first expansion in a file starts `Cmd.ReadWholeFile`, a `DiffLoad` targeted at that file of the
+  area showed. The first expansion in a file starts `ReadWholeFile`, a `DiffLoad` targeted at that file of the
   expansion, which reads its diff again as it was read (`Source`) with `DiffContext.WHOLE_FILE`.
 - `ContentView` gives each diff shown the expansion of its area (`ShownDiff.expanded`); `ShownDiff.folded` folds each
   file read whole with `Folding.fold` to the context of the moment and the lines expanded, unless it no longer has the
@@ -452,8 +452,8 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
   before.
 - **The files of a commit or a stash**, which `F` opens from the commits, divergence, branch commits and stash panes
   (`feature.diff.CommitFilesAction`), are a `CommitFilesView` in `RepoView.commitFiles`: whose changes they are, the
-  pane they were opened from, the `CommitFile`s read (`Cmd.LoadCommitFiles`), and the diff of the highlighted node
-  as a `Preview` (`Cmd.LoadCommitFileDiff`, a `DiffLoad` with a slot of its own). The files pane lists them in place
+  pane they were opened from, the `CommitFile`s read (`LoadCommitFiles`), and the diff of the highlighted node
+  as a `Preview` (`LoadCommitFileDiff`, a `DiffLoad` with a slot of its own). The files pane lists them in place
   of the working tree's (`ui.FileTreeList`, one per tree, so each keeps its own highlight and collapsed
   directories), and the content panel shows the diff in `ContentArea.COMMIT_FILE`. They open on the first directory
   that holds files directly (`FileTreeList.firstWithDiff`), whose diff shows something: the root only when files
@@ -637,11 +637,11 @@ no message from a user's event did.
 
 Every `jazygit.refreshInterval` (1 s by default, ADR 52) a `Msg.Tick` triggers `Update.tick`, which re-reads the status,
 and checks the files of the git directory that the local and remote branches (one load, `LoadBranches`), the stashes
-and the worktrees are read from (`Cmd.CheckMetadata`). That check runs no git: it stamps the HEADs, the config,
+and the worktrees are read from (`CheckMetadata`). That check runs no git: it stamps the HEADs, the config,
 `packed-refs`, the directories of the local refs, the files of the remote-tracking refs, the stash reflog, the
 worktrees' admin files, and in a reftable repository its tables (`GitMetadata`). Only a load whose stamp differs from
 the one it was last started with (`Jobs.readAt`) runs again, so an idle app runs one git process per tick instead of
-four. The highlighted diff is guarded the same way after each status (`Cmd.CheckFileDiff`, which stamps its files and
+four. The highlighted diff is guarded the same way after each status (`CheckFileDiff`, which stamps its files and
 the index), as a file can change without its status changing (ADR 58). An operation that is done reads all of them at
 once
 (`Update.refresh`), without waiting for the files to tell. That keeps the screen in sync with changes made outside
@@ -659,9 +659,9 @@ while away counts as the focus being back. See `documentation/adr/0058-less-read
 `documentation/adr/0067-reading-less-rather-than-nothing-in-the-background.md`.
 
 The status of a tick takes no optional locks, so it never writes back what it refreshed of the index: files a checkout
-just wrote, or a tool touched, would be hashed again on every tick. `Cmd.CheckMetadata` therefore also stamps the
+just wrote, or a tool touched, would be hashed again on every tick. `CheckMetadata` therefore also stamps the
 index (`GitMetadata.index`), and once that changed and settled, or 5 minutes after the last time anyway, while the
-terminal has the focus and no operation runs, `IndexUpdate.checked` asks for `Cmd.RefreshIndex`,
+terminal has the focus and no operation runs, `IndexUpdate.checked` asks for `RefreshIndex`,
 `git update-index -q --unmerged --refresh`. `Jobs.indexRefresh` keeps what the index looked like then; the first stamp
 after a refresh that wrote it is taken as what that refresh left, not as a change. A refresh that could not lock the
 index changes nothing shown. See `documentation/adr/0093-the-index-written-anew-now-and-then.md` and
@@ -670,7 +670,7 @@ index changes nothing shown. See `documentation/adr/0093-the-index-written-anew-
 A read that failed is tried again on a tick only once it waited 1, 2, 4… up to 64 ticks after each failure in a row
 (`Jobs.retries`, `Jobs.retryDue`); `Update.refresh` tries it at once. The previews (a branch's log, a commit's or a
 stash's changes, the files' diff) each take a slot, so highlighting faster than git answers only reads the last item;
-a load cancelled that way reports `LoadMsg.Skipped`, and is done like any other command. See
+a load cancelled that way reports nothing, and is only done (ADR 101). See
 `documentation/adr/0031-preview-slots-and-retry-backoff.md`.
 
 Every message is handled at the time it is: `Program` hands it to `Update.step(model, msg, now)`, which sets
@@ -743,8 +743,10 @@ classDiagram
         <<interface>>
         +run(Env) Msg
         +failed(Failure) Msg
-        +failedWith(GitError / GitFailure) Msg
-        +failedWith(GhError / GhFailure) Msg
+        +background() boolean
+        +label() Option
+        +slot() Option
+        +guard() Option
     }
     class Load {
         <<sealed interface>>
@@ -807,7 +809,9 @@ classDiagram
   - `failed(Failure)` turns a failure into the failure `Msg`. A `Failure` is data: `Failure.Git` (the
     `GitError`, the commands that ran, and why the cleanup failed if it did), `Failure.GitHub` (the `GhError`
     and the commands that ran) or `Failure.Bug` (the command threw, which `Program.perform` catches).
-- **`Cmd.Load`** reads part of the repository into the model, as a `Loadable`. Every `LoadMsg` names its
+    `Failure.of` makes one of a `GitFailure`, a `GhFailure`, a `GitError` or a `GhError`, so a command reports
+    the `Either` of a role with `.mapLeft(Failure::of).fold(this::failed, …)`.
+- **`Load`** reads part of the repository into the model, as a `Loadable`. Every `LoadMsg` names its
   load, so `LoadUpdate` knows which read came back or failed; `Msg.Done` has taken it out of what runs.
 - **`OperationCmd`** changes the repository. It names its `Operation`, the branch it is done to, and the branch
   it keeps busy. An `Operation` is a record that the feature declares next to its commands (`DropCmd.DROP`,
@@ -995,7 +999,7 @@ helpers. A test replaces the roles it needs on `StubGit.of()`, as in
     terminal the TUI owns; a command that is to edit something says how).
   - **Timeouts and locks:** a command that changes the repository gets 5 minutes, for its hooks. A read
     (`GitCommand.reading`) gets 30 seconds and takes no optional locks, so it never writes the index it refreshed:
-    `Cmd.RefreshIndex` (`git update-index -q --unmerged --refresh`) does that once the index changed, while the
+    `RefreshIndex` (`git update-index -q --unmerged --refresh`) does that once the index changed, while the
     terminal has the focus (ADR 93, ADR 97).
   - **Paths:** a command on paths takes them literally (`withLiteralPaths`), never as patterns, so
     discarding a file named `*.txt` discards only that file.
@@ -1194,7 +1198,13 @@ sequenceDiagram
    implements for every operation done through git alone:
 
    ```java
-   return perform(env.git()).fold(this::failedWith, this::succeeded);
+   return perform(env.git())
+           .fold(
+                   failure -> failure.error() instanceof GitError.StoppedOnConflicts(var inProgress, int conflicts)
+                           ? new OperationMsg.Stopped(
+                                   this, failure.commands(), new Notice.StoppedOnConflicts(inProgress, conflicts))
+                           : failed(Failure.of(failure)),
+                   this::succeeded);
    ```
 
    where `Reword.perform` is `git.commits().reword(sha, message)`.
@@ -1244,7 +1254,7 @@ sequenceDiagram
 flowchart TD
     Run["Reword.run(env)"] --> Either{"git.commits().reword(...)"}
     Either -- "Right(commands)" --> Done["OperationMsg.Succeeded(reword, commands)"]
-    Either -- "Left(GitFailure(error, commands, cleanupFailed))" --> FailedWith["Cmd.failedWith(failure)"]
+    Either -- "Left(GitFailure(error, commands, cleanupFailed))" --> FailedWith["failed(Failure.of(failure))"]
     FailedWith --> Failed["OperationMsg.Failed(reword, Failure.Git(...))"]
     Failed --> Log["OperationUpdate: CommandLog.append shows rebase, rebase --abort"]
     Log --> Update["error = AppError.OperationFailed(REWORD, ...)<br/>Update.refresh(model)"]

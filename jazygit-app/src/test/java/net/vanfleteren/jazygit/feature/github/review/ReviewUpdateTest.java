@@ -35,6 +35,7 @@ import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.AppError.CannotReview.Why;
 import net.vanfleteren.jazygit.state.CommitFilesView.Changes;
+import net.vanfleteren.jazygit.state.ReadWholeFile;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
 
@@ -617,10 +618,10 @@ class ReviewUpdateTest {
                             default -> " line" + n + "\n";
                         })
                         .mkString());
-        Cmd.ReadWholeFile read = new Cmd.ReadWholeFile(
+        ReadWholeFile read = new ReadWholeFile(
                 AREA,
                 CONTENT,
-                new Cmd.ReadWholeFile.Source.OfFiles(new Changes.OfPullRequest(COMMITS), A),
+                new ReadWholeFile.Source.OfFiles(new Changes.OfPullRequest(COMMITS), A),
                 "a.txt",
                 model.preferences().diffOptions());
         Expansion expansion = new Expansion(

@@ -59,7 +59,8 @@ public sealed interface StackRebaseCmd extends Cmd {
                     .<GitError>mapLeft(error -> error)
                     .map(had -> had.find(branch -> !branch._2()).map(Tuple2::_1))
                     .flatMap(behind -> read(history, behind))
-                    .fold(this::failedWith, msg -> msg);
+                    .mapLeft(Failure::of)
+                    .fold(this::failed, msg -> msg);
         }
 
         private Either<GitError, Msg> read(History history, Option<Tuple2<BranchName, RemoteBranch>> behind) {

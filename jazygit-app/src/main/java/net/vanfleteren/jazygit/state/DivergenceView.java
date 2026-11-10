@@ -37,8 +37,8 @@ public record DivergenceView(
     /**
      * The load that reads the commits of this view.
      */
-    public Cmd.LoadDivergence load() {
-        return new Cmd.LoadDivergence(branch, other);
+    public LoadDivergence load() {
+        return new LoadDivergence(branch, other);
     }
 
     /**

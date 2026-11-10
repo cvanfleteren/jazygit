@@ -5,7 +5,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 
 /**
- * Where a {@link Cmd.Targeted} load keeps what it reads in the model: the {@link Loadable} it fills, while the model
+ * Where a {@link Targeted} load keeps what it reads in the model: the {@link Loadable} it fills, while the model
  * still wants what the load reads. What was read for another item than the one now shown, or for a view closed since,
  * finds no target, and is dropped.
  *

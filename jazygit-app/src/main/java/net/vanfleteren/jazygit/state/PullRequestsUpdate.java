@@ -109,7 +109,7 @@ public final class PullRequestsUpdate {
      * as GitHub said before, and the next tick reads them again.
      */
     static Next branchesAgain(Model before, Next next) {
-        Cmd.Load load = Cmd.LoadBranches.current(next.model(), Cmd.LoadBranches.LISTED);
+        Load load = LoadBranches.current(next.model(), LoadBranches.LISTED);
         return GitHubBases.of(before.gitHub())
                                 .equals(GitHubBases.of(next.model().gitHub()))
                         || next.model().jobs().runs(load)

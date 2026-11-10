@@ -53,10 +53,10 @@ class BaseDistanceUpdateTest {
 
         assertEquals(
                 new LoadMsg.BranchesLoaded(
-                        Cmd.LoadBranches.LISTED,
+                        LoadBranches.LISTED,
                         READ,
                         Option.of(new LoadMsg.Bases(PARENTS, HashMap.of(FEATURE, DISTANCE)))),
-                Cmd.LoadBranches.LISTED.run(new Env(git, StubGitHub.empty())));
+                LoadBranches.LISTED.run(new Env(git, StubGitHub.empty())));
     }
 
     @Test
@@ -79,8 +79,7 @@ class BaseDistanceUpdateTest {
             }
         });
         // A protected branch is a root, which has no parent, whatever it was made from (ADR 72).
-        Cmd.LoadBranches load =
-                new Cmd.LoadBranches(new GitHubBases(HashMap.empty(), HashSet.of(FEATURE), Option.none()));
+        LoadBranches load = new LoadBranches(new GitHubBases(HashMap.empty(), HashSet.of(FEATURE), Option.none()));
 
         assertEquals(
                 new LoadMsg.BranchesLoaded(
@@ -103,8 +102,8 @@ class BaseDistanceUpdateTest {
         });
 
         assertEquals(
-                new LoadMsg.BranchesLoaded(Cmd.LoadBranches.LISTED, READ, Option.none()),
-                Cmd.LoadBranches.LISTED.run(new Env(git, StubGitHub.empty())));
+                new LoadMsg.BranchesLoaded(LoadBranches.LISTED, READ, Option.none()),
+                LoadBranches.LISTED.run(new Env(git, StubGitHub.empty())));
     }
 
     @Test
@@ -140,7 +139,7 @@ class BaseDistanceUpdateTest {
         Model failed = Update.update(
                         read,
                         new LoadMsg.Failed(
-                                Cmd.LoadBranches.LISTED, new Failure.Git(new GitError.UnexpectedOutput("garbled"))))
+                                LoadBranches.LISTED, new Failure.Git(new GitError.UnexpectedOutput("garbled"))))
                 .model();
 
         assertEquals(PARENTS, failed.repo().parents());
@@ -149,6 +148,6 @@ class BaseDistanceUpdateTest {
 
     private static LoadMsg.BranchesLoaded withBases(
             Map<BranchName, BranchName> parents, Map<BranchName, BaseDistance> counts) {
-        return new LoadMsg.BranchesLoaded(Cmd.LoadBranches.LISTED, READ, Option.of(new LoadMsg.Bases(parents, counts)));
+        return new LoadMsg.BranchesLoaded(LoadBranches.LISTED, READ, Option.of(new LoadMsg.Bases(parents, counts)));
     }
 }

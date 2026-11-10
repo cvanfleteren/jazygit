@@ -16,13 +16,13 @@ import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.settings.RecentRepositories;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.state.Anchor;
-import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.DiffCursorAt;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Notice;
+import net.vanfleteren.jazygit.state.ReadWholeFile;
 import net.vanfleteren.jazygit.state.Repositories;
 import net.vanfleteren.jazygit.state.Scrolled;
 import net.vanfleteren.jazygit.state.ScrolledContent;
@@ -81,7 +81,7 @@ class CopyUpdateTest {
     void anExpandedLineIsCopiedToo() {
         Anchor.Gap above = new Anchor.Gap("a.txt", 1, Option.of(7));
         Next asked = Update.update(loaded(), new ExpandMsg.Asked(at(above, Option.none()), ExpandMsg.Toward.ALL));
-        Cmd.ReadWholeFile read = (Cmd.ReadWholeFile) asked.cmds().head();
+        ReadWholeFile read = (ReadWholeFile) asked.cmds().head();
         Model expanded = TestModels.done(
                         TestModels.running(asked.model(), read), read, new LoadMsg.WholeFileRead(read, WHOLE))
                 .model();

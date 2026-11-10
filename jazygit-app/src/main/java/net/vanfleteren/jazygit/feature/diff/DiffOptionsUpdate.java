@@ -10,9 +10,12 @@ import net.vanfleteren.jazygit.settings.Settings;
 import net.vanfleteren.jazygit.state.BranchCommitsView;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.CommitFilesView;
+import net.vanfleteren.jazygit.state.DiffLoad;
 import net.vanfleteren.jazygit.state.DivergenceView;
+import net.vanfleteren.jazygit.state.LoadFileDiff;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Preview;
+import net.vanfleteren.jazygit.state.SaveSettings;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 
@@ -59,7 +62,7 @@ public final class DiffOptionsUpdate {
         Settings previous = model.preferences().settings();
         Settings chosen = previous.withDiffStyle(previous.diffStyle().toggled());
         Next changed = changed(model.mapPreferences(preferences -> preferences.withSettings(chosen)));
-        return new Next(changed.model(), changed.cmds().append(new Cmd.SaveSettings(previous, chosen)));
+        return new Next(changed.model(), changed.cmds().append(new SaveSettings(previous, chosen)));
     }
 
     /**
@@ -71,7 +74,7 @@ public final class DiffOptionsUpdate {
         Settings chosen = previous.withDiffWords(!previous.diffWords());
         return new Next(
                 model.mapPreferences(preferences -> preferences.withSettings(chosen)),
-                List.of(new Cmd.SaveSettings(previous, chosen)));
+                List.of(new SaveSettings(previous, chosen)));
     }
 
     /**
@@ -86,8 +89,8 @@ public final class DiffOptionsUpdate {
         Option<CommitFilesView> commitFiles =
                 model.repoView().commitFiles().map(view -> view.withDiff(reloading(view.diff())));
         List<Cmd> loads = List.<Cmd>empty()
-                .appendAll(model.repoView().fileDiff().map(diff -> new Cmd.LoadFileDiff(diff.key(), options)))
-                .appendAll(Update.shown(model).filter(load -> load instanceof Cmd.DiffLoad));
+                .appendAll(model.repoView().fileDiff().map(diff -> new LoadFileDiff(diff.key(), options)))
+                .appendAll(Update.shown(model).filter(load -> load instanceof DiffLoad));
         return new Next(
                 model.mapRepoView(repoView -> repoView.withFileDiff(reloading(repoView.fileDiff()))
                         .withCommitDetail(reloading(repoView.commitDetail()))

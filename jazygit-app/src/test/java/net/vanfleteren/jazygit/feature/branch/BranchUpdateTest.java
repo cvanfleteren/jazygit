@@ -32,10 +32,10 @@ import net.vanfleteren.jazygit.feature.branch.rename.RenameBranchCmd;
 import net.vanfleteren.jazygit.feature.branch.rename.RenameBranchMsg;
 import net.vanfleteren.jazygit.feature.branch.rename.RenameBranchPopup;
 import net.vanfleteren.jazygit.git.model.*;
-import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
-import net.vanfleteren.jazygit.state.Cmd.LoadStashes;
-import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
+import net.vanfleteren.jazygit.state.LoadBranches;
 import net.vanfleteren.jazygit.state.LoadMsg;
+import net.vanfleteren.jazygit.state.LoadStashes;
+import net.vanfleteren.jazygit.state.LoadStatus;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
@@ -1008,8 +1008,8 @@ class BranchUpdateTest {
                 List.of(
                         new LoadStatus(),
                         LoadBranches.LISTED,
-                        new net.vanfleteren.jazygit.state.Cmd.LoadStashes(),
-                        new net.vanfleteren.jazygit.state.Cmd.LoadWorktrees()),
+                        new net.vanfleteren.jazygit.state.LoadStashes(),
+                        new net.vanfleteren.jazygit.state.LoadWorktrees()),
                 next.cmds());
         assertEquals(Option.none(), next.model().outcome().error());
     }
@@ -1027,7 +1027,7 @@ class BranchUpdateTest {
                         new LoadStatus(),
                         LoadBranches.LISTED,
                         new LoadStashes(),
-                        new net.vanfleteren.jazygit.state.Cmd.LoadWorktrees()),
+                        new net.vanfleteren.jazygit.state.LoadWorktrees()),
                 next.cmds());
     }
 

@@ -23,6 +23,20 @@ public sealed interface Failure {
     }
 
     /**
+     * Git refused before any command ran.
+     */
+    static Failure of(GitError error) {
+        return new Git(error);
+    }
+
+    /**
+     * gh refused before any command ran.
+     */
+    static Failure of(GhError error) {
+        return new GitHub(error);
+    }
+
+    /**
      * The command lines that were executed before it failed, the failing one last; they belong in the
      * command log.
      */

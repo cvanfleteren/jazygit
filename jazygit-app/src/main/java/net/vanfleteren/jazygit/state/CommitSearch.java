@@ -29,8 +29,8 @@ public record CommitSearch(String text, CommitQuery query, Option<BranchRef> not
     /**
      * The load that reads the results of this search.
      */
-    public Cmd.SearchCommits load() {
-        return new Cmd.SearchCommits(query, notOn);
+    public SearchCommits load() {
+        return new SearchCommits(query, notOn);
     }
 
     /**

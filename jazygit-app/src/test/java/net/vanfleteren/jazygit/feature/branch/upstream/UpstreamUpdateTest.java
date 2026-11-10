@@ -17,6 +17,8 @@ import net.vanfleteren.jazygit.state.BranchesTab;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.DivergenceView;
 import net.vanfleteren.jazygit.state.DivergenceView.Against;
+import net.vanfleteren.jazygit.state.LoadCommitDetail;
+import net.vanfleteren.jazygit.state.LoadDivergence;
 import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
@@ -121,7 +123,7 @@ class UpstreamUpdateTest {
         DivergenceView view = DivergenceView.loading(FEATURE, new BranchRef.Remote(ORIGIN_FEATURE), Against.UPSTREAM);
         assertEquals(Option.none(), next.model().popup());
         assertEquals(Option.of(view), next.model().repoView().divergence());
-        assertEquals(List.of(new Cmd.LoadDivergence(FEATURE, new BranchRef.Remote(ORIGIN_FEATURE))), next.cmds());
+        assertEquals(List.of(new LoadDivergence(FEATURE, new BranchRef.Remote(ORIGIN_FEATURE))), next.cmds());
     }
 
     @Test
@@ -133,7 +135,7 @@ class UpstreamUpdateTest {
         assertEquals(
                 Option.of(DivergenceView.loading(FEATURE, new BranchRef.Remote(ORIGIN_MAIN), Against.BASE)),
                 next.model().repoView().divergence());
-        assertEquals(List.of(new Cmd.LoadDivergence(FEATURE, new BranchRef.Remote(ORIGIN_MAIN))), next.cmds());
+        assertEquals(List.of(new LoadDivergence(FEATURE, new BranchRef.Remote(ORIGIN_MAIN))), next.cmds());
     }
 
     @Test
@@ -173,7 +175,7 @@ class UpstreamUpdateTest {
     void aHighlightedCommitOfTheDivergenceShowsWhatItChanged() {
         Next next = Update.update(viewing(), new SelectionMsg.DivergenceCommitSelected(AHEAD.sha()));
         assertEquals(
-                List.of(new Cmd.LoadCommitDetail(AHEAD.sha(), DiffOptions.DEFAULT, Cmd.Slot.DIVERGENCE_DETAIL)),
+                List.of(new LoadCommitDetail(AHEAD.sha(), DiffOptions.DEFAULT, Cmd.Slot.DIVERGENCE_DETAIL)),
                 next.cmds());
 
         Model shown = Update.update(
@@ -210,8 +212,8 @@ class UpstreamUpdateTest {
         Next next = TestModels.remoteBranchesRead(viewing(), fetched);
 
         assertEquals(
-                List.of(new Cmd.LoadDivergence(FEATURE, new BranchRef.Remote(ORIGIN_FEATURE))),
-                next.cmds().filter(Cmd.LoadDivergence.class::isInstance));
+                List.of(new LoadDivergence(FEATURE, new BranchRef.Remote(ORIGIN_FEATURE))),
+                next.cmds().filter(LoadDivergence.class::isInstance));
     }
 
     @Test
@@ -229,15 +231,15 @@ class UpstreamUpdateTest {
         Next next = Update.update(viewing(), branchesLoaded(new AllBranches(List.of(TRACKING, committed), fetched)));
 
         assertEquals(
-                List.of(new Cmd.LoadDivergence(FEATURE, new BranchRef.Remote(ORIGIN_FEATURE))),
-                next.cmds().filter(Cmd.LoadDivergence.class::isInstance));
+                List.of(new LoadDivergence(FEATURE, new BranchRef.Remote(ORIGIN_FEATURE))),
+                next.cmds().filter(LoadDivergence.class::isInstance));
     }
 
     @Test
     void itIsNotReadAgainWhenNothingMoved() {
         Next next = TestModels.remoteBranchesRead(viewing(), REMOTES);
 
-        assertEquals(List.of(), next.cmds().filter(Cmd.LoadDivergence.class::isInstance));
+        assertEquals(List.of(), next.cmds().filter(LoadDivergence.class::isInstance));
     }
 
     @Test

@@ -26,7 +26,8 @@ public sealed interface CommentsCmd extends Cmd {
         public Msg run(Env env) {
             return env.gitHub()
                     .pullRequestComments(number)
-                    .fold(this::failedWith, comments -> new CommentsMsg.Loaded(number, comments));
+                    .mapLeft(Failure::of)
+                    .fold(this::failed, comments -> new CommentsMsg.Loaded(number, comments));
         }
 
         @Override

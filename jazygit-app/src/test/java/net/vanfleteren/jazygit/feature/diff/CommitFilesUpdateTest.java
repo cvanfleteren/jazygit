@@ -24,16 +24,18 @@ import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.image.Picture;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.settings.DiffStyle;
-import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.CommitFilesView;
 import net.vanfleteren.jazygit.state.CommitFilesView.Changes;
 import net.vanfleteren.jazygit.state.Failure;
+import net.vanfleteren.jazygit.state.LoadCommitFileDiff;
+import net.vanfleteren.jazygit.state.LoadCommitFiles;
 import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Loadable.Loading;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Preview;
+import net.vanfleteren.jazygit.state.SaveSettings;
 import net.vanfleteren.jazygit.state.SelectionMsg;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -53,7 +55,7 @@ class CommitFilesUpdateTest {
         assertEquals(
                 Option.of(CommitFilesView.of(COMMIT, Scopes.COMMITS.id(), Scopes.FILES.id())),
                 next.model().repoView().commitFiles());
-        assertEquals(List.of(new Cmd.LoadCommitFiles(COMMIT)), next.cmds());
+        assertEquals(List.of(new LoadCommitFiles(COMMIT)), next.cmds());
     }
 
     @Test
@@ -65,7 +67,7 @@ class CommitFilesUpdateTest {
 
         Next selected = Update.update(open, new SelectionMsg.CommitFilesSelected(List.of(A)));
 
-        assertEquals(List.of(new Cmd.LoadCommitFileDiff(COMMIT, List.of(A), DiffOptions.DEFAULT)), selected.cmds());
+        assertEquals(List.of(new LoadCommitFileDiff(COMMIT, List.of(A), DiffOptions.DEFAULT)), selected.cmds());
         Model read = Update.update(
                         selected.model(),
                         new LoadMsg.CommitFileDiffLoaded(COMMIT, List.of(A), DiffOptions.DEFAULT, DiffText.of("+a")))
@@ -146,9 +148,9 @@ class CommitFilesUpdateTest {
         DiffOptions rich = DiffOptions.DEFAULT.withFirstParent(true);
         assertEquals(DiffStyle.RICH, next.model().preferences().diffLook().style());
         assertEquals(rich, next.model().preferences().diffOptions());
-        assertTrue(next.cmds().contains(new Cmd.LoadCommitFileDiff(COMMIT, List.of(A), rich)));
+        assertTrue(next.cmds().contains(new LoadCommitFileDiff(COMMIT, List.of(A), rich)));
         assertTrue(next.cmds()
-                .contains(new Cmd.SaveSettings(
+                .contains(new SaveSettings(
                         open.preferences().settings(),
                         open.preferences().settings().withDiffStyle(DiffStyle.RICH))));
         assertEquals(
@@ -192,7 +194,7 @@ class CommitFilesUpdateTest {
         Next opened = Update.update(loaded(), new CommitFilesMsg.Opened(PULL_REQUEST, Scopes.BRANCHES.id()));
         assertEquals(
                 List.of(
-                        new Cmd.LoadCommitFiles(PULL_REQUEST),
+                        new LoadCommitFiles(PULL_REQUEST),
                         new CommitFilesCmd.LoadReviewRemarks(7, HashSet.empty(), 0),
                         new CommitFilesCmd.LoadCollapsed("owner/repo", 7)),
                 opened.cmds());
@@ -316,7 +318,7 @@ class CommitFilesUpdateTest {
         assertEquals(now, view.of());
         assertEquals(new Loading<>(), view.files());
         assertEquals(List.of(THREAD), view.threads());
-        assertEquals(List.of(new Cmd.LoadCommitFiles(now)), moved.cmds());
+        assertEquals(List.of(new LoadCommitFiles(now)), moved.cmds());
         // The files are read again at the commits the threads were read at.
         assertTrue(view.remarksAtItsCommits());
     }

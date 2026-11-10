@@ -7,9 +7,9 @@ import net.vanfleteren.jazygit.feature.theme.ThemeScope;
 import net.vanfleteren.jazygit.feature.theme.ThemeUpdate;
 import net.vanfleteren.jazygit.settings.Settings;
 import net.vanfleteren.jazygit.state.AppError;
-import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Landing;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.SaveSettings;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
@@ -119,7 +119,7 @@ public final class SettingsPanelUpdate {
         return new Next(
                 model.mapPreferences(preferences -> preferences.withSettings(chosen))
                         .openPopup(panel.withAnimations(chosen.animations())),
-                List.of(new Cmd.SaveSettings(kept, chosen)));
+                List.of(new SaveSettings(kept, chosen)));
     }
 
     /**
@@ -137,7 +137,7 @@ public final class SettingsPanelUpdate {
                 ? Next.of(model)
                 : new Next(
                         model.mapPreferences(preferences -> preferences.withSettings(chosen)),
-                        List.of(new Cmd.SaveSettings(kept, chosen)));
+                        List.of(new SaveSettings(kept, chosen)));
     }
 
     /**
@@ -150,7 +150,7 @@ public final class SettingsPanelUpdate {
                 : new Next(
                         model.mapPreferences(preferences -> preferences.withSettings(chosen)),
                         List.of(
-                                new Cmd.SaveSettings(model.preferences().settings(), chosen),
+                                new SaveSettings(model.preferences().settings(), chosen),
                                 new SettingsPanelCmd.Reopen(Landing.of(model.repoView()))));
     }
 }

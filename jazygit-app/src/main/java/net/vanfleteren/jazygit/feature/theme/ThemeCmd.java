@@ -21,7 +21,8 @@ public record ThemeCmd(Option<ThemeName> theme) implements Cmd {
         return env.git()
                 .config()
                 .setLocal(RepositoryTheme.KEY, theme.map(ThemeName::id))
-                .fold(this::failedWith, ThemeMsg.RepositoryThemeSaved::new);
+                .mapLeft(Failure::of)
+                .fold(this::failed, ThemeMsg.RepositoryThemeSaved::new);
     }
 
     @Override

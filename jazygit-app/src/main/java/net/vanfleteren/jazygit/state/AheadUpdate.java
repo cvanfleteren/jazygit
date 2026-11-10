@@ -115,7 +115,7 @@ public final class AheadUpdate {
     /**
      * The load of the commits of HEAD that are not on its base, as the branches read last tell what that is.
      */
-    public static Cmd.LoadAhead ofHead(Model model) {
+    public static LoadAhead ofHead(Model model) {
         return load(
                 model,
                 Option.none(),
@@ -126,7 +126,7 @@ public final class AheadUpdate {
     /**
      * The load of the commits of {@code branch} that are not on its base.
      */
-    public static Cmd.LoadAhead of(Model model, BranchRef branch) {
+    public static LoadAhead of(Model model, BranchRef branch) {
         return load(
                 model, Option.of(branch), LoadUpdate.tipOf(model, branch).flatMap(tip -> tip), Option.of(name(branch)));
     }
@@ -135,9 +135,8 @@ public final class AheadUpdate {
      * The load of the commits from {@code tip}, of {@code branch} or of HEAD, named {@code named}, that are not on
      * its base: the first of the bases of ADR 20 the branches read last have, where they have it (ADR 49).
      */
-    private static Cmd.LoadAhead load(
-            Model model, Option<BranchRef> branch, Option<Sha> tip, Option<BranchName> named) {
-        return new Cmd.LoadAhead(
+    private static LoadAhead load(Model model, Option<BranchRef> branch, Option<Sha> tip, Option<BranchName> named) {
+        return new LoadAhead(
                 branch,
                 tip,
                 BranchRef.bases(
@@ -147,15 +146,14 @@ public final class AheadUpdate {
                         .iterator()
                         .flatMap(base -> LoadUpdate.tipOf(model, base)
                                 .flatMap(found -> found)
-                                .map(at -> new Cmd.LoadAhead.Base(base, at)))
+                                .map(at -> new LoadAhead.Base(base, at)))
                         .headOption());
     }
 
     /**
      * Keeps what {@code load} read of the log of {@code branch} just read, so that the log is shown with it at once.
      */
-    static Next branchLogLoaded(
-            Model model, BranchRef branch, Cmd.LoadAhead load, Either<Failure, Option<Ahead>> ahead) {
+    static Next branchLogLoaded(Model model, BranchRef branch, LoadAhead load, Either<Failure, Option<Ahead>> ahead) {
         Model reading = model.mapRepoView(repoView -> repoView.withBranchAhead(Option.of(repoView.branchAhead()
                 .filter(preview -> preview.key().equals(branch))
                 .getOrElse(() -> new Preview<>(branch, Loadable.loading())))));
@@ -166,9 +164,9 @@ public final class AheadUpdate {
      * Keeps what {@code load} read with a log, or that it failed, as {@link #loaded} and {@link #failed} do. It was
      * asked for with the log, so the branches read since may tell another base: then it is read again for that one.
      */
-    static Next read(Model model, Cmd.LoadAhead load, Either<Failure, Option<Ahead>> ahead) {
+    static Next read(Model model, LoadAhead load, Either<Failure, Option<Ahead>> ahead) {
         Next kept = ahead.fold(failure -> Next.of(failed(model, load, failure)), read -> loaded(model, load, read));
-        Cmd.LoadAhead current = load.branch().fold(() -> ofHead(kept.model()), branch -> of(kept.model(), branch));
+        LoadAhead current = load.branch().fold(() -> ofHead(kept.model()), branch -> of(kept.model(), branch));
         return current.equals(load) ? kept : new Next(kept.model(), kept.cmds().append(current));
     }
 
@@ -179,12 +177,12 @@ public final class AheadUpdate {
      * is dropped, as there is no log to show it with, and the load of now is run, unless it runs already, on its own
      * or with a log (ADR 49).
      */
-    static Next aheadLoaded(Model model, Cmd.LoadAhead load, Option<Ahead> ahead) {
+    static Next aheadLoaded(Model model, LoadAhead load, Option<Ahead> ahead) {
         boolean shown = load.branch()
                 .forAll(branch -> model.repoView()
                         .branchAhead()
                         .exists(preview -> preview.key().equals(branch)));
-        Cmd.LoadAhead current = load.branch().fold(() -> ofHead(model), branch -> of(model, branch));
+        LoadAhead current = load.branch().fold(() -> ofHead(model), branch -> of(model, branch));
         return !shown
                 ? Next.of(model)
                 : current.equals(load)
@@ -195,17 +193,17 @@ public final class AheadUpdate {
     /**
      * Whether a command reads what {@code load} reads: it, or the log of HEAD or of a branch read with it.
      */
-    private static Predicate<Cmd> reads(Cmd.LoadAhead load) {
+    private static Predicate<Cmd> reads(LoadAhead load) {
         return cmd -> cmd.equals(load)
-                || cmd instanceof Cmd.LoadCommits(var with) && with.equals(load)
-                || cmd instanceof Cmd.LoadBranchLog log && log.ahead().equals(load);
+                || cmd instanceof LoadCommits(var with) && with.equals(load)
+                || cmd instanceof LoadBranchLog log && log.ahead().equals(load);
     }
 
     /**
      * Keeps what {@code load} read, unless it was for a branch no longer shown. For HEAD, the search follows its
      * base.
      */
-    static Next loaded(Model model, Cmd.LoadAhead load, Option<Ahead> ahead) {
+    static Next loaded(Model model, LoadAhead load, Option<Ahead> ahead) {
         return load.branch()
                 .fold(
                         () -> searchFollowed(model.mapJobs(jobs -> jobs.withoutFailedRead(load))
@@ -217,7 +215,7 @@ public final class AheadUpdate {
     /**
      * Keeps that {@code load} failed, unless it was for a branch no longer shown.
      */
-    static Model failed(Model model, Cmd.LoadAhead load, Failure failure) {
+    static Model failed(Model model, LoadAhead load, Failure failure) {
         return load.branch()
                 .fold(
                         () -> model.mapJobs(jobs -> jobs.withFailedRead(load))
@@ -259,8 +257,8 @@ public final class AheadUpdate {
     /**
      * The loads to run again as they failed.
      */
-    static List<Cmd.Load> retries(Model model) {
-        return List.<Cmd.Load>empty()
+    static List<Load> retries(Model model) {
+        return List.<Load>empty()
                 .appendAll(Option.when(
                         model.repo().ahead().isFailed() || model.jobs().headAheadFailed(), () -> ofHead(model)))
                 .appendAll(model.repoView()

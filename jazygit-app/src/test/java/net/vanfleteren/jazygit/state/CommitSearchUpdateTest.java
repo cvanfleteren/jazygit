@@ -62,7 +62,7 @@ class CommitSearchUpdateTest {
         assertEquals(
                 Option.of(CommitSearch.loading("fix author:bob", Option.none())),
                 next.model().repoView().commitSearch());
-        assertEquals(List.of(new Cmd.SearchCommits(CommitQuery.parse("fix author:bob"), Option.none())), next.cmds());
+        assertEquals(List.of(new SearchCommits(CommitQuery.parse("fix author:bob"), Option.none())), next.cmds());
     }
 
     @Test
@@ -136,7 +136,7 @@ class CommitSearchUpdateTest {
     @Test
     void aFailedSearchIsShownAndReadAgainOnTheNextRefresh() {
         Model searched = run("path:x").model();
-        Cmd.SearchCommits load = new Cmd.SearchCommits(CommitQuery.parse("path:x"), Option.none());
+        SearchCommits load = new SearchCommits(CommitQuery.parse("path:x"), Option.none());
 
         Model failed =
                 Update.update(searched, load.failed(refused("bad pathspec"))).model();
@@ -151,10 +151,10 @@ class CommitSearchUpdateTest {
 
         Next next = Update.update(searched, TestModels.commitsLoaded(FOUND));
 
-        assertTrue(next.cmds().contains(new Cmd.SearchCommits(CommitQuery.parse("fix"), Option.none())));
+        assertTrue(next.cmds().contains(new SearchCommits(CommitQuery.parse("fix"), Option.none())));
         assertFalse(Update.update(loaded(), TestModels.commitsLoaded(FOUND))
                 .cmds()
-                .exists(Cmd.SearchCommits.class::isInstance));
+                .exists(SearchCommits.class::isInstance));
     }
 
     @Test
@@ -169,9 +169,9 @@ class CommitSearchUpdateTest {
         Next only = Update.update(searched, new AheadMsg.Toggled());
 
         assertTrue(only.model().repoView().onlyAhead());
-        assertEquals(List.of(new Cmd.SearchCommits(CommitQuery.parse("fix"), Option.of(base))), only.cmds());
+        assertEquals(List.of(new SearchCommits(CommitQuery.parse("fix"), Option.of(base))), only.cmds());
         Next whole = Update.update(only.model(), new AheadMsg.Toggled());
-        assertEquals(List.of(new Cmd.SearchCommits(CommitQuery.parse("fix"), Option.none())), whole.cmds());
+        assertEquals(List.of(new SearchCommits(CommitQuery.parse("fix"), Option.none())), whole.cmds());
     }
 
     @Test
@@ -181,7 +181,7 @@ class CommitSearchUpdateTest {
         Model only = Update.update(loaded(), new AheadMsg.Toggled()).model();
         Model searched = Update.update(typed(only, "fix"), new CommitSearchMsg.Submitted())
                 .model();
-        Cmd.LoadAhead load = AheadUpdate.ofHead(searched);
+        LoadAhead load = AheadUpdate.ofHead(searched);
 
         Next read = Update.update(
                 searched,
@@ -192,7 +192,7 @@ class CommitSearchUpdateTest {
                 new LoadMsg.AheadLoaded(
                         load, Option.of(new Ahead(COMMITS.head().sha(), parent, FOUND, false, Option.none()))));
 
-        assertEquals(List.of(new Cmd.SearchCommits(CommitQuery.parse("fix"), Option.of(main))), read.cmds());
-        assertEquals(List.of(new Cmd.SearchCommits(CommitQuery.parse("fix"), Option.of(parent))), another.cmds());
+        assertEquals(List.of(new SearchCommits(CommitQuery.parse("fix"), Option.of(main))), read.cmds());
+        assertEquals(List.of(new SearchCommits(CommitQuery.parse("fix"), Option.of(parent))), another.cmds());
     }
 }

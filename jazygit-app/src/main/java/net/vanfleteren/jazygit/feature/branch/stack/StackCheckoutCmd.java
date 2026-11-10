@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteName;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Env;
+import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.GitOperationCmd;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Operation;
@@ -59,7 +60,8 @@ public sealed interface StackCheckoutCmd extends OperationCmd {
                             .<GitFailure>mapLeft(error -> new GitFailure(error, commands))
                             .map(read -> (Msg) new StackMsg.StackFetched(
                                     this, commands, StackCheckout.of(stack, remote, read, on))))
-                    .fold(this::failedWith, msg -> msg);
+                    .mapLeft(Failure::of)
+                    .fold(this::failed, msg -> msg);
         }
     }
 

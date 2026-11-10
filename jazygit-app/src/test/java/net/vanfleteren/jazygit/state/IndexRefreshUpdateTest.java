@@ -19,7 +19,6 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.MergeMode;
 import net.vanfleteren.jazygit.git.model.MetadataStamp;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
-import net.vanfleteren.jazygit.state.Cmd.RefreshIndex;
 import org.junit.jupiter.api.Test;
 
 /**

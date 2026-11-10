@@ -22,14 +22,14 @@ public record LoadBranchChecks() implements Cmd {
     public Msg run(Env env) {
         return env.gitHub()
                 .branchChecks()
+                .mapLeft(Failure::of)
                 .fold(
-                        this::failedWith,
+                        this::failed,
                         checks -> env.git()
                                 .remotes()
                                 .urls()
-                                .fold(
-                                        this::failedWith,
-                                        urls -> new BranchChecksMsg.Loaded(GitHubChecks.of(checks, urls))));
+                                .mapLeft(Failure::of)
+                                .fold(this::failed, urls -> new BranchChecksMsg.Loaded(GitHubChecks.of(checks, urls))));
     }
 
     @Override

@@ -25,7 +25,7 @@ import net.vanfleteren.jazygit.git.model.MetadataStamp;
  * @param fetchChanged whether the fetch that runs, or ran last, changed a remote-tracking branch so far (ADR 58)
  * @param lastFetch  when a remote was last fetched from, and the remotes that failed the last time
  * @param worktreeChangesRead when reading which worktrees have changes last finished, whatever came of it
- * @param readAt     for each load that {@link Cmd.CheckMetadata} guards, what the files it reads looked like when it
+ * @param readAt     for each load that {@link CheckMetadata} guards, what the files it reads looked like when it
  *                   was last started, and for the highlighted diff, when it was last read (ADR 58); it is not
  *                   started again until they change. A load that fails is forgotten, so the next tick tries again
  * @param ghExecutableEntered the gh executable the user entered last, to be checked before it is used: none for the
@@ -53,15 +53,15 @@ import net.vanfleteren.jazygit.git.model.MetadataStamp;
  */
 @With
 public record Jobs(
-        Set<Cmd.Load> failed,
+        Set<Load> failed,
         boolean fetchAgain,
         boolean fetchChanged,
         Freshness lastFetch,
         Option<Instant> worktreeChangesRead,
-        Map<Cmd.Load, MetadataStamp> readAt,
+        Map<Load, MetadataStamp> readAt,
         Option<String> ghExecutableEntered,
         long ticks,
-        Map<Cmd.Load, Retry> retries,
+        Map<Load, Retry> retries,
         Map<Long, Running> running,
         long nextId,
         Option<Lingering> lingering,
@@ -149,7 +149,7 @@ public record Jobs(
     /**
      * These jobs knowing that {@code load} ran, and whether it {@code failed}: one more failure in a row, or none.
      */
-    public Jobs withRead(Cmd.Load load, boolean failed) {
+    public Jobs withRead(Load load, boolean failed) {
         return withRetries(
                 failed
                         ? retries.put(
@@ -162,7 +162,7 @@ public record Jobs(
      * These jobs keeping only the failures of {@code loads}, the reads that are still to be tried again: those of a
      * preview that is no longer shown, say, are forgotten.
      */
-    public Jobs retainingRetries(Set<Cmd.Load> loads) {
+    public Jobs retainingRetries(Set<Load> loads) {
         return withRetries(retries.filterKeys(loads::contains));
     }
 
@@ -170,7 +170,7 @@ public record Jobs(
      * Whether a tick tries {@code load} again: once it waited one tick after failing the first time, then twice as
      * long after each failure in a row, up to {@code 2^MAX_BACKOFF_SHIFT} ticks. One that never failed always is.
      */
-    public boolean retryDue(Cmd.Load load) {
+    public boolean retryDue(Load load) {
         return retries.get(load)
                 .forAll(retry -> ticks - retry.tick() >= 1L << Math.min(retry.failures() - 1, MAX_BACKOFF_SHIFT));
     }
@@ -179,14 +179,14 @@ public record Jobs(
      * These jobs knowing that {@code load} failed, if it is one that is read again for that: the log of HEAD, and
      * what is ahead on its base.
      */
-    public Jobs withFailedRead(Cmd.Load load) {
+    public Jobs withFailedRead(Load load) {
         return retried(load) ? withFailed(failed.add(load)) : this;
     }
 
     /**
      * These jobs with {@code load} not failed anymore, as it was read, and any like it that failed before.
      */
-    public Jobs withoutFailedRead(Cmd.Load load) {
+    public Jobs withoutFailedRead(Load load) {
         return retried(load) ? withFailed(failed.reject(other -> sameRead(other, load))) : this;
     }
 
@@ -194,22 +194,22 @@ public record Jobs(
      * Whether the log of HEAD failed to be read.
      */
     public boolean commitsFailed() {
-        return failed.exists(load -> load instanceof Cmd.LoadCommits);
+        return failed.exists(load -> load instanceof LoadCommits);
     }
 
     /**
      * Whether what is ahead on the base of HEAD failed to be read.
      */
     public boolean headAheadFailed() {
-        return failed.exists(load -> load instanceof Cmd.LoadAhead);
+        return failed.exists(load -> load instanceof LoadAhead);
     }
 
-    private static boolean retried(Cmd.Load load) {
-        return load instanceof Cmd.LoadCommits
-                || load instanceof Cmd.LoadAhead ahead && ahead.branch().isEmpty();
+    private static boolean retried(Load load) {
+        return load instanceof LoadCommits
+                || load instanceof LoadAhead ahead && ahead.branch().isEmpty();
     }
 
-    private static boolean sameRead(Cmd.Load a, Cmd.Load b) {
+    private static boolean sameRead(Load a, Load b) {
         return a.getClass().equals(b.getClass());
     }
 

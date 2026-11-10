@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.CommitFilesView;
 import net.vanfleteren.jazygit.state.CommitFilesView.Changes;
+import net.vanfleteren.jazygit.state.LoadAhead;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -87,7 +88,7 @@ public final class CommitFilesUpdate {
      * last have them at (ADR 61). The main branch has no base to be compared with, nor has a branch without one.
      */
     public static Next againstBase(Model model, BranchName branch) {
-        Cmd.LoadAhead load = AheadUpdate.of(model, new BranchRef.Local(branch));
+        LoadAhead load = AheadUpdate.of(model, new BranchRef.Local(branch));
         return AheadUpdate.main(model).contains(branch)
                 ? Next.of(model.fail(new AppError.IsBaseBranch(branch)))
                 : load.base()

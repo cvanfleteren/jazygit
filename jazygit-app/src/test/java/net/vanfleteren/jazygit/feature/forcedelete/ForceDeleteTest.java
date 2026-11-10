@@ -23,6 +23,7 @@ import net.vanfleteren.jazygit.git.StubWorktrees;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Env;
+import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.OperationMsg;
@@ -122,7 +123,7 @@ class ForceDeleteTest {
     @Test
     void whenTheCommitsCannotBeCountedTheRefusalIsReported() {
         assertEquals(
-                DELETE_BOTH.failedWith(NOT_MERGED),
+                DELETE_BOTH.failed(Failure.of(NOT_MERGED)),
                 DELETE_BOTH.run(
                         env(git(Either.left(NOT_MERGED), Either.left(new GitError.CommandFailed("bad", 128))))));
         assertEquals(java.util.List.of("count feature"), ran);
@@ -132,7 +133,9 @@ class ForceDeleteTest {
     void anyOtherFailureIsReportedWithoutCounting() {
         GitFailure locked = new GitFailure(new GitError.CommandFailed("ref is locked", 1), List.empty());
 
-        assertEquals(DELETE_BOTH.failedWith(locked), DELETE_BOTH.run(env(git(Either.left(locked), Either.right(3)))));
+        assertEquals(
+                DELETE_BOTH.failed(Failure.of(locked)),
+                DELETE_BOTH.run(env(git(Either.left(locked), Either.right(3)))));
         assertEquals(java.util.List.of(), ran);
     }
 
@@ -283,7 +286,7 @@ class ForceDeleteTest {
         });
 
         assertEquals(
-                DELETE_BOTH.failedWith(locked.after(NOT_MERGED.commands())),
+                DELETE_BOTH.failed(Failure.of(locked.after(NOT_MERGED.commands()))),
                 DELETE_BOTH.run(env(deletedWith(git, NOT_MERGED))));
     }
 

@@ -90,7 +90,7 @@ public sealed interface RecentReposCmd extends Cmd {
                     .fold(
                             error -> {
                                 env.recent().forget(List.of(chosen)).onFailure(RecentReposCmd::notKept);
-                                return failedWith(error);
+                                return failed(Failure.of(error));
                             },
                             worktree -> {
                                 env.recent().opened(worktree).onFailure(RecentReposCmd::notKept);

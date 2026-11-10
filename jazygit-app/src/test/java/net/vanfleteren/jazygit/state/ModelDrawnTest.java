@@ -39,7 +39,7 @@ class ModelDrawnTest {
         Model loading = model.mapJobs(jobs -> jobs.withFetchAgain(true)
                 .withWorktreeChangesRead(Option.of(Instant.EPOCH))
                 .ticked()
-                .withRead(new Cmd.LoadStatus(), true));
+                .withRead(new LoadStatus(), true));
 
         assertEquals(model.drawn(), loading.drawn());
     }
@@ -53,7 +53,7 @@ class ModelDrawnTest {
 
     @Test
     void theCommandsThatRunAreNotDrawnAsTheyOnlyShowOnceTheyRanAWhile() {
-        Model running = model.mapJobs(jobs -> jobs.withStarted(List.of(new Cmd.LoadStatus()), Instant.EPOCH));
+        Model running = model.mapJobs(jobs -> jobs.withStarted(List.of(new LoadStatus()), Instant.EPOCH));
 
         assertEquals(model.drawn(), running.drawn());
     }

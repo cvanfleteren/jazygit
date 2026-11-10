@@ -7,11 +7,11 @@ import io.vavr.collection.Stream;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.settings.Settings;
-import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.LeftPanes;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Preferences.Dragged;
 import net.vanfleteren.jazygit.state.Preferences.DraggedHeights;
+import net.vanfleteren.jazygit.state.SaveSettings;
 import net.vanfleteren.jazygit.state.Screen;
 import net.vanfleteren.jazygit.state.Update.Next;
 
@@ -244,6 +244,6 @@ public final class LayoutUpdate {
     private static Next keep(Model model, Settings chosen) {
         Settings kept = model.preferences().settings();
         Model shown = model.mapPreferences(preferences -> preferences.withSettings(chosen));
-        return chosen.equals(kept) ? Next.of(shown) : new Next(shown, List.of(new Cmd.SaveSettings(kept, chosen)));
+        return chosen.equals(kept) ? Next.of(shown) : new Next(shown, List.of(new SaveSettings(kept, chosen)));
     }
 }

@@ -18,6 +18,8 @@ import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Freshness;
 import net.vanfleteren.jazygit.state.Jobs;
 import net.vanfleteren.jazygit.state.Label;
+import net.vanfleteren.jazygit.state.LoadBranches;
+import net.vanfleteren.jazygit.state.LoadStatus;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Screen;
 import net.vanfleteren.jazygit.state.TestModels;
@@ -69,9 +71,9 @@ class FetchLineTest {
         Model model = running(
                 running(
                         running(TestModels.loaded(), new FetchCmd.Fetch(new RemoteName("origin"), List.empty()), START),
-                        new Cmd.LoadStatus(),
+                        new LoadStatus(),
                         START.plusMillis(100)),
-                Cmd.LoadBranches.LISTED,
+                LoadBranches.LISTED,
                 START.plusMillis(400));
 
         // The branches ran too short to count.
@@ -93,7 +95,7 @@ class FetchLineTest {
         Instant done = START.plusSeconds(1);
         Model model = running(
                         running(TestModels.loaded(), new FetchCmd.Fetch(new RemoteName("origin"), List.empty()), START),
-                        new Cmd.LoadStatus(),
+                        new LoadStatus(),
                         START.plusMillis(100))
                 .mapJobs(jobs -> jobs.withDone(jobs.running().keySet().min().get(), done));
 
@@ -103,7 +105,7 @@ class FetchLineTest {
 
     @Test
     void aCommandThatNeverShowedDoesNotLinger() {
-        Model model = running(TestModels.loaded(), new Cmd.LoadStatus(), START)
+        Model model = running(TestModels.loaded(), new LoadStatus(), START)
                 .mapJobs(jobs -> jobs.withDone(0, START.plusMillis(299)));
 
         assertEquals(Option.none(), model.jobs().lingering());
@@ -155,7 +157,7 @@ class FetchLineTest {
         Instant now = START.plusSeconds(1);
         Model model = running(
                 running(TestModels.loaded(), new FetchCmd.Fetch(new RemoteName("origin"), List.empty()), START),
-                new Cmd.LoadStatus(),
+                new LoadStatus(),
                 START.plusMillis(100));
         String spinner = TimeText.spinnerFrame(now) + " ";
 

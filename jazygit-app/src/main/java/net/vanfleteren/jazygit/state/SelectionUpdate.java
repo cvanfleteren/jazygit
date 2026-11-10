@@ -3,10 +3,6 @@ package net.vanfleteren.jazygit.state;
 import io.vavr.control.Option;
 import java.util.function.Function;
 import net.vanfleteren.jazygit.git.model.Sha;
-import net.vanfleteren.jazygit.state.Cmd.LoadBranchLog;
-import net.vanfleteren.jazygit.state.Cmd.LoadCommitDetail;
-import net.vanfleteren.jazygit.state.Cmd.LoadFileDiff;
-import net.vanfleteren.jazygit.state.Cmd.LoadStashDetail;
 import net.vanfleteren.jazygit.state.SelectionMsg.BranchCommitSelected;
 import net.vanfleteren.jazygit.state.SelectionMsg.BranchSelected;
 import net.vanfleteren.jazygit.state.SelectionMsg.CommitFilesSelected;
@@ -96,7 +92,7 @@ public final class SelectionUpdate {
         };
     }
 
-    private static Function<Sha, Cmd.Load> detail(Model model, Cmd.Slot slot) {
+    private static Function<Sha, Load> detail(Model model, Cmd.Slot slot) {
         return sha -> new LoadCommitDetail(sha, model.preferences().diffOptions(), slot);
     }
 
@@ -112,7 +108,7 @@ public final class SelectionUpdate {
             K key,
             Option<Preview<K, V>> shown,
             Function<Option<Preview<K, V>>, Model> with,
-            Function<K, Cmd.Load> load) {
+            Function<K, Load> load) {
         return shown.exists(preview -> preview.key().equals(key))
                 ? Next.of(model)
                 : Next.of(with.apply(Option.of(Preview.loading(key, shown))), load.apply(key));

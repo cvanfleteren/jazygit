@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Env;
+import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Operation;
 
@@ -66,7 +67,7 @@ public sealed interface PushCmd extends BranchCmd.KeepsBranchBusy {
                             failure -> failure.error() instanceof GitError.PushRefused(var pushDefault, var target)
                                     ? new PushMsg.Refused(
                                             this, new SetUpstreamPopup.Refusal(pushDefault, target), failure.commands())
-                                    : failedWith(failure),
+                                    : failed(Failure.of(failure)),
                             this::succeeded);
         }
     }

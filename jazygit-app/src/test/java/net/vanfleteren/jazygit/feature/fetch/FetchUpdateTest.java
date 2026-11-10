@@ -12,7 +12,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.git.model.RemoteName;
-import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
+import net.vanfleteren.jazygit.state.LoadBranches;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;

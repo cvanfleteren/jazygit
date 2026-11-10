@@ -11,8 +11,8 @@ import net.vanfleteren.jazygit.feature.stage.StageCmd.Unstage;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.Fixtures;
-import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
-import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
+import net.vanfleteren.jazygit.state.LoadBranches;
+import net.vanfleteren.jazygit.state.LoadStatus;
 import net.vanfleteren.jazygit.state.LogEntry;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -145,8 +145,8 @@ class StageUpdateTest {
                 List.of(
                         new LoadStatus(),
                         LoadBranches.LISTED,
-                        new net.vanfleteren.jazygit.state.Cmd.LoadStashes(),
-                        new net.vanfleteren.jazygit.state.Cmd.LoadWorktrees()),
+                        new net.vanfleteren.jazygit.state.LoadStashes(),
+                        new net.vanfleteren.jazygit.state.LoadWorktrees()),
                 Update.update(loaded(), succeeded(new StageCmd.Stage(List.of())))
                         .cmds());
 
@@ -156,8 +156,8 @@ class StageUpdateTest {
                 List.of(
                         new LoadStatus(),
                         LoadBranches.LISTED,
-                        new net.vanfleteren.jazygit.state.Cmd.LoadStashes(),
-                        new net.vanfleteren.jazygit.state.Cmd.LoadWorktrees()),
+                        new net.vanfleteren.jazygit.state.LoadStashes(),
+                        new net.vanfleteren.jazygit.state.LoadWorktrees()),
                 failed.cmds());
     }
 }

@@ -8,9 +8,6 @@ import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.*;
-import net.vanfleteren.jazygit.state.Cmd.LoadCommitDetail;
-import net.vanfleteren.jazygit.state.Cmd.LoadStashDetail;
-import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
 import net.vanfleteren.jazygit.state.Loadable.Failed;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Loadable.Loading;
@@ -152,8 +149,7 @@ class SelectionUpdateTest {
     void aSkippedLoadIsNoLongerRunningAndIsNoFailure() {
         Model running = TestModels.running(failedDetail(failedDetail(selectedCommit())), DETAIL);
 
-        Model skipped =
-                TestModels.done(running, DETAIL, new LoadMsg.Skipped(DETAIL)).model();
+        Model skipped = TestModels.done(running, DETAIL, Option.none()).model();
 
         assertFalse(skipped.jobs().runs(DETAIL));
         // The backoff of a retry that a newer highlight skipped stays.
@@ -340,7 +336,7 @@ class SelectionUpdateTest {
         assertEquals(
                 List.of(
                         new LoadStatus(),
-                        new Cmd.CheckMetadata(),
+                        new CheckMetadata(),
                         TestModels.loadBranchLog(new BranchRef.Local(new BranchName("feature")))),
                 Update.update(model, new Tick()).cmds());
     }
@@ -398,7 +394,7 @@ class SelectionUpdateTest {
         List<FileEntry> files = DIRTY.files();
 
         Next next = Update.update(model, new SelectionMsg.FilesSelected(files));
-        assertEquals(List.of(new Cmd.LoadFileDiff(files, DiffOptions.DEFAULT)), next.cmds());
+        assertEquals(List.of(new LoadFileDiff(files, DiffOptions.DEFAULT)), next.cmds());
         assertEquals(
                 Option.of(new Preview<>(files, new Loading<>())),
                 next.model().repoView().fileDiff());
@@ -441,10 +437,10 @@ class SelectionUpdateTest {
 
         // Once the status confirms that its files are still as they were, they are looked at; without telling what
         // they looked like, the diff is read again.
-        Cmd.LoadFileDiff load = new Cmd.LoadFileDiff(DIRTY.files(), DiffOptions.DEFAULT);
+        LoadFileDiff load = new LoadFileDiff(DIRTY.files(), DiffOptions.DEFAULT);
         Model refreshed = Update.update(model, new Tick()).model();
         Next statusLoaded = Update.update(refreshed, new LoadMsg.StatusLoaded(DIRTY));
-        assertTrue(statusLoaded.cmds().contains(new Cmd.CheckFileDiff(load)));
+        assertTrue(statusLoaded.cmds().contains(new CheckFileDiff(load)));
         assertTrue(Update.update(statusLoaded.model(), new LoadMsg.FileDiffChecked(load, Option.none()))
                 .cmds()
                 .contains(load));
@@ -460,7 +456,7 @@ class SelectionUpdateTest {
 
     @Test
     void aDiffIsReadAgainOnlyOnceItsFilesChanged() {
-        Cmd.LoadFileDiff load = new Cmd.LoadFileDiff(DIRTY.files(), DiffOptions.DEFAULT);
+        LoadFileDiff load = new LoadFileDiff(DIRTY.files(), DiffOptions.DEFAULT);
         MetadataStamp read = stamp("read");
         Model dirty = Update.update(loaded(), new LoadMsg.StatusLoaded(DIRTY)).model();
         Model model = Update.update(dirty, new SelectionMsg.FilesSelected(DIRTY.files()))
@@ -503,13 +499,13 @@ class SelectionUpdateTest {
                 .model();
 
         assertEquals(
-                HashMap.of(new Cmd.LoadFileDiff(other, DiffOptions.DEFAULT), stamp("b")),
-                next.jobs().readAt().filterKeys(load -> load instanceof Cmd.LoadFileDiff));
+                HashMap.of(new LoadFileDiff(other, DiffOptions.DEFAULT), stamp("b")),
+                next.jobs().readAt().filterKeys(load -> load instanceof LoadFileDiff));
     }
 
     @Test
     void aCheckOfADiffNoLongerShownReadsNothing() {
-        Cmd.LoadFileDiff load = new Cmd.LoadFileDiff(DIRTY.files(), DiffOptions.DEFAULT);
+        LoadFileDiff load = new LoadFileDiff(DIRTY.files(), DiffOptions.DEFAULT);
 
         assertEquals(
                 List.empty(),
@@ -536,14 +532,14 @@ class SelectionUpdateTest {
                 new LoadMsg.StatusLoaded(
                         new RepoStatus(Head.onBranch(new BranchName("main"), new Sha("aaaa")), restaged)));
 
-        assertFalse(statusLoaded.cmds().contains(new Cmd.LoadFileDiff(DIRTY.files(), DiffOptions.DEFAULT)));
+        assertFalse(statusLoaded.cmds().contains(new LoadFileDiff(DIRTY.files(), DiffOptions.DEFAULT)));
     }
 
     @Test
     void aFailedDiffLoadIsShown() {
         Model model = Update.update(loaded(), new SelectionMsg.FilesSelected(DIRTY.files()))
                 .model();
-        Cmd.LoadFileDiff cmd = new Cmd.LoadFileDiff(DIRTY.files(), DiffOptions.DEFAULT);
+        LoadFileDiff cmd = new LoadFileDiff(DIRTY.files(), DiffOptions.DEFAULT);
 
         assertEquals(
                 Option.of(new Preview<>(DIRTY.files(), new Failed<>(refused("boom")))),

@@ -94,7 +94,7 @@ public final class TestModels {
     public static Model loaded() {
         Model read = branchesRead();
         // The log was asked for when the status came, before the branches were known.
-        Cmd commits = runningCmds(read).find(Cmd.LoadCommits.class::isInstance).getOrElse(TestModels::loadCommits);
+        Cmd commits = runningCmds(read).find(LoadCommits.class::isInstance).getOrElse(TestModels::loadCommits);
         return done(read, commits, commitsLoaded(COMMITS)).model();
     }
 
@@ -120,21 +120,20 @@ public final class TestModels {
      */
     private static Model branchesRead() {
         Model model = started(Update.init("repo", PLAIN)).model();
-        model = done(model, new Cmd.LoadStatus(), new LoadMsg.StatusLoaded(CLEAN))
+        model = done(model, new LoadStatus(), new LoadMsg.StatusLoaded(CLEAN)).model();
+        model = done(model, LoadBranches.LISTED, branchesLoaded(new AllBranches(BRANCHES, List.empty())))
                 .model();
-        model = done(model, Cmd.LoadBranches.LISTED, branchesLoaded(new AllBranches(BRANCHES, List.empty())))
+        model = done(model, new LoadStashes(), new LoadMsg.StashesLoaded(io.vavr.collection.List.of()))
                 .model();
-        model = done(model, new Cmd.LoadStashes(), new LoadMsg.StashesLoaded(io.vavr.collection.List.of()))
-                .model();
-        return done(model, new Cmd.LoadWorktrees(), new LoadMsg.WorktreesLoaded(io.vavr.collection.List.of()))
+        return done(model, new LoadWorktrees(), new LoadMsg.WorktreesLoaded(io.vavr.collection.List.of()))
                 .model();
     }
 
     /**
      * The load of the log of HEAD of the sample model.
      */
-    public static Cmd.LoadCommits loadCommits() {
-        return new Cmd.LoadCommits(AheadUpdate.ofHead(branchesRead()));
+    public static LoadCommits loadCommits() {
+        return new LoadCommits(AheadUpdate.ofHead(branchesRead()));
     }
 
     /**
@@ -147,15 +146,15 @@ public final class TestModels {
     /**
      * The load of the log of {@code branch} of the sample model.
      */
-    public static Cmd.LoadBranchLog loadBranchLog(BranchRef branch) {
-        return new Cmd.LoadBranchLog(branch, AheadUpdate.of(branchesRead(), branch));
+    public static LoadBranchLog loadBranchLog(BranchRef branch) {
+        return new LoadBranchLog(branch, AheadUpdate.of(branchesRead(), branch));
     }
 
     /**
      * The load of the log of {@code branch} as {@code model} has it.
      */
-    public static Cmd.LoadBranchLog loadBranchLog(Model model, BranchRef branch) {
-        return new Cmd.LoadBranchLog(branch, AheadUpdate.of(model, branch));
+    public static LoadBranchLog loadBranchLog(Model model, BranchRef branch) {
+        return new LoadBranchLog(branch, AheadUpdate.of(model, branch));
     }
 
     /**
@@ -170,7 +169,7 @@ public final class TestModels {
      * {@code branches} read, with the parents and the counts the model had before, as when those could not be read.
      */
     public static LoadMsg.BranchesLoaded branchesLoaded(AllBranches branches) {
-        return new LoadMsg.BranchesLoaded(Cmd.LoadBranches.LISTED, branches, Option.none());
+        return new LoadMsg.BranchesLoaded(LoadBranches.LISTED, branches, Option.none());
     }
 
     /**
@@ -330,12 +329,20 @@ public final class TestModels {
      * reported; the commands that asks for run.
      */
     public static Update.Next done(Model model, Cmd cmd, Msg result) {
+        return done(model, cmd, Option.of(result));
+    }
+
+    /**
+     * {@code model} with the command {@code cmd} that runs done, as {@link Program} reports it, with what it
+     * reported, if anything: one that a newer one for its slot cancelled reports nothing.
+     */
+    public static Update.Next done(Model model, Cmd cmd, Option<Msg> result) {
         long id = model.jobs()
                 .running()
                 .find(running -> running._2().cmd().equals(cmd))
                 .map(running -> running._1())
                 .getOrElseThrow(() -> new AssertionError(cmd + " does not run"));
-        return stepped(model, new Msg.Done(id, Option.of(result)));
+        return stepped(model, new Msg.Done(id, result));
     }
 
     /**

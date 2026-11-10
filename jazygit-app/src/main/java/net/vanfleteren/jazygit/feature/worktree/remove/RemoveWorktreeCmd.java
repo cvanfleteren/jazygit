@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Env;
+import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Operation;
 
@@ -85,7 +86,7 @@ public record RemoveWorktreeCmd(String location, boolean force, Option<BranchNam
                                         && failure.cleanupFailed().isEmpty()
                                 ? new RemoveWorktreeMsg.NeedsForce(this, failure.commands())
                                 : deleting.map(branch -> ForceDeleteCmd.refused(this, branch, failure, env.git()))
-                                        .getOrElse(() -> failedWith(failure)),
+                                        .getOrElse(() -> failed(Failure.of(failure))),
                         this::succeeded);
     }
 

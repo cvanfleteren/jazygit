@@ -88,7 +88,7 @@ public record Expansion(ScrolledContent content, Map<String, Expanded> files) {
      * @param lines the lines of the new file expanded, in the order they were
      */
     @With
-    public record Expanded(Cmd.ReadWholeFile read, Loadable<DiffText> whole, List<Folding.Lines> lines) {}
+    public record Expanded(ReadWholeFile read, Loadable<DiffText> whole, List<Folding.Lines> lines) {}
 
     /**
      * A diff as it is drawn, its files folded, and what is known of each of them, by its path.

@@ -13,8 +13,6 @@ import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.settings.SettingsStore;
-import net.vanfleteren.jazygit.state.Cmd.LoadBranches;
-import net.vanfleteren.jazygit.state.Cmd.LoadStatus;
 import net.vanfleteren.jazygit.state.Loadable.Failed;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Loadable.Loading;
@@ -63,8 +61,8 @@ class UpdateTest {
                 List.of(
                         new LoadStatus(),
                         LoadBranches.LISTED,
-                        new net.vanfleteren.jazygit.state.Cmd.LoadStashes(),
-                        new net.vanfleteren.jazygit.state.Cmd.LoadWorktrees()),
+                        new net.vanfleteren.jazygit.state.LoadStashes(),
+                        new net.vanfleteren.jazygit.state.LoadWorktrees()),
                 next.cmds());
     }
 
@@ -88,7 +86,7 @@ class UpdateTest {
         Next next = Update.update(Update.init("repo").model(), new LoadMsg.StatusLoaded(CLEAN));
 
         assertEquals(new Loaded<>(CLEAN), next.model().repo().status());
-        assertEquals(List.of(new Cmd.LoadCommits(AheadUpdate.ofHead(next.model()))), next.cmds());
+        assertEquals(List.of(new LoadCommits(AheadUpdate.ofHead(next.model()))), next.cmds());
     }
 
     @Test
@@ -97,13 +95,12 @@ class UpdateTest {
 
         // Started anew, the repository is read at once; a tick then only checks the files.
         assertEquals(
-                List.of(new Cmd.CheckMetadata()),
-                Update.update(model, new Tick()).cmds());
+                List.of(new CheckMetadata()), Update.update(model, new Tick()).cmds());
 
         Model statusDone = TestModels.done(model, new LoadStatus(), new LoadMsg.StatusLoaded(CLEAN))
                 .model();
         assertEquals(
-                List.of(new LoadStatus(), new Cmd.CheckMetadata()),
+                List.of(new LoadStatus(), new CheckMetadata()),
                 Update.update(statusDone, new Tick()).cmds());
     }
 
@@ -254,7 +251,7 @@ class UpdateTest {
     void movedHeadReloadsCommits() {
         Next next = Update.update(loaded(), new LoadMsg.StatusLoaded(MOVED));
 
-        assertEquals(List.of(new Cmd.LoadCommits(AheadUpdate.ofHead(next.model()))), next.cmds());
+        assertEquals(List.of(new LoadCommits(AheadUpdate.ofHead(next.model()))), next.cmds());
     }
 
     @Test
@@ -280,7 +277,7 @@ class UpdateTest {
                 .model();
         assertEquals(new Failed<>(refused("boom")), model.repo().commits());
         assertEquals(
-                List.of(new LoadStatus(), new Cmd.CheckMetadata(), TestModels.loadCommits()),
+                List.of(new LoadStatus(), new CheckMetadata(), TestModels.loadCommits()),
                 Update.update(model, new Tick()).cmds());
 
         Model statusFailed = Update.update(
@@ -288,7 +285,7 @@ class UpdateTest {
                 .model();
         assertEquals(new Failed<>(refused("no git")), statusFailed.repo().status());
         assertEquals(
-                List.of(new LoadStatus(), new Cmd.CheckMetadata()),
+                List.of(new LoadStatus(), new CheckMetadata()),
                 Update.update(statusFailed, new Tick()).cmds());
     }
 

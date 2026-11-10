@@ -13,11 +13,11 @@ import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.settings.Settings;
 import net.vanfleteren.jazygit.settings.ThemeName;
-import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.RepositoryTheme;
+import net.vanfleteren.jazygit.state.SaveSettings;
 import net.vanfleteren.jazygit.state.Screen;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
@@ -36,7 +36,7 @@ class LayoutUpdateTest {
         assertEquals(wider, next.model().preferences().settings());
         assertEquals(35, next.model().preferences().leftWidth(Screen.REPOSITORY));
         assertEquals(30, next.model().preferences().leftWidth(Screen.PULL_REQUESTS));
-        assertEquals(List.of(new Cmd.SaveSettings(TestModels.PLAIN.settings(), wider)), next.cmds());
+        assertEquals(List.of(new SaveSettings(TestModels.PLAIN.settings(), wider)), next.cmds());
     }
 
     @Test
@@ -81,7 +81,7 @@ class LayoutUpdateTest {
         Settings kept = TestModels.PLAIN.settings().withRepositoryWidth(Settings.MAX_WIDTH);
         assertEquals(kept, settled.model().preferences().settings());
         assertEquals(Option.none(), settled.model().preferences().dragged());
-        assertEquals(List.of(new Cmd.SaveSettings(TestModels.PLAIN.settings(), kept)), settled.cmds());
+        assertEquals(List.of(new SaveSettings(TestModels.PLAIN.settings(), kept)), settled.cmds());
     }
 
     @Test
@@ -121,7 +121,7 @@ class LayoutUpdateTest {
         Settings kept = TestModels.PLAIN.settings().withRepositoryHeights(List.of(35, 10, 30));
         assertEquals(kept, settled.model().preferences().settings());
         assertEquals(Option.none(), settled.model().preferences().draggedHeights());
-        assertEquals(List.of(new Cmd.SaveSettings(TestModels.PLAIN.settings(), kept)), settled.cmds());
+        assertEquals(List.of(new SaveSettings(TestModels.PLAIN.settings(), kept)), settled.cmds());
     }
 
     @Test
@@ -190,7 +190,7 @@ class LayoutUpdateTest {
 
         Settings taller = TestModels.PLAIN.settings().withRepositoryHeights(List.of(25, 25, 25));
         assertEquals(taller, next.model().preferences().settings());
-        assertEquals(List.of(new Cmd.SaveSettings(TestModels.PLAIN.settings(), taller)), next.cmds());
+        assertEquals(List.of(new SaveSettings(TestModels.PLAIN.settings(), taller)), next.cmds());
     }
 
     @Test

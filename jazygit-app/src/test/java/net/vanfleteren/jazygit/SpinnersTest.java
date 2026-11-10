@@ -19,8 +19,8 @@ import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.BranchesTab;
-import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Jobs;
+import net.vanfleteren.jazygit.state.LoadStatus;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Reading;
 import net.vanfleteren.jazygit.state.TestModels;
@@ -91,7 +91,7 @@ class SpinnersTest {
 
     @Test
     void theFetchLineShowsOneWhileACommandRunsAndWhileWhatShowedLingers() {
-        Model running = LOADED.mapJobs(jobs -> jobs.withStarted(List.of(new Cmd.LoadStatus()), NOW));
+        Model running = LOADED.mapJobs(jobs -> jobs.withStarted(List.of(new LoadStatus()), NOW));
         Model lingering = running.mapJobs(jobs -> jobs.withDone(LOADED.jobs().nextId(), NOW.plusSeconds(1)));
 
         assertTrue(Spinners.shown(running, NOW));

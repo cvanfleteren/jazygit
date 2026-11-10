@@ -18,7 +18,8 @@ public record MessageEditorCmd(CommitMessage message) implements Cmd {
     public Msg run(Env env) {
         return env.terminal()
                 .handOver(() -> env.git().editor().editMessage(message))
-                .fold(this::failedWith, edited -> new MessageEditorMsg.Edited(edited._1, edited._2));
+                .mapLeft(Failure::of)
+                .fold(this::failed, edited -> new MessageEditorMsg.Edited(edited._1, edited._2));
     }
 
     @Override
