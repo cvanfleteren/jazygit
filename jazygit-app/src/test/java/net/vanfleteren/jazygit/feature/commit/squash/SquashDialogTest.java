@@ -47,7 +47,7 @@ class SquashDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new Msg.PopupConfirmed(SquashPopup.class)), dispatched);
+        assertEquals(java.util.List.of(new PopupMsg.Confirmed(SquashPopup.class)), dispatched);
     }
 
     @Test
@@ -57,7 +57,7 @@ class SquashDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new Msg.PopupDismissed(SquashPopup.class)), dispatched);
+        assertEquals(java.util.List.of(new PopupMsg.Dismissed(SquashPopup.class)), dispatched);
     }
 
     @Test

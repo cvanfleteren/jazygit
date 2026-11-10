@@ -21,6 +21,7 @@ import net.vanfleteren.jazygit.state.ListCursor;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Popup;
+import net.vanfleteren.jazygit.state.PopupMsg;
 import net.vanfleteren.jazygit.ui.TextWidth;
 import net.vanfleteren.jazygit.ui.Theme;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog.Choice;
@@ -371,7 +372,7 @@ public final class ChoiceList<P extends Popup> {
      * choosing it does.
      */
     private void moved(FilteredCursor<Line> view, ListCursor cursor) {
-        dispatch.accept(new Msg.ListCursorChanged(cursor));
+        dispatch.accept(new PopupMsg.ListCursorChanged(cursor));
         Option<Line> after = view.at(cursor).highlighted();
         if (!after.equals(view.highlighted())) {
             preview(after.flatMap(ChoiceList::index));

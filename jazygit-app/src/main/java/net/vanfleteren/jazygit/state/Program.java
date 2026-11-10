@@ -142,7 +142,7 @@ public final class Program {
     public void dispatch(Msg msg) {
         Instant now = clock.instant();
         // The clock's ticks come too often to tell.
-        if (LOG.isDebugEnabled() && !(msg instanceof Msg.Tick || msg instanceof Msg.Clock)) {
+        if (LOG.isDebugEnabled() && !(msg instanceof TimerMsg.Tick || msg instanceof TimerMsg.Clock)) {
             LOG.debug(described(msg, now));
         }
         apply(Update.step(model, msg, now));

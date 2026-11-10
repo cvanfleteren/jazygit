@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Popup;
+import net.vanfleteren.jazygit.state.PopupMsg;
 import net.vanfleteren.jazygit.ui.TextWidth;
 
 /**
@@ -163,7 +164,7 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
      * @param popupType the popup that makes the dialog show
      * @param title     the title, from the popup
      * @param choices   the options, in order, each with a letter of its own
-     * @param onCancel  the message for cancelling, by Escape; by default a {@link Msg.PopupDismissed}
+     * @param onCancel  the message for cancelling, by Escape; by default a {@link PopupMsg.Dismissed}
      * @param minWidth  the width it takes at least, borders included, so it does not grow as the options change
      * @param opensAt   the key of the option highlighted when the dialog opens, given the popup; else the first
      */
@@ -185,7 +186,7 @@ public final class ChoiceDialog<P extends Popup> implements PopupView {
                     popupType,
                     title,
                     choices,
-                    () -> new Msg.PopupDismissed(popupType),
+                    () -> new PopupMsg.Dismissed(popupType),
                     minWidth,
                     popup -> Option.none());
         }

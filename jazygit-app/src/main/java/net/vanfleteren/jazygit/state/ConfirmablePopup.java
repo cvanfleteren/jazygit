@@ -4,7 +4,7 @@ import io.vavr.control.Option;
 
 /**
  * A popup that asks about one operation, and confirming it only starts that: the dialogs send a
- * {@link Msg.PopupConfirmed} for it, which needs no message of the feature (ADR 38).
+ * {@link PopupMsg.Confirmed} for it, which needs no message of the feature (ADR 38).
  */
 public interface ConfirmablePopup extends Popup {
 

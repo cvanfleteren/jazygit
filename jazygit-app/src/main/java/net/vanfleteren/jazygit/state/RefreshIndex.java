@@ -22,12 +22,12 @@ public record RefreshIndex() implements Cmd {
                 .status()
                 .refreshIndex()
                 .mapLeft(Failure::of)
-                .fold(this::failed, done -> new Msg.IndexRefreshed(true));
+                .fold(this::failed, done -> new IndexMsg.Refreshed(true));
     }
 
     @Override
     public Msg failed(Failure failure) {
         LoggerFactory.getLogger(RefreshIndex.class).debug("The index was not refreshed: {}", failure);
-        return new Msg.IndexRefreshed(false);
+        return new IndexMsg.Refreshed(false);
     }
 }

@@ -9,7 +9,7 @@ Refactorings that were left out of the functional/immutable cleanup, and why.
   because the TamboUI list and tree widgets only know their selection after they have been rendered.
   Fixing it means reacting to selection changes in the widgets' key and mouse handlers, or changing how
   the panels work with TamboUI.
-  The same goes for `Msg.Focused`, which `render` dispatches when the focus has moved to another element
+  The same goes for `ViewMsg.Focused`, which `render` dispatches when the focus has moved to another element
   outside the popups, as the focus lives in TamboUI's focus manager rather than in the model.
 - [ ] **The other effects of `render`.** It also activates the theme on the shared `StyleEngine`, moves the focus
   into a popup that opened and back out of one that closed, and fills a text dialog's input the first time it

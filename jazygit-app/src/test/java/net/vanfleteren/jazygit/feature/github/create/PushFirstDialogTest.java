@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.PopupMsg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
@@ -50,7 +51,7 @@ class PushFirstDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new Msg.PopupDismissed(PushFirstPopup.class)), dispatched);
+        assertEquals(java.util.List.of(new PopupMsg.Dismissed(PushFirstPopup.class)), dispatched);
     }
 
     @Test

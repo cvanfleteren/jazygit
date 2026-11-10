@@ -11,7 +11,7 @@ import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.state.Loadable.Failed;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Loadable.Loading;
-import net.vanfleteren.jazygit.state.Msg.Tick;
+import net.vanfleteren.jazygit.state.TimerMsg.Tick;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
 

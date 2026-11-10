@@ -25,6 +25,7 @@ import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.ListCursor;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.PopupMsg;
 import net.vanfleteren.jazygit.ui.PopupSlot;
 import net.vanfleteren.jazygit.ui.PullRequestSymbols;
 import net.vanfleteren.jazygit.ui.TextWidth;
@@ -215,7 +216,7 @@ public final class HelpDialog implements PopupView {
 
     private EventResult handleKey(FilteredCursor<Row> view, KeyEvent event) {
         if (event.code() == KeyCode.ESCAPE || Keymap.HELP_KEY.equals(event.string())) {
-            dispatch.accept(new Msg.PopupDismissed(HelpPopup.class));
+            dispatch.accept(new PopupMsg.Dismissed(HelpPopup.class));
             return EventResult.HANDLED;
         }
         if (event.isConfirm()) {
@@ -238,7 +239,7 @@ public final class HelpDialog implements PopupView {
     }
 
     private void highlight(FilteredCursor<Row> view, int line) {
-        dispatch.accept(new Msg.ListCursorChanged(view.at(line)));
+        dispatch.accept(new PopupMsg.ListCursorChanged(view.at(line)));
     }
 
     /**

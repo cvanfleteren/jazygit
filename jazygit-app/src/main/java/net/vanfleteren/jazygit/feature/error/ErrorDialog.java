@@ -5,6 +5,7 @@ import java.util.function.Consumer;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.ErrorPopup;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.PopupMsg;
 import net.vanfleteren.jazygit.ui.ErrorText;
 import net.vanfleteren.jazygit.ui.PopupSlot;
 import net.vanfleteren.jazygit.ui.widgets.ConfirmDialog;
@@ -19,8 +20,8 @@ public final class ErrorDialog {
             ErrorPopup.class,
             popup -> Messages.get("dialog.error.title"),
             popup -> ErrorText.of(popup.error()),
-            () -> new Msg.PopupDismissed(ErrorPopup.class),
-            () -> new Msg.PopupDismissed(ErrorPopup.class),
+            () -> new PopupMsg.Dismissed(ErrorPopup.class),
+            () -> new PopupMsg.Dismissed(ErrorPopup.class),
             "dialog.hint.close");
 
     private ErrorDialog() {}

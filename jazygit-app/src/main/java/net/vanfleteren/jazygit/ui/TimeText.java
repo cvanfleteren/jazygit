@@ -16,7 +16,7 @@ public final class TimeText {
     public static final Duration SPINNER_FRAME = Duration.ofMillis(120);
 
     /**
-     * How often the model is woken up when nothing else happens ({@code Msg.Clock}), so that an age shows at most
+     * How often the model is woken up when nothing else happens ({@code TimerMsg.Clock}), so that an age shows at most
      * this late.
      */
     public static final Duration CLOCK_INTERVAL = Duration.ofSeconds(1);

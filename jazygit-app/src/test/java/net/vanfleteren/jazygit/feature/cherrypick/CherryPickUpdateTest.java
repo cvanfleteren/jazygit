@@ -13,7 +13,7 @@ import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.PopupMsg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -129,7 +129,7 @@ class CherryPickUpdateTest {
 
     @Test
     void confirmingPicksTheCopy() {
-        Next next = Update.update(asked(), new Msg.PopupConfirmed(CherryPickPopup.class));
+        Next next = Update.update(asked(), new PopupMsg.Confirmed(CherryPickPopup.class));
 
         assertEquals(Option.none(), next.model().popup(CherryPickPopup.class));
         assertEquals(new CherryPickCmd(FIRST.sha()), next.cmds().head());
@@ -137,7 +137,7 @@ class CherryPickUpdateTest {
 
     @Test
     void cancellingClosesThePopupAndKeepsTheCopy() {
-        Next next = Update.update(asked(), new Msg.PopupDismissed(CherryPickPopup.class));
+        Next next = Update.update(asked(), new PopupMsg.Dismissed(CherryPickPopup.class));
 
         assertEquals(Option.none(), next.model().popup(CherryPickPopup.class));
         assertEquals(Option.of(FIRST), next.model().repoView().cherryPick());
@@ -146,7 +146,7 @@ class CherryPickUpdateTest {
 
     @Test
     void pickingLetsGoOfTheCopy() {
-        Model running = Update.update(asked(), new Msg.PopupConfirmed(CherryPickPopup.class))
+        Model running = Update.update(asked(), new PopupMsg.Confirmed(CherryPickPopup.class))
                 .model();
         CherryPickCmd cmd = new CherryPickCmd(FIRST.sha());
 
@@ -158,7 +158,7 @@ class CherryPickUpdateTest {
 
     @Test
     void aFailureShowsTheErrorAndKeepsTheCopy() {
-        Model running = Update.update(asked(), new Msg.PopupConfirmed(CherryPickPopup.class))
+        Model running = Update.update(asked(), new PopupMsg.Confirmed(CherryPickPopup.class))
                 .model();
 
         Model next = Update.update(running, failed(new CherryPickCmd(FIRST.sha()), "conflict"))

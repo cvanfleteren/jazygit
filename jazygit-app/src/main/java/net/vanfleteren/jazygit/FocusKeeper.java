@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.state.CommitFilesView;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Screen;
+import net.vanfleteren.jazygit.state.ViewMsg;
 import net.vanfleteren.jazygit.ui.ContentPanel;
 import net.vanfleteren.jazygit.ui.PopupSlot;
 
@@ -133,7 +134,7 @@ final class FocusKeeper {
         return Option.of(focusedId)
                 .filter(id -> !popups.owns(id))
                 .filter(id -> !model.shownPane().contains(id))
-                .map(id -> new Msg.Focused(id, ContentPanel.isArea(id)));
+                .map(id -> new ViewMsg.Focused(id, ContentPanel.isArea(id)));
     }
 
     /**

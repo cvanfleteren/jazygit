@@ -17,6 +17,7 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.PopupMsg;
 import net.vanfleteren.jazygit.ui.BasesField;
 import net.vanfleteren.jazygit.ui.LineEditInput;
 import net.vanfleteren.jazygit.ui.SubmittableTextArea;
@@ -215,7 +216,7 @@ public final class NewPullRequestDialog implements PopupView {
      */
     private EventResult keys(KeyEvent event) {
         if (event.code() == KeyCode.ESCAPE) {
-            dispatch.accept(new Msg.PopupDismissed(NewPullRequestPopup.class));
+            dispatch.accept(new PopupMsg.Dismissed(NewPullRequestPopup.class));
             return EventResult.HANDLED;
         }
         if (event.hasCtrl() && event.isChar(CONFIRM_KEY)) {

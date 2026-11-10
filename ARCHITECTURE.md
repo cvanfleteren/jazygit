@@ -347,7 +347,7 @@ request. The design and the steps still to come are in `prs.md`.
   refused up front when the working tree has changes, untracked files apart (`AppError.ChangesBeforeCheckout`), and
   for a pull request of another repository (`AppError.OtherRepository`). Which repository this is is known once its
   pull requests were read; until then, checking out says they are still being read, or why they could not be.
-- Each screen keeps where its focus was: `Msg.Focused` goes to `Model.focusedPane` or `PrOverview.focusedPane`,
+- Each screen keeps where its focus was: `ViewMsg.Focused` goes to `Model.focusedPane` or `PrOverview.focusedPane`,
   whichever screen is shown (`Model.shownPane`), and `FocusKeeper` gives it back when the screen is shown again.
 
 ## Diff options
@@ -493,8 +493,8 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
   higher than the view before
   the next one, the pages and the wheel pulling it along, a click on a row, a range of one hunk with `v`, the next
   thread with `n`. The
-  area sends where it moved it and the view in one `Msg.ContentScrolled`: `Scrolled` holds the anchor of the cursor and
-  of the other end of its range, and keeps the cursor when the same changes are read again
+  area sends where it moved it and the view in one `ViewMsg.ContentScrolled`: `Scrolled` holds the anchor of the
+  cursor and of the other end of its range, and keeps the cursor when the same changes are read again
   (`ScrolledContent.sameChanges`). Until the model has it, the area draws where it told it, so a key right after
   another acts on where that one took the cursor. Its tint, `diff-cursor`, is laid over the text the area keeps
   styled, so moving it styles nothing again.
@@ -627,7 +627,7 @@ they were just rendered from, and makes the messages that tell it the difference
 
 - the item highlighted in each pane of the screen shown (`SelectionMsg`, `PrOverviewMsg.Highlighted`), from
   each panel's `selectionChange`;
-- the element with the focus outside the popups (`Msg.Focused`).
+- the element with the focus outside the popups (`ViewMsg.Focused`).
 
 They are dispatched once the frame is drawn (`TuiRunner.runLater`), never during a render, which draws one
 model throughout. The next frame draws what they change, and reports nothing once the model agrees with the
@@ -635,8 +635,8 @@ widgets. A report can come twice, when a frame is drawn before the first one is 
 leaves a model that already has its value as it is. This is the only way the view tells the model something
 no message from a user's event did.
 
-Every `jazygit.refreshInterval` (1 s by default, ADR 52) a `Msg.Tick` triggers `Update.tick`, which re-reads the status,
-and checks the files of the git directory that the local and remote branches (one load, `LoadBranches`), the stashes
+Every `jazygit.refreshInterval` (1 s by default, ADR 52) a `TimerMsg.Tick` triggers `Update.tick`, which re-reads the
+status, and checks the files of the git directory that the local and remote branches (one load, `LoadBranches`), the stashes
 and the worktrees are read from (`CheckMetadata`). That check runs no git: it stamps the HEADs, the config,
 `packed-refs`, the directories of the local refs, the files of the remote-tracking refs, the stash reflog, the
 worktrees' admin files, and in a reftable repository its tables (`GitMetadata`). Only a load whose stamp differs from
@@ -652,7 +652,7 @@ While the terminal does not have the focus, the messages of the timers that read
 tick, the fetch, the pull requests screen and the dialogs of checks) are handled only once every
 `Msg.Periodic.whileAway()` (`Jobs.awayAt`: the tick every 15 s, the fetch and the pull requests every 5 minutes, the
 dialogs of checks every minute), and kept in `Jobs.missed` otherwise; each that is kept is handled once when it has
-the focus again (`Msg.TerminalFocused`). The time shown then moves on every 5 s (`Model.AWAY_CLOCK`), so a frame is
+the focus again (`TerminalMsg.Focused`). The time shown then moves on every 5 s (`Model.AWAY_CLOCK`), so a frame is
 drawn every 5 s rather than every second. The app asks the terminal to report
 the focus; `HandOverBackend` takes the reports out of the keys, which TamboUI reads as an unknown key, and a key read
 while away counts as the focus being back. See `documentation/adr/0058-less-reading-in-the-background.md` and
@@ -674,8 +674,8 @@ a load cancelled that way reports nothing, and is only done (ADR 101). See
 `documentation/adr/0031-preview-slots-and-retry-backoff.md`.
 
 Every message is handled at the time it is: `Program` hands it to `Update.step(model, msg, now)`, which sets
-`Model.now` before the message is applied. `Msg.Clock` comes every second, apart from that, only to wake the model up
-when nothing else happens, so the ages move on. The view rounds them: in minutes ("now" under one), and how long ago
+`Model.now` before the message is applied. `TimerMsg.Clock` comes every second, apart from that, only to wake the
+model up when nothing else happens, so the ages move on. The view rounds them: in minutes ("now" under one), and how long ago
 the remotes were fetched, or the pull requests read, in steps of 10 s under a minute. `Model.drawn()` takes the time
 to the second, so an idle app draws a frame a second, and every 5 s while the terminal does not have the focus. See
 `documentation/adr/0021-a-clock-apart-from-the-refresh.md`,
@@ -798,11 +798,11 @@ classDiagram
   `apply` delegates to that feature's update class (`RewordUpdate`). Adding a feature therefore needs
   no change to `Update` or `Msg`. The one-line `apply` overrides, one per feature message interface, are
   the price of avoiding a central dispatch, and are kept on purpose.
-- **A popup closes by itself (ADR 38).** Escape on a dialog sends `Msg.PopupDismissed(type)`, which closes
+- **A popup closes by itself (ADR 38).** Escape on a dialog sends `PopupMsg.Dismissed(type)`, which closes
   the open popup if it is of that type. The specs of the dialog widgets send it by default; a feature declares a
   `Cancelled` message of its own, with `cancelledBy` on the spec, only when Escape does more than close. Likewise,
   a popup whose confirmation only starts its operation is a `ConfirmablePopup`: its `confirm()` makes the command,
-  and Enter sends `Msg.PopupConfirmed(type)`, which `Spec.confirming(...)` sets up.
+  and Enter sends `PopupMsg.Confirmed(type)`, which `Spec.confirming(...)` sets up.
 - **`Cmd` is immutable data** that knows how to run itself against an `Env` (the `Git` and the
   `GitHub`) and how to report failure:
   - `run` folds the `Either` of a role into a `Msg`.
@@ -845,14 +845,14 @@ classDiagram
   `FilteredCursor`, which tells the lines its filter shows and the one it highlights, and keeps that one
   highlighted while the filter changes.
   The focus lives in TamboUI's `FocusManager`. The model only remembers, per screen, which pane had it last
-  outside the popups (`Msg.Focused`, `Model.shownPane`, and `PrOverview.listPane` for the list of pull requests in
+  outside the popups (`ViewMsg.Focused`, `Model.shownPane`, and `PrOverview.listPane` for the list of pull requests in
   use), so a closing popup or a screen shown again can give it back. No update decides anything on it.
   Everything else a panel shows comes from the model it is rendered with: the rows of a `LoadableList` are
   given to `render`, so a panel keeps no copy of the model between renders.
 - **What a dialog is filled in with is part of the model.** The popup holds the text as far as it was typed: a
   `TextPopup` for the `TextInputDialog`s, a `MessagePopup` for the commit and reword dialogs, `NewPullRequestPopup`
   for a new pull request. The fields show it, and send an edit message for every key that changes it
-  (`Msg.TextEdited`, `MessageEdited`, `PullRequestEdited`); the confirming message carries nothing, as its update
+  (`PopupMsg.TextEdited`, `MessageEdited`, `PullRequestEdited`); the confirming message carries nothing, as its update
   reads the popup. A field only keeps its caret, and the commit dialog where Up and Down are in the earlier
   summaries (`SummaryHistory`). See `documentation/adr/0002-model-and-view-state.md`.
 - **The command log** (`Model.commandLog`) lists every git command that changed the repository, under the
@@ -1150,7 +1150,7 @@ sequenceDiagram
     Dialog-->>User: dialog prefilled with the commit's message
 
     User->>Dialog: edits the summary and submits
-    Dialog->>Program: dispatch(Msg.PopupConfirmed(RewordPopup))
+    Dialog->>Program: dispatch(PopupMsg.Confirmed(RewordPopup))
     Program->>Update: confirm(model, RewordPopup, RewordPopup::confirm)
     Update-->>Program: Next(model - popup, [RewordCmd(sha, message)])
     Program->>IO: io.execute(perform(env, cmd))

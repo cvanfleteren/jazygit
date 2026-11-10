@@ -20,7 +20,7 @@ public final class CursorFeedback implements Consumer<Msg> {
 
     @Override
     public void accept(Msg msg) {
-        if (msg instanceof Msg.ListCursorChanged(ListCursor moved)) {
+        if (msg instanceof PopupMsg.ListCursorChanged(ListCursor moved)) {
             cursor = moved;
         } else {
             others.accept(msg);

@@ -5,6 +5,7 @@ import io.vavr.control.Option;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.PopupMsg;
 import net.vanfleteren.jazygit.ui.BranchesPanel;
 import net.vanfleteren.jazygit.ui.PopupSlot;
 import net.vanfleteren.jazygit.ui.Theme;
@@ -92,7 +93,7 @@ public final class StackDialogs {
             popup -> Messages.get(
                     "dialog.unstack.title", String.valueOf(popup.stack().number())),
             StackDialogs::unstacked,
-            () -> new Msg.PopupConfirmed(StackPopups.Unstack.class));
+            () -> new PopupMsg.Confirmed(StackPopups.Unstack.class));
 
     /**
      * Asks before rebasing a stack and pushing it: its branches, what onto, and the merges it drops (ADR 74). Enter

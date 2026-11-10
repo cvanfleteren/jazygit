@@ -13,7 +13,7 @@ class ListCursorTest {
 
     private static final ListCursor MOVED = new ListCursor(Option.of(2), Option.of("ma"));
     private final Model moved = Update.update(
-                    TestModels.loaded().openPopup(new First("a")), new Msg.ListCursorChanged(MOVED))
+                    TestModels.loaded().openPopup(new First("a")), new PopupMsg.ListCursorChanged(MOVED))
             .model();
 
     @Test
@@ -49,7 +49,8 @@ class ListCursorTest {
         Model closed = TestModels.loaded();
 
         assertEquals(
-                closed, Update.update(closed, new Msg.ListCursorChanged(MOVED)).model());
+                closed,
+                Update.update(closed, new PopupMsg.ListCursorChanged(MOVED)).model());
     }
 
     private record First(String shown) implements Popup {}

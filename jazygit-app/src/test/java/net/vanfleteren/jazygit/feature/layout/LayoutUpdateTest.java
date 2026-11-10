@@ -15,13 +15,13 @@ import net.vanfleteren.jazygit.settings.Settings;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.RepositoryTheme;
 import net.vanfleteren.jazygit.state.SaveSettings;
 import net.vanfleteren.jazygit.state.Screen;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.ViewMsg;
 import org.junit.jupiter.api.Test;
 
 class LayoutUpdateTest {
@@ -165,11 +165,11 @@ class LayoutUpdateTest {
     }
 
     private static Model focused(Model model, String id) {
-        return Update.update(model, new Msg.Focused(id, false)).model();
+        return Update.update(model, new ViewMsg.Focused(id, false)).model();
     }
 
     private static Model content(Model model) {
-        return Update.update(model, new Msg.Focused("diff-unstaged", true)).model();
+        return Update.update(model, new ViewMsg.Focused("diff-unstaged", true)).model();
     }
 
     private static Model measured(Model model, int rows) {

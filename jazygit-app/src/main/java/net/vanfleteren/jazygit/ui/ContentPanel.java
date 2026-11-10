@@ -55,6 +55,7 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Scrolled;
 import net.vanfleteren.jazygit.state.ScrolledContent;
+import net.vanfleteren.jazygit.state.ViewMsg;
 import net.vanfleteren.jazygit.ui.ContentView.Body;
 import net.vanfleteren.jazygit.ui.ContentView.Shown;
 import net.vanfleteren.jazygit.ui.ContentView.ShownDiff;
@@ -789,7 +790,7 @@ public final class ContentPanel {
          * to if it does.
          */
         private EventResult reviewed(Msg msg) {
-            if (msg instanceof Msg.ContentScrolled(var ignored, Scrolled to)) {
+            if (msg instanceof ViewMsg.ContentScrolled(var ignored, Scrolled to)) {
                 told(to);
             }
             dispatch.accept(msg);
@@ -811,7 +812,7 @@ public final class ContentPanel {
         }
 
         private Msg movedTo(DiffCursor cursor, ScrolledContent content) {
-            return new Msg.ContentScrolled(id, scrolledTo(cursor, content));
+            return new ViewMsg.ContentScrolled(id, scrolledTo(cursor, content));
         }
 
         private Scrolled scrolledTo(DiffCursor cursor, ScrolledContent content) {
@@ -924,7 +925,7 @@ public final class ContentPanel {
                     cursor.map(DiffCursor::anchor),
                     cursor.flatMap(DiffCursor::markAnchor));
             told(to);
-            dispatch.accept(new Msg.ContentScrolled(id, to));
+            dispatch.accept(new ViewMsg.ContentScrolled(id, to));
             return EventResult.HANDLED;
         }
 

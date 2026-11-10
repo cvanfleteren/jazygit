@@ -72,7 +72,6 @@ import net.vanfleteren.jazygit.state.LoadBranches;
 import net.vanfleteren.jazygit.state.LoadCommitFiles;
 import net.vanfleteren.jazygit.state.LoadStatus;
 import net.vanfleteren.jazygit.state.LoadWorktrees;
-import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.prs.LoadRepositoryPullRequests;
 import org.junit.jupiter.api.Test;
@@ -515,7 +514,7 @@ class PullRequestUpdateTest {
 
     @Test
     void aTitleReadAfterThePopupClosedOpensNothing() {
-        Model closed = Update.update(creating(), new Msg.PopupDismissed(NewPullRequestPopup.class))
+        Model closed = Update.update(creating(), new PopupMsg.Dismissed(NewPullRequestPopup.class))
                 .model();
 
         assertEquals(
@@ -679,7 +678,7 @@ class PullRequestUpdateTest {
 
     @Test
     void anEditAfterThePopupClosedIsIgnored() {
-        Model closed = Update.update(creating(), new Msg.PopupDismissed(NewPullRequestPopup.class))
+        Model closed = Update.update(creating(), new PopupMsg.Dismissed(NewPullRequestPopup.class))
                 .model();
 
         assertEquals(
@@ -692,7 +691,7 @@ class PullRequestUpdateTest {
     void cancellingTheNewPullRequestClosesThePopup() {
         assertEquals(
                 Option.none(),
-                Update.update(creating(), new Msg.PopupDismissed(NewPullRequestPopup.class))
+                Update.update(creating(), new PopupMsg.Dismissed(NewPullRequestPopup.class))
                         .model()
                         .popup());
     }
@@ -823,7 +822,7 @@ class PullRequestUpdateTest {
         Model asking = Update.update(model(), new PullRequestMsg.Requested(UNPUSHED.name()))
                 .model();
 
-        Next cancelled = Update.update(asking, new Msg.PopupDismissed(PushFirstPopup.class));
+        Next cancelled = Update.update(asking, new PopupMsg.Dismissed(PushFirstPopup.class));
 
         assertEquals(Option.none(), cancelled.model().popup());
         assertEquals(List.empty(), cancelled.cmds());
@@ -1009,7 +1008,7 @@ class PullRequestUpdateTest {
                 .model();
         // Also when the dialog was closed meanwhile.
         Model closed = Update.update(
-                        Update.update(shown, new Msg.PopupDismissed(PullRequestPopup.class))
+                        Update.update(shown, new PopupMsg.Dismissed(PullRequestPopup.class))
                                 .model(),
                         new PullRequestMsg.DetailsLoaded(42, lastRead(shown), failing))
                 .model();
@@ -1062,7 +1061,7 @@ class PullRequestUpdateTest {
                 .model();
         assertEquals(shown.popup(), other.popup());
         assertEquals(shown.gitHub().pullRequests(), other.gitHub().pullRequests());
-        Model closed = Update.update(shown, new Msg.PopupDismissed(PullRequestPopup.class))
+        Model closed = Update.update(shown, new PopupMsg.Dismissed(PullRequestPopup.class))
                 .model();
         assertEquals(Option.none(), closed.popup());
         Model late = Update.update(closed, new PullRequestMsg.DetailsLoaded(42, lastRead(closed), details))
@@ -1264,7 +1263,7 @@ class PullRequestUpdateTest {
         Model drafted = Update.update(
                         drafting.model(), ((SetDraft) drafting.cmds().head()).run(env()))
                 .model();
-        Model closed = Update.update(drafted, new Msg.PopupDismissed(PullRequestPopup.class))
+        Model closed = Update.update(drafted, new PopupMsg.Dismissed(PullRequestPopup.class))
                 .model();
         // The pull requests read again after the change list it as a draft.
         Model listed = Update.update(
@@ -1286,7 +1285,7 @@ class PullRequestUpdateTest {
         long older = lastRead(quiet);
         PullRequestDetails details = StubGitHub.empty().pullRequestDetails(42).get();
         Model reopened = Update.update(
-                        Update.update(quiet, new Msg.PopupDismissed(PullRequestPopup.class))
+                        Update.update(quiet, new PopupMsg.Dismissed(PullRequestPopup.class))
                                 .model(),
                         new PullRequestMsg.Requested(FEATURE))
                 .model();
@@ -1318,7 +1317,7 @@ class PullRequestUpdateTest {
                         drafting.model(), ((SetDraft) drafting.cmds().head()).run(env()))
                 .model();
         Model reopened = Update.update(
-                        Update.update(drafted, new Msg.PopupDismissed(PullRequestPopup.class))
+                        Update.update(drafted, new PopupMsg.Dismissed(PullRequestPopup.class))
                                 .model(),
                         new PullRequestMsg.Requested(FEATURE))
                 .model();
@@ -1555,7 +1554,7 @@ class PullRequestUpdateTest {
     void theFilesAreNotShownWhenTheDialogWasClosedBeforeItWasRead() {
         Model requested = Update.update(withPr(), new PullRequestMsg.FilesRequested(FEATURE))
                 .model();
-        Model closed = Update.update(requested, new Msg.PopupDismissed(PullRequestPopup.class))
+        Model closed = Update.update(requested, new PopupMsg.Dismissed(PullRequestPopup.class))
                 .model();
 
         Next read = readAt(closed, lastRead(requested));
@@ -1592,7 +1591,7 @@ class PullRequestUpdateTest {
                 .model();
         // Closed and asked for again: a newer read of the same pull request is waited for.
         Model again = Update.update(
-                        Update.update(first, new Msg.PopupDismissed(PullRequestPopup.class))
+                        Update.update(first, new PopupMsg.Dismissed(PullRequestPopup.class))
                                 .model(),
                         new PullRequestMsg.FilesRequested(FEATURE))
                 .model();
@@ -2765,7 +2764,7 @@ class PullRequestUpdateTest {
                 asked.model().popup());
         assertEquals(
                 List.of(new AddWorktreeCmd(new WorktreeSource.PullRequest(fork), "/repos/app-pr-9")),
-                Update.update(asked.model(), new Msg.PopupConfirmed(NewWorktreePopup.class))
+                Update.update(asked.model(), new PopupMsg.Confirmed(NewWorktreePopup.class))
                         .cmds());
 
         RepoStatus changed = new RepoStatus(
@@ -2830,7 +2829,7 @@ class PullRequestUpdateTest {
         Model asked = Update.update(withMainWorktree(CLEAN), new CheckoutPullRequestMsg.WorktreeRequested(own))
                 .model();
 
-        Next adding = TestModels.stepped(asked, new Msg.PopupConfirmed(NewWorktreePopup.class));
+        Next adding = TestModels.stepped(asked, new PopupMsg.Confirmed(NewWorktreePopup.class));
         BranchRef login = new BranchRef.Local(new BranchName("feature/login"));
         assertEquals(
                 Option.of(AddWorktreeCmd.ADD_WORKTREE),

@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.CursorFeedback;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.PopupMsg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
@@ -58,7 +59,7 @@ class RenameUpstreamDialogTest {
     @Test
     void escapeCancels() throws Exception {
         assertEquals(
-                List.of(new Msg.PopupDismissed(RenameUpstreamPopup.class)),
+                List.of(new PopupMsg.Dismissed(RenameUpstreamPopup.class)),
                 pressing(r -> SettledPilot.of(r).press(KeyCode.ESCAPE)));
     }
 

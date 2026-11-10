@@ -44,7 +44,7 @@ class ErrorDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new Msg.PopupDismissed(ErrorPopup.class)), dispatched);
+        assertEquals(java.util.List.of(new PopupMsg.Dismissed(ErrorPopup.class)), dispatched);
     }
 
     @Test
@@ -54,7 +54,7 @@ class ErrorDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new Msg.PopupDismissed(ErrorPopup.class)), dispatched);
+        assertEquals(java.util.List.of(new PopupMsg.Dismissed(ErrorPopup.class)), dispatched);
     }
 
     @Test

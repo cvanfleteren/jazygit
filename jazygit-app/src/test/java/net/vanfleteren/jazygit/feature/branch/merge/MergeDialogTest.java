@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.MergeMode;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.PopupMsg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.ui.RenderedText;
@@ -58,7 +59,7 @@ class MergeDialogTest {
             SettledPilot.of(runner).press(KeyCode.ESCAPE);
             SettledPilot.of(runner).pause();
         }
-        assertEquals(java.util.List.of(new Msg.PopupDismissed(MergePopup.class)), dispatched);
+        assertEquals(java.util.List.of(new PopupMsg.Dismissed(MergePopup.class)), dispatched);
     }
 
     private List<Msg> pressing(char key) throws Exception {

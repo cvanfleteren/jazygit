@@ -66,7 +66,7 @@ class FixupDialogTest {
             SettledPilot.of(runner).press(KeyCode.ESCAPE);
             SettledPilot.of(runner).pause();
         }
-        assertEquals(java.util.List.of(new Msg.PopupDismissed(FixupPopup.class)), dispatched);
+        assertEquals(java.util.List.of(new PopupMsg.Dismissed(FixupPopup.class)), dispatched);
     }
 
     private List<Msg> pressing(char key) throws Exception {

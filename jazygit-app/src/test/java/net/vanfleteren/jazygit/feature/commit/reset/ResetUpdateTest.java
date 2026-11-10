@@ -9,7 +9,6 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.state.*;
-import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
@@ -127,7 +126,7 @@ class ResetUpdateTest {
         Model asking = Update.update(opened(withFiles(MODIFIED)), new ResetMsg.Chosen(ResetMode.HARD))
                 .model();
 
-        Next next = Update.update(asking, new Msg.PopupConfirmed(HardResetPopup.class));
+        Next next = Update.update(asking, new PopupMsg.Confirmed(HardResetPopup.class));
 
         assertEquals(List.of(new ResetCmd(new ResetTarget.ToCommit(ROOT.sha()), ResetMode.HARD)), next.cmds());
         assertEquals(Option.none(), next.model().popup());
@@ -138,7 +137,7 @@ class ResetUpdateTest {
         Model asking = Update.update(opened(withFiles(MODIFIED)), new ResetMsg.Chosen(ResetMode.HARD))
                 .model();
 
-        Next next = Update.update(asking, new Msg.PopupDismissed(HardResetPopup.class));
+        Next next = Update.update(asking, new PopupMsg.Dismissed(HardResetPopup.class));
 
         assertEquals(List.of(), next.cmds());
         assertEquals(Option.none(), next.model().popup());
@@ -146,7 +145,7 @@ class ResetUpdateTest {
 
     @Test
     void cancellingTheChoiceClosesThePopup() {
-        Next next = Update.update(opened(withFiles()), new Msg.PopupDismissed(ResetPopup.class));
+        Next next = Update.update(opened(withFiles()), new PopupMsg.Dismissed(ResetPopup.class));
 
         assertEquals(List.of(), next.cmds());
         assertEquals(Option.none(), next.model().popup());

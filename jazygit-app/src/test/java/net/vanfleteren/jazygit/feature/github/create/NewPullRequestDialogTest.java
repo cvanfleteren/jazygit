@@ -22,6 +22,7 @@ import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.ListCursor;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.PopupMsg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.ui.RenderedText;
@@ -178,10 +179,10 @@ class NewPullRequestDialogTest {
 
         assertEquals(
                 java.util.List.of(
-                        new Msg.PopupDismissed(NewPullRequestPopup.class),
-                        new Msg.PopupDismissed(NewPullRequestPopup.class),
-                        new Msg.PopupDismissed(NewPullRequestPopup.class),
-                        new Msg.PopupDismissed(NewPullRequestPopup.class)),
+                        new PopupMsg.Dismissed(NewPullRequestPopup.class),
+                        new PopupMsg.Dismissed(NewPullRequestPopup.class),
+                        new PopupMsg.Dismissed(NewPullRequestPopup.class),
+                        new PopupMsg.Dismissed(NewPullRequestPopup.class)),
                 dispatched);
     }
 
@@ -287,7 +288,7 @@ class NewPullRequestDialogTest {
             assertTrue(screen.contains("Into: release"), screen);
             assertTrue(screen.contains("main"), screen);
             assertTrue(!screen.contains("filter:"), screen);
-            assertTrue(dispatched.stream().noneMatch(Msg.PopupDismissed.class::isInstance), screen);
+            assertTrue(dispatched.stream().noneMatch(PopupMsg.Dismissed.class::isInstance), screen);
         }
     }
 

@@ -22,7 +22,7 @@ class ScrolledTest {
 
     private final Model scrolled = Update.update(
                     TestModels.loaded(),
-                    new Msg.ContentScrolled(
+                    new ViewMsg.ContentScrolled(
                             "diff",
                             new Scrolled(AB, 3, 1, io.vavr.control.Option.none(), io.vavr.control.Option.none())))
             .model();
@@ -55,7 +55,7 @@ class ScrolledTest {
         Option<Anchor> cursor = Option.of(new Anchor.File("a.txt"));
         Model at = Update.update(
                         TestModels.loaded(),
-                        new Msg.ContentScrolled("diff", new Scrolled(before, 5, 2, cursor, cursor)))
+                        new ViewMsg.ContentScrolled("diff", new Scrolled(before, 5, 2, cursor, cursor)))
                 .model();
 
         assertEquals(new Scrolled(again, 0, 0, cursor, io.vavr.control.Option.none()), at.scrolled("diff", again));
@@ -73,7 +73,7 @@ class ScrolledTest {
         Option<Anchor> cursor = Option.of(new Anchor.File("a.txt"));
         Model at = Update.update(
                         TestModels.loaded(),
-                        new Msg.ContentScrolled("diff", new Scrolled(before, 5, 2, cursor, Option.none())))
+                        new ViewMsg.ContentScrolled("diff", new Scrolled(before, 5, 2, cursor, Option.none())))
                 .model();
 
         assertEquals(new Scrolled(pushed, 0, 0, cursor, Option.none()), at.scrolled("diff", pushed));

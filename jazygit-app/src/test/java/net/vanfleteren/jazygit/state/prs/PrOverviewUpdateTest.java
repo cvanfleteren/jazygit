@@ -22,11 +22,11 @@ import net.vanfleteren.jazygit.settings.UnseenPullRequests;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Screen;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.ViewMsg;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -364,9 +364,9 @@ class PrOverviewUpdateTest {
 
     @Test
     void theContentKeepsTheListWhosePullRequestItShows() {
-        Model authored = Update.update(toggled(loaded()).model(), new Msg.Focused("prAuthored", false))
+        Model authored = Update.update(toggled(loaded()).model(), new ViewMsg.Focused("prAuthored", false))
                 .model();
-        Model inContent = Update.update(authored, new Msg.Focused("pull-request-preview", true))
+        Model inContent = Update.update(authored, new ViewMsg.Focused("pull-request-preview", true))
                 .model();
 
         assertEquals(Option.of("pull-request-preview"), inContent.shownPane());
@@ -375,8 +375,9 @@ class PrOverviewUpdateTest {
 
     @Test
     void eachScreenKeepsWhereItsFocusWas() {
-        Model files = Update.update(loaded(), new Msg.Focused("files", false)).model();
-        Model prs = Update.update(toggled(files).model(), new Msg.Focused("prAuthored", false))
+        Model files =
+                Update.update(loaded(), new ViewMsg.Focused("files", false)).model();
+        Model prs = Update.update(toggled(files).model(), new ViewMsg.Focused("prAuthored", false))
                 .model();
 
         assertEquals(Option.of("prAuthored"), prs.shownPane());

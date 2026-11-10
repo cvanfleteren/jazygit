@@ -33,12 +33,12 @@ import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Loadable.Loading;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Preview;
 import net.vanfleteren.jazygit.state.SaveSettings;
 import net.vanfleteren.jazygit.state.SelectionMsg;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.ViewMsg;
 import org.junit.jupiter.api.Test;
 
 class CommitFilesUpdateTest {
@@ -100,19 +100,19 @@ class CommitFilesUpdateTest {
     void anotherPaneGettingTheFocusClosesThemButTheirDiffDoesNot() {
         Model open = withFiles(opened());
 
-        assertTrue(Update.update(open, new Msg.Focused(Scopes.FILES.id(), false))
+        assertTrue(Update.update(open, new ViewMsg.Focused(Scopes.FILES.id(), false))
                 .model()
                 .repoView()
                 .commitFiles()
                 .isDefined());
-        assertTrue(Update.update(open, new Msg.Focused("commit-file-changes", true))
+        assertTrue(Update.update(open, new ViewMsg.Focused("commit-file-changes", true))
                 .model()
                 .repoView()
                 .commitFiles()
                 .isDefined());
         assertEquals(
                 Option.none(),
-                Update.update(open, new Msg.Focused(Scopes.COMMITS.id(), false))
+                Update.update(open, new ViewMsg.Focused(Scopes.COMMITS.id(), false))
                         .model()
                         .repoView()
                         .commitFiles());

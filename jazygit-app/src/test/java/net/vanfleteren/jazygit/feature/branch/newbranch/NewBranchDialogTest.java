@@ -17,6 +17,7 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.PopupMsg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.ui.RenderedText;
@@ -36,7 +37,7 @@ class NewBranchDialogTest {
     private final net.vanfleteren.jazygit.ui.widgets.TextInputDialog<NewBranchPopup> dialog =
             new net.vanfleteren.jazygit.ui.widgets.TextInputDialog<>(NewBranchDialogs.NEW_BRANCH, msg -> {
                 dispatched.add(msg);
-                if (msg instanceof Msg.TextEdited) {
+                if (msg instanceof PopupMsg.TextEdited) {
                     open = Update.update(open, msg).model();
                 }
             });
@@ -91,7 +92,7 @@ class NewBranchDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(new Msg.PopupDismissed(NewBranchPopup.class), dispatched.getLast());
+        assertEquals(new PopupMsg.Dismissed(NewBranchPopup.class), dispatched.getLast());
     }
 
     @Test

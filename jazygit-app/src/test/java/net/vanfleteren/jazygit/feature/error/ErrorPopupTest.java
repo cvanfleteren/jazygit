@@ -11,7 +11,7 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.ErrorPopup;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.PopupMsg;
 import net.vanfleteren.jazygit.state.Update;
 import org.junit.jupiter.api.Test;
 
@@ -50,7 +50,7 @@ class ErrorPopupTest {
         Model failed = loaded().fail(new AppError.NothingToCommit());
 
         Model dismissed =
-                Update.update(failed, new Msg.PopupDismissed(ErrorPopup.class)).model();
+                Update.update(failed, new PopupMsg.Dismissed(ErrorPopup.class)).model();
 
         assertEquals(Option.none(), dismissed.popup());
         assertEquals(

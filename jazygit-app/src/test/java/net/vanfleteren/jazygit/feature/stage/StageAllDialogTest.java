@@ -59,7 +59,7 @@ class StageAllDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new Msg.PopupDismissed(StageAllPopup.class)), dispatched);
+        assertEquals(java.util.List.of(new PopupMsg.Dismissed(StageAllPopup.class)), dispatched);
     }
 
     @Test

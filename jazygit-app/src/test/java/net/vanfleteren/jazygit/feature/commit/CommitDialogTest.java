@@ -23,6 +23,7 @@ import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.PopupMsg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.ui.RenderedText;
@@ -98,7 +99,7 @@ class CommitDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new Msg.PopupConfirmed(CommitPopup.class)), dispatched);
+        assertEquals(java.util.List.of(new PopupMsg.Confirmed(CommitPopup.class)), dispatched);
         assertEquals(java.util.List.of(new CommitMessage("fix it", "")), held);
     }
 
@@ -114,7 +115,7 @@ class CommitDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new Msg.PopupConfirmed(CommitPopup.class)), dispatched);
+        assertEquals(java.util.List.of(new PopupMsg.Confirmed(CommitPopup.class)), dispatched);
         assertEquals(java.util.List.of(new CommitMessage("fix it", "because\nreasons")), held);
     }
 
@@ -135,7 +136,7 @@ class CommitDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new Msg.PopupConfirmed(CommitPopup.class)), dispatched);
+        assertEquals(java.util.List.of(new PopupMsg.Confirmed(CommitPopup.class)), dispatched);
         assertEquals(java.util.List.of(new CommitMessage("fix the typo", "because\nfor reasons")), held);
     }
 
@@ -159,7 +160,7 @@ class CommitDialogTest {
         }
 
         assertEquals(
-                java.util.List.of(new Msg.PopupConfirmed(CommitPopup.class), new Msg.PopupConfirmed(CommitPopup.class)),
+                java.util.List.of(new PopupMsg.Confirmed(CommitPopup.class), new PopupMsg.Confirmed(CommitPopup.class)),
                 dispatched);
         assertEquals(
                 java.util.List.of(new CommitMessage("fix it", ""), new CommitMessage("fix it", "because\nreasons")),
@@ -182,7 +183,7 @@ class CommitDialogTest {
         }
 
         assertEquals(
-                java.util.List.of(new Msg.PopupDismissed(CommitPopup.class), new Msg.PopupDismissed(CommitPopup.class)),
+                java.util.List.of(new PopupMsg.Dismissed(CommitPopup.class), new PopupMsg.Dismissed(CommitPopup.class)),
                 dispatched);
     }
 
@@ -196,7 +197,7 @@ class CommitDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new Msg.PopupConfirmed(CommitPopup.class)), dispatched);
+        assertEquals(java.util.List.of(new PopupMsg.Confirmed(CommitPopup.class)), dispatched);
         assertEquals(java.util.List.of(new CommitMessage("Scaffold Maven project", "")), held);
     }
 
@@ -210,7 +211,7 @@ class CommitDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new Msg.PopupConfirmed(CommitPopup.class)), dispatched);
+        assertEquals(java.util.List.of(new PopupMsg.Confirmed(CommitPopup.class)), dispatched);
         assertEquals(java.util.List.of(new CommitMessage("draft", "")), held);
     }
 
@@ -233,7 +234,7 @@ class CommitDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new Msg.PopupConfirmed(RewordPopup.class)), dispatched);
+        assertEquals(java.util.List.of(new PopupMsg.Confirmed(RewordPopup.class)), dispatched);
         assertEquals(java.util.List.of(new CommitMessage("Scaffold Maven project", last.body())), held);
     }
 
@@ -257,7 +258,7 @@ class CommitDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new Msg.PopupConfirmed(RewordPopup.class)), dispatched);
+        assertEquals(java.util.List.of(new PopupMsg.Confirmed(RewordPopup.class)), dispatched);
         assertEquals(java.util.List.of(new CommitMessage(last.message(), last.body())), held);
     }
 
@@ -280,7 +281,7 @@ class CommitDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new Msg.PopupConfirmed(RewordPopup.class)), dispatched);
+        assertEquals(java.util.List.of(new PopupMsg.Confirmed(RewordPopup.class)), dispatched);
         assertEquals(java.util.List.of(new CommitMessage(last.message() + "!", last.body())), held);
     }
 
@@ -311,7 +312,7 @@ class CommitDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new Msg.PopupConfirmed(CommitPopup.class)), dispatched);
+        assertEquals(java.util.List.of(new PopupMsg.Confirmed(CommitPopup.class)), dispatched);
         assertEquals(java.util.List.of(new CommitMessage("edited", "at length")), held);
     }
 

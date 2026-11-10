@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.state.ConfirmablePopup;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Popup;
+import net.vanfleteren.jazygit.state.PopupMsg;
 
 /**
  * The standard popup asking to confirm an action: a title, a message, and a hint, by default that Enter
@@ -66,7 +67,7 @@ public final class ConfirmDialog<P extends Popup> implements PopupView {
      * @param title     the title, from the popup
      * @param message   the question, from the popup; it is wrapped at the dialog's width
      * @param onConfirm the message for Enter
-     * @param onCancel  the message for Escape; by default a {@link Msg.PopupDismissed}
+     * @param onCancel  the message for Escape; by default a {@link PopupMsg.Dismissed}
      * @param hintKey   the message key of the hint about the keys
      */
     public record Spec<P extends Popup>(
@@ -93,7 +94,7 @@ public final class ConfirmDialog<P extends Popup> implements PopupView {
                     title,
                     message,
                     onConfirm,
-                    () -> new Msg.PopupDismissed(popupType),
+                    () -> new PopupMsg.Dismissed(popupType),
                     "dialog.hint.confirmCancel");
         }
 
@@ -102,7 +103,7 @@ public final class ConfirmDialog<P extends Popup> implements PopupView {
          */
         public static <P extends ConfirmablePopup> Spec<P> confirming(
                 String id, Class<P> popupType, Function<P, String> title, Function<P, String> message) {
-            return new Spec<>(id, popupType, title, message, () -> new Msg.PopupConfirmed(popupType));
+            return new Spec<>(id, popupType, title, message, () -> new PopupMsg.Confirmed(popupType));
         }
 
         /**

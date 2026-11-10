@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.OperationCmd;
 import net.vanfleteren.jazygit.state.Popup;
+import net.vanfleteren.jazygit.state.PopupMsg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
@@ -75,7 +76,7 @@ class ConfirmDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new Yes(), new Msg.PopupDismissed(AskPopup.class)), dispatched);
+        assertEquals(java.util.List.of(new Yes(), new PopupMsg.Dismissed(AskPopup.class)), dispatched);
     }
 
     @Test
@@ -105,8 +106,8 @@ class ConfirmDialogTest {
         ConfirmDialog.Spec<SurePopup> spec =
                 ConfirmDialog.Spec.confirming("sure", SurePopup.class, popup -> "Sure", popup -> "Sure?");
 
-        assertEquals(new Msg.PopupConfirmed(SurePopup.class), spec.onConfirm().get());
-        assertEquals(new Msg.PopupDismissed(SurePopup.class), spec.onCancel().get());
+        assertEquals(new PopupMsg.Confirmed(SurePopup.class), spec.onConfirm().get());
+        assertEquals(new PopupMsg.Dismissed(SurePopup.class), spec.onCancel().get());
     }
 
     private record AskPopup(String thing) implements Popup {}

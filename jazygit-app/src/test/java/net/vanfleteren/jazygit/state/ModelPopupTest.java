@@ -38,7 +38,7 @@ class ModelPopupTest {
         assertEquals(Option.none(), closed.repoView().focusedPane());
 
         Model focused =
-                Update.update(closed, new Msg.Focused("branches", false)).model();
+                Update.update(closed, new ViewMsg.Focused("branches", false)).model();
 
         assertEquals(Option.of("branches"), focused.repoView().focusedPane());
         assertEquals(

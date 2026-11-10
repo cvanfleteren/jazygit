@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.feature.github.checks.ChecksMsg;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.gh.timing.CheckTimings;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.TimerMsg;
 import net.vanfleteren.jazygit.state.prs.PrOverviewMsg;
 import net.vanfleteren.jazygit.ui.TimeText;
 
@@ -26,8 +27,8 @@ final class Timers {
     static final Duration MERGE_CHECK_INTERVAL = Duration.ofSeconds(2);
     // What is dispatched every so often: the time, the repository read again, and what the remotes and GitHub have.
     static final List<Timer> ALL = List.of(
-            new Timer(TimeText.CLOCK_INTERVAL, Msg.Clock::new),
-            new Timer(REFRESH_INTERVAL, Msg.Tick::new),
+            new Timer(TimeText.CLOCK_INTERVAL, TimerMsg.Clock::new),
+            new Timer(REFRESH_INTERVAL, TimerMsg.Tick::new),
             new Timer(FETCH_INTERVAL, FetchMsg.Tick::new),
             new Timer(FETCH_INTERVAL, PrOverviewMsg.Tick::new),
             // The dialogs that list checks read them only while one is not done, or once a minute (ADR 34).

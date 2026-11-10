@@ -15,7 +15,7 @@ import net.vanfleteren.jazygit.feature.commit.reword.RewordPopup;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.PopupMsg;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
@@ -89,7 +89,7 @@ class CommitUpdateTest {
                 .model();
 
         Next next = Update.update(
-                typed(open, new CommitMessage(" better ", "\nwhy\n")), new Msg.PopupConfirmed(RewordPopup.class));
+                typed(open, new CommitMessage(" better ", "\nwhy\n")), new PopupMsg.Confirmed(RewordPopup.class));
 
         assertEquals(List.of(new RewordCmd(new Sha("abc1234"), new CommitMessage("better", "why"))), next.cmds());
         assertEquals(Option.none(), next.model().popup());
@@ -101,7 +101,7 @@ class CommitUpdateTest {
                 .model();
 
         Model typed = typed(open, new CommitMessage(" ", "why"));
-        Next next = Update.update(typed, new Msg.PopupConfirmed(RewordPopup.class));
+        Next next = Update.update(typed, new PopupMsg.Confirmed(RewordPopup.class));
 
         assertEquals(List.of(), next.cmds());
         assertEquals(typed.popup(), next.model().popup());
@@ -114,7 +114,7 @@ class CommitUpdateTest {
 
         assertEquals(
                 Option.none(),
-                Update.update(open, new Msg.PopupDismissed(RewordPopup.class))
+                Update.update(open, new PopupMsg.Dismissed(RewordPopup.class))
                         .model()
                         .popup());
     }
@@ -173,7 +173,7 @@ class CommitUpdateTest {
                         withFiles(Fixtures.fileEntry("a.txt", ChangeType.MODIFIED)), new CommitMsg.Requested())
                 .model();
 
-        assertFalse(Update.update(asking, new Msg.PopupDismissed(StageAllPopup.class))
+        assertFalse(Update.update(asking, new PopupMsg.Dismissed(StageAllPopup.class))
                 .model()
                 .popup(StageAllPopup.class)
                 .isDefined());
@@ -185,7 +185,7 @@ class CommitUpdateTest {
                 .model();
 
         Next next = Update.update(
-                typed(open, new CommitMessage(" summary ", "\ndetails\n")), new Msg.PopupConfirmed(CommitPopup.class));
+                typed(open, new CommitMessage(" summary ", "\ndetails\n")), new PopupMsg.Confirmed(CommitPopup.class));
 
         assertEquals(List.of(new CreateCommitCmd.Commit(new CommitMessage("summary", "details"))), next.cmds());
         assertFalse(next.model().popup(CommitPopup.class).isDefined());
@@ -197,7 +197,7 @@ class CommitUpdateTest {
                 .model();
 
         Next next = Update.update(
-                typed(open, new CommitMessage("  ", "details")), new Msg.PopupConfirmed(CommitPopup.class));
+                typed(open, new CommitMessage("  ", "details")), new PopupMsg.Confirmed(CommitPopup.class));
 
         assertEquals(List.of(), next.cmds());
         assertTrue(next.model().popup(CommitPopup.class).isDefined());
@@ -208,7 +208,7 @@ class CommitUpdateTest {
         Model open = Update.update(withFiles(Fixtures.fileEntry("a.txt", ChangeType.ADDED)), new CommitMsg.Requested())
                 .model();
 
-        assertFalse(Update.update(open, new Msg.PopupDismissed(CommitPopup.class))
+        assertFalse(Update.update(open, new PopupMsg.Dismissed(CommitPopup.class))
                 .model()
                 .popup(CommitPopup.class)
                 .isDefined());
