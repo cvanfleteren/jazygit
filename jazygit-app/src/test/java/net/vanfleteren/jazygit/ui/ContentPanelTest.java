@@ -195,6 +195,13 @@ class ContentPanelTest {
 
         Update.Next asked = Update.update(onLine, cycled.head());
         ReadVersion read = (ReadVersion) asked.cmds().head();
+        ContentPanel reading = new ContentPanel(Theme.SpanStyles.NONE, () -> false);
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> reading.render(asked.model(), area))) {
+            String screen = RenderedText.ofLarge(testRunner, () -> reading.render(asked.model(), area));
+            // The title says what is coming while the diff still shows.
+            assertTrue(screen.contains("· new version (reading)"), screen);
+            assertTrue(screen.contains("-ten"), screen);
+        }
         DiffText whole = DiffText.of(header + "@@ -8,4 +8,4 @@\n eight\n nine\n-ten\n+TEN\n eleven\n");
         Model version = TestModels.done(
                         TestModels.running(asked.model(), read), read, new LoadMsg.VersionRead(read, whole))
@@ -204,6 +211,8 @@ class ContentPanelTest {
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> drawing.render(version, area))) {
             String screen = RenderedText.ofLarge(testRunner, () -> drawing.render(version, area));
             assertTrue(screen.contains("new version  a.txt"), screen);
+            assertTrue(screen.contains("· new version"), screen);
+            assertFalse(screen.contains("(reading)"), screen);
             assertTrue(screen.contains("11 │  eleven"), screen);
             assertTrue(screen.contains("10 │ +TEN"), screen);
             assertFalse(screen.contains("-ten"), screen);

@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.Divergence;
+import net.vanfleteren.jazygit.git.model.FileVersion;
 import net.vanfleteren.jazygit.git.model.ParsedDiff;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Stash;
@@ -112,7 +113,27 @@ final class ContentView {
                         stash, changes.expanded(expansion, context).versioned(version), look);
             case Body other -> other;
         };
-        return new Shown.Area(area.area(), area.title(), area.content(), body);
+        return new Shown.Area(
+                area.area(),
+                version.map(shown -> versioned(area.title(), shown)).getOrElse(area.title()),
+                area.content(),
+                body);
+    }
+
+    /**
+     * {@code title}, saying which version of its file the area shows in place of its diff, if it shows one, from the
+     * moment it was asked for: while the file is read, or when it could not be, it says so too (ADR 102).
+     */
+    static String versioned(String title, Version version) {
+        return version.shown()
+                .map(shown ->
+                        Messages.get(shown == FileVersion.NEW ? "panel.version.new" : "panel.version.original", title))
+                .map(named -> switch (version.whole()) {
+                    case Loadable.Loading<DiffText>() -> Messages.get("panel.version.reading", named);
+                    case Loadable.Failed<DiffText> _ -> Messages.get("panel.version.failed", named);
+                    case Loadable.Loaded<DiffText> _ -> named;
+                })
+                .getOrElse(title);
     }
 
     /**

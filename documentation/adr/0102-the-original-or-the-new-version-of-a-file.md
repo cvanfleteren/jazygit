@@ -40,8 +40,10 @@ file of about 3000 lines whole takes git a few milliseconds.
   those of the original in that of the old one, the other column blank. So switching moves neither the code nor the
   numbers sideways. Not: one column, which shifted the code left as the version showed.
 - The bar of the file says which version shows: `new version  src/Foo.java`, `original  src/Foo.java`. For a renamed
-  file, each names its own path: `original  old/Foo.java`, `new version  src/Foo.java`. The title of the area does
-  not change.
+  file, each names its own path: `original  old/Foo.java`, `new version  src/Foo.java`.
+- The title of the area says it too, from the moment Ctrl+O is pressed: `Files of #403 · new version`, `… · original`,
+  with `(reading)` after it while the file is read, and `(could not be read)` when it failed. The bar scrolls away
+  with the first line of the file; the title does not. Back on the diff, the title is as before.
 - A version is cut where the diff read whole is cut (ADR 79), and says so, as a diff does. Not: no limit for a
   version, which brings back what ADR 79 ended for a large file added by mistake.
 
@@ -62,9 +64,8 @@ file of about 3000 lines whole takes git a few milliseconds.
 ### When the file is read
 
 - The first Ctrl+O on a file reads it whole, unless an expansion already did with whitespace not ignored. The diff
-  shows until it is read, then the version; nothing says it is loading: it takes milliseconds for a file of code, and
-  up to a few hundred for one near the limit. A press while it is read moves the cycle on, and the area shows where
-  the cycle is once it is read.
+  shows until it is read, then the version, and the title says it is being read. A press while it is read moves the
+  cycle on, and the area shows where the cycle is once it is read.
 
 ### What the version is kept with
 
