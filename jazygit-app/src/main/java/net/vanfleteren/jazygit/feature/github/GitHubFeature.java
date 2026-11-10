@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.feature.github.checks.ShowChecksAction;
 import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestAction;
 import net.vanfleteren.jazygit.feature.github.review.ReviewAction;
 import net.vanfleteren.jazygit.feature.github.show.ShowPullRequestAction;
+import net.vanfleteren.jazygit.feature.github.verdict.VerdictAction;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.keys.Scopes;
@@ -40,7 +41,8 @@ public final class GitHubFeature {
             REFRESH,
             CreatePullRequestAction.ACTION,
             BrowseAction.ACTION,
-            ReviewAction.ACTION);
+            ReviewAction.ACTION,
+            VerdictAction.ACTION);
 
     private GitHubFeature() {}
 
