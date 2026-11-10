@@ -309,5 +309,13 @@ public sealed interface LoadMsg extends Msg {
         }
     }
 
+    record VersionRead(ReadVersion cmd, DiffText whole) implements Read<DiffText> {
+
+        @Override
+        public DiffText value() {
+            return whole;
+        }
+    }
+
     record Failed(Load cmd, Failure failure) implements LoadMsg {}
 }

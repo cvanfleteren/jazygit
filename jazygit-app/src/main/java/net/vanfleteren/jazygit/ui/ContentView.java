@@ -37,6 +37,7 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Preview;
 import net.vanfleteren.jazygit.state.Screen;
 import net.vanfleteren.jazygit.state.ScrolledContent;
+import net.vanfleteren.jazygit.state.Version;
 
 /**
  * What the content panel shows in a model, apart from how it is drawn: it mirrors whichever left pane is in use,
@@ -98,14 +99,17 @@ final class ContentView {
     private static Shown.Area expanded(Model model, Shown.Area area) {
         Option<Expansion> expansion =
                 model.repoView().expanded().get(area.area().id()).filter(kept -> kept.holdsFor(area.content()));
+        Option<Version> version = Version.in(model, area.area().id(), area.content());
         DiffContext context = model.preferences().context();
         Body body = switch (area.body()) {
             case Body.Diff(ShownDiff diff, DiffLook look, var remarks) ->
-                new Body.Diff(diff.expanded(expansion, context), look, remarks);
+                new Body.Diff(diff.expanded(expansion, context).versioned(version), look, remarks);
             case Body.CommitChanges(Commit commit, ShownDiff changes, DiffLook look) ->
-                new Body.CommitChanges(commit, changes.expanded(expansion, context), look);
+                new Body.CommitChanges(
+                        commit, changes.expanded(expansion, context).versioned(version), look);
             case Body.StashChanges(Stash stash, ShownDiff changes, DiffLook look) ->
-                new Body.StashChanges(stash, changes.expanded(expansion, context), look);
+                new Body.StashChanges(
+                        stash, changes.expanded(expansion, context).versioned(version), look);
             case Body other -> other;
         };
         return new Shown.Area(area.area(), area.title(), area.content(), body);
@@ -576,31 +580,47 @@ final class ContentView {
 
     /**
      * A diff as it is shown: {@code diff}, then the line {@code note}, which git did not print, if there is one, with
-     * the lines {@code expansion} expanded around its hunks, folded to {@code context} lines (ADR 77).
+     * the lines {@code expansion} expanded around its hunks, folded to {@code context} lines (ADR 77), and its file
+     * shown as the {@code version} of it the area shows, if it shows one (ADR 102).
      */
-    record ShownDiff(DiffText diff, Option<String> note, Option<Expansion> expansion, DiffContext context) {
+    record ShownDiff(
+            DiffText diff,
+            Option<String> note,
+            Option<Expansion> expansion,
+            DiffContext context,
+            Option<Version> version) {
 
         /**
          * {@code diff} and its note, as git gives it.
          */
         ShownDiff(DiffText diff, Option<String> note) {
-            this(diff, note, Option.none(), DiffContext.DEFAULT);
+            this(diff, note, Option.none(), DiffContext.DEFAULT, Option.none());
         }
 
         /**
          * This diff with the lines of {@code expanded} shown, folded to {@code folding} lines of context (ADR 77).
          */
         ShownDiff expanded(Option<Expansion> expanded, DiffContext folding) {
-            return new ShownDiff(diff, note, expanded, folding);
+            return new ShownDiff(diff, note, expanded, folding, version);
         }
 
         /**
-         * The diff shown parsed, its files read whole folded, with what is known of each of them (ADR 77).
+         * This diff with its file shown as {@code shown} has it, if it shows a version of it (ADR 102).
+         */
+        ShownDiff versioned(Option<Version> shown) {
+            return new ShownDiff(diff, note, expansion, context, shown);
+        }
+
+        /**
+         * The diff shown parsed, its files read whole folded, with what is known of each of them (ADR 77), its file
+         * replaced by the version of it shown, if one is (ADR 102).
          */
         Expansion.Folded folded() {
-            Expansion.Folded folded = expansion
-                    .map(expanded -> expanded.folded(diff.parsed(), context))
+            Expansion.Folded expanded = expansion
+                    .map(kept -> kept.folded(diff.parsed(), context))
                     .getOrElse(() -> Expansion.Folded.of(diff.parsed()));
+            Expansion.Folded folded =
+                    version.map(shown -> shown.applied(expanded)).getOrElse(expanded);
             return note.map(line -> new Expansion.Folded(folded.diff().withNote(line), folded.files()))
                     .getOrElse(folded);
         }

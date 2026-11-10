@@ -15,6 +15,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.model.ChangeType;
+import net.vanfleteren.jazygit.git.model.FileVersion;
 import net.vanfleteren.jazygit.git.model.Folding;
 import net.vanfleteren.jazygit.git.model.LinePairs;
 import net.vanfleteren.jazygit.git.model.ParsedDiff;
@@ -151,28 +152,40 @@ final class RichDiff {
             RemarkLines.RemarkStyle style,
             Theme.SpanStyles styles) {
         FileDiff file = parsed.file();
+        Option<FileVersion> version = fold.version();
         Vector<ParsedLine> lines = parsed.hunks().flatMap(ParsedHunk::lines).toVector();
-        int digits = lines.flatMap(line ->
-                        line.line().oldNumber().toList().appendAll(line.line().newNumber()))
+        int digits = lines.flatMap(
+                        line -> version.map(shown -> shown.number(line.line()).toList())
+                                .getOrElse(() -> line.line()
+                                        .oldNumber()
+                                        .toList()
+                                        .appendAll(line.line().newNumber())))
                 .max()
                 .map(number -> String.valueOf(number).length())
                 .getOrElse(1);
-        int gutter = 2 * digits + 1 + GUTTER_END.length();
-        String bar = bar(file);
+        // A version has one column of numbers, its own (ADR 102).
+        int gutter = (version.isDefined() ? digits : 2 * digits + 1) + GUTTER_END.length();
+        String bar = version.map(shown -> bar(file, shown)).getOrElse(() -> bar(file));
         // Each line is measured once, here: its width also tells how far a changed line is padded.
         Vector<Integer> measured =
                 inParallel(lines.toList(), line -> width(line.line().text())).toVector();
         int width = Math.max(
                 width(bar), gutter + measured.max().map(text -> text + 1).getOrElse(0));
         Blocks blocks = new Blocks(gutter + 2, RemarkLines.blockWidth(width), style);
-        Layout layout = new Layout(file.path(), index, digits, width - gutter, width, blocks, syntax, words, styles);
+        Layout layout =
+                new Layout(file.path(), index, digits, width - gutter, width, blocks, syntax, words, styles, version);
         Vector<LineRemarks> onLines = remarks.map(
                         placed -> placed.lines().flatMap(hunk -> hunk).toVector())
                 .getOrElse(() -> Vector.fill(lines.size(), () -> NO_REMARKS));
-        List<Folding.Gap> gaps = Folding.gaps(file, fold.length());
+        // A version leaves no line out; the threads on the other version's lines are not shown with it.
+        List<Folding.Gap> gaps = version.isDefined() ? List.empty() : Folding.gaps(file, fold.length());
         Option<Folding.Gap> trailing =
                 gaps.find(gap -> gap.before() == parsed.hunks().size());
-        boolean unplaced = remarks.exists(placed -> !placed.unplaced().isEmpty());
+        boolean unplaced =
+                version.isEmpty() && remarks.exists(placed -> !placed.unplaced().isEmpty());
+        Option<String> cut = Option.when(
+                version.isDefined() && fold.read() == Expansion.Read.CUT,
+                () -> Messages.get("content.file.versionCut"));
         boolean afterLast = unplaced || trailing.isDefined();
         Vector<Row> rows =
                 Vector.range(0, lines.size()).map(at -> new Row(lines.get(at), measured.get(at), onLines.get(at)));
@@ -180,7 +193,7 @@ final class RichDiff {
                 cut(rows, parsed.hunks().map(hunk -> hunk.lines().size()));
         // A block a thread covers stays as git gives it, so its gutter marks the lines the thread is on in a run.
         List<List<List<Integer>>> groups = parsed.hunks()
-                .zipWithIndex((hunk, at) -> asGiven.contains(at)
+                .zipWithIndex((hunk, at) -> asGiven.contains(at) || version.isDefined()
                         ? List.range(0, hunk.lines().size()).map(List::of)
                         : LinePairs.groups(
                                 hunk.lines(),
@@ -211,7 +224,22 @@ final class RichDiff {
                                 layout))
                         .flatMap(hunk -> hunk))
                 .appendAll(trailing.toList().map(gap -> marker(gap, fold, layout)))
-                .appendAll(remarks.toList().<Pending>map(placed -> () -> blocks.unplaced(placed.unplaced(), styles)));
+                .appendAll(cut.toList()
+                        .<Pending>map(text ->
+                                () -> List.of(Marked.plain(Line.from(styled(text, Theme.Classes.DIM, styles))))))
+                .appendAll(remarks.filter(ignored -> version.isEmpty())
+                        .toList()
+                        .<Pending>map(placed -> () -> blocks.unplaced(placed.unplaced(), styles)));
+    }
+
+    /**
+     * What the bar of {@code file} says while {@code version} of it is shown in place of its diff (ADR 102): which
+     * version, and its path in it, the one it had before a rename for the original.
+     */
+    private static String bar(FileDiff file, FileVersion version) {
+        String path = version == FileVersion.ORIGINAL ? file.origin().getOrElse(file.path()) : file.path();
+        String what = Messages.get(version == FileVersion.NEW ? "content.file.newVersion" : "content.file.original");
+        return " " + what + "  " + path + " ";
     }
 
     /**
@@ -267,8 +295,10 @@ final class RichDiff {
         boolean first = index == 0;
         Theme.SpanStyles styles = layout.styles();
         Span rule = rule(layout);
-        // One for the hunk, which each of its lines holds: a long hunk has tens of thousands.
-        Option<DiffStops.HunkAt> at = Option.of(new DiffStops.HunkAt(layout.file(), index));
+        // One for the hunk, which each of its lines holds: a long hunk has tens of thousands. The lines of a version
+        // have none, so no range is started on them: a range is of the diff (ADR 102).
+        Option<DiffStops.HunkAt> at =
+                Option.when(layout.version().isEmpty(), () -> new DiffStops.HunkAt(layout.file(), index));
         List<Pending> header = gap.isDefined()
                 ? gap.toList().map(before -> marker(before, fold, layout))
                 : hunk.header().isEmpty() || (first && hunk.numbered())
@@ -340,7 +370,10 @@ final class RichDiff {
         DiffLine line = row.parsed().line();
         LineRemarks remarks = row.remarks();
         Theme.SpanStyles styles = layout.styles();
-        String numbers = number(line.oldNumber(), layout.digits()) + " " + number(line.newNumber(), layout.digits());
+        String numbers = layout.version()
+                .map(version -> number(version.number(line), layout.digits()))
+                .getOrElse(() ->
+                        number(line.oldNumber(), layout.digits()) + " " + number(line.newNumber(), layout.digits()));
         return !remarks.threads().isEmpty() || remarks.covered()
                 ? List.of(
                         styled(numbers + " ", Theme.Classes.DIFF_LINE_NUMBER, styles),
@@ -578,8 +611,8 @@ final class RichDiff {
     /**
      * What drawing each line of a file takes from the file: how many {@code digits} its numbers have, how many
      * columns after the gutter its changed lines are padded to, its {@code width}, how the threads on its lines are
-     * drawn, whether its code is coloured by its syntax, whether the changed words of a line are highlighted, and the
-     * styles of the theme.
+     * drawn, whether its code is coloured by its syntax, whether the changed words of a line are highlighted, the
+     * styles of the theme, and the version of the file shown in place of its diff, if one is (ADR 102).
      */
     private record Layout(
             String path,
@@ -590,7 +623,8 @@ final class RichDiff {
             Blocks blocks,
             boolean syntax,
             boolean words,
-            Theme.SpanStyles styles) {}
+            Theme.SpanStyles styles,
+            Option<FileVersion> version) {}
 
     /**
      * A line of a file with what drawing it takes besides the layout of its file: how many columns its text was

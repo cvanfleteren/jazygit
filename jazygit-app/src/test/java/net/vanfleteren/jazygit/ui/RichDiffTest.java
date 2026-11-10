@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.ui;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.tamboui.style.Color;
 import dev.tamboui.style.Style;
@@ -15,6 +16,7 @@ import io.vavr.control.Option;
 import java.time.Duration;
 import java.util.stream.Collectors;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
+import net.vanfleteren.jazygit.git.model.FileVersion;
 import net.vanfleteren.jazygit.git.model.ParsedDiff;
 import net.vanfleteren.jazygit.git.model.WordDiff.Segment;
 import net.vanfleteren.jazygit.state.Anchor;
@@ -131,6 +133,55 @@ class RichDiffTest {
                         "┄┄┄┄┄ │ the file is too long to show more of ┄",
                         "┄┄┄┄┄ │ the file is too long to show more of ┄"),
                 markers(tooLong));
+    }
+
+    @Test
+    void aVersionIsDrawnUnderItsOwnBarWithOneColumnOfNumbersAndNoMarkers() {
+        ParsedDiff.ParsedFile whole = ParsedDiff.of("""
+                        diff --git a/old.txt b/new.txt
+                        similarity index 50%
+                        rename from old.txt
+                        rename to new.txt
+                        --- a/old.txt
+                        +++ b/new.txt
+                        @@ -1,3 +1,3 @@
+                         one
+                        -two
+                        +TWO
+                         three
+                        """).files().head();
+
+        RichDiff.Drawn added = drawn(whole, FileVersion.NEW, false);
+        RichDiff.Drawn original = drawn(whole, FileVersion.ORIGINAL, true);
+
+        assertEquals(
+                List.of(" new version  new.txt", "1 │  one", "2 │ +TWO", "3 │  three"),
+                text(added.lines()).map(String::stripTrailing));
+        assertEquals(
+                List.of(
+                        " original  old.txt",
+                        "1 │  one",
+                        "2 │ -two",
+                        "3 │  three",
+                        "the file is too long to show the rest of"),
+                text(original.lines()).map(String::stripTrailing));
+        // Its lines are stops, but in no hunk: a range is of the diff.
+        assertTrue(added.stops()
+                .filter(stop -> stop.mark().anchor() instanceof Anchor.OnLine)
+                .forAll(stop -> stop.mark().hunk().isEmpty()));
+        assertEquals(4, added.stops().size());
+    }
+
+    private static RichDiff.Drawn drawn(ParsedDiff.ParsedFile whole, FileVersion version, boolean cut) {
+        return RichDiff.drawn(
+                new Expansion.Folded(
+                        new ParsedDiff(List.empty(), List.of(version.of(whole))),
+                        HashMap.of(whole.file().path(), Expansion.Fold.of(version, cut))),
+                true,
+                true,
+                Option.none(),
+                Option.none(),
+                Theme.SpanStyles.NONE);
     }
 
     /**

@@ -716,10 +716,14 @@ public final class ContentPanel {
                     .getOrElse(() -> Styled.of(body, theme, asGiven, style.apply(body, asGiven)));
             styled = Option.of(current);
             // Shown in another order, the line of the cursor stays where it was on the screen: the view moves by as
-            // much as it does, which the model learns with the next move (ADR 83).
+            // much as it does, which the model learns with the next move (ADR 83). A line the cursor was moved to that
+            // was not shown before, as when a version of the file shows in place of its diff, takes the place of the
+            // line the cursor was drawn on (ADR 102).
+            Option<Anchor> drawnOn = cursor.map(DiffCursor::anchor);
             Scrolled at = last.filter(before -> before != current)
                     .flatMap(before -> told.cursor()
                             .flatMap(cursorAt -> before.row(cursorAt)
+                                    .orElse(() -> drawnOn.flatMap(before::row))
                                     .flatMap(was -> current.row(cursorAt).map(is -> is - was))))
                     .filter(shift -> shift != 0)
                     .map(shift -> {

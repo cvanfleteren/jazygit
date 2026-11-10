@@ -45,6 +45,8 @@ import net.vanfleteren.jazygit.git.model.*;
  *                     saw activity, with no header (ADR 87); it starts showing the stacks
  * @param expanded     the lines expanded around the hunks of the diff each area of the content panel shows, by the
  *                     id of the area (ADR 77)
+ * @param versions     the version of its one file each area of the content panel shows in place of its diff, by
+ *                     the id of the area, while another item was not highlighted (ADR 102)
  */
 @With
 public record RepoView(
@@ -65,7 +67,8 @@ public record RepoView(
         boolean onlyAhead,
         Set<Integer> closedStacks,
         boolean unstacked,
-        Map<String, Expansion> expanded) {
+        Map<String, Expansion> expanded,
+        Map<String, Version> versions) {
 
     public static final RepoView INITIAL = new RepoView(
             BranchesTab.LOCAL,
@@ -85,5 +88,6 @@ public record RepoView(
             false,
             HashSet.empty(),
             false,
+            HashMap.empty(),
             HashMap.empty());
 }

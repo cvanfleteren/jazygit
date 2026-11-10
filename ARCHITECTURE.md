@@ -393,6 +393,24 @@ See `documentation/adr/0077-showing-more-of-one-hunk.md`.
 - Changing the options drops every expansion (`DiffOptionsUpdate`); a diff of the working tree read again reads its
   files read whole again (`LoadUpdate`).
 
+### The original or the new version of a file
+
+See `documentation/adr/0102-the-original-or-the-new-version-of-a-file.md`.
+
+- Ctrl+O (`Scopes.DIFF` and `Scopes.PULL_REQUEST_DIFF`; `feature.diff.VersionAction`) sends `VersionMsg.Cycled` with
+  the `DiffCursorAt`. `VersionUpdate` acts only on an area whose diff holds one file with versions to show
+  (`FileVersion.shown`), and cycles it through the diff, the new version and the original (`FileVersion.after`).
+- The version is kept in `RepoView.versions`, by the id of the area, as a `Version`. The first time, it starts
+  `ReadVersion`: the read of `ReadWholeFile`, with whitespace never ignored, and no `DiffLoad`, so changing the options
+  keeps it. A file an expansion read whole without ignoring whitespace is not read again. Another item highlighted
+  drops every version (`SelectionUpdate.selected`); a diff of the working tree read again reads its versions again.
+- `ContentView` gives each diff shown the version of its area (`ShownDiff.versioned`); `Version.applied` puts
+  `FileVersion.of` the file read whole in place of the file, with an `Expansion.Fold` that names the version.
+  `RichDiff` then draws its bar, one column of numbers, no markers, and no stops in a hunk, so no range is started.
+- `Version.moved` takes the cursor to the line of the version shown: from `VersionUpdate`, or from `LoadUpdate` once the
+  read arrives. `ContentPanel` keeps the row of the cursor on the screen from the line it was drawn on. `DiffLines`
+  shows the version too, so `y` copies its lines, and the review refuses to start a thread in it (`Why.IN_VERSION`).
+
 ### Copying lines of a diff
 
 See `documentation/adr/0094-copying-lines-of-a-diff.md`.

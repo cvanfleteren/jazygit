@@ -356,6 +356,11 @@ public sealed interface AppError {
              */
             NOT_ONE_HUNK,
             /**
+             * A thread is started in the diff, not in a version of its file shown in place of it (ADR 102): GitHub
+             * takes only the lines of its hunks.
+             */
+            IN_VERSION,
+            /**
              * GitHub does not let the viewer delete the comment (ADR 64).
              */
             NO_DELETE,

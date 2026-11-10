@@ -169,6 +169,48 @@ class ContentPanelTest {
     }
 
     @Test
+    void ctrlOShowsTheNewVersionOfTheFileInPlaceOfItsDiffOnceItIsRead() throws Exception {
+        java.util.List<Msg> dispatched = new java.util.ArrayList<>();
+        ContentPanel versions = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, dispatched::add);
+        String header = "diff --git a/a.txt b/a.txt\n--- a/a.txt\n+++ b/a.txt\n";
+        Model shown = showingCommit(header + "@@ -9,2 +9,2 @@\n nine\n-ten\n+TEN\n")
+                .mapPreferences(preferences ->
+                        preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
+        String area = versions.areaOfPane(shown, CommitsPanel.ID).get();
+        ScrolledContent content = ContentView.of(shown, area).areas().head().content();
+        Anchor.OnLine removed = new Anchor.OnLine("a.txt", net.vanfleteren.jazygit.gh.model.ReviewThread.Side.LEFT, 10);
+        Model onLine = shown.withScrolled(
+                io.vavr.collection.HashMap.of(area, new Scrolled(content, 0, 0, Option.of(removed), Option.none())));
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> versions.render(onLine, area))) {
+            RenderedText.ofLarge(testRunner, () -> versions.render(onLine, area));
+            SettledPilot.focus(testRunner, area);
+            SettledPilot.of(testRunner).press('o', dev.tamboui.tui.event.KeyModifiers.CTRL);
+            SettledPilot.of(testRunner).pause();
+        }
+        List<net.vanfleteren.jazygit.feature.diff.VersionMsg.Cycled> cycled = List.ofAll(dispatched)
+                .filter(net.vanfleteren.jazygit.feature.diff.VersionMsg.Cycled.class::isInstance)
+                .map(net.vanfleteren.jazygit.feature.diff.VersionMsg.Cycled.class::cast);
+        assertEquals(List.of(removed), cycled.map(msg -> msg.at().cursor()));
+
+        Update.Next asked = Update.update(onLine, cycled.head());
+        ReadVersion read = (ReadVersion) asked.cmds().head();
+        DiffText whole = DiffText.of(header + "@@ -8,4 +8,4 @@\n eight\n nine\n-ten\n+TEN\n eleven\n");
+        Model version = TestModels.done(
+                        TestModels.running(asked.model(), read), read, new LoadMsg.VersionRead(read, whole))
+                .model();
+
+        ContentPanel drawing = new ContentPanel(Theme.SpanStyles.NONE, () -> false);
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> drawing.render(version, area))) {
+            String screen = RenderedText.ofLarge(testRunner, () -> drawing.render(version, area));
+            assertTrue(screen.contains("new version  a.txt"), screen);
+            assertTrue(screen.contains("11 │  eleven"), screen);
+            assertTrue(screen.contains("10 │ +TEN"), screen);
+            assertFalse(screen.contains("-ten"), screen);
+        }
+    }
+
+    @Test
     void yAsksToCopyWhatTheCursorIsOn() throws Exception {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
         ContentPanel copying = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, dispatched::add);
