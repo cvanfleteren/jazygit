@@ -17,6 +17,8 @@ import net.vanfleteren.jazygit.feature.github.checks.ChecksUpdate;
 import net.vanfleteren.jazygit.feature.github.comment.CommentMsg;
 import net.vanfleteren.jazygit.feature.github.comments.CommentsMsg;
 import net.vanfleteren.jazygit.feature.github.edit.EditPullRequestMsg;
+import net.vanfleteren.jazygit.feature.github.verdict.VerdictMsg;
+import net.vanfleteren.jazygit.feature.github.verdict.VerdictUpdate;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -99,6 +101,12 @@ public final class PullRequestDialog implements PopupView {
                                 "dialog.pullRequest.comment",
                                 CommentMsg.Requested::new,
                                 (model, popup) -> popup.detailsRead()),
+                        // Not on the viewer's own, nor on one that is not open (ADR 99).
+                        new Choice<PullRequestPopup>(
+                                'a',
+                                "dialog.pullRequest.approve",
+                                VerdictMsg.DialogAsked::new,
+                                (model, popup) -> VerdictUpdate.reviewable(popup)),
                         new Choice<>(
                                 'e',
                                 "dialog.pullRequest.edit",

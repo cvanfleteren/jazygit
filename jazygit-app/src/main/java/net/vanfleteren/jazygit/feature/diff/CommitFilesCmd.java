@@ -6,9 +6,11 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.image.Picture;
 import net.vanfleteren.jazygit.state.Cmd;
+import net.vanfleteren.jazygit.state.CommitFilesView;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Label;
+import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import org.slf4j.LoggerFactory;
 
@@ -24,6 +26,22 @@ public sealed interface CommitFilesCmd extends Cmd {
      * which it gives back: one changed since, as by a comment deleted, is newer than what it read (ADR 64).
      */
     record LoadReviewRemarks(int number, Set<String> settled, int version) implements CommitFilesCmd {
+
+        /**
+         * The read of the review threads of pull request {@code number} after what was sent for the threads
+         * {@code settled}, at the version the files listed in {@code model} have them at, if they are of that pull
+         * request (ADR 64).
+         */
+        public static LoadReviewRemarks after(Model model, int number, Set<String> settled) {
+            return new LoadReviewRemarks(
+                    number,
+                    settled,
+                    model.repoView()
+                            .commitFiles()
+                            .filter(view -> view.pullRequest().contains(number))
+                            .map(CommitFilesView::version)
+                            .getOrElse(0));
+        }
 
         @Override
         public Option<Label> label() {

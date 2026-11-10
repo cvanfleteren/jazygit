@@ -382,7 +382,23 @@ public sealed interface AppError {
             /**
              * A reaction to the comment is being sent (ADR 86).
              */
-            REACTING
+            REACTING,
+            /**
+             * GitHub does not let the viewer approve their own pull request, nor ask for changes on it (ADR 99).
+             */
+            OWN_PULL_REQUEST,
+            /**
+             * The viewer has a pending review, started in the browser, which stops another (ADR 99).
+             */
+            PENDING_REVIEW,
+            /**
+             * Only an open pull request is approved, or asked for changes on (ADR 99).
+             */
+            NOT_OPEN,
+            /**
+             * Asking for changes needs a reason (ADR 99).
+             */
+            NO_REASON
         }
     }
 

@@ -246,9 +246,43 @@ public record PullRequestDetails(
      * @param comments      how many comments it has
      * @param reviewThreads its review threads, on lines of the diff
      * @param labels        its labels
+     * @param reviewing     what the viewer needs to review it (ADR 99)
      */
     public record Conversation(
-            Review review, List<Reviewer> reviewers, int comments, ReviewThreads reviewThreads, List<String> labels) {}
+            Review review,
+            List<Reviewer> reviewers,
+            int comments,
+            ReviewThreads reviewThreads,
+            List<String> labels,
+            Reviewing reviewing) {
+
+        /**
+         * A conversation the viewer cannot review, as nothing is known to review it by.
+         */
+        public Conversation(
+                Review review,
+                List<Reviewer> reviewers,
+                int comments,
+                ReviewThreads reviewThreads,
+                List<String> labels) {
+            this(review, reviewers, comments, reviewThreads, labels, Reviewing.UNKNOWN);
+        }
+    }
+
+    /**
+     * What the viewer needs to approve a pull request or ask for changes (ADR 99).
+     *
+     * @param pullRequest the node id of the pull request, which a review is added to; empty when not known
+     * @param authored    whether the viewer opened it, which GitHub does not let them review
+     * @param pending     whether the viewer has a pending review on it, started in the browser, which stops another
+     */
+    public record Reviewing(String pullRequest, boolean authored, boolean pending) {
+
+        /**
+         * Nothing known to review by.
+         */
+        public static final Reviewing UNKNOWN = new Reviewing("", false, false);
+    }
 
     /**
      * Someone who reviewed the pull request, or is asked to.

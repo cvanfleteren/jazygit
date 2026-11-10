@@ -13,6 +13,8 @@ import net.vanfleteren.jazygit.feature.github.browse.BrowsePullRequestCmd;
 import net.vanfleteren.jazygit.feature.github.checks.ChecksPopup;
 import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestUpdate;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestCmd.*;
+import net.vanfleteren.jazygit.feature.github.verdict.VerdictPopup;
+import net.vanfleteren.jazygit.feature.github.verdict.VerdictUpdate;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
@@ -257,7 +259,7 @@ public final class PullRequestUpdate {
 
     /**
      * {@code model} with the dialog of pull request {@code number} as {@code change} makes it: the one that is open,
-     * or the one the open popup goes back to, like a comment on it or its checks, so that one is not out of date
+     * or the one the open popup goes back to, like a comment on it, its checks or a review, so that one is not out of date
      * then. Unchanged when no popup shows it.
      */
     private static Model mapShown(Model model, int number, Function<PullRequestPopup, PullRequestPopup> change) {
@@ -268,6 +270,12 @@ public final class PullRequestUpdate {
                         .flatMap(checks -> checks.from()
                                 .filter(dialog -> dialog.pullRequest().number() == number)
                                 .map(dialog -> model.openPopup(checks.withFrom(change.apply(dialog))))))
+                // A review opened from the dialog, which follows whether it is a draft (ADR 99).
+                .orElse(() -> model.popup(VerdictPopup.class)
+                        .flatMap(review -> review.from()
+                                .filter(from -> from.number() == number)
+                                .map(from -> VerdictUpdate.followed(
+                                        model, review, review.following(change.apply(from.pullRequestPopup()))))))
                 .getOrElse(model);
     }
 

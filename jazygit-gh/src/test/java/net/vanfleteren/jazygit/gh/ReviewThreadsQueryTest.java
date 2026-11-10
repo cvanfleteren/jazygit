@@ -32,6 +32,7 @@ class ReviewThreadsQueryTest {
     private static String page(String head, String threads) {
         return """
                 { "data": { "repository": { "pullRequest": { "state": "OPEN", "headRefOid": %s, "baseRefOid": "def456",
+                  "isDraft": false, "id": "", "viewerDidAuthor": false, "viewerLatestReview": null,
                   "reviewThreads": { "pageInfo": { "hasNextPage": false, "endCursor": null },
                   "nodes": [ %s ] } } } } }""".formatted(head, threads);
     }
@@ -103,6 +104,21 @@ class ReviewThreadsQueryTest {
                                         onLine(12),
                                         1,
                                         comment("{ \"login\": \"carol\" }", "SUBMITTED", "null", "Agreed")))));
+    }
+
+    @Test
+    void whetherItIsADraftAndWhatTheViewerNeedsToReviewItAsTheFirstPageSays() {
+        String first = page("\"abc123\"", "")
+                .replace(
+                        "\"isDraft\": false, \"id\": \"\", \"viewerDidAuthor\": false, \"viewerLatestReview\": null",
+                        "\"isDraft\": true, \"id\": \"PR_1\", \"viewerDidAuthor\": true, "
+                                + "\"viewerLatestReview\": { \"state\": \"PENDING\" }");
+
+        Either<GhError.UnexpectedOutput, ReviewRemarks> read = read(first, page("\"abc123\"", ""));
+
+        assertEquals(Either.right(true), read.map(ReviewRemarks::draft));
+        assertEquals(
+                Either.right(new PullRequestDetails.Reviewing("PR_1", true, true)), read.map(ReviewRemarks::reviewing));
     }
 
     @Test

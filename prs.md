@@ -70,4 +70,5 @@ Each its own commit, with tests.
 
 - Show that a list changed since you last looked (a marker or a count). This needs the lists to load in the
   background while the tab is hidden, and to remember what was seen; PRs are kept by repo and number for this.
-- Review actions (approve, request changes) and the PR dialog's actions for PRs of other repos.
+- The PR dialog's actions for PRs of other repos, reviewing them too (ADR 99 approves and asks for changes on PRs of
+  this repo).

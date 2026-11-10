@@ -9,6 +9,7 @@ import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.widgets.input.TextAreaState;
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -54,6 +55,23 @@ public final class CommentComposer {
      * {@code actions} makes it.
      */
     public Element render(Model model, String title, List<String> quoted, Comment comment, Actions actions) {
+        return render(model, title, List.empty(), quoted, Option.none(), comment, actions, Hints.COMMENT);
+    }
+
+    /**
+     * The popup that writes {@code comment}, titled {@code title}, under {@code fields}, which come first and choose
+     * how it is sent, then {@code quoted} and then {@code notice}, which stands out; sending what the user does as
+     * {@code actions} makes it, with {@code hints} below it. The fields take their keys before {@link #keys}.
+     */
+    public Element render(
+            Model model,
+            String title,
+            List<Element> fields,
+            List<String> quoted,
+            Option<String> notice,
+            Comment comment,
+            Actions actions,
+            Hints hints) {
         // The text area shows what the model has: what was typed in it, or what came back from the editor.
         if (!text.text().equals(comment.text())) {
             text.setText(comment.text());
@@ -72,7 +90,10 @@ public final class CommentComposer {
                 ? quoted.take(QUOTED).append("…").map(line -> about(line))
                 : quoted.map(CommentComposer::about);
         // The error of sending it, or of the editor; a new try clears it.
-        List<Element> content = about.append(area)
+        List<Element> content = fields.appendAll(about)
+                .appendAll(notice.map(
+                        line -> DialogFrame.wrapped(line, WIDTH, ERROR_LINES).addClass(Theme.Classes.NOTICE)))
+                .append(area)
                 .appendAll(model.outcome()
                         .error()
                         .filter(error -> !comment.sending())
@@ -80,7 +101,7 @@ public final class CommentComposer {
                                 .addClass(Theme.Classes.ERROR)));
         return new HintedDialog(
                 DialogFrame.of(title, WIDTH, content.toJavaArray(Element[]::new)),
-                Messages.get(comment.sending() ? "dialog.comment.sending" : "dialog.comment.hint"));
+                Messages.get(comment.sending() ? hints.sending() : hints.idle()));
     }
 
     private static Element about(String line) {
@@ -88,10 +109,11 @@ public final class CommentComposer {
     }
 
     /**
-     * Goes back on Escape, sends on {@link #CONFIRM_KEY} and opens the comment in the editor on {@link #EDITOR_KEY}.
-     * The dialog around the text area only gets keys after the global handlers, and those take Escape and Ctrl+S too.
+     * Goes back on Escape, sends on {@link #CONFIRM_KEY} and opens the comment in the editor on {@link #EDITOR_KEY},
+     * from the text area or from a field above it. The dialog around them only gets keys after the global handlers,
+     * and those take Escape and Ctrl+S too.
      */
-    private EventResult keys(KeyEvent event, Actions actions) {
+    public EventResult keys(KeyEvent event, Actions actions) {
         if (event.code() == KeyCode.ESCAPE) {
             dispatch.accept(actions.cancelled().get());
             return EventResult.HANDLED;
@@ -126,4 +148,18 @@ public final class CommentComposer {
      */
     public record Actions(
             Function<String, Msg> edited, Supplier<Msg> confirmed, Supplier<Msg> cancelled, Supplier<Msg> editor) {}
+
+    /**
+     * The keys of the hints below the popup.
+     *
+     * @param idle    while it is written
+     * @param sending while it is sent
+     */
+    public record Hints(String idle, String sending) {
+
+        /**
+         * The hints of a comment.
+         */
+        public static final Hints COMMENT = new Hints("dialog.comment.hint", "dialog.comment.sending");
+    }
 }

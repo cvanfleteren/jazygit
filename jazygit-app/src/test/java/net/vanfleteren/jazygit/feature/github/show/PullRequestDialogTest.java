@@ -680,7 +680,7 @@ class PullRequestDialogTest {
                                 .with(Either.right(READY), 0))
                         .split("\n"));
 
-        for (String pair : List.of("(o)|(d)", "(c)|(m)", "(e)|(s)", "(v)|(r)", "(C)|(x)", "(F)|(R)")) {
+        for (String pair : List.of("(o)|(d)", "(c)|(m)", "(a)|(s)", "(e)|(r)", "(v)|(x)", "(C)|(R)")) {
             String[] options = pair.split("\\|");
             String line = lines.find(text -> text.contains(options[0])).getOrElse("");
             assertTrue(line.indexOf(options[0]) < line.indexOf(options[1]), lines.mkString("\n"));
