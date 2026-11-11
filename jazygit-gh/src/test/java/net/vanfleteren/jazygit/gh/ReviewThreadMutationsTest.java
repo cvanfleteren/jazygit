@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.NewReviewThread;
 import net.vanfleteren.jazygit.gh.model.Reaction;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
@@ -43,7 +44,7 @@ class ReviewThreadMutationsTest {
                         "side=RIGHT"),
                 args(ReviewThreadMutations.start(
                         7,
-                        "abc123",
+                        new GhCommit("abc123"),
                         new NewReviewThread(
                                 "src/Foo.java",
                                 Option.of(new NewReviewThread.Lines(Side.RIGHT, 12, Side.RIGHT, 12)),
@@ -54,7 +55,7 @@ class ReviewThreadMutationsTest {
     void aThreadOnSeveralLinesGivesItsFirstToo() {
         List<String> args = args(ReviewThreadMutations.start(
                 7,
-                "abc123",
+                new GhCommit("abc123"),
                 new NewReviewThread(
                         "src/Foo.java", Option.of(new NewReviewThread.Lines(Side.LEFT, 10, Side.RIGHT, 12)), "Hm")));
 
@@ -65,8 +66,8 @@ class ReviewThreadMutationsTest {
 
     @Test
     void aThreadOnAWholeFileHasNoLine() {
-        List<String> args = args(
-                ReviewThreadMutations.start(7, "abc123", new NewReviewThread("src/Foo.java", Option.none(), "Split")));
+        List<String> args = args(ReviewThreadMutations.start(
+                7, new GhCommit("abc123"), new NewReviewThread("src/Foo.java", Option.none(), "Split")));
 
         assertEquals(List.of("-f", "subject_type=file"), args.drop(11));
     }

@@ -559,8 +559,8 @@ class ReviewUpdateTest {
                 .model();
 
         ReviewPopup popup = asked.popup(ReviewPopup.class).get();
-        Target.Start start =
-                new Target.Start(HEAD, "a.txt", Option.of(new NewReviewThread.Lines(Side.LEFT, 2, Side.RIGHT, 3)));
+        Target.Start start = new Target.Start(
+                new Sha(HEAD), "a.txt", Option.of(new NewReviewThread.Lines(Side.LEFT, 2, Side.RIGHT, 3)));
         assertEquals(start, popup.target());
         assertEquals(List.of("-two", "+TWO", " three"), popup.quoted());
         assertEquals(Option.of(new ReviewPopup.Lines(2, 3)), popup.where().lines());
@@ -583,7 +583,7 @@ class ReviewUpdateTest {
                 .model();
 
         assertEquals(
-                new Target.Start(HEAD, "a.txt", Option.none()),
+                new Target.Start(new Sha(HEAD), "a.txt", Option.none()),
                 asked.popup(ReviewPopup.class).get().target());
     }
 
@@ -612,7 +612,8 @@ class ReviewUpdateTest {
 
         ReviewPopup popup = asked.popup(ReviewPopup.class).get();
         assertEquals(
-                new Target.Start(HEAD, "a.txt", Option.of(new NewReviewThread.Lines(Side.RIGHT, 20, Side.RIGHT, 21))),
+                new Target.Start(
+                        new Sha(HEAD), "a.txt", Option.of(new NewReviewThread.Lines(Side.RIGHT, 20, Side.RIGHT, 21))),
                 popup.target());
         assertEquals(List.of(" line20", " line21"), popup.quoted());
         assertEquals(
