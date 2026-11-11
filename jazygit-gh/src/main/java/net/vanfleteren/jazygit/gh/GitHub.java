@@ -52,7 +52,7 @@ public interface GitHub {
     /**
      * The names of the protected branches of the repository (ADR 72).
      */
-    Either<GhError, List<String>> protectedBranches();
+    Either<GhError, List<GhBranch>> protectedBranches();
 
     /**
      * What there is to know about pull request {@code number}.

@@ -10,4 +10,4 @@ import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Check;
  * @param repository the repository, as {@code owner/name}
  * @param byBranch   the checks, by the name of the branch; a branch that is gone is left out
  */
-public record BranchCheckRuns(String repository, Map<String, List<Check>> byBranch) {}
+public record BranchCheckRuns(String repository, Map<GhBranch, List<Check>> byBranch) {}

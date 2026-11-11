@@ -208,7 +208,8 @@ class PullRequestsUpdateTest {
                 List.of(new LoadProtectedBranches(), new LoadRepositoryPullRequests(), new LoadBranchChecks()),
                 first.cmds());
 
-        Model read = Update.update(TestModels.loaded(), new PullRequestsMsg.ProtectedLoaded(List.of("develop")))
+        Model read = Update.update(
+                        TestModels.loaded(), new PullRequestsMsg.ProtectedLoaded(List.of(new GhBranch("develop"))))
                 .model();
         assertEquals(
                 Option.of(HashSet.of(new BranchName("develop"))), read.gitHub().protectedBranches());
@@ -248,7 +249,8 @@ class PullRequestsUpdateTest {
 
     @Test
     void theBranchesAreReadAgainWhenTheProtectedBranchesAreRead() {
-        Next read = Update.update(TestModels.loaded(), new PullRequestsMsg.ProtectedLoaded(List.of("develop")));
+        Next read = Update.update(
+                TestModels.loaded(), new PullRequestsMsg.ProtectedLoaded(List.of(new GhBranch("develop"))));
 
         assertEquals(
                 List.of(new LoadBranches(GitHubBases.of(read.model().gitHub()))),
