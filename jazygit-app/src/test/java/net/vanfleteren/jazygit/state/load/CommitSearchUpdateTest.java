@@ -17,6 +17,7 @@ import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Loadable.Failed;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.RereadUpdate;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -146,7 +147,7 @@ class CommitSearchUpdateTest {
                 Update.update(searched, load.failed(refused("bad pathspec"))).model();
 
         assertInstanceOf(Failed.class, failed.repoView().commitSearch().get().results());
-        assertTrue(Update.refresh(failed).cmds().contains(load));
+        assertTrue(RereadUpdate.refresh(failed).cmds().contains(load));
     }
 
     @Test

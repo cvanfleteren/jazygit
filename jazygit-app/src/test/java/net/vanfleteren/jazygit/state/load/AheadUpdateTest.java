@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.RereadUpdate;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.TimerMsg;
 import net.vanfleteren.jazygit.state.Update;
@@ -321,7 +322,7 @@ class AheadUpdateTest {
         Model failed = Update.update(loaded(), new LoadMsg.Failed(load, refused("boom")))
                 .model();
         assertEquals(loaded().repo().ahead(), failed.repo().ahead());
-        assertTrue(Update.refresh(failed).cmds().contains(load));
+        assertTrue(RereadUpdate.refresh(failed).cmds().contains(load));
     }
 
     @Test
@@ -424,8 +425,8 @@ class AheadUpdateTest {
         Model failed = Update.update(logRead, load.failed(refused("no"))).model();
 
         assertEquals(Option.none(), AheadUpdate.branch(failed, FEATURE_LOG));
-        assertTrue(Update.refresh(failed).cmds().contains(load));
-        assertFalse(Update.refresh(logRead).cmds().contains(load));
+        assertTrue(RereadUpdate.refresh(failed).cmds().contains(load));
+        assertFalse(RereadUpdate.refresh(logRead).cmds().contains(load));
     }
 
     @Test
@@ -511,7 +512,7 @@ class AheadUpdateTest {
         Model failed = Update.update(model, load.failed(refused("no"))).model();
 
         assertEquals(Option.none(), AheadUpdate.head(failed));
-        assertTrue(Update.refresh(failed).cmds().contains(load));
+        assertTrue(RereadUpdate.refresh(failed).cmds().contains(load));
     }
 
     @Test

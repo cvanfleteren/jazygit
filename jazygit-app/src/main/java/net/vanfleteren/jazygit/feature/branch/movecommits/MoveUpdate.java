@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.git.model.Upstream;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.RereadUpdate;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.operation.Notice;
@@ -57,7 +58,7 @@ public final class MoveUpdate {
                         popup -> Option.of(move(popup.request(), popup.target(), forcePush)));
             case Moved(var cmd, var commands) -> moved(model, cmd, commands);
             case Stopped(var cmd, var commands, var notice) ->
-                Update.refresh(OperationUpdate.done(model, cmd, commands)
+                RereadUpdate.refresh(OperationUpdate.done(model, cmd, commands)
                         .inform(new Notice.MoveStopped(notice, cmd.from(), cmd.oldest(), cmd.branch())));
         };
     }

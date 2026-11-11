@@ -4,6 +4,7 @@ import net.vanfleteren.jazygit.feature.forcedelete.ForceDeleteMsg.Confirmed;
 import net.vanfleteren.jazygit.feature.forcedelete.ForceDeleteMsg.NotFullyMerged;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.RereadUpdate;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.operation.OperationUpdate;
@@ -20,7 +21,7 @@ public final class ForceDeleteUpdate {
             // The deletion ran, and was refused; deleting it anyway is offered instead of the failure. Whether its
             // upstream is gone is as the model had it before: a remote branch deleted along with it does not count.
             case NotFullyMerged(var cmd, var branch, int lost, var commands) ->
-                Update.refresh(OperationUpdate.done(model, cmd, commands)
+                RereadUpdate.refresh(OperationUpdate.done(model, cmd, commands)
                         .openPopupIfFree(new ForceDeleteBranchPopup(
                                 branch,
                                 lost,

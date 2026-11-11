@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.RereadUpdate;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.operation.OperationUpdate;
@@ -37,7 +38,7 @@ public final class PushUpdate {
                 Next.of(model.fail(new AppError.OperationFailed(PushCmd.PUSH, Option.of(branch.value()), failure)));
             // The push ran and pushed nothing; where to push it is asked instead of the failure (ADR 40).
             case PushMsg.Refused(var cmd, var refused, var commands) ->
-                Update.refresh(OperationUpdate.done(model, cmd, commands)
+                RereadUpdate.refresh(OperationUpdate.done(model, cmd, commands)
                         .openPopupIfFree(SetUpstreamPopup.refused(cmd.branch(), refused)));
         };
     }

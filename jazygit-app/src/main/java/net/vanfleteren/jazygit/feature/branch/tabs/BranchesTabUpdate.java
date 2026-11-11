@@ -4,7 +4,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.tabs.BranchesTabMsg.Chosen;
 import net.vanfleteren.jazygit.feature.branch.tabs.BranchesTabMsg.Switched;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.RereadUpdate;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.view.BranchesTab;
 
@@ -28,7 +28,7 @@ public final class BranchesTabUpdate {
      * Shows {@code tab}; for the worktrees, reads which have changes right away rather than at the next tick.
      */
     private static Next switched(Model model, BranchesTab tab) {
-        return Update.readWorktreeChanges(model.mapRepoView(repoView ->
+        return RereadUpdate.readWorktreeChanges(model.mapRepoView(repoView ->
                 repoView.withBranchesTab(tab).withDivergence(Option.none()).withBranchCommits(Option.none())));
     }
 }
