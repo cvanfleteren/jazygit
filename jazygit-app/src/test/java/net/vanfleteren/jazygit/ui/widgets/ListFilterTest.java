@@ -42,9 +42,12 @@ class ListFilterTest {
     }
 
     @Test
-    void theWordsMayRunOverASlashOrADot() {
-        assertTrue(ListFilter.matches("SMJ", "src/main/java/Foo.java"));
+    void theWordsMayRunOverADotButNotASlash() {
         assertTrue(ListFilter.matches("FJ", "src/main/java/Foo.java"));
+        assertTrue(ListFilter.matches("CM", "feature/commit/CopyMsg.java"));
+        assertTrue(ListFilter.matches("GC", "feature/github-checks/Foo.java"));
+        assertFalse(ListFilter.matches("CM", "feature/commit/MessagePopup.java"));
+        assertFalse(ListFilter.matches("SMJ", "src/main/java/Foo.java"));
     }
 
     @Test

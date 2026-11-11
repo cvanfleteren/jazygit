@@ -26,8 +26,9 @@ A filter of two words or more also matches when its words start words following 
 - A word of the text starts at the start of the text, after anything that is not a letter or digit (`-`, `_`, `.`,
   `/`, a space), at an uppercase letter after a lowercase one or a digit, and at the last of a run of uppercase
   letters that a lowercase one follows: `HTTPServer` is `HTTP` and `Server`.
-- The words may run over a `/` or a `.`: in the files pane the whole path is matched (ADR 105), so `SMJ` matches
-  `src/main/java/…` and `FJ` matches `Foo.java`.
+- The words may run over a `.`, not over a `/`: they follow each other in one part of the text between `/`s. In the
+  files pane the whole path is matched (ADR 105), so `FJ` matches `Foo.java` and `GC` a directory `github-checks/`,
+  but `CM` does not match `commit/MessagePopup.java` nor `SMJ` `src/main/java/…`.
 - A filter of lowercase letters only matches as a substring, as before: `ccm` does not match
   `CapitalCaseMatching.java`.
 - It holds everywhere `ListFilter.matches` does: the files pane and the lists of popups. Searching the commits pane
@@ -44,6 +45,9 @@ A filter of two words or more also matches when its words start words following 
   after it keep the case, as a filter with an uppercase letter does.
 - Anything but a letter or digit separates words of the text, not only `-` and `_`: a path joins its parts with `/`
   and `.`.
+- Not over a `/`: one types the starts of a file's name or of a directory's, not of the end of one and the start of
+  the next. Running over it, `CM` matched `commit/MessagePopup.java`, a row one does not expect. A `.` stays inside
+  a name, as in `Foo.java`.
 - Words following each other: the starts of a name's words are what one remembers of it, and few paths have the
   same ones in a row.
 
