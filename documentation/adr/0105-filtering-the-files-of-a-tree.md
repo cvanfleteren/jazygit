@@ -8,13 +8,14 @@ Date: 2026-11-11
 in a working tree or a commit with many changed files, finding the ones under a name, or staging all the tests, means
 scrolling through the tree and acting on them one at a time.
 
-The files pane shows one of two trees through `FileTreeList`: the files of the working tree, and the files a commit
-or a stash changed while they are open (ADR 44). Both are loaded in full, so a filter needs no git process. A
-directory, and the root `/` that holds everything, act on all files beneath them.
+The files pane shows one of two trees through `FileTreeList`: the files of the working tree, and, while they are
+open, the files of other changes (`CommitFilesView.Changes`): of a commit or a stash (ADR 44), a pull request
+(ADR 55) or a branch (ADR 61). Both are loaded in full, so a filter needs no git process. A directory, and the root
+`/` that holds everything, act on all files beneath them.
 
 ## Decision
 
-`/` in the files pane filters its tree, the working tree's and that of a commit or stash, each with a filter of its
+`/` in the files pane filters its tree, the working tree's and that of the changes open, each with a filter of its
 own.
 
 ### The match
@@ -31,10 +32,16 @@ own.
 - While filtered, every directory is open, so no match is hidden. A directory can still be collapsed by hand; the next
   change to the filter opens all again. Clearing the filter brings back the directories collapsed before.
 - A directory, and the root, act only on the files shown under them: staging `/` with `Test` typed stages the
-  matching files only. Its diff shows only those too. A dialog, like that of discarding, names what it touches.
+  matching files only. While filtered, a directory is given to git as its files, not as a pathspec of itself
+  (`StageUpdate`), which would take the hidden files too. Its diff shows only those too. A dialog, like that of
+  discarding, names what it touches.
 - When nothing matches, the dimmed "No files match" of `ListFilter.noMatches()` takes the place of the tree, without
-  a root to act on.
-- The title shows the filter: `Files: /test`. The count of rows counts the rows shown.
+  a root to act on, and the content panel says the same in place of a diff no longer highlighted.
+- The filter narrows the files listed (ADR 57). When none is listed to begin with, what ADR 57 says stays, such as
+  `No file has unresolved remarks`: the filter is not why the tree is empty. "No files match" is only for files
+  listed that the filter all hides.
+- The title gets the filter after what it says already: `Files · /test`, `Files of #123 · with remarks · /test`.
+  The count of rows counts the rows shown.
 
 ### The keys
 
@@ -42,17 +49,18 @@ own.
 - Enter closes the line and keeps the filter; the keys go to the tree again.
 - Escape in the line puts back the filter from before `/`: none, when there was none.
 - `/` while filtered opens the line again with the filter in it.
-- Escape in a filtered tree clears the filter only. The next Escape does what it did before: it closes the files of a
-  commit (ADR 44), or lets go of the commit copied to cherry-pick.
+- Escape in a filtered tree clears the filter only. The next Escape does what it did before: it closes the files of
+  the changes open (ADR 44), or lets go of the commit copied to cherry-pick.
 - While the filter changes, the highlight stays on its node when that is still shown, else it goes to the first
   matching file, not the root. Clearing the filter keeps it on the same path.
 
 ### How long it lasts
 
-- The filter of the working tree stays through reloads and operations, and while the files of a commit are open and
-  closed again. Escape or another repository clears it.
-- The filter of a commit's files goes when its tree closes, or when another commit or stash opens. It stays when `c`
-  changes which files are listed (ADR 57): the filter narrows those listed.
+- The filter of the working tree stays through reloads and operations, and while the files of other changes are open
+  and closed again. Escape or another repository clears it.
+- The filter of the changes open goes when their tree closes, or when other changes open. It stays when the same
+  changes are read again (`Changes.sameAs`), as a pull request after a force-push (ADR 60), and when `c` changes
+  which files are listed (ADR 57).
 - Neither is kept for the next session.
 
 ### Not changed
@@ -62,8 +70,8 @@ own.
 
 ### Where it lives
 
-- The filter's text, and whether its line is open, are in the Model: the working tree's in `RepoView`, the commit's in
-  `CommitFilesView`, with their Msgs and update, as commit search has.
+- The filter's text, and whether its line is open, are in the Model: the working tree's in `RepoView`, that of the
+  changes open in `CommitFilesView`, with their Msgs and update, as commit search has.
 - The match of a file is a pure function, tested on its own.
 - Which directories are open, and the highlight, stay view state in `FileTreeList`, which rebuilds from the matching
   files when the filter changes.
@@ -81,3 +89,5 @@ own.
 - A directory or the root acts on fewer files than it holds while a filter is on; the title shows that one is.
 - `FileTreeList` gets the filter, and with it a second reason to rebuild the tree besides new files.
 - Escape in the files pane has one more layer.
+- Staging and unstaging a directory no longer always hand git the directory: tests cover the root and a directory,
+  staged and unstaged, with a filter on.
