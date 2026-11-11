@@ -98,3 +98,5 @@ git checks a branch out in only one worktree at a time.
   branch name, and `NewWorktreeBranchPopup` holds what a blank name means (`ifBlank`).
 - Of the gaps listed against lazygit, opening a worktree in an editor, locking with a reason, a dirty or
   ahead/behind marker per worktree, and `git worktree move` and `repair` remain.
+
+Opening a worktree in an editor: ADR 110 (`0110-a-worktree-opened-in-an-editor.md`).
