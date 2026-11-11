@@ -7,6 +7,7 @@ import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.*;
+import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Activity;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Branches;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Conversation;
@@ -246,7 +247,7 @@ public interface StubGitHub extends GitHub {
 
     @Override
     default Either<GhFailure, List<ExecutedCommand>> startReviewThread(
-            int number, String commit, NewReviewThread thread) {
+            int number, GhCommit commit, NewReviewThread thread) {
         return Either.right(
                 List.of(ReviewThreadMutations.start(number, commit, thread).executed()));
     }

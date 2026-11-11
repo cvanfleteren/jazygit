@@ -26,6 +26,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequestLink;
 import net.vanfleteren.jazygit.gh.model.Reaction;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.model.PullRequestCommits;
+import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.*;
@@ -258,7 +259,7 @@ public final class ReviewUpdate {
     }
 
     private static Either<Why, ReviewPopup> startIn(Model model, CommitFilesView view, DiffCursorAt at) {
-        String commit = view.of().sha().value();
+        Sha commit = view.of().sha();
         if (model.repoView()
                 .version(at.area(), at.at().content())
                 .flatMap(Version::showing)
@@ -288,7 +289,7 @@ public final class ReviewUpdate {
      * The popup that starts a thread at {@code commit} on {@code range}, lines of one hunk.
      */
     private static ReviewPopup startOn(
-            CommitFilesView view, DiffCursorAt at, String commit, Vector<DiffLines.Line> range) {
+            CommitFilesView view, DiffCursorAt at, Sha commit, Vector<DiffLines.Line> range) {
         Anchor.OnLine first = range.head().anchor();
         Anchor.OnLine last = range.last().anchor();
         Option<NewReviewThread.Lines> lines =

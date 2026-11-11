@@ -5,6 +5,7 @@ import static net.vanfleteren.jazygit.json.Decoder.at;
 import static net.vanfleteren.jazygit.json.Decoder.string;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.NewReviewThread;
 import net.vanfleteren.jazygit.gh.model.Reaction;
 import net.vanfleteren.jazygit.json.Decoder;
@@ -55,7 +56,7 @@ final class ReviewThreadMutations {
      * The command that starts {@code thread} on pull request {@code number}, at its head commit {@code commit}: on its
      * lines, the first only when it has several, or on its whole file.
      */
-    static GhCommand start(int number, String commit, NewReviewThread thread) {
+    static GhCommand start(int number, GhCommit commit, NewReviewThread thread) {
         List<String> place = thread.lines()
                 .map(lines -> List.of("-F", "line=" + lines.line(), "-f", "side=" + lines.side())
                         .appendAll(
@@ -69,7 +70,7 @@ final class ReviewThreadMutations {
                 .getOrElse(() -> List.of("-f", "subject_type=file"));
         return post(
                 "repos/{owner}/{repo}/pulls/" + number + "/comments",
-                List.of("-f", "body=" + thread.body(), "-f", "commit_id=" + commit, "-f", "path=" + thread.path())
+                List.of("-f", "body=" + thread.body(), "-f", "commit_id=" + commit.oid(), "-f", "path=" + thread.path())
                         .appendAll(place));
     }
 

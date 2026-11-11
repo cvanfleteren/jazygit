@@ -12,6 +12,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import net.vanfleteren.jazygit.gh.GhError.UnexpectedOutput;
 import net.vanfleteren.jazygit.gh.model.*;
+import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.json.Decoder;
 import net.vanfleteren.jazygit.process.Exec;
@@ -427,7 +428,7 @@ public final class CliGitHub implements GitHub {
 
     @Override
     public Either<GhFailure, List<ExecutedCommand>> startReviewThread(
-            int number, String commit, NewReviewThread thread) {
+            int number, GhCommit commit, NewReviewThread thread) {
         return process.log(ReviewThreadMutations.start(number, commit, thread));
     }
 

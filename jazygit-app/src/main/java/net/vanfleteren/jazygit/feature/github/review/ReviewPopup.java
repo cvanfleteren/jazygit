@@ -4,6 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import lombok.With;
 import net.vanfleteren.jazygit.gh.model.NewReviewThread;
+import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.diff.Scrolled;
 import net.vanfleteren.jazygit.state.popup.Popup;
@@ -56,7 +57,7 @@ public record ReviewPopup(
          * A thread to start on the pull request at its head commit {@code commit}, on {@code lines} of the file
          * {@code path}, or on the whole file.
          */
-        record Start(String commit, String path, Option<NewReviewThread.Lines> lines) implements Target {}
+        record Start(Sha commit, String path, Option<NewReviewThread.Lines> lines) implements Target {}
 
         /**
          * The comment with the node id {@code comment} of the thread with the id {@code thread}, edited from

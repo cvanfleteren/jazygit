@@ -3,8 +3,10 @@ package net.vanfleteren.jazygit.feature.github.review;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.github.review.ReviewPopup.Target;
+import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.NewReviewThread;
 import net.vanfleteren.jazygit.gh.model.Reaction;
+import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Env;
@@ -92,9 +94,10 @@ public sealed interface ReviewCmd extends Cmd {
                             .replyToReviewThread(number, comment, body)
                             .mapLeft(Failure::of)
                             .fold(this::failed, this::succeeded);
-                case Target.Start(String commit, String path, var lines) ->
+                case Target.Start(Sha commit, String path, var lines) ->
                     env.gitHub()
-                            .startReviewThread(number, commit, new NewReviewThread(path, lines, body))
+                            .startReviewThread(
+                                    number, new GhCommit(commit.value()), new NewReviewThread(path, lines, body))
                             .mapLeft(Failure::of)
                             .fold(this::failed, this::succeeded);
                 case Target.Edit(String ignored, String comment, String original) ->
