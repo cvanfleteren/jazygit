@@ -88,7 +88,6 @@ Where there is nothing to open, `e` says why instead of doing nothing (ADR 9):
 - a branch no worktree has checked out: it is not checked out in a worktree. Not: offering to add one first, which
   can follow, through the popups `w` uses;
 - a worktree whose directory is gone: it is gone, as `space` says;
-- a bare repository among the worktrees: it has no working tree to open;
 - no editors in the settings file: none is set, and how to set one, with an example of `[[editors]]`. Not: falling
   back to git's editor, which may not open a directory.
 
@@ -115,9 +114,13 @@ With one editor, `e` opens it at once, whether it has a shortcut or not.
 
 With more, `e` opens a menu of them, by `name`, in the order of the file. Each is chosen with its shortcut; one
 without gets the first that no shortcut takes of the digits `1` to `9`, then the letters `a` to `z`, in the order of
-the file. The menu moves on the arrows only, so `j` and `k` are free. Every editor has a letter, as every option of a
-`ChoiceDialog` has: 35 are more than a user lists. Not: shortcuts as keys on the panes themselves, without `e`, where
-`k` moves up and most letters are taken, differently on each pane.
+the file. The menu moves on the arrows only, so `j` and `k` are free. Every editor has a letter: 35 are more than a
+user lists. Not: shortcuts as keys on the panes themselves, without `e`, where `k` moves up and most letters are taken,
+differently on each pane.
+
+The menu is a `PickDialog`, whose rows come from the popup, as the editors come from the settings; a `ChoiceDialog`
+has its options fixed. A row of a `PickDialog` gets an optional letter, shown before it as `(k)`, which picks it as an
+option of a `ChoiceDialog` is chosen; while the filter is open, the letters are the filter's.
 
 ### Starting it
 
@@ -125,7 +128,9 @@ the file. The menu moves on the arrows only, so `j` and `k` are free. Every edit
   exits with an error within the wait. What it does after that, jazygit does not see. Not: keeping it running when
   the terminal of jazygit closes; a browser is not kept either.
 - A terminal editor goes through `TerminalHandOver`, as `EditCmd` does; once it exits, the repository is read again.
-- Either is in the command log as *Open in IntelliJ*, with the worktree as its subject.
+- Either is in the command log as *Open in editor*, with the command that ran, `idea /repos/app`, under it; a
+  failure names the worktree.
+- A bare repository is not among the worktrees (`CliWorktrees` leaves it out), so there is no such worktree to open.
 
 ### Not
 

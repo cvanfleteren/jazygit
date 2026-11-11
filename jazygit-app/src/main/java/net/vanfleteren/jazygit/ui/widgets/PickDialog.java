@@ -27,7 +27,8 @@ import net.vanfleteren.jazygit.ui.Theme;
 
 /**
  * The standard popup to pick one of a list of rows that comes from the open popup, like the branches. A row is
- * picked with the arrow keys and Enter; Escape cancels. A row can have several cells, shown in columns as wide as
+ * picked with the arrow keys and Enter, or with its letter when it has one; Escape cancels. A row can have several
+ * cells, shown in columns as wide as
  * their widest cell; a cell longer than its cap is cut, and when one of the highlighted row is, the row shows in
  * full in a box under the popup. When there are no rows, it can say so in a dimmed line, which cannot be picked.
  * {@code /} opens a {@link ListFilter}: then only the rows with a cell that contains it stay shown, and Escape
@@ -131,10 +132,10 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
      * How wide each column of {@code rows} is: as wide as its widest cell, once cut.
      */
     static List<Integer> widths(List<? extends Row<?>> rows) {
-        int columns = rows.map(row -> row.cells().size()).max().getOrElse(0);
+        int columns = rows.map(row -> row.shown().size()).max().getOrElse(0);
         return List.range(0, columns)
                 .map(column -> rows.flatMap(
-                                row -> row.cells().asPartialFunction().lift().apply(column))
+                                row -> row.shown().asPartialFunction().lift().apply(column))
                         .map(cell -> TextWidth.of(cell.shown()))
                         .max()
                         .getOrElse(0));
@@ -153,12 +154,12 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
     }
 
     private static StyledElement<?> element(Row<?> row, List<Integer> widths) {
-        if (row.cells().size() == 1) {
-            return element(row.cells().head());
+        List<Cell> cells = row.shown();
+        if (cells.size() == 1) {
+            return element(cells.head());
         }
         // In a row, the length of a cell is its width.
-        return row(row.cells()
-                        .<Integer, StyledElement<?>>zipWith(
+        return row(cells.<Integer, StyledElement<?>>zipWith(
                                 widths, (cell, width) -> element(cell).length(width))
                         .toJavaArray(StyledElement[]::new))
                 .spacing(GAP);
@@ -186,7 +187,13 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
                                 .map(row -> send(spec.onPick().apply(row.value())))
                                 .getOrElse(EventResult.UNHANDLED);
                 })
-                .getOrElse(EventResult.UNHANDLED);
+                // While the filter is open, the letters are its own.
+                .getOrElse(() -> view.cursor().filter().isDefined()
+                        ? EventResult.UNHANDLED
+                        : view.lines()
+                                .find(row -> row.key().exists(event::isChar))
+                                .map(row -> send(spec.onPick().apply(row.value())))
+                                .getOrElse(EventResult.UNHANDLED));
     }
 
     private EventResult send(Msg msg) {
@@ -203,14 +210,37 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
      *
      * @param value what picking it sends
      * @param cells what it shows, one per column
+     * @param key   the letter that picks it at once, as an option of a {@link ChoiceDialog} is chosen, shown before
+     *              its cells; none for a row picked only with the arrows and Enter
      */
-    public record Row<T>(T value, List<Cell> cells) {
+    public record Row<T>(T value, List<Cell> cells, Option<Character> key) {
+
+        /**
+         * A row picked with the arrows and Enter only.
+         */
+        public Row(T value, List<Cell> cells) {
+            this(value, cells, Option.none());
+        }
 
         /**
          * A row showing just {@code name}, which picking it sends.
          */
         public static Row<String> of(String name) {
             return new Row<>(name, List.of(Cell.of(name)));
+        }
+
+        /**
+         * This row, picked at once with {@code letter}.
+         */
+        public Row<T> withKey(char letter) {
+            return new Row<>(value, cells, Option.of(letter));
+        }
+
+        /**
+         * What it shows: its letter, when it has one, and then its cells.
+         */
+        List<Cell> shown() {
+            return key.map(letter -> Cell.of("(" + letter + ")")).toList().appendAll(cells);
         }
     }
 

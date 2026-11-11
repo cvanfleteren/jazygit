@@ -16,8 +16,9 @@ import java.time.Instant;
  *                  or {@code origin/<name>} without one
  * @param isDefault whether this is the repository's main branch, i.e. the default branch of the remote
  * @param tracking  what it follows: nothing, a branch, or one that is gone
- * @param worktree  the root of the other worktree it is checked out in, if it is: git checks a branch out in
- *                  one worktree at a time, so it can be neither checked out nor deleted here
+ * @param worktree  the root of the other worktree it is checked out in, if it is, or that rebases or bisects it
+ *                  (ADR 110): git checks a branch out in one worktree at a time, so it can be neither checked out
+ *                  nor deleted here
  */
 public record Branch(
         BranchName name,

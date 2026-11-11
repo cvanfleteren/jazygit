@@ -6,6 +6,7 @@ import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
+import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
@@ -33,5 +34,15 @@ public interface StubEditor extends Editor {
     @Override
     default Either<GitFailure, Tuple2<String, List<ExecutedCommand>>> editText(String fileName, String text) {
         return Either.right(Tuple.of(text, List.empty()));
+    }
+
+    @Override
+    default Either<GitFailure, List<ExecutedCommand>> open(Path directory, List<String> commandLine) {
+        return ran();
+    }
+
+    @Override
+    default Either<GitFailure, List<ExecutedCommand>> launch(Path directory, List<String> commandLine) {
+        return ran();
     }
 }

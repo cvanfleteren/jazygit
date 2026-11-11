@@ -7,6 +7,7 @@ import io.vavr.control.Either;
 import io.vavr.control.Try;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.regex.Pattern;
 import net.vanfleteren.jazygit.git.GitError.EditorFailed;
 import net.vanfleteren.jazygit.git.GitError.EditorNotStarted;
@@ -28,6 +29,10 @@ final class CliEditor implements Editor {
 
     // What git calls the file it edits a commit message in.
     private static final String MESSAGE_FILE = "COMMIT_EDITMSG";
+
+    // How long an editor that is left running is waited for: one still running by then is taken to have started, as
+    // a browser is (ADR 85).
+    private static final Duration SETTLE = Duration.ofSeconds(2);
 
     private final Path worktree;
 
@@ -107,6 +112,20 @@ final class CliEditor implements Editor {
                 });
     }
 
+    @Override
+    public Either<GitFailure, List<ExecutedCommand>> launch(Path directory, List<String> commandLine) {
+        return Exec.launch(directory, commandLine, SETTLE)
+                .mapLeft(failure -> new GitFailure(error(program(commandLine), failure), List.empty()))
+                .map(List::of);
+    }
+
+    /**
+     * The program {@code commandLine} runs, as the user wrote it.
+     */
+    private static String program(List<String> commandLine) {
+        return commandLine.headOption().getOrElse("");
+    }
+
     private static GitFailure tempFileFailed(Throwable cause) {
         return new GitFailure(new TempFileFailed(cause), List.empty());
     }
@@ -119,6 +138,13 @@ final class CliEditor implements Editor {
         GitCommand editorCommand = GitCommand.reading("var", "GIT_EDITOR").withInheritedEnvironment("GIT_EDITOR");
         return GitProcess.read(worktree, editorCommand, CliEditor::parseEditor)
                 .mapLeft(error -> new GitFailure(error, List.of(editorCommand.executed())));
+    }
+
+    @Override
+    public Either<GitFailure, List<ExecutedCommand>> open(Path directory, List<String> commandLine) {
+        return Exec.interactive(directory, commandLine)
+                .mapLeft(failure -> new GitFailure(error(program(commandLine), failure), List.empty()))
+                .map(List::of);
     }
 
     /**

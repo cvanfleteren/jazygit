@@ -204,6 +204,41 @@ class PickDialogTest {
     }
 
     @Test
+    void aRowWithALetterShowsItAndIsPickedWithItUnlessTheFilterIsOpen() throws Exception {
+        PickDialog<BranchPopup, String> lettered = new PickDialog<>(
+                new PickDialog.Spec<>(
+                        "pick",
+                        BranchPopup.class,
+                        popup -> "Open in",
+                        popup -> popup.branches()
+                                .map(name -> PickDialog.Row.of(name).withKey(name.charAt(0))),
+                        Picked::new),
+                cursor);
+        Supplier<Element> view = () -> stack(
+                text("background"),
+                lettered.render(cursor.on(TestModels.loaded().openPopup(new BranchPopup(List.of("idea", "kate")))))
+                        .get());
+
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(view)) {
+            SettledPilot.focus(runner, "pick");
+            String screen = RenderedText.ofLarge(runner, view);
+            assertTrue(screen.contains("(i)  idea"), screen);
+            assertTrue(screen.contains("(k)  kate"), screen);
+            type(runner, "/k");
+            String filtered = RenderedText.ofLarge(runner, view);
+            assertTrue(filtered.contains("/ k"), filtered);
+            SettledPilot.of(runner).press(KeyCode.ESCAPE);
+            SettledPilot.of(runner).pause();
+            type(runner, "k");
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(
+                java.util.List.of(new Picked("kate")),
+                dispatched.stream().filter(Picked.class::isInstance).toList());
+    }
+
+    @Test
     void filteringKeepsTheHighlightedRowWhenOthersBeforeItAreGone() throws Exception {
         try (ToolkitTestRunner runner = start()) {
             SettledPilot.of(runner).press(KeyCode.DOWN);

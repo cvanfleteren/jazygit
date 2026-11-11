@@ -146,4 +146,76 @@ class LinkedWorktreeTest {
         assertTrue(Unfinished.read(linked).get().merging());
         assertFalse(Unfinished.read(main).get().any());
     }
+
+    @Test
+    void aBranchTheLinkedWorktreeRebasesIsInThatWorktree() throws Exception {
+        stopRebaseOfFeatureOnConflicts();
+
+        List<Branch> branches =
+                CliGit.open(main).get().branches().all().map(AllBranches::local).get();
+
+        assertEquals(List.of(Option.none(), Option.of(linked)), branches.map(Branch::worktree), branches.toString());
+    }
+
+    @Test
+    void aBranchTheMainWorktreeRebasesIsInTheMainWorktreeForTheLinkedOne() throws Exception {
+        git(linked, "checkout", "-q", "--detach");
+        git(main, "checkout", "-q", "-b", "side");
+        Files.writeString(main.resolve("a.txt"), "side\n");
+        git(main, "commit", "-q", "-am", "side changes a");
+        git(main, "checkout", "-q", "feature");
+        Files.writeString(main.resolve("a.txt"), "feature\n");
+        git(main, "commit", "-q", "-am", "feature changes a");
+        gitAnyExit(main, "rebase", "side");
+        assertTrue(Unfinished.read(main).get().any(), "the rebase should have stopped");
+
+        assertEquals(Option.of(main), branch(linked, "feature").worktree());
+    }
+
+    @Test
+    void theWorktreeThatRebasesABranchDoesNotHaveItElsewhere() throws Exception {
+        stopRebaseOfFeatureOnConflicts();
+
+        assertEquals(Option.none(), branch(linked, "feature").worktree());
+        assertEquals(Option.of(main), branch(linked, "main").worktree());
+    }
+
+    @Test
+    void aBranchTheLinkedWorktreeBisectsIsInThatWorktree() throws Exception {
+        for (String step : List.of("b", "c", "d")) {
+            Files.writeString(linked.resolve("a.txt"), step + "\n");
+            git(linked, "commit", "-q", "-am", "feature " + step);
+        }
+        git(linked, "bisect", "start");
+        git(linked, "bisect", "bad", "HEAD");
+        git(linked, "bisect", "good", "HEAD~3");
+
+        assertEquals(Option.of(linked), branch(main, "feature").worktree());
+    }
+
+    /**
+     * The local branch {@code name}, as the worktree at {@code in} reads it.
+     */
+    private static Branch branch(Path in, String name) {
+        return CliGit.open(in)
+                .get()
+                .branches()
+                .all()
+                .map(AllBranches::local)
+                .get()
+                .find(branch -> branch.name().value().equals(name))
+                .get();
+    }
+
+    /**
+     * Has the linked worktree rebase {@code feature} onto {@code main}, which stops on a conflict in {@code a.txt}.
+     */
+    private void stopRebaseOfFeatureOnConflicts() throws Exception {
+        Files.writeString(main.resolve("a.txt"), "main\n");
+        git(main, "commit", "-q", "-am", "main changes a");
+        Files.writeString(linked.resolve("a.txt"), "feature\n");
+        git(linked, "commit", "-q", "-am", "feature changes a");
+        gitAnyExit(linked, "rebase", "main");
+        assertTrue(Unfinished.read(linked).get().any(), "the rebase should have stopped");
+    }
 }

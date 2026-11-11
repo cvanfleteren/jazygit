@@ -251,11 +251,22 @@ public sealed interface AppError {
     record WorktreeShownAlready(String worktree) implements AppError {}
 
     /**
-     * A worktree whose directory is gone was asked to be switched to.
+     * A worktree whose directory is gone was asked to be switched to, or to be opened in an editor.
      *
      * @param worktree the name of its directory
      */
     record WorktreeMissing(String worktree) implements AppError {}
+
+    /**
+     * The worktree of {@code branch} was asked to be opened in an editor, but no worktree has it checked out, nor
+     * rebases or bisects it (ADR 110).
+     */
+    record NotInWorktree(BranchName branch) implements AppError {}
+
+    /**
+     * A worktree was asked to be opened in an editor, but the settings file sets none (ADR 110).
+     */
+    record NoEditorSet() implements AppError {}
 
     /**
      * Pruning the worktrees was asked for, but none has its directory gone.
