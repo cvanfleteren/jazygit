@@ -98,3 +98,5 @@ review, which no longer matter:
 
 Amended by ADR 72, 73 and 74: stacks show as a node of the branches list, are linked and unstacked from jazygit, and
 are rebased and pushed whole.
+
+Amended by ADR 111: the merge keys of the dialog enable auto-merge on a pull request that is blocked and not stacked.
