@@ -27,9 +27,10 @@ is one line saying it differs.
   extension: `.md`, `.markdown`, `.mdown`, `.mkd`. Not: `.mdx`, which holds JSX. Not: the language
   `.gitattributes` gives a file.
 - One table says which extensions have a renderer, and which. A renderer is given the text of a version, the numbers
-  of its lines that changed and a width, and gives the rows it is drawn as, each with the lines of the source it was
-  drawn from. Markdown is the only renderer now; CSV and notebooks are to come as renderers of their own. Not: images
-  in the same seam, which need bytes, of both sides, and have no lines; they are for an ADR of their own.
+  of its lines that changed, a width and the styles of the theme, and gives the rows it is drawn as, each with the
+  lines of the source it was drawn from. Markdown is the only renderer now; CSV and notebooks are to come as
+  renderers of their own. Not: images in the same seam, which need bytes, of both sides, and have no lines; they are
+  for an ADR of their own.
 - What is rendered is the version ADR 102 shows, read as it reads it: no other command of git is read for it, and a
   version cut at the limit of ADR 79 is rendered up to where it is cut, and says so after it, as the version does.
 - Only a version is rendered, not the diff. Not now: a rendered diff, its added blocks and its removed ones marked, as
@@ -37,17 +38,20 @@ is one line saying it differs.
 
 ### The key
 
-- Ctrl+R, in the diff (`Scopes.DIFF` and `Scopes.PULL_REQUEST_DIFF`), renders the area the cursor is in, or shows its
+- Ctrl+T, in the diff (`Scopes.DIFF` and `Scopes.PULL_REQUEST_DIFF`), renders the area the cursor is in, or shows its
   source again, as Ctrl+O cycles it (ADR 102). Not: a third style next to plain and rich (Ctrl+D): rendered is no way
   to draw a diff. Not: more steps in the cycle of Ctrl+O, diff, new version, rendered, original, rendered, five
   presses round. Not: Ctrl+O's versions always rendered for Markdown, which leaves no way to read its source whole.
+  Not: Ctrl+R, which opens the recent repositories everywhere: in the diff it would hide that, and where it does not
+  apply, a key the diff leaves goes on to the global keys and would open them after all.
 - An area is shown as two things: which version, as ADR 102 has it, the diff, the new version or the original, and
-  whether it is rendered. Ctrl+R on the diff renders the area and shows its new version, or its original for a deleted
-  file. Ctrl+R on a rendered version shows that version as source. Ctrl+O while rendered cycles the diff, the new
+  whether it is rendered. Ctrl+T on the diff renders the area and shows its new version, or its original for a deleted
+  file. Ctrl+T on a rendered version shows that version as source. Ctrl+O while rendered cycles the diff, the new
   version rendered and the original rendered: the diff shows as a diff, but the area stays rendered, so the next
-  Ctrl+O shows a version rendered again. Once a diff can be rendered, Ctrl+R on the diff renders it instead.
-- Where it cannot apply, Ctrl+R does nothing, as Ctrl+O does: wherever Ctrl+O does nothing, and on a file without a
-  renderer. `?` lists it as it lists the other keys of the diff. Not: a message saying why.
+  Ctrl+O shows a version rendered again. Once a diff can be rendered, Ctrl+T on the diff renders it instead.
+- Where it cannot apply, Ctrl+T does nothing, as Ctrl+O does: wherever Ctrl+O does nothing, and on a file without a
+  renderer: Ctrl+T means nothing outside the diff, so the key the diff leaves goes on to no other. `?` lists it as it
+  lists the other keys of the diff. Not: a message saying why.
 
 ### How long it holds
 
@@ -67,7 +71,7 @@ is one line saying it differs.
 - A code block is highlighted by the lexer of jazygit (`jazygit-syntax`), in the theme, for the language its info
   string names, through `MarkdownView`'s highlighter: so code reads as in the diff. A language the lexer does not know
   is plain. Not: tamboui's own highlighter, with its own colours.
-- Front matter, a block of YAML between `---` lines at the top, is drawn as a `yaml` code block, as GitHub draws it as
+- Front matter, a block of YAML between `---` lines at the top, is drawn as a `yaml` code block, where GitHub draws it as
   a table. A comment of HTML is left out, as it is in the description of a pull request. Other HTML is drawn as it is
   written.
 - An image is drawn as the placeholder of ADR 82. Drawing them, an image with a relative path read from the same
@@ -100,5 +104,5 @@ is one line saying it differs.
   width or the theme changes, not each frame.
 - Other formats come in as a renderer and a line in the table of extensions; images come in with an ADR of their own,
   which reads files as bytes, and may draw them as PR #378 does.
-- A rendered diff can come later as Ctrl+R on the diff, marking the blocks added and removed from both versions read
+- A rendered diff can come later as Ctrl+T on the diff, marking the blocks added and removed from both versions read
   whole.
