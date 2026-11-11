@@ -15,8 +15,6 @@ import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.*;
-import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.popup.*;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;

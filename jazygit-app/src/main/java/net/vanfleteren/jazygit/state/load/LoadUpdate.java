@@ -8,7 +8,6 @@ import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import java.util.function.Predicate;
 import net.vanfleteren.jazygit.git.model.*;
-import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Cmd;

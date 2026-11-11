@@ -12,7 +12,6 @@ import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Branches;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Conversation;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Size;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Status;
-import net.vanfleteren.jazygit.gh.model.Verdict;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**

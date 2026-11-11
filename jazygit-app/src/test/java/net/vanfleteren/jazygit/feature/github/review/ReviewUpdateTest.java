@@ -35,13 +35,9 @@ import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.AppError.CannotReview.Why;
-import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.diff.*;
-import net.vanfleteren.jazygit.state.diff.Changes;
-import net.vanfleteren.jazygit.state.diff.WholeFile;
 import net.vanfleteren.jazygit.state.load.*;
-import net.vanfleteren.jazygit.state.load.ReadWholeFile;
 import net.vanfleteren.jazygit.state.view.*;
 import org.junit.jupiter.api.Test;
 

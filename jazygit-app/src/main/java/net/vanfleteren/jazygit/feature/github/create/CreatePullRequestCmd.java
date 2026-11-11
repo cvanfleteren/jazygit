@@ -21,10 +21,7 @@ import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.*;
-import net.vanfleteren.jazygit.state.Failure;
-import net.vanfleteren.jazygit.state.Label;
 import net.vanfleteren.jazygit.state.operation.*;
-import net.vanfleteren.jazygit.state.operation.Operation;
 
 /**
  * Creating the pull request of a branch: pushing it first when it is not on its remote, reading the branch it came

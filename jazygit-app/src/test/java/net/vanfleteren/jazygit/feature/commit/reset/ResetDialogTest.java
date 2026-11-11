@@ -21,7 +21,6 @@ import net.vanfleteren.jazygit.git.model.ResetMode;
 import net.vanfleteren.jazygit.git.model.ResetTarget;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.*;
-import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;

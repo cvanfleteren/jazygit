@@ -17,7 +17,6 @@ import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchPopup;
 import net.vanfleteren.jazygit.feature.branch.tabs.BranchesTabMsg;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.state.*;
-import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.view.*;

@@ -29,11 +29,9 @@ import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.load.*;
-import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.preferences.*;
 import net.vanfleteren.jazygit.state.view.*;
 import net.vanfleteren.jazygit.ui.*;
-import net.vanfleteren.jazygit.ui.SettledPilot;
 import org.junit.jupiter.api.Test;
 
 /**
