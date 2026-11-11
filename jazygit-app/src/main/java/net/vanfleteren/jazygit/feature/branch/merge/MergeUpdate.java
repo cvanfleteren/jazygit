@@ -5,8 +5,8 @@ import net.vanfleteren.jazygit.feature.branch.Branches;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.MergeMode;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.popup.PopupUpdate;
 
 /**
  * Merging a branch into the checked out one.
@@ -19,7 +19,7 @@ public final class MergeUpdate {
         return switch (msg) {
             case MergeMsg.Requested(BranchName branch) -> requested(model, branch);
             case MergeMsg.Chosen(MergeMode mode) ->
-                Update.confirm(model, MergePopup.class, popup -> Option.of(new MergeCmd(popup.branch(), mode)));
+                PopupUpdate.confirm(model, MergePopup.class, popup -> Option.of(new MergeCmd(popup.branch(), mode)));
         };
     }
 
@@ -27,6 +27,7 @@ public final class MergeUpdate {
      * Only a known branch other than the checked out one can be merged, and only into a checked out branch.
      */
     private static Next requested(Model model, BranchName branch) {
-        return Update.ask(model, Branches.checkedOutAnd(model, branch).map(both -> new MergePopup(both._1, both._2)));
+        return PopupUpdate.ask(
+                model, Branches.checkedOutAnd(model, branch).map(both -> new MergePopup(both._1, both._2)));
     }
 }

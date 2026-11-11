@@ -17,9 +17,10 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.github.FromGitHub;
+import net.vanfleteren.jazygit.state.operation.OperationUpdate;
+import net.vanfleteren.jazygit.state.popup.PopupUpdate;
 
 /**
  * Checking out a pull request listed on the pull requests screen.
@@ -75,7 +76,7 @@ public final class CheckoutPullRequestUpdate {
         return proceed(
                 model,
                 forCheckout(model, pullRequest),
-                () -> Update.start(model.clearError(), new CheckoutPullRequestCmd(pullRequest)));
+                () -> OperationUpdate.start(model.clearError(), new CheckoutPullRequestCmd(pullRequest)));
     }
 
     /**
@@ -86,7 +87,7 @@ public final class CheckoutPullRequestUpdate {
         return switch (readiness) {
             case Readiness.Blocked(AppError error) -> Next.of(model.fail(error));
             case Readiness.Elsewhere(BranchName branch, String worktree) ->
-                Update.ask(model, new SwitchWorktreePopup(branch, worktree));
+                PopupUpdate.ask(model, new SwitchWorktreePopup(branch, worktree));
             case Readiness.Busy() -> Next.of(model);
             case Readiness.Ready() -> ready.get();
         };

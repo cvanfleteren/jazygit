@@ -59,6 +59,7 @@ import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.load.*;
 import net.vanfleteren.jazygit.state.operation.*;
+import net.vanfleteren.jazygit.state.operation.OperationUpdate;
 import net.vanfleteren.jazygit.state.popup.*;
 import net.vanfleteren.jazygit.state.view.*;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
@@ -572,7 +573,7 @@ class WorktreeUpdateTest {
     @Test
     void anAddedWorktreeShowsTheWorktreesReadsTheRepositoryAgainAndOffersToSwitchToIt() {
         AddWorktreeCmd add = new AddWorktreeCmd(new WorktreeSource.Existing(FEATURE), "../app-feature");
-        Model adding = Update.start(model(), add).model();
+        Model adding = OperationUpdate.start(model(), add).model();
 
         Next next = Update.update(
                 adding,

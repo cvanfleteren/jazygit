@@ -4,8 +4,8 @@ import net.vanfleteren.jazygit.feature.worktree.WorktreeError;
 import net.vanfleteren.jazygit.feature.worktree.prune.PruneWorktreesMsg.Requested;
 import net.vanfleteren.jazygit.git.model.Worktree;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.operation.OperationUpdate;
 
 /**
  * Forgetting the worktrees whose directory is gone. Nothing is lost, so it is not confirmed.
@@ -28,7 +28,7 @@ public final class PruneWorktreesUpdate {
                 .worktrees()
                 .toOption()
                 .map(worktrees -> worktrees.exists(Worktree::prunable)
-                        ? Update.start(model.clearError(), new PruneWorktreesCmd())
+                        ? OperationUpdate.start(model.clearError(), new PruneWorktreesCmd())
                         : Next.of(model.fail(new WorktreeError.NothingToPrune())))
                 .getOrElse(() -> Next.of(model));
     }
