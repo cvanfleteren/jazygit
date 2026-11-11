@@ -71,6 +71,7 @@ import net.vanfleteren.jazygit.git.process.GitError;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.diff.BaseTip;
 import net.vanfleteren.jazygit.state.diff.Changes;
@@ -2914,7 +2915,7 @@ class PullRequestUpdateTest {
         PullRequestSummary pr = summary("owner/repo");
         Landing landing = new Landing(BranchesTab.LOCAL, Option.none())
                 .followedBy(new CheckoutMsg.Placed(new PullRequestCheckout(pr)));
-        Model model = TestModels.started(Update.init("repo", SettingsStore.Loaded.DEFAULT, Option.none(), landing))
+        Model model = TestModels.started(TestModels.init("repo", SettingsStore.Loaded.DEFAULT, Option.none(), landing))
                 .model();
         Next branches = TestModels.done(
                 model,

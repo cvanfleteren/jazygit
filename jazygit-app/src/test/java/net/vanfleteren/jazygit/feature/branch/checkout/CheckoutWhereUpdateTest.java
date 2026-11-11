@@ -278,7 +278,7 @@ class CheckoutWhereUpdateTest {
     @Test
     void whatALandingSaysToDoIsDoneOnceTheStatusBranchesAndWorktreesAreRead() {
         Landing landing = new Landing(BranchesTab.LOCAL, Option.none()).followedBy(new CheckoutMsg.Requested(FEATURE));
-        Model model = started(Update.init("repo", SettingsStore.Loaded.DEFAULT, Option.none(), landing))
+        Model model = started(TestModels.init("repo", SettingsStore.Loaded.DEFAULT, Option.none(), landing))
                 .model();
         Next branches = done(
                 model,
