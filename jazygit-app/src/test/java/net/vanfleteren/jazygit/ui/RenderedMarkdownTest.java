@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
 import io.vavr.collection.HashMap;
+import io.vavr.collection.LinkedHashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
@@ -68,6 +69,17 @@ class RenderedMarkdownTest {
         assertEquals(
                 Vector.of("a ", "", " b", "c"),
                 RenderedMarkdown.withoutComments(Vector.of("a <!-- one", "two", "three --> b", "c")));
+        assertEquals(
+                Vector.of("", "", "text"),
+                RenderedMarkdown.withoutComments(Vector.of("<!-- a block", "of comment -->", "text")));
+    }
+
+    @Test
+    void whatLooksLikeACommentInCodeStays() {
+        Vector<String> code =
+                Vector.of("HTML comments (`<!-- -->`), taken out.", "", "```html", "<!-- kept -->", "```");
+
+        assertEquals(code, RenderedMarkdown.withoutComments(code));
     }
 
     @Test
@@ -98,7 +110,7 @@ class RenderedMarkdownTest {
     }
 
     @Test
-    void theBarIsTheOnlyStopAndEachLineIsPlacedOnTheFirstRowOfItsBlock() {
+    void theBarIsTheOnlyStopAndEveryLineIsPlacedOnTheFirstRowOfABlock() {
         RichDiff.Drawn drawn = drawn(FileVersion.NEW, false);
 
         assertEquals(
@@ -108,7 +120,10 @@ class RenderedMarkdownTest {
                 List.of(
                         new RichDiff.Place(new Anchor.OnLine("README.md", Side.RIGHT, 1), 1),
                         new RichDiff.Place(new Anchor.OnLine("README.md", Side.RIGHT, 3), 3),
+                        // A blank line goes with the block after it, after that block's own lines.
+                        new RichDiff.Place(new Anchor.OnLine("README.md", Side.RIGHT, 2), 3),
                         new RichDiff.Place(new Anchor.OnLine("README.md", Side.RIGHT, 5), 5),
+                        new RichDiff.Place(new Anchor.OnLine("README.md", Side.RIGHT, 4), 5),
                         new RichDiff.Place(new Anchor.OnLine("README.md", Side.RIGHT, 6), 6)),
                 drawn.places());
     }
@@ -158,6 +173,7 @@ class RenderedMarkdownTest {
     void theCellsOfATableAreAlignedAsItsDashesSayAndAnEscapedPipeStaysInItsCell() {
         Option<List<Line>> table = RenderedMarkdown.table(
                 "| left | right | middle |\n|:--|--:|:-:|\n| a | 1 | x |\n| a \\| b | 22 | yyy |",
+                LinkedHashMap.empty(),
                 Theme.SpanStyles.NONE);
 
         assertEquals(
@@ -170,7 +186,55 @@ class RenderedMarkdownTest {
 
     @Test
     void aHeadingUnderlinedWithDashesIsNoTable() {
-        assertEquals(Option.none(), RenderedMarkdown.table("Title\n---", Theme.SpanStyles.NONE));
+        assertEquals(Option.none(), RenderedMarkdown.table("Title\n---", LinkedHashMap.empty(), Theme.SpanStyles.NONE));
+    }
+
+    @Test
+    void aHeaderOfMoreCellsThanItsDashesIsNoTable() {
+        assertEquals(
+                Option.none(),
+                RenderedMarkdown.table(
+                        "| A | B | C |\n|---|---|\n| a | b | c |", LinkedHashMap.empty(), Theme.SpanStyles.NONE));
+    }
+
+    @Test
+    void aTableRightAfterALineOfTextIsATableOfItsOwn() {
+        List<RenderedMarkdown.Block> blocks = RenderedMarkdown.blocks(
+                Vector.of("Options:", "| A | B |", "|---|---|", "| a | b |"), 60, Theme.SpanStyles.NONE);
+
+        assertEquals(List.of(0, 1), blocks.map(RenderedMarkdown.Block::first));
+        assertEquals(List.of("A  B", "a  b"), text(blocks.last().rows()).map(String::stripTrailing));
+    }
+
+    @Test
+    void aCellHoldsTextOnlyNotABlock() {
+        Option<List<Line>> table = RenderedMarkdown.table(
+                "| a | b | c | d | e |\n|---|---|---|---|---|\n| - | # h | > q | --- | 1. x |",
+                LinkedHashMap.empty(),
+                Theme.SpanStyles.NONE);
+
+        assertEquals(
+                List.of("-", "# h", "> q", "---", "1. x"),
+                List.of(text(table.get()).last().strip().split(" {2,}")));
+    }
+
+    @Test
+    void aReferenceLinkInACellIsItsText() {
+        List<RenderedMarkdown.Block> blocks = RenderedMarkdown.blocks(
+                Vector.of("| A | B |", "|---|---|", "| [docs][d] | x |", "", "[d]: https://example.com"),
+                60,
+                Theme.SpanStyles.NONE);
+
+        assertEquals("docs  x", text(blocks.head().rows()).last().stripTrailing());
+    }
+
+    @Test
+    void aBlockIsDrawnWithOnlyTheLinkDefinitionsItRefersTo() {
+        LinkedHashMap<String, String> definitions =
+                LinkedHashMap.of("a", "[a]: https://a.example", "b", "[B]: https://b.example");
+
+        assertEquals("\n\n[B]: https://b.example", RenderedMarkdown.referred("see [the b][B]", definitions));
+        assertEquals("", RenderedMarkdown.referred("no links", definitions));
     }
 
     @Test

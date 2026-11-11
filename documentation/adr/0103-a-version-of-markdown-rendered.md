@@ -72,6 +72,13 @@ is one line saying it differs.
   between columns, its first row bold, each cell drawn as tamboui draws Markdown. Not: tamboui's table, which gives
   each column an equal share of the width, so a short first column takes as much as a long second one, and cuts off
   what does not fit.
+- A table is found as GitHub finds one, by commonmark's extension for tables: right after a line of text too, and not
+  when its first row has another number of cells than its row of dashes. A cell holds text only, as on GitHub: a
+  cell of `-` is a dash, not a list.
+- A block is drawn with only the link definitions it refers to, and the blocks side by side: a changelog has a block
+  and a definition for each release, and each block with all of them took seconds.
+- A line no block holds, as a blank one between two, goes with the block after it, so a cursor on it is a cursor on
+  that block.
 - A code block is highlighted by the lexer of jazygit (`jazygit-syntax`), in the theme, for the language its info
   string names, through `MarkdownView`'s highlighter: so code reads as in the diff. A language the lexer does not know
   is plain. Not: tamboui's own highlighter, with its own colours.

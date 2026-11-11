@@ -55,6 +55,11 @@
             <groupId>org.commonmark</groupId>
             <artifactId>commonmark</artifactId>
         </dependency>
+        <!-- Finds the tables of a Markdown file rendered (ADR 103), as GitHub does, which jazygit draws itself. -->
+        <dependency>
+            <groupId>org.commonmark</groupId>
+            <artifactId>commonmark-ext-gfm-tables</artifactId>
+        </dependency>
         <dependency>
             <groupId>dev.tamboui</groupId>
             <artifactId>tamboui-panama-backend</artifactId>

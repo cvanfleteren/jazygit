@@ -241,6 +241,48 @@ class ContentPanelTest {
     }
 
     @Test
+    void renderedTheBlockAfterABlankLineOfTheCursorTakesItsRowOnTheScreen() throws Exception {
+        String header = "diff --git a/a.md b/a.md\n--- a/a.md\n+++ b/a.md\n";
+        // Paragraphs on the odd lines, blank lines between them; the one on line 21 changed.
+        java.util.function.IntFunction<String> line =
+                n -> n == 21 ? "-para 21\n+changed 21\n" : n % 2 == 1 ? " para " + n + "\n" : " \n";
+        Model shown = showingCommit(header + "@@ -18,7 +18,7 @@\n"
+                        + List.rangeClosed(18, 24).map(line::apply).mkString())
+                .mapPreferences(preferences ->
+                        preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
+        ContentPanel panel = new ContentPanel(Theme.SpanStyles.NONE, () -> false);
+        String area = panel.areaOfPane(shown, CommitsPanel.ID).get();
+        ScrolledContent content = ContentView.of(shown, area).areas().head().content();
+        Anchor.OnLine blank = new Anchor.OnLine("a.md", net.vanfleteren.jazygit.gh.model.ReviewThread.Side.RIGHT, 20);
+        Model onBlank = shown.withScrolled(
+                io.vavr.collection.HashMap.of(area, new Scrolled(content, 0, 0, Option.of(blank), Option.none())));
+        DiffCursorAt at = new DiffCursorAt(
+                area, onBlank.scrolled(area, content), blank, Option.none(), Option.none(), Option.none());
+        Update.Next asked =
+                Update.update(onBlank, new net.vanfleteren.jazygit.feature.diff.VersionMsg.RenderToggled(at));
+        ReadVersion read = (ReadVersion) asked.cmds().head();
+        DiffText whole = DiffText.of(header + "@@ -1,41 +1,41 @@\n"
+                + List.rangeClosed(1, 41).map(line::apply).mkString());
+        Model rendered = TestModels.done(
+                        TestModels.running(asked.model(), read), read, new LoadMsg.VersionRead(read, whole))
+                .model();
+        java.util.concurrent.atomic.AtomicReference<Model> model =
+                new java.util.concurrent.atomic.AtomicReference<>(onBlank);
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model.get(), area))) {
+            List<String> before = List.of(RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), area))
+                    .split("\n"));
+            model.set(rendered);
+            List<String> after = List.of(RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), area))
+                    .split("\n"));
+
+            int was = before.indexWhere(row -> row.contains(" 20 │"));
+            assertTrue(was > 0, before.mkString("\n"));
+            assertEquals(was, after.indexWhere(row -> row.contains("changed 21")), after.mkString("\n"));
+        }
+    }
+
+    @Test
     void ctrlTShowsTheNewVersionRenderedAndActsOnTheBlockAtTheTop() throws Exception {
         String header = "diff --git a/a.md b/a.md\n--- a/a.md\n+++ b/a.md\n";
         DiffText changes = DiffText.of(header + "@@ -1,3 +1,3 @@\n # Title\n-old text\n+new text\n \n");

@@ -309,13 +309,22 @@ final class RichDiff {
                 RenderedMarkdown.blocks(lines.map(DiffLine::text), Math.max(1, width - RENDERED_GUTTER), styles);
         String bar = bar(file, version);
         int tinted = Math.max(width(bar), width);
-        List<Marked> body = blocks.flatMap(block -> {
+        List<Marked> body = blocks.zipWithIndex().flatMap(at -> {
+            RenderedMarkdown.Block block = at._1();
             Span gutter = Vector.rangeClosed(block.first(), block.last())
-                            .exists(at -> at < lines.size() && lines.get(at).kind() != DiffLine.Kind.CONTEXT)
+                            .exists(line ->
+                                    line < lines.size() && lines.get(line).kind() != DiffLine.Kind.CONTEXT)
                     ? changed
                     : unchanged;
-            List<Anchor> placed = Vector.rangeClosed(block.first(), Math.min(block.last(), lines.size() - 1))
-                    .flatMap(at -> Anchor.of(path, lines.get(at)))
+            // A line no block holds, as a blank one between two, goes with the block after it, or the last block; the
+            // block's own lines come first, so a key acts on its first line (ADR 103).
+            int after = at._2() == 0 ? 0 : blocks.get(at._2() - 1).last() + 1;
+            int until = at._2() == blocks.size() - 1 ? lines.size() - 1 : block.last();
+            List<Anchor> placed = Vector.rangeClosed(block.first(), block.last())
+                    .appendAll(Vector.range(after, block.first()))
+                    .appendAll(Vector.rangeClosed(block.last() + 1, until))
+                    .filter(line -> line < lines.size())
+                    .flatMap(line -> Anchor.of(path, lines.get(line)))
                     .map(anchor -> (Anchor) anchor)
                     .toList();
             List<Marked> rows = block.rows()
