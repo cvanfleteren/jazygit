@@ -7,6 +7,7 @@ import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.DiffContext;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.DiffText;
+import net.vanfleteren.jazygit.git.model.FileContent;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -105,6 +106,14 @@ public record ReadWholeFile(AreaId area, ScrolledContent content, Source source,
                             case Changes.OfPullRequest(PullRequestCommits commits) ->
                                 env.git().diffs().pullRequestFileChanges(commits, List.of(file), whole);
                         };
+                    // A file that is no text has no lines to show: no file is read, as for a binary one.
+                    case Source.OnDisk(String path) ->
+                        env.git()
+                                .status()
+                                .content(path)
+                                .map(content -> content instanceof FileContent.Text(DiffText asDiff)
+                                        ? asDiff
+                                        : DiffText.of(""));
                 })
                 .mapLeft(Failure::of);
     }

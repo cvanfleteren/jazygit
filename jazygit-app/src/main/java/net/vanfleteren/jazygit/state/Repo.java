@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.state;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
+import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import lombok.With;
 import net.vanfleteren.jazygit.git.model.*;
@@ -25,6 +26,8 @@ import net.vanfleteren.jazygit.git.model.*;
  * @param parents         the parent of each branch that has one, as read last with the branches (ADR 58, ADR 72):
  *                        what GitHub says it is built on, else the branch it was made from; none before the first
  *                        read
+ * @param allFiles        the paths of all files of the working tree, read only while the files pane lists them all
+ *                        (ADR 108): loading until then
  */
 @With
 public record Repo(
@@ -37,7 +40,8 @@ public record Repo(
         Loadable<List<Worktree>> worktrees,
         Map<String, Boolean> worktreeChanges,
         Map<BranchName, BaseDistance> baseDistance,
-        Map<BranchName, BranchName> parents) {
+        Map<BranchName, BranchName> parents,
+        Loadable<List<String>> allFiles) {
 
     public static final Repo LOADING = new Repo(
             Loadable.loading(),
@@ -49,7 +53,30 @@ public record Repo(
             Loadable.loading(),
             HashMap.empty(),
             HashMap.empty(),
-            HashMap.empty());
+            HashMap.empty(),
+            Loadable.loading());
+
+    /**
+     * The files the files pane lists for the working tree: its changed files, and, when {@code all} of them are
+     * listed, each of its other files as one without changes (ADR 108). Those are loading until all files are read
+     * once, so that the tree starts from all of them.
+     */
+    public Loadable<List<FileEntry>> workingFiles(boolean all) {
+        if (!all) {
+            return status.map(RepoStatus::files);
+        }
+        return switch (allFiles) {
+            case Loadable.Loaded<List<String>>(List<String> paths) ->
+                status.map(read -> {
+                    Set<String> changed = read.files().map(FileEntry::path).toSet();
+                    return read.files()
+                            .appendAll(paths.filter(path -> !changed.contains(path))
+                                    .map(FileEntry::unchanged));
+                });
+            case Loadable.Loading<List<String>>() -> Loadable.loading();
+            case Loadable.Failed<List<String>>(Failure failure) -> new Loadable.Failed<>(failure);
+        };
+    }
 
     /**
      * How many commits of its parent {@code branch} does not have, as on its remote when it is there: what GitHub

@@ -66,6 +66,16 @@ final class CliStatus implements Status {
         return metadataAt.flatMap(at -> CliMetadata.diff(at, worktree, files, Instant.now()));
     }
 
+    @Override
+    public Either<GitError, List<String>> allFiles() {
+        return CliWorkingFiles.allFiles(worktree);
+    }
+
+    @Override
+    public Either<GitError, FileContent> content(String path) {
+        return CliWorkingFiles.content(worktree, path, CliDiffs.LIMIT);
+    }
+
     /**
      * Parses the output of {@code git status --porcelain=v2 --branch -z}.
      */

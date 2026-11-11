@@ -94,6 +94,11 @@ public sealed interface GitError {
     record NoWorktree(Path directory) implements GitError {}
 
     /**
+     * The file at {@code path} in the working tree could not be read from disk, for {@code reason} (ADR 108).
+     */
+    record Unreadable(String path, String reason) implements GitError {}
+
+    /**
      * There is no such branch, local or remote-tracking.
      */
     record UnknownBranch(BranchRef branch) implements GitError {}

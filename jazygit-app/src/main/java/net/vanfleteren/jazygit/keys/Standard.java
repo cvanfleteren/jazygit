@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.feature.diff.ExpandAction;
 import net.vanfleteren.jazygit.feature.diff.VersionAction;
 import net.vanfleteren.jazygit.feature.discard.DiscardKeys;
 import net.vanfleteren.jazygit.feature.edit.EditKeys;
+import net.vanfleteren.jazygit.feature.files.all.AllFilesAction;
 import net.vanfleteren.jazygit.feature.files.filter.FileFilterAction;
 import net.vanfleteren.jazygit.feature.github.GitHubFeature;
 import net.vanfleteren.jazygit.feature.stage.StageKeys;
@@ -34,6 +35,7 @@ final class Standard {
                     WorktreeFeature::register,
                     CommitFilesAction.ACTION.keys(),
                     FileFilterAction.ACTION.keys(),
+                    AllFilesAction.ACTION.keys(),
                     ExpandAction.ACTION.keys(),
                     VersionAction.ACTION.keys(),
                     CopyAction.ACTION.keys(),

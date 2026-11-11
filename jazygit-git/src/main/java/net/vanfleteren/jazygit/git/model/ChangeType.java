@@ -15,7 +15,11 @@ public enum ChangeType {
     /**
      * Both sides of a merge changed the file; see {@link FileEntry#conflict()}.
      */
-    CONFLICTED("U");
+    CONFLICTED("U"),
+    /**
+     * Not changed at all: a file of the working tree listed with all its files (ADR 108), which has no marker.
+     */
+    UNCHANGED("");
 
     private final String marker;
 

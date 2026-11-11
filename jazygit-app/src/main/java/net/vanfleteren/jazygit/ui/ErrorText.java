@@ -32,6 +32,7 @@ public final class ErrorText {
             case AppError.NothingToAmend() -> Messages.get("error.amend.nothing");
             case AppError.MergeNotAmendable() -> Messages.get("error.amendCommit.merge");
             case AppError.NothingToStash() -> Messages.get("error.stash.nothing");
+            case AppError.Unchanged(String path) -> Messages.get("error.unchanged", path.isEmpty() ? "/" : path);
             case AppError.AlreadyPicked(Sha sha) -> Messages.get("error.cherryPick.already", sha.shortSha());
             case AppError.ConflictsRemain(int files) -> Messages.get("error.conflictsRemain", files);
             case AppError.Unfinished(var operation, Option<String> subject, var inProgress, int conflicts) ->
@@ -180,6 +181,7 @@ public final class ErrorText {
             case GitError.UnexpectedOutput(String output) -> Messages.get("git.unexpectedOutput", output);
             case GitError.NotARepository(var directory) -> Messages.get("git.notRepository", directory);
             case GitError.NoWorktree(var directory) -> Messages.get("git.noWorkTree", directory);
+            case GitError.Unreadable(String path, String reason) -> Messages.get("git.unreadable", path, reason);
             case GitError.UnknownBranch(BranchRef branch) -> Messages.get("git.unknownBranch", branch.name());
             case GitError.LocalChanges(String explanation) -> explanation;
             case GitError.WorktreeHasChanges(String explanation) -> explanation;

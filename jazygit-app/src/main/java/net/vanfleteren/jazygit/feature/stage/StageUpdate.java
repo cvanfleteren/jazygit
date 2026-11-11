@@ -6,6 +6,7 @@ import net.vanfleteren.jazygit.feature.stage.StageCmd.Stage;
 import net.vanfleteren.jazygit.feature.stage.StageCmd.Unstage;
 import net.vanfleteren.jazygit.feature.stage.StageMsg.Requested;
 import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -36,6 +37,10 @@ public final class StageUpdate {
      * directory, git gets the directory itself where that has the same effect.
      */
     private static Next toggle(Model model, List<FileEntry> files, Option<String> directory) {
+        // Among all files of the working tree, a node may have none that changed: that is said (ADR 108).
+        if (!files.isEmpty() && !files.exists(FileEntry::changed)) {
+            return Next.of(model.fail(AppError.Unchanged.of(files, directory)));
+        }
         List<String> unstaged = files.filter(FileEntry::unstaged).flatMap(f -> f.paths(false));
         List<FileEntry> staged = files.filter(FileEntry::staged);
         // Adding a directory stages every change below it, which are exactly the changed files that are not

@@ -211,7 +211,7 @@ final class RichDiff {
                         .map(number -> String.valueOf(number).length())
                         .getOrElse(1));
         int gutter = 2 * digits + 1 + GUTTER_END.length();
-        String bar = version.map(shown -> bar(file, shown)).getOrElse(() -> bar(file));
+        String bar = version.map(shown -> bar(parsed, shown)).getOrElse(() -> bar(file));
         // Each line is measured once, here: its width also tells how far a changed line is padded.
         Vector<Integer> measured =
                 inParallel(lines.toList(), line -> width(line.line().text())).toVector();
@@ -307,7 +307,7 @@ final class RichDiff {
         Span unchanged = Span.raw(" ");
         List<RenderedMarkdown.Block> blocks =
                 RenderedMarkdown.blocks(lines.map(DiffLine::text), Math.max(1, width - RENDERED_GUTTER), styles);
-        String bar = bar(file, version);
+        String bar = bar(parsed, version);
         int tinted = Math.max(width(bar), width);
         List<Marked> body = blocks.zipWithIndex().flatMap(at -> {
             RenderedMarkdown.Block block = at._1();
@@ -355,11 +355,16 @@ final class RichDiff {
 
     /**
      * What the bar of {@code file} says while {@code version} of it is shown in place of its diff (ADR 102): which
-     * version, and its path in it, the one it had before a rename for the original.
+     * version, and its path in it, the one it had before a rename for the original. A file without a line that changed
+     * is one without changes, shown as it is on disk (ADR 108).
      */
-    private static String bar(FileDiff file, FileVersion version) {
+    private static String bar(ParsedFile parsed, FileVersion version) {
+        FileDiff file = parsed.file();
         String path = version == FileVersion.ORIGINAL ? file.origin().getOrElse(file.path()) : file.path();
-        String what = Messages.get(version == FileVersion.NEW ? "content.file.newVersion" : "content.file.original");
+        String what = Messages.get(
+                unchanged(parsed)
+                        ? "content.file.unchanged"
+                        : version == FileVersion.NEW ? "content.file.newVersion" : "content.file.original");
         return " " + what + "  " + path + " ";
     }
 
@@ -380,6 +385,16 @@ final class RichDiff {
                 .map(change -> "  " + Messages.get("content.file.mode", change.from(), change.to()))
                 .getOrElse("");
         return " " + what + "  " + path + mode + " ";
+    }
+
+    /**
+     * Whether no line of {@code parsed} was added or removed: a file without changes, shown as a diff of itself.
+     */
+    private static boolean unchanged(ParsedFile parsed) {
+        return parsed.hunks()
+                .flatMap(ParsedHunk::lines)
+                .forAll(line -> line.line().kind() == DiffLine.Kind.CONTEXT
+                        || line.line().kind() == DiffLine.Kind.NOTE);
     }
 
     /**

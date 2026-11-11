@@ -17,6 +17,8 @@ enum ContentArea {
     STASH("stash-changes", StashPanel.ID),
     // What a commit or a stash changed in the files highlighted in the tree of them the files pane lists.
     COMMIT_FILE("commit-file-changes", FilesPanel.ID),
+    // A file without changes highlighted among all files of the working tree, as it is on disk (ADR 108).
+    FILE_CONTENT("file-content", FilesPanel.ID),
     // The commit highlighted in the divergence the branches pane lists.
     DIVERGENCE("divergence-commit", BranchesPanel.ID),
     // The commit highlighted in the commits of a branch the branches pane lists.

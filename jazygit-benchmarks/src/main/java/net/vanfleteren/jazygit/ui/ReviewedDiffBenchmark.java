@@ -118,7 +118,7 @@ public class ReviewedDiffBenchmark {
                 subject,
                 List.of(comment(i, 0), comment(i, 1)),
                 0,
-                "thread" + i,
+                new ReviewThread.Id("thread" + i),
                 ReviewThread.Rights.ALL);
     }
 
@@ -128,8 +128,8 @@ public class ReviewedDiffBenchmark {
                 Instant.EPOCH,
                 "A remark on this line, number %d of thread %d.".formatted(index, thread),
                 Option.none(),
-                "comment" + thread + "-" + index,
-                String.valueOf(thread * 10 + index),
+                new ReviewThread.Comment.Id("comment" + thread + "-" + index),
+                new ReviewThread.Comment.RestId(String.valueOf(thread * 10 + index)),
                 CommentRights.ALL);
     }
 }

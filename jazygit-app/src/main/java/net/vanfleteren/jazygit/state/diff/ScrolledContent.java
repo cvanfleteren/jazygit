@@ -42,6 +42,7 @@ public sealed interface ScrolledContent {
             case CommitChanges(var commit, DiffText changes) -> Option.of(changes);
             case StashChanges(var sha, DiffText changes) -> Option.of(changes);
             case FileChanges(var of, var files, DiffText diff) -> Option.of(diff);
+            case Unchanged(var path, DiffText asDiff) -> Option.of(asDiff);
             case BranchLog _, PullRequest _ -> Option.none();
         };
     }
@@ -50,6 +51,12 @@ public sealed interface ScrolledContent {
      * A diff of the working tree: the staged or the unstaged changes.
      */
     record Diff(DiffText diff) implements ScrolledContent {}
+
+    /**
+     * The file at {@code path} in the working tree, without changes, as it is on disk: a diff of it against itself
+     * (ADR 108).
+     */
+    record Unchanged(String path, DiffText asDiff) implements ScrolledContent {}
 
     /**
      * The log of a branch.

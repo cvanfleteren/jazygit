@@ -43,5 +43,10 @@ public record WholeFile(ScrolledContent content, Source source, String path, Dif
          * What {@code of}, whose files the files pane lists, changed in {@code file}.
          */
         record OfFiles(Changes of, CommitFile file) implements Source {}
+
+        /**
+         * The file at {@code path} in the working tree, without changes, as it is on disk (ADR 108).
+         */
+        record OnDisk(String path) implements Source {}
     }
 }
