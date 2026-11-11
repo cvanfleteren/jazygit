@@ -71,9 +71,9 @@ is one line saying it differs.
 - A code block is highlighted by the lexer of jazygit (`jazygit-syntax`), in the theme, for the language its info
   string names, through `MarkdownView`'s highlighter: so code reads as in the diff. A language the lexer does not know
   is plain. Not: tamboui's own highlighter, with its own colours.
-- Front matter, a block of YAML between `---` lines at the top, is drawn as a `yaml` code block, where GitHub draws it as
-  a table. A comment of HTML is left out, as it is in the description of a pull request. Other HTML is drawn as it is
-  written.
+- Front matter, a block of YAML between `---` lines at the top, is drawn as a `yaml` code block, where GitHub draws it
+  as a table. A comment of HTML is left out, as it is in the description of a pull request. Other HTML is drawn as it
+  is written.
 - An image is drawn as the placeholder of ADR 82. Drawing them, an image with a relative path read from the same
   version and one GitHub keeps read as ADR 84 reads it, is for the ADR on images: it needs a file read as bytes.
 - A link stays as tamboui draws it, a hyperlink where the terminal has them. A relative link, to another file of the
