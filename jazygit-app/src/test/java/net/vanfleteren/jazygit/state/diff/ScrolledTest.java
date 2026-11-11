@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
@@ -22,30 +23,30 @@ import org.junit.jupiter.api.Test;
 class ScrolledTest {
 
     private static final ScrolledContent AB = new ScrolledContent.Diff(DiffText.of("+a\n+b\n"));
+    private static final AreaId AREA = new AreaId("diff");
     private static final ScrolledContent C = new ScrolledContent.Diff(DiffText.of("+c\n"));
 
     private final Model scrolled = Update.update(
                     TestModels.loaded(),
                     new ViewMsg.ContentScrolled(
-                            "diff",
-                            new Scrolled(AB, 3, 1, io.vavr.control.Option.none(), io.vavr.control.Option.none())))
+                            AREA, new Scrolled(AB, 3, 1, io.vavr.control.Option.none(), io.vavr.control.Option.none())))
             .model();
 
     @Test
     void anAreaShowsItsContentFromTheTopUntilItIsScrolled() {
-        assertEquals(Scrolled.top(C), TestModels.loaded().scrolled("diff", C));
+        assertEquals(Scrolled.top(C), TestModels.loaded().scrolled(AREA, C));
     }
 
     @Test
     void anAreaStaysWhereItWasScrolledToWhileItShowsTheSameContent() {
         assertEquals(
                 new Scrolled(AB, 3, 1, io.vavr.control.Option.none(), io.vavr.control.Option.none()),
-                scrolled.scrolled("diff", AB));
+                scrolled.scrolled(AREA, AB));
     }
 
     @Test
     void otherContentStartsAtTheTop() {
-        assertEquals(Scrolled.top(C), scrolled.scrolled("diff", C));
+        assertEquals(Scrolled.top(C), scrolled.scrolled(AREA, C));
     }
 
     @Test
@@ -59,13 +60,13 @@ class ScrolledTest {
         Option<Anchor> cursor = Option.of(new Anchor.File("a.txt"));
         Model at = Update.update(
                         TestModels.loaded(),
-                        new ViewMsg.ContentScrolled("diff", new Scrolled(before, 5, 2, cursor, cursor)))
+                        new ViewMsg.ContentScrolled(AREA, new Scrolled(before, 5, 2, cursor, cursor)))
                 .model();
 
-        assertEquals(new Scrolled(again, 0, 0, cursor, io.vavr.control.Option.none()), at.scrolled("diff", again));
-        assertEquals(Scrolled.top(other), at.scrolled("diff", other));
+        assertEquals(new Scrolled(again, 0, 0, cursor, io.vavr.control.Option.none()), at.scrolled(AREA, again));
+        assertEquals(Scrolled.top(other), at.scrolled(AREA, other));
         // A diff of the working tree read again is other content.
-        assertEquals(Scrolled.top(C), scrolled.scrolled("diff", C));
+        assertEquals(Scrolled.top(C), scrolled.scrolled(AREA, C));
     }
 
     @Test
@@ -77,11 +78,11 @@ class ScrolledTest {
         Option<Anchor> cursor = Option.of(new Anchor.File("a.txt"));
         Model at = Update.update(
                         TestModels.loaded(),
-                        new ViewMsg.ContentScrolled("diff", new Scrolled(before, 5, 2, cursor, Option.none())))
+                        new ViewMsg.ContentScrolled(AREA, new Scrolled(before, 5, 2, cursor, Option.none())))
                 .model();
 
-        assertEquals(new Scrolled(pushed, 0, 0, cursor, Option.none()), at.scrolled("diff", pushed));
-        assertEquals(Scrolled.top(another), at.scrolled("diff", another));
+        assertEquals(new Scrolled(pushed, 0, 0, cursor, Option.none()), at.scrolled(AREA, pushed));
+        assertEquals(Scrolled.top(another), at.scrolled(AREA, another));
     }
 
     private static Changes pullRequest(int number, String head) {
@@ -91,6 +92,6 @@ class ScrolledTest {
 
     @Test
     void eachAreaHasItsOwnPosition() {
-        assertEquals(Scrolled.top(AB), scrolled.scrolled("log", AB));
+        assertEquals(Scrolled.top(AB), scrolled.scrolled(new AreaId("log"), AB));
     }
 }

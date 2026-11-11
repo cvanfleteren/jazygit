@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.settings.DiffLook;
 import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.diff.*;
 import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.diff.WholeFile;
@@ -149,7 +150,7 @@ class ContentViewTest {
         DiffText changes = DiffText.of(header + "@@ -1 +1 @@\n-a\n+b\n");
         ScrolledContent content = new ScrolledContent.StashChanges(new Sha("5555"), changes);
         ReadVersion read = ReadVersion.of(
-                "stash-changes",
+                new AreaId("stash-changes"),
                 content,
                 new WholeFile.Source.OfStash(
                         new Sha("5555"), new CommitFile("a.txt", ChangeType.MODIFIED, Option.none())),
@@ -253,8 +254,9 @@ class ContentViewTest {
     void aPopupOpenedFromTheCommitChangesKeepsShowingTheCommit() {
         // The area had the focus when the popup opened, so that is what the focus goes back to.
         Model withPopup = showingCommit(DiffOptions.DEFAULT, "")
-                .mapRepoView(repoView -> repoView.withFocusedPane(Option.of(ContentArea.COMMIT.id())))
-                .openPopup(new HelpPopup(ContentArea.COMMIT.id(), List.empty()));
+                .mapRepoView(repoView -> repoView.withFocusedPane(
+                        Option.of(ContentArea.COMMIT.id().value())))
+                .openPopup(new HelpPopup(ContentArea.COMMIT.id().value(), List.empty()));
 
         assertEquals("Commit: aaaa", area(ContentView.of(withPopup, "help")).title());
     }

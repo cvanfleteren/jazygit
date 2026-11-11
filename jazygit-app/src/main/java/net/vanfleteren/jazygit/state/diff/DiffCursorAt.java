@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.state.diff;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Msg;
 
 /**
@@ -16,7 +17,7 @@ import net.vanfleteren.jazygit.state.Msg;
  * @param marked   where {@code v} takes it: a range started on its line, or dropped; none when it is not on a line
  */
 public record DiffCursorAt(
-        String area, Scrolled at, Anchor cursor, Option<Msg> next, Option<Msg> previous, Option<Msg> marked) {
+        AreaId area, Scrolled at, Anchor cursor, Option<Msg> next, Option<Msg> previous, Option<Msg> marked) {
 
     /**
      * The other end of the range, while one is open.

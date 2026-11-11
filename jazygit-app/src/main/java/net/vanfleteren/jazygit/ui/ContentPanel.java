@@ -526,7 +526,7 @@ public final class ContentPanel {
                 .iterator()
                 .map(Shown.Area::area)
                 .find(area -> area.pane(model).equals(paneId))
-                .map(ContentArea::id);
+                .map(area -> area.id().value());
     }
 
     /**
@@ -707,7 +707,7 @@ public final class ContentPanel {
 
         ScrollArea(ContentArea area, BooleanSupplier leaveScrollArea, Consumer<String> focus, Consumer<Msg> dispatch) {
             this.area = area;
-            this.id = area.id();
+            this.id = area.id().value();
             this.leaveScrollArea = leaveScrollArea;
             this.focus = focus;
             this.dispatch = dispatch;
@@ -739,7 +739,7 @@ public final class ContentPanel {
                 Model model, String focusedId, Shown.Area shown, Styler style, Theme.SpanStyles styles) {
             ThemeName theme = model.preferences().theme();
             ScrolledContent content = shown.content();
-            Scrolled known = model.scrolled(id, content);
+            Scrolled known = model.scrolled(area.id(), content);
             sent = sent.filter(told -> told._1().equals(known));
             Scrolled told = sent.map(Tuple2::_2).getOrElse(known);
             // What was drawn before, for the same changes drawn anew, as when a version of the file shows in place of
@@ -856,7 +856,7 @@ public final class ContentPanel {
         private DiffCursorAt at(DiffCursor cursor, ScrolledContent content) {
             Anchor acting = acting(cursor);
             return new DiffCursorAt(
-                    id,
+                    area.id(),
                     new Scrolled(content, cursor.row(), column, Option.of(acting), cursor.markAnchor()),
                     acting,
                     cursor.nextThread().map(next -> movedTo(next, content)),
@@ -876,7 +876,7 @@ public final class ContentPanel {
         }
 
         private Msg movedTo(DiffCursor cursor, ScrolledContent content) {
-            return new ViewMsg.ContentScrolled(id, scrolledTo(cursor, content));
+            return new ViewMsg.ContentScrolled(area.id(), scrolledTo(cursor, content));
         }
 
         private Scrolled scrolledTo(DiffCursor cursor, ScrolledContent content) {
@@ -989,7 +989,7 @@ public final class ContentPanel {
                     cursor.map(DiffCursor::anchor),
                     cursor.flatMap(DiffCursor::markAnchor));
             told(to);
-            dispatch.accept(new ViewMsg.ContentScrolled(id, to));
+            dispatch.accept(new ViewMsg.ContentScrolled(area.id(), to));
             return EventResult.HANDLED;
         }
 

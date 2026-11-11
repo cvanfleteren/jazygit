@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.state.view;
 
+import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
@@ -27,7 +28,7 @@ public sealed interface ViewMsg extends Msg {
     /**
      * The user scrolled the content area {@code area}.
      */
-    record ContentScrolled(String area, Scrolled to) implements ViewMsg {
+    record ContentScrolled(AreaId area, Scrolled to) implements ViewMsg {
 
         @Override
         public Update.Next apply(Model model) {

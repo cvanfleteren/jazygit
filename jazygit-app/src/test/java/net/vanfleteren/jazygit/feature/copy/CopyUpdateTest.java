@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.settings.RecentRepositories;
 import net.vanfleteren.jazygit.settings.SettingsStore;
+import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
@@ -34,7 +35,7 @@ import org.junit.jupiter.api.Test;
 
 class CopyUpdateTest {
 
-    private static final String AREA = "stash-changes";
+    private static final AreaId AREA = new AreaId("stash-changes");
     private static final String HEADER = "diff --git a/a.txt b/a.txt\n--- a/a.txt\n+++ b/a.txt\n";
     /**
      * Line 10 of a file of 30 changed, as git shows it with three lines of context.

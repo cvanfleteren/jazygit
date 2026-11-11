@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Folding;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.diff.WholeFile.Source;
 import net.vanfleteren.jazygit.state.load.ReadWholeFile;
@@ -25,7 +26,7 @@ class ExpansionTest {
     private static final String HEADER = "diff --git a/a.txt b/a.txt\n--- a/a.txt\n+++ b/a.txt\n";
     private static final ScrolledContent CONTENT = new ScrolledContent.StashChanges(new Sha("5555"), DiffText.of(""));
     private static final ReadWholeFile READ = new ReadWholeFile(
-            "stash-changes",
+            new AreaId("stash-changes"),
             CONTENT,
             new Source.OfStash(new Sha("5555"), new CommitFile("a.txt", ChangeType.MODIFIED)),
             "a.txt",

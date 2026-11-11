@@ -5,6 +5,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Folding;
+import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
@@ -43,7 +44,7 @@ public final class ExpandUpdate {
      * {@code content}, reading the file whole first if it is not, or failed to be.
      */
     private static Next asked(
-            Model model, String area, ScrolledContent content, Anchor.Gap gap, ExpandMsg.Toward toward) {
+            Model model, AreaId area, ScrolledContent content, Anchor.Gap gap, ExpandMsg.Toward toward) {
         Expansion expansion = model.repoView().expansion(area, content).getOrElse(() -> Expansion.of(content));
         Option<Expansion.Expanded> before = expansion.files().get(gap.path());
         boolean reads = before.forAll(file -> file.whole().isFailed());
