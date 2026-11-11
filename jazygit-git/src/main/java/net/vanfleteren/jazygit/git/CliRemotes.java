@@ -95,14 +95,14 @@ final class CliRemotes implements Remotes {
     }
 
     @Override
-    public Either<GitError, Map<String, String>> urls() {
+    public Either<GitError, Map<RemoteName, String>> urls() {
         return remoteUrls(worktree);
     }
 
     /**
      * The URL of each remote, by its name. Only looked up, so not logged.
      */
-    static Either<GitError, Map<String, String>> remoteUrls(Path worktree) {
+    static Either<GitError, Map<RemoteName, String>> remoteUrls(Path worktree) {
         // git config --get-regexp exits with 1, saying nothing, when no key matches.
         return GitProcess.ask(worktree, GitCommand.reading("config", "--get-regexp", "^remote\\..*\\.url$"))
                 .map(answer -> answer.map(output -> parseUrls(output.stdout())).getOrElse(HashMap.empty()))
@@ -113,14 +113,15 @@ final class CliRemotes implements Remotes {
      * Parses {@code remote.<name>.url <url>} lines into the URL of each remote; the first, for a remote with
      * several.
      */
-    static Map<String, String> parseUrls(String raw) {
+    static Map<RemoteName, String> parseUrls(String raw) {
         return GitOutput.nonBlankLines(raw)
                 .flatMap(line -> GitOutput.fields(line, " ", 2).toOption())
                 .flatMap(fields -> GitOutput.after(fields.head(), REMOTE_KEY)
                         .filter(rest -> rest.endsWith(URL_KEY))
                         .map(rest -> rest.substring(0, rest.length() - URL_KEY.length()))
                         .filter(name -> !name.isEmpty())
-                        .map(name -> Tuple.of(name, fields.last().strip())))
+                        .map(name ->
+                                Tuple.of(new RemoteName(name), fields.last().strip())))
                 .reverse()
                 .toMap(url -> url);
     }

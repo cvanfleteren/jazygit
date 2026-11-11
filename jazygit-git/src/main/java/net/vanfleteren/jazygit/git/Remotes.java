@@ -30,7 +30,7 @@ public interface Remotes {
     /**
      * The URL of each remote, by its name.
      */
-    Either<GitError, Map<String, String>> urls();
+    Either<GitError, Map<RemoteName, String>> urls();
 
     // Pushing branches, as git push does.
 

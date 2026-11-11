@@ -178,26 +178,28 @@ class CliPullRequestTest {
 
     @Test
     void theRemoteOfARepositoryIsTheOneWhoseUrlNamesIt() {
-        HashMap<String, String> urls = HashMap.of(
-                "upstream", "git@github.com:Owner/Repo.git",
-                "origin", "https://github.com/me/repo",
-                "mirror", "ssh://git@github.com/owner/repo/",
-                "other", "https://github.com/owner/repository.git");
+        HashMap<RemoteName, String> urls = HashMap.of(
+                        "upstream", "git@github.com:Owner/Repo.git",
+                        "origin", "https://github.com/me/repo",
+                        "mirror", "ssh://git@github.com/owner/repo/",
+                        "other", "https://github.com/owner/repository.git")
+                .mapKeys(RemoteName::new);
 
         assertEquals(Option.of(new RemoteName("mirror")), CliPullRequest.remoteOf(urls, "owner/repo", "github.com"));
         assertEquals(Option.of(new RemoteName("origin")), CliPullRequest.remoteOf(urls, "me/repo", "github.com"));
         assertEquals(Option.none(), CliPullRequest.remoteOf(urls, "owner/rep", "github.com"));
         assertEquals(
                 Option.of(new RemoteName("upstream")),
-                CliPullRequest.remoteOf(urls.remove("mirror"), "owner/repo", "github.com"));
+                CliPullRequest.remoteOf(urls.remove(new RemoteName("mirror")), "owner/repo", "github.com"));
     }
 
     @Test
     void aRemoteOnTheHostOfTheRepositoryComesBeforeAMirrorElsewhere() {
-        HashMap<String, String> urls = HashMap.of(
-                "backup", "https://gitlab.com/owner/repo.git",
-                "origin", "git@github.com:owner/repo.git",
-                "work", "https://user@ghe.example.com:8443/owner/repo");
+        HashMap<RemoteName, String> urls = HashMap.of(
+                        "backup", "https://gitlab.com/owner/repo.git",
+                        "origin", "git@github.com:owner/repo.git",
+                        "work", "https://user@ghe.example.com:8443/owner/repo")
+                .mapKeys(RemoteName::new);
 
         assertEquals(Option.of(new RemoteName("origin")), CliPullRequest.remoteOf(urls, "owner/repo", "github.com"));
         assertEquals(Option.of(new RemoteName("work")), CliPullRequest.remoteOf(urls, "owner/repo", "GHE.example.com"));
