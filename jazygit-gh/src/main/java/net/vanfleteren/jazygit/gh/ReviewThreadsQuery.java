@@ -86,7 +86,11 @@ final class ReviewThreadsQuery {
             map3(AUTHOR, field("createdAt", instant()), field("body", string()), Tuple::of),
             field("state", string()),
             map2(field("isMinimized", bool()), field("minimizedReason", nullable(string())), Tuple::of),
-            map3(field("id", string()), field("fullDatabaseId", string()), COMMENT_RIGHTS, Tuple::of),
+            map3(
+                    field("id", string()).map(Comment.Id::new),
+                    field("fullDatabaseId", string()).map(Comment.RestId::new),
+                    COMMENT_RIGHTS,
+                    Tuple::of),
             REACTIONS,
             (written, state, hidden, ids, reactions) -> Option.when(
                     !state.equals("PENDING"),
@@ -130,7 +134,7 @@ final class ReviewThreadsQuery {
             // The side of its first line, none when it is on one line; it is then that of its line.
             field("startDiffSide", nullable(enumOf(Side.class))),
             COMMENTS_READ,
-            field("id", string()),
+            field("id", string()).map(ReviewThread.Id::new),
             RIGHTS,
             (thread, startSide, comments, id, rights) -> Option.when(
                     !comments._1().isEmpty(),

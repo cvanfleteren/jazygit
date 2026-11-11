@@ -43,7 +43,7 @@ public final class CommitFilesUpdate {
     public static Next update(Model model, CommitFilesMsg msg) {
         return switch (msg) {
             case CommitFilesMsg.Opened(var of, var pane) -> {
-                CommitFilesView view = CommitFilesView.of(of, pane, Scopes.FILES.id());
+                CommitFilesView view = CommitFilesView.of(of, pane, Scopes.FILES.pane());
                 yield new Next(
                         model.mapRepoView(repoView -> repoView.withCommitFiles(Option.of(view))),
                         List.<Cmd>of(LoadCommitFiles.of(view))
@@ -99,7 +99,7 @@ public final class CommitFilesUpdate {
                                 .map(tip -> update(
                                         model,
                                         new CommitFilesMsg.Opened(
-                                                new Changes.OfBranch(branch, base, tip), Scopes.BRANCHES.id())))
+                                                new Changes.OfBranch(branch, base, tip), Scopes.BRANCHES.pane())))
                                 .getOrElse(() -> Next.of(model)))
                         .getOrElse(() -> Next.of(model.fail(new AppError.NoBaseBranch(branch))));
     }
@@ -128,7 +128,8 @@ public final class CommitFilesUpdate {
      * the commits they are at now: the threads are of those. Read at an older {@code version} than they are at now, as
      * before a comment was deleted, they are dropped, and read again for the threads {@code settled} (ADR 64).
      */
-    private static Next remarksRead(Model model, int number, ReviewRemarks remarks, Set<String> settled, int version) {
+    private static Next remarksRead(
+            Model model, int number, ReviewRemarks remarks, Set<ReviewThread.Id> settled, int version) {
         return model.repoView()
                 .commitFiles()
                 .filter(view -> view.pullRequest().contains(number))

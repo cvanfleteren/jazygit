@@ -338,7 +338,7 @@ public final class PullRequestUpdate {
     private static Next files(Model model, PullRequestCommits commits) {
         return CommitFilesUpdate.update(
                 model.withScreen(Screen.REPOSITORY),
-                new CommitFilesMsg.Opened(new Changes.OfPullRequest(commits), Scopes.BRANCHES.id()));
+                new CommitFilesMsg.Opened(new Changes.OfPullRequest(commits), Scopes.BRANCHES.pane()));
     }
 
     /**

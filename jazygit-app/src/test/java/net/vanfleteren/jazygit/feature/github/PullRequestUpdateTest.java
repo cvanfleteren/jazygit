@@ -68,6 +68,7 @@ import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.diff.BaseTip;
 import net.vanfleteren.jazygit.state.diff.Changes;
@@ -1405,7 +1406,7 @@ class PullRequestUpdateTest {
             assertEquals(Option.none(), opened.model().popup(PullRequestPopup.class));
             assertEquals(Screen.REPOSITORY, opened.model().screen());
             assertEquals(
-                    Option.of(CommitFilesView.of(of, "branches", "files")),
+                    Option.of(CommitFilesView.of(of, new PaneId("branches"), new PaneId("files"))),
                     opened.model().repoView().commitFiles());
             assertEquals(
                     List.of(
@@ -1465,7 +1466,7 @@ class PullRequestUpdateTest {
         assertEquals(Option.none(), opened.model().popup(PullRequestPopup.class));
         assertEquals(Screen.REPOSITORY, opened.model().screen());
         assertEquals(
-                Option.of(CommitFilesView.of(of, "branches", "files")),
+                Option.of(CommitFilesView.of(of, new PaneId("branches"), new PaneId("files"))),
                 opened.model().repoView().commitFiles());
         assertTrue(opened.cmds()
                 .containsAll(List.of(
@@ -1516,7 +1517,7 @@ class PullRequestUpdateTest {
                 new PullRequestCommits(42, "owner/repo", "github.com", new Sha(BASE_OID), new Sha(HEAD_OID)));
         assertEquals(Option.none(), opened.model().popup(PullRequestPopup.class));
         assertEquals(
-                Option.of(CommitFilesView.of(of, "branches", "files")),
+                Option.of(CommitFilesView.of(of, new PaneId("branches"), new PaneId("files"))),
                 opened.model().repoView().commitFiles());
         assertEquals(
                 List.of(
@@ -1539,7 +1540,7 @@ class PullRequestUpdateTest {
             Next opened = Update.update(shown, new PullRequestMsg.FilesRequested(UNPUSHED.name()));
 
             assertEquals(
-                    Option.of(CommitFilesView.of(of, "branches", "files")),
+                    Option.of(CommitFilesView.of(of, new PaneId("branches"), new PaneId("files"))),
                     opened.model().repoView().commitFiles());
             assertEquals(List.of(new LoadCommitFiles(of)), opened.cmds());
             assertFalse(opened.cmds().head().background());
@@ -1648,8 +1649,8 @@ class PullRequestUpdateTest {
                 Option.of(CommitFilesView.of(
                         new Changes.OfPullRequest(new PullRequestCommits(
                                 42, "owner/repo", "github.com", new Sha(BASE_OID), new Sha(HEAD_OID))),
-                        "branches",
-                        "files")),
+                        new PaneId("branches"),
+                        new PaneId("files"))),
                 again.model().repoView().commitFiles());
         assertFalse(again.cmds().exists(cmd -> cmd instanceof LoadPullRequestDetails));
     }
@@ -2453,7 +2454,7 @@ class PullRequestUpdateTest {
         assertEquals(Option.none(), opened.model().popup());
         assertEquals(Screen.REPOSITORY, opened.model().screen());
         assertEquals(
-                Option.of(CommitFilesView.of(of, "branches", "files")),
+                Option.of(CommitFilesView.of(of, new PaneId("branches"), new PaneId("files"))),
                 opened.model().repoView().commitFiles());
         assertTrue(opened.cmds().contains(new LoadCommitFiles(of)));
     }
@@ -2484,7 +2485,7 @@ class PullRequestUpdateTest {
         assertEquals(Option.none(), opened.model().popup(PullRequestPopup.class));
         assertEquals(Screen.REPOSITORY, opened.model().screen());
         assertEquals(
-                Option.of(CommitFilesView.of(of, "branches", "files")),
+                Option.of(CommitFilesView.of(of, new PaneId("branches"), new PaneId("files"))),
                 opened.model().repoView().commitFiles());
         assertTrue(opened.cmds().contains(new LoadCommitFiles(of)));
     }

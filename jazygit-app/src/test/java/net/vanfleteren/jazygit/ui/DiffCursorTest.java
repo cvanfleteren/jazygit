@@ -9,6 +9,7 @@ import dev.tamboui.text.Span;
 import io.vavr.collection.List;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.state.diff.Anchor;
 import net.vanfleteren.jazygit.state.diff.DiffStops;
@@ -22,7 +23,8 @@ class DiffCursorTest {
     private static final Anchor LEAD = new Anchor.Lead();
     private static final Anchor FILE = new Anchor.File("a.txt");
     private static final Anchor ONE = new Anchor.OnLine("a.txt", Side.RIGHT, 1);
-    private static final Anchor THREAD = new Anchor.Thread("T", Option.of(new Anchor.OnLine("a.txt", Side.RIGHT, 1)));
+    private static final Anchor THREAD =
+            new Anchor.Thread(new ReviewThread.Id("T"), Option.of(new Anchor.OnLine("a.txt", Side.RIGHT, 1)));
     private static final Anchor TWO = new Anchor.OnLine("a.txt", Side.RIGHT, 2);
     private static final Anchor THREE = new Anchor.OnLine("a.txt", Side.RIGHT, 3);
 
@@ -31,8 +33,10 @@ class DiffCursorTest {
     private static final Vector<RichDiff.Stop> STOPS = Vector.of(
             stop(LEAD, 3, 0), stop(FILE, 1, 3), line(ONE, 4), stop(THREAD, 10, 5), line(TWO, 15), line(THREE, 16));
 
-    private static final Anchor FIRST = new Anchor.Thread("T1", Option.of(new Anchor.OnLine("a.txt", Side.RIGHT, 1)));
-    private static final Anchor LAST = new Anchor.Thread("T2", Option.of(new Anchor.OnLine("a.txt", Side.RIGHT, 2)));
+    private static final Anchor FIRST =
+            new Anchor.Thread(new ReviewThread.Id("T1"), Option.of(new Anchor.OnLine("a.txt", Side.RIGHT, 1)));
+    private static final Anchor LAST =
+            new Anchor.Thread(new ReviewThread.Id("T2"), Option.of(new Anchor.OnLine("a.txt", Side.RIGHT, 2)));
 
     // A bar, line 1 and its thread, line 2 and its thread, and line 3: 6 lines, all on one screen.
     private static final Vector<RichDiff.Stop> TWO_THREADS = Vector.of(
@@ -179,7 +183,7 @@ class DiffCursorTest {
 
     @Test
     void aCommentIsAStopThatTheNextAndThePreviousThreadGoFrom() {
-        Anchor reply = new Anchor.Comment("R", (Anchor.Thread) FIRST);
+        Anchor reply = new Anchor.Comment(new ReviewThread.Comment.Id("R"), (Anchor.Thread) FIRST);
         Vector<RichDiff.Stop> stops = Vector.of(
                 stop(FILE, 1, 0),
                 line(ONE, 1),

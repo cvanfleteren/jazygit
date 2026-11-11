@@ -102,7 +102,8 @@ class GitHubBasesTest {
     private static GitHubBases onGitHub(List<PullRequest> pullRequests, String... remotes) {
         return GitHubBases.of(GitHubState.NOT_READ
                 .withListed(pullRequests)
-                .withBranchChecks(Option.of(new GitHubChecks(HashSet.of(remotes), HashMap.empty()))));
+                .withBranchChecks(
+                        Option.of(new GitHubChecks(HashSet.of(remotes).map(RemoteName::new), HashMap.empty()))));
     }
 
     private static Map<BranchName, BranchName> parents(

@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.RemoteName;
 import net.vanfleteren.jazygit.state.github.FromGitHub;
 import net.vanfleteren.jazygit.state.github.GitHubChecks;
 import net.vanfleteren.jazygit.state.github.GitHubState;
@@ -26,7 +27,7 @@ import net.vanfleteren.jazygit.state.github.GitHubState;
  * @param remotes           the remotes on GitHub; none until they were read, when any of them may be
  */
 public record GitHubBases(
-        Map<BranchName, BranchName> byHead, Set<BranchName> protectedBranches, Option<Set<String>> remotes) {
+        Map<BranchName, BranchName> byHead, Set<BranchName> protectedBranches, Option<Set<RemoteName>> remotes) {
 
     /**
      * What is known before GitHub said anything.
@@ -102,8 +103,7 @@ public record GitHubBases(
         return branch.remoteUpstream()
                 .fold(
                         () -> Option.of(branch.name()),
-                        upstream -> remotes.forAll(onGitHub ->
-                                        onGitHub.contains(upstream.remote().value()))
+                        upstream -> remotes.forAll(onGitHub -> onGitHub.contains(upstream.remote()))
                                 ? Option.of(upstream.branch())
                                 : Option.none());
     }

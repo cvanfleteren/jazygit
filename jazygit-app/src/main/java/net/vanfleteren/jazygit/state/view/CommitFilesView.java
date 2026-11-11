@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.image.Picture;
 import net.vanfleteren.jazygit.state.Lens;
 import net.vanfleteren.jazygit.state.Loadable;
+import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.diff.Collapsed;
 
@@ -49,16 +50,16 @@ import net.vanfleteren.jazygit.state.diff.Collapsed;
 @With
 public record CommitFilesView(
         Changes of,
-        String pane,
-        String listedIn,
+        PaneId pane,
+        PaneId listedIn,
         Loadable<List<CommitFile>> files,
         Option<Preview<List<CommitFile>, DiffText>> diff,
         Option<Loadable<ReviewRemarks>> remarks,
         Listed listed,
         Collapsed collapsed,
-        Set<String> sending,
-        Set<String> deleting,
-        Set<String> reacting,
+        Set<ReviewThread.Id> sending,
+        Set<ReviewThread.Comment.Id> deleting,
+        Set<ReviewThread.Comment.Id> reacting,
         int version,
         Map<String, Option<Picture>> pictures,
         Option<FileFilter> filter) {
@@ -67,7 +68,7 @@ public record CommitFilesView(
      * The view of the files of {@code of}, opened from the pane {@code pane} and listed in {@code listedIn}, while
      * they are read, and the review threads of a pull request.
      */
-    public static CommitFilesView of(Changes of, String pane, String listedIn) {
+    public static CommitFilesView of(Changes of, PaneId pane, PaneId listedIn) {
         return new CommitFilesView(
                 of,
                 pane,
@@ -119,7 +120,7 @@ public record CommitFilesView(
      * the next comment of its thread is then its first, and the thread is gone with its last, unless GitHub has more of
      * it than were read. Changed so, they are of a newer version, which a read started before is older than.
      */
-    public CommitFilesView withoutComment(String comment) {
+    public CommitFilesView withoutComment(ReviewThread.Comment.Id comment) {
         return remarks.flatMap(Loadable::toOption)
                 .filter(read -> read.threads().exists(thread -> has(thread, comment)))
                 .map(read -> {
@@ -137,7 +138,7 @@ public record CommitFilesView(
      * These with the comment with the id {@code comment} saying {@code body}, as GitHub holds it once it is edited
      * (ADR 65). Changed so, they are of a newer version, which a read started before is older than.
      */
-    public CommitFilesView withEdited(String comment, String body) {
+    public CommitFilesView withEdited(ReviewThread.Comment.Id comment, String body) {
         return withComment(comment, each -> each.withBody(body));
     }
 
@@ -146,7 +147,7 @@ public record CommitFilesView(
      * else taken back, as GitHub holds it once it took that (ADR 86). Changed so, they are of a newer version, which a
      * read started before is older than.
      */
-    public CommitFilesView withReacted(String comment, Reaction reaction, boolean given) {
+    public CommitFilesView withReacted(ReviewThread.Comment.Id comment, Reaction reaction, boolean given) {
         return withComment(comment, each -> each.withReactions(each.reactions().withViewer(reaction, given)));
     }
 
@@ -155,7 +156,8 @@ public record CommitFilesView(
      * what was sent for it, at a newer version, which a read started before is older than (ADR 64); these as they are
      * when no thread read has it.
      */
-    private CommitFilesView withComment(String comment, Function<ReviewThread.Comment, ReviewThread.Comment> change) {
+    private CommitFilesView withComment(
+            ReviewThread.Comment.Id comment, Function<ReviewThread.Comment, ReviewThread.Comment> change) {
         return remarks.flatMap(Loadable::toOption)
                 .filter(read -> read.threads().exists(thread -> has(thread, comment)))
                 .map(read -> {
@@ -170,11 +172,11 @@ public record CommitFilesView(
                 .getOrElse(this);
     }
 
-    private static boolean has(ReviewThread thread, String comment) {
+    private static boolean has(ReviewThread thread, ReviewThread.Comment.Id comment) {
         return thread.comments().exists(each -> each.id().equals(comment));
     }
 
-    private static ReviewThread without(ReviewThread thread, String comment) {
+    private static ReviewThread without(ReviewThread thread, ReviewThread.Comment.Id comment) {
         return thread.withComments(thread.comments().filter(each -> !each.id().equals(comment)));
     }
 

@@ -43,6 +43,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.gh.timing.CheckHistory;
 import net.vanfleteren.jazygit.gh.timing.CheckSample;
 import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.RemoteName;
 import net.vanfleteren.jazygit.state.CursorFeedback;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -697,7 +698,8 @@ class PullRequestDialogTest {
         Model withChecks = Update.update(
                         TestModels.loaded(),
                         new BranchChecksMsg.Loaded(new GitHubChecks(
-                                HashSet.of("origin"), HashMap.of(new BranchName("support_rename"), Checks.FAILING))))
+                                HashSet.of(new RemoteName("origin")),
+                                HashMap.of(new BranchName("support_rename"), Checks.FAILING))))
                 .model();
         for (Model model : List.of(TestModels.loaded(), withChecks)) {
             try (ToolkitTestRunner runner = start(model.openPopup(ready))) {

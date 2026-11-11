@@ -26,11 +26,13 @@ import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.model.*;
+import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.settings.DiffLook;
 import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.AreaId;
+import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.diff.*;
 import net.vanfleteren.jazygit.state.diff.Changes;
@@ -95,7 +97,7 @@ class ContentPanelTest {
                 .model();
 
         String area = content.areaOfPane(selected, CommitsPanel.ID).get();
-        assertEquals(Option.of(CommitsPanel.ID), content.paneOfArea(selected, area));
+        assertEquals(Option.of(new PaneId(CommitsPanel.ID)), content.paneOfArea(selected, area));
         assertNotNull(content.render(selected, area));
     }
 
@@ -930,7 +932,7 @@ class ContentPanelTest {
         Changes of = new Changes.OfCommit(new Sha("aaaa"));
         CommitFile file = new CommitFile("src/a.txt", ChangeType.MODIFIED);
         Model open = Update.update(
-                        Update.update(TestModels.loaded(), new CommitFilesMsg.Opened(of, CommitsPanel.ID))
+                        Update.update(TestModels.loaded(), new CommitFilesMsg.Opened(of, Scopes.COMMITS.pane()))
                                 .model(),
                         new LoadMsg.CommitFilesLoaded(of, List.of(file)))
                 .model();
@@ -1079,7 +1081,7 @@ class ContentPanelTest {
                         new LoadMsg.CommitDetailLoaded(new Sha("ffff"), DiffOptions.DEFAULT, DiffText.of("+a")))
                 .model();
         String area = content.areaOfPane(loaded, BranchesPanel.ID).get();
-        assertEquals(Option.of(BranchesPanel.ID), content.paneOfArea(loaded, area));
+        assertEquals(Option.of(new PaneId(BranchesPanel.ID)), content.paneOfArea(loaded, area));
     }
 
     @Test
@@ -1291,7 +1293,7 @@ class ContentPanelTest {
             SettledPilot.of(testRunner).pause();
             ViewMsg.ContentScrolled next = (ViewMsg.ContentScrolled) dispatched.getLast();
             Anchor onThread = new Anchor.Thread(
-                    "T1",
+                    new net.vanfleteren.jazygit.gh.model.ReviewThread.Id("T1"),
                     Option.of(new Anchor.OnLine("a.txt", net.vanfleteren.jazygit.gh.model.ReviewThread.Side.RIGHT, 1)));
             assertEquals(Option.of(onThread), next.to().cursor());
 
@@ -1552,11 +1554,11 @@ class ContentPanelTest {
                         Instant.EPOCH,
                         body,
                         Option.none(),
-                        "C",
-                        "1",
+                        new net.vanfleteren.jazygit.gh.model.ReviewThread.Comment.Id("C"),
+                        new net.vanfleteren.jazygit.gh.model.ReviewThread.Comment.RestId("1"),
                         net.vanfleteren.jazygit.gh.model.CommentRights.ALL)),
                 0,
-                "T1",
+                new net.vanfleteren.jazygit.gh.model.ReviewThread.Id("T1"),
                 net.vanfleteren.jazygit.gh.model.ReviewThread.Rights.ALL);
         Model rich = TestModels.loaded()
                 .mapPreferences(preferences ->
@@ -1566,7 +1568,7 @@ class ContentPanelTest {
                                         Update.update(
                                                         rich,
                                                         new net.vanfleteren.jazygit.feature.diff.CommitFilesMsg.Opened(
-                                                                of, BranchesPanel.ID))
+                                                                of, Scopes.BRANCHES.pane()))
                                                 .model(),
                                         new LoadMsg.CommitFilesLoaded(of, List.of(file)))
                                 .model(),
@@ -1592,8 +1594,8 @@ class ContentPanelTest {
     void theDiffAreasReturnToTheFilesPane() {
         Model model = TestModels.loaded();
         assertEquals(Option.none(), content.paneOfArea(model, "unknown"));
-        assertEquals(Option.of(FilesPanel.ID), content.paneOfArea(model, "diff-staged"));
-        assertEquals(Option.of(FilesPanel.ID), content.paneOfArea(model, "diff-unstaged"));
+        assertEquals(Option.of(new PaneId(FilesPanel.ID)), content.paneOfArea(model, "diff-staged"));
+        assertEquals(Option.of(new PaneId(FilesPanel.ID)), content.paneOfArea(model, "diff-unstaged"));
     }
 
     @Test
@@ -1625,10 +1627,10 @@ class ContentPanelTest {
         assertEquals(Option.of("pull-request-preview"), content.areaOfPane(read, first));
         assertEquals(Option.none(), content.areaOfPane(read, second));
 
-        Model fromSecond = read.withPrOverview(read.prOverview().withListPane(Option.of(second)));
+        Model fromSecond = read.withPrOverview(read.prOverview().withListPane(Option.of(new PaneId(second))));
         assertEquals(Option.of("pull-request-preview"), content.areaOfPane(fromSecond, second));
         assertEquals(Option.none(), content.areaOfPane(fromSecond, first));
-        assertEquals(Option.of(second), content.paneOfArea(fromSecond, "pull-request-preview"));
+        assertEquals(Option.of(new PaneId(second)), content.paneOfArea(fromSecond, "pull-request-preview"));
     }
 
     @Test
