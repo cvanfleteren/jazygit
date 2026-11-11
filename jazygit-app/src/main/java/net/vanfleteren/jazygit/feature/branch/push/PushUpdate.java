@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch.push;
 
+import net.vanfleteren.jazygit.state.RereadUpdate;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.push.PushCmd.Push;
 import net.vanfleteren.jazygit.feature.branch.push.PushCmd.PushSettingUpstream;
@@ -33,7 +34,7 @@ public final class PushUpdate {
                         .getOrElse(() -> Next.of(model));
             // The push ran and pushed nothing; where to push it is asked instead of the failure (ADR 40).
             case PushMsg.Refused(var cmd, var refused, var commands) ->
-                Update.refresh(OperationUpdate.done(model, cmd, commands)
+                RereadUpdate.refresh(OperationUpdate.done(model, cmd, commands)
                         .openPopupIfFree(SetUpstreamPopup.refused(cmd.branch(), refused)));
         };
     }

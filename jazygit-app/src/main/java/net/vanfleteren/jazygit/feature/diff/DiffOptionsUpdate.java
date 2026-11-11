@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.diff;
 
+import net.vanfleteren.jazygit.state.RereadUpdate;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
@@ -90,7 +91,7 @@ public final class DiffOptionsUpdate {
                 model.repoView().commitFiles().map(view -> view.withDiff(reloading(view.diff())));
         List<Cmd> loads = List.<Cmd>empty()
                 .appendAll(model.repoView().fileDiff().map(diff -> new LoadFileDiff(diff.key(), options)))
-                .appendAll(Update.shown(model).filter(load -> load instanceof DiffLoad));
+                .appendAll(RereadUpdate.shown(model).filter(load -> load instanceof DiffLoad));
         return new Next(
                 model.mapRepoView(repoView -> repoView.withFileDiff(reloading(repoView.fileDiff()))
                         .withCommitDetail(reloading(repoView.commitDetail()))

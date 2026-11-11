@@ -182,8 +182,8 @@ class BranchCommitsUpdateTest {
                 view(failed).flatMap(BranchCommitsView::detail).exists(d -> d.value() instanceof Loadable.Failed),
                 view(failed).toString());
         assertTrue(
-                Update.tick(failed).cmds().contains(load),
-                Update.tick(failed).cmds().toString());
+                RereadUpdate.tick(failed).cmds().contains(load),
+                RereadUpdate.tick(failed).cmds().toString());
     }
 
     @Test

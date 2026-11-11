@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch.nuke;
 
+import net.vanfleteren.jazygit.state.RereadUpdate;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.nuke.NukeBranchMsg.Confirmed;
 import net.vanfleteren.jazygit.feature.branch.nuke.NukeBranchMsg.NotAllNuked;
@@ -35,7 +36,7 @@ public final class NukeBranchUpdate {
                                 .map(NukeBranchPopup::cmd)
                                 .filter(popup.cmd()::equals));
             case NotAllNuked(NukeBranchCmd cmd, var commands, var left, var failures) ->
-                Update.refresh(OperationUpdate.done(model, cmd, commands)
+                RereadUpdate.refresh(OperationUpdate.done(model, cmd, commands)
                         .fail(new AppError.NotAllNuked(cmd.branch(), left, failures)));
         };
     }

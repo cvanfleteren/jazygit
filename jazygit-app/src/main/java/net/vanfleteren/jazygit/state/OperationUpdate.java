@@ -20,7 +20,7 @@ public final class OperationUpdate {
             case OperationMsg.Stopped(OperationCmd cmd, List<ExecutedCommand> commands, var notice) ->
                 refreshed(done(model, cmd, commands).inform(notice), cmd);
             case OperationMsg.Failed(OperationCmd cmd, Failure failure) ->
-                Update.refresh(done(model, cmd, failure.commands())
+                RereadUpdate.refresh(done(model, cmd, failure.commands())
                         .fail(new AppError.OperationFailed(cmd.operation(), cmd.subject(), failure)));
         };
     }
@@ -37,7 +37,7 @@ public final class OperationUpdate {
      * The repository read again once {@code cmd} is done; and what GitHub knows, when it changed that.
      */
     private static Next refreshed(Model model, OperationCmd cmd) {
-        Next refreshed = Update.refresh(model);
+        Next refreshed = RereadUpdate.refresh(model);
         return cmd.changesGitHub() ? PullRequestsUpdate.loadAnyway(refreshed) : refreshed;
     }
 

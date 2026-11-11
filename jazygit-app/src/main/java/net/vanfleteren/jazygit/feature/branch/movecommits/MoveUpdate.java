@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch.movecommits;
 
+import net.vanfleteren.jazygit.state.RereadUpdate;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutMsg;
@@ -55,7 +56,7 @@ public final class MoveUpdate {
                         popup -> Option.of(move(popup.request(), popup.target(), forcePush)));
             case Moved(var cmd, var commands) -> moved(model, cmd, commands);
             case Stopped(var cmd, var commands, var notice) ->
-                Update.refresh(OperationUpdate.done(model, cmd, commands)
+                RereadUpdate.refresh(OperationUpdate.done(model, cmd, commands)
                         .inform(new Notice.MoveStopped(notice, cmd.from(), cmd.oldest(), cmd.branch())));
         };
     }

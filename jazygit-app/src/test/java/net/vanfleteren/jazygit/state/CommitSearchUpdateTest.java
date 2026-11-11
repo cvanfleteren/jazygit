@@ -142,7 +142,7 @@ class CommitSearchUpdateTest {
                 Update.update(searched, load.failed(refused("bad pathspec"))).model();
 
         assertInstanceOf(Failed.class, failed.repoView().commitSearch().get().results());
-        assertTrue(Update.refresh(failed).cmds().contains(load));
+        assertTrue(RereadUpdate.refresh(failed).cmds().contains(load));
     }
 
     @Test

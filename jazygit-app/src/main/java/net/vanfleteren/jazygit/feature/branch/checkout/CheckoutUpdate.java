@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch.checkout;
 
+import net.vanfleteren.jazygit.state.RereadUpdate;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.Branches;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutMsg.*;
@@ -30,7 +31,7 @@ public final class CheckoutUpdate {
             case RemoteRequested(RemoteBranch branch) -> remoteRequested(model, branch);
             // The checkout ran, and failed; the stash it needs is offered instead of the failure.
             case NeedsStash(var cmd, var commands) ->
-                Update.refresh(OperationUpdate.done(model, cmd, commands)
+                RereadUpdate.refresh(OperationUpdate.done(model, cmd, commands)
                         .openPopupIfFree(new StashCheckoutPopup(cmd.branch())));
             case CheckedOut(var cmd, var commands) ->
                 OperationUpdate.succeeded(

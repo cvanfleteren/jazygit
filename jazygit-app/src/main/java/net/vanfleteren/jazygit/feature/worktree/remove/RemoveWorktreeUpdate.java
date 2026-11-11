@@ -38,7 +38,7 @@ public final class RemoveWorktreeUpdate {
                                         popup.location(), false, popup.branch().filter(branch -> deleteBranch))));
             // The removal ran, and failed; removing it anyway is offered instead of the failure.
             case NeedsForce(var cmd, var commands) ->
-                Update.refresh(OperationUpdate.done(model, cmd, commands)
+                RereadUpdate.refresh(OperationUpdate.done(model, cmd, commands)
                         .openPopupIfFree(new ForceRemoveWorktreePopup(
                                 cmd,
                                 model.repo()
