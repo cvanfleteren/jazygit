@@ -220,7 +220,7 @@ class AheadUpdateTest {
     void whatIsReadWithTheLogOfHeadIsReadAgainWhenTheBranchesArrivedMeanwhile() {
         // At the start the status arrives first: the log is asked for before the branches tell its base.
         Update.Next started = Update.update(
-                Update.init("repo").model(),
+                TestModels.init("repo").model(),
                 new LoadMsg.StatusLoaded(new RepoStatus(Head.onBranch(FEATURE, FEATURE_TIP), List.empty())));
         LoadAhead issued = ((LoadCommits) started.cmds().single()).ahead();
         Model branchesRead = Update.update(

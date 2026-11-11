@@ -110,7 +110,7 @@ class ResetUpdateTest {
 
     @Test
     void aHardResetAsksWhenTheStatusIsNotKnown() {
-        Model model = Update.update(Update.init("repo").model(), TestModels.commitsLoaded(List.of(TIP, ROOT)))
+        Model model = Update.update(TestModels.init("repo").model(), TestModels.commitsLoaded(List.of(TIP, ROOT)))
                 .model();
 
         Next next = Update.update(opened(model), new ResetMsg.Chosen(ResetMode.HARD));

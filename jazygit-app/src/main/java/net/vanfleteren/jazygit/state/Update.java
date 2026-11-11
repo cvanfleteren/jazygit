@@ -42,35 +42,12 @@ public final class Update {
 
     private Update() {}
 
-    public static Next init(String repositoryName) {
-        return init(repositoryName, SettingsStore.Loaded.DEFAULT);
-    }
-
     /**
-     * The start of a session with {@code settings}; what was wrong with them shows in the command log.
-     */
-    public static Next init(String repositoryName, SettingsStore.Loaded settings) {
-        return init(repositoryName, settings, Option.none());
-    }
-
-    /**
-     * The start of a session with {@code settings}, drawn in {@code themeOverride} instead of the saved theme
-     * if there is one.
-     */
-    public static Next init(String repositoryName, SettingsStore.Loaded settings, Option<ThemeName> themeOverride) {
-        return init(repositoryName, settings, themeOverride, Landing.START);
-    }
-
-    /**
-     * The start of a session as {@link #init(String, SettingsStore.Loaded, Option)} starts it, shown where
-     * {@code landing} says.
+     * The start of a session from {@code initial} with {@code settings}, drawn in {@code themeOverride} instead of the
+     * saved theme if there is one, in a repository the git configuration gives {@code repositoryTheme} (ADR 70), and
+     * shown where {@code landing} says. What was wrong with the settings shows in the command log.
      */
     public static Next init(
-            String repositoryName, SettingsStore.Loaded settings, Option<ThemeName> themeOverride, Landing landing) {
-        return init(Model.initial(repositoryName), settings, themeOverride, RepositoryTheme.NONE, landing);
-    }
-
-    private static Next init(
             Model initial,
             SettingsStore.Loaded settings,
             Option<ThemeName> themeOverride,
@@ -87,9 +64,8 @@ public final class Update {
     }
 
     /**
-     * The start of a session as {@link #init(String, SettingsStore.Loaded, Option, Landing)} starts it, in a
-     * repository the git configuration gives {@code repositoryTheme} (ADR 70), at {@code now}: the commands it asks
-     * for are stamped (ADR 33).
+     * The start of a session as {@link #init(Model, SettingsStore.Loaded, Option, RepositoryTheme, Landing)} starts
+     * it, at {@code now}: the commands it asks for are stamped (ADR 33).
      */
     public static Step begin(
             String repositoryName,

@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.github;
 
+import net.vanfleteren.jazygit.state.TestModels;
 import static net.vanfleteren.jazygit.state.TestModels.*;
 import static net.vanfleteren.jazygit.state.TestModels.lastRead;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -2669,7 +2670,7 @@ class PullRequestUpdateTest {
         PullRequestSummary pr = summary("owner/repo");
         Landing landing = new Landing(BranchesTab.LOCAL, Option.none())
                 .followedBy(new CheckoutMsg.Placed(new PullRequestCheckout(pr)));
-        Model model = TestModels.started(Update.init("repo", SettingsStore.Loaded.DEFAULT, Option.none(), landing))
+        Model model = TestModels.started(TestModels.init("repo", SettingsStore.Loaded.DEFAULT, Option.none(), landing))
                 .model();
         Next branches = TestModels.done(
                 model,
