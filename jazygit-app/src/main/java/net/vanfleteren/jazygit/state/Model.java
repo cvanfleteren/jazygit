@@ -110,11 +110,11 @@ public record Model(
             case REPOSITORY ->
                 withRepoView(repoView.withFocusedPane(Option.of(id))
                         .withCommitFiles(repoView.commitFiles()
-                                .filter(view -> content || view.listedIn().equals(id))));
+                                .filter(view -> content || view.listedIn().equals(new PaneId(id)))));
             case PULL_REQUESTS ->
                 withPrOverview(prOverview
                         .withFocusedPane(Option.of(id))
-                        .withListPane(content ? prOverview.listPane() : Option.of(id)));
+                        .withListPane(content ? prOverview.listPane() : Option.of(new PaneId(id))));
         };
     }
 

@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.image.Picture;
 import net.vanfleteren.jazygit.state.Lens;
 import net.vanfleteren.jazygit.state.Loadable;
+import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.diff.Collapsed;
 
@@ -49,8 +50,8 @@ import net.vanfleteren.jazygit.state.diff.Collapsed;
 @With
 public record CommitFilesView(
         Changes of,
-        String pane,
-        String listedIn,
+        PaneId pane,
+        PaneId listedIn,
         Loadable<List<CommitFile>> files,
         Option<Preview<List<CommitFile>, DiffText>> diff,
         Option<Loadable<ReviewRemarks>> remarks,
@@ -67,7 +68,7 @@ public record CommitFilesView(
      * The view of the files of {@code of}, opened from the pane {@code pane} and listed in {@code listedIn}, while
      * they are read, and the review threads of a pull request.
      */
-    public static CommitFilesView of(Changes of, String pane, String listedIn) {
+    public static CommitFilesView of(Changes of, PaneId pane, PaneId listedIn) {
         return new CommitFilesView(
                 of,
                 pane,

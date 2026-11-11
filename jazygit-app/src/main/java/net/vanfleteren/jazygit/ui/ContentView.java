@@ -182,7 +182,7 @@ final class ContentView {
                 ? Option.of(focusedId)
                 : model.repoView().focusedPane().orElse(Option.of(focusedId));
         return id.map(known -> ContentArea.focusable(known)
-                        .map(area -> area.pane(model))
+                        .map(area -> area.pane(model).value())
                         .getOrElse(known))
                 .flatMap(Mirrored::of)
                 .getOrElse(Mirrored.FILES);

@@ -121,7 +121,7 @@ class ReviewUpdateTest {
 
     private static Model files(PullRequestDetails.State state, String head, List<ReviewThread> threads) {
         Model opened = Update.update(
-                        loaded(), new CommitFilesMsg.Opened(new Changes.OfPullRequest(COMMITS), Scopes.BRANCHES.id()))
+                        loaded(), new CommitFilesMsg.Opened(new Changes.OfPullRequest(COMMITS), Scopes.BRANCHES.pane()))
                 .model();
         Model read = Update.update(
                         opened,
@@ -367,7 +367,7 @@ class ReviewUpdateTest {
 
         // Kept before the threads are read, it is the same once they are.
         Model opened = Update.update(
-                        loaded(), new CommitFilesMsg.Opened(new Changes.OfPullRequest(COMMITS), Scopes.BRANCHES.id()))
+                        loaded(), new CommitFilesMsg.Opened(new Changes.OfPullRequest(COMMITS), Scopes.BRANCHES.pane()))
                 .model();
         Model early = Update.update(opened, kept).model();
         assertEquals(
@@ -1337,7 +1337,7 @@ class ReviewUpdateTest {
     @Test
     void nothingIsCommentedOnEditedNorDeletedUntilTheThreadsAreRead() {
         Model reading = Update.update(
-                        loaded(), new CommitFilesMsg.Opened(new Changes.OfPullRequest(COMMITS), Scopes.BRANCHES.id()))
+                        loaded(), new CommitFilesMsg.Opened(new Changes.OfPullRequest(COMMITS), Scopes.BRANCHES.pane()))
                 .model();
         Model failed = Update.update(
                         reading,

@@ -28,6 +28,7 @@ import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Loadable.Loading;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.diff.Changes;
@@ -51,10 +52,10 @@ class CommitFilesUpdateTest {
 
     @Test
     void openingListsTheFilesInTheFilesPaneAndReadsThem() {
-        Next next = Update.update(loaded(), new CommitFilesMsg.Opened(COMMIT, Scopes.COMMITS.id()));
+        Next next = Update.update(loaded(), new CommitFilesMsg.Opened(COMMIT, Scopes.COMMITS.pane()));
 
         assertEquals(
-                Option.of(CommitFilesView.of(COMMIT, Scopes.COMMITS.id(), Scopes.FILES.id())),
+                Option.of(CommitFilesView.of(COMMIT, Scopes.COMMITS.pane(), Scopes.FILES.pane())),
                 next.model().repoView().commitFiles());
         assertEquals(List.of(new LoadCommitFiles(COMMIT)), next.cmds());
     }
@@ -124,7 +125,7 @@ class CommitFilesUpdateTest {
         Stash stash = new Stash("stash@{0}", new Sha("5555"), "work", Option.none(), Instant.EPOCH);
         Stash other = new Stash("stash@{0}", new Sha("6666"), "other", Option.none(), Instant.EPOCH);
         Model open = Update.update(
-                        loaded(), new CommitFilesMsg.Opened(new Changes.OfStash(stash.sha()), Scopes.STASH.id()))
+                        loaded(), new CommitFilesMsg.Opened(new Changes.OfStash(stash.sha()), Scopes.STASH.pane()))
                 .model();
 
         Model kept = Update.update(open, new LoadMsg.StashesLoaded(List.of(other, stash)))
@@ -186,13 +187,13 @@ class CommitFilesUpdateTest {
     }
 
     private static Model openedPullRequest() {
-        return Update.update(loaded(), new CommitFilesMsg.Opened(PULL_REQUEST, Scopes.BRANCHES.id()))
+        return Update.update(loaded(), new CommitFilesMsg.Opened(PULL_REQUEST, Scopes.BRANCHES.pane()))
                 .model();
     }
 
     @Test
     void theFilesOfAPullRequestComeWithItsReviewThreadsWhichCanBeReadAgain() {
-        Next opened = Update.update(loaded(), new CommitFilesMsg.Opened(PULL_REQUEST, Scopes.BRANCHES.id()));
+        Next opened = Update.update(loaded(), new CommitFilesMsg.Opened(PULL_REQUEST, Scopes.BRANCHES.pane()));
         assertEquals(
                 List.of(
                         new LoadCommitFiles(PULL_REQUEST),
@@ -341,7 +342,10 @@ class CommitFilesUpdateTest {
         // Other changes opened in their place start without a filter.
         assertEquals(
                 Option.none(),
-                Update.update(moved, new CommitFilesMsg.Opened(new Changes.OfCommit(new Sha("a".repeat(40))), "x"))
+                Update.update(
+                                moved,
+                                new CommitFilesMsg.Opened(
+                                        new Changes.OfCommit(new Sha("a".repeat(40))), new PaneId("x")))
                         .model()
                         .repoView()
                         .commitFiles()
@@ -391,7 +395,7 @@ class CommitFilesUpdateTest {
     }
 
     private static Model opened() {
-        return Update.update(loaded(), new CommitFilesMsg.Opened(COMMIT, Scopes.COMMITS.id()))
+        return Update.update(loaded(), new CommitFilesMsg.Opened(COMMIT, Scopes.COMMITS.pane()))
                 .model();
     }
 
