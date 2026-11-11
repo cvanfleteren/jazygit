@@ -17,4 +17,10 @@ public sealed interface VersionMsg extends Msg {
      * cursor {@code at} is in (ADR 102).
      */
     record Cycled(DiffCursorAt at) implements VersionMsg {}
+
+    /**
+     * The user asked to show the version of the one file of the area the cursor {@code at} is in rendered, or as source
+     * again (ADR 103).
+     */
+    record RenderToggled(DiffCursorAt at) implements VersionMsg {}
 }

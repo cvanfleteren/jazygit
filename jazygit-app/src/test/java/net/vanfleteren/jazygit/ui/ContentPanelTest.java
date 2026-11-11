@@ -240,6 +240,49 @@ class ContentPanelTest {
                 screens.last().mkString("\n"));
     }
 
+    @Test
+    void ctrlTShowsTheNewVersionRenderedAndActsOnTheBlockAtTheTop() throws Exception {
+        String header = "diff --git a/a.md b/a.md\n--- a/a.md\n+++ b/a.md\n";
+        DiffText changes = DiffText.of(header + "@@ -1,3 +1,3 @@\n # Title\n-old text\n+new text\n \n");
+        Model shown = showingCommit(changes.text())
+                .mapPreferences(preferences ->
+                        preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
+        java.util.List<Msg> dispatched = new java.util.ArrayList<>();
+        ContentPanel panel = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, dispatched::add);
+        String area = panel.areaOfPane(shown, CommitsPanel.ID).get();
+        ScrolledContent content = ContentView.of(shown, area).areas().head().content();
+        Anchor.OnLine removed = new Anchor.OnLine("a.md", net.vanfleteren.jazygit.gh.model.ReviewThread.Side.LEFT, 2);
+        Model onLine = shown.withScrolled(
+                io.vavr.collection.HashMap.of(area, new Scrolled(content, 0, 0, Option.of(removed), Option.none())));
+        DiffCursorAt at = new DiffCursorAt(
+                area, onLine.scrolled(area, content), removed, Option.none(), Option.none(), Option.none());
+        Update.Next asked =
+                Update.update(onLine, new net.vanfleteren.jazygit.feature.diff.VersionMsg.RenderToggled(at));
+        ReadVersion read = (ReadVersion) asked.cmds().head();
+        Model rendered = TestModels.done(
+                        TestModels.running(asked.model(), read), read, new LoadMsg.VersionRead(read, changes))
+                .model();
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(rendered, area))) {
+            String screen = RenderedText.ofLarge(testRunner, () -> panel.render(rendered, area));
+            assertTrue(screen.contains("· new version, rendered"), screen);
+            assertTrue(screen.contains("new version  a.md"), screen);
+            assertTrue(screen.contains("+ new text"), screen);
+            assertFalse(screen.contains("old text"), screen);
+            assertFalse(screen.contains(" 2 │"), screen);
+            SettledPilot.focus(testRunner, area);
+            SettledPilot.of(testRunner).press('t', dev.tamboui.tui.event.KeyModifiers.CTRL);
+            SettledPilot.of(testRunner).pause();
+        }
+        List<net.vanfleteren.jazygit.feature.diff.VersionMsg.RenderToggled> toggled = List.ofAll(dispatched)
+                .filter(net.vanfleteren.jazygit.feature.diff.VersionMsg.RenderToggled.class::isInstance)
+                .map(net.vanfleteren.jazygit.feature.diff.VersionMsg.RenderToggled.class::cast);
+        // With the bar of the file at the top, the first block, its first line.
+        assertEquals(
+                List.of(new Anchor.OnLine("a.md", net.vanfleteren.jazygit.gh.model.ReviewThread.Side.RIGHT, 1)),
+                toggled.map(msg -> msg.at().cursor()));
+    }
+
     /**
      * The screen of a panel with the cursor on line 39 of a diff around line 41, and then, in the same panel, once the
      * new version of the file of 60 lines is read in place of it.

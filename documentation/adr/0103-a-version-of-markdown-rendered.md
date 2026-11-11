@@ -92,9 +92,12 @@ is one line saying it differs.
 
 - The title of the area says it: `Files of #403 · new version, rendered`, with `(reading)` and `(could not be read)`
   as ADR 102 has them. The bar of the file is as in the version: `new version  README.md`.
-- A rendered version has no cursor: it scrolls. Rendering it scrolls to the block that holds the line of the cursor,
-  at the row the line was on; showing its source again puts the cursor on the first line of the block at the top.
-  Not: a cursor going from block to block, which is for when a block can be acted on.
+- A rendered version has no cursor in its blocks: it scrolls. The bar of its file is its only stop, whose lines the
+  rows after it are, so `j` and `k` scroll through them, and the keys of the diff, as Ctrl+O and Ctrl+T, still have a
+  cursor to act on. Rendering it scrolls to the block that holds the line of the cursor, at the row the line was on;
+  a key acts on the first line of the block at the top, or of the first block while the bar is at the top, so showing
+  its source again puts the cursor there. Not: a cursor going from block to block, which is for when a block can be
+  acted on.
 - While rendered, `y` and `v` do nothing, a thread cannot be started, and no review threads are shown.
 
 ## Consequences

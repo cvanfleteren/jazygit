@@ -702,7 +702,7 @@ class RemarkLinesTest {
         for (String markdown : List.of("> ![](a.png)", "- ![](a.png)", "1. ![](a.png)", "> > ![](a.png)")) {
             MarkdownImages.Drawn drawn = MarkdownImages.drawn(markdown, HashMap.of("a.png", picture), 10);
             List<String> lines =
-                    text(RemarkLines.markdown(drawn.markdown(), 10, StylePropertyResolver.empty(), drawn.pictures()));
+                    text(MarkdownLines.markdown(drawn.markdown(), 10, StylePropertyResolver.empty(), drawn.pictures()));
 
             // Each row of the picture is one line of all its cells, never wrapped onto the next; two quotes leave it
             // room for one row only.
@@ -718,14 +718,14 @@ class RemarkLinesTest {
 
     @Test
     void markdownIsReadBackFromWhatTamboUiDrawsAsLinesWithoutTheirBlankEnd() {
-        List<String> lines = text(
-                RemarkLines.markdown("# Title\n\n- one\n- `two`\n\n```\ncode\n```", 30, StylePropertyResolver.empty()));
+        List<String> lines = text(MarkdownLines.markdown(
+                "# Title\n\n- one\n- `two`\n\n```\ncode\n```", 30, StylePropertyResolver.empty()));
 
         assertTrue(lines.exists(line -> line.contains("Title")), lines.mkString("\n"));
         assertTrue(lines.exists(line -> line.contains("one")), lines.mkString("\n"));
         assertTrue(lines.exists(line -> line.contains("code")), lines.mkString("\n"));
         assertTrue(lines.forAll(line -> line.equals(line.stripTrailing())), lines.mkString("|\n"));
-        assertEquals(List.empty(), RemarkLines.markdown("  ", 30, StylePropertyResolver.empty()));
+        assertEquals(List.empty(), MarkdownLines.markdown("  ", 30, StylePropertyResolver.empty()));
     }
 
     @Test
@@ -746,7 +746,7 @@ class RemarkLinesTest {
                         "",
                         "after after after after after",
                         "after after after after after"),
-                text(RemarkLines.markdown(markdown, 30, StylePropertyResolver.empty())));
+                text(MarkdownLines.markdown(markdown, 30, StylePropertyResolver.empty())));
     }
 
     @Test
@@ -754,8 +754,8 @@ class RemarkLinesTest {
         String code = "x".repeat(40);
         String markdown = "# Title\n\nwords\n\n```\n" + code + "\n```\n\n- one\n- two";
 
-        List<String> together = text(RemarkLines.markdown(markdown, 60, StylePropertyResolver.empty()));
-        List<String> apart = text(RemarkLines.markdown(markdown, 30, StylePropertyResolver.empty()));
+        List<String> together = text(MarkdownLines.markdown(markdown, 60, StylePropertyResolver.empty()));
+        List<String> apart = text(MarkdownLines.markdown(markdown, 30, StylePropertyResolver.empty()));
 
         assertEquals(together.map(String::isEmpty), apart.map(String::isEmpty), apart.mkString("\n"));
     }
@@ -764,7 +764,7 @@ class RemarkLinesTest {
     void aLinkKeepsItsDefinitionOnTheOtherSideOfAWideCodeBlockWhichAddsNoBlankLine() {
         String markdown = "See [the docs][d].\n\n```\n" + "x".repeat(50) + "\n```\n\n[d]: https://example.com";
 
-        List<String> lines = text(RemarkLines.markdown(markdown, 30, StylePropertyResolver.empty()));
+        List<String> lines = text(MarkdownLines.markdown(markdown, 30, StylePropertyResolver.empty()));
 
         assertEquals("See the docs.", lines.head(), lines.mkString("\n"));
         assertTrue(lines.last().startsWith("╰"), lines.mkString("|\n"));
@@ -774,7 +774,7 @@ class RemarkLinesTest {
     void aCodeBlockAloneTooWideForTheTextIsDrawnAsWideAsItsLines() {
         String code = "x".repeat(50);
 
-        List<String> lines = text(RemarkLines.markdown("```\n" + code + "\n```", 30, StylePropertyResolver.empty()));
+        List<String> lines = text(MarkdownLines.markdown("```\n" + code + "\n```", 30, StylePropertyResolver.empty()));
 
         assertTrue(lines.exists(line -> line.contains(code)), lines.mkString("\n"));
     }

@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.ui;
 
+import dev.tamboui.style.Style;
 import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
 import io.vavr.Tuple;
@@ -34,6 +35,7 @@ import net.vanfleteren.jazygit.state.Expansion;
 import net.vanfleteren.jazygit.state.PlacedRemarks;
 import net.vanfleteren.jazygit.state.PlacedRemarks.FileRemarks;
 import net.vanfleteren.jazygit.state.PlacedRemarks.LineRemarks;
+import net.vanfleteren.jazygit.state.Rendered;
 import net.vanfleteren.jazygit.syntax.Token;
 
 /**
@@ -43,7 +45,18 @@ import net.vanfleteren.jazygit.syntax.Token;
  */
 final class RichDiff {
 
+    /**
+     * How wide a version is rendered while the width of its area is not known yet (ADR 103).
+     */
+    static final int RENDERED_WIDTH = 80;
+    /**
+     * The gutter of a version rendered: the bar beside a block that changed, and a space (ADR 103).
+     */
+    static final int RENDERED_GUTTER = 2;
+
     private static final String GUTTER_END = " │ ";
+
+    private static final String RENDERED_BAR = "▎";
     /**
      * What sets the text of a line apart from its marker, as GitHub does: {@code + - item} reads as a list item that
      * was added, where {@code +- item} reads as neither.
@@ -87,6 +100,22 @@ final class RichDiff {
             Option<ContentView.ShownRemarks> remarks,
             Option<DiffStops.HunkAt> asGiven,
             Theme.SpanStyles styles) {
+        return drawn(folded, syntax, words, remarks, asGiven, styles, RENDERED_WIDTH);
+    }
+
+    /**
+     * The lines of the diff of {@code folded}, as {@link #drawn(Expansion.Folded, boolean, boolean, Option, Option,
+     * Theme.SpanStyles)} draws them, a version of a file rendered (ADR 103) {@code width} columns wide, its gutter
+     * included.
+     */
+    static Drawn drawn(
+            Expansion.Folded folded,
+            boolean syntax,
+            boolean words,
+            Option<ContentView.ShownRemarks> remarks,
+            Option<DiffStops.HunkAt> asGiven,
+            Theme.SpanStyles styles,
+            int width) {
         ParsedDiff diff = folded.diff();
         UnifiedDiff parsed = diff.diff();
         Vector<Option<FileRemarks>> placed = remarks.map(
@@ -111,7 +140,8 @@ final class RichDiff {
                                 syntax,
                                 words,
                                 style,
-                                styles))
+                                styles,
+                                width))
                 .intersperse(List.of(BLANK))
                 .flatMap(file -> file);
         return Drawn.of(parsed.preamble()
@@ -156,9 +186,13 @@ final class RichDiff {
             boolean syntax,
             boolean words,
             RemarkLines.RemarkStyle style,
-            Theme.SpanStyles styles) {
+            Theme.SpanStyles styles,
+            int rendering) {
         FileDiff file = parsed.file();
         Option<FileVersion> version = fold.version();
+        if (fold.rendered() && version.isDefined() && Rendered.of(file.path()).isDefined()) {
+            return List.of(() -> rendered(parsed, version.get(), fold, rendering, styles));
+        }
         Vector<ParsedLine> lines = parsed.hunks().flatMap(ParsedHunk::lines).toVector();
         // A version keeps the gutter of the diff it is shown in place of, as wide, so its code does not move sideways
         // (ADR 102): its numbers, of the whole file, may be longer than the diff's, but fit in both of its columns.
@@ -243,6 +277,71 @@ final class RichDiff {
                 .appendAll(remarks.filter(ignored -> version.isEmpty())
                         .toList()
                         .<Pending>map(placed -> () -> blocks.unplaced(placed.unplaced(), styles)));
+    }
+
+    /**
+     * {@code version} of {@code parsed}, a file read whole as {@code fold} says, rendered {@code width} columns wide,
+     * its gutter included (ADR 103): its bar, a stop of the cursor whose lines the rows after it are, then each of its
+     * blocks, with a bar in the gutter beside one that holds a line that changed, the lines each was drawn from placed
+     * on its first row, and a line that says so when the file was read up to a cut.
+     */
+    private static List<Marked> rendered(
+            ParsedFile parsed, FileVersion version, Expansion.Fold fold, int width, Theme.SpanStyles styles) {
+        FileDiff file = parsed.file();
+        String path = file.path();
+        Vector<DiffLine> lines = parsed.hunks()
+                .flatMap(ParsedHunk::lines)
+                .map(ParsedLine::line)
+                .filter(line -> line.kind() != DiffLine.Kind.NOTE)
+                .toVector();
+        Change change = version == FileVersion.NEW ? Change.ADDED : Change.REMOVED;
+        // A theme that tints a changed line has the bar take the colour of the tint; one that does not, as mono, has
+        // the marker the line would have.
+        Span changed = styles.of(change.lineClass())
+                .bg()
+                .map(tint -> Span.styled(RENDERED_BAR, Style.EMPTY.fg(tint)))
+                .orElseGet(() -> styled(
+                        change.marker(),
+                        version == FileVersion.NEW ? Theme.Classes.DIFF_ADDED : Theme.Classes.DIFF_REMOVED,
+                        styles));
+        Span unchanged = Span.raw(" ");
+        List<RenderedMarkdown.Block> blocks =
+                RenderedMarkdown.blocks(lines.map(DiffLine::text), Math.max(1, width - RENDERED_GUTTER), styles);
+        String bar = bar(file, version);
+        int tinted = Math.max(width(bar), width);
+        List<Marked> body = blocks.flatMap(block -> {
+            Span gutter = Vector.rangeClosed(block.first(), block.last())
+                            .exists(at -> at < lines.size() && lines.get(at).kind() != DiffLine.Kind.CONTEXT)
+                    ? changed
+                    : unchanged;
+            List<Anchor> placed = Vector.rangeClosed(block.first(), Math.min(block.last(), lines.size() - 1))
+                    .flatMap(at -> Anchor.of(path, lines.get(at)))
+                    .map(anchor -> (Anchor) anchor)
+                    .toList();
+            List<Marked> rows = block.rows()
+                    .zipWithIndex()
+                    .map(row -> new Marked(
+                            Rows.kept(Line.from(List.of(gutter, Span.raw(" "))
+                                    .appendAll(row._1().spans())
+                                    .toJavaList())),
+                            Option.none(),
+                            row._2() == 0 ? placed : List.empty()));
+            return block.spaced() ? rows.prepend(Marked.plain(Line.from(""))) : rows;
+        });
+        return List.of(new Marked(
+                        Rows.kept(Line.from(
+                                styled(bar, Theme.Classes.DIFF_FILE_HEADER, styles),
+                                styled(
+                                        " ".repeat(Math.max(0, tinted - width(bar))),
+                                        Theme.Classes.DIFF_FILE_HEADER,
+                                        styles))),
+                        Option.of(new Mark(new Anchor.File(path), 1, tinted, Option.none()))))
+                .appendAll(body)
+                .appendAll(Option.when(
+                                fold.read() == Expansion.Read.CUT,
+                                () -> Marked.plain(Line.from(
+                                        styled(Messages.get("content.file.renderedCut"), Theme.Classes.DIM, styles))))
+                        .toList());
     }
 
     /**
@@ -506,7 +605,7 @@ final class RichDiff {
                 .reverse();
     }
 
-    private static String syntaxClass(Token.Kind kind) {
+    static String syntaxClass(Token.Kind kind) {
         return switch (kind) {
             case KEYWORD -> Theme.Classes.SYNTAX_KEYWORD;
             case STRING -> Theme.Classes.SYNTAX_STRING;
@@ -560,7 +659,11 @@ final class RichDiff {
     /**
      * What draws a line, and the stop of the cursor that starts on it, if one does.
      */
-    private record Marked(Supplier<Line> line, Option<Mark> mark) {
+    private record Marked(Supplier<Line> line, Option<Mark> mark, List<Anchor> places) {
+
+        Marked(Supplier<Line> line, Option<Mark> mark) {
+            this(line, mark, List.empty());
+        }
 
         static Marked plain(Line line) {
             return new Marked(Rows.kept(line), Option.none());
@@ -587,15 +690,30 @@ final class RichDiff {
     record Stop(Mark mark, int row) {}
 
     /**
+     * Where a line of a version rendered is drawn (ADR 103): the first row of the block it is part of. No stop of the
+     * cursor, which a version rendered has none of but the bar of its file.
+     *
+     * @param anchor the line
+     * @param row    the first row of its block
+     */
+    record Place(Anchor anchor, int row) {}
+
+    /**
      * The lines of a diff, each drawn when it shows ({@link Rows}), and where each stop of the cursor in them starts, in
      * order.
      */
-    record Drawn(Rows rows, List<Stop> stops) {
+    record Drawn(Rows rows, List<Stop> stops, List<Place> places) {
+
+        Drawn(Rows rows, List<Stop> stops) {
+            this(rows, stops, List.empty());
+        }
 
         private static Drawn of(List<Marked> marked) {
             return new Drawn(
                     Rows.drawn(marked.map(Marked::line)),
-                    marked.zipWithIndex().flatMap(line -> line._1().mark().map(mark -> new Stop(mark, line._2()))));
+                    marked.zipWithIndex().flatMap(line -> line._1().mark().map(mark -> new Stop(mark, line._2()))),
+                    marked.zipWithIndex()
+                            .flatMap(line -> line._1().places().map(anchor -> new Place(anchor, line._2()))));
         }
 
         /**
@@ -624,7 +742,9 @@ final class RichDiff {
          */
         Drawn after(List<Line> before) {
             return new Drawn(
-                    rows.after(Rows.of(before)), stops.map(stop -> new Stop(stop.mark(), stop.row() + before.size())));
+                    rows.after(Rows.of(before)),
+                    stops.map(stop -> new Stop(stop.mark(), stop.row() + before.size())),
+                    places.map(place -> new Place(place.anchor(), place.row() + before.size())));
         }
 
         /**
@@ -635,7 +755,8 @@ final class RichDiff {
                     .filter(first -> first.row() > 0)
                     .map(first -> new Drawn(
                             rows,
-                            stops.prepend(new Stop(new Mark(new Anchor.Lead(), first.row(), 0, Option.none()), 0))))
+                            stops.prepend(new Stop(new Mark(new Anchor.Lead(), first.row(), 0, Option.none()), 0)),
+                            places))
                     .getOrElse(this);
         }
     }

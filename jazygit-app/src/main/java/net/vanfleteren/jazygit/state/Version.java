@@ -22,10 +22,29 @@ import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
  * @param shown   the version shown; none for the diff
  * @param read    how the file is read whole, with whitespace not ignored
  * @param whole   the file read whole
+ * @param rendered whether a version shows rendered rather than as source (ADR 103); while the diff is shown, whether
+ *                 the next version shown is
  */
 @With
 public record Version(
-        ScrolledContent content, String path, Option<FileVersion> shown, ReadVersion read, Loadable<DiffText> whole) {
+        ScrolledContent content,
+        String path,
+        Option<FileVersion> shown,
+        ReadVersion read,
+        Loadable<DiffText> whole,
+        boolean rendered) {
+
+    /**
+     * A version shown as source.
+     */
+    public Version(
+            ScrolledContent content,
+            String path,
+            Option<FileVersion> shown,
+            ReadVersion read,
+            Loadable<DiffText> whole) {
+        this(content, path, shown, read, whole, false);
+    }
 
     /**
      * The version kept for the area with the id {@code area} while it shows {@code content}, if it holds for that.
@@ -72,8 +91,16 @@ public record Version(
     }
 
     /**
-     * {@code folded} with this file as the version shown, if one is, and what is known of it: no line left out, and
-     * whether its read was cut.
+     * The version shown rendered (ADR 103), once the file is read whole; none while the diff or a version as source is
+     * shown, or the file is still read.
+     */
+    public Option<FileVersion> rendering() {
+        return showing().filter(ignored -> rendered);
+    }
+
+    /**
+     * {@code folded} with this file as the version shown, if one is, and what is known of it: no line left out,
+     * whether its read was cut, and whether it is rendered (ADR 103).
      */
     public Expansion.Folded applied(Expansion.Folded folded) {
         return showing()
@@ -95,7 +122,8 @@ public record Version(
                                                                 .path()
                                                                 .equals(path))
                                                         .map(Version::digits)
-                                                        .getOrElse(1))))))
+                                                        .getOrElse(1),
+                                                rendered)))))
                 .getOrElse(folded);
     }
 

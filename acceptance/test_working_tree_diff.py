@@ -65,3 +65,30 @@ def test_a_removed_line_is_followed_by_the_line_it_became(repo, jazygit):
     ]
     found = [next(at for at, row in enumerate(rows) if line in row) for line in order]
     assert found == sorted(found), ui.app.text()
+
+
+def test_ctrl_t_shows_the_new_version_of_a_markdown_file_rendered(repo, jazygit):
+    """A version of Markdown rendered (ADR 103)."""
+    repo.commit("Add readme", **{"README.md": "# Title\n\nOld text.\n\n- one\n"})
+    repo.write("README.md", "# Title\n\nNew **text**.\n\n- one\n")
+    ui = jazygit()
+    ui.files.select("README.md")
+    ui.app.wait_for("diff --git a/README.md b/README.md")
+    ui.app.press("ctrl+d")
+    ui.app.wait_for("modified  README.md")
+    ui.app.press("enter")
+
+    ui.app.press("ctrl+t")
+
+    ui.app.wait_for("new version  README.md")
+    text = ui.app.text()
+    assert "· new version, rendered" in text
+    assert "▎ New text." in text
+    assert "# Title" not in text
+    assert "Old text." not in text
+
+    ui.app.press("ctrl+t")
+
+    # As source again, the version of ADR 102: the theme tints the changed line, so its marker is blank.
+    ui.app.wait_for("3 │   New **text**.")
+    assert "new version, rendered" not in ui.app.text()

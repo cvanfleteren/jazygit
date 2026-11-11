@@ -629,7 +629,7 @@ class RichDiffTest {
             +String s = "ac";
             """;
 
-    private static final Theme.SpanStyles SYNTAX_STYLES = cssClass -> switch (cssClass) {
+    static final Theme.SpanStyles SYNTAX_STYLES = cssClass -> switch (cssClass) {
         case Theme.Classes.DIFF_ADDED_LINE, Theme.Classes.DIFF_REMOVED_LINE ->
             Style.EMPTY.fg(Color.GREEN).bg(Color.BLACK);
         case Theme.Classes.DIFF_ADDED_WORD, Theme.Classes.DIFF_REMOVED_WORD ->
