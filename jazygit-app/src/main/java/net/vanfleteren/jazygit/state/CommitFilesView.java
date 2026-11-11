@@ -42,6 +42,7 @@ import net.vanfleteren.jazygit.image.Picture;
  *                 read started before is older than they are, and is read again (ADR 64)
  * @param pictures the images of the review threads that are read to be shown, by where they are: none while one is
  *                 read, or when it could not be (ADR 84)
+ * @param filter   the filter of the files: the tree shows only those listed that match it (ADR 105)
  */
 @With
 public record CommitFilesView(
@@ -57,7 +58,8 @@ public record CommitFilesView(
         Set<String> deleting,
         Set<String> reacting,
         int version,
-        Map<String, Option<Picture>> pictures) {
+        Map<String, Option<Picture>> pictures,
+        Option<FileFilter> filter) {
 
     /**
      * The view of the files of {@code of}, opened from the pane {@code pane} and listed in {@code listedIn}, while
@@ -77,7 +79,8 @@ public record CommitFilesView(
                 HashSet.empty(),
                 HashSet.empty(),
                 0,
-                HashMap.empty());
+                HashMap.empty(),
+                Option.none());
     }
 
     /**

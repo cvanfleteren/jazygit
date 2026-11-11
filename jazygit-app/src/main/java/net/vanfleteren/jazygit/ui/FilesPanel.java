@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.ui;
 
 import dev.tamboui.toolkit.Toolkit;
+import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.elements.TreeElement;
@@ -18,13 +19,15 @@ import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.ui.widgets.FilterLine;
 import net.vanfleteren.jazygit.ui.widgets.Pane;
 
 /**
  * Left-side panel showing the changed files, as in {@code git status}, as a directory tree; or, while they are open,
  * the files a commit or a stash changed (ADR 44). Each tree keeps its own selection and expansion, so the files of the
  * working tree are as they were when those of a commit are closed. The files of a commit open on the first directory
- * that holds files directly, so its diff shows at once.
+ * that holds files directly, so its diff shows at once. {@code /} filters the tree shown by the paths of its files
+ * (ADR 105): the line above it takes the keys that edit the filter, and Escape clears it before it does anything else.
  */
 public class FilesPanel {
 
@@ -33,8 +36,11 @@ public class FilesPanel {
     private final FileTreeList<FileEntry> statusTree;
     private final FileTreeList<CommitFile> commitTree;
     private final Keymap keymap = Keymap.standard();
+    private final FilterLine filterLine = new FilterLine();
     // The trees' key handlers also see keys typed in other panes, so they must know whether the pane has focus.
     private boolean focused;
+    // The filter of the tree shown, as last rendered (ADR 105).
+    private Option<FileFilter> filter = Option.none();
     // The review threads of the pull request whose files are listed, by their path, as last rendered (ADR 55).
     private ThreadsByPath threads = ThreadsByPath.of(List.empty());
 
@@ -64,15 +70,57 @@ public class FilesPanel {
                 FileTreeList::firstWithDiff);
         statusTree.onKey(PaneKeys.whileFocused(
                 () -> focused,
-                event -> opensDiff(event, statusTree)
-                        ? Option.of(openDiff)
-                        : PaneKeys.sending(keymap.handle(Scopes.FILES, event, statusTree.selected()), dispatch)));
+                event -> filtered(event, dispatch)
+                        .orElse(() -> opensDiff(event, statusTree)
+                                ? Option.of(openDiff)
+                                : PaneKeys.sending(
+                                        keymap.handle(Scopes.FILES, event, statusTree.selected()), dispatch))));
         commitTree.onKey(PaneKeys.whileFocused(
                 () -> focused,
-                event -> opensDiff(event, commitTree)
-                        ? Option.of(openDiff)
-                        : PaneKeys.sending(
-                                keymap.handle(Scopes.COMMIT_FILES, event, commitTree.selected()), dispatch)));
+                event -> filtered(event, dispatch)
+                        .orElse(() -> opensDiff(event, commitTree)
+                                ? Option.of(openDiff)
+                                : PaneKeys.sending(
+                                        keymap.handle(Scopes.COMMIT_FILES, event, commitTree.selected()), dispatch))));
+    }
+
+    /**
+     * What {@code event} does to the filter of the tree shown (ADR 105). While its line is open, the keys that edit
+     * it do, Enter keeps it and Escape puts back the one from before; the keys the tree moves with go to the tree,
+     * and the others do nothing. Once it is closed, Escape clears the filter, before it does anything else.
+     */
+    private Option<Runnable> filtered(KeyEvent event, Consumer<Msg> dispatch) {
+        return filter.filter(FileFilter::typing)
+                .map(typing -> moves(event)
+                        ? Option.<Runnable>none()
+                        : Option.<Runnable>of(() -> typed(typing.text(), event).forEach(dispatch)))
+                .getOrElse(() -> filter.isDefined() && event.code() == KeyCode.ESCAPE
+                        ? Option.of(() -> dispatch.accept(new FileFilterMsg.Cleared()))
+                        : Option.none());
+    }
+
+    /**
+     * What {@code event} sends while the line holds {@code text}.
+     */
+    private Option<Msg> typed(String text, KeyEvent event) {
+        return event.code() == KeyCode.ESCAPE
+                ? Option.of(new FileFilterMsg.Cancelled())
+                : event.code() == KeyCode.ENTER
+                        ? Option.of(new FileFilterMsg.Submitted())
+                        : filterLine.edit(text, event).map(FileFilterMsg.Edited::new);
+    }
+
+    /**
+     * Whether {@code event} is one of the keys the tree moves its highlight with, which it keeps while the filter is
+     * typed.
+     */
+    private static boolean moves(KeyEvent event) {
+        return event.matches(Actions.MOVE_UP)
+                || event.matches(Actions.MOVE_DOWN)
+                || event.matches(Actions.PAGE_UP)
+                || event.matches(Actions.PAGE_DOWN)
+                || event.code() == KeyCode.HOME
+                || event.code() == KeyCode.END;
     }
 
     /**
@@ -229,6 +277,8 @@ public class FilesPanel {
         boolean active = ID.equals(activeId);
         threads = ThreadsByPath.of(
                 model.repoView().commitFiles().map(CommitFilesView::threads).getOrElse(List.empty()));
+        filter = FileFilterUpdate.shown(model);
+        Option<String> shown = FileFilter.shown(filter);
         return model.repoView()
                 .commitFiles()
                 .map(view -> Pane.bordered(
@@ -241,20 +291,52 @@ public class FilesPanel {
                                         .getOrElse(() -> Messages.get(
                                                 "panel.commitFiles.titleFor",
                                                 ContentView.changesName(model, view.of())))
-                                + listedTitle(view.listed()).map(Messages::get).getOrElse(""),
-                        commitTree.render(view.of(), view.listedFiles(), active, placeholder(view)),
+                                + listedTitle(view.listed()).map(Messages::get).getOrElse("")
+                                + filteredTitle(),
+                        withLine(commitTree.render(view.of(), view.listedFiles(), active, placeholder(view), shown)),
                         focused,
                         commitTree.selectedRow(),
                         commitTree.count(view.listedFiles())))
                 .getOrElse(() -> {
                     Loadable<List<FileEntry>> files = model.repo().status().map(RepoStatus::files);
                     return Pane.bordered(
-                            Messages.get("panel.files.title"),
-                            statusTree.render(ID, files, active),
+                            Messages.get("panel.files.title") + filteredTitle(),
+                            withLine(statusTree.render(ID, files, active, FileTreeList.Placeholder.DEFAULT, shown)),
                             focused,
                             statusTree.selectedRow(),
                             statusTree.count(files));
                 });
+    }
+
+    /**
+     * What the title says after what it says already while the files are filtered, once the filter is typed: the
+     * line above the tree shows it meanwhile.
+     */
+    private String filteredTitle() {
+        return filter.filter(typed -> !typed.typing())
+                .flatMap(FileFilter::shown)
+                .map(text -> Messages.get("panel.files.filtered", text))
+                .getOrElse("");
+    }
+
+    /**
+     * {@code tree}, under the line the filter is typed in while it is open.
+     */
+    private Element withLine(Element tree) {
+        return filter.filter(FileFilter::typing)
+                .<Element>map(typing -> Toolkit.column(filterLine.field(typing.text()), tree))
+                .getOrElse(tree);
+    }
+
+    /**
+     * Whether the files pane, showing {@code files}, shows none of them for its filter: the content panel then says
+     * so too, in place of the diff of a node no longer highlighted (ADR 105).
+     */
+    static <T extends Pathed> boolean noneMatch(Model model, List<T> files) {
+        Option<String> shown = FileFilter.shown(FileFilterUpdate.shown(model));
+        return shown.isDefined()
+                && !files.isEmpty()
+                && FileTreeList.matching(files, shown).isEmpty();
     }
 
     /**

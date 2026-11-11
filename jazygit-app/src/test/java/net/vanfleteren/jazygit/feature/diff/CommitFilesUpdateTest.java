@@ -27,6 +27,7 @@ import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.state.CommitFilesView;
 import net.vanfleteren.jazygit.state.CommitFilesView.Changes;
 import net.vanfleteren.jazygit.state.Failure;
+import net.vanfleteren.jazygit.state.FileFilter;
 import net.vanfleteren.jazygit.state.LoadCommitFileDiff;
 import net.vanfleteren.jazygit.state.LoadCommitFiles;
 import net.vanfleteren.jazygit.state.LoadMsg;
@@ -321,6 +322,31 @@ class CommitFilesUpdateTest {
         assertEquals(List.of(new LoadCommitFiles(now)), moved.cmds());
         // The files are read again at the commits the threads were read at.
         assertTrue(view.remarksAtItsCommits());
+    }
+
+    @Test
+    void theFilterOfTheFilesOfAPullRequestStaysWhenItMovedOn() {
+        Option<FileFilter> filter = Option.of(new FileFilter("Test", Option.none()));
+        Model filtered = withFiles(openedPullRequest())
+                .mapRepoView(repoView ->
+                        repoView.withCommitFiles(repoView.commitFiles().map(view -> view.withFilter(filter))));
+
+        Model moved = Update.update(
+                        filtered,
+                        new CommitFilesMsg.RemarksLoaded(
+                                7, remarks("c".repeat(40), "b".repeat(40)), HashSet.empty(), 0))
+                .model();
+
+        assertEquals(filter, moved.repoView().commitFiles().get().filter());
+        // Other changes opened in their place start without a filter.
+        assertEquals(
+                Option.none(),
+                Update.update(moved, new CommitFilesMsg.Opened(new Changes.OfCommit(new Sha("a".repeat(40))), "x"))
+                        .model()
+                        .repoView()
+                        .commitFiles()
+                        .get()
+                        .filter());
     }
 
     @Test
