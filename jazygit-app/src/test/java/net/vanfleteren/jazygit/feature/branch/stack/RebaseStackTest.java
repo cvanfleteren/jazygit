@@ -52,6 +52,7 @@ import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.operation.Notice;
 import net.vanfleteren.jazygit.state.operation.OperationMsg;
 import net.vanfleteren.jazygit.state.popup.PopupMsg;
+import net.vanfleteren.jazygit.ui.ErrorText;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -109,6 +110,10 @@ class RebaseStackTest {
 
     private static Either<AppError, StackRebase> plan(Model model, List<Entry> entries) {
         return StackRebase.of(model, stack(entries, 1));
+    }
+
+    private static Option<String> refusalText(Model model, List<Entry> entries) {
+        return plan(model, entries).swap().toOption().map(ErrorText::of);
     }
 
     private static Option<StackRefusal> refusal(Model model, List<Entry> entries) {
@@ -249,7 +254,7 @@ class RebaseStackTest {
     void anOpenPullRequestWhoseBranchGitHubDidNotSayIsNotPushed() {
         List<Entry> unnamed = ENTRIES.update(1, new Entry(2, 99, State.OPEN));
 
-        assertEquals(Option.of(StackRefusal.NO_BASE), refusal(model(LOCAL, unnamed), unnamed));
+        assertEquals(Option.of(StackRefusal.UNKNOWN_BRANCH), refusal(model(LOCAL, unnamed), unnamed));
     }
 
     @Test
@@ -431,6 +436,41 @@ class RebaseStackTest {
         assertEquals(
                 Option.of(new Notice.StackNotAsked(12)), read.model().outcome().notice());
         assertEquals(List.empty(), read.cmds());
+    }
+
+    @Test
+    void aRefusalForWhatGitHubDidNotSayNamesWhatIsMissing() {
+        List<Entry> unnamed = ENTRIES.update(1, new Entry(2, 99, State.OPEN));
+        List<Entry> baseless = ENTRIES.update(
+                0,
+                new Entry(
+                        1,
+                        98,
+                        State.OPEN,
+                        Option.of(new GhBranch("feat/c")),
+                        Option.none(),
+                        Option.none(),
+                        false,
+                        false));
+
+        assertEquals(
+                Option.of("Stack #12 is not rebased: GitHub did not say the branch of #99"),
+                refusalText(model(LOCAL, unnamed), unnamed));
+        assertEquals(
+                Option.of("Stack #12 is not rebased: its base is not known"),
+                refusalText(model(LOCAL, baseless), baseless));
+    }
+
+    @Test
+    void aStackWithNothingOpenIsNotRebased() {
+        List<Entry> closed = List.of(
+                new Entry(1, 98, State.MERGED, new GhBranch("feat/c"), new GhBranch("main")),
+                new Entry(2, 99, State.CLOSED, new GhBranch("feat/d"), new GhBranch("feat/c")));
+
+        assertEquals(Option.of(StackRefusal.NOTHING_OPEN), refusal(model(LOCAL, closed), closed));
+        assertEquals(
+                Option.of("Stack #12 is not rebased: none of its pull requests is open"),
+                refusalText(model(LOCAL, closed), closed));
     }
 
     @Test

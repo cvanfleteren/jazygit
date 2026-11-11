@@ -276,7 +276,7 @@ public final class StackDialogs {
                 .map(change -> Messages.get(
                         "dialog.makeStack.change",
                         String.valueOf(change.number()),
-                        change.from().map(GhBranch::name).getOrElse(""),
+                        change.from().map(GhBranch::name).getOrElse("?"),
                         change.to().name()));
         List<String> diverged = confirm.diverged()
                 .map(branch -> Messages.get(

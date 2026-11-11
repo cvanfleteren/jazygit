@@ -164,8 +164,12 @@ public sealed interface AppError {
     enum StackRefusal {
         /** The worktree has changes, which a rebase would bring onto the top instead of where they were. */
         CHANGES,
-        /** GitHub did not say its base, or the branch of an open pull request of it. */
+        /** Its base is not known. */
         NO_BASE,
+        /** GitHub did not say the branch of an open pull request of it, which would be moved and pushed. */
+        UNKNOWN_BRANCH,
+        /** None of its pull requests is open: there is nothing to rebase. */
+        NOTHING_OPEN,
         /** Its base is not on the remote its branches are pushed to: it is fetched first. */
         BASE_NOT_FETCHED,
         /** Where a merged branch under it was is not known: its commits would be replayed. */
