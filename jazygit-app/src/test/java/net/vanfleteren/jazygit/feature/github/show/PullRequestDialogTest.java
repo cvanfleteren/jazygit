@@ -26,6 +26,7 @@ import net.vanfleteren.jazygit.feature.github.comment.CommentMsg;
 import net.vanfleteren.jazygit.feature.github.comments.CommentsMsg;
 import net.vanfleteren.jazygit.feature.github.edit.EditPullRequestMsg;
 import net.vanfleteren.jazygit.gh.model.CheckRun;
+import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
@@ -62,13 +63,13 @@ class PullRequestDialogTest {
 
     private static final Instant NOW = Instant.parse("2026-10-13T12:00:00Z");
     private static final PullRequest PR =
-            new PullRequest(42, "support_rename", true, Checks.FAILING, Review.CHANGES_REQUESTED);
+            new PullRequest(42, new GhBranch("support_rename"), true, Checks.FAILING, Review.CHANGES_REQUESTED);
     private static final PullRequestDetails DETAILS = new PullRequestDetails(
             42,
             "Add rename support to the files panel",
             "cvf",
             new Status(State.OPEN, true, Mergeable.MERGEABLE),
-            new Branches("support_rename", "main"),
+            new Branches(new GhBranch("support_rename"), new GhBranch("main")),
             new Activity(Instant.parse("2026-10-10T08:00:00Z"), Instant.parse("2026-10-12T09:00:00Z")),
             new Size(120, 34, 7, 3),
             new Conversation(
@@ -91,7 +92,7 @@ class PullRequestDialogTest {
             "Ready",
             "cvf",
             new Status(State.OPEN, false, Mergeable.MERGEABLE),
-            new Branches("support_rename", "main"),
+            new Branches(new GhBranch("support_rename"), new GhBranch("main")),
             new Activity(NOW, NOW),
             new Size(1, 1, 1, 1),
             new Conversation(Review.APPROVED, List.empty(), 0, ReviewThreads.NONE, List.empty()),
@@ -102,7 +103,8 @@ class PullRequestDialogTest {
 
     // DETAILS at commit head, into base, not known to be behind it.
     private static PullRequestDetails at(String head, String base) {
-        return DETAILS.withBranches(new Branches(DETAILS.branches().head(), base, GhCommit.parse(head), Option.none()));
+        return DETAILS.withBranches(
+                new Branches(DETAILS.branches().head(), new GhBranch(base), GhCommit.parse(head), Option.none()));
     }
 
     /**
@@ -342,7 +344,7 @@ class PullRequestDialogTest {
     void theBottomOfAStackMergesOnlyItself() throws Exception {
         PullRequest bottom = new PullRequest(
                 42,
-                "support_rename",
+                new GhBranch("support_rename"),
                 false,
                 Checks.PASSING,
                 Review.APPROVED,
@@ -517,7 +519,7 @@ class PullRequestDialogTest {
                 "t",
                 "",
                 new Status(State.OPEN, false, Mergeable.UNKNOWN),
-                new Branches("a", "b"),
+                new Branches(new GhBranch("a"), new GhBranch("b")),
                 new Activity(NOW, NOW),
                 new Size(0, 0, 0, 1),
                 new Conversation(Review.NONE, List.empty(), 0, ReviewThreads.NONE, List.empty()),
@@ -643,7 +645,7 @@ class PullRequestDialogTest {
                         + "that it really does not fit",
                 "cvf",
                 new Status(State.OPEN, false, Mergeable.UNKNOWN),
-                new Branches("a", "b"),
+                new Branches(new GhBranch("a"), new GhBranch("b")),
                 new Activity(NOW, NOW),
                 new Size(0, 0, 0, 1),
                 new Conversation(
@@ -767,8 +769,8 @@ class PullRequestDialogTest {
     @Test
     void theFilesChangedAreListedForAnOpenPullRequestAtCommitsThatAreKnown() throws Exception {
         PullRequestDetails known = READY.withBranches(new Branches(
-                "support_rename",
-                "main",
+                new GhBranch("support_rename"),
+                new GhBranch("main"),
                 GhCommit.parse("a".repeat(40)),
                 Option.none(),
                 GhCommit.parse("b".repeat(40))));

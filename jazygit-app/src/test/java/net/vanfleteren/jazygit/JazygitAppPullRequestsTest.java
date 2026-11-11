@@ -17,6 +17,7 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.MyPullRequests;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -119,7 +120,7 @@ class JazygitAppPullRequestsTest {
                                     12,
                                     "Fix the login",
                                     "alice",
-                                    "fix/login",
+                                    new GhBranch("fix/login"),
                                     false,
                                     false,
                                     Checks.PASSING,

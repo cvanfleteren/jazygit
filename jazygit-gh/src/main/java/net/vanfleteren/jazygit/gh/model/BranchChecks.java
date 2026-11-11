@@ -8,9 +8,9 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
  * How the CI checks are doing on the tip of each branch of a GitHub repository.
  *
  * @param repository the repository, as {@code owner/name}
- * @param checks     by the name of the branch
+ * @param checks     by the branch
  */
-public record BranchChecks(String repository, Map<String, Checks> checks) {
+public record BranchChecks(String repository, Map<GhBranch, Checks> checks) {
 
     /**
      * Whether the git remote {@code url} points at this repository, over ssh or https, with or without

@@ -17,6 +17,7 @@ import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.BranchChecks;
+import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.json.Decoder;
 
@@ -65,11 +66,13 @@ final class BranchesQuery {
             succeed(Checks.NONE));
 
     // A page: the repository, and its branches with the state of their checks.
-    static final Decoder<Tuple2<String, List<Tuple2<String, Checks>>>> PAGE = at(
+    static final Decoder<Tuple2<String, List<Tuple2<GhBranch, Checks>>>> PAGE = at(
             "data.repository",
             map2(
                     field("nameWithOwner", string()),
-                    at("refs.nodes", list(map2(field("name", string()), field("target", TIP), Tuple::of))),
+                    at(
+                            "refs.nodes",
+                            list(map2(field("name", string()).map(GhBranch::new), field("target", TIP), Tuple::of))),
                     Tuple::of));
 
     static final Decoder<BranchChecks> DECODER = list(PAGE)

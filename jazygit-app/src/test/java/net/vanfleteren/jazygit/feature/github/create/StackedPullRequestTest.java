@@ -14,6 +14,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.stack.StackCmd;
 import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestCmd.CreatePullRequest;
 import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestCmd.Stacking;
+import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.NewPullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
@@ -41,7 +42,15 @@ class StackedPullRequestTest {
     private static final BranchName MAIN = new BranchName("main");
 
     private static PullRequest pr(int number, String head, Option<PullRequestStack> stack) {
-        return new PullRequest(number, head, "main", false, Checks.NONE, Review.NONE, stack, Option.none());
+        return new PullRequest(
+                number,
+                new GhBranch(head),
+                new GhBranch("main"),
+                false,
+                Checks.NONE,
+                Review.NONE,
+                stack,
+                Option.none());
     }
 
     // feat/a has #96 open, on whatever stack is given; feature has none yet.
@@ -60,8 +69,8 @@ class StackedPullRequestTest {
                 position,
                 2,
                 List.of(
-                        new PullRequestStack.Entry(1, 96, State.OPEN, "feat/a", "main"),
-                        new PullRequestStack.Entry(2, 95, State.OPEN, "other", "feat/a")));
+                        new PullRequestStack.Entry(1, 96, State.OPEN, new GhBranch("feat/a"), new GhBranch("main")),
+                        new PullRequestStack.Entry(2, 95, State.OPEN, new GhBranch("other"), new GhBranch("feat/a"))));
     }
 
     private static NewPullRequestPopup popup(BranchName base, boolean stacked) {
@@ -90,7 +99,10 @@ class StackedPullRequestTest {
     @Test
     void onTheTopOfAStackItIsAddedToIt() {
         PullRequestStack top = new PullRequestStack(
-                12, 1, 1, List.of(new PullRequestStack.Entry(1, 96, State.OPEN, "feat/a", "main")));
+                12,
+                1,
+                1,
+                List.of(new PullRequestStack.Entry(1, 96, State.OPEN, new GhBranch("feat/a"), new GhBranch("main"))));
 
         assertEquals(
                 Option.of(Either.right(new Stacking(96, Option.of(12)))),

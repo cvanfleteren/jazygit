@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.vavr.Tuple;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
+import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.process.Limit;
 import net.vanfleteren.jazygit.process.Limited;
@@ -19,7 +20,7 @@ class PreviewQueryTest {
     @Test
     void theBaseAndTheBodyAreRead() {
         assertEquals(
-                Either.right(Tuple.of("main", "Fixes the login.\n\nSee #3.\n")),
+                Either.right(Tuple.of(new GhBranch("main"), "Fixes the login.\n\nSee #3.\n")),
                 GhProcess.decoded("""
                         {"baseRefName": "main", "body": "Fixes the login.\\n\\nSee #3.\\n"}""", PreviewQuery.DECODER));
     }
@@ -27,18 +28,19 @@ class PreviewQueryTest {
     @Test
     void thePreviewHasTheBodyWithoutTrailingWhitespace() {
         assertEquals(
-                new PullRequestPreview("main", "Fixes the login.\n\nSee #3.", "+a\n", false),
-                PreviewQuery.preview("main", "Fixes the login.\n\nSee #3.\n", new Limited("+a\n", false)));
+                new PullRequestPreview(new GhBranch("main"), "Fixes the login.\n\nSee #3.", "+a\n", false),
+                PreviewQuery.preview(
+                        new GhBranch("main"), "Fixes the login.\n\nSee #3.\n", new Limited("+a\n", false)));
         assertEquals(
-                new PullRequestPreview("main", "", "", false),
-                PreviewQuery.preview("main", "", new Limited("", false)));
+                new PullRequestPreview(new GhBranch("main"), "", "", false),
+                PreviewQuery.preview(new GhBranch("main"), "", new Limited("", false)));
     }
 
     @Test
     void aDiffCutOffWhenItWasReadIsTruncated() {
         assertEquals(
-                new PullRequestPreview("main", "", "+a\n", true),
-                PreviewQuery.preview("main", "", new Limited("+a\n", true)));
+                new PullRequestPreview(new GhBranch("main"), "", "+a\n", true),
+                PreviewQuery.preview(new GhBranch("main"), "", new Limited("+a\n", true)));
     }
 
     @Test

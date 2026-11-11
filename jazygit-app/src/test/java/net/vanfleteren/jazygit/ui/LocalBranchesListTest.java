@@ -12,6 +12,7 @@ import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
+import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -66,7 +67,8 @@ class LocalBranchesListTest {
                 Duration.ofDays(3),
                 Option.of(new BaseDistance(ORIGIN_MAIN, new Sha("1"), 1, 58)),
                 BranchSegs.gitHub(
-                        Option.of(new PullRequest(42, "b", false, Checks.PASSING, Review.APPROVED)), Option.none()),
+                        Option.of(new PullRequest(42, new GhBranch("b"), false, Checks.PASSING, Review.APPROVED)),
+                        Option.none()),
                 Option.of("Pushing |"));
 
         assertEquals("feature  Pushing |", row.text());
@@ -82,7 +84,8 @@ class LocalBranchesListTest {
                 Option.of(new BaseDistance(new BranchRef.Local(new BranchName("feat/a")), new Sha("1"), 0, 1)),
                 Option.of(new BranchName("feat/a")),
                 BranchSegs.gitHub(
-                        Option.of(new PullRequest(97, "feat/b", false, Checks.PASSING, Review.NONE)), Option.none()),
+                        Option.of(new PullRequest(97, new GhBranch("feat/b"), false, Checks.PASSING, Review.NONE)),
+                        Option.none()),
                 Option.none());
 
         assertEquals(Option.of("  2d  ⇣1 on feat/a  ✓ #97"), row.detailText());
@@ -132,7 +135,8 @@ class LocalBranchesListTest {
                 Option.none(),
                 Option.of(new BranchName("feature/a-very-long-name")),
                 BranchSegs.gitHub(
-                        Option.of(new PullRequest(42, "b", false, Checks.PASSING, Review.APPROVED)), Option.none()),
+                        Option.of(new PullRequest(42, new GhBranch("b"), false, Checks.PASSING, Review.APPROVED)),
+                        Option.none()),
                 Option.none());
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(row::element)) {
             return RenderedText.ofSize(runner, row::element, width, 2)
@@ -188,10 +192,18 @@ class LocalBranchesListTest {
                 2,
                 2,
                 List.of(
-                        new PullRequestStack.Entry(1, 96, State.OPEN, "feat/a", "main"),
-                        new PullRequestStack.Entry(2, 97, State.OPEN, "feature", "feat/a")));
+                        new PullRequestStack.Entry(1, 96, State.OPEN, new GhBranch("feat/a"), new GhBranch("main")),
+                        new PullRequestStack.Entry(
+                                2, 97, State.OPEN, new GhBranch("feature"), new GhBranch("feat/a"))));
         PullRequest stacked = new PullRequest(
-                97, "feature", "feat/a", false, Checks.NONE, Review.NONE, Option.of(stack), Option.none());
+                97,
+                new GhBranch("feature"),
+                new GhBranch("feat/a"),
+                false,
+                Checks.NONE,
+                Review.NONE,
+                Option.of(stack),
+                Option.none());
 
         assertEquals(
                 Option.none(),

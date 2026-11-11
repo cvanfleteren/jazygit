@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.feature.github.checkout.CheckoutPullRequestCmd;
 import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestCmd.PushFirst;
 import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeCmd;
 import net.vanfleteren.jazygit.feature.worktree.add.WorktreeSource;
+import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.BranchName;
@@ -58,7 +59,7 @@ class RemoteRefsGuardTest {
                 9,
                 "Title",
                 "bob",
-                "patch-1",
+                new GhBranch("patch-1"),
                 false,
                 true,
                 PullRequest.Checks.NONE,

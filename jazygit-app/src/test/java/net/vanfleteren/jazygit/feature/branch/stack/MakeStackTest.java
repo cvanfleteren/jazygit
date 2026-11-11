@@ -60,7 +60,15 @@ class MakeStackTest {
             Fixtures.branch(name("main"), false, new Sha("aaaa"), Instant.EPOCH, false, true);
 
     private static PullRequest pr(int number, String head, String base) {
-        return new PullRequest(number, head, base, false, Checks.NONE, Review.NONE, Option.none(), Option.none());
+        return new PullRequest(
+                number,
+                new GhBranch(head),
+                new GhBranch(base),
+                false,
+                Checks.NONE,
+                Review.NONE,
+                Option.none(),
+                Option.none());
     }
 
     // main ← feat/a ← feat/b ← feat/c; feat/b's pull request is still on main.
@@ -107,18 +115,25 @@ class MakeStackTest {
             2,
             2,
             List.of(
-                    new PullRequestStack.Entry(1, 96, State.OPEN, "feat/a", "main"),
-                    new PullRequestStack.Entry(2, 97, State.OPEN, "feat/b", "feat/a")));
+                    new PullRequestStack.Entry(1, 96, State.OPEN, new GhBranch("feat/a"), new GhBranch("main")),
+                    new PullRequestStack.Entry(2, 97, State.OPEN, new GhBranch("feat/b"), new GhBranch("feat/a"))));
 
     private static final Model STACKED = model(new PullRequest(
-                    97, "feat/b", "feat/a", false, Checks.NONE, Review.NONE, Option.of(STACK), Option.none()))
+                    97,
+                    new GhBranch("feat/b"),
+                    new GhBranch("feat/a"),
+                    false,
+                    Checks.NONE,
+                    Review.NONE,
+                    Option.of(STACK),
+                    Option.none()))
             .mapGitHub(gitHub -> gitHub.withPullRequests(gitHub.pullRequests()
                     .map(open -> open.put(
                             name("feat/a"),
                             new PullRequest(
                                     96,
-                                    "feat/a",
-                                    "main",
+                                    new GhBranch("feat/a"),
+                                    new GhBranch("main"),
                                     false,
                                     Checks.NONE,
                                     Review.NONE,
@@ -181,7 +196,7 @@ class MakeStackTest {
         assertEquals(
                 Option.of(new StackPopups.Confirm(
                         new StackCmd.MakeStack(
-                                List.of(new BaseChange(98, "feat/b", new GhBranch("feat/a"))),
+                                List.of(new BaseChange(98, new GhBranch("feat/b"), new GhBranch("feat/a"))),
                                 List.of(96, 98),
                                 Option.none()),
                         List.empty())),
@@ -234,9 +249,10 @@ class MakeStackTest {
             3,
             3,
             List.of(
-                    new PullRequestStack.Entry(1, 95, State.MERGED, "feat/z", "main"),
-                    new PullRequestStack.Entry(2, 96, State.OPEN, "feat/a", "feat/z", Option.none(), true),
-                    new PullRequestStack.Entry(3, 97, State.OPEN, "feat/b", "feat/a")));
+                    new PullRequestStack.Entry(1, 95, State.MERGED, new GhBranch("feat/z"), new GhBranch("main")),
+                    new PullRequestStack.Entry(
+                            2, 96, State.OPEN, new GhBranch("feat/a"), new GhBranch("feat/z"), Option.none(), true),
+                    new PullRequestStack.Entry(3, 97, State.OPEN, new GhBranch("feat/b"), new GhBranch("feat/a"))));
 
     @Test
     void unstackingSaysMergedAndQueuedPullRequestsStayInTheStack() {
@@ -251,8 +267,8 @@ class MakeStackTest {
         StackChange gone = new StackChange.Unstacked(12, MODEL.now());
         PullRequest queued = new PullRequest(
                 96,
-                "feat/a",
-                "feat/z",
+                new GhBranch("feat/a"),
+                new GhBranch("feat/z"),
                 false,
                 Checks.NONE,
                 Review.NONE,
@@ -297,7 +313,9 @@ class MakeStackTest {
         Update.Next confirmed = Update.update(picking, new StackMsg.PickConfirmed());
 
         StackCmd.MakeStack cmd = new StackCmd.MakeStack(
-                List.of(new BaseChange(97, "main", new GhBranch("feat/a"))), List.of(96, 97, 98), Option.none());
+                List.of(new BaseChange(97, new GhBranch("main"), new GhBranch("feat/a"))),
+                List.of(96, 97, 98),
+                Option.none());
         assertEquals(
                 Option.of(new StackPopups.Confirm(cmd, List.empty())),
                 confirmed.model().popup());
@@ -331,8 +349,8 @@ class MakeStackTest {
     void theBasesChangeFromTheBottomUpThenTheStackIsMade() {
         StackCmd.MakeStack cmd = new StackCmd.MakeStack(
                 List.of(
-                        new BaseChange(97, "main", new GhBranch("feat/a")),
-                        new BaseChange(98, "main", new GhBranch("feat/b"))),
+                        new BaseChange(97, new GhBranch("main"), new GhBranch("feat/a")),
+                        new BaseChange(98, new GhBranch("main"), new GhBranch("feat/b"))),
                 List.of(96, 97, 98),
                 Option.none());
 
@@ -361,7 +379,9 @@ class MakeStackTest {
     @Test
     void aStackGitHubRefusesShowsTheBasesChangedBeforeInTheLog() {
         StackCmd.MakeStack cmd = new StackCmd.MakeStack(
-                List.of(new BaseChange(97, "main", new GhBranch("feat/a"))), List.of(96, 97), Option.none());
+                List.of(new BaseChange(97, new GhBranch("main"), new GhBranch("feat/a"))),
+                List.of(96, 97),
+                Option.none());
         StubGitHub refusing = new StubGitHub() {
             @Override
             public Either<GhFailure, List<ExecutedCommand>> createStack(List<Integer> pullRequests) {

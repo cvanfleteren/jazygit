@@ -89,7 +89,8 @@ public final class ErrorText {
                 Messages.get("error.checkoutPr.changes", pullRequest);
             case AppError.PullRequestCheckedOutHere(String pullRequest) ->
                 Messages.get("error.checkoutPr.here", pullRequest);
-            case AppError.ChangesBeforeMove(String target) -> Messages.get("error.moveCommits.changes", target);
+            case AppError.ChangesBeforeMove(BranchRef target) ->
+                Messages.get("error.moveCommits.changes", target.name());
             case AppError.MovedThroughMerge(Sha oldest, BranchName branch, Sha merge, Sha parent) ->
                 Messages.get(
                         "error.moveCommits.throughMerge",
@@ -97,7 +98,7 @@ public final class ErrorText {
                         branch.value(),
                         merge.shortSha(),
                         parent.shortSha());
-            case AppError.DefaultBranch(String branch) -> Messages.get("error.deleteBranch.default", branch);
+            case AppError.DefaultBranch(BranchRef branch) -> Messages.get("error.deleteBranch.default", branch.name());
             case AppError.NotAllNuked(BranchName branch, var left, var failures) ->
                 Messages.get(
                         "error.nukeBranch.notAll",

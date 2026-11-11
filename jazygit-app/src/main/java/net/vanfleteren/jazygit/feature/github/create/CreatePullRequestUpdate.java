@@ -115,7 +115,7 @@ public final class CreatePullRequestUpdate {
                 Model shown = pullRequest
                         .map(pr -> done.model()
                                 .mapGitHub(gitHub -> gitHub.withPullRequests(gitHub.pullRequests()
-                                        .map(open -> open.put(new BranchName(pr.headBranch()), pr)))))
+                                        .map(open -> open.put(FromGitHub.branch(pr.headBranch()), pr)))))
                         .getOrElse(done.model());
                 // A read that is still running may have missed it, so this one is started anyway. GitHub may have
                 // changed the remote too, which a fetch brings in.

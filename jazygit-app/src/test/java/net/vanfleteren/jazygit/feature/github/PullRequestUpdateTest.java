@@ -44,6 +44,7 @@ import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.GhFailure;
 import net.vanfleteren.jazygit.gh.GitHub;
 import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.MergeStatus;
@@ -120,7 +121,7 @@ class PullRequestUpdateTest {
             Option.of(new Upstream(new BranchRef.Remote(new RemoteBranch("origin", new BranchName("ahead"))), 2, 0)));
     private static final BranchName FEATURE = PUSHED.name();
     private static final PullRequest FEATURE_PR =
-            new PullRequest(42, "feature", false, Checks.PASSING, Review.APPROVED);
+            new PullRequest(42, new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED);
 
     private static Model withPr() {
         return Update.update(model(), new PullRequestsMsg.Loaded(List.of(FEATURE_PR)))
@@ -1021,7 +1022,14 @@ class PullRequestUpdateTest {
                 .model();
 
         PullRequest now = new PullRequest(
-                42, "feature", "main", true, Checks.FAILING, Review.CHANGES_REQUESTED, Option.none(), Option.none());
+                42,
+                new GhBranch("feature"),
+                new GhBranch("main"),
+                true,
+                Checks.FAILING,
+                Review.CHANGES_REQUESTED,
+                Option.none(),
+                Option.none());
         assertEquals(Option.of(now), loaded.gitHub().pullRequest(PUSHED));
         assertEquals(Option.of(now), closed.gitHub().pullRequest(PUSHED));
     }
@@ -1134,8 +1142,8 @@ class PullRequestUpdateTest {
         // requests read again after the change list it as a draft.
         Model drafted = Update.update(
                         Update.update(drafting.model(), cmd.run(env())).model(),
-                        new PullRequestsMsg.Loaded(
-                                List.of(new PullRequest(42, "feature", true, Checks.PASSING, Review.APPROVED))))
+                        new PullRequestsMsg.Loaded(List.of(
+                                new PullRequest(42, new GhBranch("feature"), true, Checks.PASSING, Review.APPROVED))))
                 .model();
         Model dropped = Update.update(drafted, new PullRequestMsg.DetailsLoaded(42, lastRead(drafted), before))
                 .model();
@@ -1275,8 +1283,8 @@ class PullRequestUpdateTest {
         // The pull requests read again after the change list it as a draft.
         Model listed = Update.update(
                         closed,
-                        new PullRequestsMsg.Loaded(
-                                List.of(new PullRequest(42, "feature", true, Checks.PASSING, Review.APPROVED))))
+                        new PullRequestsMsg.Loaded(List.of(
+                                new PullRequest(42, new GhBranch("feature"), true, Checks.PASSING, Review.APPROVED))))
                 .model();
 
         Model dropped = Update.update(listed, new PullRequestMsg.DetailsLoaded(42, lastRead(listed), before))
@@ -1308,7 +1316,14 @@ class PullRequestUpdateTest {
         assertEquals(Option.of(loading), read.popup(PullRequestPopup.class));
         assertEquals(
                 Option.of(new PullRequest(
-                        42, "feature", "main", true, Checks.NONE, Review.NONE, Option.none(), Option.none())),
+                        42,
+                        new GhBranch("feature"),
+                        new GhBranch("main"),
+                        true,
+                        Checks.NONE,
+                        Review.NONE,
+                        Option.none(),
+                        Option.none())),
                 read.gitHub().pullRequest(PUSHED));
     }
 
@@ -1367,8 +1382,8 @@ class PullRequestUpdateTest {
                 .withUrl("https://github.com/owner/repo")
                 .withStatus(read.status().withState(state))
                 .withBranches(new PullRequestDetails.Branches(
-                        "feature",
-                        "main",
+                        new GhBranch("feature"),
+                        new GhBranch("main"),
                         GhCommit.parse(known ? HEAD_OID : ""),
                         Option.none(),
                         GhCommit.parse(BASE_OID)));
@@ -1423,7 +1438,11 @@ class PullRequestUpdateTest {
                 .withUrl("https://github.com/owner/repo")
                 .withStatus(read.status().withState(state))
                 .withBranches(new PullRequestDetails.Branches(
-                        "feature", "main", GhCommit.parse(HEAD_OID), Option.none(), GhCommit.parse(BASE_OID)));
+                        new GhBranch("feature"),
+                        new GhBranch("main"),
+                        GhCommit.parse(HEAD_OID),
+                        Option.none(),
+                        GhCommit.parse(BASE_OID)));
     }
 
     @Test
@@ -1478,7 +1497,7 @@ class PullRequestUpdateTest {
     void shiftFOnABranchWhosePullRequestIsListedWithItsCommitsShowsItsFilesAtOnce() {
         PullRequest listed = new PullRequest(
                 42,
-                "feature",
+                new GhBranch("feature"),
                 false,
                 Checks.PASSING,
                 Review.APPROVED,
@@ -1575,8 +1594,9 @@ class PullRequestUpdateTest {
     void theFilesAreNotShownWhenTheDialogOfAnotherPullRequestWasOpenedMeanwhile() {
         Model both = Update.update(
                         model(),
-                        new PullRequestsMsg.Loaded(
-                                List.of(FEATURE_PR, new PullRequest(43, "ahead", false, Checks.PASSING, Review.NONE))))
+                        new PullRequestsMsg.Loaded(List.of(
+                                FEATURE_PR,
+                                new PullRequest(43, new GhBranch("ahead"), false, Checks.PASSING, Review.NONE))))
                 .model();
         Model requested =
                 Update.update(both, new PullRequestMsg.FilesRequested(FEATURE)).model();
@@ -2140,9 +2160,9 @@ class PullRequestUpdateTest {
      */
     private static Model stackOfTwo() {
         PullRequest bottom = new PullRequest(
-                41, "base-work", false, Checks.PASSING, Review.APPROVED, Option.of(stack(7, 1, 41, 42)));
-        PullRequest top =
-                new PullRequest(42, "feature", false, Checks.PASSING, Review.APPROVED, Option.of(stack(7, 2, 41, 42)));
+                41, new GhBranch("base-work"), false, Checks.PASSING, Review.APPROVED, Option.of(stack(7, 1, 41, 42)));
+        PullRequest top = new PullRequest(
+                42, new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED, Option.of(stack(7, 2, 41, 42)));
         return Update.update(model(), new PullRequestsMsg.Loaded(List.of(bottom, top)))
                 .model();
     }
@@ -2173,13 +2193,23 @@ class PullRequestUpdateTest {
     @Test
     void mergingAStackedPullRequestMergesTheOnesBelowItToo() {
         PullRequest bottom = new PullRequest(
-                41, "base-work", false, Checks.PASSING, Review.APPROVED, Option.of(stack(7, 1, 41, 42, 43)));
+                41,
+                new GhBranch("base-work"),
+                false,
+                Checks.PASSING,
+                Review.APPROVED,
+                Option.of(stack(7, 1, 41, 42, 43)));
         PullRequest middle = new PullRequest(
-                42, "feature", false, Checks.PASSING, Review.APPROVED, Option.of(stack(7, 2, 41, 42, 43)));
+                42,
+                new GhBranch("feature"),
+                false,
+                Checks.PASSING,
+                Review.APPROVED,
+                Option.of(stack(7, 2, 41, 42, 43)));
         PullRequest top = new PullRequest(
-                43, "on-top", false, Checks.PASSING, Review.APPROVED, Option.of(stack(7, 3, 41, 42, 43)));
+                43, new GhBranch("on-top"), false, Checks.PASSING, Review.APPROVED, Option.of(stack(7, 3, 41, 42, 43)));
         PullRequest other = new PullRequest(
-                40, "elsewhere", false, Checks.PASSING, Review.APPROVED, Option.of(stack(8, 1, 40, 44)));
+                40, new GhBranch("elsewhere"), false, Checks.PASSING, Review.APPROVED, Option.of(stack(8, 1, 40, 44)));
         Model stacked = Update.update(model(), new PullRequestsMsg.Loaded(List.of(bottom, middle, top, other)))
                 .model();
 
@@ -2327,7 +2357,7 @@ class PullRequestUpdateTest {
                 new RemoteBranch("origin", FEATURE),
                 new RemoteBranch("origin", MAIN.name()),
                 new NewPullRequest("Login", "", false));
-        PullRequest created = new PullRequest(43, "feature", false, Checks.NONE, Review.NONE);
+        PullRequest created = new PullRequest(43, new GhBranch("feature"), false, Checks.NONE, Review.NONE);
         Model creating = confirmed(cmd.pullRequest()).model();
 
         Next done = Update.update(creating, new CreatePullRequestMsg.Created(cmd, Option.of(created), List.empty()));
@@ -2345,7 +2375,7 @@ class PullRequestUpdateTest {
                 9,
                 "From a fork",
                 "bob",
-                "patch-1",
+                new GhBranch("patch-1"),
                 true,
                 true,
                 Checks.FAILING,
@@ -2363,7 +2393,7 @@ class PullRequestUpdateTest {
         assertEquals(
                 Option.of(PullRequestPopup.loading(
                                 new BranchName("patch-1"),
-                                new PullRequest(9, "patch-1", true, Checks.FAILING, Review.REQUIRED),
+                                new PullRequest(9, new GhBranch("patch-1"), true, Checks.FAILING, Review.REQUIRED),
                                 Instant.EPOCH,
                                 0)
                         .ofFork()),
@@ -2378,7 +2408,7 @@ class PullRequestUpdateTest {
                 3,
                 "Elsewhere",
                 "carol",
-                "fix",
+                new GhBranch("fix"),
                 false,
                 false,
                 Checks.NONE,
@@ -2402,7 +2432,7 @@ class PullRequestUpdateTest {
                 9,
                 "From a fork",
                 "bob",
-                "patch-1",
+                new GhBranch("patch-1"),
                 false,
                 true,
                 Checks.NONE,
@@ -2486,7 +2516,7 @@ class PullRequestUpdateTest {
                 number,
                 "From a fork",
                 "bob",
-                "patch-1",
+                new GhBranch("patch-1"),
                 false,
                 true,
                 Checks.NONE,
@@ -2534,7 +2564,7 @@ class PullRequestUpdateTest {
                 fork.number(),
                 fork.title(),
                 fork.author(),
-                "patch-1",
+                new GhBranch("patch-1"),
                 false,
                 false,
                 fork.checks(),
@@ -2734,7 +2764,7 @@ class PullRequestUpdateTest {
                 fork.number(),
                 fork.title(),
                 fork.author(),
-                headBranch,
+                new GhBranch(headBranch),
                 false,
                 false,
                 fork.checks(),

@@ -4,6 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -265,7 +266,7 @@ public sealed interface AppError {
      * Commits are not copied onto {@code target}, a branch, while the working tree has changes, which git would
      * refuse to cherry-pick onto.
      */
-    record ChangesBeforeMove(String target) implements AppError {}
+    record ChangesBeforeMove(BranchRef target) implements AppError {}
 
     /**
      * The commits of {@code branch} from {@code oldest} up are not moved, as {@code oldest} came in through
@@ -275,11 +276,11 @@ public sealed interface AppError {
     record MovedThroughMerge(Sha oldest, BranchName branch, Sha merge, Sha parent) implements AppError {}
 
     /**
-     * Deleting a remote branch was asked for, but it is the default branch of its remote.
+     * Deleting a remote branch, or nuking a local one, was asked for, but it is the default branch.
      *
-     * @param branch the short name of the remote branch, e.g. {@code origin/main}
+     * @param branch the branch: a remote one to delete, e.g. {@code origin/main}, or a local one to nuke
      */
-    record DefaultBranch(String branch) implements AppError {}
+    record DefaultBranch(BranchRef branch) implements AppError {}
 
     /**
      * Nuking {@code branch} did not delete all it was to delete (ADR 43).

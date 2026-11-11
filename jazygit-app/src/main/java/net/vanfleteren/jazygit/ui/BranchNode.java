@@ -5,6 +5,7 @@ import io.vavr.collection.List;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import java.util.function.Function;
+import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.git.model.Branch;
@@ -39,7 +40,7 @@ sealed interface BranchNode {
             Function<Branch, Option<PullRequest>> pullRequest,
             boolean stacked,
             Set<Integer> closed,
-            Function<String, Option<RemoteBranch>> fetched) {
+            Function<GhBranch, Option<RemoteBranch>> fetched) {
         List<Option<PullRequestStack>> stacks = branches.map(branch ->
                 stacked ? pullRequest.apply(branch).flatMap(PullRequest::stack) : Option.<PullRequestStack>none());
         return branches.zip(stacks)
@@ -63,7 +64,7 @@ sealed interface BranchNode {
             List<Tuple2<Branch, Option<PullRequestStack>>> branches,
             Function<Branch, Option<PullRequest>> pullRequest,
             Set<Integer> closed,
-            Function<String, Option<RemoteBranch>> fetched) {
+            Function<GhBranch, Option<RemoteBranch>> fetched) {
         List<Tuple2<Branch, PullRequestStack>> members = branches.flatMap(
                 branch -> branch._2().filter(stack -> stack.number() == number).map(stack -> branch.map2(s -> stack)));
         // The stacks of its pull requests are read with each, and the one that lists the most of them says most.

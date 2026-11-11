@@ -21,6 +21,7 @@ import net.vanfleteren.jazygit.feature.github.comment.CommentMsg;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.CommentRights;
+import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
@@ -44,7 +45,7 @@ class CommentsDialogTest {
 
     private static final PullRequestPopup SHOWN = PullRequestPopup.loading(
                     new BranchName("feature"),
-                    new PullRequest(42, "feature", false, Checks.PASSING, Review.APPROVED),
+                    new PullRequest(42, new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED),
                     Instant.EPOCH,
                     0)
             .with(Either.right(StubGitHub.empty().pullRequestDetails(42).get()), 0);
@@ -359,8 +360,8 @@ class CommentsDialogTest {
                 new BranchName("feature"),
                 new PullRequest(
                         42,
-                        "feature",
-                        "main",
+                        new GhBranch("feature"),
+                        new GhBranch("main"),
                         false,
                         Checks.PASSING,
                         Review.APPROVED,

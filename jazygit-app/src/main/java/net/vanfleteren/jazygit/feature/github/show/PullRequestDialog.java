@@ -365,7 +365,8 @@ public final class PullRequestDialog implements PopupView {
     private List<Line> loading(PullRequestPopup popup) {
         return List.of(
                 Line.labelled(
-                        "dialog.pullRequest.branch", text(popup.pullRequest().headBranch())),
+                        "dialog.pullRequest.branch",
+                        text(popup.pullRequest().headBranch().name())),
                 Line.blank(),
                 Line.pieces(List.of(
                         text(Messages.get("dialog.pullRequest.loading") + " ").addClass(Theme.Classes.DIM),
@@ -382,8 +383,8 @@ public final class PullRequestDialog implements PopupView {
                         () -> Line.labelled("dialog.pullRequest.author", text("@" + pr.author()))))
                 .append(Line.pieces(List.<StyledElement<?>>of(
                                 label("dialog.pullRequest.branch"),
-                                text(pr.branches().head() + " → "
-                                        + pr.branches().base()))
+                                text(pr.branches().head().name() + " → "
+                                        + pr.branches().base().name()))
                         .appendAll(behindBase(pr))))
                 .appendAll(pr.stack().map(PullRequestDialog::stack))
                 .appendAll(List.of(

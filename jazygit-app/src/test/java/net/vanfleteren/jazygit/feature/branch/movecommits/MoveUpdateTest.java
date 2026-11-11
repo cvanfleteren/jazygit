@@ -256,7 +256,7 @@ class MoveUpdateTest {
 
         assertEquals(List.of(), next.cmds());
         assertEquals(
-                Option.of(new AppError.ChangesBeforeMove("main")),
+                Option.of(new AppError.ChangesBeforeMove(new BranchRef.Local(MAIN))),
                 next.model().outcome().error());
     }
 
@@ -266,7 +266,7 @@ class MoveUpdateTest {
 
         assertEquals(List.of(), next.cmds());
         assertEquals(
-                Option.of(new AppError.ChangesBeforeMove("origin/main")),
+                Option.of(new AppError.ChangesBeforeMove(new BranchRef.Remote(ORIGIN_MAIN))),
                 next.model().outcome().error());
     }
 

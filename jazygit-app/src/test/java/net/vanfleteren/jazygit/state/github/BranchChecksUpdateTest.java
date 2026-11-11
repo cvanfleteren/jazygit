@@ -17,6 +17,7 @@ import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.BranchChecks;
 import net.vanfleteren.jazygit.gh.model.CheckRun;
+import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -55,7 +56,7 @@ class BranchChecksUpdateTest {
             HashSet.of("origin"),
             HashMap.of(new BranchName("feature"), Checks.FAILING, new BranchName("main"), Checks.PASSING));
     private static final PullRequest FEATURE_PR =
-            new PullRequest(42, "feature", false, Checks.PASSING, Review.APPROVED);
+            new PullRequest(42, new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED);
 
     private static RemoteBranch remote(String remote, String branch) {
         return new RemoteBranch(remote, new BranchName(branch));
@@ -113,7 +114,8 @@ class BranchChecksUpdateTest {
                         new StubGitHub() {
                             @Override
                             public Either<GhError, BranchChecks> branchChecks() {
-                                return Either.right(new BranchChecks("owner/repo", HashMap.of("main", Checks.PASSING)));
+                                return Either.right(new BranchChecks(
+                                        "owner/repo", HashMap.of(new GhBranch("main"), Checks.PASSING)));
                             }
                         }));
 

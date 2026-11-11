@@ -284,8 +284,8 @@ public sealed interface CreatePullRequestCmd extends Cmd {
                                     created.number()
                                             .map(number -> new PullRequest(
                                                     number,
-                                                    head.branch().value(),
-                                                    base.branch().value(),
+                                                    OnGitHub.branch(head),
+                                                    OnGitHub.branch(base),
                                                     pullRequest.draft(),
                                                     Checks.NONE,
                                                     Review.NONE,

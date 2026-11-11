@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.*;
@@ -93,7 +94,7 @@ class BrowseUpdateTest {
                 3,
                 "Elsewhere",
                 "carol",
-                "fix",
+                new GhBranch("fix"),
                 false,
                 false,
                 PullRequest.Checks.NONE,

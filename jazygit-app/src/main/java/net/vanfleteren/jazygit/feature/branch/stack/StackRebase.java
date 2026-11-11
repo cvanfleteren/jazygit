@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.git.model.StackLayer;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.AppError.StackRefusal;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.github.FromGitHub;
 
 /**
  * What rebasing a stack on GitHub takes (ADR 74): its base, and its open branches from the bottom up, each with what
@@ -81,7 +82,7 @@ public record StackRebase(
             return refused(stack, unmovable.get());
         }
         RemoteBranch base =
-                new RemoteBranch(push.remote(), new BranchName(stack.base().get()));
+                new RemoteBranch(push.remote(), FromGitHub.branch(stack.base().get()));
         if (model.repo().remoteBranch(base).isEmpty()) {
             return refused(stack, new StackPush.Refused(base.shortName(), StackRefusal.BASE_NOT_FETCHED));
         }
@@ -143,7 +144,7 @@ public record StackRebase(
      * last, the branch on {@code remote}, and the local branch.
      */
     private static List<Revision> where(Model model, RemoteName remote, PullRequestStack.Entry entry) {
-        BranchName name = new BranchName(entry.headBranch());
+        BranchName name = FromGitHub.branch(entry.headBranch());
         return entry.headOid()
                 .flatMap(Sha::parse)
                 .<Revision>map(Revision.Commit::new)

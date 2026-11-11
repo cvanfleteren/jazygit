@@ -10,6 +10,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.feature.branch.stack.StackMsg;
+import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -35,16 +36,16 @@ class StackRowsTest {
 
     // #95 is merged; #96 and #97 are checked out; #98 is only fetched.
     private static final List<PullRequestStack.Entry> ENTRIES = List.of(
-            new PullRequestStack.Entry(1, 95, State.MERGED, "feat/0", "main"),
-            new PullRequestStack.Entry(2, 96, State.OPEN, "feat/a", "main"),
-            new PullRequestStack.Entry(3, 97, State.OPEN, "feat/b", "feat/a"),
-            new PullRequestStack.Entry(4, 98, State.OPEN, "feat/c", "feat/b"));
+            new PullRequestStack.Entry(1, 95, State.MERGED, new GhBranch("feat/0"), new GhBranch("main")),
+            new PullRequestStack.Entry(2, 96, State.OPEN, new GhBranch("feat/a"), new GhBranch("main")),
+            new PullRequestStack.Entry(3, 97, State.OPEN, new GhBranch("feat/b"), new GhBranch("feat/a")),
+            new PullRequestStack.Entry(4, 98, State.OPEN, new GhBranch("feat/c"), new GhBranch("feat/b")));
 
     private static PullRequest stacked(int number, String head, int position) {
         return new PullRequest(
                 number,
-                head,
-                "",
+                new GhBranch(head),
+                GhBranch.UNKNOWN,
                 false,
                 Checks.NONE,
                 Review.NONE,

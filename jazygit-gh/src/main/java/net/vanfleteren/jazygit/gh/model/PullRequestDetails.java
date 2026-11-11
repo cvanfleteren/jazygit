@@ -193,8 +193,8 @@ public record PullRequestDetails(
      * @param baseCommit the commit its base branch is at, if known, which its changes are diffed against (ADR 55)
      */
     public record Branches(
-            String head,
-            String base,
+            GhBranch head,
+            GhBranch base,
             Option<GhCommit> headCommit,
             Option<Integer> behindBase,
             Option<GhCommit> baseCommit) {
@@ -202,14 +202,14 @@ public record PullRequestDetails(
         /**
          * Branches at a commit that is not known, not known to be apart.
          */
-        public Branches(String head, String base) {
+        public Branches(GhBranch head, GhBranch base) {
             this(head, base, Option.none(), Option.none());
         }
 
         /**
          * Branches whose base is at a commit that is not known.
          */
-        public Branches(String head, String base, Option<GhCommit> headCommit, Option<Integer> behindBase) {
+        public Branches(GhBranch head, GhBranch base, Option<GhCommit> headCommit, Option<Integer> behindBase) {
             this(head, base, headCommit, behindBase, Option.none());
         }
 
