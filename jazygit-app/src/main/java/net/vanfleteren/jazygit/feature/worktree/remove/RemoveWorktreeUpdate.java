@@ -5,6 +5,7 @@ import net.vanfleteren.jazygit.feature.worktree.WorktreeError;
 import net.vanfleteren.jazygit.feature.worktree.remove.RemoveWorktreeMsg.*;
 import net.vanfleteren.jazygit.git.model.Worktree;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.RereadUpdate;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.operation.*;
 
@@ -40,7 +41,7 @@ public final class RemoveWorktreeUpdate {
                                         popup.location(), false, popup.branch().filter(branch -> deleteBranch))));
             // The removal ran, and failed; removing it anyway is offered instead of the failure.
             case NeedsForce(var cmd, var commands) ->
-                Update.refresh(OperationUpdate.done(model, cmd, commands)
+                RereadUpdate.refresh(OperationUpdate.done(model, cmd, commands)
                         .openPopupIfFree(new ForceRemoveWorktreePopup(
                                 cmd,
                                 model.repo()

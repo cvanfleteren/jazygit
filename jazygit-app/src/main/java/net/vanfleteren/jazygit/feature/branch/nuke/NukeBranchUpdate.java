@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Worktree;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.RereadUpdate;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.operation.OperationUpdate;
@@ -37,7 +38,7 @@ public final class NukeBranchUpdate {
                                 .map(NukeBranchPopup::cmd)
                                 .filter(popup.cmd()::equals));
             case NotAllNuked(NukeBranchCmd cmd, var commands, var left, var failures) ->
-                Update.refresh(OperationUpdate.done(model, cmd, commands)
+                RereadUpdate.refresh(OperationUpdate.done(model, cmd, commands)
                         .fail(new BranchError.NotAllNuked(cmd.branch(), left, failures)));
         };
     }
