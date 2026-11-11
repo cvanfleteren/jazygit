@@ -14,7 +14,7 @@ import net.vanfleteren.jazygit.ui.Theme;
  * The filter of a list in a popup. Typing {@code /} opens a {@link FilterLine} above the list to type it in, and only
  * the rows that contain it stay shown, until Escape closes it again. It ignores case, unless it has an uppercase
  * letter. A filter of two words or more, each started by an uppercase letter, also matches the starts of words
- * following each other (ADR 106): {@code CCM} and {@code CCMat} match {@code CapitalCaseMatching.java}, {@code CCM}
+ * following each other within a part between {@code /}s (ADR 106): {@code CCM} and {@code CCMat} match {@code CapitalCaseMatching.java}, {@code CCM}
  * matches {@code can-can-mama.txt}. Whether it is open, and its text, live in the
  * {@link net.vanfleteren.jazygit.state.popup.ListCursor}.
  */
@@ -42,19 +42,24 @@ public final class ListFilter {
     }
 
     /**
-     * Whether the words typed in {@code filter} start words following each other in {@code text}. A word typed
-     * starts at each uppercase letter; it takes two or more, of letters and digits only. The first letter of each
-     * matches ignoring case, the others as typed: {@code CCMat} matches {@code CapitalCaseMatching}, {@code CCM}
-     * matches {@code can-can-mama}.
+     * Whether the words typed in {@code filter} start words following each other in one part of {@code text}
+     * between {@code /}s. A word typed starts at each uppercase letter; it takes two or more, of letters and digits
+     * only. The first letter of each matches ignoring case, the others as typed: {@code CCMat} matches
+     * {@code CapitalCaseMatching}, {@code CCM} matches {@code can-can-mama}, {@code CM} does not match
+     * {@code commit/Message}.
      */
     static boolean matchesWordStarts(String filter, String text) {
         var typed = wordsTyped(filter);
-        var starts = wordStarts(text);
         return typed.size() >= 2
                 && filter.chars().allMatch(Character::isLetterOrDigit)
-                && Array.rangeClosed(0, starts.size() - typed.size())
-                        .exists(first -> typed.zipWithIndex()
-                                .forAll(word -> startsWith(text, starts.get(first + word._2), word._1)));
+                && Array.of(text.split("/", -1)).exists(part -> startsWordsFollowing(typed, part));
+    }
+
+    private static boolean startsWordsFollowing(Array<String> typed, String part) {
+        var starts = wordStarts(part);
+        return Array.rangeClosed(0, starts.size() - typed.size())
+                .exists(first ->
+                        typed.zipWithIndex().forAll(word -> startsWith(part, starts.get(first + word._2), word._1)));
     }
 
     /**
