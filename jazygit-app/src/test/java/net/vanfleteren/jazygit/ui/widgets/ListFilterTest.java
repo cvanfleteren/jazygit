@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.vavr.collection.Array;
 import org.junit.jupiter.api.Test;
 
 class ListFilterTest {
@@ -22,7 +23,7 @@ class ListFilterTest {
     }
 
     @Test
-    void anUppercaseFilterMatchesTheFirstLettersOfWordsFollowingEachOther() {
+    void uppercaseLettersMatchTheFirstLettersOfWordsFollowingEachOther() {
         assertTrue(ListFilter.matches("CCM", "src/main/java/CapitalCaseMatching.java"));
         assertTrue(ListFilter.matches("CCM", "notes/CanCanMamaHere.txt"));
         assertTrue(ListFilter.matches("CCM", "can-can-mama.txt"));
@@ -32,23 +33,50 @@ class ListFilterTest {
     }
 
     @Test
+    void lowercaseLettersAfterOneMatchMoreOfItsWord() {
+        assertTrue(ListFilter.matches("CCMat", "CapitalCaseMatching.java"));
+        assertTrue(ListFilter.matches("CaCaMa", "can-can-mama.txt"));
+        assertTrue(ListFilter.matches("CapCM", "CapitalCaseMatching.java"));
+        assertFalse(ListFilter.matches("CCMat", "CapitalCaseMove.java"));
+        assertFalse(ListFilter.matches("CCMAt", "CapitalCaseMatching.java"));
+    }
+
+    @Test
     void theWordsMayRunOverASlashOrADot() {
         assertTrue(ListFilter.matches("SMJ", "src/main/java/Foo.java"));
         assertTrue(ListFilter.matches("FJ", "src/main/java/Foo.java"));
     }
 
     @Test
-    void aLowercaseFilterDoesNotMatchFirstLetters() {
+    void oneWordTypedMatchesOnlyAsASubstring() {
+        assertFalse(ListFilter.matches("Feat", "frontend/e2e/api/tests/x.txt"));
+        assertFalse(ListFilter.matches("M", "src/main/Foo.java"));
+    }
+
+    @Test
+    void aLowercaseFilterMatchesOnlyAsASubstring() {
         assertFalse(ListFilter.matches("ccm", "CapitalCaseMatching.java"));
     }
 
     @Test
+    void aFilterWithASeparatorMatchesOnlyAsASubstring() {
+        assertFalse(ListFilter.matches("C-M", "c-m.txt"));
+        assertTrue(ListFilter.matches("C-M", "C-M.txt"));
+    }
+
+    @Test
+    void anUppercaseLetterStartsAWordTyped() {
+        assertEquals(Array.of("C", "C", "Mat"), ListFilter.wordsTyped("CCMat"));
+        assertEquals(Array.of("foo", "Bar"), ListFilter.wordsTyped("fooBar"));
+    }
+
+    @Test
     void wordsStartAtSeparatorsAtCaseChangesAndAtTheEndOfAnAcronym() {
-        assertEquals("cs", ListFilter.initials("CapitalSomething"));
-        assertEquals("hs", ListFilter.initials("HTTPServer"));
-        assertEquals("ade", ListFilter.initials("ABC-d e"));
-        assertEquals("vd", ListFilter.initials("v2Dialog"));
-        assertEquals("fbbj", ListFilter.initials("foo_bar-Baz.java"));
-        assertEquals("", ListFilter.initials("--/"));
+        assertEquals(Array.of(0, 7), ListFilter.wordStarts("CapitalSomething"));
+        assertEquals(Array.of(0, 4), ListFilter.wordStarts("HTTPServer"));
+        assertEquals(Array.of(0, 4, 6), ListFilter.wordStarts("ABC-d e"));
+        assertEquals(Array.of(0, 2), ListFilter.wordStarts("v2Dialog"));
+        assertEquals(Array.of(0, 4, 8, 12), ListFilter.wordStarts("foo_bar-Baz.java"));
+        assertEquals(Array.empty(), ListFilter.wordStarts("--/"));
     }
 }
