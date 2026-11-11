@@ -130,12 +130,12 @@ class SettingsPanelUpdateTest {
                         ThemeScope.EVERYWHERE,
                         RepositoryTheme.NONE,
                         ThemeName.DARK,
-                        Option.of(READ))),
+                        Option.of(READ.withOpensAt(Option.of('t'))))),
                 choosing.popup(ThemePopup.class));
     }
 
     @Test
-    void cancellingTheThemeGoesBackToTheSettings() {
+    void cancellingTheThemeGoesBackToTheSettingsOnTheTheme() {
         Model open = TestModels.loaded().openPopup(READ);
         Model choosing =
                 Update.update(open, new SettingsPanelMsg.ThemeRequested()).model();
@@ -144,19 +144,19 @@ class SettingsPanelUpdateTest {
 
         Model cancelled = Update.update(previewed, new ThemeMsg.Cancelled()).model();
 
-        assertEquals(Option.of(READ), cancelled.popup(SettingsPanelPopup.class));
+        assertEquals(Option.of(READ.withOpensAt(Option.of('t'))), cancelled.popup(SettingsPanelPopup.class));
         assertEquals(ThemeName.DARK, cancelled.preferences().theme());
     }
 
     @Test
-    void cancellingTheRepositoryThemeGoesBackToTheSettings() {
+    void cancellingTheRepositoryThemeGoesBackToTheSettingsOnTheRepositoryTheme() {
         Model open = TestModels.loaded().openPopup(READ);
         Model choosing = Update.update(open, new SettingsPanelMsg.RepositoryThemeRequested())
                 .model();
 
         Model cancelled = Update.update(choosing, new ThemeMsg.Cancelled()).model();
 
-        assertEquals(Option.of(READ), cancelled.popup(SettingsPanelPopup.class));
+        assertEquals(Option.of(READ.withOpensAt(Option.of('r'))), cancelled.popup(SettingsPanelPopup.class));
     }
 
     @Test

@@ -258,4 +258,32 @@ class SettingsPanelDialogsTest {
                 List.of(new SettingsPanelMsg.AccountRequested(), new SettingsPanelMsg.ThemeRequested()),
                 List.ofAll(dispatched));
     }
+
+    @Test
+    void opensOnTheSettingItIsToldTo() throws Exception {
+        java.util.List<Msg> dispatched = new ArrayList<>();
+        CursorFeedback cursor = new CursorFeedback(dispatched::add);
+        ChoiceDialog<SettingsPanelPopup> dialog = new ChoiceDialog<>(SettingsPanelDialogs.PANEL, cursor);
+        SettingsPanelPopup popup = new SettingsPanelPopup(
+                ThemeName.DARK,
+                RepositoryTheme.NONE,
+                Option.none(),
+                Option.of(setup(Option.none())),
+                true,
+                AccountBrowsers.NONE,
+                Option.none(),
+                Option.of('r'));
+        Supplier<Element> view = () -> stack(
+                text("background"),
+                dialog.render(cursor.on(TestModels.loaded().openPopup(popup))).get());
+
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(view)) {
+            SettledPilot.focus(runner, SettingsPanelDialogs.PANEL.id());
+            RenderedText.of(runner, view);
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(List.of(new SettingsPanelMsg.RepositoryThemeRequested()), List.ofAll(dispatched));
+    }
 }
