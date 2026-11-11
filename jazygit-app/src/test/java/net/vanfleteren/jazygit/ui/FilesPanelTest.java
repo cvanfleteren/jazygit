@@ -751,9 +751,16 @@ class FilesPanelTest {
             String refiltered = RenderedText.ofLarge(testRunner, () -> panel.render(other, FilesPanel.ID));
             assertTrue(refiltered.contains("ATest.java"), refiltered);
 
+            // A file highlighted in a directory that was collapsed before the filter.
+            RenderedText.ofLarge(testRunner, () -> panel.render(filtered, FilesPanel.ID));
+            panel.tree().selected(3);
+            assertEquals("src/main/A.java", panel.tree().selectedNode().data().path());
+
             String cleared = RenderedText.ofLarge(testRunner, () -> panel.render(all, FilesPanel.ID));
             assertFalse(cleared.contains("A.java"), cleared);
             assertTrue(cleared.contains("ATest.java"), cleared);
+            // Hidden again, it gives the highlight to the directory that holds it, not to the first file.
+            assertEquals("src/main", panel.tree().selectedNode().data().path());
             SettledPilot.of(testRunner).quit();
         }
     }

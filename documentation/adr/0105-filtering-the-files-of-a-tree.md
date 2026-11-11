@@ -52,7 +52,8 @@ own.
 - Escape in a filtered tree clears the filter only. The next Escape does what it did before: it closes the files of
   the changes open (ADR 44), or lets go of the commit copied to cherry-pick.
 - While the filter changes, the highlight stays on its node when that is still shown, else it goes to the first
-  matching file, not the root. Clearing the filter keeps it on the same path.
+  matching file, not the root. Clearing the filter keeps it on the same path, or on the directory holding it when
+  that is collapsed again.
 
 ### How long it lasts
 
@@ -91,3 +92,6 @@ own.
 - Escape in the files pane has one more layer.
 - Staging and unstaging a directory no longer always hand git the directory: tests cover the root and a directory,
   staged and unstaged, with a filter on.
+- While filtered, staging a directory gives git one path per file, as discarding one always did: tens of thousands
+  can go over the system's limit on the length of a command. Passing them on stdin (`--pathspec-from-file`) is left
+  to issue #410.

@@ -292,8 +292,8 @@ final class FileTreeList<T extends Pathed> {
 
     /**
      * Rebuilds the tree once the filter changed from {@code before}: with every directory open while it filters, or
-     * else those collapsed before it did collapsed again. The highlight stays on the same path, or else goes to the
-     * first file.
+     * else those collapsed before it did collapsed again. The highlight stays on the same path. Once the filter is
+     * cleared, a path inside a directory collapsed again gives it to that directory; else it goes to the first file.
      */
     private void refilter(Loadable<List<T>> files, Option<String> before) {
         Option<String> highlighted = selected().map(FileTree::path);
@@ -302,8 +302,23 @@ final class FileTreeList<T extends Pathed> {
         }
         show(roots(files, filter.isDefined() ? HashSet.empty() : collapsedUnfiltered));
         List<TreeNode<FileTree<T>>> rows = visible(roots);
-        int same = paths(rows).indexWhere(path -> path.isDefined() && path.equals(highlighted));
-        tree.selected(same >= 0 ? same : Math.max(0, rows.indexWhere(n -> n.data() instanceof FileTree.File<T>)));
+        List<Option<String>> shown = paths(rows);
+        int same = shown.indexWhere(path -> path.isDefined() && path.equals(highlighted));
+        int row = same >= 0 || filter.isDefined()
+                ? same
+                : highlighted.map(path -> holding(shown, path)).getOrElse(-1);
+        tree.selected(row >= 0 ? row : Math.max(0, rows.indexWhere(n -> n.data() instanceof FileTree.File<T>)));
+    }
+
+    /**
+     * The row of the deepest of the directories {@code shown} that holds {@code path}; -1 when none does.
+     */
+    private static int holding(List<Option<String>> shown, String path) {
+        return shown.zipWithIndex()
+                .filter(row -> row._1.exists(dir -> dir.isEmpty() || path.startsWith(dir + "/")))
+                .maxBy(row -> row._1.get().length())
+                .map(row -> row._2)
+                .getOrElse(-1);
     }
 
     @SuppressWarnings("unchecked")
