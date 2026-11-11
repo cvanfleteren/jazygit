@@ -29,7 +29,7 @@ public interface StubRemotes extends Remotes {
     }
 
     @Override
-    default Either<GitError, Map<String, String>> urls() {
+    default Either<GitError, Map<RemoteName, String>> urls() {
         return Either.right(HashMap.empty());
     }
 

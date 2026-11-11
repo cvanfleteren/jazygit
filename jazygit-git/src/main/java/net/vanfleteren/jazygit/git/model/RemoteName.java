@@ -5,7 +5,15 @@ import io.vavr.control.Option;
 /**
  * The name of a remote, e.g. {@code origin} (ADR 40).
  */
-public record RemoteName(String value) {
+public record RemoteName(String value) implements Comparable<RemoteName> {
+
+    /**
+     * Ordered by name, as git lists remotes.
+     */
+    @Override
+    public int compareTo(RemoteName other) {
+        return value.compareTo(other.value);
+    }
 
     /**
      * The name {@code text} spells, ignoring surrounding whitespace; none when it is blank or has whitespace

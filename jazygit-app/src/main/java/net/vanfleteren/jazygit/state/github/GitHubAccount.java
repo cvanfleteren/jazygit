@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.state.github;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.GhAccount;
 import net.vanfleteren.jazygit.git.Git;
+import net.vanfleteren.jazygit.git.model.RemoteName;
 
 /**
  * The gh account a repository is configured to use, kept in its own git configuration, so it stays with the
@@ -33,6 +34,10 @@ public final class GitHubAccount {
      * The GitHub host of the remotes of {@code git}; github.com when they do not say.
      */
     public static String host(Git git) {
-        return git.remotes().urls().toOption().flatMap(GhAccount::remoteHost).getOrElse(GhAccount.GITHUB);
+        return git.remotes()
+                .urls()
+                .toOption()
+                .flatMap(urls -> GhAccount.remoteHost(urls.mapKeys(RemoteName::value)))
+                .getOrElse(GhAccount.GITHUB);
     }
 }

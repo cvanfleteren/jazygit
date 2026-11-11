@@ -25,6 +25,7 @@ import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.StubConfig;
 import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.git.StubRemotes;
+import net.vanfleteren.jazygit.git.model.RemoteName;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.settings.AccountBrowsers;
 import net.vanfleteren.jazygit.settings.RecentRepositories;
@@ -364,8 +365,9 @@ class SettingsPanelUpdateTest {
                         })
                         .withRemotes(new StubRemotes() {
                             @Override
-                            public Either<GitError, Map<String, String>> urls() {
-                                return Either.right(HashMap.of("origin", "git@github.com:team/repo.git"));
+                            public Either<GitError, Map<RemoteName, String>> urls() {
+                                return Either.right(
+                                        HashMap.of(new RemoteName("origin"), "git@github.com:team/repo.git"));
                             }
                         }),
                 new StubGitHub() {
