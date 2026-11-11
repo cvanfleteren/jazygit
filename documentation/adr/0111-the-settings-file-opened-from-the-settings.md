@@ -57,13 +57,42 @@ The file is read again, and the settings applied, at two moments:
 - when the editor is closed;
 - when the settings panel opens, for what was edited outside jazygit meanwhile.
 
-Applied is all the file holds, as at the start: the theme, the animations, the gh executable, the sizes of the panes,
-the look of the diff, the browsers and the editors. A gh executable that changed reopens the repository, as choosing
-one in the panel does. What is wrong in the file is reported as at the start (`SettingsProblem.Invalid`), and the
-defaults are used for those keys. A file that cannot be read, or is not TOML, keeps the settings in use instead of
-falling back to all the defaults: one bad save does not undo every setting.
+#### What is applied
 
-After the editor, the settings panel shows again, with the settings as read, so the user sees what changed.
+The settings in use are not always what the file has: a setting whose save failed still holds for the session
+(`SettingsUpdate`), and the file may have a value that is not valid. So a read applies what changed in the file, not
+all of it. jazygit keeps what the file had when it last read or wrote it; a setting takes the value the file has now
+when that value is valid and differs from what the file had then. Every other setting keeps the value in use:
+
+- a setting only the session has stays, unless the user edited that same key;
+- a key whose value is not valid, such as `theme = "drakula"`, keeps the value in use, rather than the default the
+  start falls back to; it is reported (below);
+- a file that cannot be read, or is not TOML, keeps all the settings in use.
+
+What can be applied is all the file holds: the theme, the animations, the gh executable, the sizes of the panes, the
+look of the diff, the browsers and the editors. A gh executable that changed reopens the repository, as choosing one in
+the panel does. A theme that changed replaces the theme `--theme` gave the session, as choosing one in the panel does;
+while the theme in the file stays as it was, `--theme` holds.
+
+- Not: applying all the file holds, as the start does. A read when the panel opens would undo, without a word, a
+  setting whose save failed; and a typo would reset a setting the user had.
+- Not: reading only when the file's modification time changed. It keeps a setting only the session has, but a typo
+  still resets one.
+
+#### When it runs
+
+The read runs on the `io` executor, as `SaveSettings` does, which runs one command at a time: so a save asked for
+before it is written before it is read, and a read does not overtake it to apply the file as it was.
+
+#### What is reported
+
+What is wrong in the file is reported as at the start (`SettingsProblem`):
+
+- after the editor, always: the user just edited it, and wants to know;
+- when the settings panel opens, only when it differs from what was reported last, at the start or since; the same
+  problem is not reported at each opening until it is fixed.
+
+After the editor, the settings panel shows again, with the settings as applied, so the user sees what changed.
 
 - Not: watching the file. jazygit watches no file yet; with git's editor it knows when the edit is done.
 - Not: a restart to apply them.
@@ -77,6 +106,11 @@ editor that cannot start, or fails, is reported as there.
 
 - Every setting, also those only in the file, can be set without leaving jazygit or knowing where the file is.
 - A hand edit applies when the editor closes, or the next time the settings panel opens; not before.
-- The settings are read at more moments than the start. `SettingsFile` reads them as at the start; what applies them
-  is new, and takes in a change of the gh executable.
+- The settings are read at more moments than the start. `SettingsFile` reads them as at the start, but tells which
+  keys are not valid apart from their defaults; what applies them is new, and takes in a change of the gh executable
+  and of the theme over `--theme`.
+- The model keeps what the file had at the last read or save, besides the settings in use, and the problem reported
+  last.
+- A setting whose save failed, or a typo, never undoes a setting in use; a hand edit of a key always wins over what
+  the session has for it.
 - The editors of ADR 110 still open worktrees only.
