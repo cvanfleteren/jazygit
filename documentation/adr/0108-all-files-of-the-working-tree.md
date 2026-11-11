@@ -1,0 +1,73 @@
+# 108. All files of the working tree
+
+Date: 2026-11-11
+
+## Context
+
+The files pane lists what changed in the working tree: its staged, unstaged and untracked files. A file that did not
+change is not in it, so finding a file to read, or to open in the editor (`e`) for a small change, means leaving
+jazygit, though the pane has a tree and a filter (ADR 105, 106) that would find it at once.
+
+`f` on a branch lists the files it changes against its base (ADR 61); the main branch has none, and says so. Listing
+the files of a branch as committed was weighed: it shows files that may not be on disk, so `e` could not open them,
+or would open the copy of another branch, and what was just edited would not show in it. The files as they are on
+disk are what is read and edited.
+
+The content panel shows the diff of the file highlighted, or a version of it read whole (ADR 102, 103). A file
+without changes has no diff, and no version can be made from one.
+
+## Decision
+
+### The mode
+
+- `a` in the files pane switches the tree of the working tree between its changed files, as now, and all its files.
+  `?` lists it. Not: `f` on the main branch, which is not always what is checked out, nor on disk.
+- All its files are those git tracks and the untracked ones it does not ignore: `git ls-files -z --cached --others
+  --exclude-standard`. A submodule is one entry. Not: the ignored files, as `target/` or `node_modules/`, which would
+  bury the others.
+- They are read again with each reload of the working tree, only while the mode is on: the pane of changed files
+  costs nothing more.
+- The mode is kept per repository for the session, through reloads and operations. It is not kept for the next one.
+
+### The tree
+
+- It is the same tree with more files: a changed file keeps its marker, and staging, discarding and the other keys
+  act on it as in the tree of changed files. On a file without changes they are disabled, saying why. A directory and
+  the root act on the changed files under them.
+- It opens with the directories of the top level open, and those leading to a changed file: no change is hidden by
+  the files around it. Not: all open, as a tree of changes is, which is no use with thousands of files; `/` opens
+  every directory leading to a match (ADR 105).
+- The working tree keeps its one filter (ADR 105) in both modes: switching keeps `/Test`.
+- The title says it, before the filter: `Files · all files`, `Files · all files · /test`.
+
+### The content panel
+
+- A changed file shows its diff, as now, with its versions (Ctrl+O) and Markdown rendered (Ctrl+T).
+- A file without changes shows its content, read from disk when it is highlighted, and dropped when the highlight
+  leaves it, as a diff is:
+    - As source, lexed whole, with one column of line numbers. Ctrl+T renders it as ADR 103 renders a version;
+      Ctrl+O does nothing, as there is one version only.
+    - With the cursor of a version (ADR 102): `y` copies its lines, `v` a range of them.
+    - Cut at the limit of ADR 79, saying so, as a version is.
+    - A binary file, one with a NUL byte in its first 8000 bytes, as git tells, is not shown: `Binary file · 12 KiB`.
+      A symbolic link says `Symbolic link to <target>`, a submodule `Submodule at abc1234`. Not: images drawn, which
+      are for an ADR of their own (ADR 103).
+- A directory, or the root, shows the diff of the changes under it, as now. With none, it says how many files it
+  holds, those shown when filtered: `src/main · 214 files`.
+
+### The editor
+
+- `e` opens the file highlighted in the tree in git's editor, as it does now, a file without changes too. The reload
+  after it shows the edit at once: the file is marked changed, and its diff shows.
+- It opens the file, not the line of the cursor.
+
+## Consequences
+
+- A second command lists the files of the working tree, while the mode is on, on each reload: in a repository of
+  100 000 files that is a few megabytes and tens of milliseconds more per reload.
+- The content panel reads a file from disk for the first time, apart from a diff; a file without changes has a way of
+  its own to be shown.
+- `FileTreeList` gets a second shape of the working tree, and the open directories to start from with it.
+- `f` on the main branch still says it has no base. Left for later: the files of a branch as committed, read-only,
+  for a branch not checked out; `e` at the line of the cursor, which needs the way each editor takes a line; a file
+  compared with how it was before the last commit that changed it.
