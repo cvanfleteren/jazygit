@@ -22,7 +22,7 @@ import org.junit.jupiter.api.Test;
 class FilesPanelAllFilesTest {
 
     private static final FileEntry CHANGED = new FileEntry("src/main/A.java", ChangeType.MODIFIED, false, true);
-    // Rows: /, README.md, docs/guide, src/main, M A.java, B.java.
+    // Rows: /, docs/guide, src/main, M A.java, B.java, README.md: directories come first.
     private static final List<String> ALL =
             List.of("README.md", "docs/guide/intro.md", "src/main/A.java", "src/main/B.java");
 
@@ -71,19 +71,19 @@ class FilesPanelAllFilesTest {
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.ID))) {
             RenderedText.ofLarge(testRunner, () -> panel.render(model, FilesPanel.ID));
 
-            panel.allTree().selected(1);
+            panel.allTree().selected(5);
             assertEquals(Option.of(new SelectionMsg.UnchangedFileSelected("README.md")), panel.selectionChange(model));
 
-            panel.allTree().selected(2);
+            panel.allTree().selected(1);
             assertEquals(
                     Option.of(new SelectionMsg.UnchangedDirectorySelected("docs/guide", 1)),
                     panel.selectionChange(model));
 
-            panel.allTree().selected(3);
+            panel.allTree().selected(2);
             // Its diff is of its changed files only, as without all files.
             assertEquals(Option.of(new SelectionMsg.FilesSelected(List.of(CHANGED))), panel.selectionChange(model));
 
-            panel.allTree().selected(5);
+            panel.allTree().selected(4);
             assertEquals(
                     Option.of(new SelectionMsg.UnchangedFileSelected("src/main/B.java")), panel.selectionChange(model));
             SettledPilot.of(testRunner).quit();

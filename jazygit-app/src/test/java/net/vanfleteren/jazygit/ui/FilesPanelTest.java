@@ -740,7 +740,8 @@ class FilesPanelTest {
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(all, FilesPanel.ID))) {
             RenderedText.ofLarge(testRunner, () -> panel.render(all, FilesPanel.ID));
-            panel.tree().selected(3);
+            // The root, src, then src/main: directories come before README.md.
+            panel.tree().selected(2);
             assertEquals("src/main", panel.tree().selectedNode().data().path());
             panel.tree().selectedNode().expanded(false);
             assertFalse(RenderedText.ofLarge(testRunner, () -> panel.render(all, FilesPanel.ID))
