@@ -13,6 +13,7 @@ import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import java.time.Instant;
 import java.util.function.Function;
+import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.model.ChangeType;
@@ -443,13 +444,18 @@ final class RichDiff {
                                 hunk.numbered()
                                         ? Line.from(rule)
                                         : Line.from(rule, styled(hunk.header(), Theme.Classes.DIFF_HUNK, styles)))));
+        // No line of the diff is wider than the bar of its file, which is as wide as the file: each is measured at most
+        // that wide without being drawn.
+        Option<Integer> within = Option.some(layout.fileWidth());
         return header.appendAll(groups.zipWithIndex().<Pending>map(group -> () -> {
             List<Row> members = group._1().map(rows::get);
             List<Row> threaded = members.filter(row -> !row.remarks().threads().isEmpty());
             return members.map(row -> new Marked(
                             () -> line(row, layout),
                             Anchor.of(layout.path(), row.parsed().line())
-                                    .map(on -> new Mark(on, 1, layout.fileWidth(), at))))
+                                    .map(on -> new Mark(on, 1, layout.fileWidth(), at)),
+                            List.empty(),
+                            within))
                     .appendAll(threaded.zipWithIndex()
                             .flatMap(row -> layout.blocks()
                                     .threads(
@@ -681,12 +687,25 @@ final class RichDiff {
     }
 
     /**
-     * What draws a line, and the stop of the cursor that starts on it, if one does.
+     * What draws a line, the stop of the cursor that starts on it, if one does, and how wide it is at most, when that is
+     * known without drawing it: a line of a diff is no wider than its file, so a long diff is measured without drawing
+     * each of its lines only to throw it away.
      */
-    private record Marked(Supplier<Line> line, Option<Mark> mark, List<Anchor> places) {
+    private record Marked(Supplier<Line> line, Option<Mark> mark, List<Anchor> places, Option<Integer> width) {
 
         Marked(Supplier<Line> line, Option<Mark> mark) {
             this(line, mark, List.empty());
+        }
+
+        Marked(Supplier<Line> line, Option<Mark> mark, List<Anchor> places) {
+            this(line, mark, places, Option.none());
+        }
+
+        /**
+         * How wide the line is, at most: drawn to be measured when that is not known.
+         */
+        int measured() {
+            return width.getOrElse(() -> line.get().width());
         }
 
         static Marked plain(Line line) {
@@ -723,13 +742,17 @@ final class RichDiff {
     record Place(Anchor anchor, int row) {}
 
     /**
-     * The lines of a diff, each drawn when it shows ({@link Rows}), and where each stop of the cursor in them starts, in
-     * order.
+     * The lines of a diff, each drawn when it shows ({@link Rows}), where each stop of the cursor in them starts, in
+     * order, and what works out how wide the widest of them is.
+     *
+     * @param widest how wide the widest line is, worked out when it is asked for: the lines of a diff are not drawn for
+     *               it, as each is no wider than its file ({@link Marked#width}); other lines are drawn to be measured,
+     *               as {@link Rows#widest} does
      */
-    record Drawn(Rows rows, List<Stop> stops, List<Place> places) {
+    record Drawn(Rows rows, List<Stop> stops, List<Place> places, IntSupplier widest) {
 
         Drawn(Rows rows, List<Stop> stops) {
-            this(rows, stops, List.empty());
+            this(rows, stops, List.empty(), rows::widest);
         }
 
         private static Drawn of(List<Marked> marked) {
@@ -737,7 +760,12 @@ final class RichDiff {
                     Rows.drawn(marked.map(Marked::line)),
                     marked.zipWithIndex().flatMap(line -> line._1().mark().map(mark -> new Stop(mark, line._2()))),
                     marked.zipWithIndex()
-                            .flatMap(line -> line._1().places().map(anchor -> new Place(anchor, line._2()))));
+                            .flatMap(line -> line._1().places().map(anchor -> new Place(anchor, line._2()))),
+                    // On the threads of the common pool, as Rows.widest measures, for the lines that are drawn for it.
+                    () -> marked.toJavaParallelStream()
+                            .mapToInt(Marked::measured)
+                            .max()
+                            .orElse(0));
         }
 
         /**
@@ -765,10 +793,13 @@ final class RichDiff {
          * These lines after {@code before}, their stops moved down by as many lines.
          */
         Drawn after(List<Line> before) {
+            IntSupplier inBody = widest;
             return new Drawn(
                     rows.after(Rows.of(before)),
                     stops.map(stop -> new Stop(stop.mark(), stop.row() + before.size())),
-                    places.map(place -> new Place(place.anchor(), place.row() + before.size())));
+                    places.map(place -> new Place(place.anchor(), place.row() + before.size())),
+                    () -> Math.max(
+                            inBody.getAsInt(), before.map(Line::width).max().getOrElse(0)));
         }
 
         /**
@@ -780,7 +811,8 @@ final class RichDiff {
                     .map(first -> new Drawn(
                             rows,
                             stops.prepend(new Stop(new Mark(new Anchor.Lead(), first.row(), 0, Option.none()), 0)),
-                            places))
+                            places,
+                            widest))
                     .getOrElse(this);
         }
     }

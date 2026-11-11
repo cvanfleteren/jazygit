@@ -1082,8 +1082,9 @@ public final class ContentPanel {
                         lines,
                         stops,
                         DiffCursor.indexes(stops),
-                        // The render thread waits for it, as it does for the lines to be drawn.
-                        lines.widest(),
+                        // The render thread waits for it, as it does for the lines to be drawn; the lines of a diff
+                        // are not drawn for it.
+                        drawn.widest().getAsInt(),
                         stops.filter(stop -> switch (stop.mark().anchor()) {
                                     case Anchor.File _, Anchor.OnLine _, Anchor.Gap _ -> true;
                                     case Anchor.Lead _, Anchor.Thread _, Anchor.Comment _ -> false;
