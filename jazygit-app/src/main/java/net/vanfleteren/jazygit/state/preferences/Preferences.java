@@ -12,6 +12,8 @@ import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.settings.DiffLook;
 import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.settings.Settings;
+import net.vanfleteren.jazygit.settings.SettingsProblem;
+import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.settings.ThemeName;
 
 /**
@@ -32,6 +34,9 @@ import net.vanfleteren.jazygit.settings.ThemeName;
  *                       the status, for this session only (ADR 92)
  * @param collapsedColumns the screens whose left column is collapsed, which maximizes their content panel, for this
  *                         session only (ADR 92, ADR 104)
+ * @param file          what the settings file had when it was last read or written, to tell what changed in it since
+ *                      (ADR 111)
+ * @param reported      what was wrong in the settings file as last reported, at the start or since (ADR 111)
  */
 @With
 public record Preferences(
@@ -44,7 +49,9 @@ public record Preferences(
         Option<DraggedHeights> draggedHeights,
         Option<Integer> columnRows,
         Map<Screen, Integer> maximizedPanes,
-        Set<Screen> collapsedColumns) {
+        Set<Screen> collapsedColumns,
+        SettingsStore.Loaded file,
+        Option<SettingsProblem> reported) {
 
     public static final Preferences DEFAULT = new Preferences(
             Settings.DEFAULT,
@@ -56,7 +63,9 @@ public record Preferences(
             Option.none(),
             Option.none(),
             HashMap.empty(),
-            HashSet.empty());
+            HashSet.empty(),
+            SettingsStore.Loaded.DEFAULT,
+            Option.none());
 
     /**
      * How the diffs of the files and the commits are read: a merge against its first parent when changes are drawn

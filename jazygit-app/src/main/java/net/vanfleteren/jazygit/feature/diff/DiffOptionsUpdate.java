@@ -78,9 +78,10 @@ public final class DiffOptionsUpdate {
     }
 
     /**
-     * Reads the diffs shown in {@code model} again, with the options it has now.
+     * Reads the diffs shown in {@code model} again, with the options it has now, as after they changed in the
+     * settings file (ADR 111).
      */
-    private static Next changed(Model model) {
+    public static Next changed(Model model) {
         DiffOptions options = model.preferences().diffOptions();
         Option<DivergenceView> divergence =
                 model.repoView().divergence().map(view -> view.withDetail(reloading(view.detail())));

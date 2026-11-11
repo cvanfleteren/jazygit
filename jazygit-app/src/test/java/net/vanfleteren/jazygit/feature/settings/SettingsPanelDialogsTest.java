@@ -11,6 +11,7 @@ import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.gh.model.ChosenBrowser;
@@ -79,7 +80,8 @@ class SettingsPanelDialogsTest {
                 Option.none(),
                 Option.of(setup(Option.of("alice-work"))),
                 true,
-                AccountBrowsers.NONE);
+                AccountBrowsers.NONE,
+                Option.none());
 
         assertEquals(
                 "Browser for alice-work on github.com: firefox -P work",
@@ -113,10 +115,38 @@ class SettingsPanelDialogsTest {
     }
 
     @Test
+    void theSettingsFileShowsWhereItIsWithATildeForTheHomeDirectory() {
+        SettingsPanelPopup popup = new SettingsPanelPopup(
+                ThemeName.DARK,
+                RepositoryTheme.NONE,
+                Option.none(),
+                Option.none(),
+                true,
+                AccountBrowsers.NONE,
+                Option.none());
+        Path home = Path.of(System.getProperty("user.home"));
+
+        assertEquals(
+                "Edit ~/.config/jazygit/config.toml",
+                SettingsPanelDialogs.file(popup.withFile(
+                        Option.of(home.resolve(".config/jazygit/config.toml").toString()))));
+        assertEquals(
+                "Edit /etc/jazygit/config.toml",
+                SettingsPanelDialogs.file(popup.withFile(Option.of("/etc/jazygit/config.toml"))));
+        assertEquals("Edit reading…", SettingsPanelDialogs.file(popup));
+    }
+
+    @Test
     void theThemeOfTheRepositoryIsItsOwnElseTheOneItInherits() {
         RepositoryTheme.Inherited work = new RepositoryTheme.Inherited(ThemeName.LIGHT, "/etc/gitconfig-work");
         SettingsPanelPopup popup = new SettingsPanelPopup(
-                ThemeName.DARK, RepositoryTheme.NONE, Option.none(), Option.none(), true, AccountBrowsers.NONE);
+                ThemeName.DARK,
+                RepositoryTheme.NONE,
+                Option.none(),
+                Option.none(),
+                true,
+                AccountBrowsers.NONE,
+                Option.none());
 
         assertEquals(
                 "Theme for this repository: ember, blues and oranges",
@@ -136,7 +166,13 @@ class SettingsPanelDialogsTest {
         ChoiceDialog<SettingsPanelPopup> dialog =
                 new ChoiceDialog<>(SettingsPanelDialogs.PANEL, new ArrayList<Msg>()::add);
         SettingsPanelPopup popup = new SettingsPanelPopup(
-                ThemeName.DARK, RepositoryTheme.NONE, Option.of("/opt/gh"), Option.none(), true, AccountBrowsers.NONE);
+                ThemeName.DARK,
+                RepositoryTheme.NONE,
+                Option.of("/opt/gh"),
+                Option.none(),
+                true,
+                AccountBrowsers.NONE,
+                Option.none());
         Element view = stack(
                 text("background"),
                 dialog.render(TestModels.loaded().openPopup(popup)).get());
@@ -158,7 +194,8 @@ class SettingsPanelDialogsTest {
                 Option.none(),
                 Option.of(setup(Option.of("alice-work"))),
                 true,
-                AccountBrowsers.NONE.with("github.com", "alice-work", Option.of("firefox -P work")));
+                AccountBrowsers.NONE.with("github.com", "alice-work", Option.of("firefox -P work")),
+                Option.none());
         Element view = stack(
                 text("background"),
                 dialog.render(TestModels.loaded().openPopup(popup)).get());
@@ -194,7 +231,8 @@ class SettingsPanelDialogsTest {
                 Option.none(),
                 Option.of(setup(Option.none())),
                 true,
-                AccountBrowsers.NONE);
+                AccountBrowsers.NONE,
+                Option.none());
         Supplier<Element> view = () -> stack(
                 text("background"),
                 dialog.render(cursor.on(TestModels.loaded().openPopup(popup))).get());

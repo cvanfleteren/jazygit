@@ -2,20 +2,26 @@ package net.vanfleteren.jazygit.feature.settings;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.diff.DiffOptionsUpdate;
 import net.vanfleteren.jazygit.feature.theme.ThemeMsg;
 import net.vanfleteren.jazygit.feature.theme.ThemeScope;
 import net.vanfleteren.jazygit.feature.theme.ThemeUpdate;
 import net.vanfleteren.jazygit.settings.Settings;
+import net.vanfleteren.jazygit.settings.SettingsProblem;
+import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Landing;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.operation.CommandLog;
+import net.vanfleteren.jazygit.state.preferences.Preferences;
 import net.vanfleteren.jazygit.state.preferences.SaveSettings;
 
 /**
  * Looking at the settings and changing them: the theme, whether what moves moves smoothly, the gh executable, the
  * account gh and git use for the repository, and the browser of that account. A change to how gh runs shows the repository again, as if the app
- * had been started with it.
+ * had been started with it. The settings file opens in git's editor, and is read again after it, and as the panel
+ * opens (ADR 111).
  */
 public final class SettingsPanelUpdate {
 
@@ -33,9 +39,11 @@ public final class SettingsPanelUpdate {
                                 model.preferences().settings().ghExecutable(),
                                 Option.none(),
                                 model.preferences().settings().animations(),
-                                model.preferences().settings().browsers())),
+                                model.preferences().settings().browsers(),
+                                Option.none())),
                         new SettingsPanelCmd.ReadGitHub(
-                                model.preferences().settings().gh()));
+                                model.preferences().settings().gh()),
+                        new SettingsPanelCmd.ReadFile());
             // Read for a panel that may be closed already, or open on another gh executable.
             case SettingsPanelMsg.GitHubRead(GitHubSetup gitHub) ->
                 Next.of(model.popup(SettingsPanelPopup.class)
@@ -106,7 +114,59 @@ public final class SettingsPanelUpdate {
                 Next.of(model.fail(new AppError.GitHubAccountNotSet(failure)));
             case SettingsPanelMsg.NotReopened(var failure) ->
                 Next.of(model.fail(new AppError.SettingsNotApplied(failure)));
+            case SettingsPanelMsg.FileRequested() -> Next.of(model.clearError(), new SettingsPanelCmd.EditFile());
+            case SettingsPanelMsg.FileRead(var file, var loaded) ->
+                read(
+                        model.popup(SettingsPanelPopup.class)
+                                .map(panel -> model.openPopup(panel.withFile(file)))
+                                .getOrElse(model),
+                        loaded,
+                        false);
+            // The file is read again when the panel opens next.
+            case SettingsPanelMsg.FileNotRead(var failure) -> Next.of(model);
+            case SettingsPanelMsg.FileEdited(var commands, var loaded) ->
+                read(CommandLog.append(model, SettingsPanelCmd.EditFile.EDIT_SETTINGS, commands), loaded, true);
+            case SettingsPanelMsg.FileNotEdited(var failure) ->
+                Next.of(CommandLog.append(model, SettingsPanelCmd.EditFile.EDIT_SETTINGS, failure.commands())
+                        .fail(new AppError.OperationFailed(
+                                SettingsPanelCmd.EditFile.EDIT_SETTINGS, Option.none(), failure)));
         };
+    }
+
+    /**
+     * Applies the settings file, read again as {@code loaded}, after the editor when {@code edited}, else as the panel
+     * opened (ADR 111). Only what changed in the file since it was last read or written, and is valid, is applied;
+     * a setting only the session has, or a value that is not valid, leaves the one in use. What is wrong in the file
+     * is reported after the editor always, else only when it differs from what was reported last. An open panel shows
+     * the settings as applied.
+     */
+    static Next read(Model model, SettingsStore.Loaded loaded, boolean edited) {
+        Preferences before = model.preferences();
+        SettingsStore.Applied applied = loaded.appliedTo(before.settings(), before.file());
+        Settings settings = applied.settings();
+        Model updated = model.mapPreferences(preferences -> preferences
+                .withSettings(settings)
+                .withFile(loaded)
+                .withReported(loaded.problem())
+                .withThemeOverride(applied.themeChanged() ? Option.none() : preferences.themeOverride()));
+        Model shown = updated.popup(SettingsPanelPopup.class)
+                .map(panel -> updated.openPopup(panel.withTheme(settings.theme())
+                        .withGhExecutable(settings.ghExecutable())
+                        .withAnimations(settings.animations())
+                        .withBrowsers(settings.browsers())))
+                .getOrElse(updated);
+        Option<SettingsProblem> report = edited
+                ? loaded.problem()
+                : loaded.problem().filter(problem -> !before.reported().contains(problem));
+        Model reported = report.map(problem -> shown.fail(new AppError.SettingsNotReread(problem)))
+                .getOrElse(shown);
+        if (!settings.ghExecutable().equals(before.settings().ghExecutable())) {
+            // Shown again, the diffs are read with the settings as they are now, too.
+            return Next.of(reported, new SettingsPanelCmd.Reopen(Landing.of(reported.repoView())));
+        }
+        return settings.diffStyle() == before.settings().diffStyle()
+                ? Next.of(reported)
+                : DiffOptionsUpdate.changed(reported);
     }
 
     /**

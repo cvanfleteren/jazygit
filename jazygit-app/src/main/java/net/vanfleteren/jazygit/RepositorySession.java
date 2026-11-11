@@ -195,6 +195,11 @@ final class RepositorySession {
                     last.preferences().themeOverride(),
                     repositoryTheme,
                     landing);
+            // What this session knew of the settings file goes on, so a setting only it has is not taken for one
+            // the file has (ADR 111).
+            runtime.forEach(opened -> opened.program()
+                    .dispatch(new SettingsMsg.Carried(
+                            last.preferences().file(), last.preferences().reported())));
             requestRedraw.run();
         });
     }

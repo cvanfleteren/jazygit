@@ -102,7 +102,10 @@ public final class SettingsPanelDialogs {
                                     SettingsPanelMsg.BrowserRequested::new,
                                     (model, popup) -> popup.gitHub()
                                             .exists(gitHub -> gitHub.account().isDefined()))
-                            .withDetails("dialog.settings.browser.details")),
+                            .withDetails("dialog.settings.browser.details"),
+                    new Choice<SettingsPanelPopup>('e', SettingsPanelDialogs::file, SettingsPanelMsg.FileRequested::new)
+                            .withHeading("dialog.settings.group.file")
+                            .withDetails("dialog.settings.file.details")),
             WIDTH);
     // How a warning starts.
     private static final String WARNING = "⚠ ";
@@ -135,6 +138,15 @@ public final class SettingsPanelDialogs {
                                 ThemeDialog.origin(inherited.origin()))))
                 .getOrElse(() -> Messages.get("dialog.settings.repositoryTheme.none"));
         return Messages.get("dialog.settings.repositoryTheme", shown);
+    }
+
+    /**
+     * The settings file, as the settings show it: where it is, with {@code ~} for the home directory (ADR 111).
+     */
+    static String file(SettingsPanelPopup popup) {
+        return Messages.get(
+                "dialog.settings.file",
+                popup.file().map(ThemeDialog::origin).getOrElse(() -> Messages.get("dialog.settings.reading")));
     }
 
     private static String themeLabel(ThemeName theme) {

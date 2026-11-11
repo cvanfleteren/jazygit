@@ -121,6 +121,7 @@ public final class ErrorText {
             case AppError.CannotReview(AppError.CannotReview.Why why) ->
                 Messages.get("error.review." + why.name().toLowerCase(Locale.ROOT));
             case AppError.SettingsNotLoaded(SettingsProblem problem) -> of(problem);
+            case AppError.SettingsNotReread(SettingsProblem problem) -> reread(problem);
             case AppError.SettingsNotSaved(Failure failure) -> Messages.get("error.settings.notSaved", of(failure));
             case AppError.RepositoryNotOpened(String directory, Failure failure) ->
                 Messages.get("error.recentRepos.notOpened", directory, of(failure));
@@ -229,5 +230,19 @@ public final class ErrorText {
         return Option.of(cause.getMessage())
                 .filter(message -> !message.isBlank())
                 .getOrElse(() -> cause.getClass().getSimpleName());
+    }
+
+    /**
+     * What is wrong in the settings file read again, whose settings in use stay rather than going back to the
+     * defaults (ADR 111).
+     */
+    private static String reread(SettingsProblem problem) {
+        return switch (problem) {
+            case SettingsProblem.Unreadable(var file, String reason) ->
+                Messages.get("settings.reread.unreadable", file, reason);
+            case SettingsProblem.Invalid(var file, var keys) ->
+                Messages.get("settings.reread.invalid", file, keys.mkString(", "));
+            case SettingsProblem.Unwritable unwritable -> of(unwritable);
+        };
     }
 }

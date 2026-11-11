@@ -16,6 +16,8 @@ import net.vanfleteren.jazygit.state.preferences.RepositoryTheme;
  * @param gitHub          how gh is set up for the repository; none while it is read
  * @param animations      whether what moves on the screen moves there smoothly (ADR 81)
  * @param browsers        the browser set for each GitHub account (ADR 88)
+ * @param file            the settings file, which {@code e} opens; none while it is read, or when the settings are
+ *                        kept in no file (ADR 111)
  */
 @With
 public record SettingsPanelPopup(
@@ -24,5 +26,6 @@ public record SettingsPanelPopup(
         Option<String> ghExecutable,
         Option<GitHubSetup> gitHub,
         boolean animations,
-        AccountBrowsers browsers)
+        AccountBrowsers browsers,
+        Option<String> file)
         implements Popup {}

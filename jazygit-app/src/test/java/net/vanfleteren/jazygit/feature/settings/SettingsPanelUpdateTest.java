@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.settings;
 import static net.vanfleteren.jazygit.state.TestModels.typed;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.HashMap;
@@ -12,7 +13,9 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.function.Supplier;
 import net.vanfleteren.jazygit.feature.commit.create.CommitPopup;
+import net.vanfleteren.jazygit.feature.diff.DiffOptionsUpdate;
 import net.vanfleteren.jazygit.feature.theme.ThemePopup;
 import net.vanfleteren.jazygit.feature.theme.ThemeScope;
 import net.vanfleteren.jazygit.gh.GhError;
@@ -20,9 +23,11 @@ import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.ChosenBrowser;
 import net.vanfleteren.jazygit.gh.model.GhAccount;
 import net.vanfleteren.jazygit.gh.model.GhLogin;
+import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.StubConfig;
+import net.vanfleteren.jazygit.git.StubEditor;
 import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.git.StubRemotes;
 import net.vanfleteren.jazygit.git.model.RemoteName;
@@ -30,11 +35,13 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.settings.AccountBrowsers;
 import net.vanfleteren.jazygit.settings.RecentRepositories;
 import net.vanfleteren.jazygit.settings.Settings;
+import net.vanfleteren.jazygit.settings.SettingsProblem;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.github.*;
+import net.vanfleteren.jazygit.state.operation.CommandLog;
 import net.vanfleteren.jazygit.state.popup.*;
 import net.vanfleteren.jazygit.state.preferences.RepositoryTheme;
 import net.vanfleteren.jazygit.state.preferences.SaveSettings;
@@ -53,7 +60,13 @@ class SettingsPanelUpdateTest {
             Option.of(new GhAccount("github.com", "alice")),
             Option.of(new ChosenBrowser("xdg-open", ChosenBrowser.Source.DESKTOP)));
     private static final SettingsPanelPopup READ = new SettingsPanelPopup(
-            ThemeName.DARK, RepositoryTheme.NONE, Option.none(), Option.of(SETUP), true, AccountBrowsers.NONE);
+            ThemeName.DARK,
+            RepositoryTheme.NONE,
+            Option.none(),
+            Option.of(SETUP),
+            true,
+            AccountBrowsers.NONE,
+            Option.none());
 
     @Test
     void requestingShowsTheSettingsAndReadsHowGhIsSetUp() {
@@ -66,9 +79,10 @@ class SettingsPanelUpdateTest {
                         Option.none(),
                         Option.none(),
                         true,
-                        AccountBrowsers.NONE)),
+                        AccountBrowsers.NONE,
+                        Option.none())),
                 next.model().popup(SettingsPanelPopup.class));
-        assertEquals(List.of(new SettingsPanelCmd.ReadGitHub("gh")), next.cmds());
+        assertEquals(List.of(new SettingsPanelCmd.ReadGitHub("gh"), new SettingsPanelCmd.ReadFile()), next.cmds());
     }
 
     @Test
@@ -259,7 +273,8 @@ class SettingsPanelUpdateTest {
                         Option.none(),
                         Option.none(),
                         true,
-                        AccountBrowsers.NONE));
+                        AccountBrowsers.NONE,
+                        Option.none()));
 
         assertEquals(
                 reading,
@@ -417,5 +432,289 @@ class SettingsPanelUpdateTest {
         assertEquals(
                 List.of("jazygit.githubUser=alice-work", "reopened " + Path.of("/repos/a") + " on REMOTE"),
                 List.ofAll(done));
+    }
+
+    private static final Path FILE = Path.of("/home/me/.config/jazygit/config.toml");
+    private static final SettingsProblem INVALID_THEME = new SettingsProblem.Invalid(FILE, List.of("ui.theme"));
+
+    private static SettingsStore.Loaded read(Settings settings) {
+        return new SettingsStore.Loaded(settings, Option.none());
+    }
+
+    /**
+     * A settings file at {@link #FILE} that reads as {@code loaded}, and is made as {@code made} says.
+     */
+    private static SettingsStore file(SettingsStore.Loaded loaded, Either<SettingsProblem, Path> made) {
+        return new SettingsStore() {
+            @Override
+            public Loaded load() {
+                return loaded;
+            }
+
+            @Override
+            public Either<SettingsProblem, Settings> save(Settings previous, Settings next) {
+                return Either.right(next);
+            }
+
+            @Override
+            public Option<Path> file() {
+                return Option.of(FILE);
+            }
+
+            @Override
+            public Either<SettingsProblem, Path> made() {
+                return made;
+            }
+        };
+    }
+
+    private static Env env(Git git, SettingsStore settings, Terminal terminal) {
+        return new Env(git, StubGitHub.empty(), settings, RecentRepositories.NONE, Repositories.NONE, terminal);
+    }
+
+    @Test
+    void eOpensTheSettingsFile() {
+        Next next = Update.update(TestModels.loaded().openPopup(READ), new SettingsPanelMsg.FileRequested());
+
+        assertEquals(List.of(new SettingsPanelCmd.EditFile()), next.cmds());
+        assertEquals(Option.of(READ), next.model().popup(SettingsPanelPopup.class));
+    }
+
+    @Test
+    void theFileIsMadeEditedWithTheTerminalHandedOverAndReadOnceTheEditorIsClosed() {
+        java.util.List<String> events = new ArrayList<>();
+        Terminal terminal = new Terminal() {
+            @Override
+            public <T> T handOver(Supplier<T> program) {
+                events.add("leave");
+                T result = program.get();
+                events.add("come back");
+                return result;
+            }
+        };
+        Git git = StubGit.of().withEditor(new StubEditor() {
+            @Override
+            public Either<GitFailure, List<ExecutedCommand>> edit(List<String> files) {
+                events.add("edit " + files.mkString(" "));
+                return Either.right(List.empty());
+            }
+        });
+        SettingsStore.Loaded edited = read(Settings.DEFAULT.withAnimations(false));
+
+        Msg msg = new SettingsPanelCmd.EditFile().run(env(git, file(edited, Either.right(FILE)), terminal));
+
+        assertEquals(new SettingsPanelMsg.FileEdited(List.empty(), edited), msg);
+        assertEquals(java.util.List.of("leave", "edit " + FILE, "come back"), events);
+    }
+
+    @Test
+    void aFileThatCannotBeMadeIsNotOpened() {
+        java.util.List<String> events = new ArrayList<>();
+        Git git = StubGit.of().withEditor(new StubEditor() {
+            @Override
+            public Either<GitFailure, List<ExecutedCommand>> edit(List<String> files) {
+                events.add("edit");
+                return Either.right(List.empty());
+            }
+        });
+        SettingsProblem unwritable = new SettingsProblem.Unwritable(FILE, "Permission denied");
+
+        Msg msg = new SettingsPanelCmd.EditFile()
+                .run(env(git, file(SettingsStore.Loaded.DEFAULT, Either.left(unwritable)), Terminal.NONE));
+
+        assertEquals(new SettingsPanelMsg.FileNotEdited(new Failure.Settings(unwritable)), msg);
+        assertEquals(java.util.List.of(), events);
+        AppError.OperationFailed error = assertInstanceOf(
+                AppError.OperationFailed.class,
+                Update.update(TestModels.loaded().openPopup(READ), msg)
+                        .model()
+                        .outcome()
+                        .error()
+                        .get());
+        assertEquals(SettingsPanelCmd.EditFile.EDIT_SETTINGS, error.operation());
+    }
+
+    @Test
+    void anEditorThatFailsShowsWhy() {
+        Git git = StubGit.of().withEditor(new StubEditor() {
+            @Override
+            public Either<GitFailure, List<ExecutedCommand>> edit(List<String> files) {
+                return Either.left(new GitFailure(new GitError.EditorFailed("nvim", 1), List.empty()));
+            }
+        });
+
+        Msg msg = new SettingsPanelCmd.EditFile()
+                .run(env(git, file(SettingsStore.Loaded.DEFAULT, Either.right(FILE)), Terminal.NONE));
+
+        assertInstanceOf(SettingsPanelMsg.FileNotEdited.class, msg);
+    }
+
+    @Test
+    void whatChangedInTheFileAppliesOnceTheEditorIsClosedAndThePanelShowsIt() {
+        Settings edited = Settings.DEFAULT.withTheme(ThemeName.DARCULA).withAnimations(false);
+
+        Model model = Update.update(
+                        TestModels.loaded().openPopup(READ),
+                        new SettingsPanelMsg.FileEdited(List.empty(), read(edited)))
+                .model();
+
+        assertEquals(edited, model.preferences().settings());
+        assertEquals(read(edited), model.preferences().file());
+        assertEquals(
+                Option.of(READ.withTheme(ThemeName.DARCULA).withAnimations(false)),
+                model.popup(SettingsPanelPopup.class));
+        assertEquals(Option.none(), model.outcome().error());
+    }
+
+    @Test
+    void readingTheFileAsThePanelOpensShowsWhereItIsAndKeepsASettingOnlyTheSessionHas() {
+        // The animations were turned off, but could not be saved: the file has them on still.
+        Model model = TestModels.loaded()
+                .mapPreferences(preferences ->
+                        preferences.withSettings(preferences.settings().withAnimations(false)))
+                .openPopup(READ.withAnimations(false));
+
+        Model read = Update.update(
+                        model, new SettingsPanelMsg.FileRead(Option.of(FILE.toString()), SettingsStore.Loaded.DEFAULT))
+                .model();
+
+        assertFalse(read.preferences().settings().animations());
+        assertEquals(
+                Option.of(READ.withAnimations(false).withFile(Option.of(FILE.toString()))),
+                read.popup(SettingsPanelPopup.class));
+    }
+
+    @Test
+    void aValueThatIsNotValidKeepsTheOneInUseAndIsReported() {
+        Model model = TestModels.loaded()
+                .mapPreferences(preferences ->
+                        preferences.withSettings(preferences.settings().withTheme(ThemeName.DARCULA)))
+                .openPopup(READ);
+
+        Model read = Update.update(
+                        model,
+                        new SettingsPanelMsg.FileEdited(
+                                List.empty(), new SettingsStore.Loaded(Settings.DEFAULT, Option.of(INVALID_THEME))))
+                .model();
+
+        assertEquals(ThemeName.DARCULA, read.preferences().settings().theme());
+        assertEquals(
+                Option.of(new AppError.SettingsNotReread(INVALID_THEME)),
+                read.outcome().error());
+        assertEquals(Option.of(INVALID_THEME), read.preferences().reported());
+    }
+
+    @Test
+    void aProblemReportedBeforeIsReportedAgainAfterTheEditor() {
+        Model model = TestModels.loaded()
+                .mapPreferences(preferences -> preferences.withReported(Option.of(INVALID_THEME)))
+                .openPopup(READ);
+
+        Model read = Update.update(
+                        model,
+                        new SettingsPanelMsg.FileEdited(
+                                List.empty(), new SettingsStore.Loaded(Settings.DEFAULT, Option.of(INVALID_THEME))))
+                .model();
+
+        assertEquals(
+                Option.of(new AppError.SettingsNotReread(INVALID_THEME)),
+                read.outcome().error());
+    }
+
+    @Test
+    void aProblemReportedBeforeIsNotReportedAgainAsThePanelOpens() {
+        Model model = TestModels.loaded()
+                .mapPreferences(preferences -> preferences.withReported(Option.of(INVALID_THEME)))
+                .openPopup(READ);
+        SettingsProblem other = new SettingsProblem.Invalid(FILE, List.of("ui.animations"));
+
+        Model same = Update.update(
+                        model,
+                        new SettingsPanelMsg.FileRead(
+                                Option.of(FILE.toString()),
+                                new SettingsStore.Loaded(Settings.DEFAULT, Option.of(INVALID_THEME))))
+                .model();
+        Model changed = Update.update(
+                        model,
+                        new SettingsPanelMsg.FileRead(
+                                Option.of(FILE.toString()),
+                                new SettingsStore.Loaded(Settings.DEFAULT, Option.of(other))))
+                .model();
+
+        assertEquals(Option.none(), same.outcome().error());
+        assertEquals(
+                Option.of(new AppError.SettingsNotReread(other)),
+                changed.outcome().error());
+    }
+
+    @Test
+    void aThemeChangedInTheFileReplacesTheOneAskedForAtStartup() {
+        Model model = TestModels.loaded()
+                .mapPreferences(preferences -> preferences.withThemeOverride(Option.of(ThemeName.LIGHT)))
+                .openPopup(READ);
+
+        Model changed = Update.update(
+                        model,
+                        new SettingsPanelMsg.FileEdited(
+                                List.empty(), read(Settings.DEFAULT.withTheme(ThemeName.DARCULA))))
+                .model();
+        Model unchanged = Update.update(
+                        model,
+                        new SettingsPanelMsg.FileEdited(List.empty(), read(Settings.DEFAULT.withAnimations(false))))
+                .model();
+
+        assertEquals(ThemeName.DARCULA, changed.preferences().theme());
+        assertEquals(ThemeName.LIGHT, unchanged.preferences().theme());
+    }
+
+    @Test
+    void aGhExecutableChangedInTheFileShowsTheRepositoryAgain() {
+        Model model = TestModels.loaded().openPopup(READ);
+
+        Next next = Update.update(
+                model,
+                new SettingsPanelMsg.FileEdited(
+                        List.empty(), read(Settings.DEFAULT.withGhExecutable(Option.of("/opt/gh")))));
+
+        assertEquals(Option.of("/opt/gh"), next.model().preferences().settings().ghExecutable());
+        assertEquals(List.of(new SettingsPanelCmd.Reopen(Landing.of(model.repoView()))), next.cmds());
+    }
+
+    @Test
+    void aDiffStyleChangedInTheFileReadsTheDiffsAgain() {
+        Model model = TestModels.loaded().openPopup(READ);
+        Settings edited =
+                Settings.DEFAULT.withDiffStyle(Settings.DEFAULT.diffStyle().toggled());
+
+        Next next = Update.update(model, new SettingsPanelMsg.FileEdited(List.empty(), read(edited)));
+
+        assertEquals(edited.diffStyle(), next.model().preferences().settings().diffStyle());
+        assertEquals(DiffOptionsUpdate.changed(next.model()).cmds(), next.cmds());
+    }
+
+    @Test
+    void theEditIsInTheCommandLog() {
+        List<ExecutedCommand> commands = List.of(ExecutedCommand.of("nvim", FILE.toString()));
+
+        Model model = Update.update(
+                        TestModels.loaded().openPopup(READ),
+                        new SettingsPanelMsg.FileEdited(commands, SettingsStore.Loaded.DEFAULT))
+                .model();
+
+        assertEquals(
+                CommandLog.append(TestModels.loaded(), SettingsPanelCmd.EditFile.EDIT_SETTINGS, commands)
+                        .outcome()
+                        .commandLog(),
+                model.outcome().commandLog());
+    }
+
+    @Test
+    void readingTheFileReadsItAndWhereItIs() {
+        SettingsStore.Loaded loaded = read(Settings.DEFAULT.withAnimations(false));
+
+        Msg msg =
+                new SettingsPanelCmd.ReadFile().run(env(StubGit.of(), file(loaded, Either.right(FILE)), Terminal.NONE));
+
+        assertEquals(new SettingsPanelMsg.FileRead(Option.of(FILE.toString()), loaded), msg);
     }
 }

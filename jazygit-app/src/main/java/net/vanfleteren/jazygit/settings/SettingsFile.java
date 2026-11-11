@@ -26,6 +26,19 @@ public final class SettingsFile implements SettingsStore {
     }
 
     @Override
+    public Option<Path> file() {
+        return Option.of(file);
+    }
+
+    @Override
+    public Either<SettingsProblem, Path> made() {
+        // The lock makes the directories the file is in.
+        return TomlFile.locked(file, () -> Try.of(() -> Files.exists(file) ? file : Files.createFile(file)))
+                .toEither()
+                .mapLeft(cause -> new SettingsProblem.Unwritable(file, TomlFile.reason(cause)));
+    }
+
+    @Override
     public Loaded load() {
         if (!Files.exists(file)) {
             return Loaded.DEFAULT;
