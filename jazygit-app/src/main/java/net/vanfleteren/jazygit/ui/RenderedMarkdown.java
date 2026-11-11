@@ -116,7 +116,12 @@ final class RenderedMarkdown {
      * to it: those whose label it holds between brackets, whatever their case.
      */
     static String referred(String markdown, Map<String, String> definitions) {
-        String text = markdown.toLowerCase(Locale.ROOT);
+        // As a label is matched: its blanks and line breaks one space, none just inside its brackets, whatever its
+        // case.
+        String text = markdown.replaceAll("\\s+", " ")
+                .replace("[ ", "[")
+                .replace(" ]", "]")
+                .toLowerCase(Locale.ROOT);
         return definitions
                 .filterKeys(label -> text.contains("[" + label + "]"))
                 .values()

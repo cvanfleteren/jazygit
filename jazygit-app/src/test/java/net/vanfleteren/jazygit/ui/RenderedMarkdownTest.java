@@ -229,6 +229,25 @@ class RenderedMarkdownTest {
     }
 
     @Test
+    void aLabelOverTwoLinesOrWithMoreBlanksFindsItsDefinition() {
+        List<RenderedMarkdown.Block> wrapped = RenderedMarkdown.blocks(
+                Vector.of(
+                        "See the [Keep a", "Changelog] format.", "", "[keep a changelog]: https://keepachangelog.com"),
+                60,
+                Theme.SpanStyles.NONE);
+        List<RenderedMarkdown.Block> blanks = RenderedMarkdown.blocks(
+                Vector.of("See [x][Keep  a] and [ y ].", "", "[keep a]: https://k.com", "[y]: https://y.com"),
+                60,
+                Theme.SpanStyles.NONE);
+
+        assertEquals(
+                "See the Keep a Changelog format.",
+                String.join(" ", text(wrapped.head().rows())));
+        // Resolved, so drawn without its brackets; the text of a link keeps the blanks inside them.
+        assertEquals("See x and  y .", text(blanks.head().rows()).head().stripTrailing());
+    }
+
+    @Test
     void aBlockIsDrawnWithOnlyTheLinkDefinitionsItRefersTo() {
         LinkedHashMap<String, String> definitions =
                 LinkedHashMap.of("a", "[a]: https://a.example", "b", "[B]: https://b.example");
