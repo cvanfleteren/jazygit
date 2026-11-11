@@ -3,7 +3,7 @@ package net.vanfleteren.jazygit.feature.help;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.Popup;
+import net.vanfleteren.jazygit.state.popup.Popup;
 
 /**
  * Listing the keybindings of the panel with the id {@code scopeId}, and the global ones.

@@ -4,7 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.state.ListCursor;
+import net.vanfleteren.jazygit.state.popup.ListCursor;
 import org.junit.jupiter.api.Test;
 
 class FilteredCursorTest {

@@ -10,8 +10,8 @@ import net.vanfleteren.jazygit.settings.UnseenPullRequests;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.Screen;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.preferences.Screen;
 
 /**
  * What happens on the pull requests screen.

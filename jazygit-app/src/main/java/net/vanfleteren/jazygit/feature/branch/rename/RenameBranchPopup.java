@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.feature.branch.rename;
 
 import net.vanfleteren.jazygit.git.model.BranchName;
-import net.vanfleteren.jazygit.state.TextPopup;
+import net.vanfleteren.jazygit.state.popup.TextPopup;
 
 /**
  * Asking for the new name of {@code branch}.

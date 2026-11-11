@@ -8,8 +8,8 @@ import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
-import net.vanfleteren.jazygit.state.GitOperationCmd;
-import net.vanfleteren.jazygit.state.Operation;
+import net.vanfleteren.jazygit.state.operation.GitOperationCmd;
+import net.vanfleteren.jazygit.state.operation.Operation;
 
 /**
  * Stages the paths, if any, then amends {@code target} with the index, keeping its message. Only amending an

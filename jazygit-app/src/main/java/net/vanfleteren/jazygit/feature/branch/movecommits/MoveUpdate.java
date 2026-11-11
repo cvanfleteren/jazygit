@@ -18,10 +18,10 @@ import net.vanfleteren.jazygit.git.model.Upstream;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Notice;
-import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.operation.Notice;
+import net.vanfleteren.jazygit.state.operation.OperationUpdate;
 
 /**
  * Moving the newest commits of the checked out branch to another branch: reading which commits move, asking which

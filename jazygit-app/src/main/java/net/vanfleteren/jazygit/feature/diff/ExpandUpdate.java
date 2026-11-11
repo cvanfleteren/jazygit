@@ -5,16 +5,16 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Folding;
-import net.vanfleteren.jazygit.state.Anchor;
 import net.vanfleteren.jazygit.state.Cmd;
-import net.vanfleteren.jazygit.state.Expansion;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Preview;
-import net.vanfleteren.jazygit.state.ReadWholeFile;
-import net.vanfleteren.jazygit.state.ReadWholeFile.Source;
-import net.vanfleteren.jazygit.state.ScrolledContent;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.diff.Anchor;
+import net.vanfleteren.jazygit.state.diff.Expansion;
+import net.vanfleteren.jazygit.state.diff.ScrolledContent;
+import net.vanfleteren.jazygit.state.load.ReadWholeFile;
+import net.vanfleteren.jazygit.state.load.ReadWholeFile.Source;
+import net.vanfleteren.jazygit.state.view.Preview;
 
 /**
  * Showing lines a diff leaves out around its hunks (ADR 77). The first expansion in a file reads it whole, as its diff

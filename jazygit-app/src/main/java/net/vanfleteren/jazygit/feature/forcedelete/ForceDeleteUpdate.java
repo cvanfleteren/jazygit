@@ -4,9 +4,9 @@ import net.vanfleteren.jazygit.feature.forcedelete.ForceDeleteMsg.Confirmed;
 import net.vanfleteren.jazygit.feature.forcedelete.ForceDeleteMsg.NotFullyMerged;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.operation.OperationUpdate;
 
 /**
  * Deleting a local branch that git refused to delete as it is not merged, once the user agreed to lose its commits.

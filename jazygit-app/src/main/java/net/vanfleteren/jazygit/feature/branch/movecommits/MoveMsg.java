@@ -9,8 +9,8 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.Notice;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.operation.Notice;
 
 public sealed interface MoveMsg extends Msg {
 

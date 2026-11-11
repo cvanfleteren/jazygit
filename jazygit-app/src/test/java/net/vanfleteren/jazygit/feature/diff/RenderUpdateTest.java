@@ -10,17 +10,17 @@ import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.FileVersion;
 import net.vanfleteren.jazygit.git.model.Sha;
-import net.vanfleteren.jazygit.state.Anchor;
-import net.vanfleteren.jazygit.state.DiffCursorAt;
-import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.ReadVersion;
-import net.vanfleteren.jazygit.state.Scrolled;
-import net.vanfleteren.jazygit.state.ScrolledContent;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
-import net.vanfleteren.jazygit.state.Version;
+import net.vanfleteren.jazygit.state.diff.Anchor;
+import net.vanfleteren.jazygit.state.diff.DiffCursorAt;
+import net.vanfleteren.jazygit.state.diff.Scrolled;
+import net.vanfleteren.jazygit.state.diff.ScrolledContent;
+import net.vanfleteren.jazygit.state.diff.Version;
+import net.vanfleteren.jazygit.state.load.LoadMsg;
+import net.vanfleteren.jazygit.state.load.ReadVersion;
 import org.junit.jupiter.api.Test;
 
 /**

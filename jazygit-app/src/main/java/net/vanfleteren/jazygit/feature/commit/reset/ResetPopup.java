@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.feature.commit.reset;
 
 import net.vanfleteren.jazygit.git.model.ResetTarget;
-import net.vanfleteren.jazygit.state.Popup;
+import net.vanfleteren.jazygit.state.popup.Popup;
 
 /**
  * Asking how to reset the checked out branch to {@code target}.

@@ -4,7 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import net.vanfleteren.jazygit.state.ListCursor;
+import net.vanfleteren.jazygit.state.popup.ListCursor;
 
 /**
  * What a list in a popup shows for its {@link ListCursor} in the model: the lines that contain its filter, and the

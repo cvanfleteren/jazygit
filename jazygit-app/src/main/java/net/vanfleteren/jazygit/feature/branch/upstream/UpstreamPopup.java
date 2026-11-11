@@ -3,7 +3,7 @@ package net.vanfleteren.jazygit.feature.branch.upstream;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchRef;
-import net.vanfleteren.jazygit.state.Popup;
+import net.vanfleteren.jazygit.state.popup.Popup;
 
 /**
  * Asking what to do with the upstream of a branch.

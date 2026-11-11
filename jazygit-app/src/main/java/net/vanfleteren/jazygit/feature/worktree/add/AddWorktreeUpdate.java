@@ -13,6 +13,8 @@ import net.vanfleteren.jazygit.git.model.Worktree;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.operation.*;
+import net.vanfleteren.jazygit.state.view.*;
 
 /**
  * Adding a worktree: for a branch, an existing one or a new one made from a branch or following a remote one, for

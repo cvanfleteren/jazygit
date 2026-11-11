@@ -7,15 +7,15 @@ import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.FileVersion;
 import net.vanfleteren.jazygit.git.model.ParsedDiff.ParsedFile;
 import net.vanfleteren.jazygit.state.Cmd;
-import net.vanfleteren.jazygit.state.DiffCursorAt;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.ReadVersion;
-import net.vanfleteren.jazygit.state.Rendered;
-import net.vanfleteren.jazygit.state.Scrolled;
-import net.vanfleteren.jazygit.state.ScrolledContent;
 import net.vanfleteren.jazygit.state.Update.Next;
-import net.vanfleteren.jazygit.state.Version;
+import net.vanfleteren.jazygit.state.diff.DiffCursorAt;
+import net.vanfleteren.jazygit.state.diff.Rendered;
+import net.vanfleteren.jazygit.state.diff.Scrolled;
+import net.vanfleteren.jazygit.state.diff.ScrolledContent;
+import net.vanfleteren.jazygit.state.diff.Version;
+import net.vanfleteren.jazygit.state.load.ReadVersion;
 
 /**
  * Showing the new version or the original of a file in place of its diff (ADR 102), as source or rendered (ADR 103).

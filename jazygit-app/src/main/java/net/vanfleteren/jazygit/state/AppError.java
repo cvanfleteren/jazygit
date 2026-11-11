@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.settings.SettingsProblem;
+import net.vanfleteren.jazygit.state.operation.Operation;
 
 /**
  * What the user is told went wrong, as data; the view turns it into text.

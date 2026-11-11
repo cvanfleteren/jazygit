@@ -4,10 +4,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.control.Option;
 import lombok.With;
-import net.vanfleteren.jazygit.state.ConfirmablePopup;
-import net.vanfleteren.jazygit.state.OperationCmd;
-import net.vanfleteren.jazygit.state.PopupMsg;
-import net.vanfleteren.jazygit.state.TextPopup;
+import net.vanfleteren.jazygit.state.operation.OperationCmd;
+import net.vanfleteren.jazygit.state.popup.ConfirmablePopup;
+import net.vanfleteren.jazygit.state.popup.PopupMsg;
+import net.vanfleteren.jazygit.state.popup.TextPopup;
 import org.junit.jupiter.api.Test;
 
 class TextInputDialogTest {

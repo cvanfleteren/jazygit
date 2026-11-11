@@ -15,6 +15,7 @@ import io.vavr.control.Option;
 import java.util.ArrayList;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.popup.*;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import org.junit.jupiter.api.Test;

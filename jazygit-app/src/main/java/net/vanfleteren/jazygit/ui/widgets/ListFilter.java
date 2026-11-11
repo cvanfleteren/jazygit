@@ -16,7 +16,7 @@ import net.vanfleteren.jazygit.ui.Theme;
  * letter. A filter of two words or more, each started by an uppercase letter, also matches the starts of words
  * following each other (ADR 106): {@code CCM} and {@code CCMat} match {@code CapitalCaseMatching.java}, {@code CCM}
  * matches {@code can-can-mama.txt}. Whether it is open, and its text, live in the
- * {@link net.vanfleteren.jazygit.state.ListCursor}.
+ * {@link net.vanfleteren.jazygit.state.popup.ListCursor}.
  */
 public final class ListFilter {
 

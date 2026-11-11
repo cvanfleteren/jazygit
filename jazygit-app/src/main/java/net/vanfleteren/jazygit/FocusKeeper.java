@@ -8,11 +8,11 @@ import io.vavr.control.Option;
 import java.util.Objects;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.keys.Scopes;
-import net.vanfleteren.jazygit.state.CommitFilesView;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.Screen;
-import net.vanfleteren.jazygit.state.ViewMsg;
+import net.vanfleteren.jazygit.state.preferences.Screen;
+import net.vanfleteren.jazygit.state.view.CommitFilesView;
+import net.vanfleteren.jazygit.state.view.ViewMsg;
 import net.vanfleteren.jazygit.ui.ContentPanel;
 import net.vanfleteren.jazygit.ui.PopupSlot;
 

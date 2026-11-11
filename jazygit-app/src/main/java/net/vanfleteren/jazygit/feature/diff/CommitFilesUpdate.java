@@ -15,15 +15,15 @@ import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.image.MarkdownImage;
 import net.vanfleteren.jazygit.keys.Scopes;
-import net.vanfleteren.jazygit.state.AheadUpdate;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Cmd;
-import net.vanfleteren.jazygit.state.CommitFilesView;
-import net.vanfleteren.jazygit.state.CommitFilesView.Changes;
-import net.vanfleteren.jazygit.state.LoadAhead;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.load.AheadUpdate;
+import net.vanfleteren.jazygit.state.load.LoadAhead;
+import net.vanfleteren.jazygit.state.view.CommitFilesView;
+import net.vanfleteren.jazygit.state.view.CommitFilesView.Changes;
 
 /**
  * Listing the files a commit, a stash, a pull request or a branch changed in the files pane, in place of the changed files of

@@ -2,7 +2,7 @@ package net.vanfleteren.jazygit.feature.branch.checkout;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Worktree;
-import net.vanfleteren.jazygit.state.Popup;
+import net.vanfleteren.jazygit.state.popup.Popup;
 
 /**
  * Asking where {@code request} is checked out, as the worktree shown is a linked one: here, in the main worktree or

@@ -15,6 +15,9 @@ import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.StubBranches;
 import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.git.model.*;
+import net.vanfleteren.jazygit.state.github.GitHubBases;
+import net.vanfleteren.jazygit.state.load.LoadBranches;
+import net.vanfleteren.jazygit.state.load.LoadMsg;
 import org.junit.jupiter.api.Test;
 
 /**

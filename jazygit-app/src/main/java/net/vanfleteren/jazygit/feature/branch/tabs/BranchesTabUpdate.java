@@ -3,10 +3,10 @@ package net.vanfleteren.jazygit.feature.branch.tabs;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.tabs.BranchesTabMsg.Chosen;
 import net.vanfleteren.jazygit.feature.branch.tabs.BranchesTabMsg.Switched;
-import net.vanfleteren.jazygit.state.BranchesTab;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.view.BranchesTab;
 
 /**
  * Switching the branches pane between the local branches, the remote ones and the worktrees. Switching closes the

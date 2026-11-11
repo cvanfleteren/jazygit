@@ -1,0 +1,112 @@
+package net.vanfleteren.jazygit.state.preferences;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import io.vavr.collection.List;
+import io.vavr.control.Either;
+import io.vavr.control.Option;
+import java.nio.file.Path;
+import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.git.StubGit;
+import net.vanfleteren.jazygit.settings.Settings;
+import net.vanfleteren.jazygit.settings.SettingsProblem;
+import net.vanfleteren.jazygit.settings.SettingsStore;
+import net.vanfleteren.jazygit.settings.ThemeName;
+import net.vanfleteren.jazygit.state.AppError;
+import net.vanfleteren.jazygit.state.Env;
+import net.vanfleteren.jazygit.state.Failure;
+import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.Program;
+import net.vanfleteren.jazygit.state.TestModels;
+import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.popup.ErrorPopup;
+import org.junit.jupiter.api.Test;
+
+class SettingsUpdateTest {
+
+    private static final Path FILE = Path.of("/config/jazygit/config.toml");
+    private static final Settings DARCULA = Settings.DEFAULT.withTheme(ThemeName.DARCULA);
+    private static final SaveSettings SAVE = new SaveSettings(Settings.DEFAULT, DARCULA);
+
+    private static Env env(SettingsStore settings) {
+        return new Env(StubGit.of(), StubGitHub.empty(), settings);
+    }
+
+    private static SettingsStore saving(Either<SettingsProblem, Settings> outcome) {
+        return new SettingsStore() {
+            @Override
+            public Loaded load() {
+                return Loaded.DEFAULT;
+            }
+
+            @Override
+            public Either<SettingsProblem, Settings> save(Settings previous, Settings next) {
+                return outcome;
+            }
+        };
+    }
+
+    @Test
+    void theLoadedSettingsAreUsedFromTheStart() {
+        Model model = Update.init("repo", new SettingsStore.Loaded(DARCULA, Option.none()))
+                .model();
+
+        assertEquals(DARCULA, model.preferences().settings());
+        assertEquals(Option.none(), model.outcome().error());
+    }
+
+    @Test
+    void aThemeAskedForAtStartupIsDrawnInsteadOfTheSavedOne() {
+        Model model = Update.init("repo", new SettingsStore.Loaded(DARCULA, Option.none()), Option.of(ThemeName.LIGHT))
+                .model();
+
+        assertEquals(ThemeName.LIGHT, model.preferences().theme());
+        assertEquals(DARCULA, model.preferences().settings());
+    }
+
+    @Test
+    void withoutAThemeAskedForAtStartupTheSavedOneIsDrawn() {
+        Model model = Update.init("repo", new SettingsStore.Loaded(DARCULA, Option.none()), Option.none())
+                .model();
+
+        assertEquals(ThemeName.DARCULA, model.preferences().theme());
+    }
+
+    @Test
+    void aProblemLoadingTheSettingsIsShownInTheCommandLogOnly() {
+        SettingsProblem invalid = new SettingsProblem.Invalid(FILE, List.of("ui.theme"));
+
+        Model model = Update.init("repo", new SettingsStore.Loaded(Settings.DEFAULT, Option.of(invalid)))
+                .model();
+
+        assertEquals(
+                Option.of(new AppError.SettingsNotLoaded(invalid)),
+                model.outcome().error());
+        assertEquals(Option.none(), model.popup());
+    }
+
+    @Test
+    void savingChangesNothingWhenItWorks() {
+        Model model = TestModels.loaded().mapPreferences(preferences -> preferences.withSettings(DARCULA));
+
+        Msg saved = Program.perform(env(saving(Either.right(DARCULA))), SAVE);
+
+        assertEquals(new SettingsMsg.Saved(), saved);
+        assertEquals(Update.Next.of(model), Update.update(model, saved));
+    }
+
+    @Test
+    void savingThatFailsKeepsTheSettingAndShowsTheError() {
+        Model model = TestModels.loaded().mapPreferences(preferences -> preferences.withSettings(DARCULA));
+        SettingsProblem unwritable = new SettingsProblem.Unwritable(FILE, "read-only");
+
+        Model after = Update.update(model, Program.perform(env(saving(Either.left(unwritable))), SAVE))
+                .model();
+
+        AppError error = new AppError.SettingsNotSaved(new Failure.Settings(unwritable));
+        assertEquals(DARCULA, after.preferences().settings());
+        assertEquals(Option.of(error), after.outcome().error());
+        assertEquals(Option.of(new ErrorPopup(error)), after.popup());
+    }
+}

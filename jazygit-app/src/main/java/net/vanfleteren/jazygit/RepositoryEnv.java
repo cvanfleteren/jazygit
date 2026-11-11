@@ -12,9 +12,9 @@ import net.vanfleteren.jazygit.settings.Settings;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.settings.UnseenPullRequestsStore;
 import net.vanfleteren.jazygit.state.Env;
-import net.vanfleteren.jazygit.state.GitHubAccount;
 import net.vanfleteren.jazygit.state.Repositories;
 import net.vanfleteren.jazygit.state.Terminal;
+import net.vanfleteren.jazygit.state.github.GitHubAccount;
 
 /**
  * What commands run against for a repository on disk: git and gh as the account configured for it.

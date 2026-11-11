@@ -30,6 +30,10 @@ import net.vanfleteren.jazygit.settings.DiffLook;
 import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.TestModels;
+import net.vanfleteren.jazygit.state.diff.*;
+import net.vanfleteren.jazygit.state.load.*;
+import net.vanfleteren.jazygit.state.preferences.*;
+import net.vanfleteren.jazygit.state.view.*;
 import org.junit.jupiter.api.Test;
 
 /**

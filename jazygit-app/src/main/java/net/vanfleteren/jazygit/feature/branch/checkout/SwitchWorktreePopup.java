@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.feature.branch.checkout;
 
 import net.vanfleteren.jazygit.git.model.BranchName;
-import net.vanfleteren.jazygit.state.Popup;
+import net.vanfleteren.jazygit.state.popup.Popup;
 
 /**
  * Telling that {@code branch}, which is to be checked out, is checked out in the worktree at {@code worktree}

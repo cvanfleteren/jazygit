@@ -30,8 +30,11 @@ import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.AppError.CannotReview.Why;
-import net.vanfleteren.jazygit.state.CommitFilesView.Changes;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.diff.*;
+import net.vanfleteren.jazygit.state.operation.*;
+import net.vanfleteren.jazygit.state.view.*;
+import net.vanfleteren.jazygit.state.view.CommitFilesView.Changes;
 
 /**
  * Commenting on the lines of the diff of a pull request's files from its cursor (ADR 60). A thread is started, or

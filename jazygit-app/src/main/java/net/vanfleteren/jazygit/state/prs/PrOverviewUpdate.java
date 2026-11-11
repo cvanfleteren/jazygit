@@ -8,16 +8,16 @@ import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.gh.model.RepositoryPullRequests;
 import net.vanfleteren.jazygit.settings.UnseenPullRequests;
 import net.vanfleteren.jazygit.state.Cmd;
-import net.vanfleteren.jazygit.state.FailingRead;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Jobs;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Preview;
-import net.vanfleteren.jazygit.state.PullRequestsMsg;
-import net.vanfleteren.jazygit.state.PullRequestsUpdate;
-import net.vanfleteren.jazygit.state.Screen;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.github.FailingRead;
+import net.vanfleteren.jazygit.state.github.PullRequestsMsg;
+import net.vanfleteren.jazygit.state.github.PullRequestsUpdate;
+import net.vanfleteren.jazygit.state.preferences.Screen;
+import net.vanfleteren.jazygit.state.view.Preview;
 
 /**
  * The pull requests screen. Its transitions work on the {@link PrOverview} alone; only switching screens, and

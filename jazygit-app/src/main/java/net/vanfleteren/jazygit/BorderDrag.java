@@ -10,10 +10,10 @@ import io.vavr.control.Option;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.feature.layout.LayoutMsg;
 import net.vanfleteren.jazygit.feature.layout.LayoutUpdate;
-import net.vanfleteren.jazygit.state.LeftPanes;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.Screen;
+import net.vanfleteren.jazygit.state.preferences.LeftPanes;
+import net.vanfleteren.jazygit.state.preferences.Screen;
 import net.vanfleteren.jazygit.ui.LeftBorder;
 import net.vanfleteren.jazygit.ui.PaneBorder;
 

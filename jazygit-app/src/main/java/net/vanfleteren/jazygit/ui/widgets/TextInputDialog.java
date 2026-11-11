@@ -13,12 +13,12 @@ import io.vavr.control.Option;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import net.vanfleteren.jazygit.state.ConfirmablePopup;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.Popup;
-import net.vanfleteren.jazygit.state.PopupMsg;
-import net.vanfleteren.jazygit.state.TextPopup;
+import net.vanfleteren.jazygit.state.popup.ConfirmablePopup;
+import net.vanfleteren.jazygit.state.popup.Popup;
+import net.vanfleteren.jazygit.state.popup.PopupMsg;
+import net.vanfleteren.jazygit.state.popup.TextPopup;
 import net.vanfleteren.jazygit.ui.LineEditInput;
 
 /**

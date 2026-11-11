@@ -23,15 +23,15 @@ import net.vanfleteren.jazygit.git.Status;
 import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.git.StubStatus;
 import net.vanfleteren.jazygit.git.model.*;
-import net.vanfleteren.jazygit.state.CommitFilesView;
-import net.vanfleteren.jazygit.state.FileFilter;
-import net.vanfleteren.jazygit.state.FileFilterMsg;
-import net.vanfleteren.jazygit.state.LoadAhead;
-import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.load.LoadAhead;
+import net.vanfleteren.jazygit.state.load.LoadMsg;
+import net.vanfleteren.jazygit.state.view.CommitFilesView;
+import net.vanfleteren.jazygit.state.view.FileFilter;
+import net.vanfleteren.jazygit.state.view.FileFilterMsg;
 import org.junit.jupiter.api.Test;
 
 /**

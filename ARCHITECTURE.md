@@ -50,7 +50,7 @@ graph TD
     UI["ui<br/><i>panels and widgets: render a Model</i>"]
     Keys["keys<br/><i>Keymap: every shortcut, declared once</i>"]
     Feature["feature.*<br/><i>branch, commit, stage, stash, discard,<br/>github, fetch, error, help, theme, repos,<br/>settings, worktree, inprogress, edit, start</i>"]
-    State["state<br/><i>Model, Msg, Update, Cmd, Program</i>"]
+    State["state.*<br/><i>Model, Msg, Update, Cmd, Program;<br/>load, view, diff, github, prs,<br/>operation, index, popup, preferences</i>"]
     Git["git<br/><i>Git, its roles, CliGit, Cli*, GitProcess, GitError</i>"]
     GitModel["git.model<br/><i>Branch, Commit, RepoStatus, Sha, ...</i>"]
     Gh["gh<br/><i>GitHub, CliGitHub, GhProcess, GhError</i>"]
@@ -110,7 +110,16 @@ inside the core, the compiler does: it cannot reach the app's packages at all, n
 | `ui` | Panels (`FilesPanel`, `BranchesPanel`, `CommitsPanel`, `ContentPanel`, `CommandLogPanel`, ...) that render a `Model` and turn key events into `Msg`s; the dialog widgets (`ConfirmDialog`, `ChoiceDialog`, `TextInputDialog`, `PickDialog`) and the `DialogFrame` they are drawn in, with `WithDetails` for a box of details under one; `ErrorText`, the only place that turns errors into text. |
 | `keys` | `Keymap`: the keys of each panel (`Scope`) and the global keys. Panels react to keys from it, and the help popup lists them from it. |
 | `feature.*` | One package per feature. Each one holds the feature's messages, its update functions, its commands, and its popups, dialogs and keys. |
-| `state` | The Elm core: `Model`, `Msg`, `Update`, `Cmd`, `Program`, `Loadable`, `Preview`, the parts the `Model` is grouped in (`Repo`, `RepoView`, `GitHubState`, `Jobs`, `Outcome`, `Preferences`), the operations (`OperationCmd`, `OperationMsg`, `OperationUpdate`), the periodic reads (`LoadUpdate`, `PullRequestsUpdate`), the highlights of the panes and the previews read for them (`SelectionMsg`, `SelectionUpdate`), the command log and the errors as data (`AppError`, `Failure`). |
+| `state` | The Elm core: `Model`, `Msg`, `Update`, `Cmd`, `Program`, `Env`, `Loadable`, `Lens`, `Repo`, `Jobs`, and the errors as data (`AppError`, `Failure`). The other parts of the `Model` each have a subpackage, with their messages, updates and commands: |
+| `state.load` | The reads of the repository: `Load` and every one of them (`LoadStatus`, `LoadBranches`, `ReadWholeFile`, ...), with `Target` and `Targeted`, where a read puts what it read; `LoadMsg`, `LoadUpdate`; what is ahead on the base (`AheadUpdate`). |
+| `state.view` | What the repository screen shows: `RepoView` and its views (`CommitFilesView`, `BranchCommitsView`, `DivergenceView`, `CommitSearch`), `Preview`, the highlights of the panes and the previews read for them (`SelectionMsg`, `SelectionUpdate`), focus and scrolling (`ViewMsg`). |
+| `state.diff` | The content area: `ScrolledContent`, `Scrolled`, `Version`, `Expansion`, and the lines of a diff with the remarks on them (`DiffLines`, `DiffStops`, `PlacedRemarks`, `Collapsed`). |
+| `state.github` | What is read from GitHub: `GitHubState`, the pull requests (`PullRequestsMsg`, `PullRequestsUpdate`), the checks and how long they take (`BranchChecksUpdate`, `CheckTimesUpdate`), and how those reads are paced (`GitHubReads`, `FailingRead`). |
+| `state.prs` | The pull requests screen: `PrOverview`, `PrOverviewMsg`, `PrOverviewUpdate`. |
+| `state.operation` | The operations (`Operation`, `OperationCmd`, `OperationMsg`, `OperationUpdate`), the command log (`CommandLog`, `LogEntry`) and how the last one went (`Outcome`, `Notice`). |
+| `state.index` | Writing the index anew (`IndexRefresh`, `IndexUpdate`). |
+| `state.popup` | `Popup` and the kinds of it all features share (`ConfirmablePopup`, `TextPopup`, `ErrorPopup`), `PopupMsg`. |
+| `state.preferences` | `Preferences`, `Screen`, `LeftPanes`, `RepositoryTheme`, and saving the settings (`SettingsMsg`, `SettingsUpdate`). |
 | `git` | Everything that touches the repository, all through the `git` command line. All results are `Either` values. |
 | `git.model` | Immutable value types describing the repository. |
 | `gh` | Everything that talks to GitHub, all through the `gh` command line. It knows nothing of `git`, and `git` knows nothing of it; the features combine them. |
@@ -258,7 +267,7 @@ highlighted branch diverged (`feature.branch`, `UpstreamUpdate`):
   `Branch.isDefault`
   marks. The main branch itself has no base.
 
-`Model.divergence` (`state.DivergenceView`) holds the two branches, the commits only on either of them, read with
+`Model.divergence` (`state.view.DivergenceView`) holds the two branches, the commits only on either of them, read with
 `History.divergence` (two `git log a ^b` of at most 300 commits each, and `rev-list --left-right --count` for
 how many there are), and the preview of the highlighted one. While it is open, the branches pane lists it in place of
 the local branches: the commits only on the other branch, then the ones only on the local branch, each under the
@@ -276,7 +285,7 @@ Enter on a branch, local or remote, lists its commits in place of the branches (
 base dimmed, and with `b` only the others and the fork point. Enter on a commit moves the focus to its diff; Escape,
 or switching tabs, goes back to the branches.
 
-`RepoView.branchCommits` (`state.BranchCommitsView`) holds only the branch and the preview of the highlighted commit.
+`RepoView.branchCommits` (`state.view.BranchCommitsView`) holds only the branch and the preview of the highlighted commit.
 The commits are not held twice: while the list is open, the branch stays the one highlighted in the branches pane,
 so its log is `RepoView.branchLog` and what is ahead `RepoView.branchAhead`, read and read again as for the
 highlighted branch. A log read for another branch shows as loading. When the branch is gone, the list closes. The
@@ -286,7 +295,7 @@ content panel shows the highlighted commit as the commits pane does, in a scroll
 
 `/` in the commits pane opens a line above the list to type a query in (`RepoView.searchLine`); Enter runs it through
 `History.search`, and the pane then lists what it found in place of the log of HEAD (`RepoView.commitSearch`,
-`state.CommitSearch`), flat, without the rails of merges, until Escape clears it. Its messages and update are in
+`state.view.CommitSearch`), flat, without the rails of merges, until Escape clears it. Its messages and update are in
 `state` (`CommitSearchMsg`, `CommitSearchUpdate`), as the pane sends them; `feature.commit.search` only declares the
 key. `git.model.CommitQuery` parses the query: bare words for the message, `author:`, `path:` and `-S:`, smart case.
 See ADR 4.
@@ -301,12 +310,12 @@ branch it was made from (`gh-merge-base`), else the main branch, `origin/` first
 `b`, in either pane, lists only those and the fork point (`RepoView.onlyAhead`), and a search then leaves the base
 out. `LoadAhead` reads it into `Repo.ahead` for HEAD and `RepoView.branchAhead` for the highlighted branch:
 together with the log it goes with (`LoadCommits`, `LoadBranchLog`), so that a log is never shown undimmed
-first, and on its own again when the base moves; `state.AheadUpdate` decides what to read, and
+first, and on its own again when the base moves; `state.load.AheadUpdate` decides what to read, and
 `ui.AheadView` how the panes show it. `feature.ahead` only declares the keys. See ADR 20.
 
 ## The pull requests screen
 
-Ctrl+P switches the left of the screen between the repository and the pull requests (`Model.screen`, `state.Screen`);
+Ctrl+P switches the left of the screen between the repository and the pull requests (`Model.screen`, `state.preferences.Screen`);
 the status panel names both, the one shown in bold. What the pull requests screen shows lives in one part of the
 model, `Model.prOverview` (`state.prs.PrOverview`), with its own messages and its own update, which works on that part
 alone (`PrOverviewMsg`, `PrOverviewUpdate`); only switching screens, and whether the screen is shown, look at the rest.
@@ -417,7 +426,7 @@ See `documentation/adr/0102-the-original-or-the-new-version-of-a-file.md`.
 See `documentation/adr/0103-a-version-of-markdown-rendered.md`.
 
 - Ctrl+T (`feature.diff.VersionAction`, next to Ctrl+O) sends `VersionMsg.RenderToggled`. `VersionUpdate` acts as for
-  Ctrl+O, and only on a file `state.Rendered` knows by its extension, the one table of the files with a renderer. It
+  Ctrl+O, and only on a file `state.diff.Rendered` knows by its extension, the one table of the files with a renderer. It
   sets `Version.rendered`: on the diff, it renders and shows the new version, or the original of a deleted file; on a
   version rendered, it shows it as source. Ctrl+O keeps `rendered` as it cycles.
 - `Version.applied` passes `rendered` on in the `Expansion.Fold`. `RichDiff.rendered` draws the file: its bar, the only
@@ -529,9 +538,9 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
   opened from when Escape closes them. `Model.withShownPane` closes them when another pane gets the focus, and
   `LoadUpdate` when the stash they are of is dropped.
 - **The cursor of the rich view** (ADR 60): it stops on an `Anchor` (the lead, a file's bar, a line by its side and
-  number, a thread by its id, a comment of an open thread), and `state.DiffStops`, pure, says where it goes when its
+  number, a thread by its id, a comment of an open thread), and `state.diff.DiffStops`, pure, says where it goes when its
   stop is gone (`DiffStops.nearest`). `RichDiff.drawn` works out the stops as it draws the diff and marks the row each
-  starts on (`RichDiff.Drawn`); a key of the review needs only the lines among them, which `state.DiffLines` works
+  starts on (`RichDiff.Drawn`); a key of the review needs only the lines among them, which `state.diff.DiffLines` works
   out from the diff alone, without placing the threads. `ui.DiffCursor` moves it: `j`/`k` and the arrows, through a stop
   higher than the view before
   the next one, the pages and the wheel pulling it along, a click on a row, a range of one hunk with `v`, the next
@@ -550,7 +559,7 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
   commits of the files and a pull request that is not merged, else it says why (`AppError.CannotReview`); the ids of
   the threads something is sent for (`CommitFilesView.sending`) take no other key until the threads are read again.
   `Space` collapses or opens the thread or the comment of the cursor against its default (ADR 62): the ids flipped
-  are `CommitFilesView.collapsed` (`state.Collapsed`), which `ui.RemarkLines` reads as it draws the threads
+  are `CommitFilesView.collapsed` (`state.diff.Collapsed`), which `ui.RemarkLines` reads as it draws the threads
   and their stops (`DiffStops.anchors`), so each comment of an open thread is a stop of its own (`Anchor.Comment`).
 
 ## The editor
@@ -1078,7 +1087,7 @@ the GitHub repository from the git remotes itself. It mirrors the git layer with
   dialog shows together: `Status`, `Branches`, `Activity`, `Size` and `Conversation`.
 - **The review threads of one pull request** (ADR 55), to show next to their lines: `gh api graphql --paginate
   --slurp`, 100 threads a page and 50 comments a thread, as `ReviewRemarks`, with the head and base commits they
-  were read at. A comment of a review not submitted yet is left out. `state.PlacedRemarks` places them in a parsed
+  were read at. A comment of a review not submitted yet is left out. `state.diff.PlacedRemarks` places them in a parsed
   diff: by path (either of a rename), side (`LEFT` the old file, `RIGHT` the new one) and line number, one about a
   whole file under its bar, and one that cannot be placed at the end of its file.
 - **Creating and opening:** `gh pr create --head <branch on the remote> --base <base> --fill` and

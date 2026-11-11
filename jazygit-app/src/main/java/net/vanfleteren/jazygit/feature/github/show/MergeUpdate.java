@@ -9,6 +9,8 @@ import net.vanfleteren.jazygit.gh.model.MergeStatus;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.github.*;
+import net.vanfleteren.jazygit.state.operation.*;
 import net.vanfleteren.jazygit.state.prs.PrOverviewUpdate;
 
 /**

@@ -14,6 +14,8 @@ import net.vanfleteren.jazygit.gh.timing.Eta;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.github.*;
+import net.vanfleteren.jazygit.state.operation.*;
 
 /**
  * The parts of a row the lists of the branches pane have in common: how far a branch is from its upstream, how it

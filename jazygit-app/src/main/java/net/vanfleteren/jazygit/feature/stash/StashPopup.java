@@ -1,8 +1,8 @@
 package net.vanfleteren.jazygit.feature.stash;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.state.ConfirmablePopup;
-import net.vanfleteren.jazygit.state.TextPopup;
+import net.vanfleteren.jazygit.state.popup.ConfirmablePopup;
+import net.vanfleteren.jazygit.state.popup.TextPopup;
 
 /**
  * Asking for the name of the stash of the current changes.

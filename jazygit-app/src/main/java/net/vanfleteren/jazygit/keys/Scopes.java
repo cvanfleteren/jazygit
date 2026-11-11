@@ -3,8 +3,8 @@ package net.vanfleteren.jazygit.keys;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.keys.Keymap.Scope;
-import net.vanfleteren.jazygit.state.DiffCursorAt;
-import net.vanfleteren.jazygit.state.Screen;
+import net.vanfleteren.jazygit.state.diff.DiffCursorAt;
+import net.vanfleteren.jazygit.state.preferences.Screen;
 
 /**
  * The panels with keys of their own, and what is selected in each, which its keys act on.

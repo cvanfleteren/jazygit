@@ -8,7 +8,21 @@ import java.time.temporal.ChronoUnit;
 import java.util.function.UnaryOperator;
 import lombok.With;
 import net.vanfleteren.jazygit.git.model.*;
+import net.vanfleteren.jazygit.state.diff.Scrolled;
+import net.vanfleteren.jazygit.state.diff.ScrolledContent;
+import net.vanfleteren.jazygit.state.github.GitHubState;
+import net.vanfleteren.jazygit.state.index.IndexRefresh;
+import net.vanfleteren.jazygit.state.load.AheadUpdate;
+import net.vanfleteren.jazygit.state.operation.Notice;
+import net.vanfleteren.jazygit.state.operation.OperationCmd;
+import net.vanfleteren.jazygit.state.operation.Outcome;
+import net.vanfleteren.jazygit.state.popup.ErrorPopup;
+import net.vanfleteren.jazygit.state.popup.ListCursor;
+import net.vanfleteren.jazygit.state.popup.Popup;
+import net.vanfleteren.jazygit.state.preferences.Preferences;
+import net.vanfleteren.jazygit.state.preferences.Screen;
 import net.vanfleteren.jazygit.state.prs.PrOverview;
+import net.vanfleteren.jazygit.state.view.RepoView;
 
 /**
  * The complete, immutable state of the repository as shown by the UI.

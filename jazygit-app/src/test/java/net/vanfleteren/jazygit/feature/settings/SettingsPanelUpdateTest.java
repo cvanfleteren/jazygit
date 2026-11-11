@@ -32,9 +32,12 @@ import net.vanfleteren.jazygit.settings.Settings;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.*;
-import net.vanfleteren.jazygit.state.RepositoryTheme;
-import net.vanfleteren.jazygit.state.SaveSettings;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.github.*;
+import net.vanfleteren.jazygit.state.popup.*;
+import net.vanfleteren.jazygit.state.preferences.RepositoryTheme;
+import net.vanfleteren.jazygit.state.preferences.SaveSettings;
+import net.vanfleteren.jazygit.state.view.*;
 import org.junit.jupiter.api.Test;
 
 class SettingsPanelUpdateTest {

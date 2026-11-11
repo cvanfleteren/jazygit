@@ -11,7 +11,7 @@ import net.vanfleteren.jazygit.feature.branch.stack.StackCheckout.Landing;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.PopupMsg;
+import net.vanfleteren.jazygit.state.popup.PopupMsg;
 import net.vanfleteren.jazygit.ui.widgets.DialogFrame;
 import net.vanfleteren.jazygit.ui.widgets.PopupView;
 

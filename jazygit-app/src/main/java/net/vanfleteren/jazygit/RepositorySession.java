@@ -18,6 +18,8 @@ import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.github.*;
+import net.vanfleteren.jazygit.state.preferences.*;
 
 /**
  * What runs for the repository shown: the {@link Program} and the threads it runs git on, from the start of the app

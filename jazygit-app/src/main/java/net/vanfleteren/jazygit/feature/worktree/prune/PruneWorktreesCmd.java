@@ -5,8 +5,8 @@ import io.vavr.control.Either;
 import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
-import net.vanfleteren.jazygit.state.GitOperationCmd;
-import net.vanfleteren.jazygit.state.Operation;
+import net.vanfleteren.jazygit.state.operation.GitOperationCmd;
+import net.vanfleteren.jazygit.state.operation.Operation;
 
 /**
  * Forgets the worktrees whose directory is gone.

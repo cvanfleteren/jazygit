@@ -10,8 +10,8 @@ import net.vanfleteren.jazygit.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
-import net.vanfleteren.jazygit.state.ConfirmablePopup;
-import net.vanfleteren.jazygit.state.Popup;
+import net.vanfleteren.jazygit.state.popup.ConfirmablePopup;
+import net.vanfleteren.jazygit.state.popup.Popup;
 
 /**
  * The popups of making and unmaking a stack (ADR 73).

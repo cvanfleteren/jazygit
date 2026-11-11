@@ -27,8 +27,8 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.Popup;
 import net.vanfleteren.jazygit.state.Program;
+import net.vanfleteren.jazygit.state.popup.Popup;
 
 /**
  * Rules about which parts of the application may depend on which, and how. That the core (jazygit-process,

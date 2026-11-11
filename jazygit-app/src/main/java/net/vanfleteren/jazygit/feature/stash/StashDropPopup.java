@@ -2,7 +2,7 @@ package net.vanfleteren.jazygit.feature.stash;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Stash;
-import net.vanfleteren.jazygit.state.ConfirmablePopup;
+import net.vanfleteren.jazygit.state.popup.ConfirmablePopup;
 
 /**
  * Asking to confirm the deletion of {@code stash}.

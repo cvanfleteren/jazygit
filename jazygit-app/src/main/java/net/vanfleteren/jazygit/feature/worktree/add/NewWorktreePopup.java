@@ -1,8 +1,8 @@
 package net.vanfleteren.jazygit.feature.worktree.add;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.state.ConfirmablePopup;
-import net.vanfleteren.jazygit.state.TextPopup;
+import net.vanfleteren.jazygit.state.popup.ConfirmablePopup;
+import net.vanfleteren.jazygit.state.popup.TextPopup;
 
 /**
  * Asking where the new worktree that checks out {@code source} goes.

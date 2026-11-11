@@ -24,7 +24,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.Env;
-import net.vanfleteren.jazygit.state.Preview;
+import net.vanfleteren.jazygit.state.view.Preview;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import org.junit.jupiter.api.Test;
 

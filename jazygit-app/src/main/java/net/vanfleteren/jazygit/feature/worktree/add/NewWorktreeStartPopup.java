@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.feature.worktree.add;
 
-import net.vanfleteren.jazygit.state.TextPopup;
+import net.vanfleteren.jazygit.state.popup.TextPopup;
 
 /**
  * Asking where a new worktree starts: a branch, local or remote, a commit or any other revision.

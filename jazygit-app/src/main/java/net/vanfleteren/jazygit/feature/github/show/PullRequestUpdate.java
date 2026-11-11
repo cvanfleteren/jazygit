@@ -25,7 +25,11 @@ import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.github.*;
+import net.vanfleteren.jazygit.state.operation.*;
+import net.vanfleteren.jazygit.state.preferences.*;
 import net.vanfleteren.jazygit.state.prs.PrOverviewUpdate;
+import net.vanfleteren.jazygit.state.view.*;
 
 /**
  * Showing the pull requests of the branches, and merging, closing, opening and drafting them from there; a

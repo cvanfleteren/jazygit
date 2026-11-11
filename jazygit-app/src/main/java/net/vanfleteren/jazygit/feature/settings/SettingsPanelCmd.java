@@ -6,6 +6,7 @@ import net.vanfleteren.jazygit.gh.model.GhAccount;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Label;
+import net.vanfleteren.jazygit.state.github.*;
 
 /**
  * The IO of the settings.

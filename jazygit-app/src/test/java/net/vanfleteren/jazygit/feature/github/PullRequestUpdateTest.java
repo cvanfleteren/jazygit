@@ -67,13 +67,19 @@ import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.state.*;
-import net.vanfleteren.jazygit.state.LoadAhead;
-import net.vanfleteren.jazygit.state.LoadBranches;
-import net.vanfleteren.jazygit.state.LoadCommitFiles;
-import net.vanfleteren.jazygit.state.LoadStatus;
-import net.vanfleteren.jazygit.state.LoadWorktrees;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.github.*;
+import net.vanfleteren.jazygit.state.load.*;
+import net.vanfleteren.jazygit.state.load.LoadAhead;
+import net.vanfleteren.jazygit.state.load.LoadBranches;
+import net.vanfleteren.jazygit.state.load.LoadCommitFiles;
+import net.vanfleteren.jazygit.state.load.LoadStatus;
+import net.vanfleteren.jazygit.state.load.LoadWorktrees;
+import net.vanfleteren.jazygit.state.operation.*;
+import net.vanfleteren.jazygit.state.popup.*;
+import net.vanfleteren.jazygit.state.preferences.*;
 import net.vanfleteren.jazygit.state.prs.LoadRepositoryPullRequests;
+import net.vanfleteren.jazygit.state.view.*;
 import org.junit.jupiter.api.Test;
 
 class PullRequestUpdateTest {

@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.feature.worktree.remove;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.state.ConfirmablePopup;
+import net.vanfleteren.jazygit.state.popup.ConfirmablePopup;
 
 /**
  * Warning that the worktree {@code removal} removes has changes, and asking to remove it anyway, deleting its branch

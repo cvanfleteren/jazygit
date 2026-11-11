@@ -5,6 +5,7 @@ import net.vanfleteren.jazygit.feature.worktree.remove.RemoveWorktreeMsg.*;
 import net.vanfleteren.jazygit.git.model.Worktree;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.operation.*;
 
 /**
  * Removing a worktree, and deleting its branch with it when the user chose so; when it has changes, removing it

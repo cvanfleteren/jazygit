@@ -8,7 +8,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.Preview;
+import net.vanfleteren.jazygit.state.view.Preview;
 
 /**
  * What the panes on the left have in common: how they react to keys, and how they report a new highlight.

@@ -29,13 +29,13 @@ import net.vanfleteren.jazygit.git.model.UnifiedDiff.FileDiff;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.Hunk;
 import net.vanfleteren.jazygit.git.model.WordDiff.Segment;
 import net.vanfleteren.jazygit.i18n.Messages;
-import net.vanfleteren.jazygit.state.Anchor;
-import net.vanfleteren.jazygit.state.DiffStops;
-import net.vanfleteren.jazygit.state.Expansion;
-import net.vanfleteren.jazygit.state.PlacedRemarks;
-import net.vanfleteren.jazygit.state.PlacedRemarks.FileRemarks;
-import net.vanfleteren.jazygit.state.PlacedRemarks.LineRemarks;
-import net.vanfleteren.jazygit.state.Rendered;
+import net.vanfleteren.jazygit.state.diff.Anchor;
+import net.vanfleteren.jazygit.state.diff.DiffStops;
+import net.vanfleteren.jazygit.state.diff.Expansion;
+import net.vanfleteren.jazygit.state.diff.PlacedRemarks;
+import net.vanfleteren.jazygit.state.diff.PlacedRemarks.FileRemarks;
+import net.vanfleteren.jazygit.state.diff.PlacedRemarks.LineRemarks;
+import net.vanfleteren.jazygit.state.diff.Rendered;
 import net.vanfleteren.jazygit.syntax.Token;
 
 /**

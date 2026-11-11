@@ -5,11 +5,11 @@ import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.image.Picture;
-import net.vanfleteren.jazygit.state.CommitFilesView;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.view.CommitFilesView;
 
 public sealed interface CommitFilesMsg extends Msg {
 

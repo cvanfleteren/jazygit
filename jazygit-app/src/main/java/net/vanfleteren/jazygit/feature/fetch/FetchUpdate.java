@@ -3,9 +3,9 @@ package net.vanfleteren.jazygit.feature.fetch;
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.RemoteName;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.PullRequestsUpdate;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.github.PullRequestsUpdate;
 
 /**
  * Fetching from the remotes in the background, one after the other, so the remote being fetched from can be

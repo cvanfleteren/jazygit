@@ -11,7 +11,7 @@ import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Freshness;
 import net.vanfleteren.jazygit.state.Loadable;
-import net.vanfleteren.jazygit.state.Preview;
+import net.vanfleteren.jazygit.state.view.Preview;
 
 /**
  * What the pull requests screen shows: everything of it, apart from the rest of the {@code Model}. The lists are

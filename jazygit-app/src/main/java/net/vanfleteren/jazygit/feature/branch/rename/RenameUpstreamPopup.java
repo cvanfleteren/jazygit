@@ -2,7 +2,7 @@ package net.vanfleteren.jazygit.feature.branch.rename;
 
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
-import net.vanfleteren.jazygit.state.Popup;
+import net.vanfleteren.jazygit.state.popup.Popup;
 
 /**
  * Asking whether renaming {@code branch} to {@code newName} renames {@code upstream}, the branch of the same name on

@@ -31,19 +31,19 @@ import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
-import net.vanfleteren.jazygit.state.AheadUpdate;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Failure;
-import net.vanfleteren.jazygit.state.GitHubBases;
-import net.vanfleteren.jazygit.state.ListCursor;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Notice;
-import net.vanfleteren.jazygit.state.OperationMsg;
-import net.vanfleteren.jazygit.state.OperationUpdate;
-import net.vanfleteren.jazygit.state.PullRequestsUpdate;
-import net.vanfleteren.jazygit.state.StackChange;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.github.GitHubBases;
+import net.vanfleteren.jazygit.state.github.PullRequestsUpdate;
+import net.vanfleteren.jazygit.state.github.StackChange;
+import net.vanfleteren.jazygit.state.load.AheadUpdate;
+import net.vanfleteren.jazygit.state.operation.Notice;
+import net.vanfleteren.jazygit.state.operation.OperationMsg;
+import net.vanfleteren.jazygit.state.operation.OperationUpdate;
+import net.vanfleteren.jazygit.state.popup.ListCursor;
 
 /**
  * Opening and closing a stack in the branches pane (ADR 72), showing the stacks or not (ADR 87), and making one

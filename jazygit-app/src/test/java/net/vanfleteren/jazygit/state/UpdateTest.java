@@ -20,6 +20,19 @@ import net.vanfleteren.jazygit.state.TimerMsg.Tick;
 import net.vanfleteren.jazygit.state.Update.Launch;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.Update.Step;
+import net.vanfleteren.jazygit.state.load.AheadUpdate;
+import net.vanfleteren.jazygit.state.load.CheckMetadata;
+import net.vanfleteren.jazygit.state.load.LoadBranches;
+import net.vanfleteren.jazygit.state.load.LoadCommits;
+import net.vanfleteren.jazygit.state.load.LoadMsg;
+import net.vanfleteren.jazygit.state.load.LoadStatus;
+import net.vanfleteren.jazygit.state.operation.Operation;
+import net.vanfleteren.jazygit.state.operation.OperationCmd;
+import net.vanfleteren.jazygit.state.popup.ConfirmablePopup;
+import net.vanfleteren.jazygit.state.popup.Popup;
+import net.vanfleteren.jazygit.state.popup.PopupMsg;
+import net.vanfleteren.jazygit.state.preferences.RepositoryTheme;
+import net.vanfleteren.jazygit.state.view.BranchesTab;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -61,8 +74,8 @@ class UpdateTest {
                 List.of(
                         new LoadStatus(),
                         LoadBranches.LISTED,
-                        new net.vanfleteren.jazygit.state.LoadStashes(),
-                        new net.vanfleteren.jazygit.state.LoadWorktrees()),
+                        new net.vanfleteren.jazygit.state.load.LoadStashes(),
+                        new net.vanfleteren.jazygit.state.load.LoadWorktrees()),
                 next.cmds());
     }
 

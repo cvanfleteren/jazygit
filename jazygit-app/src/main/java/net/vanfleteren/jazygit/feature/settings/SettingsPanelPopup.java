@@ -4,8 +4,8 @@ import io.vavr.control.Option;
 import lombok.With;
 import net.vanfleteren.jazygit.settings.AccountBrowsers;
 import net.vanfleteren.jazygit.settings.ThemeName;
-import net.vanfleteren.jazygit.state.Popup;
-import net.vanfleteren.jazygit.state.RepositoryTheme;
+import net.vanfleteren.jazygit.state.popup.Popup;
+import net.vanfleteren.jazygit.state.preferences.RepositoryTheme;
 
 /**
  * The settings, while the user looks at them, with how gh is set up once that is read.

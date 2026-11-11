@@ -5,8 +5,8 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.OperationCmd;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.operation.OperationCmd;
 
 /**
  * Deleting a local branch that is not merged, losing the commits only it has.

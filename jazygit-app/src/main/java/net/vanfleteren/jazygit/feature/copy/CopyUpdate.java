@@ -2,13 +2,13 @@ package net.vanfleteren.jazygit.feature.copy;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.state.Anchor;
-import net.vanfleteren.jazygit.state.DiffCursorAt;
-import net.vanfleteren.jazygit.state.DiffLines;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Notice;
 import net.vanfleteren.jazygit.state.Update.Next;
-import net.vanfleteren.jazygit.state.Version;
+import net.vanfleteren.jazygit.state.diff.Anchor;
+import net.vanfleteren.jazygit.state.diff.DiffCursorAt;
+import net.vanfleteren.jazygit.state.diff.DiffLines;
+import net.vanfleteren.jazygit.state.diff.Version;
+import net.vanfleteren.jazygit.state.operation.Notice;
 
 /**
  * Copying what the cursor of a rich diff is on (ADR 94): its line, the lines of its range, or the path of the file

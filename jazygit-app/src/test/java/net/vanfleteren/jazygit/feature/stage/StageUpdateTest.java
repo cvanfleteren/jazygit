@@ -11,13 +11,13 @@ import net.vanfleteren.jazygit.feature.stage.StageCmd.Unstage;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.Fixtures;
-import net.vanfleteren.jazygit.state.FileFilter;
-import net.vanfleteren.jazygit.state.LoadBranches;
-import net.vanfleteren.jazygit.state.LoadStatus;
-import net.vanfleteren.jazygit.state.LogEntry;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.load.LoadBranches;
+import net.vanfleteren.jazygit.state.load.LoadStatus;
+import net.vanfleteren.jazygit.state.operation.LogEntry;
+import net.vanfleteren.jazygit.state.view.FileFilter;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -185,8 +185,8 @@ class StageUpdateTest {
                 List.of(
                         new LoadStatus(),
                         LoadBranches.LISTED,
-                        new net.vanfleteren.jazygit.state.LoadStashes(),
-                        new net.vanfleteren.jazygit.state.LoadWorktrees()),
+                        new net.vanfleteren.jazygit.state.load.LoadStashes(),
+                        new net.vanfleteren.jazygit.state.load.LoadWorktrees()),
                 Update.update(loaded(), succeeded(new StageCmd.Stage(List.of())))
                         .cmds());
 
@@ -196,8 +196,8 @@ class StageUpdateTest {
                 List.of(
                         new LoadStatus(),
                         LoadBranches.LISTED,
-                        new net.vanfleteren.jazygit.state.LoadStashes(),
-                        new net.vanfleteren.jazygit.state.LoadWorktrees()),
+                        new net.vanfleteren.jazygit.state.load.LoadStashes(),
+                        new net.vanfleteren.jazygit.state.load.LoadWorktrees()),
                 failed.cmds());
     }
 }

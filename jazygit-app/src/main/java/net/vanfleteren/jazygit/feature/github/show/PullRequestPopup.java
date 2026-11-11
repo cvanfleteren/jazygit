@@ -11,12 +11,12 @@ import net.vanfleteren.jazygit.gh.timing.CheckTimings;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.Sha;
-import net.vanfleteren.jazygit.state.CheckTimes;
-import net.vanfleteren.jazygit.state.ChecksReached;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Popup;
-import net.vanfleteren.jazygit.state.Reading;
+import net.vanfleteren.jazygit.state.github.CheckTimes;
+import net.vanfleteren.jazygit.state.github.ChecksReached;
+import net.vanfleteren.jazygit.state.github.Reading;
+import net.vanfleteren.jazygit.state.popup.Popup;
 
 /**
  * Showing the pull request of {@code branch}.

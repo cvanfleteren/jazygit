@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.feature.settings;
 
-import net.vanfleteren.jazygit.state.TextPopup;
+import net.vanfleteren.jazygit.state.popup.TextPopup;
 
 /**
  * Asking which gh executable to run.

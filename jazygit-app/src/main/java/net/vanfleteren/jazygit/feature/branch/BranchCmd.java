@@ -6,8 +6,8 @@ import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutMsg;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
-import net.vanfleteren.jazygit.state.GitOperationCmd;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.operation.GitOperationCmd;
 
 /**
  * A command that acts on a branch. Each branch operation has its own, in its subpackage.

@@ -13,20 +13,20 @@ import net.vanfleteren.jazygit.feature.commit.reset.ResetCmd;
 import net.vanfleteren.jazygit.feature.commit.reset.ResetMsg;
 import net.vanfleteren.jazygit.feature.commit.reset.ResetPopup;
 import net.vanfleteren.jazygit.git.model.*;
-import net.vanfleteren.jazygit.state.BranchesTab;
 import net.vanfleteren.jazygit.state.Cmd;
-import net.vanfleteren.jazygit.state.DivergenceView;
-import net.vanfleteren.jazygit.state.DivergenceView.Against;
-import net.vanfleteren.jazygit.state.LoadCommitDetail;
-import net.vanfleteren.jazygit.state.LoadDivergence;
-import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.PopupMsg;
-import net.vanfleteren.jazygit.state.SelectionMsg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.load.LoadCommitDetail;
+import net.vanfleteren.jazygit.state.load.LoadDivergence;
+import net.vanfleteren.jazygit.state.load.LoadMsg;
+import net.vanfleteren.jazygit.state.popup.PopupMsg;
+import net.vanfleteren.jazygit.state.view.BranchesTab;
+import net.vanfleteren.jazygit.state.view.DivergenceView;
+import net.vanfleteren.jazygit.state.view.DivergenceView.Against;
+import net.vanfleteren.jazygit.state.view.SelectionMsg;
 import org.junit.jupiter.api.Test;
 
 /**

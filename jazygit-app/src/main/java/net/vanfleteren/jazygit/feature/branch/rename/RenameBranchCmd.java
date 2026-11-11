@@ -8,7 +8,7 @@ import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
-import net.vanfleteren.jazygit.state.Operation;
+import net.vanfleteren.jazygit.state.operation.Operation;
 
 /**
  * Renames {@code branch} to {@code newName}, and then {@code upstream} on its remote too, if given. The local branch

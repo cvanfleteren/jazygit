@@ -27,6 +27,8 @@ import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.settings.*;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.preferences.*;
+import net.vanfleteren.jazygit.state.view.*;
 import net.vanfleteren.jazygit.ui.*;
 import net.vanfleteren.jazygit.ui.widgets.*;
 

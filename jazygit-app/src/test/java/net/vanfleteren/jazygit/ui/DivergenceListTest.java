@@ -4,7 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.*;
-import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.view.*;
 import org.junit.jupiter.api.Test;
 
 class DivergenceListTest {

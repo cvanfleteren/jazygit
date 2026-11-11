@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.feature.worktree;
 
 import java.nio.file.Path;
-import net.vanfleteren.jazygit.state.GitOperationCmd;
+import net.vanfleteren.jazygit.state.operation.GitOperationCmd;
 
 /**
  * A command that adds or removes a worktree.

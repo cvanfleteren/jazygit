@@ -3,7 +3,7 @@ package net.vanfleteren.jazygit.feature.commit.search;
 import net.vanfleteren.jazygit.feature.FeatureAction;
 import net.vanfleteren.jazygit.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.keys.Scopes;
-import net.vanfleteren.jazygit.state.CommitSearchMsg;
+import net.vanfleteren.jazygit.state.view.CommitSearchMsg;
 
 /**
  * Searching the commits by their message, author, the paths they change or the text they add or remove. The commits

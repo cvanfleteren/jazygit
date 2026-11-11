@@ -1,9 +1,9 @@
 package net.vanfleteren.jazygit.feature.branch.tabs;
 
-import net.vanfleteren.jazygit.state.BranchesTab;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.view.BranchesTab;
 
 public sealed interface BranchesTabMsg extends Msg {
 

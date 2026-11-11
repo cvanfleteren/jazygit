@@ -4,7 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.repos.RecentRepo;
 import net.vanfleteren.jazygit.state.Failure;
-import net.vanfleteren.jazygit.state.Popup;
+import net.vanfleteren.jazygit.state.popup.Popup;
 
 /**
  * Asking what to do instead, as the folder jazygit was started in, or was asked to open, is in no repository.

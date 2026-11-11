@@ -8,7 +8,7 @@ import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Label;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.PendingChecks;
+import net.vanfleteren.jazygit.state.github.PendingChecks;
 
 /**
  * Reads the checks on the tip of {@code branch} on GitHub one by one, with their timing, which the user is waiting

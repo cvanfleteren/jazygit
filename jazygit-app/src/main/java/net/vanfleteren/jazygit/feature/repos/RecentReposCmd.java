@@ -8,12 +8,12 @@ import net.vanfleteren.jazygit.git.HeadFile;
 import net.vanfleteren.jazygit.git.RepositoryIdentity;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.settings.RecentRepositories;
-import net.vanfleteren.jazygit.state.BranchesTab;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Landing;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.view.BranchesTab;
 import org.slf4j.LoggerFactory;
 
 /**

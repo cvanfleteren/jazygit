@@ -1,6 +1,8 @@
 package net.vanfleteren.jazygit.state;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.state.view.BranchesTab;
+import net.vanfleteren.jazygit.state.view.RepoView;
 
 /**
  * Where the app shows a repository it opens in place of the one shown: the list of the branches pane, and the pane

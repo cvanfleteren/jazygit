@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.feature.commit.create;
 
-import net.vanfleteren.jazygit.state.Popup;
+import net.vanfleteren.jazygit.state.popup.Popup;
 
 /**
  * Asking to stage all files, because none is staged yet.

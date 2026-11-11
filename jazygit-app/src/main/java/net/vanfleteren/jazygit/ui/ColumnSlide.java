@@ -3,7 +3,7 @@ package net.vanfleteren.jazygit.ui;
 import io.vavr.control.Option;
 import java.time.Duration;
 import java.time.Instant;
-import net.vanfleteren.jazygit.state.Screen;
+import net.vanfleteren.jazygit.state.preferences.Screen;
 
 /**
  * How many columns the left column of {@code screen} takes on a screen {@code width} columns wide, on its way from

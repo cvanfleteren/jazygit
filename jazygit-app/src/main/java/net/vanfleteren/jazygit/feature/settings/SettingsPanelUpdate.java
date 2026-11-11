@@ -9,8 +9,8 @@ import net.vanfleteren.jazygit.settings.Settings;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Landing;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.SaveSettings;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.preferences.SaveSettings;
 
 /**
  * Looking at the settings and changing them: the theme, whether what moves moves smoothly, the gh executable, the

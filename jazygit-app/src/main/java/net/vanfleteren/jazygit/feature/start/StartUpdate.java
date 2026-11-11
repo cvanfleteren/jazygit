@@ -8,8 +8,8 @@ import net.vanfleteren.jazygit.settings.Settings;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Popup;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.popup.Popup;
 
 /**
  * Asking what to open instead, when jazygit starts outside a repository: making the folder one, another folder, or

@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.feature.branch.movecommits;
 
 import net.vanfleteren.jazygit.git.model.BranchName;
-import net.vanfleteren.jazygit.state.Popup;
+import net.vanfleteren.jazygit.state.popup.Popup;
 
 /**
  * Asking where the new branch {@code name}, which the commits of {@code request} move to, starts.

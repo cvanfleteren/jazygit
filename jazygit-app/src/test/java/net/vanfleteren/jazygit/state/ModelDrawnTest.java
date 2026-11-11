@@ -9,6 +9,8 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.feature.worktree.prune.PruneWorktreesCmd;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.state.load.LoadStatus;
+import net.vanfleteren.jazygit.state.operation.Operation;
 import org.junit.jupiter.api.Test;
 
 /**
