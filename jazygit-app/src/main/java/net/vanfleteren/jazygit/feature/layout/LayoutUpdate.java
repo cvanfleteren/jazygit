@@ -8,6 +8,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.settings.Settings;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.preferences.LeftPanes;
 import net.vanfleteren.jazygit.state.preferences.Preferences.Dragged;
@@ -126,8 +127,10 @@ public final class LayoutUpdate {
      * status; none when the content panel had it.
      */
     private static Option<Integer> focusedPane(Model model) {
-        List<String> panes = Scopes.leftPanes(model.screen());
-        return model.shownPane().map(panes::indexOf).filter(pane -> pane >= 0);
+        List<PaneId> panes = Scopes.leftPanes(model.screen());
+        return model.shownPane()
+                .map(id -> panes.indexWhere(pane -> pane.value().equals(id)))
+                .filter(pane -> pane >= 0);
     }
 
     /**

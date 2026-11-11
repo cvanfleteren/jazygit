@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
+import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.view.CommitFilesView.Listed;
 import org.junit.jupiter.api.Test;
@@ -49,8 +50,8 @@ class CommitFilesViewTest {
 
     @Test
     void untilTheThreadsAreReadNoneIsListedButAllAre() {
-        CommitFilesView loading =
-                CommitFilesView.of(PULL_REQUEST, "branches", "files").withFiles(new Loadable.Loaded<>(FILES));
+        CommitFilesView loading = CommitFilesView.of(PULL_REQUEST, new PaneId("branches"), new PaneId("files"))
+                .withFiles(new Loadable.Loaded<>(FILES));
         assertEquals(new Loadable.Loaded<>(FILES), loading.listedFiles());
         assertEquals(
                 new Loadable.Loading<>(), loading.withListed(Listed.UNRESOLVED).listedFiles());
@@ -118,7 +119,7 @@ class CommitFilesViewTest {
     }
 
     private static CommitFilesView read(List<ReviewThread> threads) {
-        return CommitFilesView.of(PULL_REQUEST, "branches", "files")
+        return CommitFilesView.of(PULL_REQUEST, new PaneId("branches"), new PaneId("files"))
                 .withFiles(new Loadable.Loaded<>(FILES))
                 .withRemarks(Option.of(new Loadable.Loaded<>(
                         new ReviewRemarks(PullRequestDetails.State.OPEN, Option.none(), Option.none(), threads))));

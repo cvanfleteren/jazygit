@@ -22,6 +22,7 @@ import net.vanfleteren.jazygit.settings.UnseenPullRequests;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -370,7 +371,7 @@ class PrOverviewUpdateTest {
                 .model();
 
         assertEquals(Option.of("pull-request-preview"), inContent.shownPane());
-        assertEquals(Option.of("prAuthored"), inContent.prOverview().listPane());
+        assertEquals(Option.of(new PaneId("prAuthored")), inContent.prOverview().listPane());
     }
 
     @Test

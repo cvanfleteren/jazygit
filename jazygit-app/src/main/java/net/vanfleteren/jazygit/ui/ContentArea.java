@@ -5,6 +5,7 @@ import io.vavr.control.Option;
 import java.util.function.Function;
 import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.PaneId;
 
 /**
  * A scrollable area of the content panel, and the pane whose highlighted row it shows.
@@ -22,17 +23,18 @@ enum ContentArea {
     BRANCH_COMMIT("branch-commit", BranchesPanel.ID),
     // It shows the pull request highlighted in whichever list of the pull requests screen is in use.
     PULL_REQUEST(
-            "pull-request-preview", model -> model.prOverview().listPane().getOrElse(PullRequestsPanel.FIRST_PANE_ID)),
+            "pull-request-preview",
+            model -> model.prOverview().listPane().getOrElse(() -> new PaneId(PullRequestsPanel.FIRST_PANE_ID))),
     LOG("branch-log", BranchesPanel.ID);
 
     private final AreaId id;
-    private final Function<Model, String> pane;
+    private final Function<Model, PaneId> pane;
 
     ContentArea(String id, String pane) {
-        this(id, model -> pane);
+        this(id, model -> new PaneId(pane));
     }
 
-    ContentArea(String id, Function<Model, String> pane) {
+    ContentArea(String id, Function<Model, PaneId> pane) {
         this.id = new AreaId(id);
         this.pane = pane;
     }
@@ -52,7 +54,7 @@ enum ContentArea {
      * The pane whose highlighted row the area shows in {@code model}, which gets the focus back when Escape, or Left
      * once the area is scrolled all the way left, is pressed in it.
      */
-    String pane(Model model) {
+    PaneId pane(Model model) {
         return pane.apply(model);
     }
 }

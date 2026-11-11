@@ -10,6 +10,7 @@ import java.util.function.Supplier;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.preferences.Screen;
 import net.vanfleteren.jazygit.state.view.CommitFilesView;
 import net.vanfleteren.jazygit.state.view.ViewMsg;
@@ -100,7 +101,8 @@ final class FocusKeeper {
     private void leaveCollapsedColumn(Model model) {
         if (model.preferences().leftCollapsed(model.screen())) {
             Option.of(focusedId())
-                    .filter(Scopes.leftPanes(model.screen())::contains)
+                    .filter(id -> Scopes.leftPanes(model.screen())
+                            .exists(pane -> pane.value().equals(id)))
                     .flatMap(pane -> contentPanel.areaOfPane(model, pane))
                     .forEach(this::moveTo);
         }
@@ -117,14 +119,14 @@ final class FocusKeeper {
         }
         Option<CommitFilesView> closed = shownFiles;
         shownFiles = files;
-        files.forEach(opened -> moveTo(opened.listedIn()));
+        files.forEach(opened -> moveTo(opened.listedIn().value()));
         if (files.isEmpty()) {
             closed.filter(view -> {
                         String focusedId = focusedId();
-                        return view.listedIn().equals(focusedId)
+                        return view.listedIn().value().equals(focusedId)
                                 || contentPanel.paneOfArea(model, focusedId).contains(view.listedIn());
                     })
-                    .forEach(view -> moveTo(view.pane()));
+                    .forEach(view -> moveTo(view.pane().value()));
         }
     }
 
@@ -136,7 +138,7 @@ final class FocusKeeper {
         return Option.of(focusedId)
                 .filter(id -> !popups.owns(id))
                 .orElse(model.shownPane())
-                .map(id -> contentPanel.paneOfArea(model, id).getOrElse(id))
+                .map(id -> contentPanel.paneOfArea(model, id).map(PaneId::value).getOrElse(id))
                 .getOrNull();
     }
 
@@ -180,8 +182,8 @@ final class FocusKeeper {
      * Gives the focus back to the pane whose content has it, and says whether there was one.
      */
     boolean leaveScrollArea() {
-        Option<String> pane = contentPanel.paneOfArea(model.get(), focusedId());
-        pane.forEach(this::moveTo);
+        Option<PaneId> pane = contentPanel.paneOfArea(model.get(), focusedId());
+        pane.map(PaneId::value).forEach(this::moveTo);
         return pane.isDefined();
     }
 
