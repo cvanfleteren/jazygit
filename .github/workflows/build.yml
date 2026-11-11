@@ -2,12 +2,11 @@ name: Build
 
 # Pushes to main and releases are verified by publish.yml, which calls this workflow before publishing.
 # A pull request that only changes documentation isn't built: no build or test reads it. The review still runs.
+# That is decided by the changes job rather than by paths-ignore, so build-ok runs on every pull request: it is the
+# check main requires before a pull request can be merged, also by auto-merge, and a required check that never runs
+# would keep a documentation-only pull request from being merged.
 on:
   pull_request:
-    paths-ignore:
-      - '*.md'
-      - 'documentation/**'
-      - 'acceptance/README.md'
   workflow_call:
   workflow_dispatch:
 
@@ -19,7 +18,32 @@ permissions:
 # verify doesn't wait for that jar: Maven can't take up a build from another job (the resources it copies again
 # make it compile the modules after them again), so it would only start later and build all the same.
 jobs:
+  # Whether anything but documentation changed: always outside a pull request. The files ignored are the root's
+  # Markdown files, the documentation and the acceptance tests' README.
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      code: ${{ steps.files.outputs.code }}
+    steps:
+      - name: Look at the changed files
+        id: files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" != pull_request ]; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          code=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/files" --jq '.[].filename' \
+            | grep -v -E '^[^/]+\.md$|^documentation/|^acceptance/README\.md$' || true)
+          if [ -n "$code" ]; then echo "code=true"; else echo "code=false"; fi >> "$GITHUB_OUTPUT"
+
   verify:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -48,6 +72,8 @@ jobs:
           ./mvnw --batch-mode --no-transfer-progress verify
 
   package:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -116,3 +142,21 @@ jobs:
           git --version
           pip install -r acceptance/requirements.txt
           python -m pytest acceptance -v --jar "$(ls jar/jazygit-*-fat.jar)" --shard ${{ matrix.shard }}/4
+
+  # The one check main requires: passes when the jobs above passed, or were skipped as only documentation changed.
+  build-ok:
+    needs: [changes, verify, package, acceptance]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the build
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "$RESULTS"
+          for result in $RESULTS; do
+            case "$result" in
+              success|skipped) ;;
+              *) exit 1 ;;
+            esac
+          done
