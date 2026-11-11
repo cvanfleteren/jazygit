@@ -207,7 +207,7 @@ public final class CliGitHub implements GitHub {
     }
 
     @Override
-    public Either<GhError, List<String>> protectedBranches() {
+    public Either<GhError, List<GhBranch>> protectedBranches() {
         return process.readJson(ProtectedBranchesQuery.COMMAND, ProtectedBranchesQuery.DECODER);
     }
 

@@ -71,7 +71,7 @@ class EditPullRequestUpdateTest {
     // A local branch that has another name on its remote.
     private static final RemoteBranch ORIGIN_RELEASE = new RemoteBranch("origin", new BranchName("release-2"));
     private static final PullRequest FEATURE_PR =
-            new PullRequest(42, "feature", false, Checks.PASSING, Review.APPROVED);
+            new PullRequest(42, new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED);
     private static final PullRequestDetails DETAILS =
             StubGitHub.empty().pullRequestDetails(42).get().withBody("Why");
     private static final PullRequestPopup SHOWN = shown(DETAILS);
@@ -146,7 +146,7 @@ class EditPullRequestUpdateTest {
 
     @Test
     void theBaseIsListedFirstAlsoWhenItIsNotOnTheRemote() {
-        PullRequestDetails gone = DETAILS.withBranches(new Branches("feature", "gone"));
+        PullRequestDetails gone = DETAILS.withBranches(new Branches(new GhBranch("feature"), new GhBranch("gone")));
 
         EditPullRequestPopup popup = Update.update(
                         withBranches().openPopup(shown(gone)), new EditPullRequestMsg.Requested())

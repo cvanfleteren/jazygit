@@ -22,6 +22,7 @@ import net.vanfleteren.jazygit.feature.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.CheckRun;
+import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -606,7 +607,7 @@ class ChecksDialogTest {
     private static PullRequestPopup pullRequestDialog(List<Check> checks) {
         return PullRequestPopup.loading(
                         new BranchName("main"),
-                        new PullRequest(42, "main", false, Checks.PENDING, Review.APPROVED),
+                        new PullRequest(42, new GhBranch("main"), false, Checks.PENDING, Review.APPROVED),
                         NOW,
                         0)
                 .with(Either.right(pullRequest(checks)), 0);

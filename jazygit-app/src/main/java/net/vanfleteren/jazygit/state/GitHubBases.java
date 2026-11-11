@@ -7,11 +7,13 @@ import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteName;
+import net.vanfleteren.jazygit.state.github.FromGitHub;
 import net.vanfleteren.jazygit.state.github.GitHubChecks;
 import net.vanfleteren.jazygit.state.github.GitHubState;
 
@@ -41,7 +43,7 @@ public record GitHubBases(
                         .getOrElse(HashMap.empty())
                         .values()
                         .toList()
-                        .flatMap(pr -> base(pr).map(base -> Tuple.of(new BranchName(pr.headBranch()), base)))
+                        .flatMap(pr -> base(pr).map(base -> Tuple.of(FromGitHub.branch(pr.headBranch()), base)))
                         .toMap(pair -> pair),
                 gitHub.protectedBranches().getOrElse(HashSet.empty()),
                 gitHub.branchChecks().map(GitHubChecks::remotes));
@@ -53,8 +55,8 @@ public record GitHubBases(
     private static Option<BranchName> base(PullRequest pr) {
         return pr.stack()
                 .flatMap(PullRequestStack::branchBelow)
-                .orElse(() -> Option.of(pr.baseBranch()).filter(base -> !base.isEmpty()))
-                .map(BranchName::new);
+                .orElse(() -> Option.of(pr.baseBranch()).filter(GhBranch::isKnown))
+                .map(FromGitHub::branch);
     }
 
     /**

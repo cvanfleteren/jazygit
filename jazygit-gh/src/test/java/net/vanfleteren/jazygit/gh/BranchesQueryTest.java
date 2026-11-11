@@ -10,6 +10,7 @@ import io.vavr.control.Either;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.gh.model.BranchChecks;
+import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
@@ -44,13 +45,13 @@ class BranchesQueryTest {
                 Either.right(new BranchChecks(
                         "owner/repo",
                         HashMap.of(
-                                "feature/login",
+                                new GhBranch("feature/login"),
                                 Checks.PASSING,
-                                "wip",
+                                new GhBranch("wip"),
                                 Checks.NONE,
-                                "main",
+                                new GhBranch("main"),
                                 Checks.FAILING,
-                                "fix",
+                                new GhBranch("fix"),
                                 Checks.PENDING))),
                 branches("["
                         + page(branch("feature/login", "{ \"state\": \"SUCCESS\" }", noSuites) + ", "
@@ -67,13 +68,13 @@ class BranchesQueryTest {
                 Either.right(new BranchChecks(
                         "owner/repo",
                         HashMap.of(
-                                "main",
+                                new GhBranch("main"),
                                 Checks.PENDING,
-                                "broken",
+                                new GhBranch("broken"),
                                 Checks.FAILING,
-                                "feature",
+                                new GhBranch("feature"),
                                 Checks.PASSING,
-                                "wip",
+                                new GhBranch("wip"),
                                 Checks.NONE))),
                 branches("["
                         + page(branch("main", "null", WAITING_SUITES) + ", "
@@ -86,7 +87,7 @@ class BranchesQueryTest {
     @Test
     void aBranchWhoseTipIsNoCommitHasNoChecks() {
         assertEquals(
-                Either.right(new BranchChecks("owner/repo", HashMap.of("odd", Checks.NONE))),
+                Either.right(new BranchChecks("owner/repo", HashMap.of(new GhBranch("odd"), Checks.NONE))),
                 branches("[" + page("{ \"name\": \"odd\", \"target\": { \"__typename\": \"Tree\" } }") + "]"));
     }
 

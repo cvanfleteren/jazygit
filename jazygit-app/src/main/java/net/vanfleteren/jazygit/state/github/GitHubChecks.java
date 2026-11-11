@@ -22,6 +22,6 @@ public record GitHubChecks(Set<RemoteName> remotes, Map<BranchName, Checks> byBr
      */
     public static GitHubChecks of(BranchChecks checks, Map<RemoteName, String> urls) {
         return new GitHubChecks(
-                urls.filterValues(checks::isAt).keySet(), checks.checks().mapKeys(BranchName::new));
+                urls.filterValues(checks::isAt).keySet(), checks.checks().mapKeys(FromGitHub::branch));
     }
 }

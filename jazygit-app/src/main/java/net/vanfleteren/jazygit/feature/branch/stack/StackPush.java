@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.RemoteName;
 import net.vanfleteren.jazygit.state.AppError.StackRefusal;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.github.FromGitHub;
 
 /**
  * Where the open branches of a stack on GitHub are pushed (ADR 74): all to one remote, in one push, each to the
@@ -58,7 +59,7 @@ public record StackPush(int stack, RemoteName remote, List<Tuple2<Branch, Branch
             return Either.left(new Refused("#" + missing.get().number(), StackRefusal.NOT_CHECKED_OUT));
         }
         List<Tuple2<Branch, BranchName>> branches =
-                open.map(entry -> Tuple.of(checkedOut(model, entry).get(), new BranchName(entry.headBranch())));
+                open.map(entry -> Tuple.of(checkedOut(model, entry).get(), FromGitHub.branch(entry.headBranch())));
         Option<RemoteName> remote =
                 branches.headOption().map(branch -> branch._1().pushTarget().remote());
         Option<Branch> elsewhere = branches.map(Tuple2::_1)

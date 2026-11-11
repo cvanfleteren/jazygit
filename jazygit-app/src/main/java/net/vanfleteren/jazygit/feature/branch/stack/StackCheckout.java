@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.feature.branch.stack;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.git.model.AllBranches;
@@ -13,6 +14,7 @@ import net.vanfleteren.jazygit.git.model.RemoteName;
 import net.vanfleteren.jazygit.git.model.RemoteRef;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.github.FromGitHub;
 
 /**
  * Checking out a stack on GitHub (ADR 99): a local branch for each of its open pull requests, made or fast-forwarded
@@ -44,8 +46,8 @@ public record StackCheckout(int stack, List<Line> lines, List<Integer> skipped, 
      */
     public static List<BranchName> fetched(PullRequestStack stack) {
         return open(stack)
-                .filter(entry -> !entry.fork() && !entry.headBranch().isEmpty())
-                .map(entry -> new BranchName(entry.headBranch()));
+                .filter(entry -> !entry.fork() && entry.headBranch().isKnown())
+                .map(entry -> FromGitHub.branch(entry.headBranch()));
     }
 
     /**
@@ -86,10 +88,10 @@ public record StackCheckout(int stack, List<Line> lines, List<Integer> skipped, 
     }
 
     private static Line line(PullRequestStack.Entry entry, RemoteName remote, AllBranches read) {
-        BranchName name = new BranchName(entry.headBranch());
+        BranchName name = FromGitHub.branch(entry.headBranch());
         RemoteBranch upstream = new RemoteBranch(remote, name);
         Option<BranchName> parent =
-                Option.of(entry.baseBranch()).filter(base -> !base.isEmpty()).map(BranchName::new);
+                Option.of(entry.baseBranch()).filter(GhBranch::isKnown).map(FromGitHub::branch);
         if (entry.fork()) {
             return new Line(entry.number(), name, upstream, Kind.FORK, 0, Option.none());
         }

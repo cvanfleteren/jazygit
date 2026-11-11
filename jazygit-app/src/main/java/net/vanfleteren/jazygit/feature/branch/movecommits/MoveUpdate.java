@@ -203,13 +203,13 @@ public final class MoveUpdate {
     }
 
     /**
-     * The branch the commits are copied onto, by name: an existing one, or the one a new branch starts at elsewhere;
+     * The branch the commits are copied onto: an existing one, or the one a new branch starts at elsewhere;
      * none when they stay where they are.
      */
-    private static Option<String> copiedOnto(MoveTarget target) {
+    private static Option<BranchRef> copiedOnto(MoveTarget target) {
         return switch (target) {
-            case MoveTarget.NewBranch newBranch -> newBranch.onto().map(BranchRef::name);
-            case MoveTarget.Existing(var branch) -> Option.of(branch.value());
+            case MoveTarget.NewBranch newBranch -> newBranch.onto();
+            case MoveTarget.Existing(var branch) -> Option.of(new BranchRef.Local(branch));
         };
     }
 

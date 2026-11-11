@@ -11,6 +11,7 @@ import io.vavr.collection.TreeSet;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.MyPullRequests;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -42,7 +43,7 @@ class PrOverviewUpdateTest {
                 number,
                 "Pull request " + number,
                 "alice",
-                "branch-" + number,
+                new GhBranch("branch-" + number),
                 false,
                 false,
                 Checks.NONE,
@@ -416,7 +417,7 @@ class PrOverviewUpdateTest {
 
     @Test
     void theReadPreviewIsShownAndTheOneBeforeStaysWhileTheNextIsRead() {
-        PullRequestPreview preview = new PullRequestPreview("main", "Body", "+a\n", false);
+        PullRequestPreview preview = new PullRequestPreview(new GhBranch("main"), "Body", "+a\n", false);
         Model read = Update.update(
                         Update.update(loaded(), new PrOverviewMsg.Highlighted(NEW))
                                 .model(),

@@ -7,6 +7,7 @@ import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -24,7 +25,7 @@ class GitHubStateTest {
 
     private static final BranchName FEATURE = new BranchName("feature");
     private static final PullRequest FEATURE_PR =
-            new PullRequest(42, "feature", false, Checks.PASSING, Review.APPROVED);
+            new PullRequest(42, new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED);
     private static final GitHubState LISTED =
             GitHubState.NOT_READ.withPullRequests(Option.of(HashMap.of(FEATURE, FEATURE_PR)));
 
@@ -34,7 +35,7 @@ class GitHubStateTest {
                 "A pull request",
                 "someone",
                 new Status(state, true, PullRequestDetails.Mergeable.UNKNOWN),
-                new Branches(headBranch, "main"),
+                new Branches(new GhBranch(headBranch), new GhBranch("main")),
                 new Activity(Instant.EPOCH, Instant.EPOCH),
                 new Size(0, 0, 0, 1),
                 new Conversation(
@@ -49,8 +50,8 @@ class GitHubStateTest {
                         FEATURE,
                         new PullRequest(
                                 42,
-                                "feature",
-                                "main",
+                                new GhBranch("feature"),
+                                new GhBranch("main"),
                                 true,
                                 Checks.FAILING,
                                 Review.CHANGES_REQUESTED,

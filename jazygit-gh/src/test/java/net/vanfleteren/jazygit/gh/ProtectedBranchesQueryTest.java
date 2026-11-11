@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
+import net.vanfleteren.jazygit.gh.model.GhBranch;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -11,13 +12,13 @@ import org.junit.jupiter.api.Test;
  */
 class ProtectedBranchesQueryTest {
 
-    private static Either<GhError.UnexpectedOutput, List<String>> protectedBranches(String json) {
+    private static Either<GhError.UnexpectedOutput, List<GhBranch>> protectedBranches(String json) {
         return GhProcess.decoded(json, ProtectedBranchesQuery.DECODER);
     }
 
     @Test
     void theNamesOfTheProtectedBranchesOverAllPages() {
-        assertEquals(Either.right(List.of("main", "develop", "release/1")), protectedBranches("""
+        assertEquals(Either.right(List.of("main", "develop", "release/1").map(GhBranch::new)), protectedBranches("""
                         [ [ { "name": "main", "protected": true, "commit": { "sha": "abc" } },
                             { "name": "develop", "protected": true } ],
                           [ { "name": "release/1", "protected": true } ] ]"""));

@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.feature.github.verdict.VerdictCmd.EditReview;
 import net.vanfleteren.jazygit.feature.github.verdict.VerdictCmd.SubmitReview;
 import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
@@ -51,7 +52,7 @@ class VerdictUpdateTest {
 
     private static final BranchName FEATURE = new BranchName("feature");
     private static final PullRequest FEATURE_PR =
-            new PullRequest(42, "feature", false, Checks.PASSING, Review.APPROVED);
+            new PullRequest(42, new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED);
     private static final Reviewing BY_A_REVIEWER = new Reviewing("PR_42", false, false);
     private static final ExecutedCommand GH = ExecutedCommand.of("gh", "api", "graphql");
 

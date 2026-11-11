@@ -17,7 +17,7 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 public record PendingChecks(String repository, Map<BranchName, List<Check>> byBranch) {
 
     public static PendingChecks of(BranchCheckRuns runs) {
-        return new PendingChecks(runs.repository(), runs.byBranch().mapKeys(BranchName::new));
+        return new PendingChecks(runs.repository(), runs.byBranch().mapKeys(FromGitHub::branch));
     }
 
     /**

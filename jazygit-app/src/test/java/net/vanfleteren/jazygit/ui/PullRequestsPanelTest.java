@@ -6,6 +6,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Duration;
 import java.time.Instant;
+import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestList;
@@ -24,7 +25,7 @@ class PullRequestsPanelTest {
                 12,
                 "Fix the login",
                 "alice",
-                "fix/login",
+                new GhBranch("fix/login"),
                 draft,
                 false,
                 Checks.FAILING,

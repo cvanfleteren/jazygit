@@ -59,7 +59,7 @@ public interface StubGitHub extends GitHub {
      */
     @Override
     default Either<GhError, PullRequestPreview> pullRequestPreview(String url) {
-        return Either.right(new PullRequestPreview("main", "", "", false));
+        return Either.right(new PullRequestPreview(new GhBranch("main"), "", "", false));
     }
 
     /**
@@ -74,7 +74,7 @@ public interface StubGitHub extends GitHub {
      * A repository that protects no branch.
      */
     @Override
-    default Either<GhError, List<String>> protectedBranches() {
+    default Either<GhError, List<GhBranch>> protectedBranches() {
         return Either.right(List.empty());
     }
 
@@ -128,7 +128,7 @@ public interface StubGitHub extends GitHub {
                 "A pull request",
                 "someone",
                 new Status(PullRequestDetails.State.OPEN, false, PullRequestDetails.Mergeable.UNKNOWN),
-                new Branches("feature", "main"),
+                new Branches(new GhBranch("feature"), new GhBranch("main")),
                 new Activity(Instant.EPOCH, Instant.EPOCH),
                 new Size(0, 0, 0, 1),
                 new Conversation(

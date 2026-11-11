@@ -9,6 +9,7 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.feature.branch.commits.BranchCommitsMsg;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.feature.help.HelpPopup;
+import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
@@ -47,7 +48,7 @@ class ContentViewTest {
             42,
             "Fix the login",
             "alice",
-            "fix/login",
+            new GhBranch("fix/login"),
             false,
             false,
             PullRequest.Checks.NONE,
@@ -55,7 +56,8 @@ class ContentViewTest {
             Instant.EPOCH,
             "https://github.com/owner/repo/pull/42");
 
-    private static final PullRequestPreview READ = new PullRequestPreview("main", "Why", "+fixed\n", false);
+    private static final PullRequestPreview READ =
+            new PullRequestPreview(new GhBranch("main"), "Why", "+fixed\n", false);
 
     private final Model model = TestModels.loaded(SampleData.git(), "feature/initial-layout");
 

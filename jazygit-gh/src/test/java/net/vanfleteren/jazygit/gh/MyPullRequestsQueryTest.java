@@ -9,6 +9,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.MyPullRequests;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -52,7 +53,7 @@ class MyPullRequestsQueryTest {
                                         9,
                                         "Fix the\tlogin",
                                         "alice",
-                                        "feature/login",
+                                        new GhBranch("feature/login"),
                                         false,
                                         false,
                                         Checks.PASSING,
@@ -62,7 +63,7 @@ class MyPullRequestsQueryTest {
                                         Option.none(),
                                         Option.none(),
                                         Option.none(),
-                                        "main")),
+                                        new GhBranch("main"))),
                                 52),
                         PullRequestList.EMPTY)),
                 mine(52, fix, 0, ""));

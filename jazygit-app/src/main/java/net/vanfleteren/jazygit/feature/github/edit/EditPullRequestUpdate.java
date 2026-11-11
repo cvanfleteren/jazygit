@@ -145,14 +145,14 @@ public final class EditPullRequestUpdate {
                 .filter(b -> b.hasRemote() && !b.name().equals(branch))
                 .sortBy(b -> !b.isDefault())
                 .flatMap(Branch::remoteUpstream)
-                .filter(remote ->
-                        !remote.branch().value().equals(details.branches().head()))
+                .filter(remote -> !remote.branch()
+                        .equals(FromGitHub.branch(details.branches().head())))
                 .distinctBy(RemoteBranch::branch);
-        RemoteBranch current = others.find(remote ->
-                        remote.branch().value().equals(details.branches().base()))
+        RemoteBranch current = others.find(remote -> remote.branch()
+                        .equals(FromGitHub.branch(details.branches().base())))
                 .getOrElse(() -> new RemoteBranch(
                         RemoteBranch.DEFAULT_REMOTE,
-                        new BranchName(details.branches().base())));
+                        FromGitHub.branch(details.branches().base())));
         return others.remove(current).prepend(current);
     }
 

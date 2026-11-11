@@ -20,6 +20,7 @@ import java.time.ZoneOffset;
 import java.util.stream.Collectors;
 import net.vanfleteren.jazygit.feature.branch.commits.BranchCommitsMsg;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesMsg;
+import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
@@ -1604,7 +1605,7 @@ class ContentPanelTest {
                 42,
                 "Fix the login",
                 "alice",
-                "fix/login",
+                new GhBranch("fix/login"),
                 false,
                 false,
                 PullRequest.Checks.NONE,
@@ -1616,7 +1617,9 @@ class ContentPanelTest {
                 .withPrOverview(net.vanfleteren.jazygit.state.github.prs.PrOverview.INITIAL
                         .withHighlighted(Option.of(pr))
                         .withPreview(Option.of(new Preview<>(
-                                pr, new Loadable.Loaded<>(new PullRequestPreview("main", "Why", "+fixed\n", false))))));
+                                pr,
+                                new Loadable.Loaded<>(
+                                        new PullRequestPreview(new GhBranch("main"), "Why", "+fixed\n", false))))));
         String first = PullRequestsPanel.FIRST_PANE_ID;
         String second = net.vanfleteren.jazygit.keys.Scopes.PR_REVIEW_REQUESTED.id();
 
@@ -1675,7 +1678,7 @@ class ContentPanelTest {
                 12,
                 "Fix the login",
                 "alice",
-                "fix/login",
+                new GhBranch("fix/login"),
                 false,
                 true,
                 PullRequest.Checks.NONE,
@@ -1685,7 +1688,7 @@ class ContentPanelTest {
 
         List<String> lines = ContentPanel.pullRequestText(
                         pr,
-                        new PullRequestPreview("main", "Why:\r\n\r\nit broke", "+fixed\n", false),
+                        new PullRequestPreview(new GhBranch("main"), "Why:\r\n\r\nit broke", "+fixed\n", false),
                         Theme.SpanStyles.NONE)
                 .lines()
                 .stream()

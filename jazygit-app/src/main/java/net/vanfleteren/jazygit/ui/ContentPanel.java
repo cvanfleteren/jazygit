@@ -643,8 +643,8 @@ public final class ContentPanel {
                         Span.raw(Messages.get("content.pullRequest.author", pr.author())),
                         Span.raw(Messages.get(
                                 pr.fromFork() ? "content.pullRequest.forkBranches" : "content.pullRequest.branches",
-                                pr.headBranch(),
-                                preview.base())),
+                                pr.headBranch().name(),
+                                preview.base().name())),
                         Span.raw(Messages.get(
                                 "content.pullRequest.updated",
                                 COMMIT_DATE.format(pr.updatedAt().atZone(ZoneId.systemDefault())))),

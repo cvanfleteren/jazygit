@@ -166,8 +166,8 @@ public record GitHubState(
     public GitHubState withListed(List<PullRequest> listed) {
         // Vavr's toMap has no merge function; a later entry replaces an earlier one, so ascending numbers keep the
         // newest.
-        return withPullRequests(
-                Option.of(listed.sortBy(PullRequest::number).toMap(pr -> new BranchName(pr.headBranch()), pr -> pr)));
+        return withPullRequests(Option.of(
+                listed.sortBy(PullRequest::number).toMap(pr -> FromGitHub.branch(pr.headBranch()), pr -> pr)));
     }
 
     /**

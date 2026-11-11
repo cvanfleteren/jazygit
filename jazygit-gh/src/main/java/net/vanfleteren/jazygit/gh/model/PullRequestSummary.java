@@ -22,14 +22,14 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
  * @param stack      where it sits in its stack, if it is stacked
  * @param baseCommit the commit its base branch is at, if GitHub said
  * @param headCommit the commit its branch is at, if GitHub said; none when that branch is gone
- * @param baseBranch the branch it merges into, empty when not known
+ * @param baseBranch the branch it merges into, {@link GhBranch#UNKNOWN} when not known
  */
 public record PullRequestSummary(
         String repository,
         int number,
         String title,
         String author,
-        String headBranch,
+        GhBranch headBranch,
         boolean draft,
         boolean fromFork,
         Checks checks,
@@ -39,7 +39,7 @@ public record PullRequestSummary(
         Option<PullRequestStack> stack,
         Option<GhCommit> baseCommit,
         Option<GhCommit> headCommit,
-        String baseBranch) {
+        GhBranch baseBranch) {
 
     /**
      * One whose base branch is not known.
@@ -49,7 +49,7 @@ public record PullRequestSummary(
             int number,
             String title,
             String author,
-            String headBranch,
+            GhBranch headBranch,
             boolean draft,
             boolean fromFork,
             Checks checks,
@@ -74,7 +74,7 @@ public record PullRequestSummary(
                 stack,
                 baseCommit,
                 headCommit,
-                "");
+                GhBranch.UNKNOWN);
     }
 
     /**
@@ -85,7 +85,7 @@ public record PullRequestSummary(
             int number,
             String title,
             String author,
-            String headBranch,
+            GhBranch headBranch,
             boolean draft,
             boolean fromFork,
             Checks checks,
@@ -118,7 +118,7 @@ public record PullRequestSummary(
             int number,
             String title,
             String author,
-            String headBranch,
+            GhBranch headBranch,
             boolean draft,
             boolean fromFork,
             Checks checks,

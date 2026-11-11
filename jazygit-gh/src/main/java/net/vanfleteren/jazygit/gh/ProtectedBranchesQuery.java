@@ -6,6 +6,7 @@ import static net.vanfleteren.jazygit.json.Decoder.list;
 import static net.vanfleteren.jazygit.json.Decoder.string;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.json.Decoder;
 
 /**
@@ -18,8 +19,8 @@ final class ProtectedBranchesQuery {
     static final GhCommand COMMAND =
             gh("api", "repos/{owner}/{repo}/branches?protected=true&per_page=100", "--paginate", "--slurp");
 
-    static final Decoder<List<String>> DECODER =
-            list(list(field("name", string()))).map(pages -> pages.flatMap(page -> page));
+    static final Decoder<List<GhBranch>> DECODER =
+            list(list(field("name", string()).map(GhBranch::new))).map(pages -> pages.flatMap(page -> page));
 
     private ProtectedBranchesQuery() {}
 }
