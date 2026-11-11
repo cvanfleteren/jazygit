@@ -68,6 +68,10 @@ is one line saying it differs.
   or to scroll to.
 - A paragraph, a heading and a list are wrapped to the width of the area. A code block and a table keep their width,
   and scroll sideways with the area, as the lines of a diff do.
+- A table is drawn by jazygit: each column as wide as its widest cell, aligned as its row of dashes says, two spaces
+  between columns, its first row bold, each cell drawn as tamboui draws Markdown. Not: tamboui's table, which gives
+  each column an equal share of the width, so a short first column takes as much as a long second one, and cuts off
+  what does not fit.
 - A code block is highlighted by the lexer of jazygit (`jazygit-syntax`), in the theme, for the language its info
   string names, through `MarkdownView`'s highlighter: so code reads as in the diff. A language the lexer does not know
   is plain. Not: tamboui's own highlighter, with its own colours.

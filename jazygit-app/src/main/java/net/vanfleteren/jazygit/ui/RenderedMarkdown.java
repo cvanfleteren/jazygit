@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.ui;
 
 import dev.tamboui.text.Line;
+import dev.tamboui.text.Span;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.collection.Iterator;
@@ -31,6 +32,9 @@ final class RenderedMarkdown {
     private static final Pattern HTML_COMMENT = Pattern.compile("<!--.*?-->", Pattern.DOTALL);
     // A link with a scheme, as https: or mailto:, or to another host; anything else is relative.
     private static final Pattern ABSOLUTE = Pattern.compile("([A-Za-z][A-Za-z0-9+.-]*:|//).*", Pattern.DOTALL);
+    // The row under the first of a table: cells of dashes, a colon at either end, between pipes.
+    private static final Pattern TABLE_RULE = Pattern.compile("\\s*\\|?\\s*:?-+:?\\s*(\\|\\s*:?-+:?\\s*)*\\|?\\s*");
+    private static final String COLUMN_GAP = "  ";
 
     private RenderedMarkdown() {}
 
@@ -80,16 +84,86 @@ final class RenderedMarkdown {
 
     /**
      * {@code markdown} drawn, its images links that say so and its relative links their text, without the blank lines
-     * at its end.
+     * at its end; a table as {@link #table} draws it.
      */
     private static List<Line> drawn(String markdown, int width, Theme.SpanStyles styles, LexedHighlighter highlighter) {
-        List<Line> rows = MarkdownLines.markdown(
-                withoutRelativeLinks(MarkdownImages.asLinks(markdown)),
-                width,
-                styles.markdown(),
-                List.empty(),
-                Option.of(highlighter));
+        String shown = withoutRelativeLinks(MarkdownImages.asLinks(markdown));
+        List<Line> rows = table(shown, styles)
+                .getOrElse(() ->
+                        MarkdownLines.markdown(shown, width, styles.markdown(), List.empty(), Option.of(highlighter)));
         return rows.reverse().dropWhile(row -> row.width() == 0).reverse();
+    }
+
+    /**
+     * {@code markdown} drawn as a table, if it starts with one: a row of cells between pipes, then a row of dashes. Each
+     * column is as wide as its widest cell, its cells aligned as the colons of its dashes say, two spaces between two
+     * columns, the cells of the first row bold, each cell drawn as tamboui draws the Markdown in it. So a table wider
+     * than the area scrolls sideways with it, as a code block does. Not: tamboui's table, which gives each column as
+     * many columns of the area, and cuts off what does not fit.
+     */
+    static Option<List<Line>> table(String markdown, Theme.SpanStyles styles) {
+        Vector<String> lines = Vector.of(markdown.split("\n", -1)).takeWhile(line -> !line.isBlank());
+        if (lines.size() < 2
+                || !lines.get(0).contains("|")
+                || !lines.get(1).contains("|")
+                || !TABLE_RULE.matcher(lines.get(1)).matches()) {
+            return Option.none();
+        }
+        Vector<String> aligned = cells(lines.get(1));
+        Vector<Vector<List<Span>>> rows = lines.removeAt(1)
+                .zipWithIndex()
+                .map(row -> Vector.range(0, aligned.size())
+                        .map(column -> cells(row._1()).lift().apply(column).getOrElse(""))
+                        .map(cell -> inline(cell, styles, row._2() == 0)));
+        Vector<Integer> widths = Vector.range(0, aligned.size())
+                .map(column -> rows.map(row -> width(row.get(column))).max().getOrElse(0));
+        return Option.of(rows.map(row -> Line.from(Vector.range(0, aligned.size())
+                        .flatMap(column -> {
+                            List<Span> cell = row.get(column);
+                            int room = widths.get(column) - width(cell);
+                            String rule = aligned.get(column).strip();
+                            int before = rule.endsWith(":") ? rule.startsWith(":") ? room / 2 : room : 0;
+                            boolean last = column == aligned.size() - 1;
+                            return List.of(Span.raw(column == 0 ? "" : COLUMN_GAP))
+                                    .append(Span.raw(" ".repeat(before)))
+                                    .appendAll(cell)
+                                    .append(Span.raw(last ? "" : " ".repeat(room - before)));
+                        })
+                        .filter(span -> !span.content().isEmpty())
+                        .toJavaList()))
+                .toList());
+    }
+
+    /**
+     * The cells of the row {@code line} of a table: between its pipes, but not an escaped one, each stripped, an escaped
+     * pipe in it a pipe.
+     */
+    private static Vector<String> cells(String line) {
+        String row = line.strip();
+        String inner = row.substring(
+                row.startsWith("|") ? 1 : 0,
+                row.endsWith("|") && !row.endsWith("\\|") && row.length() > 1 ? row.length() - 1 : row.length());
+        return Vector.of(inner.split("(?<!\\\\)\\|", -1))
+                .map(cell -> cell.strip().replace("\\|", "|"));
+    }
+
+    /**
+     * The Markdown of a cell drawn on one line, as tamboui draws it, bold if it is in the {@code header}.
+     */
+    private static List<Span> inline(String cell, Theme.SpanStyles styles, boolean header) {
+        List<Span> spans = cell.isEmpty()
+                ? List.empty()
+                : MarkdownLines.markdown(cell, Math.max(1, TextWidth.of(cell)), styles.markdown())
+                        .headOption()
+                        .map(line -> List.ofAll(line.spans()))
+                        .getOrElse(List.empty());
+        return header
+                ? spans.map(span -> Span.styled(span.content(), span.style().bold()))
+                : spans;
+    }
+
+    private static int width(List<Span> spans) {
+        return spans.map(Span::width).sum().intValue();
     }
 
     /**

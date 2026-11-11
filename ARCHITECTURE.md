@@ -427,7 +427,8 @@ See `documentation/adr/0103-a-version-of-markdown-rendered.md`.
 - `RenderedMarkdown` parses with commonmark's source spans, a block for each top-level node and for each item of a
   top-level list, and draws each with `MarkdownLines` (drawn out of `RemarkLines`, which draws the text of review
   remarks with it), its code blocks coloured by `LexedHighlighter`, jazygit's lexer behind tamboui's
-  `SyntaxHighlighter`.
+  `SyntaxHighlighter`. A table it draws itself (`RenderedMarkdown.table`), each column as wide as its widest cell, as
+  tamboui's table shares the width out evenly.
 - A version rendered is drawn as wide as its area: `ContentPanel.Styler` gets the width the text area last had, and a
   body that is `rendering` is styled again when it changes. `Styled.row` finds a line by its place too, so the line of
   the cursor keeps its row as the version renders; a key on the bar acts on `Styled.top`, the first line of the block

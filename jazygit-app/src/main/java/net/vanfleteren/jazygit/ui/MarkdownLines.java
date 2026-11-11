@@ -18,14 +18,12 @@ import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import java.util.Objects;
 import java.util.function.Function;
-import java.util.regex.Pattern;
 import net.vanfleteren.jazygit.image.Picture;
 import net.vanfleteren.jazygit.ui.widgets.MarkdownImages;
 import org.commonmark.node.FencedCodeBlock;
 import org.commonmark.node.IndentedCodeBlock;
 import org.commonmark.node.LinkReferenceDefinition;
 import org.commonmark.node.Node;
-import org.commonmark.node.Paragraph;
 import org.commonmark.parser.IncludeSourceSpans;
 import org.commonmark.parser.Parser;
 
@@ -34,10 +32,6 @@ import org.commonmark.parser.Parser;
  * (ADR 55), and a version of a Markdown file rendered (ADR 103).
  */
 final class MarkdownLines {
-
-    // The line under the header of a table, which commonmark without its extension for tables parses as a paragraph:
-    // cells of dashes, with a colon at either end, between pipes.
-    private static final Pattern TABLE_RULE = Pattern.compile("\\s*\\|?\\s*:?-+:?\\s*(\\|\\s*:?-+:?\\s*)*\\|?\\s*");
 
     private MarkdownLines() {}
 
@@ -85,8 +79,8 @@ final class MarkdownLines {
     }
 
     /**
-     * {@code markdown} in pieces: each code block or table at its top too wide for {@code width} a piece of its own, as
-     * wide as its widest line and its border, and the text between them pieces {@code width} wide. Each piece of text also
+     * {@code markdown} in pieces: each code block at its top too wide for {@code width} a piece of its own, as wide as
+     * its widest line and its border, and the text between them pieces {@code width} wide. Each piece of text also
      * holds the link definitions of the whole, as a link in one piece may be defined in another.
      */
     private static List<Piece> pieces(String markdown, int width) {
@@ -98,7 +92,7 @@ final class MarkdownLines {
         List<Tuple2<Node, Integer>> blocks = List.ofAll(Iterator.iterate(document.getFirstChild(), Node::getNext)
                         .takeWhile(Objects::nonNull))
                 .filter(block -> !block.getSourceSpans().isEmpty())
-                .map(block -> Tuple.of(block, wide(block, lines, width)));
+                .map(block -> Tuple.of(block, wide(block, width)));
         // Each block joins the piece before it, unless one of the two is a wide code block.
         List<List<Tuple2<Node, Integer>>> runs = blocks.foldLeft(
                         List.<List<Tuple2<Node, Integer>>>empty(),
@@ -128,29 +122,18 @@ final class MarkdownLines {
     }
 
     /**
-     * How wide {@code block} of {@code markdown} is drawn: a code block too wide for {@code width} as wide as its widest
-     * line and its border, a table too wide for it as wide as its widest line, anything else {@code width}.
+     * How wide {@code block} is drawn: a code block too wide for {@code width} as wide as its widest line and its
+     * border, anything else {@code width}.
      */
-    private static int wide(Node block, Vector<String> markdown, int width) {
-        Option<Integer> code = block instanceof FencedCodeBlock fenced
-                ? Option.of(widest(lines(fenced.getLiteral())) + 2)
-                : block instanceof IndentedCodeBlock indented
-                        ? Option.of(widest(lines(indented.getLiteral())) + 2)
-                        : Option.none();
-        Option<Integer> table = Option.when(block instanceof Paragraph, () -> source(markdown, List.of(block)))
-                .map(MarkdownLines::lines)
-                .filter(lines ->
-                        lines.size() > 1 && TABLE_RULE.matcher(lines.get(1)).matches())
-                .map(lines -> widest(lines) + 1);
-        return code.orElse(table).filter(needed -> needed > width).getOrElse(width);
-    }
-
-    private static List<String> lines(String text) {
-        return List.ofAll(text.lines());
-    }
-
-    private static int widest(List<String> lines) {
-        return lines.map(TextWidth::of).max().getOrElse(0);
+    private static int wide(Node block, int width) {
+        Option<String> code = block instanceof FencedCodeBlock fenced
+                ? Option.of(fenced.getLiteral())
+                : block instanceof IndentedCodeBlock indented ? Option.of(indented.getLiteral()) : Option.none();
+        return code.map(literal ->
+                        List.ofAll(literal.lines()).map(TextWidth::of).max().getOrElse(0))
+                .map(widest -> widest + 2)
+                .filter(needed -> needed > width)
+                .getOrElse(width);
     }
 
     private static List<Line> drawn(

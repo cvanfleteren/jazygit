@@ -136,6 +136,44 @@ class RenderedMarkdownTest {
     }
 
     @Test
+    void eachColumnOfATableIsAsWideAsItsWidestCellHoweverWideTheTable() {
+        List<RenderedMarkdown.Block> blocks = RenderedMarkdown.blocks(
+                Vector.of(
+                        "| Module | Holds |",
+                        "|---|---|",
+                        "| `jazygit-json` | json: JSON as plain values, and the decoders that turn it into records |",
+                        "| `jazygit-git` | git: running git |"),
+                40,
+                Theme.SpanStyles.NONE);
+
+        assertEquals(
+                List.of(
+                        "Module        Holds",
+                        "jazygit-json  json: JSON as plain values, and the decoders that turn it into records",
+                        "jazygit-git   git: running git"),
+                text(blocks.head().rows()).map(String::stripTrailing));
+    }
+
+    @Test
+    void theCellsOfATableAreAlignedAsItsDashesSayAndAnEscapedPipeStaysInItsCell() {
+        Option<List<Line>> table = RenderedMarkdown.table(
+                "| left | right | middle |\n|:--|--:|:-:|\n| a | 1 | x |\n| a \\| b | 22 | yyy |",
+                Theme.SpanStyles.NONE);
+
+        assertEquals(
+                List.of("left   right  middle", "a          1    x", "a | b     22   yyy"),
+                text(table.get()).map(String::stripTrailing));
+        assertTrue(table.get().head().spans().stream()
+                .filter(span -> !span.content().isBlank())
+                .allMatch(span -> span.style().addModifiers().contains(dev.tamboui.style.Modifier.BOLD)));
+    }
+
+    @Test
+    void aHeadingUnderlinedWithDashesIsNoTable() {
+        assertEquals(Option.none(), RenderedMarkdown.table("Title\n---", Theme.SpanStyles.NONE));
+    }
+
+    @Test
     void aLanguageIsNamedAsAnExtensionOrAProgram() {
         assertTrue(LexedHighlighter.named("java").isDefined());
         assertTrue(LexedHighlighter.named("python").isDefined());
