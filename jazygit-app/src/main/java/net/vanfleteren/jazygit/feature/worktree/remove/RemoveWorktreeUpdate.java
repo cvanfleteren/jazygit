@@ -21,13 +21,13 @@ public final class RemoveWorktreeUpdate {
                         .worktree(location)
                         .map(worktree -> notRemovable(worktree)
                                 .map(error -> Next.of(model.fail(error)))
-                                .getOrElse(() -> Update.ask(
+                                .getOrElse(() -> OperationUpdate.ask(
                                         model,
                                         new RemoveWorktreePopup(
                                                 worktree.location(), worktree.name(), worktree.branch()))))
                         .getOrElse(() -> Next.of(model));
             case Chosen(boolean deleteBranch) ->
-                Update.confirm(
+                OperationUpdate.confirm(
                         model,
                         RemoveWorktreePopup.class,
                         popup -> model.repo()
@@ -38,7 +38,7 @@ public final class RemoveWorktreeUpdate {
                                         popup.location(), false, popup.branch().filter(branch -> deleteBranch))));
             // The removal ran, and failed; removing it anyway is offered instead of the failure.
             case NeedsForce(var cmd, var commands) ->
-                Update.refresh(OperationUpdate.done(model, cmd, commands)
+                RereadUpdate.refresh(OperationUpdate.done(model, cmd, commands)
                         .openPopupIfFree(new ForceRemoveWorktreePopup(
                                 cmd,
                                 model.repo()

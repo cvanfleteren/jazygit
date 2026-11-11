@@ -71,7 +71,7 @@ public final class CreatePullRequestUpdate {
             when model.popup(NewPullRequestPopup.class)
                     .exists(popup -> popup.pullRequest().title().isBlank()) -> Next.of(model);
             case Confirmed() ->
-                Update.confirm(
+                OperationUpdate.confirm(
                         model,
                         NewPullRequestPopup.class,
                         popup -> model.repo()
@@ -91,7 +91,7 @@ public final class CreatePullRequestUpdate {
                         .flatMap(popup -> model.idleBranch(popup.branch()))
                         .filter(known -> pushFirst(known).isEmpty())
                         .map(known -> askPushed(model.withoutPopup(PushFirstPopup.class), known))
-                        .getOrElse(() -> Update.confirm(
+                        .getOrElse(() -> OperationUpdate.confirm(
                                 model,
                                 PushFirstPopup.class,
                                 popup -> model.idleBranch(popup.branch()).flatMap(CreatePullRequestUpdate::pushFirst)));
@@ -188,10 +188,10 @@ public final class CreatePullRequestUpdate {
                         ? ask(model, branch)
                         : branch.behind() > 0
                                 ? Next.of(model.fail(new AppError.Diverged(branch.name(), upstream)))
-                                : Update.ask(
+                                : OperationUpdate.ask(
                                         model, new PushFirstPopup(branch.name(), upstream, Option.of(branch.ahead()))))
-                .getOrElse(
-                        () -> Update.ask(model, new PushFirstPopup(branch.name(), branch.pushTarget(), Option.none())));
+                .getOrElse(() -> OperationUpdate.ask(
+                        model, new PushFirstPopup(branch.name(), branch.pushTarget(), Option.none())));
     }
 
     /**

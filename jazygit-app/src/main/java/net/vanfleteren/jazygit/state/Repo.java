@@ -124,6 +124,13 @@ public record Repo(
     }
 
     /**
+     * The changed files, once the status is loaded.
+     */
+    public Option<List<FileEntry>> files() {
+        return status.toOption().map(RepoStatus::files);
+    }
+
+    /**
      * The worktree shown, if the worktrees are loaded.
      */
     public Option<Worktree> currentWorktree() {

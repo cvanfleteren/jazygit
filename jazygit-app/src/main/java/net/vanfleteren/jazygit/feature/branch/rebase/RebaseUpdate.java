@@ -7,7 +7,7 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.state.AheadUpdate;
 import net.vanfleteren.jazygit.state.GitHubBases;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
@@ -21,7 +21,7 @@ public final class RebaseUpdate {
         return switch (msg) {
             case RebaseMsg.Requested(BranchName highlighted) -> requested(model, highlighted);
             case RebaseMsg.Chosen(RebaseMsg.Target target) ->
-                Update.confirm(
+                OperationUpdate.confirm(
                         model,
                         RebasePopup.class,
                         popup -> onto(model, popup, target).map(RebaseCmd::new));
@@ -34,7 +34,7 @@ public final class RebaseUpdate {
      * operation runs on a branch it takes, is disabled rather than keeping the popup closed (ADR 91).
      */
     private static Next requested(Model model, BranchName highlighted) {
-        return Update.ask(
+        return OperationUpdate.ask(
                 model,
                 model.repo()
                         .currentBranch()

@@ -242,7 +242,7 @@ class BranchUpdateTest {
                         .cmds());
         assertEquals(
                 List.of(),
-                Update.update(Update.init("repo").model(), new CheckoutMsg.Requested(new BranchName("feature")))
+                Update.update(TestModels.init("repo").model(), new CheckoutMsg.Requested(new BranchName("feature")))
                         .cmds());
     }
 

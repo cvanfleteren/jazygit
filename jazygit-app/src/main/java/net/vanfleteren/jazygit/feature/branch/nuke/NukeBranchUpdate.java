@@ -12,7 +12,7 @@ import net.vanfleteren.jazygit.git.model.Worktree;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.OperationUpdate;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.RereadUpdate;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
@@ -28,14 +28,14 @@ public final class NukeBranchUpdate {
             case Requested(BranchName branch) -> requested(model, branch);
             // Nothing starts when the branch, its worktree or its remote branch changed since the dialog named them.
             case Confirmed() ->
-                Update.confirm(
+                OperationUpdate.confirm(
                         model,
                         NukeBranchPopup.class,
                         popup -> popup(model, popup.branch())
                                 .map(NukeBranchPopup::cmd)
                                 .filter(popup.cmd()::equals));
             case NotAllNuked(NukeBranchCmd cmd, var commands, var left, var failures) ->
-                Update.refresh(OperationUpdate.done(model, cmd, commands)
+                RereadUpdate.refresh(OperationUpdate.done(model, cmd, commands)
                         .fail(new AppError.NotAllNuked(cmd.branch(), left, failures)));
         };
     }
@@ -49,7 +49,7 @@ public final class NukeBranchUpdate {
                 .branch(name)
                 .flatMap(branch -> refused(model, branch))
                 .map(error -> Next.of(model.fail(error)))
-                .getOrElse(() -> Update.ask(model, popup(model, name)));
+                .getOrElse(() -> OperationUpdate.ask(model, popup(model, name)));
     }
 
     /**

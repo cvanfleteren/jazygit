@@ -220,7 +220,7 @@ class AheadUpdateTest {
     void whatIsReadWithTheLogOfHeadIsReadAgainWhenTheBranchesArrivedMeanwhile() {
         // At the start the status arrives first: the log is asked for before the branches tell its base.
         Update.Next started = Update.update(
-                Update.init("repo").model(),
+                TestModels.init("repo").model(),
                 new LoadMsg.StatusLoaded(new RepoStatus(Head.onBranch(FEATURE, FEATURE_TIP), List.empty())));
         LoadAhead issued = ((LoadCommits) started.cmds().single()).ahead();
         Model branchesRead = Update.update(
@@ -315,7 +315,7 @@ class AheadUpdateTest {
         Model failed = Update.update(loaded(), new LoadMsg.Failed(load, refused("boom")))
                 .model();
         assertEquals(loaded().repo().ahead(), failed.repo().ahead());
-        assertTrue(Update.refresh(failed).cmds().contains(load));
+        assertTrue(RereadUpdate.refresh(failed).cmds().contains(load));
     }
 
     @Test
@@ -418,8 +418,8 @@ class AheadUpdateTest {
         Model failed = Update.update(logRead, load.failed(refused("no"))).model();
 
         assertEquals(Option.none(), AheadUpdate.branch(failed, FEATURE_LOG));
-        assertTrue(Update.refresh(failed).cmds().contains(load));
-        assertFalse(Update.refresh(logRead).cmds().contains(load));
+        assertTrue(RereadUpdate.refresh(failed).cmds().contains(load));
+        assertFalse(RereadUpdate.refresh(logRead).cmds().contains(load));
     }
 
     @Test
@@ -505,7 +505,7 @@ class AheadUpdateTest {
         Model failed = Update.update(model, load.failed(refused("no"))).model();
 
         assertEquals(Option.none(), AheadUpdate.head(failed));
-        assertTrue(Update.refresh(failed).cmds().contains(load));
+        assertTrue(RereadUpdate.refresh(failed).cmds().contains(load));
     }
 
     @Test

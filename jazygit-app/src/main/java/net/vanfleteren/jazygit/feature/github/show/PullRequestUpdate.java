@@ -50,7 +50,7 @@ public final class PullRequestUpdate {
                         pullRequest.fromFork(),
                         false);
             case PullRequestMsg.SummaryRequested(var pullRequest) ->
-                Update.start(model.clearError(), new BrowsePullRequestCmd(pullRequest));
+                OperationUpdate.start(model.clearError(), new BrowsePullRequestCmd(pullRequest));
             // Its files are listed in the files pane, which only has those of this repository.
             case PullRequestMsg.SummaryFilesRequested(var pullRequest)
             when model.prOverview().ofThisRepository(pullRequest).getOrElse(false) ->
@@ -60,7 +60,7 @@ public final class PullRequestUpdate {
                         pullRequest.pullRequest(),
                         pullRequest.fromFork());
             case PullRequestMsg.SummaryFilesRequested(var pullRequest) ->
-                Update.start(model.clearError(), new BrowsePullRequestCmd(pullRequest));
+                OperationUpdate.start(model.clearError(), new BrowsePullRequestCmd(pullRequest));
             // The branches pane shows the pull request as it was just read too, also when the dialog is closed.
             // How long its checks take is learned from them too (ADR 32).
             // A read that a later one was taken before, or that started before a change, is not taken: it would show
@@ -90,7 +90,7 @@ public final class PullRequestUpdate {
             // The dialog stays open, so the pull request can still be merged or closed from it.
             case PullRequestMsg.OpenConfirmed() ->
                 model.popup(PullRequestPopup.class)
-                        .map(popup -> Update.start(
+                        .map(popup -> OperationUpdate.start(
                                 model.clearError(),
                                 new OpenPullRequest(
                                         popup.branch(), popup.pullRequest().number())))
@@ -103,7 +103,7 @@ public final class PullRequestUpdate {
                         .map(commits -> files(model.withoutPopup(PullRequestPopup.class), commits))
                         .getOrElse(() -> Next.of(model));
             case PullRequestMsg.MergeChosen(MergeMethod method) ->
-                Update.confirm(
+                OperationUpdate.confirm(
                         model,
                         PullRequestPopup.class,
                         popup -> Option.when(
@@ -118,7 +118,7 @@ public final class PullRequestUpdate {
             case PullRequestMsg.MergeCheckFailed(int number, String id, var failure) ->
                 MergeUpdate.checkFailed(model, number, id);
             case PullRequestMsg.CloseChosen() ->
-                Update.confirm(
+                OperationUpdate.confirm(
                         model,
                         PullRequestPopup.class,
                         popup -> Option.when(
@@ -130,7 +130,7 @@ public final class PullRequestUpdate {
                 model.popup(PullRequestPopup.class)
                         .filter(popup -> draftChangeable(model, popup))
                         .flatMap(popup -> popup.draft()
-                                .map(draft -> Update.start(
+                                .map(draft -> OperationUpdate.start(
                                         model.clearError(),
                                         new SetDraft(
                                                 popup.branch(),
@@ -371,7 +371,9 @@ public final class PullRequestUpdate {
             PullRequestPopup opened = PullRequestPopup.loading(branch, pullRequest, model.now(), load.read());
             PullRequestPopup loading = fromFork ? opened.ofFork() : opened;
             return Next.of(
-                    Update.ask(given, files ? loading.wantingFiles() : loading).model(), load);
+                    OperationUpdate.ask(given, files ? loading.wantingFiles() : loading)
+                            .model(),
+                    load);
         });
     }
 }

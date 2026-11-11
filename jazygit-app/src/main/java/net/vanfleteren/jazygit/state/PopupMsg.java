@@ -49,7 +49,7 @@ public sealed interface PopupMsg extends Msg {
 
         @Override
         public Update.Next apply(Model model) {
-            return Update.confirm(model, type, ConfirmablePopup::confirm);
+            return OperationUpdate.confirm(model, type, ConfirmablePopup::confirm);
         }
     }
 }

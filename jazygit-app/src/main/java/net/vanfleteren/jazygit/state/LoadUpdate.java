@@ -66,7 +66,7 @@ public final class LoadUpdate {
                 }));
             // Only the diff that is still shown, with the options now chosen, is read again.
             case FileDiffChecked(var load, var stamp) ->
-                Update.shownDiff(done).contains(load)
+                shownDiff(done).contains(load)
                         ? metadataChecked(done, List.of(Tuple.of((Load) load, stamp)))
                         : Next.of(done);
             // The cursor goes from the diff, which showed while the file was read, to the version asked for (ADR 102).
@@ -208,7 +208,34 @@ public final class LoadUpdate {
         // Commit loads are not deduplicated: one queued after HEAD moved must still run, even if
         // an earlier one is in progress.
         List<Cmd> cmds = headMoved ? List.of(new LoadCommits(AheadUpdate.ofHead(next))) : List.empty();
-        return Update.reloadDiff(next, cmds, headMoved);
+        return reloadDiff(next, cmds, headMoved);
+    }
+
+    /**
+     * Reads the highlighted diff again once its files changed, as they can change on disk without their status
+     * changing: it looks at them first, without git (ADR 58), unless HEAD moved, which changes what the staged changes
+     * are compared with. This waits for the status: right after (un)staging, the entries the diff was read for are
+     * outdated, and reading them again would show their changes as gone for as long as the new status takes to
+     * arrive.
+     */
+    private static Next reloadDiff(Model model, List<Cmd> cmds, boolean headMoved) {
+        return shownDiff(model)
+                .filter(load -> !model.jobs().runs(load) && !model.jobs().runs(new CheckFileDiff(load)))
+                .map(load -> new Next(model, cmds.append(headMoved ? load : new CheckFileDiff(load))))
+                .getOrElse(() -> new Next(model, cmds));
+    }
+
+    /**
+     * The read of the highlighted diff, with the options now chosen, while the status still lists its files.
+     */
+    private static Option<LoadFileDiff> shownDiff(Model model) {
+        return model.repoView()
+                .fileDiff()
+                .filter(d -> model.repo()
+                        .status()
+                        .toOption()
+                        .exists(status -> status.files().containsAll(d.key())))
+                .map(d -> new LoadFileDiff(d.key(), model.preferences().diffOptions()));
     }
 
     /**

@@ -40,7 +40,7 @@ class SettingsUpdateTest {
 
     @Test
     void theLoadedSettingsAreUsedFromTheStart() {
-        Model model = Update.init("repo", new SettingsStore.Loaded(DARCULA, Option.none()))
+        Model model = TestModels.init("repo", new SettingsStore.Loaded(DARCULA, Option.none()))
                 .model();
 
         assertEquals(DARCULA, model.preferences().settings());
@@ -49,7 +49,8 @@ class SettingsUpdateTest {
 
     @Test
     void aThemeAskedForAtStartupIsDrawnInsteadOfTheSavedOne() {
-        Model model = Update.init("repo", new SettingsStore.Loaded(DARCULA, Option.none()), Option.of(ThemeName.LIGHT))
+        Model model = TestModels.init(
+                        "repo", new SettingsStore.Loaded(DARCULA, Option.none()), Option.of(ThemeName.LIGHT))
                 .model();
 
         assertEquals(ThemeName.LIGHT, model.preferences().theme());
@@ -58,7 +59,7 @@ class SettingsUpdateTest {
 
     @Test
     void withoutAThemeAskedForAtStartupTheSavedOneIsDrawn() {
-        Model model = Update.init("repo", new SettingsStore.Loaded(DARCULA, Option.none()), Option.none())
+        Model model = TestModels.init("repo", new SettingsStore.Loaded(DARCULA, Option.none()), Option.none())
                 .model();
 
         assertEquals(ThemeName.DARCULA, model.preferences().theme());
@@ -68,7 +69,7 @@ class SettingsUpdateTest {
     void aProblemLoadingTheSettingsIsShownInTheCommandLogOnly() {
         SettingsProblem invalid = new SettingsProblem.Invalid(FILE, List.of("ui.theme"));
 
-        Model model = Update.init("repo", new SettingsStore.Loaded(Settings.DEFAULT, Option.of(invalid)))
+        Model model = TestModels.init("repo", new SettingsStore.Loaded(Settings.DEFAULT, Option.of(invalid)))
                 .model();
 
         assertEquals(

@@ -42,7 +42,6 @@ import net.vanfleteren.jazygit.state.OperationMsg;
 import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.state.PullRequestsUpdate;
 import net.vanfleteren.jazygit.state.StackChange;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
@@ -74,7 +73,7 @@ public final class StackUpdate {
                 chosen(
                         model,
                         menu -> menu.canUnstack()
-                                ? Update.ask(
+                                ? OperationUpdate.ask(
                                         model.withoutPopup(StackPopups.Menu.class),
                                         new StackPopups.Unstack(menu.stack().get()))
                                 : Next.of(model));
@@ -100,7 +99,7 @@ public final class StackUpdate {
             case StackMsg.LinkAndRebaseChosen() ->
                 model.popup(StackPopups.Confirm.class)
                         .filter(confirm -> !confirm.diverged().isEmpty())
-                        .map(confirm -> Update.start(
+                        .map(confirm -> OperationUpdate.start(
                                 model.withoutPopup(StackPopups.Confirm.class).clearError(),
                                 confirm.cmd().rebasing()))
                         .getOrElse(() -> Next.of(model));
@@ -143,7 +142,7 @@ public final class StackUpdate {
             case StackMsg.StackRead(StackRebase rebase, var commits) ->
                 model.popup().isDefined()
                         ? Next.of(model.inform(new Notice.StackNotAsked(rebase.stack())))
-                        : Update.ask(
+                        : OperationUpdate.ask(
                                 model,
                                 new StackPopups.RebaseConfirm(new StackRebaseCmd.RebaseStack(rebase, commits, true)));
             case StackMsg.StackReadFailed(int stack, var failure) ->
@@ -161,7 +160,7 @@ public final class StackUpdate {
                                 ? AppError.StackRefusal.BEHIND_REMOTE
                                 : AppError.StackRefusal.BEHIND_UNFOLLOWED)));
             case StackMsg.RebaseLocallyChosen() ->
-                Update.confirm(
+                OperationUpdate.confirm(
                         model,
                         StackPopups.RebaseConfirm.class,
                         popup -> Option.of(popup.cmd().locally()));
@@ -171,7 +170,7 @@ public final class StackUpdate {
                 chosen(
                         model,
                         menu -> menu.canCheckOut()
-                                ? Update.start(
+                                ? OperationUpdate.start(
                                         model.withoutPopup(StackPopups.Menu.class)
                                                 .clearError(),
                                         new StackCheckoutCmd.Fetch(
@@ -191,7 +190,7 @@ public final class StackUpdate {
                         .filter(StackCheckout::startable)
                         .filter(checkout -> landing == StackCheckout.Landing.STAY
                                 || checkout.target(landing).isDefined())
-                        .map(checkout -> Update.start(
+                        .map(checkout -> OperationUpdate.start(
                                 model.withoutPopup(StackPopups.Checkout.class).clearError(),
                                 new StackCheckoutCmd.CatchUp(checkout, landing)))
                         .getOrElse(() -> Next.of(model));
@@ -213,7 +212,7 @@ public final class StackUpdate {
                 .fold(
                         unknown -> Next.of(model.fail(unknown)),
                         ofThis -> ofThis
-                                ? Update.ask(
+                                ? OperationUpdate.ask(
                                         model,
                                         new StackPopups.Menu(
                                                 Option.none(),
@@ -263,7 +262,7 @@ public final class StackUpdate {
                 .fold(
                         refused -> Next.of(model.fail(
                                 new AppError.StackNotPushed(stack.number(), refused.branch(), refused.why()))),
-                        push -> Update.start(model.clearError(), new StackRebaseCmd.PushStack(push)));
+                        push -> OperationUpdate.start(model.clearError(), new StackRebaseCmd.PushStack(push)));
     }
 
     /**
@@ -332,7 +331,7 @@ public final class StackUpdate {
                 pullRequest.map(PullRequest::number),
                 stacked.map(on -> StackCheckout.status(model, on)).getOrElse(StackCheckout.Status.NOTHING));
         // Nothing opens where nothing applies, as on a root.
-        return Update.ask(model, Option.of(menu).filter(StackPopups.Menu::anyApplies));
+        return OperationUpdate.ask(model, Option.of(menu).filter(StackPopups.Menu::anyApplies));
     }
 
     /**
@@ -446,7 +445,7 @@ public final class StackUpdate {
         return chosen(
                 model,
                 menu -> menu.canStackOn()
-                        ? Update.ask(
+                        ? OperationUpdate.ask(
                                 model.withoutPopup(StackPopups.Menu.class),
                                 new StackPopups.StackOn(
                                         menu.branch().get(), menu.pullRequest().get(), menu.targets()))
@@ -480,8 +479,8 @@ public final class StackUpdate {
      */
     private static Next made(Model model, StackCmd.MakeStack cmd, List<StackPopups.Diverged> diverged) {
         return cmd.changes().isEmpty() && diverged.isEmpty()
-                ? Update.start(model.clearError(), cmd)
-                : Update.ask(model, new StackPopups.Confirm(cmd, diverged));
+                ? OperationUpdate.start(model.clearError(), cmd)
+                : OperationUpdate.ask(model, new StackPopups.Confirm(cmd, diverged));
     }
 
     /**

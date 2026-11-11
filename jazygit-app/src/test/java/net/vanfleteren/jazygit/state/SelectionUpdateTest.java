@@ -119,7 +119,7 @@ class SelectionUpdateTest {
         // Each tick that tries again fails again; it waits 1, 2, 4 and then 8 ticks.
         List<Integer> tried = List.rangeClosed(1, 16)
                 .foldLeft(Tuple.of(failed, List.<Integer>empty()), (state, tick) -> {
-                    Next next = Update.tick(state._1());
+                    Next next = RereadUpdate.tick(state._1());
                     return next.cmds().contains(DETAIL)
                             ? Tuple.of(failedDetail(next.model()), state._2().append(tick))
                             : Tuple.of(next.model(), state._2());
@@ -132,11 +132,11 @@ class SelectionUpdateTest {
     @Test
     void changesThatFailedAreTriedAgainAtOnceOnARefreshAndForgottenOnceRead() {
         Model failedTwice =
-                failedDetail(Update.tick(failedDetail(selectedCommit())).model());
+                failedDetail(RereadUpdate.tick(failedDetail(selectedCommit())).model());
 
         // The next tick that tries again is two ticks off.
-        assertFalse(Update.tick(failedTwice).cmds().contains(DETAIL));
-        assertTrue(Update.refresh(failedTwice).cmds().contains(DETAIL));
+        assertFalse(RereadUpdate.tick(failedTwice).cmds().contains(DETAIL));
+        assertTrue(RereadUpdate.refresh(failedTwice).cmds().contains(DETAIL));
 
         Model read = Update.update(
                         failedTwice,

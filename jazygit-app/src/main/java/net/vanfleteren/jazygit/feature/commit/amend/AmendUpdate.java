@@ -12,7 +12,7 @@ import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
@@ -48,28 +48,30 @@ public final class AmendUpdate {
     }
 
     private static Next ask(Model model, AmendTarget target) {
-        return Update.withFiles(
-                model,
-                files -> files.isEmpty()
+        return model.repo()
+                .files()
+                .map(files -> files.isEmpty()
                         ? Next.of(model.fail(new AppError.NothingToAmend()))
-                        : Update.ask(model, new AmendPopup(target)));
+                        : OperationUpdate.ask(model, new AmendPopup(target)))
+                .getOrElse(() -> Next.of(model));
     }
 
     /**
      * Amends with the staged files; when none is staged, asks whether to amend with all files instead.
      */
     private static Next confirmed(Model model) {
-        return Update.files(model).exists(FileEntry::staged)
-                ? Update.confirm(
+        return model.repo().files().getOrElse(List.empty()).exists(FileEntry::staged)
+                ? OperationUpdate.confirm(
                         model, AmendPopup.class, popup -> Option.of(new AmendCmd(popup.target(), List.empty())))
                 : model.popup(AmendPopup.class)
-                        .map(popup -> Update.ask(
+                        .map(popup -> OperationUpdate.ask(
                                 model.withoutPopup(AmendPopup.class), new AmendStageAllPopup(popup.target())))
                         .getOrElse(() -> Next.of(model));
     }
 
     private static Next stageAllConfirmed(Model model) {
-        List<String> paths = FileEntry.paths(Update.files(model), FileEntry::unstaged);
-        return Update.confirm(model, AmendStageAllPopup.class, popup -> Option.of(new AmendCmd(popup.target(), paths)));
+        List<String> paths = FileEntry.paths(model.repo().files().getOrElse(List.empty()), FileEntry::unstaged);
+        return OperationUpdate.confirm(
+                model, AmendStageAllPopup.class, popup -> Option.of(new AmendCmd(popup.target(), paths)));
     }
 }

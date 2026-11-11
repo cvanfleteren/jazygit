@@ -11,7 +11,7 @@ import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.DiscardPlan;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
@@ -29,12 +29,12 @@ public final class DiscardUpdate {
     }
 
     private static Next requested(Model model, List<FileEntry> files) {
-        return Update.ask(model, Option.when(!files.isEmpty(), () -> new DiscardPopup(files)));
+        return OperationUpdate.ask(model, Option.when(!files.isEmpty(), () -> new DiscardPopup(files)));
     }
 
     private static Next chosen(Model model, Scope scope) {
         // Without unstaged changes there is nothing to discard of that kind.
-        return Update.confirm(
+        return OperationUpdate.confirm(
                 model,
                 DiscardPopup.class,
                 popup -> Option.of(popup)

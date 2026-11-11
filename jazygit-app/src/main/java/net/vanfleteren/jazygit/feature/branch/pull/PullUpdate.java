@@ -6,7 +6,7 @@ import net.vanfleteren.jazygit.feature.branch.pull.PullCmd.Pull;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
@@ -31,12 +31,12 @@ public final class PullUpdate {
         return model.idleBranch(branch)
                 .map(known -> known.upstream()
                         .map(upstream -> known.current()
-                                ? Update.start(model.clearError(), new Pull(branch))
+                                ? OperationUpdate.start(model.clearError(), new Pull(branch))
                                 : known.ahead() > 0
                                         ? Next.of(model.fail(new AppError.UnpushedCommits(branch)))
                                         : Branches.checkedOutElsewhere(model, PullCmd.FAST_FORWARD, branch)
                                                 .map(error -> Next.of(model.fail(error)))
-                                                .getOrElse(() -> Update.start(
+                                                .getOrElse(() -> OperationUpdate.start(
                                                         model.clearError(),
                                                         new FastForward(branch, upstream.branch()))))
                         .getOrElse(() -> Next.of(model.fail(AppError.noUpstream(known)))))

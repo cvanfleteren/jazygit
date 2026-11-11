@@ -30,7 +30,7 @@ class UpdateTest {
     @Test
     void branchesThatCannotBeReadFailBothListsAsTheyAreReadTogether() {
         Model failed = Update.update(
-                        Update.init("repo").model(), new LoadMsg.Failed(LoadBranches.LISTED, refused("boom")))
+                        TestModels.init("repo").model(), new LoadMsg.Failed(LoadBranches.LISTED, refused("boom")))
                 .model();
 
         assertInstanceOf(Failed.class, failed.repo().branches());
@@ -52,7 +52,7 @@ class UpdateTest {
 
     @Test
     void initStartsLoadingStatusAndBranches() {
-        Next next = Update.init("repo");
+        Next next = TestModels.init("repo");
 
         assertEquals("repo", next.model().repositoryName());
         assertInstanceOf(Loading.class, next.model().repo().status());
@@ -70,20 +70,20 @@ class UpdateTest {
     void initShowsTheRepositoryWhereItLands() {
         Landing landing = new Landing(BranchesTab.WORKTREES, Option.of("branches"));
 
-        Model started = Update.init("repo", SettingsStore.Loaded.DEFAULT, Option.none(), landing)
+        Model started = TestModels.init("repo", SettingsStore.Loaded.DEFAULT, Option.none(), landing)
                 .model();
 
         assertEquals(BranchesTab.WORKTREES, started.repoView().branchesTab());
         assertEquals(Option.of("branches"), started.shownPane());
         // Where the app starts: the local branches, and no pane yet, so the files get the focus.
-        Model fresh = Update.init("repo").model();
+        Model fresh = TestModels.init("repo").model();
         assertEquals(BranchesTab.LOCAL, fresh.repoView().branchesTab());
         assertEquals(Option.none(), fresh.shownPane());
     }
 
     @Test
     void firstStatusLoadsCommits() {
-        Next next = Update.update(Update.init("repo").model(), new LoadMsg.StatusLoaded(CLEAN));
+        Next next = Update.update(TestModels.init("repo").model(), new LoadMsg.StatusLoaded(CLEAN));
 
         assertEquals(new Loaded<>(CLEAN), next.model().repo().status());
         assertEquals(List.of(new LoadCommits(AheadUpdate.ofHead(next.model()))), next.cmds());
@@ -91,7 +91,7 @@ class UpdateTest {
 
     @Test
     void tickDoesNotRepeatLoadsThatAreStillRunning() {
-        Model model = TestModels.started(Update.init("repo")).model();
+        Model model = TestModels.started(TestModels.init("repo")).model();
 
         // Started anew, the repository is read at once; a tick then only checks the files.
         assertEquals(
@@ -214,7 +214,7 @@ class UpdateTest {
                 "repo", SettingsStore.Loaded.DEFAULT, Option.none(), RepositoryTheme.NONE, Landing.START, now);
 
         assertEquals(now, begun.model().now());
-        assertEquals(Update.init("repo").cmds(), begun.launches().map(Launch::cmd));
+        assertEquals(TestModels.init("repo").cmds(), begun.launches().map(Launch::cmd));
         assertTrue(begun.model()
                 .jobs()
                 .running()
@@ -281,7 +281,7 @@ class UpdateTest {
                 Update.update(model, new Tick()).cmds());
 
         Model statusFailed = Update.update(
-                        Update.init("repo").model(), new LoadMsg.Failed(new LoadStatus(), refused("no git")))
+                        TestModels.init("repo").model(), new LoadMsg.Failed(new LoadStatus(), refused("no git")))
                 .model();
         assertEquals(new Failed<>(refused("no git")), statusFailed.repo().status());
         assertEquals(

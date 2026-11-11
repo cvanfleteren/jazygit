@@ -7,7 +7,7 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.Revision;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
@@ -20,7 +20,7 @@ public final class NewBranchUpdate {
     public static Next update(Model model, NewBranchMsg msg) {
         return switch (msg) {
             case Requested(BranchName base) ->
-                Update.ask(model, model.idleBranch(base).map(known -> new NewBranchPopup(base)));
+                OperationUpdate.ask(model, model.idleBranch(base).map(known -> new NewBranchPopup(base)));
             case NewBranchMsg.RequestedAtCommit(var sha) -> atCommit(model, sha);
             // Checking it out may ask where, in a linked worktree (ADR 68).
             case NewBranchMsg.Confirmed() ->
@@ -29,7 +29,7 @@ public final class NewBranchUpdate {
                         .map(request -> CheckoutUpdate.place(model.withoutPopup(NewBranchPopup.class), request))
                         .getOrElse(() -> Next.of(model));
             case NewBranchMsg.RequestedAtRemote(var remote) ->
-                Update.ask(
+                OperationUpdate.ask(
                         model,
                         model.repo()
                                 .remoteBranch(remote)
@@ -38,7 +38,7 @@ public final class NewBranchUpdate {
     }
 
     private static Next atCommit(Model model, Sha sha) {
-        return Update.ask(
+        return OperationUpdate.ask(
                 model,
                 model.commit(sha).map(commit -> new NewBranchPopup(new Revision.Commit(commit.sha()), Option.none())));
     }

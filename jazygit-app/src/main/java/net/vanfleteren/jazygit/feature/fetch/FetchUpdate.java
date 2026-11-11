@@ -4,7 +4,7 @@ import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.RemoteName;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.PullRequestsUpdate;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.RereadUpdate;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
@@ -82,7 +82,7 @@ public final class FetchUpdate {
      * meanwhile (ADR 58). GitHub is read again either way, as what it has changes on its own.
      */
     private static Next done(Model model) {
-        Next read = model.jobs().fetchChanged() ? Update.refresh(model) : Next.of(model);
+        Next read = model.jobs().fetchChanged() ? RereadUpdate.refresh(model) : Next.of(model);
         Next done = PullRequestsUpdate.poll(read);
         return model.jobs().fetchAgain() ? start(done) : done;
     }

@@ -72,6 +72,7 @@ import net.vanfleteren.jazygit.state.LoadBranches;
 import net.vanfleteren.jazygit.state.LoadCommitFiles;
 import net.vanfleteren.jazygit.state.LoadStatus;
 import net.vanfleteren.jazygit.state.LoadWorktrees;
+import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.prs.LoadRepositoryPullRequests;
 import org.junit.jupiter.api.Test;
@@ -832,7 +833,7 @@ class PullRequestUpdateTest {
     void onceItIsPushedItsPullRequestIsAskedForWhileTheRepositoryIsReadAgain() {
         PushFirst push =
                 new PushFirst(new PushSettingUpstream(UNPUSHED.name(), new RemoteBranch("origin", UNPUSHED.name())));
-        Model pushing = Update.start(model(), push).model();
+        Model pushing = OperationUpdate.start(model(), push).model();
 
         List<ExecutedCommand> commands = StubGit.executed("git push -u origin local");
 
@@ -860,7 +861,7 @@ class PullRequestUpdateTest {
     void aFailedPushAsksForNoPullRequest() {
         PushFirst push =
                 new PushFirst(new PushSettingUpstream(UNPUSHED.name(), new RemoteBranch("origin", UNPUSHED.name())));
-        Model pushing = Update.start(model(), push).model();
+        Model pushing = OperationUpdate.start(model(), push).model();
 
         Next failed = Update.update(pushing, failed(push, "rejected"));
 
@@ -923,7 +924,7 @@ class PullRequestUpdateTest {
     void aPushedBranchThatIsGoneMeanwhileAsksForNoPullRequest() {
         PushFirst push =
                 new PushFirst(new PushSettingUpstream(UNPUSHED.name(), new RemoteBranch("origin", UNPUSHED.name())));
-        Model pushing = Update.start(model(), push).model();
+        Model pushing = OperationUpdate.start(model(), push).model();
         Model gone = localBranchesRead(pushing, List.of(RELEASE, PUSHED, AHEAD, MAIN))
                 .model();
         List<ExecutedCommand> commands = StubGit.executed("git push -u origin local");
@@ -938,7 +939,9 @@ class PullRequestUpdateTest {
     void aPushThatEndsWhileAnotherPopupIsOpenLeavesThatOpen() {
         PushFirst push =
                 new PushFirst(new PushSettingUpstream(UNPUSHED.name(), new RemoteBranch("origin", UNPUSHED.name())));
-        Model other = Update.start(model(), push).model().openPopup(new SwitchWorktreePopup(MAIN.name(), "/work/main"));
+        Model other = OperationUpdate.start(model(), push)
+                .model()
+                .openPopup(new SwitchWorktreePopup(MAIN.name(), "/work/main"));
         Model pushed = Update.update(other, push.succeeded(StubGit.executed("git push -u origin local")))
                 .model();
 
@@ -2669,7 +2672,7 @@ class PullRequestUpdateTest {
         PullRequestSummary pr = summary("owner/repo");
         Landing landing = new Landing(BranchesTab.LOCAL, Option.none())
                 .followedBy(new CheckoutMsg.Placed(new PullRequestCheckout(pr)));
-        Model model = TestModels.started(Update.init("repo", SettingsStore.Loaded.DEFAULT, Option.none(), landing))
+        Model model = TestModels.started(TestModels.init("repo", SettingsStore.Loaded.DEFAULT, Option.none(), landing))
                 .model();
         Next branches = TestModels.done(
                 model,

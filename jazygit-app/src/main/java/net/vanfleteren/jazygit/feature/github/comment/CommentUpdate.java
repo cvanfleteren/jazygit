@@ -28,7 +28,7 @@ public final class CommentUpdate {
             // Once the details are read, whatever state the pull request is in: closed ones take comments too. The
             // comments are only shown once the details are read.
             case CommentMsg.Requested() ->
-                Update.ask(
+                OperationUpdate.ask(
                         model,
                         model.popup(PullRequestPopup.class)
                                 .filter(PullRequestPopup::detailsRead)
@@ -44,7 +44,7 @@ public final class CommentUpdate {
             case CommentMsg.Confirmed() ->
                 editable(model)
                         .filter(popup -> !popup.text().isBlank())
-                        .map(popup -> Update.start(
+                        .map(popup -> OperationUpdate.start(
                                 model.clearError().openPopup(popup.withSending(true)),
                                 new AddComment(popup.pullRequestPopup().branch(), popup.number(), popup.text())))
                         .getOrElse(() -> Next.of(model));

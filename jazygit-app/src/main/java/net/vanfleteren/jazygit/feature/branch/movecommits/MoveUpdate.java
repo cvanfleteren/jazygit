@@ -20,7 +20,7 @@ import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Notice;
 import net.vanfleteren.jazygit.state.OperationUpdate;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.RereadUpdate;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
@@ -49,13 +49,13 @@ public final class MoveUpdate {
                                 based(model.withoutPopup(MoveBasePopup.class), popup.request(), popup.name(), base))
                         .getOrElse(() -> Next.of(model));
             case PushedConfirmed(boolean forcePush) ->
-                Update.confirm(
+                OperationUpdate.confirm(
                         model,
                         MovePushedPopup.class,
                         popup -> Option.of(move(popup.request(), popup.target(), forcePush)));
             case Moved(var cmd, var commands) -> moved(model, cmd, commands);
             case Stopped(var cmd, var commands, var notice) ->
-                Update.refresh(OperationUpdate.done(model, cmd, commands)
+                RereadUpdate.refresh(OperationUpdate.done(model, cmd, commands)
                         .inform(new Notice.MoveStopped(notice, cmd.from(), cmd.oldest(), cmd.branch())));
         };
     }
@@ -131,7 +131,7 @@ public final class MoveUpdate {
      */
     private static Next targetChosen(Model model, MoveRequest request, Option<BranchName> branch) {
         return branch.fold(
-                () -> Update.ask(model, new MoveNamePopup(request)),
+                () -> OperationUpdate.ask(model, new MoveNamePopup(request)),
                 name -> model.repo()
                         .branch(name)
                         .map(known -> known.worktreeLocation()
@@ -169,7 +169,7 @@ public final class MoveUpdate {
                         .map(name -> {
                             Model closed = model.withoutPopup(MoveNamePopup.class);
                             return popup.request().bases().size() > 1
-                                    ? Update.ask(closed, new MoveBasePopup(popup.request(), name))
+                                    ? OperationUpdate.ask(closed, new MoveBasePopup(popup.request(), name))
                                     : based(closed, popup.request(), name, new MoveBase.Parent());
                         }))
                 .getOrElse(() -> Next.of(model));
@@ -193,13 +193,14 @@ public final class MoveUpdate {
      * the commits unmoved. Untracked files do not count, as git only stops for those that are in the way.
      */
     private static Next targeted(Model model, MoveRequest request, MoveTarget target) {
-        boolean changed = Update.files(model).exists(file -> file.type() != ChangeType.UNTRACKED);
+        boolean changed =
+                model.repo().files().getOrElse(List.empty()).exists(file -> file.type() != ChangeType.UNTRACKED);
         return copiedOnto(target)
                 .filter(onto -> changed)
                 .map(onto -> Next.of(model.fail(new AppError.ChangesBeforeMove(onto))))
                 .getOrElse(() -> request.pushed()
-                        ? Update.ask(model, new MovePushedPopup(request, target))
-                        : Update.start(model.clearError(), move(request, target, false)));
+                        ? OperationUpdate.ask(model, new MovePushedPopup(request, target))
+                        : OperationUpdate.start(model.clearError(), move(request, target, false)));
     }
 
     /**
@@ -225,7 +226,7 @@ public final class MoveUpdate {
         Next checkedOut = new CheckoutMsg.CheckedOut(cmd, commands).apply(model);
         return cmd.forcePush()
                 .map(upstream -> {
-                    Next pushing = Update.start(
+                    Next pushing = OperationUpdate.start(
                             checkedOut.model(), new PushCmd.Push(cmd.from(), upstream, PushMode.FORCE_WITH_LEASE));
                     return new Next(pushing.model(), checkedOut.cmds().appendAll(pushing.cmds()));
                 })

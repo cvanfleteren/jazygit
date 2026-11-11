@@ -13,7 +13,7 @@ import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.DivergenceView;
 import net.vanfleteren.jazygit.state.DivergenceView.Against;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
@@ -29,7 +29,7 @@ public final class UpstreamUpdate {
         return switch (msg) {
             case UpstreamMsg.Requested(Option<BranchName> branch) -> {
                 Option<Branch> highlighted = branch.flatMap(model.repo()::branch);
-                yield Update.ask(
+                yield OperationUpdate.ask(
                         model,
                         new UpstreamPopup(
                                 highlighted,
@@ -104,7 +104,7 @@ public final class UpstreamUpdate {
     private static Next resetChosen(Model model, UpstreamPopup popup) {
         return popup.checkedOut()
                 .map(branch -> branch.upstream()
-                        .map(upstream -> Update.ask(
+                        .map(upstream -> OperationUpdate.ask(
                                 model, new ResetPopup(new ResetTarget.ToUpstream(upstream.branch()), upstream.ahead())))
                         .getOrElse(() -> Next.of(model.fail(AppError.noUpstream(branch)))))
                 .getOrElse(() ->

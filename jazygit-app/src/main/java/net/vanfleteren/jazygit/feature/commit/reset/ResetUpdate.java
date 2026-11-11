@@ -7,7 +7,7 @@ import net.vanfleteren.jazygit.git.model.ResetMode;
 import net.vanfleteren.jazygit.git.model.ResetTarget;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
@@ -21,7 +21,7 @@ public final class ResetUpdate {
     public static Next update(Model model, ResetMsg msg) {
         return switch (msg) {
             case ResetMsg.Requested(Sha sha) ->
-                Update.ask(
+                OperationUpdate.ask(
                         model, model.commit(sha).map(commit -> new ResetPopup(new ResetTarget.ToCommit(commit.sha()))));
             case ResetMsg.Chosen(ResetMode mode) -> chosen(model, mode);
         };
@@ -35,10 +35,11 @@ public final class ResetUpdate {
         boolean confirm = mode == ResetMode.HARD && !discarded.contains(0);
         return confirm
                 ? model.popup(ResetPopup.class)
-                        .map(popup -> Update.ask(
+                        .map(popup -> OperationUpdate.ask(
                                 model.withoutPopup(ResetPopup.class), new HardResetPopup(popup.target(), discarded)))
                         .getOrElse(() -> Next.of(model))
-                : Update.confirm(model, ResetPopup.class, popup -> Option.of(new ResetCmd(popup.target(), mode)));
+                : OperationUpdate.confirm(
+                        model, ResetPopup.class, popup -> Option.of(new ResetCmd(popup.target(), mode)));
     }
 
     /**

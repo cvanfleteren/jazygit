@@ -3,7 +3,7 @@ package net.vanfleteren.jazygit.feature.commit.revert;
 import net.vanfleteren.jazygit.feature.commit.revert.RevertMsg.Requested;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
@@ -24,6 +24,6 @@ public final class RevertUpdate {
      * Any commit can be reverted, a merge against its first parent.
      */
     private static Next requested(Model model, Sha sha) {
-        return model.commit(sha).map(RevertPopup::new).transform(popup -> Update.ask(model, popup));
+        return model.commit(sha).map(RevertPopup::new).transform(popup -> OperationUpdate.ask(model, popup));
     }
 }

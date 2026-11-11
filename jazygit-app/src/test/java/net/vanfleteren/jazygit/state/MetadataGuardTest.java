@@ -82,7 +82,7 @@ class MetadataGuardTest {
 
     @Test
     void anOperationStillReadsEverythingAtOnce() {
-        List<Cmd> cmds = Update.refresh(idle()).cmds();
+        List<Cmd> cmds = RereadUpdate.refresh(idle()).cmds();
 
         assertTrue(CheckMetadata.GUARDED.forAll(cmds::contains));
         assertFalse(cmds.contains(new CheckMetadata()));

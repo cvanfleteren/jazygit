@@ -57,8 +57,8 @@ class WorktreeChangesTest {
 
     @Test
     void aTickReadsTheOtherWorktreesThatAreOnDiskOnlyWhileTheWorktreesAreShown() {
-        assertFalse(Update.refresh(withWorktrees()).cmds().exists(cmd -> cmd instanceof LoadWorktreeChanges));
-        assertTrue(Update.refresh(onWorktreesTab(withWorktrees())).cmds().contains(LOAD));
+        assertFalse(RereadUpdate.refresh(withWorktrees()).cmds().exists(cmd -> cmd instanceof LoadWorktreeChanges));
+        assertTrue(RereadUpdate.refresh(onWorktreesTab(withWorktrees())).cmds().contains(LOAD));
     }
 
     @Test
@@ -72,17 +72,17 @@ class WorktreeChangesTest {
 
     @Test
     void aTickDoesNotReadThemAgainWhileTheyAreBeingRead() {
-        Model reading = TestModels.started(Update.refresh(onWorktreesTab(withWorktrees())))
+        Model reading = TestModels.started(RereadUpdate.refresh(onWorktreesTab(withWorktrees())))
                 .model();
 
-        assertFalse(Update.refresh(reading).cmds().exists(cmd -> cmd instanceof LoadWorktreeChanges));
+        assertFalse(RereadUpdate.refresh(reading).cmds().exists(cmd -> cmd instanceof LoadWorktreeChanges));
     }
 
     @Test
     void aTickWaitsAWhileAfterTheyWereReadBeforeReadingThemAgain() {
         Instant read = Instant.parse("2026-10-21T10:00:00Z");
         Model done = Update.update(
-                        Update.refresh(onWorktreesTab(withWorktrees()).withNow(read))
+                        RereadUpdate.refresh(onWorktreesTab(withWorktrees()).withNow(read))
                                 .model(),
                         new LoadMsg.WorktreeChangesLoaded(List.of(LINKED.toString()), HashMap.empty()))
                 .model();
@@ -90,7 +90,7 @@ class WorktreeChangesTest {
         assertFalse(Update.update(done.withNow(read.plusMillis(500)), new TimerMsg.Tick())
                 .cmds()
                 .exists(cmd -> cmd instanceof LoadWorktreeChanges));
-        assertTrue(Update.update(done.withNow(read.plus(Update.WORKTREE_CHANGES_INTERVAL)), new TimerMsg.Tick())
+        assertTrue(Update.update(done.withNow(read.plus(RereadUpdate.WORKTREE_CHANGES_INTERVAL)), new TimerMsg.Tick())
                 .cmds()
                 .contains(LOAD));
     }
@@ -99,7 +99,7 @@ class WorktreeChangesTest {
     void failingToReadThemAlsoMakesATickWait() {
         Instant read = Instant.parse("2026-10-21T10:00:00Z");
         Model failed = Update.update(
-                        Update.refresh(onWorktreesTab(withWorktrees()).withNow(read))
+                        RereadUpdate.refresh(onWorktreesTab(withWorktrees()).withNow(read))
                                 .model(),
                         new LoadMsg.Failed(LOAD, new Failure.Git(new GitError.TimedOut("status", LINKED))))
                 .model();
@@ -139,7 +139,7 @@ class WorktreeChangesTest {
     @Test
     void whatWasReadReplacesWhatWasKnownAndTheShownWorktreeGoesByItsStatus() {
         Model model = TestModels.done(
-                        TestModels.started(Update.refresh(onWorktreesTab(withWorktrees())))
+                        TestModels.started(RereadUpdate.refresh(onWorktreesTab(withWorktrees())))
                                 .model(),
                         LOAD,
                         new LoadMsg.WorktreeChangesLoaded(

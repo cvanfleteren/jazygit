@@ -31,7 +31,7 @@ public final class EditPullRequestUpdate {
         return switch (msg) {
             // Once the details are read, whatever state the pull request is in: closed and merged ones are edited too.
             case EditPullRequestMsg.Requested() ->
-                Update.ask(
+                OperationUpdate.ask(
                         model,
                         model.popup(PullRequestPopup.class)
                                 .flatMap(shown -> shown.readDetails().map(details -> opened(model, shown, details))));
@@ -58,7 +58,8 @@ public final class EditPullRequestUpdate {
                 editable(model)
                         .filter(popup -> !popup.fields().title().isBlank())
                         .map(popup -> save(popup)
-                                .map(cmd -> Update.start(model.clearError().openPopup(popup.withSaving(true)), cmd))
+                                .map(cmd -> OperationUpdate.start(
+                                        model.clearError().openPopup(popup.withSaving(true)), cmd))
                                 .getOrElse(() -> Next.of(model.clearError().openPopup(popup.from()))))
                         .getOrElse(() -> Next.of(model));
             case EditPullRequestMsg.Cancelled() ->
