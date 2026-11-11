@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import org.junit.jupiter.api.Test;
@@ -50,11 +51,11 @@ class StackFragmentTest {
 
         assertEquals(
                 Option.of(List.of(
-                        new PullRequestStack.Entry(1, 94, State.OPEN, "feat/a", "main"),
-                        new PullRequestStack.Entry(2, 95, State.OPEN, "feat/b", "feat/a"))),
+                        new PullRequestStack.Entry(1, 94, State.OPEN, new GhBranch("feat/a"), new GhBranch("main")),
+                        new PullRequestStack.Entry(2, 95, State.OPEN, new GhBranch("feat/b"), new GhBranch("feat/a")))),
                 read.map(PullRequestStack::entries));
-        assertEquals(Option.of(Option.of("feat/a")), read.map(PullRequestStack::branchBelow));
-        assertEquals(Option.of(Option.of("main")), read.map(PullRequestStack::base));
+        assertEquals(Option.of(Option.of(new GhBranch("feat/a"))), read.map(PullRequestStack::branchBelow));
+        assertEquals(Option.of(Option.of(new GhBranch("main"))), read.map(PullRequestStack::base));
     }
 
     @Test
@@ -70,8 +71,22 @@ class StackFragmentTest {
 
         assertEquals(
                 Option.of(List.of(
-                        new PullRequestStack.Entry(1, 94, State.MERGED, "feat/a", "main", Option.of("abc123"), false),
-                        new PullRequestStack.Entry(2, 95, State.OPEN, "feat/b", "feat/a", Option.of("def456"), true))),
+                        new PullRequestStack.Entry(
+                                1,
+                                94,
+                                State.MERGED,
+                                new GhBranch("feat/a"),
+                                new GhBranch("main"),
+                                Option.of("abc123"),
+                                false),
+                        new PullRequestStack.Entry(
+                                2,
+                                95,
+                                State.OPEN,
+                                new GhBranch("feat/b"),
+                                new GhBranch("feat/a"),
+                                Option.of("def456"),
+                                true))),
                 read.map(PullRequestStack::entries));
     }
 
@@ -85,7 +100,14 @@ class StackFragmentTest {
 
         assertEquals(
                 Option.of(List.of(new PullRequestStack.Entry(
-                        1, 94, State.OPEN, "feat/a", "main", Option.of("abc123"), false, true))),
+                        1,
+                        94,
+                        State.OPEN,
+                        new GhBranch("feat/a"),
+                        new GhBranch("main"),
+                        Option.of("abc123"),
+                        false,
+                        true))),
                 read.map(PullRequestStack::entries));
     }
 

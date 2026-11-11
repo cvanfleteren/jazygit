@@ -3,7 +3,6 @@ package net.vanfleteren.jazygit.state.github;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
-import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.GitHubBases;
 import net.vanfleteren.jazygit.state.Model;
@@ -40,7 +39,7 @@ public final class PullRequestsUpdate {
                         GitHubReads.done(
                                 FailingRead.ran(
                                         model.mapGitHub(gitHub -> gitHub.withProtectedBranches(Option.of(
-                                                branches.map(BranchName::new).toSet()))),
+                                                branches.map(FromGitHub::branch).toSet()))),
                                         new LoadProtectedBranches(),
                                         false),
                                 new LoadProtectedBranches()));

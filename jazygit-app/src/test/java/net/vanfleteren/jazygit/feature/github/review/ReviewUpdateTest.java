@@ -35,13 +35,9 @@ import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.AppError.CannotReview.Why;
-import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.diff.*;
-import net.vanfleteren.jazygit.state.diff.Changes;
-import net.vanfleteren.jazygit.state.diff.WholeFile;
 import net.vanfleteren.jazygit.state.load.*;
-import net.vanfleteren.jazygit.state.load.ReadWholeFile;
 import net.vanfleteren.jazygit.state.view.*;
 import org.junit.jupiter.api.Test;
 
@@ -94,8 +90,8 @@ class ReviewUpdateTest {
                                 Instant.EPOCH,
                                 "Why?\nReally?",
                                 Option.none(),
-                                "C" + id.substring(1),
-                                "1",
+                                new ReviewThread.Comment.Id("C" + id.substring(1)),
+                                new ReviewThread.Comment.RestId("1"),
                                 CommentRights.ALL),
                         // A reply, R1 on T1.
                         new Comment(
@@ -103,11 +99,11 @@ class ReviewUpdateTest {
                                 Instant.EPOCH,
                                 "Yes",
                                 Option.none(),
-                                "R" + id.substring(1),
-                                "2",
+                                new ReviewThread.Comment.Id("R" + id.substring(1)),
+                                new ReviewThread.Comment.RestId("2"),
                                 CommentRights.ALL)),
                 0,
-                id,
+                new ReviewThread.Id(id),
                 rights);
     }
 
@@ -121,7 +117,7 @@ class ReviewUpdateTest {
 
     private static Model files(PullRequestDetails.State state, String head, List<ReviewThread> threads) {
         Model opened = Update.update(
-                        loaded(), new CommitFilesMsg.Opened(new Changes.OfPullRequest(COMMITS), Scopes.BRANCHES.id()))
+                        loaded(), new CommitFilesMsg.Opened(new Changes.OfPullRequest(COMMITS), Scopes.BRANCHES.pane()))
                 .model();
         Model read = Update.update(
                         opened,
@@ -154,7 +150,7 @@ class ReviewUpdateTest {
     }
 
     private static Anchor onThread(String id) {
-        return new Anchor.Thread(id, Option.of(line(Side.RIGHT, 2)));
+        return new Anchor.Thread(new ReviewThread.Id(id), Option.of(line(Side.RIGHT, 2)));
     }
 
     private static CommitFilesView view(Model model) {
@@ -169,9 +165,10 @@ class ReviewUpdateTest {
     void aThreadIsResolvedAtOnceAndTakesNoSecondKeyUntilItIsReadAgainAfterIt() {
         Next resolving = Update.update(files(), new ReviewMsg.ResolveAsked(at(onThread("T1"))));
 
-        ReviewCmd.Resolve resolve = new ReviewCmd.Resolve(7, "T1", true);
+        ReviewCmd.Resolve resolve = new ReviewCmd.Resolve(7, new ReviewThread.Id("T1"), true);
         assertEquals(List.of(resolve), resolving.cmds());
-        assertEquals(HashSet.of("T1"), view(resolving.model()).sending());
+        assertEquals(
+                HashSet.of(new ReviewThread.Id("T1")), view(resolving.model()).sending());
 
         Next again = Update.update(resolving.model(), new ReviewMsg.ResolveAsked(at(onThread("T1"))));
         assertEquals(List.empty(), again.cmds());
@@ -182,11 +179,14 @@ class ReviewUpdateTest {
                         .model()));
 
         Next resolved = Update.update(resolving.model(), new ReviewMsg.Resolved(resolve, List.empty()));
-        assertTrue(resolved.cmds().contains(new CommitFilesCmd.LoadReviewRemarks(7, HashSet.of("T1"), 0)));
-        assertEquals(HashSet.of("T1"), view(resolved.model()).sending());
+        assertTrue(resolved.cmds()
+                .contains(new CommitFilesCmd.LoadReviewRemarks(7, HashSet.of(new ReviewThread.Id("T1")), 0)));
+        assertEquals(
+                HashSet.of(new ReviewThread.Id("T1")), view(resolved.model()).sending());
 
         Model read = Update.update(
-                        resolved.model(), new CommitFilesMsg.RemarksLoaded(7, remarks(), HashSet.of("T1"), 0))
+                        resolved.model(),
+                        new CommitFilesMsg.RemarksLoaded(7, remarks(), HashSet.of(new ReviewThread.Id("T1")), 0))
                 .model();
         assertEquals(HashSet.empty(), view(read).sending());
     }
@@ -202,7 +202,7 @@ class ReviewUpdateTest {
         Model stale = Update.update(
                         refreshed.model(), new CommitFilesMsg.RemarksLoaded(7, remarks(), HashSet.empty(), 0))
                 .model();
-        assertEquals(HashSet.of("T1"), view(stale).sending());
+        assertEquals(HashSet.of(new ReviewThread.Id("T1")), view(stale).sending());
         Next again = Update.update(stale, new ReviewMsg.ResolveAsked(at(onThread("T1"))));
         assertEquals(List.empty(), again.cmds());
         assertEquals(Option.of(new AppError.CannotReview(Why.SENDING)), error(again.model()));
@@ -213,13 +213,16 @@ class ReviewUpdateTest {
         Model resolved = Update.update(
                         Update.update(files(), new ReviewMsg.ResolveAsked(at(onThread("T1"))))
                                 .model(),
-                        new ReviewMsg.Resolved(new ReviewCmd.Resolve(7, "T1", true), List.empty()))
+                        new ReviewMsg.Resolved(new ReviewCmd.Resolve(7, new ReviewThread.Id("T1"), true), List.empty()))
                 .model();
 
         Model failed = Update.update(
                         resolved,
                         new CommitFilesMsg.RemarksFailed(
-                                7, new Failure.Bug(new RuntimeException("offline")), HashSet.of("T1"), 0))
+                                7,
+                                new Failure.Bug(new RuntimeException("offline")),
+                                HashSet.of(new ReviewThread.Id("T1")),
+                                0))
                 .model();
 
         assertEquals(HashSet.empty(), view(failed).sending());
@@ -237,7 +240,8 @@ class ReviewUpdateTest {
         Model failed = Update.update(
                         resolving.model(),
                         new ReviewMsg.ResolveFailed(
-                                new ReviewCmd.Resolve(7, "T1", true), new Failure.Bug(new RuntimeException("offline"))))
+                                new ReviewCmd.Resolve(7, new ReviewThread.Id("T1"), true),
+                                new Failure.Bug(new RuntimeException("offline"))))
                 .model();
 
         assertEquals(HashSet.empty(), view(failed).sending());
@@ -254,13 +258,17 @@ class ReviewUpdateTest {
     @Test
     void theBrowserOpensOnTheCommentOfTheCursorOrElseOnThePullRequest() {
         assertEquals(
-                List.of(new BrowseRemarkCmd(new PullRequestLink("", "owner/repo", 7, Option.of("1")))),
+                List.of(new BrowseRemarkCmd(
+                        new PullRequestLink("", "owner/repo", 7, Option.of(new ReviewThread.Comment.RestId("1"))))),
                 Update.update(files(), new ReviewMsg.OpenAsked(at(onThread("T1"))))
                         .cmds());
         assertEquals(
-                List.of(new BrowseRemarkCmd(new PullRequestLink("", "owner/repo", 7, Option.of("2")))),
-                Update.update(files(), new ReviewMsg.OpenAsked(at(new Anchor.Comment("R1", (Anchor.Thread)
-                                onThread("T1")))))
+                List.of(new BrowseRemarkCmd(
+                        new PullRequestLink("", "owner/repo", 7, Option.of(new ReviewThread.Comment.RestId("2"))))),
+                Update.update(
+                                files(),
+                                new ReviewMsg.OpenAsked(at(new Anchor.Comment(
+                                        new ReviewThread.Comment.Id("R1"), (Anchor.Thread) onThread("T1")))))
                         .cmds());
         assertEquals(
                 List.of(new BrowseRemarkCmd(new PullRequestLink("", "owner/repo", 7, Option.none()))),
@@ -274,7 +282,9 @@ class ReviewUpdateTest {
                 files(PullRequestDetails.State.MERGED, "c".repeat(40)), new ReviewMsg.OpenAsked(at(onThread("T1"))));
 
         assertEquals(
-                List.of(new BrowseRemarkCmd(new PullRequestLink("", "owner/repo", 7, Option.of("1")))), opened.cmds());
+                List.of(new BrowseRemarkCmd(
+                        new PullRequestLink("", "owner/repo", 7, Option.of(new ReviewThread.Comment.RestId("1"))))),
+                opened.cmds());
         assertEquals(Option.none(), error(opened.model()));
     }
 
@@ -306,7 +316,9 @@ class ReviewUpdateTest {
     void aThreadOrACommentIsCollapsedAndOpenedAgainstItsDefault() {
         Model opened = Update.update(files(), new ReviewMsg.ThreadToggled(at(onThread("T2"))))
                 .model();
-        assertEquals(new Collapsed(HashMap.of("T2", true)), view(opened).collapsed());
+        assertEquals(
+                new Collapsed(HashMap.of(new Collapsed.Key("T2"), true)),
+                view(opened).collapsed());
         assertFalse(view(opened).collapsed().thread(SETTLED));
 
         Model closed = Update.update(opened, new ReviewMsg.ThreadToggled(at(onThread("T2"))))
@@ -317,10 +329,14 @@ class ReviewUpdateTest {
         Model collapsed = Update.update(files(), new ReviewMsg.ThreadToggled(at(onThread("T1"))))
                 .model();
         assertTrue(view(collapsed).collapsed().thread(OPEN));
-        Model comment = Update.update(files(), new ReviewMsg.ThreadToggled(at(new Anchor.Comment("R1", (Anchor.Thread)
-                        onThread("T1")))))
+        Model comment = Update.update(
+                        files(),
+                        new ReviewMsg.ThreadToggled(at(
+                                new Anchor.Comment(new ReviewThread.Comment.Id("R1"), (Anchor.Thread) onThread("T1")))))
                 .model();
-        assertEquals(new Collapsed(HashMap.of("R1", false)), view(comment).collapsed());
+        assertEquals(
+                new Collapsed(HashMap.of(new Collapsed.Key("R1"), false)),
+                view(comment).collapsed());
     }
 
     @Test
@@ -344,7 +360,10 @@ class ReviewUpdateTest {
         // With whether each was collapsed by default, and when it was flipped (ADR 63).
         assertEquals(
                 List.of(new CommitFilesCmd.SaveCollapsed(
-                        "owner/repo", 7, HashMap.of("T2", true), opened.model().now())),
+                        "owner/repo",
+                        7,
+                        HashMap.of(new Collapsed.Key("T2"), true),
+                        opened.model().now())),
                 opened.cmds());
         assertEquals(
                 List.of(new CommitFilesCmd.SaveCollapsed(
@@ -356,9 +375,11 @@ class ReviewUpdateTest {
     @Test
     void whatWasCollapsedOrOpenedInAnEarlierSessionIsAsItWasUnlessItsDefaultChangedSince() {
         // T2 opened while resolved, R1 collapsed, and T1 opened while resolved, which it is no longer.
-        CommitFilesMsg.CollapsedLoaded kept =
-                new CommitFilesMsg.CollapsedLoaded(7, HashMap.of("T2", true, "R1", false, "T1", true));
-        Collapsed expected = new Collapsed(HashMap.of("T2", true, "R1", false));
+        CommitFilesMsg.CollapsedLoaded kept = new CommitFilesMsg.CollapsedLoaded(
+                7,
+                HashMap.of(
+                        new Collapsed.Key("T2"), true, new Collapsed.Key("R1"), false, new Collapsed.Key("T1"), true));
+        Collapsed expected = new Collapsed(HashMap.of(new Collapsed.Key("T2"), true, new Collapsed.Key("R1"), false));
 
         Model read = Update.update(files(), kept).model();
         assertEquals(expected, view(read).collapsed());
@@ -367,7 +388,7 @@ class ReviewUpdateTest {
 
         // Kept before the threads are read, it is the same once they are.
         Model opened = Update.update(
-                        loaded(), new CommitFilesMsg.Opened(new Changes.OfPullRequest(COMMITS), Scopes.BRANCHES.id()))
+                        loaded(), new CommitFilesMsg.Opened(new Changes.OfPullRequest(COMMITS), Scopes.BRANCHES.pane()))
                 .model();
         Model early = Update.update(opened, kept).model();
         assertEquals(
@@ -382,7 +403,7 @@ class ReviewUpdateTest {
         assertTrue(view(Update.update(collapsed, kept).model()).collapsed().thread(OPEN));
     }
 
-    private static CommitFilesMsg.RemarksLoaded readAgain(Set<String> settled, ReviewThread... threads) {
+    private static CommitFilesMsg.RemarksLoaded readAgain(Set<ReviewThread.Id> settled, ReviewThread... threads) {
         return new CommitFilesMsg.RemarksLoaded(
                 7,
                 new ReviewRemarks(
@@ -396,7 +417,8 @@ class ReviewUpdateTest {
         Model toggled = Update.update(
                         Update.update(files(), new ReviewMsg.ThreadToggled(at(onThread("T1"))))
                                 .model(),
-                        new ReviewMsg.ThreadToggled(at(new Anchor.Comment("R1", (Anchor.Thread) onThread("T1")))))
+                        new ReviewMsg.ThreadToggled(at(
+                                new Anchor.Comment(new ReviewThread.Comment.Id("R1"), (Anchor.Thread) onThread("T1")))))
                 .model();
         Next resolving = Update.update(toggled, new ReviewMsg.ResolveAsked(at(onThread("T1"))));
         ReviewCmd.Resolve resolve = (ReviewCmd.Resolve) resolving.cmds().head();
@@ -405,32 +427,37 @@ class ReviewUpdateTest {
         Model resolved = Update.update(resolving.model(), new ReviewMsg.Resolved(resolve, List.empty()))
                 .model();
         assertEquals(
-                new Collapsed(HashMap.of("T1", false, "R1", false)),
+                new Collapsed(HashMap.of(new Collapsed.Key("T1"), false, new Collapsed.Key("R1"), false)),
                 view(resolved).collapsed());
         assertTrue(view(resolved).collapsed().thread(OPEN));
 
         // Read again resolved, it is as a resolved thread starts: collapsed, its flip dropped; its comments stay.
         ReviewThread done = thread("T1", true, ReviewThread.Rights.ALL);
-        Model read = Update.update(resolved, readAgain(HashSet.of("T1"), done, SETTLED))
+        Model read = Update.update(resolved, readAgain(HashSet.of(new ReviewThread.Id("T1")), done, SETTLED))
                 .model();
-        assertEquals(new Collapsed(HashMap.of("R1", false)), view(read).collapsed());
+        assertEquals(
+                new Collapsed(HashMap.of(new Collapsed.Key("R1"), false)),
+                view(read).collapsed());
         assertTrue(view(read).collapsed().thread(done));
 
         // A read again that fails keeps the flip, as the thread is still drawn as it was read.
         Model failed = Update.update(
                         resolved,
                         new CommitFilesMsg.RemarksFailed(
-                                7, new Failure.Bug(new RuntimeException("offline")), HashSet.of("T1"), 0))
+                                7,
+                                new Failure.Bug(new RuntimeException("offline")),
+                                HashSet.of(new ReviewThread.Id("T1")),
+                                0))
                 .model();
         assertEquals(
-                new Collapsed(HashMap.of("T1", false, "R1", false)),
+                new Collapsed(HashMap.of(new Collapsed.Key("T1"), false, new Collapsed.Key("R1"), false)),
                 view(failed).collapsed());
         Model notSent = Update.update(
                         resolving.model(),
                         new ReviewMsg.ResolveFailed(resolve, new Failure.Bug(new RuntimeException("offline"))))
                 .model();
         assertEquals(
-                new Collapsed(HashMap.of("T1", false, "R1", false)),
+                new Collapsed(HashMap.of(new Collapsed.Key("T1"), false, new Collapsed.Key("R1"), false)),
                 view(notSent).collapsed());
     }
 
@@ -438,11 +465,13 @@ class ReviewUpdateTest {
     void aThreadResolvedOrUnresolvedElsewhereIsAsItStartsOnceReadAgain() {
         Model opened = Update.update(files(), new ReviewMsg.ThreadToggled(at(onThread("T2"))))
                 .model();
-        assertEquals(new Collapsed(HashMap.of("T2", true)), view(opened).collapsed());
+        assertEquals(
+                new Collapsed(HashMap.of(new Collapsed.Key("T2"), true)),
+                view(opened).collapsed());
 
         // Read again as it was, the flip stays.
         assertEquals(
-                new Collapsed(HashMap.of("T2", true)),
+                new Collapsed(HashMap.of(new Collapsed.Key("T2"), true)),
                 view(Update.update(opened, readAgain(HashSet.empty(), OPEN, SETTLED))
                                 .model())
                         .collapsed());
@@ -456,17 +485,17 @@ class ReviewUpdateTest {
 
     @Test
     void theKeysOfAThreadWorkOnEachOfItsComments() {
-        Anchor onComment = new Anchor.Comment("R1", (Anchor.Thread) onThread("T1"));
+        Anchor onComment = new Anchor.Comment(new ReviewThread.Comment.Id("R1"), (Anchor.Thread) onThread("T1"));
 
         assertEquals(
-                new Target.Reply("T1", "1"),
+                new Target.Reply(new ReviewThread.Id("T1"), new ReviewThread.Comment.RestId("1")),
                 Update.update(files(), new ReviewMsg.ReplyAsked(at(onComment)))
                         .model()
                         .popup(ReviewPopup.class)
                         .get()
                         .target());
         assertEquals(
-                List.of(new ReviewCmd.Resolve(7, "T1", true)),
+                List.of(new ReviewCmd.Resolve(7, new ReviewThread.Id("T1"), true)),
                 Update.update(files(), new ReviewMsg.ResolveAsked(at(onComment)))
                         .cmds());
     }
@@ -476,20 +505,23 @@ class ReviewUpdateTest {
         Model asked = Update.update(files(), new ReviewMsg.ReplyAsked(at(onThread("T1"))))
                 .model();
         ReviewPopup popup = asked.popup(ReviewPopup.class).get();
-        assertEquals(new Target.Reply("T1", "1"), popup.target());
+        assertEquals(new Target.Reply(new ReviewThread.Id("T1"), new ReviewThread.Comment.RestId("1")), popup.target());
         assertEquals(List.of("carol:", "Yes"), popup.quoted());
 
         Model typed = Update.update(asked, new ReviewMsg.Edited("Because")).model();
         Next sending = Update.update(typed, new ReviewMsg.Confirmed());
 
-        ReviewCmd.Send send = new ReviewCmd.Send(7, new Target.Reply("T1", "1"), "Because");
+        ReviewCmd.Send send = new ReviewCmd.Send(
+                7, new Target.Reply(new ReviewThread.Id("T1"), new ReviewThread.Comment.RestId("1")), "Because");
         assertEquals(List.of(send), sending.cmds());
         assertTrue(sending.model().popup(ReviewPopup.class).get().sending());
-        assertEquals(HashSet.of("T1"), view(sending.model()).sending());
+        assertEquals(
+                HashSet.of(new ReviewThread.Id("T1")), view(sending.model()).sending());
 
         Next sent = Update.update(sending.model(), new ReviewMsg.Sent(send, List.empty()));
         assertEquals(Option.none(), sent.model().popup(ReviewPopup.class));
-        assertTrue(sent.cmds().contains(new CommitFilesCmd.LoadReviewRemarks(7, HashSet.of("T1"), 0)));
+        assertTrue(sent.cmds()
+                .contains(new CommitFilesCmd.LoadReviewRemarks(7, HashSet.of(new ReviewThread.Id("T1")), 0)));
     }
 
     @Test
@@ -503,7 +535,11 @@ class ReviewUpdateTest {
         Model failed = Update.update(
                         sending,
                         new ReviewMsg.SendFailed(
-                                new ReviewCmd.Send(7, new Target.Reply("T1", "1"), "Because"),
+                                new ReviewCmd.Send(
+                                        7,
+                                        new Target.Reply(
+                                                new ReviewThread.Id("T1"), new ReviewThread.Comment.RestId("1")),
+                                        "Because"),
                                 new Failure.Bug(new RuntimeException("offline"))))
                 .model();
 
@@ -519,8 +555,8 @@ class ReviewUpdateTest {
                 .model();
 
         ReviewPopup popup = asked.popup(ReviewPopup.class).get();
-        Target.Start start =
-                new Target.Start(HEAD, "a.txt", Option.of(new NewReviewThread.Lines(Side.LEFT, 2, Side.RIGHT, 3)));
+        Target.Start start = new Target.Start(
+                new Sha(HEAD), "a.txt", Option.of(new NewReviewThread.Lines(Side.LEFT, 2, Side.RIGHT, 3)));
         assertEquals(start, popup.target());
         assertEquals(List.of("-two", "+TWO", " three"), popup.quoted());
         assertEquals(Option.of(new ReviewPopup.Lines(2, 3)), popup.where().lines());
@@ -543,7 +579,7 @@ class ReviewUpdateTest {
                 .model();
 
         assertEquals(
-                new Target.Start(HEAD, "a.txt", Option.none()),
+                new Target.Start(new Sha(HEAD), "a.txt", Option.none()),
                 asked.popup(ReviewPopup.class).get().target());
     }
 
@@ -572,7 +608,8 @@ class ReviewUpdateTest {
 
         ReviewPopup popup = asked.popup(ReviewPopup.class).get();
         assertEquals(
-                new Target.Start(HEAD, "a.txt", Option.of(new NewReviewThread.Lines(Side.RIGHT, 20, Side.RIGHT, 21))),
+                new Target.Start(
+                        new Sha(HEAD), "a.txt", Option.of(new NewReviewThread.Lines(Side.RIGHT, 20, Side.RIGHT, 21))),
                 popup.target());
         assertEquals(List.of(" line20", " line21"), popup.quoted());
         assertEquals(
@@ -618,15 +655,24 @@ class ReviewUpdateTest {
                 false,
                 false,
                 ReviewThread.Subject.LINE,
-                List.of(new Comment("bob", Instant.EPOCH, "Why?", Option.none(), "C3", "3", CommentRights.ALL)),
+                List.of(new Comment(
+                        "bob",
+                        Instant.EPOCH,
+                        "Why?",
+                        Option.none(),
+                        new ReviewThread.Comment.Id("C3"),
+                        new ReviewThread.Comment.RestId("3"),
+                        CommentRights.ALL)),
                 0,
-                "T3",
+                new ReviewThread.Id("T3"),
                 ReviewThread.Rights.ALL);
         Model expanded =
                 expanded(files(PullRequestDetails.State.OPEN, HEAD, List.of(onExpanded)), new Folding.Lines(20, 21));
 
         Model asked = Update.update(
-                        expanded, new ReviewMsg.EditAsked(at(new Anchor.Thread("T3", Option.of(line(Side.RIGHT, 20))))))
+                        expanded,
+                        new ReviewMsg.EditAsked(
+                                at(new Anchor.Thread(new ReviewThread.Id("T3"), Option.of(line(Side.RIGHT, 20))))))
                 .model();
 
         assertEquals(List.of(" line20"), asked.popup(ReviewPopup.class).get().quoted());
@@ -670,14 +716,14 @@ class ReviewUpdateTest {
     }
 
     private static Anchor onComment(String comment, String thread) {
-        return new Anchor.Comment(comment, (Anchor.Thread) onThread(thread));
+        return new Anchor.Comment(new ReviewThread.Comment.Id(comment), (Anchor.Thread) onThread(thread));
     }
 
     private static List<String> comments(Model model, String thread) {
         return view(model)
                 .threads()
-                .find(each -> each.id().equals(thread))
-                .map(each -> each.comments().map(Comment::id))
+                .find(each -> each.id().equals(new ReviewThread.Id(thread)))
+                .map(each -> each.comments().map(comment -> comment.id().value()))
                 .getOrElse(List.empty());
     }
 
@@ -694,14 +740,17 @@ class ReviewUpdateTest {
         Model asked = Update.update(files(), new ReviewMsg.DeleteAsked(at(onComment("R1", "T1"))))
                 .model();
         DeleteCommentPopup popup = asked.popup(DeleteCommentPopup.class).get();
-        assertEquals("R1", popup.comment().id());
-        assertEquals("T1", popup.thread());
+        assertEquals(new ReviewThread.Comment.Id("R1"), popup.comment().id());
+        assertEquals(new ReviewThread.Id("T1"), popup.thread());
 
         Next confirmed = Update.update(asked, new ReviewMsg.DeleteConfirmed());
-        ReviewCmd.DeleteComment delete = new ReviewCmd.DeleteComment(7, "T1", "R1");
+        ReviewCmd.DeleteComment delete =
+                new ReviewCmd.DeleteComment(7, new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("R1"));
         assertEquals(List.of(delete), confirmed.cmds());
         assertTrue(confirmed.model().popup(DeleteCommentPopup.class).isEmpty());
-        assertEquals(HashSet.of("R1"), view(confirmed.model()).deleting());
+        assertEquals(
+                HashSet.of(new ReviewThread.Comment.Id("R1")),
+                view(confirmed.model()).deleting());
         assertEquals(List.of("C1", "R1"), comments(confirmed.model(), "T1"));
 
         Next deleted = Update.update(confirmed.model(), new ReviewMsg.CommentDeleted(delete, List.empty()));
@@ -714,7 +763,8 @@ class ReviewUpdateTest {
     @Test
     void theStopOfAnOpenThreadIsItsFirstCommentAndOnceThatIsDeletedTheNextIsItsFirst() {
         Next confirmed = deleting(files(), onThread("T1"));
-        ReviewCmd.DeleteComment delete = new ReviewCmd.DeleteComment(7, "T1", "C1");
+        ReviewCmd.DeleteComment delete =
+                new ReviewCmd.DeleteComment(7, new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("C1"));
         assertEquals(List.of(delete), confirmed.cmds());
 
         Model deleted = Update.update(confirmed.model(), new ReviewMsg.CommentDeleted(delete, List.empty()))
@@ -725,7 +775,7 @@ class ReviewUpdateTest {
         Model replying = Update.update(deleted, new ReviewMsg.ReplyAsked(at(onThread("T1"))))
                 .model();
         assertEquals(
-                new Target.Reply("T1", "2"),
+                new Target.Reply(new ReviewThread.Id("T1"), new ReviewThread.Comment.RestId("2")),
                 replying.popup(ReviewPopup.class).get().target());
     }
 
@@ -733,14 +783,20 @@ class ReviewUpdateTest {
     void aThreadGoesWithItsLastComment() {
         Model once = Update.update(
                         deleting(files(), onComment("R1", "T1")).model(),
-                        new ReviewMsg.CommentDeleted(new ReviewCmd.DeleteComment(7, "T1", "R1"), List.empty()))
+                        new ReviewMsg.CommentDeleted(
+                                new ReviewCmd.DeleteComment(
+                                        7, new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("R1")),
+                                List.empty()))
                 .model();
         Model twice = Update.update(
                         deleting(once, onThread("T1")).model(),
-                        new ReviewMsg.CommentDeleted(new ReviewCmd.DeleteComment(7, "T1", "C1"), List.empty()))
+                        new ReviewMsg.CommentDeleted(
+                                new ReviewCmd.DeleteComment(
+                                        7, new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("C1")),
+                                List.empty()))
                 .model();
 
-        assertEquals(List.of("T2"), view(twice).threads().map(ReviewThread::id));
+        assertEquals(List.of(new ReviewThread.Id("T2")), view(twice).threads().map(ReviewThread::id));
         assertEquals(2, view(twice).version());
     }
 
@@ -841,7 +897,7 @@ class ReviewUpdateTest {
         Model movedOn = files(PullRequestDetails.State.CLOSED, "c".repeat(40));
 
         assertEquals(
-                List.of(new ReviewCmd.DeleteComment(7, "T1", "R1")),
+                List.of(new ReviewCmd.DeleteComment(7, new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("R1"))),
                 deleting(movedOn, onComment("R1", "T1")).cmds());
     }
 
@@ -849,8 +905,12 @@ class ReviewUpdateTest {
     void aCommentGoneBeforeItsDeleteIsConfirmedIsNotDeleted() {
         Model asked = Update.update(files(), new ReviewMsg.DeleteAsked(at(onComment("R1", "T1"))))
                 .model();
-        ReviewRemarks without =
-                view(asked).withoutComment("R1").remarks().get().toOption().get();
+        ReviewRemarks without = view(asked)
+                .withoutComment(new ReviewThread.Comment.Id("R1"))
+                .remarks()
+                .get()
+                .toOption()
+                .get();
         Model read = Update.update(asked, new CommitFilesMsg.RemarksLoaded(7, without, HashSet.empty(), 0))
                 .model();
 
@@ -862,7 +922,8 @@ class ReviewUpdateTest {
 
     @Test
     void aDeleteThatFailedLeavesTheComment() {
-        ReviewCmd.DeleteComment delete = new ReviewCmd.DeleteComment(7, "T1", "R1");
+        ReviewCmd.DeleteComment delete =
+                new ReviewCmd.DeleteComment(7, new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("R1"));
         Model failed = Update.update(
                         deleting(files(), onComment("R1", "T1")).model(),
                         new ReviewMsg.DeleteFailed(delete, new Failure.Bug(new RuntimeException("offline"))))
@@ -879,22 +940,31 @@ class ReviewUpdateTest {
         Next resolved = Update.update(
                 Update.update(files(), new ReviewMsg.ResolveAsked(at(onThread("T1"))))
                         .model(),
-                new ReviewMsg.Resolved(new ReviewCmd.Resolve(7, "T1", true), List.empty()));
-        assertTrue(resolved.cmds().contains(new CommitFilesCmd.LoadReviewRemarks(7, HashSet.of("T1"), 0)));
+                new ReviewMsg.Resolved(new ReviewCmd.Resolve(7, new ReviewThread.Id("T1"), true), List.empty()));
+        assertTrue(resolved.cmds()
+                .contains(new CommitFilesCmd.LoadReviewRemarks(7, HashSet.of(new ReviewThread.Id("T1")), 0)));
         Model deleted = Update.update(
                         deleting(resolved.model(), onComment("R2", "T2")).model(),
-                        new ReviewMsg.CommentDeleted(new ReviewCmd.DeleteComment(7, "T2", "R2"), List.empty()))
+                        new ReviewMsg.CommentDeleted(
+                                new ReviewCmd.DeleteComment(
+                                        7, new ReviewThread.Id("T2"), new ReviewThread.Comment.Id("R2")),
+                                List.empty()))
                 .model();
 
         // The read of before the delete comes back with the comment still in it.
-        Next stale = Update.update(deleted, new CommitFilesMsg.RemarksLoaded(7, remarks(), HashSet.of("T1"), 0));
+        Next stale = Update.update(
+                deleted, new CommitFilesMsg.RemarksLoaded(7, remarks(), HashSet.of(new ReviewThread.Id("T1")), 0));
 
-        assertEquals(List.of(new CommitFilesCmd.LoadReviewRemarks(7, HashSet.of("T1"), 1)), stale.cmds());
+        assertEquals(
+                List.of(new CommitFilesCmd.LoadReviewRemarks(7, HashSet.of(new ReviewThread.Id("T1")), 1)),
+                stale.cmds());
         assertEquals(List.of("C2"), comments(stale.model(), "T2"));
-        assertEquals(HashSet.of("T1"), view(stale.model()).sending());
+        assertEquals(HashSet.of(new ReviewThread.Id("T1")), view(stale.model()).sending());
 
         ReviewRemarks after = view(deleted).remarks().get().toOption().get();
-        Model read = Update.update(stale.model(), new CommitFilesMsg.RemarksLoaded(7, after, HashSet.of("T1"), 1))
+        Model read = Update.update(
+                        stale.model(),
+                        new CommitFilesMsg.RemarksLoaded(7, after, HashSet.of(new ReviewThread.Id("T1")), 1))
                 .model();
         assertEquals(HashSet.empty(), view(read).sending());
         assertEquals(List.of("C2"), comments(read, "T2"));
@@ -931,12 +1001,17 @@ class ReviewUpdateTest {
     void aCollapsedThreadOfOneCommentIsDeletedWithItButNotOneGitHubHasMoreCommentsOf() {
         Model one = files(PullRequestDetails.State.OPEN, HEAD, List.of(OPEN, firstOnly(SETTLED, 0)));
         Next confirmed = deleting(one, onThread("T2"));
-        assertEquals(List.of(new ReviewCmd.DeleteComment(7, "T2", "C2")), confirmed.cmds());
+        assertEquals(
+                List.of(new ReviewCmd.DeleteComment(7, new ReviewThread.Id("T2"), new ReviewThread.Comment.Id("C2"))),
+                confirmed.cmds());
         Model deleted = Update.update(
                         confirmed.model(),
-                        new ReviewMsg.CommentDeleted(new ReviewCmd.DeleteComment(7, "T2", "C2"), List.empty()))
+                        new ReviewMsg.CommentDeleted(
+                                new ReviewCmd.DeleteComment(
+                                        7, new ReviewThread.Id("T2"), new ReviewThread.Comment.Id("C2")),
+                                List.empty()))
                 .model();
-        assertEquals(List.of("T1"), view(deleted).threads().map(ReviewThread::id));
+        assertEquals(List.of(new ReviewThread.Id("T1")), view(deleted).threads().map(ReviewThread::id));
 
         Model more = files(PullRequestDetails.State.OPEN, HEAD, List.of(OPEN, firstOnly(SETTLED, 4)));
         assertEquals(
@@ -954,7 +1029,8 @@ class ReviewUpdateTest {
     @Test
     void aThreadWhoseCommentsReadAreAllDeletedIsReadAgainAndTakesNoReplyUntilThen() {
         Model more = files(PullRequestDetails.State.OPEN, HEAD, List.of(firstOnly(OPEN, 60), SETTLED));
-        ReviewCmd.DeleteComment delete = new ReviewCmd.DeleteComment(7, "T1", "C1");
+        ReviewCmd.DeleteComment delete =
+                new ReviewCmd.DeleteComment(7, new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("C1"));
 
         Next deleted = Update.update(
                 deleting(more, onThread("T1")).model(), new ReviewMsg.CommentDeleted(delete, List.empty()));
@@ -984,11 +1060,16 @@ class ReviewUpdateTest {
                         HashSet.empty(),
                         0));
         assertNotEquals(view(confirmed).of(), view(moved.model()).of());
-        assertEquals(HashSet.of("R1"), view(moved.model()).deleting());
+        assertEquals(
+                HashSet.of(new ReviewThread.Comment.Id("R1")),
+                view(moved.model()).deleting());
 
         Model deleted = Update.update(
                         moved.model(),
-                        new ReviewMsg.CommentDeleted(new ReviewCmd.DeleteComment(7, "T1", "R1"), List.empty()))
+                        new ReviewMsg.CommentDeleted(
+                                new ReviewCmd.DeleteComment(
+                                        7, new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("R1")),
+                                List.empty()))
                 .model();
         Model rebuilt = Update.update(
                         deleted,
@@ -1014,7 +1095,7 @@ class ReviewUpdateTest {
         Model asked = Update.update(files(), new ReviewMsg.EditAsked(at(onComment("R1", "T1"))))
                 .model();
         ReviewPopup popup = asked.popup(ReviewPopup.class).get();
-        Target.Edit edit = new Target.Edit("T1", "R1", "Yes");
+        Target.Edit edit = new Target.Edit(new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("R1"), "Yes");
         assertEquals(edit, popup.target());
         assertEquals("Yes", popup.text());
         // Under the comment before it, on the lines of its thread.
@@ -1063,7 +1144,8 @@ class ReviewUpdateTest {
 
         ReviewPopup popup = asked.popup(ReviewPopup.class).get();
         assertEquals("a\nb", popup.text());
-        assertEquals(new Target.Edit("T1", "R1", "a\nb"), popup.target());
+        assertEquals(
+                new Target.Edit(new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("R1"), "a\nb"), popup.target());
         assertFalse(popup.holdsInput());
         assertEquals(
                 List.empty(), Update.update(asked, new ReviewMsg.Confirmed()).cmds());
@@ -1076,7 +1158,9 @@ class ReviewUpdateTest {
                 .popup(ReviewPopup.class)
                 .get();
 
-        assertEquals(new Target.Edit("T1", "C1", "Why?\nReally?"), popup.target());
+        assertEquals(
+                new Target.Edit(new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("C1"), "Why?\nReally?"),
+                popup.target());
         assertEquals(List.of("+TWO"), popup.quoted());
     }
 
@@ -1097,7 +1181,10 @@ class ReviewUpdateTest {
 
         // A change of whitespace only is a change.
         assertEquals(
-                List.of(new ReviewCmd.Send(7, new Target.Edit("T1", "R1", "Yes"), "Yes ")),
+                List.of(new ReviewCmd.Send(
+                        7,
+                        new Target.Edit(new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("R1"), "Yes"),
+                        "Yes ")),
                 Update.update(Update.update(asked, new ReviewMsg.Edited("Yes ")).model(), new ReviewMsg.Confirmed())
                         .cmds());
     }
@@ -1144,7 +1231,11 @@ class ReviewUpdateTest {
         Model failed = Update.update(
                         saving,
                         new ReviewMsg.SendFailed(
-                                new ReviewCmd.Send(7, new Target.Edit("T1", "R1", "Yes"), "Yes!"),
+                                new ReviewCmd.Send(
+                                        7,
+                                        new Target.Edit(
+                                                new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("R1"), "Yes"),
+                                        "Yes!"),
                                 new Failure.Bug(new RuntimeException("offline"))))
                 .model();
 
@@ -1167,7 +1258,11 @@ class ReviewUpdateTest {
         Model saved = Update.update(
                         saving,
                         new ReviewMsg.CommentEdited(
-                                new ReviewCmd.Send(7, new Target.Edit("T1", "R1", "Yes"), "Yes!"),
+                                new ReviewCmd.Send(
+                                        7,
+                                        new Target.Edit(
+                                                new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("R1"), "Yes"),
+                                        "Yes!"),
                                 "Yes!",
                                 List.empty()))
                 .model();
@@ -1184,13 +1279,18 @@ class ReviewUpdateTest {
         Model asked = Update.update(files(), new ReviewMsg.ReactAsked(at(onComment("R1", "T1"))))
                 .model();
         ReactionPopup popup = asked.popup(ReactionPopup.class).get();
-        assertEquals(new ReactionPopup(7, "T1", "R1", Reactions.NONE), popup);
+        assertEquals(
+                new ReactionPopup(7, new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("R1"), Reactions.NONE),
+                popup);
 
         Next chosen = Update.update(asked, new ReviewMsg.ReactionChosen(Reaction.EYES));
-        ReviewCmd.React react = new ReviewCmd.React(7, "T1", "R1", Reaction.EYES, true);
+        ReviewCmd.React react = new ReviewCmd.React(
+                7, new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("R1"), Reaction.EYES, true);
         assertEquals(List.of(react), chosen.cmds());
         assertTrue(chosen.model().popup(ReactionPopup.class).isEmpty());
-        assertEquals(HashSet.of("R1"), view(chosen.model()).reacting());
+        assertEquals(
+                HashSet.of(new ReviewThread.Comment.Id("R1")),
+                view(chosen.model()).reacting());
 
         Next reacted = Update.update(chosen.model(), new ReviewMsg.Reacted(react, List.empty()));
         assertFalse(reacted.cmds().exists(cmd -> cmd instanceof CommitFilesCmd.LoadReviewRemarks));
@@ -1204,14 +1304,22 @@ class ReviewUpdateTest {
     void aReactionTheViewerGaveIsTakenBackWhenChosenAgain() {
         Model reacted = Update.update(
                         files(),
-                        new ReviewMsg.Reacted(new ReviewCmd.React(7, "T1", "C1", Reaction.HEART, true), List.empty()))
+                        new ReviewMsg.Reacted(
+                                new ReviewCmd.React(
+                                        7,
+                                        new ReviewThread.Id("T1"),
+                                        new ReviewThread.Comment.Id("C1"),
+                                        Reaction.HEART,
+                                        true),
+                                List.empty()))
                 .model();
         Model asked = Update.update(reacted, new ReviewMsg.ReactAsked(at(onThread("T1"))))
                 .model();
 
         Next chosen = Update.update(asked, new ReviewMsg.ReactionChosen(Reaction.HEART));
 
-        ReviewCmd.React unreact = new ReviewCmd.React(7, "T1", "C1", Reaction.HEART, false);
+        ReviewCmd.React unreact = new ReviewCmd.React(
+                7, new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("C1"), Reaction.HEART, false);
         assertEquals(List.of(unreact), chosen.cmds());
         assertEquals(
                 Reactions.NONE,
@@ -1247,13 +1355,23 @@ class ReviewUpdateTest {
         // Meanwhile the viewer's heart arrives, as from a read of the threads.
         Model meanwhile = Update.update(
                         asked,
-                        new ReviewMsg.Reacted(new ReviewCmd.React(7, "T1", "C1", Reaction.HEART, true), List.empty()))
+                        new ReviewMsg.Reacted(
+                                new ReviewCmd.React(
+                                        7,
+                                        new ReviewThread.Id("T1"),
+                                        new ReviewThread.Comment.Id("C1"),
+                                        Reaction.HEART,
+                                        true),
+                                List.empty()))
                 .model();
         assertEquals(Reactions.NONE, meanwhile.popup(ReactionPopup.class).get().reactions());
 
         Next chosen = Update.update(meanwhile, new ReviewMsg.ReactionChosen(Reaction.HEART));
 
-        assertEquals(List.of(new ReviewCmd.React(7, "T1", "C1", Reaction.HEART, false)), chosen.cmds());
+        assertEquals(
+                List.of(new ReviewCmd.React(
+                        7, new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("C1"), Reaction.HEART, false)),
+                chosen.cmds());
     }
 
     @Test
@@ -1261,7 +1379,11 @@ class ReviewUpdateTest {
         Model asked = Update.update(files(), new ReviewMsg.ReactAsked(at(onComment("R1", "T1"))))
                 .model();
         Model deleted = Update.update(
-                        asked, new ReviewMsg.CommentDeleted(new ReviewCmd.DeleteComment(7, "T1", "R1"), List.empty()))
+                        asked,
+                        new ReviewMsg.CommentDeleted(
+                                new ReviewCmd.DeleteComment(
+                                        7, new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("R1")),
+                                List.empty()))
                 .model();
 
         Next chosen = Update.update(deleted, new ReviewMsg.ReactionChosen(Reaction.EYES));
@@ -1309,7 +1431,8 @@ class ReviewUpdateTest {
                                 .model(),
                         new ReviewMsg.ReactionChosen(Reaction.ROCKET))
                 .model();
-        ReviewCmd.React react = new ReviewCmd.React(7, "T1", "R1", Reaction.ROCKET, true);
+        ReviewCmd.React react = new ReviewCmd.React(
+                7, new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("R1"), Reaction.ROCKET, true);
 
         Model failed = Update.update(
                         sending, new ReviewMsg.ReactFailed(react, new Failure.Bug(new RuntimeException("offline"))))
@@ -1323,7 +1446,8 @@ class ReviewUpdateTest {
 
     @Test
     void aReactionToACommentGitHubNoLongerHasTakesItOutOfItsThreadAndSaysSo() {
-        ReviewCmd.React react = new ReviewCmd.React(7, "T1", "R1", Reaction.ROCKET, true);
+        ReviewCmd.React react = new ReviewCmd.React(
+                7, new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("R1"), Reaction.ROCKET, true);
 
         Next failed = Update.update(
                 files(), new ReviewMsg.ReactFailed(react, new Failure.GitHub(new GhError.Gone(), List.empty())));
@@ -1337,7 +1461,7 @@ class ReviewUpdateTest {
     @Test
     void nothingIsCommentedOnEditedNorDeletedUntilTheThreadsAreRead() {
         Model reading = Update.update(
-                        loaded(), new CommitFilesMsg.Opened(new Changes.OfPullRequest(COMMITS), Scopes.BRANCHES.id()))
+                        loaded(), new CommitFilesMsg.Opened(new Changes.OfPullRequest(COMMITS), Scopes.BRANCHES.pane()))
                 .model();
         Model failed = Update.update(
                         reading,
@@ -1376,27 +1500,33 @@ class ReviewUpdateTest {
     void theThreadsOfAPullRequestNotListedAreReadAgainAtTheFirstVersion() {
         Model deleted = Update.update(
                         deleting(files(), onComment("R1", "T1")).model(),
-                        new ReviewMsg.CommentDeleted(new ReviewCmd.DeleteComment(7, "T1", "R1"), List.empty()))
+                        new ReviewMsg.CommentDeleted(
+                                new ReviewCmd.DeleteComment(
+                                        7, new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("R1")),
+                                List.empty()))
                 .model();
         assertEquals(1, view(deleted).version());
 
-        Next resolved =
-                Update.update(deleted, new ReviewMsg.Resolved(new ReviewCmd.Resolve(8, "T9", true), List.empty()));
+        Next resolved = Update.update(
+                deleted,
+                new ReviewMsg.Resolved(new ReviewCmd.Resolve(8, new ReviewThread.Id("T9"), true), List.empty()));
 
-        assertTrue(resolved.cmds().contains(new CommitFilesCmd.LoadReviewRemarks(8, HashSet.of("T9"), 0)));
+        assertTrue(resolved.cmds()
+                .contains(new CommitFilesCmd.LoadReviewRemarks(8, HashSet.of(new ReviewThread.Id("T9")), 0)));
     }
 
     @Test
     void aDeleteOrAReactionConfirmedForAnotherPullRequestIsNotSent() {
-        Model deleteOther = files().openPopup(
-                        new DeleteCommentPopup(8, "T1", OPEN.comments().last(), Instant.EPOCH));
+        Model deleteOther = files().openPopup(new DeleteCommentPopup(
+                8, new ReviewThread.Id("T1"), OPEN.comments().last(), Instant.EPOCH));
         Next deleted = Update.update(deleteOther, new ReviewMsg.DeleteConfirmed());
         assertEquals(List.empty(), deleted.cmds());
         assertTrue(deleted.model().popup(DeleteCommentPopup.class).isEmpty());
         assertEquals(HashSet.empty(), view(deleted.model()).deleting());
         assertEquals(Option.of(new AppError.CannotReview(Why.NOT_READ)), error(deleted.model()));
 
-        Model reactOther = files().openPopup(new ReactionPopup(8, "T1", "R1", Reactions.NONE));
+        Model reactOther = files().openPopup(new ReactionPopup(
+                8, new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("R1"), Reactions.NONE));
         Next reacted = Update.update(reactOther, new ReviewMsg.ReactionChosen(Reaction.EYES));
         assertEquals(List.empty(), reacted.cmds());
         assertTrue(reacted.model().popup(ReactionPopup.class).isEmpty());
@@ -1463,7 +1593,7 @@ class ReviewUpdateTest {
         return view(model)
                 .threads()
                 .flatMap(ReviewThread::comments)
-                .find(each -> each.id().equals(comment))
+                .find(each -> each.id().equals(new Comment.Id(comment)))
                 .map(Comment::reactions)
                 .get();
     }

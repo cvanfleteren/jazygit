@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.github.FromGitHub;
 
 /**
  * Checking out a pull request listed on the pull requests screen.
@@ -135,7 +136,7 @@ public final class CheckoutPullRequestUpdate {
      * from a fork gh names after its owner, so it is not looked for.
      */
     private static Option<Readiness> checkedOutElsewhere(Model model, PullRequestSummary pullRequest) {
-        BranchName branch = new BranchName(pullRequest.headBranch());
+        BranchName branch = FromGitHub.branch(pullRequest.headBranch());
         return Option.when(!pullRequest.fromFork(), branch)
                 .flatMap(model.repo()::branch)
                 .flatMap(Branch::worktreeLocation)
@@ -149,7 +150,7 @@ public final class CheckoutPullRequestUpdate {
         return !pullRequest.fromFork()
                 && model.repo()
                         .currentBranch()
-                        .exists(current -> current.name().value().equals(pullRequest.headBranch()));
+                        .exists(current -> current.name().equals(FromGitHub.branch(pullRequest.headBranch())));
     }
 
     /**

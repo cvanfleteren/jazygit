@@ -8,7 +8,7 @@ import io.vavr.control.Option;
  *
  * @param number     its number, e.g. 42 for {@code #42}
  * @param headBranch the branch on the remote it merges from
- * @param baseBranch the branch on the remote it merges into, empty when not known
+ * @param baseBranch the branch on the remote it merges into, {@link GhBranch#UNKNOWN} when not known
  * @param draft      whether it is still a draft
  * @param checks     how its CI checks are doing
  * @param review     where its review stands
@@ -17,8 +17,8 @@ import io.vavr.control.Option;
  */
 public record PullRequest(
         int number,
-        String headBranch,
-        String baseBranch,
+        GhBranch headBranch,
+        GhBranch baseBranch,
         boolean draft,
         Checks checks,
         Review review,
@@ -30,13 +30,13 @@ public record PullRequest(
      */
     public PullRequest(
             int number,
-            String headBranch,
+            GhBranch headBranch,
             boolean draft,
             Checks checks,
             Review review,
             Option<PullRequestStack> stack,
             Option<Commits> commits) {
-        this(number, headBranch, "", draft, checks, review, stack, commits);
+        this(number, headBranch, GhBranch.UNKNOWN, draft, checks, review, stack, commits);
     }
 
     /**
@@ -44,7 +44,7 @@ public record PullRequest(
      */
     public PullRequest(
             int number,
-            String headBranch,
+            GhBranch headBranch,
             boolean draft,
             Checks checks,
             Review review,
@@ -55,15 +55,8 @@ public record PullRequest(
     /**
      * One that is not stacked.
      */
-    public PullRequest(int number, String headBranch, boolean draft, Checks checks, Review review) {
+    public PullRequest(int number, GhBranch headBranch, boolean draft, Checks checks, Review review) {
         this(number, headBranch, draft, checks, review, Option.none());
-    }
-
-    /**
-     * The branch it merges from, as GitHub names it: what a pull request stacked on it takes as its base (ADR 73).
-     */
-    public GhBranch head() {
-        return new GhBranch(headBranch);
     }
 
     /**

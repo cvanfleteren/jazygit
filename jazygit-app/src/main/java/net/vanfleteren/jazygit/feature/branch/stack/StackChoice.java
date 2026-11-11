@@ -181,7 +181,7 @@ public record StackChoice(List<StackChoice.Row> rows, int branch, int bottom, in
                 .zip(pullRequests.drop(1))
                 .filter(pair -> !pair._2().baseBranch().equals(pair._1().headBranch()))
                 .map(pair -> new BaseChange(
-                        pair._2().number(), pair._2().baseBranch(), pair._1().head()));
+                        pair._2().number(), pair._2().baseBranch(), pair._1().headBranch()));
         return Either.right(new Plan(pullRequests.drop(skip), changes));
     }
 
@@ -202,7 +202,7 @@ public record StackChoice(List<StackChoice.Row> rows, int branch, int bottom, in
      * @param from   the base it has, as GitHub names it
      * @param to     the head of the pull request below it
      */
-    public record BaseChange(int number, String from, GhBranch to) {}
+    public record BaseChange(int number, GhBranch from, GhBranch to) {}
 
     /**
      * What making the stack takes: the pull requests from the bottom up, and the bases that change first.

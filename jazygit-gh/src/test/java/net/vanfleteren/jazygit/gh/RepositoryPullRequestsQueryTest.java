@@ -10,6 +10,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
@@ -48,7 +49,7 @@ class RepositoryPullRequestsQueryTest {
                                         7,
                                         "WIP",
                                         "",
-                                        "patch-1",
+                                        new GhBranch("patch-1"),
                                         true,
                                         true,
                                         Checks.NONE,
@@ -58,7 +59,7 @@ class RepositoryPullRequestsQueryTest {
                                         Option.none(),
                                         Option.none(),
                                         Option.none(),
-                                        "main")),
+                                        new GhBranch("main"))),
                                 1),
                         Option.of("bob"),
                         7)),
@@ -94,8 +95,10 @@ class RepositoryPullRequestsQueryTest {
                         2,
                         2,
                         List.of(
-                                new PullRequestStack.Entry(1, 94, State.MERGED, "b94", "main"),
-                                new PullRequestStack.Entry(2, 95, State.OPEN, "b95", "b94")))),
+                                new PullRequestStack.Entry(
+                                        1, 94, State.MERGED, new GhBranch("b94"), new GhBranch("main")),
+                                new PullRequestStack.Entry(
+                                        2, 95, State.OPEN, new GhBranch("b95"), new GhBranch("b94"))))),
                 read("{ \"login\": \"bob\" }", "", 1, summary(95, "null", NO_SUITES, STACKED))
                         .get()
                         .open()

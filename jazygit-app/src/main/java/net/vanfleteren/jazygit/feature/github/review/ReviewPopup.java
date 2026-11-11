@@ -4,6 +4,8 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import lombok.With;
 import net.vanfleteren.jazygit.gh.model.NewReviewThread;
+import net.vanfleteren.jazygit.gh.model.ReviewThread;
+import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.diff.Scrolled;
 import net.vanfleteren.jazygit.state.popup.Popup;
@@ -47,22 +49,21 @@ public record ReviewPopup(
     public sealed interface Target {
 
         /**
-         * A reply to the thread with the id {@code thread}, whose first comment has the id {@code comment}, as REST
-         * numbers it.
+         * A reply to the thread with the id {@code thread}, whose first comment has the REST id {@code comment}.
          */
-        record Reply(String thread, String comment) implements Target {}
+        record Reply(ReviewThread.Id thread, ReviewThread.Comment.RestId comment) implements Target {}
 
         /**
          * A thread to start on the pull request at its head commit {@code commit}, on {@code lines} of the file
          * {@code path}, or on the whole file.
          */
-        record Start(String commit, String path, Option<NewReviewThread.Lines> lines) implements Target {}
+        record Start(Sha commit, String path, Option<NewReviewThread.Lines> lines) implements Target {}
 
         /**
          * The comment with the node id {@code comment} of the thread with the id {@code thread}, edited from
          * {@code body}, what it said when the popup opened (ADR 65).
          */
-        record Edit(String thread, String comment, String body) implements Target {}
+        record Edit(ReviewThread.Id thread, ReviewThread.Comment.Id comment, String body) implements Target {}
     }
 
     /**

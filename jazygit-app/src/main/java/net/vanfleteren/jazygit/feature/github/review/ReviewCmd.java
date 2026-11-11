@@ -3,8 +3,11 @@ package net.vanfleteren.jazygit.feature.github.review;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.github.review.ReviewPopup.Target;
+import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.NewReviewThread;
 import net.vanfleteren.jazygit.gh.model.Reaction;
+import net.vanfleteren.jazygit.gh.model.ReviewThread;
+import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Env;
@@ -87,17 +90,18 @@ public sealed interface ReviewCmd extends Cmd {
         @Override
         public Msg run(Env env) {
             return switch (target) {
-                case Target.Reply(String ignored, String comment) ->
+                case Target.Reply(var ignored, ReviewThread.Comment.RestId comment) ->
                     env.gitHub()
                             .replyToReviewThread(number, comment, body)
                             .mapLeft(Failure::of)
                             .fold(this::failed, this::succeeded);
-                case Target.Start(String commit, String path, var lines) ->
+                case Target.Start(Sha commit, String path, var lines) ->
                     env.gitHub()
-                            .startReviewThread(number, commit, new NewReviewThread(path, lines, body))
+                            .startReviewThread(
+                                    number, new GhCommit(commit.value()), new NewReviewThread(path, lines, body))
                             .mapLeft(Failure::of)
                             .fold(this::failed, this::succeeded);
-                case Target.Edit(String ignored, String comment, String original) ->
+                case Target.Edit(var ignored, ReviewThread.Comment.Id comment, String original) ->
                     env.gitHub()
                             .editReviewComment(comment, body)
                             .mapLeft(Failure::of)
@@ -122,7 +126,7 @@ public sealed interface ReviewCmd extends Cmd {
      * Resolves the thread with the id {@code thread} of pull request {@code number} when {@code resolved}, else
      * unresolves it.
      */
-    record Resolve(int number, String thread, boolean resolved) implements ReviewCmd, OperationCmd {
+    record Resolve(int number, ReviewThread.Id thread, boolean resolved) implements ReviewCmd, OperationCmd {
 
         @Override
         public Operation operation() {
@@ -157,7 +161,8 @@ public sealed interface ReviewCmd extends Cmd {
      * Deletes the comment with the id {@code comment} of the thread with the id {@code thread} of pull request
      * {@code number} (ADR 64).
      */
-    record DeleteComment(int number, String thread, String comment) implements ReviewCmd, OperationCmd {
+    record DeleteComment(int number, ReviewThread.Id thread, ReviewThread.Comment.Id comment)
+            implements ReviewCmd, OperationCmd {
 
         @Override
         public Operation operation() {
@@ -192,7 +197,7 @@ public sealed interface ReviewCmd extends Cmd {
      * Gives {@code reaction} to the comment with the id {@code comment} of the thread with the id {@code thread} of
      * pull request {@code number} when {@code given}, else takes it back (ADR 86).
      */
-    record React(int number, String thread, String comment, Reaction reaction, boolean given)
+    record React(int number, ReviewThread.Id thread, ReviewThread.Comment.Id comment, Reaction reaction, boolean given)
             implements ReviewCmd, OperationCmd {
 
         @Override

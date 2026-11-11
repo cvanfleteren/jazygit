@@ -19,6 +19,7 @@ import io.vavr.Tuple;
 import io.vavr.Tuple3;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.json.Decoder;
@@ -42,8 +43,8 @@ final class StackFragment {
                             nullable(map7(
                                     field("number", integer()),
                                     field("state", enumOf(State.class)),
-                                    field("headRefName", string()),
-                                    field("baseRefName", string()),
+                                    field("headRefName", string()).map(GhBranch::new),
+                                    field("baseRefName", string()).map(GhBranch::new),
                                     // Read since ADR 74; an answer without them is still read.
                                     optionalField("headRefOid", nullable(string()))
                                             .map(oid -> oid.flatMap(read -> read)),

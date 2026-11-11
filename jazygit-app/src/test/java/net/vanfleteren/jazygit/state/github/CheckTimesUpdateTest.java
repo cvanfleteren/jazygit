@@ -17,6 +17,7 @@ import net.vanfleteren.jazygit.feature.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.CheckRun;
+import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
@@ -338,7 +339,8 @@ class CheckTimesUpdateTest {
                 "t",
                 "",
                 new Status(PullRequestDetails.State.OPEN, false, PullRequestDetails.Mergeable.UNKNOWN),
-                new Branches("feature", "main", Option.of(new GhCommit("abc")), Option.none()),
+                new Branches(
+                        new GhBranch("feature"), new GhBranch("main"), Option.of(new GhCommit("abc")), Option.none()),
                 new Activity(NOW, NOW),
                 new Size(0, 0, 0, 1),
                 new Conversation(

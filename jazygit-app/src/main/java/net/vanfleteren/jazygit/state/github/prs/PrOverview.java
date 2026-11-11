@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Freshness;
 import net.vanfleteren.jazygit.state.Loadable;
+import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.view.Preview;
 
 /**
@@ -29,8 +30,9 @@ import net.vanfleteren.jazygit.state.view.Preview;
  * @param preview         what the highlighted pull request says and changes, once one is highlighted
  * @param listPane        the id of the list that had the focus last, whose highlighted pull request the content
  *                        panel shows; none before one had it
- * @param focusedPane     the id of the pane of the screen that had the focus last, which it gets back when the
- *                        screen is shown again; none before one had it
+ * @param focusedPane     the id of the pane of the screen that had the focus last, or of the area of the content
+ *                        panel, which it gets back when the screen is shown again; none before one had it. It is
+ *                        not a {@link PaneId}, as it can be an area's.
  */
 @With
 public record PrOverview(
@@ -42,7 +44,7 @@ public record PrOverview(
         Freshness freshness,
         Option<PullRequestSummary> highlighted,
         Option<Preview<PullRequestSummary, PullRequestPreview>> preview,
-        Option<String> listPane,
+        Option<PaneId> listPane,
         Option<String> focusedPane) {
 
     public static final PrOverview INITIAL = new PrOverview(

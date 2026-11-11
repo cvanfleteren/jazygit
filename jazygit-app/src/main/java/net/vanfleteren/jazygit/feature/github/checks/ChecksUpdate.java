@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.github.CheckTimesUpdate;
+import net.vanfleteren.jazygit.state.github.FromGitHub;
 import net.vanfleteren.jazygit.state.github.PendingChecks;
 import net.vanfleteren.jazygit.state.github.Reading;
 
@@ -87,7 +88,7 @@ public final class ChecksUpdate {
      * here may have its name. Every remote on GitHub is of the same repository, so has the same checks.
      */
     public static Option<RemoteBranch> ofPullRequest(Model model, PullRequestPopup dialog) {
-        BranchName head = new BranchName(dialog.pullRequest().headBranch());
+        BranchName head = FromGitHub.branch(dialog.pullRequest().headBranch());
         return model.gitHub()
                 .branchChecks()
                 .filter(checks -> dialog.detailsRead() && !dialog.fromFork())

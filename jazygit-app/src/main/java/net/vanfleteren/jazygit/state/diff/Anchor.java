@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.state.diff;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
 
@@ -50,11 +51,11 @@ public sealed interface Anchor {
      * where the cursor goes when the thread is gone. It is found again by its id, wherever it is now
      * ({@link DiffStops#nearest}).
      */
-    record Thread(String id, Option<OnLine> line) implements Anchor {}
+    record Thread(ReviewThread.Id id, Option<OnLine> line) implements Anchor {}
 
     /**
      * The comment with the id {@code id} of an open thread, but its first, which is the thread (ADR 62). It is found
      * again by its id; when it is gone, as when its thread is collapsed, the cursor goes to its {@code thread}.
      */
-    record Comment(String id, Thread thread) implements Anchor {}
+    record Comment(ReviewThread.Comment.Id id, Thread thread) implements Anchor {}
 }

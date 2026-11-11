@@ -8,4 +8,4 @@ package net.vanfleteren.jazygit.gh.model;
  * @param diff      what it changes, as a unified diff, or only its first lines when it is truncated
  * @param truncated whether lines of the diff were left out
  */
-public record PullRequestPreview(String base, String body, String diff, boolean truncated) {}
+public record PullRequestPreview(GhBranch base, String body, String diff, boolean truncated) {}

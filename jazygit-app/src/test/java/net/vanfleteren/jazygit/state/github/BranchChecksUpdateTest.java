@@ -17,6 +17,7 @@ import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.BranchChecks;
 import net.vanfleteren.jazygit.gh.model.CheckRun;
+import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -33,6 +34,7 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.git.model.RemoteName;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Upstream;
 import net.vanfleteren.jazygit.state.Cmd;
@@ -52,10 +54,10 @@ import org.junit.jupiter.api.Test;
 class BranchChecksUpdateTest {
 
     private static final GitHubChecks ON_ORIGIN = new GitHubChecks(
-            HashSet.of("origin"),
+            HashSet.of(new RemoteName("origin")),
             HashMap.of(new BranchName("feature"), Checks.FAILING, new BranchName("main"), Checks.PASSING));
     private static final PullRequest FEATURE_PR =
-            new PullRequest(42, "feature", false, Checks.PASSING, Review.APPROVED);
+            new PullRequest(42, new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED);
 
     private static RemoteBranch remote(String remote, String branch) {
         return new RemoteBranch(remote, new BranchName(branch));
@@ -100,26 +102,29 @@ class BranchChecksUpdateTest {
                 .run(new Env(
                         StubGit.of().withRemotes(new StubRemotes() {
                             @Override
-                            public Either<GitError, Map<String, String>> urls() {
+                            public Either<GitError, Map<RemoteName, String>> urls() {
                                 return Either.right(HashMap.of(
-                                        "origin",
-                                        "git@github.com:me/repo.git",
-                                        "upstream",
-                                        "git@github.com:owner/repo.git",
-                                        "mirror",
-                                        "https://github.com/owner/repo"));
+                                                "origin",
+                                                "git@github.com:me/repo.git",
+                                                "upstream",
+                                                "git@github.com:owner/repo.git",
+                                                "mirror",
+                                                "https://github.com/owner/repo")
+                                        .mapKeys(RemoteName::new));
                             }
                         }),
                         new StubGitHub() {
                             @Override
                             public Either<GhError, BranchChecks> branchChecks() {
-                                return Either.right(new BranchChecks("owner/repo", HashMap.of("main", Checks.PASSING)));
+                                return Either.right(new BranchChecks(
+                                        "owner/repo", HashMap.of(new GhBranch("main"), Checks.PASSING)));
                             }
                         }));
 
         assertEquals(
                 new BranchChecksMsg.Loaded(new GitHubChecks(
-                        HashSet.of("upstream", "mirror"), HashMap.of(new BranchName("main"), Checks.PASSING))),
+                        HashSet.of("upstream", "mirror").map(RemoteName::new),
+                        HashMap.of(new BranchName("main"), Checks.PASSING))),
                 msg);
     }
 
@@ -136,7 +141,7 @@ class BranchChecksUpdateTest {
 
     private static GitHubChecks pending(String... branches) {
         return new GitHubChecks(
-                HashSet.of("origin"),
+                HashSet.of(new RemoteName("origin")),
                 List.of(branches)
                         .toMap(branch -> new BranchName(branch), branch -> Checks.PENDING)
                         .put(new BranchName("done"), Checks.PASSING));

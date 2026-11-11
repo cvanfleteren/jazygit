@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.state;
 
 import io.vavr.collection.*;
-import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import java.time.Duration;
 import java.time.Instant;
@@ -9,7 +8,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.function.UnaryOperator;
 import lombok.With;
 import net.vanfleteren.jazygit.git.model.*;
-import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.state.diff.DiffCursorAt;
 import net.vanfleteren.jazygit.state.diff.DiffLines;
 import net.vanfleteren.jazygit.state.diff.Expansion;
@@ -110,11 +108,11 @@ public record Model(
             case REPOSITORY ->
                 withRepoView(repoView.withFocusedPane(Option.of(id))
                         .withCommitFiles(repoView.commitFiles()
-                                .filter(view -> content || view.listedIn().equals(id))));
+                                .filter(view -> content || view.listedIn().equals(new PaneId(id)))));
             case PULL_REQUESTS ->
                 withPrOverview(prOverview
                         .withFocusedPane(Option.of(id))
-                        .withListPane(content ? prOverview.listPane() : Option.of(id)));
+                        .withListPane(content ? prOverview.listPane() : Option.of(new PaneId(id))));
         };
     }
 

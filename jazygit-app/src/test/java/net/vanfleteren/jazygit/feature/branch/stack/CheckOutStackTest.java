@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutCmd;
 import net.vanfleteren.jazygit.feature.branch.stack.StackCheckout.Kind;
 import net.vanfleteren.jazygit.feature.branch.stack.StackCheckout.Landing;
 import net.vanfleteren.jazygit.feature.branch.stack.StackCheckout.Status;
+import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -57,10 +58,25 @@ class CheckOutStackTest {
 
     // Stack #12 on main: #95 merged, then feat/a (#96), feat/b (#97) and feat/c (#98), all open.
     private static final List<Entry> ENTRIES = List.of(
-            new Entry(1, 95, State.MERGED, "feat/old", "main"),
-            new Entry(2, 96, State.OPEN, "feat/a", "main", Option.of("1".repeat(40)), false),
-            new Entry(3, 97, State.OPEN, "feat/b", "feat/a", Option.of("b".repeat(40)), false),
-            new Entry(4, 98, State.OPEN, "feat/c", "feat/b", Option.of("c".repeat(40)), false));
+            new Entry(1, 95, State.MERGED, new GhBranch("feat/old"), new GhBranch("main")),
+            new Entry(
+                    2, 96, State.OPEN, new GhBranch("feat/a"), new GhBranch("main"), Option.of("1".repeat(40)), false),
+            new Entry(
+                    3,
+                    97,
+                    State.OPEN,
+                    new GhBranch("feat/b"),
+                    new GhBranch("feat/a"),
+                    Option.of("b".repeat(40)),
+                    false),
+            new Entry(
+                    4,
+                    98,
+                    State.OPEN,
+                    new GhBranch("feat/c"),
+                    new GhBranch("feat/b"),
+                    Option.of("c".repeat(40)),
+                    false));
 
     private static PullRequestStack stack(List<Entry> entries, int position) {
         return new PullRequestStack(12, position, entries.size(), entries);
@@ -117,8 +133,8 @@ class CheckOutStackTest {
                         branch.name(),
                         new PullRequest(
                                 96 + List.of(A, B, C).indexOf(branch.name()),
-                                branch.name().value(),
-                                "",
+                                new GhBranch(branch.name().value()),
+                                GhBranch.UNKNOWN,
                                 false,
                                 Checks.NONE,
                                 Review.NONE,
@@ -238,7 +254,16 @@ class CheckOutStackTest {
     @Test
     void aBranchInAForkIsLeftOutAndNotFetched() {
         List<Entry> forked = ENTRIES.update(
-                3, new Entry(4, 98, State.OPEN, "feat/c", "feat/b", Option.of("c".repeat(40)), false, true));
+                3,
+                new Entry(
+                        4,
+                        98,
+                        State.OPEN,
+                        new GhBranch("feat/c"),
+                        new GhBranch("feat/b"),
+                        Option.of("c".repeat(40)),
+                        false,
+                        true));
 
         assertEquals(List.of(A, B), StackCheckout.fetched(stack(forked, 2)));
         StackCheckout checkout = StackCheckout.of(stack(forked, 2), ORIGIN, FETCHED, Option.none());
@@ -272,11 +297,14 @@ class CheckOutStackTest {
         assertEquals(Status.UP_TO_DATE, StackCheckout.status(model(all), STACK));
         assertEquals(Status.UPDATE, StackCheckout.status(model(all.update(1, following(A, A_TIP, 0, 0))), STACK));
         // A branch whose commit on GitHub is not known may be behind.
-        List<Entry> unknown = ENTRIES.update(1, new Entry(2, 96, State.OPEN, "feat/a", "main"));
+        List<Entry> unknown =
+                ENTRIES.update(1, new Entry(2, 96, State.OPEN, new GhBranch("feat/a"), new GhBranch("main")));
         assertEquals(Status.UPDATE, StackCheckout.status(model(all), stack(unknown, 2)));
         assertEquals(
                 Status.NOTHING,
-                StackCheckout.status(ONE_LOCAL, stack(List.of(new Entry(1, 95, State.MERGED, "x", "main")), 1)));
+                StackCheckout.status(
+                        ONE_LOCAL,
+                        stack(List.of(new Entry(1, 95, State.MERGED, new GhBranch("x"), new GhBranch("main"))), 1)));
     }
 
     @Test
@@ -376,7 +404,7 @@ class CheckOutStackTest {
                 97,
                 "Refresh flow",
                 "sam",
-                "feat/b",
+                new GhBranch("feat/b"),
                 false,
                 false,
                 Checks.NONE,

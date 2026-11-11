@@ -58,8 +58,7 @@ public final class NukeBranchUpdate {
      */
     private static Option<AppError> refused(Model model, Branch branch) {
         return Option.<AppError>when(
-                        branch.isDefault(),
-                        () -> new AppError.DefaultBranch(branch.name().value()))
+                        branch.isDefault(), () -> new AppError.DefaultBranch(new BranchRef.Local(branch.name())))
                 .orElse(() -> Option.when(branch.current(), () -> model.repo().currentWorktree())
                         .flatMap(shown -> shown)
                         .map(shown -> new AppError.ShownWorktreeNotRemovable(shown.name())))

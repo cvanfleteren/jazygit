@@ -356,8 +356,8 @@ final class RemarkLines {
      */
     record RemarkStyle(
             Collapsed collapsed,
-            Set<String> sending,
-            Set<String> deleting,
+            Set<ReviewThread.Id> sending,
+            Set<Comment.Id> deleting,
             Instant now,
             Map<String, Picture> pictures) {
 
@@ -365,7 +365,7 @@ final class RemarkLines {
             this(Collapsed.NONE, HashSet.empty(), HashSet.empty(), now);
         }
 
-        RemarkStyle(Collapsed collapsed, Set<String> sending, Set<String> deleting, Instant now) {
+        RemarkStyle(Collapsed collapsed, Set<ReviewThread.Id> sending, Set<Comment.Id> deleting, Instant now) {
             this(collapsed, sending, deleting, now, HashMap.empty());
         }
 

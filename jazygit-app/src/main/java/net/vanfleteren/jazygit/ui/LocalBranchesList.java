@@ -10,6 +10,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.i18n.Messages;
@@ -202,7 +203,10 @@ class LocalBranchesList implements BranchesTabList {
                                 Messages.get(
                                         "branches.stack.header",
                                         header.stack().number(),
-                                        header.stack().base().getOrElse("?")),
+                                        header.stack()
+                                                .base()
+                                                .map(GhBranch::name)
+                                                .getOrElse("?")),
                                 Theme.Classes.PULL_REQUEST))
                 .appendAll(BranchSegs.group(BranchSegs.spinnerSeg(spinner).toList()))
                 .appendAll(BranchSegs.group(List.of(LoadableList.Seg.styled(
@@ -296,15 +300,15 @@ class LocalBranchesList implements BranchesTabList {
     /**
      * The remote-tracking branch on GitHub of {@code head}, the branch a pull request merges from, if it was fetched.
      */
-    static Option<RemoteBranch> fetched(Model model, String head) {
+    static Option<RemoteBranch> fetched(Model model, GhBranch head) {
         return model.repo()
                 .remoteBranches()
                 .toOption()
                 .getOrElse(List.empty())
                 .iterator()
                 .map(RemoteRef::branch)
-                .find(remote ->
-                        remote.branch().value().equals(head) && model.gitHub().mayBeOnGitHub(remote));
+                .find(remote -> remote.branch().equals(FromGitHub.branch(head))
+                        && model.gitHub().mayBeOnGitHub(remote));
     }
 
     /**

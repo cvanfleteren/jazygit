@@ -12,7 +12,6 @@ import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Branches;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Conversation;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Size;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Status;
-import net.vanfleteren.jazygit.gh.model.Verdict;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
@@ -59,7 +58,7 @@ public interface StubGitHub extends GitHub {
      */
     @Override
     default Either<GhError, PullRequestPreview> pullRequestPreview(String url) {
-        return Either.right(new PullRequestPreview("main", "", "", false));
+        return Either.right(new PullRequestPreview(new GhBranch("main"), "", "", false));
     }
 
     /**
@@ -74,7 +73,7 @@ public interface StubGitHub extends GitHub {
      * A repository that protects no branch.
      */
     @Override
-    default Either<GhError, List<String>> protectedBranches() {
+    default Either<GhError, List<GhBranch>> protectedBranches() {
         return Either.right(List.empty());
     }
 
@@ -128,7 +127,7 @@ public interface StubGitHub extends GitHub {
                 "A pull request",
                 "someone",
                 new Status(PullRequestDetails.State.OPEN, false, PullRequestDetails.Mergeable.UNKNOWN),
-                new Branches("feature", "main"),
+                new Branches(new GhBranch("feature"), new GhBranch("main")),
                 new Activity(Instant.EPOCH, Instant.EPOCH),
                 new Size(0, 0, 0, 1),
                 new Conversation(
@@ -246,48 +245,49 @@ public interface StubGitHub extends GitHub {
 
     @Override
     default Either<GhFailure, List<ExecutedCommand>> startReviewThread(
-            int number, String commit, NewReviewThread thread) {
+            int number, GhCommit commit, NewReviewThread thread) {
         return Either.right(
                 List.of(ReviewThreadMutations.start(number, commit, thread).executed()));
     }
 
     @Override
-    default Either<GhFailure, List<ExecutedCommand>> replyToReviewThread(int number, String comment, String body) {
+    default Either<GhFailure, List<ExecutedCommand>> replyToReviewThread(
+            int number, ReviewThread.Comment.RestId comment, String body) {
         return Either.right(
                 List.of(ReviewThreadMutations.reply(number, comment, body).executed()));
     }
 
     @Override
-    default Either<GhFailure, List<ExecutedCommand>> resolveReviewThread(String thread, boolean resolved) {
+    default Either<GhFailure, List<ExecutedCommand>> resolveReviewThread(ReviewThread.Id thread, boolean resolved) {
         return Either.right(
                 List.of(ReviewThreadMutations.resolve(thread, resolved).executed()));
     }
 
     @Override
-    default Either<GhFailure, List<ExecutedCommand>> deleteReviewComment(String comment) {
+    default Either<GhFailure, List<ExecutedCommand>> deleteReviewComment(ReviewThread.Comment.Id comment) {
         return Either.right(List.of(ReviewThreadMutations.delete(comment).executed()));
     }
 
     @Override
-    default Either<GhFailure, List<ExecutedCommand>> deletePullRequestComment(String comment) {
+    default Either<GhFailure, List<ExecutedCommand>> deletePullRequestComment(PullRequestComment.Id comment) {
         return Either.right(List.of(CliGitHub.deleteCommentCommand(comment).executed()));
     }
 
     @Override
     default Either<GhFailure, List<ExecutedCommand>> reactToReviewComment(
-            String comment, Reaction reaction, boolean given) {
+            ReviewThread.Comment.Id comment, Reaction reaction, boolean given) {
         return Either.right(
                 List.of(ReviewThreadMutations.react(comment, reaction, given).executed()));
     }
 
     @Override
-    default Either<GhFailure, Edited> editReviewComment(String comment, String body) {
+    default Either<GhFailure, Edited> editReviewComment(ReviewThread.Comment.Id comment, String body) {
         return Either.right(new Edited(
                 body, List.of(ReviewThreadMutations.edit(comment, body).executed())));
     }
 
     @Override
-    default Either<GhFailure, Edited> editPullRequestComment(String comment, String body) {
+    default Either<GhFailure, Edited> editPullRequestComment(PullRequestComment.Id comment, String body) {
         return Either.right(new Edited(
                 body, List.of(CliGitHub.editCommentCommand(comment, body).executed())));
     }

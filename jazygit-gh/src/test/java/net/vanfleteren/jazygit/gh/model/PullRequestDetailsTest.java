@@ -24,7 +24,7 @@ class PullRequestDetailsTest {
                 "A pull request",
                 "someone",
                 new Status(state, true, PullRequestDetails.Mergeable.UNKNOWN),
-                new Branches("feature", "main"),
+                new Branches(new GhBranch("feature"), new GhBranch("main")),
                 new Activity(Instant.EPOCH, Instant.EPOCH),
                 new Size(0, 0, 0, 1),
                 new Conversation(Review.REQUIRED, List.empty(), 0, PullRequestDetails.ReviewThreads.NONE, List.empty()),
@@ -39,7 +39,14 @@ class PullRequestDetailsTest {
     void anOpenPullRequestIsListedAsItIs() {
         assertEquals(
                 Option.of(new PullRequest(
-                        42, "feature", "main", true, Checks.PASSING, Review.REQUIRED, Option.none(), Option.none())),
+                        42,
+                        new GhBranch("feature"),
+                        new GhBranch("main"),
+                        true,
+                        Checks.PASSING,
+                        Review.REQUIRED,
+                        Option.none(),
+                        Option.none())),
                 details(State.OPEN, List.of(new Check("build", Checks.PASSING))).listed());
     }
 

@@ -27,6 +27,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Activity;
@@ -101,8 +102,8 @@ final class DetailsQuery {
 
     // How far behind its base it is only counts while it is open, at a commit that is known.
     static final Decoder<Branches> BRANCHES = map5(
-            field("headRefName", string()),
-            field("baseRefName", string()),
+            field("headRefName", string()).map(GhBranch::new),
+            field("baseRefName", string()).map(GhBranch::new),
             field("headRefOid", nullable(string())).map(oid -> oid.flatMap(GhCommit::parse)),
             field("baseRefOid", nullable(string())).map(oid -> oid.flatMap(GhCommit::parse)),
             BEHIND,

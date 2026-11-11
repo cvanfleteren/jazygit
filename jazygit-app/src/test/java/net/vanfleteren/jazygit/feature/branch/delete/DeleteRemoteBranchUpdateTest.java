@@ -9,7 +9,6 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchCmd.DeleteRemoteBranch;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.state.*;
-import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.popup.*;
 import org.junit.jupiter.api.Test;
@@ -87,7 +86,7 @@ class DeleteRemoteBranchUpdateTest {
 
         assertEquals(List.empty(), asked.cmds());
         assertEquals(
-                Option.of(new AppError.DefaultBranch("origin/main")),
+                Option.of(new AppError.DefaultBranch(new BranchRef.Remote(ORIGIN_MAIN))),
                 asked.model().outcome().error());
     }
 

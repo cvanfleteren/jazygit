@@ -39,6 +39,7 @@ import net.vanfleteren.jazygit.feature.worktree.switchto.SwitchWorktreeMsg;
 import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.GhFailure;
 import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.Git;
@@ -52,12 +53,8 @@ import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.*;
-import net.vanfleteren.jazygit.state.Failure;
-import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.load.*;
-import net.vanfleteren.jazygit.state.load.LoadWorktrees;
 import net.vanfleteren.jazygit.state.operation.*;
 import net.vanfleteren.jazygit.state.popup.*;
 import net.vanfleteren.jazygit.state.view.*;
@@ -376,7 +373,7 @@ class WorktreeUpdateTest {
                 9,
                 "Title",
                 "bob",
-                "patch-1",
+                new GhBranch("patch-1"),
                 false,
                 true,
                 PullRequest.Checks.NONE,

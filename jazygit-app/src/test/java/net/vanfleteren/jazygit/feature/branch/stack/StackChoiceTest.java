@@ -52,7 +52,15 @@ class StackChoiceTest {
             name("feat/e"), name("feat/b"));
 
     private static PullRequest pr(int number, String head, String base) {
-        return new PullRequest(number, head, base, false, Checks.NONE, Review.NONE, Option.none(), Option.none());
+        return new PullRequest(
+                number,
+                new GhBranch(head),
+                new GhBranch(base),
+                false,
+                Checks.NONE,
+                Review.NONE,
+                Option.none(),
+                Option.none());
     }
 
     // feat/b's pull request is still on develop, as one opened from the parent gh-merge-base recorded.
@@ -100,7 +108,7 @@ class StackChoiceTest {
                         List.of(
                                 OPEN.get(name("feat/a")).get(),
                                 OPEN.get(name("feat/b")).get()),
-                        List.of(new BaseChange(97, "develop", new GhBranch("feat/a"))))),
+                        List.of(new BaseChange(97, new GhBranch("develop"), new GhBranch("feat/a"))))),
                 choice().plan(2, 0));
     }
 
@@ -134,9 +142,19 @@ class StackChoiceTest {
     @Test
     void aPullRequestInAStackAlreadyIsNotStackedAgain() {
         PullRequestStack stack = new PullRequestStack(
-                12, 1, 1, List.of(new PullRequestStack.Entry(1, 98, State.OPEN, "feat/c", "feat/b")));
+                12,
+                1,
+                1,
+                List.of(new PullRequestStack.Entry(1, 98, State.OPEN, new GhBranch("feat/c"), new GhBranch("feat/b"))));
         PullRequest stacked = new PullRequest(
-                98, "feat/c", "feat/b", false, Checks.NONE, Review.NONE, Option.of(stack), Option.none());
+                98,
+                new GhBranch("feat/c"),
+                new GhBranch("feat/b"),
+                false,
+                Checks.NONE,
+                Review.NONE,
+                Option.of(stack),
+                Option.none());
 
         assertEquals(
                 Either.left(new Refusal.Stacked(List.of(name("feat/c")))),

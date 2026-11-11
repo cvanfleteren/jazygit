@@ -28,8 +28,8 @@ class FileFilterUpdateTest {
     }
 
     private static Model withCommitFiles(Model model) {
-        return model.mapRepoView(repoView -> repoView.withCommitFiles(Option.of(
-                CommitFilesView.of(new Changes.OfCommit(new Sha("aaaa")), Scopes.COMMITS.id(), Scopes.FILES.id()))));
+        return model.mapRepoView(repoView -> repoView.withCommitFiles(Option.of(CommitFilesView.of(
+                new Changes.OfCommit(new Sha("aaaa")), Scopes.COMMITS.pane(), Scopes.FILES.pane()))));
     }
 
     @Test

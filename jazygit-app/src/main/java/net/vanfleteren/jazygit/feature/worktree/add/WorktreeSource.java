@@ -6,6 +6,7 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.NewBranchStart;
 import net.vanfleteren.jazygit.git.model.Revision;
+import net.vanfleteren.jazygit.state.github.FromGitHub;
 
 /**
  * What a new worktree checks out.
@@ -99,7 +100,9 @@ public sealed interface WorktreeSource {
          */
         @Override
         public BranchName directory() {
-            return new BranchName(pullRequest.fromFork() ? "pr-" + pullRequest.number() : pullRequest.headBranch());
+            return pullRequest.fromFork()
+                    ? new BranchName("pr-" + pullRequest.number())
+                    : FromGitHub.branch(pullRequest.headBranch());
         }
 
         /**
@@ -108,7 +111,7 @@ public sealed interface WorktreeSource {
         @Override
         public Option<BranchRef> busyBranch() {
             return Option.when(
-                    !pullRequest.fromFork(), () -> new BranchRef.Local(new BranchName(pullRequest.headBranch())));
+                    !pullRequest.fromFork(), () -> new BranchRef.Local(FromGitHub.branch(pullRequest.headBranch())));
         }
     }
 }

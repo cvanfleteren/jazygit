@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.keys;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.keys.Keymap.Scope;
+import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.diff.DiffCursorAt;
 import net.vanfleteren.jazygit.state.preferences.Screen;
 
@@ -91,10 +92,10 @@ public final class Scopes {
      * The ids of the panes of the left column of {@code screen} under the status, top to bottom, in the order the view
      * shows them; the keys that resize and maximize a pane find the focused one by it (ADR 92).
      */
-    public static io.vavr.collection.List<String> leftPanes(Screen screen) {
+    public static io.vavr.collection.List<PaneId> leftPanes(Screen screen) {
         return switch (screen) {
-            case REPOSITORY -> io.vavr.collection.List.of(FILES.id(), BRANCHES.id(), COMMITS.id(), STASH.id());
-            case PULL_REQUESTS -> PULL_REQUESTS.map(Scope::id);
+            case REPOSITORY -> io.vavr.collection.List.of(FILES.pane(), BRANCHES.pane(), COMMITS.pane(), STASH.pane());
+            case PULL_REQUESTS -> PULL_REQUESTS.map(Scope::pane);
         };
     }
 }

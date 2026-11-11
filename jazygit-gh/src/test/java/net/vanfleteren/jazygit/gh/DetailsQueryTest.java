@@ -13,6 +13,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -120,7 +121,7 @@ class DetailsQueryTest {
                         "Add\trename",
                         "cvf",
                         new Status(State.OPEN, true, Mergeable.MERGEABLE),
-                        new Branches("support_rename", "main"),
+                        new Branches(new GhBranch("support_rename"), new GhBranch("main")),
                         new Activity(Instant.parse("2026-10-10T08:00:00Z"), Instant.parse("2026-10-12T09:00:00Z")),
                         new Size(120, 34, 7, 3),
                         new Conversation(
@@ -173,7 +174,7 @@ class DetailsQueryTest {
                         "Fix",
                         "",
                         new Status(State.MERGED, false, Mergeable.UNKNOWN),
-                        new Branches("fix", "main"),
+                        new Branches(new GhBranch("fix"), new GhBranch("main")),
                         new Activity(Instant.parse("2026-01-01T00:00:00Z"), Instant.parse("2026-01-01T00:00:00Z")),
                         new Size(1, 0, 1, 1),
                         new Conversation(Review.NONE, List.empty(), 0, ReviewThreads.NONE, List.empty()),
@@ -259,8 +260,8 @@ class DetailsQueryTest {
                 2,
                 2,
                 List.of(
-                        new PullRequestStack.Entry(1, 94, State.MERGED, "b94", "main"),
-                        new PullRequestStack.Entry(2, 95, State.OPEN, "b95", "b94")));
+                        new PullRequestStack.Entry(1, 94, State.MERGED, new GhBranch("b94"), new GhBranch("main")),
+                        new PullRequestStack.Entry(2, 95, State.OPEN, new GhBranch("b95"), new GhBranch("b94"))));
 
         assertEquals(Option.of(new GhCommit("abc123")), details.branches().headCommit());
         assertEquals(Option.of(stack), details.stack());

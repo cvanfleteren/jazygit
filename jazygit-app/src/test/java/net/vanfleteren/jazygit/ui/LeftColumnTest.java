@@ -14,6 +14,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Clock;
 import net.vanfleteren.jazygit.keys.Scopes;
+import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.preferences.Screen;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -38,7 +39,7 @@ class LeftColumnTest {
                 .column()
                 .render(Frame.forTesting(Buffer.empty(AREA)), AREA, context);
 
-        List<String> panes = Scopes.leftPanes(screen);
+        List<String> panes = Scopes.leftPanes(screen).map(PaneId::value);
         List<Integer> tops = panes.map(id -> registry.getArea(id).y());
         assertEquals(tops.sorted(), tops, "the tops of " + panes);
         assertEquals(tops.size(), tops.distinct().size(), "the tops of " + panes);
@@ -64,7 +65,9 @@ class LeftColumnTest {
         // Square without a theme, which rounds the corners.
         assertEquals(List.of("┌»┐", "│ │", "│ │", "│ │", "└─┘"), lines(buffer, area));
         assertEquals(List.empty(), rendered.panes());
-        Scopes.leftPanes(screen).forEach(id -> assertNull(registry.getArea(id), id + " is not drawn"));
+        Scopes.leftPanes(screen)
+                .map(PaneId::value)
+                .forEach(id -> assertNull(registry.getArea(id), id + " is not drawn"));
     }
 
     private static List<String> lines(Buffer buffer, Rect area) {

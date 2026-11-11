@@ -9,6 +9,7 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesCmd;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestCmd;
 import net.vanfleteren.jazygit.feature.settings.SettingsPanelCmd;
+import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
@@ -29,7 +30,7 @@ class BackgroundCmdTest {
             7,
             "Pull request 7",
             "alice",
-            "feature",
+            new GhBranch("feature"),
             false,
             false,
             Checks.NONE,

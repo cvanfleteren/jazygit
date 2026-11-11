@@ -166,8 +166,8 @@ public record GitHubState(
     public GitHubState withListed(List<PullRequest> listed) {
         // Vavr's toMap has no merge function; a later entry replaces an earlier one, so ascending numbers keep the
         // newest.
-        return withPullRequests(
-                Option.of(listed.sortBy(PullRequest::number).toMap(pr -> new BranchName(pr.headBranch()), pr -> pr)));
+        return withPullRequests(Option.of(
+                listed.sortBy(PullRequest::number).toMap(pr -> FromGitHub.branch(pr.headBranch()), pr -> pr)));
     }
 
     /**
@@ -211,7 +211,7 @@ public record GitHubState(
      */
     public Option<Checks> checks(RemoteBranch remote) {
         return branchChecks
-                .filter(checks -> checks.remotes().contains(remote.remote().value()))
+                .filter(checks -> checks.remotes().contains(remote.remote()))
                 .flatMap(checks -> checks.byBranch().get(remote.branch()));
     }
 
@@ -269,8 +269,7 @@ public record GitHubState(
     }
 
     private boolean onGitHub(RemoteBranch remote) {
-        return branchChecks.exists(
-                checks -> checks.remotes().contains(remote.remote().value()));
+        return branchChecks.exists(checks -> checks.remotes().contains(remote.remote()));
     }
 
     /**

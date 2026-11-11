@@ -12,5 +12,5 @@ import net.vanfleteren.jazygit.state.popup.Popup;
  * @param comment the comment, which the popup says who wrote, when, and the first line of
  * @param now     when it was asked, to tell how long ago the comment was written
  */
-public record DeleteCommentPopup(int number, String thread, ReviewThread.Comment comment, Instant now)
+public record DeleteCommentPopup(int number, ReviewThread.Id thread, ReviewThread.Comment comment, Instant now)
         implements Popup {}

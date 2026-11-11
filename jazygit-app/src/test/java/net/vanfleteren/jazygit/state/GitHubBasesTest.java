@@ -8,6 +8,7 @@ import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -57,7 +58,15 @@ class GitHubBasesTest {
     }
 
     private static PullRequest pr(int number, String head, String base) {
-        return new PullRequest(number, head, base, false, Checks.NONE, Review.NONE, Option.none(), Option.none());
+        return new PullRequest(
+                number,
+                new GhBranch(head),
+                new GhBranch(base),
+                false,
+                Checks.NONE,
+                Review.NONE,
+                Option.none(),
+                Option.none());
     }
 
     private static PullRequest stacked(int number, String head, String base, int position, String below) {
@@ -71,9 +80,17 @@ class GitHubBasesTest {
                 position,
                 2,
                 List.of(
-                        new PullRequestStack.Entry(1, 1, belowState, below, "main"),
-                        new PullRequestStack.Entry(2, number, State.OPEN, head, base)));
-        return new PullRequest(number, head, base, false, Checks.NONE, Review.NONE, Option.of(stack), Option.none());
+                        new PullRequestStack.Entry(1, 1, belowState, new GhBranch(below), new GhBranch("main")),
+                        new PullRequestStack.Entry(2, number, State.OPEN, new GhBranch(head), new GhBranch(base))));
+        return new PullRequest(
+                number,
+                new GhBranch(head),
+                new GhBranch(base),
+                false,
+                Checks.NONE,
+                Review.NONE,
+                Option.of(stack),
+                Option.none());
     }
 
     private static GitHubBases of(List<PullRequest> pullRequests, String... protectedBranches) {
@@ -85,7 +102,8 @@ class GitHubBasesTest {
     private static GitHubBases onGitHub(List<PullRequest> pullRequests, String... remotes) {
         return GitHubBases.of(GitHubState.NOT_READ
                 .withListed(pullRequests)
-                .withBranchChecks(Option.of(new GitHubChecks(HashSet.of(remotes), HashMap.empty()))));
+                .withBranchChecks(
+                        Option.of(new GitHubChecks(HashSet.of(remotes).map(RemoteName::new), HashMap.empty()))));
     }
 
     private static Map<BranchName, BranchName> parents(

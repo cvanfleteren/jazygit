@@ -11,6 +11,7 @@ import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import java.util.ArrayList;
+import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -41,7 +42,15 @@ class StackPickDialogTest {
     }
 
     private static PullRequest pr(int number, String head, String base) {
-        return new PullRequest(number, head, base, false, Checks.NONE, Review.NONE, Option.none(), Option.none());
+        return new PullRequest(
+                number,
+                new GhBranch(head),
+                new GhBranch(base),
+                false,
+                Checks.NONE,
+                Review.NONE,
+                Option.none(),
+                Option.none());
     }
 
     private static final Map<BranchName, PullRequest> OPEN = HashMap.of(

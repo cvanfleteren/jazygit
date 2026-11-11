@@ -50,7 +50,7 @@ public final class PullRequestUpdate {
             when model.prOverview().ofThisRepository(pullRequest).getOrElse(false) ->
                 show(
                         model,
-                        new BranchName(pullRequest.headBranch()),
+                        FromGitHub.branch(pullRequest.headBranch()),
                         pullRequest.pullRequest(),
                         pullRequest.fromFork(),
                         false);
@@ -61,7 +61,7 @@ public final class PullRequestUpdate {
             when model.prOverview().ofThisRepository(pullRequest).getOrElse(false) ->
                 files(
                         model.clearError(),
-                        new BranchName(pullRequest.headBranch()),
+                        FromGitHub.branch(pullRequest.headBranch()),
                         pullRequest.pullRequest(),
                         pullRequest.fromFork());
             case PullRequestMsg.SummaryFilesRequested(var pullRequest) ->
@@ -338,7 +338,7 @@ public final class PullRequestUpdate {
     private static Next files(Model model, PullRequestCommits commits) {
         return CommitFilesUpdate.update(
                 model.withScreen(Screen.REPOSITORY),
-                new CommitFilesMsg.Opened(new Changes.OfPullRequest(commits), Scopes.BRANCHES.id()));
+                new CommitFilesMsg.Opened(new Changes.OfPullRequest(commits), Scopes.BRANCHES.pane()));
     }
 
     /**
