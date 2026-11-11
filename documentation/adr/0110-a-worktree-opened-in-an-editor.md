@@ -77,8 +77,8 @@ the same way, as `editors[2].shortcut`. The entry stays, chosen as one without a
 `e` opens a worktree in an editor:
 
 - on the worktrees, the highlighted worktree;
-- on the local branches, the worktree that has the branch checked out: the main one, the one shown, or a linked
-  one.
+- on the local branches, the worktree that has the branch: the main one, the one shown, or a linked one, also while
+  it rebases or bisects the branch (see below).
 
 As `e` on the files means opening the file in the editor. `?` lists it on both. Not: on the remote branches, the
 commits or the files.
@@ -92,14 +92,32 @@ Where there is nothing to open, `e` says why instead of doing nothing (ADR 9):
 - no editors in the settings file: none is set, and how to set one, with an example of `[[editors]]`. Not: falling
   back to git's editor, which may not open a directory.
 
+### Which worktree has a branch
+
+A worktree has a branch when its HEAD is the branch, or when it rebases or bisects the branch: its git directory, such
+as `.git/worktrees/wt`, names it in `rebase-merge/head-name` or `rebase-apply/head-name` (`refs/heads/feat`), or in
+`BISECT_START` (`feat`). That is how git decides it, when it refuses to check the branch out in another worktree:
+`'feat' is already used by worktree at …`.
+
+While a worktree rebases, its HEAD is detached: `git worktree list` says `detached`, and `%(worktreepath)`, which
+`CliBranches` reads, is empty for the branch. Taken from HEAD alone, `e` on the branch would say it is not checked out,
+at the moment the editor is wanted most: a rebase that went wrong.
+
+- `Branch.worktreeLocation` follows git's rule: the branches are read with, for each worktree without a branch as its
+  HEAD, the branch its rebase or bisect names, from the files `CliInProgress` reads for the worktree shown.
+- So what asks it besides `e`, `checkedOutElsewhere` for `d`, `space` and `w`, knows a branch that is rebased in
+  another worktree is in use there, instead of leaving git to refuse; and the branches show it in that worktree.
+- A bisect started on a detached HEAD names a commit, not a branch: no branch is in that worktree.
+
 ### Choosing an editor
 
 With one editor, `e` opens it at once, whether it has a shortcut or not.
 
 With more, `e` opens a menu of them, by `name`, in the order of the file. Each is chosen with its shortcut; one
-without is chosen with the first digit from `1` to `9` that no shortcut takes, in the order of the file. Past those, an
-editor has no letter, and is chosen with the arrows and Enter, as any option can be. Not: shortcuts as keys on the
-panes themselves, without `e`, where `k` moves up and most letters are taken, differently on each pane.
+without gets the first that no shortcut takes of the digits `1` to `9`, then the letters `a` to `z`, in the order of
+the file. The menu moves on the arrows only, so `j` and `k` are free. Every editor has a letter, as every option of a
+`ChoiceDialog` has: 35 are more than a user lists. Not: shortcuts as keys on the panes themselves, without `e`, where
+`k` moves up and most letters are taken, differently on each pane.
 
 ### Starting it
 
@@ -116,6 +134,8 @@ panes themselves, without `e`, where `k` moves up and most letters are taken, di
 ## Consequences
 
 - A worktree opens in any editor that takes a directory, GUI or terminal, with `e`, or `e` and a letter.
+- A branch is in the worktree that rebases or bisects it, for every key that asks, not only `e`. Reading the branches
+  reads a few small files in the git directory of each worktree without a branch as its HEAD.
 - The settings file gets its first list of tables; `SettingsFile` reads, and reports, each entry on its own.
 - Opening a worktree starts a program the user wrote down, with no confirmation, as `e` on a file does.
 - Nothing works until the user lists an editor; the message says how.
