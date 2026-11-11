@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.diff.BaseTip;
 import net.vanfleteren.jazygit.state.diff.Changes;
@@ -67,7 +68,7 @@ class ReadWholeFileTest {
      */
     private static String read(Source source) {
         ReadWholeFile read = new ReadWholeFile(
-                "area", new ScrolledContent.Diff(DiffText.of("")), source, "a.txt", DiffOptions.DEFAULT);
+                new AreaId("area"), new ScrolledContent.Diff(DiffText.of("")), source, "a.txt", DiffOptions.DEFAULT);
         LoadMsg.WholeFileRead msg = (LoadMsg.WholeFileRead) read.run(new Env(git(), StubGitHub.empty()));
         assertEquals(read, msg.cmd());
         return msg.whole().text();

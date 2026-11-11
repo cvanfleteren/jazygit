@@ -29,6 +29,7 @@ import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.settings.DiffLook;
 import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.diff.*;
 import net.vanfleteren.jazygit.state.diff.Changes;
@@ -116,12 +117,12 @@ class ContentPanelTest {
             SettledPilot.of(testRunner).pause();
         }
         ViewMsg.ContentScrolled down = (ViewMsg.ContentScrolled) dispatched.getLast();
-        assertEquals(area, down.area());
+        assertEquals(new AreaId(area), down.area());
         assertEquals(1, down.to().row());
 
         // Where the model has it scrolled to is what shows, whatever was scrolled in the element before.
         Model scrolled = selected.withScrolled(io.vavr.collection.HashMap.of(
-                area,
+                new AreaId(area),
                 new Scrolled(
                         down.to().content(), 20, 0, io.vavr.control.Option.none(), io.vavr.control.Option.none())));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> scrolling.render(scrolled, area))) {
@@ -149,8 +150,8 @@ class ContentPanelTest {
         String area = expanding.areaOfPane(shown, CommitsPanel.ID).get();
         ScrolledContent content = ContentView.of(shown, area).areas().head().content();
         Anchor.Gap above = new Anchor.Gap("a.txt", 1, Option.of(9));
-        Model onMarker = shown.withScrolled(
-                io.vavr.collection.HashMap.of(area, new Scrolled(content, 0, 0, Option.of(above), Option.none())));
+        Model onMarker = shown.withScrolled(io.vavr.collection.HashMap.of(
+                new AreaId(area), new Scrolled(content, 0, 0, Option.of(above), Option.none())));
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> expanding.render(onMarker, area))) {
             String screen = RenderedText.ofLarge(testRunner, () -> expanding.render(onMarker, area));
@@ -171,7 +172,9 @@ class ContentPanelTest {
                         net.vanfleteren.jazygit.feature.diff.ExpandMsg.Toward.DOWN),
                 asked.map(net.vanfleteren.jazygit.feature.diff.ExpandMsg.Asked::toward));
         assertEquals(List.of(above, above), asked.map(msg -> msg.at().cursor()));
-        assertEquals(List.of(area, area), asked.map(msg -> msg.at().area()));
+        assertEquals(
+                List.of(new AreaId(area), new AreaId(area)),
+                asked.map(msg -> msg.at().area()));
     }
 
     @Test
@@ -185,8 +188,8 @@ class ContentPanelTest {
         String area = versions.areaOfPane(shown, CommitsPanel.ID).get();
         ScrolledContent content = ContentView.of(shown, area).areas().head().content();
         Anchor.OnLine removed = new Anchor.OnLine("a.txt", net.vanfleteren.jazygit.gh.model.ReviewThread.Side.LEFT, 10);
-        Model onLine = shown.withScrolled(
-                io.vavr.collection.HashMap.of(area, new Scrolled(content, 0, 0, Option.of(removed), Option.none())));
+        Model onLine = shown.withScrolled(io.vavr.collection.HashMap.of(
+                new AreaId(area), new Scrolled(content, 0, 0, Option.of(removed), Option.none())));
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> versions.render(onLine, area))) {
             RenderedText.ofLarge(testRunner, () -> versions.render(onLine, area));
@@ -260,10 +263,15 @@ class ContentPanelTest {
         String area = panel.areaOfPane(shown, CommitsPanel.ID).get();
         ScrolledContent content = ContentView.of(shown, area).areas().head().content();
         Anchor.OnLine blank = new Anchor.OnLine("a.md", net.vanfleteren.jazygit.gh.model.ReviewThread.Side.RIGHT, 20);
-        Model onBlank = shown.withScrolled(
-                io.vavr.collection.HashMap.of(area, new Scrolled(content, 0, 0, Option.of(blank), Option.none())));
+        Model onBlank = shown.withScrolled(io.vavr.collection.HashMap.of(
+                new AreaId(area), new Scrolled(content, 0, 0, Option.of(blank), Option.none())));
         DiffCursorAt at = new DiffCursorAt(
-                area, onBlank.scrolled(area, content), blank, Option.none(), Option.none(), Option.none());
+                new AreaId(area),
+                onBlank.scrolled(new AreaId(area), content),
+                blank,
+                Option.none(),
+                Option.none(),
+                Option.none());
         Update.Next asked =
                 Update.update(onBlank, new net.vanfleteren.jazygit.feature.diff.VersionMsg.RenderToggled(at));
         ReadVersion read = (ReadVersion) asked.cmds().head();
@@ -300,10 +308,15 @@ class ContentPanelTest {
         String area = panel.areaOfPane(shown, CommitsPanel.ID).get();
         ScrolledContent content = ContentView.of(shown, area).areas().head().content();
         Anchor.OnLine removed = new Anchor.OnLine("a.md", net.vanfleteren.jazygit.gh.model.ReviewThread.Side.LEFT, 2);
-        Model onLine = shown.withScrolled(
-                io.vavr.collection.HashMap.of(area, new Scrolled(content, 0, 0, Option.of(removed), Option.none())));
+        Model onLine = shown.withScrolled(io.vavr.collection.HashMap.of(
+                new AreaId(area), new Scrolled(content, 0, 0, Option.of(removed), Option.none())));
         DiffCursorAt at = new DiffCursorAt(
-                area, onLine.scrolled(area, content), removed, Option.none(), Option.none(), Option.none());
+                new AreaId(area),
+                onLine.scrolled(new AreaId(area), content),
+                removed,
+                Option.none(),
+                Option.none(),
+                Option.none());
         Update.Next asked =
                 Update.update(onLine, new net.vanfleteren.jazygit.feature.diff.VersionMsg.RenderToggled(at));
         ReadVersion read = (ReadVersion) asked.cmds().head();
@@ -346,10 +359,15 @@ class ContentPanelTest {
         String area = panel.areaOfPane(shown, CommitsPanel.ID).get();
         ScrolledContent content = ContentView.of(shown, area).areas().head().content();
         Anchor.OnLine on = new Anchor.OnLine("a.txt", net.vanfleteren.jazygit.gh.model.ReviewThread.Side.RIGHT, 39);
-        Model onLine = shown.withScrolled(
-                io.vavr.collection.HashMap.of(area, new Scrolled(content, 0, 0, Option.of(on), Option.none())));
-        DiffCursorAt at =
-                new DiffCursorAt(area, onLine.scrolled(area, content), on, Option.none(), Option.none(), Option.none());
+        Model onLine = shown.withScrolled(io.vavr.collection.HashMap.of(
+                new AreaId(area), new Scrolled(content, 0, 0, Option.of(on), Option.none())));
+        DiffCursorAt at = new DiffCursorAt(
+                new AreaId(area),
+                onLine.scrolled(new AreaId(area), content),
+                on,
+                Option.none(),
+                Option.none(),
+                Option.none());
         Update.Next asked = Update.update(onLine, new net.vanfleteren.jazygit.feature.diff.VersionMsg.Cycled(at));
         ReadVersion read = (ReadVersion) asked.cmds().head();
         DiffText whole = DiffText.of(header + "@@ -1,60 +1,60 @@\n"
@@ -390,8 +408,8 @@ class ContentPanelTest {
         String area = copying.areaOfPane(shown, CommitsPanel.ID).get();
         ScrolledContent content = ContentView.of(shown, area).areas().head().content();
         Anchor.OnLine added = new Anchor.OnLine("a.txt", net.vanfleteren.jazygit.gh.model.ReviewThread.Side.RIGHT, 10);
-        Model onLine = shown.withScrolled(
-                io.vavr.collection.HashMap.of(area, new Scrolled(content, 0, 0, Option.of(added), Option.none())));
+        Model onLine = shown.withScrolled(io.vavr.collection.HashMap.of(
+                new AreaId(area), new Scrolled(content, 0, 0, Option.of(added), Option.none())));
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> copying.render(onLine, area))) {
             RenderedText.ofLarge(testRunner, () -> copying.render(onLine, area));
@@ -405,7 +423,7 @@ class ContentPanelTest {
                 .filter(net.vanfleteren.jazygit.feature.copy.CopyMsg.Asked.class::isInstance)
                 .map(net.vanfleteren.jazygit.feature.copy.CopyMsg.Asked.class::cast);
         assertEquals(List.of(added), asked.map(msg -> msg.at().cursor()));
-        assertEquals(List.of(area), asked.map(msg -> msg.at().area()));
+        assertEquals(List.of(new AreaId(area)), asked.map(msg -> msg.at().area()));
         // v opens a range in the diff of a commit too, which y then copies.
         assertEquals(
                 List.of(Option.of(added)),
@@ -922,7 +940,7 @@ class ContentPanelTest {
                                 of, List.of(file), DiffOptions.DEFAULT, DiffText.of("+" + "x".repeat(300))))
                 .model();
         String area = scrolling.areaOfPane(selected, FilesPanel.ID).get();
-        assertEquals(ContentArea.COMMIT_FILE.id(), area);
+        assertEquals(ContentArea.COMMIT_FILE.id().value(), area);
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> scrolling.render(selected, area))) {
             SettledPilot.focus(testRunner, area);
@@ -976,7 +994,8 @@ class ContentPanelTest {
 
         // TamboUI does not draw the columns scrolled past, so the next scroll tells where the area was.
         Model scrolled = selected.withScrolled(io.vavr.collection.HashMap.of(
-                area, new Scrolled(shown, 0, 11, io.vavr.control.Option.none(), io.vavr.control.Option.none())));
+                new AreaId(area),
+                new Scrolled(shown, 0, 11, io.vavr.control.Option.none(), io.vavr.control.Option.none())));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> scrolling.render(scrolled, area))) {
             SettledPilot.focus(testRunner, area);
             RenderedText.ofLarge(testRunner, () -> scrolling.render(scrolled, area));
@@ -1337,7 +1356,7 @@ class ContentPanelTest {
                 .filter(net.vanfleteren.jazygit.feature.copy.CopyMsg.Asked.class::isInstance)
                 .map(net.vanfleteren.jazygit.feature.copy.CopyMsg.Asked.class::cast);
         assertEquals(List.of(line), asked.map(msg -> msg.at().cursor()));
-        assertEquals(List.of(area), asked.map(msg -> msg.at().area()));
+        assertEquals(List.of(new AreaId(area)), asked.map(msg -> msg.at().area()));
     }
 
     @Test

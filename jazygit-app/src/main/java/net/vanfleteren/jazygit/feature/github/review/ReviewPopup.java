@@ -4,6 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import lombok.With;
 import net.vanfleteren.jazygit.gh.model.NewReviewThread;
+import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.diff.Scrolled;
 import net.vanfleteren.jazygit.state.popup.Popup;
 
@@ -30,7 +31,7 @@ public record ReviewPopup(
         List<String> quoted,
         String text,
         boolean sending,
-        String area,
+        AreaId area,
         Scrolled at)
         implements Popup {
 

@@ -10,6 +10,7 @@ import java.util.function.Predicate;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.state.AppError;
+import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
@@ -139,7 +140,7 @@ public final class LoadUpdate {
      * {@code model} with the cursor of the area {@code area} moved onto the version it shows, if it shows one and its
      * cursor is in the diff of it (ADR 102).
      */
-    static Model versionShown(Model model, String area) {
+    static Model versionShown(Model model, AreaId area) {
         return model.repoView()
                 .versions()
                 .get(area)

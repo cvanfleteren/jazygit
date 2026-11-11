@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.ui;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Function;
+import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Model;
 
 /**
@@ -24,7 +25,7 @@ enum ContentArea {
             "pull-request-preview", model -> model.prOverview().listPane().getOrElse(PullRequestsPanel.FIRST_PANE_ID)),
     LOG("branch-log", BranchesPanel.ID);
 
-    private final String id;
+    private final AreaId id;
     private final Function<Model, String> pane;
 
     ContentArea(String id, String pane) {
@@ -32,11 +33,11 @@ enum ContentArea {
     }
 
     ContentArea(String id, Function<Model, String> pane) {
-        this.id = id;
+        this.id = new AreaId(id);
         this.pane = pane;
     }
 
-    String id() {
+    AreaId id() {
         return id;
     }
 
@@ -44,7 +45,7 @@ enum ContentArea {
      * The area with id {@code id}, which can have the focus, if it is one.
      */
     static Option<ContentArea> focusable(String id) {
-        return List.of(values()).find(area -> area.id.equals(id));
+        return List.of(values()).find(area -> area.id.value().equals(id));
     }
 
     /**

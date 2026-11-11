@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.FileVersion;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.load.ReadVersion;
 import org.junit.jupiter.api.Test;
@@ -95,10 +96,14 @@ class VersionTest {
 
     @Test
     void aReadWithWhitespaceIgnoredIsMadeWithoutIt() {
-        assertFalse(
-                ReadVersion.of("a", CONTENT, read().source(), "a.txt", DiffOptions.DEFAULT.withIgnoreWhitespace(true))
-                        .options()
-                        .ignoreWhitespace());
+        assertFalse(ReadVersion.of(
+                        new AreaId("a"),
+                        CONTENT,
+                        read().source(),
+                        "a.txt",
+                        DiffOptions.DEFAULT.withIgnoreWhitespace(true))
+                .options()
+                .ignoreWhitespace());
     }
 
     private static Version version(Option<FileVersion> shown, Loadable<DiffText> whole) {
@@ -107,7 +112,7 @@ class VersionTest {
 
     private static ReadVersion read() {
         return ReadVersion.of(
-                "stash-changes",
+                new AreaId("stash-changes"),
                 CONTENT,
                 new WholeFile.Source.OfStash(
                         new Sha("5555"), new CommitFile("a.txt", ChangeType.MODIFIED, Option.none())),

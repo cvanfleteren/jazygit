@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.state.load;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.DiffText;
+import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Label;
 import net.vanfleteren.jazygit.state.Lens;
@@ -21,7 +22,7 @@ import net.vanfleteren.jazygit.state.view.RepoView;
  * options change.
  */
 public record ReadVersion(
-        String area, ScrolledContent content, WholeFile.Source source, String path, DiffOptions options)
+        AreaId area, ScrolledContent content, WholeFile.Source source, String path, DiffOptions options)
         implements Targeted<DiffText> {
 
     /**
@@ -29,14 +30,14 @@ public record ReadVersion(
      * not ignored.
      */
     public static ReadVersion of(
-            String area, ScrolledContent content, WholeFile.Source source, String path, DiffOptions options) {
+            AreaId area, ScrolledContent content, WholeFile.Source source, String path, DiffOptions options) {
         return new ReadVersion(area, content, source, path, options.withIgnoreWhitespace(false));
     }
 
     /**
      * The read of {@code file} for the area {@code area}, as the version keeps it.
      */
-    public static ReadVersion of(String area, WholeFile file) {
+    public static ReadVersion of(AreaId area, WholeFile file) {
         return new ReadVersion(area, file.content(), file.source(), file.path(), file.options());
     }
 

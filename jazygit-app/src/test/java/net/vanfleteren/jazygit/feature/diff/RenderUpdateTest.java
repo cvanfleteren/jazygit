@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.FileVersion;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
@@ -28,7 +29,7 @@ import org.junit.jupiter.api.Test;
  */
 class RenderUpdateTest {
 
-    private static final String AREA = "stash-changes";
+    private static final AreaId AREA = new AreaId("stash-changes");
     private static final Sha STASH = new Sha("5555");
     private static final String HEADER = "diff --git a/a.md b/a.md\n--- a/a.md\n+++ b/a.md\n";
     private static final DiffText CHANGES = DiffText.of(HEADER + "@@ -1,3 +1,3 @@\n # Title\n-old\n+new\n end\n");

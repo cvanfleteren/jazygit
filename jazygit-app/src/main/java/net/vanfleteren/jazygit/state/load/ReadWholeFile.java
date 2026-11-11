@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Label;
@@ -28,7 +29,7 @@ import net.vanfleteren.jazygit.state.view.RepoView;
  * as context, to show more of it than its hunks in the area {@code area} while it shows {@code content} (ADR 77).
  * It reads with {@code options} but for the context, so what it read with options changed since is dropped.
  */
-public record ReadWholeFile(String area, ScrolledContent content, Source source, String path, DiffOptions options)
+public record ReadWholeFile(AreaId area, ScrolledContent content, Source source, String path, DiffOptions options)
         implements DiffLoad, Targeted<DiffText> {
 
     @Override
@@ -57,7 +58,7 @@ public record ReadWholeFile(String area, ScrolledContent content, Source source,
     /**
      * The read of {@code file} for the area {@code area}.
      */
-    public static ReadWholeFile of(String area, WholeFile file) {
+    public static ReadWholeFile of(AreaId area, WholeFile file) {
         return new ReadWholeFile(area, file.content(), file.source(), file.path(), file.options());
     }
 

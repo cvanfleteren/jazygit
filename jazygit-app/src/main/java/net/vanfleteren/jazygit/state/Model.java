@@ -60,7 +60,7 @@ public record Model(
         Outcome outcome,
         Option<Popup> popup,
         ListCursor listCursor,
-        Map<String, Scrolled> scrolled,
+        Map<AreaId, Scrolled> scrolled,
         Preferences preferences,
         Instant now) {
 
@@ -123,7 +123,7 @@ public record Model(
      * to, unless it showed something else then. When it showed the same changes read again, its cursor stays on its
      * stop, from the top, and its range is dropped (ADR 60).
      */
-    public Scrolled scrolled(String area, ScrolledContent content) {
+    public Scrolled scrolled(AreaId area, ScrolledContent content) {
         Option<Scrolled> last = scrolled.get(area);
         return last.filter(at -> at.content().equals(content))
                 .orElse(() -> last.filter(at -> at.content().sameChanges(content))

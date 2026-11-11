@@ -6,6 +6,7 @@ import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.FileVersion;
 import net.vanfleteren.jazygit.git.model.ParsedDiff.ParsedFile;
+import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
@@ -127,7 +128,7 @@ public final class VersionUpdate {
      * The file with the path {@code path} read whole to expand it in the area {@code area}, if it was read with
      * whitespace not ignored, as a version is.
      */
-    private static Option<Loadable<DiffText>> expanded(Model model, String area, ScrolledContent content, String path) {
+    private static Option<Loadable<DiffText>> expanded(Model model, AreaId area, ScrolledContent content, String path) {
         return model.repoView()
                 .expansion(area, content)
                 .flatMap(expansion -> expansion.files().get(path))

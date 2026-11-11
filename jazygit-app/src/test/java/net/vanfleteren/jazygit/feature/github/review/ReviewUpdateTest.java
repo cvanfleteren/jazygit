@@ -35,6 +35,7 @@ import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.AppError.CannotReview.Why;
+import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.diff.*;
 import net.vanfleteren.jazygit.state.diff.Changes;
@@ -55,7 +56,7 @@ class ReviewUpdateTest {
     private static final PullRequestCommits COMMITS =
             new PullRequestCommits(7, "owner/repo", "", new Sha(BASE), new Sha(HEAD));
     private static final CommitFile A = new CommitFile("a.txt", ChangeType.MODIFIED);
-    private static final String AREA = "commit-file-changes";
+    private static final AreaId AREA = new AreaId("commit-file-changes");
     // Line 2 of a.txt changed, in a first hunk; line 10 in a second.
     private static final DiffText DIFF = DiffText.of("""
             diff --git a/a.txt b/a.txt
