@@ -12,6 +12,7 @@ import java.util.function.Supplier;
 import net.vanfleteren.jazygit.feature.help.HelpMsg;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.PaneId;
 
 /**
  * The single source of truth for keyboard shortcuts: every key is declared once, with its description, and
@@ -204,7 +205,15 @@ public final class Keymap {
      * @param <S>      what is selected in the panel, which its keys act on
      */
     @SuppressWarnings("UnusedTypeParameter")
-    public record Scope<S>(String id, String titleKey) {}
+    public record Scope<S>(String id, String titleKey) {
+
+        /**
+         * The id of the pane the panel is, as the model keeps it.
+         */
+        public PaneId pane() {
+            return new PaneId(id);
+        }
+    }
 
     /**
      * A key in a panel.

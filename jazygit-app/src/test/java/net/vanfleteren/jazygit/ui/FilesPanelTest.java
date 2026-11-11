@@ -23,6 +23,7 @@ import net.vanfleteren.jazygit.git.Status;
 import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.git.StubStatus;
 import net.vanfleteren.jazygit.git.model.*;
+import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
@@ -350,7 +351,7 @@ class FilesPanelTest {
                 new BaseTip(new BranchRef.Remote(new RemoteBranch("origin", new BranchName("main"))), new Sha("bbbb")),
                 new Sha("aaaa"));
         Model open = Update.update(
-                        Update.update(TestModels.loaded(), new CommitFilesMsg.Opened(of, BranchesPanel.ID))
+                        Update.update(TestModels.loaded(), new CommitFilesMsg.Opened(of, Scopes.BRANCHES.pane()))
                                 .model(),
                         new LoadMsg.CommitFilesLoaded(of, List.of(new CommitFile("b.txt", ChangeType.ADDED))))
                 .model();
@@ -368,7 +369,7 @@ class FilesPanelTest {
         Model model = TestModels.loaded(fixed(List.of(Fixtures.fileEntry("work.txt", ChangeType.MODIFIED))));
         Changes of = new Changes.OfCommit(new Sha("aaaa"));
         Model open = Update.update(
-                        Update.update(model, new CommitFilesMsg.Opened(of, CommitsPanel.ID))
+                        Update.update(model, new CommitFilesMsg.Opened(of, Scopes.COMMITS.pane()))
                                 .model(),
                         new LoadMsg.CommitFilesLoaded(
                                 of,
@@ -396,7 +397,7 @@ class FilesPanelTest {
         Changes of = new Changes.OfPullRequest(
                 new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
         Model open = Update.update(
-                        Update.update(TestModels.loaded(), new CommitFilesMsg.Opened(of, BranchesPanel.ID))
+                        Update.update(TestModels.loaded(), new CommitFilesMsg.Opened(of, Scopes.BRANCHES.pane()))
                                 .model(),
                         new LoadMsg.CommitFilesLoaded(
                                 of,
@@ -437,7 +438,7 @@ class FilesPanelTest {
         Changes of = new Changes.OfPullRequest(
                 new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
         Model open = Update.update(
-                        Update.update(TestModels.loaded(), new CommitFilesMsg.Opened(of, BranchesPanel.ID))
+                        Update.update(TestModels.loaded(), new CommitFilesMsg.Opened(of, Scopes.BRANCHES.pane()))
                                 .model(),
                         new LoadMsg.CommitFilesLoaded(
                                 of,
@@ -503,7 +504,7 @@ class FilesPanelTest {
     void aHighlightedFileLeftOutOfTheFilesWithRemarksMovesTheHighlightToTheNearestRowListed() throws Exception {
         Changes of = new Changes.OfPullRequest(
                 new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
-        Model opened = Update.update(TestModels.loaded(), new CommitFilesMsg.Opened(of, BranchesPanel.ID))
+        Model opened = Update.update(TestModels.loaded(), new CommitFilesMsg.Opened(of, Scopes.BRANCHES.pane()))
                 .model();
         Model loaded = Update.update(
                         opened,
@@ -560,9 +561,15 @@ class FilesPanelTest {
                 false,
                 ReviewThread.Subject.LINE,
                 List.of(new ReviewThread.Comment(
-                        "bob", java.time.Instant.EPOCH, "Hm", Option.none(), "C", "1", CommentRights.ALL)),
+                        "bob",
+                        java.time.Instant.EPOCH,
+                        "Hm",
+                        Option.none(),
+                        new ReviewThread.Comment.Id("C"),
+                        new ReviewThread.Comment.RestId("1"),
+                        CommentRights.ALL)),
                 0,
-                "T",
+                new ReviewThread.Id("T"),
                 ReviewThread.Rights.ALL);
     }
 
@@ -827,7 +834,7 @@ class FilesPanelTest {
      * {@code model} with the files of {@link #COMMIT} opened from the commits pane, while they are read.
      */
     private static Model opened(Model model) {
-        return Update.update(model, new CommitFilesMsg.Opened(COMMIT, CommitsPanel.ID))
+        return Update.update(model, new CommitFilesMsg.Opened(COMMIT, Scopes.COMMITS.pane()))
                 .model();
     }
 

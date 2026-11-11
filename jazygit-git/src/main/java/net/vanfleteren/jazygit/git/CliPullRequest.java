@@ -91,14 +91,14 @@ final class CliPullRequest {
      * host does not have the pull requests, so one on {@code host} is taken first; when none is, as when an ssh alias
      * names it, the first whose path names it. The first by name when several do.
      */
-    static Option<RemoteName> remoteOf(Map<String, String> urls, String repository, String host) {
+    static Option<RemoteName> remoteOf(Map<RemoteName, String> urls, String repository, String host) {
         String wanted = "/" + repository.toLowerCase(Locale.ROOT);
-        List<Tuple2<String, String>> named = urls.toList()
+        List<Tuple2<RemoteName, String>> named = urls.toList()
                 .sortBy(remote -> remote._1)
                 .filter(remote -> path(remote._2).endsWith(wanted));
         return named.find(remote -> host(remote._2).equals(host.toLowerCase(Locale.ROOT)))
                 .orElse(named::headOption)
-                .map(remote -> new RemoteName(remote._1));
+                .map(Tuple2::_1);
     }
 
     /**

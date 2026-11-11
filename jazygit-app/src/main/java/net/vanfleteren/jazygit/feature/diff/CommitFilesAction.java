@@ -18,28 +18,28 @@ public final class CommitFilesAction {
                     Binding.onSelected(
                             KEY,
                             "help.commits.files",
-                            commit ->
-                                    new CommitFilesMsg.Opened(new Changes.OfCommit(commit.sha()), Scopes.COMMITS.id())))
+                            commit -> new CommitFilesMsg.Opened(
+                                    new Changes.OfCommit(commit.sha()), Scopes.COMMITS.pane())))
             .add(
                     Scopes.DIVERGENCE,
                     Binding.onSelected(
                             KEY,
                             "help.commits.files",
                             commit -> new CommitFilesMsg.Opened(
-                                    new Changes.OfCommit(commit.sha()), Scopes.BRANCHES.id())))
+                                    new Changes.OfCommit(commit.sha()), Scopes.BRANCHES.pane())))
             .add(
                     Scopes.BRANCH_COMMITS,
                     Binding.onSelected(
                             KEY,
                             "help.commits.files",
                             commit -> new CommitFilesMsg.Opened(
-                                    new Changes.OfCommit(commit.sha()), Scopes.BRANCHES.id())))
+                                    new Changes.OfCommit(commit.sha()), Scopes.BRANCHES.pane())))
             .add(
                     Scopes.STASH,
                     Binding.onSelected(
                             KEY,
                             "help.stash.files",
-                            stash -> new CommitFilesMsg.Opened(new Changes.OfStash(stash.sha()), Scopes.STASH.id())))
+                            stash -> new CommitFilesMsg.Opened(new Changes.OfStash(stash.sha()), Scopes.STASH.pane())))
             .add(
                     Scopes.COMMIT_FILES,
                     Binding.always(Keymap.ESCAPE, "help.commitFiles.close", CommitFilesMsg.Closed::new))

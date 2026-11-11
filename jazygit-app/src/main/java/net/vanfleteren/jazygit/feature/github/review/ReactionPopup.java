@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.github.review;
 
 import net.vanfleteren.jazygit.gh.model.Reactions;
+import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.state.popup.Popup;
 
 /**
@@ -12,4 +13,5 @@ import net.vanfleteren.jazygit.state.popup.Popup;
  * @param comment   the node id of the comment
  * @param reactions the reactions it has, which say which the viewer gave, and so takes back when chosen
  */
-public record ReactionPopup(int number, String thread, String comment, Reactions reactions) implements Popup {}
+public record ReactionPopup(int number, ReviewThread.Id thread, ReviewThread.Comment.Id comment, Reactions reactions)
+        implements Popup {}

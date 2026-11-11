@@ -37,7 +37,8 @@ import net.vanfleteren.jazygit.state.diff.Version;
  * @param commitFiles  the files a commit or a stash changed, which the files pane lists in place of the changed
  *                     files of the working tree while it is open
  * @param focusedPane  the id of the element of the screen, outside the popups, that had the focus last, which a
- *                     closing popup gives it back to; none before the view reported one
+ *                     closing popup gives it back to; none before the view reported one. It is a pane's id or
+ *                     an {@link AreaId}'s value, so not a {@link net.vanfleteren.jazygit.state.PaneId}
  * @param cherryPick   the commit copied to be cherry-picked onto the branch checked out later, if one is
  * @param searchLine   the text of the line above the commits pane to type a search in, while it is open
  * @param commitSearch the search of the log of HEAD that was run last, which the commits pane lists in place of

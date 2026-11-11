@@ -25,6 +25,7 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.git.model.RemoteName;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Upstream;
 import net.vanfleteren.jazygit.state.Model;
@@ -82,8 +83,8 @@ class ChecksUpdateTest {
         Model model = TestModels.localBranchesRead(loaded(), List.of(mine)).model();
         return Update.update(
                         model,
-                        new BranchChecksMsg.Loaded(
-                                new GitHubChecks(HashSet.of("origin"), HashMap.of(new BranchName("feature"), checks))))
+                        new BranchChecksMsg.Loaded(new GitHubChecks(
+                                HashSet.of(new RemoteName("origin")), HashMap.of(new BranchName("feature"), checks))))
                 .model();
     }
 

@@ -13,6 +13,7 @@ import java.nio.file.Path;
 import net.vanfleteren.jazygit.gh.model.GhAccount;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PullRequestLink;
+import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
@@ -26,7 +27,8 @@ import org.junit.jupiter.api.io.TempDir;
 @DisabledOnOs(OS.WINDOWS)
 class AccountBrowserTest {
 
-    private static final PullRequestLink COMMENT = new PullRequestLink("github.com", "owner/repo", 7, Option.of("42"));
+    private static final PullRequestLink COMMENT =
+            new PullRequestLink("github.com", "owner/repo", 7, Option.of(new ReviewThread.Comment.RestId("42")));
     private static final GhAccount ACTIVE = new GhAccount("github.com", "cvf");
 
     @TempDir

@@ -215,41 +215,43 @@ public interface GitHub {
      * Replies {@code body} to the review thread of pull request {@code number} whose first comment has the id
      * {@code comment}, as REST numbers it, published at once (ADR 60).
      */
-    Either<GhFailure, List<ExecutedCommand>> replyToReviewThread(int number, String comment, String body);
+    Either<GhFailure, List<ExecutedCommand>> replyToReviewThread(
+            int number, ReviewThread.Comment.RestId comment, String body);
 
     /**
      * Resolves the review thread with node id {@code thread} when {@code resolved}, else unresolves it (ADR 60).
      */
-    Either<GhFailure, List<ExecutedCommand>> resolveReviewThread(String thread, boolean resolved);
+    Either<GhFailure, List<ExecutedCommand>> resolveReviewThread(ReviewThread.Id thread, boolean resolved);
 
     /**
      * Deletes the comment of a review thread with node id {@code comment}; one that is gone already counts as deleted
      * (ADR 64).
      */
-    Either<GhFailure, List<ExecutedCommand>> deleteReviewComment(String comment);
+    Either<GhFailure, List<ExecutedCommand>> deleteReviewComment(ReviewThread.Comment.Id comment);
 
     /**
      * Deletes the comment of the conversation on a pull request with node id {@code comment}; one that is gone already
      * counts as deleted (ADR 64).
      */
-    Either<GhFailure, List<ExecutedCommand>> deletePullRequestComment(String comment);
+    Either<GhFailure, List<ExecutedCommand>> deletePullRequestComment(PullRequestComment.Id comment);
 
     /**
      * Gives {@code reaction} to the comment of a review thread with node id {@code comment} when {@code given}, else
      * takes it back (ADR 86); a comment GitHub no longer has fails as {@link GhError.Gone}.
      */
-    Either<GhFailure, List<ExecutedCommand>> reactToReviewComment(String comment, Reaction reaction, boolean given);
+    Either<GhFailure, List<ExecutedCommand>> reactToReviewComment(
+            ReviewThread.Comment.Id comment, Reaction reaction, boolean given);
 
     /**
      * Changes the comment of a review thread with node id {@code comment} to {@code body} (ADR 65).
      */
-    Either<GhFailure, Edited> editReviewComment(String comment, String body);
+    Either<GhFailure, Edited> editReviewComment(ReviewThread.Comment.Id comment, String body);
 
     /**
      * Changes the comment of the conversation on a pull request with node id {@code comment} to {@code body}
      * (ADR 65).
      */
-    Either<GhFailure, Edited> editPullRequestComment(String comment, String body);
+    Either<GhFailure, Edited> editPullRequestComment(PullRequestComment.Id comment, String body);
 
     /**
      * A pull request that was created.

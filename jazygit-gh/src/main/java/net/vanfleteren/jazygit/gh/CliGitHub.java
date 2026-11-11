@@ -432,28 +432,29 @@ public final class CliGitHub implements GitHub {
     }
 
     @Override
-    public Either<GhFailure, List<ExecutedCommand>> replyToReviewThread(int number, String comment, String body) {
+    public Either<GhFailure, List<ExecutedCommand>> replyToReviewThread(
+            int number, ReviewThread.Comment.RestId comment, String body) {
         return process.log(ReviewThreadMutations.reply(number, comment, body));
     }
 
     @Override
-    public Either<GhFailure, List<ExecutedCommand>> resolveReviewThread(String thread, boolean resolved) {
+    public Either<GhFailure, List<ExecutedCommand>> resolveReviewThread(ReviewThread.Id thread, boolean resolved) {
         return process.log(ReviewThreadMutations.resolve(thread, resolved));
     }
 
     @Override
-    public Either<GhFailure, List<ExecutedCommand>> deleteReviewComment(String comment) {
+    public Either<GhFailure, List<ExecutedCommand>> deleteReviewComment(ReviewThread.Comment.Id comment) {
         return delete(ReviewThreadMutations.delete(comment));
     }
 
     @Override
-    public Either<GhFailure, List<ExecutedCommand>> deletePullRequestComment(String comment) {
+    public Either<GhFailure, List<ExecutedCommand>> deletePullRequestComment(PullRequestComment.Id comment) {
         return delete(deleteCommentCommand(comment));
     }
 
     @Override
     public Either<GhFailure, List<ExecutedCommand>> reactToReviewComment(
-            String comment, Reaction reaction, boolean given) {
+            ReviewThread.Comment.Id comment, Reaction reaction, boolean given) {
         return process.log(ReviewThreadMutations.react(comment, reaction, given))
                 .mapLeft(failure -> GhProcess.gone(failure.error())
                         ? new GhFailure(new GhError.Gone(), failure.commands())
@@ -461,12 +462,12 @@ public final class CliGitHub implements GitHub {
     }
 
     @Override
-    public Either<GhFailure, Edited> editReviewComment(String comment, String body) {
+    public Either<GhFailure, Edited> editReviewComment(ReviewThread.Comment.Id comment, String body) {
         return edit(ReviewThreadMutations.edit(comment, body), ReviewThreadMutations.EDITED);
     }
 
     @Override
-    public Either<GhFailure, Edited> editPullRequestComment(String comment, String body) {
+    public Either<GhFailure, Edited> editPullRequestComment(PullRequestComment.Id comment, String body) {
         return edit(editCommentCommand(comment, body), EDITED_COMMENT);
     }
 
@@ -474,12 +475,20 @@ public final class CliGitHub implements GitHub {
         return gh("pr", "comment", String.valueOf(number), "--body", body);
     }
 
-    static GhCommand deleteCommentCommand(String comment) {
-        return gh("api", "graphql", "-f", "query=" + DELETE_COMMENT, "-f", "comment=" + comment);
+    static GhCommand deleteCommentCommand(PullRequestComment.Id comment) {
+        return gh("api", "graphql", "-f", "query=" + DELETE_COMMENT, "-f", "comment=" + comment.value());
     }
 
-    static GhCommand editCommentCommand(String comment, String body) {
-        return gh("api", "graphql", "-f", "query=" + EDIT_COMMENT, "-f", "comment=" + comment, "-f", "body=" + body);
+    static GhCommand editCommentCommand(PullRequestComment.Id comment, String body) {
+        return gh(
+                "api",
+                "graphql",
+                "-f",
+                "query=" + EDIT_COMMENT,
+                "-f",
+                "comment=" + comment.value(),
+                "-f",
+                "body=" + body);
     }
 
     // Runs command, which edits a comment, and gives the body GitHub now holds, which decoder reads from what it says.

@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.git.model.*;
+import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.settings.DiffLook;
 import net.vanfleteren.jazygit.settings.DiffStyle;
@@ -283,7 +284,7 @@ class ContentViewTest {
                 .mapPreferences(preferences ->
                         preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
         Model open = Update.update(
-                        Update.update(rich, new CommitFilesMsg.Opened(of, CommitsPanel.ID))
+                        Update.update(rich, new CommitFilesMsg.Opened(of, Scopes.COMMITS.pane()))
                                 .model(),
                         new LoadMsg.CommitFilesLoaded(of, List.of(file)))
                 .model();
@@ -312,7 +313,7 @@ class ContentViewTest {
                 new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
         CommitFile file = new CommitFile("src/a.txt", ChangeType.MODIFIED);
         Model open = Update.update(
-                        Update.update(TestModels.loaded(), new CommitFilesMsg.Opened(of, BranchesPanel.ID))
+                        Update.update(TestModels.loaded(), new CommitFilesMsg.Opened(of, Scopes.BRANCHES.pane()))
                                 .model(),
                         new LoadMsg.CommitFilesLoaded(of, List.of(file)))
                 .model();

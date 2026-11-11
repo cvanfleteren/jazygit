@@ -48,6 +48,7 @@ import net.vanfleteren.jazygit.settings.DiffLook;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.diff.Anchor;
 import net.vanfleteren.jazygit.state.diff.DiffCursorAt;
 import net.vanfleteren.jazygit.state.diff.DiffLines;
@@ -512,7 +513,7 @@ public final class ContentPanel {
      * The pane that gets the focus back when Escape, or Left at its left edge, is pressed in the area with id
      * {@code areaId}, if that is an area: the pane whose highlighted row it shows.
      */
-    public Option<String> paneOfArea(Model model, String areaId) {
+    public Option<PaneId> paneOfArea(Model model, String areaId) {
         return ContentArea.focusable(areaId).map(area -> area.pane(model));
     }
 
@@ -525,7 +526,7 @@ public final class ContentPanel {
                 .areas()
                 .iterator()
                 .map(Shown.Area::area)
-                .find(area -> area.pane(model).equals(paneId))
+                .find(area -> area.pane(model).value().equals(paneId))
                 .map(area -> area.id().value());
     }
 

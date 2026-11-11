@@ -95,7 +95,7 @@ class VerdictUpdateTest {
                         new CommitFilesMsg.Opened(
                                 new Changes.OfPullRequest(
                                         new PullRequestCommits(7, "owner/repo", "", new Sha(base), new Sha(head))),
-                                Scopes.BRANCHES.id()))
+                                Scopes.BRANCHES.pane()))
                 .model();
         return Update.update(opened, new CommitFilesMsg.RemarksLoaded(7, remarks, HashSet.empty(), 0))
                 .model();
