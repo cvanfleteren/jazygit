@@ -25,8 +25,10 @@ without changes has no diff, and no version can be made from one.
 - All its files are those git tracks and the untracked ones it does not ignore: `git ls-files -z -t --cached --others
   --exclude-standard --deduplicate`, which lists a conflicted file once, not once per stage. A submodule is one
   entry. Not: the ignored files, as `target/` or `node_modules/`, which would bury the others.
-- A file a sparse checkout leaves off the disk, tagged `S` by `-t`, is left out: it cannot be read, and `e` would make
-  a new file. A tracked file deleted from the disk but not staged stays: it is a changed file, and shows its diff.
+- A file tagged `S` by `-t` (skip-worktree) is left out when it is not on disk, as a sparse checkout leaves it: it
+  cannot be read, and `e` would make a new file. One that is on disk, as `git update-index --skip-worktree` leaves it,
+  stays and shows its content, its edits too, as git does not report them. A tracked file deleted from the disk but
+  not staged stays: it is a changed file, and shows its diff.
 - They are read again with each reload of the working tree, only while the mode is on: the pane of changed files
   costs nothing more.
 - The mode is kept per repository for the session, through reloads and operations. It is not kept for the next one.
