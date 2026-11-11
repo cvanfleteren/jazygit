@@ -11,6 +11,7 @@ import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import java.util.concurrent.atomic.AtomicReference;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.gh.model.CommentRights;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
@@ -23,9 +24,12 @@ import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.git.StubStatus;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.state.CommitFilesView;
+import net.vanfleteren.jazygit.state.FileFilter;
+import net.vanfleteren.jazygit.state.FileFilterMsg;
 import net.vanfleteren.jazygit.state.LoadAhead;
 import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import org.junit.jupiter.api.Test;
@@ -40,6 +44,13 @@ class FilesPanelTest {
     private static final List<CommitFile> MODEL_AND_TEST = List.of(
             new CommitFile(MODEL + "/WordDiff.java", ChangeType.MODIFIED),
             new CommitFile("core/src/test/java/model/WordDiffTest.java", ChangeType.MODIFIED));
+
+    // Rows: /, src, main, A.java, test, ATest.java, BTest.java, README.md.
+    private static final List<FileEntry> FILTERED = List.of(
+            Fixtures.fileEntry("src/main/A.java", ChangeType.MODIFIED),
+            Fixtures.fileEntry("src/test/ATest.java", ChangeType.MODIFIED),
+            Fixtures.fileEntry("src/test/BTest.java", ChangeType.MODIFIED),
+            Fixtures.fileEntry("README.md", ChangeType.MODIFIED));
 
     private final FilesPanel panel = new FilesPanel(msg -> {}, () -> {});
 
@@ -603,6 +614,190 @@ class FilesPanelTest {
             assertEquals("", highlighted(panel));
             SettledPilot.of(testRunner).quit();
         }
+    }
+
+    @Test
+    void theFilterIsTypedAboveTheTreeKeptWithEnterAndClearedWithEscape() throws Exception {
+        AtomicReference<Model> model = new AtomicReference<>(TestModels.loaded(fixed(FILTERED)));
+        java.util.List<Msg> sent = new java.util.ArrayList<>();
+        FilesPanel panel = new FilesPanel(
+                msg -> {
+                    sent.add(msg);
+                    model.set(Update.update(model.get(), msg).model());
+                },
+                () -> {});
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model.get(), FilesPanel.ID))) {
+            SettledPilot.focus(testRunner, FilesPanel.ID);
+            SettledPilot.of(testRunner).pause();
+            SettledPilot.of(testRunner).press('/');
+            SettledPilot.of(testRunner).pause();
+            // Space, which stages, and d, which discards, are letters of the filter meanwhile.
+            for (char typed : "Test d".toCharArray()) {
+                SettledPilot.of(testRunner).press(typed);
+                SettledPilot.of(testRunner).pause();
+            }
+            for (int i = 0; i < 2; i++) {
+                SettledPilot.of(testRunner).press(KeyCode.BACKSPACE);
+                SettledPilot.of(testRunner).pause();
+            }
+            String typing = RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), FilesPanel.ID));
+            assertTrue(typing.contains("/ Test"), typing);
+            assertTrue(typing.contains("ATest.java"), typing);
+            assertTrue(typing.contains("BTest.java"), typing);
+            assertFalse(typing.contains("A.java"), typing);
+            assertFalse(typing.contains("README.md"), typing);
+            // The highlight is on the first file that matches, not on the root.
+            assertEquals(
+                    "src/test/ATest.java", panel.tree().selectedNode().data().path());
+
+            SettledPilot.of(testRunner).press(KeyCode.DOWN);
+            SettledPilot.of(testRunner).pause();
+            assertEquals(
+                    "src/test/BTest.java", panel.tree().selectedNode().data().path());
+
+            SettledPilot.of(testRunner).press(KeyCode.ENTER);
+            SettledPilot.of(testRunner).pause();
+            String kept = RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), FilesPanel.ID));
+            assertTrue(kept.contains("Files · /Test"), kept);
+            assertFalse(kept.contains("/ Test"), kept);
+            // The rows shown: /, src/test and its two files.
+            assertTrue(kept.contains("4/4"), kept);
+            assertEquals(
+                    Option.of("Test"), FileFilter.shown(model.get().repoView().filesFilter()));
+
+            SettledPilot.of(testRunner).press(KeyCode.ESCAPE);
+            SettledPilot.of(testRunner).pause();
+            String cleared = RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), FilesPanel.ID));
+            assertTrue(cleared.contains("README.md"), cleared);
+            assertTrue(cleared.contains("Files"), cleared);
+            assertFalse(cleared.contains("/Test"), cleared);
+            assertEquals(
+                    "src/test/BTest.java", panel.tree().selectedNode().data().path());
+
+            assertEquals(new FileFilterMsg.Opened(), sent.getFirst());
+            assertEquals(new FileFilterMsg.Submitted(), sent.get(sent.size() - 2));
+            assertEquals(new FileFilterMsg.Cleared(), sent.getLast());
+            SettledPilot.of(testRunner).quit();
+        }
+    }
+
+    @Test
+    void escapeInTheLinePutsBackTheFilterFromBefore() throws Exception {
+        AtomicReference<Model> model = new AtomicReference<>(TestModels.loaded(fixed(FILTERED))
+                .mapRepoView(repoView -> repoView.withFilesFilter(Option.of(new FileFilter("README", Option.none())))));
+        FilesPanel panel =
+                new FilesPanel(msg -> model.set(Update.update(model.get(), msg).model()), () -> {});
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model.get(), FilesPanel.ID))) {
+            SettledPilot.focus(testRunner, FilesPanel.ID);
+            SettledPilot.of(testRunner).pause();
+            SettledPilot.of(testRunner).press('/');
+            SettledPilot.of(testRunner).pause();
+            SettledPilot.of(testRunner).press('x');
+            SettledPilot.of(testRunner).pause();
+            assertTrue(RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), FilesPanel.ID))
+                    .contains("No files match"));
+
+            SettledPilot.of(testRunner).press(KeyCode.ESCAPE);
+            SettledPilot.of(testRunner).pause();
+            String back = RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), FilesPanel.ID));
+            assertTrue(back.contains("Files · /README"), back);
+            assertTrue(back.contains("README.md"), back);
+            SettledPilot.of(testRunner).quit();
+        }
+    }
+
+    @Test
+    void nothingMatchingLeavesNothingToActOn() throws Exception {
+        Model model = TestModels.loaded(fixed(FILTERED))
+                .mapRepoView(repoView -> repoView.withFilesFilter(Option.of(new FileFilter("zzz", Option.none()))));
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.ID))) {
+            String screen = RenderedText.ofLarge(testRunner, () -> panel.render(model, FilesPanel.ID));
+            assertTrue(screen.contains("No files match"), screen);
+            assertTrue(screen.contains("0/0"), screen);
+            assertTrue(panel.selectionChange(model).isEmpty());
+            assertTrue(FilesPanel.noneMatch(model, FILTERED));
+            assertFalse(FilesPanel.noneMatch(TestModels.loaded(fixed(FILTERED)), FILTERED));
+            SettledPilot.of(testRunner).quit();
+        }
+    }
+
+    @Test
+    void theDirectoriesOpenWhileFilteredAndCloseAgainOnceTheFilterIsCleared() throws Exception {
+        Model all = TestModels.loaded(fixed(FILTERED));
+        Model filtered =
+                all.mapRepoView(repoView -> repoView.withFilesFilter(Option.of(new FileFilter("java", Option.none()))));
+        Model other =
+                all.mapRepoView(repoView -> repoView.withFilesFilter(Option.of(new FileFilter("Test", Option.none()))));
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(all, FilesPanel.ID))) {
+            RenderedText.ofLarge(testRunner, () -> panel.render(all, FilesPanel.ID));
+            panel.tree().selected(3);
+            assertEquals("src/main", panel.tree().selectedNode().data().path());
+            panel.tree().selectedNode().expanded(false);
+            assertFalse(RenderedText.ofLarge(testRunner, () -> panel.render(all, FilesPanel.ID))
+                    .contains("A.java"));
+
+            assertTrue(RenderedText.ofLarge(testRunner, () -> panel.render(filtered, FilesPanel.ID))
+                    .contains("A.java"));
+            // Collapsed by hand while filtered, and opened again by the next filter.
+            panel.tree().selected(4);
+            assertEquals("src/test", panel.tree().selectedNode().data().path());
+            panel.tree().selectedNode().expanded(false);
+            assertFalse(RenderedText.ofLarge(testRunner, () -> panel.render(filtered, FilesPanel.ID))
+                    .contains("ATest.java"));
+            String refiltered = RenderedText.ofLarge(testRunner, () -> panel.render(other, FilesPanel.ID));
+            assertTrue(refiltered.contains("ATest.java"), refiltered);
+
+            String cleared = RenderedText.ofLarge(testRunner, () -> panel.render(all, FilesPanel.ID));
+            assertFalse(cleared.contains("A.java"), cleared);
+            assertTrue(cleared.contains("ATest.java"), cleared);
+            SettledPilot.of(testRunner).quit();
+        }
+    }
+
+    @Test
+    void escapeInTheFilteredFilesOfACommitClearsTheFilterBeforeItClosesThem() throws Exception {
+        AtomicReference<Model> model =
+                new AtomicReference<>(loaded(opened(TestModels.loaded(fixed(List.of()))), MODEL_AND_TEST)
+                        .mapRepoView(repoView -> repoView.withCommitFiles(repoView.commitFiles()
+                                .map(view -> view.withFilter(Option.of(new FileFilter("Test", Option.none())))))));
+        FilesPanel panel =
+                new FilesPanel(msg -> model.set(Update.update(model.get(), msg).model()), () -> {});
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model.get(), FilesPanel.ID))) {
+            SettledPilot.focus(testRunner, FilesPanel.ID);
+            SettledPilot.of(testRunner).pause();
+            String filtered = RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), FilesPanel.ID));
+            assertTrue(filtered.contains("Files of aaaa · /Test"), filtered);
+            assertFalse(filtered.contains("WordDiff.java"), filtered);
+
+            SettledPilot.of(testRunner).press(KeyCode.ESCAPE);
+            SettledPilot.of(testRunner).pause();
+            assertTrue(model.get().repoView().commitFiles().isDefined());
+            assertTrue(RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), FilesPanel.ID))
+                    .contains("WordDiff.java"));
+
+            SettledPilot.of(testRunner).press(KeyCode.ESCAPE);
+            SettledPilot.of(testRunner).pause();
+            assertTrue(model.get().repoView().commitFiles().isEmpty());
+            SettledPilot.of(testRunner).quit();
+        }
+    }
+
+    @Test
+    void theFilterMatchesTheWholePathOrWhereARenamedFileCameFrom() {
+        List<FileEntry> files = List.of(
+                Fixtures.fileEntry("src/main/A.java", ChangeType.MODIFIED),
+                FileEntry.renamed("lib/B.java", "src/old/B.java", true, false));
+
+        assertEquals(files, FileTreeList.matching(files, Option.none()));
+        assertEquals(files, FileTreeList.matching(files, Option.of("src/")));
+        assertEquals(files.take(1), FileTreeList.matching(files, Option.of("main/a")));
+        assertEquals(List.empty(), FileTreeList.matching(files, Option.of("Main")));
+        assertEquals(files.drop(1), FileTreeList.matching(files, Option.of("old")));
     }
 
     /**

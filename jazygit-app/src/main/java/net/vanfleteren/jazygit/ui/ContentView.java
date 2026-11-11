@@ -237,14 +237,17 @@ final class ContentView {
         // With no files there is nothing to highlight, so no diff is ever requested.
         return model.repo().status().toOption().exists(status -> status.files().isEmpty())
                 ? dim(title, Messages.get("content.noChangedFiles"))
-                : model.repoView()
-                        .fileDiff()
-                        .map(Preview::shown)
-                        .map(diff -> whenLoaded(
-                                title,
-                                diff.value(),
-                                diffs -> diffAreas(options, model.preferences().diffLook(), title, diffs)))
-                        .getOrElse(() -> loading(title));
+                : model.repo().status().toOption().exists(status -> FilesPanel.noneMatch(model, status.files()))
+                        ? dim(title, Messages.get("panel.files.noMatches"))
+                        : model.repoView()
+                                .fileDiff()
+                                .map(Preview::shown)
+                                .map(diff -> whenLoaded(
+                                        title,
+                                        diff.value(),
+                                        diffs -> diffAreas(
+                                                options, model.preferences().diffLook(), title, diffs)))
+                                .getOrElse(() -> loading(title));
     }
 
     /**
@@ -369,7 +372,12 @@ final class ContentView {
         // When only the files with review threads are listed and none is, nothing is highlighted (ADR 57).
         Option<Shown> nothingListed = FilesPanel.nothingListed(view.listed())
                 .filter(nothing -> !view.listedFiles().toOption().exists(List::nonEmpty))
-                .map(nothing -> whenLoaded(title, view.listedFiles(), listed -> dim(title, nothing)));
+                .map(nothing -> whenLoaded(title, view.listedFiles(), listed -> dim(title, nothing)))
+                // Nor when the filter hides all files listed (ADR 105).
+                .orElse(() -> view.listedFiles()
+                        .toOption()
+                        .filter(listed -> FilesPanel.noneMatch(model, listed))
+                        .map(listed -> dim(title, Messages.get("panel.files.noMatches"))));
         return nothingListed.getOrElse(() -> view.diff()
                 .map(Preview::shown)
                 .map(diff -> whenLoaded(

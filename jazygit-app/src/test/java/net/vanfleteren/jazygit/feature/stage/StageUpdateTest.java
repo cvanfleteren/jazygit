@@ -11,9 +11,11 @@ import net.vanfleteren.jazygit.feature.stage.StageCmd.Unstage;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.Fixtures;
+import net.vanfleteren.jazygit.state.FileFilter;
 import net.vanfleteren.jazygit.state.LoadBranches;
 import net.vanfleteren.jazygit.state.LoadStatus;
 import net.vanfleteren.jazygit.state.LogEntry;
+import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import org.junit.jupiter.api.Test;
@@ -91,6 +93,44 @@ class StageUpdateTest {
         assertEquals(
                 List.of(new Stage(List.of("."))),
                 Update.update(loaded(), new StageMsg.Requested(List.of(unstaged, staged), Option.of("")))
+                        .cmds());
+    }
+
+    @Test
+    void whileTheFilesAreFilteredADirectoryStandsForTheFilesShownUnderIt() {
+        FileEntry unstaged = Fixtures.fileEntry("src/ATest.java", ChangeType.MODIFIED);
+        FileEntry staged = new FileEntry("src/BTest.java", ChangeType.MODIFIED, true, false);
+        FileEntry added = new FileEntry("src/CTest.java", ChangeType.ADDED, true, false);
+        Model filtered = loaded().mapRepoView(
+                        repoView -> repoView.withFilesFilter(Option.of(new FileFilter("Test", Option.none()))));
+
+        assertEquals(
+                List.of(new Stage(List.of("src/ATest.java"))),
+                Update.update(filtered, new StageMsg.Requested(List.of(unstaged, staged), Option.of("")))
+                        .cmds());
+        assertEquals(
+                List.of(new Stage(List.of("src/ATest.java"))),
+                Update.update(filtered, new StageMsg.Requested(List.of(unstaged), Option.of("src")))
+                        .cmds());
+        assertEquals(
+                List.of(new Unstage(List.of(), List.of("src/BTest.java"))),
+                Update.update(filtered, new StageMsg.Requested(List.of(staged), Option.of("")))
+                        .cmds());
+        assertEquals(
+                List.of(new Unstage(List.of("src/CTest.java"), List.of("src/BTest.java"))),
+                Update.update(filtered, new StageMsg.Requested(List.of(added, staged), Option.of("src")))
+                        .cmds());
+    }
+
+    @Test
+    void anOpenLineWithNothingTypedFiltersNoDirectory() {
+        FileEntry unstaged = Fixtures.fileEntry("src/a.txt", ChangeType.MODIFIED);
+        Model typing = loaded().mapRepoView(
+                        repoView -> repoView.withFilesFilter(Option.of(new FileFilter("", Option.of("")))));
+
+        assertEquals(
+                List.of(new Stage(List.of("src"))),
+                Update.update(typing, new StageMsg.Requested(List.of(unstaged), Option.of("src")))
                         .cmds());
     }
 

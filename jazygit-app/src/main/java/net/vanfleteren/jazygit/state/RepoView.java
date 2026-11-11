@@ -38,6 +38,8 @@ import net.vanfleteren.jazygit.git.model.*;
  * @param searchLine   the text of the line above the commits pane to type a search in, while it is open
  * @param commitSearch the search of the log of HEAD that was run last, which the commits pane lists in place of
  *                     the log until it is cleared
+ * @param filesFilter  the filter of the files of the working tree: the files pane shows only those that match it
+ *                     (ADR 105)
  * @param onlyAhead    whether the logs list only the commits not on their base, and the commit they forked from
  * @param closedStacks the numbers of the stacks the branches pane shows closed, as only their header; a stack
  *                     starts open (ADR 72)
@@ -64,6 +66,7 @@ public record RepoView(
         Option<Commit> cherryPick,
         Option<String> searchLine,
         Option<CommitSearch> commitSearch,
+        Option<FileFilter> filesFilter,
         boolean onlyAhead,
         Set<Integer> closedStacks,
         boolean unstacked,
@@ -72,6 +75,7 @@ public record RepoView(
 
     public static final RepoView INITIAL = new RepoView(
             BranchesTab.LOCAL,
+            Option.none(),
             Option.none(),
             Option.none(),
             Option.none(),

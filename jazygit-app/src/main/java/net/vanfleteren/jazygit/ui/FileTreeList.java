@@ -11,6 +11,7 @@ import dev.tamboui.tui.event.MouseEventKind;
 import dev.tamboui.widgets.common.ScrollBarPolicy;
 import dev.tamboui.widgets.tree.TreeNode;
 import io.vavr.Tuple;
+import io.vavr.collection.HashSet;
 import io.vavr.collection.Iterator;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
@@ -21,8 +22,10 @@ import java.util.function.Function;
 import java.util.function.ToIntFunction;
 import net.vanfleteren.jazygit.git.model.FileTree;
 import net.vanfleteren.jazygit.git.model.Pathed;
+import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
+import net.vanfleteren.jazygit.ui.widgets.ListFilter;
 
 /**
  * Changed files as a directory tree under a root that holds them all, in a tree widget that keeps its own selection
@@ -50,6 +53,9 @@ final class FileTreeList<T extends Pathed> {
     private Option<Loadable<List<T>>> shown = Option.none();
     // What the tree says while the files are read, and when there are none, that it was built for.
     private Placeholder placeholder = Placeholder.DEFAULT;
+    // What the files were filtered on when the tree was built, and the directories collapsed before they were.
+    private Option<String> filter = Option.none();
+    private Set<String> collapsedUnfiltered = HashSet.empty();
     // Whether the files have not been read since they were last loading, so the start highlight is still to place.
     private boolean unread;
     // The nodes drawn for the frame being rendered, with what they were drawn as, to find the one clicked on.
@@ -104,6 +110,18 @@ final class FileTreeList<T extends Pathed> {
      * @param active whether the pane is in use, which shows the highlighted node
      */
     TreeElement<FileTree<T>> render(Object of, Loadable<List<T>> files, boolean active, Placeholder placeholder) {
+        return render(of, files, active, placeholder, Option.none());
+    }
+
+    /**
+     * The tree of those of {@code files} that match {@code filter} (ADR 105). While they are filtered, every
+     * directory is open; a change to the filter opens them all again, and clearing it collapses those collapsed
+     * before. The highlight then stays on its path, or else goes to the first file shown.
+     *
+     * @param filter what the files are filtered on, if anything
+     */
+    TreeElement<FileTree<T>> render(
+            Object of, Loadable<List<T>> files, boolean active, Placeholder placeholder, Option<String> filter) {
         drawn = List.of();
         tree.highlightStyle(highlights.of(active))
                 .highlightSymbol(active ? HIGHLIGHT_SYMBOL : " ".repeat(HIGHLIGHT_SYMBOL.length()));
@@ -111,14 +129,22 @@ final class FileTreeList<T extends Pathed> {
             shownOf = Option.of(of);
             shown = Option.of(files);
             this.placeholder = placeholder;
+            this.filter = filter;
+            collapsedUnfiltered = HashSet.empty();
             roots = List.of();
-            rebuild(files);
+            rebuild(files, HashSet.empty());
             tree.selected(0);
             unread = true;
+        } else if (!this.filter.equals(filter)) {
+            Option<String> before = this.filter;
+            shown = Option.of(files);
+            this.placeholder = placeholder;
+            this.filter = filter;
+            refilter(files, before);
         } else if (!shown.contains(files) || !this.placeholder.equals(placeholder)) {
             shown = Option.of(files);
             this.placeholder = placeholder;
-            rebuild(files);
+            rebuild(files, collapsed(roots));
         }
         // A load already lost the highlight, so it is placed afresh once the files are read again.
         if (!(files instanceof Loadable.Loaded<List<T>>)) {
@@ -153,7 +179,19 @@ final class FileTreeList<T extends Pathed> {
      * a rebuild.
      */
     Option<Integer> count(Loadable<List<T>> files) {
-        return files.toOption().map(read -> read.isEmpty() ? 0 : visible(roots).size());
+        return files.toOption()
+                .map(read ->
+                        matching(read, filter).isEmpty() ? 0 : visible(roots).size());
+    }
+
+    /**
+     * Those of {@code files} whose path, or the path a renamed one came from, contains {@code filter}: all of them
+     * when there is none.
+     */
+    static <T extends Pathed> List<T> matching(List<T> files, Option<String> filter) {
+        return filter.map(typed -> files.filter(file -> ListFilter.matches(Option.of(typed), file.path())
+                        || file.origin().exists(origin -> ListFilter.matches(Option.of(typed), origin))))
+                .getOrElse(files);
     }
 
     /**
@@ -241,13 +279,37 @@ final class FileTreeList<T extends Pathed> {
                 (n.isExpanded() ? visible(List.ofAll(n.children())) : List.<TreeNode<FileTree<T>>>empty()).prepend(n));
     }
 
-    @SuppressWarnings("unchecked")
-    private void rebuild(Loadable<List<T>> files) {
+    /**
+     * Rebuilds the tree, keeping the {@code collapsed} directories collapsed, and the highlight on the same path or
+     * the nearest one still there.
+     */
+    private void rebuild(Loadable<List<T>> files, Set<String> collapsed) {
         List<Option<String>> before = paths(visible(roots));
         int previous = tree.selected();
-        roots = roots(files, collapsed(roots));
-        tree.roots(roots.toJavaArray(TreeNode[]::new));
+        show(roots(files, collapsed));
         tree.selected(restored(before, previous, paths(visible(roots))));
+    }
+
+    /**
+     * Rebuilds the tree once the filter changed from {@code before}: with every directory open while it filters, or
+     * else those collapsed before it did collapsed again. The highlight stays on the same path, or else goes to the
+     * first file.
+     */
+    private void refilter(Loadable<List<T>> files, Option<String> before) {
+        Option<String> highlighted = selected().map(FileTree::path);
+        if (before.isEmpty()) {
+            collapsedUnfiltered = collapsed(roots);
+        }
+        show(roots(files, filter.isDefined() ? HashSet.empty() : collapsedUnfiltered));
+        List<TreeNode<FileTree<T>>> rows = visible(roots);
+        int same = paths(rows).indexWhere(path -> path.isDefined() && path.equals(highlighted));
+        tree.selected(same >= 0 ? same : Math.max(0, rows.indexWhere(n -> n.data() instanceof FileTree.File<T>)));
+    }
+
+    @SuppressWarnings("unchecked")
+    private void show(List<TreeNode<FileTree<T>>> roots) {
+        this.roots = roots;
+        tree.roots(roots.toJavaArray(TreeNode[]::new));
     }
 
     /**
@@ -275,8 +337,12 @@ final class FileTreeList<T extends Pathed> {
                         .empty()
                         .map(empty -> TreeNode.<FileTree<T>>of(empty).leaf())
                         .toList();
+            case Loadable.Loaded<List<T>>(List<T> value)
+            when matching(value, filter).isEmpty() ->
+                List.of(TreeNode.<FileTree<T>>of(Messages.get("panel.files.noMatches"))
+                        .leaf());
             case Loadable.Loaded<List<T>>(List<T> value) ->
-                List.of(node(new FileTree.Dir<>(ROOT_NAME, "", FileTree.of(value)), collapsed));
+                List.of(node(new FileTree.Dir<>(ROOT_NAME, "", FileTree.of(matching(value, filter))), collapsed));
         };
     }
 

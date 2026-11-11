@@ -6,6 +6,7 @@ import net.vanfleteren.jazygit.feature.stage.StageCmd.Stage;
 import net.vanfleteren.jazygit.feature.stage.StageCmd.Unstage;
 import net.vanfleteren.jazygit.feature.stage.StageMsg.Requested;
 import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.state.FileFilterUpdate;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -19,7 +20,14 @@ public final class StageUpdate {
 
     public static Next update(Model model, StageMsg msg) {
         return switch (msg) {
-            case Requested(List<FileEntry> files, Option<String> directory) -> toggle(model, files, directory);
+            case Requested(List<FileEntry> files, Option<String> directory) ->
+                // While the files are filtered, a directory stands for the files shown under it only, so git gets
+                // those: the directory itself would also take the files the filter hides (ADR 105).
+                toggle(
+                        model,
+                        files,
+                        directory.filter(
+                                d -> FileFilterUpdate.workingTree(model).isEmpty()));
         };
     }
 

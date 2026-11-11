@@ -150,7 +150,9 @@ public final class CommitFilesUpdate {
                                         .withDeleting(read.deleting())
                                         .withReacting(read.reacting())
                                         .withVersion(read.version())
-                                        .withPictures(read.pictures());
+                                        .withPictures(read.pictures())
+                                        // The same pull request, read again: its filter stays (ADR 105).
+                                        .withFilter(read.filter());
                                 return pictures(
                                         model.mapRepoView(repoView -> repoView.withCommitFiles(Option.of(again))),
                                         again,
