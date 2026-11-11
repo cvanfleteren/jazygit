@@ -95,3 +95,6 @@ own.
 - While filtered, staging a directory gives git one path per file, as discarding one always did: tens of thousands
   can go over the system's limit on the length of a command. Passing them on stdin (`--pathspec-from-file`) is left
   to issue #410.
+
+Amended by ADR 106: a filter of two words or more, each started by an uppercase letter, also matches the starts of
+words following each other: `CCM` and `CCMat` match `CapitalCaseMatching.java`.
