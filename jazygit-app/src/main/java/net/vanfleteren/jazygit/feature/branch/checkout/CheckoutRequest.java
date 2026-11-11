@@ -5,6 +5,7 @@ import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutCmd.Checkout;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutCmd.CheckoutRemote;
 import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchCmd;
 import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeUpdate;
+import net.vanfleteren.jazygit.feature.worktree.add.CatchUp;
 import net.vanfleteren.jazygit.feature.worktree.add.WorktreeSource;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.NewBranchStart;
@@ -44,9 +45,18 @@ public interface CheckoutRequest {
     Msg again();
 
     /**
-     * The local branch {@code branch}, which exists and is checked out nowhere.
+     * The local branch {@code branch}, which exists and is checked out nowhere. In a new worktree, {@code catchUp} is
+     * done to it first: one asked for as a remote branch it follows goes there at what was fetched of it (ADR 109).
+     * Here it is checked out as it is.
      */
-    record Local(BranchName branch) implements CheckoutRequest {
+    record Local(BranchName branch, CatchUp catchUp) implements CheckoutRequest {
+
+        /**
+         * {@code branch}, checked out as it is wherever it goes.
+         */
+        public Local(BranchName branch) {
+            this(branch, new CatchUp.AsIs());
+        }
 
         @Override
         public String label() {
@@ -60,7 +70,7 @@ public interface CheckoutRequest {
 
         @Override
         public Next inNewWorktree(Model model) {
-            return AddWorktreeUpdate.forBranch(model, branch, true);
+            return AddWorktreeUpdate.forBranch(model, branch, catchUp, true);
         }
 
         @Override

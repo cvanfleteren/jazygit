@@ -5,6 +5,7 @@ import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
+import java.util.Comparator;
 import lombok.With;
 import net.vanfleteren.jazygit.git.model.*;
 
@@ -120,11 +121,35 @@ public record Repo(
     }
 
     /**
-     * The local branch that follows {@code upstream}, if the branches are loaded and one does.
+     * The local branch that follows {@code upstream}, if the branches are loaded and one does: the first of
+     * {@link #followers}.
      */
     public Option<Branch> trackingBranch(RemoteBranch upstream) {
+        return followers(upstream).headOption();
+    }
+
+    /**
+     * The local branches that follow {@code upstream}, empty while the branches are not loaded: first those that no
+     * worktree has checked out, then those another worktree has, then the one checked out here; within each, the one
+     * named as {@code upstream} first, then by name (ADR 109).
+     */
+    public List<Branch> followers(RemoteBranch upstream) {
         return branches.toOption()
-                .flatMap(loaded -> loaded.find(branch -> branch.remoteUpstream().contains(upstream)));
+                .getOrElse(List.empty())
+                .filter(branch -> branch.remoteUpstream().contains(upstream))
+                .sorted(Comparator.comparingInt(Repo::whereCheckedOut)
+                        .thenComparing((Branch branch) -> !branch.name().equals(upstream.branch()))
+                        .thenComparing(branch -> branch.name().value()));
+    }
+
+    /**
+     * 0 for a branch that no worktree has checked out, 1 for one another worktree has, 2 for the one checked out here.
+     */
+    private static int whereCheckedOut(Branch branch) {
+        if (branch.current()) {
+            return 2;
+        }
+        return branch.checkedOutElsewhere() ? 1 : 0;
     }
 
     /**

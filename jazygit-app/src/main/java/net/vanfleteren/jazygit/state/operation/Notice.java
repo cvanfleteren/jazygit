@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.state.operation;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.InProgress;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Sha;
 
 /**
@@ -54,6 +55,12 @@ public sealed interface Notice {
      * fast-forwarded, and {@code kept} kept as they were, though not where their branch on the remote is.
      */
     record StackCheckedOut(int stack, int made, int fastForwarded, int kept) implements Notice {}
+
+    /**
+     * {@code branch}, which a new worktree checked out, was kept as it was: it has {@code ahead} commits that are not
+     * on {@code upstream}, the remote branch it follows, so it was not fast-forwarded to it (ADR 109).
+     */
+    record BranchKept(BranchName branch, int ahead, RemoteBranch upstream) implements Notice {}
 
     /**
      * The terminal was asked to copy {@code lines} lines of a diff to the clipboard (ADR 94).
