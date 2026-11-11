@@ -16,7 +16,6 @@ import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.Cmd.*;
 import net.vanfleteren.jazygit.state.load.AheadUpdate;
-import net.vanfleteren.jazygit.state.load.CheckFileDiff;
 import net.vanfleteren.jazygit.state.load.CheckMetadata;
 import net.vanfleteren.jazygit.state.load.Load;
 import net.vanfleteren.jazygit.state.load.LoadBranchLog;
@@ -26,7 +25,6 @@ import net.vanfleteren.jazygit.state.load.LoadCommitFileDiff;
 import net.vanfleteren.jazygit.state.load.LoadCommitFiles;
 import net.vanfleteren.jazygit.state.load.LoadCommits;
 import net.vanfleteren.jazygit.state.load.LoadDivergence;
-import net.vanfleteren.jazygit.state.load.LoadFileDiff;
 import net.vanfleteren.jazygit.state.load.LoadStashDetail;
 import net.vanfleteren.jazygit.state.load.LoadStatus;
 import net.vanfleteren.jazygit.state.load.LoadWorktreeChanges;
@@ -362,33 +360,6 @@ public final class Update {
                         && model.repoView().branchesTab() == BranchesTab.WORKTREES
                         && others.nonEmpty()
                         && !model.jobs().runs(LoadWorktreeChanges.class::isInstance));
-    }
-
-    /**
-     * Reads the highlighted diff again once its files changed, as they can change on disk without their status
-     * changing: it looks at them first, without git (ADR 58), unless HEAD moved, which changes what the staged changes
-     * are compared with. This waits for the status: right after (un)staging, the entries the diff was read for are
-     * outdated, and reading them again would show their changes as gone for as long as the new status takes to
-     * arrive.
-     */
-    public static Next reloadDiff(Model model, List<Cmd> cmds, boolean headMoved) {
-        return shownDiff(model)
-                .filter(load -> !model.jobs().runs(load) && !model.jobs().runs(new CheckFileDiff(load)))
-                .map(load -> new Next(model, cmds.append(headMoved ? load : new CheckFileDiff(load))))
-                .getOrElse(() -> new Next(model, cmds));
-    }
-
-    /**
-     * The read of the highlighted diff, with the options now chosen, while the status still lists its files.
-     */
-    public static Option<LoadFileDiff> shownDiff(Model model) {
-        return model.repoView()
-                .fileDiff()
-                .filter(d -> model.repo()
-                        .status()
-                        .toOption()
-                        .exists(status -> status.files().toSet().containsAll(d.key())))
-                .map(d -> new LoadFileDiff(d.key(), model.preferences().diffOptions()));
     }
 
     /**
