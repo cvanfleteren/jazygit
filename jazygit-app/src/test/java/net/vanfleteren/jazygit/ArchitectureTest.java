@@ -390,6 +390,13 @@ class ArchitectureTest {
     static final ArchRule featuresAreFreeOfCycles =
             slices().matching(ROOT + ".feature.(*)..").should().beFreeOfCycles();
     /**
+     * The parts of the state, each a subpackage of it, depend on each other one way only. The core, in {@code state}
+     * itself, is no part: the {@code Model} holds them all, and they all work on it.
+     */
+    @ArchTest
+    static final ArchRule stateIsFreeOfCycles =
+            slices().matching(ROOT + ".state.(*)..").should().beFreeOfCycles();
+    /**
      * Only {@code OnGitHub} names a branch for gh, from the branch on its remote, so the name of a local branch is not
      * handed to gh for it (ADR 40). A constructor reference, {@code GhBranch::new}, is an access too, so it counts as
      * a call does.

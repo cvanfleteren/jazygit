@@ -32,9 +32,9 @@ import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.AppError.CannotReview.Why;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.diff.*;
+import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.operation.*;
 import net.vanfleteren.jazygit.state.view.*;
-import net.vanfleteren.jazygit.state.view.CommitFilesView.Changes;
 
 /**
  * Commenting on the lines of the diff of a pull request's files from its cursor (ADR 60). A thread is started, or
@@ -259,7 +259,8 @@ public final class ReviewUpdate {
 
     private static Either<Why, ReviewPopup> startIn(Model model, CommitFilesView view, DiffCursorAt at) {
         String commit = view.of().sha().value();
-        if (Version.in(model, at.area(), at.at().content())
+        if (model.repoView()
+                .version(at.area(), at.at().content())
                 .flatMap(Version::showing)
                 .isDefined()) {
             return Either.left(Why.IN_VERSION);
@@ -615,10 +616,8 @@ public final class ReviewUpdate {
      * content panel draws it: with the lines expanded in its area (ADR 77), so that a range stays in a hunk as shown.
      */
     private static DiffLines diffLines(Model model, CommitFilesView view, DiffCursorAt at) {
-        return DiffLines.shown(
-                model,
-                at,
-                view.diff().flatMap(preview -> preview.shown().value().toOption()));
+        return model.diffLines(
+                at, view.diff().flatMap(preview -> preview.shown().value().toOption()));
     }
 
     /**

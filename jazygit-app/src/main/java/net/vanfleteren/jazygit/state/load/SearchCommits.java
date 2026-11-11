@@ -18,6 +18,13 @@ import net.vanfleteren.jazygit.state.view.RepoView;
  */
 public record SearchCommits(CommitQuery query, Option<BranchRef> notOn) implements Targeted<List<Commit>> {
 
+    /**
+     * The load that reads the results of {@code search}.
+     */
+    public static SearchCommits of(CommitSearch search) {
+        return new SearchCommits(search.query(), search.notOn());
+    }
+
     @Override
     public Option<Label> label() {
         return Option.of(Label.of("work.search"));
@@ -31,7 +38,7 @@ public record SearchCommits(CommitQuery query, Option<BranchRef> notOn) implemen
         return Target.inView(Lens.where(
                         RepoView::commitSearch,
                         RepoView::withCommitSearch,
-                        search -> search.load().equals(this))
+                        search -> of(search).equals(this))
                 .andThen(Lens.of(CommitSearch::results, CommitSearch::withResults)));
     }
 

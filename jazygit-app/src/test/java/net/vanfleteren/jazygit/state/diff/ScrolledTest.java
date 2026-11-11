@@ -12,7 +12,6 @@ import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
-import net.vanfleteren.jazygit.state.view.CommitFilesView;
 import net.vanfleteren.jazygit.state.view.ViewMsg;
 import org.junit.jupiter.api.Test;
 
@@ -51,12 +50,12 @@ class ScrolledTest {
 
     @Test
     void theSameChangesReadAgainKeepTheCursorFromTheTopButNotItsRange() {
-        CommitFilesView.Changes of = new CommitFilesView.Changes.OfCommit(new Sha("aaaa"));
+        Changes of = new Changes.OfCommit(new Sha("aaaa"));
         List<CommitFile> files = List.of(new CommitFile("a.txt", ChangeType.MODIFIED, Option.none()));
         ScrolledContent before = new ScrolledContent.FileChanges(of, files, DiffText.of("+a\n"));
         ScrolledContent again = new ScrolledContent.FileChanges(of, files, DiffText.of("+b\n"));
-        ScrolledContent other = new ScrolledContent.FileChanges(
-                new CommitFilesView.Changes.OfCommit(new Sha("bbbb")), files, DiffText.of("+b\n"));
+        ScrolledContent other =
+                new ScrolledContent.FileChanges(new Changes.OfCommit(new Sha("bbbb")), files, DiffText.of("+b\n"));
         Option<Anchor> cursor = Option.of(new Anchor.File("a.txt"));
         Model at = Update.update(
                         TestModels.loaded(),
@@ -85,8 +84,8 @@ class ScrolledTest {
         assertEquals(Scrolled.top(another), at.scrolled("diff", another));
     }
 
-    private static CommitFilesView.Changes pullRequest(int number, String head) {
-        return new CommitFilesView.Changes.OfPullRequest(
+    private static Changes pullRequest(int number, String head) {
+        return new Changes.OfPullRequest(
                 new PullRequestCommits(number, "owner/repo", "", new Sha("cccc"), new Sha(head)));
     }
 

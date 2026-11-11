@@ -9,6 +9,7 @@ import io.vavr.control.Option;
 import lombok.With;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.state.diff.Expansion;
+import net.vanfleteren.jazygit.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.state.diff.Version;
 
 /**
@@ -96,4 +97,18 @@ public record RepoView(
             false,
             HashMap.empty(),
             HashMap.empty());
+
+    /**
+     * The version kept for the area with the id {@code area} while it shows {@code content}, if it holds for that.
+     */
+    public Option<Version> version(String area, ScrolledContent content) {
+        return versions.get(area).filter(version -> version.holdsFor(content));
+    }
+
+    /**
+     * The lines expanded in the area with the id {@code area} while it shows {@code content}, if they hold for that.
+     */
+    public Option<Expansion> expansion(String area, ScrolledContent content) {
+        return expanded.get(area).filter(kept -> kept.holdsFor(content));
+    }
 }

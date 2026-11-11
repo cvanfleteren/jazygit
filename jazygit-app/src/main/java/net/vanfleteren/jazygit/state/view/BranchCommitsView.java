@@ -9,7 +9,6 @@ import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.load.AheadUpdate;
 
 /**
  * The commits of a branch, local or remote, as the branches pane lists them in place of the branches. They are the
@@ -38,16 +37,5 @@ public record BranchCommitsView(BranchRef branch, Option<Preview<Sha, DiffText>>
                 .filter(log -> log.key().equals(branch))
                 .map(Preview::value)
                 .getOrElse(Loadable.loading());
-    }
-
-    /**
-     * The commit {@code sha}, if it is one of the commits of the branch read in {@code model}: of its log, or of
-     * what of it is not on its base and the fork point, which are listed in its place.
-     */
-    public Option<Commit> commit(Model model, Sha sha) {
-        return commits(model)
-                .toOption()
-                .flatMap(commits -> commits.find(commit -> commit.sha().equals(sha))
-                        .orElse(() -> AheadUpdate.branch(model, branch).flatMap(ahead -> ahead.commit(sha))));
     }
 }

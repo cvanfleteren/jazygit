@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.state.view;
+package net.vanfleteren.jazygit.state.load;
 
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.BranchRef;

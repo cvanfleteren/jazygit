@@ -38,8 +38,8 @@ import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.github.prs.PrOverview;
 import net.vanfleteren.jazygit.state.operation.Notice;
-import net.vanfleteren.jazygit.state.prs.PrOverview;
 import org.junit.jupiter.api.Test;
 
 /**

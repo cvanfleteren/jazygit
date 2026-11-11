@@ -12,8 +12,8 @@ import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.diff.Anchor;
 import net.vanfleteren.jazygit.state.diff.Expansion;
 import net.vanfleteren.jazygit.state.diff.ScrolledContent;
+import net.vanfleteren.jazygit.state.diff.WholeFile.Source;
 import net.vanfleteren.jazygit.state.load.ReadWholeFile;
-import net.vanfleteren.jazygit.state.load.ReadWholeFile.Source;
 import net.vanfleteren.jazygit.state.view.Preview;
 
 /**
@@ -64,9 +64,9 @@ public final class ExpandUpdate {
             return Next.of(model);
         }
         Folding.Lines lines = lines(gap, toward);
-        Expansion.Expanded expanded = before.map(file ->
-                        read.fold(() -> file, again -> file.withRead(again).withWhole(Loadable.loading())))
-                .getOrElse(() -> new Expansion.Expanded(read.get(), Loadable.loading(), List.empty()));
+        Expansion.Expanded expanded = before.map(file -> read.fold(
+                        () -> file, again -> file.withRead(again.file()).withWhole(Loadable.loading())))
+                .getOrElse(() -> new Expansion.Expanded(read.get().file(), Loadable.loading(), List.empty()));
         Expansion.Expanded asked = expanded.withLines(expanded.lines().append(lines));
         return new Next(
                 model.mapRepoView(view -> view.withExpanded(view.expanded()

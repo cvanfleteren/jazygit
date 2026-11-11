@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.state;
 
 import io.vavr.collection.*;
+import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import java.time.Duration;
 import java.time.Instant;
@@ -8,9 +9,15 @@ import java.time.temporal.ChronoUnit;
 import java.util.function.UnaryOperator;
 import lombok.With;
 import net.vanfleteren.jazygit.git.model.*;
+import net.vanfleteren.jazygit.git.model.DiffText;
+import net.vanfleteren.jazygit.state.diff.DiffCursorAt;
+import net.vanfleteren.jazygit.state.diff.DiffLines;
+import net.vanfleteren.jazygit.state.diff.Expansion;
 import net.vanfleteren.jazygit.state.diff.Scrolled;
 import net.vanfleteren.jazygit.state.diff.ScrolledContent;
+import net.vanfleteren.jazygit.state.diff.Version;
 import net.vanfleteren.jazygit.state.github.GitHubState;
+import net.vanfleteren.jazygit.state.github.prs.PrOverview;
 import net.vanfleteren.jazygit.state.index.IndexRefresh;
 import net.vanfleteren.jazygit.state.load.AheadUpdate;
 import net.vanfleteren.jazygit.state.operation.Notice;
@@ -21,7 +28,7 @@ import net.vanfleteren.jazygit.state.popup.ListCursor;
 import net.vanfleteren.jazygit.state.popup.Popup;
 import net.vanfleteren.jazygit.state.preferences.Preferences;
 import net.vanfleteren.jazygit.state.preferences.Screen;
-import net.vanfleteren.jazygit.state.prs.PrOverview;
+import net.vanfleteren.jazygit.state.view.BranchCommitsView;
 import net.vanfleteren.jazygit.state.view.RepoView;
 
 /**
@@ -219,6 +226,41 @@ public record Model(
         return repo.commit(sha)
                 .orElse(() -> repoView.commitSearch().flatMap(search -> search.commit(sha)))
                 .orElse(() -> AheadUpdate.head(this).flatMap(ahead -> ahead.commit(sha)));
+    }
+
+    /**
+     * The lines of {@code diff} as the content panel draws it in the area of the cursor {@code at}: with the lines
+     * expanded in that area (ADR 77), folded as the view folds them, so that a range stays in a hunk as shown, or the
+     * version of its file shown in place of it (ADR 102). None without a diff.
+     */
+    public DiffLines diffLines(DiffCursorAt at, Option<DiffText> diff) {
+        Option<Expansion> expansion = repoView.expansion(at.area(), at.at().content());
+        Option<Version> version = repoView.version(at.area(), at.at().content());
+        return diff.map(text -> expansion
+                        .map(expanded -> expanded.folded(text.parsed(), preferences.context()))
+                        .getOrElse(() -> Expansion.Folded.of(text.parsed())))
+                .map(folded -> version.map(shown -> shown.applied(folded)).getOrElse(folded))
+                .map(folded -> DiffLines.of(folded.diff().diff()))
+                .getOrElse(() -> new DiffLines(Vector.empty()));
+    }
+
+    /**
+     * This model with its popup told that what was learned of how long checks take changed from what {@code before}
+     * knows, so it can keep what it showed with what was known before (ADR 89).
+     */
+    public Model checkTimesChanged(Model before) {
+        return popup.map(open -> openPopup(open.checkTimesChanging(before))).getOrElse(this);
+    }
+
+    /**
+     * The commit {@code sha}, if it is one of the commits of the branch {@code view} lists: of its log, or of what of
+     * it is not on its base and the fork point, which are listed in its place.
+     */
+    public Option<Commit> branchCommit(BranchCommitsView view, Sha sha) {
+        return view.commits(this)
+                .toOption()
+                .flatMap(commits -> commits.find(commit -> commit.sha().equals(sha))
+                        .orElse(() -> AheadUpdate.branch(this, view.branch()).flatMap(ahead -> ahead.commit(sha))));
     }
 
     /**

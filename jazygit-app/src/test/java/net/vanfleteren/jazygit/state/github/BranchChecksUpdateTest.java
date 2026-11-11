@@ -37,6 +37,7 @@ import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Upstream;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Env;
+import net.vanfleteren.jazygit.state.GitHubBases;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;

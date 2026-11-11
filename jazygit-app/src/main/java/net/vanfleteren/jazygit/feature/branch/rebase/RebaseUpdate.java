@@ -4,10 +4,10 @@ import io.vavr.collection.HashSet;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.state.GitHubBases;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
-import net.vanfleteren.jazygit.state.github.GitHubBases;
 import net.vanfleteren.jazygit.state.load.AheadUpdate;
 
 /**

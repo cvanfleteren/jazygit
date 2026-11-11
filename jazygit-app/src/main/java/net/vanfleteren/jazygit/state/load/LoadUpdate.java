@@ -7,7 +7,6 @@ import io.vavr.collection.Map;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import java.util.function.Predicate;
-import java.util.function.UnaryOperator;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.state.AppError;
@@ -18,13 +17,11 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Repo;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.diff.Scrolled;
 import net.vanfleteren.jazygit.state.diff.ScrolledContent;
-import net.vanfleteren.jazygit.state.diff.Version;
 import net.vanfleteren.jazygit.state.index.IndexUpdate;
 import net.vanfleteren.jazygit.state.load.LoadMsg.*;
-import net.vanfleteren.jazygit.state.view.CommitFilesView;
-import net.vanfleteren.jazygit.state.view.CommitSearch;
 import net.vanfleteren.jazygit.state.view.DivergenceView;
 import net.vanfleteren.jazygit.state.view.Preview;
 
@@ -56,7 +53,7 @@ public final class LoadUpdate {
             case StashesLoaded loaded ->
                 Next.of(loaded.kept(done)
                         .mapRepoView(repoView -> repoView.withCommitFiles(repoView.commitFiles()
-                                .filter(view -> !(view.of() instanceof CommitFilesView.Changes.OfStash stash)
+                                .filter(view -> !(view.of() instanceof Changes.OfStash stash)
                                         || loaded.stashes()
                                                 .exists(listed -> listed.sha().equals(stash.sha()))))));
             case WorktreeChangesLoaded loaded ->
@@ -120,21 +117,21 @@ public final class LoadUpdate {
                 .toSet();
         List<ReadWholeFile> reads = model.repoView()
                 .expanded()
-                .values()
-                .filter(expansion -> expansion.content() instanceof ScrolledContent.Diff)
-                .flatMap(expansion -> expansion.files().values())
-                .filter(file -> shown.contains(file.read().path()))
-                .map(file -> file.read().withOptions(options))
-                .filter(read -> !model.jobs().runs(read))
-                .toList();
+                .toList()
+                .filter(area -> area._2().content() instanceof ScrolledContent.Diff)
+                .<ReadWholeFile>flatMap(area -> area._2()
+                        .files()
+                        .values()
+                        .filter(file -> shown.contains(file.read().path()))
+                        .map(file -> ReadWholeFile.of(area._1(), file.read().withOptions(options))))
+                .filter(read -> !model.jobs().runs(read));
         // A version of a file of the working tree is read again too, as it was read, whitespace not ignored (ADR 102).
         List<ReadVersion> versions = model.repoView()
                 .versions()
-                .values()
-                .filter(version -> version.content() instanceof ScrolledContent.Diff)
-                .map(Version::read)
-                .filter(read -> shown.contains(read.path()) && !model.jobs().runs(read))
-                .toList();
+                .toList()
+                .filter(area -> area._2().content() instanceof ScrolledContent.Diff)
+                .map(area -> ReadVersion.of(area._1(), area._2().read()))
+                .filter(read -> shown.contains(read.path()) && !model.jobs().runs(read));
         return new Next(model, List.<Cmd>narrow(reads).appendAll(versions));
     }
 
@@ -170,7 +167,7 @@ public final class LoadUpdate {
                         .appendAll(read.model()
                                 .repoView()
                                 .commitSearch()
-                                .map(CommitSearch::load)
+                                .map(SearchCommits::of)
                                 .filter(search -> !read.cmds().contains(search))));
     }
 
@@ -252,7 +249,7 @@ public final class LoadUpdate {
                 .map(view -> switch (validity(model, view)) {
                     case Validity.Keep() ->
                         view.refs().exists(ref -> !tipOf(before, ref).equals(tipOf(model, ref)))
-                                ? new Next(model, next.cmds().append(view.load()))
+                                ? new Next(model, next.cmds().append(LoadDivergence.of(view)))
                                 : next;
                     case Validity.Close() -> new Next(withoutDivergence(model), next.cmds());
                     case Validity.CloseWith(AppError error) ->
@@ -339,14 +336,6 @@ public final class LoadUpdate {
      */
     private static Model worktreeChangesRead(Model model) {
         return model.mapJobs(jobs -> jobs.withWorktreeChangesRead(Option.of(model.now())));
-    }
-
-    /**
-     * {@code open} with {@code f} applied if it holds a view that {@code matches}: what a read gives is only for the
-     * view that asked for it, and is dropped when another one is open now.
-     */
-    public static <V> Option<V> mapWhere(Option<V> open, Predicate<V> matches, UnaryOperator<V> f) {
-        return open.map(view -> matches.test(view) ? f.apply(view) : view);
     }
 
     /**

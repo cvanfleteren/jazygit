@@ -15,12 +15,13 @@ import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
+import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.view.CommitFilesView.Listed;
 import org.junit.jupiter.api.Test;
 
 class CommitFilesViewTest {
 
-    private static final CommitFilesView.Changes PULL_REQUEST = new CommitFilesView.Changes.OfPullRequest(
+    private static final Changes PULL_REQUEST = new Changes.OfPullRequest(
             new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
     private static final CommitFile OPEN = new CommitFile("src/Open.java", ChangeType.MODIFIED);
     private static final CommitFile RESOLVED = new CommitFile("src/Resolved.java", ChangeType.MODIFIED);

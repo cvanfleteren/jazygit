@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.state.prs;
+package net.vanfleteren.jazygit.state.github.prs;
 
 import static net.vanfleteren.jazygit.state.TestModels.loaded;
 import static net.vanfleteren.jazygit.state.TestModels.refused;

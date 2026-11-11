@@ -12,8 +12,6 @@ import net.vanfleteren.jazygit.git.model.ParsedDiff.ParsedHunk;
 import net.vanfleteren.jazygit.git.model.ParsedDiff.ParsedLine;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
 import net.vanfleteren.jazygit.state.Loadable;
-import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.load.ReadVersion;
 
 /**
  * Which version of its one file an area of the content panel shows in place of its diff (ADR 102): the new one, the
@@ -33,7 +31,7 @@ public record Version(
         ScrolledContent content,
         String path,
         Option<FileVersion> shown,
-        ReadVersion read,
+        WholeFile read,
         Loadable<DiffText> whole,
         boolean rendered) {
 
@@ -41,19 +39,8 @@ public record Version(
      * A version shown as source.
      */
     public Version(
-            ScrolledContent content,
-            String path,
-            Option<FileVersion> shown,
-            ReadVersion read,
-            Loadable<DiffText> whole) {
+            ScrolledContent content, String path, Option<FileVersion> shown, WholeFile read, Loadable<DiffText> whole) {
         this(content, path, shown, read, whole, false);
-    }
-
-    /**
-     * The version kept for the area with the id {@code area} while it shows {@code content}, if it holds for that.
-     */
-    public static Option<Version> in(Model model, String area, ScrolledContent content) {
-        return model.repoView().versions().get(area).filter(version -> version.holdsFor(content));
     }
 
     /**

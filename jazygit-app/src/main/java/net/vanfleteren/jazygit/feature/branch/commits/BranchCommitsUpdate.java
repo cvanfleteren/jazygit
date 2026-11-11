@@ -5,8 +5,8 @@ import net.vanfleteren.jazygit.feature.branch.commits.BranchCommitsMsg.Closed;
 import net.vanfleteren.jazygit.feature.branch.commits.BranchCommitsMsg.Opened;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.view.BranchCommitsView;
-import net.vanfleteren.jazygit.state.view.SelectionMsg;
 
 /**
  * Listing the commits of a branch in place of the branches, and going back to them. The commits are the log of the

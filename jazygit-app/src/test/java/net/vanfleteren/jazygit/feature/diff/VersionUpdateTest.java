@@ -23,11 +23,11 @@ import net.vanfleteren.jazygit.state.diff.DiffCursorAt;
 import net.vanfleteren.jazygit.state.diff.Scrolled;
 import net.vanfleteren.jazygit.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.state.diff.Version;
+import net.vanfleteren.jazygit.state.diff.WholeFile.Source;
 import net.vanfleteren.jazygit.state.load.LoadMsg;
 import net.vanfleteren.jazygit.state.load.ReadVersion;
 import net.vanfleteren.jazygit.state.load.ReadWholeFile;
-import net.vanfleteren.jazygit.state.load.ReadWholeFile.Source;
-import net.vanfleteren.jazygit.state.view.SelectionMsg;
+import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import org.junit.jupiter.api.Test;
 
 class VersionUpdateTest {

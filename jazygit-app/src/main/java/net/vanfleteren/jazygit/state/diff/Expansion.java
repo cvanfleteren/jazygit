@@ -12,7 +12,6 @@ import net.vanfleteren.jazygit.git.model.Folding;
 import net.vanfleteren.jazygit.git.model.ParsedDiff;
 import net.vanfleteren.jazygit.git.model.ParsedDiff.ParsedFile;
 import net.vanfleteren.jazygit.state.Loadable;
-import net.vanfleteren.jazygit.state.load.ReadWholeFile;
 
 /**
  * The lines the user expanded in the diff an area of the content panel shows, around its hunks (ADR 77).
@@ -91,7 +90,7 @@ public record Expansion(ScrolledContent content, Map<String, Expanded> files) {
      * @param lines the lines of the new file expanded, in the order they were
      */
     @With
-    public record Expanded(ReadWholeFile read, Loadable<DiffText> whole, List<Folding.Lines> lines) {}
+    public record Expanded(WholeFile read, Loadable<DiffText> whole, List<Folding.Lines> lines) {}
 
     /**
      * A diff as it is drawn, its files folded, and what is known of each of them, by its path.

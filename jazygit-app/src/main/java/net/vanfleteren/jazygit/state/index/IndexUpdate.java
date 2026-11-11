@@ -6,8 +6,6 @@ import net.vanfleteren.jazygit.git.model.MetadataStamp;
 import net.vanfleteren.jazygit.state.Jobs;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
-import net.vanfleteren.jazygit.state.load.CheckMetadata;
-import net.vanfleteren.jazygit.state.operation.OperationCmd;
 
 /**
  * When the index is written anew (ADR 97): once it changed and settled, as after a checkout, and every
@@ -24,7 +22,7 @@ public final class IndexUpdate {
     private IndexUpdate() {}
 
     /**
-     * {@code next}, which handled the stamps that {@link CheckMetadata} took, also writing the index anew if it
+     * {@code next}, which handled the stamps that {@code CheckMetadata} took, also writing the index anew if it
      * looks other than {@code index} since it was last written anew, which the first stamp that can be told always does,
      * or that was {@link #FALLBACK} ago. Only while the
      * terminal has the focus, when the user is not likely to run git elsewhere, and while no operation of the app
@@ -37,9 +35,8 @@ public final class IndexUpdate {
         IndexRefresh last = adopted(jobs.indexRefresh(), index);
         boolean changed = index.isDefined() && !last.seen().equals(index);
         boolean due = changed || last.at().exists(at -> !model.now().isBefore(at.plus(FALLBACK)));
-        boolean free = !jobs.away()
-                && !last.adopt()
-                && !jobs.runs(cmd -> cmd instanceof OperationCmd || cmd instanceof RefreshIndex);
+        boolean free =
+                !jobs.away() && !last.adopt() && !jobs.runsOperation() && !jobs.runs(RefreshIndex.class::isInstance);
         return due && free
                 ? new Next(
                         model.mapJobs(those ->

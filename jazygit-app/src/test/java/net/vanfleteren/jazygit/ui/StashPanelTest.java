@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.load.*;
+import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.view.*;
 import org.junit.jupiter.api.Test;
 

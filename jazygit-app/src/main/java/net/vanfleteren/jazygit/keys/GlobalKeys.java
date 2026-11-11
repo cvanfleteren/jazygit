@@ -11,8 +11,8 @@ import net.vanfleteren.jazygit.feature.layout.LayoutUpdate;
 import net.vanfleteren.jazygit.feature.repos.RecentReposMsg;
 import net.vanfleteren.jazygit.feature.settings.SettingsPanelMsg;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.github.prs.PrOverviewMsg;
 import net.vanfleteren.jazygit.state.popup.PopupMsg;
-import net.vanfleteren.jazygit.state.prs.PrOverviewMsg;
 
 /**
  * The keys that work wherever the focus is.

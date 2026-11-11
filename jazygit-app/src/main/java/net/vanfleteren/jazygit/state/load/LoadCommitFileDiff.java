@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Label;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.view.CommitFilesView;
 import net.vanfleteren.jazygit.state.view.Preview;
 
@@ -18,8 +19,15 @@ import net.vanfleteren.jazygit.state.view.Preview;
  * Reads what a commit, a stash or a pull request changed in the files of the node highlighted in the tree of its
  * files.
  */
-public record LoadCommitFileDiff(CommitFilesView.Changes of, List<CommitFile> files, DiffOptions options)
+public record LoadCommitFileDiff(Changes of, List<CommitFile> files, DiffOptions options)
         implements DiffLoad, Targeted<DiffText> {
+
+    /**
+     * The load of the diff of {@code files} of {@code view}, read with {@code options}.
+     */
+    public static LoadCommitFileDiff of(CommitFilesView view, List<CommitFile> files, DiffOptions options) {
+        return new LoadCommitFileDiff(view.of(), files, options);
+    }
 
     @Override
     public Option<Label> label() {
@@ -43,13 +51,11 @@ public record LoadCommitFileDiff(CommitFilesView.Changes of, List<CommitFile> fi
     @Override
     public Msg run(Env env) {
         return (switch (of) {
-                    case CommitFilesView.Changes.OfCommit(Sha sha) ->
-                        env.git().diffs().commitFileChanges(sha, files, options);
-                    case CommitFilesView.Changes.OfStash(Sha sha) ->
-                        env.git().stashes().fileChanges(sha, files, options);
-                    case CommitFilesView.Changes.OfBranch(var branch, var base, Sha sha) ->
+                    case Changes.OfCommit(Sha sha) -> env.git().diffs().commitFileChanges(sha, files, options);
+                    case Changes.OfStash(Sha sha) -> env.git().stashes().fileChanges(sha, files, options);
+                    case Changes.OfBranch(var branch, var base, Sha sha) ->
                         env.git().diffs().rangeFileChanges(base.tip(), sha, files, options);
-                    case CommitFilesView.Changes.OfPullRequest(PullRequestCommits commits) ->
+                    case Changes.OfPullRequest(PullRequestCommits commits) ->
                         env.git().diffs().pullRequestFileChanges(commits, files, options);
                 })
                 .mapLeft(Failure::of)

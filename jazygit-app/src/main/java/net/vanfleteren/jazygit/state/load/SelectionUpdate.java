@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.state.view;
+package net.vanfleteren.jazygit.state.load;
 
 import io.vavr.collection.HashMap;
 import io.vavr.control.Option;
@@ -7,20 +7,15 @@ import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
-import net.vanfleteren.jazygit.state.load.AheadUpdate;
-import net.vanfleteren.jazygit.state.load.Load;
-import net.vanfleteren.jazygit.state.load.LoadBranchLog;
-import net.vanfleteren.jazygit.state.load.LoadCommitDetail;
-import net.vanfleteren.jazygit.state.load.LoadFileDiff;
-import net.vanfleteren.jazygit.state.load.LoadStashDetail;
-import net.vanfleteren.jazygit.state.view.SelectionMsg.BranchCommitSelected;
-import net.vanfleteren.jazygit.state.view.SelectionMsg.BranchSelected;
-import net.vanfleteren.jazygit.state.view.SelectionMsg.CommitFilesSelected;
-import net.vanfleteren.jazygit.state.view.SelectionMsg.CommitSelected;
-import net.vanfleteren.jazygit.state.view.SelectionMsg.DivergenceCommitSelected;
-import net.vanfleteren.jazygit.state.view.SelectionMsg.FilesSelected;
-import net.vanfleteren.jazygit.state.view.SelectionMsg.StashSelected;
-import net.vanfleteren.jazygit.state.view.SelectionMsg.UnfetchedSelected;
+import net.vanfleteren.jazygit.state.load.SelectionMsg.BranchCommitSelected;
+import net.vanfleteren.jazygit.state.load.SelectionMsg.BranchSelected;
+import net.vanfleteren.jazygit.state.load.SelectionMsg.CommitFilesSelected;
+import net.vanfleteren.jazygit.state.load.SelectionMsg.CommitSelected;
+import net.vanfleteren.jazygit.state.load.SelectionMsg.DivergenceCommitSelected;
+import net.vanfleteren.jazygit.state.load.SelectionMsg.FilesSelected;
+import net.vanfleteren.jazygit.state.load.SelectionMsg.StashSelected;
+import net.vanfleteren.jazygit.state.load.SelectionMsg.UnfetchedSelected;
+import net.vanfleteren.jazygit.state.view.Preview;
 
 /**
  * The panes' highlights, and the data loaded for them.
@@ -88,8 +83,8 @@ public final class SelectionUpdate {
                                 view.diff(),
                                 diff -> model.mapRepoView(
                                         repoView -> repoView.withCommitFiles(Option.of(view.withDiff(diff)))),
-                                entries -> view.diffLoad(
-                                        entries, model.preferences().diffOptions())))
+                                entries -> LoadCommitFileDiff.of(
+                                        view, entries, model.preferences().diffOptions())))
                         .getOrElse(() -> Next.of(model));
             case StashSelected(var sha) ->
                 selected(

@@ -8,7 +8,6 @@ import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitQuery;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Loadable;
-import net.vanfleteren.jazygit.state.load.SearchCommits;
 
 /**
  * A search of the log of HEAD, whose results the commits pane lists in place of the log.
@@ -26,13 +25,6 @@ public record CommitSearch(String text, CommitQuery query, Option<BranchRef> not
      */
     public static CommitSearch loading(String text, Option<BranchRef> notOn) {
         return new CommitSearch(text, CommitQuery.parse(text), notOn, Loadable.loading());
-    }
-
-    /**
-     * The load that reads the results of this search.
-     */
-    public SearchCommits load() {
-        return new SearchCommits(query, notOn);
     }
 
     /**

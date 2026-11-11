@@ -1,9 +1,9 @@
-package net.vanfleteren.jazygit.state.view;
+package net.vanfleteren.jazygit.state.load;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
-import net.vanfleteren.jazygit.state.load.AheadUpdate;
+import net.vanfleteren.jazygit.state.view.CommitSearch;
 
 /**
  * Searching the log of HEAD: the line above the commits pane holds the query while it is typed, and running it lists
@@ -36,6 +36,8 @@ public final class CommitSearchUpdate {
         Model closed = model.mapRepoView(repoView -> repoView.withSearchLine(Option.none()));
         return search.query().isEmpty()
                 ? Next.of(closed.mapRepoView(repoView -> repoView.withCommitSearch(Option.none())))
-                : Next.of(closed.mapRepoView(repoView -> repoView.withCommitSearch(Option.of(search))), search.load());
+                : Next.of(
+                        closed.mapRepoView(repoView -> repoView.withCommitSearch(Option.of(search))),
+                        SearchCommits.of(search));
     }
 }

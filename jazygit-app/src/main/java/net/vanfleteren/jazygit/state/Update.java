@@ -22,11 +22,15 @@ import net.vanfleteren.jazygit.state.load.Load;
 import net.vanfleteren.jazygit.state.load.LoadBranchLog;
 import net.vanfleteren.jazygit.state.load.LoadBranches;
 import net.vanfleteren.jazygit.state.load.LoadCommitDetail;
+import net.vanfleteren.jazygit.state.load.LoadCommitFileDiff;
+import net.vanfleteren.jazygit.state.load.LoadCommitFiles;
 import net.vanfleteren.jazygit.state.load.LoadCommits;
+import net.vanfleteren.jazygit.state.load.LoadDivergence;
 import net.vanfleteren.jazygit.state.load.LoadFileDiff;
 import net.vanfleteren.jazygit.state.load.LoadStashDetail;
 import net.vanfleteren.jazygit.state.load.LoadStatus;
 import net.vanfleteren.jazygit.state.load.LoadWorktreeChanges;
+import net.vanfleteren.jazygit.state.load.SearchCommits;
 import net.vanfleteren.jazygit.state.load.Targeted;
 import net.vanfleteren.jazygit.state.operation.OperationCmd;
 import net.vanfleteren.jazygit.state.popup.Popup;
@@ -34,8 +38,6 @@ import net.vanfleteren.jazygit.state.preferences.RepositoryTheme;
 import net.vanfleteren.jazygit.state.preferences.Screen;
 import net.vanfleteren.jazygit.state.view.BranchCommitsView;
 import net.vanfleteren.jazygit.state.view.BranchesTab;
-import net.vanfleteren.jazygit.state.view.CommitFilesView;
-import net.vanfleteren.jazygit.state.view.CommitSearch;
 import net.vanfleteren.jazygit.state.view.DivergenceView;
 import net.vanfleteren.jazygit.state.view.RepoView;
 
@@ -300,12 +302,12 @@ public final class Update {
         RepoView repoView = model.repoView();
         DiffOptions options = model.preferences().diffOptions();
         return List.<Targeted<?>>empty()
-                .appendAll(repoView.commitSearch().map(CommitSearch::load))
+                .appendAll(repoView.commitSearch().map(SearchCommits::of))
                 .appendAll(repoView.branchLog()
                         .map(log -> new LoadBranchLog(log.key(), AheadUpdate.of(model, log.key()))))
                 .appendAll(repoView.commitDetail()
                         .map(detail -> new LoadCommitDetail(detail.key(), options, Slot.COMMIT_DETAIL)))
-                .appendAll(repoView.divergence().map(DivergenceView::load))
+                .appendAll(repoView.divergence().map(LoadDivergence::of))
                 .appendAll(repoView.divergence()
                         .flatMap(DivergenceView::detail)
                         .map(detail -> new LoadCommitDetail(detail.key(), options, Slot.DIVERGENCE_DETAIL)))
@@ -313,9 +315,9 @@ public final class Update {
                         .flatMap(BranchCommitsView::detail)
                         .map(detail -> new LoadCommitDetail(detail.key(), options, Slot.BRANCH_COMMITS_DETAIL)))
                 .appendAll(repoView.stashDetail().map(detail -> new LoadStashDetail(detail.key(), options)))
-                .appendAll(repoView.commitFiles().map(CommitFilesView::load))
+                .appendAll(repoView.commitFiles().map(LoadCommitFiles::of))
                 .appendAll(repoView.commitFiles()
-                        .flatMap(view -> view.diff().map(diff -> view.diffLoad(diff.key(), options))));
+                        .flatMap(view -> view.diff().map(diff -> LoadCommitFileDiff.of(view, diff.key(), options))));
     }
 
     /**

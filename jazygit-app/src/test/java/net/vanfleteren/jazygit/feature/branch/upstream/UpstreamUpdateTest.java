@@ -22,11 +22,11 @@ import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.load.LoadCommitDetail;
 import net.vanfleteren.jazygit.state.load.LoadDivergence;
 import net.vanfleteren.jazygit.state.load.LoadMsg;
+import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.popup.PopupMsg;
 import net.vanfleteren.jazygit.state.view.BranchesTab;
 import net.vanfleteren.jazygit.state.view.DivergenceView;
 import net.vanfleteren.jazygit.state.view.DivergenceView.Against;
-import net.vanfleteren.jazygit.state.view.SelectionMsg;
 import org.junit.jupiter.api.Test;
 
 /**

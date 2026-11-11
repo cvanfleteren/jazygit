@@ -40,8 +40,8 @@ import net.vanfleteren.jazygit.state.AppError.CannotReview.Why;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.github.Reading;
-import net.vanfleteren.jazygit.state.view.CommitFilesView.Changes;
 import org.junit.jupiter.api.Test;
 
 /**

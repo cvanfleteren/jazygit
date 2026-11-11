@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.state.prs;
+package net.vanfleteren.jazygit.state.github.prs;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.state.Cmd;

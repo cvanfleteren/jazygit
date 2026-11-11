@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.state.view;
+package net.vanfleteren.jazygit.state.load;
 
 import static net.vanfleteren.jazygit.state.TestModels.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -17,13 +17,7 @@ import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.TimerMsg.Tick;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
-import net.vanfleteren.jazygit.state.load.CheckFileDiff;
-import net.vanfleteren.jazygit.state.load.CheckMetadata;
-import net.vanfleteren.jazygit.state.load.LoadCommitDetail;
-import net.vanfleteren.jazygit.state.load.LoadFileDiff;
-import net.vanfleteren.jazygit.state.load.LoadMsg;
-import net.vanfleteren.jazygit.state.load.LoadStashDetail;
-import net.vanfleteren.jazygit.state.load.LoadStatus;
+import net.vanfleteren.jazygit.state.view.Preview;
 import org.junit.jupiter.api.Test;
 
 /**

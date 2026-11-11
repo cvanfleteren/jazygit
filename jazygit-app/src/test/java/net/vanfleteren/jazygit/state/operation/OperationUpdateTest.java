@@ -38,11 +38,11 @@ import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.github.LoadBranchChecks;
 import net.vanfleteren.jazygit.state.github.LoadProtectedBranches;
+import net.vanfleteren.jazygit.state.github.prs.LoadRepositoryPullRequests;
 import net.vanfleteren.jazygit.state.load.LoadBranches;
 import net.vanfleteren.jazygit.state.load.LoadStashes;
 import net.vanfleteren.jazygit.state.load.LoadStatus;
 import net.vanfleteren.jazygit.state.load.LoadWorktrees;
-import net.vanfleteren.jazygit.state.prs.LoadRepositoryPullRequests;
 import org.junit.jupiter.api.Test;
 
 class OperationUpdateTest {

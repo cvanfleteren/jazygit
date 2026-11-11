@@ -51,7 +51,7 @@ public final class VersionUpdate {
     private static Option<Next> shown(
             Model model, DiffCursorAt at, ScrolledContent content, ParsedFile file, boolean toggle) {
         String path = file.file().path();
-        Option<Version> before = Version.in(model, at.area(), content);
+        Option<Version> before = model.repoView().version(at.area(), content);
         boolean failed = before.exists(Version::failed);
         boolean reads = before.isEmpty() || failed;
         Option<ReadVersion> read = reads
@@ -62,7 +62,7 @@ public final class VersionUpdate {
                                 source,
                                 path,
                                 model.preferences().diffOptions()))
-                : before.map(Version::read);
+                : before.map(kept -> ReadVersion.of(at.area(), kept.read()));
         return read.map(how -> {
             Option<Loadable<DiffText>> reused = reads ? expanded(model, at.area(), content, path) : Option.none();
             Loadable<DiffText> whole = reused.orElse(
@@ -73,9 +73,9 @@ public final class VersionUpdate {
                     : cycled(before, failed, file.file().type());
             Version version = before.map(kept -> kept.withShown(next.version())
                             .withRendered(next.rendered())
-                            .withRead(how)
+                            .withRead(how.file())
                             .withWhole(whole))
-                    .getOrElse(() -> new Version(content, path, next.version(), how, whole, next.rendered()));
+                    .getOrElse(() -> new Version(content, path, next.version(), how.file(), whole, next.rendered()));
             Scrolled was = at.at();
             Scrolled to = new Scrolled(
                     was.content(),

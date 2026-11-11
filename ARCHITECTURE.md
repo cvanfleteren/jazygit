@@ -50,7 +50,7 @@ graph TD
     UI["ui<br/><i>panels and widgets: render a Model</i>"]
     Keys["keys<br/><i>Keymap: every shortcut, declared once</i>"]
     Feature["feature.*<br/><i>branch, commit, stage, stash, discard,<br/>github, fetch, error, help, theme, repos,<br/>settings, worktree, inprogress, edit, start</i>"]
-    State["state.*<br/><i>Model, Msg, Update, Cmd, Program;<br/>load, view, diff, github, prs,<br/>operation, index, popup, preferences</i>"]
+    State["state.*<br/><i>Model, Msg, Update, Cmd, Program;<br/>load, view, diff, github,<br/>operation, index, popup, preferences</i>"]
     Git["git<br/><i>Git, its roles, CliGit, Cli*, GitProcess, GitError</i>"]
     GitModel["git.model<br/><i>Branch, Commit, RepoStatus, Sha, ...</i>"]
     Gh["gh<br/><i>GitHub, CliGitHub, GhProcess, GhError</i>"]
@@ -95,6 +95,11 @@ inside the core, the compiler does: it cannot reach the app's packages at all, n
 
 - **The parts have no cycles**, with one exception: `Keymap.standard()` lists the keys of the features, which
   declare them with the types of `keys` (dotted).
+- **Nor have the parts of `state`**, its subpackages: `diff` ← `view` ← `load` ← `github` ← `operation` ← `popup`,
+  with `index` and `preferences` below `load` and `github`. The core, `state` itself, uses them all, and they all use
+  it, as the `Model` holds them and they work on it. What a part keeps of a read is data, not the read: a read knows
+  where in the `Model` it puts what it read (`Target`), so a `Version` keeps the `WholeFile` it shows, and
+  `ReadVersion.of` makes the read of it again.
 - **Views use `ui`, but only to draw:**
   - The dialogs of a feature use the widgets of `ui`.
   - `ui` uses `git` and `gh` only for the errors, which `ErrorText` describes.
@@ -110,12 +115,11 @@ inside the core, the compiler does: it cannot reach the app's packages at all, n
 | `ui` | Panels (`FilesPanel`, `BranchesPanel`, `CommitsPanel`, `ContentPanel`, `CommandLogPanel`, ...) that render a `Model` and turn key events into `Msg`s; the dialog widgets (`ConfirmDialog`, `ChoiceDialog`, `TextInputDialog`, `PickDialog`) and the `DialogFrame` they are drawn in, with `WithDetails` for a box of details under one; `ErrorText`, the only place that turns errors into text. |
 | `keys` | `Keymap`: the keys of each panel (`Scope`) and the global keys. Panels react to keys from it, and the help popup lists them from it. |
 | `feature.*` | One package per feature. Each one holds the feature's messages, its update functions, its commands, and its popups, dialogs and keys. |
-| `state` | The Elm core: `Model`, `Msg`, `Update`, `Cmd`, `Program`, `Env`, `Loadable`, `Lens`, `Repo`, `Jobs`, and the errors as data (`AppError`, `Failure`). The other parts of the `Model` each have a subpackage, with their messages, updates and commands: |
-| `state.load` | The reads of the repository: `Load` and every one of them (`LoadStatus`, `LoadBranches`, `ReadWholeFile`, ...), with `Target` and `Targeted`, where a read puts what it read; `LoadMsg`, `LoadUpdate`; what is ahead on the base (`AheadUpdate`). |
-| `state.view` | What the repository screen shows: `RepoView` and its views (`CommitFilesView`, `BranchCommitsView`, `DivergenceView`, `CommitSearch`), `Preview`, the highlights of the panes and the previews read for them (`SelectionMsg`, `SelectionUpdate`), focus and scrolling (`ViewMsg`). |
-| `state.diff` | The content area: `ScrolledContent`, `Scrolled`, `Version`, `Expansion`, and the lines of a diff with the remarks on them (`DiffLines`, `DiffStops`, `PlacedRemarks`, `Collapsed`). |
-| `state.github` | What is read from GitHub: `GitHubState`, the pull requests (`PullRequestsMsg`, `PullRequestsUpdate`), the checks and how long they take (`BranchChecksUpdate`, `CheckTimesUpdate`), and how those reads are paced (`GitHubReads`, `FailingRead`). |
-| `state.prs` | The pull requests screen: `PrOverview`, `PrOverviewMsg`, `PrOverviewUpdate`. |
+| `state` | The Elm core: `Model`, `Msg`, `Update`, `Cmd`, `Program`, `Env`, `Loadable`, `Lens`, `Repo`, `Jobs`, `GitHubBases`, and the errors as data (`AppError`, `Failure`). The other parts of the `Model` each have a subpackage, with their messages, updates and commands: |
+| `state.load` | The reads of the repository: `Load` and every one of them (`LoadStatus`, `LoadBranches`, `ReadWholeFile`, ...), with `Target` and `Targeted`, where a read puts what it read; `LoadMsg`, `LoadUpdate`; what is ahead on the base (`AheadUpdate`); the updates that start reads: the highlights of the panes and the previews read for them (`SelectionMsg`, `SelectionUpdate`), and the search of the commits (`CommitSearchMsg`, `CommitSearchUpdate`). |
+| `state.view` | What the repository screen shows: `RepoView` and its views (`CommitFilesView`, `BranchCommitsView`, `DivergenceView`, `CommitSearch`), `Preview`, the filter of the files tree (`FileFilter`, `FileFilterMsg`, `FileFilterUpdate`, ADR 105), focus and scrolling (`ViewMsg`). |
+| `state.diff` | The content area: `ScrolledContent`, `Scrolled`, `Version`, `Expansion`, the file read whole they keep (`WholeFile`) and whose changes it is (`Changes`, `BaseTip`), and the lines of a diff with the remarks on them (`DiffLines`, `DiffStops`, `PlacedRemarks`, `Collapsed`). |
+| `state.github` | What is read from GitHub: `GitHubState`, the pull requests (`PullRequestsMsg`, `PullRequestsUpdate`), the checks and how long they take (`BranchChecksUpdate`, `CheckTimesUpdate`), and how those reads are paced (`GitHubReads`, `FailingRead`); the pull requests screen, in `state.github.prs` (`PrOverview`, `PrOverviewMsg`, `PrOverviewUpdate`). |
 | `state.operation` | The operations (`Operation`, `OperationCmd`, `OperationMsg`, `OperationUpdate`), the command log (`CommandLog`, `LogEntry`) and how the last one went (`Outcome`, `Notice`). |
 | `state.index` | Writing the index anew (`IndexRefresh`, `IndexUpdate`). |
 | `state.popup` | `Popup` and the kinds of it all features share (`ConfirmablePopup`, `TextPopup`, `ErrorPopup`), `PopupMsg`. |
@@ -296,7 +300,7 @@ content panel shows the highlighted commit as the commits pane does, in a scroll
 `/` in the commits pane opens a line above the list to type a query in (`RepoView.searchLine`); Enter runs it through
 `History.search`, and the pane then lists what it found in place of the log of HEAD (`RepoView.commitSearch`,
 `state.view.CommitSearch`), flat, without the rails of merges, until Escape clears it. Its messages and update are in
-`state` (`CommitSearchMsg`, `CommitSearchUpdate`), as the pane sends them; `feature.commit.search` only declares the
+`state.load` (`CommitSearchMsg`, `CommitSearchUpdate`), as the pane sends them; `feature.commit.search` only declares the
 key. `git.model.CommitQuery` parses the query: bare words for the message, `author:`, `path:` and `-S:`, smart case.
 See ADR 4.
 
@@ -317,7 +321,7 @@ first, and on its own again when the base moves; `state.load.AheadUpdate` decide
 
 Ctrl+P switches the left of the screen between the repository and the pull requests (`Model.screen`, `state.preferences.Screen`);
 the status panel names both, the one shown in bold. What the pull requests screen shows lives in one part of the
-model, `Model.prOverview` (`state.prs.PrOverview`), with its own messages and its own update, which works on that part
+model, `Model.prOverview` (`state.github.prs.PrOverview`), with its own messages and its own update, which works on that part
 alone (`PrOverviewMsg`, `PrOverviewUpdate`); only switching screens, and whether the screen is shown, look at the rest.
 It lives in `state`, next to the other reads of GitHub, so the GitHub feature can read it again after changing a pull
 request. The design and the steps still to come are in `prs.md`.

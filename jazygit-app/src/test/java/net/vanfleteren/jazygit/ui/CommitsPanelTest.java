@@ -22,9 +22,9 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.load.CommitSearchMsg;
 import net.vanfleteren.jazygit.state.load.LoadMsg;
 import net.vanfleteren.jazygit.state.view.CommitSearch;
-import net.vanfleteren.jazygit.state.view.CommitSearchMsg;
 import org.junit.jupiter.api.Test;
 
 class CommitsPanelTest {

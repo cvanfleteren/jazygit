@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.state.view;
+package net.vanfleteren.jazygit.state.load;
 
 import static net.vanfleteren.jazygit.state.TestModels.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -20,11 +20,7 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
-import net.vanfleteren.jazygit.state.load.AheadMsg;
-import net.vanfleteren.jazygit.state.load.AheadUpdate;
-import net.vanfleteren.jazygit.state.load.LoadAhead;
-import net.vanfleteren.jazygit.state.load.LoadMsg;
-import net.vanfleteren.jazygit.state.load.SearchCommits;
+import net.vanfleteren.jazygit.state.view.CommitSearch;
 import org.junit.jupiter.api.Test;
 
 /**

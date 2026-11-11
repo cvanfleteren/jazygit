@@ -10,8 +10,8 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.github.*;
+import net.vanfleteren.jazygit.state.github.prs.PrOverviewUpdate;
 import net.vanfleteren.jazygit.state.operation.*;
-import net.vanfleteren.jazygit.state.prs.PrOverviewUpdate;
 
 /**
  * Merging a pull request, which GitHub does in the background (ADR 24): the merge is kept in the model while GitHub

@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.load.*;
 import net.vanfleteren.jazygit.state.load.LoadCommitDetail;
+import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.view.*;
 import org.junit.jupiter.api.Test;
 
@@ -115,7 +116,7 @@ class BranchCommitsUpdateTest {
         assertEquals(
                 Option.of(new Loadable.Loaded<>(CHANGES)),
                 view(read).flatMap(BranchCommitsView::detail).map(Preview::value));
-        assertEquals(Option.of(FEATURE_COMMITS.head()), view(read).flatMap(v -> v.commit(read, FEATURE_TIP)));
+        assertEquals(Option.of(FEATURE_COMMITS.head()), view(read).flatMap(v -> read.branchCommit(v, FEATURE_TIP)));
     }
 
     @Test
@@ -199,6 +200,6 @@ class BranchCommitsUpdateTest {
                                 new Loadable.Loaded<>(Option.of(
                                         new Ahead(FEATURE_TIP, base, FEATURE_COMMITS, false, Option.of(fork))))))));
 
-        assertEquals(Option.of(fork), view(open).flatMap(v -> v.commit(open, fork.sha())));
+        assertEquals(Option.of(fork), view(open).flatMap(v -> open.branchCommit(v, fork.sha())));
     }
 }

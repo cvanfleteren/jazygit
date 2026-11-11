@@ -18,14 +18,15 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
+import net.vanfleteren.jazygit.state.GitHubBases;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.github.prs.LoadRepositoryPullRequests;
+import net.vanfleteren.jazygit.state.github.prs.PrOverviewMsg;
 import net.vanfleteren.jazygit.state.load.LoadBranches;
 import net.vanfleteren.jazygit.state.popup.ErrorPopup;
-import net.vanfleteren.jazygit.state.prs.LoadRepositoryPullRequests;
-import net.vanfleteren.jazygit.state.prs.PrOverviewMsg;
 import org.junit.jupiter.api.Test;
 
 /**

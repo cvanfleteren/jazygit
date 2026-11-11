@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.preferences.*;
 import net.vanfleteren.jazygit.state.view.*;
 

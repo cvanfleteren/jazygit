@@ -35,9 +35,9 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.github.StackChange;
+import net.vanfleteren.jazygit.state.github.prs.LoadRepositoryPullRequests;
 import net.vanfleteren.jazygit.state.operation.Notice;
 import net.vanfleteren.jazygit.state.popup.ListCursor;
-import net.vanfleteren.jazygit.state.prs.LoadRepositoryPullRequests;
 import net.vanfleteren.jazygit.ui.NoticeText;
 import org.junit.jupiter.api.Test;
 

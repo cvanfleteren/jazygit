@@ -13,7 +13,6 @@ import net.vanfleteren.jazygit.git.model.FileVersion;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.load.ReadVersion;
-import net.vanfleteren.jazygit.state.load.ReadWholeFile;
 import org.junit.jupiter.api.Test;
 
 class VersionTest {
@@ -40,8 +39,8 @@ class VersionTest {
 
     @Test
     void aDiffOfTheWorkingTreeHoldsForAnotherDiffOfTheSameFile() {
-        Version version =
-                new Version(new ScrolledContent.Diff(CHANGES), "a.txt", Option.none(), read(), Loadable.loading());
+        Version version = new Version(
+                new ScrolledContent.Diff(CHANGES), "a.txt", Option.none(), read().file(), Loadable.loading());
 
         assertTrue(version.holdsFor(new ScrolledContent.Diff(DiffText.of(CHANGES.text() + " four\n"))));
         assertFalse(version.holdsFor(
@@ -103,14 +102,14 @@ class VersionTest {
     }
 
     private static Version version(Option<FileVersion> shown, Loadable<DiffText> whole) {
-        return new Version(CONTENT, "a.txt", shown, read(), whole);
+        return new Version(CONTENT, "a.txt", shown, read().file(), whole);
     }
 
     private static ReadVersion read() {
         return ReadVersion.of(
                 "stash-changes",
                 CONTENT,
-                new ReadWholeFile.Source.OfStash(
+                new WholeFile.Source.OfStash(
                         new Sha("5555"), new CommitFile("a.txt", ChangeType.MODIFIED, Option.none())),
                 "a.txt",
                 DiffOptions.DEFAULT);

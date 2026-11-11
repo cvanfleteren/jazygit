@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Label;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.diff.BaseTip;
 
 /**
  * Reads the commits from {@code tip}, where {@code branch} is, or HEAD for none, that are not on {@code base}. Both
@@ -19,7 +20,7 @@ import net.vanfleteren.jazygit.state.Msg;
  * @param base the base of ADR 20, {@link BranchRef#bases}, with the commit it is at: the first of them the branches
  *             read last have; none when there is none to compare with
  */
-public record LoadAhead(Option<BranchRef> branch, Option<Sha> tip, Option<Base> base) implements Load {
+public record LoadAhead(Option<BranchRef> branch, Option<Sha> tip, Option<BaseTip> base) implements Load {
 
     @Override
     public Option<Label> label() {
@@ -43,9 +44,4 @@ public record LoadAhead(Option<BranchRef> branch, Option<Sha> tip, Option<Base> 
                         .map(Option::of)))
                 .getOrElse(() -> Either.right(Option.none()));
     }
-
-    /**
-     * A branch compared with, and the commit it is at.
-     */
-    public record Base(BranchRef ref, Sha tip) {}
 }

@@ -21,9 +21,10 @@ import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Env;
+import net.vanfleteren.jazygit.state.diff.BaseTip;
+import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.diff.ScrolledContent;
-import net.vanfleteren.jazygit.state.load.ReadWholeFile.Source;
-import net.vanfleteren.jazygit.state.view.CommitFilesView;
+import net.vanfleteren.jazygit.state.diff.WholeFile.Source;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -41,22 +42,18 @@ class ReadWholeFileTest {
     void eachDiffIsReadAgainTheWayItWasReadWithTheWholeFileAsContext() {
         assertEquals("commit aaaa a.txt -U1000000", read(new Source.OfCommit(SHA, FILE)));
         assertEquals("stash aaaa a.txt -U1000000", read(new Source.OfStash(SHA, FILE)));
-        assertEquals(
-                "commit aaaa a.txt -U1000000",
-                read(new Source.OfFiles(new CommitFilesView.Changes.OfCommit(SHA), FILE)));
-        assertEquals(
-                "stash aaaa a.txt -U1000000", read(new Source.OfFiles(new CommitFilesView.Changes.OfStash(SHA), FILE)));
+        assertEquals("commit aaaa a.txt -U1000000", read(new Source.OfFiles(new Changes.OfCommit(SHA), FILE)));
+        assertEquals("stash aaaa a.txt -U1000000", read(new Source.OfFiles(new Changes.OfStash(SHA), FILE)));
         assertEquals(
                 "range bbbb aaaa a.txt -U1000000",
                 read(new Source.OfFiles(
-                        new CommitFilesView.Changes.OfBranch(
+                        new Changes.OfBranch(
                                 new BranchName("feature"),
-                                new LoadAhead.Base(new BranchRef.Local(new BranchName("main")), BASE),
+                                new BaseTip(new BranchRef.Local(new BranchName("main")), BASE),
                                 SHA),
                         FILE)));
         assertEquals(
-                "pull request 7 a.txt -U1000000",
-                read(new Source.OfFiles(new CommitFilesView.Changes.OfPullRequest(COMMITS), FILE)));
+                "pull request 7 a.txt -U1000000", read(new Source.OfFiles(new Changes.OfPullRequest(COMMITS), FILE)));
     }
 
     @Test

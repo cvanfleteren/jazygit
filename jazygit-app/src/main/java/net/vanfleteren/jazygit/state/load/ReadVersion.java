@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.state.diff.Version;
+import net.vanfleteren.jazygit.state.diff.WholeFile;
 import net.vanfleteren.jazygit.state.view.RepoView;
 
 /**
@@ -20,7 +21,7 @@ import net.vanfleteren.jazygit.state.view.RepoView;
  * options change.
  */
 public record ReadVersion(
-        String area, ScrolledContent content, ReadWholeFile.Source source, String path, DiffOptions options)
+        String area, ScrolledContent content, WholeFile.Source source, String path, DiffOptions options)
         implements Targeted<DiffText> {
 
     /**
@@ -28,8 +29,22 @@ public record ReadVersion(
      * not ignored.
      */
     public static ReadVersion of(
-            String area, ScrolledContent content, ReadWholeFile.Source source, String path, DiffOptions options) {
+            String area, ScrolledContent content, WholeFile.Source source, String path, DiffOptions options) {
         return new ReadVersion(area, content, source, path, options.withIgnoreWhitespace(false));
+    }
+
+    /**
+     * The read of {@code file} for the area {@code area}, as the version keeps it.
+     */
+    public static ReadVersion of(String area, WholeFile file) {
+        return new ReadVersion(area, file.content(), file.source(), file.path(), file.options());
+    }
+
+    /**
+     * What this reads, as the version keeps it.
+     */
+    public WholeFile file() {
+        return new WholeFile(content, source, path, options);
     }
 
     @Override
@@ -51,7 +66,7 @@ public record ReadVersion(
     }
 
     private Option<Version> version(RepoView view) {
-        return view.versions().get(area).filter(version -> version.read().equals(this));
+        return view.versions().get(area).filter(version -> version.read().equals(file()));
     }
 
     @Override

@@ -235,6 +235,13 @@ public record Jobs(
     }
 
     /**
+     * Whether a git operation runs, like a push or a commit.
+     */
+    public boolean runsOperation() {
+        return runs(OperationCmd.class::isInstance);
+    }
+
+    /**
      * The branches a git operation runs on, like a push or a delete, and that operation: they show a spinner, and take
      * no other operation until it is done.
      */

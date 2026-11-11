@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.state.view;
+package net.vanfleteren.jazygit.state.load;
 
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;

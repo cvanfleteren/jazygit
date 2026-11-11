@@ -37,10 +37,11 @@ import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.AppError.CannotReview.Why;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.diff.*;
+import net.vanfleteren.jazygit.state.diff.Changes;
+import net.vanfleteren.jazygit.state.diff.WholeFile;
 import net.vanfleteren.jazygit.state.load.*;
 import net.vanfleteren.jazygit.state.load.ReadWholeFile;
 import net.vanfleteren.jazygit.state.view.*;
-import net.vanfleteren.jazygit.state.view.CommitFilesView.Changes;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -70,7 +71,7 @@ class ReviewUpdateTest {
             +TEN
             """);
     private static final ScrolledContent CONTENT =
-            new ScrolledContent.FileChanges(new CommitFilesView.Changes.OfPullRequest(COMMITS), List.of(A), DIFF);
+            new ScrolledContent.FileChanges(new Changes.OfPullRequest(COMMITS), List.of(A), DIFF);
 
     private static final ReviewThread OPEN = thread("T1", false, ReviewThread.Rights.ALL);
     private static final ReviewThread SETTLED = thread("T2", true, new ReviewThread.Rights(true, true, false));
@@ -586,10 +587,11 @@ class ReviewUpdateTest {
         ReadVersion read = ReadVersion.of(
                 AREA,
                 CONTENT,
-                new ReadWholeFile.Source.OfFiles(new Changes.OfPullRequest(COMMITS), A),
+                new WholeFile.Source.OfFiles(new Changes.OfPullRequest(COMMITS), A),
                 "a.txt",
                 files().preferences().diffOptions());
-        Version shown = new Version(CONTENT, "a.txt", Option.of(FileVersion.NEW), read, new Loadable.Loaded<>(DIFF));
+        Version shown =
+                new Version(CONTENT, "a.txt", Option.of(FileVersion.NEW), read.file(), new Loadable.Loaded<>(DIFF));
         Model inVersion =
                 files().mapRepoView(view -> view.withVersions(view.versions().put(AREA, shown)));
 
@@ -647,13 +649,13 @@ class ReviewUpdateTest {
         ReadWholeFile read = new ReadWholeFile(
                 AREA,
                 CONTENT,
-                new ReadWholeFile.Source.OfFiles(new Changes.OfPullRequest(COMMITS), A),
+                new WholeFile.Source.OfFiles(new Changes.OfPullRequest(COMMITS), A),
                 "a.txt",
                 model.preferences().diffOptions());
         Expansion expansion = new Expansion(
                 CONTENT,
                 io.vavr.collection.HashMap.of(
-                        "a.txt", new Expansion.Expanded(read, new Loadable.Loaded<>(whole), List.of(lines))));
+                        "a.txt", new Expansion.Expanded(read.file(), new Loadable.Loaded<>(whole), List.of(lines))));
         return model.mapRepoView(view -> view.withExpanded(view.expanded().put(AREA, expansion)));
     }
 

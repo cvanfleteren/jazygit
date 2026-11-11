@@ -10,7 +10,6 @@ import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Divergence;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Loadable;
-import net.vanfleteren.jazygit.state.load.LoadDivergence;
 
 /**
  * The commits a local branch and another one do not share, as the branches pane lists them.
@@ -34,13 +33,6 @@ public record DivergenceView(
      */
     public static DivergenceView loading(BranchName branch, BranchRef other, Against against) {
         return new DivergenceView(branch, other, against, Loadable.loading(), Option.none());
-    }
-
-    /**
-     * The load that reads the commits of this view.
-     */
-    public LoadDivergence load() {
-        return new LoadDivergence(branch, other);
     }
 
     /**

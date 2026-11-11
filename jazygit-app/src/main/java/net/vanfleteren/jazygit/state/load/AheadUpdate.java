@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.diff.BaseTip;
 import net.vanfleteren.jazygit.state.view.CommitSearch;
 import net.vanfleteren.jazygit.state.view.Preview;
 
@@ -47,7 +48,8 @@ public final class AheadUpdate {
                 .filter(search -> !search.notOn().equals(notOn))
                 .map(search -> CommitSearch.loading(search.text(), notOn))
                 .map(search -> Next.of(
-                        model.mapRepoView(repoView -> repoView.withCommitSearch(Option.of(search))), search.load()))
+                        model.mapRepoView(repoView -> repoView.withCommitSearch(Option.of(search))),
+                        SearchCommits.of(search)))
                 .getOrElse(() -> Next.of(model));
     }
 
@@ -152,7 +154,7 @@ public final class AheadUpdate {
                         .iterator()
                         .flatMap(base -> LoadUpdate.tipOf(model, base)
                                 .flatMap(found -> found)
-                                .map(at -> new LoadAhead.Base(base, at)))
+                                .map(at -> new BaseTip(base, at)))
                         .headOption());
     }
 

@@ -18,9 +18,9 @@ import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.load.AheadUpdate;
+import net.vanfleteren.jazygit.state.load.CommitSearchMsg;
+import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.view.CommitSearch;
-import net.vanfleteren.jazygit.state.view.CommitSearchMsg;
-import net.vanfleteren.jazygit.state.view.SelectionMsg;
 import net.vanfleteren.jazygit.ui.widgets.FilterLine;
 import net.vanfleteren.jazygit.ui.widgets.Pane;
 

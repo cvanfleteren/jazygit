@@ -4,10 +4,10 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.AllBranches;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
+import net.vanfleteren.jazygit.state.GitHubBases;
 import net.vanfleteren.jazygit.state.Label;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.github.GitHubBases;
 
 /**
  * Reads the local and the remote-tracking branches, at once, and with them the parents of the branches and how

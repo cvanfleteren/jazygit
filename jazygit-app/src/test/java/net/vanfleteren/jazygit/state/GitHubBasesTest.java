@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.state.github;
+package net.vanfleteren.jazygit.state;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -21,6 +21,9 @@ import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.RemoteName;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Upstream;
+import net.vanfleteren.jazygit.state.github.GitHubChecks;
+import net.vanfleteren.jazygit.state.github.GitHubState;
+import net.vanfleteren.jazygit.state.github.PullRequestsUpdate;
 import org.junit.jupiter.api.Test;
 
 /**

@@ -14,7 +14,7 @@ import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.prs.PrOverviewMsg;
+import net.vanfleteren.jazygit.state.github.prs.PrOverviewMsg;
 import net.vanfleteren.jazygit.ui.PopupSlot;
 
 /**

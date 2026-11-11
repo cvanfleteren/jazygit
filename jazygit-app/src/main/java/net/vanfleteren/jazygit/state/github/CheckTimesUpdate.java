@@ -33,10 +33,7 @@ public final class CheckTimesUpdate {
         Model after = next.model();
         return after.gitHub().checkTimes().equals(model.gitHub().checkTimes())
                 ? next
-                : after.popup()
-                        .map(popup ->
-                                new Next(after.openPopup(popup.checkTimesChanging(model)), next.cmds(), next.quit()))
-                        .getOrElse(next);
+                : new Next(after.checkTimesChanged(model), next.cmds(), next.quit());
     }
 
     private static Next learn(Model model, CheckTimesMsg msg) {

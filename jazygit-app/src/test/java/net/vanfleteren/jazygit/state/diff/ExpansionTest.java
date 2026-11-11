@@ -13,8 +13,8 @@ import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Folding;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Loadable;
+import net.vanfleteren.jazygit.state.diff.WholeFile.Source;
 import net.vanfleteren.jazygit.state.load.ReadWholeFile;
-import net.vanfleteren.jazygit.state.load.ReadWholeFile.Source;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -72,7 +72,8 @@ class ExpansionTest {
                 CONTENT,
                 HashMap.of(
                         "a.txt",
-                        new Expansion.Expanded(READ, new Loadable.Loaded<>(whole), List.of(new Folding.Lines(1, 6)))));
+                        new Expansion.Expanded(
+                                READ.file(), new Loadable.Loaded<>(whole), List.of(new Folding.Lines(1, 6)))));
     }
 
     /**

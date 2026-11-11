@@ -28,10 +28,10 @@ import net.vanfleteren.jazygit.state.load.LoadCommitDetail;
 import net.vanfleteren.jazygit.state.load.LoadFileDiff;
 import net.vanfleteren.jazygit.state.load.LoadMsg;
 import net.vanfleteren.jazygit.state.load.LoadStashDetail;
+import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.preferences.SaveSettings;
 import net.vanfleteren.jazygit.state.view.DivergenceView;
 import net.vanfleteren.jazygit.state.view.Preview;
-import net.vanfleteren.jazygit.state.view.SelectionMsg;
 import org.junit.jupiter.api.Test;
 
 class DiffOptionsUpdateTest {

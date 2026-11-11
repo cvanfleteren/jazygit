@@ -25,10 +25,11 @@ import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.github.*;
+import net.vanfleteren.jazygit.state.github.prs.PrOverviewUpdate;
 import net.vanfleteren.jazygit.state.operation.*;
 import net.vanfleteren.jazygit.state.preferences.*;
-import net.vanfleteren.jazygit.state.prs.PrOverviewUpdate;
 import net.vanfleteren.jazygit.state.view.*;
 
 /**
@@ -337,7 +338,7 @@ public final class PullRequestUpdate {
     private static Next files(Model model, PullRequestCommits commits) {
         return CommitFilesUpdate.update(
                 model.withScreen(Screen.REPOSITORY),
-                new CommitFilesMsg.Opened(new CommitFilesView.Changes.OfPullRequest(commits), Scopes.BRANCHES.id()));
+                new CommitFilesMsg.Opened(new Changes.OfPullRequest(commits), Scopes.BRANCHES.id()));
     }
 
     /**

@@ -17,6 +17,13 @@ import net.vanfleteren.jazygit.state.view.RepoView;
  */
 public record LoadDivergence(BranchName branch, BranchRef other) implements Targeted<Divergence> {
 
+    /**
+     * The load that reads the commits of {@code view}.
+     */
+    public static LoadDivergence of(DivergenceView view) {
+        return new LoadDivergence(view.branch(), view.other());
+    }
+
     @Override
     public Option<Label> label() {
         return Option.of(Label.of("work.divergence", branch.value(), other.name()));
@@ -27,10 +34,7 @@ public record LoadDivergence(BranchName branch, BranchRef other) implements Targ
      */
     @Override
     public Target<Divergence> target() {
-        return Target.inView(Lens.where(
-                        RepoView::divergence,
-                        RepoView::withDivergence,
-                        view -> view.load().equals(this))
+        return Target.inView(Lens.where(RepoView::divergence, RepoView::withDivergence, view -> of(view).equals(this))
                 .andThen(Lens.of(DivergenceView::commits, DivergenceView::withCommits)));
     }
 

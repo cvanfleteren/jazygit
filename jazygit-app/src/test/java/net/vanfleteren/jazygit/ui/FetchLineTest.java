@@ -20,10 +20,10 @@ import net.vanfleteren.jazygit.state.Jobs;
 import net.vanfleteren.jazygit.state.Label;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
+import net.vanfleteren.jazygit.state.github.prs.PrOverview;
 import net.vanfleteren.jazygit.state.load.LoadBranches;
 import net.vanfleteren.jazygit.state.load.LoadStatus;
 import net.vanfleteren.jazygit.state.preferences.Screen;
-import net.vanfleteren.jazygit.state.prs.PrOverview;
 import org.junit.jupiter.api.Test;
 
 /**

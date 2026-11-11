@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.load.LoadDivergence;
+import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.view.*;
 import net.vanfleteren.jazygit.ui.widgets.Pane;
 
@@ -106,7 +107,7 @@ class DivergenceList {
      * Remembers which divergence is shown; one just opened starts at its first commit.
      */
     private void follow(Option<DivergenceView> divergence) {
-        Option<LoadDivergence> now = divergence.map(DivergenceView::load);
+        Option<LoadDivergence> now = divergence.map(LoadDivergence::of);
         if (now.isDefined() && !now.equals(shown)) {
             list.select(0);
             selected = 0;

@@ -16,9 +16,11 @@ import net.vanfleteren.jazygit.state.Label;
 import net.vanfleteren.jazygit.state.Lens;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.diff.Expansion;
 import net.vanfleteren.jazygit.state.diff.ScrolledContent;
-import net.vanfleteren.jazygit.state.view.CommitFilesView;
+import net.vanfleteren.jazygit.state.diff.WholeFile;
+import net.vanfleteren.jazygit.state.diff.WholeFile.Source;
 import net.vanfleteren.jazygit.state.view.RepoView;
 
 /**
@@ -53,10 +55,17 @@ public record ReadWholeFile(String area, ScrolledContent content, Source source,
     }
 
     /**
-     * This read with {@code chosen} options.
+     * The read of {@code file} for the area {@code area}.
      */
-    public ReadWholeFile withOptions(DiffOptions chosen) {
-        return new ReadWholeFile(area, content, source, path, chosen);
+    public static ReadWholeFile of(String area, WholeFile file) {
+        return new ReadWholeFile(area, file.content(), file.source(), file.path(), file.options());
+    }
+
+    /**
+     * What this reads, as the expansion keeps it.
+     */
+    public WholeFile file() {
+        return new WholeFile(content, source, path, options);
     }
 
     private Option<Expansion.Expanded> expanded(RepoView view) {
@@ -87,44 +96,17 @@ public record ReadWholeFile(String area, ScrolledContent content, Source source,
                         env.git().diffs().commitFileChanges(sha, List.of(file), whole);
                     case Source.OfStash(Sha sha, CommitFile file) ->
                         env.git().stashes().fileChanges(sha, List.of(file), whole);
-                    case Source.OfFiles(CommitFilesView.Changes of, CommitFile file) ->
+                    case Source.OfFiles(Changes of, CommitFile file) ->
                         switch (of) {
-                            case CommitFilesView.Changes.OfCommit(Sha sha) ->
+                            case Changes.OfCommit(Sha sha) ->
                                 env.git().diffs().commitFileChanges(sha, List.of(file), whole);
-                            case CommitFilesView.Changes.OfStash(Sha sha) ->
-                                env.git().stashes().fileChanges(sha, List.of(file), whole);
-                            case CommitFilesView.Changes.OfBranch(var branch, var base, Sha sha) ->
+                            case Changes.OfStash(Sha sha) -> env.git().stashes().fileChanges(sha, List.of(file), whole);
+                            case Changes.OfBranch(var branch, var base, Sha sha) ->
                                 env.git().diffs().rangeFileChanges(base.tip(), sha, List.of(file), whole);
-                            case CommitFilesView.Changes.OfPullRequest(PullRequestCommits commits) ->
+                            case Changes.OfPullRequest(PullRequestCommits commits) ->
                                 env.git().diffs().pullRequestFileChanges(commits, List.of(file), whole);
                         };
                 })
                 .mapLeft(Failure::of);
-    }
-
-    /**
-     * How a file is read whole: as the diff it is shown in was read.
-     */
-    public sealed interface Source {
-
-        /**
-         * The staged changes of {@code file} in the working tree, or the unstaged ones.
-         */
-        record WorkingTree(FileEntry file, boolean staged) implements Source {}
-
-        /**
-         * What the commit {@code sha} changed in {@code file}.
-         */
-        record OfCommit(Sha sha, CommitFile file) implements Source {}
-
-        /**
-         * What the stash {@code sha} stashed of {@code file}.
-         */
-        record OfStash(Sha sha, CommitFile file) implements Source {}
-
-        /**
-         * What {@code of}, whose files the files pane lists, changed in {@code file}.
-         */
-        record OfFiles(CommitFilesView.Changes of, CommitFile file) implements Source {}
     }
 }

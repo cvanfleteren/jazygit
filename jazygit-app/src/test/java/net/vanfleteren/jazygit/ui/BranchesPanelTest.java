@@ -24,6 +24,7 @@ import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.load.*;
+import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.popup.*;
 import net.vanfleteren.jazygit.state.view.*;
 import org.junit.jupiter.api.Test;

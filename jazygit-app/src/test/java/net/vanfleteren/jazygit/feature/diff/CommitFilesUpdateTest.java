@@ -30,15 +30,15 @@ import net.vanfleteren.jazygit.state.Loadable.Loading;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.load.LoadCommitFileDiff;
 import net.vanfleteren.jazygit.state.load.LoadCommitFiles;
 import net.vanfleteren.jazygit.state.load.LoadMsg;
+import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.preferences.SaveSettings;
 import net.vanfleteren.jazygit.state.view.CommitFilesView;
-import net.vanfleteren.jazygit.state.view.CommitFilesView.Changes;
 import net.vanfleteren.jazygit.state.view.FileFilter;
 import net.vanfleteren.jazygit.state.view.Preview;
-import net.vanfleteren.jazygit.state.view.SelectionMsg;
 import net.vanfleteren.jazygit.state.view.ViewMsg;
 import org.junit.jupiter.api.Test;
 

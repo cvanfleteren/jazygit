@@ -16,7 +16,7 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.TimerMsg;
 import net.vanfleteren.jazygit.state.Update;
-import net.vanfleteren.jazygit.state.view.SelectionMsg;
+import net.vanfleteren.jazygit.state.diff.BaseTip;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -92,19 +92,19 @@ class AheadUpdateTest {
         List<RemoteRef> both = List.of(remote("parent", new Sha("3333")), remote("main", new Sha("1111")));
 
         assertEquals(
-                Option.of(new LoadAhead.Base(origin("parent"), new Sha("3333"))),
+                Option.of(new BaseTip(origin("parent"), new Sha("3333"))),
                 AheadUpdate.of(withBranches(loaded(), both, parented), FEATURE_LOG)
                         .base());
         assertEquals(
-                Option.of(new LoadAhead.Base(new BranchRef.Local(new BranchName("parent")), new Sha("2222"))),
+                Option.of(new BaseTip(new BranchRef.Local(new BranchName("parent")), new Sha("2222"))),
                 AheadUpdate.of(withBranches(loaded(), List.empty(), parented), FEATURE_LOG)
                         .base());
         assertEquals(
-                Option.of(new LoadAhead.Base(origin("main"), new Sha("1111"))),
+                Option.of(new BaseTip(origin("main"), new Sha("1111"))),
                 AheadUpdate.of(withBranches(loaded(), both, io.vavr.collection.HashMap.empty()), FEATURE_LOG)
                         .base());
         assertEquals(
-                Option.of(new LoadAhead.Base(new BranchRef.Local(MAIN), HEAD)),
+                Option.of(new BaseTip(new BranchRef.Local(MAIN), HEAD)),
                 AheadUpdate.of(withBranches(loaded(), List.empty(), io.vavr.collection.HashMap.empty()), FEATURE_LOG)
                         .base());
     }
@@ -141,7 +141,7 @@ class AheadUpdateTest {
 
         assertEquals(Option.of(FEATURE_TIP), AheadUpdate.ofHead(detached).tip());
         assertEquals(
-                Option.of(new LoadAhead.Base(new BranchRef.Local(MAIN), HEAD)),
+                Option.of(new BaseTip(new BranchRef.Local(MAIN), HEAD)),
                 AheadUpdate.ofHead(detached).base());
     }
 
@@ -151,14 +151,13 @@ class AheadUpdateTest {
                 Either.right(Option.none()), new LoadAhead(Option.none(), Option.of(HEAD), Option.none()).read(null));
         assertEquals(
                 Either.right(Option.none()),
-                new LoadAhead(Option.none(), Option.none(), Option.of(new LoadAhead.Base(origin("main"), HEAD)))
-                        .read(null));
+                new LoadAhead(Option.none(), Option.none(), Option.of(new BaseTip(origin("main"), HEAD))).read(null));
     }
 
     @Test
     void theCommitsAheadAreReadFromGitAndSaidToBeLoadedForTheLoadThatAskedForThem() {
-        LoadAhead load = new LoadAhead(
-                Option.none(), Option.of(FEATURE_TIP), Option.of(new LoadAhead.Base(origin("main"), HEAD)));
+        LoadAhead load =
+                new LoadAhead(Option.none(), Option.of(FEATURE_TIP), Option.of(new BaseTip(origin("main"), HEAD)));
 
         assertEquals(
                 new LoadMsg.AheadLoaded(
@@ -285,10 +284,10 @@ class AheadUpdateTest {
                 model, sameBranchesWith(model, io.vavr.collection.HashMap.of(head, FEATURE, FEATURE, MAIN)));
 
         assertEquals(
-                Option.of(new LoadAhead.Base(new BranchRef.Local(FEATURE), FEATURE_TIP)),
+                Option.of(new BaseTip(new BranchRef.Local(FEATURE), FEATURE_TIP)),
                 AheadUpdate.ofHead(read.model()).base());
         assertEquals(
-                Option.of(new LoadAhead.Base(new BranchRef.Local(MAIN), HEAD)),
+                Option.of(new BaseTip(new BranchRef.Local(MAIN), HEAD)),
                 AheadUpdate.of(read.model(), FEATURE_LOG).base());
         assertTrue(read.cmds().contains(AheadUpdate.ofHead(read.model())));
         assertTrue(read.cmds().contains(AheadUpdate.of(read.model(), FEATURE_LOG)));
@@ -409,7 +408,7 @@ class AheadUpdateTest {
         Update.Next bothMoved = localBranchesRead(read, mainAnd(new Sha("cccc"), new Sha("eeee")));
 
         LoadAhead moved = AheadUpdate.of(baseMoved.model(), FEATURE_LOG);
-        assertEquals(Option.of(new LoadAhead.Base(new BranchRef.Local(MAIN), new Sha("cccc"))), moved.base());
+        assertEquals(Option.of(new BaseTip(new BranchRef.Local(MAIN), new Sha("cccc"))), moved.base());
         assertTrue(baseMoved.cmds().contains(moved), baseMoved.cmds().toString());
         // Its log is read again, and what is not on its base after it.
         assertEquals(
@@ -445,7 +444,7 @@ class AheadUpdateTest {
                         Fixtures.branch(FEATURE, false, new Sha("eeee"))));
         Update.Next still = localBranchesRead(read, BRANCHES);
 
-        assertEquals(Option.of(new LoadAhead.Base(new BranchRef.Local(FEATURE), FEATURE_TIP)), load.base());
+        assertEquals(Option.of(new BaseTip(new BranchRef.Local(FEATURE), FEATURE_TIP)), load.base());
         assertTrue(moved.cmds().contains(AheadUpdate.ofHead(moved.model())));
         assertFalse(still.cmds().exists(LoadAhead.class::isInstance));
     }
@@ -499,7 +498,7 @@ class AheadUpdateTest {
                         Fixtures.branch(FEATURE, true, HEAD)));
 
         assertEquals(
-                Option.of(new LoadAhead.Base(new BranchRef.Local(MAIN), HEAD)),
+                Option.of(new BaseTip(new BranchRef.Local(MAIN), HEAD)),
                 AheadUpdate.ofHead(checkedOut.model()).base());
         assertTrue(checkedOut.cmds().contains(AheadUpdate.ofHead(checkedOut.model())));
     }

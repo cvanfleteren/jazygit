@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.diff.Changes;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -27,8 +28,8 @@ class FileFilterUpdateTest {
     }
 
     private static Model withCommitFiles(Model model) {
-        return model.mapRepoView(repoView -> repoView.withCommitFiles(Option.of(CommitFilesView.of(
-                new CommitFilesView.Changes.OfCommit(new Sha("aaaa")), Scopes.COMMITS.id(), Scopes.FILES.id()))));
+        return model.mapRepoView(repoView -> repoView.withCommitFiles(Option.of(
+                CommitFilesView.of(new Changes.OfCommit(new Sha("aaaa")), Scopes.COMMITS.id(), Scopes.FILES.id()))));
     }
 
     @Test

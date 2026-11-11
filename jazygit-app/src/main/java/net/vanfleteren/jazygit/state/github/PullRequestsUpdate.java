@@ -6,11 +6,12 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.state.AppError;
+import net.vanfleteren.jazygit.state.GitHubBases;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.github.prs.LoadRepositoryPullRequests;
 import net.vanfleteren.jazygit.state.load.Load;
 import net.vanfleteren.jazygit.state.load.LoadBranches;
-import net.vanfleteren.jazygit.state.prs.LoadRepositoryPullRequests;
 
 /**
  * Reading the open pull requests from GitHub, which the branches show, along with how the checks are doing on
@@ -126,7 +127,7 @@ public final class PullRequestsUpdate {
      * bases: the newest, the one with the highest number, is kept, so the choice does not depend on the order
      * gh lists them in.
      */
-    static Map<BranchName, PullRequest> byHeadBranch(List<PullRequest> pullRequests) {
+    public static Map<BranchName, PullRequest> byHeadBranch(List<PullRequest> pullRequests) {
         // Vavr's toMap has no merge function; a later entry replaces an earlier one, so ascending numbers keep the
         // newest.
         return pullRequests.sortBy(PullRequest::number).toMap(pr -> new BranchName(pr.headBranch()), pr -> pr);

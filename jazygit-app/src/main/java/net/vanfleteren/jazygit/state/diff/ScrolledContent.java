@@ -8,7 +8,6 @@ import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Sha;
-import net.vanfleteren.jazygit.state.view.CommitFilesView;
 
 /**
  * What an area of the content panel shows, which where it is {@link Scrolled scrolled} to holds for.
@@ -26,8 +25,8 @@ public sealed interface ScrolledContent {
                         && same.sha().equals(commit.sha());
             case StashChanges(Sha sha, var ignored) ->
                 other instanceof StashChanges(Sha same, var also) && same.equals(sha);
-            case FileChanges(CommitFilesView.Changes of, List<CommitFile> files, var ignored) ->
-                other instanceof FileChanges(CommitFilesView.Changes same, List<CommitFile> those, var also)
+            case FileChanges(Changes of, List<CommitFile> files, var ignored) ->
+                other instanceof FileChanges(Changes same, List<CommitFile> those, var also)
                         && same.sameAs(of)
                         && those.map(CommitFile::path).equals(files.map(CommitFile::path));
             default -> equals(other);
@@ -71,7 +70,7 @@ public sealed interface ScrolledContent {
     /**
      * What the commit, the stash or the pull request {@code of} changed in {@code files}.
      */
-    record FileChanges(CommitFilesView.Changes of, List<CommitFile> files, DiffText diff) implements ScrolledContent {}
+    record FileChanges(Changes of, List<CommitFile> files, DiffText diff) implements ScrolledContent {}
 
     /**
      * A pull request, and what it says and changes.

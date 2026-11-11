@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.state.prs;
+package net.vanfleteren.jazygit.state.github.prs;
 
 import net.vanfleteren.jazygit.settings.UnseenPullRequests;
 import net.vanfleteren.jazygit.state.Cmd;

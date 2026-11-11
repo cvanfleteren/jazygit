@@ -11,7 +11,7 @@ import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
-import net.vanfleteren.jazygit.state.view.CommitFilesView;
+import net.vanfleteren.jazygit.state.diff.Changes;
 
 /**
  * The outcome of reading from the repository.
@@ -277,7 +277,7 @@ public sealed interface LoadMsg extends Msg {
         }
     }
 
-    record CommitFilesLoaded(CommitFilesView.Changes of, List<CommitFile> files) implements Read<List<CommitFile>> {
+    record CommitFilesLoaded(Changes of, List<CommitFile> files) implements Read<List<CommitFile>> {
 
         @Override
         public List<CommitFile> value() {
@@ -290,7 +290,7 @@ public sealed interface LoadMsg extends Msg {
         }
     }
 
-    record CommitFileDiffLoaded(CommitFilesView.Changes of, List<CommitFile> files, DiffOptions options, DiffText diff)
+    record CommitFileDiffLoaded(Changes of, List<CommitFile> files, DiffOptions options, DiffText diff)
             implements Read<DiffText> {
 
         @Override

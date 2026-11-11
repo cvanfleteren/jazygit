@@ -7,7 +7,6 @@ import java.util.function.UnaryOperator;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Lens;
 import net.vanfleteren.jazygit.state.Loadable;
-import net.vanfleteren.jazygit.state.load.LoadUpdate;
 
 /**
  * What is read for the item highlighted in a pane, e.g. the log of the highlighted branch.
@@ -39,7 +38,7 @@ public record Preview<K, V>(K key, Loadable<V> value, Option<Preview<K, V>> prev
      */
     public static <K, V> Option<Preview<K, V>> updated(
             Option<Preview<K, V>> preview, K key, UnaryOperator<Preview<K, V>> f) {
-        return LoadUpdate.mapWhere(preview, shown -> shown.key().equals(key), f);
+        return preview.map(shown -> shown.key().equals(key) ? f.apply(shown) : shown);
     }
 
     /**
