@@ -25,6 +25,8 @@ import lombok.With;
  * @param animations          whether what moves on the screen, like the left column stepped wider or narrower,
  *                            moves there smoothly, rather than at once (ADR 81)
  * @param browsers            the browser set for each GitHub account (ADR 88)
+ * @param editors             the editors a worktree can be opened in (ADR 110); only read, never written, as only
+ *                            the user sets them
  */
 @With
 public record Settings(
@@ -38,7 +40,8 @@ public record Settings(
         List<Integer> repositoryHeights,
         List<Integer> pullRequestsHeights,
         boolean animations,
-        AccountBrowsers browsers) {
+        AccountBrowsers browsers,
+        Editors editors) {
 
     /**
      * The narrowest the left column may get, in percent of the width.
@@ -82,7 +85,8 @@ public record Settings(
             DEFAULT_REPOSITORY_HEIGHTS,
             DEFAULT_PULL_REQUESTS_HEIGHTS,
             true,
-            AccountBrowsers.NONE);
+            AccountBrowsers.NONE,
+            Editors.NONE);
 
     /**
      * The key of the theme in the settings file.
@@ -191,6 +195,9 @@ public record Settings(
                 animations.filter(Boolean.class::isInstance).map(Boolean.class::cast);
         Option<Object> browsers = value.apply(BROWSERS);
         Option<AccountBrowsers> validBrowsers = browsers.flatMap(AccountBrowsers::read);
+        Editors.Read editors = value.apply(Editors.KEY)
+                .map(Editors::read)
+                .getOrElse(() -> new Editors.Read(Editors.NONE, List.empty()));
         return new Read(
                 new Settings(
                         validTheme.getOrElse(DEFAULT.theme),
@@ -203,7 +210,8 @@ public record Settings(
                         validRepositoryHeights.getOrElse(DEFAULT_REPOSITORY_HEIGHTS),
                         validPullRequestsHeights.getOrElse(DEFAULT_PULL_REQUESTS_HEIGHTS),
                         validAnimations.getOrElse(DEFAULT.animations),
-                        validBrowsers.getOrElse(DEFAULT.browsers)),
+                        validBrowsers.getOrElse(DEFAULT.browsers),
+                        editors.editors()),
                 Option.when(theme.isDefined() && validTheme.isEmpty(), THEME)
                         .toList()
                         .appendAll(Option.when(gh.isDefined() && validGh.isEmpty(), GH_EXECUTABLE))
@@ -220,7 +228,8 @@ public record Settings(
                                 pullRequestsHeights.isDefined() && validPullRequestsHeights.isEmpty(),
                                 PULL_REQUESTS_HEIGHTS))
                         .appendAll(Option.when(animations.isDefined() && validAnimations.isEmpty(), ANIMATIONS))
-                        .appendAll(Option.when(browsers.isDefined() && validBrowsers.isEmpty(), BROWSERS)));
+                        .appendAll(Option.when(browsers.isDefined() && validBrowsers.isEmpty(), BROWSERS))
+                        .appendAll(editors.invalid()));
     }
 
     /**
@@ -259,7 +268,8 @@ public record Settings(
 
     /**
      * The settings as they are kept in the settings file, by the path of their key, each name of a table it is in
-     * and then its own; a setting left at its default has none.
+     * and then its own; a setting left at its default has none. The editors are not among them: the user writes
+     * them, and saving leaves them as they are.
      */
     Map<List<String>, Object> entries() {
         return dotted().mapKeys(key -> List.of(key.split("\\."))).merge(browsers.entries());

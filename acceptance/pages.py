@@ -390,6 +390,12 @@ class BranchesPane:
         # Its log shows once the app has taken it as the selected branch, which the keys then act on.
         self.wait_for_log(branch)
 
+    def open_in_editor(self, branch: str):
+        """Opens the worktree that has the branch in the one editor of the settings (ADR 110). It does not wait for
+        the editor."""
+        self.select(branch)
+        self.app.press("e")
+
     def select_remote(self, branch: str):
         """Focuses the pane and moves to the remote branch, such as "origin/main", on the list of remote ones."""
         self.ui.caught_up()
@@ -1019,6 +1025,15 @@ class WorktreesPane:
         change."""
         self.select(name)
         self.app.press("d")
+
+    def open_in_editor(self, name: str, letter: str | None = None):
+        """Opens the worktree in an editor of the settings: with {letter}, the one it chooses in the menu that more
+        than one editor brings up (ADR 110). It does not wait for the editor."""
+        self.select(name)
+        self.app.press("e")
+        if letter is not None:
+            self.app.wait_for("Open " + name + " in")
+            self.app.press(letter)
 
     def lock(self, name: str):
         """Locks the worktree, or unlocks it when it is locked."""

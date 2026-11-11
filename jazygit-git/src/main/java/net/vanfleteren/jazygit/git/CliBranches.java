@@ -96,7 +96,7 @@ final class CliBranches implements Branches {
                 .flatMap(created -> GitProcess.read(
                         worktree,
                         GitCommand.reading("for-each-ref", "--format=" + FORMAT, HEADS, REMOTES),
-                        raw -> parseAll(raw, created)));
+                        raw -> parseAll(raw, created, BranchesInUse.elsewhere(worktree))));
     }
 
     /**
@@ -251,9 +251,19 @@ final class CliBranches implements Branches {
      * {@code created} says.
      */
     static Either<UnexpectedOutput, AllBranches> parseAll(String raw, Map<BranchName, Creation> created) {
+        return parseAll(raw, created, HashMap.empty());
+    }
+
+    /**
+     * The branches in {@code raw}, as {@link #parseAll(String, Map)} reads them, with a branch that another worktree
+     * rebases or bisects, as {@code inUse} has it, in that worktree: its HEAD is detached meanwhile, so
+     * {@code %(worktreepath)} does not name it, but git takes it as in use there (ADR 110).
+     */
+    static Either<UnexpectedOutput, AllBranches> parseAll(
+            String raw, Map<BranchName, Creation> created, Map<BranchName, Path> inUse) {
         return Either.sequenceRight(GitOutput.nonBlankLines(raw).map(Ref::parse))
                 .map(Seq::toList)
-                .map(refs -> new AllBranches(branches(refs, created), remoteRefs(refs)));
+                .map(refs -> new AllBranches(branches(refs, created, inUse), remoteRefs(refs)));
     }
 
     /**
@@ -289,7 +299,8 @@ final class CliBranches implements Branches {
                 .sorted(REMOTE_ORDER);
     }
 
-    private static List<Branch> branches(List<Ref> refs, Map<BranchName, Creation> created) {
+    private static List<Branch> branches(
+            List<Ref> refs, Map<BranchName, Creation> created, Map<BranchName, Path> inUse) {
         Set<String> remote =
                 refs.map(Ref::name).filter(name -> name.startsWith(REMOTES)).toSet();
         List<BranchName> local = refs.flatMap(Ref::localName);
@@ -306,7 +317,7 @@ final class CliBranches implements Branches {
                                 remote.contains(ref.pushedTo(name)),
                                 defaultBranch.contains(name),
                                 tracking(ref),
-                                ref.otherWorktree())))
+                                ref.otherWorktree().orElse(() -> inUse.get(name).filter(path -> !ref.head())))))
                 .sorted(ORDER);
     }
 

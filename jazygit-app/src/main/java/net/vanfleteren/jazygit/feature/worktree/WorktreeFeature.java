@@ -5,6 +5,7 @@ import java.util.function.Consumer;
 import net.vanfleteren.jazygit.feature.FeatureAction;
 import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeAction;
 import net.vanfleteren.jazygit.feature.worktree.lock.LockWorktreeAction;
+import net.vanfleteren.jazygit.feature.worktree.open.OpenInEditorAction;
 import net.vanfleteren.jazygit.feature.worktree.prune.PruneWorktreesAction;
 import net.vanfleteren.jazygit.feature.worktree.remove.RemoveWorktreeAction;
 import net.vanfleteren.jazygit.feature.worktree.switchto.SwitchWorktreeAction;
@@ -27,7 +28,8 @@ public final class WorktreeFeature {
             SwitchWorktreeAction.ACTION,
             RemoveWorktreeAction.ACTION,
             PruneWorktreesAction.ACTION,
-            LockWorktreeAction.ACTION);
+            LockWorktreeAction.ACTION,
+            OpenInEditorAction.ACTION);
 
     private WorktreeFeature() {}
 

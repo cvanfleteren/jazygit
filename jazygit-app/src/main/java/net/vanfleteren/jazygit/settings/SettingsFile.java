@@ -84,7 +84,8 @@ public final class SettingsFile implements SettingsStore {
     }
 
     /**
-     * {@code value} as read, with a table as a {@link java.util.Map}, so the settings know nothing of the TOML library.
+     * {@code value} as read, with a table as a {@link java.util.Map}, also one in an array, as the editors are
+     * (ADR 110), so the settings know nothing of the TOML library.
      */
     private static Object plain(Object value) {
         return value instanceof UnmodifiableConfig table
@@ -92,6 +93,8 @@ public final class SettingsFile implements SettingsStore {
                         .toJavaMap(
                                 java.util.LinkedHashMap::new,
                                 entry -> Tuple.of(entry.getKey(), plain(entry.getValue())))
-                : value;
+                : value instanceof java.util.List<?> array
+                        ? List.ofAll(array).map(SettingsFile::plain).toJavaList()
+                        : value;
     }
 }

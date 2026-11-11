@@ -141,6 +141,67 @@ class SettingsFileTest {
     }
 
     @Test
+    void readsTheEditorsInTheirOrder() throws IOException {
+        write("""
+                [[editors]]
+                name = "IntelliJ"
+                command = ["idea", "{dir}"]
+                shortcut = "i"
+
+                [[editors]]
+                name = "Neovim"
+                command = ["nvim", "."]
+                terminal = true
+                """);
+
+        Loaded loaded = settingsFile().load();
+
+        assertEquals(Option.none(), loaded.problem());
+        assertEquals(
+                new Editors(List.of(
+                        new EditorProgram("IntelliJ", List.of("idea", "{dir}"), false, Option.of('i')),
+                        new EditorProgram("Neovim", List.of("nvim", "."), true, Option.none()))),
+                loaded.settings().editors());
+    }
+
+    @Test
+    void anEditorWithoutACommandIsLeftOutAndSaidSo() throws IOException {
+        write("""
+                [[editors]]
+                name = "Broken"
+
+                [[editors]]
+                name = "Kate"
+                command = ["kate"]
+                """);
+
+        Loaded loaded = settingsFile().load();
+
+        assertEquals(Option.of(new SettingsProblem.Invalid(file(), List.of("editors[1].command"))), loaded.problem());
+        assertEquals(List.of("Kate"), loaded.settings().editors().all().map(EditorProgram::name));
+    }
+
+    @Test
+    void savingAnotherSettingKeepsTheEditors() throws IOException {
+        write("""
+                [ui]
+                theme = "light"
+
+                [[editors]]
+                name = "Kate"
+                command = ["kate", "{dir}"]
+                shortcut = "k"
+                """);
+        Settings loaded = settingsFile().load().settings();
+
+        settingsFile().save(loaded, loaded.withTheme(ThemeName.DARCULA));
+
+        Settings reread = settingsFile().load().settings();
+        assertEquals(ThemeName.DARCULA, reread.theme());
+        assertEquals(loaded.editors(), reread.editors());
+    }
+
+    @Test
     void savingOnlyChangesWhatChanged() throws IOException {
         // Edited by hand while jazygit ran: a setting that did not change in jazygit keeps the edit.
         write("""

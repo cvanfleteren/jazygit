@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.i18n.Messages;
+import net.vanfleteren.jazygit.settings.EditorProgram;
 import net.vanfleteren.jazygit.settings.SettingsProblem;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Failure;
@@ -79,6 +80,13 @@ public final class ErrorText {
                         : Messages.get("error.removeWorktree.lockedBecause", worktree, reason);
             case AppError.WorktreeShownAlready(String worktree) -> Messages.get("error.switchWorktree.shown", worktree);
             case AppError.WorktreeMissing(String worktree) -> Messages.get("error.switchWorktree.missing", worktree);
+            case AppError.NotInWorktree(BranchName branch) ->
+                Messages.get("error.openInEditor.notInWorktree", branch.value());
+            case AppError.NoEditorSet() ->
+                Messages.get(
+                        "error.openInEditor.noEditor",
+                        // On lines of their own, as TOML has them, so it can be pasted as it is.
+                        "[[editors]]\nname = \"IntelliJ\"\ncommand = [\"idea\", \"" + EditorProgram.DIR + "\"]");
             case AppError.NothingToPrune() -> Messages.get("error.pruneWorktrees.nothing");
             case AppError.MainWorktreeNotLockable() -> Messages.get("error.lockWorktree.main");
             case AppError.Diverged(BranchName branch, RemoteBranch upstream) ->

@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.git;
 import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
+import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.model.CommitMessage;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
@@ -32,4 +33,18 @@ public interface Editor {
      * the terminal, which the caller must have handed over. Fails as {@link #editMessage} does.
      */
     Either<GitFailure, Tuple2<String, List<ExecutedCommand>>> editText(String fileName, String text);
+
+    /**
+     * Runs {@code commandLine}, an editor the user set, in {@code directory}, and waits until it is closed (ADR 110).
+     * It runs on the terminal, which the caller must have handed over. Fails with a {@link GitError.EditorNotStarted}
+     * or {@link GitError.EditorFailed}.
+     */
+    Either<GitFailure, List<ExecutedCommand>> open(Path directory, List<String> commandLine);
+
+    /**
+     * Starts {@code commandLine}, an editor the user set, in {@code directory}, and leaves it running, as a browser
+     * is (ADR 110): it gets no input, and its output is thrown away. Fails with a {@link GitError.EditorNotStarted}, or
+     * a {@link GitError.EditorFailed} when it exits with an error before it is taken to have started.
+     */
+    Either<GitFailure, List<ExecutedCommand>> launch(Path directory, List<String> commandLine);
 }

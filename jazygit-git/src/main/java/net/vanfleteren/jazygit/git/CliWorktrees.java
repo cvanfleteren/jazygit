@@ -38,12 +38,18 @@ final class CliWorktrees implements Worktrees {
 
     /**
      * Runs {@code git worktree list --porcelain -z}: the worktrees, {@code worktree}, the one that is current, first,
-     * then the others as git lists them, the main one first.
+     * then the others as git lists them, the main one first. Each one with its HEAD detached has the branch it rebases
+     * or bisects, read from its git directory (ADR 110).
      */
     @Override
     public Either<GitError, List<Worktree>> list() {
         return GitProcess.read(
-                worktree, GitCommand.reading("worktree", "list", "--porcelain", "-z"), raw -> parse(raw, worktree));
+                        worktree,
+                        GitCommand.reading("worktree", "list", "--porcelain", "-z"),
+                        raw -> parse(raw, worktree))
+                .map(worktrees -> worktrees.map(listed -> listed.branch().isEmpty() && !listed.prunable()
+                        ? listed.withBusyWith(BranchesInUse.busyIn(listed.path()))
+                        : listed));
     }
 
     /**

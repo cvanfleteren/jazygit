@@ -1,6 +1,7 @@
 """Adding worktrees, for a branch, a new branch or a commit, and switching to, removing, locking and pruning them."""
 
 import shutil
+from pathlib import Path
 
 from harness import Git
 
@@ -390,3 +391,52 @@ def test_delete_a_branch_with_its_locked_worktree_unlocks_it_first(repo, tmp_pat
     assert repo.worktrees() == {repo.path: "main"}
     assert not (tmp_path / "repo-feature").exists()
     assert repo.branches() == ["main"]
+
+
+def editors(env, *entries: tuple[str, str, str | None]):
+    """Sets editors in the settings, each (name, marker, shortcut): one that touches the file named marker in the
+    worktree it opens, and is left running, as a GUI editor is (ADR 110)."""
+    config = Path(env["XDG_CONFIG_HOME"]) / "jazygit" / "config.toml"
+    with config.open("a") as file:
+        for name, marker, shortcut in entries:
+            file.write(f'\n[[editors]]\nname = "{name}"\ncommand = ["touch", "{{dir}}/{marker}"]\n')
+            if shortcut is not None:
+                file.write(f'shortcut = "{shortcut}"\n')
+
+
+def test_open_a_worktree_in_the_one_editor_set(repo, env, tmp_path, jazygit):
+    two_commits(repo)
+    repo("branch", "feature")
+    worktree(repo, tmp_path, "feature")
+    editors(env, ("Marker", "opened", None))
+    ui = jazygit()
+
+    ui.worktrees.open_in_editor("repo-feature")
+
+    ui.app.eventually(lambda: (tmp_path / "repo-feature" / "opened").exists(), "the worktree opened in the editor")
+    assert not (repo.path / "opened").exists()
+
+
+def test_with_more_editors_the_letter_chooses_one(repo, env, tmp_path, jazygit):
+    two_commits(repo)
+    repo("branch", "feature")
+    worktree(repo, tmp_path, "feature")
+    editors(env, ("First", "first", None), ("Kate", "kate", "k"))
+    ui = jazygit()
+
+    ui.worktrees.open_in_editor("repo-feature", "k")
+
+    ui.app.eventually(lambda: (tmp_path / "repo-feature" / "kate").exists(), "the worktree opened in Kate")
+    assert not (tmp_path / "repo-feature" / "first").exists()
+
+
+def test_open_the_worktree_of_a_branch(repo, env, tmp_path, jazygit):
+    two_commits(repo)
+    repo("branch", "feature")
+    worktree(repo, tmp_path, "feature")
+    editors(env, ("Marker", "opened", None))
+    ui = jazygit()
+
+    ui.branches.open_in_editor("feature")
+
+    ui.app.eventually(lambda: (tmp_path / "repo-feature" / "opened").exists(), "the worktree opened in the editor")
