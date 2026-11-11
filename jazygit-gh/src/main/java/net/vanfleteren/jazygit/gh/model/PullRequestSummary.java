@@ -39,7 +39,58 @@ public record PullRequestSummary(
         Option<PullRequestStack> stack,
         Option<GhCommit> baseCommit,
         Option<GhCommit> headCommit,
-        Option<GhBranch> baseBranch) {
+        Option<GhBranch> baseBranch,
+        Option<PullRequestSummary.Extra> extra) {
+
+    /**
+     * PROTOTYPE: what the list rows show beyond the summary: its size, comments, labels and reviews.
+     */
+    public record Extra(
+            int additions,
+            int deletions,
+            int comments,
+            io.vavr.collection.List<String> labels,
+            int approvals,
+            int changesRequested,
+            int requested) {}
+
+    /**
+     * One without the extras.
+     */
+    public PullRequestSummary(
+            String repository,
+            int number,
+            String title,
+            String author,
+            GhBranch headBranch,
+            boolean draft,
+            boolean fromFork,
+            Checks checks,
+            Review review,
+            Instant updatedAt,
+            String url,
+            Option<PullRequestStack> stack,
+            Option<GhCommit> baseCommit,
+            Option<GhCommit> headCommit,
+            Option<GhBranch> baseBranch) {
+        this(
+                repository,
+                number,
+                title,
+                author,
+                headBranch,
+                draft,
+                fromFork,
+                checks,
+                review,
+                updatedAt,
+                url,
+                stack,
+                baseCommit,
+                headCommit,
+                baseBranch,
+                Option.none());
+    }
 
     /**
      * One whose base branch is not known.

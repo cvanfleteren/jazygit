@@ -576,8 +576,8 @@ public final class ContentPanel {
                 commitDrawn(commit, changes, look, styles, width);
             case Body.StashChanges(Stash stash, ShownDiff changes, DiffLook look) ->
                 stashDrawn(stash, changes, look, styles, width);
-            case Body.PullRequest(PullRequestSummary pullRequest, PullRequestPreview preview) ->
-                plain(pullRequestText(pullRequest, preview, styles));
+            case Body.PullRequest(PullRequestSummary pullRequest, PullRequestPreview preview, int tab) ->
+                plain(PrPreviewText.of(pullRequest, preview, tab, styles));
         };
     }
 

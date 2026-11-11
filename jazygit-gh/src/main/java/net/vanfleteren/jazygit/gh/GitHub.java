@@ -60,6 +60,21 @@ public interface GitHub {
     Either<GhError, PullRequestDetails> pullRequestDetails(int number);
 
     /**
+     * PROTOTYPE: the details of pull request {@code number} of {@code repository}, as {@code owner/name}.
+     */
+    default Either<GhError, PullRequestDetails> pullRequestDetails(String repository, int number) {
+        return pullRequestDetails(number);
+    }
+
+    /**
+     * PROTOTYPE: what happened last on pull request {@code number} of {@code repository}, oldest first.
+     */
+    default Either<GhError, io.vavr.collection.List<net.vanfleteren.jazygit.gh.model.PullRequestEvent>> timeline(
+            String repository, int number) {
+        return Either.right(io.vavr.collection.List.empty());
+    }
+
+    /**
      * The checks on the tips of {@code branches} of the repository, one by one and with their timing.
      */
     Either<GhError, BranchCheckRuns> branchCheckRuns(List<String> branches);

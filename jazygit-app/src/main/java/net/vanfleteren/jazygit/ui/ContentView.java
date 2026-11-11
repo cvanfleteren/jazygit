@@ -90,6 +90,7 @@ final class ContentView {
                         model::commit,
                         Option.when(model.repo().commits().toOption().exists(List::isEmpty), "content.noCommits"));
             case STASH -> stash(model);
+            case PULL_REQUESTS -> pullRequest(model);
         };
     }
 
@@ -288,6 +289,17 @@ final class ContentView {
      * The pull request highlighted in the pane of the pull requests screen in use; the one shown before stays while
      * it is read.
      */
+    /**
+     * PROTOTYPE: the tabs of the preview of a pull request, the one shown in brackets.
+     */
+    private static String tabs(int shown) {
+        return net.vanfleteren.jazygit.state.github.prs.PrOverview.TABS
+                        .zipWithIndex()
+                        .map(tab -> tab._2 == shown ? "[" + tab._1 + "]" : " " + tab._1 + " ")
+                        .mkString("")
+                + "  [ ]";
+    }
+
     private static Shown pullRequest(Model model) {
         String title = Messages.get("panel.pullRequest.title");
         return model.prOverview()
@@ -299,11 +311,15 @@ final class ContentView {
                         read -> new Shown.Area(
                                 ContentArea.PULL_REQUEST,
                                 Messages.get(
-                                        "panel.pullRequest.titleFor",
-                                        preview.key().repository(),
-                                        String.valueOf(preview.key().number())),
-                                new ScrolledContent.PullRequest(preview.key(), read),
-                                new Body.PullRequest(preview.key(), read))))
+                                                "panel.pullRequest.titleFor",
+                                                preview.key().repository(),
+                                                String.valueOf(preview.key().number()))
+                                        + "  "
+                                        + tabs(model.prOverview().previewTab()),
+                                new ScrolledContent.PullRequest(
+                                        preview.key(), read, model.prOverview().previewTab()),
+                                new Body.PullRequest(
+                                        preview.key(), read, model.prOverview().previewTab()))))
                 .getOrElse(() -> dim(title, Messages.get("content.noPullRequest")));
     }
 
@@ -651,7 +667,7 @@ final class ContentView {
         /**
          * A pull request, and what it says and changes.
          */
-        record PullRequest(PullRequestSummary pullRequest, PullRequestPreview preview) implements Body {}
+        record PullRequest(PullRequestSummary pullRequest, PullRequestPreview preview, int tab) implements Body {}
     }
 
     /**
@@ -767,7 +783,9 @@ final class ContentView {
         FILES(FilesPanel.ID),
         BRANCHES(BranchesPanel.ID),
         COMMITS(CommitsPanel.ID),
-        STASH(StashPanel.ID);
+        STASH(StashPanel.ID),
+        // PROTOTYPE: the pull requests of this repository, on the repository screen.
+        PULL_REQUESTS(net.vanfleteren.jazygit.keys.Scopes.PR_REPOSITORY.id());
 
         private final String id;
 

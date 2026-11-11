@@ -45,7 +45,8 @@ public record PrOverview(
         Option<PullRequestSummary> highlighted,
         Option<Preview<PullRequestSummary, PullRequestPreview>> preview,
         Option<PaneId> listPane,
-        Option<String> focusedPane) {
+        Option<String> focusedPane,
+        int previewTab) {
 
     public static final PrOverview INITIAL = new PrOverview(
             Loadable.loading(),
@@ -57,7 +58,14 @@ public record PrOverview(
             Option.none(),
             Option.none(),
             Option.none(),
-            Option.none());
+            Option.none(),
+            0);
+
+    /**
+     * PROTOTYPE: the tabs of the preview of a pull request.
+     */
+    public static final io.vavr.collection.List<String> TABS =
+            io.vavr.collection.List.of("Overview", "Activity", "Checks", "Commits", "Files");
 
     /**
      * How many pull requests of the repository were opened and not seen yet.

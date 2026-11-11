@@ -60,12 +60,12 @@ public record Settings(
      * How tall the files, the branches and the commits are unless the user changed it, in percent of the height of
      * the left column; the stash takes what is left.
      */
-    public static final List<Integer> DEFAULT_REPOSITORY_HEIGHTS = List.of(25, 20, 30);
+    public static final List<Integer> DEFAULT_REPOSITORY_HEIGHTS = List.of(22, 18, 25, 20);
     /**
      * How tall the first two pull requests panes are unless the user changed it, in percent of the height of the
      * left column; the last takes what is left, which is about as much in a column under the status.
      */
-    public static final List<Integer> DEFAULT_PULL_REQUESTS_HEIGHTS = List.of(32, 32);
+    public static final List<Integer> DEFAULT_PULL_REQUESTS_HEIGHTS = List.of();
 
     /**
      * The settings of a first session.
@@ -74,7 +74,7 @@ public record Settings(
             ThemeName.DARK,
             Option.none(),
             DEFAULT_WIDTH,
-            DEFAULT_WIDTH,
+            45, // PROTOTYPE: the pull requests screen is wider
             // The default has become rich diffs.
             DiffStyle.RICH,
             true,
@@ -196,7 +196,7 @@ public record Settings(
                         validTheme.getOrElse(DEFAULT.theme),
                         validGh,
                         validRepositoryWidth.getOrElse(DEFAULT_WIDTH),
-                        validPullRequestsWidth.getOrElse(DEFAULT_WIDTH),
+                        validPullRequestsWidth.getOrElse(45),
                         validDiffStyle.getOrElse(DEFAULT.diffStyle),
                         validDiffSyntax.getOrElse(DEFAULT.diffSyntax),
                         validDiffWords.getOrElse(DEFAULT.diffWords),

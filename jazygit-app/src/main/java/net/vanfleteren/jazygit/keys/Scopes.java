@@ -81,10 +81,14 @@ public final class Scopes {
     public static final Scope<PullRequestSummary> PR_REPOSITORY =
             new Scope<>("prRepository", "panel.prRepository.title");
     /**
+     * PROTOTYPE: the one inbox pane of the pull requests screen.
+     */
+    public static final Scope<PullRequestSummary> PR_INBOX = new Scope<>("prInbox", "panel.prInbox.title");
+    /**
      * The panes of the pull requests screen, top to bottom.
      */
     public static final io.vavr.collection.List<Scope<PullRequestSummary>> PULL_REQUESTS =
-            io.vavr.collection.List.of(PR_REPOSITORY, PR_REVIEW_REQUESTED, PR_AUTHORED);
+            io.vavr.collection.List.of(PR_REPOSITORY, PR_REVIEW_REQUESTED, PR_AUTHORED, PR_INBOX);
 
     private Scopes() {}
 
@@ -94,8 +98,10 @@ public final class Scopes {
      */
     public static io.vavr.collection.List<PaneId> leftPanes(Screen screen) {
         return switch (screen) {
-            case REPOSITORY -> io.vavr.collection.List.of(FILES.pane(), BRANCHES.pane(), COMMITS.pane(), STASH.pane());
-            case PULL_REQUESTS -> PULL_REQUESTS.map(Scope::pane);
+            case REPOSITORY ->
+                io.vavr.collection.List.of(
+                        FILES.pane(), BRANCHES.pane(), COMMITS.pane(), PR_REPOSITORY.pane(), STASH.pane());
+            case PULL_REQUESTS -> io.vavr.collection.List.of(PR_INBOX.pane());
         };
     }
 }

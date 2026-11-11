@@ -32,9 +32,15 @@ public record LoadPullRequestPreview(PullRequestSummary key) implements Cmd {
 
     @Override
     public Msg run(Env env) {
+        // PROTOTYPE: the details the overview shows and the timeline of the activity, read meanwhile.
+        var details = java.util.concurrent.CompletableFuture.supplyAsync(
+                () -> env.gitHub().pullRequestDetails(key.repository(), key.number()).toOption());
+        var timeline = java.util.concurrent.CompletableFuture.supplyAsync(
+                () -> env.gitHub().timeline(key.repository(), key.number()).toOption());
         return env.gitHub()
                 .pullRequestPreview(key.url())
                 .mapLeft(Failure::of)
+                .map(preview -> preview.withDetails(details.join()).withTimeline(timeline.join()))
                 .fold(this::failed, preview -> new PrOverviewMsg.PreviewLoaded(key, preview));
     }
 

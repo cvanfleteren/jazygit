@@ -39,6 +39,8 @@ final class SummaryFragment {
     static final String FRAGMENT = """
             fragment summary on PullRequest { number title url updatedAt isDraft isCrossRepository headRefName baseRefName headRefOid baseRefOid \
             author { login } repository { nameWithOwner } reviewDecision %s \
+            additions deletions comments { totalCount } labels(first: 10) { nodes { name } } \
+            latestReviews(first: 20) { nodes { state } } reviewRequests { totalCount } \
             commits(last: 1) { nodes { commit { statusCheckRollup { state } %s } } } }""".formatted(StackFragment.FIELDS, SuiteFragment.FIELDS);
 
     // The checks on a commit: the state of their rollup, and PENDING for each workflow run that waits to start.
@@ -76,13 +78,35 @@ final class SummaryFragment {
     static final Decoder<Tuple2<Option<GhCommit>, Option<GhCommit>>> COMMITS =
             map2(commit("baseRefOid"), commit("headRefOid"), Tuple::of);
 
-    static final Decoder<PullRequestSummary> SUMMARY = map5(
+    // PROTOTYPE: its size, comments, labels and reviews, none when the query did not ask for them.
+    static final Decoder<Option<PullRequestSummary.Extra>> EXTRA = json -> Decoder.map6(
+                    field("additions", integer()),
+                    field("deletions", integer()),
+                    at("comments.totalCount", integer()),
+                    at("labels.nodes", list(field("name", string()))),
+                    at("latestReviews.nodes", list(field("state", string()))),
+                    at("reviewRequests.totalCount", integer()),
+                    (additions, deletions, comments, labels, reviews, requested) -> new PullRequestSummary.Extra(
+                            additions,
+                            deletions,
+                            comments,
+                            labels,
+                            reviews.count("APPROVED"::equals),
+                            reviews.count("CHANGES_REQUESTED"::equals),
+                            requested))
+            .decode(json)
+            .fold(
+                    failed -> io.vavr.control.Either.right(Option.none()),
+                    extra -> io.vavr.control.Either.right(Option.some(extra)));
+
+    static final Decoder<PullRequestSummary> SUMMARY = map6(
             NAMED,
             STATE,
             StackFragment.DECODER,
             COMMITS,
             field("baseRefName", string()).map(GhBranch::named),
-            (named, state, stack, commits, base) -> new PullRequestSummary(
+            EXTRA,
+            (named, state, stack, commits, base, extra) -> new PullRequestSummary(
                     named._1(),
                     named._2(),
                     named._3(),
@@ -97,7 +121,8 @@ final class SummaryFragment {
                     stack,
                     commits._1(),
                     commits._2(),
-                    base));
+                    base,
+                    extra));
 
     /**
      * A hit of a search of issues: a pull request, or none for an issue, which answers only its {@code __typename}.

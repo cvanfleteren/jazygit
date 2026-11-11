@@ -32,7 +32,7 @@ public final class PullRequestsPanel {
     /**
      * The id of the top pane, the one that gets the focus the first time the screen is shown.
      */
-    public static final String FIRST_PANE_ID = Scopes.PR_REPOSITORY.id();
+    public static final String FIRST_PANE_ID = Scopes.PR_INBOX.id();
 
     /**
      * What marks a pull request that was opened and not seen yet, in its row and in the name of the screen.
@@ -126,7 +126,40 @@ public final class PullRequestsPanel {
                 .appendAll(PullRequestSymbols.state(pr.stack(), pr.checks(), pr.review(), merge)
                         .map(PullRequestsPanel::symbol))
                 .appendAll(List.of(
-                        seg(" " + pr.title(), plain), LoadableList.Seg.styled(" " + pr.author(), Theme.Classes.DIM))));
+                        seg(" " + pr.title(), plain).shrinking(),
+                        LoadableList.Seg.styled(" " + pr.author(), Theme.Classes.DIM)))
+                .appendAll(extra(pr)));
+    }
+
+    /**
+     * PROTOTYPE: the size, comments, reviews and labels of {@code pr}, when the list read them.
+     */
+    private static List<LoadableList.Seg> extra(PullRequestSummary pr) {
+        return pr.extra()
+                .toList()
+                .flatMap(extra -> List.of(
+                                LoadableList.Seg.styled(" +" + extra.additions(), Theme.Classes.DIFF_ADDED),
+                                LoadableList.Seg.styled(" −" + extra.deletions(), Theme.Classes.DIFF_REMOVED))
+                        .appendAll(
+                                extra.comments() > 0
+                                        ? List.of(LoadableList.Seg.styled(" 💬" + extra.comments(), Theme.Classes.DIM))
+                                        : List.empty())
+                        .appendAll(
+                                extra.approvals() > 0
+                                        ? List.of(LoadableList.Seg.styled(
+                                                " ✓" + extra.approvals(), Theme.Classes.REVIEW_APPROVED))
+                                        : List.empty())
+                        .appendAll(
+                                extra.changesRequested() > 0
+                                        ? List.of(LoadableList.Seg.styled(
+                                                " ✗" + extra.changesRequested(), Theme.Classes.REVIEW_CHANGES))
+                                        : List.empty())
+                        .appendAll(
+                                extra.requested() > 0
+                                        ? List.of(LoadableList.Seg.styled(" ○" + extra.requested(), Theme.Classes.DIM))
+                                        : List.empty())
+                        .appendAll(extra.labels()
+                                .map(label -> LoadableList.Seg.styled(" [" + label + "]", Theme.Classes.TAG))));
     }
 
     private static LoadableList.Seg seg(String text, String cssClass) {

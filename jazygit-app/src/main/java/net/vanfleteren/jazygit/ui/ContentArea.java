@@ -26,7 +26,10 @@ enum ContentArea {
     // It shows the pull request highlighted in whichever list of the pull requests screen is in use.
     PULL_REQUEST(
             "pull-request-preview",
-            model -> model.prOverview().listPane().getOrElse(() -> new PaneId(PullRequestsPanel.FIRST_PANE_ID))),
+            // PROTOTYPE: on the repository screen it is the pull requests pane there.
+            model -> model.screen() == net.vanfleteren.jazygit.state.preferences.Screen.REPOSITORY
+                    ? net.vanfleteren.jazygit.keys.Scopes.PR_REPOSITORY.pane()
+                    : new PaneId(PullRequestsPanel.FIRST_PANE_ID)),
     LOG("branch-log", BranchesPanel.ID);
 
     private final AreaId id;

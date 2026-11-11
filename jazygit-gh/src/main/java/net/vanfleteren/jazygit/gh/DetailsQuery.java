@@ -273,6 +273,24 @@ final class DetailsQuery {
     /**
      * The command that reads the details of pull request {@code number} without how far behind its base it is.
      */
+    /**
+     * PROTOTYPE: the details of pull request {@code number} of {@code repository}, as {@code owner/name}.
+     */
+    static GhCommand command(String repository, int number) {
+        String[] parts = repository.split("/", 2);
+        return gh(
+                "api",
+                "graphql",
+                "-F",
+                "owner=" + parts[0],
+                "-F",
+                "name=" + parts[1],
+                "-F",
+                "number=" + number,
+                "-f",
+                "query=" + WITHOUT_BEHIND);
+    }
+
     static GhCommand withoutBehind(int number) {
         return gh(
                 "api",

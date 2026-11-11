@@ -42,6 +42,7 @@ public final class LeftColumn {
     private final CommitsPanel commitsPanel;
     private final StashPanel stashPanel;
     private final List<PullRequestsPanel> pullRequestsPanels;
+    private final PrInboxPanel inboxPanel;
 
     /**
      * @param styleEngine     the active theme, which highlights the selected rows
@@ -65,6 +66,7 @@ public final class LeftColumn {
         this.commitsPanel = new CommitsPanel(dispatch, () -> openContent.accept(CommitsPanel.ID), highlight);
         this.stashPanel = new StashPanel(dispatch, () -> openContent.accept(StashPanel.ID), highlight);
         this.pullRequestsPanels = PullRequestsPanel.all(dispatch, openContent, highlight);
+        this.inboxPanel = new PrInboxPanel(dispatch, openContent, highlight);
     }
 
     /**
@@ -80,7 +82,7 @@ public final class LeftColumn {
             return new Rendered(column(collapsed()), List.empty());
         }
         List<Panel> shown = model.screen() == Screen.PULL_REQUESTS
-                ? pullRequestsPanels.map(pane -> pane.render(model, focusedId, activeId))
+                ? List.of(inboxPanel.render(model, focusedId, activeId))
                 : repositoryPanes(model, focusedId, activeId);
         List<Integer> heights = model.preferences().leftHeights(model.screen());
         List<Panel> panes = rows.fold(
@@ -100,14 +102,18 @@ public final class LeftColumn {
     public List<Msg> selectionChanges(Model model, String activeId) {
         return model.screen() == Screen.PULL_REQUESTS
                 // The content panel shows the pull request highlighted in the pane in use.
-                ? pullRequestsPanels
-                        .filter(pane -> pane.id().equals(activeId))
-                        .flatMap(pane -> pane.selectionChange(model))
+                ? inboxPanel.selectionChange(model).toList()
                 : List.of(
                                 branchesPanel.selectionChange(model),
                                 commitsPanel.selectionChange(model),
                                 filesPanel.selectionChange(model),
-                                stashPanel.selectionChange(model))
+                                stashPanel.selectionChange(model),
+                                // PROTOTYPE: the pull requests pane of the repository screen.
+                                pullRequestsPanels
+                                        .head()
+                                        .selectionChange(model)
+                                        .filter(change ->
+                                                pullRequestsPanels.head().id().equals(activeId)))
                         .flatMap(change -> change);
     }
 
@@ -119,6 +125,7 @@ public final class LeftColumn {
                 filesPanel.render(model, focusedId, activeId),
                 branchesPanel.render(model, focusedId, activeId),
                 commitsPanel.render(model, focusedId, activeId),
+                pullRequestsPanels.head().render(model, focusedId, activeId),
                 stashPanel.render(model, focusedId, activeId));
     }
 

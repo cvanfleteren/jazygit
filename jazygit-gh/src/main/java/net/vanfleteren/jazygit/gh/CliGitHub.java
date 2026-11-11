@@ -223,6 +223,17 @@ public final class CliGitHub implements GitHub {
     }
 
     @Override
+    public Either<GhError, PullRequestDetails> pullRequestDetails(String repository, int number) {
+        return process.readJson(DetailsQuery.command(repository, number), DetailsQuery.DECODER);
+    }
+
+    @Override
+    public Either<GhError, io.vavr.collection.List<net.vanfleteren.jazygit.gh.model.PullRequestEvent>> timeline(
+            String repository, int number) {
+        return process.readJson(TimelineQuery.command(repository, number), TimelineQuery.DECODER);
+    }
+
+    @Override
     public Either<GhError, BranchCheckRuns> branchCheckRuns(List<String> branches) {
         return process.readJson(BranchCheckRunsQuery.command(branches), BranchCheckRunsQuery.decoder(branches.size()));
     }

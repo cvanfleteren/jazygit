@@ -83,4 +83,9 @@ public sealed interface PrOverviewMsg extends Msg {
      * The unseen pull requests were kept, or could not be, which is not worth telling.
      */
     record UnseenKept() implements PrOverviewMsg {}
+
+    /**
+     * PROTOTYPE: the user stepped {@code by} tabs of the preview of a pull request.
+     */
+    record TabStepped(int by) implements PrOverviewMsg {}
 }

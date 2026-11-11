@@ -82,5 +82,6 @@ public sealed interface ScrolledContent {
     /**
      * A pull request, and what it says and changes.
      */
-    record PullRequest(PullRequestSummary pullRequest, PullRequestPreview preview) implements ScrolledContent {}
+    record PullRequest(PullRequestSummary pullRequest, PullRequestPreview preview, int tab)
+            implements ScrolledContent {}
 }

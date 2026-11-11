@@ -48,12 +48,16 @@ public final class PrOverviewUpdate {
             // The screen already shown stays as it is, without reading it again.
             case PrOverviewMsg.Chosen(Screen screen) when screen == model.screen() -> Next.of(model);
             case PrOverviewMsg.Chosen(Screen screen) -> reloadIfShown(Next.of(model.withScreen(screen)));
-            case PrOverviewMsg.Tick() when model.screen() != Screen.PULL_REQUESTS -> Next.of(model);
             // The reads that keep failing wait longer the more they failed (ADR 58).
             case PrOverviewMsg.Tick() -> loaded(Next.of(model), TICKED.filter(load -> FailingRead.due(model, load)));
             // The pull requests of the repository are those of the branches too (ADR 58).
-            case PrOverviewMsg.RepositoryLoaded(var read, var kept) ->
-                withBranches(overview(model, msg), new PullRequestsMsg.Loaded(read.ofBranches()));
+            case PrOverviewMsg.RepositoryLoaded(var read, var kept) -> {
+                Next next = withBranches(overview(model, msg), new PullRequestsMsg.Loaded(read.ofBranches()));
+                // PROTOTYPE: the user's own lists are read with the first read of the repository's, at the start.
+                yield model.prOverview().authored() instanceof Loadable.Loading<PullRequestList>
+                        ? loaded(next, List.of(new LoadMyPullRequests()))
+                        : next;
+            }
             case PrOverviewMsg.RepositoryLoadFailed(var failure) ->
                 withBranches(overview(model, msg), new PullRequestsMsg.LoadFailed(failure));
             default -> overview(model, msg);
@@ -107,6 +111,8 @@ public final class PrOverviewUpdate {
             case PrOverviewMsg.PreviewLoadFailed(PullRequestSummary key, Failure failure) ->
                 Step.of(overview.withPreview(Preview.updated(overview.preview(), key, shown -> shown.failed(failure))));
             case PrOverviewMsg.Toggled(), PrOverviewMsg.Tick(), PrOverviewMsg.UnseenKept() -> Step.of(overview);
+            case PrOverviewMsg.TabStepped(int by) ->
+                Step.of(overview.withPreviewTab(Math.floorMod(overview.previewTab() + by, PrOverview.TABS.size())));
             case PrOverviewMsg.Chosen(Screen screen) -> Step.of(overview);
         };
     }
@@ -152,7 +158,8 @@ public final class PrOverviewUpdate {
      * GitHub.
      */
     public static Next reloadIfShown(Next next) {
-        return next.model().screen() == Screen.PULL_REQUESTS ? reload(next) : next;
+        // PROTOTYPE: the lists are read whatever screen is shown, for the pane and the status.
+        return reload(next);
     }
 
     /**

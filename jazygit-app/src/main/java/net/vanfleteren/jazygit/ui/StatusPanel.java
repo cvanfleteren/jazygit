@@ -54,7 +54,7 @@ public final class StatusPanel {
      * @param screenClicked called when the name of a screen in the title is clicked, with that screen
      */
     public static Panel render(Model model, Theme.SpanStyles styles, Consumer<Screen> screenClicked) {
-        int unseen = model.prOverview().unseenCount();
+        PrSummary unseen = PrSummary.of(model);
         String branch = switch (model.repo().status()) {
             case Loadable.Loading<RepoStatus>() -> Placeholders.loading();
             case Loadable.Failed<RepoStatus>(Failure failure) -> Placeholders.error(failure);
@@ -88,7 +88,8 @@ public final class StatusPanel {
      * Shows the screen whose name in the title of the panel, drawn in {@code area} with {@code unseen} new pull
      * requests, is clicked. The title starts after the corner of the border.
      */
-    private static EventResult titleClick(Rect area, MouseEvent event, int unseen, Consumer<Screen> screenClicked) {
+    private static EventResult titleClick(
+            Rect area, MouseEvent event, PrSummary unseen, Consumer<Screen> screenClicked) {
         return Option.when(
                         event.kind() == MouseEventKind.PRESS && event.isLeftButton() && event.y() == area.top(),
                         event.x() - area.left() - 1)
@@ -105,7 +106,7 @@ public final class StatusPanel {
      * start of the title, if any; the separators between them are none, and the count of the new ones is part of
      * the name of the pull requests screen.
      */
-    static Option<Screen> screenAt(int column, int unseen) {
+    static Option<Screen> screenAt(int column, PrSummary unseen) {
         int separator = Span.raw(TITLE_SEPARATOR).width();
         List<Screen> screens = List.of(Screen.values());
         // Where the name of each screen starts: after the names and separators before it.
@@ -121,10 +122,18 @@ public final class StatusPanel {
      * as the lists in the title of the branches pane; with how many pull requests of the repository were opened
      * and not seen yet after the name of their screen, in their own style, when there are any (ADR 29).
      */
-    static Line title(Screen shown, int unseen, Theme.SpanStyles styles) {
+    static Line title(Screen shown, PrSummary unseen, Theme.SpanStyles styles) {
         List<List<Span>> names = List.of(Screen.values())
                 .map(screen -> unseenCount(screen, unseen)
-                        .map(count -> Span.styled(count, styles.of(Theme.Classes.UNSEEN)))
+                        .zipWithIndex()
+                        .map(count -> Span.styled(
+                                count._1,
+                                styles.of(
+                                        count._1.contains("✗")
+                                                ? Theme.Classes.CHECKS_FAILED
+                                                : count._1.contains(PullRequestsPanel.UNSEEN_MARK)
+                                                        ? Theme.Classes.UNSEEN
+                                                        : Theme.Classes.DIM)))
                         .prepend(
                                 screen == shown
                                         ? screenName(screen).bold().underlined()
@@ -138,13 +147,49 @@ public final class StatusPanel {
      * How many pull requests were opened and not seen yet, after the name of {@code screen}: only after the one of
      * the pull requests, and only when there are any.
      */
-    private static List<String> unseenCount(Screen screen, int unseen) {
-        return screen == Screen.PULL_REQUESTS && unseen > 0
-                ? List.of(" " + PullRequestsPanel.UNSEEN_MARK + unseen)
-                : List.empty();
+    private static List<String> unseenCount(Screen screen, PrSummary unseen) {
+        return screen == Screen.PULL_REQUESTS ? unseen.pieces() : List.empty();
     }
 
-    private static int nameWidth(Screen screen, int unseen) {
+    /**
+     * PROTOTYPE: what the pull requests screen holds, after its name: the new ones of the repository, the ones that
+     * ask for the user's review, and the user's own, with how many of those fail.
+     */
+    record PrSummary(int unseen, int review, int mine, int failing) {
+
+        static PrSummary of(Model model) {
+            var overview = model.prOverview();
+            var mine = overview.authored()
+                    .map(net.vanfleteren.jazygit.gh.model.PullRequestList::pullRequests)
+                    .getOrElse(List.empty());
+            return new PrSummary(
+                    overview.unseenCount(),
+                    overview.reviewRequested()
+                            .map(list -> list.pullRequests().size())
+                            .getOrElse(0),
+                    mine.size(),
+                    mine.count(pr -> pr.checks() == net.vanfleteren.jazygit.gh.model.PullRequest.Checks.FAILING));
+        }
+
+        List<String> pieces() {
+            List<String> all = List.empty();
+            if (unseen > 0) {
+                all = all.append(" " + PullRequestsPanel.UNSEEN_MARK + unseen);
+            }
+            if (review > 0) {
+                all = all.append(" · review " + review);
+            }
+            if (mine > 0) {
+                all = all.append(" · mine " + mine);
+            }
+            if (failing > 0) {
+                all = all.append(" ✗" + failing);
+            }
+            return all;
+        }
+    }
+
+    private static int nameWidth(Screen screen, PrSummary unseen) {
         return screenName(screen).width()
                 + unseenCount(screen, unseen)
                         .map(count -> Span.raw(count).width())

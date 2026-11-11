@@ -63,6 +63,11 @@ final class GlobalKeys {
                         DiffOptionsMsg.ContextNarrowed::new))
                 .global(new Keymap.Global.Dispatching(
                         "ctrl+p", "help.global.screen", GlobalKeys::isScreenKey, PrOverviewMsg.Toggled::new))
+                // PROTOTYPE: the tabs of the preview of a pull request.
+                .global(new Keymap.Global.Dispatching(
+                        "]", "help.global.screen", event -> isChar(event, ']'), () -> new PrOverviewMsg.TabStepped(1)))
+                .global(new Keymap.Global.Dispatching(
+                        "[", "help.global.screen", event -> isChar(event, '['), () -> new PrOverviewMsg.TabStepped(-1)))
                 // Escape only gets here when nothing else, like a dialog, took it.
                 .global(new Keymap.Global.Dispatching(
                         "esc", "help.global.cherryPickDrop", GlobalKeys::isEscape, CherryPickMsg.Dropped::new))
