@@ -33,7 +33,6 @@ import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.AppError.CannotReview.Why;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.diff.*;
-import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.operation.*;
 import net.vanfleteren.jazygit.state.view.*;
 
