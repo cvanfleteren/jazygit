@@ -12,6 +12,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.feature.fetch.FetchMsg;
+import net.vanfleteren.jazygit.feature.settings.SettingsPanelUpdate;
 import net.vanfleteren.jazygit.git.CliGit;
 import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitError;
@@ -195,6 +196,9 @@ final class RepositorySession {
                     last.preferences().themeOverride(),
                     repositoryTheme,
                     landing);
+            // What this session knew of the settings file goes on, so a setting only it has is not taken for one
+            // the file has, and a problem it was showing still shows (ADR 111).
+            runtime.forEach(opened -> opened.program().dispatch(SettingsPanelUpdate.carried(last)));
             requestRedraw.run();
         });
     }

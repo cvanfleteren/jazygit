@@ -460,6 +460,12 @@ public sealed interface AppError {
     record SettingsNotLoaded(SettingsProblem problem) implements AppError {}
 
     /**
+     * The settings file, read again, could not be read, or has values that are not valid; the settings in use stay for
+     * those (ADR 111).
+     */
+    record SettingsNotReread(SettingsProblem problem) implements AppError {}
+
+    /**
      * A changed setting could not be kept for the next session; it still holds in this one.
      */
     record SettingsNotSaved(Failure failure) implements AppError {}

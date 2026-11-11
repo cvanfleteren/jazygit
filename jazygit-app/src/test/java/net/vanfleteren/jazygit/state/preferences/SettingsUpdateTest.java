@@ -8,6 +8,7 @@ import io.vavr.control.Option;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.git.StubGit;
+import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.settings.Settings;
 import net.vanfleteren.jazygit.settings.SettingsProblem;
 import net.vanfleteren.jazygit.settings.SettingsStore;
@@ -87,13 +88,59 @@ class SettingsUpdateTest {
     }
 
     @Test
-    void savingChangesNothingWhenItWorks() {
-        Model model = TestModels.loaded().mapPreferences(preferences -> preferences.withSettings(DARCULA));
+    void savingKeepsWhatTheFileHasNowWhenItWorks() {
+        // The file has plain diffs, which the save leaves as they are.
+        SettingsStore.Loaded file =
+                new SettingsStore.Loaded(Settings.DEFAULT.withDiffStyle(DiffStyle.PLAIN), Option.none());
+        Model model = TestModels.loaded()
+                .mapPreferences(preferences -> preferences.withSettings(DARCULA).withFile(file));
 
         Msg saved = Program.perform(env(saving(Either.right(DARCULA))), SAVE);
 
-        assertEquals(new SettingsMsg.Saved(), saved);
-        assertEquals(Update.Next.of(model), Update.update(model, saved));
+        assertEquals(new SettingsMsg.Saved(Settings.DEFAULT, DARCULA), saved);
+        assertEquals(
+                Update.Next.of(model.mapPreferences(preferences -> preferences.withFile(
+                        new SettingsStore.Loaded(DARCULA.withDiffStyle(DiffStyle.PLAIN), Option.none())))),
+                Update.update(model, saved));
+    }
+
+    @Test
+    void whatTheFileHadGoesOnToTheRepositoryShownInstead() {
+        SettingsStore.Loaded file = new SettingsStore.Loaded(DARCULA, Option.none());
+        Option<SettingsProblem> reported = Option.of(new SettingsProblem.Invalid(FILE, List.of("ui.theme")));
+
+        Model model = Update.update(TestModels.loaded(), new SettingsMsg.Carried(file, reported, Option.none()))
+                .model();
+
+        assertEquals(file, model.preferences().file());
+        assertEquals(reported, model.preferences().reported());
+        assertEquals(Option.none(), model.outcome().error());
+    }
+
+    @Test
+    void aProblemTheSessionWasShowingShowsInTheRepositoryShownInstead() {
+        SettingsProblem invalid = new SettingsProblem.Invalid(FILE, List.of("ui.theme"));
+
+        Model model = Update.update(
+                        TestModels.loaded(),
+                        new SettingsMsg.Carried(SettingsStore.Loaded.DEFAULT, Option.of(invalid), Option.of(invalid)))
+                .model();
+
+        assertEquals(
+                Option.of(new AppError.SettingsNotReread(invalid)),
+                model.outcome().error());
+        assertEquals(Option.of(invalid), model.preferences().reported());
+    }
+
+    @Test
+    void theStartKeepsWhatTheFileHadAndWhatWasReported() {
+        SettingsProblem invalid = new SettingsProblem.Invalid(FILE, List.of("ui.theme"));
+        SettingsStore.Loaded loaded = new SettingsStore.Loaded(DARCULA, Option.of(invalid));
+
+        Model model = Update.init("repo", loaded).model();
+
+        assertEquals(loaded, model.preferences().file());
+        assertEquals(Option.of(invalid), model.preferences().reported());
     }
 
     @Test

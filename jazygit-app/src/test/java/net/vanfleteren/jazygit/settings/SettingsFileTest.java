@@ -340,6 +340,43 @@ class SettingsFileTest {
     }
 
     @Test
+    void aMissingFileIsMadeEmptyWithItsDirectoriesToBeEdited() throws IOException {
+        Either<SettingsProblem, Path> made = settingsFile().made();
+
+        assertEquals(Either.right(file()), made);
+        assertEquals("", Files.readString(file()));
+        assertEquals(new Loaded(Settings.DEFAULT, Option.none()), settingsFile().load());
+    }
+
+    @Test
+    void aFileThatIsThereIsLeftAsItIsToBeEdited() throws IOException {
+        write("""
+                [ui]
+                theme = "darcula"
+                """);
+
+        assertEquals(Either.right(file()), settingsFile().made());
+        assertEquals(new Loaded(DARCULA, Option.none()), settingsFile().load());
+    }
+
+    @Test
+    void aFileThatCannotBeMadeToBeEditedIsReported() throws IOException {
+        Files.writeString(dir.resolve("jazygit"), "a file where the directory should be");
+
+        Either<SettingsProblem, Path> made = settingsFile().made();
+
+        assertEquals(file(), made.getLeft().file());
+        assertInstanceOf(SettingsProblem.Unwritable.class, made.getLeft());
+    }
+
+    @Test
+    void theFileIsWhereTheSettingsAreKept() {
+        assertEquals(Option.of(file()), settingsFile().file());
+        assertEquals(Option.none(), SettingsStore.NONE.file());
+        assertTrue(SettingsStore.NONE.made().isLeft());
+    }
+
+    @Test
     void aDirectoryThatCannotBeMadeIsReported() throws IOException {
         Files.writeString(dir.resolve("jazygit"), "a file where the directory should be");
 

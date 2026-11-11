@@ -1,7 +1,10 @@
 package net.vanfleteren.jazygit.feature.settings;
 
+import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
+import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -79,4 +82,24 @@ public sealed interface SettingsPanelMsg extends Msg {
     record Reopened() implements SettingsPanelMsg {}
 
     record NotReopened(Failure failure) implements SettingsPanelMsg {}
+
+    /**
+     * The user asked to open the settings file in git's editor (ADR 111).
+     */
+    record FileRequested() implements SettingsPanelMsg {}
+
+    /**
+     * The settings file, at {@code file}, read again as the panel opens, as {@code loaded} (ADR 111).
+     */
+    record FileRead(Option<String> file, SettingsStore.Loaded loaded) implements SettingsPanelMsg {}
+
+    record FileNotRead(Failure failure) implements SettingsPanelMsg {}
+
+    /**
+     * The editor ran {@code commands} on the settings file, which reads as {@code loaded} once it is closed
+     * (ADR 111).
+     */
+    record FileEdited(List<ExecutedCommand> commands, SettingsStore.Loaded loaded) implements SettingsPanelMsg {}
+
+    record FileNotEdited(Failure failure) implements SettingsPanelMsg {}
 }

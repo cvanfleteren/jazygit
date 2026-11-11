@@ -15,7 +15,7 @@ public record SaveSettings(Settings previous, Settings next) implements Cmd {
     public Msg run(Env env) {
         return env.settings()
                 .save(previous, next)
-                .fold(problem -> failed(new Failure.Settings(problem)), saved -> new SettingsMsg.Saved());
+                .fold(problem -> failed(new Failure.Settings(problem)), saved -> new SettingsMsg.Saved(previous, next));
     }
 
     @Override

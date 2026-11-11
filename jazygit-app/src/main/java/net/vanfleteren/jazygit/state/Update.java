@@ -106,6 +106,8 @@ public final class Update {
                 .mapJobs(jobs -> jobs.withOnArrival(landing.then()))
                 .mapPreferences(preferences -> preferences
                         .withSettings(settings.settings())
+                        .withFile(settings)
+                        .withReported(settings.problem())
                         .withThemeOverride(themeOverride)
                         .withRepositoryTheme(repositoryTheme))
                 .mapOutcome(outcome -> outcome.withError(settings.problem().map(AppError.SettingsNotLoaded::new))));

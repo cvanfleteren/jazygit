@@ -1,10 +1,13 @@
 package net.vanfleteren.jazygit.feature.settings;
 
+import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import java.nio.file.Path;
 import net.vanfleteren.jazygit.gh.model.GhAccount;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.github.*;
+import net.vanfleteren.jazygit.state.operation.Operation;
 
 /**
  * The IO of the settings.
@@ -116,6 +119,53 @@ public sealed interface SettingsPanelCmd extends Cmd {
         @Override
         public Msg failed(Failure failure) {
             return new SettingsPanelMsg.NotReopened(failure);
+        }
+    }
+
+    /**
+     * Reads the settings file again, as the panel opens, for what was edited outside jazygit (ADR 111). On the
+     * {@code io} executor, as saving runs there: a save asked for before is written before this reads.
+     */
+    record ReadFile() implements SettingsPanelCmd {
+
+        @Override
+        public Msg run(Env env) {
+            return new SettingsPanelMsg.FileRead(
+                    env.settings().file().map(Path::toString), env.settings().load());
+        }
+
+        @Override
+        public Msg failed(Failure failure) {
+            return new SettingsPanelMsg.FileNotRead(failure);
+        }
+    }
+
+    /**
+     * Opens the settings file in git's editor, with the terminal handed over to it, made empty first when it is not
+     * there, and reads it again once the editor is closed (ADR 111). On the {@code io} executor, as saving runs there.
+     */
+    record EditFile() implements SettingsPanelCmd {
+
+        public static final Operation EDIT_SETTINGS =
+                Operation.of("log.title.editSettings", "error.editSettings.failed");
+
+        @Override
+        public Msg run(Env env) {
+            return env.settings()
+                    .made()
+                    .<Failure>mapLeft(Failure.Settings::new)
+                    .flatMap(file -> env.terminal()
+                            .handOver(() -> env.git().editor().edit(List.of(file.toString())))
+                            .mapLeft(Failure::of))
+                    .fold(
+                            this::failed,
+                            commands -> new SettingsPanelMsg.FileEdited(
+                                    commands, env.settings().load()));
+        }
+
+        @Override
+        public Msg failed(Failure failure) {
+            return new SettingsPanelMsg.FileNotEdited(failure);
         }
     }
 }
