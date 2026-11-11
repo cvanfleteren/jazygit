@@ -427,7 +427,7 @@ public final class CliGitHub implements GitHub {
 
     @Override
     public Either<GhFailure, List<ExecutedCommand>> startReviewThread(
-            int number, String commit, NewReviewThread thread) {
+            int number, GhCommit commit, NewReviewThread thread) {
         return process.log(ReviewThreadMutations.start(number, commit, thread));
     }
 

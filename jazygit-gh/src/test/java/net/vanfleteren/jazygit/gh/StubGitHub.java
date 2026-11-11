@@ -246,7 +246,7 @@ public interface StubGitHub extends GitHub {
 
     @Override
     default Either<GhFailure, List<ExecutedCommand>> startReviewThread(
-            int number, String commit, NewReviewThread thread) {
+            int number, GhCommit commit, NewReviewThread thread) {
         return Either.right(
                 List.of(ReviewThreadMutations.start(number, commit, thread).executed()));
     }

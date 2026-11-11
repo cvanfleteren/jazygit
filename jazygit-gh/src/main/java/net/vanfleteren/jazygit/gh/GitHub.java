@@ -209,7 +209,7 @@ public interface GitHub {
      * Starts {@code thread} on pull request {@code number}, at its head commit {@code commit}, published at once
      * (ADR 60).
      */
-    Either<GhFailure, List<ExecutedCommand>> startReviewThread(int number, String commit, NewReviewThread thread);
+    Either<GhFailure, List<ExecutedCommand>> startReviewThread(int number, GhCommit commit, NewReviewThread thread);
 
     /**
      * Replies {@code body} to the review thread of pull request {@code number} whose first comment has the id
