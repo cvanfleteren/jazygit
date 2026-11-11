@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch.checkout;
 
+import net.vanfleteren.jazygit.state.OperationUpdate;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutCmd.Checkout;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutCmd.CheckoutRemote;
@@ -55,7 +56,7 @@ public interface CheckoutRequest {
 
         @Override
         public Next here(Model model) {
-            return Update.start(model, new Checkout(branch));
+            return OperationUpdate.start(model, new Checkout(branch));
         }
 
         @Override
@@ -81,7 +82,7 @@ public interface CheckoutRequest {
 
         @Override
         public Next here(Model model) {
-            return Update.start(model, new CheckoutRemote(branch, upstream));
+            return OperationUpdate.start(model, new CheckoutRemote(branch, upstream));
         }
 
         @Override
@@ -114,7 +115,7 @@ public interface CheckoutRequest {
 
         @Override
         public Next here(Model model) {
-            return Update.start(model, new NewBranchCmd(branch, base, parent));
+            return OperationUpdate.start(model, new NewBranchCmd(branch, base, parent));
         }
 
         @Override

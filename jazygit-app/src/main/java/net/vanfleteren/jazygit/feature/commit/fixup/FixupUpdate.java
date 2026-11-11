@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.commit.fixup;
 
+import net.vanfleteren.jazygit.state.OperationUpdate;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.commit.squash.SquashCmd;
 import net.vanfleteren.jazygit.feature.commit.squash.SquashUpdate;
@@ -20,7 +21,7 @@ public final class FixupUpdate {
         return switch (msg) {
             case FixupMsg.Requested(Sha sha) -> requested(model, sha);
             case FixupMsg.Chosen(SquashMode mode) ->
-                Update.confirm(
+                OperationUpdate.confirm(
                         model,
                         FixupPopup.class,
                         popup -> Option.of(new SquashCmd(popup.commit().sha(), mode)));
@@ -33,6 +34,6 @@ public final class FixupUpdate {
     private static Next requested(Model model, Sha sha) {
         return model.commit(sha)
                 .flatMap(commit -> SquashUpdate.onlyParent(commit).map(into -> new FixupPopup(commit, into)))
-                .transform(popup -> Update.ask(model, popup));
+                .transform(popup -> OperationUpdate.ask(model, popup));
     }
 }

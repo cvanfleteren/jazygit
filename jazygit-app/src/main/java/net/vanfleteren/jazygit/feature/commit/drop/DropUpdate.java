@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.commit.drop;
 
+import net.vanfleteren.jazygit.state.OperationUpdate;
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -24,7 +25,7 @@ public final class DropUpdate {
         return model.commit(sha)
                 .filter(commit -> droppable(model, commit))
                 .map(DropPopup::new)
-                .transform(popup -> Update.ask(model, popup));
+                .transform(popup -> OperationUpdate.ask(model, popup));
     }
 
     /**

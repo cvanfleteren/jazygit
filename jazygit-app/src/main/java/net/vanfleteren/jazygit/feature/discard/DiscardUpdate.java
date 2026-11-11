@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.discard;
 
+import net.vanfleteren.jazygit.state.OperationUpdate;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Predicate;
@@ -29,12 +30,12 @@ public final class DiscardUpdate {
     }
 
     private static Next requested(Model model, List<FileEntry> files) {
-        return Update.ask(model, Option.when(!files.isEmpty(), () -> new DiscardPopup(files)));
+        return OperationUpdate.ask(model, Option.when(!files.isEmpty(), () -> new DiscardPopup(files)));
     }
 
     private static Next chosen(Model model, Scope scope) {
         // Without unstaged changes there is nothing to discard of that kind.
-        return Update.confirm(
+        return OperationUpdate.confirm(
                 model,
                 DiscardPopup.class,
                 popup -> Option.of(popup)

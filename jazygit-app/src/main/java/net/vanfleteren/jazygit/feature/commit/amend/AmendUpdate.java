@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.commit.amend;
 
+import net.vanfleteren.jazygit.state.OperationUpdate;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.commit.amend.AmendMsg.Confirmed;
@@ -50,7 +51,7 @@ public final class AmendUpdate {
     private static Next ask(Model model, AmendTarget target) {
         return model.repo().files().map(files -> files.isEmpty()
                         ? Next.of(model.fail(new AppError.NothingToAmend()))
-                        : Update.ask(model, new AmendPopup(target))).getOrElse(() -> Next.of(model));
+                        : OperationUpdate.ask(model, new AmendPopup(target))).getOrElse(() -> Next.of(model));
     }
 
     /**
@@ -58,16 +59,16 @@ public final class AmendUpdate {
      */
     private static Next confirmed(Model model) {
         return model.repo().files().getOrElse(List.empty()).exists(FileEntry::staged)
-                ? Update.confirm(
+                ? OperationUpdate.confirm(
                         model, AmendPopup.class, popup -> Option.of(new AmendCmd(popup.target(), List.empty())))
                 : model.popup(AmendPopup.class)
-                        .map(popup -> Update.ask(
+                        .map(popup -> OperationUpdate.ask(
                                 model.withoutPopup(AmendPopup.class), new AmendStageAllPopup(popup.target())))
                         .getOrElse(() -> Next.of(model));
     }
 
     private static Next stageAllConfirmed(Model model) {
         List<String> paths = FileEntry.paths(model.repo().files().getOrElse(List.empty()), FileEntry::unstaged);
-        return Update.confirm(model, AmendStageAllPopup.class, popup -> Option.of(new AmendCmd(popup.target(), paths)));
+        return OperationUpdate.confirm(model, AmendStageAllPopup.class, popup -> Option.of(new AmendCmd(popup.target(), paths)));
     }
 }

@@ -29,7 +29,7 @@ public final class NukeBranchUpdate {
             case Requested(BranchName branch) -> requested(model, branch);
             // Nothing starts when the branch, its worktree or its remote branch changed since the dialog named them.
             case Confirmed() ->
-                Update.confirm(
+                OperationUpdate.confirm(
                         model,
                         NukeBranchPopup.class,
                         popup -> popup(model, popup.branch())
@@ -50,7 +50,7 @@ public final class NukeBranchUpdate {
                 .branch(name)
                 .flatMap(branch -> refused(model, branch))
                 .map(error -> Next.of(model.fail(error)))
-                .getOrElse(() -> Update.ask(model, popup(model, name)));
+                .getOrElse(() -> OperationUpdate.ask(model, popup(model, name)));
     }
 
     /**

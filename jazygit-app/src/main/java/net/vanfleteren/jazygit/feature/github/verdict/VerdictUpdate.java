@@ -48,7 +48,7 @@ public final class VerdictUpdate {
                         .flatMap(dialog -> dialog.readDetails().map(details -> fromDialog(model, dialog, details)))
                         .getOrElse(() -> Next.of(model));
             case VerdictMsg.DiffAsked() ->
-                fromDiff(model).fold(why -> Next.of(refused(model, why)), popup -> Update.ask(model, popup));
+                fromDiff(model).fold(why -> Next.of(refused(model, why)), popup -> OperationUpdate.ask(model, popup));
             case VerdictMsg.Chosen(Verdict verdict) ->
                 Next.of(changed(model, popup -> popup.withVerdict(verdict), true));
             // While it is being sent, the text stays as it is sent.
@@ -108,7 +108,7 @@ public final class VerdictUpdate {
     private static Next fromDialog(Model model, PullRequestPopup dialog, PullRequestDetails details) {
         Reviewing reviewing = details.conversation().reviewing();
         return mayReview(details.status().state(), reviewing).fold(why -> Next.of(model), may -> {
-            Next asked = Update.ask(model, VerdictPopup.of(dialog, reviewing));
+            Next asked = OperationUpdate.ask(model, VerdictPopup.of(dialog, reviewing));
             return reviewing.pending() ? Next.of(refused(asked.model(), Why.PENDING_REVIEW)) : asked;
         });
     }
@@ -159,7 +159,7 @@ public final class VerdictUpdate {
         if (popup.verdict().needsText() && popup.text().isBlank()) {
             return Next.of(refused(model, Why.NO_REASON));
         }
-        return Update.start(
+        return OperationUpdate.start(
                 model.clearError().openPopup(popup.withSending(true)),
                 new SubmitReview(popup.number(), popup.pullRequest(), popup.verdict(), popup.text()));
     }

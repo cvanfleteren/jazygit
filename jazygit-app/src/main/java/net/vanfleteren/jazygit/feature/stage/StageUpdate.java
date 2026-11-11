@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.stage;
 
+import net.vanfleteren.jazygit.state.OperationUpdate;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.stage.StageCmd.Stage;
@@ -33,10 +34,10 @@ public final class StageUpdate {
         // Adding a directory stages every change below it, which are exactly the changed files that are not
         // staged completely yet.
         return !unstaged.isEmpty()
-                ? Update.start(
+                ? OperationUpdate.start(
                         model.clearError(),
                         new Stage(directory.map(d -> List.of(pathspec(d))).getOrElse(unstaged)))
-                : staged.isEmpty() ? Next.of(model) : Update.start(model.clearError(), unstage(staged, directory));
+                : staged.isEmpty() ? Next.of(model) : OperationUpdate.start(model.clearError(), unstage(staged, directory));
     }
 
     private static Unstage unstage(List<FileEntry> staged, Option<String> directory) {

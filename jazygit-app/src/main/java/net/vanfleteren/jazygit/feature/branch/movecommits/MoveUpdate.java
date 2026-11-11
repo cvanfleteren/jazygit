@@ -50,7 +50,7 @@ public final class MoveUpdate {
                                 based(model.withoutPopup(MoveBasePopup.class), popup.request(), popup.name(), base))
                         .getOrElse(() -> Next.of(model));
             case PushedConfirmed(boolean forcePush) ->
-                Update.confirm(
+                OperationUpdate.confirm(
                         model,
                         MovePushedPopup.class,
                         popup -> Option.of(move(popup.request(), popup.target(), forcePush)));
@@ -132,7 +132,7 @@ public final class MoveUpdate {
      */
     private static Next targetChosen(Model model, MoveRequest request, Option<BranchName> branch) {
         return branch.fold(
-                () -> Update.ask(model, new MoveNamePopup(request)),
+                () -> OperationUpdate.ask(model, new MoveNamePopup(request)),
                 name -> model.repo()
                         .branch(name)
                         .map(known -> known.worktreeLocation()
@@ -170,7 +170,7 @@ public final class MoveUpdate {
                         .map(name -> {
                             Model closed = model.withoutPopup(MoveNamePopup.class);
                             return popup.request().bases().size() > 1
-                                    ? Update.ask(closed, new MoveBasePopup(popup.request(), name))
+                                    ? OperationUpdate.ask(closed, new MoveBasePopup(popup.request(), name))
                                     : based(closed, popup.request(), name, new MoveBase.Parent());
                         }))
                 .getOrElse(() -> Next.of(model));
@@ -199,8 +199,8 @@ public final class MoveUpdate {
                 .filter(onto -> changed)
                 .map(onto -> Next.of(model.fail(new AppError.ChangesBeforeMove(onto))))
                 .getOrElse(() -> request.pushed()
-                        ? Update.ask(model, new MovePushedPopup(request, target))
-                        : Update.start(model.clearError(), move(request, target, false)));
+                        ? OperationUpdate.ask(model, new MovePushedPopup(request, target))
+                        : OperationUpdate.start(model.clearError(), move(request, target, false)));
     }
 
     /**
@@ -226,7 +226,7 @@ public final class MoveUpdate {
         Next checkedOut = new CheckoutMsg.CheckedOut(cmd, commands).apply(model);
         return cmd.forcePush()
                 .map(upstream -> {
-                    Next pushing = Update.start(
+                    Next pushing = OperationUpdate.start(
                             checkedOut.model(), new PushCmd.Push(cmd.from(), upstream, PushMode.FORCE_WITH_LEASE));
                     return new Next(pushing.model(), checkedOut.cmds().appendAll(pushing.cmds()));
                 })

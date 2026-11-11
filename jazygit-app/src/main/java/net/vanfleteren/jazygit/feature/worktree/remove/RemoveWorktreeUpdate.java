@@ -21,13 +21,13 @@ public final class RemoveWorktreeUpdate {
                         .worktree(location)
                         .map(worktree -> notRemovable(worktree)
                                 .map(error -> Next.of(model.fail(error)))
-                                .getOrElse(() -> Update.ask(
+                                .getOrElse(() -> OperationUpdate.ask(
                                         model,
                                         new RemoveWorktreePopup(
                                                 worktree.location(), worktree.name(), worktree.branch()))))
                         .getOrElse(() -> Next.of(model));
             case Chosen(boolean deleteBranch) ->
-                Update.confirm(
+                OperationUpdate.confirm(
                         model,
                         RemoveWorktreePopup.class,
                         popup -> model.repo()

@@ -1,25 +1,15 @@
 package net.vanfleteren.jazygit.state;
 
-import io.vavr.collection.HashMap;
-import io.vavr.collection.LinkedHashSet;
 import io.vavr.collection.List;
-import io.vavr.collection.Set;
 import io.vavr.control.Option;
-import java.time.Duration;
 import java.time.Instant;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import net.vanfleteren.jazygit.git.model.DiffOptions;
-import net.vanfleteren.jazygit.git.model.FileEntry;
-import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.settings.ThemeName;
-import net.vanfleteren.jazygit.state.Cmd.*;
 
 /**
  * The pure state transitions of the app: given a model and a message, the next model and the IO
  * to perform next. The transitions of each feature live in their own class, next to their
- * {@link Msg} group.
+ * {@link Msg} group; what many of them share, in {@link RereadUpdate} and {@link OperationUpdate}.
  */
 public final class Update {
 
@@ -111,53 +101,6 @@ public final class Update {
                 next.model().mapJobs(jobs -> jobs.withStarted(next.cmds(), now)),
                 next.cmds().zipWithIndex().map(cmd -> new Launch(first + cmd._2(), cmd._1())),
                 next.quit());
-    }
-
-    /**
-     * Starts {@code cmd}: its branch, if it has one, is busy until it is done ({@link Jobs#busy()}). One that waits
-     * until the repository is in the middle of nothing is not started while it is, which the user is told instead.
-     */
-    public static Next start(Model model, OperationCmd cmd) {
-        return unfinished(model, cmd).map(error -> Next.of(model.fail(error))).getOrElse(() -> Next.of(model, cmd));
-    }
-
-    private static Option<AppError> unfinished(Model model, OperationCmd cmd) {
-        return Option.when(
-                        cmd.operation().waitsForUnfinished(),
-                        () -> model.repo().status().toOption())
-                .flatMap(status -> status)
-                .filter(status -> status.inProgress().isDefined() || status.conflicts() > 0)
-                .map(status -> new AppError.Unfinished(
-                        cmd.operation(), cmd.subject(), status.inProgress(), status.conflicts()));
-    }
-
-    /**
-     * Opens {@code popup}, which asks about an operation to start: the error of the last one is not shown
-     * anymore.
-     */
-    public static Next ask(Model model, Popup popup) {
-        return Next.of(model.clearError().openPopup(popup));
-    }
-
-    /**
-     * Opens {@code popup} as {@link #ask(Model, Popup)} does, if there is one: none when the operation it would
-     * ask about cannot be done, and then nothing happens.
-     */
-    public static Next ask(Model model, Option<? extends Popup> popup) {
-        return popup.map(open -> ask(model, open)).getOrElse(() -> Next.of(model));
-    }
-
-    /**
-     * Confirms the open popup of type {@code type}: closes it, clears the error and starts the operation
-     * {@code cmd} makes of it. When no such popup is open, or {@code cmd} makes none because what was entered
-     * cannot be used, nothing happens.
-     */
-    public static <P extends Popup> Next confirm(
-            Model model, Class<P> type, Function<? super P, Option<? extends OperationCmd>> cmd) {
-        return model.popup(type)
-                .flatMap(cmd)
-                .map(operation -> start(model.withoutPopup(type).clearError(), operation))
-                .getOrElse(() -> Next.of(model));
     }
 
     /**

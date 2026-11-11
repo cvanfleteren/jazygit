@@ -47,7 +47,7 @@ public final class PushUpdate {
         boolean stillDiverged =
                 model.repo().branch(popup.branch()).filter(PushUpdate::diverged).isDefined();
         return stillDiverged
-                ? Update.confirm(
+                ? OperationUpdate.confirm(
                         model,
                         ForcePushPopup.class,
                         p -> model.repo()
@@ -67,12 +67,12 @@ public final class PushUpdate {
         return model.idleBranch(branch)
                 .map(known -> known.remoteUpstream()
                         .map(upstream -> diverged(known)
-                                ? Update.ask(model, new ForcePushPopup(branch))
+                                ? OperationUpdate.ask(model, new ForcePushPopup(branch))
                                 : sameName(known) && known.behind() > 0
                                         ? Next.of(model.fail(new AppError.BehindUpstream(branch)))
-                                        : Update.start(
+                                        : OperationUpdate.start(
                                                 model.clearError(), new Push(branch, upstream, PushMode.FAST_FORWARD)))
-                        .getOrElse(() -> Update.ask(model, new SetUpstreamPopup(branch))))
+                        .getOrElse(() -> OperationUpdate.ask(model, new SetUpstreamPopup(branch))))
                 .getOrElse(() -> Next.of(model));
     }
 
@@ -94,7 +94,7 @@ public final class PushUpdate {
         Option<RemoteBranch> upstream = RemoteBranch.parse(text);
         return upstream.isEmpty()
                 ? Next.of(model.fail(new AppError.InvalidUpstream(text)))
-                : Update.confirm(
+                : OperationUpdate.confirm(
                         model,
                         SetUpstreamPopup.class,
                         popup -> upstream.map(remote -> new PushSettingUpstream(popup.branch(), remote)));

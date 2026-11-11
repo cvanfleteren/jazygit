@@ -568,7 +568,7 @@ class WorktreeUpdateTest {
     @Test
     void anAddedWorktreeShowsTheWorktreesReadsTheRepositoryAgainAndOffersToSwitchToIt() {
         AddWorktreeCmd add = new AddWorktreeCmd(new WorktreeSource.Existing(FEATURE), "../app-feature");
-        Model adding = Update.start(model(), add).model();
+        Model adding = OperationUpdate.start(model(), add).model();
 
         Next next = Update.update(
                 adding,

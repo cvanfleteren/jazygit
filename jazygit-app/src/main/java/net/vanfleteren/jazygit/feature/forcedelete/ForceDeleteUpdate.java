@@ -33,7 +33,7 @@ public final class ForceDeleteUpdate {
             // checked out in another worktree is left to git to refuse: after removing a worktree the model still
             // lists the branch there until the refresh lands.
             case Confirmed() ->
-                Update.confirm(
+                OperationUpdate.confirm(
                         model,
                         ForceDeleteBranchPopup.class,
                         popup -> model.idleBranch(popup.branch())

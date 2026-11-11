@@ -91,7 +91,7 @@ public final class CheckoutUpdate {
                 .filter(here -> !here.main())
                 .map(here -> {
                     Option<Worktree> main = model.repo().mainWorktree();
-                    return Update.ask(
+                    return OperationUpdate.ask(
                             model, new CheckoutWherePopup(request, here, main, main.flatMap(model.repo()::hasChanges)));
                 })
                 .getOrElse(() -> request.here(model.clearError()));
@@ -110,7 +110,7 @@ public final class CheckoutUpdate {
                 .trackingBranch(remote)
                 .map(local -> requested(model, local.name()))
                 .getOrElse(() -> model.repo().branch(remote.branch()).isDefined()
-                        ? Update.ask(model, NewBranchPopup.following(remote))
+                        ? OperationUpdate.ask(model, NewBranchPopup.following(remote))
                         : place(model, new CheckoutRequest.Remote(remote.branch(), remote)));
     }
 
@@ -121,7 +121,7 @@ public final class CheckoutUpdate {
     private static Next requested(Model model, BranchName branch) {
         return model.idleBranch(branch)
                 .flatMap(Branch::worktreeLocation)
-                .map(worktree -> Update.ask(model, new SwitchWorktreePopup(branch, worktree)))
+                .map(worktree -> OperationUpdate.ask(model, new SwitchWorktreePopup(branch, worktree)))
                 .getOrElse(() -> Branches.isOtherIdleBranch(model, branch)
                         ? place(model, new CheckoutRequest.Local(branch))
                         : Next.of(model));

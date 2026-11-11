@@ -35,14 +35,14 @@ public final class CommitUpdate {
      */
     private static Next requested(Model model) {
         return model.repo().files().map(files -> files.exists(FileEntry::staged)
-                        ? Update.ask(model, new CommitPopup())
+                        ? OperationUpdate.ask(model, new CommitPopup())
                         : files.isEmpty()
                                 ? Next.of(model.fail(new AppError.NothingToCommit()))
-                                : Update.ask(model, new StageAllPopup())).getOrElse(() -> Next.of(model));
+                                : OperationUpdate.ask(model, new StageAllPopup())).getOrElse(() -> Next.of(model));
     }
 
     private static Next stageAllConfirmed(Model model) {
         List<String> paths = FileEntry.paths(model.repo().files().getOrElse(List.empty()), FileEntry::unstaged);
-        return Update.confirm(model, StageAllPopup.class, popup -> Option.of(new StageForCommit(paths)));
+        return OperationUpdate.confirm(model, StageAllPopup.class, popup -> Option.of(new StageForCommit(paths)));
     }
 }

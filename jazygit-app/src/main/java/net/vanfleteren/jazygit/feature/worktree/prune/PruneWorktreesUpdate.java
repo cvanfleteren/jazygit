@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.worktree.prune;
 
+import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.feature.worktree.prune.PruneWorktreesMsg.Requested;
 import net.vanfleteren.jazygit.git.model.Worktree;
 import net.vanfleteren.jazygit.state.AppError;
@@ -28,7 +29,7 @@ public final class PruneWorktreesUpdate {
                 .worktrees()
                 .toOption()
                 .map(worktrees -> worktrees.exists(Worktree::prunable)
-                        ? Update.start(model.clearError(), new PruneWorktreesCmd())
+                        ? OperationUpdate.start(model.clearError(), new PruneWorktreesCmd())
                         : Next.of(model.fail(new AppError.NothingToPrune())))
                 .getOrElse(() -> Next.of(model));
     }

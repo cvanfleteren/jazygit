@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.github.checks;
 
+import net.vanfleteren.jazygit.state.OperationUpdate;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.util.function.Predicate;
@@ -30,7 +31,7 @@ public final class ChecksUpdate {
             case ChecksMsg.Requested(BranchRef branch) ->
                 onGitHub(model, branch)
                         .map(remote -> Next.of(
-                                Update.ask(model, ChecksPopup.loading(branch, remote, model.now()))
+                                OperationUpdate.ask(model, ChecksPopup.loading(branch, remote, model.now()))
                                         .model(),
                                 new LoadChecks(remote)))
                         .getOrElse(() -> Next.of(model));
@@ -39,7 +40,7 @@ public final class ChecksUpdate {
                 model.popup(PullRequestPopup.class)
                         .flatMap(dialog -> ofPullRequest(model, dialog)
                                 .map(remote -> Next.of(
-                                        Update.ask(
+                                        OperationUpdate.ask(
                                                         model,
                                                         ChecksPopup.loading(
                                                                 remote.tracking(), remote, model.now(), dialog))

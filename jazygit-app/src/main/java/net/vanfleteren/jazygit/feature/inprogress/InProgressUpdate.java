@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.inprogress;
 
+import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.git.model.InProgressAction;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
@@ -25,7 +26,7 @@ public final class InProgressUpdate {
      * With nothing in progress, nothing happens.
      */
     private static Next requested(Model model) {
-        return Update.ask(
+        return OperationUpdate.ask(
                 model,
                 model.repo()
                         .status()
@@ -45,10 +46,10 @@ public final class InProgressUpdate {
                 .map(popup -> {
                     Model closed = model.withoutPopup(InProgressPopup.class);
                     return action != InProgressAction.CONTINUE
-                            ? Update.ask(closed, new InProgressConfirmPopup(popup.inProgress(), action))
+                            ? OperationUpdate.ask(closed, new InProgressConfirmPopup(popup.inProgress(), action))
                             : popup.conflicts() > 0
                                     ? Next.of(closed.fail(new AppError.ConflictsRemain(popup.conflicts())))
-                                    : Update.start(closed.clearError(), new InProgressCmd(popup.inProgress(), action));
+                                    : OperationUpdate.start(closed.clearError(), new InProgressCmd(popup.inProgress(), action));
                 })
                 .getOrElse(() -> Next.of(model));
     }

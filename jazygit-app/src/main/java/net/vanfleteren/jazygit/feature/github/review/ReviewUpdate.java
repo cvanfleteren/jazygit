@@ -66,7 +66,7 @@ public final class ReviewUpdate {
                                     number(found._1()),
                                     found._2().id(),
                                     !found._2().resolved());
-                            return Update.start(sending(model.clearError(), set -> set.add(resolve.thread())), resolve);
+                            return OperationUpdate.start(sending(model.clearError(), set -> set.add(resolve.thread())), resolve);
                         });
             // Collapsing a thread or a comment needs no more than the thread: a merged pull request's too. The first
             // comment of a thread is the thread (ADR 62). Off a thread, Space does nothing: there is nothing to refuse.
@@ -87,7 +87,7 @@ public final class ReviewUpdate {
             case ReviewMsg.OpenAsked(DiffCursorAt at) ->
                 pullRequestFiles(model)
                         .flatMap(view -> link(view, at.cursor()))
-                        .map(link -> Update.start(model.clearError(), new BrowseRemarkCmd(link)))
+                        .map(link -> OperationUpdate.start(model.clearError(), new BrowseRemarkCmd(link)))
                         .getOrElse(() -> Next.of(model));
             case ReviewMsg.Refused(Why why) -> Next.of(refused(model, why));
             // While it is being sent, the comment stays as it is sent.
@@ -139,7 +139,7 @@ public final class ReviewUpdate {
                 deletable(model, at.cursor())
                         .fold(
                                 why -> Next.of(refused(model, why)),
-                                found -> Update.ask(
+                                found -> OperationUpdate.ask(
                                         model,
                                         new DeleteCommentPopup(
                                                 number(found._1()), found._2().id(), found._3(), model.now())));
@@ -167,7 +167,7 @@ public final class ReviewUpdate {
                 reactable(model, at.cursor())
                         .fold(
                                 why -> Next.of(refused(model, why)),
-                                found -> Update.ask(
+                                found -> OperationUpdate.ask(
                                         model,
                                         new ReactionPopup(
                                                 number(found._1()),
@@ -235,7 +235,7 @@ public final class ReviewUpdate {
         // An edit does not mark its thread as being sent, as a reply does: the popup takes every key while it is
         // saved, so nothing else is sent for the thread meanwhile (ADR 65).
         Model sending = model.clearError().openPopup(popup.withSending(true));
-        return Update.start(
+        return OperationUpdate.start(
                 popup.target() instanceof Target.Reply(String thread, var comment)
                         ? sending(sending, set -> set.add(thread))
                         : sending,
@@ -243,7 +243,7 @@ public final class ReviewUpdate {
     }
 
     private static Next asked(Model model, Either<Why, ReviewPopup> popup) {
-        return popup.fold(why -> Next.of(refused(model, why)), open -> Update.ask(model, open));
+        return popup.fold(why -> Next.of(refused(model, why)), open -> OperationUpdate.ask(model, open));
     }
 
     /**
@@ -523,7 +523,7 @@ public final class ReviewUpdate {
                             popup.comment(),
                             reaction,
                             !found._3().reactions().viewerGave(reaction));
-                    Next started = Update.confirm(model, ReactionPopup.class, open -> Option.of(react));
+                    Next started = OperationUpdate.confirm(model, ReactionPopup.class, open -> Option.of(react));
                     return new Next(
                             mapPullRequest(
                                     started.model(),
@@ -542,7 +542,7 @@ public final class ReviewUpdate {
         return deletable(model, on)
                 .filterOrElse(found -> found._1().pullRequest().contains(popup.number()), found -> Why.NOT_READ)
                 .fold(why -> Next.of(refused(model.withoutPopup(DeleteCommentPopup.class), why)), found -> {
-                    Next started = Update.confirm(
+                    Next started = OperationUpdate.confirm(
                             model,
                             DeleteCommentPopup.class,
                             open -> Option.of(new DeleteComment(

@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.github.checkout;
 
+import net.vanfleteren.jazygit.state.OperationUpdate;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Supplier;
@@ -72,7 +73,7 @@ public final class CheckoutPullRequestUpdate {
         return proceed(
                 model,
                 forCheckout(model, pullRequest),
-                () -> Update.start(model.clearError(), new CheckoutPullRequestCmd(pullRequest)));
+                () -> OperationUpdate.start(model.clearError(), new CheckoutPullRequestCmd(pullRequest)));
     }
 
     /**
@@ -83,7 +84,7 @@ public final class CheckoutPullRequestUpdate {
         return switch (readiness) {
             case Readiness.Blocked(AppError error) -> Next.of(model.fail(error));
             case Readiness.Elsewhere(BranchName branch, String worktree) ->
-                Update.ask(model, new SwitchWorktreePopup(branch, worktree));
+                OperationUpdate.ask(model, new SwitchWorktreePopup(branch, worktree));
             case Readiness.Busy() -> Next.of(model);
             case Readiness.Ready() -> ready.get();
         };
