@@ -16,6 +16,8 @@ import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.load.*;
+import net.vanfleteren.jazygit.state.popup.*;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import org.junit.jupiter.api.Test;

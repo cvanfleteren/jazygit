@@ -30,6 +30,12 @@ import net.vanfleteren.jazygit.settings.DiffLook;
 import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.TestModels;
+import net.vanfleteren.jazygit.state.diff.*;
+import net.vanfleteren.jazygit.state.diff.Changes;
+import net.vanfleteren.jazygit.state.load.*;
+import net.vanfleteren.jazygit.state.load.SelectionMsg;
+import net.vanfleteren.jazygit.state.preferences.*;
+import net.vanfleteren.jazygit.state.view.*;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -902,7 +908,7 @@ class ContentPanelTest {
             leaves.incrementAndGet();
             return true;
         });
-        CommitFilesView.Changes of = new CommitFilesView.Changes.OfCommit(new Sha("aaaa"));
+        Changes of = new Changes.OfCommit(new Sha("aaaa"));
         CommitFile file = new CommitFile("src/a.txt", ChangeType.MODIFIED);
         Model open = Update.update(
                         Update.update(TestModels.loaded(), new CommitFilesMsg.Opened(of, CommitsPanel.ID))
@@ -1508,7 +1514,7 @@ class ContentPanelTest {
      * {@link #pullRequestDiff(String)}, of the diff {@code diff}, with the thread on the first line of the new file.
      */
     private static Model pullRequestDiff(String body, String diff) {
-        CommitFilesView.Changes of = new CommitFilesView.Changes.OfPullRequest(
+        Changes of = new Changes.OfPullRequest(
                 new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
         CommitFile file = new CommitFile("a.txt", ChangeType.MODIFIED);
         net.vanfleteren.jazygit.gh.model.ReviewThread thread = new net.vanfleteren.jazygit.gh.model.ReviewThread(
@@ -1586,7 +1592,7 @@ class ContentPanelTest {
                 "https://github.com/owner/repo/pull/42");
         Model read = TestModels.loaded()
                 .withScreen(Screen.PULL_REQUESTS)
-                .withPrOverview(net.vanfleteren.jazygit.state.prs.PrOverview.INITIAL
+                .withPrOverview(net.vanfleteren.jazygit.state.github.prs.PrOverview.INITIAL
                         .withHighlighted(Option.of(pr))
                         .withPreview(Option.of(new Preview<>(
                                 pr, new Loadable.Loaded<>(new PullRequestPreview("main", "Why", "+fixed\n", false))))));

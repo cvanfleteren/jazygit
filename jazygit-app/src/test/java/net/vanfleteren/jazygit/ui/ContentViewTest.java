@@ -19,7 +19,14 @@ import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.settings.DiffLook;
 import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.state.*;
-import net.vanfleteren.jazygit.state.prs.PrOverview;
+import net.vanfleteren.jazygit.state.diff.*;
+import net.vanfleteren.jazygit.state.diff.Changes;
+import net.vanfleteren.jazygit.state.diff.WholeFile;
+import net.vanfleteren.jazygit.state.github.prs.PrOverview;
+import net.vanfleteren.jazygit.state.load.*;
+import net.vanfleteren.jazygit.state.load.SelectionMsg;
+import net.vanfleteren.jazygit.state.preferences.*;
+import net.vanfleteren.jazygit.state.view.*;
 import net.vanfleteren.jazygit.ui.ContentView.Body;
 import net.vanfleteren.jazygit.ui.ContentView.Shown;
 import net.vanfleteren.jazygit.ui.ContentView.Tone;
@@ -144,11 +151,11 @@ class ContentViewTest {
         ReadVersion read = ReadVersion.of(
                 "stash-changes",
                 content,
-                new ReadWholeFile.Source.OfStash(
+                new WholeFile.Source.OfStash(
                         new Sha("5555"), new CommitFile("a.txt", ChangeType.MODIFIED, Option.none())),
                 "a.txt",
                 DiffOptions.DEFAULT);
-        Version asked = new Version(content, "a.txt", Option.of(FileVersion.NEW), read, Loadable.loading());
+        Version asked = new Version(content, "a.txt", Option.of(FileVersion.NEW), read.file(), Loadable.loading());
 
         assertEquals("Stash · new version (reading)", ContentView.versioned("Stash", asked));
         assertEquals(
@@ -268,7 +275,7 @@ class ContentViewTest {
 
     @Test
     void theFilesOfACommitShowWhatItChangedInTheHighlightedNodeInTheStyleChosen() {
-        CommitFilesView.Changes of = new CommitFilesView.Changes.OfCommit(new Sha("aaaa"));
+        Changes of = new Changes.OfCommit(new Sha("aaaa"));
         CommitFile file = new CommitFile("src/a.txt", ChangeType.MODIFIED);
         Model rich = TestModels.loaded()
                 .mapPreferences(preferences ->
@@ -299,7 +306,7 @@ class ContentViewTest {
 
     @Test
     void whenOnlyTheFilesOfAPullRequestWithRemarksAreListedAndNoneIsTheDiffShownBeforeIsNot() {
-        CommitFilesView.Changes of = new CommitFilesView.Changes.OfPullRequest(
+        Changes of = new Changes.OfPullRequest(
                 new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
         CommitFile file = new CommitFile("src/a.txt", ChangeType.MODIFIED);
         Model open = Update.update(

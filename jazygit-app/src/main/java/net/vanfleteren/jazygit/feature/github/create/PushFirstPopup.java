@@ -3,7 +3,7 @@ package net.vanfleteren.jazygit.feature.github.create;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
-import net.vanfleteren.jazygit.state.Popup;
+import net.vanfleteren.jazygit.state.popup.Popup;
 
 /**
  * Asking to push {@code branch} to {@code target} before creating its pull request.

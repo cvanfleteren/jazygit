@@ -22,6 +22,8 @@ import net.vanfleteren.jazygit.settings.RecentRepositories;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.popup.*;
+import net.vanfleteren.jazygit.state.view.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 

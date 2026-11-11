@@ -2,7 +2,7 @@ package net.vanfleteren.jazygit.feature.start;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.state.Failure;
-import net.vanfleteren.jazygit.state.TextPopup;
+import net.vanfleteren.jazygit.state.popup.TextPopup;
 
 /**
  * Asking for the path of another folder to open, as {@code outside} offered.

@@ -7,17 +7,17 @@ import java.util.function.UnaryOperator;
 import net.vanfleteren.jazygit.git.model.DiffContext;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.settings.Settings;
-import net.vanfleteren.jazygit.state.BranchCommitsView;
 import net.vanfleteren.jazygit.state.Cmd;
-import net.vanfleteren.jazygit.state.CommitFilesView;
-import net.vanfleteren.jazygit.state.DiffLoad;
-import net.vanfleteren.jazygit.state.DivergenceView;
-import net.vanfleteren.jazygit.state.LoadFileDiff;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Preview;
-import net.vanfleteren.jazygit.state.SaveSettings;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.load.DiffLoad;
+import net.vanfleteren.jazygit.state.load.LoadFileDiff;
+import net.vanfleteren.jazygit.state.preferences.SaveSettings;
+import net.vanfleteren.jazygit.state.view.BranchCommitsView;
+import net.vanfleteren.jazygit.state.view.CommitFilesView;
+import net.vanfleteren.jazygit.state.view.DivergenceView;
+import net.vanfleteren.jazygit.state.view.Preview;
 
 /**
  * How the diffs are read, and how the diffs of the working tree, of a commit and of a stash are drawn. Changing either

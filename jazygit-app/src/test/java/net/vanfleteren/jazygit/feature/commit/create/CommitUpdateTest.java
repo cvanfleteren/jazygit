@@ -15,9 +15,9 @@ import net.vanfleteren.jazygit.feature.commit.reword.RewordPopup;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.PopupMsg;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.popup.PopupMsg;
 import org.junit.jupiter.api.Test;
 
 /**

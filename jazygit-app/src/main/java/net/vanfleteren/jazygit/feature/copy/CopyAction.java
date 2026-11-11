@@ -4,7 +4,7 @@ import io.vavr.collection.List;
 import net.vanfleteren.jazygit.feature.FeatureAction;
 import net.vanfleteren.jazygit.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.keys.Scopes;
-import net.vanfleteren.jazygit.state.DiffCursorAt;
+import net.vanfleteren.jazygit.state.diff.DiffCursorAt;
 
 /**
  * Copying what the cursor of a rich diff is on (ADR 94): in every rich diff, and in the diff of a pull request's files

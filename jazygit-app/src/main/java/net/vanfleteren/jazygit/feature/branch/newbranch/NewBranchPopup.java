@@ -6,7 +6,7 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Revision;
-import net.vanfleteren.jazygit.state.TextPopup;
+import net.vanfleteren.jazygit.state.popup.TextPopup;
 
 /**
  * Asking for the name of a new branch, which starts at {@code base}. Confirming it checks the branch out where the user

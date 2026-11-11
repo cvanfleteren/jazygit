@@ -5,10 +5,10 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Failure;
-import net.vanfleteren.jazygit.state.ListCursor;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.popup.ListCursor;
 
 /**
  * Editing the pull request that is shown: its title, its body, its base and whether it is a draft (ADR 59).

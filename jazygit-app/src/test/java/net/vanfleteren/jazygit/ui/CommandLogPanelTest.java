@@ -10,10 +10,10 @@ import net.vanfleteren.jazygit.feature.branch.push.PushCmd;
 import net.vanfleteren.jazygit.feature.commit.create.CreateCommitCmd;
 import net.vanfleteren.jazygit.feature.stage.StageCmd;
 import net.vanfleteren.jazygit.model.SampleData;
-import net.vanfleteren.jazygit.state.LogEntry;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Notice;
 import net.vanfleteren.jazygit.state.TestModels;
+import net.vanfleteren.jazygit.state.operation.LogEntry;
+import net.vanfleteren.jazygit.state.operation.Notice;
 import org.junit.jupiter.api.Test;
 
 /**

@@ -13,7 +13,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.git.model.*;
-import net.vanfleteren.jazygit.state.Waiting;
+import net.vanfleteren.jazygit.state.github.Waiting;
 import org.junit.jupiter.api.Test;
 
 class BranchSegsTest {

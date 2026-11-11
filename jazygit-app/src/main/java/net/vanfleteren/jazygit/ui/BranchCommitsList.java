@@ -12,11 +12,11 @@ import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
-import net.vanfleteren.jazygit.state.AheadUpdate;
-import net.vanfleteren.jazygit.state.BranchCommitsView;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.SelectionMsg;
+import net.vanfleteren.jazygit.state.load.AheadUpdate;
+import net.vanfleteren.jazygit.state.load.SelectionMsg;
+import net.vanfleteren.jazygit.state.view.BranchCommitsView;
 import net.vanfleteren.jazygit.ui.widgets.Pane;
 
 /**

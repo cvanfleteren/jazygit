@@ -12,7 +12,7 @@ import net.vanfleteren.jazygit.feature.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.gh.timing.CheckTimings;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TimerMsg;
-import net.vanfleteren.jazygit.state.prs.PrOverviewMsg;
+import net.vanfleteren.jazygit.state.github.prs.PrOverviewMsg;
 import net.vanfleteren.jazygit.ui.TimeText;
 
 /**

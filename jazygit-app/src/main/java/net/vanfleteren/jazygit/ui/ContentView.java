@@ -27,18 +27,19 @@ import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.image.Picture;
 import net.vanfleteren.jazygit.settings.DiffLook;
-import net.vanfleteren.jazygit.state.AheadUpdate;
-import net.vanfleteren.jazygit.state.BranchesTab;
-import net.vanfleteren.jazygit.state.Collapsed;
-import net.vanfleteren.jazygit.state.CommitFilesView;
-import net.vanfleteren.jazygit.state.Expansion;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Preview;
-import net.vanfleteren.jazygit.state.Screen;
-import net.vanfleteren.jazygit.state.ScrolledContent;
-import net.vanfleteren.jazygit.state.Version;
+import net.vanfleteren.jazygit.state.diff.Changes;
+import net.vanfleteren.jazygit.state.diff.Collapsed;
+import net.vanfleteren.jazygit.state.diff.Expansion;
+import net.vanfleteren.jazygit.state.diff.ScrolledContent;
+import net.vanfleteren.jazygit.state.diff.Version;
+import net.vanfleteren.jazygit.state.load.AheadUpdate;
+import net.vanfleteren.jazygit.state.preferences.Screen;
+import net.vanfleteren.jazygit.state.view.BranchesTab;
+import net.vanfleteren.jazygit.state.view.CommitFilesView;
+import net.vanfleteren.jazygit.state.view.Preview;
 
 /**
  * What the content panel shows in a model, apart from how it is drawn: it mirrors whichever left pane is in use,
@@ -98,9 +99,8 @@ final class ContentView {
     }
 
     private static Shown.Area expanded(Model model, Shown.Area area) {
-        Option<Expansion> expansion =
-                model.repoView().expanded().get(area.area().id()).filter(kept -> kept.holdsFor(area.content()));
-        Option<Version> version = Version.in(model, area.area().id(), area.content());
+        Option<Expansion> expansion = model.repoView().expansion(area.area().id(), area.content());
+        Option<Version> version = model.repoView().version(area.area().id(), area.content());
         DiffContext context = model.preferences().context();
         Body body = switch (area.body()) {
             case Body.Diff(ShownDiff diff, DiffLook look, var remarks) ->
@@ -289,7 +289,7 @@ final class ContentView {
                                 model,
                                 ContentArea.BRANCH_COMMIT,
                                 view.detail(),
-                                sha -> view.commit(model, sha),
+                                sha -> model.branchCommit(view, sha),
                                 Option.when(
                                         view.commits(model).toOption().exists(List::isEmpty), "content.noCommits"))))
                 .getOrElse(() -> branchLog(model));
@@ -438,13 +438,12 @@ final class ContentView {
      * How the commit, the stash, the pull request or the branch {@code of} is named: by its short sha, by its
      * {@code stash@{n}}, by its {@code #n}, or by its name and the base it is compared with (ADR 61).
      */
-    static String changesName(Model model, CommitFilesView.Changes of) {
+    static String changesName(Model model, Changes of) {
         return switch (of) {
-            case CommitFilesView.Changes.OfCommit(Sha sha) -> sha.shortSha();
-            case CommitFilesView.Changes.OfStash(Sha sha) ->
-                stash(model, sha).map(Stash::ref).getOrElse(sha::shortSha);
-            case CommitFilesView.Changes.OfPullRequest(var commits) -> "#" + commits.number();
-            case CommitFilesView.Changes.OfBranch(var branch, var base, var sha) ->
+            case Changes.OfCommit(Sha sha) -> sha.shortSha();
+            case Changes.OfStash(Sha sha) -> stash(model, sha).map(Stash::ref).getOrElse(sha::shortSha);
+            case Changes.OfPullRequest(var commits) -> "#" + commits.number();
+            case Changes.OfBranch(var branch, var base, var sha) ->
                 Messages.get(
                         "panel.commitFiles.branch", branch.value(), base.ref().name());
         };

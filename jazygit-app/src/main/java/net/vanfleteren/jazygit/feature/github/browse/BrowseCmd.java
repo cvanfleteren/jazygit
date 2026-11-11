@@ -6,8 +6,8 @@ import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.Operation;
-import net.vanfleteren.jazygit.state.OperationCmd;
+import net.vanfleteren.jazygit.state.operation.Operation;
+import net.vanfleteren.jazygit.state.operation.OperationCmd;
 
 /**
  * Opens {@code branch} on GitHub, in the browser.

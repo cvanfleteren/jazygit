@@ -10,12 +10,12 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Worktree;
-import net.vanfleteren.jazygit.state.BranchesTab;
 import net.vanfleteren.jazygit.state.Landing;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.operation.OperationUpdate;
+import net.vanfleteren.jazygit.state.view.BranchesTab;
 
 /**
  * Checking out a branch.

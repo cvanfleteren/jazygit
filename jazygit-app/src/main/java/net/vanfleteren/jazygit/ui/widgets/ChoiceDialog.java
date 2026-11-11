@@ -11,8 +11,8 @@ import java.util.function.Supplier;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.Popup;
-import net.vanfleteren.jazygit.state.PopupMsg;
+import net.vanfleteren.jazygit.state.popup.Popup;
+import net.vanfleteren.jazygit.state.popup.PopupMsg;
 import net.vanfleteren.jazygit.ui.TextWidth;
 
 /**

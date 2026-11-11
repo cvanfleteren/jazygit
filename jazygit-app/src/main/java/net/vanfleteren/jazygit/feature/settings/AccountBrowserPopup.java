@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.feature.settings;
 
 import net.vanfleteren.jazygit.gh.model.GhAccount;
-import net.vanfleteren.jazygit.state.TextPopup;
+import net.vanfleteren.jazygit.state.popup.TextPopup;
 
 /**
  * Asking which browser links open in for the account the repository uses (ADR 88).

@@ -7,12 +7,12 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.settings.Settings;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.AppError;
-import net.vanfleteren.jazygit.state.CommandLog;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.RepositoryTheme;
-import net.vanfleteren.jazygit.state.SaveSettings;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.operation.CommandLog;
+import net.vanfleteren.jazygit.state.preferences.RepositoryTheme;
+import net.vanfleteren.jazygit.state.preferences.SaveSettings;
 
 /**
  * Choosing the theme, which is kept for the next session; it replaces a theme asked for at startup. The highlighted

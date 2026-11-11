@@ -1,0 +1,74 @@
+package net.vanfleteren.jazygit.state.operation;
+
+import io.vavr.collection.List;
+import io.vavr.control.Option;
+import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
+import net.vanfleteren.jazygit.state.Cmd;
+import net.vanfleteren.jazygit.state.Failure;
+import net.vanfleteren.jazygit.state.Label;
+import net.vanfleteren.jazygit.state.Msg;
+
+/**
+ * A command that performs an {@link Operation} on the repository. Its outcome is reported as an
+ * {@link OperationMsg}, which {@link OperationUpdate} handles the same way for every operation: the commands
+ * are logged, a failure is shown, and the repository is read again. {@link GitOperationCmd} is one done
+ * through git alone.
+ */
+public interface OperationCmd extends Cmd {
+
+    Operation operation();
+
+    /**
+     * What the operation is done to, e.g. the branch that is pushed, if its error message names it.
+     */
+    default Option<String> subject() {
+        return Option.none();
+    }
+
+    /**
+     * The title of the operation, as the command log has it, and what it is done to, if its error names that.
+     */
+    @Override
+    default Option<Label> label() {
+        Label title = Label.of(operation().logTitleKey());
+        return Option.of(subject()
+                .map(subject -> Label.of("work.operation", title, subject))
+                .getOrElse(title));
+    }
+
+    /**
+     * The branch that is marked busy while this runs, if any; it is released when this is done.
+     */
+    default Option<BranchRef> busyBranch() {
+        return Option.none();
+    }
+
+    /**
+     * The branches that are marked busy while this runs: {@link #busyBranch()}, or more for one that runs on several,
+     * as on the branches of a stack (ADR 74).
+     */
+    default List<BranchRef> busyBranches() {
+        return busyBranch().toList();
+    }
+
+    /**
+     * Whether the operation changes what GitHub knows, like a push, after which the pull requests and the checks
+     * of the branches are read again.
+     */
+    default boolean changesGitHub() {
+        return false;
+    }
+
+    /**
+     * The {@link Msg} that reports this operation running {@code commands} successfully.
+     */
+    default Msg succeeded(List<ExecutedCommand> commands) {
+        return new OperationMsg.Succeeded(this, commands);
+    }
+
+    @Override
+    default Msg failed(Failure failure) {
+        return new OperationMsg.Failed(this, failure);
+    }
+}

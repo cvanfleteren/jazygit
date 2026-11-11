@@ -2,13 +2,12 @@ package net.vanfleteren.jazygit.feature.copy;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.state.Anchor;
-import net.vanfleteren.jazygit.state.DiffCursorAt;
-import net.vanfleteren.jazygit.state.DiffLines;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Notice;
 import net.vanfleteren.jazygit.state.Update.Next;
-import net.vanfleteren.jazygit.state.Version;
+import net.vanfleteren.jazygit.state.diff.Anchor;
+import net.vanfleteren.jazygit.state.diff.DiffCursorAt;
+import net.vanfleteren.jazygit.state.diff.Version;
+import net.vanfleteren.jazygit.state.operation.Notice;
 
 /**
  * Copying what the cursor of a rich diff is on (ADR 94): its line, the lines of its range, or the path of the file
@@ -31,7 +30,8 @@ public final class CopyUpdate {
      * a version rendered, whose rows are no lines of the file (ADR 103).
      */
     static Option<CopyCmd> copy(Model model, DiffCursorAt at) {
-        if (Version.in(model, at.area(), at.at().content())
+        if (model.repoView()
+                .version(at.area(), at.at().content())
                 .flatMap(Version::rendering)
                 .isDefined()) {
             return Option.none();
@@ -39,7 +39,7 @@ public final class CopyUpdate {
         return switch (at.cursor()) {
             case Anchor.File(String path) -> Option.of(new CopyCmd(path, new Notice.PathCopied(path)));
             case Anchor.OnLine cursor ->
-                DiffLines.shown(model, at, at.at().content().richDiff())
+                model.diffLines(at, at.at().content().richDiff())
                         .between(from(at, cursor), cursor)
                         .map(range -> new CopyCmd(
                                 range.map(line -> line.line().text()).mkString("\n"), new Notice.Copied(range.size())));

@@ -8,8 +8,8 @@ import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.model.ResetMode;
 import net.vanfleteren.jazygit.git.model.ResetTarget;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
-import net.vanfleteren.jazygit.state.GitOperationCmd;
-import net.vanfleteren.jazygit.state.Operation;
+import net.vanfleteren.jazygit.state.operation.GitOperationCmd;
+import net.vanfleteren.jazygit.state.operation.Operation;
 
 /**
  * Moves the checked out branch to {@code target}, doing with the changes {@code mode} says.

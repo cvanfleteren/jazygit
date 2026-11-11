@@ -15,6 +15,31 @@ import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.Cmd.*;
+import net.vanfleteren.jazygit.state.load.AheadUpdate;
+import net.vanfleteren.jazygit.state.load.CheckFileDiff;
+import net.vanfleteren.jazygit.state.load.CheckMetadata;
+import net.vanfleteren.jazygit.state.load.Load;
+import net.vanfleteren.jazygit.state.load.LoadBranchLog;
+import net.vanfleteren.jazygit.state.load.LoadBranches;
+import net.vanfleteren.jazygit.state.load.LoadCommitDetail;
+import net.vanfleteren.jazygit.state.load.LoadCommitFileDiff;
+import net.vanfleteren.jazygit.state.load.LoadCommitFiles;
+import net.vanfleteren.jazygit.state.load.LoadCommits;
+import net.vanfleteren.jazygit.state.load.LoadDivergence;
+import net.vanfleteren.jazygit.state.load.LoadFileDiff;
+import net.vanfleteren.jazygit.state.load.LoadStashDetail;
+import net.vanfleteren.jazygit.state.load.LoadStatus;
+import net.vanfleteren.jazygit.state.load.LoadWorktreeChanges;
+import net.vanfleteren.jazygit.state.load.SearchCommits;
+import net.vanfleteren.jazygit.state.load.Targeted;
+import net.vanfleteren.jazygit.state.operation.OperationCmd;
+import net.vanfleteren.jazygit.state.popup.Popup;
+import net.vanfleteren.jazygit.state.preferences.RepositoryTheme;
+import net.vanfleteren.jazygit.state.preferences.Screen;
+import net.vanfleteren.jazygit.state.view.BranchCommitsView;
+import net.vanfleteren.jazygit.state.view.BranchesTab;
+import net.vanfleteren.jazygit.state.view.DivergenceView;
+import net.vanfleteren.jazygit.state.view.RepoView;
 
 /**
  * The pure state transitions of the app: given a model and a message, the next model and the IO
@@ -277,12 +302,12 @@ public final class Update {
         RepoView repoView = model.repoView();
         DiffOptions options = model.preferences().diffOptions();
         return List.<Targeted<?>>empty()
-                .appendAll(repoView.commitSearch().map(CommitSearch::load))
+                .appendAll(repoView.commitSearch().map(SearchCommits::of))
                 .appendAll(repoView.branchLog()
                         .map(log -> new LoadBranchLog(log.key(), AheadUpdate.of(model, log.key()))))
                 .appendAll(repoView.commitDetail()
                         .map(detail -> new LoadCommitDetail(detail.key(), options, Slot.COMMIT_DETAIL)))
-                .appendAll(repoView.divergence().map(DivergenceView::load))
+                .appendAll(repoView.divergence().map(LoadDivergence::of))
                 .appendAll(repoView.divergence()
                         .flatMap(DivergenceView::detail)
                         .map(detail -> new LoadCommitDetail(detail.key(), options, Slot.DIVERGENCE_DETAIL)))
@@ -290,9 +315,9 @@ public final class Update {
                         .flatMap(BranchCommitsView::detail)
                         .map(detail -> new LoadCommitDetail(detail.key(), options, Slot.BRANCH_COMMITS_DETAIL)))
                 .appendAll(repoView.stashDetail().map(detail -> new LoadStashDetail(detail.key(), options)))
-                .appendAll(repoView.commitFiles().map(CommitFilesView::load))
+                .appendAll(repoView.commitFiles().map(LoadCommitFiles::of))
                 .appendAll(repoView.commitFiles()
-                        .flatMap(view -> view.diff().map(diff -> view.diffLoad(diff.key(), options))));
+                        .flatMap(view -> view.diff().map(diff -> LoadCommitFileDiff.of(view, diff.key(), options))));
     }
 
     /**
@@ -323,7 +348,7 @@ public final class Update {
      * outdated, and reading them again would show their changes as gone for as long as the new status takes to
      * arrive.
      */
-    static Next reloadDiff(Model model, List<Cmd> cmds, boolean headMoved) {
+    public static Next reloadDiff(Model model, List<Cmd> cmds, boolean headMoved) {
         return shownDiff(model)
                 .filter(load -> !model.jobs().runs(load) && !model.jobs().runs(new CheckFileDiff(load)))
                 .map(load -> new Next(model, cmds.append(headMoved ? load : new CheckFileDiff(load))))
@@ -333,7 +358,7 @@ public final class Update {
     /**
      * The read of the highlighted diff, with the options now chosen, while the status still lists its files.
      */
-    static Option<LoadFileDiff> shownDiff(Model model) {
+    public static Option<LoadFileDiff> shownDiff(Model model) {
         return model.repoView()
                 .fileDiff()
                 .filter(d -> model.repo()

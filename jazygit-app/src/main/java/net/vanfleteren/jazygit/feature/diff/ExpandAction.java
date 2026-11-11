@@ -5,8 +5,8 @@ import net.vanfleteren.jazygit.feature.FeatureAction;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.keys.Scopes;
-import net.vanfleteren.jazygit.state.Anchor;
-import net.vanfleteren.jazygit.state.DiffCursorAt;
+import net.vanfleteren.jazygit.state.diff.Anchor;
+import net.vanfleteren.jazygit.state.diff.DiffCursorAt;
 
 /**
  * Showing the lines a marker of a rich diff leaves out, from its cursor (ADR 77): in every rich diff, and in the diff

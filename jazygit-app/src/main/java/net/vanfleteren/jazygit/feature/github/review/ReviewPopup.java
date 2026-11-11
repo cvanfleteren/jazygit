@@ -4,8 +4,8 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import lombok.With;
 import net.vanfleteren.jazygit.gh.model.NewReviewThread;
-import net.vanfleteren.jazygit.state.Popup;
-import net.vanfleteren.jazygit.state.Scrolled;
+import net.vanfleteren.jazygit.state.diff.Scrolled;
+import net.vanfleteren.jazygit.state.popup.Popup;
 
 /**
  * Asking for a comment on the lines of the diff of a pull request's files, a reply to one of its threads (ADR 60), or

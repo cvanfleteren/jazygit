@@ -14,8 +14,8 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Clock;
 import net.vanfleteren.jazygit.keys.Scopes;
-import net.vanfleteren.jazygit.state.Screen;
 import net.vanfleteren.jazygit.state.TestModels;
+import net.vanfleteren.jazygit.state.preferences.Screen;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 

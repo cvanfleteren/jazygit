@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.state.ListCursor;
+import net.vanfleteren.jazygit.state.popup.ListCursor;
 import org.junit.jupiter.api.Test;
 
 class ListKeysTest {

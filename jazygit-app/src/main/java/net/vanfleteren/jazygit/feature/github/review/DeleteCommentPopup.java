@@ -2,7 +2,7 @@ package net.vanfleteren.jazygit.feature.github.review;
 
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
-import net.vanfleteren.jazygit.state.Popup;
+import net.vanfleteren.jazygit.state.popup.Popup;
 
 /**
  * Asking to confirm deleting a comment of a review thread of the diff of a pull request's files (ADR 64).

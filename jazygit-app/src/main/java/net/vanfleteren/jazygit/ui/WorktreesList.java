@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.popup.*;
 
 /**
  * The worktrees of the repository, the one shown marked. Space switches to the highlighted one, d removes it, L

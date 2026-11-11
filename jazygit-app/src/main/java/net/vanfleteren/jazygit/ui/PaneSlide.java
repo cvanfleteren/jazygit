@@ -3,7 +3,7 @@ package net.vanfleteren.jazygit.ui;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.state.Screen;
+import net.vanfleteren.jazygit.state.preferences.Screen;
 
 /**
  * How many rows the panes of the left column of {@code screen}, under the status, take in a column {@code column} rows

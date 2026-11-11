@@ -24,10 +24,10 @@ import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Failure;
-import net.vanfleteren.jazygit.state.LeftPanes;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Screen;
+import net.vanfleteren.jazygit.state.preferences.LeftPanes;
+import net.vanfleteren.jazygit.state.preferences.Screen;
 
 /**
  * Top-left panel showing the repository name and the current branch, and what the repository is in the middle

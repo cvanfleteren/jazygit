@@ -14,7 +14,7 @@ import net.vanfleteren.jazygit.gh.timing.CheckProgress;
 import net.vanfleteren.jazygit.gh.timing.CheckSpan;
 import net.vanfleteren.jazygit.gh.timing.Eta;
 import net.vanfleteren.jazygit.i18n.Messages;
-import net.vanfleteren.jazygit.state.CheckTimes;
+import net.vanfleteren.jazygit.state.github.CheckTimes;
 
 /**
  * What the dialogs that list checks one by one have in common (ADR 32): how many are in each state, in which order

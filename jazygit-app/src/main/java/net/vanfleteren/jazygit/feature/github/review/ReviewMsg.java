@@ -4,11 +4,11 @@ import io.vavr.collection.List;
 import net.vanfleteren.jazygit.gh.model.Reaction;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.AppError;
-import net.vanfleteren.jazygit.state.DiffCursorAt;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.diff.DiffCursorAt;
 
 /**
  * Commenting on the lines of the diff of a pull request's files, from its cursor (ADR 60): starting a review thread,

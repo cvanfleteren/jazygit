@@ -1,9 +1,9 @@
 package net.vanfleteren.jazygit.feature.diff;
 
-import net.vanfleteren.jazygit.state.DiffCursorAt;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.diff.DiffCursorAt;
 
 public sealed interface VersionMsg extends Msg {
 

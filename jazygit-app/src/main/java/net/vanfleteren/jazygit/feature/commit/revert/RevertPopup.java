@@ -2,7 +2,7 @@ package net.vanfleteren.jazygit.feature.commit.revert;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Commit;
-import net.vanfleteren.jazygit.state.ConfirmablePopup;
+import net.vanfleteren.jazygit.state.popup.ConfirmablePopup;
 
 /**
  * Asking to confirm reverting {@code commit}.

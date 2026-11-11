@@ -13,20 +13,20 @@ import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.Folding;
 import net.vanfleteren.jazygit.git.model.Sha;
-import net.vanfleteren.jazygit.state.Anchor;
-import net.vanfleteren.jazygit.state.DiffCursorAt;
-import net.vanfleteren.jazygit.state.Expansion;
-import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.ReadWholeFile;
-import net.vanfleteren.jazygit.state.ReadWholeFile.Source;
-import net.vanfleteren.jazygit.state.Scrolled;
-import net.vanfleteren.jazygit.state.ScrolledContent;
-import net.vanfleteren.jazygit.state.SelectionMsg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.diff.Anchor;
+import net.vanfleteren.jazygit.state.diff.DiffCursorAt;
+import net.vanfleteren.jazygit.state.diff.Expansion;
+import net.vanfleteren.jazygit.state.diff.Scrolled;
+import net.vanfleteren.jazygit.state.diff.ScrolledContent;
+import net.vanfleteren.jazygit.state.diff.WholeFile.Source;
+import net.vanfleteren.jazygit.state.load.LoadMsg;
+import net.vanfleteren.jazygit.state.load.ReadWholeFile;
+import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import org.junit.jupiter.api.Test;
 
 class ExpandUpdateTest {
@@ -58,7 +58,7 @@ class ExpandUpdateTest {
         ReadWholeFile read = read(model);
         assertEquals(List.of(read), next.cmds());
         assertEquals(
-                Option.of(new Expansion.Expanded(read, Loadable.loading(), List.of(new Folding.Lines(1, 6)))),
+                Option.of(new Expansion.Expanded(read.file(), Loadable.loading(), List.of(new Folding.Lines(1, 6)))),
                 expanded(next.model()));
     }
 

@@ -5,16 +5,16 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Folding;
-import net.vanfleteren.jazygit.state.Anchor;
 import net.vanfleteren.jazygit.state.Cmd;
-import net.vanfleteren.jazygit.state.Expansion;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Preview;
-import net.vanfleteren.jazygit.state.ReadWholeFile;
-import net.vanfleteren.jazygit.state.ReadWholeFile.Source;
-import net.vanfleteren.jazygit.state.ScrolledContent;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.diff.Anchor;
+import net.vanfleteren.jazygit.state.diff.Expansion;
+import net.vanfleteren.jazygit.state.diff.ScrolledContent;
+import net.vanfleteren.jazygit.state.diff.WholeFile.Source;
+import net.vanfleteren.jazygit.state.load.ReadWholeFile;
+import net.vanfleteren.jazygit.state.view.Preview;
 
 /**
  * Showing lines a diff leaves out around its hunks (ADR 77). The first expansion in a file reads it whole, as its diff
@@ -44,11 +44,7 @@ public final class ExpandUpdate {
      */
     private static Next asked(
             Model model, String area, ScrolledContent content, Anchor.Gap gap, ExpandMsg.Toward toward) {
-        Expansion expansion = model.repoView()
-                .expanded()
-                .get(area)
-                .filter(kept -> kept.holdsFor(content))
-                .getOrElse(() -> Expansion.of(content));
+        Expansion expansion = model.repoView().expansion(area, content).getOrElse(() -> Expansion.of(content));
         Option<Expansion.Expanded> before = expansion.files().get(gap.path());
         boolean reads = before.forAll(file -> file.whole().isFailed());
         Option<ReadWholeFile> read = reads
@@ -64,9 +60,9 @@ public final class ExpandUpdate {
             return Next.of(model);
         }
         Folding.Lines lines = lines(gap, toward);
-        Expansion.Expanded expanded = before.map(file ->
-                        read.fold(() -> file, again -> file.withRead(again).withWhole(Loadable.loading())))
-                .getOrElse(() -> new Expansion.Expanded(read.get(), Loadable.loading(), List.empty()));
+        Expansion.Expanded expanded = before.map(file -> read.fold(
+                        () -> file, again -> file.withRead(again.file()).withWhole(Loadable.loading())))
+                .getOrElse(() -> new Expansion.Expanded(read.get().file(), Loadable.loading(), List.empty()));
         Expansion.Expanded asked = expanded.withLines(expanded.lines().append(lines));
         return new Next(
                 model.mapRepoView(view -> view.withExpanded(view.expanded()

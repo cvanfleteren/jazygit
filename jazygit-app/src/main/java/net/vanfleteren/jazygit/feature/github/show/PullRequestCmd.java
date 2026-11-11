@@ -11,7 +11,8 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Label;
-import net.vanfleteren.jazygit.state.Operation;
+import net.vanfleteren.jazygit.state.operation.*;
+import net.vanfleteren.jazygit.state.operation.Operation;
 
 /**
  * Reading the details of the pull request that is shown, and what is done to it from there.

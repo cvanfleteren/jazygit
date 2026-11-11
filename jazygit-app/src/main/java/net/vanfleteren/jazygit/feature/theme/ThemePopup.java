@@ -2,8 +2,8 @@ package net.vanfleteren.jazygit.feature.theme;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.settings.ThemeName;
-import net.vanfleteren.jazygit.state.Popup;
-import net.vanfleteren.jazygit.state.RepositoryTheme;
+import net.vanfleteren.jazygit.state.popup.Popup;
+import net.vanfleteren.jazygit.state.preferences.RepositoryTheme;
 
 /**
  * Asking which theme to use where {@code scope} says, while {@code current} is in use. The highlighted theme shows

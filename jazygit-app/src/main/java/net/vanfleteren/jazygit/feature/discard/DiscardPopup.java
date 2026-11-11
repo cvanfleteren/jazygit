@@ -2,7 +2,7 @@ package net.vanfleteren.jazygit.feature.discard;
 
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.FileEntry;
-import net.vanfleteren.jazygit.state.Popup;
+import net.vanfleteren.jazygit.state.popup.Popup;
 
 /**
  * Asking what to discard of {@code files}: every changed file under the node the user picked.

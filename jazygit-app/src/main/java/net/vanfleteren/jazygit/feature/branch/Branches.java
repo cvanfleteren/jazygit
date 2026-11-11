@@ -7,7 +7,7 @@ import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Operation;
+import net.vanfleteren.jazygit.state.operation.Operation;
 
 /**
  * Questions about the branches that several branch operations ask.

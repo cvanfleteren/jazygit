@@ -8,8 +8,8 @@ import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.Operation;
-import net.vanfleteren.jazygit.state.OperationCmd;
+import net.vanfleteren.jazygit.state.operation.Operation;
+import net.vanfleteren.jazygit.state.operation.OperationCmd;
 
 /**
  * Writing a comment on a pull request in the editor, and adding it.

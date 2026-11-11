@@ -19,15 +19,15 @@ import net.vanfleteren.jazygit.gh.model.Verdict;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.AppError.CannotReview.Why;
-import net.vanfleteren.jazygit.state.CommandLog;
-import net.vanfleteren.jazygit.state.CommitFilesView;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.OperationMsg;
-import net.vanfleteren.jazygit.state.OperationUpdate;
-import net.vanfleteren.jazygit.state.Reading;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.github.Reading;
+import net.vanfleteren.jazygit.state.operation.CommandLog;
+import net.vanfleteren.jazygit.state.operation.OperationMsg;
+import net.vanfleteren.jazygit.state.operation.OperationUpdate;
+import net.vanfleteren.jazygit.state.view.CommitFilesView;
 
 /**
  * Approving a pull request, or asking for changes (ADR 100), from its dialog or from the diff of its files. Only an

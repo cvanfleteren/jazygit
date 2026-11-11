@@ -67,13 +67,20 @@ import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.state.*;
-import net.vanfleteren.jazygit.state.LoadAhead;
-import net.vanfleteren.jazygit.state.LoadBranches;
-import net.vanfleteren.jazygit.state.LoadCommitFiles;
-import net.vanfleteren.jazygit.state.LoadStatus;
-import net.vanfleteren.jazygit.state.LoadWorktrees;
 import net.vanfleteren.jazygit.state.Update.Next;
-import net.vanfleteren.jazygit.state.prs.LoadRepositoryPullRequests;
+import net.vanfleteren.jazygit.state.diff.BaseTip;
+import net.vanfleteren.jazygit.state.diff.Changes;
+import net.vanfleteren.jazygit.state.github.*;
+import net.vanfleteren.jazygit.state.github.prs.LoadRepositoryPullRequests;
+import net.vanfleteren.jazygit.state.load.*;
+import net.vanfleteren.jazygit.state.load.LoadBranches;
+import net.vanfleteren.jazygit.state.load.LoadCommitFiles;
+import net.vanfleteren.jazygit.state.load.LoadStatus;
+import net.vanfleteren.jazygit.state.load.LoadWorktrees;
+import net.vanfleteren.jazygit.state.operation.*;
+import net.vanfleteren.jazygit.state.popup.*;
+import net.vanfleteren.jazygit.state.preferences.*;
+import net.vanfleteren.jazygit.state.view.*;
 import org.junit.jupiter.api.Test;
 
 class PullRequestUpdateTest {
@@ -1379,7 +1386,7 @@ class PullRequestUpdateTest {
 
             Next opened = Update.update(shown, new PullRequestMsg.FilesChosen());
 
-            CommitFilesView.Changes of = new CommitFilesView.Changes.OfPullRequest(commits);
+            Changes of = new Changes.OfPullRequest(commits);
             assertEquals(Option.none(), opened.model().popup(PullRequestPopup.class));
             assertEquals(Screen.REPOSITORY, opened.model().screen());
             assertEquals(
@@ -1434,7 +1441,7 @@ class PullRequestUpdateTest {
                 new PullRequestMsg.DetailsLoaded(
                         42, lastRead(requested.model()), readAtCommits(PullRequestDetails.State.OPEN)));
 
-        CommitFilesView.Changes of = new CommitFilesView.Changes.OfPullRequest(
+        Changes of = new Changes.OfPullRequest(
                 new PullRequestCommits(42, "owner/repo", "github.com", new Sha(BASE_OID), new Sha(HEAD_OID)));
         assertEquals(Option.none(), opened.model().popup(PullRequestPopup.class));
         assertEquals(Screen.REPOSITORY, opened.model().screen());
@@ -1486,7 +1493,7 @@ class PullRequestUpdateTest {
 
         Next opened = Update.update(shown, new PullRequestMsg.FilesRequested(FEATURE));
 
-        CommitFilesView.Changes of = new CommitFilesView.Changes.OfPullRequest(
+        Changes of = new Changes.OfPullRequest(
                 new PullRequestCommits(42, "owner/repo", "github.com", new Sha(BASE_OID), new Sha(HEAD_OID)));
         assertEquals(Option.none(), opened.model().popup(PullRequestPopup.class));
         assertEquals(
@@ -1502,8 +1509,8 @@ class PullRequestUpdateTest {
 
     @Test
     void shiftFOnABranchWithoutAPullRequestShowsItsFilesAgainstItsBase() {
-        CommitFilesView.Changes of = new CommitFilesView.Changes.OfBranch(
-                UNPUSHED.name(), new LoadAhead.Base(new BranchRef.Local(MAIN.name()), MAIN.tip()), UNPUSHED.tip());
+        Changes of = new Changes.OfBranch(
+                UNPUSHED.name(), new BaseTip(new BranchRef.Local(MAIN.name()), MAIN.tip()), UNPUSHED.tip());
         // Also when it is not known whether it has one: the pull requests are not read yet, or reading them failed.
         for (Model shown : List.of(
                 withPr(),
@@ -1619,7 +1626,7 @@ class PullRequestUpdateTest {
         assertEquals(Option.none(), again.model().popup(PullRequestPopup.class));
         assertEquals(
                 Option.of(CommitFilesView.of(
-                        new CommitFilesView.Changes.OfPullRequest(new PullRequestCommits(
+                        new Changes.OfPullRequest(new PullRequestCommits(
                                 42, "owner/repo", "github.com", new Sha(BASE_OID), new Sha(HEAD_OID))),
                         "branches",
                         "files")),
@@ -2347,7 +2354,7 @@ class PullRequestUpdateTest {
                 "https://github.com/owner/repo/pull/9");
 
         Model ofOwnerRepo = loaded().withPrOverview(
-                        net.vanfleteren.jazygit.state.prs.PrOverview.INITIAL.withRepositoryName(
+                        net.vanfleteren.jazygit.state.github.prs.PrOverview.INITIAL.withRepositoryName(
                                 Option.of("owner/repo")));
 
         Next shown = Update.update(ofOwnerRepo, new PullRequestMsg.SummaryRequested(summary));
@@ -2379,7 +2386,7 @@ class PullRequestUpdateTest {
                 Instant.EPOCH,
                 "https://github.com/other/repo/pull/3");
         Model ofOwnerRepo = loaded().withPrOverview(
-                        net.vanfleteren.jazygit.state.prs.PrOverview.INITIAL.withRepositoryName(
+                        net.vanfleteren.jazygit.state.github.prs.PrOverview.INITIAL.withRepositoryName(
                                 Option.of("owner/repo")));
 
         Next opened = Update.update(ofOwnerRepo, new PullRequestMsg.SummaryRequested(elsewhere));
@@ -2406,12 +2413,12 @@ class PullRequestUpdateTest {
                 Option.of(new GhCommit(BASE_OID)),
                 Option.of(new GhCommit(HEAD_OID)));
         Model ofOwnerRepo = loaded().withScreen(Screen.PULL_REQUESTS)
-                .withPrOverview(net.vanfleteren.jazygit.state.prs.PrOverview.INITIAL.withRepositoryName(
+                .withPrOverview(net.vanfleteren.jazygit.state.github.prs.PrOverview.INITIAL.withRepositoryName(
                         Option.of("owner/repo")));
 
         Next opened = Update.update(ofOwnerRepo, new PullRequestMsg.SummaryFilesRequested(listed));
 
-        CommitFilesView.Changes of = new CommitFilesView.Changes.OfPullRequest(
+        Changes of = new Changes.OfPullRequest(
                 new PullRequestCommits(9, "owner/repo", "github.com", new Sha(BASE_OID), new Sha(HEAD_OID)));
         assertEquals(Option.none(), opened.model().popup());
         assertEquals(Screen.REPOSITORY, opened.model().screen());
@@ -2424,7 +2431,7 @@ class PullRequestUpdateTest {
     @Test
     void shiftFOnThePullRequestsScreenShowsTheFilesOfAPullRequestListedWithoutItsCommitsOnceItIsRead() {
         Model ofOwnerRepo = loaded().withScreen(Screen.PULL_REQUESTS)
-                .withPrOverview(net.vanfleteren.jazygit.state.prs.PrOverview.INITIAL.withRepositoryName(
+                .withPrOverview(net.vanfleteren.jazygit.state.github.prs.PrOverview.INITIAL.withRepositoryName(
                         Option.of("owner/repo")));
 
         Next requested =
@@ -2442,7 +2449,7 @@ class PullRequestUpdateTest {
                 new PullRequestMsg.DetailsLoaded(
                         42, lastRead(requested.model()), readAtCommits(PullRequestDetails.State.OPEN)));
 
-        CommitFilesView.Changes of = new CommitFilesView.Changes.OfPullRequest(
+        Changes of = new Changes.OfPullRequest(
                 new PullRequestCommits(42, "owner/repo", "github.com", new Sha(BASE_OID), new Sha(HEAD_OID)));
         assertEquals(Option.none(), opened.model().popup(PullRequestPopup.class));
         assertEquals(Screen.REPOSITORY, opened.model().screen());
@@ -2456,7 +2463,7 @@ class PullRequestUpdateTest {
     void shiftFOnAPullRequestOfAnotherRepositoryOpensItInTheBrowser() {
         PullRequestSummary elsewhere = summary("other/repo");
         Model ofOwnerRepo = loaded().withPrOverview(
-                        net.vanfleteren.jazygit.state.prs.PrOverview.INITIAL.withRepositoryName(
+                        net.vanfleteren.jazygit.state.github.prs.PrOverview.INITIAL.withRepositoryName(
                                 Option.of("owner/repo")));
 
         Next opened = Update.update(ofOwnerRepo, new PullRequestMsg.SummaryFilesRequested(elsewhere));
@@ -2491,7 +2498,7 @@ class PullRequestUpdateTest {
     private static Model ofOwnerRepo(RepoStatus status) {
         return Update.update(loaded(), new LoadMsg.StatusLoaded(status))
                 .model()
-                .withPrOverview(net.vanfleteren.jazygit.state.prs.PrOverview.INITIAL.withRepositoryName(
+                .withPrOverview(net.vanfleteren.jazygit.state.github.prs.PrOverview.INITIAL.withRepositoryName(
                         Option.of("owner/repo")));
     }
 

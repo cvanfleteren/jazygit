@@ -27,8 +27,8 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.Popup;
 import net.vanfleteren.jazygit.state.Program;
+import net.vanfleteren.jazygit.state.popup.Popup;
 
 /**
  * Rules about which parts of the application may depend on which, and how. That the core (jazygit-process,
@@ -389,6 +389,13 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule featuresAreFreeOfCycles =
             slices().matching(ROOT + ".feature.(*)..").should().beFreeOfCycles();
+    /**
+     * The parts of the state, each a subpackage of it, depend on each other one way only. The core, in {@code state}
+     * itself, is no part: the {@code Model} holds them all, and they all work on it.
+     */
+    @ArchTest
+    static final ArchRule stateIsFreeOfCycles =
+            slices().matching(ROOT + ".state.(*)..").should().beFreeOfCycles();
     /**
      * Only {@code OnGitHub} names a branch for gh, from the branch on its remote, so the name of a local branch is not
      * handed to gh for it (ADR 40). A constructor reference, {@code GhBranch::new}, is an access too, so it counts as

@@ -15,15 +15,16 @@ import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.image.MarkdownImage;
 import net.vanfleteren.jazygit.keys.Scopes;
-import net.vanfleteren.jazygit.state.AheadUpdate;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Cmd;
-import net.vanfleteren.jazygit.state.CommitFilesView;
-import net.vanfleteren.jazygit.state.CommitFilesView.Changes;
-import net.vanfleteren.jazygit.state.LoadAhead;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.diff.Changes;
+import net.vanfleteren.jazygit.state.load.AheadUpdate;
+import net.vanfleteren.jazygit.state.load.LoadAhead;
+import net.vanfleteren.jazygit.state.load.LoadCommitFiles;
+import net.vanfleteren.jazygit.state.view.CommitFilesView;
 
 /**
  * Listing the files a commit, a stash, a pull request or a branch changed in the files pane, in place of the changed files of
@@ -45,7 +46,9 @@ public final class CommitFilesUpdate {
                 CommitFilesView view = CommitFilesView.of(of, pane, Scopes.FILES.id());
                 yield new Next(
                         model.mapRepoView(repoView -> repoView.withCommitFiles(Option.of(view))),
-                        List.<Cmd>of(view.load()).appendAll(remarksLoad(view)).appendAll(collapsedLoad(view)));
+                        List.<Cmd>of(LoadCommitFiles.of(view))
+                                .appendAll(remarksLoad(view))
+                                .appendAll(collapsedLoad(view)));
             }
             case CommitFilesMsg.Closed() ->
                 Next.of(model.mapRepoView(repoView -> repoView.withCommitFiles(Option.none())));
@@ -157,7 +160,7 @@ public final class CommitFilesUpdate {
                                         model.mapRepoView(repoView -> repoView.withCommitFiles(Option.of(again))),
                                         again,
                                         number,
-                                        List.of(again.load()));
+                                        List.of(LoadCommitFiles.of(again)));
                             })
                             .getOrElse(() -> pictures(
                                     model.mapRepoView(repoView -> repoView.withCommitFiles(Option.of(read))),

@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch.movecommits;
 
-import net.vanfleteren.jazygit.state.TextPopup;
+import net.vanfleteren.jazygit.state.popup.TextPopup;
 
 /**
  * Asking for the name of the new branch the commits of {@code request} move to.

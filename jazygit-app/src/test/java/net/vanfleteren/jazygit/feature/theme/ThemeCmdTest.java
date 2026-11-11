@@ -13,7 +13,7 @@ import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.Env;
-import net.vanfleteren.jazygit.state.RepositoryTheme;
+import net.vanfleteren.jazygit.state.preferences.RepositoryTheme;
 import org.junit.jupiter.api.Test;
 
 /**

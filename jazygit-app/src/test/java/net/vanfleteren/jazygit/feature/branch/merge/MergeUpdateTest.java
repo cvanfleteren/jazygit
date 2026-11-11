@@ -8,13 +8,13 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.MergeMode;
-import net.vanfleteren.jazygit.state.LoadBranches;
-import net.vanfleteren.jazygit.state.LoadStashes;
-import net.vanfleteren.jazygit.state.LoadStatus;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.PopupMsg;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.load.LoadBranches;
+import net.vanfleteren.jazygit.state.load.LoadStashes;
+import net.vanfleteren.jazygit.state.load.LoadStatus;
+import net.vanfleteren.jazygit.state.popup.PopupMsg;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -78,7 +78,7 @@ class MergeUpdateTest {
                         new LoadStatus(),
                         LoadBranches.LISTED,
                         new LoadStashes(),
-                        new net.vanfleteren.jazygit.state.LoadWorktrees()),
+                        new net.vanfleteren.jazygit.state.load.LoadWorktrees()),
                 done.cmds());
         assertEquals(
                 executed("git merge --ff --no-edit feature"),

@@ -6,10 +6,10 @@ import net.vanfleteren.jazygit.feature.stage.StageCmd.Stage;
 import net.vanfleteren.jazygit.feature.stage.StageCmd.Unstage;
 import net.vanfleteren.jazygit.feature.stage.StageMsg.Requested;
 import net.vanfleteren.jazygit.git.model.FileEntry;
-import net.vanfleteren.jazygit.state.FileFilterUpdate;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.view.FileFilterUpdate;
 
 /**
  * Staging and unstaging files.

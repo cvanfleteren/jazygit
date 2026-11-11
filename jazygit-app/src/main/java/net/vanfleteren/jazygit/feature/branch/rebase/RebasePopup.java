@@ -2,7 +2,7 @@ package net.vanfleteren.jazygit.feature.branch.rebase;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.BranchName;
-import net.vanfleteren.jazygit.state.Popup;
+import net.vanfleteren.jazygit.state.popup.Popup;
 
 /**
  * Asking where to rebase the checked out {@code branch}: onto the highlighted branch, {@code highlighted}, or on its

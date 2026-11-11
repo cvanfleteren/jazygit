@@ -1,10 +1,10 @@
 package net.vanfleteren.jazygit.feature.copy;
 
-import net.vanfleteren.jazygit.state.DiffCursorAt;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.Notice;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.diff.DiffCursorAt;
+import net.vanfleteren.jazygit.state.operation.Notice;
 
 public sealed interface CopyMsg extends Msg {
 

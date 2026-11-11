@@ -14,6 +14,7 @@ import io.vavr.collection.List;
 import java.util.ArrayList;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.popup.*;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog.Choice;

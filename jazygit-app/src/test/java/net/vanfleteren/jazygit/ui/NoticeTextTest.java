@@ -6,7 +6,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.Sha;
-import net.vanfleteren.jazygit.state.Notice;
+import net.vanfleteren.jazygit.state.operation.Notice;
 import org.junit.jupiter.api.Test;
 
 /**

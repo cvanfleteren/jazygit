@@ -14,6 +14,13 @@ import java.util.function.Predicate;
 import lombok.With;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.MetadataStamp;
+import net.vanfleteren.jazygit.state.index.IndexRefresh;
+import net.vanfleteren.jazygit.state.load.CheckMetadata;
+import net.vanfleteren.jazygit.state.load.Load;
+import net.vanfleteren.jazygit.state.load.LoadAhead;
+import net.vanfleteren.jazygit.state.load.LoadCommits;
+import net.vanfleteren.jazygit.state.operation.Operation;
+import net.vanfleteren.jazygit.state.operation.OperationCmd;
 
 /**
  * What runs in the background, and when the remotes were last fetched from.
@@ -225,6 +232,13 @@ public record Jobs(
      */
     public boolean runs(Predicate<? super Cmd> which) {
         return running.values().exists(command -> which.test(command.cmd()));
+    }
+
+    /**
+     * Whether a git operation runs, like a push or a commit.
+     */
+    public boolean runsOperation() {
+        return runs(OperationCmd.class::isInstance);
     }
 
     /**

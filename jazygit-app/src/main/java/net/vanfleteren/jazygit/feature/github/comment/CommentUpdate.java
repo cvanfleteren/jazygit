@@ -12,6 +12,8 @@ import net.vanfleteren.jazygit.feature.github.show.PullRequestUpdate;
 import net.vanfleteren.jazygit.feature.github.show.ShowsPullRequest;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.github.*;
+import net.vanfleteren.jazygit.state.operation.*;
 
 /**
  * Commenting on the pull request that is shown. The comment is written in a popup of its own, or in the editor, and

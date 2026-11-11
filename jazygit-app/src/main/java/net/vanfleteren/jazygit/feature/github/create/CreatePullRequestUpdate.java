@@ -21,6 +21,8 @@ import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.github.*;
+import net.vanfleteren.jazygit.state.operation.*;
 
 /**
  * Creating the pull request of a branch: pushing it first when it is not on its remote, reading the branch it came

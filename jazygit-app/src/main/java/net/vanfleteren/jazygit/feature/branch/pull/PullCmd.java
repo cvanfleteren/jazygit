@@ -8,7 +8,7 @@ import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
-import net.vanfleteren.jazygit.state.Operation;
+import net.vanfleteren.jazygit.state.operation.Operation;
 
 /**
  * Bringing a branch up to date with the branch it tracks: pulling the checked out one, or fast-forwarding another.

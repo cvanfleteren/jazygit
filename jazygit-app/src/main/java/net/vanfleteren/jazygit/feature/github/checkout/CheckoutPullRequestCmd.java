@@ -5,8 +5,8 @@ import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.Operation;
-import net.vanfleteren.jazygit.state.OperationCmd;
+import net.vanfleteren.jazygit.state.operation.Operation;
+import net.vanfleteren.jazygit.state.operation.OperationCmd;
 
 /**
  * Checks out {@code pullRequest}, of the repository, in place, as {@code gh pr checkout} does.

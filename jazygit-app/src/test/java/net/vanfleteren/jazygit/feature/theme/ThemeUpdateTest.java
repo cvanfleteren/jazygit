@@ -6,11 +6,11 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.RepositoryTheme;
-import net.vanfleteren.jazygit.state.SaveSettings;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.preferences.RepositoryTheme;
+import net.vanfleteren.jazygit.state.preferences.SaveSettings;
 import org.junit.jupiter.api.Test;
 
 class ThemeUpdateTest {

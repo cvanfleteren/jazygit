@@ -17,7 +17,7 @@ import net.vanfleteren.jazygit.feature.settings.SettingsPanelMsg;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.prs.PrOverviewMsg;
+import net.vanfleteren.jazygit.state.github.prs.PrOverviewMsg;
 import org.junit.jupiter.api.Test;
 
 class KeymapTest {

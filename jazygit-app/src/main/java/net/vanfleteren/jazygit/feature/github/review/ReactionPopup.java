@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.feature.github.review;
 
 import net.vanfleteren.jazygit.gh.model.Reactions;
-import net.vanfleteren.jazygit.state.Popup;
+import net.vanfleteren.jazygit.state.popup.Popup;
 
 /**
  * Asking which reaction to give to a comment of a review thread of the diff of a pull request's files, or to take back

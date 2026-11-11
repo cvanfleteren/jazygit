@@ -11,6 +11,12 @@ import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.model.AllBranches;
 import net.vanfleteren.jazygit.git.model.MetadataStamp;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.load.CheckMetadata;
+import net.vanfleteren.jazygit.state.load.Load;
+import net.vanfleteren.jazygit.state.load.LoadBranches;
+import net.vanfleteren.jazygit.state.load.LoadMsg;
+import net.vanfleteren.jazygit.state.load.LoadStashes;
+import net.vanfleteren.jazygit.state.load.LoadWorktrees;
 import org.junit.jupiter.api.Test;
 
 /**

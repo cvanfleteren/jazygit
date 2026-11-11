@@ -10,11 +10,12 @@ import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.ResetTarget;
 import net.vanfleteren.jazygit.state.AppError;
-import net.vanfleteren.jazygit.state.DivergenceView;
-import net.vanfleteren.jazygit.state.DivergenceView.Against;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.load.LoadDivergence;
+import net.vanfleteren.jazygit.state.view.DivergenceView;
+import net.vanfleteren.jazygit.state.view.DivergenceView.Against;
 
 /**
  * The options on the upstream of a branch: viewing how the highlighted branch diverged from its upstream or from
@@ -93,7 +94,8 @@ public final class UpstreamUpdate {
     private static Next open(Model model, Branch branch, BranchRef other, Against against) {
         DivergenceView view = DivergenceView.loading(branch.name(), other, against);
         return Next.of(
-                model.clearError().mapRepoView(repoView -> repoView.withDivergence(Option.of(view))), view.load());
+                model.clearError().mapRepoView(repoView -> repoView.withDivergence(Option.of(view))),
+                LoadDivergence.of(view));
     }
 
     /**

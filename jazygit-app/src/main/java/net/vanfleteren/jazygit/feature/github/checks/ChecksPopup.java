@@ -9,13 +9,13 @@ import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.gh.timing.CheckTimings;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
-import net.vanfleteren.jazygit.state.CheckTimes;
-import net.vanfleteren.jazygit.state.ChecksReached;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.PendingChecks;
-import net.vanfleteren.jazygit.state.Popup;
-import net.vanfleteren.jazygit.state.Reading;
+import net.vanfleteren.jazygit.state.github.CheckTimes;
+import net.vanfleteren.jazygit.state.github.ChecksReached;
+import net.vanfleteren.jazygit.state.github.PendingChecks;
+import net.vanfleteren.jazygit.state.github.Reading;
+import net.vanfleteren.jazygit.state.popup.Popup;
 
 /**
  * Showing the checks on the tip of a branch one by one, with how long they took or run (ADR 32), read again every so

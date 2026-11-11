@@ -6,7 +6,7 @@ import dev.tamboui.layout.Rect;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.settings.Settings;
-import net.vanfleteren.jazygit.state.LeftPanes;
+import net.vanfleteren.jazygit.state.preferences.LeftPanes;
 import org.junit.jupiter.api.Test;
 
 class PaneBorderTest {

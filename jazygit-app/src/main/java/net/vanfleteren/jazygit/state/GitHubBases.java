@@ -11,6 +11,8 @@ import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.state.github.GitHubChecks;
+import net.vanfleteren.jazygit.state.github.GitHubState;
 
 /**
  * What GitHub says the branches are built on (ADR 72): by the branch an open pull request merges from, the branch

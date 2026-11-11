@@ -21,13 +21,13 @@ import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Env;
-import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.OperationMsg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.load.LoadMsg;
+import net.vanfleteren.jazygit.state.operation.OperationMsg;
 import org.junit.jupiter.api.Test;
 
 /**

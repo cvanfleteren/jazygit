@@ -18,6 +18,8 @@ import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.load.SelectionMsg;
+import net.vanfleteren.jazygit.state.view.*;
 import org.junit.jupiter.api.Test;
 
 /**

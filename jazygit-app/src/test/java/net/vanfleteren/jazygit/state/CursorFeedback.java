@@ -1,6 +1,8 @@
 package net.vanfleteren.jazygit.state;
 
 import java.util.function.Consumer;
+import net.vanfleteren.jazygit.state.popup.ListCursor;
+import net.vanfleteren.jazygit.state.popup.PopupMsg;
 
 /**
  * Stands in for the app around the list of a popup in a test: it keeps where the user moved to in the list, which

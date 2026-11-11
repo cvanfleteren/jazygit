@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.feature.branch.delete;
 
 import net.vanfleteren.jazygit.git.model.BranchName;
-import net.vanfleteren.jazygit.state.Popup;
+import net.vanfleteren.jazygit.state.popup.Popup;
 
 /**
  * Asking whether to unlock the worktree at {@code location}, which has {@code branch} checked out, so that it can be

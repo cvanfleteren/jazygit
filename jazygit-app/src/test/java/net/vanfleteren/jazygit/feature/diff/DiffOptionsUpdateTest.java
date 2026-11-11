@@ -18,20 +18,20 @@ import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Sha;
-import net.vanfleteren.jazygit.state.DivergenceView;
-import net.vanfleteren.jazygit.state.LoadCommitDetail;
-import net.vanfleteren.jazygit.state.LoadFileDiff;
-import net.vanfleteren.jazygit.state.LoadMsg;
-import net.vanfleteren.jazygit.state.LoadStashDetail;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
 import net.vanfleteren.jazygit.state.Loadable.Loading;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Preview;
-import net.vanfleteren.jazygit.state.SaveSettings;
-import net.vanfleteren.jazygit.state.SelectionMsg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.load.LoadCommitDetail;
+import net.vanfleteren.jazygit.state.load.LoadFileDiff;
+import net.vanfleteren.jazygit.state.load.LoadMsg;
+import net.vanfleteren.jazygit.state.load.LoadStashDetail;
+import net.vanfleteren.jazygit.state.load.SelectionMsg;
+import net.vanfleteren.jazygit.state.preferences.SaveSettings;
+import net.vanfleteren.jazygit.state.view.DivergenceView;
+import net.vanfleteren.jazygit.state.view.Preview;
 import org.junit.jupiter.api.Test;
 
 class DiffOptionsUpdateTest {

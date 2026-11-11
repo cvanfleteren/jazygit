@@ -6,7 +6,7 @@ import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.feature.github.show.ShowsPullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Reviewing;
 import net.vanfleteren.jazygit.gh.model.Verdict;
-import net.vanfleteren.jazygit.state.Popup;
+import net.vanfleteren.jazygit.state.popup.Popup;
 
 /**
  * Asking for a review of a pull request, which approves it or asks for changes (ADR 100), from its dialog or from the

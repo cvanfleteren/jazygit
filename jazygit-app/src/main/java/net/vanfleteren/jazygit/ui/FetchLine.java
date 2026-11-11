@@ -14,7 +14,7 @@ import net.vanfleteren.jazygit.state.Freshness;
 import net.vanfleteren.jazygit.state.Jobs;
 import net.vanfleteren.jazygit.state.Label;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Screen;
+import net.vanfleteren.jazygit.state.preferences.Screen;
 
 /**
  * The line under everything else saying which commit is copied to cherry-pick. On the right it says what runs (ADR

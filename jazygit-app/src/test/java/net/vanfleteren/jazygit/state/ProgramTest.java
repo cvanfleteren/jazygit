@@ -84,7 +84,16 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.state.Loadable.Failed;
 import net.vanfleteren.jazygit.state.Loadable.Loaded;
-import net.vanfleteren.jazygit.state.prs.LoadRepositoryPullRequests;
+import net.vanfleteren.jazygit.state.github.LoadBranchChecks;
+import net.vanfleteren.jazygit.state.github.PullRequestsMsg;
+import net.vanfleteren.jazygit.state.github.prs.LoadRepositoryPullRequests;
+import net.vanfleteren.jazygit.state.load.Load;
+import net.vanfleteren.jazygit.state.load.LoadBranchLog;
+import net.vanfleteren.jazygit.state.load.SelectionMsg;
+import net.vanfleteren.jazygit.state.popup.PopupMsg;
+import net.vanfleteren.jazygit.state.preferences.RepositoryTheme;
+import net.vanfleteren.jazygit.state.view.Preview;
+import net.vanfleteren.jazygit.state.view.ViewMsg;
 import org.junit.jupiter.api.Test;
 
 /**

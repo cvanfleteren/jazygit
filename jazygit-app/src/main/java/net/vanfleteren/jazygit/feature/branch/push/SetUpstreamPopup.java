@@ -3,7 +3,7 @@ package net.vanfleteren.jazygit.feature.branch.push;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
-import net.vanfleteren.jazygit.state.TextPopup;
+import net.vanfleteren.jazygit.state.popup.TextPopup;
 
 /**
  * Asking where to push {@code branch}: it has no upstream yet, or {@code push.default} does not push it to the one

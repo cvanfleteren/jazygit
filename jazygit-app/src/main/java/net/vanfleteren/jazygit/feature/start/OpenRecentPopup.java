@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.feature.start;
 
-import net.vanfleteren.jazygit.state.Popup;
+import net.vanfleteren.jazygit.state.popup.Popup;
 
 /**
  * Asking which of the recent repositories {@code outside} offered to open.

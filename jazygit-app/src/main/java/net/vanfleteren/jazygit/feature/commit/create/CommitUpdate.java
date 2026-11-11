@@ -8,9 +8,9 @@ import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.operation.OperationUpdate;
 
 /**
  * Committing what is staged.

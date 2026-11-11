@@ -32,15 +32,15 @@ import net.vanfleteren.jazygit.feature.branch.rename.RenameBranchCmd;
 import net.vanfleteren.jazygit.feature.branch.rename.RenameBranchMsg;
 import net.vanfleteren.jazygit.feature.branch.rename.RenameBranchPopup;
 import net.vanfleteren.jazygit.git.model.*;
-import net.vanfleteren.jazygit.state.LoadBranches;
-import net.vanfleteren.jazygit.state.LoadMsg;
-import net.vanfleteren.jazygit.state.LoadStashes;
-import net.vanfleteren.jazygit.state.LoadStatus;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.PopupMsg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.load.LoadBranches;
+import net.vanfleteren.jazygit.state.load.LoadMsg;
+import net.vanfleteren.jazygit.state.load.LoadStashes;
+import net.vanfleteren.jazygit.state.load.LoadStatus;
+import net.vanfleteren.jazygit.state.popup.PopupMsg;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -1008,8 +1008,8 @@ class BranchUpdateTest {
                 List.of(
                         new LoadStatus(),
                         LoadBranches.LISTED,
-                        new net.vanfleteren.jazygit.state.LoadStashes(),
-                        new net.vanfleteren.jazygit.state.LoadWorktrees()),
+                        new net.vanfleteren.jazygit.state.load.LoadStashes(),
+                        new net.vanfleteren.jazygit.state.load.LoadWorktrees()),
                 next.cmds());
         assertEquals(Option.none(), next.model().outcome().error());
     }
@@ -1027,7 +1027,7 @@ class BranchUpdateTest {
                         new LoadStatus(),
                         LoadBranches.LISTED,
                         new LoadStashes(),
-                        new net.vanfleteren.jazygit.state.LoadWorktrees()),
+                        new net.vanfleteren.jazygit.state.load.LoadWorktrees()),
                 next.cmds());
     }
 

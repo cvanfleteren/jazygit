@@ -18,7 +18,7 @@ import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Comment;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.image.Picture;
-import net.vanfleteren.jazygit.state.Collapsed;
+import net.vanfleteren.jazygit.state.diff.Collapsed;
 import net.vanfleteren.jazygit.ui.widgets.MarkdownImages;
 import net.vanfleteren.jazygit.ui.widgets.MarkdownScroll;
 
@@ -66,7 +66,7 @@ final class RemarkLines {
     /**
      * The lines of each of {@code threads}, as {@link #threads} draws them, without the blank lines between them, in
      * parts that are each a stop of the cursor (ADR 60, 62): the thread, then each of its other comments while it is
-     * open, as {@link net.vanfleteren.jazygit.state.DiffStops#anchors} gives them.
+     * open, as {@link net.vanfleteren.jazygit.state.diff.DiffStops#anchors} gives them.
      */
     static List<List<List<Line>>> blocks(
             List<ReviewThread> threads, int indent, int width, RemarkStyle style, Theme.SpanStyles styles) {

@@ -12,11 +12,11 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Clock;
 import java.util.function.Consumer;
-import net.vanfleteren.jazygit.state.BranchesTab;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.Screen;
-import net.vanfleteren.jazygit.state.prs.PrOverviewMsg;
+import net.vanfleteren.jazygit.state.github.prs.PrOverviewMsg;
+import net.vanfleteren.jazygit.state.preferences.Screen;
+import net.vanfleteren.jazygit.state.view.BranchesTab;
 import net.vanfleteren.jazygit.ui.widgets.Pane;
 
 /**

@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.state;
 
 import io.vavr.control.Option;
 import java.time.Duration;
+import net.vanfleteren.jazygit.state.popup.Popup;
 
 /**
  * Everything that can happen to the {@link Model}, grouped by feature. A message knows how to

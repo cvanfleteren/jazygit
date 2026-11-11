@@ -36,10 +36,10 @@ import net.vanfleteren.jazygit.git.model.Upstream;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Notice;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
-import net.vanfleteren.jazygit.state.prs.PrOverview;
+import net.vanfleteren.jazygit.state.github.prs.PrOverview;
+import net.vanfleteren.jazygit.state.operation.Notice;
 import org.junit.jupiter.api.Test;
 
 /**

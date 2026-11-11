@@ -2,8 +2,8 @@ package net.vanfleteren.jazygit.feature.layout;
 
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.Screen;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.preferences.Screen;
 
 public sealed interface LayoutMsg extends Msg {
 

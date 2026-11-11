@@ -7,13 +7,13 @@ import io.vavr.collection.Stream;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.settings.Settings;
-import net.vanfleteren.jazygit.state.LeftPanes;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Preferences.Dragged;
-import net.vanfleteren.jazygit.state.Preferences.DraggedHeights;
-import net.vanfleteren.jazygit.state.SaveSettings;
-import net.vanfleteren.jazygit.state.Screen;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.preferences.LeftPanes;
+import net.vanfleteren.jazygit.state.preferences.Preferences.Dragged;
+import net.vanfleteren.jazygit.state.preferences.Preferences.DraggedHeights;
+import net.vanfleteren.jazygit.state.preferences.SaveSettings;
+import net.vanfleteren.jazygit.state.preferences.Screen;
 
 /**
  * How wide the left column of each screen is, and how tall its panes are, which is kept for the next session. A width

@@ -4,7 +4,7 @@ import io.vavr.collection.List;
 import net.vanfleteren.jazygit.feature.FeatureAction;
 import net.vanfleteren.jazygit.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.keys.Scopes;
-import net.vanfleteren.jazygit.state.DiffCursorAt;
+import net.vanfleteren.jazygit.state.diff.DiffCursorAt;
 
 /**
  * Showing the new version or the original of the one file of a rich diff in place of its diff (ADR 102), and showing

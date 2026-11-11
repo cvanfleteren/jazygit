@@ -17,8 +17,8 @@ import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.prs.PrOverview;
-import net.vanfleteren.jazygit.state.prs.PrOverviewMsg;
+import net.vanfleteren.jazygit.state.github.prs.PrOverview;
+import net.vanfleteren.jazygit.state.github.prs.PrOverviewMsg;
 import net.vanfleteren.jazygit.ui.widgets.Pane;
 
 /**

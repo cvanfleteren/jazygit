@@ -4,7 +4,7 @@ import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.Notice;
+import net.vanfleteren.jazygit.state.operation.Notice;
 
 /**
  * Asks the terminal to copy {@code text} to the clipboard (ADR 94); {@code copied} tells the user what it was, once it

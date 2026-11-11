@@ -2,7 +2,7 @@ package net.vanfleteren.jazygit.feature.worktree.remove;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.BranchName;
-import net.vanfleteren.jazygit.state.Popup;
+import net.vanfleteren.jazygit.state.popup.Popup;
 
 /**
  * Asking whether to remove the worktree at {@code location}, and whether to delete its branch with it.

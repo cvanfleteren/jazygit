@@ -13,7 +13,7 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.Operation;
+import net.vanfleteren.jazygit.state.operation.Operation;
 
 /**
  * Nukes {@code branch} (ADR 43): removes the worktree at {@code worktree} whatever it has, deletes the branch with

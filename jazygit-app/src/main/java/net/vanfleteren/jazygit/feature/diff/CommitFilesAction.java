@@ -4,7 +4,7 @@ import net.vanfleteren.jazygit.feature.FeatureAction;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.keys.Scopes;
-import net.vanfleteren.jazygit.state.CommitFilesView.Changes;
+import net.vanfleteren.jazygit.state.diff.Changes;
 
 /**
  * Viewing the files the selected commit or stash changed, and going back to the files of the working tree.

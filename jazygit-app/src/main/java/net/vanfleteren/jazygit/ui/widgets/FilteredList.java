@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.ui.widgets;
 
-import net.vanfleteren.jazygit.state.ListCursor;
+import net.vanfleteren.jazygit.state.popup.ListCursor;
 
 /**
  * What a list in a popup shows, as far as its keys need to know: its cursor in the model, the highlighted line, and

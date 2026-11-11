@@ -15,7 +15,9 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
-import net.vanfleteren.jazygit.state.prs.PrOverviewUpdate;
+import net.vanfleteren.jazygit.state.github.*;
+import net.vanfleteren.jazygit.state.github.prs.PrOverviewUpdate;
+import net.vanfleteren.jazygit.state.operation.*;
 
 /**
  * Editing the pull request that is shown (ADR 59): its title, body, base and whether it is a draft, in a popup of its

@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.feature.commit.amend;
 
-import net.vanfleteren.jazygit.state.Popup;
+import net.vanfleteren.jazygit.state.popup.Popup;
 
 /**
  * Asking whether to amend {@code target} with all files, because none is staged.

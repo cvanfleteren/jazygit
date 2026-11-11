@@ -6,7 +6,7 @@ import net.vanfleteren.jazygit.feature.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.AppError.CannotReview.Why;
-import net.vanfleteren.jazygit.state.DiffCursorAt;
+import net.vanfleteren.jazygit.state.diff.DiffCursorAt;
 import net.vanfleteren.jazygit.ui.PopupSlot;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
 import net.vanfleteren.jazygit.ui.widgets.ConfirmDialog;

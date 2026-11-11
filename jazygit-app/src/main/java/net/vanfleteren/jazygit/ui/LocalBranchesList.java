@@ -16,6 +16,8 @@ import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.github.*;
+import net.vanfleteren.jazygit.state.load.*;
 
 /**
  * The local branches, with the name of the current branch in bold and a colour of its own. Space checks out the highlighted branch, P pushes it, R asks

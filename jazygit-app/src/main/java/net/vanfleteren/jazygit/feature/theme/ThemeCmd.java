@@ -6,8 +6,8 @@ import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.Operation;
-import net.vanfleteren.jazygit.state.RepositoryTheme;
+import net.vanfleteren.jazygit.state.operation.Operation;
+import net.vanfleteren.jazygit.state.preferences.RepositoryTheme;
 
 /**
  * Keeps {@code theme} as the repository's own in its git configuration, or takes its own away there for none.

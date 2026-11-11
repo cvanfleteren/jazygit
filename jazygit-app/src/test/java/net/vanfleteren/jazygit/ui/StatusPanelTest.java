@@ -14,11 +14,11 @@ import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.model.SampleData;
-import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Screen;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.load.LoadMsg;
+import net.vanfleteren.jazygit.state.preferences.Screen;
 import org.junit.jupiter.api.Test;
 
 /**

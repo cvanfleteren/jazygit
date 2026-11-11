@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.git.model.SquashMode;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
+import net.vanfleteren.jazygit.state.popup.*;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;

@@ -46,11 +46,11 @@ import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.Notice;
-import net.vanfleteren.jazygit.state.OperationMsg;
-import net.vanfleteren.jazygit.state.PopupMsg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.operation.Notice;
+import net.vanfleteren.jazygit.state.operation.OperationMsg;
+import net.vanfleteren.jazygit.state.popup.PopupMsg;
 import org.junit.jupiter.api.Test;
 
 /**

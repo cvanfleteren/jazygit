@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.feature.github.show;
 
-import net.vanfleteren.jazygit.state.Popup;
+import net.vanfleteren.jazygit.state.popup.Popup;
 
 /**
  * A popup that shows a pull request: the pull request dialog itself, or a popup opened from it, which keeps it to go

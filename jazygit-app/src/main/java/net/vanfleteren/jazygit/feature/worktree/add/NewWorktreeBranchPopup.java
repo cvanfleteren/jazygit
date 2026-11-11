@@ -7,7 +7,7 @@ import net.vanfleteren.jazygit.git.model.NewBranchStart;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Revision;
 import net.vanfleteren.jazygit.git.model.Sha;
-import net.vanfleteren.jazygit.state.TextPopup;
+import net.vanfleteren.jazygit.state.popup.TextPopup;
 
 /**
  * Asking for the name of a new branch to check out in a new worktree, which starts where {@code from} says, shown

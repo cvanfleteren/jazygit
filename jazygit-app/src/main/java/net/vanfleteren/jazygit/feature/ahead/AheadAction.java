@@ -3,7 +3,7 @@ package net.vanfleteren.jazygit.feature.ahead;
 import net.vanfleteren.jazygit.feature.FeatureAction;
 import net.vanfleteren.jazygit.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.keys.Scopes;
-import net.vanfleteren.jazygit.state.AheadMsg;
+import net.vanfleteren.jazygit.state.load.AheadMsg;
 
 /**
  * Listing only the commits of a branch that are not on its base, in the commits pane and in the log of the

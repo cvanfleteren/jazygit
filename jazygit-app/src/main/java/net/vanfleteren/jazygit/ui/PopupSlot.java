@@ -2,7 +2,7 @@ package net.vanfleteren.jazygit.ui;
 
 import java.util.function.Function;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Screen;
+import net.vanfleteren.jazygit.state.preferences.Screen;
 import net.vanfleteren.jazygit.ui.widgets.PopupView;
 
 /**

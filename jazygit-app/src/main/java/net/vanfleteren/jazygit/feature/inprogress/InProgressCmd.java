@@ -8,8 +8,8 @@ import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.InProgressAction;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
-import net.vanfleteren.jazygit.state.GitOperationCmd;
-import net.vanfleteren.jazygit.state.Operation;
+import net.vanfleteren.jazygit.state.operation.GitOperationCmd;
+import net.vanfleteren.jazygit.state.operation.Operation;
 
 /**
  * Does {@code action} to {@code inProgress}, the operation the repository stopped in the middle of.

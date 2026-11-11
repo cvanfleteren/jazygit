@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.feature.commit;
 
 import net.vanfleteren.jazygit.git.model.CommitMessage;
-import net.vanfleteren.jazygit.state.ConfirmablePopup;
+import net.vanfleteren.jazygit.state.popup.ConfirmablePopup;
 
 /**
  * A popup asking for a commit message, which can be edited in the editor. The message lives here, in the model, as

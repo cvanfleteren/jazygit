@@ -3,7 +3,7 @@ package net.vanfleteren.jazygit.feature.commit.reset;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.ResetMode;
 import net.vanfleteren.jazygit.git.model.ResetTarget;
-import net.vanfleteren.jazygit.state.ConfirmablePopup;
+import net.vanfleteren.jazygit.state.popup.ConfirmablePopup;
 
 /**
  * Asking to confirm a hard reset to {@code target}, which discards the uncommitted changes.

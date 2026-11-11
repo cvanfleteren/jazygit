@@ -27,17 +27,17 @@ import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Upstream;
-import net.vanfleteren.jazygit.state.BranchChecksMsg;
-import net.vanfleteren.jazygit.state.CheckTimesCmd;
-import net.vanfleteren.jazygit.state.GitHubChecks;
-import net.vanfleteren.jazygit.state.ListCursor;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.PendingChecks;
-import net.vanfleteren.jazygit.state.PopupMsg;
-import net.vanfleteren.jazygit.state.Reading;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.github.BranchChecksMsg;
+import net.vanfleteren.jazygit.state.github.CheckTimesCmd;
+import net.vanfleteren.jazygit.state.github.GitHubChecks;
+import net.vanfleteren.jazygit.state.github.PendingChecks;
+import net.vanfleteren.jazygit.state.github.Reading;
+import net.vanfleteren.jazygit.state.popup.ListCursor;
+import net.vanfleteren.jazygit.state.popup.PopupMsg;
 import org.junit.jupiter.api.Test;
 
 /**

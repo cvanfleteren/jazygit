@@ -13,8 +13,8 @@ import java.util.stream.Collectors;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.git.model.FileVersion;
 import net.vanfleteren.jazygit.git.model.ParsedDiff;
-import net.vanfleteren.jazygit.state.Anchor;
-import net.vanfleteren.jazygit.state.Expansion;
+import net.vanfleteren.jazygit.state.diff.Anchor;
+import net.vanfleteren.jazygit.state.diff.Expansion;
 import org.junit.jupiter.api.Test;
 
 /**

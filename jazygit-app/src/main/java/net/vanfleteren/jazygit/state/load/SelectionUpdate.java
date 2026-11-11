@@ -1,0 +1,124 @@
+package net.vanfleteren.jazygit.state.load;
+
+import io.vavr.collection.HashMap;
+import io.vavr.control.Option;
+import java.util.function.Function;
+import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.state.Cmd;
+import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.load.SelectionMsg.BranchCommitSelected;
+import net.vanfleteren.jazygit.state.load.SelectionMsg.BranchSelected;
+import net.vanfleteren.jazygit.state.load.SelectionMsg.CommitFilesSelected;
+import net.vanfleteren.jazygit.state.load.SelectionMsg.CommitSelected;
+import net.vanfleteren.jazygit.state.load.SelectionMsg.DivergenceCommitSelected;
+import net.vanfleteren.jazygit.state.load.SelectionMsg.FilesSelected;
+import net.vanfleteren.jazygit.state.load.SelectionMsg.StashSelected;
+import net.vanfleteren.jazygit.state.load.SelectionMsg.UnfetchedSelected;
+import net.vanfleteren.jazygit.state.view.Preview;
+
+/**
+ * The panes' highlights, and the data loaded for them.
+ */
+public final class SelectionUpdate {
+
+    private SelectionUpdate() {}
+
+    public static Next update(Model model, SelectionMsg msg) {
+        return switch (msg) {
+            case BranchSelected(var branch) ->
+                selected(
+                        model,
+                        branch,
+                        model.repoView().branchLog(),
+                        log -> model.mapRepoView(
+                                repoView -> repoView.withBranchLog(log).withUnfetched(Option.none())),
+                        log -> new LoadBranchLog(log, AheadUpdate.of(model, log)));
+            // No log is shown, nor read again as branches move.
+            case UnfetchedSelected(int pullRequest) ->
+                Next.of(model.mapRepoView(
+                        repoView -> repoView.withBranchLog(Option.none()).withUnfetched(Option.of(pullRequest))));
+            case CommitSelected(var sha) ->
+                selected(
+                        model,
+                        sha,
+                        model.repoView().commitDetail(),
+                        detail -> model.mapRepoView(repoView -> repoView.withCommitDetail(detail)),
+                        detail(model, Cmd.Slot.COMMIT_DETAIL));
+            case DivergenceCommitSelected(var sha) ->
+                model.repoView()
+                        .divergence()
+                        .map(view -> selected(
+                                model,
+                                sha,
+                                view.detail(),
+                                detail -> model.mapRepoView(
+                                        repoView -> repoView.withDivergence(Option.of(view.withDetail(detail)))),
+                                detail(model, Cmd.Slot.DIVERGENCE_DETAIL)))
+                        .getOrElse(() -> Next.of(model));
+            case BranchCommitSelected(var sha) ->
+                model.repoView()
+                        .branchCommits()
+                        .map(view -> selected(
+                                model,
+                                sha,
+                                view.detail(),
+                                detail -> model.mapRepoView(
+                                        repoView -> repoView.withBranchCommits(Option.of(view.withDetail(detail)))),
+                                detail(model, Cmd.Slot.BRANCH_COMMITS_DETAIL)))
+                        .getOrElse(() -> Next.of(model));
+            case FilesSelected(var files) ->
+                selected(
+                        model,
+                        files,
+                        model.repoView().fileDiff(),
+                        diff -> model.mapRepoView(repoView -> repoView.withFileDiff(diff)),
+                        entries -> new LoadFileDiff(entries, model.preferences().diffOptions()));
+            case CommitFilesSelected(var files) ->
+                model.repoView()
+                        .commitFiles()
+                        .map(view -> selected(
+                                model,
+                                files,
+                                view.diff(),
+                                diff -> model.mapRepoView(
+                                        repoView -> repoView.withCommitFiles(Option.of(view.withDiff(diff)))),
+                                entries -> LoadCommitFileDiff.of(
+                                        view, entries, model.preferences().diffOptions())))
+                        .getOrElse(() -> Next.of(model));
+            case StashSelected(var sha) ->
+                selected(
+                        model,
+                        sha,
+                        model.repoView().stashDetail(),
+                        detail -> model.mapRepoView(repoView -> repoView.withStashDetail(detail)),
+                        stash -> new LoadStashDetail(stash, model.preferences().diffOptions()));
+        };
+    }
+
+    private static Function<Sha, Load> detail(Model model, Cmd.Slot slot) {
+        return sha -> new LoadCommitDetail(sha, model.preferences().diffOptions(), slot);
+    }
+
+    /**
+     * Loads the preview of {@code key}, unless it is the one already shown. Another item highlighted drops the versions
+     * of the files shown in place of their diffs (ADR 102): coming back to one shows its diff.
+     *
+     * @param shown the preview that is shown
+     * @param with  the model with another preview shown
+     * @param load  the load of the preview of a key
+     */
+    private static <K, V> Next selected(
+            Model model,
+            K key,
+            Option<Preview<K, V>> shown,
+            Function<Option<Preview<K, V>>, Model> with,
+            Function<K, Load> load) {
+        return shown.exists(preview -> preview.key().equals(key))
+                ? Next.of(model)
+                : Next.of(
+                        with.apply(Option.of(Preview.loading(key, shown)))
+                                .mapRepoView(view -> view.withVersions(HashMap.empty())),
+                        load.apply(key));
+    }
+}

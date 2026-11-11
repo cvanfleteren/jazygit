@@ -5,11 +5,11 @@ import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.image.Picture;
-import net.vanfleteren.jazygit.state.CommitFilesView;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.diff.Changes;
 
 public sealed interface CommitFilesMsg extends Msg {
 
@@ -21,7 +21,7 @@ public sealed interface CommitFilesMsg extends Msg {
     /**
      * The user asked for the files {@code of} changed, from the pane {@code pane}.
      */
-    record Opened(CommitFilesView.Changes of, String pane) implements CommitFilesMsg {}
+    record Opened(Changes of, String pane) implements CommitFilesMsg {}
 
     /**
      * The user closed the files of the commit or the stash, to see the files of the working tree again.

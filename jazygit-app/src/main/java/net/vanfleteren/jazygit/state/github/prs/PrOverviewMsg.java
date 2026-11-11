@@ -1,0 +1,86 @@
+package net.vanfleteren.jazygit.state.github.prs;
+
+import io.vavr.control.Option;
+import java.time.Duration;
+import net.vanfleteren.jazygit.gh.model.MyPullRequests;
+import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
+import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
+import net.vanfleteren.jazygit.gh.model.RepositoryPullRequests;
+import net.vanfleteren.jazygit.settings.UnseenPullRequests;
+import net.vanfleteren.jazygit.state.Failure;
+import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.preferences.Screen;
+
+/**
+ * What happens on the pull requests screen.
+ */
+public sealed interface PrOverviewMsg extends Msg {
+
+    @Override
+    default Update.Next apply(Model model) {
+        return PrOverviewUpdate.update(model, this);
+    }
+
+    /**
+     * The user asked to show the other screen.
+     */
+    record Toggled() implements PrOverviewMsg {}
+
+    /**
+     * The user asked to show {@code screen}, by clicking its name.
+     */
+    record Chosen(Screen screen) implements PrOverviewMsg {}
+
+    /**
+     * Periodic prompt to read the pull requests again: all of them while they are shown, else the ones of the
+     * repository, for the new ones (ADR 29).
+     */
+    record Tick() implements PrOverviewMsg, Msg.Periodic {
+
+        // The pull requests every 5 minutes rather than every minute.
+        public static final Duration WHILE_AWAY = Duration.ofMinutes(5);
+
+        @Override
+        public Duration whileAway() {
+            return WHILE_AWAY;
+        }
+    }
+
+    /**
+     * The user asked to read the pull requests again.
+     */
+    record Refresh() implements PrOverviewMsg {}
+
+    /**
+     * The pull requests of the repository were read; the model's clock tells when.
+     *
+     * @param kept the unseen pull requests that were kept for the repository, if any
+     */
+    record RepositoryLoaded(RepositoryPullRequests pullRequests, Option<UnseenPullRequests> kept)
+            implements PrOverviewMsg {}
+
+    record RepositoryLoadFailed(Failure failure) implements PrOverviewMsg {}
+
+    /**
+     * The pull requests of the user were read; the model's clock tells when.
+     */
+    record MineLoaded(MyPullRequests pullRequests) implements PrOverviewMsg {}
+
+    record MineLoadFailed(Failure failure) implements PrOverviewMsg {}
+
+    /**
+     * The user highlighted {@code pullRequest}.
+     */
+    record Highlighted(PullRequestSummary pullRequest) implements PrOverviewMsg {}
+
+    record PreviewLoaded(PullRequestSummary key, PullRequestPreview preview) implements PrOverviewMsg {}
+
+    record PreviewLoadFailed(PullRequestSummary key, Failure failure) implements PrOverviewMsg {}
+
+    /**
+     * The unseen pull requests were kept, or could not be, which is not worth telling.
+     */
+    record UnseenKept() implements PrOverviewMsg {}
+}

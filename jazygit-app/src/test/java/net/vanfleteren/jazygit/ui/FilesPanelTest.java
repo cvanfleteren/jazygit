@@ -23,15 +23,15 @@ import net.vanfleteren.jazygit.git.Status;
 import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.git.StubStatus;
 import net.vanfleteren.jazygit.git.model.*;
-import net.vanfleteren.jazygit.state.CommitFilesView;
-import net.vanfleteren.jazygit.state.FileFilter;
-import net.vanfleteren.jazygit.state.FileFilterMsg;
-import net.vanfleteren.jazygit.state.LoadAhead;
-import net.vanfleteren.jazygit.state.LoadMsg;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.diff.BaseTip;
+import net.vanfleteren.jazygit.state.diff.Changes;
+import net.vanfleteren.jazygit.state.load.LoadMsg;
+import net.vanfleteren.jazygit.state.view.FileFilter;
+import net.vanfleteren.jazygit.state.view.FileFilterMsg;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -39,7 +39,7 @@ import org.junit.jupiter.api.Test;
  */
 class FilesPanelTest {
 
-    private static final CommitFilesView.Changes COMMIT = new CommitFilesView.Changes.OfCommit(new Sha("aaaa"));
+    private static final Changes COMMIT = new Changes.OfCommit(new Sha("aaaa"));
     private static final String MODEL = "core/src/main/java/model";
     private static final List<CommitFile> MODEL_AND_TEST = List.of(
             new CommitFile(MODEL + "/WordDiff.java", ChangeType.MODIFIED),
@@ -345,10 +345,9 @@ class FilesPanelTest {
 
     @Test
     void theFilesOfABranchNameTheBaseTheyAreComparedWith() throws Exception {
-        CommitFilesView.Changes of = new CommitFilesView.Changes.OfBranch(
+        Changes of = new Changes.OfBranch(
                 new BranchName("feature"),
-                new LoadAhead.Base(
-                        new BranchRef.Remote(new RemoteBranch("origin", new BranchName("main"))), new Sha("bbbb")),
+                new BaseTip(new BranchRef.Remote(new RemoteBranch("origin", new BranchName("main"))), new Sha("bbbb")),
                 new Sha("aaaa"));
         Model open = Update.update(
                         Update.update(TestModels.loaded(), new CommitFilesMsg.Opened(of, BranchesPanel.ID))
@@ -367,7 +366,7 @@ class FilesPanelTest {
     @Test
     void theFilesOfACommitShowInPlaceOfThoseOfTheWorkingTreeUntilTheyClose() throws Exception {
         Model model = TestModels.loaded(fixed(List.of(Fixtures.fileEntry("work.txt", ChangeType.MODIFIED))));
-        CommitFilesView.Changes of = new CommitFilesView.Changes.OfCommit(new Sha("aaaa"));
+        Changes of = new Changes.OfCommit(new Sha("aaaa"));
         Model open = Update.update(
                         Update.update(model, new CommitFilesMsg.Opened(of, CommitsPanel.ID))
                                 .model(),
@@ -394,7 +393,7 @@ class FilesPanelTest {
 
     @Test
     void theFilesOfAPullRequestCountTheirUnresolvedRemarksByEitherPathOfARename() throws Exception {
-        CommitFilesView.Changes of = new CommitFilesView.Changes.OfPullRequest(
+        Changes of = new Changes.OfPullRequest(
                 new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
         Model open = Update.update(
                         Update.update(TestModels.loaded(), new CommitFilesMsg.Opened(of, BranchesPanel.ID))
@@ -435,7 +434,7 @@ class FilesPanelTest {
 
     @Test
     void theFilesOfAPullRequestCanBeListedOnlyWhenTheyHaveRemarks() throws Exception {
-        CommitFilesView.Changes of = new CommitFilesView.Changes.OfPullRequest(
+        Changes of = new Changes.OfPullRequest(
                 new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
         Model open = Update.update(
                         Update.update(TestModels.loaded(), new CommitFilesMsg.Opened(of, BranchesPanel.ID))
@@ -502,7 +501,7 @@ class FilesPanelTest {
 
     @Test
     void aHighlightedFileLeftOutOfTheFilesWithRemarksMovesTheHighlightToTheNearestRowListed() throws Exception {
-        CommitFilesView.Changes of = new CommitFilesView.Changes.OfPullRequest(
+        Changes of = new Changes.OfPullRequest(
                 new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
         Model opened = Update.update(TestModels.loaded(), new CommitFilesMsg.Opened(of, BranchesPanel.ID))
                 .model();

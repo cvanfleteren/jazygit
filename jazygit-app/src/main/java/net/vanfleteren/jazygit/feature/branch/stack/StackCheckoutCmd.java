@@ -11,10 +11,10 @@ import net.vanfleteren.jazygit.git.model.RemoteName;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
-import net.vanfleteren.jazygit.state.GitOperationCmd;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.Operation;
-import net.vanfleteren.jazygit.state.OperationCmd;
+import net.vanfleteren.jazygit.state.operation.GitOperationCmd;
+import net.vanfleteren.jazygit.state.operation.Operation;
+import net.vanfleteren.jazygit.state.operation.OperationCmd;
 
 /**
  * Checking out a stack on GitHub (ADR 99): fetching its branches, to say what happens to each, then making and

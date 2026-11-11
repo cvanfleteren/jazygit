@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.Update.Launch;
 import net.vanfleteren.jazygit.state.Update.Step;
+import net.vanfleteren.jazygit.state.preferences.RepositoryTheme;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -115,11 +116,11 @@ public final class Program {
         return program;
     }
 
-    static Msg perform(Env env, Cmd cmd) {
+    public static Msg perform(Env env, Cmd cmd) {
         return perform(env, cmd, bug -> {});
     }
 
-    static Msg perform(Env env, Cmd cmd, Consumer<Throwable> bugs) {
+    public static Msg perform(Env env, Cmd cmd, Consumer<Throwable> bugs) {
         try {
             return cmd.run(env);
         } catch (Throwable e) {

@@ -8,8 +8,8 @@ import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.state.Anchor;
-import net.vanfleteren.jazygit.state.DiffStops;
+import net.vanfleteren.jazygit.state.diff.Anchor;
+import net.vanfleteren.jazygit.state.diff.DiffStops;
 
 /**
  * The cursor of a rich diff (ADR 60): which of its stops it is on, and where the view is scrolled to, as the keys and

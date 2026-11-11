@@ -47,12 +47,12 @@ import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Reading;
 import net.vanfleteren.jazygit.state.Repositories;
 import net.vanfleteren.jazygit.state.Terminal;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.github.Reading;
 import org.junit.jupiter.api.Test;
 
 /**

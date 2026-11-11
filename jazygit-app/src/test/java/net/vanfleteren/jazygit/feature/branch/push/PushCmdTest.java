@@ -17,7 +17,7 @@ import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.OperationMsg;
+import net.vanfleteren.jazygit.state.operation.OperationMsg;
 import org.junit.jupiter.api.Test;
 
 class PushCmdTest {
