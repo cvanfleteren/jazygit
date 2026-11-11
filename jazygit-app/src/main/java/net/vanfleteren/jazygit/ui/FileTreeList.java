@@ -47,7 +47,11 @@ final class FileTreeList<T extends Pathed> {
     private final Function<FileTree.File<T>, StyledElement<?>> drawFile;
     private final Theme.Highlights highlights;
     private final ToIntFunction<List<TreeNode<FileTree<T>>>> start;
+    private final Function<List<T>, Set<String>> startCollapsed;
     private List<TreeNode<FileTree<T>>> roots = List.of();
+    // Whether the files have not been read since they started afresh, so the directories to start collapsed are
+    // still to collapse.
+    private boolean fresh;
     // What the files are of, and the files, that the tree was built for.
     private Option<Object> shownOf = Option.none();
     private Option<Loadable<List<T>>> shown = Option.none();
@@ -75,10 +79,25 @@ final class FileTreeList<T extends Pathed> {
             Function<FileTree.File<T>, StyledElement<?>> drawFile,
             Theme.Highlights highlights,
             ToIntFunction<List<TreeNode<FileTree<T>>>> start) {
+        this(id, label, drawFile, highlights, start, files -> HashSet.empty());
+    }
+
+    /**
+     * @param startCollapsed the paths of the directories to collapse once files start afresh and are read: a tree of
+     *                       all files of the working tree opens only on its changes (ADR 108)
+     */
+    FileTreeList(
+            String id,
+            Function<FileTree.File<T>, String> label,
+            Function<FileTree.File<T>, StyledElement<?>> drawFile,
+            Theme.Highlights highlights,
+            ToIntFunction<List<TreeNode<FileTree<T>>>> start,
+            Function<List<T>, Set<String>> startCollapsed) {
         this.label = label;
         this.drawFile = drawFile;
         this.highlights = highlights;
         this.start = start;
+        this.startCollapsed = startCollapsed;
         tree = Toolkit.<FileTree<T>>tree()
                 .id(id)
                 .focusable()
@@ -132,9 +151,15 @@ final class FileTreeList<T extends Pathed> {
             this.filter = filter;
             collapsedUnfiltered = HashSet.empty();
             roots = List.of();
-            rebuild(files, HashSet.empty());
+            fresh = true;
+            rebuild(files, started(files));
             tree.selected(0);
             unread = true;
+        } else if (fresh && files instanceof Loadable.Loaded<List<T>> && !shown.contains(files)) {
+            shown = Option.of(files);
+            this.placeholder = placeholder;
+            this.filter = filter;
+            rebuild(files, started(files));
         } else if (!this.filter.equals(filter)) {
             Option<String> before = this.filter;
             shown = Option.of(files);
@@ -154,6 +179,20 @@ final class FileTreeList<T extends Pathed> {
             tree.selected(start.applyAsInt(visible(roots)));
         }
         return tree;
+    }
+
+    /**
+     * The directories to collapse as {@code files} start afresh: those {@link #startCollapsed} says once they are read,
+     * which ends their start. While a filter is on, all are open, and those are collapsed once it is cleared.
+     */
+    private Set<String> started(Loadable<List<T>> files) {
+        Set<String> collapsed = files.toOption().map(startCollapsed).getOrElse(HashSet.empty());
+        fresh = !(files instanceof Loadable.Loaded<List<T>>);
+        if (filter.isDefined()) {
+            collapsedUnfiltered = collapsed;
+            return HashSet.empty();
+        }
+        return collapsed;
     }
 
     /**

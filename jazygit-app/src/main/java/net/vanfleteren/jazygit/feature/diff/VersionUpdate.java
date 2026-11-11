@@ -43,7 +43,9 @@ public final class VersionUpdate {
      */
     private static Next shown(Model model, DiffCursorAt at, boolean toggle) {
         ScrolledContent content = at.at().content();
+        // A file without changes has one version only, shown already: it can be rendered, not cycled (ADR 108).
         return one(content)
+                .filter(file -> toggle || !(content instanceof ScrolledContent.Unchanged))
                 .filter(file -> !toggle || Rendered.of(file.file().path()).isDefined())
                 .flatMap(file -> shown(model, at, content, file, toggle))
                 .getOrElse(() -> Next.of(model));
@@ -65,7 +67,12 @@ public final class VersionUpdate {
                                 model.preferences().diffOptions()))
                 : before.map(kept -> ReadVersion.of(at.area(), kept.read()));
         return read.map(how -> {
-            Option<Loadable<DiffText>> reused = reads ? expanded(model, at.area(), content, path) : Option.none();
+            // A file without changes is shown whole already, read from disk.
+            Option<Loadable<DiffText>> reused = reads
+                    ? content instanceof ScrolledContent.Unchanged(var onDisk, DiffText asDiff)
+                            ? Option.of(new Loadable.Loaded<>(asDiff))
+                            : expanded(model, at.area(), content, path)
+                    : Option.none();
             Loadable<DiffText> whole = reused.orElse(
                             () -> before.filter(ignored -> !reads).map(Version::whole))
                     .getOrElse(Loadable::loading);

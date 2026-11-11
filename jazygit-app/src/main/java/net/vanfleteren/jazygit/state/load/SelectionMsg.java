@@ -51,6 +51,18 @@ public sealed interface SelectionMsg extends Msg {
     record FilesSelected(List<FileEntry> files) implements SelectionMsg {}
 
     /**
+     * The user highlighted the file at {@code path} in the files tree while it lists all files, a file without
+     * changes (ADR 108).
+     */
+    record UnchangedFileSelected(String path) implements SelectionMsg {}
+
+    /**
+     * The user highlighted the directory at {@code path}, the root when it is empty, in the files tree while it lists
+     * all files, with no changes under it; it holds {@code files} files shown (ADR 108).
+     */
+    record UnchangedDirectorySelected(String path, int files) implements SelectionMsg {}
+
+    /**
      * The user highlighted a node of the tree of the files of a commit or a stash; {@code files} are the files
      * directly under it.
      */

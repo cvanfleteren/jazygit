@@ -323,5 +323,37 @@ public sealed interface LoadMsg extends Msg {
         }
     }
 
+    /**
+     * The paths of all files of the working tree (ADR 108).
+     */
+    record AllFilesLoaded(List<String> paths) implements Read<List<String>> {
+
+        @Override
+        public List<String> value() {
+            return paths;
+        }
+
+        @Override
+        public LoadAllFiles cmd() {
+            return new LoadAllFiles();
+        }
+    }
+
+    /**
+     * What the file at {@code path} in the working tree holds on disk (ADR 108).
+     */
+    record FileContentRead(String path, FileContent content) implements Read<FileContent> {
+
+        @Override
+        public FileContent value() {
+            return content;
+        }
+
+        @Override
+        public ReadFileContent cmd() {
+            return new ReadFileContent(path);
+        }
+    }
+
     record Failed(Load cmd, Failure failure) implements LoadMsg {}
 }

@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.feature.discard.DiscardMsg.Scope;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.DiscardPlan;
 import net.vanfleteren.jazygit.git.model.FileEntry;
+import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -28,8 +29,16 @@ public final class DiscardUpdate {
         };
     }
 
+    /**
+     * Asks to discard the changes of {@code files}: of those that have changes, as the files without changes listed
+     * with all files of the working tree have nothing to discard, and the dialog names what it touches. When none of
+     * them has changes, that is said (ADR 108).
+     */
     private static Next requested(Model model, List<FileEntry> files) {
-        return Update.ask(model, Option.when(!files.isEmpty(), () -> new DiscardPopup(files)));
+        List<FileEntry> changed = files.filter(FileEntry::changed);
+        return !files.isEmpty() && changed.isEmpty()
+                ? Next.of(model.fail(AppError.Unchanged.of(files, Option.none())))
+                : Update.ask(model, Option.when(!changed.isEmpty(), () -> new DiscardPopup(changed)));
     }
 
     private static Next chosen(Model model, Scope scope) {

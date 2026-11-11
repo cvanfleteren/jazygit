@@ -36,11 +36,20 @@ public class FilesPanel {
     public static final String ID = Scopes.FILES.id();
 
     private final FileTreeList<FileEntry> statusTree;
+    // All files of the working tree, kept apart from its changed files, so that each keeps its highlight and the
+    // directories collapsed in it as the files pane switches between them (ADR 108).
+    private final FileTreeList<FileEntry> allTree;
     private final FileTreeList<CommitFile> commitTree;
     private final Keymap keymap = Keymap.standard();
     private final FilterLine filterLine = new FilterLine();
     // The trees' key handlers also see keys typed in other panes, so they must know whether the pane has focus.
     private boolean focused;
+    // All files of the working tree, as last merged, with the status and the paths they were merged from: merging
+    // them again on every frame would cost tens of milliseconds in a repository of 100 000 files (ADR 108).
+    private Option<Merged> merged = Option.none();
+    // How many files the directory without changes highlighted last holds, the node itself the key: counting them on
+    // every frame would walk all files under the root.
+    private Option<Counted> counted = Option.none();
     // The filter of the tree shown, as last rendered (ADR 105).
     private Option<FileFilter> filter = Option.none();
     // The review threads of the pull request whose files are listed, by their path, as last rendered (ADR 55).
@@ -64,19 +73,27 @@ public class FilesPanel {
                 FilesPanel::drawEntry,
                 highlights,
                 FileTreeList::first);
+        allTree = new FileTreeList<>(
+                ID,
+                file -> file.entry().type().marker() + " " + name(file),
+                FilesPanel::drawEntry,
+                highlights,
+                FileTreeList::first,
+                FilesPanel::unchangedDirectories);
         commitTree = new FileTreeList<>(
                 ID,
                 file -> file.entry().type().marker() + " " + name(file),
                 this::drawCommitFile,
                 highlights,
                 FileTreeList::firstWithDiff);
-        statusTree.onKey(PaneKeys.whileFocused(
-                () -> focused,
-                event -> filtered(event, dispatch)
-                        .orElse(() -> opensDiff(event, statusTree)
-                                ? Option.of(openDiff)
-                                : PaneKeys.sending(
-                                        keymap.handle(Scopes.FILES, event, statusTree.selected()), dispatch))));
+        List.of(statusTree, allTree)
+                .forEach(tree -> tree.onKey(PaneKeys.whileFocused(
+                        () -> focused,
+                        event -> filtered(event, dispatch)
+                                .orElse(() -> opensDiff(event, tree)
+                                        ? Option.of(openDiff)
+                                        : PaneKeys.sending(
+                                                keymap.handle(Scopes.FILES, event, tree.selected()), dispatch)))));
         commitTree.onKey(PaneKeys.whileFocused(
                 () -> focused,
                 event -> filtered(event, dispatch)
@@ -141,6 +158,10 @@ public class FilesPanel {
      */
     private static StyledElement<?> drawEntry(FileTree.File<FileEntry> file) {
         FileEntry entry = file.entry();
+        // A file without changes, among all files, has no marker: its name lines up with those that have one.
+        if (!entry.changed()) {
+            return Toolkit.text("   " + file.name());
+        }
         if (entry.type() == ChangeType.UNTRACKED) {
             return Toolkit.row(Toolkit.text("??").addClass(Theme.Classes.UNSTAGED), Toolkit.text(" " + file.name()));
         }
@@ -256,10 +277,101 @@ public class FilesPanel {
                         commitTree.selected().map(FileTree::directEntries),
                         view.diff(),
                         SelectionMsg.CommitFilesSelected::new))
-                .getOrElse(() -> PaneKeys.selectionChange(
-                        statusTree.selected().map(FileTree::directEntries),
-                        model.repoView().fileDiff(),
-                        SelectionMsg.FilesSelected::new));
+                .getOrElse(() -> workingSelectionChange(model));
+    }
+
+    /**
+     * The message to send when the node highlighted in the tree of the working tree is not the one the content panel
+     * shows: its diff, or, among all files, the file or the directory without changes (ADR 108).
+     */
+    private Option<Msg> workingSelectionChange(Model model) {
+        RepoView view = model.repoView();
+        Option<FileTree<FileEntry>> selected = workingTree(view).selected();
+        if (selected.exists(node -> view.allFiles() && !hasChanges(node))) {
+            FileTree<FileEntry> node = selected.get();
+            return Option.<Msg>of(
+                            node instanceof FileTree.File<FileEntry> file
+                                    ? new SelectionMsg.UnchangedFileSelected(file.path())
+                                    : new SelectionMsg.UnchangedDirectorySelected(node.path(), count(node)))
+                    .filter(msg -> !shows(view.unchanged(), msg));
+        }
+        Option<List<FileEntry>> entries =
+                selected.map(node -> node.directEntries().filter(FileEntry::changed));
+        // Coming from a node without changes, its diff shows again even when it is the one read last.
+        return view.unchanged().isDefined()
+                ? entries.map(SelectionMsg.FilesSelected::new)
+                : PaneKeys.selectionChange(entries, view.fileDiff(), SelectionMsg.FilesSelected::new);
+    }
+
+    /**
+     * Whether {@code shown} is what {@code msg} asks to show.
+     */
+    private static boolean shows(Option<UnchangedNode> shown, Msg msg) {
+        return shown.exists(node -> switch (node) {
+            case UnchangedNode.File(var content) ->
+                msg instanceof SelectionMsg.UnchangedFileSelected(String path)
+                        && content.key().equals(path);
+            case UnchangedNode.Directory(String path, int files) ->
+                msg.equals(new SelectionMsg.UnchangedDirectorySelected(path, files));
+        });
+    }
+
+    /**
+     * Whether a file under {@code node}, or it itself, has changes; it stops at the first one.
+     */
+    static boolean hasChanges(FileTree<FileEntry> node) {
+        return switch (node) {
+            case FileTree.File<FileEntry> file -> file.entry().changed();
+            case FileTree.Dir<FileEntry> dir -> dir.children().exists(FilesPanel::hasChanges);
+        };
+    }
+
+    /**
+     * How many files are under {@code node}, counted once for each node.
+     */
+    private int count(FileTree<FileEntry> node) {
+        Counted known = counted.filter(last -> last.node() == node)
+                .getOrElse(() -> new Counted(node, node.entries().size()));
+        counted = Option.of(known);
+        return known.files();
+    }
+
+    /**
+     * The paths of the directories of {@code files} with no changes under them, which a tree of all files of the
+     * working tree starts collapsed: it opens on its changes (ADR 108).
+     */
+    static io.vavr.collection.Set<String> unchangedDirectories(List<FileEntry> files) {
+        return directories(FileTree.of(files))
+                .filter(dir -> !hasChanges(dir))
+                .map(FileTree.Dir::path)
+                .toSet();
+    }
+
+    private static List<FileTree.Dir<FileEntry>> directories(List<FileTree<FileEntry>> nodes) {
+        return nodes.flatMap(node -> node instanceof FileTree.Dir<FileEntry> dir
+                ? directories(dir.children()).prepend(dir)
+                : List.empty());
+    }
+
+    /**
+     * The tree of the working tree shown: of all its files, or of its changed ones (ADR 108).
+     */
+    private FileTreeList<FileEntry> workingTree(RepoView view) {
+        return view.allFiles() ? allTree : statusTree;
+    }
+
+    /**
+     * The files of the working tree listed: all of them merged with its changed ones only when either changed, the
+     * last merge otherwise.
+     */
+    private Loadable<List<FileEntry>> workingFiles(Repo repo, boolean all) {
+        if (!all) {
+            return repo.workingFiles(false);
+        }
+        Merged now = merged.filter(last -> last.status() == repo.status() && last.paths() == repo.allFiles())
+                .getOrElse(() -> new Merged(repo.status(), repo.allFiles(), repo.workingFiles(true)));
+        merged = Option.of(now);
+        return now.files();
     }
 
     /**
@@ -300,13 +412,17 @@ public class FilesPanel {
                         commitTree.selectedRow(),
                         commitTree.count(view.listedFiles())))
                 .getOrElse(() -> {
-                    Loadable<List<FileEntry>> files = model.repo().status().map(RepoStatus::files);
+                    boolean all = model.repoView().allFiles();
+                    Loadable<List<FileEntry>> files = workingFiles(model.repo(), all);
+                    FileTreeList<FileEntry> tree = workingTree(model.repoView());
                     return Pane.bordered(
-                            Messages.get("panel.files.title") + filteredTitle(),
-                            withLine(statusTree.render(ID, files, active, FileTreeList.Placeholder.DEFAULT, shown)),
+                            Messages.get("panel.files.title")
+                                    + (all ? Messages.get("panel.files.all") : "")
+                                    + filteredTitle(),
+                            withLine(tree.render(ID, files, active, FileTreeList.Placeholder.DEFAULT, shown)),
                             focused,
-                            statusTree.selectedRow(),
-                            statusTree.count(files));
+                            tree.selectedRow(),
+                            tree.count(files));
                 });
     }
 
@@ -349,9 +465,26 @@ public class FilesPanel {
     }
 
     /**
+     * The tree widget of all files of the working tree, which holds their selection and expansion state (ADR 108).
+     */
+    TreeElement<FileTree<FileEntry>> allTree() {
+        return allTree.tree();
+    }
+
+    /**
      * The tree widget of the files of a commit, which holds their selection and expansion state.
      */
     TreeElement<FileTree<CommitFile>> commitTree() {
         return commitTree.tree();
     }
+
+    /**
+     * All files of the working tree, merged from {@code status} and {@code paths}.
+     */
+    private record Merged(Loadable<RepoStatus> status, Loadable<List<String>> paths, Loadable<List<FileEntry>> files) {}
+
+    /**
+     * How many files are under {@code node}.
+     */
+    private record Counted(FileTree<FileEntry> node, int files) {}
 }

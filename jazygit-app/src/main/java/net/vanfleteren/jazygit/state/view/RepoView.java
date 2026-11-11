@@ -54,6 +54,10 @@ import net.vanfleteren.jazygit.state.diff.Version;
  *                     id of the area (ADR 77)
  * @param versions     the version of its one file each area of the content panel shows in place of its diff, by
  *                     the id of the area, while another item was not highlighted (ADR 102)
+ * @param allFiles     whether the files pane lists all files of the working tree, not only those with changes
+ *                     (ADR 108); a reload then lists them too
+ * @param unchanged    the node highlighted in the files pane while it lists all files, when nothing under it has
+ *                     changed: the content panel shows it in place of a diff (ADR 108)
  */
 @With
 public record RepoView(
@@ -76,7 +80,9 @@ public record RepoView(
         Set<Integer> closedStacks,
         boolean unstacked,
         Map<AreaId, Expansion> expanded,
-        Map<AreaId, Version> versions) {
+        Map<AreaId, Version> versions,
+        boolean allFiles,
+        Option<UnchangedNode> unchanged) {
 
     public static final RepoView INITIAL = new RepoView(
             BranchesTab.LOCAL,
@@ -98,7 +104,9 @@ public record RepoView(
             HashSet.empty(),
             false,
             HashMap.empty(),
-            HashMap.empty());
+            HashMap.empty(),
+            false,
+            Option.none());
 
     /**
      * The version kept for the area with the id {@code area} while it shows {@code content}, if it holds for that.

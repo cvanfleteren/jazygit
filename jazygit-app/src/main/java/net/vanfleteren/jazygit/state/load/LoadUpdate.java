@@ -219,8 +219,22 @@ public final class LoadUpdate {
                         .exists(status -> previous.headCommit().equals(status.headCommit())));
         // Commit loads are not deduplicated: one queued after HEAD moved must still run, even if
         // an earlier one is in progress.
-        List<Cmd> cmds = headMoved ? List.of(new LoadCommits(AheadUpdate.ofHead(next))) : List.empty();
+        List<Cmd> cmds = (headMoved ? List.<Cmd>of(new LoadCommits(AheadUpdate.ofHead(next))) : List.<Cmd>empty())
+                .appendAll(allFilesLoad(before, next));
         return Update.reloadDiff(next, cmds, headMoved);
+    }
+
+    /**
+     * Reads all files of the working tree again while the files pane lists them all, once the status changed: a file
+     * is added, deleted, renamed or committed only with a change to the status, so a status like the one before needs
+     * no read of them (ADR 108).
+     */
+    private static List<Cmd> allFilesLoad(Model before, Model next) {
+        return Option.<Cmd>of(new LoadAllFiles())
+                .filter(load -> next.repoView().allFiles()
+                        && (next.repo().allFiles().toOption().isEmpty()
+                                || !before.repo().status().equals(next.repo().status())))
+                .toList();
     }
 
     /**

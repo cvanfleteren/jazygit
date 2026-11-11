@@ -1,10 +1,10 @@
 package net.vanfleteren.jazygit.git;
 
+import io.vavr.CheckedFunction0;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
-import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -124,22 +124,18 @@ final class CliWorkingFiles {
         return DiffText.of(header + hunk, truncated);
     }
 
-    private static <T extends FileContent> Either<GitError, FileContent> read(String path, Reading<T> reading) {
-        return Try.of(reading::read)
+    /**
+     * What {@code reading} the file at {@code path} from disk gives, or why it could not.
+     */
+    private static <T extends FileContent> Either<GitError, FileContent> read(
+            String path, CheckedFunction0<T> reading) {
+        return Try.of(reading)
                 .toEither()
                 .<FileContent>map(content -> content)
                 .mapLeft(failure -> new GitError.Unreadable(
                         path,
                         Option.of(failure.getMessage())
                                 .getOrElse(failure.getClass().getSimpleName())));
-    }
-
-    /**
-     * Reading from disk, which can fail.
-     */
-    @FunctionalInterface
-    private interface Reading<T> {
-        T read() throws IOException;
     }
 
     /**

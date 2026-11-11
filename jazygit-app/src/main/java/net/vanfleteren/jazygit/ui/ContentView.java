@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.Divergence;
+import net.vanfleteren.jazygit.git.model.FileContent;
 import net.vanfleteren.jazygit.git.model.FileVersion;
 import net.vanfleteren.jazygit.git.model.ParsedDiff;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -27,6 +28,7 @@ import net.vanfleteren.jazygit.git.model.Stash;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.image.Picture;
 import net.vanfleteren.jazygit.settings.DiffLook;
+import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
@@ -35,11 +37,13 @@ import net.vanfleteren.jazygit.state.diff.Collapsed;
 import net.vanfleteren.jazygit.state.diff.Expansion;
 import net.vanfleteren.jazygit.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.state.diff.Version;
+import net.vanfleteren.jazygit.state.diff.WholeFile;
 import net.vanfleteren.jazygit.state.load.AheadUpdate;
 import net.vanfleteren.jazygit.state.preferences.Screen;
 import net.vanfleteren.jazygit.state.view.BranchesTab;
 import net.vanfleteren.jazygit.state.view.CommitFilesView;
 import net.vanfleteren.jazygit.state.view.Preview;
+import net.vanfleteren.jazygit.state.view.UnchangedNode;
 
 /**
  * What the content panel shows in a model, apart from how it is drawn: it mirrors whichever left pane is in use,
@@ -73,7 +77,10 @@ final class ContentView {
                 model.repoView()
                         .commitFiles()
                         .map(view -> commitFiles(model, view))
-                        .getOrElse(() -> fileDiffs(model));
+                        .getOrElse(() -> model.repoView()
+                                .unchanged()
+                                .map(node -> unchanged(model, node))
+                                .getOrElse(() -> fileDiffs(model)));
             case BRANCHES -> branches(model);
             case COMMITS ->
                 commit(
@@ -100,7 +107,9 @@ final class ContentView {
 
     private static Shown.Area expanded(Model model, Shown.Area area) {
         Option<Expansion> expansion = model.repoView().expansion(area.area().id(), area.content());
-        Option<Version> version = model.repoView().version(area.area().id(), area.content());
+        Option<Version> version = model.repoView()
+                .version(area.area().id(), area.content())
+                .orElse(() -> asVersion(model, area.content()));
         DiffContext context = model.preferences().context();
         Body body = switch (area.body()) {
             case Body.Diff(ShownDiff diff, DiffLook look, var remarks) ->
@@ -113,11 +122,81 @@ final class ContentView {
                         stash, changes.expanded(expansion, context).versioned(version), look);
             case Body other -> other;
         };
-        return new Shown.Area(
-                area.area(),
-                version.map(shown -> versioned(area.title(), shown)).getOrElse(area.title()),
-                area.content(),
-                body);
+        // A file without changes has one version: the title says only whether it is rendered (ADR 108).
+        String title = area.content() instanceof ScrolledContent.Unchanged
+                ? version.exists(Version::rendered) ? Messages.get("panel.file.rendered", area.title()) : area.title()
+                : version.map(shown -> versioned(area.title(), shown)).getOrElse(area.title());
+        return new Shown.Area(area.area(), title, area.content(), body);
+    }
+
+    /**
+     * The version a file without changes shows of itself, as source, when none was asked for: it is read whole, so
+     * it shows with no line left out, and as Ctrl+T renders it (ADR 108).
+     */
+    private static Option<Version> asVersion(Model model, ScrolledContent content) {
+        return content instanceof ScrolledContent.Unchanged(String path, DiffText asDiff)
+                ? Option.of(new Version(
+                        content,
+                        path,
+                        Option.of(FileVersion.NEW),
+                        new WholeFile(
+                                content,
+                                new WholeFile.Source.OnDisk(path),
+                                path,
+                                model.preferences().diffOptions()),
+                        new Loadable.Loaded<>(asDiff)))
+                : Option.none();
+    }
+
+    /**
+     * The node without changes highlighted among all files of the working tree (ADR 108): what a file holds, read
+     * from disk, or how many files a directory holds. The file shown before stays while another is read.
+     */
+    private static Shown unchanged(Model model, UnchangedNode node) {
+        String title = Messages.get("panel.file.title");
+        return switch (node) {
+            case UnchangedNode.Directory(String path, int files) ->
+                dim(title, Messages.get("content.directoryFiles", path.isEmpty() ? "/" : path, files));
+            case UnchangedNode.File(var content) -> {
+                Preview<String, FileContent> shown = content.shown();
+                yield whenLoaded(title, shown.value(), read -> fileContent(model, shown.key(), read, title));
+            }
+        };
+    }
+
+    /**
+     * What the file at {@code path} holds, {@code content}: text as a diff of itself, drawn in the rich view whatever
+     * look diffs have, and anything else as a line that says what it is.
+     */
+    private static Shown fileContent(Model model, String path, FileContent content, String title) {
+        return switch (content) {
+            case FileContent.Text(DiffText asDiff) -> {
+                DiffLook look = model.preferences().diffLook();
+                yield new Shown.Area(
+                        ContentArea.FILE_CONTENT,
+                        title,
+                        new ScrolledContent.Unchanged(path, asDiff),
+                        new Body.Diff(shown(asDiff), new DiffLook(DiffStyle.RICH, look.syntax(), look.words())));
+            }
+            case FileContent.Binary(long size) -> dim(title, Messages.get("content.file.binarySize", size(size)));
+            case FileContent.Link(String target) -> dim(title, Messages.get("content.file.link", target));
+            case FileContent.Submodule(var commit) ->
+                dim(
+                        title,
+                        commit.map(sha -> Messages.get("content.file.submodule", sha.shortSha()))
+                                .getOrElse(() -> Messages.get("content.file.submoduleUnknown")));
+        };
+    }
+
+    /**
+     * {@code bytes} as a size to read: in bytes, KiB or MiB.
+     */
+    static String size(long bytes) {
+        return bytes < 1024
+                ? bytes + " B"
+                : bytes < 1024 * 1024
+                        ? (bytes + 512) / 1024 + " KiB"
+                        : String.format(java.util.Locale.ROOT, "%.1f MiB", bytes / (1024.0 * 1024.0));
     }
 
     /**

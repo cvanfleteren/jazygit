@@ -14,8 +14,11 @@ import net.vanfleteren.jazygit.state.load.SelectionMsg.CommitSelected;
 import net.vanfleteren.jazygit.state.load.SelectionMsg.DivergenceCommitSelected;
 import net.vanfleteren.jazygit.state.load.SelectionMsg.FilesSelected;
 import net.vanfleteren.jazygit.state.load.SelectionMsg.StashSelected;
+import net.vanfleteren.jazygit.state.load.SelectionMsg.UnchangedDirectorySelected;
+import net.vanfleteren.jazygit.state.load.SelectionMsg.UnchangedFileSelected;
 import net.vanfleteren.jazygit.state.load.SelectionMsg.UnfetchedSelected;
 import net.vanfleteren.jazygit.state.view.Preview;
+import net.vanfleteren.jazygit.state.view.UnchangedNode;
 
 /**
  * The panes' highlights, and the data loaded for them.
@@ -67,13 +70,33 @@ public final class SelectionUpdate {
                                         repoView -> repoView.withBranchCommits(Option.of(view.withDetail(detail)))),
                                 detail(model, Cmd.Slot.BRANCH_COMMITS_DETAIL)))
                         .getOrElse(() -> Next.of(model));
-            case FilesSelected(var files) ->
+            // A node with changes shows its diff, not the node without them highlighted before (ADR 108).
+            case FilesSelected(var files) -> {
+                Model changed = model.mapRepoView(repoView -> repoView.withUnchanged(Option.none()));
+                yield selected(
+                        changed,
+                        files,
+                        changed.repoView().fileDiff(),
+                        diff -> changed.mapRepoView(repoView -> repoView.withFileDiff(diff)),
+                        entries -> new LoadFileDiff(entries, model.preferences().diffOptions()));
+            }
+            case UnchangedFileSelected(String path) ->
                 selected(
                         model,
-                        files,
-                        model.repoView().fileDiff(),
-                        diff -> model.mapRepoView(repoView -> repoView.withFileDiff(diff)),
-                        entries -> new LoadFileDiff(entries, model.preferences().diffOptions()));
+                        path,
+                        model.repoView()
+                                .unchanged()
+                                .flatMap(node -> node instanceof UnchangedNode.File(var content)
+                                        ? Option.of(content)
+                                        : Option.none()),
+                        content -> model.mapRepoView(
+                                repoView -> repoView.withUnchanged(content.map(UnchangedNode.File::new))),
+                        ReadFileContent::new);
+            // A directory without changes needs nothing read: it says how many files it holds.
+            case UnchangedDirectorySelected(String path, int files) ->
+                Next.of(model.mapRepoView(
+                        repoView -> repoView.withUnchanged(Option.of(new UnchangedNode.Directory(path, files)))
+                                .withVersions(HashMap.empty())));
             case CommitFilesSelected(var files) ->
                 model.repoView()
                         .commitFiles()
