@@ -14,9 +14,9 @@ import net.vanfleteren.jazygit.ui.Theme;
  * The filter of a list in a popup. Typing {@code /} opens a {@link FilterLine} above the list to type it in, and only
  * the rows that contain it stay shown, until Escape closes it again. It ignores case, unless it has an uppercase
  * letter. A filter of two words or more, each started by an uppercase letter, also matches the starts of words
- * following each other within a part between {@code /}s (ADR 106): {@code CCM} and {@code CCMat} match {@code CapitalCaseMatching.java}, {@code CCM}
- * matches {@code can-can-mama.txt}. Whether it is open, and its text, live in the
- * {@link net.vanfleteren.jazygit.state.popup.ListCursor}.
+ * following each other within a part between {@code /}s (ADR 106): {@code CCM} and {@code CCMat} match
+ * {@code CapitalCaseMatching.java}, {@code CCM} matches {@code can-can-mama.txt}. Whether it is open, and its text,
+ * live in the {@link net.vanfleteren.jazygit.state.popup.ListCursor}.
  */
 public final class ListFilter {
 
