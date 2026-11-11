@@ -121,28 +121,35 @@ public record Repo(
     }
 
     /**
-     * The local branch that follows {@code upstream}, if the branches are loaded and one does. Of several, the first
-     * of: the one named as {@code upstream} that no worktree has checked out, any other that none has, one that
-     * another worktree has checked out, the one checked out here; the first by name where that leaves more than one
-     * (ADR 109).
+     * The local branch that follows {@code upstream}, if the branches are loaded and one does: the first of
+     * {@link #followers}.
      */
     public Option<Branch> trackingBranch(RemoteBranch upstream) {
-        return branches.toOption()
-                .flatMap(loaded -> loaded.filter(
-                                branch -> branch.remoteUpstream().contains(upstream))
-                        .sorted(Comparator.comparingInt((Branch branch) -> followerRank(branch, upstream))
-                                .thenComparing(branch -> branch.name().value()))
-                        .headOption());
+        return followers(upstream).headOption();
     }
 
-    private static int followerRank(Branch branch, RemoteBranch upstream) {
+    /**
+     * The local branches that follow {@code upstream}, empty while the branches are not loaded: first those that no
+     * worktree has checked out, then those another worktree has, then the one checked out here; within each, the one
+     * named as {@code upstream} first, then by name (ADR 109).
+     */
+    public List<Branch> followers(RemoteBranch upstream) {
+        return branches.toOption()
+                .getOrElse(List.empty())
+                .filter(branch -> branch.remoteUpstream().contains(upstream))
+                .sorted(Comparator.comparingInt(Repo::whereCheckedOut)
+                        .thenComparing((Branch branch) -> !branch.name().equals(upstream.branch()))
+                        .thenComparing(branch -> branch.name().value()));
+    }
+
+    /**
+     * 0 for a branch that no worktree has checked out, 1 for one another worktree has, 2 for the one checked out here.
+     */
+    private static int whereCheckedOut(Branch branch) {
         if (branch.current()) {
-            return 3;
-        }
-        if (branch.checkedOutElsewhere()) {
             return 2;
         }
-        return branch.name().equals(upstream.branch()) ? 0 : 1;
+        return branch.checkedOutElsewhere() ? 1 : 0;
     }
 
     /**

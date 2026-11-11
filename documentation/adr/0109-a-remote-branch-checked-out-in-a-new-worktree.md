@@ -31,22 +31,24 @@ a local branch adds one. `?` lists it. `W` stays as it is, for a new branch unde
 As `space` decides it, from the branches read, without fetching:
 
 1. **A local branch follows it**: one of those that do, the first of:
-    1. the one under its name, `feat-x`, when no worktree has it checked out;
-    2. any other that no worktree has checked out, the first by name;
-    3. one that another worktree has checked out: switching to that worktree is offered (`SwitchWorktreePopup`), as
+    1. one that no worktree has checked out;
+    2. one that another worktree has checked out: switching to that worktree is offered (`SwitchWorktreePopup`), as
        `space` offers it. Not: refused, as `w` on a local branch refuses it; the user asked for the remote branch, and
        that worktree has it;
-    4. the one checked out here: a worktree cannot check it out a second time, so a new branch following the remote
+    3. the one checked out here: a worktree cannot check it out a second time, so a new branch following the remote
        one is asked for, as `W` asks.
 
-   Not: the first one found, which depends on the order the branches are listed in, and can ask for a new branch, or
-   offer another worktree, while a follower is free.
+   Where that leaves more than one, the one under its name, `feat-x`, comes first, then the first by name. Not: the
+   first one found, which depends on the order the branches are listed in, and can ask for a new branch, or offer
+   another worktree, while a follower is free.
 2. **No local branch has its name**: one is made under that name, following it, without asking for the name.
 3. **A local branch has its name but follows something else, or nothing**: a name is asked for, as `W` asks
    (`NewWorktreeBranchPopup.followingRemote`). Not: taking that branch, which may be another branch altogether.
 
-`space` picks the follower the same way, also when it checks out here or in the main worktree: one function picks it
-for both keys.
+`space` picks the follower the same way, also when it checks out here or in the main worktree: one function orders
+the followers for both keys. Only the one checked out here differs: for `space` it comes first, and nothing is done,
+as before: the user is on what was asked for. Not: `space` moving off a branch that follows the remote one onto
+another that does, or offering another worktree.
 
 Then the location is asked for as for any new worktree (`NewWorktreePopup`), starting out at the same default, and
 once added the app asks whether to switch to it (`SwitchToAddedPopup`), as after `w` on a local branch.
@@ -68,8 +70,8 @@ git fetch --no-write-fetch-head . refs/remotes/<remote>/<remote-branch>:refs/hea
   operation, as any failed operation shows, and no worktree is added.
 - A branch with commits of its own is checked out as it is, behind or not, and the notice says so:
   `feat-x kept: 1 commit not on origin/feat-x`. Not: rebasing or merging it, which `w` never does. After `space`
-  and *in a new worktree*, the app switches to the new worktree at once (ADR 68), and the notice goes with the
-  worktree left behind; the command log keeps what ran.
+  and *in a new worktree*, the app switches to the new worktree at once (ADR 68); the notice goes along in the
+  `Landing`, and is said there once the worktree is read.
 - Not: checking out the branch as it is, as checking out here does: asking for the remote branch means wanting what
   is on the remote, and a new worktree has no files of its own to lose. Checking out here keeps the branch as it is,
   as before: it has the files of a worktree in use around it.

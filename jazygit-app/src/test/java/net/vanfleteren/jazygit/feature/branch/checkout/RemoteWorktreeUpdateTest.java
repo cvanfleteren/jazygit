@@ -8,6 +8,7 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.time.Instant;
+import net.vanfleteren.jazygit.feature.repos.RecentReposCmd;
 import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeCmd;
 import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeMsg;
 import net.vanfleteren.jazygit.feature.worktree.add.CatchUp;
@@ -166,6 +167,56 @@ class RemoteWorktreeUpdateTest {
         assertEquals(
                 Option.of(new SwitchWorktreePopup(MINE, ELSEWHERE.toString())),
                 asked(shown(follower(MINE, 0, 0, false, Option.of(ELSEWHERE)))));
+    }
+
+    @Test
+    void ofSeveralCheckedOutElsewhereTheOneUnderItsNameIsOfferedFirst() {
+        Path other = Path.of("/repos/app-other");
+        Model model = shown(
+                follower(new BranchName("a-first"), 0, 0, false, Option.of(other)),
+                follower(FEAT, 0, 0, false, Option.of(ELSEWHERE)));
+
+        assertEquals(Option.of(new SwitchWorktreePopup(FEAT, ELSEWHERE.toString())), asked(model));
+    }
+
+    @Test
+    void spaceWhereAFollowerIsCheckedOutHereDoesNothingThoughAnotherIsFree() {
+        Model model = TestModels.localBranchesRead(
+                        shown(),
+                        List.of(
+                                follower(MINE, 0, 0, true, Option.none()),
+                                idleFollower(new BranchName("a-free"), 0, 0),
+                                follower(FEAT, 0, 0, false, Option.of(ELSEWHERE))))
+                .model();
+
+        Next next = Update.update(model, new CheckoutMsg.RemoteRequested(ORIGIN_FEAT));
+
+        assertEquals(List.of(), next.cmds());
+        assertEquals(Option.none(), next.model().popup());
+    }
+
+    @Test
+    void aKeptBranchIsSaidInTheWorktreeSwitchedTo() {
+        WorktreeSource source = new WorktreeSource.Existing(MINE, new CatchUp.Kept(ORIGIN_FEAT, 2));
+        Model model = shown(idleFollower(MINE, 2, 0));
+        Notice kept = new Notice.BranchKept(MINE, 2, ORIGIN_FEAT);
+
+        Next added = Update.update(
+                model,
+                new AddWorktreeMsg.Added(
+                        new AddWorktreeCmd(source, "/repos/app-mine", true), "/repos/app-mine", List.empty()));
+
+        assertEquals(
+                List.of(Option.of(new AddWorktreeMsg.Informed(kept))),
+                added.cmds()
+                        .filter(RecentReposCmd.SwitchTo.class::isInstance)
+                        .map(cmd -> ((RecentReposCmd.SwitchTo) cmd).landing().then()));
+        assertEquals(
+                Option.of(kept),
+                Update.update(model, new AddWorktreeMsg.Informed(kept))
+                        .model()
+                        .outcome()
+                        .notice());
     }
 
     @Test

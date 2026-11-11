@@ -104,11 +104,13 @@ public final class CheckoutUpdate {
 
     /**
      * Checks out the local branch that follows {@code remote}, as {@link net.vanfleteren.jazygit.state.Repo#trackingBranch}
-     * picks it; in a new worktree, once caught up with {@code remote}. Without one, creates it under the same name;
-     * when a local branch that follows something else already has that name, asks for another.
+     * picks it; in a new worktree, once caught up with {@code remote}. When the branch checked out here follows it,
+     * does nothing. Without one, creates it under the same name; when a local branch that follows something else
+     * already has that name, asks for another.
      */
     private static Next remoteRequested(Model model, RemoteBranch remote) {
-        if (!isIdleRemote(model, remote)) {
+        // A branch checked out here already follows it: that is what was asked for, and nothing moves (ADR 109).
+        if (!isIdleRemote(model, remote) || model.repo().followers(remote).exists(Branch::current)) {
             return Next.of(model);
         }
         return model.repo()

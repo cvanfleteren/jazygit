@@ -57,6 +57,7 @@ public final class AddWorktreeUpdate {
                         new AppError.OperationFailed(AddWorktreeCmd.ADD_WORKTREE, Option.of(typed), failure)));
             case NameConfirmed() -> nameConfirmed(model);
             case Added(var cmd, String location, var commands) -> added(model, cmd, location, commands);
+            case Informed(var notice) -> Next.of(model.inform(notice));
             case SwitchConfirmed() ->
                 model.popup(SwitchToAddedPopup.class)
                         .map(popup -> Next.of(
@@ -84,35 +85,39 @@ public final class AddWorktreeUpdate {
     /**
      * The worktree {@code cmd} added at {@code location}, running {@code commands}. One added to check something out
      * in is switched to, shown as a checkout here shows it: on the local branches, the focus where it was. Otherwise
-     * the worktrees are shown, the new one among them, and switching to it is offered.
+     * the worktrees are shown, the new one among them, and switching to it is offered. That the branch was kept as it
+     * was is said where the user is once it is added: in the worktree switched to, once that is read, or here.
      */
     private static Next added(Model model, AddWorktreeCmd cmd, String location, List<ExecutedCommand> commands) {
+        Option<Notice> kept = kept(cmd.source());
         if (cmd.switching()) {
             Next succeeded = OperationUpdate.succeeded(model, cmd, commands);
+            Landing there = new Landing(BranchesTab.LOCAL, model.repoView().focusedPane());
             return new Next(
                     succeeded.model(),
                     succeeded
                             .cmds()
                             .append(new RecentReposCmd.SwitchTo(
                                     location,
-                                    new Landing(
-                                            BranchesTab.LOCAL, model.repoView().focusedPane()))));
+                                    kept.map(notice -> there.followedBy(new Informed(notice)))
+                                            .getOrElse(there))));
         }
         Next succeeded = OperationUpdate.succeeded(
                 model.mapRepoView(repoView -> repoView.withBranchesTab(BranchesTab.WORKTREES)), cmd, commands);
         return new Next(
-                kept(succeeded.model(), cmd.source())
+                kept.map(succeeded.model()::inform)
+                        .getOrElse(succeeded.model())
                         .openPopupIfFree(new SwitchToAddedPopup(cmd.source().label(), location)),
                 succeeded.cmds());
     }
 
     /**
-     * {@code model}, told that the branch {@code source} checked out was kept as it was, when it was (ADR 109).
+     * That the branch {@code source} checked out was kept as it was, when it was (ADR 109).
      */
-    private static Model kept(Model model, WorktreeSource source) {
+    private static Option<Notice> kept(WorktreeSource source) {
         return source instanceof WorktreeSource.Existing(BranchName branch, CatchUp.Kept(var upstream, int ahead))
-                ? model.inform(new Notice.BranchKept(branch, ahead, upstream))
-                : model;
+                ? Option.of(new Notice.BranchKept(branch, ahead, upstream))
+                : Option.none();
     }
 
     /**

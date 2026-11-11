@@ -79,3 +79,6 @@ user chose it to.
   too little, and too late.
 
 Amends ADR 38 (`0038-a-popup-closes-by-itself.md`), for creating a branch.
+
+Amended by ADR 109: which local branch following a remote one is checked out, of several; and one going into a new
+worktree is fast-forwarded to the remote one first.
