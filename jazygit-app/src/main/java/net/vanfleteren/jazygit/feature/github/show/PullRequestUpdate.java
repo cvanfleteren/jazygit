@@ -371,7 +371,9 @@ public final class PullRequestUpdate {
             PullRequestPopup opened = PullRequestPopup.loading(branch, pullRequest, model.now(), load.read());
             PullRequestPopup loading = fromFork ? opened.ofFork() : opened;
             return Next.of(
-                    OperationUpdate.ask(given, files ? loading.wantingFiles() : loading).model(), load);
+                    OperationUpdate.ask(given, files ? loading.wantingFiles() : loading)
+                            .model(),
+                    load);
         });
     }
 }

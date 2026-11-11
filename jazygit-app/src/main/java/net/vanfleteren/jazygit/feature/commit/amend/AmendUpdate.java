@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.feature.commit.amend;
 
-import net.vanfleteren.jazygit.state.OperationUpdate;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.commit.amend.AmendMsg.Confirmed;
@@ -13,7 +12,7 @@ import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
@@ -49,9 +48,12 @@ public final class AmendUpdate {
     }
 
     private static Next ask(Model model, AmendTarget target) {
-        return model.repo().files().map(files -> files.isEmpty()
+        return model.repo()
+                .files()
+                .map(files -> files.isEmpty()
                         ? Next.of(model.fail(new AppError.NothingToAmend()))
-                        : OperationUpdate.ask(model, new AmendPopup(target))).getOrElse(() -> Next.of(model));
+                        : OperationUpdate.ask(model, new AmendPopup(target)))
+                .getOrElse(() -> Next.of(model));
     }
 
     /**
@@ -69,6 +71,7 @@ public final class AmendUpdate {
 
     private static Next stageAllConfirmed(Model model) {
         List<String> paths = FileEntry.paths(model.repo().files().getOrElse(List.empty()), FileEntry::unstaged);
-        return OperationUpdate.confirm(model, AmendStageAllPopup.class, popup -> Option.of(new AmendCmd(popup.target(), paths)));
+        return OperationUpdate.confirm(
+                model, AmendStageAllPopup.class, popup -> Option.of(new AmendCmd(popup.target(), paths)));
     }
 }

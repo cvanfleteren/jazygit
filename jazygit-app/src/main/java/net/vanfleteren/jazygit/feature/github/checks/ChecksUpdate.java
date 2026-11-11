@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.feature.github.checks;
 
-import net.vanfleteren.jazygit.state.OperationUpdate;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.util.function.Predicate;
@@ -13,9 +12,9 @@ import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.CheckTimesUpdate;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.state.PendingChecks;
 import net.vanfleteren.jazygit.state.Reading;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**

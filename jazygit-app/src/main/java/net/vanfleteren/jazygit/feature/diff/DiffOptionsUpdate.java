@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.feature.diff;
 
-import net.vanfleteren.jazygit.state.RereadUpdate;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
@@ -16,8 +15,8 @@ import net.vanfleteren.jazygit.state.DivergenceView;
 import net.vanfleteren.jazygit.state.LoadFileDiff;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Preview;
+import net.vanfleteren.jazygit.state.RereadUpdate;
 import net.vanfleteren.jazygit.state.SaveSettings;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**

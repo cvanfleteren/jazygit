@@ -1,11 +1,10 @@
 package net.vanfleteren.jazygit.feature.stash;
 
-import net.vanfleteren.jazygit.state.OperationUpdate;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
@@ -29,9 +28,12 @@ public final class StashUpdate {
      * Asks for a name, when there are changes to stash.
      */
     private static Next requested(Model model) {
-        return model.repo().files().map(files -> files.isEmpty()
+        return model.repo()
+                .files()
+                .map(files -> files.isEmpty()
                         ? Next.of(model.fail(new AppError.NothingToStash()))
-                        : OperationUpdate.ask(model, new StashPopup())).getOrElse(() -> Next.of(model));
+                        : OperationUpdate.ask(model, new StashPopup()))
+                .getOrElse(() -> Next.of(model));
     }
 
     /**

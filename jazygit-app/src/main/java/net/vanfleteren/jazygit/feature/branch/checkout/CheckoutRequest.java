@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.feature.branch.checkout;
 
-import net.vanfleteren.jazygit.state.OperationUpdate;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutCmd.Checkout;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutCmd.CheckoutRemote;
@@ -13,7 +12,7 @@ import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Revision;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**

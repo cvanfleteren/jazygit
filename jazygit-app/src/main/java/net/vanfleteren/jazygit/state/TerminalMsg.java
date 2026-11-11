@@ -25,8 +25,9 @@ public sealed interface TerminalMsg extends Msg {
             }
             Set<Msg> missed = model.jobs().missed();
             return missed.foldLeft(
-                    Next.of(model.mapJobs(jobs ->
-                            jobs.withAway(false).withMissed(LinkedHashSet.empty()).withAwayAt(HashMap.empty()))),
+                    Next.of(model.mapJobs(jobs -> jobs.withAway(false)
+                            .withMissed(LinkedHashSet.empty())
+                            .withAwayAt(HashMap.empty()))),
                     (next, msg) -> {
                         Next handled = Update.update(next.model(), msg);
                         return new Next(handled.model(), next.cmds().appendAll(handled.cmds()));

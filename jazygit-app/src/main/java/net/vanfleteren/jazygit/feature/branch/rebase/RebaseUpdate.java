@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.feature.branch.rebase;
 
-import net.vanfleteren.jazygit.state.OperationUpdate;
 import io.vavr.collection.HashSet;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.Branch;
@@ -8,7 +7,7 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.state.AheadUpdate;
 import net.vanfleteren.jazygit.state.GitHubBases;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**

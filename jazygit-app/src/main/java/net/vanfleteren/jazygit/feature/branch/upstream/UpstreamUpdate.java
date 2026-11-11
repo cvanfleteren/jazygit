@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.feature.branch.upstream;
 
-import net.vanfleteren.jazygit.state.OperationUpdate;
 import io.vavr.control.Option;
 import java.util.function.BiFunction;
 import net.vanfleteren.jazygit.feature.commit.reset.ResetPopup;
@@ -14,7 +13,7 @@ import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.DivergenceView;
 import net.vanfleteren.jazygit.state.DivergenceView.Against;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**

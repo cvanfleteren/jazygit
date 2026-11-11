@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.feature.commit.reset;
 
-import net.vanfleteren.jazygit.state.OperationUpdate;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
@@ -8,7 +7,7 @@ import net.vanfleteren.jazygit.git.model.ResetMode;
 import net.vanfleteren.jazygit.git.model.ResetTarget;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
@@ -39,7 +38,8 @@ public final class ResetUpdate {
                         .map(popup -> OperationUpdate.ask(
                                 model.withoutPopup(ResetPopup.class), new HardResetPopup(popup.target(), discarded)))
                         .getOrElse(() -> Next.of(model))
-                : OperationUpdate.confirm(model, ResetPopup.class, popup -> Option.of(new ResetCmd(popup.target(), mode)));
+                : OperationUpdate.confirm(
+                        model, ResetPopup.class, popup -> Option.of(new ResetCmd(popup.target(), mode)));
     }
 
     /**

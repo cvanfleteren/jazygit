@@ -1,11 +1,10 @@
 package net.vanfleteren.jazygit.feature.fetch;
 
-import net.vanfleteren.jazygit.state.RereadUpdate;
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.RemoteName;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.PullRequestsUpdate;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.RereadUpdate;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**

@@ -1,13 +1,12 @@
 package net.vanfleteren.jazygit.feature.commit.fixup;
 
-import net.vanfleteren.jazygit.state.OperationUpdate;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.commit.squash.SquashCmd;
 import net.vanfleteren.jazygit.feature.commit.squash.SquashUpdate;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.SquashMode;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**

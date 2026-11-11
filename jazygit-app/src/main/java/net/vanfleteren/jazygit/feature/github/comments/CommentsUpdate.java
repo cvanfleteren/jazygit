@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.feature.github.comments;
 
-import net.vanfleteren.jazygit.state.OperationUpdate;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.util.function.UnaryOperator;
@@ -10,7 +9,7 @@ import net.vanfleteren.jazygit.feature.github.comments.CommentsCmd.LoadComments;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestCmd.OpenPullRequest;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
@@ -28,7 +27,8 @@ public final class CommentsUpdate {
                 model.popup(PullRequestPopup.class)
                         .filter(PullRequestPopup::detailsRead)
                         .map(shown -> Next.of(
-                                OperationUpdate.ask(model, CommentsPopup.loading(shown)).model(),
+                                OperationUpdate.ask(model, CommentsPopup.loading(shown))
+                                        .model(),
                                 new LoadComments(shown.pullRequest().number())))
                         .getOrElse(() -> Next.of(model));
             case CommentsMsg.Loaded(int number, var comments) ->

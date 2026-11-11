@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.feature.github.checkout;
 
-import net.vanfleteren.jazygit.state.OperationUpdate;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Supplier;
@@ -16,7 +15,7 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
@@ -113,7 +112,8 @@ public final class CheckoutPullRequestUpdate {
      * instead, as checking out the branch offers it.
      */
     private static Readiness forCheckout(Model model, PullRequestSummary pullRequest) {
-        boolean changed = model.repo().files().getOrElse(List.empty()).exists(file -> file.type() != ChangeType.UNTRACKED);
+        boolean changed =
+                model.repo().files().getOrElse(List.empty()).exists(file -> file.type() != ChangeType.UNTRACKED);
         return checkedOutElsewhere(model, pullRequest)
                 .orElse(() -> Option.when(
                         changed, () -> new Readiness.Blocked(new AppError.ChangesBeforeCheckout(name(pullRequest)))))

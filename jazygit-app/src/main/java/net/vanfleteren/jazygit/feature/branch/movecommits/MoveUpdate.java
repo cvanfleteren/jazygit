@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.feature.branch.movecommits;
 
-import net.vanfleteren.jazygit.state.RereadUpdate;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutMsg;
@@ -21,7 +20,7 @@ import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Notice;
 import net.vanfleteren.jazygit.state.OperationUpdate;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.RereadUpdate;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
@@ -194,7 +193,8 @@ public final class MoveUpdate {
      * the commits unmoved. Untracked files do not count, as git only stops for those that are in the way.
      */
     private static Next targeted(Model model, MoveRequest request, MoveTarget target) {
-        boolean changed = model.repo().files().getOrElse(List.empty()).exists(file -> file.type() != ChangeType.UNTRACKED);
+        boolean changed =
+                model.repo().files().getOrElse(List.empty()).exists(file -> file.type() != ChangeType.UNTRACKED);
         return copiedOnto(target)
                 .filter(onto -> changed)
                 .map(onto -> Next.of(model.fail(new AppError.ChangesBeforeMove(onto))))

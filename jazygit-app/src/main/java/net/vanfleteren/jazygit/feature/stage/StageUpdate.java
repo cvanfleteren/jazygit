@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.feature.stage;
 
-import net.vanfleteren.jazygit.state.OperationUpdate;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.stage.StageCmd.Stage;
@@ -8,7 +7,7 @@ import net.vanfleteren.jazygit.feature.stage.StageCmd.Unstage;
 import net.vanfleteren.jazygit.feature.stage.StageMsg.Requested;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
@@ -37,7 +36,9 @@ public final class StageUpdate {
                 ? OperationUpdate.start(
                         model.clearError(),
                         new Stage(directory.map(d -> List.of(pathspec(d))).getOrElse(unstaged)))
-                : staged.isEmpty() ? Next.of(model) : OperationUpdate.start(model.clearError(), unstage(staged, directory));
+                : staged.isEmpty()
+                        ? Next.of(model)
+                        : OperationUpdate.start(model.clearError(), unstage(staged, directory));
     }
 
     private static Unstage unstage(List<FileEntry> staged, Option<String> directory) {

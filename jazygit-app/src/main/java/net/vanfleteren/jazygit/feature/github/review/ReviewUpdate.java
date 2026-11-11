@@ -66,7 +66,8 @@ public final class ReviewUpdate {
                                     number(found._1()),
                                     found._2().id(),
                                     !found._2().resolved());
-                            return OperationUpdate.start(sending(model.clearError(), set -> set.add(resolve.thread())), resolve);
+                            return OperationUpdate.start(
+                                    sending(model.clearError(), set -> set.add(resolve.thread())), resolve);
                         });
             // Collapsing a thread or a comment needs no more than the thread: a merged pull request's too. The first
             // comment of a thread is the thread (ADR 62). Off a thread, Space does nothing: there is nothing to refuse.

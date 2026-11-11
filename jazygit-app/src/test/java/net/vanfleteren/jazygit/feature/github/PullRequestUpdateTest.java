@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.feature.github;
 
-import net.vanfleteren.jazygit.state.TestModels;
 import static net.vanfleteren.jazygit.state.TestModels.*;
 import static net.vanfleteren.jazygit.state.TestModels.lastRead;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -73,6 +72,7 @@ import net.vanfleteren.jazygit.state.LoadBranches;
 import net.vanfleteren.jazygit.state.LoadCommitFiles;
 import net.vanfleteren.jazygit.state.LoadStatus;
 import net.vanfleteren.jazygit.state.LoadWorktrees;
+import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.prs.LoadRepositoryPullRequests;
 import org.junit.jupiter.api.Test;
@@ -939,7 +939,9 @@ class PullRequestUpdateTest {
     void aPushThatEndsWhileAnotherPopupIsOpenLeavesThatOpen() {
         PushFirst push =
                 new PushFirst(new PushSettingUpstream(UNPUSHED.name(), new RemoteBranch("origin", UNPUSHED.name())));
-        Model other = OperationUpdate.start(model(), push).model().openPopup(new SwitchWorktreePopup(MAIN.name(), "/work/main"));
+        Model other = OperationUpdate.start(model(), push)
+                .model()
+                .openPopup(new SwitchWorktreePopup(MAIN.name(), "/work/main"));
         Model pushed = Update.update(other, push.succeeded(StubGit.executed("git push -u origin local")))
                 .model();
 

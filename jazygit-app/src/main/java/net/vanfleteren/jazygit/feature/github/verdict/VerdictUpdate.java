@@ -26,7 +26,6 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.OperationMsg;
 import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.state.Reading;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**

@@ -58,7 +58,8 @@ public final class EditPullRequestUpdate {
                 editable(model)
                         .filter(popup -> !popup.fields().title().isBlank())
                         .map(popup -> save(popup)
-                                .map(cmd -> OperationUpdate.start(model.clearError().openPopup(popup.withSaving(true)), cmd))
+                                .map(cmd -> OperationUpdate.start(
+                                        model.clearError().openPopup(popup.withSaving(true)), cmd))
                                 .getOrElse(() -> Next.of(model.clearError().openPopup(popup.from()))))
                         .getOrElse(() -> Next.of(model));
             case EditPullRequestMsg.Cancelled() ->

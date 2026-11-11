@@ -49,7 +49,8 @@ class SettingsUpdateTest {
 
     @Test
     void aThemeAskedForAtStartupIsDrawnInsteadOfTheSavedOne() {
-        Model model = TestModels.init("repo", new SettingsStore.Loaded(DARCULA, Option.none()), Option.of(ThemeName.LIGHT))
+        Model model = TestModels.init(
+                        "repo", new SettingsStore.Loaded(DARCULA, Option.none()), Option.of(ThemeName.LIGHT))
                 .model();
 
         assertEquals(ThemeName.LIGHT, model.preferences().theme());

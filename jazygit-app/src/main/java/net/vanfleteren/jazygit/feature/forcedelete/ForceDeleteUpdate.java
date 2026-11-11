@@ -1,12 +1,11 @@
 package net.vanfleteren.jazygit.feature.forcedelete;
 
-import net.vanfleteren.jazygit.state.RereadUpdate;
 import net.vanfleteren.jazygit.feature.forcedelete.ForceDeleteMsg.Confirmed;
 import net.vanfleteren.jazygit.feature.forcedelete.ForceDeleteMsg.NotFullyMerged;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.OperationUpdate;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.RereadUpdate;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**

@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.feature.branch.rename;
 
-import net.vanfleteren.jazygit.state.OperationUpdate;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.rename.RenameBranchMsg.Confirmed;
 import net.vanfleteren.jazygit.feature.branch.rename.RenameBranchMsg.LocallyChosen;
@@ -11,7 +10,7 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**

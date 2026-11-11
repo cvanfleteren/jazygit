@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.feature.branch.push;
 
-import net.vanfleteren.jazygit.state.RereadUpdate;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.push.PushCmd.Push;
 import net.vanfleteren.jazygit.feature.branch.push.PushCmd.PushSettingUpstream;
@@ -11,7 +10,7 @@ import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.OperationUpdate;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.RereadUpdate;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**

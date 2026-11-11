@@ -190,8 +190,8 @@ public final class CreatePullRequestUpdate {
                                 ? Next.of(model.fail(new AppError.Diverged(branch.name(), upstream)))
                                 : OperationUpdate.ask(
                                         model, new PushFirstPopup(branch.name(), upstream, Option.of(branch.ahead()))))
-                .getOrElse(
-                        () -> OperationUpdate.ask(model, new PushFirstPopup(branch.name(), branch.pushTarget(), Option.none())));
+                .getOrElse(() -> OperationUpdate.ask(
+                        model, new PushFirstPopup(branch.name(), branch.pushTarget(), Option.none())));
     }
 
     /**

@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.feature.branch.checkout;
 
-import net.vanfleteren.jazygit.state.RereadUpdate;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.Branches;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutMsg.*;
@@ -15,7 +14,7 @@ import net.vanfleteren.jazygit.state.BranchesTab;
 import net.vanfleteren.jazygit.state.Landing;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.OperationUpdate;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.RereadUpdate;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**

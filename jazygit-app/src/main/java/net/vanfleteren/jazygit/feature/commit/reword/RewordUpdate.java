@@ -1,10 +1,9 @@
 package net.vanfleteren.jazygit.feature.commit.reword;
 
-import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.feature.commit.reword.RewordMsg.Requested;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**

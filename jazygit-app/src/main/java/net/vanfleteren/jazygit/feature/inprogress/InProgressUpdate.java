@@ -1,10 +1,9 @@
 package net.vanfleteren.jazygit.feature.inprogress;
 
-import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.git.model.InProgressAction;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
@@ -49,7 +48,8 @@ public final class InProgressUpdate {
                             ? OperationUpdate.ask(closed, new InProgressConfirmPopup(popup.inProgress(), action))
                             : popup.conflicts() > 0
                                     ? Next.of(closed.fail(new AppError.ConflictsRemain(popup.conflicts())))
-                                    : OperationUpdate.start(closed.clearError(), new InProgressCmd(popup.inProgress(), action));
+                                    : OperationUpdate.start(
+                                            closed.clearError(), new InProgressCmd(popup.inProgress(), action));
                 })
                 .getOrElse(() -> Next.of(model));
     }

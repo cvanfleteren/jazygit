@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.feature.branch.nuke;
 
-import net.vanfleteren.jazygit.state.RereadUpdate;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.nuke.NukeBranchMsg.Confirmed;
 import net.vanfleteren.jazygit.feature.branch.nuke.NukeBranchMsg.NotAllNuked;
@@ -13,7 +12,7 @@ import net.vanfleteren.jazygit.git.model.Worktree;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.OperationUpdate;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.RereadUpdate;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**

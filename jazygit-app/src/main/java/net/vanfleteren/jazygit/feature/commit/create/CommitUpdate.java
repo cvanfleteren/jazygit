@@ -9,7 +9,6 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.OperationUpdate;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
@@ -34,11 +33,14 @@ public final class CommitUpdate {
      * Commits what is staged; when nothing is, offers to stage everything first.
      */
     private static Next requested(Model model) {
-        return model.repo().files().map(files -> files.exists(FileEntry::staged)
+        return model.repo()
+                .files()
+                .map(files -> files.exists(FileEntry::staged)
                         ? OperationUpdate.ask(model, new CommitPopup())
                         : files.isEmpty()
                                 ? Next.of(model.fail(new AppError.NothingToCommit()))
-                                : OperationUpdate.ask(model, new StageAllPopup())).getOrElse(() -> Next.of(model));
+                                : OperationUpdate.ask(model, new StageAllPopup()))
+                .getOrElse(() -> Next.of(model));
     }
 
     private static Next stageAllConfirmed(Model model) {

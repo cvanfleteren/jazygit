@@ -1,11 +1,10 @@
 package net.vanfleteren.jazygit.feature.worktree.prune;
 
-import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.feature.worktree.prune.PruneWorktreesMsg.Requested;
 import net.vanfleteren.jazygit.git.model.Worktree;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.OperationUpdate;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
