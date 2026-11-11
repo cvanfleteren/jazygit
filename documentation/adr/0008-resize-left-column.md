@@ -45,3 +45,6 @@ unhandled: the next tick draws the last width only. The press and the release ar
 
 That a drag is going on is view state, kept in `JazygitApp` next to the focus: no update reads it. It sends
 `Resized(screen, percent)` for each drag event and `Settled(screen)` on release, which saves the width.
+
+Amended by ADR 104: past the narrowest width, by `<` or a drag, the left column collapses to 3 columns for the
+session.

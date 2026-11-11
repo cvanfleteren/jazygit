@@ -17,8 +17,8 @@ import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
  * How wide the left column of each screen is, and how tall its panes are, which is kept for the next session. A width
- * or a height that is dragged shows while the user drags, and is kept when they let go. A pane, or the content panel,
- * can be maximized for the session (ADR 92).
+ * or a height that is dragged shows while the user drags, and is kept when they let go. A pane can be maximized for
+ * the session (ADR 92), and the left column collapsed, which maximizes the content panel (ADR 104).
  */
 public final class LayoutUpdate {
 
@@ -30,6 +30,14 @@ public final class LayoutUpdate {
 
     private LayoutUpdate() {}
 
+    /**
+     * Whether the left column dragged to {@code width} percent of the width collapses: when it is dragged past half
+     * the narrowest it gets otherwise (ADR 104).
+     */
+    public static boolean collapses(int width) {
+        return width * 2 < Settings.MIN_WIDTH;
+    }
+
     public static Next update(Model model, LayoutMsg msg) {
         return switch (msg) {
             // The keys and the borders work on the panes, not behind a popup.
@@ -38,18 +46,15 @@ public final class LayoutUpdate {
             case LayoutMsg.PaneResized resized when model.popup().isDefined() -> Next.of(model);
             case LayoutMsg.PaneStepped stepped when model.popup().isDefined() -> Next.of(model);
             case LayoutMsg.MaximizeToggled toggled when model.popup().isDefined() -> Next.of(model);
-            // A step ends a drag, of which a release that the terminal did not report would keep the width dragged to,
-            // and the content panel maximized, from the width it is shown with.
-            case LayoutMsg.Stepped(int by) ->
-                keep(
-                        model.mapPreferences(preferences ->
-                                preferences.withDragged(Option.none()).withContentMaximized(model.screen(), false)),
-                        model.screen(),
-                        model.preferences().leftWidth(model.screen()) + by);
+            case LayoutMsg.Expanded expanded when model.popup().isDefined() -> Next.of(model);
+            case LayoutMsg.Stepped(int by) -> stepWidth(model, by);
+            // Dragged far enough, the column collapses, until it is dragged out again.
             case LayoutMsg.Resized(Screen screen, int width) ->
-                Next.of(model.mapPreferences(preferences -> preferences
-                        .withContentMaximized(screen, false)
-                        .withDragged(Option.of(new Dragged(screen, Settings.clampWidth(width))))));
+                Next.of(model.mapPreferences(preferences -> collapses(width)
+                        ? preferences.withLeftCollapsed(screen, true).withDragged(Option.none())
+                        : preferences
+                                .withLeftCollapsed(screen, false)
+                                .withDragged(Option.of(new Dragged(screen, Settings.clampWidth(width))))));
             case LayoutMsg.Settled(Screen screen) ->
                 model.preferences()
                         .dragged()
@@ -76,9 +81,34 @@ public final class LayoutUpdate {
             case LayoutMsg.PaneStepped(int by) ->
                 focusedPane(model).map(pane -> stepPane(model, pane, by)).getOrElse(() -> Next.of(model));
             case LayoutMsg.MaximizeToggled() -> Next.of(toggleMaximized(model));
+            case LayoutMsg.Expanded(Screen screen) ->
+                Next.of(model.mapPreferences(preferences -> preferences.withLeftCollapsed(screen, false)));
             case LayoutMsg.Measured(int rows) ->
                 Next.of(model.mapPreferences(preferences -> preferences.withColumnRows(Option.of(rows))));
         };
+    }
+
+    /**
+     * Makes the left column of the screen shown {@code by} percent of the width wider, or narrower when it is negative,
+     * and keeps the width. A step narrower at the narrowest collapses the column, for the session, and a step wider
+     * opens a collapsed column at the narrowest, which is kept (ADR 104). A step ends a drag, of which a release that
+     * the terminal did not report would keep the width dragged to.
+     */
+    private static Next stepWidth(Model model, int by) {
+        Screen screen = model.screen();
+        Model ended = model.mapPreferences(preferences -> preferences.withDragged(Option.none()));
+        if (model.preferences().leftCollapsed(screen)) {
+            return by > 0
+                    ? keep(
+                            ended.mapPreferences(preferences -> preferences.withLeftCollapsed(screen, false)),
+                            screen,
+                            Settings.MIN_WIDTH)
+                    : Next.of(ended);
+        }
+        int shown = model.preferences().leftWidth(screen);
+        return by < 0 && shown == Settings.MIN_WIDTH
+                ? Next.of(ended.mapPreferences(preferences -> preferences.withLeftCollapsed(screen, true)))
+                : keep(ended, screen, shown + by);
     }
 
     /**
@@ -221,7 +251,7 @@ public final class LayoutUpdate {
     /**
      * Maximizes the pane of the left column, or the content panel, of the screen shown that had the focus last, or no
      * longer does if it is. Maximizing a pane of the left column ends another one being maximized; the content panel
-     * is maximized apart from them.
+     * is maximized apart from them, by collapsing the left column (ADR 104).
      */
     private static Model toggleMaximized(Model model) {
         Screen screen = model.screen();
@@ -230,7 +260,7 @@ public final class LayoutUpdate {
                         screen, preferences.maximizedPane(screen).contains(pane) ? Option.none() : Option.of(pane))))
                 .orElse(() -> model.shownPane()
                         .map(content -> model.mapPreferences(preferences ->
-                                preferences.withContentMaximized(screen, !preferences.contentMaximized(screen)))))
+                                preferences.withLeftCollapsed(screen, !preferences.leftCollapsed(screen)))))
                 .getOrElse(model);
     }
 

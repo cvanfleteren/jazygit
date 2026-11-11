@@ -43,4 +43,34 @@ class LeftColumnTest {
         assertEquals(tops.sorted(), tops, "the tops of " + panes);
         assertEquals(tops.size(), tops.distinct().size(), "the tops of " + panes);
     }
+
+    @ParameterizedTest
+    @EnumSource(Screen.class)
+    void aCollapsedColumnIsAnEmptyPanelMarkedAtItsTopRight(Screen screen) {
+        Rect area = new Rect(0, 0, LeftColumn.COLLAPSED_COLUMNS, 5);
+        ElementRegistry registry = new ElementRegistry();
+        FocusManager focus = new FocusManager();
+        DefaultRenderContext context = new DefaultRenderContext(focus, new EventRouter(focus, registry));
+        Buffer buffer = Buffer.empty(area);
+        LeftColumn.Rendered rendered = leftColumn.render(
+                TestModels.loaded()
+                        .withScreen(screen)
+                        .mapPreferences(preferences -> preferences.withLeftCollapsed(screen, true)),
+                "",
+                "",
+                Option.none());
+        rendered.column().render(Frame.forTesting(buffer), area, context);
+
+        // Square without a theme, which rounds the corners.
+        assertEquals(List.of("┌»┐", "│ │", "│ │", "│ │", "└─┘"), lines(buffer, area));
+        assertEquals(List.empty(), rendered.panes());
+        Scopes.leftPanes(screen).forEach(id -> assertNull(registry.getArea(id), id + " is not drawn"));
+    }
+
+    private static List<String> lines(Buffer buffer, Rect area) {
+        return List.range(area.y(), area.bottom())
+                .map(y -> List.range(area.x(), area.right())
+                        .map(x -> buffer.get(x, y).symbol())
+                        .mkString());
+    }
 }

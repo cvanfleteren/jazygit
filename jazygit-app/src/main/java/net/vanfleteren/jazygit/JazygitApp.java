@@ -109,9 +109,14 @@ public class JazygitApp extends ToolkitApp {
     }
 
     /**
-     * Gives the focus back to the pane whose content has it, and says whether there was one.
+     * Gives the focus back to the pane whose content has it, and says whether there was one. A collapsed left column
+     * opens first, so the pane is drawn (ADR 104).
      */
     private boolean leaveScrollArea() {
+        Model model = model();
+        if (model.preferences().leftCollapsed(model.screen()) && focus.inPaneContent()) {
+            dispatch.accept(new LayoutMsg.Expanded(model.screen()));
+        }
         return focus.leaveScrollArea();
     }
 
@@ -176,7 +181,8 @@ public class JazygitApp extends ToolkitApp {
     }
 
     /**
-     * Drags the border between the columns or between the panes of the left column, or else gives the focus to what a click lands on.
+     * Drags the border between the columns or between the panes of the left column, opens a collapsed left column that
+     * is clicked, or else gives the focus to what a click lands on.
      */
     private EventResult handleMouse(Event event) {
         if (!(event instanceof MouseEvent mouse)) {
@@ -187,6 +193,16 @@ public class JazygitApp extends ToolkitApp {
             requestRedraw();
         }
         if (borderDrag.handle(mouse, model()).isHandled()) {
+            return EventResult.HANDLED;
+        }
+        // A click on a collapsed left column opens it (ADR 104).
+        Model model = model();
+        if (mouse.kind() == MouseEventKind.PRESS
+                && mouse.isLeftButton()
+                && model.popup().isEmpty()
+                && model.preferences().leftCollapsed(model.screen())
+                && borderDrag.onLeftColumn(mouse.x(), mouse.y())) {
+            dispatch.accept(new LayoutMsg.Expanded(model.screen()));
             return EventResult.HANDLED;
         }
         focus.clicked(mouse);
@@ -233,7 +249,9 @@ public class JazygitApp extends ToolkitApp {
         Column left = Try.of(() -> runner().tuiRunner().backend().size().width())
                 .toOption()
                 .map(width -> rendered.column().length(leftColumns(model, width)))
-                .getOrElse(() -> rendered.column().percent(model.preferences().leftWidth(model.screen())));
+                .getOrElse(() -> model.preferences().leftCollapsed(model.screen())
+                        ? rendered.column().length(LeftColumn.COLLAPSED_COLUMNS)
+                        : rendered.column().percent(model.preferences().leftWidth(model.screen())));
         var panes = row(
                 left,
                 column(
@@ -300,7 +318,9 @@ public class JazygitApp extends ToolkitApp {
                 leftSlide,
                 model.screen(),
                 width,
-                model.preferences().leftWidth(model.screen()),
+                model.preferences().leftCollapsed(model.screen())
+                        ? LeftColumn.COLLAPSED_COLUMNS
+                        : LeftBorder.columns(width, model.preferences().leftWidth(model.screen())),
                 model.preferences().settings().animations(),
                 model.preferences().dragged().isDefined(),
                 now);

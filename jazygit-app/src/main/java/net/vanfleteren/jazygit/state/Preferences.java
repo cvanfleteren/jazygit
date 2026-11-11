@@ -30,7 +30,8 @@ import net.vanfleteren.jazygit.settings.ThemeName;
  * @param columnRows    how many rows the left column has, as the last frame drew it, if one was (ADR 92)
  * @param maximizedPanes the pane of the left column of each screen that is maximized, counted from the first under
  *                       the status, for this session only (ADR 92)
- * @param maximizedContents the screens whose content panel is maximized, for this session only (ADR 92)
+ * @param collapsedColumns the screens whose left column is collapsed, which maximizes their content panel, for this
+ *                         session only (ADR 92, ADR 104)
  */
 @With
 public record Preferences(
@@ -43,7 +44,7 @@ public record Preferences(
         Option<DraggedHeights> draggedHeights,
         Option<Integer> columnRows,
         Map<Screen, Integer> maximizedPanes,
-        Set<Screen> maximizedContents) {
+        Set<Screen> collapsedColumns) {
 
     public static final Preferences DEFAULT = new Preferences(
             Settings.DEFAULT,
@@ -81,13 +82,13 @@ public record Preferences(
     }
 
     /**
-     * How wide the left column of {@code screen} is, in percent of the width: where it is dragged to, else as narrow
-     * as it gets while the content panel is maximized, else the width kept.
+     * How wide the left column of {@code screen} is when it is not collapsed, in percent of the width: where it is
+     * dragged to, else the width kept.
      */
     public int leftWidth(Screen screen) {
         return dragged.filter(drag -> drag.screen() == screen)
                 .map(Dragged::width)
-                .getOrElse(() -> contentMaximized(screen) ? Settings.MIN_WIDTH : keptWidth(screen));
+                .getOrElse(() -> keptWidth(screen));
     }
 
     /**
@@ -105,17 +106,18 @@ public record Preferences(
     }
 
     /**
-     * Whether the content panel of {@code screen} is maximized.
+     * Whether the left column of {@code screen} is collapsed, which leaves all but a sliver of the width to the
+     * content panel (ADR 104).
      */
-    public boolean contentMaximized(Screen screen) {
-        return maximizedContents.contains(screen);
+    public boolean leftCollapsed(Screen screen) {
+        return collapsedColumns.contains(screen);
     }
 
     /**
-     * These preferences with the content panel of {@code screen} maximized, or not.
+     * These preferences with the left column of {@code screen} collapsed, or not.
      */
-    public Preferences withContentMaximized(Screen screen, boolean maximized) {
-        return withMaximizedContents(maximized ? maximizedContents.add(screen) : maximizedContents.remove(screen));
+    public Preferences withLeftCollapsed(Screen screen, boolean collapsed) {
+        return withCollapsedColumns(collapsed ? collapsedColumns.add(screen) : collapsedColumns.remove(screen));
     }
 
     /**

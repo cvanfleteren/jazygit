@@ -195,6 +195,35 @@ class JazygitAppPilotTest {
                 model, BranchesPanel.ID, new BranchesPanel(msg -> {}, tab -> {})::render, "branch-log");
     }
 
+    @Test
+    void aPaneOfACollapsedLeftColumnGivesTheFocusToItsContent() throws Exception {
+        Model model = Update.update(
+                        Update.update(TestModels.loaded(), new SelectionMsg.CommitSelected(new Sha("aaaa")))
+                                .model(),
+                        new LoadMsg.CommitDetailLoaded(new Sha("aaaa"), DiffOptions.DEFAULT, DiffText.of("+a\n")))
+                .model()
+                .mapPreferences(preferences -> preferences.withLeftCollapsed(Screen.REPOSITORY, true));
+        AtomicReference<ToolkitTestRunner> runner = new AtomicReference<>();
+        AtomicReference<FocusKeeper> keeper = new AtomicReference<>();
+        ContentPanel content = new ContentPanel(Theme.SpanStyles.NONE, () -> false);
+        keeper.set(new FocusKeeper(() -> runner.get().runner(), () -> model, content, new Popups(msg -> {}), () -> {}));
+
+        // The collapsed column draws no pane: only the content, as JazygitApp settles the focus before drawing it.
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> {
+            String focusedId = runner.get() == null ? null : keeper.get().settle(model);
+            return content.render(model, focusedId).fill();
+        })) {
+            runner.set(testRunner);
+            SettledPilot.focus(testRunner, CommitsPanel.ID);
+            Pilot pilot = SettledPilot.of(testRunner);
+            pilot.pause();
+
+            assertEquals("commit-changes", keeper.get().focusedId());
+
+            pilot.quit();
+        }
+    }
+
     /**
      * Right in the pane {@code paneId}, which no list in it takes, moves the focus to the area {@code areaId}, as the
      * app's global key handler does, and Left gives it back to the pane.

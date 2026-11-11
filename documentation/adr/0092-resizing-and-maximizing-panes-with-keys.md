@@ -91,3 +91,6 @@ the left column has: only the frame does.
 
 Amended by ADR 95: `+` takes from the panes under the pane, then from the ones above, and once they are as short as
 they get, maximizes it.
+
+Amended by ADR 104: `Z` on the content panel collapses the left column to 3 columns instead of making it 15
+percent wide.
