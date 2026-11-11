@@ -481,9 +481,8 @@ class JazygitAppPilotTest {
                     fixture.data().status().read().get().files().toSet(),
                     all.files().toSet());
 
-            // Files come before directories: README.md, notes.txt, pom.xml, the merged src/... directory,
-            // JazygitApp.java and then the "model" directory.
-            for (int i = 0; i < 6; i++) {
+            // Directories come before files: the merged src/... directory, then its "model" directory.
+            for (int i = 0; i < 2; i++) {
                 pilot.press(KeyCode.DOWN);
             }
             pilot.press(' ');

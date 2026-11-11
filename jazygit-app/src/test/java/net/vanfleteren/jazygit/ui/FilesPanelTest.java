@@ -276,8 +276,8 @@ class FilesPanelTest {
     @Test
     void whenTheSelectedDirectoryIsGoneItsNeighbourIsSelected() throws Exception {
         List<String> names = List.of("a.txt", "dir1/x.txt", "dir2/w.txt", "dir3/v.txt");
-        // The root, a.txt, dir1, x.txt, then dir2.
-        assertEquals("x.txt", selectedAfter(4, names, List.of("a.txt", "dir1/x.txt", "dir3/v.txt")));
+        // The root, dir1, x.txt, then dir2.
+        assertEquals("x.txt", selectedAfter(3, names, List.of("a.txt", "dir1/x.txt", "dir3/v.txt")));
     }
 
     /**
