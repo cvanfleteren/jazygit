@@ -34,7 +34,7 @@ public record ReviewThread(
         Subject subject,
         List<Comment> comments,
         int more,
-        String id,
+        Id id,
         Rights rights) {
 
     /**
@@ -66,6 +66,13 @@ public record ReviewThread(
                 id,
                 rights);
     }
+
+    /**
+     * The node id of a thread, which GitHub's GraphQL mutations of it take (ADR 60).
+     *
+     * @param value the id, as GitHub gives it
+     */
+    public record Id(String value) {}
 
     /**
      * Which file of a diff a line is numbered in.
@@ -106,8 +113,8 @@ public record ReviewThread(
             Instant at,
             String body,
             Option<String> hidden,
-            String id,
-            String restId,
+            Id id,
+            RestId restId,
             CommentRights rights,
             Reactions reactions) {
 
@@ -119,8 +126,8 @@ public record ReviewThread(
                 Instant at,
                 String body,
                 Option<String> hidden,
-                String id,
-                String restId,
+                Id id,
+                RestId restId,
                 CommentRights rights) {
             this(author, at, body, hidden, id, restId, rights, Reactions.NONE);
         }
@@ -138,6 +145,22 @@ public record ReviewThread(
         public Comment withReactions(Reactions reactions) {
             return new Comment(author, at, body, hidden, id, restId, rights, reactions);
         }
+
+        /**
+         * The node id of a comment, which GitHub's GraphQL mutations of it take: editing, deleting or reacting to it
+         * (ADR 60, ADR 64, ADR 65, ADR 86).
+         *
+         * @param value the id, as GitHub gives it
+         */
+        public record Id(String value) {}
+
+        /**
+         * The id of a comment as GitHub's REST API numbers it, which is another than its node id: a reply to the
+         * thread it starts is sent to it, and its URL ends in it (ADR 60, ADR 85).
+         *
+         * @param value the number, as GitHub gives it
+         */
+        public record RestId(String value) {}
     }
 
     /**

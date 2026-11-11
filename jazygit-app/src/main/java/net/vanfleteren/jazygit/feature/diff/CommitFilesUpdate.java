@@ -128,7 +128,8 @@ public final class CommitFilesUpdate {
      * the commits they are at now: the threads are of those. Read at an older {@code version} than they are at now, as
      * before a comment was deleted, they are dropped, and read again for the threads {@code settled} (ADR 64).
      */
-    private static Next remarksRead(Model model, int number, ReviewRemarks remarks, Set<String> settled, int version) {
+    private static Next remarksRead(
+            Model model, int number, ReviewRemarks remarks, Set<ReviewThread.Id> settled, int version) {
         return model.repoView()
                 .commitFiles()
                 .filter(view -> view.pullRequest().contains(number))

@@ -90,31 +90,38 @@ class CommitFilesViewTest {
                 false,
                 read.subject(),
                 List.of(new ReviewThread.Comment(
-                        "bob", Instant.EPOCH, "Hm", Option.none(), "M", "2", CommentRights.ALL)),
+                        "bob",
+                        Instant.EPOCH,
+                        "Hm",
+                        Option.none(),
+                        new ReviewThread.Comment.Id("M"),
+                        new ReviewThread.Comment.RestId("2"),
+                        CommentRights.ALL)),
                 3,
-                "TM",
+                new ReviewThread.Id("TM"),
                 ReviewThread.Rights.ALL);
         CommitFilesView view = read(List.of(read, more));
 
-        CommitFilesView deleted = view.withoutComment("C").withoutComment("M");
+        CommitFilesView deleted =
+                view.withoutComment(new ReviewThread.Comment.Id("C")).withoutComment(new ReviewThread.Comment.Id("M"));
 
-        assertEquals(List.of("TM"), deleted.threads().map(ReviewThread::id));
+        assertEquals(List.of(new ReviewThread.Id("TM")), deleted.threads().map(ReviewThread::id));
         assertEquals(List.empty(), deleted.threads().head().comments());
         assertEquals(2, deleted.version());
         // One that is gone already changes nothing, not even the version.
-        assertEquals(deleted, deleted.withoutComment("C"));
+        assertEquals(deleted, deleted.withoutComment(new ReviewThread.Comment.Id("C")));
     }
 
     @Test
     void aCommentEditedSaysWhatGitHubHoldsAtANewerVersion() {
         CommitFilesView view = read(List.of(thread("a.txt", false)));
 
-        CommitFilesView edited = view.withEdited("C", "Hm?");
+        CommitFilesView edited = view.withEdited(new ReviewThread.Comment.Id("C"), "Hm?");
 
         assertEquals(List.of("Hm?"), edited.threads().head().comments().map(ReviewThread.Comment::body));
         assertEquals(1, edited.version());
         // One that is gone changes nothing, not even the version.
-        assertEquals(edited, edited.withEdited("X", "Hm!"));
+        assertEquals(edited, edited.withEdited(new ReviewThread.Comment.Id("X"), "Hm!"));
     }
 
     private static CommitFilesView read(List<ReviewThread> threads) {
@@ -136,9 +143,15 @@ class CommitFilesViewTest {
                 false,
                 ReviewThread.Subject.LINE,
                 List.of(new ReviewThread.Comment(
-                        "bob", Instant.EPOCH, "Hm", Option.none(), "C", "1", CommentRights.ALL)),
+                        "bob",
+                        Instant.EPOCH,
+                        "Hm",
+                        Option.none(),
+                        new ReviewThread.Comment.Id("C"),
+                        new ReviewThread.Comment.RestId("1"),
+                        CommentRights.ALL)),
                 0,
-                "T",
+                new ReviewThread.Id("T"),
                 ReviewThread.Rights.ALL);
     }
 }

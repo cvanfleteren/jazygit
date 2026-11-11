@@ -12,6 +12,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.gh.model.ChosenBrowser;
 import net.vanfleteren.jazygit.gh.model.PullRequestLink;
+import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -21,7 +22,8 @@ import org.junit.jupiter.api.io.TempDir;
  */
 class BrowserTest {
 
-    private static final PullRequestLink COMMENT = new PullRequestLink("github.com", "owner/repo", 7, Option.of("42"));
+    private static final PullRequestLink COMMENT =
+            new PullRequestLink("github.com", "owner/repo", 7, Option.of(new ReviewThread.Comment.RestId("42")));
 
     @TempDir
     Path dir;
@@ -110,7 +112,8 @@ class BrowserTest {
         assertEquals(
                 Either.right(List.of(ExecutedCommand.of("gh", "pr", "view", "7", "--web"))),
                 github(HashMap.of("BROWSER", "firefox"), "Linux")
-                        .openInBrowser(new PullRequestLink("", "owner/repo", 7, Option.of("42"))));
+                        .openInBrowser(new PullRequestLink(
+                                "", "owner/repo", 7, Option.of(new ReviewThread.Comment.RestId("42")))));
     }
 
     @Test

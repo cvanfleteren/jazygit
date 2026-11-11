@@ -72,9 +72,15 @@ class RemarkLinesTest {
                 Subject.LINE,
                 List.of(bodies)
                         .zipWithIndex((body, at) -> new Comment(
-                                "bob", NOW.minusSeconds(7200), body, Option.none(), "C" + at, "1", CommentRights.ALL)),
+                                "bob",
+                                NOW.minusSeconds(7200),
+                                body,
+                                Option.none(),
+                                new ReviewThread.Comment.Id("C" + at),
+                                new ReviewThread.Comment.RestId("1"),
+                                CommentRights.ALL)),
                 0,
-                path + line + String.join("", bodies),
+                new ReviewThread.Id(path + line + String.join("", bodies)),
                 ReviewThread.Rights.ALL);
     }
 
@@ -117,9 +123,15 @@ class RemarkLinesTest {
                 false,
                 Subject.LINE,
                 List.of(new Comment(
-                        "bob", NOW.minusSeconds(7200), "Why?", Option.none(), "C0", "1", CommentRights.ALL)),
+                        "bob",
+                        NOW.minusSeconds(7200),
+                        "Why?",
+                        Option.none(),
+                        new ReviewThread.Comment.Id("C0"),
+                        new ReviewThread.Comment.RestId("1"),
+                        CommentRights.ALL)),
                 0,
-                "T" + startSide + start + side + line,
+                new ReviewThread.Id("T" + startSide + start + side + line),
                 ReviewThread.Rights.ALL);
     }
 
@@ -278,7 +290,7 @@ class RemarkLinesTest {
     }
 
     private static List<String> drawnAlone(
-            ReviewThread thread, Collapsed collapsed, io.vavr.collection.Set<String> sending) {
+            ReviewThread thread, Collapsed collapsed, io.vavr.collection.Set<ReviewThread.Id> sending) {
         return text(RemarkLines.threads(
                         List.of(thread),
                         8,
@@ -294,7 +306,10 @@ class RemarkLinesTest {
         ReviewThread open = thread(2, false, "Why?", "Because");
         String indent = " ".repeat(8);
 
-        assertTrue(drawnAlone(resolved, Collapsed.NONE.flipped(resolved.id(), List.of(resolved)), HashSet.empty())
+        assertTrue(drawnAlone(
+                        resolved,
+                        Collapsed.NONE.flipped(Collapsed.Key.of(resolved.id()), List.of(resolved)),
+                        HashSet.empty())
                 .contains(indent + "┃  Done"));
         assertEquals(
                 List.of(indent + "━━ ✓ resolved · bob: Done"), drawnAlone(resolved, Collapsed.NONE, HashSet.empty()));
@@ -303,7 +318,7 @@ class RemarkLinesTest {
                 drawnAlone(resolved, Collapsed.NONE, HashSet.of(resolved.id())));
 
         // An unresolved thread collapsed says how many comments it has, not dimmed (ADR 62).
-        Collapsed closed = Collapsed.NONE.flipped(open.id(), List.of(open));
+        Collapsed closed = Collapsed.NONE.flipped(Collapsed.Key.of(open.id()), List.of(open));
         assertEquals(List.of(indent + "━━ ▸ 2 remarks · bob: Why?"), drawnAlone(open, closed, HashSet.empty()));
         assertEquals(
                 List.of(indent + "━━ ▸ 2 remarks · bob: Why? · sending…"),
@@ -327,13 +342,14 @@ class RemarkLinesTest {
     void aCommentBeingDeletedSaysSoAfterItsHeaderAndACollapsedThreadAfterItsLineWhenItIsItsFirst() {
         ReviewThread open = thread(2, false, "Why?", "Because");
         String indent = " ".repeat(8);
-        Collapsed closed = Collapsed.NONE.flipped(open.id(), List.of(open));
+        Collapsed closed = Collapsed.NONE.flipped(Collapsed.Key.of(open.id()), List.of(open));
 
         List<String> deleting = text(RemarkLines.threads(
                         List.of(open),
                         8,
                         RemarkLines.MIN_WIDTH,
-                        new RemarkLines.RemarkStyle(Collapsed.NONE, HashSet.empty(), HashSet.of("C1"), NOW),
+                        new RemarkLines.RemarkStyle(
+                                Collapsed.NONE, HashSet.empty(), HashSet.of(new Comment.Id("C1")), NOW),
                         Theme.SpanStyles.NONE))
                 .map(String::stripTrailing);
         assertTrue(deleting.contains(indent + "┣━ bob · 2h ago · deleting…"), deleting.toString());
@@ -345,7 +361,8 @@ class RemarkLinesTest {
                                 List.of(open),
                                 8,
                                 RemarkLines.MIN_WIDTH,
-                                new RemarkLines.RemarkStyle(closed, HashSet.empty(), HashSet.of("C0"), NOW),
+                                new RemarkLines.RemarkStyle(
+                                        closed, HashSet.empty(), HashSet.of(new Comment.Id("C0")), NOW),
                                 Theme.SpanStyles.NONE))
                         .map(String::stripTrailing));
     }
@@ -362,11 +379,11 @@ class RemarkLinesTest {
                         indent + "┃",
                         indent + "┣━ bob · 2h ago · Because",
                         indent + "┗━"),
-                drawnAlone(open, Collapsed.NONE.flipped("C1", List.of(open)), HashSet.empty()));
+                drawnAlone(open, Collapsed.NONE.flipped(new Collapsed.Key("C1"), List.of(open)), HashSet.empty()));
         // The first comment is the thread: flipping its id does nothing.
         assertEquals(
                 drawnAlone(open, Collapsed.NONE, HashSet.empty()),
-                drawnAlone(open, Collapsed.NONE.flipped("C0", List.of(open)), HashSet.empty()));
+                drawnAlone(open, Collapsed.NONE.flipped(new Collapsed.Key("C0"), List.of(open)), HashSet.empty()));
     }
 
     @Test
@@ -388,8 +405,8 @@ class RemarkLinesTest {
                                 NOW.minusSeconds(7200),
                                 "Buy now",
                                 Option.of("SPAM"),
-                                "H",
-                                "2",
+                                new ReviewThread.Comment.Id("H"),
+                                new ReviewThread.Comment.RestId("2"),
                                 CommentRights.ALL)),
                 2,
                 thread.id(),
@@ -399,12 +416,15 @@ class RemarkLinesTest {
         List<String> collapsed = drawnAlone(hidden, Collapsed.NONE, HashSet.empty());
         assertTrue(collapsed.contains(indent + "┣━ carol · 2h ago · hidden · spam"), collapsed.mkString("\n"));
         assertFalse(collapsed.exists(line -> line.contains("Buy now")));
-        assertTrue(drawnAlone(hidden, Collapsed.NONE.flipped("H", List.of(hidden)), HashSet.empty())
+        assertTrue(drawnAlone(hidden, Collapsed.NONE.flipped(new Collapsed.Key("H"), List.of(hidden)), HashSet.empty())
                 .contains(indent + "┃  Buy now"));
         // The count of a collapsed thread is of the comments GitHub has more of too.
         assertEquals(
                 List.of(indent + "━━ ▸ 4 remarks · bob: Why?"),
-                drawnAlone(hidden, Collapsed.NONE.flipped(hidden.id(), List.of(hidden)), HashSet.empty()));
+                drawnAlone(
+                        hidden,
+                        Collapsed.NONE.flipped(Collapsed.Key.of(hidden.id()), List.of(hidden)),
+                        HashSet.empty()));
     }
 
     @Test
@@ -422,7 +442,7 @@ class RemarkLinesTest {
                                 Theme.SpanStyles.NONE))
                         .tail()
                         .map(String::stripTrailing));
-        assertTrue(rich(shown(Collapsed.NONE.flipped(resolved.id(), List.of(resolved)), resolved))
+        assertTrue(rich(shown(Collapsed.NONE.flipped(Collapsed.Key.of(resolved.id()), List.of(resolved)), resolved))
                 .contains(" ".repeat(8) + "┃  Done"));
     }
 
@@ -438,9 +458,16 @@ class RemarkLinesTest {
                 false,
                 false,
                 Subject.LINE,
-                List.of(new Comment("", NOW, "All of it", Option.none(), "C", "1", CommentRights.ALL)),
+                List.of(new Comment(
+                        "",
+                        NOW,
+                        "All of it",
+                        Option.none(),
+                        new ReviewThread.Comment.Id("C"),
+                        new ReviewThread.Comment.RestId("1"),
+                        CommentRights.ALL)),
                 2,
-                "T",
+                new ReviewThread.Id("T"),
                 ReviewThread.Rights.ALL);
         ReviewThread outdated = new ReviewThread(
                 "a.txt",
@@ -452,9 +479,16 @@ class RemarkLinesTest {
                 false,
                 true,
                 Subject.LINE,
-                List.of(new Comment("carol", NOW, "Old", Option.of("OUTDATED"), "C", "1", CommentRights.ALL)),
+                List.of(new Comment(
+                        "carol",
+                        NOW,
+                        "Old",
+                        Option.of("OUTDATED"),
+                        new ReviewThread.Comment.Id("C"),
+                        new ReviewThread.Comment.RestId("1"),
+                        CommentRights.ALL)),
                 0,
-                "T",
+                new ReviewThread.Id("T"),
                 ReviewThread.Rights.ALL);
 
         List<String> lines = rich(shown(Collapsed.NONE, several, outdated));
@@ -550,9 +584,15 @@ class RemarkLinesTest {
                 false,
                 Subject.FILE,
                 List.of(new Comment(
-                        "bob", NOW.minusSeconds(7200), "Split this file", Option.none(), "C", "1", CommentRights.ALL)),
+                        "bob",
+                        NOW.minusSeconds(7200),
+                        "Split this file",
+                        Option.none(),
+                        new ReviewThread.Comment.Id("C"),
+                        new ReviewThread.Comment.RestId("1"),
+                        CommentRights.ALL)),
                 0,
-                "T",
+                new ReviewThread.Id("T"),
                 ReviewThread.Rights.ALL);
 
         List<String> lines = rich(shown(Collapsed.NONE, onFile));
@@ -575,9 +615,16 @@ class RemarkLinesTest {
                 false,
                 false,
                 Subject.LINE,
-                List.of(new Comment("carol", NOW, "Off topic", Option.of("OFF_TOPIC"), "C", "1", CommentRights.ALL)),
+                List.of(new Comment(
+                        "carol",
+                        NOW,
+                        "Off topic",
+                        Option.of("OFF_TOPIC"),
+                        new ReviewThread.Comment.Id("C"),
+                        new ReviewThread.Comment.RestId("1"),
+                        CommentRights.ALL)),
                 0,
-                "T",
+                new ReviewThread.Id("T"),
                 ReviewThread.Rights.ALL);
 
         // Its first comment hidden, the thread is collapsed, and says why in place of its first line (ADR 62).
@@ -586,7 +633,7 @@ class RemarkLinesTest {
                 collapsed.contains(" ".repeat(8) + "━━ ▸ 1 remark · carol: hidden · off-topic"),
                 collapsed.mkString("\n"));
         assertFalse(collapsed.exists(line -> line.contains("Off topic")));
-        assertTrue(rich(shown(Collapsed.NONE.flipped("T", List.of(hidden)), hidden))
+        assertTrue(rich(shown(Collapsed.NONE.flipped(new Collapsed.Key("T"), List.of(hidden)), hidden))
                 .contains(" ".repeat(8) + "┃  Off topic"));
     }
 
@@ -844,7 +891,7 @@ class RemarkLinesTest {
                         two,
                         new Anchor.Thread(first.id(), Option.of(two)),
                         replied,
-                        new Anchor.Comment("C1", replied),
+                        new Anchor.Comment(new ReviewThread.Comment.Id("C1"), replied),
                         new Anchor.OnLine("a.txt", Side.RIGHT, 3),
                         new Anchor.Gap("a.txt", 4, Option.none()),
                         new Anchor.Thread(outdated.id(), Option.none())),
@@ -866,7 +913,8 @@ class RemarkLinesTest {
                 .get();
         assertEquals(
                 new Anchor.Comment(
-                        "C1", new Anchor.Thread(second.id(), Option.of(new Anchor.OnLine("a.txt", Side.RIGHT, 2)))),
+                        new ReviewThread.Comment.Id("C1"),
+                        new Anchor.Thread(second.id(), Option.of(new Anchor.OnLine("a.txt", Side.RIGHT, 2)))),
                 comment.mark().anchor());
         assertTrue(lines.get(comment.row()).contains("┣━ bob"), lines.mkString("\n"));
         assertTrue(lines.get(comment.row() + comment.mark().lines() - 1).contains("┗━"));
@@ -889,16 +937,35 @@ class RemarkLinesTest {
                 false,
                 plain.subject(),
                 List.of(
-                        new Comment("carol", NOW, "Spam", Option.of("SPAM"), "H", "1", CommentRights.ALL),
-                        new Comment("bob", NOW, "g", Option.none(), "G", "2", CommentRights.ALL)),
+                        new Comment(
+                                "carol",
+                                NOW,
+                                "Spam",
+                                Option.of("SPAM"),
+                                new ReviewThread.Comment.Id("H"),
+                                new ReviewThread.Comment.RestId("1"),
+                                CommentRights.ALL),
+                        new Comment(
+                                "bob",
+                                NOW,
+                                "g",
+                                Option.none(),
+                                new ReviewThread.Comment.Id("G"),
+                                new ReviewThread.Comment.RestId("2"),
+                                CommentRights.ALL)),
                 0,
                 plain.id(),
                 plain.rights());
         ReviewThread resolved = thread("a.txt", 40, true, "h", "i");
         // A reply collapsed, an unresolved thread collapsed, a thread whose first comment is hidden opened, and a
         // resolved one as it starts.
-        Collapsed flipped =
-                new Collapsed(io.vavr.collection.HashMap.of("C1", false, collapsed.id(), false, hidden.id(), true));
+        Collapsed flipped = new Collapsed(io.vavr.collection.HashMap.of(
+                new Collapsed.Key("C1"),
+                false,
+                Collapsed.Key.of(collapsed.id()),
+                false,
+                Collapsed.Key.of(hidden.id()),
+                true));
         ShownRemarks remarks = shown(flipped, replied, collapsed, hidden, resolved);
 
         RichDiff.Drawn drawn = drawn(ParsedDiff.of(DIFF), true, Option.of(remarks), Theme.SpanStyles.NONE);
@@ -913,12 +980,12 @@ class RemarkLinesTest {
                         new Anchor.File("a.txt"),
                         one,
                         opened,
-                        new Anchor.Comment("G", opened),
+                        new Anchor.Comment(new ReviewThread.Comment.Id("G"), opened),
                         new Anchor.OnLine("a.txt", Side.LEFT, 2),
                         two,
                         open,
-                        new Anchor.Comment("C1", open),
-                        new Anchor.Comment("C2", open),
+                        new Anchor.Comment(new ReviewThread.Comment.Id("C1"), open),
+                        new Anchor.Comment(new ReviewThread.Comment.Id("C2"), open),
                         three,
                         new Anchor.Thread(collapsed.id(), Option.of(three)),
                         new Anchor.Gap("a.txt", 4, Option.none()),

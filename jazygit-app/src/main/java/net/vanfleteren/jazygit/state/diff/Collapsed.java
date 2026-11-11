@@ -17,7 +17,7 @@ import net.vanfleteren.jazygit.gh.model.ReviewThread.Comment;
  *                that default was collapsed when it was flipped: one whose default is no longer that is as it starts,
  *                as one kept from an earlier session, of a thread resolved since (ADR 63)
  */
-public record Collapsed(Map<String, Boolean> toggled) {
+public record Collapsed(Map<Collapsed.Key, Boolean> toggled) {
 
     /**
      * Each thread and comment as it is by default.
@@ -28,7 +28,7 @@ public record Collapsed(Map<String, Boolean> toggled) {
      * Whether {@code thread} is collapsed.
      */
     public boolean thread(ReviewThread thread) {
-        return byDefault(thread) != isFlipped(thread.id(), byDefault(thread));
+        return byDefault(thread) != isFlipped(Key.of(thread.id()), byDefault(thread));
     }
 
     private static boolean byDefault(ReviewThread thread) {
@@ -41,10 +41,10 @@ public record Collapsed(Map<String, Boolean> toggled) {
      */
     public boolean comment(Comment comment) {
         return comment.hidden().isDefined()
-                != isFlipped(comment.id(), comment.hidden().isDefined());
+                != isFlipped(Key.of(comment.id()), comment.hidden().isDefined());
     }
 
-    private boolean isFlipped(String id, boolean byDefault) {
+    private boolean isFlipped(Key id, boolean byDefault) {
         return toggled.get(id).contains(byDefault);
     }
 
@@ -60,7 +60,7 @@ public record Collapsed(Map<String, Boolean> toggled) {
      * These with the thread or the comment with the id {@code id}, one of {@code threads}, flipped; as they are when
      * it is none of them.
      */
-    public Collapsed flipped(String id, List<ReviewThread> threads) {
+    public Collapsed flipped(Key id, List<ReviewThread> threads) {
         return defaults(threads)
                 .get(id)
                 .map(byDefault ->
@@ -74,14 +74,14 @@ public record Collapsed(Map<String, Boolean> toggled) {
      * against its new default (ADR 62). One not read stays.
      */
     public Collapsed readAgain(List<ReviewThread> threads) {
-        Map<String, Boolean> now = defaults(threads);
+        Map<Key, Boolean> now = defaults(threads);
         return new Collapsed(toggled.filter((id, then) -> now.get(id).forAll(then::equals)));
     }
 
     /**
      * These with {@code kept} too, those kept from an earlier session (ADR 63): what was flipped in this one wins.
      */
-    public Collapsed with(Map<String, Boolean> kept) {
+    public Collapsed with(Map<Key, Boolean> kept) {
         return new Collapsed(kept.merge(toggled, (before, now) -> now));
     }
 
@@ -89,10 +89,35 @@ public record Collapsed(Map<String, Boolean> toggled) {
      * Whether each of {@code threads}, and each of its comments that is a stop of its own, is collapsed by default, by
      * its id.
      */
-    private static Map<String, Boolean> defaults(List<ReviewThread> threads) {
+    private static Map<Key, Boolean> defaults(List<ReviewThread> threads) {
         return threads.flatMap(thread -> replies(thread)
-                        .map(comment -> Tuple.of(comment.id(), comment.hidden().isDefined()))
-                        .prepend(Tuple.of(thread.id(), byDefault(thread))))
+                        .map(comment ->
+                                Tuple.of(Key.of(comment.id()), comment.hidden().isDefined()))
+                        .prepend(Tuple.of(Key.of(thread.id()), byDefault(thread))))
                 .toMap(Tuple2::_1, Tuple2::_2);
+    }
+
+    /**
+     * The node id of a thread or of a comment, by which what was flipped is kept. GitHub's node ids of both are of one
+     * kind, so the ids of threads and comments are kept together, as the store of an earlier session keeps them (ADR
+     * 63), which does not tell which is which.
+     *
+     * @param value the id, as GitHub gives it
+     */
+    public record Key(String value) {
+
+        /**
+         * The key of the thread with the id {@code thread}.
+         */
+        public static Key of(ReviewThread.Id thread) {
+            return new Key(thread.value());
+        }
+
+        /**
+         * The key of the comment with the id {@code comment}.
+         */
+        public static Key of(Comment.Id comment) {
+            return new Key(comment.value());
+        }
     }
 }

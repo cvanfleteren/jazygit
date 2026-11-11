@@ -74,16 +74,28 @@ class ReviewThreadsQueryTest {
                 Subject.LINE,
                 comments,
                 more,
-                "PRRT_1",
+                new ReviewThread.Id("PRRT_1"),
                 new ReviewThread.Rights(true, true, false));
     }
 
     @Test
     void theThreadsOfAllPagesWithTheCommitsOfTheFirst() {
-        Comment bob =
-                new Comment("bob", Instant.parse(AT), "Rename this?", Option.none(), "IC_1", "101", CommentRights.ALL);
-        Comment carol =
-                new Comment("carol", Instant.parse(AT), "Agreed", Option.none(), "IC_1", "101", CommentRights.ALL);
+        Comment bob = new Comment(
+                "bob",
+                Instant.parse(AT),
+                "Rename this?",
+                Option.none(),
+                new Comment.Id("IC_1"),
+                new Comment.RestId("101"),
+                CommentRights.ALL);
+        Comment carol = new Comment(
+                "carol",
+                Instant.parse(AT),
+                "Agreed",
+                Option.none(),
+                new Comment.Id("IC_1"),
+                new Comment.RestId("101"),
+                CommentRights.ALL);
 
         assertEquals(
                 Either.right(new ReviewRemarks(
@@ -129,7 +141,13 @@ class ReviewThreadsQueryTest {
         assertEquals(
                 List.of(onLine12(
                         List.of(new Comment(
-                                "bob", Instant.parse(AT), "Done", Option.none(), "IC_1", "101", CommentRights.ALL)),
+                                "bob",
+                                Instant.parse(AT),
+                                "Done",
+                                Option.none(),
+                                new Comment.Id("IC_1"),
+                                new Comment.RestId("101"),
+                                CommentRights.ALL)),
                         0)),
                 read(page(
                                 "\"abc123\"",
@@ -142,7 +160,13 @@ class ReviewThreadsQueryTest {
     void aHiddenCommentSaysWhyAndADeletedAuthorHasNoName() {
         assertEquals(
                 List.of(new Comment(
-                        "", Instant.parse(AT), "spam", Option.of("SPAM"), "IC_1", "101", CommentRights.ALL)),
+                        "",
+                        Instant.parse(AT),
+                        "spam",
+                        Option.of("SPAM"),
+                        new Comment.Id("IC_1"),
+                        new Comment.RestId("101"),
+                        CommentRights.ALL)),
                 read(page("\"abc123\"", thread(onLine(12), 1, comment("null", "SUBMITTED", "\"SPAM\"", "spam"))))
                         .get()
                         .threads()
@@ -209,12 +233,15 @@ class ReviewThreadsQueryTest {
                         thread(onLine(12), 1, comment("{ \"login\": \"bob\" }", "SUBMITTED", "null", "Hm"))))
                 .get();
 
-        assertEquals("PRRT_1", read.threads().head().id());
+        assertEquals(new ReviewThread.Id("PRRT_1"), read.threads().head().id());
         assertEquals(
                 new ReviewThread.Rights(true, true, false),
                 read.threads().head().rights());
-        assertEquals("IC_1", read.threads().head().comments().head().id());
-        assertEquals("101", read.threads().head().comments().head().restId());
+        assertEquals(
+                new Comment.Id("IC_1"), read.threads().head().comments().head().id());
+        assertEquals(
+                new Comment.RestId("101"),
+                read.threads().head().comments().head().restId());
     }
 
     @Test

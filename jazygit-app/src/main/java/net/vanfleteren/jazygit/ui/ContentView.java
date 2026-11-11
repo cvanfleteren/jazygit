@@ -595,8 +595,8 @@ final class ContentView {
             Option<Failure> failed,
             boolean onLines,
             Collapsed collapsed,
-            Set<String> sending,
-            Set<String> deleting,
+            Set<ReviewThread.Id> sending,
+            Set<ReviewThread.Comment.Id> deleting,
             Map<String, Picture> pictures) {
 
         ShownRemarks(
@@ -605,8 +605,8 @@ final class ContentView {
                 Option<Failure> failed,
                 boolean onLines,
                 Collapsed collapsed,
-                Set<String> sending,
-                Set<String> deleting) {
+                Set<ReviewThread.Id> sending,
+                Set<ReviewThread.Comment.Id> deleting) {
             this(threads, now, failed, onLines, collapsed, sending, deleting, HashMap.empty());
         }
     }

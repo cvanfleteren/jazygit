@@ -121,7 +121,7 @@ public final class ReviewUpdate {
                 Next failed = OperationUpdate.update(model, new OperationMsg.Failed(cmd, failure));
                 Model back = changed(failed.model(), popup -> popup.withSending(false), false);
                 yield new Next(
-                        cmd.target() instanceof Target.Reply(String thread, var comment)
+                        cmd.target() instanceof Target.Reply(ReviewThread.Id thread, var comment)
                                 ? sending(back, set -> set.remove(thread))
                                 : back,
                         failed.cmds());
@@ -239,7 +239,7 @@ public final class ReviewUpdate {
         // saved, so nothing else is sent for the thread meanwhile (ADR 65).
         Model sending = model.clearError().openPopup(popup.withSending(true));
         return Update.start(
-                popup.target() instanceof Target.Reply(String thread, var comment)
+                popup.target() instanceof Target.Reply(ReviewThread.Id thread, var comment)
                         ? sending(sending, set -> set.add(thread))
                         : sending,
                 new Send(popup.number(), popup.target(), popup.text()));
@@ -422,8 +422,9 @@ public final class ReviewUpdate {
                                                 Option.of(line),
                                                 Option.none())))))
                 .getOrElse(closed);
-        Set<String> settled =
-                cmd.target() instanceof Target.Reply(String thread, var comment) ? HashSet.of(thread) : HashSet.empty();
+        Set<ReviewThread.Id> settled = cmd.target() instanceof Target.Reply(ReviewThread.Id thread, var comment)
+                ? HashSet.of(thread)
+                : HashSet.empty();
         return new Next(moved, done.cmds().append(LoadReviewRemarks.after(moved, cmd.number(), settled)));
     }
 
@@ -439,7 +440,7 @@ public final class ReviewUpdate {
                 .map(open -> done.model().withoutPopup(ReviewPopup.class))
                 .getOrElse(done.model());
         return new Next(
-                cmd.target() instanceof Target.Edit(var thread, String comment, var original)
+                cmd.target() instanceof Target.Edit(var thread, ReviewThread.Comment.Id comment, var original)
                         ? mapPullRequest(closed, cmd.number(), view -> view.withEdited(comment, body))
                         : closed,
                 done.cmds());
@@ -487,7 +488,8 @@ public final class ReviewUpdate {
      * the last comment read of a thread GitHub has more of: which of those is its first now, that a reply goes to, is
      * not known until the threads are read again.
      */
-    private static Next gone(Model model, List<Cmd> cmds, int number, String thread, String comment) {
+    private static Next gone(
+            Model model, List<Cmd> cmds, int number, ReviewThread.Id thread, ReviewThread.Comment.Id comment) {
         Model deleted = mapPullRequest(model, number, view -> view.withoutComment(comment));
         boolean unread = pullRequestFiles(deleted)
                 .filter(view -> view.pullRequest().contains(number))
@@ -565,7 +567,7 @@ public final class ReviewUpdate {
      * The comment of {@code thread} the cursor {@code on} is on: the one it names, or its first, which its stop is.
      */
     private static Option<ReviewThread.Comment> comment(ReviewThread thread, Anchor on) {
-        return on instanceof Anchor.Comment(String id, var _)
+        return on instanceof Anchor.Comment(ReviewThread.Comment.Id id, var _)
                 ? thread.comments().find(comment -> comment.id().equals(id))
                 : thread.comments().headOption();
     }
@@ -641,9 +643,9 @@ public final class ReviewUpdate {
         CommitFilesView view = found._1();
         Collapsed collapsed = view.collapsed()
                 .flipped(
-                        on instanceof Anchor.Comment(String id, var _)
-                                ? id
-                                : found._2().id(),
+                        on instanceof Anchor.Comment(ReviewThread.Comment.Id id, var _)
+                                ? Collapsed.Key.of(id)
+                                : Collapsed.Key.of(found._2().id()),
                         view.threads());
         return new Next(
                 mapView(model, files -> files.withCollapsed(collapsed)),
@@ -678,7 +680,7 @@ public final class ReviewUpdate {
      * The thread the cursor {@code on} is on, or on a comment of, with the files it is of.
      */
     private static Either<Why, Tuple2<CommitFilesView, ReviewThread>> thread(CommitFilesView view, Anchor on) {
-        Option<String> id = switch (on) {
+        Option<ReviewThread.Id> id = switch (on) {
             case Anchor.Thread thread -> Option.of(thread.id());
             case Anchor.Comment(var _, Anchor.Thread thread) -> Option.of(thread.id());
             default -> Option.none();
@@ -716,7 +718,7 @@ public final class ReviewUpdate {
         return mapView(model, view -> view.pullRequest().contains(number) ? f.apply(view) : view);
     }
 
-    private static Model sending(Model model, Function<Set<String>, Set<String>> f) {
+    private static Model sending(Model model, Function<Set<ReviewThread.Id>, Set<ReviewThread.Id>> f) {
         return mapView(model, view -> view.withSending(f.apply(view.sending())));
     }
 

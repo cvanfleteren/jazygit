@@ -174,7 +174,7 @@ class CommitFilesUpdateTest {
             ReviewThread.Subject.LINE,
             List.empty(),
             0,
-            "T",
+            new ReviewThread.Id("T"),
             ReviewThread.Rights.ALL);
 
     private static ReviewRemarks remarks(String head, String base) {
@@ -234,16 +234,16 @@ class CommitFilesUpdateTest {
                         Instant.EPOCH,
                         "Working… <img src=\"" + icon + "\" width=\"14\" /> and ![x](https://example.com/track.png)",
                         Option.none(),
-                        "C1",
-                        "1",
+                        new ReviewThread.Comment.Id("C1"),
+                        new ReviewThread.Comment.RestId("1"),
                         CommentRights.ALL),
                 new ReviewThread.Comment(
                         "cvf",
                         Instant.EPOCH,
                         "<img alt=\"shot\" src=\"" + pasted + "\">\n\n![again](" + icon + ")",
                         Option.none(),
-                        "C2",
-                        "2",
+                        new ReviewThread.Comment.Id("C2"),
+                        new ReviewThread.Comment.RestId("2"),
                         CommentRights.ALL)));
         ReviewRemarks remarks = new ReviewRemarks(
                 PullRequestDetails.State.OPEN,

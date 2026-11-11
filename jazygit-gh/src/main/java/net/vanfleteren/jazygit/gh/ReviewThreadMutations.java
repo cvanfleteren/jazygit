@@ -7,6 +7,7 @@ import static net.vanfleteren.jazygit.json.Decoder.string;
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.gh.model.NewReviewThread;
 import net.vanfleteren.jazygit.gh.model.Reaction;
+import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.json.Decoder;
 
 /**
@@ -77,33 +78,47 @@ final class ReviewThreadMutations {
      * The command that replies {@code body} to the thread of pull request {@code number} whose first comment has the
      * id {@code comment}, as REST numbers it.
      */
-    static GhCommand reply(int number, String comment, String body) {
+    static GhCommand reply(int number, ReviewThread.Comment.RestId comment, String body) {
         return post(
-                "repos/{owner}/{repo}/pulls/" + number + "/comments/" + comment + "/replies",
+                "repos/{owner}/{repo}/pulls/" + number + "/comments/" + comment.value() + "/replies",
                 List.of("-f", "body=" + body));
     }
 
     /**
      * The command that resolves the thread with node id {@code thread} when {@code resolved}, else unresolves it.
      */
-    static GhCommand resolve(String thread, boolean resolved) {
-        return gh(List.of("api", "graphql", "-f", "query=" + (resolved ? RESOLVE : UNRESOLVE), "-f", "thread=" + thread)
+    static GhCommand resolve(ReviewThread.Id thread, boolean resolved) {
+        return gh(List.of(
+                        "api",
+                        "graphql",
+                        "-f",
+                        "query=" + (resolved ? RESOLVE : UNRESOLVE),
+                        "-f",
+                        "thread=" + thread.value())
                 .toJavaArray(String[]::new));
     }
 
     /**
      * The command that deletes the comment of a review thread with node id {@code comment}.
      */
-    static GhCommand delete(String comment) {
-        return gh(List.of("api", "graphql", "-f", "query=" + DELETE, "-f", "comment=" + comment)
+    static GhCommand delete(ReviewThread.Comment.Id comment) {
+        return gh(List.of("api", "graphql", "-f", "query=" + DELETE, "-f", "comment=" + comment.value())
                 .toJavaArray(String[]::new));
     }
 
     /**
      * The command that changes the comment of a review thread with node id {@code comment} to {@code body}.
      */
-    static GhCommand edit(String comment, String body) {
-        return gh(List.of("api", "graphql", "-f", "query=" + EDIT, "-f", "comment=" + comment, "-f", "body=" + body)
+    static GhCommand edit(ReviewThread.Comment.Id comment, String body) {
+        return gh(List.of(
+                        "api",
+                        "graphql",
+                        "-f",
+                        "query=" + EDIT,
+                        "-f",
+                        "comment=" + comment.value(),
+                        "-f",
+                        "body=" + body)
                 .toJavaArray(String[]::new));
     }
 
@@ -111,14 +126,14 @@ final class ReviewThreadMutations {
      * The command that gives {@code reaction} to the comment with node id {@code comment} when {@code given}, else
      * takes it back (ADR 86).
      */
-    static GhCommand react(String comment, Reaction reaction, boolean given) {
+    static GhCommand react(ReviewThread.Comment.Id comment, Reaction reaction, boolean given) {
         return gh(List.of(
                         "api",
                         "graphql",
                         "-f",
                         "query=" + (given ? ADD_REACTION : REMOVE_REACTION),
                         "-f",
-                        "subject=" + comment,
+                        "subject=" + comment.value(),
                         "-f",
                         "content=" + reaction.name())
                 .toJavaArray(String[]::new));

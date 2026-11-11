@@ -560,9 +560,15 @@ class FilesPanelTest {
                 false,
                 ReviewThread.Subject.LINE,
                 List.of(new ReviewThread.Comment(
-                        "bob", java.time.Instant.EPOCH, "Hm", Option.none(), "C", "1", CommentRights.ALL)),
+                        "bob",
+                        java.time.Instant.EPOCH,
+                        "Hm",
+                        Option.none(),
+                        new ReviewThread.Comment.Id("C"),
+                        new ReviewThread.Comment.RestId("1"),
+                        CommentRights.ALL)),
                 0,
-                "T",
+                new ReviewThread.Id("T"),
                 ReviewThread.Rights.ALL);
     }
 
