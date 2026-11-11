@@ -10,8 +10,6 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
-import net.vanfleteren.jazygit.git.model.FileEntry;
-import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.Cmd.*;
@@ -360,18 +358,6 @@ public final class Update {
                         && model.repoView().branchesTab() == BranchesTab.WORKTREES
                         && others.nonEmpty()
                         && !model.jobs().runs(LoadWorktreeChanges.class::isInstance));
-    }
-
-    /**
-     * What {@code then} makes of the changed files, once the status is loaded; until then, or when it failed to
-     * load, nothing happens, as it is unknown what changed.
-     */
-    public static Next withFiles(Model model, Function<List<FileEntry>, Next> then) {
-        return model.repo().status().toOption().map(RepoStatus::files).map(then).getOrElse(() -> Next.of(model));
-    }
-
-    public static List<FileEntry> files(Model model) {
-        return model.repo().status().toOption().map(RepoStatus::files).getOrElse(List.empty());
     }
 
     /**

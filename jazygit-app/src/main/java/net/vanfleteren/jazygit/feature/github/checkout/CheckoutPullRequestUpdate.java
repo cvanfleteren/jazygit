@@ -114,7 +114,8 @@ public final class CheckoutPullRequestUpdate {
      * instead, as checking out the branch offers it.
      */
     private static Readiness forCheckout(Model model, PullRequestSummary pullRequest) {
-        boolean changed = Update.files(model).exists(file -> file.type() != ChangeType.UNTRACKED);
+        boolean changed =
+                model.repo().files().exists(files -> files.exists(file -> file.type() != ChangeType.UNTRACKED));
         return checkedOutElsewhere(model, pullRequest)
                 .orElse(() -> Option.when(
                         changed, () -> new Readiness.Blocked(new GitHubError.ChangesBeforeCheckout(name(pullRequest)))))
