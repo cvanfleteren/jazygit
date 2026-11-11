@@ -67,7 +67,11 @@ def test_z_on_the_content_collapses_the_left_column_until_the_focus_goes_back(re
     ui = jazygit()
     ui.app.wait_for("Add one")
     ui.app.focus("Commits")
+    focused = ui.app.panes()["Commits"]
+    # Right only moves the focus into the content once it shows the commit, and Z acts on what has the focus then.
+    ui.app.wait_for("╭Commit:")
     ui.app.press("right")
+    ui.app.eventually(lambda: ui.app.colour_at("╭Commit:") == focused, "the commit to have the focus")
 
     ui.app.press("Z")
 
