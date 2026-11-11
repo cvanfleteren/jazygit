@@ -289,9 +289,9 @@ Enter on a branch, local or remote, lists its commits in place of the branches (
 base dimmed, and with `b` only the others and the fork point. Enter on a commit moves the focus to its diff; Escape,
 or switching tabs, goes back to the branches.
 
-`RepoView.branchCommits` (`state.view.BranchCommitsView`) holds only the branch and the preview of the highlighted commit.
-The commits are not held twice: while the list is open, the branch stays the one highlighted in the branches pane,
-so its log is `RepoView.branchLog` and what is ahead `RepoView.branchAhead`, read and read again as for the
+`RepoView.branchCommits` (`state.view.BranchCommitsView`) holds only the branch and the preview of the highlighted
+commit. The commits are not held twice: while the list is open, the branch stays the one highlighted in the branches
+pane, so its log is `RepoView.branchLog` and what is ahead `RepoView.branchAhead`, read and read again as for the
 highlighted branch. A log read for another branch shows as loading. When the branch is gone, the list closes. The
 content panel shows the highlighted commit as the commits pane does, in a scroll area of its own. See ADR 23.
 
@@ -300,8 +300,8 @@ content panel shows the highlighted commit as the commits pane does, in a scroll
 `/` in the commits pane opens a line above the list to type a query in (`RepoView.searchLine`); Enter runs it through
 `History.search`, and the pane then lists what it found in place of the log of HEAD (`RepoView.commitSearch`,
 `state.view.CommitSearch`), flat, without the rails of merges, until Escape clears it. Its messages and update are in
-`state.load` (`CommitSearchMsg`, `CommitSearchUpdate`), as the pane sends them; `feature.commit.search` only declares the
-key. `git.model.CommitQuery` parses the query: bare words for the message, `author:`, `path:` and `-S:`, smart case.
+`state.load` (`CommitSearchMsg`, `CommitSearchUpdate`), as the pane sends them; `feature.commit.search` only declares
+the key. `git.model.CommitQuery` parses the query: bare words for the message, `author:`, `path:` and `-S:`, smart case.
 See ADR 4.
 
 The search runs again each time the log is read again, so it stays right after an operation, and the commit
@@ -319,12 +319,12 @@ first, and on its own again when the base moves; `state.load.AheadUpdate` decide
 
 ## The pull requests screen
 
-Ctrl+P switches the left of the screen between the repository and the pull requests (`Model.screen`, `state.preferences.Screen`);
-the status panel names both, the one shown in bold. What the pull requests screen shows lives in one part of the
-model, `Model.prOverview` (`state.github.prs.PrOverview`), with its own messages and its own update, which works on that part
-alone (`PrOverviewMsg`, `PrOverviewUpdate`); only switching screens, and whether the screen is shown, look at the rest.
-It lives in `state`, next to the other reads of GitHub, so the GitHub feature can read it again after changing a pull
-request. The design and the steps still to come are in `prs.md`.
+Ctrl+P switches the left of the screen between the repository and the pull requests (`Model.screen`,
+`state.preferences.Screen`); the status panel names both, the one shown in bold. What the pull requests screen shows
+lives in one part of the model, `Model.prOverview` (`state.github.prs.PrOverview`), with its own messages and its own
+update, which works on that part alone (`PrOverviewMsg`, `PrOverviewUpdate`); only switching screens, and whether the
+screen is shown, look at the rest. It lives in `state.github`, next to the other reads of GitHub, so the GitHub feature
+can read it again after changing a pull request. The design and the steps still to come are in `prs.md`.
 
 - The panes, top to bottom, are **This repo**, **Review requested** and **My PRs**. **Review requested** and
   **My PRs** list the open pull requests that ask for the user's review and the ones they opened, in any repository:
@@ -430,8 +430,8 @@ See `documentation/adr/0102-the-original-or-the-new-version-of-a-file.md`.
 See `documentation/adr/0103-a-version-of-markdown-rendered.md`.
 
 - Ctrl+T (`feature.diff.VersionAction`, next to Ctrl+O) sends `VersionMsg.RenderToggled`. `VersionUpdate` acts as for
-  Ctrl+O, and only on a file `state.diff.Rendered` knows by its extension, the one table of the files with a renderer. It
-  sets `Version.rendered`: on the diff, it renders and shows the new version, or the original of a deleted file; on a
+  Ctrl+O, and only on a file `state.diff.Rendered` knows by its extension, the one table of the files with a renderer.
+  It sets `Version.rendered`: on the diff, it renders and shows the new version, or the original of a deleted file; on a
   version rendered, it shows it as source. Ctrl+O keeps `rendered` as it cycles.
 - `Version.applied` passes `rendered` on in the `Expansion.Fold`. `RichDiff.rendered` draws the file: its bar, the only
   stop of the cursor, whose lines the rows after it are, so `j` and `k` scroll; then each block `RenderedMarkdown` draws,
@@ -542,18 +542,16 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
   opened from when Escape closes them. `Model.withShownPane` closes them when another pane gets the focus, and
   `LoadUpdate` when the stash they are of is dropped.
 - **The cursor of the rich view** (ADR 60): it stops on an `Anchor` (the lead, a file's bar, a line by its side and
-  number, a thread by its id, a comment of an open thread), and `state.diff.DiffStops`, pure, says where it goes when its
-  stop is gone (`DiffStops.nearest`). `RichDiff.drawn` works out the stops as it draws the diff and marks the row each
-  starts on (`RichDiff.Drawn`); a key of the review needs only the lines among them, which `state.diff.DiffLines` works
-  out from the diff alone, without placing the threads. `ui.DiffCursor` moves it: `j`/`k` and the arrows, through a stop
-  higher than the view before
-  the next one, the pages and the wheel pulling it along, a click on a row, a range of one hunk with `v`, the next
-  thread with `n`. The
-  area sends where it moved it and the view in one `ViewMsg.ContentScrolled`: `Scrolled` holds the anchor of the
-  cursor and of the other end of its range, and keeps the cursor when the same changes are read again
-  (`ScrolledContent.sameChanges`). Until the model has it, the area draws where it told it, so a key right after
-  another acts on where that one took the cursor. Its tint, `diff-cursor`, is laid over the text the area keeps
-  styled, so moving it styles nothing again.
+  number, a thread by its id, a comment of an open thread), and `state.diff.DiffStops`, pure, says where it goes when
+  its stop is gone (`DiffStops.nearest`). `RichDiff.drawn` works out the stops as it draws the diff and marks the row
+  each starts on (`RichDiff.Drawn`); a key of the review needs only the lines among them, which `state.diff.DiffLines`
+  works out from the diff alone, without placing the threads. `ui.DiffCursor` moves it: `j`/`k` and the arrows, through
+  a stop higher than the view before the next one, the pages and the wheel pulling it along, a click on a row, a range
+  of one hunk with `v`, the next thread with `n`. The area sends where it moved it and the view in one
+  `ViewMsg.ContentScrolled`: `Scrolled` holds the anchor of the cursor and of the other end of its range, and keeps the
+  cursor when the same changes are read again (`ScrolledContent.sameChanges`). Until the model has it, the area draws
+  where it told it, so a key right after another acts on where that one took the cursor. Its tint, `diff-cursor`, is
+  laid over the text the area keeps styled, so moving it styles nothing again.
 - **Commenting on a pull request's diff** (ADR 60): while the content panel shows the files of a pull request, its
   keys are those of `Scopes.PULL_REQUEST_DIFF`, whose selection is the cursor (`DiffCursorAt`, with where `n`, `N` and
   `v` take it). `feature.github.review` starts a thread on a line, a range or a file and replies to one from a
