@@ -23,8 +23,8 @@ without changes has no diff, and no version can be made from one.
 - `a` in the files pane switches the tree of the working tree between its changed files, as now, and all its files.
   `?` lists it. Not: `f` on the main branch, which is not always what is checked out, nor on disk.
 - All its files are those git tracks and the untracked ones it does not ignore: `git ls-files -z -t --cached --others
-  --exclude-standard --deduplicate`, which lists a conflicted file once, not once per stage. A submodule is one
-  entry. Not: the ignored files, as `target/` or `node_modules/`, which would bury the others.
+  --exclude-standard`, each path kept once and sorted: git lists a conflicted file once per stage, and with `-t` its
+  `--deduplicate` does nothing. A submodule is one entry. Not: the ignored files, as `target/` or `node_modules/`, which would bury the others.
 - A file tagged `S` by `-t` (skip-worktree) is left out when it is not on disk, as a sparse checkout leaves it: it
   cannot be read, and `e` would make a new file. One that is on disk, as `git update-index --skip-worktree` leaves it,
   stays and shows its content, its edits too, as git does not report them. A tracked file deleted from the disk but

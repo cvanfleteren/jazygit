@@ -4,6 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.FileContent;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.GitMetadata;
 import net.vanfleteren.jazygit.git.model.Head;
@@ -36,5 +37,16 @@ public interface StubStatus extends Status {
     @Override
     default Option<MetadataStamp> diffStamp(List<FileEntry> files) {
         return Option.none();
+    }
+
+    // No files besides the changed ones, of which there are none.
+    @Override
+    default Either<GitError, List<String>> allFiles() {
+        return Either.right(List.empty());
+    }
+
+    @Override
+    default Either<GitError, FileContent> content(String path) {
+        return Either.left(new GitError.Unreadable(path, "no such file"));
     }
 }

@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.git;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.git.model.FileContent;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.GitMetadata;
 import net.vanfleteren.jazygit.git.model.MetadataStamp;
@@ -37,4 +38,16 @@ public interface Status {
      * without running git; none when that cannot be told, and then the diff is to be read every time (ADR 58).
      */
     Option<MetadataStamp> diffStamp(List<FileEntry> files);
+
+    /**
+     * The paths of all files of the working tree, sorted: those git tracks and the untracked ones it does not ignore,
+     * each once. A file a sparse checkout leaves off the disk is left out; one kept on disk with the skip-worktree bit
+     * stays (ADR 108).
+     */
+    Either<GitError, List<String>> allFiles();
+
+    /**
+     * What the file at {@code path} in the working tree holds on disk, read up to the limit of a diff (ADR 79, 108).
+     */
+    Either<GitError, FileContent> content(String path);
 }

@@ -180,6 +180,7 @@ public final class ErrorText {
             case GitError.UnexpectedOutput(String output) -> Messages.get("git.unexpectedOutput", output);
             case GitError.NotARepository(var directory) -> Messages.get("git.notRepository", directory);
             case GitError.NoWorktree(var directory) -> Messages.get("git.noWorkTree", directory);
+            case GitError.Unreadable(String path, String reason) -> Messages.get("git.unreadable", path, reason);
             case GitError.UnknownBranch(BranchRef branch) -> Messages.get("git.unknownBranch", branch.name());
             case GitError.LocalChanges(String explanation) -> explanation;
             case GitError.WorktreeHasChanges(String explanation) -> explanation;

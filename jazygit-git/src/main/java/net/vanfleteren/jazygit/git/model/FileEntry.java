@@ -41,6 +41,21 @@ public record FileEntry(
     }
 
     /**
+     * A file of the working tree that has no changes, listed with all its files (ADR 108).
+     */
+    public static FileEntry unchanged(String path) {
+        return new FileEntry(path, ChangeType.UNCHANGED, false, false);
+    }
+
+    /**
+     * Whether the file has a change, staged or not, or is untracked: all but a file listed with all files of the
+     * working tree that has none (ADR 108).
+     */
+    public boolean changed() {
+        return type != ChangeType.UNCHANGED;
+    }
+
+    /**
      * The paths of the {@code files} that {@code which} picks.
      */
     public static List<String> paths(List<FileEntry> files, Predicate<? super FileEntry> which) {
