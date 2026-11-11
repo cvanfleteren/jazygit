@@ -18,16 +18,18 @@ still takes a cell.
 
 - The left column of a screen can be collapsed: it is then 3 columns wide, an empty panel with `»` at its top right,
   pointing the way it opens. It shows no pane, not the status either.
-- `Z` on the content panel collapses the left column, and `Z` there again opens it at the width kept. The maximized
-  content panel of ADR 92 is the collapsed column: a pane of the left column and the content panel can still be
-  maximized at once.
+- `Z` on the content panel collapses the left column, and `Z` on a collapsed column opens it at the width kept,
+  whatever had the focus last. The maximized content panel of ADR 92 is the collapsed column: a pane of the left
+  column and the content panel can still be maximized at once.
 - `<` at the narrowest width collapses the column. `>` opens it at the narrowest width, which is kept.
 - A drag of the border of the column past half the narrowest width, 7 percent, collapses it; dragged back over it,
   it opens. Letting go of a collapsed column keeps nothing.
 - A click on the collapsed column opens it at the width kept. Its right edge is the border, which a press drags.
 - Leaving the content panel for its pane, with Escape or with Left at its left edge, opens the column, so the pane
   that gets the focus is drawn. A pane that has the focus when the column collapses, by `<` or a drag, gives it to
-  the content shown for it.
+  the content shown for it. Content that is only a message, like that of the files of a clean worktree, cannot take
+  it: the hidden pane keeps it, and `Z`, `>` or a click opens the column.
+- `+` and `-` do nothing while the column is collapsed: its panes are not drawn.
 - Collapsed is for the session, per screen, as a maximized pane is (ADR 92): the next session starts with the width
   kept. The settings file has no value for it.
 - The column slides to 3 columns and back as it slides to a width (ADR 81).

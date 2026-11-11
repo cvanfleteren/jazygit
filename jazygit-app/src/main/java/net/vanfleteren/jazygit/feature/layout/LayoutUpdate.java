@@ -78,6 +78,8 @@ public final class LayoutUpdate {
                                 model.mapPreferences(preferences -> preferences.withDraggedHeights(Option.none())),
                                 model.preferences().keepingHeights(screen, drag.heights())))
                         .getOrElse(() -> Next.of(model));
+            // The panes of a collapsed column are not drawn, so they are not resized either (ADR 104).
+            case LayoutMsg.PaneStepped stepped when model.preferences().leftCollapsed(model.screen()) -> Next.of(model);
             case LayoutMsg.PaneStepped(int by) ->
                 focusedPane(model).map(pane -> stepPane(model, pane, by)).getOrElse(() -> Next.of(model));
             case LayoutMsg.MaximizeToggled() -> Next.of(toggleMaximized(model));
@@ -251,16 +253,20 @@ public final class LayoutUpdate {
     /**
      * Maximizes the pane of the left column, or the content panel, of the screen shown that had the focus last, or no
      * longer does if it is. Maximizing a pane of the left column ends another one being maximized; the content panel
-     * is maximized apart from them, by collapsing the left column (ADR 104).
+     * is maximized apart from them, by collapsing the left column (ADR 104). A collapsed column opens, whatever had the
+     * focus last: a pane it hides can still have it, when the content shown for the pane had no area to take it.
      */
     private static Model toggleMaximized(Model model) {
         Screen screen = model.screen();
+        if (model.preferences().leftCollapsed(screen)) {
+            return model.mapPreferences(preferences -> preferences.withLeftCollapsed(screen, false));
+        }
         return focusedPane(model)
                 .map(pane -> model.mapPreferences(preferences -> preferences.withMaximizedPane(
                         screen, preferences.maximizedPane(screen).contains(pane) ? Option.none() : Option.of(pane))))
                 .orElse(() -> model.shownPane()
-                        .map(content -> model.mapPreferences(preferences ->
-                                preferences.withLeftCollapsed(screen, !preferences.leftCollapsed(screen)))))
+                        .map(content ->
+                                model.mapPreferences(preferences -> preferences.withLeftCollapsed(screen, true))))
                 .getOrElse(model);
     }
 

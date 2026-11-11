@@ -458,6 +458,27 @@ class LayoutUpdateTest {
     }
 
     @Test
+    void zOpensACollapsedColumnWhileAPaneItHidesHadTheFocusLast() {
+        // Collapsed by < while the files had the focus, whose content had no area to take it.
+        Model collapsed = focused(model, Scopes.FILES.id())
+                .mapPreferences(preferences -> preferences.withLeftCollapsed(Screen.REPOSITORY, true));
+
+        Model opened = toggled(collapsed);
+
+        assertFalse(opened.preferences().leftCollapsed(Screen.REPOSITORY));
+        assertEquals(Option.none(), opened.preferences().maximizedPane(Screen.REPOSITORY));
+    }
+
+    @Test
+    void plusAndMinusDoNothingWhileTheColumnIsCollapsed() {
+        Model collapsed = focused(model, Scopes.FILES.id())
+                .mapPreferences(preferences -> preferences.withLeftCollapsed(Screen.REPOSITORY, true));
+
+        assertEquals(Next.of(collapsed), Update.update(collapsed, new LayoutMsg.PaneStepped(5)));
+        assertEquals(Next.of(collapsed), Update.update(collapsed, new LayoutMsg.PaneStepped(-5)));
+    }
+
+    @Test
     void aStepWiderOpensACollapsedColumnAtTheNarrowestAndKeepsIt() {
         Next next = Update.update(toggled(content(model)), new LayoutMsg.Stepped(5));
 
