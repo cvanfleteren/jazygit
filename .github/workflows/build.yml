@@ -19,7 +19,8 @@ permissions:
 # make it compile the modules after them again), so it would only start later and build all the same.
 jobs:
   # Whether anything but documentation changed: always outside a pull request. The files ignored are the root's
-  # Markdown files, the documentation and the acceptance tests' README.
+  # Markdown files, the documentation and the acceptance tests' README. A renamed file counts by both its paths, so
+  # moving code into the documentation still builds. Not being able to list the files fails the job, and so build-ok.
   changes:
     runs-on: ubuntu-latest
     permissions:
@@ -37,8 +38,9 @@ jobs:
             echo "code=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          code=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/files" --jq '.[].filename' \
-            | grep -v -E '^[^/]+\.md$|^documentation/|^acceptance/README\.md$' || true)
+          files=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/files" \
+            --jq '.[] | .filename, (.previous_filename // empty)')
+          code=$(grep -v -E '^[^/]+\.md$|^documentation/|^acceptance/README\.md$' <<< "$files" || true)
           if [ -n "$code" ]; then echo "code=true"; else echo "code=false"; fi >> "$GITHUB_OUTPUT"
 
   verify:
