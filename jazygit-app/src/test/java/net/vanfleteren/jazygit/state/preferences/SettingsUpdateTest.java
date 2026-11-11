@@ -109,11 +109,27 @@ class SettingsUpdateTest {
         SettingsStore.Loaded file = new SettingsStore.Loaded(DARCULA, Option.none());
         Option<SettingsProblem> reported = Option.of(new SettingsProblem.Invalid(FILE, List.of("ui.theme")));
 
-        Model model = Update.update(TestModels.loaded(), new SettingsMsg.Carried(file, reported))
+        Model model = Update.update(TestModels.loaded(), new SettingsMsg.Carried(file, reported, Option.none()))
                 .model();
 
         assertEquals(file, model.preferences().file());
         assertEquals(reported, model.preferences().reported());
+        assertEquals(Option.none(), model.outcome().error());
+    }
+
+    @Test
+    void aProblemTheSessionWasShowingShowsInTheRepositoryShownInstead() {
+        SettingsProblem invalid = new SettingsProblem.Invalid(FILE, List.of("ui.theme"));
+
+        Model model = Update.update(
+                        TestModels.loaded(),
+                        new SettingsMsg.Carried(SettingsStore.Loaded.DEFAULT, Option.of(invalid), Option.of(invalid)))
+                .model();
+
+        assertEquals(
+                Option.of(new AppError.SettingsNotReread(invalid)),
+                model.outcome().error());
+        assertEquals(Option.of(invalid), model.preferences().reported());
     }
 
     @Test

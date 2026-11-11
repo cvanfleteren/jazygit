@@ -19,9 +19,12 @@ public final class SettingsUpdate {
                 Next.of(model.mapPreferences(
                         preferences -> preferences.withFile(preferences.file().saved(previous, next))));
             case SettingsMsg.NotSaved(Failure failure) -> Next.of(model.fail(new AppError.SettingsNotSaved(failure)));
-            case SettingsMsg.Carried(var file, var reported) ->
-                Next.of(model.mapPreferences(
-                        preferences -> preferences.withFile(file).withReported(reported)));
+            case SettingsMsg.Carried(var file, var reported, var shown) -> {
+                Model carried = model.mapPreferences(
+                        preferences -> preferences.withFile(file).withReported(reported));
+                yield Next.of(shown.map(problem -> carried.fail(new AppError.SettingsNotReread(problem)))
+                        .getOrElse(carried));
+            }
         };
     }
 }

@@ -61,8 +61,10 @@ The file is read again, and the settings applied, at two moments:
 
 The settings in use are not always what the file has: a setting whose save failed still holds for the session
 (`SettingsUpdate`), and the file may have a value that is not valid. So a read applies what changed in the file, not
-all of it. jazygit keeps what the file had when it last read or wrote it; a setting takes the value the file has now
-when that value is valid and differs from what the file had then. Every other setting keeps the value in use:
+all of it. jazygit keeps what the file had when it last read it, updated on each save that works with only the keys
+that save wrote, those that differ between its previous and next settings; a save that fails leaves it as it was. A
+setting takes the value the file has now when that value is valid and differs from that. Every other setting keeps the
+value in use:
 
 - a setting only the session has stays, unless the user edited that same key;
 - a key whose value is not valid, such as `theme = "drakula"`, keeps the value in use, rather than the default the
@@ -86,11 +88,15 @@ before it is written before it is read, and a read does not overtake it to apply
 
 #### What is reported
 
-What is wrong in the file is reported as at the start (`SettingsProblem`):
+What is wrong in the file is reported as at the start (`SettingsProblem`), but saying the settings in use stay for it,
+not the defaults (`AppError.SettingsNotReread`):
 
 - after the editor, always: the user just edited it, and wants to know;
 - when the settings panel opens, only when it differs from what was reported last, at the start or since; the same
   problem is not reported at each opening until it is fixed.
+
+A read that changed the gh executable shows the repository again, in a session of its own. What the session before
+knew of the file goes on to it, with the problem it was showing, which it shows too (`SettingsMsg.Carried`).
 
 After the editor, the settings panel shows again, with the settings as applied, so the user sees what changed.
 

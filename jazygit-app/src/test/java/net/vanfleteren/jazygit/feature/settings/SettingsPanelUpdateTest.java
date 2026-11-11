@@ -45,6 +45,7 @@ import net.vanfleteren.jazygit.state.operation.CommandLog;
 import net.vanfleteren.jazygit.state.popup.*;
 import net.vanfleteren.jazygit.state.preferences.RepositoryTheme;
 import net.vanfleteren.jazygit.state.preferences.SaveSettings;
+import net.vanfleteren.jazygit.state.preferences.SettingsMsg;
 import net.vanfleteren.jazygit.state.view.*;
 import org.junit.jupiter.api.Test;
 
@@ -678,6 +679,39 @@ class SettingsPanelUpdateTest {
 
         assertEquals(Option.of("/opt/gh"), next.model().preferences().settings().ghExecutable());
         assertEquals(List.of(new SettingsPanelCmd.Reopen(Landing.of(model.repoView()))), next.cmds());
+    }
+
+    @Test
+    void aProblemFoundWithAGhExecutableChangedInTheFileGoesOnToTheRepositoryShownAgain() {
+        Model model = TestModels.loaded().openPopup(READ);
+
+        Next next = Update.update(
+                model,
+                new SettingsPanelMsg.FileEdited(
+                        List.empty(),
+                        new SettingsStore.Loaded(
+                                Settings.DEFAULT.withGhExecutable(Option.of("/opt/gh")), Option.of(INVALID_THEME))));
+        // The repository is shown again, in a session of its own.
+        Model shownAgain = Update.update(TestModels.loaded(), SettingsPanelUpdate.carried(next.model()))
+                .model();
+
+        assertEquals(List.of(new SettingsPanelCmd.Reopen(Landing.of(model.repoView()))), next.cmds());
+        assertEquals(
+                Option.of(new AppError.SettingsNotReread(INVALID_THEME)),
+                shownAgain.outcome().error());
+    }
+
+    @Test
+    void whatTheSessionKnewOfTheFileGoesOnWithoutAnotherErrorItWasShowing() {
+        SettingsStore.Loaded file = read(Settings.DEFAULT.withAnimations(false));
+        Model last = TestModels.loaded()
+                .mapPreferences(preferences -> preferences.withFile(file).withReported(Option.of(INVALID_THEME)))
+                .fail(new AppError.SettingsNotSaved(
+                        new Failure.Settings(new SettingsProblem.Unwritable(FILE, "Permission denied"))));
+
+        assertEquals(
+                new SettingsMsg.Carried(file, Option.of(INVALID_THEME), Option.none()),
+                SettingsPanelUpdate.carried(last));
     }
 
     @Test

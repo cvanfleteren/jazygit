@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.operation.CommandLog;
 import net.vanfleteren.jazygit.state.preferences.Preferences;
 import net.vanfleteren.jazygit.state.preferences.SaveSettings;
+import net.vanfleteren.jazygit.state.preferences.SettingsMsg;
 
 /**
  * Looking at the settings and changing them: the theme, whether what moves moves smoothly, the gh executable, the
@@ -131,6 +132,22 @@ public final class SettingsPanelUpdate {
                         .fail(new AppError.OperationFailed(
                                 SettingsPanelCmd.EditFile.EDIT_SETTINGS, Option.none(), failure)));
         };
+    }
+
+    /**
+     * What the session of {@code last} knew of the settings file, for the repository shown in its place: what the file
+     * had, what was reported, and the problem in it the session was showing, which goes on showing there, as a read
+     * that changed the gh executable shows the repository again at once (ADR 111).
+     */
+    public static SettingsMsg.Carried carried(Model last) {
+        return new SettingsMsg.Carried(
+                last.preferences().file(),
+                last.preferences().reported(),
+                last.outcome()
+                        .error()
+                        .flatMap(error -> error instanceof AppError.SettingsNotReread(var problem)
+                                ? Option.of(problem)
+                                : Option.none()));
     }
 
     /**

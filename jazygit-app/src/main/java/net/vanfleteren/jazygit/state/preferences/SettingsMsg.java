@@ -28,7 +28,9 @@ public sealed interface SettingsMsg extends Msg {
 
     /**
      * A repository is shown in place of another, with what its session knew of the settings file: what the file had
-     * when last read or written, and what was reported wrong in it (ADR 111).
+     * when last read or written, what was reported wrong in it, and the problem in it that session was showing, which
+     * goes on showing, as a read that changed the gh executable shows the repository again at once (ADR 111).
      */
-    record Carried(SettingsStore.Loaded file, Option<SettingsProblem> reported) implements SettingsMsg {}
+    record Carried(SettingsStore.Loaded file, Option<SettingsProblem> reported, Option<SettingsProblem> shown)
+            implements SettingsMsg {}
 }

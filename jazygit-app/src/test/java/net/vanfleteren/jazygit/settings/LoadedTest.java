@@ -134,6 +134,30 @@ class LoadedTest {
     }
 
     @Test
+    void aHandEditStillAppliesAfterASaveOfAnotherSetting() {
+        // The file had the light theme; the user edits it to darcula by hand, then drags a pane, which is saved.
+        Settings inUse = Settings.DEFAULT.withTheme(ThemeName.LIGHT);
+        Loaded before = read(inUse).saved(inUse, inUse.withRepositoryWidth(40));
+        Loaded now = read(Settings.DEFAULT.withTheme(ThemeName.DARCULA).withRepositoryWidth(40));
+
+        Applied applied = now.appliedTo(inUse.withRepositoryWidth(40), before);
+
+        assertEquals(Settings.DEFAULT.withTheme(ThemeName.DARCULA).withRepositoryWidth(40), applied.settings());
+    }
+
+    @Test
+    void aSettingOnlyTheSessionHasStaysAfterASaveOfAnotherSetting() {
+        // Turning the animations off failed to save; dragging a pane is saved after.
+        Settings inUse = Settings.DEFAULT.withAnimations(false);
+        Loaded before = DEFAULT.saved(inUse, inUse.withRepositoryWidth(40));
+        Loaded now = read(Settings.DEFAULT.withRepositoryWidth(40));
+
+        Applied applied = now.appliedTo(inUse.withRepositoryWidth(40), before);
+
+        assertEquals(inUse.withRepositoryWidth(40), applied.settings());
+    }
+
+    @Test
     void savingASettingThatWasNotValidMakesItValid() {
         Loaded before = invalid(Settings.DEFAULT, Settings.THEME, Settings.ANIMATIONS);
 
