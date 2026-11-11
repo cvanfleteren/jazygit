@@ -14,8 +14,10 @@ concurrency:
 jobs:
   verify:
     uses: ./.github/workflows/build.yml
+    # pull-requests for its changes job, which only reads the files of a pull request when called by one.
     permissions:
       contents: read
+      pull-requests: read
 
   build:
     runs-on: ubuntu-latest
