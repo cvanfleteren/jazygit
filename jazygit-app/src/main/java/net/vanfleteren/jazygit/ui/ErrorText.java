@@ -85,7 +85,8 @@ public final class ErrorText {
             case AppError.NoEditorSet() ->
                 Messages.get(
                         "error.openInEditor.noEditor",
-                        "[[editors]] name = \"IntelliJ\" command = [\"idea\", \"" + EditorProgram.DIR + "\"]");
+                        // On lines of their own, as TOML has them, so it can be pasted as it is.
+                        "[[editors]]\nname = \"IntelliJ\"\ncommand = [\"idea\", \"" + EditorProgram.DIR + "\"]");
             case AppError.NothingToPrune() -> Messages.get("error.pruneWorktrees.nothing");
             case AppError.MainWorktreeNotLockable() -> Messages.get("error.lockWorktree.main");
             case AppError.Diverged(BranchName branch, RemoteBranch upstream) ->

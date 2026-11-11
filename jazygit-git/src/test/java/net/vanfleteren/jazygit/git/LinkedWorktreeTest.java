@@ -10,11 +10,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.git.model.AllBranches;
 import net.vanfleteren.jazygit.git.model.Branch;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.Diffs;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.Fixtures;
+import net.vanfleteren.jazygit.git.model.Worktree;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -191,6 +193,35 @@ class LinkedWorktreeTest {
         git(linked, "bisect", "good", "HEAD~3");
 
         assertEquals(Option.of(linked), branch(main, "feature").worktree());
+    }
+
+    @Test
+    void theWorktreesSayWhichBranchADetachedOneRebases() throws Exception {
+        stopRebaseOfFeatureOnConflicts();
+
+        List<Worktree> worktrees = CliGit.open(main).get().worktrees().list().get();
+
+        assertEquals(
+                List.of(Option.of("main"), Option.of("feature")),
+                worktrees.map(worktree -> worktree.workingOn().map(BranchName::value)));
+        assertEquals(Option.none(), worktrees.last().branch());
+    }
+
+    @Test
+    void aBisectInTheMainWorktreeKeepsItsBranchThereForBothWorktrees() throws Exception {
+        for (String step : List.of("b", "c", "d")) {
+            Files.writeString(main.resolve("a.txt"), step + "\n");
+            git(main, "commit", "-q", "-am", "main " + step);
+        }
+        git(main, "bisect", "start");
+        git(main, "bisect", "bad", "HEAD");
+        git(main, "bisect", "good", "HEAD~3");
+
+        Worktree shown = CliGit.open(main).get().worktrees().list().get().head();
+
+        assertEquals(Option.none(), shown.branch());
+        assertEquals(Option.of(new BranchName("main")), shown.workingOn());
+        assertEquals(Option.of(main), branch(linked, "main").worktree());
     }
 
     /**

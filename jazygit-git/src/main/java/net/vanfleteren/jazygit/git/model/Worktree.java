@@ -15,15 +15,45 @@ import java.nio.file.Path;
  * @param current  whether it is the one the app shows
  * @param locked   why it is locked, which keeps git from removing it, if it is; empty when no reason was given
  * @param prunable whether its directory is gone, so that git only remembers it
+ * @param busyWith the branch it rebases or bisects, with its HEAD detached meanwhile, if it does (ADR 110)
  */
 public record Worktree(
-        Path path, Option<Head> head, boolean main, boolean current, Option<String> locked, boolean prunable) {
+        Path path,
+        Option<Head> head,
+        boolean main,
+        boolean current,
+        Option<String> locked,
+        boolean prunable,
+        Option<BranchName> busyWith) {
+
+    /**
+     * A worktree that rebases and bisects nothing.
+     */
+    public Worktree(
+            Path path, Option<Head> head, boolean main, boolean current, Option<String> locked, boolean prunable) {
+        this(path, head, main, current, locked, prunable, Option.none());
+    }
+
+    /**
+     * This worktree, rebasing or bisecting {@code branch}, if any.
+     */
+    public Worktree withBusyWith(Option<BranchName> branch) {
+        return new Worktree(path, head, main, current, locked, prunable, branch);
+    }
 
     /**
      * The branch it has checked out; none when its HEAD is detached or cannot be resolved.
      */
     public Option<BranchName> branch() {
         return head.flatMap(Head::branchName);
+    }
+
+    /**
+     * The branch it works on: the one it has checked out, or while its HEAD is detached, the one it rebases or bisects
+     * (ADR 110). Git takes that branch as in use there, as this does.
+     */
+    public Option<BranchName> workingOn() {
+        return branch().orElse(busyWith);
     }
 
     /**

@@ -88,25 +88,35 @@ Where there is nothing to open, `e` says why instead of doing nothing (ADR 9):
 - a branch no worktree has checked out: it is not checked out in a worktree. Not: offering to add one first, which
   can follow, through the popups `w` uses;
 - a worktree whose directory is gone: it is gone, as `space` says;
-- no editors in the settings file: none is set, and how to set one, with an example of `[[editors]]`. Not: falling
-  back to git's editor, which may not open a directory.
+- no editors in the settings file: none is set, and how to set one, with an example of `[[editors]]` on lines of its
+  own, as TOML wants them, so it can be pasted as it is. Not: falling back to git's editor, which may not open a
+  directory.
 
 ### Which worktree has a branch
 
-A worktree has a branch when its HEAD is the branch, or when it rebases or bisects the branch: its git directory, such
-as `.git/worktrees/wt`, names it in `rebase-merge/head-name` or `rebase-apply/head-name` (`refs/heads/feat`), or in
-`BISECT_START` (`feat`). That is how git decides it, when it refuses to check the branch out in another worktree:
+Where a branch is on disk is always the root of a worktree; what has to be known is which branch each worktree works
+on. Git has no command that says it in every state: while a worktree rebases or bisects, its HEAD is detached,
+`git worktree list` says `detached`, and `%(worktreepath)`, which `CliBranches` reads, is empty for the branch. Taken
+from HEAD alone, `e` on the branch would say it is not checked out, at the moment the editor is wanted most: a rebase
+that went wrong. Git itself still takes the branch as in use there, and refuses to check it out elsewhere:
 `'feat' is already used by worktree at …`.
 
-While a worktree rebases, its HEAD is detached: `git worktree list` says `detached`, and `%(worktreepath)`, which
-`CliBranches` reads, is empty for the branch. Taken from HEAD alone, `e` on the branch would say it is not checked out,
-at the moment the editor is wanted most: a rebase that went wrong.
+So each worktree has one branch it works on (`Worktree.workingOn`), by one rule:
 
-- `Branch.worktreeLocation` follows git's rule: the branches are read with, for each worktree without a branch as its
-  HEAD, the branch its rebase or bisect names, from the files `CliInProgress` reads for the worktree shown.
-- So what asks it besides `e`, `checkedOutElsewhere` for `d`, `space` and `w`, knows a branch that is rebased in
-  another worktree is in use there, instead of leaving git to refuse; and the branches show it in that worktree.
-- A bisect started on a detached HEAD names a commit, not a branch: no branch is in that worktree.
+1. the branch its HEAD is on;
+2. else the branch its rebase names, in `rebase-merge/head-name` or `rebase-apply/head-name` (`refs/heads/feat`);
+3. else the branch its bisect started from, in `BISECT_START` (`feat`); one started on a detached HEAD names a commit,
+   and no branch.
+
+The files are those of the worktree's own git directory, such as `.git/worktrees/wt`, found as `HeadFile.gitDir`
+finds it, and read without running git (`BranchesInUse.busyWith`).
+
+- The worktrees are read with it: `CliWorktrees` gives each worktree without a branch as its HEAD the branch its
+  rebase or bisect names. `e` on a branch opens the worktree that works on it, the one shown or another, by that alone.
+  Not: telling the one shown apart by `Branch.current` and the state it is in, which knows a rebase but not a bisect.
+- The branches are read with the same rule: `Branch.worktree` is the other worktree that works on the branch. So
+  `checkedOutElsewhere`, for `d`, `space` and `w`, knows a branch rebased or bisected in another worktree is in use
+  there, instead of leaving git to refuse; and the branches show it in that worktree.
 
 ### Choosing an editor
 
@@ -135,12 +145,16 @@ option of a `ChoiceDialog` is chosen; while the filter is open, the letters are 
 ### Not
 
 - The editors in the settings panel: they are set in the file only, for now.
+- The branches a rebase moves along with `--update-refs` (`rebase.updateRefs`), which it lists in
+  `rebase-merge/update-refs`. Git takes them as in use in that worktree too, but they are not what is worked on there.
+  `d` or `space` on one is left to git to refuse, which says why.
 
 ## Consequences
 
 - A worktree opens in any editor that takes a directory, GUI or terminal, with `e`, or `e` and a letter.
-- A branch is in the worktree that rebases or bisects it, for every key that asks, not only `e`. Reading the branches
-  reads a few small files in the git directory of each worktree without a branch as its HEAD.
+- A branch is in the worktree that rebases or bisects it, for every key that asks, not only `e`, by one rule. Reading
+  the worktrees and the branches reads a few small files in the git directory of each worktree without a branch as its
+  HEAD; no git process more.
 - The settings file gets its first list of tables; `SettingsFile` reads, and reports, each entry on its own.
 - Opening a worktree starts a program the user wrote down, with no confirmation, as `e` on a file does.
 - Nothing works until the user lists an editor; the message says how.

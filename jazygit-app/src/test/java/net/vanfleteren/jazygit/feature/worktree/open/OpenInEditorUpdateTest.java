@@ -147,8 +147,8 @@ class OpenInEditorUpdateTest {
 
         assertEquals(List.empty(), next.cmds());
         assertEquals(
-                Option.of("No editor is set to open a worktree in; add one to the settings file, config.toml, such as "
-                        + "[[editors]] name = \"IntelliJ\" command = [\"idea\", \"{dir}\"]"),
+                Option.of("No editor is set to open a worktree in. Add one to the settings file, config.toml, such as:"
+                        + "\n\n[[editors]]\nname = \"IntelliJ\"\ncommand = [\"idea\", \"{dir}\"]"),
                 errorText(next.model()));
     }
 
@@ -193,16 +193,30 @@ class OpenInEditorUpdateTest {
     }
 
     @Test
-    void aBranchTheWorktreeShownRebasesOpensIt() {
-        Model rebasing = model(List.of(IDEA))
-                .mapRepo(repo -> repo.withStatus(new Loadable.Loaded<>(new RepoStatus(
-                        new Head.Detached(new Sha("ffff")),
-                        List.empty(),
-                        Option.of(new InProgress.Rebasing(Option.of(FEATURE), new Sha("aaaa"), 1, 2))))));
+    void aBranchTheWorktreeShownBisectsWithItsHeadDetachedOpensIt() {
+        Worktree bisecting = new Worktree(
+                        MAIN_PATH, Option.of(new Head.Detached(new Sha("ffff"))), true, true, Option.none(), false)
+                .withBusyWith(Option.of(FEATURE));
+        Model model = Update.update(
+                        model(List.of(IDEA)), new LoadMsg.WorktreesLoaded(List.of(bisecting, LINKED, MISSING)))
+                .model();
 
-        Next next = Update.update(rebasing, new OpenInEditorMsg.BranchRequested(FEATURE));
+        Next next = Update.update(model, new OpenInEditorMsg.BranchRequested(FEATURE));
 
         assertEquals(List.of(new OpenInEditorCmd(IDEA, MAIN_PATH.toString())), next.cmds());
+    }
+
+    @Test
+    void aBranchAnotherWorktreeRebasesWithItsHeadDetachedOpensThatOne() {
+        Worktree rebasing = new Worktree(
+                        LINKED_PATH, Option.of(new Head.Detached(new Sha("1111"))), false, false, Option.none(), false)
+                .withBusyWith(Option.of(FEATURE));
+        Model model = Update.update(model(List.of(IDEA)), new LoadMsg.WorktreesLoaded(List.of(MAIN, rebasing, MISSING)))
+                .model();
+
+        Next next = Update.update(model, new OpenInEditorMsg.BranchRequested(FEATURE));
+
+        assertEquals(List.of(new OpenInEditorCmd(IDEA, LINKED_PATH.toString())), next.cmds());
     }
 
     @Test

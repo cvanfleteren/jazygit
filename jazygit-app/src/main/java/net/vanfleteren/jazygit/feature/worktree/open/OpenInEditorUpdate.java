@@ -1,8 +1,6 @@
 package net.vanfleteren.jazygit.feature.worktree.open;
 
-import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
-import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.Worktree;
 import net.vanfleteren.jazygit.settings.EditorProgram;
 import net.vanfleteren.jazygit.settings.Editors;
@@ -26,8 +24,7 @@ public final class OpenInEditorUpdate {
                         .worktree(location)
                         .map(worktree -> worktree(model, worktree))
                         .getOrElse(() -> Next.of(model));
-            case OpenInEditorMsg.BranchRequested(BranchName branch) ->
-                model.repo().branch(branch).map(found -> branch(model, found)).getOrElse(() -> Next.of(model));
+            case OpenInEditorMsg.BranchRequested(BranchName branch) -> branch(model, branch);
             case OpenInEditorMsg.Chosen(EditorProgram editor) ->
                 model.popup(OpenInEditorPopup.class)
                         .map(popup -> open(model.withoutPopup(OpenInEditorPopup.class), editor, popup.worktree()))
@@ -36,34 +33,18 @@ public final class OpenInEditorUpdate {
     }
 
     /**
-     * Opens the worktree that has {@code branch}: the one shown, when it is checked out or rebased here, or the other
-     * one it is in; it is in none, which is said.
+     * Opens the worktree that works on {@code branch}, the one shown or another: that has it checked out, or rebases
+     * or bisects it (ADR 110). It is in none, which is said; nothing is done before the worktrees are read.
      */
-    private static Next branch(Model model, Branch branch) {
-        if (branch.current() || rebasedHere(model, branch.name())) {
-            return model.repo()
-                    .currentWorktree()
-                    .map(worktree -> worktree(model, worktree))
-                    .getOrElse(() -> Next.of(model));
-        }
-        return branch.worktreeLocation()
-                .map(location -> model.repo()
-                        .worktree(location)
-                        .map(worktree -> worktree(model, worktree))
-                        .getOrElse(() -> editors(model, location)))
-                .getOrElse(() -> Next.of(model.fail(new AppError.NotInWorktree(branch.name()))));
-    }
-
-    /**
-     * Whether the worktree shown rebases {@code branch}, with its HEAD detached meanwhile.
-     */
-    private static boolean rebasedHere(Model model, BranchName branch) {
+    private static Next branch(Model model, BranchName branch) {
         return model.repo()
-                .status()
+                .worktrees()
                 .toOption()
-                .flatMap(status -> status.inProgress())
-                .exists(inProgress -> inProgress instanceof InProgress.Rebasing rebasing
-                        && rebasing.branch().contains(branch));
+                .map(worktrees -> worktrees
+                        .find(worktree -> worktree.workingOn().contains(branch))
+                        .map(worktree -> worktree(model, worktree))
+                        .getOrElse(() -> Next.of(model.fail(new AppError.NotInWorktree(branch)))))
+                .getOrElse(() -> Next.of(model));
     }
 
     /**

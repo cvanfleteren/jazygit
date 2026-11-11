@@ -14,10 +14,11 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 
 /**
- * The branches that the other worktrees of a repository rebase or bisect, with their HEAD detached meanwhile, so that
- * {@code %(worktreepath)} does not name them (ADR 110). Git still takes such a branch as in use there, and refuses to
- * check it out in another worktree; it reads that from the files it keeps in the git directory of each worktree, as
- * this does, without running git.
+ * The branch a worktree rebases or bisects, with its HEAD detached meanwhile, so that neither {@code %(worktreepath)}
+ * nor {@code git worktree list} names it (ADR 110). Git still takes such a branch as in use there, and refuses to check
+ * it out in another worktree; it reads that from the files it keeps in the git directory of the worktree, as this does,
+ * without running git. The one rule, {@link #busyWith}, serves both the worktrees ({@link #busyIn}) and the branches
+ * ({@link #elsewhere}).
  */
 final class BranchesInUse {
 
@@ -35,6 +36,13 @@ final class BranchesInUse {
     private static final String BISECT_START = "BISECT_START";
 
     private BranchesInUse() {}
+
+    /**
+     * The branch the worktree at {@code root} rebases or bisects, if any.
+     */
+    static Option<BranchName> busyIn(Path root) {
+        return HeadFile.gitDir(root).flatMap(BranchesInUse::busyWith);
+    }
 
     /**
      * The branches the worktrees of the repository other than the one at {@code worktree} rebase or bisect, each with
