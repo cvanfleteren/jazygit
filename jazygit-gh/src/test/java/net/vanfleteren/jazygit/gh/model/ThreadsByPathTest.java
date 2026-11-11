@@ -26,7 +26,7 @@ class ThreadsByPathTest {
                 Subject.FILE,
                 List.empty(),
                 0,
-                id,
+                new ReviewThread.Id(id),
                 ReviewThread.Rights.ALL);
     }
 

@@ -13,10 +13,12 @@ import net.vanfleteren.jazygit.gh.model.BranchChecks;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.NewPullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
+import net.vanfleteren.jazygit.gh.model.PullRequestComment;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.*;
 import net.vanfleteren.jazygit.gh.model.PullRequestEdit;
 import net.vanfleteren.jazygit.gh.model.Reaction;
+import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -118,7 +120,9 @@ class CliGitHubTest {
 
     @Test
     void aCommentOfTheConversationIsDeletedByItsNodeId() {
-        List<String> args = CliGitHub.deleteCommentCommand("IC_1").executed().commandLine();
+        List<String> args = CliGitHub.deleteCommentCommand(new PullRequestComment.Id("IC_1"))
+                .executed()
+                .commandLine();
 
         assertEquals(List.of("gh", "api", "graphql"), args.take(3));
         assertTrue(args.get(4).contains("deleteIssueComment"), args.get(4));
@@ -144,8 +148,10 @@ class CliGitHubTest {
         assumeTrue(Files.isExecutable(Path.of("/bin/sh")), "no POSIX shell");
         CliGitHub gitHub = failing(dir, true);
 
-        assertTrue(gitHub.deleteReviewComment("PRRC_1").isRight());
-        assertTrue(gitHub.deletePullRequestComment("IC_1").isRight());
+        assertTrue(gitHub.deleteReviewComment(new ReviewThread.Comment.Id("PRRC_1"))
+                .isRight());
+        assertTrue(gitHub.deletePullRequestComment(new PullRequestComment.Id("IC_1"))
+                .isRight());
     }
 
     @Test
@@ -154,13 +160,17 @@ class CliGitHubTest {
 
         assertEquals(
                 new GhError.CommandFailed(Option.of("gh: Resource not accessible by integration"), 1),
-                failing(dir, false).deleteReviewComment("PRRC_1").getLeft().error());
+                failing(dir, false)
+                        .deleteReviewComment(new ReviewThread.Comment.Id("PRRC_1"))
+                        .getLeft()
+                        .error());
     }
 
     @Test
     void aCommentOfTheConversationIsEditedByItsNodeIdWithItsBodyAsTyped() {
-        List<String> args =
-                CliGitHub.editCommentCommand("IC_1", "@all see").executed().commandLine();
+        List<String> args = CliGitHub.editCommentCommand(new PullRequestComment.Id("IC_1"), "@all see")
+                .executed()
+                .commandLine();
 
         assertEquals(List.of("gh", "api", "graphql"), args.take(3));
         assertTrue(args.get(4).contains("updateIssueComment"), args.get(4));
@@ -182,14 +192,17 @@ class CliGitHubTest {
                 "Fixed",
                 answering(dir, """
                                 {"data": {"updateIssueComment": {"issueComment": {"body": "Fixed"}}}}""")
-                        .editPullRequestComment("IC_1", "Fixed ")
+                        .editPullRequestComment(new PullRequestComment.Id("IC_1"), "Fixed ")
                         .get()
                         .body());
         assertEquals(
                 "Fixed",
                 answering(dir, """
                                 {"data": {"updatePullRequestReviewComment": \
-                                {"pullRequestReviewComment": {"body": "Fixed"}}}}""").editReviewComment("PRRC_1", "Fixed ").get().body());
+                                {"pullRequestReviewComment": {"body": "Fixed"}}}}""")
+                        .editReviewComment(new ReviewThread.Comment.Id("PRRC_1"), "Fixed ")
+                        .get()
+                        .body());
     }
 
     @Test
@@ -199,10 +212,14 @@ class CliGitHubTest {
 
         assertEquals(
                 new GhError.Gone(),
-                gitHub.editReviewComment("PRRC_1", "Fixed").getLeft().error());
+                gitHub.editReviewComment(new ReviewThread.Comment.Id("PRRC_1"), "Fixed")
+                        .getLeft()
+                        .error());
         assertEquals(
                 new GhError.Gone(),
-                gitHub.editPullRequestComment("IC_1", "Fixed").getLeft().error());
+                gitHub.editPullRequestComment(new PullRequestComment.Id("IC_1"), "Fixed")
+                        .getLeft()
+                        .error());
     }
 
     @Test
@@ -359,13 +376,13 @@ class CliGitHubTest {
         assertEquals(
                 new GhError.Gone(),
                 failing(dir, true)
-                        .reactToReviewComment("PRRC_1", Reaction.EYES, true)
+                        .reactToReviewComment(new ReviewThread.Comment.Id("PRRC_1"), Reaction.EYES, true)
                         .getLeft()
                         .error());
         assertEquals(
                 new GhError.CommandFailed(Option.of("gh: Resource not accessible by integration"), 1),
                 failing(dir, false)
-                        .reactToReviewComment("PRRC_1", Reaction.EYES, false)
+                        .reactToReviewComment(new ReviewThread.Comment.Id("PRRC_1"), Reaction.EYES, false)
                         .getLeft()
                         .error());
     }

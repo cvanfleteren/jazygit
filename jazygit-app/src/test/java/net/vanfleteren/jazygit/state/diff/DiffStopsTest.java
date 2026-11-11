@@ -38,9 +38,16 @@ class DiffStopsTest {
                 false,
                 false,
                 subject,
-                List.of(new Comment("bob", Instant.EPOCH, "Hm", Option.none(), "C", "1", CommentRights.ALL)),
+                List.of(new Comment(
+                        "bob",
+                        Instant.EPOCH,
+                        "Hm",
+                        Option.none(),
+                        new ReviewThread.Comment.Id("C"),
+                        new ReviewThread.Comment.RestId("1"),
+                        CommentRights.ALL)),
                 0,
-                id,
+                new ReviewThread.Id(id),
                 ReviewThread.Rights.ALL);
     }
 
@@ -87,15 +94,19 @@ class DiffStopsTest {
 
     @Test
     void aThreadIsFoundByItsIdWhereverItIsElseItGoesToItsLine() {
-        Seq<Anchor> stops = STOPS.insert(6, new Anchor.Thread("L", Option.of(line(Side.RIGHT, 3))));
+        Seq<Anchor> stops =
+                STOPS.insert(6, new Anchor.Thread(new ReviewThread.Id("L"), Option.of(line(Side.RIGHT, 3))));
 
         assertEquals(
-                Option.of(new Anchor.Thread("L", Option.of(line(Side.RIGHT, 3)))),
-                DiffStops.nearest(stops, new Anchor.Thread("L", Option.of(line(Side.RIGHT, 2)))));
+                Option.of(new Anchor.Thread(new ReviewThread.Id("L"), Option.of(line(Side.RIGHT, 3)))),
+                DiffStops.nearest(stops, new Anchor.Thread(new ReviewThread.Id("L"), Option.of(line(Side.RIGHT, 2)))));
         assertEquals(
                 Option.of(line(Side.RIGHT, 2)),
-                DiffStops.nearest(stops, new Anchor.Thread("gone", Option.of(line(Side.RIGHT, 2)))));
-        assertEquals(Option.of(LEAD), DiffStops.nearest(stops, new Anchor.Thread("gone", Option.none())));
+                DiffStops.nearest(
+                        stops, new Anchor.Thread(new ReviewThread.Id("gone"), Option.of(line(Side.RIGHT, 2)))));
+        assertEquals(
+                Option.of(LEAD),
+                DiffStops.nearest(stops, new Anchor.Thread(new ReviewThread.Id("gone"), Option.none())));
     }
 
     /**
@@ -116,17 +127,34 @@ class DiffStopsTest {
                 thread.subject(),
                 List.of(
                         first,
-                        new Comment("ann", Instant.EPOCH, "Yes", Option.none(), "R1", "2", CommentRights.ALL),
-                        new Comment("bob", Instant.EPOCH, "No", Option.none(), "R2", "3", CommentRights.ALL)),
+                        new Comment(
+                                "ann",
+                                Instant.EPOCH,
+                                "Yes",
+                                Option.none(),
+                                new ReviewThread.Comment.Id("R1"),
+                                new ReviewThread.Comment.RestId("2"),
+                                CommentRights.ALL),
+                        new Comment(
+                                "bob",
+                                Instant.EPOCH,
+                                "No",
+                                Option.none(),
+                                new ReviewThread.Comment.Id("R2"),
+                                new ReviewThread.Comment.RestId("3"),
+                                CommentRights.ALL)),
                 0,
-                id,
+                new ReviewThread.Id(id),
                 ReviewThread.Rights.ALL);
     }
 
     @Test
     void eachCommentOfAnOpenThreadButItsFirstIsAStopOfItsOwn() {
-        Anchor.Thread thread = new Anchor.Thread("L", Option.of(line(Side.RIGHT, 2)));
-        List<Anchor> threads = List.of(thread, new Anchor.Comment("R1", thread), new Anchor.Comment("R2", thread));
+        Anchor.Thread thread = new Anchor.Thread(new ReviewThread.Id("L"), Option.of(line(Side.RIGHT, 2)));
+        List<Anchor> threads = List.of(
+                thread,
+                new Anchor.Comment(new ReviewThread.Comment.Id("R1"), thread),
+                new Anchor.Comment(new ReviewThread.Comment.Id("R2"), thread));
 
         assertEquals(threads, DiffStops.anchors(replied("L", false), thread.line(), Collapsed.NONE));
         // A resolved thread is collapsed, one stop, until it is opened; an open one is collapsed by hand.
@@ -134,34 +162,52 @@ class DiffStopsTest {
         assertEquals(
                 threads,
                 DiffStops.anchors(
-                        replied("L", true), thread.line(), Collapsed.NONE.flipped("L", List.of(replied("L", true)))));
+                        replied("L", true),
+                        thread.line(),
+                        Collapsed.NONE.flipped(new Collapsed.Key("L"), List.of(replied("L", true)))));
         assertEquals(
                 List.of(thread),
                 DiffStops.anchors(
-                        replied("L", false), thread.line(), Collapsed.NONE.flipped("L", List.of(replied("L", false)))));
+                        replied("L", false),
+                        thread.line(),
+                        Collapsed.NONE.flipped(new Collapsed.Key("L"), List.of(replied("L", false)))));
         // A collapsed comment is still a stop.
         assertEquals(
                 threads,
                 DiffStops.anchors(
                         replied("L", false),
                         thread.line(),
-                        Collapsed.NONE.flipped("R1", List.of(replied("L", false)))));
+                        Collapsed.NONE.flipped(new Collapsed.Key("R1"), List.of(replied("L", false)))));
     }
 
     @Test
     void aCommentIsFoundByItsIdElseItGoesToItsThread() {
-        Anchor.Thread thread = new Anchor.Thread("L", Option.of(line(Side.RIGHT, 2)));
-        Seq<Anchor> open =
-                STOPS.insertAll(5, List.of(thread, new Anchor.Comment("R1", thread), new Anchor.Comment("R2", thread)));
+        Anchor.Thread thread = new Anchor.Thread(new ReviewThread.Id("L"), Option.of(line(Side.RIGHT, 2)));
+        Seq<Anchor> open = STOPS.insertAll(
+                5,
+                List.of(
+                        thread,
+                        new Anchor.Comment(new ReviewThread.Comment.Id("R1"), thread),
+                        new Anchor.Comment(new ReviewThread.Comment.Id("R2"), thread)));
         Seq<Anchor> collapsed = STOPS.insert(5, thread);
 
         assertEquals(
-                Option.of(new Anchor.Comment("R2", thread)),
-                DiffStops.nearest(open, new Anchor.Comment("R2", new Anchor.Thread("L", Option.none()))));
-        assertEquals(Option.of(thread), DiffStops.nearest(collapsed, new Anchor.Comment("R2", thread)));
+                Option.of(new Anchor.Comment(new ReviewThread.Comment.Id("R2"), thread)),
+                DiffStops.nearest(
+                        open,
+                        new Anchor.Comment(
+                                new ReviewThread.Comment.Id("R2"),
+                                new Anchor.Thread(new ReviewThread.Id("L"), Option.none()))));
+        assertEquals(
+                Option.of(thread),
+                DiffStops.nearest(collapsed, new Anchor.Comment(new ReviewThread.Comment.Id("R2"), thread)));
         assertEquals(
                 Option.of(line(Side.RIGHT, 2)),
-                DiffStops.nearest(open, new Anchor.Comment("gone", new Anchor.Thread("gone", thread.line()))));
+                DiffStops.nearest(
+                        open,
+                        new Anchor.Comment(
+                                new ReviewThread.Comment.Id("gone"),
+                                new Anchor.Thread(new ReviewThread.Id("gone"), thread.line()))));
     }
 
     @Test

@@ -49,9 +49,16 @@ class PlacedRemarksTest {
                 false,
                 line.isEmpty(),
                 Subject.LINE,
-                List.of(new Comment("bob", Instant.EPOCH, "Hm", Option.none(), "C", "1", CommentRights.ALL)),
+                List.of(new Comment(
+                        "bob",
+                        Instant.EPOCH,
+                        "Hm",
+                        Option.none(),
+                        new ReviewThread.Comment.Id("C"),
+                        new ReviewThread.Comment.RestId("1"),
+                        CommentRights.ALL)),
                 0,
-                "T",
+                new ReviewThread.Id("T"),
                 ReviewThread.Rights.ALL);
     }
 
@@ -206,7 +213,7 @@ class PlacedRemarksTest {
                 Subject.FILE,
                 List.empty(),
                 0,
-                "T",
+                new ReviewThread.Id("T"),
                 ReviewThread.Rights.ALL);
 
         FileRemarks file = PlacedRemarks.place(DIFF, List.of(onFile)).files().head();

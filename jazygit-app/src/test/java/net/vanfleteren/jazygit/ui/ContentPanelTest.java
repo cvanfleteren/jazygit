@@ -1292,7 +1292,7 @@ class ContentPanelTest {
             SettledPilot.of(testRunner).pause();
             ViewMsg.ContentScrolled next = (ViewMsg.ContentScrolled) dispatched.getLast();
             Anchor onThread = new Anchor.Thread(
-                    "T1",
+                    new net.vanfleteren.jazygit.gh.model.ReviewThread.Id("T1"),
                     Option.of(new Anchor.OnLine("a.txt", net.vanfleteren.jazygit.gh.model.ReviewThread.Side.RIGHT, 1)));
             assertEquals(Option.of(onThread), next.to().cursor());
 
@@ -1553,11 +1553,11 @@ class ContentPanelTest {
                         Instant.EPOCH,
                         body,
                         Option.none(),
-                        "C",
-                        "1",
+                        new net.vanfleteren.jazygit.gh.model.ReviewThread.Comment.Id("C"),
+                        new net.vanfleteren.jazygit.gh.model.ReviewThread.Comment.RestId("1"),
                         net.vanfleteren.jazygit.gh.model.CommentRights.ALL)),
                 0,
-                "T1",
+                new net.vanfleteren.jazygit.gh.model.ReviewThread.Id("T1"),
                 net.vanfleteren.jazygit.gh.model.ReviewThread.Rights.ALL);
         Model rich = TestModels.loaded()
                 .mapPreferences(preferences ->

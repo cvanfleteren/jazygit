@@ -40,11 +40,13 @@ public final class DiffStops {
      */
     public static Option<Anchor> nearest(Seq<Anchor> stops, Anchor at) {
         Option<Anchor> found = switch (at) {
-            case Anchor.Comment(String id, Anchor.Thread thread) ->
-                stops.find(stop -> stop instanceof Anchor.Comment(String other, var ignored) && other.equals(id))
+            case Anchor.Comment(ReviewThread.Comment.Id id, Anchor.Thread thread) ->
+                stops.find(stop -> stop instanceof Anchor.Comment(ReviewThread.Comment.Id other, var ignored)
+                                && other.equals(id))
                         .orElse(() -> nearest(stops, thread));
-            case Anchor.Thread(String id, Option<Anchor.OnLine> line) ->
-                stops.find(stop -> stop instanceof Anchor.Thread(String other, var ignored) && other.equals(id))
+            case Anchor.Thread(ReviewThread.Id id, Option<Anchor.OnLine> line) ->
+                stops.find(stop ->
+                                stop instanceof Anchor.Thread(ReviewThread.Id other, var ignored) && other.equals(id))
                         .orElse(() -> line.flatMap(on -> nearest(stops, on)));
             case Anchor.OnLine(String path, ReviewThread.Side side, int number) ->
                 stops.find(at::equals)
