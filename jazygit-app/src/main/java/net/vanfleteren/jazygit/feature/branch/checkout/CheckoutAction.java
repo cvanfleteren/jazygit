@@ -15,7 +15,13 @@ public final class CheckoutAction {
                             Binding.onSelected(" ", "help.branches.checkout", CheckoutMsg.Requested::new))
                     .add(
                             Scopes.REMOTE_BRANCHES,
-                            Binding.onSelected(" ", "help.remoteBranches.checkout", CheckoutMsg.RemoteRequested::new)),
+                            Binding.onSelected(" ", "help.remoteBranches.checkout", CheckoutMsg.RemoteRequested::new))
+                    .add(
+                            Scopes.REMOTE_BRANCHES,
+                            Binding.onSelected(
+                                    "w",
+                                    "help.remoteBranches.worktree",
+                                    CheckoutMsg.RemoteInNewWorktreeRequested::new)),
             CheckoutDialogs::popups);
 
     private CheckoutAction() {}

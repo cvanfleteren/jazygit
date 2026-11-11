@@ -26,6 +26,8 @@ public final class NoticeText {
             case Notice.StackNotListed(int pullRequest) ->
                 Messages.get("notice.stackNotListed", String.valueOf(pullRequest));
             case Notice.StackNotAsked(int stack) -> Messages.get("notice.stackNotAsked", String.valueOf(stack));
+            case Notice.BranchKept(var branch, int ahead, var upstream) ->
+                Messages.get("notice.branchKept", branch.value(), ahead, upstream.shortName());
             case Notice.StackCheckedOut(int stack, int made, int fastForwarded, int kept) ->
                 Messages.get("notice.stackCheckedOut", String.valueOf(stack), made, fastForwarded, kept);
             case Notice.Copied(int lines) -> Messages.get("notice.copied", lines);

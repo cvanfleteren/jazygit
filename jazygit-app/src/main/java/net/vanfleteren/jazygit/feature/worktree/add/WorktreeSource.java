@@ -31,9 +31,16 @@ public sealed interface WorktreeSource {
     }
 
     /**
-     * {@code branch}, which exists and is checked out nowhere.
+     * {@code branch}, which exists and is checked out nowhere, once {@code catchUp} is done to it.
      */
-    record Existing(BranchName branch) implements WorktreeSource {
+    record Existing(BranchName branch, CatchUp catchUp) implements WorktreeSource {
+
+        /**
+         * {@code branch} as it is.
+         */
+        public Existing(BranchName branch) {
+            this(branch, new CatchUp.AsIs());
+        }
 
         @Override
         public String label() {

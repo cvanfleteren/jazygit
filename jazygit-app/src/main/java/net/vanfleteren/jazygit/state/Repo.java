@@ -5,6 +5,7 @@ import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
+import java.util.Comparator;
 import lombok.With;
 import net.vanfleteren.jazygit.git.model.*;
 
@@ -120,11 +121,28 @@ public record Repo(
     }
 
     /**
-     * The local branch that follows {@code upstream}, if the branches are loaded and one does.
+     * The local branch that follows {@code upstream}, if the branches are loaded and one does. Of several, the first
+     * of: the one named as {@code upstream} that no worktree has checked out, any other that none has, one that
+     * another worktree has checked out, the one checked out here; the first by name where that leaves more than one
+     * (ADR 109).
      */
     public Option<Branch> trackingBranch(RemoteBranch upstream) {
         return branches.toOption()
-                .flatMap(loaded -> loaded.find(branch -> branch.remoteUpstream().contains(upstream)));
+                .flatMap(loaded -> loaded.filter(
+                                branch -> branch.remoteUpstream().contains(upstream))
+                        .sorted(Comparator.comparingInt((Branch branch) -> followerRank(branch, upstream))
+                                .thenComparing(branch -> branch.name().value()))
+                        .headOption());
+    }
+
+    private static int followerRank(Branch branch, RemoteBranch upstream) {
+        if (branch.current()) {
+            return 3;
+        }
+        if (branch.checkedOutElsewhere()) {
+            return 2;
+        }
+        return branch.name().equals(upstream.branch()) ? 0 : 1;
     }
 
     /**

@@ -101,20 +101,37 @@ public final class AddWorktreeUpdate {
         Next succeeded = OperationUpdate.succeeded(
                 model.mapRepoView(repoView -> repoView.withBranchesTab(BranchesTab.WORKTREES)), cmd, commands);
         return new Next(
-                succeeded
-                        .model()
+                kept(succeeded.model(), cmd.source())
                         .openPopupIfFree(new SwitchToAddedPopup(cmd.source().label(), location)),
                 succeeded.cmds());
     }
 
     /**
-     * Asks where to check out {@code branch}, a known branch that no operation runs on, in a new worktree, starting
-     * out at {@link #location}; once added, the app switches to it without asking when {@code switching} (ADR 68). The
-     * branch checked out here git keeps from being checked out twice, so a new branch made from it is asked for
-     * instead; one that another worktree has checked out git would refuse too, which is said.
+     * {@code model}, told that the branch {@code source} checked out was kept as it was, when it was (ADR 109).
+     */
+    private static Model kept(Model model, WorktreeSource source) {
+        return source instanceof WorktreeSource.Existing(BranchName branch, CatchUp.Kept(var upstream, int ahead))
+                ? model.inform(new Notice.BranchKept(branch, ahead, upstream))
+                : model;
+    }
+
+    /**
+     * Asks where to check out {@code branch}, a known branch that no operation runs on, in a new worktree, as
+     * {@link #forBranch(Model, BranchName, CatchUp, boolean)} does, as it is.
      */
     public static Next forBranch(Model model, BranchName branch, boolean switching) {
-        WorktreeSource source = new WorktreeSource.Existing(branch);
+        return forBranch(model, branch, new CatchUp.AsIs(), switching);
+    }
+
+    /**
+     * Asks where to check out {@code branch}, a known branch that no operation runs on, in a new worktree, starting
+     * out at {@link #location}, once {@code catchUp} is done to it; once added, the app switches to it without asking
+     * when {@code switching} (ADR 68). The branch checked out here git keeps from being checked out twice, so a new
+     * branch made from it is asked for instead; one that another worktree has checked out git would refuse too, which
+     * is said.
+     */
+    public static Next forBranch(Model model, BranchName branch, CatchUp catchUp, boolean switching) {
+        WorktreeSource source = new WorktreeSource.Existing(branch, catchUp);
         return model.idleBranch(branch)
                 .map(known -> known.current()
                         ? update(model, new NewBranchRequested(branch))

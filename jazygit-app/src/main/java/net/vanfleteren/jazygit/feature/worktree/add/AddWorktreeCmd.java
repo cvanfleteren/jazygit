@@ -10,7 +10,10 @@ import net.vanfleteren.jazygit.feature.worktree.add.WorktreeSource.*;
 import net.vanfleteren.jazygit.gh.GitHub;
 import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.GitFailure;
+import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.CaughtUpBranch;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Revision;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Env;
@@ -20,7 +23,8 @@ import net.vanfleteren.jazygit.state.operation.Operation;
 import net.vanfleteren.jazygit.state.operation.OperationCmd;
 
 /**
- * Adds a worktree at {@code location} that checks out what {@code source} says. A pull request is checked out by
+ * Adds a worktree at {@code location} that checks out what {@code source} says, a branch fast-forwarded first when
+ * the source says so. A pull request is checked out by
  * gh in the new worktree, which starts out on no branch; when gh fails, the worktree is removed again. Once added,
  * it tells where the worktree is, as git lists it.
  *
@@ -63,7 +67,12 @@ public record AddWorktreeCmd(WorktreeSource source, String location, boolean swi
         Git git = env.git();
         Path path = WorktreeCmd.path(location);
         return switch (source) {
-            case Existing(var branch) -> reported(env, git.worktrees().add(path, branch));
+            case Existing(var branch, var catchUp) ->
+                reported(
+                        env,
+                        GitFailure.sequence(
+                                () -> caughtUp(git, branch, catchUp),
+                                () -> git.worktrees().add(path, branch)));
             case Created(var name, var from) -> reported(env, git.worktrees().addWithNewBranch(path, name, from));
             case Detached(var start, var label) -> reported(env, git.worktrees().addDetached(path, start));
             case PullRequest(var pullRequest) ->
@@ -75,6 +84,16 @@ public record AddWorktreeCmd(WorktreeSource source, String location, boolean swi
                                 added -> checkout(git, env.gitHub(), path, pullRequest.number(), added)
                                         .fold(this::failed, all -> added(env, all)));
         };
+    }
+
+    /**
+     * Fast-forwards {@code branch} to the remote branch it follows when {@code catchUp} says so, without fetching:
+     * from the remote-tracking branch, which git refuses when that is no fast-forward (ADR 109).
+     */
+    private static Either<GitFailure, List<ExecutedCommand>> caughtUp(Git git, BranchName branch, CatchUp catchUp) {
+        return catchUp instanceof CatchUp.FastForward(RemoteBranch upstream)
+                ? git.branches().catchUp(List.of(new CaughtUpBranch(branch, upstream, false, Option.none())))
+                : GitFailure.nothing();
     }
 
     private Msg reported(Env env, Either<GitFailure, List<ExecutedCommand>> outcome) {

@@ -42,8 +42,8 @@ As `space` decides it, from the branches read, without fetching:
    Not: the first one found, which depends on the order the branches are listed in, and can ask for a new branch, or
    offer another worktree, while a follower is free.
 2. **No local branch has its name**: one is made under that name, following it, without asking for the name.
-3. **A local branch has its name but follows something else, or nothing**: a name is asked for, as `space` asks
-   (`NewBranchPopup.following`). Not: taking that branch, which may be another branch altogether.
+3. **A local branch has its name but follows something else, or nothing**: a name is asked for, as `W` asks
+   (`NewWorktreeBranchPopup.followingRemote`). Not: taking that branch, which may be another branch altogether.
 
 `space` picks the follower the same way, also when it checks out here or in the main worktree: one function picks it
 for both keys.
@@ -67,7 +67,9 @@ git fetch --no-write-fetch-head . refs/remotes/<remote>/<remote-branch>:refs/hea
 - Without `+`, git refuses what is no fast-forward: a branch that got commits of its own meanwhile fails the whole
   operation, as any failed operation shows, and no worktree is added.
 - A branch with commits of its own is checked out as it is, behind or not, and the notice says so:
-  `feat-x kept: 1 commit not on origin/feat-x`. Not: rebasing or merging it, which `w` never does.
+  `feat-x kept: 1 commit not on origin/feat-x`. Not: rebasing or merging it, which `w` never does. After `space`
+  and *in a new worktree*, the app switches to the new worktree at once (ADR 68), and the notice goes with the
+  worktree left behind; the command log keeps what ran.
 - Not: checking out the branch as it is, as checking out here does: asking for the remote branch means wanting what
   is on the remote, and a new worktree has no files of its own to lose. Checking out here keeps the branch as it is,
   as before: it has the files of a worktree in use around it.

@@ -28,6 +28,12 @@ public sealed interface CheckoutMsg extends Msg {
     record RemoteRequested(RemoteBranch branch) implements CheckoutMsg {}
 
     /**
+     * The user asked to check out the remote branch {@code branch} in a new worktree: the local branch that follows
+     * it, or a new one that does (ADR 109).
+     */
+    record RemoteInNewWorktreeRequested(RemoteBranch branch) implements CheckoutMsg {}
+
+    /**
      * {@code cmd} ran {@code commands} and left a local branch checked out.
      */
     record CheckedOut(BranchCmd.ChecksOutBranch cmd, List<ExecutedCommand> commands) implements CheckoutMsg {}
