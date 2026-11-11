@@ -144,16 +144,16 @@ public record StackRebase(
      * last, the branch on {@code remote}, and the local branch.
      */
     private static List<Revision> where(Model model, RemoteName remote, PullRequestStack.Entry entry) {
-        BranchName name = FromGitHub.branch(entry.headBranch());
+        Option<BranchName> name = entry.headBranch().map(FromGitHub::branch);
         return entry.headOid()
                 .flatMap(Sha::parse)
                 .<Revision>map(Revision.Commit::new)
                 .toList()
-                .appendAll(model.repo()
-                        .remoteBranch(new RemoteBranch(remote, name))
+                .appendAll(name.flatMap(known -> model.repo().remoteBranch(new RemoteBranch(remote, known)))
                         .map(RemoteRef::branch)
                         .map(RemoteBranch::tracking))
-                .appendAll(model.repo().branch(name).map(branch -> new BranchRef.Local(branch.name())));
+                .appendAll(name.flatMap(known -> model.repo().branch(known))
+                        .map(branch -> new BranchRef.Local(branch.name())));
     }
 
     private static <T> Either<AppError, T> refused(PullRequestStack stack, StackPush.Refused why) {

@@ -231,7 +231,7 @@ class PullRequestsUpdateTest {
         PullRequest onA = new PullRequest(
                 42,
                 new GhBranch("feature"),
-                new GhBranch("feat/a"),
+                Option.of(new GhBranch("feat/a")),
                 false,
                 Checks.PASSING,
                 Review.APPROVED,

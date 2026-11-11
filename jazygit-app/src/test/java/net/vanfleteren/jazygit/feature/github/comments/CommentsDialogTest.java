@@ -361,7 +361,7 @@ class CommentsDialogTest {
                 new PullRequest(
                         42,
                         new GhBranch("feature"),
-                        new GhBranch("main"),
+                        Option.of(new GhBranch("main")),
                         false,
                         Checks.PASSING,
                         Review.APPROVED,

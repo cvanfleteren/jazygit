@@ -59,7 +59,7 @@ class RepositoryPullRequestsQueryTest {
                                         Option.none(),
                                         Option.none(),
                                         Option.none(),
-                                        new GhBranch("main"))),
+                                        Option.of(new GhBranch("main")))),
                                 1),
                         Option.of("bob"),
                         7)),

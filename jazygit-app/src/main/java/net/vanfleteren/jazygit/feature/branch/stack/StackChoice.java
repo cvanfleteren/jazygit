@@ -179,7 +179,7 @@ public record StackChoice(List<StackChoice.Row> rows, int branch, int bottom, in
         List<PullRequest> pullRequests = path.flatMap(Row::pullRequest);
         List<BaseChange> changes = pullRequests
                 .zip(pullRequests.drop(1))
-                .filter(pair -> !pair._2().baseBranch().equals(pair._1().headBranch()))
+                .filter(pair -> !pair._2().baseBranch().contains(pair._1().headBranch()))
                 .map(pair -> new BaseChange(
                         pair._2().number(), pair._2().baseBranch(), pair._1().headBranch()));
         return Either.right(new Plan(pullRequests.drop(skip), changes));
@@ -199,10 +199,10 @@ public record StackChoice(List<StackChoice.Row> rows, int branch, int bottom, in
      * A base of a pull request that has to change for the stack to be one line.
      *
      * @param number its pull request
-     * @param from   the base it has, as GitHub names it
+     * @param from   the base it has, as GitHub names it, if GitHub said
      * @param to     the head of the pull request below it
      */
-    public record BaseChange(int number, GhBranch from, GhBranch to) {}
+    public record BaseChange(int number, Option<GhBranch> from, GhBranch to) {}
 
     /**
      * What making the stack takes: the pull requests from the bottom up, and the bases that change first.

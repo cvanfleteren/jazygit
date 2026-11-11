@@ -31,15 +31,14 @@ public record PullRequestStack(int number, int position, int size, List<Entry> e
     public Option<GhBranch> branchBelow() {
         return entries.filter(entry -> entry.position() < position && entry.state() == State.OPEN)
                 .maxBy(Entry::position)
-                .map(Entry::headBranch)
-                .filter(GhBranch::isKnown);
+                .flatMap(Entry::headBranch);
     }
 
     /**
      * The branch the bottom pull request of the stack merges into, its base; none when it cannot be read.
      */
     public Option<GhBranch> base() {
-        return entries.minBy(Entry::position).map(Entry::baseBranch).filter(GhBranch::isKnown);
+        return entries.minBy(Entry::position).flatMap(Entry::baseBranch);
     }
 
     /**
@@ -62,8 +61,8 @@ public record PullRequestStack(int number, int position, int size, List<Entry> e
      * @param position   where it sits in the stack, 1 being the closest to the base
      * @param number     its number
      * @param state      whether it is open, merged or closed
-     * @param headBranch the branch it merges from, {@link GhBranch#UNKNOWN} when not known
-     * @param baseBranch the branch it merges into, {@link GhBranch#UNKNOWN} when not known
+     * @param headBranch the branch it merges from, if GitHub said
+     * @param baseBranch the branch it merges into, if GitHub said
      * @param headOid    the commit its branch was at last, as GitHub has it: where a merged one was (ADR 74)
      * @param queued     whether it is in a merge queue, where rewriting its branch takes it out (ADR 74)
      * @param fork       whether its branch is in another repository than its base, a fork, which checking out the stack
@@ -73,8 +72,8 @@ public record PullRequestStack(int number, int position, int size, List<Entry> e
             int position,
             int number,
             State state,
-            GhBranch headBranch,
-            GhBranch baseBranch,
+            Option<GhBranch> headBranch,
+            Option<GhBranch> baseBranch,
             Option<String> headOid,
             boolean queued,
             boolean fork) {
@@ -90,21 +89,21 @@ public record PullRequestStack(int number, int position, int size, List<Entry> e
                 GhBranch baseBranch,
                 Option<String> headOid,
                 boolean queued) {
-            this(position, number, state, headBranch, baseBranch, headOid, queued, false);
+            this(position, number, state, Option.of(headBranch), Option.of(baseBranch), headOid, queued, false);
         }
 
         /**
          * One whose head commit and queue are not known.
          */
         public Entry(int position, int number, State state, GhBranch headBranch, GhBranch baseBranch) {
-            this(position, number, state, headBranch, baseBranch, Option.none(), false, false);
+            this(position, number, state, headBranch, baseBranch, Option.none(), false);
         }
 
         /**
          * One whose branches are not known.
          */
         public Entry(int position, int number, State state) {
-            this(position, number, state, GhBranch.UNKNOWN, GhBranch.UNKNOWN, Option.none(), false, false);
+            this(position, number, state, Option.none(), Option.none(), Option.none(), false, false);
         }
 
         /**

@@ -462,7 +462,7 @@ public final class StackUpdate {
                 .map(popup -> {
                     PullRequest pr = popup.pullRequest();
                     PullRequest on = target.pullRequest();
-                    List<StackChoice.BaseChange> changes = pr.baseBranch().equals(on.headBranch())
+                    List<StackChoice.BaseChange> changes = pr.baseBranch().contains(on.headBranch())
                             ? List.empty()
                             : List.of(new StackChoice.BaseChange(pr.number(), pr.baseBranch(), on.headBranch()));
                     Option<Integer> stack = on.stack().map(PullRequestStack::number);

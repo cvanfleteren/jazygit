@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.branch.stack;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
+import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.popup.PopupMsg;
@@ -275,7 +276,7 @@ public final class StackDialogs {
                 .map(change -> Messages.get(
                         "dialog.makeStack.change",
                         String.valueOf(change.number()),
-                        change.from().name(),
+                        change.from().map(GhBranch::name).getOrElse(""),
                         change.to().name()));
         List<String> diverged = confirm.diverged()
                 .map(branch -> Messages.get(

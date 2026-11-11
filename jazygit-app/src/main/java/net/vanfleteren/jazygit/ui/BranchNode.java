@@ -75,7 +75,8 @@ sealed interface BranchNode {
                 .map(entry -> members.find(
                                 member -> pullRequest.apply(member._1()).exists(pr -> pr.number() == entry.number()))
                         .<BranchNode>map(member -> new Leaf(member._1(), true))
-                        .getOrElse(() -> new Other(number, entry, fetched.apply(entry.headBranch()))));
+                        .getOrElse(() ->
+                                new Other(number, entry, entry.headBranch().flatMap(fetched))));
         // A branch whose pull request the stack it was read with does not list goes after the ones it does.
         List<BranchNode> unlisted = members.filter(member -> !leaves.exists(
                         leaf -> leaf instanceof Leaf listed && listed.branch().equals(member._1())))

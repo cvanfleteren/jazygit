@@ -136,7 +136,7 @@ public record PullRequestDetails(
                 () -> new PullRequest(
                         number,
                         branches.head(),
-                        branches.base(),
+                        GhBranch.named(branches.base().name()),
                         status.draft(),
                         Checks.combined(checks.map(Check::state)),
                         conversation.review(),

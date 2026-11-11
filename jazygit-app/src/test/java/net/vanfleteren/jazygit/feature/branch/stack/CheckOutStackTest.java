@@ -134,7 +134,7 @@ class CheckOutStackTest {
                         new PullRequest(
                                 96 + List.of(A, B, C).indexOf(branch.name()),
                                 new GhBranch(branch.name().value()),
-                                GhBranch.UNKNOWN,
+                                Option.none(),
                                 false,
                                 Checks.NONE,
                                 Review.NONE,
@@ -259,8 +259,8 @@ class CheckOutStackTest {
                         4,
                         98,
                         State.OPEN,
-                        new GhBranch("feat/c"),
-                        new GhBranch("feat/b"),
+                        Option.of(new GhBranch("feat/c")),
+                        Option.of(new GhBranch("feat/b")),
                         Option.of("c".repeat(40)),
                         false,
                         true));
@@ -270,6 +270,16 @@ class CheckOutStackTest {
         assertEquals(Kind.FORK, kindOf(checkout, 98));
         // The top is the highest pull request with a branch here.
         assertEquals(Option.of(B), checkout.top());
+    }
+
+    @Test
+    void anOpenPullRequestWhoseBranchGitHubDidNotSayIsLeftOutAndNotFetched() {
+        List<Entry> unnamed = ENTRIES.update(3, new Entry(4, 98, State.OPEN));
+
+        assertEquals(List.of(A, B), StackCheckout.fetched(stack(unnamed, 2)));
+        StackCheckout checkout = StackCheckout.of(stack(unnamed, 2), ORIGIN, FETCHED, Option.none());
+        assertEquals(List.of(96, 97), checkout.lines().map(StackCheckout.Line::number));
+        assertEquals(List.of(95, 98), checkout.skipped());
     }
 
     @Test

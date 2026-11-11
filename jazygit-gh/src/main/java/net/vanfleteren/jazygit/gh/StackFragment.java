@@ -43,8 +43,8 @@ final class StackFragment {
                             nullable(map7(
                                     field("number", integer()),
                                     field("state", enumOf(State.class)),
-                                    field("headRefName", string()).map(GhBranch::new),
-                                    field("baseRefName", string()).map(GhBranch::new),
+                                    field("headRefName", string()).map(GhBranch::named),
+                                    field("baseRefName", string()).map(GhBranch::named),
                                     // Read since ADR 74; an answer without them is still read.
                                     optionalField("headRefOid", nullable(string()))
                                             .map(oid -> oid.flatMap(read -> read)),

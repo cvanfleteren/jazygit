@@ -8,7 +8,7 @@ import io.vavr.control.Option;
  *
  * @param number     its number, e.g. 42 for {@code #42}
  * @param headBranch the branch on the remote it merges from
- * @param baseBranch the branch on the remote it merges into, {@link GhBranch#UNKNOWN} when not known
+ * @param baseBranch the branch on the remote it merges into, if GitHub said
  * @param draft      whether it is still a draft
  * @param checks     how its CI checks are doing
  * @param review     where its review stands
@@ -18,7 +18,7 @@ import io.vavr.control.Option;
 public record PullRequest(
         int number,
         GhBranch headBranch,
-        GhBranch baseBranch,
+        Option<GhBranch> baseBranch,
         boolean draft,
         Checks checks,
         Review review,
@@ -36,7 +36,7 @@ public record PullRequest(
             Review review,
             Option<PullRequestStack> stack,
             Option<Commits> commits) {
-        this(number, headBranch, GhBranch.UNKNOWN, draft, checks, review, stack, commits);
+        this(number, headBranch, Option.none(), draft, checks, review, stack, commits);
     }
 
     /**

@@ -81,7 +81,7 @@ class RebaseStackTest {
         return new PullRequest(
                 number,
                 new GhBranch(head),
-                GhBranch.UNKNOWN,
+                Option.none(),
                 false,
                 Checks.NONE,
                 Review.NONE,
@@ -243,6 +243,13 @@ class RebaseStackTest {
                 ENTRIES.append(new Entry(3, 100, State.OPEN, new GhBranch("feat/e"), new GhBranch("feat/d")));
 
         assertEquals(Option.of(StackRefusal.NOT_CHECKED_OUT), refusal(model(LOCAL, three), three));
+    }
+
+    @Test
+    void anOpenPullRequestWhoseBranchGitHubDidNotSayIsNotPushed() {
+        List<Entry> unnamed = ENTRIES.update(1, new Entry(2, 99, State.OPEN));
+
+        assertEquals(Option.of(StackRefusal.NO_BASE), refusal(model(LOCAL, unnamed), unnamed));
     }
 
     @Test
