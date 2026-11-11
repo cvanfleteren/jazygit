@@ -412,6 +412,30 @@ See `documentation/adr/0102-the-original-or-the-new-version-of-a-file.md`.
   read arrives. `ContentPanel` keeps the row of the cursor on the screen from the line it was drawn on. `DiffLines`
   shows the version too, so `y` copies its lines, and the review refuses to start a thread in it (`Why.IN_VERSION`).
 
+### A version of Markdown rendered
+
+See `documentation/adr/0103-a-version-of-markdown-rendered.md`.
+
+- Ctrl+T (`feature.diff.VersionAction`, next to Ctrl+O) sends `VersionMsg.RenderToggled`. `VersionUpdate` acts as for
+  Ctrl+O, and only on a file `state.Rendered` knows by its extension, the one table of the files with a renderer. It
+  sets `Version.rendered`: on the diff, it renders and shows the new version, or the original of a deleted file; on a
+  version rendered, it shows it as source. Ctrl+O keeps `rendered` as it cycles.
+- `Version.applied` passes `rendered` on in the `Expansion.Fold`. `RichDiff.rendered` draws the file: its bar, the only
+  stop of the cursor, whose lines the rows after it are, so `j` and `k` scroll; then each block `RenderedMarkdown` draws,
+  with `▎` (or `+`/`-` in a theme without tinted lines) beside a block that holds a changed line, and a
+  `RichDiff.Place` for each of its lines on its first row.
+- `RenderedMarkdown` parses with commonmark's source spans, a block for each top-level node and for each item of a
+  top-level list, and draws each with `MarkdownLines` (drawn out of `RemarkLines`, which draws the text of review
+  remarks with it), its code blocks coloured by `LexedHighlighter`, jazygit's lexer behind tamboui's
+  `SyntaxHighlighter`. A table it draws itself (`RenderedMarkdown.table`), each column as wide as its widest cell, as
+  tamboui's table shares the width out evenly; it finds tables with commonmark's `TablesExtension`, and draws each cell
+  as text only (`inlineOnly`). Each block gets only the link definitions it refers to (`referred`), and the blocks are
+  drawn on the common pool. Comments of HTML are found by the parser, so none in code is taken out.
+- A version rendered is drawn as wide as its area: `ContentPanel.Styler` gets the width the text area last had, and a
+  body that is `rendering` is styled again when it changes. `Styled.row` finds a line by its place too, so the line of
+  the cursor keeps its row as the version renders; a key on the bar acts on `Styled.top`, the first line of the block
+  at the top, so the version shown as source again has the cursor there. `CopyUpdate` copies nothing from it.
+
 ### Copying lines of a diff
 
 See `documentation/adr/0094-copying-lines-of-a-diff.md`.

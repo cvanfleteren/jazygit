@@ -34,7 +34,6 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.AbstractList;
 import java.util.Locale;
-import java.util.function.BiFunction;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -159,6 +158,20 @@ public final class ContentPanel {
             Option<ShownRemarks> remarks,
             Option<DiffStops.HunkAt> asGiven,
             Theme.SpanStyles styles) {
+        return diffDrawn(diff, look, remarks, asGiven, styles, RichDiff.RENDERED_WIDTH);
+    }
+
+    /**
+     * The lines of {@link #diffDrawn(ShownDiff, DiffLook, Option, Option, Theme.SpanStyles)}, a version of its file
+     * rendered {@code width} columns wide (ADR 103).
+     */
+    static RichDiff.Drawn diffDrawn(
+            ShownDiff diff,
+            DiffLook look,
+            Option<ShownRemarks> remarks,
+            Option<DiffStops.HunkAt> asGiven,
+            Theme.SpanStyles styles,
+            int width) {
         List<Line> failed = remarks.flatMap(ShownRemarks::failed)
                 .map(failure -> Line.from(styled(
                         Messages.get("content.remarks.failed", Placeholders.error(failure)),
@@ -170,7 +183,7 @@ public final class ContentPanel {
                 RichDiff.Drawn.plain(remarks.filter(shown -> !shown.threads().isEmpty())
                         .map(shown -> counted(diff, shown.threads(), styles))
                         .getOrElse(() -> changeLines(diff, look, styles)));
-            case RICH -> RichDiff.drawn(diff.folded(), look.syntax(), look.words(), remarks, asGiven, styles);
+            case RICH -> RichDiff.drawn(diff.folded(), look.syntax(), look.words(), remarks, asGiven, styles, width);
         };
         return drawn.after(failed).withLead();
     }
@@ -402,8 +415,16 @@ public final class ContentPanel {
      * The lines of {@link #commitText}, with the stops of the cursor in the rich view (ADR 60).
      */
     static RichDiff.Drawn commitDrawn(Commit commit, ShownDiff changes, DiffLook look, Theme.SpanStyles styles) {
+        return commitDrawn(commit, changes, look, styles, RichDiff.RENDERED_WIDTH);
+    }
+
+    /**
+     * The lines of {@link #commitText}, a version of its file rendered {@code width} columns wide (ADR 103).
+     */
+    static RichDiff.Drawn commitDrawn(
+            Commit commit, ShownDiff changes, DiffLook look, Theme.SpanStyles styles, int width) {
         List<String> message = messageLines(commit);
-        return changeDrawn(changes, look, styles)
+        return changeDrawn(changes, look, styles, width)
                 .after(List.of(
                                 styled(
                                         Messages.get(
@@ -434,7 +455,15 @@ public final class ContentPanel {
      * The lines of {@link #stashText}, with the stops of the cursor in the rich view (ADR 60).
      */
     static RichDiff.Drawn stashDrawn(Stash stash, ShownDiff changes, DiffLook look, Theme.SpanStyles styles) {
-        return changeDrawn(changes, look, styles)
+        return stashDrawn(stash, changes, look, styles, RichDiff.RENDERED_WIDTH);
+    }
+
+    /**
+     * The lines of {@link #stashText}, a version of its file rendered {@code width} columns wide (ADR 103).
+     */
+    static RichDiff.Drawn stashDrawn(
+            Stash stash, ShownDiff changes, DiffLook look, Theme.SpanStyles styles, int width) {
+        return changeDrawn(changes, look, styles, width)
                 .after(List.of(styled(
                                 Messages.get("content.stashHeader", stash.ref(), stash.message()),
                                 Theme.Classes.SHA,
@@ -451,18 +480,19 @@ public final class ContentPanel {
      * A unified diff, drawn as {@code look} says.
      */
     static List<Line> changeLines(ShownDiff changes, DiffLook look, Theme.SpanStyles styles) {
-        return changeDrawn(changes, look, styles).lines();
+        return changeDrawn(changes, look, styles, RichDiff.RENDERED_WIDTH).lines();
     }
 
     /**
      * A unified diff, drawn as {@code look} says, with the stops of the cursor in the rich view (ADR 60).
      */
-    private static RichDiff.Drawn changeDrawn(ShownDiff changes, DiffLook look, Theme.SpanStyles styles) {
+    private static RichDiff.Drawn changeDrawn(ShownDiff changes, DiffLook look, Theme.SpanStyles styles, int width) {
         return switch (look.style()) {
             case PLAIN ->
                 RichDiff.Drawn.plain(Rows.drawn(lines(changes.text()).map(line -> () -> diffLine(line, styles))));
             case RICH ->
-                RichDiff.drawn(changes.folded(), look.syntax(), look.words(), Option.none(), Option.none(), styles);
+                RichDiff.drawn(
+                        changes.folded(), look.syntax(), look.words(), Option.none(), Option.none(), styles, width);
         };
     }
 
@@ -532,18 +562,19 @@ public final class ContentPanel {
 
     /**
      * {@code body}, styled, with the stops of the cursor of a rich diff (ADR 60), the lines of {@code asGiven}, the
-     * hunk a range is open in, as git gives them (ADR 83). Only the diff of a pull request's files has ranges.
+     * hunk a range is open in, as git gives them (ADR 83), and a version of a file rendered {@code width} columns wide
+     * (ADR 103). Only the diff of a pull request's files has ranges.
      */
-    private RichDiff.Drawn bodyDrawn(Body body, Option<DiffStops.HunkAt> asGiven) {
+    private RichDiff.Drawn bodyDrawn(Body body, Option<DiffStops.HunkAt> asGiven, int width) {
         return switch (body) {
             case Body.Diff(ShownDiff diff, DiffLook look, var remarks) ->
-                diffDrawn(diff, look, remarks, asGiven, styles);
+                diffDrawn(diff, look, remarks, asGiven, styles, width);
             case Body.BranchLog(List<Commit> commits, AheadView ahead) ->
                 plain(logText(commits, ZoneId.systemDefault(), ahead, styles));
             case Body.CommitChanges(Commit commit, ShownDiff changes, DiffLook look) ->
-                commitDrawn(commit, changes, look, styles);
+                commitDrawn(commit, changes, look, styles, width);
             case Body.StashChanges(Stash stash, ShownDiff changes, DiffLook look) ->
-                stashDrawn(stash, changes, look, styles);
+                stashDrawn(stash, changes, look, styles, width);
             case Body.PullRequest(PullRequestSummary pullRequest, PullRequestPreview preview) ->
                 plain(pullRequestText(pullRequest, preview, styles));
         };
@@ -555,6 +586,20 @@ public final class ContentPanel {
      * left out are shown (ADR 77). None unless {@code body} is a diff with that line: only the diff of a pull request's
      * files has ranges.
      */
+    /**
+     * Whether {@code body} shows a version of a file rendered (ADR 103), which is drawn as wide as its area.
+     */
+    static boolean rendering(Body body) {
+        Option<ShownDiff> diff = switch (body) {
+            case Body.Diff(ShownDiff shown, var look, var remarks) -> Option.of(shown);
+            case Body.CommitChanges(var commit, ShownDiff changes, var look) -> Option.of(changes);
+            case Body.StashChanges(var stash, ShownDiff changes, var look) -> Option.of(changes);
+            case Body.BranchLog _, Body.PullRequest _ -> Option.none();
+        };
+        return diff.flatMap(ShownDiff::version)
+                .exists(version -> version.rendering().isDefined());
+    }
+
     static Option<DiffStops.HunkAt> markedHunk(Body body, Anchor mark) {
         return body instanceof Body.Diff(ShownDiff diff, var look, var remarks)
                 ? DiffLines.of(diff.folded().diff().diff())
@@ -681,12 +726,7 @@ public final class ContentPanel {
          * The area as {@code shown}, its body as {@code style} styles it, where the model has it scrolled to, its lines
          * fitted to the size it is drawn in (ADR 80).
          */
-        Element show(
-                Model model,
-                String focusedId,
-                Shown.Area shown,
-                BiFunction<Body, Option<DiffStops.HunkAt>, RichDiff.Drawn> style,
-                Theme.SpanStyles styles) {
+        Element show(Model model, String focusedId, Shown.Area shown, Styler style, Theme.SpanStyles styles) {
             return new Fitted(
                     fit(model, focusedId, shown, style, styles), () -> fit(model, focusedId, shown, style, styles));
         }
@@ -696,11 +736,7 @@ public final class ContentPanel {
          * in, which the text area only learns while it draws.
          */
         private RichTextAreaElement fit(
-                Model model,
-                String focusedId,
-                Shown.Area shown,
-                BiFunction<Body, Option<DiffStops.HunkAt>, RichDiff.Drawn> style,
-                Theme.SpanStyles styles) {
+                Model model, String focusedId, Shown.Area shown, Styler style, Theme.SpanStyles styles) {
             ThemeName theme = model.preferences().theme();
             ScrolledContent content = shown.content();
             Scrolled known = model.scrolled(id, content);
@@ -712,13 +748,17 @@ public final class ContentPanel {
                     before -> before.theme() == theme && shownAt.content().sameChanges(content));
             shownAt = known;
             Body body = shown.body();
-            Option<Styled> last = styled.filter(before -> before.body().equals(body) && before.theme() == theme);
+            // A version rendered is drawn as wide as the area, which it learns while it draws (ADR 80, 103).
+            int width = element.state().viewportWidth() > 0 ? element.state().viewportWidth() : RichDiff.RENDERED_WIDTH;
+            Option<Styled> last = styled.filter(before -> before.body().equals(body)
+                    && before.theme() == theme
+                    && (!rendering(body) || before.width() == width));
             // The hunk a range is open in is shown as git gives it, so a range holds the lines it shows (ADR 83). A new
             // body has its hunk looked up in its diff, so it is drawn once, in the order it is shown in.
             Option<DiffStops.HunkAt> asGiven = told.mark()
                     .flatMap(mark -> last.map(before -> before.hunk(mark)).getOrElse(() -> markedHunk(body, mark)));
             Styled current = last.filter(before -> before.asGiven().equals(asGiven))
-                    .getOrElse(() -> Styled.of(body, theme, asGiven, style.apply(body, asGiven)));
+                    .getOrElse(() -> Styled.of(body, theme, asGiven, style.drawn(body, asGiven, width), width));
             styled = Option.of(current);
             // Shown in another order, or as another version of the file, the line of the cursor stays where it was on
             // the screen: the view moves by as much as it does, which the model learns with the next move (ADR 83,
@@ -814,13 +854,25 @@ public final class ContentPanel {
          * it take it.
          */
         private DiffCursorAt at(DiffCursor cursor, ScrolledContent content) {
+            Anchor acting = acting(cursor);
             return new DiffCursorAt(
                     id,
-                    scrolledTo(cursor, content),
-                    cursor.anchor(),
+                    new Scrolled(content, cursor.row(), column, Option.of(acting), cursor.markAnchor()),
+                    acting,
                     cursor.nextThread().map(next -> movedTo(next, content)),
                     cursor.previousThread().map(previous -> movedTo(previous, content)),
                     cursor.marked().map(marked -> movedTo(marked, content)));
+        }
+
+        /**
+         * What a key acts on with the cursor on {@code cursor}: the stop it is on, but on the bar of a version
+         * rendered, which is its only stop, the first line of the block at the top of the area, so a version shown
+         * as source again has the cursor there (ADR 103).
+         */
+        private Anchor acting(DiffCursor cursor) {
+            return cursor.anchor() instanceof Anchor.File
+                    ? styled.flatMap(shown -> shown.top(cursor.row())).getOrElse(cursor::anchor)
+                    : cursor.anchor();
         }
 
         private Msg movedTo(DiffCursor cursor, ScrolledContent content) {
@@ -1003,6 +1055,8 @@ public final class ContentPanel {
          * @param widest  how wide the widest of {@code lines} is, which the tint of the cursor never makes wider
          * @param filling the lines drawn to the edge of the area (ADR 80): the bar of each file, the lines of the diff
          *                and the markers of the lines it leaves out, not the threads on them
+         * @param places  where each line of a version rendered is drawn, in order (ADR 103)
+         * @param width   how wide a version rendered was drawn
          */
         private record Styled(
                 Body body,
@@ -1012,9 +1066,12 @@ public final class ContentPanel {
                 Vector<RichDiff.Stop> stops,
                 Map<Anchor, Integer> indexes,
                 int widest,
-                Set<Integer> filling) {
+                Set<Integer> filling,
+                Vector<RichDiff.Place> places,
+                int width) {
 
-            static Styled of(Body body, ThemeName theme, Option<DiffStops.HunkAt> asGiven, RichDiff.Drawn drawn) {
+            static Styled of(
+                    Body body, ThemeName theme, Option<DiffStops.HunkAt> asGiven, RichDiff.Drawn drawn, int width) {
                 Rows lines = drawn.rows();
                 Vector<RichDiff.Stop> stops = drawn.stops().toVector();
                 return new Styled(
@@ -1031,14 +1088,16 @@ public final class ContentPanel {
                                     case Anchor.Lead _, Anchor.Thread _, Anchor.Comment _ -> false;
                                 })
                                 .map(RichDiff.Stop::row)
-                                .toSet());
+                                .toSet(),
+                        drawn.places().toVector(),
+                        width);
             }
 
             /**
              * This body with {@code kept}, its lines with others kept drawn.
              */
             Styled withLines(Rows kept) {
-                return new Styled(body, theme, asGiven, kept, stops, indexes, widest, filling);
+                return new Styled(body, theme, asGiven, kept, stops, indexes, widest, filling, places, width);
             }
 
             /**
@@ -1053,8 +1112,34 @@ public final class ContentPanel {
              * The line the stop {@code anchor} starts on, if it is a stop of this body.
              */
             Option<Integer> row(Anchor anchor) {
-                return indexes.get(anchor).map(index -> stops.get(index).row());
+                return indexes.get(anchor)
+                        .map(index -> stops.get(index).row())
+                        .orElse(() -> places.find(place -> place.anchor().equals(anchor))
+                                .map(RichDiff.Place::row));
+            }
+
+            /**
+             * The first line of the block of a version rendered at the top of the area scrolled to {@code row}, or of
+             * its first block when none is at or above it; none for a body that is no version rendered (ADR 103).
+             */
+            Option<Anchor> top(int row) {
+                return places.filter(place -> place.row() <= row)
+                        .lastOption()
+                        // Above the first block, as with the bar of the file at the top, the first block.
+                        .orElse(places.headOption())
+                        .flatMap(last -> places.find(place -> place.row() == last.row()))
+                        .map(RichDiff.Place::anchor);
             }
         }
+    }
+
+    /**
+     * How a body is drawn: with the stops of its cursor, the hunk a range is open in as git gives it (ADR 83), and a
+     * version of a file rendered as wide as its area (ADR 103).
+     */
+    @FunctionalInterface
+    interface Styler {
+
+        RichDiff.Drawn drawn(Body body, Option<DiffStops.HunkAt> asGiven, int width);
     }
 }

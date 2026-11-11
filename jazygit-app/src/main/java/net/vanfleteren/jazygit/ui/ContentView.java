@@ -122,12 +122,16 @@ final class ContentView {
 
     /**
      * {@code title}, saying which version of its file the area shows in place of its diff, if it shows one, from the
-     * moment it was asked for: while the file is read, or when it could not be, it says so too (ADR 102).
+     * moment it was asked for, and whether rendered (ADR 103): while the file is read, or when it could not be, it says
+     * so too (ADR 102).
      */
     static String versioned(String title, Version version) {
         return version.shown()
-                .map(shown ->
-                        Messages.get(shown == FileVersion.NEW ? "panel.version.new" : "panel.version.original", title))
+                .map(shown -> Messages.get(
+                        shown == FileVersion.NEW
+                                ? version.rendered() ? "panel.version.newRendered" : "panel.version.new"
+                                : version.rendered() ? "panel.version.originalRendered" : "panel.version.original",
+                        title))
                 // A read that has no such file shows the diff, as a failed one does, and says so as well.
                 .map(named -> version.failed()
                         ? Messages.get("panel.version.failed", named)

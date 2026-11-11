@@ -164,6 +164,16 @@ class ContentViewTest {
                 "Stash · new version (could not be read)",
                 ContentView.versioned("Stash", asked.withWhole(new Loadable.Loaded<>(DiffText.of("")))));
         assertEquals("Stash", ContentView.versioned("Stash", asked.withShown(Option.none())));
+        // Rendered, it says so too (ADR 103).
+        assertEquals(
+                "Stash · new version, rendered (reading)", ContentView.versioned("Stash", asked.withRendered(true)));
+        assertEquals(
+                "Stash · original, rendered",
+                ContentView.versioned(
+                        "Stash",
+                        asked.withShown(Option.of(FileVersion.ORIGINAL))
+                                .withRendered(true)
+                                .withWhole(new Loadable.Loaded<>(changes))));
     }
 
     @Test

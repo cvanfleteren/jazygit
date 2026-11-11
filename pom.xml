@@ -35,8 +35,9 @@
         <zt-exec.version>1.13.0</zt-exec.version>
         <archunit.version>1.5.1</archunit.version>
         <night-config.version>3.9.0</night-config.version>
-        <!-- The version tamboui-markdown brings along. Only needed because the compile scope of RemarkLines needs it
-             (tamboui declares it as runtime); keep it equal to tamboui's and let a tamboui bump move it. -->
+        <!-- The version tamboui-markdown brings along, of commonmark and of its extension for tables. Declared only
+             because jazygit compiles against both, which tamboui declares as runtime; keep it equal to tamboui's and
+             let a tamboui bump move it. -->
         <commonmark.version>0.28.0</commonmark.version>
         <picocli.version>4.7.7</picocli.version>
         <parsson.version>1.1.9</parsson.version>
@@ -135,6 +136,11 @@
             <dependency>
                 <groupId>org.commonmark</groupId>
                 <artifactId>commonmark</artifactId>
+                <version>${commonmark.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.commonmark</groupId>
+                <artifactId>commonmark-ext-gfm-tables</artifactId>
                 <version>${commonmark.version}</version>
             </dependency>
             <dependency>

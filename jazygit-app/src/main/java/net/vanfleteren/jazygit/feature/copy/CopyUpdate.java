@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.state.DiffLines;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Notice;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.Version;
 
 /**
  * Copying what the cursor of a rich diff is on (ADR 94): its line, the lines of its range, or the path of the file
@@ -26,9 +27,15 @@ public final class CopyUpdate {
     }
 
     /**
-     * What copies what the cursor {@code at} is on; none on what is neither a line nor the bar of a file.
+     * What copies what the cursor {@code at} is on; none on what is neither a line nor the bar of a file, and none in
+     * a version rendered, whose rows are no lines of the file (ADR 103).
      */
     static Option<CopyCmd> copy(Model model, DiffCursorAt at) {
+        if (Version.in(model, at.area(), at.at().content())
+                .flatMap(Version::rendering)
+                .isDefined()) {
+            return Option.none();
+        }
         return switch (at.cursor()) {
             case Anchor.File(String path) -> Option.of(new CopyCmd(path, new Notice.PathCopied(path)));
             case Anchor.OnLine cursor ->
