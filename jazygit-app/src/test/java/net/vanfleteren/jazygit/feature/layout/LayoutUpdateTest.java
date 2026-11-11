@@ -49,14 +49,39 @@ class LayoutUpdateTest {
     }
 
     @Test
-    void theWidthStaysWithinItsRangeAndAStepPastItKeepsNothing() {
+    void theWidthStaysWithinItsRangeAndAStepPastTheWidestKeepsNothing() {
+        Model widest = model.mapPreferences(preferences ->
+                preferences.withSettings(TestModels.PLAIN.settings().withRepositoryWidth(Settings.MAX_WIDTH)));
+
+        Next next = Update.update(widest, new LayoutMsg.Stepped(5));
+
+        assertEquals(widest, next.model());
+        assertEquals(List.of(), next.cmds());
+    }
+
+    @Test
+    void aStepNarrowerAtTheNarrowestCollapsesTheColumnForTheSession() {
         Model narrowest = model.mapPreferences(preferences ->
                 preferences.withSettings(TestModels.PLAIN.settings().withRepositoryWidth(Settings.MIN_WIDTH)));
 
         Next next = Update.update(narrowest, new LayoutMsg.Stepped(-5));
 
-        assertEquals(narrowest, next.model());
+        assertTrue(next.model().preferences().leftCollapsed(Screen.REPOSITORY));
+        assertFalse(next.model().preferences().leftCollapsed(Screen.PULL_REQUESTS));
+        assertEquals(
+                narrowest.preferences().settings(), next.model().preferences().settings());
         assertEquals(List.of(), next.cmds());
+    }
+
+    @Test
+    void aStepNarrowerOnTheWayClampsToTheNarrowestWithoutCollapsing() {
+        Model narrow = model.mapPreferences(preferences ->
+                preferences.withSettings(TestModels.PLAIN.settings().withRepositoryWidth(Settings.MIN_WIDTH + 2)));
+
+        Next next = Update.update(narrow, new LayoutMsg.Stepped(-5));
+
+        assertFalse(next.model().preferences().leftCollapsed(Screen.REPOSITORY));
+        assertEquals(Settings.MIN_WIDTH, next.model().preferences().settings().repositoryWidth());
     }
 
     @Test
@@ -66,6 +91,7 @@ class LayoutUpdateTest {
 
         assertEquals(Next.of(open), Update.update(open, new LayoutMsg.Stepped(5)));
         assertEquals(Next.of(open), Update.update(open, new LayoutMsg.Resized(Screen.REPOSITORY, 50)));
+        assertEquals(Next.of(open), Update.update(open, new LayoutMsg.Expanded(Screen.REPOSITORY)));
     }
 
     @Test
@@ -420,31 +446,94 @@ class LayoutUpdateTest {
     }
 
     @Test
-    void zOnTheContentPanelMakesTheLeftColumnAsNarrowAsItGetsApartFromAMaximizedPane() {
-        Model narrow = toggled(content(toggled(focused(model, Scopes.COMMITS.id()))));
+    void zOnTheContentPanelCollapsesTheLeftColumnApartFromAMaximizedPane() {
+        Model collapsed = toggled(content(toggled(focused(model, Scopes.COMMITS.id()))));
 
-        assertEquals(Settings.MIN_WIDTH, narrow.preferences().leftWidth(Screen.REPOSITORY));
-        assertEquals(30, narrow.preferences().keptWidth(Screen.REPOSITORY));
-        assertEquals(Option.of(2), narrow.preferences().maximizedPane(Screen.REPOSITORY));
-        assertEquals(30, toggled(narrow).preferences().leftWidth(Screen.REPOSITORY));
-        assertEquals(Option.of(2), toggled(narrow).preferences().maximizedPane(Screen.REPOSITORY));
+        assertTrue(collapsed.preferences().leftCollapsed(Screen.REPOSITORY));
+        assertEquals(30, collapsed.preferences().keptWidth(Screen.REPOSITORY));
+        assertEquals(Option.of(2), collapsed.preferences().maximizedPane(Screen.REPOSITORY));
+        assertFalse(toggled(collapsed).preferences().leftCollapsed(Screen.REPOSITORY));
+        assertEquals(30, toggled(collapsed).preferences().leftWidth(Screen.REPOSITORY));
+        assertEquals(Option.of(2), toggled(collapsed).preferences().maximizedPane(Screen.REPOSITORY));
     }
 
     @Test
-    void aWidthStepEndsTheMaximizedContentPanelFromTheWidthShown() {
+    void zOpensACollapsedColumnWhileAPaneItHidesHadTheFocusLast() {
+        // Collapsed by < while the files had the focus, whose content had no area to take it.
+        Model collapsed = focused(model, Scopes.FILES.id())
+                .mapPreferences(preferences -> preferences.withLeftCollapsed(Screen.REPOSITORY, true));
+
+        Model opened = toggled(collapsed);
+
+        assertFalse(opened.preferences().leftCollapsed(Screen.REPOSITORY));
+        assertEquals(Option.none(), opened.preferences().maximizedPane(Screen.REPOSITORY));
+    }
+
+    @Test
+    void plusAndMinusDoNothingWhileTheColumnIsCollapsed() {
+        Model collapsed = focused(model, Scopes.FILES.id())
+                .mapPreferences(preferences -> preferences.withLeftCollapsed(Screen.REPOSITORY, true));
+
+        assertEquals(Next.of(collapsed), Update.update(collapsed, new LayoutMsg.PaneStepped(5)));
+        assertEquals(Next.of(collapsed), Update.update(collapsed, new LayoutMsg.PaneStepped(-5)));
+    }
+
+    @Test
+    void aStepWiderOpensACollapsedColumnAtTheNarrowestAndKeepsIt() {
         Next next = Update.update(toggled(content(model)), new LayoutMsg.Stepped(5));
 
-        assertFalse(next.model().preferences().contentMaximized(Screen.REPOSITORY));
-        assertEquals(20, next.model().preferences().settings().repositoryWidth());
+        assertFalse(next.model().preferences().leftCollapsed(Screen.REPOSITORY));
+        Settings narrowest = TestModels.PLAIN.settings().withRepositoryWidth(Settings.MIN_WIDTH);
+        assertEquals(narrowest, next.model().preferences().settings());
+        assertEquals(List.of(new SaveSettings(TestModels.PLAIN.settings(), narrowest)), next.cmds());
     }
 
     @Test
-    void aDragOfTheColumnBorderEndsTheMaximizedContentPanel() {
+    void aStepNarrowerLeavesACollapsedColumnCollapsed() {
+        Model collapsed = toggled(content(model));
+
+        assertEquals(Next.of(collapsed), Update.update(collapsed, new LayoutMsg.Stepped(-5)));
+    }
+
+    @Test
+    void aDragOfTheColumnBorderOpensACollapsedColumn() {
         Model dragged = Update.update(toggled(content(model)), new LayoutMsg.Resized(Screen.REPOSITORY, 25))
                 .model();
 
-        assertFalse(dragged.preferences().contentMaximized(Screen.REPOSITORY));
+        assertFalse(dragged.preferences().leftCollapsed(Screen.REPOSITORY));
         assertEquals(25, dragged.preferences().leftWidth(Screen.REPOSITORY));
+    }
+
+    @Test
+    void aDragPastHalfTheNarrowestCollapsesTheColumnAndLettingGoKeepsNothing() {
+        Model collapsed = Update.update(model, new LayoutMsg.Resized(Screen.REPOSITORY, Settings.MIN_WIDTH / 2))
+                .model();
+
+        assertTrue(collapsed.preferences().leftCollapsed(Screen.REPOSITORY));
+        assertEquals(Option.none(), collapsed.preferences().dragged());
+        assertEquals(
+                List.of(),
+                Update.update(collapsed, new LayoutMsg.Settled(Screen.REPOSITORY))
+                        .cmds());
+
+        Model reopened = Update.update(collapsed, new LayoutMsg.Resized(Screen.REPOSITORY, Settings.MIN_WIDTH / 2 + 1))
+                .model();
+
+        assertFalse(reopened.preferences().leftCollapsed(Screen.REPOSITORY));
+        assertEquals(Settings.MIN_WIDTH, reopened.preferences().leftWidth(Screen.REPOSITORY));
+    }
+
+    @Test
+    void expandedOpensTheCollapsedColumnOfItsScreenAtTheWidthKept() {
+        Model collapsed = toggled(content(model));
+
+        Next other = Update.update(collapsed, new LayoutMsg.Expanded(Screen.PULL_REQUESTS));
+        Next expanded = Update.update(collapsed, new LayoutMsg.Expanded(Screen.REPOSITORY));
+
+        assertTrue(other.model().preferences().leftCollapsed(Screen.REPOSITORY));
+        assertFalse(expanded.model().preferences().leftCollapsed(Screen.REPOSITORY));
+        assertEquals(30, expanded.model().preferences().leftWidth(Screen.REPOSITORY));
+        assertEquals(List.of(), expanded.cmds());
     }
 
     @Test

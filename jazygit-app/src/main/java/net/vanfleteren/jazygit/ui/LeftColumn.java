@@ -1,8 +1,10 @@
 package net.vanfleteren.jazygit.ui;
 
 import static dev.tamboui.toolkit.Toolkit.column;
+import static dev.tamboui.toolkit.Toolkit.panel;
 
 import dev.tamboui.css.engine.StyleEngine;
+import dev.tamboui.layout.Alignment;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.elements.Column;
 import dev.tamboui.toolkit.elements.Panel;
@@ -15,12 +17,23 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Screen;
 import net.vanfleteren.jazygit.state.prs.PrOverviewMsg;
+import net.vanfleteren.jazygit.ui.widgets.Pane;
 
 /**
  * The left column of the app: the status above the panes of the screen shown, which are the files, the branches, the
  * commits and the stashes of the repository, or its pull requests.
  */
 public final class LeftColumn {
+
+    /**
+     * How many columns a collapsed left column takes: a border on either side of its mark (ADR 104).
+     */
+    public static final int COLLAPSED_COLUMNS = 3;
+
+    /**
+     * The mark at the top right of a collapsed left column, pointing the way it opens.
+     */
+    static final String COLLAPSED_MARK = "»";
 
     private final Consumer<Msg> dispatch;
     private final StyleEngine styleEngine;
@@ -56,12 +69,16 @@ public final class LeftColumn {
 
     /**
      * The column for the screen {@code model} shows, with the panes under the status, whose bottom borders the user
-     * drags: {@code rows} tall each if the rows of the column are known (ADR 92), else their share of it.
+     * drags: {@code rows} tall each if the rows of the column are known (ADR 92), else their share of it. A collapsed
+     * column shows none of them: it is an empty panel with a mark at its top right (ADR 104).
      *
      * @param focusedId the element with the focus, if any
      * @param activeId  the pane in use, whose highlighted row shows
      */
     public Rendered render(Model model, String focusedId, String activeId, Option<List<Integer>> rows) {
+        if (model.preferences().leftCollapsed(model.screen())) {
+            return new Rendered(column(collapsed()), List.empty());
+        }
         List<Panel> shown = model.screen() == Screen.PULL_REQUESTS
                 ? pullRequestsPanels.map(pane -> pane.render(model, focusedId, activeId))
                 : repositoryPanes(model, focusedId, activeId);
@@ -103,6 +120,15 @@ public final class LeftColumn {
                 branchesPanel.render(model, focusedId, activeId),
                 commitsPanel.render(model, focusedId, activeId),
                 stashPanel.render(model, focusedId, activeId));
+    }
+
+    /**
+     * The left column collapsed: an empty panel, marked at its top right.
+     */
+    static Panel collapsed() {
+        return panel().title(Pane.title(COLLAPSED_MARK))
+                .titleAlignment(Alignment.RIGHT)
+                .fill();
     }
 
     /**

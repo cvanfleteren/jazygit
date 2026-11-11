@@ -52,6 +52,12 @@ public sealed interface LayoutMsg extends Msg {
     record MaximizeToggled() implements LayoutMsg {}
 
     /**
+     * The user asked to see the left column of {@code screen} again, which is collapsed (ADR 104): by a click on it, or
+     * by leaving the content panel for a pane in it.
+     */
+    record Expanded(Screen screen) implements LayoutMsg {}
+
+    /**
      * The left column was drawn {@code rows} rows tall, which the steps of the heights of its panes go by (ADR 92).
      */
     record Measured(int rows) implements LayoutMsg {}

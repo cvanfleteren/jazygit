@@ -81,16 +81,16 @@ class ColumnSlideTest {
     }
 
     @Test
-    void inTheFirstFrameTheColumnIsAtRestAtThePercentChosen() {
-        ColumnSlide first = ColumnSlide.next(Option.none(), Screen.REPOSITORY, 160, 30, true, false, NOW);
+    void inTheFirstFrameTheColumnIsAtRestAtTheColumnsChosen() {
+        ColumnSlide first = ColumnSlide.next(Option.none(), Screen.REPOSITORY, 160, 48, true, false, NOW);
 
         assertEquals(48, first.columnsAt(NOW));
         assertFalse(first.moving(NOW));
     }
 
     @Test
-    void anotherPercentChosenSlidesThereWhileTheAnimationsAreOn() {
-        ColumnSlide wider = ColumnSlide.next(Option.of(RESTING), Screen.REPOSITORY, 160, 35, true, false, NOW);
+    void otherColumnsChosenSlideThereWhileTheAnimationsAreOn() {
+        ColumnSlide wider = ColumnSlide.next(Option.of(RESTING), Screen.REPOSITORY, 160, 56, true, false, NOW);
 
         assertEquals(48, wider.columnsAt(NOW));
         assertTrue(wider.moving(NOW));
@@ -99,7 +99,7 @@ class ColumnSlideTest {
 
     @Test
     void aDraggedColumnIsThereAtOnce() {
-        ColumnSlide dragged = ColumnSlide.next(Option.of(RESTING), Screen.REPOSITORY, 160, 35, true, true, NOW);
+        ColumnSlide dragged = ColumnSlide.next(Option.of(RESTING), Screen.REPOSITORY, 160, 56, true, true, NOW);
 
         assertEquals(56, dragged.columnsAt(NOW));
         assertFalse(dragged.moving(NOW));
@@ -107,9 +107,9 @@ class ColumnSlideTest {
 
     @Test
     void theAnimationsTurnedOffOnItsWayPutTheColumnThereAtOnce() {
-        ColumnSlide wider = ColumnSlide.next(Option.of(RESTING), Screen.REPOSITORY, 160, 35, true, false, NOW);
+        ColumnSlide wider = ColumnSlide.next(Option.of(RESTING), Screen.REPOSITORY, 160, 56, true, false, NOW);
 
-        ColumnSlide off = ColumnSlide.next(Option.of(wider), Screen.REPOSITORY, 160, 35, false, false, after(30));
+        ColumnSlide off = ColumnSlide.next(Option.of(wider), Screen.REPOSITORY, 160, 56, false, false, after(30));
 
         assertEquals(56, off.columnsAt(after(30)));
         assertFalse(off.moving(after(30)));
@@ -117,10 +117,10 @@ class ColumnSlideTest {
 
     @Test
     void onceThereTheColumnAsksForNoMoreFrames() {
-        ColumnSlide wider = ColumnSlide.next(Option.of(RESTING), Screen.REPOSITORY, 160, 35, true, false, NOW);
+        ColumnSlide wider = ColumnSlide.next(Option.of(RESTING), Screen.REPOSITORY, 160, 56, true, false, NOW);
         Instant there = after(ColumnSlide.LENGTH.toMillis());
 
-        ColumnSlide after = ColumnSlide.next(Option.of(wider), Screen.REPOSITORY, 160, 35, true, false, there);
+        ColumnSlide after = ColumnSlide.next(Option.of(wider), Screen.REPOSITORY, 160, 56, true, false, there);
 
         assertSame(wider, after);
         assertFalse(after.moving(there));

@@ -7,6 +7,7 @@ import dev.tamboui.tui.event.MouseEventKind;
 import io.vavr.control.Option;
 import java.util.Objects;
 import java.util.function.Supplier;
+import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.CommitFilesView;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -86,9 +87,23 @@ final class FocusKeeper {
             moveToPaneOf(model);
         }
         followCommitFiles(model);
+        leaveCollapsedColumn(model);
         String focusedId = focusedId();
         lastFocus = Option.of(focusedId).orElse(lastFocus);
         return focusedId;
+    }
+
+    /**
+     * Moves the focus from a pane of the left column into the content shown for it once the column is collapsed, which
+     * does not draw the pane (ADR 104).
+     */
+    private void leaveCollapsedColumn(Model model) {
+        if (model.preferences().leftCollapsed(model.screen())) {
+            Option.of(focusedId())
+                    .filter(Scopes.leftPanes(model.screen())::contains)
+                    .flatMap(pane -> contentPanel.areaOfPane(model, pane))
+                    .forEach(this::moveTo);
+        }
     }
 
     /**
@@ -152,6 +167,13 @@ final class FocusKeeper {
         Option<String> area = Option.of(focusedId()).flatMap(id -> contentPanel.areaOfPane(model.get(), id));
         area.forEach(this::moveTo);
         return area.isDefined();
+    }
+
+    /**
+     * Whether the content shown for a pane has the focus, which {@link #leaveScrollArea} gives back to that pane.
+     */
+    boolean inPaneContent() {
+        return contentPanel.paneOfArea(model.get(), focusedId()).isDefined();
     }
 
     /**

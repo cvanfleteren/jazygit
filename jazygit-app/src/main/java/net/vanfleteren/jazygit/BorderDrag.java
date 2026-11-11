@@ -9,6 +9,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.feature.layout.LayoutMsg;
+import net.vanfleteren.jazygit.feature.layout.LayoutUpdate;
 import net.vanfleteren.jazygit.state.LeftPanes;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -101,7 +102,7 @@ final class BorderDrag {
         switch (grip) {
             case LeftEdge(Screen screen) ->
                 leftWidth(event.x())
-                        .filter(width -> width != model.preferences().leftWidth(screen))
+                        .filter(width -> !shownAt(model, screen, width))
                         .forEach(width -> dispatch.accept(new LayoutMsg.Resized(screen, width)));
             case PaneBottom(Screen screen, int pane, int pressedAt, int pressedBottom) ->
                 (event.y() == pressedAt
@@ -112,6 +113,17 @@ final class BorderDrag {
                         .filter(border -> border != bottom(model, screen, pane))
                         .forEach(border -> dispatch.accept(new LayoutMsg.PaneResized(screen, pane, border)));
         }
+    }
+
+    /**
+     * Whether the left column of {@code screen} of {@code model} is shown as it is when dragged to {@code width}
+     * percent of the width: collapsed for a width that collapses it (ADR 104), else that width.
+     */
+    private static boolean shownAt(Model model, Screen screen, int width) {
+        boolean collapsed = model.preferences().leftCollapsed(screen);
+        return LayoutUpdate.collapses(width)
+                ? collapsed
+                : !collapsed && width == model.preferences().leftWidth(screen);
     }
 
     /**
@@ -139,6 +151,13 @@ final class BorderDrag {
      */
     private List<Rect> leftPaneAreas() {
         return shownLeftPanes.flatMap(pane -> Option.of(pane.renderedArea()));
+    }
+
+    /**
+     * Whether {@code (x, y)} is in the left column, as the last frame drew it.
+     */
+    boolean onLeftColumn(int x, int y) {
+        return shownLeft.flatMap(left -> Option.of(left.renderedArea())).exists(left -> left.contains(x, y));
     }
 
     /**

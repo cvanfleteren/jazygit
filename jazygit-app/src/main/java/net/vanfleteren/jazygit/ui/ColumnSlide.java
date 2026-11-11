@@ -25,19 +25,18 @@ public record ColumnSlide(Screen screen, int width, int from, int to, Instant st
 
     /**
      * The left column of {@code screen} in a frame drawn at {@code now} on a screen {@code width} columns wide, after
-     * it was {@code before} in the frame before, if one was drawn: on its way to {@code percent} of the screen, which
-     * it slides to while the {@code animations} are on and it is not {@code dragged}, else there at once. In the first
-     * frame, it is there at rest.
+     * it was {@code before} in the frame before, if one was drawn: on its way to {@code columns}, which it slides to
+     * while the {@code animations} are on and it is not {@code dragged}, else there at once. In the first frame, it is
+     * there at rest.
      */
     public static ColumnSlide next(
             Option<ColumnSlide> before,
             Screen screen,
             int width,
-            int percent,
+            int columns,
             boolean animations,
             boolean dragged,
             Instant now) {
-        int columns = LeftBorder.columns(width, percent);
         return before.map(shown -> shown.toward(screen, width, columns, animations && !dragged, now))
                 .getOrElse(() -> at(screen, width, columns));
     }
