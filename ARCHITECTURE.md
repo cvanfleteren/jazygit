@@ -678,7 +678,7 @@ widgets. A report can come twice, when a frame is drawn before the first one is 
 leaves a model that already has its value as it is. This is the only way the view tells the model something
 no message from a user's event did.
 
-Every `jazygit.refreshInterval` (1 s by default, ADR 52) a `TimerMsg.Tick` triggers `Update.tick`, which re-reads the
+Every `jazygit.refreshInterval` (1 s by default, ADR 52) a `TimerMsg.Tick` triggers `RereadUpdate.tick`, which re-reads the
 status, and checks the files of the git directory that the local and remote branches (one load, `LoadBranches`), the
 stashes and the worktrees are read from (`CheckMetadata`). That check runs no git: it stamps the HEADs, the config,
 `packed-refs`, the directories of the local refs, the files of the remote-tracking refs, the stash reflog, the
@@ -687,7 +687,7 @@ the one it was last started with (`Jobs.readAt`) runs again, so an idle app runs
 four. The highlighted diff is guarded the same way after each status (`CheckFileDiff`, which stamps its files and
 the index), as a file can change without its status changing (ADR 58). An operation that is done reads all of them at
 once
-(`Update.refresh`), without waiting for the files to tell. That keeps the screen in sync with changes made outside
+(`RereadUpdate.refresh`), without waiting for the files to tell. That keeps the screen in sync with changes made outside
 the app. A periodic load is skipped while an equal one is still running (`Jobs.runs`). See
 `documentation/adr/0015-check-metadata-before-loading.md`.
 
@@ -711,7 +711,7 @@ index changes nothing shown. See `documentation/adr/0093-the-index-written-anew-
 `documentation/adr/0097-the-index-written-anew-once-it-changed.md`.
 
 A read that failed is tried again on a tick only once it waited 1, 2, 4… up to 64 ticks after each failure in a row
-(`Jobs.retries`, `Jobs.retryDue`); `Update.refresh` tries it at once. The previews (a branch's log, a commit's or a
+(`Jobs.retries`, `Jobs.retryDue`); `RereadUpdate.refresh` tries it at once. The previews (a branch's log, a commit's or a
 stash's changes, the files' diff) each take a slot, so highlighting faster than git answers only reads the last item;
 a load cancelled that way reports nothing, and is only done (ADR 101). See
 `documentation/adr/0031-preview-slots-and-retry-backoff.md`.
@@ -868,9 +868,9 @@ classDiagram
   such a message adds to. A `GitOperationCmd` is one done through git alone: it only implements
   `perform(Git)`. The others, like creating a pull request, implement `run(Env)` themselves.
 - **Operations are started through `Update`.**
-  - `Update.start` marks the operation's branch busy.
-  - `Update.ask` opens the popup that asks about an operation, which clears the error of the last one.
-  - `Update.confirm` closes that popup and starts the operation made of it.
+  - `OperationUpdate.start` marks the operation's branch busy.
+  - `OperationUpdate.ask` opens the popup that asks about an operation, which clears the error of the last one.
+  - `OperationUpdate.confirm` closes that popup and starts the operation made of it.
   - A branch that is busy (`Model.idleBranch`) takes no other operation until it is done.
 - **Errors are data until the view.** `Model.error` is an `Option<AppError>` and `Loadable.Failed` holds a
   `Failure`; `ErrorText` in `ui` turns them into text. `Model.fail` stores the error, which the command log
@@ -908,7 +908,7 @@ Each feature package follows the same shape:
 | Type | Example (reword) | Role |
 |---|---|---|
 | `XxxMsg` | `RewordMsg` | Sealed set of messages, usually `Requested`, with `Confirmed` and `Cancelled` only when Enter or Escape does more than start the popup's operation or close it (ADR 38); a feature with several dialogs or outcomes names them after those (`StashMsg.DropRequested`, `PullRequestMsg.MergeChosen`). |
-| `XxxUpdate` | `RewordUpdate` | Pure transitions for those messages; `Update.confirm` closes a popup and starts the operation made of it. |
+| `XxxUpdate` | `RewordUpdate` | Pure transitions for those messages; `OperationUpdate.confirm` closes a popup and starts the operation made of it. |
 | `XxxCmd` | `RewordCmd` | The operation the feature asks for, an `OperationCmd`. |
 | `XxxPopup` | `RewordPopup` | What the open dialog is about; it lives in the model. |
 | `XxxDialogs` | `SquashDialogs.SQUASH`, `CommitDialog.reword` | The popups, mostly as data (`ConfirmDialog.Spec`, `ChoiceDialog.Spec`, `TextInputDialog.Spec`, `PickDialog.Spec`) that `popups(dispatch)` turns into widgets, as the `PopupSlot`s `JazygitApp` shows; `XxxDialog` for a feature with one, or a dialog of its own. |
@@ -1226,7 +1226,7 @@ sequenceDiagram
      was read again meanwhile can't make it another one.
 
 2. **Open the dialog**, a pure step in `RewordUpdate.requested`. If the commit is in the loaded log,
-   `Update.ask` opens a `RewordPopup(commit)` and clears the error. No IO is needed.
+   `OperationUpdate.ask` opens a `RewordPopup(commit)` and clears the error. No IO is needed.
 
 3. **Render.**
    - `JazygitApp.render` asks each dialog to render. `CommitDialog.reword` renders because
@@ -1235,7 +1235,7 @@ sequenceDiagram
 
 4. **Confirm**, a pure step in `RewordUpdate.confirmed`.
    - A blank summary keeps the dialog open.
-   - Otherwise `Update.confirm` closes the popup and returns one command: `RewordCmd(sha, message)`.
+   - Otherwise `OperationUpdate.confirm` closes the popup and returns one command: `RewordCmd(sha, message)`.
 
 5. **Perform**, on the `git-io` thread. `Program.perform` calls `Reword.run(env)`, which `GitOperationCmd`
    implements for every operation done through git alone:
@@ -1277,7 +1277,7 @@ sequenceDiagram
 
 7. **Report.** The `Either` becomes one of two messages, which `OperationUpdate` handles:
    - **Success:** `OperationMsg.Succeeded(reword, commands)`. The commands are logged under
-     `RewordCmd.REWORD`, the error is cleared and `Update.refresh` reads the repository again.
+     `RewordCmd.REWORD`, the error is cleared and `RereadUpdate.refresh` reads the repository again.
    - **Stopped on conflicts:** `OperationMsg.Stopped(reword, commands, notice)`. As for a success, but the
      command log shows the `Notice`, which `NoticeText` turns into text, and the status panel shows the
      rebase in progress.
@@ -1286,7 +1286,7 @@ sequenceDiagram
      `AppError.OperationFailed(REWORD, none, failure)`, which `ErrorText` shows as `"Reword failed: …"`;
      and the repository is read again.
 
-8. **Refresh.** `Update.refresh` starts `LoadStatus`, `LoadBranches` and `LoadStashes`.
+8. **Refresh.** `RereadUpdate.refresh` starts `LoadStatus`, `LoadBranches` and `LoadStashes`.
    - When `StatusLoaded` arrives, `LoadUpdate.statusLoaded` sees that `HEAD` moved (the reworded
      commit and everything after it have new shas) and issues `LoadCommits`.
    - When `CommitsLoaded` arrives, the commits pane shows the new message.
@@ -1300,9 +1300,9 @@ flowchart TD
     Either -- "Left(GitFailure(error, commands, cleanupFailed))" --> FailedWith["failed(Failure.of(failure))"]
     FailedWith --> Failed["OperationMsg.Failed(reword, Failure.Git(...))"]
     Failed --> Log["OperationUpdate: CommandLog.append shows rebase, rebase --abort"]
-    Log --> Update["error = AppError.OperationFailed(REWORD, ...)<br/>Update.refresh(model)"]
+    Log --> Update["error = AppError.OperationFailed(REWORD, ...)<br/>RereadUpdate.refresh(model)"]
     Update --> Text["ErrorText.of(error) when rendered<br/>e.g. 'Reword failed: ' + git's explanation"]
-    Done --> UpdateOk["OperationUpdate: command log += commands<br/>Update.refresh(model)"]
+    Done --> UpdateOk["OperationUpdate: command log += commands<br/>RereadUpdate.refresh(model)"]
 ```
 
 ## Testing
