@@ -49,6 +49,7 @@ the first row that fits:
 | `BLOCKED`, `viewerCanEnableAutoMerge`                           | Squash and merge when ready                               |
 | `BLOCKED`, `autoMergeAllowed` false                             | disabled: auto-merge is off for this repository           |
 | `BLOCKED`, otherwise                                            | disabled: GitHub does not allow merging it yet            |
+| `BEHIND`                                                        | disabled: behind its base, update the branch first        |
 | `UNKNOWN`, or anything else                                     | Squash and merge, as before                               |
 
 And so for `m` (Merge when ready) and `r` (Rebase and merge when ready). One that conflicts stays disabled, as
@@ -59,6 +60,10 @@ before, through `mergeable`.
 - GitHub only lets auto-merge be enabled on a pull request it cannot merge now, so a key merges now or when ready,
   never both, and is never a merge GitHub said it refuses for being blocked. Not: a key of its own for merging when
   ready, next to the three.
+- `BEHIND`, which GitHub only says when the base branch has to be caught up with before a merge, is disabled: GitHub
+  refuses that merge. Rebasing it on its base (ADR 91) and pushing it catches it up, after which the keys go by the
+  table again. Not: merging when ready, as `BLOCKED` does: auto-merge does not catch the branch up itself, so it
+  would wait until someone else did.
 - `UNKNOWN` merges now, as before: GitHub has not worked out yet whether it can, and may still refuse it. Not:
   disabling the keys until it has, which is often for a while after a push.
 - The rows of auto-merge on come before those of `mergeStateStatus`: while it is on, the pull request is blocked or
