@@ -12,7 +12,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import net.vanfleteren.jazygit.gh.GhError.UnexpectedOutput;
 import net.vanfleteren.jazygit.gh.model.*;
-import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.json.Decoder;
 import net.vanfleteren.jazygit.process.Exec;

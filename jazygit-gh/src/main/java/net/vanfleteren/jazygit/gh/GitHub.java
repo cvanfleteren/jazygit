@@ -5,7 +5,6 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.gh.model.*;
-import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**
