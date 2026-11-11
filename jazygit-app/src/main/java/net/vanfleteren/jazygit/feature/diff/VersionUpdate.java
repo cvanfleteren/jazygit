@@ -129,9 +129,7 @@ public final class VersionUpdate {
      */
     private static Option<Loadable<DiffText>> expanded(Model model, String area, ScrolledContent content, String path) {
         return model.repoView()
-                .expanded()
-                .get(area)
-                .filter(expansion -> expansion.holdsFor(content))
+                .expansion(area, content)
                 .flatMap(expansion -> expansion.files().get(path))
                 .filter(file -> !file.read().options().ignoreWhitespace())
                 .flatMap(file -> file.whole().toOption())

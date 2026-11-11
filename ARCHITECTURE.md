@@ -99,7 +99,7 @@ inside the core, the compiler does: it cannot reach the app's packages at all, n
   with `index` and `preferences` below `load` and `github`. The core, `state` itself, uses them all, and they all use
   it, as the `Model` holds them and they work on it. What a part keeps of a read is data, not the read: a read knows
   where in the `Model` it puts what it read (`Target`), so a `Version` keeps the `WholeFile` it shows, and
-  `ReadVersion.of` makes the read of it again.
+  `ReadVersion.of` makes the read of it again (ADR 107).
 - **Views use `ui`, but only to draw:**
   - The dialogs of a feature use the widgets of `ui`.
   - `ui` uses `git` and `gh` only for the errors, which `ErrorText` describes.

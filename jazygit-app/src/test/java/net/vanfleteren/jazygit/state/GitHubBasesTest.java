@@ -23,7 +23,6 @@ import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Upstream;
 import net.vanfleteren.jazygit.state.github.GitHubChecks;
 import net.vanfleteren.jazygit.state.github.GitHubState;
-import net.vanfleteren.jazygit.state.github.PullRequestsUpdate;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -79,13 +78,13 @@ class GitHubBasesTest {
 
     private static GitHubBases of(List<PullRequest> pullRequests, String... protectedBranches) {
         return GitHubBases.of(GitHubState.NOT_READ
-                .withPullRequests(Option.of(PullRequestsUpdate.byHeadBranch(pullRequests)))
+                .withListed(pullRequests)
                 .withProtectedBranches(Option.of(HashSet.of(protectedBranches).map(BranchName::new))));
     }
 
     private static GitHubBases onGitHub(List<PullRequest> pullRequests, String... remotes) {
         return GitHubBases.of(GitHubState.NOT_READ
-                .withPullRequests(Option.of(PullRequestsUpdate.byHeadBranch(pullRequests)))
+                .withListed(pullRequests)
                 .withBranchChecks(Option.of(new GitHubChecks(HashSet.of(remotes), HashMap.empty()))));
     }
 

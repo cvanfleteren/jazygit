@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.state.github;
 
 import io.vavr.collection.List;
-import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.git.model.BranchName;
@@ -30,9 +29,8 @@ public final class PullRequestsUpdate {
                         model,
                         GitHubReads.done(
                                 FailingRead.ran(
-                                        model.mapGitHub(
-                                                gitHub -> gitHub.withPullRequests(Option.of(byHeadBranch(pullRequests)))
-                                                        .withPullRequestsFailure(Option.none())),
+                                        model.mapGitHub(gitHub ->
+                                                gitHub.withListed(pullRequests).withPullRequestsFailure(Option.none())),
                                         new LoadRepositoryPullRequests(),
                                         false),
                                 new LoadRepositoryPullRequests()));
@@ -120,16 +118,5 @@ public final class PullRequestsUpdate {
                         || next.model().jobs().runs(load)
                 ? next
                 : new Next(next.model(), next.cmds().append(load));
-    }
-
-    /**
-     * The pull requests by the branch they merge from. Several can merge from the same branch, into different
-     * bases: the newest, the one with the highest number, is kept, so the choice does not depend on the order
-     * gh lists them in.
-     */
-    public static Map<BranchName, PullRequest> byHeadBranch(List<PullRequest> pullRequests) {
-        // Vavr's toMap has no merge function; a later entry replaces an earlier one, so ascending numbers keep the
-        // newest.
-        return pullRequests.sortBy(PullRequest::number).toMap(pr -> new BranchName(pr.headBranch()), pr -> pr);
     }
 }

@@ -159,6 +159,18 @@ public record GitHubState(
     }
 
     /**
+     * This state with the open pull requests {@code listed}, by the branch they merge from. Several can merge from the
+     * same branch, into different bases: the newest, the one with the highest number, is kept, so the choice does not
+     * depend on the order gh lists them in.
+     */
+    public GitHubState withListed(List<PullRequest> listed) {
+        // Vavr's toMap has no merge function; a later entry replaces an earlier one, so ascending numbers keep the
+        // newest.
+        return withPullRequests(
+                Option.of(listed.sortBy(PullRequest::number).toMap(pr -> new BranchName(pr.headBranch()), pr -> pr)));
+    }
+
+    /**
      * This state with the pull request {@code details} are about as they were just read: as it now is, or no
      * longer listed once it is merged or closed. Unchanged when it is not listed.
      */

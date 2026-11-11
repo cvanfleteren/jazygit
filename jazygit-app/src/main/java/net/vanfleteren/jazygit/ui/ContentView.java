@@ -99,8 +99,7 @@ final class ContentView {
     }
 
     private static Shown.Area expanded(Model model, Shown.Area area) {
-        Option<Expansion> expansion =
-                model.repoView().expanded().get(area.area().id()).filter(kept -> kept.holdsFor(area.content()));
+        Option<Expansion> expansion = model.repoView().expansion(area.area().id(), area.content());
         Option<Version> version = model.repoView().version(area.area().id(), area.content());
         DiffContext context = model.preferences().context();
         Body body = switch (area.body()) {

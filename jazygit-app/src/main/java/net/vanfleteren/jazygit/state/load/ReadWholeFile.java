@@ -69,9 +69,7 @@ public record ReadWholeFile(String area, ScrolledContent content, Source source,
     }
 
     private Option<Expansion.Expanded> expanded(RepoView view) {
-        return view.expanded()
-                .get(area)
-                .filter(expansion -> expansion.holdsFor(content))
+        return view.expansion(area, content)
                 .flatMap(expansion -> expansion.files().get(path));
     }
 

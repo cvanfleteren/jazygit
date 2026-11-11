@@ -44,11 +44,7 @@ public final class ExpandUpdate {
      */
     private static Next asked(
             Model model, String area, ScrolledContent content, Anchor.Gap gap, ExpandMsg.Toward toward) {
-        Expansion expansion = model.repoView()
-                .expanded()
-                .get(area)
-                .filter(kept -> kept.holdsFor(content))
-                .getOrElse(() -> Expansion.of(content));
+        Expansion expansion = model.repoView().expansion(area, content).getOrElse(() -> Expansion.of(content));
         Option<Expansion.Expanded> before = expansion.files().get(gap.path());
         boolean reads = before.forAll(file -> file.whole().isFailed());
         Option<ReadWholeFile> read = reads
