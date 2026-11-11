@@ -30,6 +30,8 @@ import net.vanfleteren.jazygit.ui.widgets.Pane;
  * working tree are as they were when those of a commit are closed. The files of a commit open on the first directory
  * that holds files directly, so its diff shows at once. {@code /} filters the tree shown by the paths of its files
  * (ADR 105): the line above it takes the keys that edit the filter, and Escape clears it before it does anything else.
+ * {@code a} lists all files of the working tree in place of its changed ones (ADR 108), in a tree of its own that opens
+ * only on the directories with changes.
  */
 public class FilesPanel {
 

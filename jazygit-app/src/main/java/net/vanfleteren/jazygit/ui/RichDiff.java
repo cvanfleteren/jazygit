@@ -369,16 +369,6 @@ final class RichDiff {
     }
 
     /**
-     * Whether no line of {@code parsed} was added or removed: a file without changes, shown as a diff of itself.
-     */
-    private static boolean unchanged(ParsedFile parsed) {
-        return parsed.hunks()
-                .flatMap(ParsedHunk::lines)
-                .forAll(line -> line.line().kind() == DiffLine.Kind.CONTEXT
-                        || line.line().kind() == DiffLine.Kind.NOTE);
-    }
-
-    /**
      * What the bar of {@code file} says: what happened to it and its path, and how its mode changed if it did.
      */
     private static String bar(FileDiff file) {
@@ -395,6 +385,16 @@ final class RichDiff {
                 .map(change -> "  " + Messages.get("content.file.mode", change.from(), change.to()))
                 .getOrElse("");
         return " " + what + "  " + path + mode + " ";
+    }
+
+    /**
+     * Whether no line of {@code parsed} was added or removed: a file without changes, shown as a diff of itself.
+     */
+    private static boolean unchanged(ParsedFile parsed) {
+        return parsed.hunks()
+                .flatMap(ParsedHunk::lines)
+                .forAll(line -> line.line().kind() == DiffLine.Kind.CONTEXT
+                        || line.line().kind() == DiffLine.Kind.NOTE);
     }
 
     /**

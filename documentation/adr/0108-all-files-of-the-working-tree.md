@@ -24,13 +24,14 @@ without changes has no diff, and no version can be made from one.
   `?` lists it. Not: `f` on the main branch, which is not always what is checked out, nor on disk.
 - All its files are those git tracks and the untracked ones it does not ignore: `git ls-files -z -t --cached --others
   --exclude-standard`, each path kept once and sorted: git lists a conflicted file once per stage, and with `-t` its
-  `--deduplicate` does nothing. A submodule is one entry. Not: the ignored files, as `target/` or `node_modules/`, which would bury the others.
+  `--deduplicate` does nothing. A submodule is one entry. Not: the ignored files, as `target/` or `node_modules/`,
+  which would bury the others.
 - A file tagged `S` by `-t` (skip-worktree) is left out when it is not on disk, as a sparse checkout leaves it: it
   cannot be read, and `e` would make a new file. One that is on disk, as `git update-index --skip-worktree` leaves it,
   stays and shows its content, its edits too, as git does not report them. A tracked file deleted from the disk but
   not staged stays: it is a changed file, and shows its diff.
-- They are read again with each reload of the working tree, only while the mode is on: the pane of changed files
-  costs nothing more.
+- They are read again with a reload of the working tree whose status changed, only while the mode is on: the pane of
+  changed files costs nothing more.
 - The mode is kept per repository for the session, through reloads and operations. It is not kept for the next one.
 
 ### The tree
@@ -82,16 +83,22 @@ without changes has no diff, and no version can be made from one.
 - `FileTreeList` filters the files, and builds its tree, while it renders: on the UI thread, on each key typed in the
   filter and each reload. With all files, that is every path of the repository, matched with the starts of words of
   ADR 106.
-- The budget: a key typed in the filter of 100 000 files stays within a frame, 16 ms. A benchmark in
-  `jazygit-benchmarks` measures it with the implementation, and a run of the app on a repository that large confirms
-  it, as a benchmark alone can miss where the time goes.
-- Over budget, the filter is applied once typing pauses, or matched off the UI thread. Not: a limit on the number of
-  files, as ADR 79 has for a diff: the mode is wanted most in the repositories that would pass it.
+- The budget: a key typed in the filter of 100 000 files stays within a frame, 16 ms. `AllFilesBenchmark` in
+  `jazygit-benchmarks` measures it, and a run of the app on a repository that large is to confirm it, as a benchmark
+  alone can miss where the time goes.
+- As built, it is over budget: at 100 000 files a key typed takes about 100 ms, 140 ms for a filter of the starts of
+  words, mostly in matching each path; the directories to start collapsed take about 80 ms once. That is taken for
+  now: the repositories of most users are far smaller. Making the match cheaper (the filter parsed once, the starts
+  of words found without making lists), then applying the filter once typing pauses, or matching off the UI thread,
+  is left for later. Not: a limit on the number of files, as ADR 79 has for a diff: the mode is wanted most in the
+  repositories that would pass it.
+- All files are listed again only when the status changed, not on each reload: a file is added, deleted, renamed or
+  committed only with a change to the status.
 
 ## Consequences
 
-- A second command lists the files of the working tree, while the mode is on, on each reload: in a repository of
-  100 000 files that is a few megabytes and tens of milliseconds more per reload, and a tree of all of them rebuilt.
+- A second command lists the files of the working tree, while the mode is on, when the status changed: in a
+  repository of 100 000 files that is a few megabytes and tens of milliseconds more, and a tree of all of them rebuilt.
 - The content panel reads a file from disk for the first time, apart from a diff; a file without changes has a way of
   its own to be shown.
 - `FileTreeList` gets a second shape of the working tree, and the open directories to start from with it.
