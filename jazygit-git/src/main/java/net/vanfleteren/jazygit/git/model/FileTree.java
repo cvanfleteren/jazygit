@@ -12,7 +12,7 @@ import io.vavr.control.Option;
 public sealed interface FileTree<T extends Pathed> {
 
     /**
-     * The roots of the tree for the given files: files first, then directories, each sorted by name.
+     * The roots of the tree for the given files: directories first, then files, each sorted by name.
      */
     static <T extends Pathed> List<FileTree<T>> of(List<T> files) {
         return children("", files);
@@ -33,7 +33,7 @@ public sealed interface FileTree<T extends Pathed> {
         List<FileTree<T>> leaves = nested._2
                 .<FileTree<T>>map(f -> new File<>(relative(prefix, f), f))
                 .sorted((a, b) -> a.name().compareTo(b.name()));
-        return leaves.appendAll(dirs);
+        return dirs.appendAll(leaves);
     }
 
     private static String relative(String prefix, Pathed file) {
