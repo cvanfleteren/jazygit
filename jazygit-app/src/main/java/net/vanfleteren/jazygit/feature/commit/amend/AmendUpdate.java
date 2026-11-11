@@ -12,8 +12,8 @@ import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.popup.PopupUpdate;
 
 /**
  * Amending the last commit, or any other commit of the checked out branch, with the staged changes, keeping its
@@ -52,7 +52,7 @@ public final class AmendUpdate {
                 .files()
                 .map(files -> files.isEmpty()
                         ? Next.of(model.fail(new CommitError.NothingToAmend()))
-                        : Update.ask(model, new AmendPopup(target)))
+                        : PopupUpdate.ask(model, new AmendPopup(target)))
                 .getOrElse(() -> Next.of(model));
     }
 
@@ -61,16 +61,17 @@ public final class AmendUpdate {
      */
     private static Next confirmed(Model model) {
         return model.repo().files().exists(files -> files.exists(FileEntry::staged))
-                ? Update.confirm(
+                ? PopupUpdate.confirm(
                         model, AmendPopup.class, popup -> Option.of(new AmendCmd(popup.target(), List.empty())))
                 : model.popup(AmendPopup.class)
-                        .map(popup -> Update.ask(
+                        .map(popup -> PopupUpdate.ask(
                                 model.withoutPopup(AmendPopup.class), new AmendStageAllPopup(popup.target())))
                         .getOrElse(() -> Next.of(model));
     }
 
     private static Next stageAllConfirmed(Model model) {
         List<String> paths = FileEntry.paths(model.repo().files().getOrElse(List.empty()), FileEntry::unstaged);
-        return Update.confirm(model, AmendStageAllPopup.class, popup -> Option.of(new AmendCmd(popup.target(), paths)));
+        return PopupUpdate.confirm(
+                model, AmendStageAllPopup.class, popup -> Option.of(new AmendCmd(popup.target(), paths)));
     }
 }

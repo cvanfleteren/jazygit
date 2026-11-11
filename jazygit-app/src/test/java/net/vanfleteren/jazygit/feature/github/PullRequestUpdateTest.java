@@ -78,6 +78,7 @@ import net.vanfleteren.jazygit.state.github.*;
 import net.vanfleteren.jazygit.state.github.prs.LoadRepositoryPullRequests;
 import net.vanfleteren.jazygit.state.load.*;
 import net.vanfleteren.jazygit.state.operation.*;
+import net.vanfleteren.jazygit.state.operation.OperationUpdate;
 import net.vanfleteren.jazygit.state.popup.*;
 import net.vanfleteren.jazygit.state.preferences.*;
 import net.vanfleteren.jazygit.state.view.*;
@@ -841,7 +842,7 @@ class PullRequestUpdateTest {
     void onceItIsPushedItsPullRequestIsAskedForWhileTheRepositoryIsReadAgain() {
         PushFirst push =
                 new PushFirst(new PushSettingUpstream(UNPUSHED.name(), new RemoteBranch("origin", UNPUSHED.name())));
-        Model pushing = Update.start(model(), push).model();
+        Model pushing = OperationUpdate.start(model(), push).model();
 
         List<ExecutedCommand> commands = StubGit.executed("git push -u origin local");
 
@@ -869,7 +870,7 @@ class PullRequestUpdateTest {
     void aFailedPushAsksForNoPullRequest() {
         PushFirst push =
                 new PushFirst(new PushSettingUpstream(UNPUSHED.name(), new RemoteBranch("origin", UNPUSHED.name())));
-        Model pushing = Update.start(model(), push).model();
+        Model pushing = OperationUpdate.start(model(), push).model();
 
         Next failed = Update.update(pushing, failed(push, "rejected"));
 
@@ -932,7 +933,7 @@ class PullRequestUpdateTest {
     void aPushedBranchThatIsGoneMeanwhileAsksForNoPullRequest() {
         PushFirst push =
                 new PushFirst(new PushSettingUpstream(UNPUSHED.name(), new RemoteBranch("origin", UNPUSHED.name())));
-        Model pushing = Update.start(model(), push).model();
+        Model pushing = OperationUpdate.start(model(), push).model();
         Model gone = localBranchesRead(pushing, List.of(RELEASE, PUSHED, AHEAD, MAIN))
                 .model();
         List<ExecutedCommand> commands = StubGit.executed("git push -u origin local");
@@ -947,7 +948,9 @@ class PullRequestUpdateTest {
     void aPushThatEndsWhileAnotherPopupIsOpenLeavesThatOpen() {
         PushFirst push =
                 new PushFirst(new PushSettingUpstream(UNPUSHED.name(), new RemoteBranch("origin", UNPUSHED.name())));
-        Model other = Update.start(model(), push).model().openPopup(new SwitchWorktreePopup(MAIN.name(), "/work/main"));
+        Model other = OperationUpdate.start(model(), push)
+                .model()
+                .openPopup(new SwitchWorktreePopup(MAIN.name(), "/work/main"));
         Model pushed = Update.update(other, push.succeeded(StubGit.executed("git push -u origin local")))
                 .model();
 

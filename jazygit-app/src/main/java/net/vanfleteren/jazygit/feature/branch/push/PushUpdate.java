@@ -11,9 +11,9 @@ import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.RereadUpdate;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.operation.OperationUpdate;
+import net.vanfleteren.jazygit.state.popup.PopupUpdate;
 
 /**
  * Pushing a branch.
@@ -54,7 +54,7 @@ public final class PushUpdate {
                 .flatMap(PushUpdate::forcePush)
                 .contains(popup);
         return unchanged
-                ? Update.confirm(
+                ? PopupUpdate.confirm(
                         model,
                         ForcePushPopup.class,
                         p -> model.repo()
@@ -75,7 +75,7 @@ public final class PushUpdate {
         return !unchanged
                 ? requested(model, popup.branch())
                 : had
-                        ? Update.ask(model, popup)
+                        ? PopupUpdate.ask(model, popup)
                         : Next.of(model.fail(new BranchError.BehindUpstream(popup.branch(), !popup.onlyBehind())));
     }
 
@@ -91,9 +91,9 @@ public final class PushUpdate {
                 .map(known -> known.remoteUpstream()
                         .map(upstream -> forcePush(known)
                                 .map(popup -> Next.of(model.clearError(), new ForcePushCheck(popup, upstream)))
-                                .getOrElse(() -> Update.start(
+                                .getOrElse(() -> OperationUpdate.start(
                                         model.clearError(), new Push(branch, upstream, PushMode.FAST_FORWARD))))
-                        .getOrElse(() -> Update.ask(model, new SetUpstreamPopup(branch))))
+                        .getOrElse(() -> PopupUpdate.ask(model, new SetUpstreamPopup(branch))))
                 .getOrElse(() -> Next.of(model));
     }
 
@@ -121,7 +121,7 @@ public final class PushUpdate {
         Option<RemoteBranch> upstream = RemoteBranch.parse(text);
         return upstream.isEmpty()
                 ? Next.of(model.fail(new BranchError.InvalidUpstream(text)))
-                : Update.confirm(
+                : PopupUpdate.confirm(
                         model,
                         SetUpstreamPopup.class,
                         popup -> upstream.map(remote -> new PushSettingUpstream(popup.branch(), remote)));

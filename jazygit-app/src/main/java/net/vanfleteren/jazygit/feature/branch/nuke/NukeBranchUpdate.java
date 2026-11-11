@@ -14,9 +14,9 @@ import net.vanfleteren.jazygit.git.model.Worktree;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.RereadUpdate;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.operation.OperationUpdate;
+import net.vanfleteren.jazygit.state.popup.PopupUpdate;
 
 /**
  * Nuking a branch (ADR 43): deleting it, the other worktree that has it checked out and its remote branch, after one
@@ -31,7 +31,7 @@ public final class NukeBranchUpdate {
             case Requested(BranchName branch) -> requested(model, branch);
             // Nothing starts when the branch, its worktree or its remote branch changed since the dialog named them.
             case Confirmed() ->
-                Update.confirm(
+                PopupUpdate.confirm(
                         model,
                         NukeBranchPopup.class,
                         popup -> popup(model, popup.branch())
@@ -52,7 +52,7 @@ public final class NukeBranchUpdate {
                 .branch(name)
                 .flatMap(branch -> refused(model, branch))
                 .map(error -> Next.of(model.fail(error)))
-                .getOrElse(() -> Update.ask(model, popup(model, name)));
+                .getOrElse(() -> PopupUpdate.ask(model, popup(model, name)));
     }
 
     /**

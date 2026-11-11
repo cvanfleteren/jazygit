@@ -8,9 +8,9 @@ import net.vanfleteren.jazygit.feature.commit.create.CreateCommitCmd.StageForCom
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.operation.OperationUpdate;
+import net.vanfleteren.jazygit.state.popup.PopupUpdate;
 
 /**
  * Committing what is staged.
@@ -35,15 +35,15 @@ public final class CommitUpdate {
         return model.repo()
                 .files()
                 .map(files -> files.exists(FileEntry::staged)
-                        ? Update.ask(model, new CommitPopup())
+                        ? PopupUpdate.ask(model, new CommitPopup())
                         : files.isEmpty()
                                 ? Next.of(model.fail(new CommitError.NothingToCommit()))
-                                : Update.ask(model, new StageAllPopup()))
+                                : PopupUpdate.ask(model, new StageAllPopup()))
                 .getOrElse(() -> Next.of(model));
     }
 
     private static Next stageAllConfirmed(Model model) {
         List<String> paths = FileEntry.paths(model.repo().files().getOrElse(List.empty()), FileEntry::unstaged);
-        return Update.confirm(model, StageAllPopup.class, popup -> Option.of(new StageForCommit(paths)));
+        return PopupUpdate.confirm(model, StageAllPopup.class, popup -> Option.of(new StageForCommit(paths)));
     }
 }

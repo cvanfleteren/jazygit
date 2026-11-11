@@ -13,8 +13,8 @@ import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Revision;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.operation.OperationUpdate;
 
 /**
  * A checkout the user asked for, which goes in the worktree shown, in the main worktree or in a new one: in a linked
@@ -65,7 +65,7 @@ public interface CheckoutRequest {
 
         @Override
         public Next here(Model model) {
-            return Update.start(model, new Checkout(branch));
+            return OperationUpdate.start(model, new Checkout(branch));
         }
 
         @Override
@@ -91,7 +91,7 @@ public interface CheckoutRequest {
 
         @Override
         public Next here(Model model) {
-            return Update.start(model, new CheckoutRemote(branch, upstream));
+            return OperationUpdate.start(model, new CheckoutRemote(branch, upstream));
         }
 
         @Override
@@ -124,7 +124,7 @@ public interface CheckoutRequest {
 
         @Override
         public Next here(Model model) {
-            return Update.start(model, new NewBranchCmd(branch, base, parent));
+            return OperationUpdate.start(model, new NewBranchCmd(branch, base, parent));
         }
 
         @Override
