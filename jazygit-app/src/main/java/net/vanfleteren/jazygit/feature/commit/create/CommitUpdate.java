@@ -34,17 +34,15 @@ public final class CommitUpdate {
      * Commits what is staged; when nothing is, offers to stage everything first.
      */
     private static Next requested(Model model) {
-        return Update.withFiles(
-                model,
-                files -> files.exists(FileEntry::staged)
+        return model.repo().files().map(files -> files.exists(FileEntry::staged)
                         ? Update.ask(model, new CommitPopup())
                         : files.isEmpty()
                                 ? Next.of(model.fail(new AppError.NothingToCommit()))
-                                : Update.ask(model, new StageAllPopup()));
+                                : Update.ask(model, new StageAllPopup())).getOrElse(() -> Next.of(model));
     }
 
     private static Next stageAllConfirmed(Model model) {
-        List<String> paths = FileEntry.paths(Update.files(model), FileEntry::unstaged);
+        List<String> paths = FileEntry.paths(model.repo().files().getOrElse(List.empty()), FileEntry::unstaged);
         return Update.confirm(model, StageAllPopup.class, popup -> Option.of(new StageForCommit(paths)));
     }
 }

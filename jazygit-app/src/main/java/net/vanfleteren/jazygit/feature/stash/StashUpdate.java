@@ -28,11 +28,9 @@ public final class StashUpdate {
      * Asks for a name, when there are changes to stash.
      */
     private static Next requested(Model model) {
-        return Update.withFiles(
-                model,
-                files -> files.isEmpty()
+        return model.repo().files().map(files -> files.isEmpty()
                         ? Next.of(model.fail(new AppError.NothingToStash()))
-                        : Update.ask(model, new StashPopup()));
+                        : Update.ask(model, new StashPopup())).getOrElse(() -> Next.of(model));
     }
 
     /**

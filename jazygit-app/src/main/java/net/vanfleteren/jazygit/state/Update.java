@@ -297,18 +297,6 @@ public final class Update {
     }
 
     /**
-     * What {@code then} makes of the changed files, once the status is loaded; until then, or when it failed to
-     * load, nothing happens, as it is unknown what changed.
-     */
-    public static Next withFiles(Model model, Function<List<FileEntry>, Next> then) {
-        return model.repo().status().toOption().map(RepoStatus::files).map(then).getOrElse(() -> Next.of(model));
-    }
-
-    public static List<FileEntry> files(Model model) {
-        return model.repo().status().toOption().map(RepoStatus::files).getOrElse(List.empty());
-    }
-
-    /**
      * The next model, and the commands to run for it. A command is asked for once: one equal to one asked for before
      * it is dropped, as the model only knows what runs once the message is handled (ADR 39).
      *

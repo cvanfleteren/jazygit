@@ -48,18 +48,16 @@ public final class AmendUpdate {
     }
 
     private static Next ask(Model model, AmendTarget target) {
-        return Update.withFiles(
-                model,
-                files -> files.isEmpty()
+        return model.repo().files().map(files -> files.isEmpty()
                         ? Next.of(model.fail(new AppError.NothingToAmend()))
-                        : Update.ask(model, new AmendPopup(target)));
+                        : Update.ask(model, new AmendPopup(target))).getOrElse(() -> Next.of(model));
     }
 
     /**
      * Amends with the staged files; when none is staged, asks whether to amend with all files instead.
      */
     private static Next confirmed(Model model) {
-        return Update.files(model).exists(FileEntry::staged)
+        return model.repo().files().getOrElse(List.empty()).exists(FileEntry::staged)
                 ? Update.confirm(
                         model, AmendPopup.class, popup -> Option.of(new AmendCmd(popup.target(), List.empty())))
                 : model.popup(AmendPopup.class)
@@ -69,7 +67,7 @@ public final class AmendUpdate {
     }
 
     private static Next stageAllConfirmed(Model model) {
-        List<String> paths = FileEntry.paths(Update.files(model), FileEntry::unstaged);
+        List<String> paths = FileEntry.paths(model.repo().files().getOrElse(List.empty()), FileEntry::unstaged);
         return Update.confirm(model, AmendStageAllPopup.class, popup -> Option.of(new AmendCmd(popup.target(), paths)));
     }
 }

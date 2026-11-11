@@ -193,7 +193,7 @@ public final class MoveUpdate {
      * the commits unmoved. Untracked files do not count, as git only stops for those that are in the way.
      */
     private static Next targeted(Model model, MoveRequest request, MoveTarget target) {
-        boolean changed = Update.files(model).exists(file -> file.type() != ChangeType.UNTRACKED);
+        boolean changed = model.repo().files().getOrElse(List.empty()).exists(file -> file.type() != ChangeType.UNTRACKED);
         return copiedOnto(target)
                 .filter(onto -> changed)
                 .map(onto -> Next.of(model.fail(new AppError.ChangesBeforeMove(onto))))
