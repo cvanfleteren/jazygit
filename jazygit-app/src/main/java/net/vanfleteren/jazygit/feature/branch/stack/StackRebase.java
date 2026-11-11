@@ -57,15 +57,18 @@ public record StackRebase(
      * What rebasing {@code stack} takes, as {@code model} has its branches; or why it is not rebased: the worktree has
      * changes, a branch of it is not checked out, is pushed to another remote than the others, is checked out in
      * another worktree, or is in a merge queue; or its base is not on that remote, or where a merged branch below was
-     * is not known.
+     * is not known; or GitHub did not say its base or the branch of an open pull request of it; or none is open.
      */
     public static Either<AppError, StackRebase> of(Model model, PullRequestStack stack) {
         if (!model.repo().status().toOption().exists(status -> status.files().isEmpty())) {
             return refused(stack, new StackPush.Refused("", StackRefusal.CHANGES));
         }
         List<PullRequestStack.Entry> entries = stack.entries().sortBy(PullRequestStack.Entry::position);
-        if (stack.base().isEmpty() || entries.forAll(entry -> entry.state() != State.OPEN)) {
+        if (stack.base().isEmpty()) {
             return refused(stack, new StackPush.Refused("#" + stack.number(), StackRefusal.NO_BASE));
+        }
+        if (entries.forAll(entry -> entry.state() != State.OPEN)) {
+            return refused(stack, new StackPush.Refused("#" + stack.number(), StackRefusal.NOTHING_OPEN));
         }
         Either<StackPush.Refused, StackPush> planned = StackPush.of(model, stack);
         if (planned.isLeft()) {
@@ -144,16 +147,16 @@ public record StackRebase(
      * last, the branch on {@code remote}, and the local branch.
      */
     private static List<Revision> where(Model model, RemoteName remote, PullRequestStack.Entry entry) {
-        BranchName name = FromGitHub.branch(entry.headBranch());
+        Option<BranchName> name = entry.headBranch().map(FromGitHub::branch);
         return entry.headOid()
                 .flatMap(Sha::parse)
                 .<Revision>map(Revision.Commit::new)
                 .toList()
-                .appendAll(model.repo()
-                        .remoteBranch(new RemoteBranch(remote, name))
+                .appendAll(name.flatMap(known -> model.repo().remoteBranch(new RemoteBranch(remote, known)))
                         .map(RemoteRef::branch)
                         .map(RemoteBranch::tracking))
-                .appendAll(model.repo().branch(name).map(branch -> new BranchRef.Local(branch.name())));
+                .appendAll(name.flatMap(known -> model.repo().branch(known))
+                        .map(branch -> new BranchRef.Local(branch.name())));
     }
 
     private static <T> Either<AppError, T> refused(PullRequestStack stack, StackPush.Refused why) {

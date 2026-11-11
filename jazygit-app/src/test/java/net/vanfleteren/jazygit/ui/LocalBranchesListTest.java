@@ -198,7 +198,7 @@ class LocalBranchesListTest {
         PullRequest stacked = new PullRequest(
                 97,
                 new GhBranch("feature"),
-                new GhBranch("feat/a"),
+                Option.of(new GhBranch("feat/a")),
                 false,
                 Checks.NONE,
                 Review.NONE,

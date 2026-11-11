@@ -22,7 +22,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
  * @param stack      where it sits in its stack, if it is stacked
  * @param baseCommit the commit its base branch is at, if GitHub said
  * @param headCommit the commit its branch is at, if GitHub said; none when that branch is gone
- * @param baseBranch the branch it merges into, {@link GhBranch#UNKNOWN} when not known
+ * @param baseBranch the branch it merges into, if GitHub said
  */
 public record PullRequestSummary(
         String repository,
@@ -39,7 +39,7 @@ public record PullRequestSummary(
         Option<PullRequestStack> stack,
         Option<GhCommit> baseCommit,
         Option<GhCommit> headCommit,
-        GhBranch baseBranch) {
+        Option<GhBranch> baseBranch) {
 
     /**
      * One whose base branch is not known.
@@ -74,7 +74,7 @@ public record PullRequestSummary(
                 stack,
                 baseCommit,
                 headCommit,
-                GhBranch.UNKNOWN);
+                Option.none());
     }
 
     /**

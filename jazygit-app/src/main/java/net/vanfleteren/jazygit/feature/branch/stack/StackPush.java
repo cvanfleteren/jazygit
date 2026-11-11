@@ -48,7 +48,7 @@ public record StackPush(int stack, RemoteName remote, List<Tuple2<Branch, Branch
 
     /**
      * Pushing the open branches of {@code stack}, as {@code model} has them; or why not: a pull request of it has no
-     * local branch, or they are not all pushed to the same remote.
+     * local branch or no known branch on GitHub, or they are not all pushed to the same remote.
      */
     public static Either<Refused, StackPush> of(Model model, PullRequestStack stack) {
         List<PullRequestStack.Entry> open =
@@ -58,8 +58,14 @@ public record StackPush(int stack, RemoteName remote, List<Tuple2<Branch, Branch
         if (missing.isDefined()) {
             return Either.left(new Refused("#" + missing.get().number(), StackRefusal.NOT_CHECKED_OUT));
         }
-        List<Tuple2<Branch, BranchName>> branches =
-                open.map(entry -> Tuple.of(checkedOut(model, entry).get(), FromGitHub.branch(entry.headBranch())));
+        Option<PullRequestStack.Entry> unnamed =
+                open.find(entry -> entry.headBranch().isEmpty());
+        if (unnamed.isDefined()) {
+            return Either.left(new Refused("#" + unnamed.get().number(), StackRefusal.UNKNOWN_BRANCH));
+        }
+        List<Tuple2<Branch, BranchName>> branches = open.map(entry -> Tuple.of(
+                checkedOut(model, entry).get(),
+                FromGitHub.branch(entry.headBranch().get())));
         Option<RemoteName> remote =
                 branches.headOption().map(branch -> branch._1().pushTarget().remote());
         Option<Branch> elsewhere = branches.map(Tuple2::_1)

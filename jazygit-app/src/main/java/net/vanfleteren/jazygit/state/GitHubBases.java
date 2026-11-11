@@ -7,7 +7,6 @@ import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.git.model.Branch;
@@ -55,7 +54,7 @@ public record GitHubBases(
     private static Option<BranchName> base(PullRequest pr) {
         return pr.stack()
                 .flatMap(PullRequestStack::branchBelow)
-                .orElse(() -> Option.of(pr.baseBranch()).filter(GhBranch::isKnown))
+                .orElse(pr::baseBranch)
                 .map(FromGitHub::branch);
     }
 

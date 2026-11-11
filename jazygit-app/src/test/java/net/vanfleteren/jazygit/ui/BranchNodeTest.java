@@ -39,7 +39,7 @@ class BranchNodeTest {
         return new PullRequest(
                 number,
                 new GhBranch(head),
-                GhBranch.UNKNOWN,
+                Option.none(),
                 false,
                 Checks.NONE,
                 Review.NONE,

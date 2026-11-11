@@ -61,7 +61,7 @@ class GitHubBasesTest {
         return new PullRequest(
                 number,
                 new GhBranch(head),
-                new GhBranch(base),
+                Option.of(new GhBranch(base)),
                 false,
                 Checks.NONE,
                 Review.NONE,
@@ -85,7 +85,7 @@ class GitHubBasesTest {
         return new PullRequest(
                 number,
                 new GhBranch(head),
-                new GhBranch(base),
+                Option.of(new GhBranch(base)),
                 false,
                 Checks.NONE,
                 Review.NONE,

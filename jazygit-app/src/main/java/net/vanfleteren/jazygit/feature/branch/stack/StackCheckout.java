@@ -22,7 +22,8 @@ import net.vanfleteren.jazygit.state.github.FromGitHub;
  *
  * @param stack   the number of the stack
  * @param lines   its open pull requests, from the bottom up, each with what happens to its branch
- * @param skipped its merged and closed pull requests, by number, which are left out
+ * @param skipped its merged and closed pull requests, and the open ones whose branch GitHub did not say, by number,
+ *                which are left out
  * @param on      the number of the pull request it was asked for on, if it was asked for on one
  */
 public record StackCheckout(int stack, List<Line> lines, List<Integer> skipped, Option<Integer> on) {
@@ -46,8 +47,8 @@ public record StackCheckout(int stack, List<Line> lines, List<Integer> skipped, 
      */
     public static List<BranchName> fetched(PullRequestStack stack) {
         return open(stack)
-                .filter(entry -> !entry.fork() && entry.headBranch().isKnown())
-                .map(entry -> FromGitHub.branch(entry.headBranch()));
+                .filter(entry -> !entry.fork())
+                .flatMap(entry -> entry.headBranch().map(FromGitHub::branch));
     }
 
     /**
@@ -82,16 +83,17 @@ public record StackCheckout(int stack, List<Line> lines, List<Integer> skipped, 
         List<PullRequestStack.Entry> entries = stack.entries().sortBy(PullRequestStack.Entry::position);
         return new StackCheckout(
                 stack.number(),
-                entries.filter(StackCheckout::isOpen).map(entry -> line(entry, remote, read)),
-                entries.filter(entry -> !isOpen(entry)).map(PullRequestStack.Entry::number),
+                entries.filter(StackCheckout::isOpen)
+                        .flatMap(entry -> entry.headBranch().map(head -> line(entry, head, remote, read))),
+                entries.filter(entry -> !isOpen(entry) || entry.headBranch().isEmpty())
+                        .map(PullRequestStack.Entry::number),
                 on);
     }
 
-    private static Line line(PullRequestStack.Entry entry, RemoteName remote, AllBranches read) {
-        BranchName name = FromGitHub.branch(entry.headBranch());
+    private static Line line(PullRequestStack.Entry entry, GhBranch head, RemoteName remote, AllBranches read) {
+        BranchName name = FromGitHub.branch(head);
         RemoteBranch upstream = new RemoteBranch(remote, name);
-        Option<BranchName> parent =
-                Option.of(entry.baseBranch()).filter(GhBranch::isKnown).map(FromGitHub::branch);
+        Option<BranchName> parent = entry.baseBranch().map(FromGitHub::branch);
         if (entry.fork()) {
             return new Line(entry.number(), name, upstream, Kind.FORK, 0, Option.none());
         }

@@ -63,7 +63,7 @@ class MakeStackTest {
         return new PullRequest(
                 number,
                 new GhBranch(head),
-                new GhBranch(base),
+                Option.of(new GhBranch(base)),
                 false,
                 Checks.NONE,
                 Review.NONE,
@@ -121,7 +121,7 @@ class MakeStackTest {
     private static final Model STACKED = model(new PullRequest(
                     97,
                     new GhBranch("feat/b"),
-                    new GhBranch("feat/a"),
+                    Option.of(new GhBranch("feat/a")),
                     false,
                     Checks.NONE,
                     Review.NONE,
@@ -133,7 +133,7 @@ class MakeStackTest {
                             new PullRequest(
                                     96,
                                     new GhBranch("feat/a"),
-                                    new GhBranch("main"),
+                                    Option.of(new GhBranch("main")),
                                     false,
                                     Checks.NONE,
                                     Review.NONE,
@@ -196,7 +196,7 @@ class MakeStackTest {
         assertEquals(
                 Option.of(new StackPopups.Confirm(
                         new StackCmd.MakeStack(
-                                List.of(new BaseChange(98, new GhBranch("feat/b"), new GhBranch("feat/a"))),
+                                List.of(new BaseChange(98, Option.of(new GhBranch("feat/b")), new GhBranch("feat/a"))),
                                 List.of(96, 98),
                                 Option.none()),
                         List.empty())),
@@ -268,7 +268,7 @@ class MakeStackTest {
         PullRequest queued = new PullRequest(
                 96,
                 new GhBranch("feat/a"),
-                new GhBranch("feat/z"),
+                Option.of(new GhBranch("feat/z")),
                 false,
                 Checks.NONE,
                 Review.NONE,
@@ -313,7 +313,7 @@ class MakeStackTest {
         Update.Next confirmed = Update.update(picking, new StackMsg.PickConfirmed());
 
         StackCmd.MakeStack cmd = new StackCmd.MakeStack(
-                List.of(new BaseChange(97, new GhBranch("main"), new GhBranch("feat/a"))),
+                List.of(new BaseChange(97, Option.of(new GhBranch("main")), new GhBranch("feat/a"))),
                 List.of(96, 97, 98),
                 Option.none());
         assertEquals(
@@ -349,8 +349,8 @@ class MakeStackTest {
     void theBasesChangeFromTheBottomUpThenTheStackIsMade() {
         StackCmd.MakeStack cmd = new StackCmd.MakeStack(
                 List.of(
-                        new BaseChange(97, new GhBranch("main"), new GhBranch("feat/a")),
-                        new BaseChange(98, new GhBranch("main"), new GhBranch("feat/b"))),
+                        new BaseChange(97, Option.of(new GhBranch("main")), new GhBranch("feat/a")),
+                        new BaseChange(98, Option.of(new GhBranch("main")), new GhBranch("feat/b"))),
                 List.of(96, 97, 98),
                 Option.none());
 
@@ -379,7 +379,7 @@ class MakeStackTest {
     @Test
     void aStackGitHubRefusesShowsTheBasesChangedBeforeInTheLog() {
         StackCmd.MakeStack cmd = new StackCmd.MakeStack(
-                List.of(new BaseChange(97, new GhBranch("main"), new GhBranch("feat/a"))),
+                List.of(new BaseChange(97, Option.of(new GhBranch("main")), new GhBranch("feat/a"))),
                 List.of(96, 97),
                 Option.none());
         StubGitHub refusing = new StubGitHub() {

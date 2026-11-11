@@ -45,7 +45,7 @@ class StackedPullRequestTest {
         return new PullRequest(
                 number,
                 new GhBranch(head),
-                new GhBranch("main"),
+                Option.of(new GhBranch("main")),
                 false,
                 Checks.NONE,
                 Review.NONE,

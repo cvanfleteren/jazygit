@@ -55,7 +55,7 @@ class StackChoiceTest {
         return new PullRequest(
                 number,
                 new GhBranch(head),
-                new GhBranch(base),
+                Option.of(new GhBranch(base)),
                 false,
                 Checks.NONE,
                 Review.NONE,
@@ -108,7 +108,7 @@ class StackChoiceTest {
                         List.of(
                                 OPEN.get(name("feat/a")).get(),
                                 OPEN.get(name("feat/b")).get()),
-                        List.of(new BaseChange(97, new GhBranch("develop"), new GhBranch("feat/a"))))),
+                        List.of(new BaseChange(97, Option.of(new GhBranch("develop")), new GhBranch("feat/a"))))),
                 choice().plan(2, 0));
     }
 
@@ -149,7 +149,7 @@ class StackChoiceTest {
         PullRequest stacked = new PullRequest(
                 98,
                 new GhBranch("feat/c"),
-                new GhBranch("feat/b"),
+                Option.of(new GhBranch("feat/b")),
                 false,
                 Checks.NONE,
                 Review.NONE,

@@ -63,7 +63,7 @@ class MyPullRequestsQueryTest {
                                         Option.none(),
                                         Option.none(),
                                         Option.none(),
-                                        new GhBranch("main"))),
+                                        Option.of(new GhBranch("main")))),
                                 52),
                         PullRequestList.EMPTY)),
                 mine(52, fix, 0, ""));

@@ -81,7 +81,7 @@ final class SummaryFragment {
             STATE,
             StackFragment.DECODER,
             COMMITS,
-            field("baseRefName", string()).map(GhBranch::new),
+            field("baseRefName", string()).map(GhBranch::named),
             (named, state, stack, commits, base) -> new PullRequestSummary(
                     named._1(),
                     named._2(),
