@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.ui;
 import static dev.tamboui.toolkit.Toolkit.*;
 
 import dev.tamboui.style.Style;
+import dev.tamboui.text.GraphemeClusters;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.elements.ListElement;
@@ -142,12 +143,13 @@ public final class BasesField<B> {
 
     /**
      * The filter {@code typed} after {@code event}, if it edits it: a character typed goes at its end, Backspace
-     * takes the last one off, and Ctrl+U clears it.
+     * takes the last one off, whole even when it is more than one code point, like a flag, and Ctrl+U clears it.
      */
     static Option<String> filtered(String typed, KeyEvent event) {
         if (event.code() == KeyCode.BACKSPACE) {
+            // The start of a cluster ending at 0 is not asked for: GraphemeClusters reads before it.
             return Option.of(
-                    typed.isEmpty() ? typed : typed.substring(0, typed.offsetByCodePoints(typed.length(), -1)));
+                    typed.isEmpty() ? typed : typed.substring(0, GraphemeClusters.clusterStart(typed, typed.length())));
         }
         if (event.hasCtrl() && event.isChar(CLEAR_KEY)) {
             return Option.of("");

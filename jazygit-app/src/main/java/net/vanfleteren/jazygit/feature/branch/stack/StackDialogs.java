@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.popup.PopupMsg;
 import net.vanfleteren.jazygit.ui.BranchesPanel;
 import net.vanfleteren.jazygit.ui.PopupSlot;
+import net.vanfleteren.jazygit.ui.TextWidth;
 import net.vanfleteren.jazygit.ui.Theme;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog.Choice;
@@ -173,7 +174,7 @@ public final class StackDialogs {
      */
     static String checkedOut(StackCheckout checkout) {
         int width = checkout.lines()
-                .map(line -> line.branch().value().length())
+                .map(line -> TextWidth.of(line.branch().value()))
                 .max()
                 .getOrElse(0);
         int numbers = checkout.lines()
@@ -226,7 +227,7 @@ public final class StackDialogs {
     }
 
     private static String pad(String text, int width) {
-        return text + " ".repeat(Math.max(0, width - text.length()));
+        return text + " ".repeat(Math.max(0, width - TextWidth.of(text)));
     }
 
     private static String kindKey(StackCheckout.Kind kind) {
