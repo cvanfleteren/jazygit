@@ -49,7 +49,7 @@ public final class ConfirmDialog<P extends Popup> implements PopupView {
         return model.popup(spec.popupType()).map(popup -> {
             String text = spec.message().apply(popup);
             String title = spec.title().apply(popup);
-            return new FittedDialog(width(text), width -> dialog(title, text, width));
+            return new FittedDialog(width(title, text), width -> dialog(title, text, width));
         });
     }
 
@@ -68,13 +68,13 @@ public final class ConfirmDialog<P extends Popup> implements PopupView {
     }
 
     /**
-     * The width that shows {@code message}: {@value #WIDTH}, or wider to keep a longer word, such as a path, on one
-     * line, up to {@value #MAX_WIDTH}.
+     * The width that shows {@code title} and {@code message}: {@value #WIDTH}, or wider to keep the whole title, or a
+     * longer word of the message, such as a path, on one line, up to {@value #MAX_WIDTH}.
      */
-    static int width(String message) {
+    static int width(String title, String message) {
         int longestWord =
                 List.of(message.split("\\s+")).map(TextWidth::of).max().getOrElse(0);
-        return Math.clamp(DialogFrame.FRAME + longestWord, WIDTH, MAX_WIDTH);
+        return Math.clamp(DialogFrame.FRAME + Math.max(longestWord, TextWidth.of(title)), WIDTH, MAX_WIDTH);
     }
 
     /**
