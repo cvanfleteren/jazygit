@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.github.comment;
 
+import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
 import java.util.function.Function;
@@ -69,25 +70,24 @@ public final class CommentUpdate {
             // A read of the pull request that started before the comment was sent is not taken; the one started now is
             // the dialog's own, read quietly (ADR 34).
             case CommentMsg.Sent(AddComment cmd, var commands) -> {
-                Next done = OperationUpdate.succeeded(model, cmd, commands);
-                Model changed = done.model().mapGitHub(gitHub -> gitHub.withChanged(cmd.number()));
-                yield changed.popup(CommentPopup.class)
+                Next done = OperationUpdate.succeeded(model, cmd, commands)
+                        .map(succeeded -> succeeded.mapGitHub(gitHub -> gitHub.withChanged(cmd.number())));
+                yield done.model()
+                        .popup(CommentPopup.class)
                         .filter(popup -> popup.number() == cmd.number())
-                        .map(popup -> PullRequestUpdate.read(changed, cmd.number())
+                        .map(popup -> done.then(changed -> PullRequestUpdate.read(changed, cmd.number())
                                 .apply((given, load) -> new Next(
                                         given.openPopup(sentFrom(popup.from(), load.read(), model.now())),
-                                        done.cmds()
-                                                .append(load)
+                                        List.<Cmd>of(load)
                                                 .appendAll(Option.when(
                                                         popup.from() instanceof CommentsPopup,
-                                                        () -> new LoadComments(cmd.number()))))))
-                        .getOrElse(() -> new Next(changed, done.cmds()));
+                                                        () -> new LoadComments(cmd.number())))))))
+                        .getOrElse(done);
             }
             // The popup stays open, with the comment, to send it again or to copy it.
-            case CommentMsg.SendFailed(AddComment cmd, Failure failure) -> {
-                Next failed = OperationUpdate.update(model, new OperationMsg.Failed(cmd, failure));
-                yield new Next(changed(failed.model(), popup -> popup.withSending(false)), failed.cmds());
-            }
+            case CommentMsg.SendFailed(AddComment cmd, Failure failure) ->
+                OperationUpdate.update(model, new OperationMsg.Failed(cmd, failure))
+                        .map(failed -> changed(failed, popup -> popup.withSending(false)));
         };
     }
 

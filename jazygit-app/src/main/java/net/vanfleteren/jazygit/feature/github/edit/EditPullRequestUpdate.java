@@ -13,11 +13,13 @@ import net.vanfleteren.jazygit.gh.model.PullRequestEdit;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.github.*;
 import net.vanfleteren.jazygit.state.github.prs.PrOverviewUpdate;
 import net.vanfleteren.jazygit.state.operation.*;
+import net.vanfleteren.jazygit.state.popup.ListCursor;
 
 /**
  * Editing the pull request that is shown (ADR 59): its title, body, base and whether it is a draft, in a popup of its
@@ -31,86 +33,138 @@ public final class EditPullRequestUpdate {
 
     public static Next update(Model model, EditPullRequestMsg msg) {
         return switch (msg) {
-            // Once the details are read, whatever state the pull request is in: closed and merged ones are edited too.
-            case EditPullRequestMsg.Requested() ->
-                Update.ask(
-                        model,
-                        model.popup(PullRequestPopup.class)
-                                .flatMap(shown -> shown.readDetails().map(details -> opened(model, shown, details))));
-            // A move that shows no base, as the filter hides them all, keeps the base.
-            case EditPullRequestMsg.BaseMoved(var cursor, var base) ->
-                Next.of(editable(model)
-                        .filter(EditPullRequestPopup::baseChangeable)
-                        .map(popup -> model.openPopup(popup.withFields(
-                                        base.map(popup.fields()::withBase).getOrElse(popup.fields())))
-                                .withListCursor(cursor))
-                        .getOrElse(model));
+            case EditPullRequestMsg.Requested() -> requested(model);
+            case EditPullRequestMsg.BaseMoved(var cursor, var base) -> baseMoved(model, cursor, base);
             case EditPullRequestMsg.Edited(String title, String body, boolean draft) ->
-                Next.of(editable(model)
-                        .map(popup -> model.openPopup(popup.withFields(popup.fields()
-                                .withTitle(title)
-                                .withBody(body)
-                                .withDraft(
-                                        popup.draftChangeable()
-                                                ? draft
-                                                : popup.fields().draft()))))
-                        .getOrElse(model));
-            // A blank title is not saved, as GitHub needs one; with nothing changed, there is nothing to save.
-            case EditPullRequestMsg.Confirmed() ->
-                editable(model)
-                        .filter(popup -> !popup.fields().title().isBlank())
-                        .map(popup -> save(popup)
-                                .map(cmd -> Update.start(model.clearError().openPopup(popup.withSaving(true)), cmd))
-                                .getOrElse(() -> Next.of(model.clearError().openPopup(popup.from()))))
-                        .getOrElse(() -> Next.of(model));
-            case EditPullRequestMsg.Cancelled() ->
-                Next.of(editable(model)
-                        .map(popup -> model.clearError().openPopup(popup.from()))
-                        .getOrElse(model));
-            case EditPullRequestMsg.EditorRequested() ->
-                editable(model)
-                        .map(popup -> Next.of(
-                                model.clearError(), new EditBody(popup.fields().body())))
-                        .getOrElse(() -> Next.of(model));
-            // Cancelled meanwhile, the popup stays closed.
-            case EditPullRequestMsg.EditorClosed(String text, var commands) ->
-                Next.of(changed(
-                        CommandLog.append(model, EditPullRequestCmd.EDIT_BODY, commands),
-                        popup -> popup.withFields(popup.fields().withBody(text))));
-            case EditPullRequestMsg.EditorFailed(Failure failure) ->
-                Next.of(CommandLog.append(model, EditPullRequestCmd.EDIT_BODY, failure.commands())
-                        .fail(new AppError.OperationFailed(EditPullRequestCmd.EDIT_BODY, Option.none(), failure)));
-            // A read of the pull request that started before it was saved is not taken; the one started now is the
-            // dialog's own, read quietly (ADR 34).
-            case EditPullRequestMsg.Saved(SavePullRequest cmd, var commands) -> {
-                Next done = OperationUpdate.succeeded(model, cmd, commands);
-                Model changed = done.model().mapGitHub(gitHub -> gitHub.withChanged(cmd.number()));
-                Next back = changed.popup(EditPullRequestPopup.class)
-                        .filter(popup -> popup.number() == cmd.number())
-                        .map(popup -> readAgain(changed, popup.from(), done.cmds()))
-                        .getOrElse(() -> new Next(changed, done.cmds()));
-                yield cmd.changesGitHub() ? PrOverviewUpdate.reloadIfShown(back) : back;
-            }
-            // The popup stays open, with what was typed, to save it again. When only making it a draft or ready failed,
-            // the rest was saved, which the popup then counts as opened with, and the dialog under it reads again; a
-            // new
-            // base shows on the branch, so the pull requests are read again too.
-            case EditPullRequestMsg.SaveFailed(SavePullRequest cmd, Failure failure, boolean edited) -> {
-                Next failed = OperationUpdate.update(model, new OperationMsg.Failed(cmd, failure));
-                Model reopened = changed(
-                        failed.model(),
-                        popup -> popup.withSaving(false).withOpened(edited ? saved(popup) : popup.opened()));
-                Next read = edited
-                        ? readUnder(
-                                reopened.mapGitHub(gitHub -> gitHub.withChanged(cmd.number())),
-                                cmd.number(),
-                                failed.cmds())
-                        : new Next(reopened, failed.cmds());
-                yield edited && cmd.edit().base().isDefined()
-                        ? PrOverviewUpdate.reloadIfShown(PullRequestsUpdate.loadAnyway(read))
-                        : read;
-            }
+                edited(model, title, body, draft);
+            case EditPullRequestMsg.Confirmed() -> confirmed(model);
+            case EditPullRequestMsg.Cancelled() -> cancelled(model);
+            case EditPullRequestMsg.EditorRequested() -> editorRequested(model);
+            case EditPullRequestMsg.EditorClosed(String text, var commands) -> editorClosed(model, text, commands);
+            case EditPullRequestMsg.EditorFailed(Failure failure) -> editorFailed(model, failure);
+            case EditPullRequestMsg.Saved(SavePullRequest cmd, var commands) -> saved(model, cmd, commands);
+            case EditPullRequestMsg.SaveFailed(SavePullRequest cmd, Failure failure, boolean edited) ->
+                saveFailed(model, cmd, failure, edited);
         };
+    }
+
+    /**
+     * Opens the edit popup once the details are read, whatever state the pull request is in: closed and merged ones
+     * are edited too.
+     */
+    private static Next requested(Model model) {
+        return Update.ask(
+                model,
+                model.popup(PullRequestPopup.class)
+                        .flatMap(shown -> shown.readDetails().map(details -> opened(model, shown, details))));
+    }
+
+    /**
+     * Moves in the list of bases to {@code cursor}. A move that shows no base, as the filter hides them all, keeps
+     * the base.
+     */
+    private static Next baseMoved(Model model, ListCursor cursor, Option<RemoteBranch> base) {
+        return Next.of(editable(model)
+                .filter(EditPullRequestPopup::baseChangeable)
+                .map(popup -> model.openPopup(popup.withFields(
+                                base.map(popup.fields()::withBase).getOrElse(popup.fields())))
+                        .withListCursor(cursor))
+                .getOrElse(model));
+    }
+
+    /**
+     * The edit popup with the title, body and, when it can be changed, whether it is a draft as the user typed them.
+     */
+    private static Next edited(Model model, String title, String body, boolean draft) {
+        return Next.of(editable(model)
+                .map(popup -> model.openPopup(popup.withFields(popup.fields()
+                        .withTitle(title)
+                        .withBody(body)
+                        .withDraft(
+                                popup.draftChangeable() ? draft : popup.fields().draft()))))
+                .getOrElse(model));
+    }
+
+    /**
+     * Saves what was changed. A blank title is not saved, as GitHub needs one; with nothing changed, there is
+     * nothing to save.
+     */
+    private static Next confirmed(Model model) {
+        return editable(model)
+                .filter(popup -> !popup.fields().title().isBlank())
+                .map(popup -> save(popup)
+                        .map(cmd -> Update.start(model.clearError().openPopup(popup.withSaving(true)), cmd))
+                        .getOrElse(() -> Next.of(model.clearError().openPopup(popup.from()))))
+                .getOrElse(() -> Next.of(model));
+    }
+
+    /**
+     * Back on the pull request dialog the edit popup came from.
+     */
+    private static Next cancelled(Model model) {
+        return Next.of(editable(model)
+                .map(popup -> model.clearError().openPopup(popup.from()))
+                .getOrElse(model));
+    }
+
+    /**
+     * Edits the body in the external editor.
+     */
+    private static Next editorRequested(Model model) {
+        return editable(model)
+                .map(popup ->
+                        Next.of(model.clearError(), new EditBody(popup.fields().body())))
+                .getOrElse(() -> Next.of(model));
+    }
+
+    /**
+     * The edit popup with the body as the editor left it. Cancelled meanwhile, the popup stays closed.
+     */
+    private static Next editorClosed(Model model, String text, List<ExecutedCommand> commands) {
+        return Next.of(changed(
+                CommandLog.append(model, EditPullRequestCmd.EDIT_BODY, commands),
+                popup -> popup.withFields(popup.fields().withBody(text))));
+    }
+
+    /**
+     * Shows why the editor failed.
+     */
+    private static Next editorFailed(Model model, Failure failure) {
+        return Next.of(CommandLog.append(model, EditPullRequestCmd.EDIT_BODY, failure.commands())
+                .fail(new AppError.OperationFailed(EditPullRequestCmd.EDIT_BODY, Option.none(), failure)));
+    }
+
+    /**
+     * Back on the pull request dialog once saved. A read of the pull request that started before it was saved is not
+     * taken; the one started now is the dialog's own, read quietly (ADR 34).
+     */
+    private static Next saved(Model model, SavePullRequest cmd, List<ExecutedCommand> commands) {
+        Next back = OperationUpdate.succeeded(model, cmd, commands)
+                .map(done -> done.mapGitHub(gitHub -> gitHub.withChanged(cmd.number())))
+                .then(changed -> changed.popup(EditPullRequestPopup.class)
+                        .filter(popup -> popup.number() == cmd.number())
+                        .map(popup -> readAgain(changed, popup.from()))
+                        .getOrElse(() -> Next.of(changed)));
+        return cmd.changesGitHub() ? PrOverviewUpdate.reloadIfShown(back) : back;
+    }
+
+    /**
+     * The popup stays open, with what was typed, to save it again. When only making it a draft or ready failed, the
+     * rest was saved, which the popup then counts as opened with, and the dialog under it reads again; a new base
+     * shows on the branch, so the pull requests are read again too.
+     */
+    private static Next saveFailed(Model model, SavePullRequest cmd, Failure failure, boolean edited) {
+        Next failed = OperationUpdate.update(model, new OperationMsg.Failed(cmd, failure))
+                .map(reopened -> changed(
+                        reopened,
+                        popup -> popup.withSaving(false).withOpened(edited ? savedFields(popup) : popup.opened())));
+        Next read = edited
+                ? failed.map(reopened -> reopened.mapGitHub(gitHub -> gitHub.withChanged(cmd.number())))
+                        .then(changed -> readUnder(changed, cmd.number()))
+                : failed;
+        return edited && cmd.edit().base().isDefined()
+                ? PrOverviewUpdate.reloadIfShown(PullRequestsUpdate.loadAnyway(read))
+                : read;
     }
 
     /**
@@ -177,7 +231,7 @@ public final class EditPullRequestUpdate {
      * What the popup counts as opened with once the title, body and base it shows were saved, but not whether it is
      * a draft.
      */
-    private static PullRequestFields saved(EditPullRequestPopup popup) {
+    private static PullRequestFields savedFields(EditPullRequestPopup popup) {
         PullRequestFields fields = popup.fields();
         return popup.opened()
                 .withTitle(fields.title().strip())
@@ -186,29 +240,27 @@ public final class EditPullRequestUpdate {
     }
 
     /**
-     * {@code model} back on the pull request dialog {@code from}, which reads its details again, quietly, after
-     * {@code cmds}.
+     * {@code model} back on the pull request dialog {@code from}, which reads its details again, quietly.
      */
-    private static Next readAgain(Model model, PullRequestPopup from, List<Cmd> cmds) {
+    private static Next readAgain(Model model, PullRequestPopup from) {
         return PullRequestUpdate.read(model, from.number())
-                .apply((given, load) -> new Next(
-                        given.openPopup(from.readingAgain(Reading.BY_ITSELF, model.now(), load.read())),
-                        cmds.append(load)));
+                .apply((given, load) ->
+                        Next.of(given.openPopup(from.readingAgain(Reading.BY_ITSELF, model.now(), load.read())), load));
     }
 
     /**
      * {@code model} with the pull request dialog under the edit popup of pull request {@code number} reading its
-     * details again, quietly, after {@code cmds}, if that popup is open.
+     * details again, quietly, if that popup is open.
      */
-    private static Next readUnder(Model model, int number, List<Cmd> cmds) {
+    private static Next readUnder(Model model, int number) {
         return model.popup(EditPullRequestPopup.class)
                 .filter(popup -> popup.number() == number)
                 .map(popup -> PullRequestUpdate.read(model, number)
-                        .apply((given, load) -> new Next(
+                        .apply((given, load) -> Next.of(
                                 given.openPopup(popup.withFrom(
                                         popup.from().readingAgain(Reading.BY_ITSELF, model.now(), load.read()))),
-                                cmds.append(load))))
-                .getOrElse(() -> new Next(model, cmds));
+                                load)))
+                .getOrElse(() -> Next.of(model));
     }
 
     /**

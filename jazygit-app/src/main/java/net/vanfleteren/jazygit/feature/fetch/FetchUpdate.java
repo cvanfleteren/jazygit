@@ -49,7 +49,7 @@ public final class FetchUpdate {
      */
     public static Next requested(Next next) {
         return fetching(next.model())
-                ? new Next(next.model().mapJobs(jobs -> jobs.withFetchAgain(true)), next.cmds())
+                ? next.map(model -> model.mapJobs(jobs -> jobs.withFetchAgain(true)))
                 : start(next);
     }
 
@@ -61,9 +61,9 @@ public final class FetchUpdate {
     }
 
     private static Next start(Next next) {
-        return new Next(
-                next.model().mapJobs(jobs -> jobs.withFetchAgain(false).withFetchChanged(false)),
-                next.cmds().append(new FetchCmd.ListRemotes()));
+        return next.map(model ->
+                        model.mapJobs(jobs -> jobs.withFetchAgain(false).withFetchChanged(false)))
+                .and(new FetchCmd.ListRemotes());
     }
 
     /**

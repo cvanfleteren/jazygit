@@ -22,14 +22,9 @@ public final class CreatePullRequestDialogs {
             popup -> Messages.get("dialog.pushFirst.title", popup.branch().value()),
             popup -> popup.unpushed()
                     .map(commits -> Messages.get(
-                            "dialog.pushFirst.unpushed",
-                            popup.branch().value(),
-                            commits,
-                            popup.target().shortName()))
+                            "dialog.pushFirst.unpushed", commits, popup.target().shortName()))
                     .getOrElse(() -> Messages.get(
-                            "dialog.pushFirst.untracked",
-                            popup.branch().value(),
-                            popup.target().shortName())),
+                            "dialog.pushFirst.untracked", popup.target().shortName())),
             CreatePullRequestMsg.PushFirstConfirmed::new);
 
     private CreatePullRequestDialogs() {}

@@ -59,7 +59,7 @@ class PushFirstDialogTest {
         try (ToolkitTestRunner runner = start()) {
             String screen = RenderedText.ofLarge(runner, this::view);
             assertTrue(screen.contains("Push stack-1 first"), screen);
-            assertTrue(screen.contains("stack-1 has 1 commit not on origin/stack-1."), screen);
+            assertTrue(screen.contains("This branch has 1 commit not on origin/stack-1."), screen);
         }
     }
 
@@ -68,8 +68,20 @@ class PushFirstDialogTest {
         open = TestModels.loaded().openPopup(new PushFirstPopup(BRANCH, TARGET, Option.none()));
         try (ToolkitTestRunner runner = start()) {
             String screen = RenderedText.ofLarge(runner, this::view);
-            assertTrue(screen.contains("stack-1 does not track a remote branch."), screen);
+            assertTrue(screen.contains("This branch does not track a remote branch."), screen);
             assertTrue(screen.contains("origin/stack-1 and track it, then create its pull request?"), screen);
+        }
+    }
+
+    @Test
+    void theTitleNamesALongBranchWholeWhenItsTargetIsNamedOtherwise() throws Exception {
+        BranchName longName = new BranchName("feature/a-rather-long-descriptive-branch-name-for-the-push-first-dialog");
+        open = TestModels.loaded()
+                .openPopup(
+                        new PushFirstPopup(longName, new RemoteBranch("origin", new BranchName("fx")), Option.none()));
+        try (ToolkitTestRunner runner = start()) {
+            String screen = RenderedText.ofLarge(runner, this::view);
+            assertTrue(screen.contains("Push " + longName.value() + " first"), screen);
         }
     }
 

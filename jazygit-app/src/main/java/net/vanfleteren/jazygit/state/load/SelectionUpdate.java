@@ -1,8 +1,12 @@
 package net.vanfleteren.jazygit.state.load;
 
 import io.vavr.collection.HashMap;
+import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Function;
+import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.CommitFile;
+import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Model;
@@ -29,94 +33,146 @@ public final class SelectionUpdate {
 
     public static Next update(Model model, SelectionMsg msg) {
         return switch (msg) {
-            case BranchSelected(var branch) ->
-                selected(
-                        model,
-                        branch,
-                        model.repoView().branchLog(),
-                        log -> model.mapRepoView(
-                                repoView -> repoView.withBranchLog(log).withUnfetched(Option.none())),
-                        log -> new LoadBranchLog(log, AheadUpdate.of(model, log)));
-            // No log is shown, nor read again as branches move.
-            case UnfetchedSelected(int pullRequest) ->
-                Next.of(model.mapRepoView(
-                        repoView -> repoView.withBranchLog(Option.none()).withUnfetched(Option.of(pullRequest))));
-            case CommitSelected(var sha) ->
-                selected(
-                        model,
-                        sha,
-                        model.repoView().commitDetail(),
-                        detail -> model.mapRepoView(repoView -> repoView.withCommitDetail(detail)),
-                        detail(model, Cmd.Slot.COMMIT_DETAIL));
-            case DivergenceCommitSelected(var sha) ->
-                model.repoView()
-                        .divergence()
-                        .map(view -> selected(
-                                model,
-                                sha,
-                                view.detail(),
-                                detail -> model.mapRepoView(
-                                        repoView -> repoView.withDivergence(Option.of(view.withDetail(detail)))),
-                                detail(model, Cmd.Slot.DIVERGENCE_DETAIL)))
-                        .getOrElse(() -> Next.of(model));
-            case BranchCommitSelected(var sha) ->
-                model.repoView()
-                        .branchCommits()
-                        .map(view -> selected(
-                                model,
-                                sha,
-                                view.detail(),
-                                detail -> model.mapRepoView(
-                                        repoView -> repoView.withBranchCommits(Option.of(view.withDetail(detail)))),
-                                detail(model, Cmd.Slot.BRANCH_COMMITS_DETAIL)))
-                        .getOrElse(() -> Next.of(model));
-            // A node with changes shows its diff, not the node without them highlighted before (ADR 108).
-            case FilesSelected(var files) -> {
-                Model changed = model.mapRepoView(repoView -> repoView.withUnchanged(Option.none()));
-                yield selected(
-                        changed,
-                        files,
-                        changed.repoView().fileDiff(),
-                        diff -> changed.mapRepoView(repoView -> repoView.withFileDiff(diff)),
-                        entries -> new LoadFileDiff(entries, model.preferences().diffOptions()));
-            }
-            case UnchangedFileSelected(String path) ->
-                selected(
-                        model,
-                        path,
-                        model.repoView()
-                                .unchanged()
-                                .flatMap(node -> node instanceof UnchangedNode.File(var content)
-                                        ? Option.of(content)
-                                        : Option.none()),
-                        content -> model.mapRepoView(
-                                repoView -> repoView.withUnchanged(content.map(UnchangedNode.File::new))),
-                        ReadFileContent::new);
-            // A directory without changes needs nothing read: it says how many files it holds.
-            case UnchangedDirectorySelected(String path, int files) ->
-                Next.of(model.mapRepoView(
-                        repoView -> repoView.withUnchanged(Option.of(new UnchangedNode.Directory(path, files)))
-                                .withVersions(HashMap.empty())));
-            case CommitFilesSelected(var files) ->
-                model.repoView()
-                        .commitFiles()
-                        .map(view -> selected(
-                                model,
-                                files,
-                                view.diff(),
-                                diff -> model.mapRepoView(
-                                        repoView -> repoView.withCommitFiles(Option.of(view.withDiff(diff)))),
-                                entries -> LoadCommitFileDiff.of(
-                                        view, entries, model.preferences().diffOptions())))
-                        .getOrElse(() -> Next.of(model));
-            case StashSelected(var sha) ->
-                selected(
-                        model,
-                        sha,
-                        model.repoView().stashDetail(),
-                        detail -> model.mapRepoView(repoView -> repoView.withStashDetail(detail)),
-                        stash -> new LoadStashDetail(stash, model.preferences().diffOptions()));
+            case BranchSelected(var branch) -> branchSelected(model, branch);
+            case UnfetchedSelected(int pullRequest) -> unfetchedSelected(model, pullRequest);
+            case CommitSelected(var sha) -> commitSelected(model, sha);
+            case DivergenceCommitSelected(var sha) -> divergenceCommitSelected(model, sha);
+            case BranchCommitSelected(var sha) -> branchCommitSelected(model, sha);
+            case FilesSelected(var files) -> filesSelected(model, files);
+            case UnchangedFileSelected(String path) -> unchangedFileSelected(model, path);
+            case UnchangedDirectorySelected(String path, int files) -> unchangedDirectorySelected(model, path, files);
+            case CommitFilesSelected(var files) -> commitFilesSelected(model, files);
+            case StashSelected(var sha) -> stashSelected(model, sha);
         };
+    }
+
+    /**
+     * Loads the log of {@code branch}.
+     */
+    private static Next branchSelected(Model model, BranchRef branch) {
+        return selected(
+                model,
+                branch,
+                model.repoView().branchLog(),
+                log -> model.mapRepoView(repoView -> repoView.withBranchLog(log).withUnfetched(Option.none())),
+                log -> new LoadBranchLog(log, AheadUpdate.of(model, log)));
+    }
+
+    /**
+     * No log is shown, nor read again as branches move.
+     */
+    private static Next unfetchedSelected(Model model, int pullRequest) {
+        return Next.of(model.mapRepoView(
+                repoView -> repoView.withBranchLog(Option.none()).withUnfetched(Option.of(pullRequest))));
+    }
+
+    /**
+     * Loads the detail of commit {@code sha} of the commits pane.
+     */
+    private static Next commitSelected(Model model, Sha sha) {
+        return selected(
+                model,
+                sha,
+                model.repoView().commitDetail(),
+                detail -> model.mapRepoView(repoView -> repoView.withCommitDetail(detail)),
+                detail(model, Cmd.Slot.COMMIT_DETAIL));
+    }
+
+    /**
+     * Loads the detail of commit {@code sha} of the divergence shown, if one is.
+     */
+    private static Next divergenceCommitSelected(Model model, Sha sha) {
+        return model.repoView()
+                .divergence()
+                .map(view -> selected(
+                        model,
+                        sha,
+                        view.detail(),
+                        detail -> model.mapRepoView(
+                                repoView -> repoView.withDivergence(Option.of(view.withDetail(detail)))),
+                        detail(model, Cmd.Slot.DIVERGENCE_DETAIL)))
+                .getOrElse(() -> Next.of(model));
+    }
+
+    /**
+     * Loads the detail of commit {@code sha} of the branch commits shown, if they are.
+     */
+    private static Next branchCommitSelected(Model model, Sha sha) {
+        return model.repoView()
+                .branchCommits()
+                .map(view -> selected(
+                        model,
+                        sha,
+                        view.detail(),
+                        detail -> model.mapRepoView(
+                                repoView -> repoView.withBranchCommits(Option.of(view.withDetail(detail)))),
+                        detail(model, Cmd.Slot.BRANCH_COMMITS_DETAIL)))
+                .getOrElse(() -> Next.of(model));
+    }
+
+    /**
+     * A node with changes shows its diff, not the node without them highlighted before (ADR 108).
+     */
+    private static Next filesSelected(Model model, List<FileEntry> files) {
+        Model changed = model.mapRepoView(repoView -> repoView.withUnchanged(Option.none()));
+        return selected(
+                changed,
+                files,
+                changed.repoView().fileDiff(),
+                diff -> changed.mapRepoView(repoView -> repoView.withFileDiff(diff)),
+                entries -> new LoadFileDiff(entries, model.preferences().diffOptions()));
+    }
+
+    /**
+     * Reads the content of the file without changes at {@code path}.
+     */
+    private static Next unchangedFileSelected(Model model, String path) {
+        return selected(
+                model,
+                path,
+                model.repoView()
+                        .unchanged()
+                        .flatMap(node ->
+                                node instanceof UnchangedNode.File(var content) ? Option.of(content) : Option.none()),
+                content -> model.mapRepoView(repoView -> repoView.withUnchanged(content.map(UnchangedNode.File::new))),
+                ReadFileContent::new);
+    }
+
+    /**
+     * A directory without changes needs nothing read: it says how many files it holds.
+     */
+    private static Next unchangedDirectorySelected(Model model, String path, int files) {
+        return Next.of(model.mapRepoView(
+                repoView -> repoView.withUnchanged(Option.of(new UnchangedNode.Directory(path, files)))
+                        .withVersions(HashMap.empty())));
+    }
+
+    /**
+     * Loads the diff of {@code files} of the commit files shown, if they are.
+     */
+    private static Next commitFilesSelected(Model model, List<CommitFile> files) {
+        return model.repoView()
+                .commitFiles()
+                .map(view -> selected(
+                        model,
+                        files,
+                        view.diff(),
+                        diff -> model.mapRepoView(repoView -> repoView.withCommitFiles(Option.of(view.withDiff(diff)))),
+                        entries -> LoadCommitFileDiff.of(
+                                view, entries, model.preferences().diffOptions())))
+                .getOrElse(() -> Next.of(model));
+    }
+
+    /**
+     * Loads the detail of stash {@code sha}.
+     */
+    private static Next stashSelected(Model model, Sha sha) {
+        return selected(
+                model,
+                sha,
+                model.repoView().stashDetail(),
+                detail -> model.mapRepoView(repoView -> repoView.withStashDetail(detail)),
+                stash -> new LoadStashDetail(stash, model.preferences().diffOptions()));
     }
 
     private static Function<Sha, Load> detail(Model model, Cmd.Slot slot) {
