@@ -2,8 +2,10 @@ package net.vanfleteren.jazygit.feature.github.checkout;
 
 import io.vavr.control.Option;
 import java.util.function.Supplier;
+import net.vanfleteren.jazygit.feature.branch.BranchError;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutUpdate;
 import net.vanfleteren.jazygit.feature.branch.checkout.SwitchWorktreePopup;
+import net.vanfleteren.jazygit.feature.github.GitHubError;
 import net.vanfleteren.jazygit.feature.github.checkout.CheckoutPullRequestMsg.Requested;
 import net.vanfleteren.jazygit.feature.github.checkout.CheckoutPullRequestMsg.WorktreeRequested;
 import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeUpdate;
@@ -100,7 +102,7 @@ public final class CheckoutPullRequestUpdate {
                 .orElse(() -> checkedOutElsewhere(model, pullRequest))
                 .orElse(() -> Option.when(
                         checkedOutHere(model, pullRequest),
-                        () -> new Readiness.Blocked(new AppError.PullRequestCheckedOutHere(name(pullRequest)))))
+                        () -> new Readiness.Blocked(new GitHubError.PullRequestCheckedOutHere(name(pullRequest)))))
                 .orElse(() -> Option.when(busy(model, source), Readiness.Busy::new))
                 .getOrElse(Readiness.Ready::new);
     }
@@ -115,7 +117,7 @@ public final class CheckoutPullRequestUpdate {
         boolean changed = Update.files(model).exists(file -> file.type() != ChangeType.UNTRACKED);
         return checkedOutElsewhere(model, pullRequest)
                 .orElse(() -> Option.when(
-                        changed, () -> new Readiness.Blocked(new AppError.ChangesBeforeCheckout(name(pullRequest)))))
+                        changed, () -> new Readiness.Blocked(new GitHubError.ChangesBeforeCheckout(name(pullRequest)))))
                 .getOrElse(Readiness.Ready::new);
     }
 
@@ -128,7 +130,8 @@ public final class CheckoutPullRequestUpdate {
                 .fold(
                         unknown -> Option.of(new Readiness.Blocked(unknown)),
                         ofThis -> Option.when(
-                                !ofThis, () -> new Readiness.Blocked(new AppError.OtherRepository(name(pullRequest)))));
+                                !ofThis,
+                                () -> new Readiness.Blocked(new BranchError.OtherRepository(name(pullRequest)))));
     }
 
     /**

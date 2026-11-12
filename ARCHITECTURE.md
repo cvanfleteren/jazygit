@@ -115,7 +115,7 @@ inside the core, the compiler does: it cannot reach the app's packages at all, n
 | `ui` | Panels (`FilesPanel`, `BranchesPanel`, `CommitsPanel`, `ContentPanel`, `CommandLogPanel`, ...) that render a `Model` and turn key events into `Msg`s; the dialog widgets (`ConfirmDialog`, `ChoiceDialog`, `TextInputDialog`, `PickDialog`) and the `DialogFrame` they are drawn in, with `WithDetails` for a box of details under one; `ErrorText`, the only place that turns errors into text. |
 | `keys` | `Keymap`: the keys of each panel (`Scope`) and the global keys. Panels react to keys from it, and the help popup lists them from it. |
 | `feature.*` | One package per feature. Each one holds the feature's messages, its update functions, its commands, and its popups, dialogs and keys. |
-| `state` | The Elm core: `Model`, `Msg`, `Update`, `Cmd`, `Program`, `Env`, `Loadable`, `Lens`, `Repo`, `Jobs`, `GitHubBases`, and the errors as data (`AppError`, `Failure`). The other parts of the `Model` each have a subpackage, with their messages, updates and commands: |
+| `state` | The Elm core: `Model`, `Msg`, `Update`, `Cmd`, `Program`, `Env`, `Loadable`, `Lens`, `Repo`, `Jobs`, `GitHubBases`, and the errors as data (`AppError`, `Phrase`, `Failure`). The other parts of the `Model` each have a subpackage, with their messages, updates and commands: |
 | `state.load` | The reads of the repository: `Load` and every one of them (`LoadStatus`, `LoadBranches`, `ReadWholeFile`, ...), with `Target` and `Targeted`, where a read puts what it read; `LoadMsg`, `LoadUpdate`; what is ahead on the base (`AheadUpdate`); the updates that start reads: the highlights of the panes and the previews read for them (`SelectionMsg`, `SelectionUpdate`), and the search of the commits (`CommitSearchMsg`, `CommitSearchUpdate`). |
 | `state.view` | What the repository screen shows: `RepoView` and its views (`CommitFilesView`, `BranchCommitsView`, `DivergenceView`, `CommitSearch`), `Preview`, the filter of the files tree (`FileFilter`, `FileFilterMsg`, `FileFilterUpdate`, ADR 105), focus and scrolling (`ViewMsg`). |
 | `state.diff` | The content area: `ScrolledContent`, `Scrolled`, `Version`, `Expansion`, the file read whole they keep (`WholeFile`) and whose changes it is (`Changes`, `BaseTip`), and the lines of a diff with the remarks on them (`DiffLines`, `DiffStops`, `PlacedRemarks`, `Collapsed`). |
@@ -240,7 +240,7 @@ one and one whose directory is gone.
 - **A branch checked out in another worktree** is marked `wt` in the list of branches (ADR 45). git checks a branch
   out in one worktree at a time, so what it would refuse is not run: checking the branch out offers to switch to
   that worktree instead, and fast-forwarding it or adding a worktree for it fail up front with an
-  `AppError.CheckedOutElsewhere` that names the worktree. Deleting it offers to remove that worktree and then delete
+  `WorktreeError.CheckedOutElsewhere` that names the worktree. Deleting it offers to remove that worktree and then delete
   the branch locally, the same removal as above, besides deleting it on its remote; only when the worktree cannot be
   removed either and the branch is not on its remote does deleting it fail up front. The branch feature depends on
   the worktree feature for this, so the keys switching the tabs of the branches pane, the worktrees' too, are the
@@ -357,8 +357,8 @@ can read it again after changing a pull request. The design and the steps still 
 - **Checking out**: space checks out a pull request of the repository in place, from a fork too, with
   `gh pr checkout <n>` (`CheckoutPullRequestCmd.CHECKOUT_PR`), which waits until the repository is in the middle of
   nothing. It is
-  refused up front when the working tree has changes, untracked files apart (`AppError.ChangesBeforeCheckout`), and
-  for a pull request of another repository (`AppError.OtherRepository`). Which repository this is is known once its
+  refused up front when the working tree has changes, untracked files apart (`GitHubError.ChangesBeforeCheckout`), and
+  for a pull request of another repository (`BranchError.OtherRepository`). Which repository this is is known once its
   pull requests were read; until then, checking out says they are still being read, or why they could not be.
 - Each screen keeps where its focus was: `ViewMsg.Focused` goes to `Model.focusedPane` or `PrOverview.focusedPane`,
   whichever screen is shown (`Model.shownPane`), and `FocusKeeper` gives it back when the screen is shown again.
@@ -558,7 +558,7 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
   `ReviewPopup`, drawn by `ReviewDialog` with the `ui.CommentComposer` the comment on a pull request shares, and
   resolves one at once; `ReviewThreadMutations` sends a thread and a reply as REST review comments, published at once
   (GraphQL would leave them pending), and a resolve with `gh api graphql`. Each needs the threads read at the
-  commits of the files and a pull request that is not merged, else it says why (`AppError.CannotReview`); the ids of
+  commits of the files and a pull request that is not merged, else it says why (`GitHubError.CannotReview`); the ids of
   the threads something is sent for (`CommitFilesView.sending`) take no other key until the threads are read again.
   `Space` collapses or opens the thread or the comment of the cursor against its default (ADR 62): the ids flipped
   are `CommitFilesView.collapsed` (`state.diff.Collapsed`), which `ui.RemarkLines` reads as it draws the threads
@@ -884,8 +884,12 @@ classDiagram
   - `Update.confirm` closes that popup and starts the operation made of it.
   - A branch that is busy (`Model.idleBranch`) takes no other operation until it is done.
 - **Errors are data until the view.** `Model.error` is an `Option<AppError>` and `Loadable.Failed` holds a
-  `Failure`; `ErrorText` in `ui` turns them into text. `Model.fail` stores the error, which the command log
-  shows, and opens an `ErrorPopup`, unless another popup is open, which then keeps what the user entered.
+  `Failure`; `ErrorText` in `ui` turns them into text. An `AppError` says itself as a `Phrase`: a message key and
+  what goes into it, never text, which `ErrorText` looks up. `AppError` is open, as `Msg` is: each feature keeps its
+  own errors as a sealed `XxxError` (`BranchError`, `WorktreeError`, `GitHubError`, ...), and only those that belong
+  to no feature, or that the core reports, stay in `AppError`, so adding an error changes nothing outside the
+  feature (`ArchitectureTest.featureErrorsAreSealed`). `Model.fail` stores the error, which the command log shows,
+  and opens an `ErrorPopup`, unless another popup is open, which then keeps what the user entered.
 - **Popups are part of the model.** `model.popup()` says which dialog is open. `JazygitApp` renders the
   dialog that matches it and moves the focus into it, then back to the pane it came from once
   the popup closes. Each feature lists its dialogs, with the pane they give the focus back to, as

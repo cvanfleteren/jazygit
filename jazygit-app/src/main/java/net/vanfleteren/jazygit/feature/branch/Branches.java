@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.branch;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.worktree.WorktreeError;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.state.AppError;
@@ -36,7 +37,7 @@ public final class Branches {
         return model.repo()
                 .branch(name)
                 .flatMap(Branch::worktreeLocation)
-                .map(worktree -> new AppError.CheckedOutElsewhere(operation, name, worktree));
+                .map(worktree -> new WorktreeError.CheckedOutElsewhere(operation, name, worktree));
     }
 
     /**

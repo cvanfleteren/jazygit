@@ -12,10 +12,10 @@ import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.KeyModifiers;
 import io.vavr.control.Option;
 import java.util.ArrayList;
+import net.vanfleteren.jazygit.feature.github.GitHubError;
+import net.vanfleteren.jazygit.feature.github.GitHubError.CannotReview.Why;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Reviewing;
 import net.vanfleteren.jazygit.gh.model.Verdict;
-import net.vanfleteren.jazygit.state.AppError;
-import net.vanfleteren.jazygit.state.AppError.CannotReview.Why;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
@@ -131,7 +131,7 @@ class VerdictDialogTest {
     @Test
     void whyItCannotBeSentShowsUnderTheText() throws Exception {
         model = model.openPopup(REVIEW.withVerdict(Verdict.REQUEST_CHANGES))
-                .fail(new AppError.CannotReview(Why.NO_REASON));
+                .fail(new GitHubError.CannotReview(Why.NO_REASON));
         try (ToolkitTestRunner runner = start()) {
             String screen = RenderedText.ofLarge(runner, this::view);
 

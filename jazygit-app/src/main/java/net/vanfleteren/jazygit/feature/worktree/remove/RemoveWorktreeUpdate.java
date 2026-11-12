@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.worktree.remove;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.worktree.WorktreeError;
 import net.vanfleteren.jazygit.feature.worktree.remove.RemoveWorktreeMsg.*;
 import net.vanfleteren.jazygit.git.model.Worktree;
 import net.vanfleteren.jazygit.state.*;
@@ -55,10 +56,10 @@ public final class RemoveWorktreeUpdate {
      */
     public static Option<AppError> notRemovable(Worktree worktree) {
         return worktree.main()
-                ? Option.of(new AppError.MainWorktreeNotRemovable(worktree.name()))
+                ? Option.of(new WorktreeError.MainWorktreeNotRemovable(worktree.name()))
                 : worktree.current()
-                        ? Option.of(new AppError.ShownWorktreeNotRemovable(worktree.name()))
-                        : worktree.locked().map(reason -> new AppError.WorktreeLocked(worktree.name(), reason));
+                        ? Option.of(new WorktreeError.ShownWorktreeNotRemovable(worktree.name()))
+                        : worktree.locked().map(reason -> new WorktreeError.WorktreeLocked(worktree.name(), reason));
     }
 
     /**

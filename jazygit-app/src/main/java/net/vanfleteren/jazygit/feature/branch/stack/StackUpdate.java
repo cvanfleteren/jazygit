@@ -9,6 +9,7 @@ import java.time.Duration;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
+import net.vanfleteren.jazygit.feature.branch.BranchError;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutMsg;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutRequest;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutUpdate;
@@ -232,12 +233,12 @@ public final class StackUpdate {
      * when the branch follows it.
      */
     private static Next behindRemote(Model model, int stack, BranchName branch, RemoteBranch remote) {
-        return Next.of(model.fail(new AppError.StackNotRebased(
+        return Next.of(model.fail(new BranchError.StackNotRebased(
                 stack,
                 branch.value(),
                 model.repo().branch(branch).flatMap(Branch::remoteUpstream).contains(remote)
-                        ? AppError.StackRefusal.BEHIND_REMOTE
-                        : AppError.StackRefusal.BEHIND_UNFOLLOWED)));
+                        ? BranchError.StackRefusal.BEHIND_REMOTE
+                        : BranchError.StackRefusal.BEHIND_UNFOLLOWED)));
     }
 
     /**
@@ -315,7 +316,7 @@ public final class StackUpdate {
                                                 List.empty(),
                                                 Option.of(pullRequest.number()),
                                                 StackCheckout.status(model, stack)))
-                                : Next.of(model.fail(new AppError.OtherRepository(
+                                : Next.of(model.fail(new BranchError.OtherRepository(
                                         pullRequest.repository() + "#" + pullRequest.number()))));
     }
 
@@ -352,7 +353,7 @@ public final class StackUpdate {
         return StackPush.of(model, stack)
                 .fold(
                         refused -> Next.of(model.fail(
-                                new AppError.StackNotPushed(stack.number(), refused.branch(), refused.why()))),
+                                new BranchError.StackNotPushed(stack.number(), refused.branch(), refused.why()))),
                         push -> Update.start(model.clearError(), new StackRebaseCmd.PushStack(push)));
     }
 

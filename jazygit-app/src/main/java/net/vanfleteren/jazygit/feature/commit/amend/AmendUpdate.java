@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.feature.commit.amend;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.commit.CommitError;
 import net.vanfleteren.jazygit.feature.commit.amend.AmendMsg.Confirmed;
 import net.vanfleteren.jazygit.feature.commit.amend.AmendMsg.Requested;
 import net.vanfleteren.jazygit.feature.commit.amend.AmendMsg.StageAllConfirmed;
@@ -10,7 +11,6 @@ import net.vanfleteren.jazygit.feature.commit.amend.AmendTarget.Older;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.Sha;
-import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -42,7 +42,7 @@ public final class AmendUpdate {
                         () -> ask(model, new LastCommit()),
                         older -> model.commit(older)
                                 .map(commit -> commit.isMerge()
-                                        ? Next.of(model.fail(new AppError.MergeNotAmendable()))
+                                        ? Next.of(model.fail(new CommitError.MergeNotAmendable()))
                                         : ask(model, new Older(older)))
                                 .getOrElse(() -> Next.of(model)));
     }
@@ -51,7 +51,7 @@ public final class AmendUpdate {
         return Update.withFiles(
                 model,
                 files -> files.isEmpty()
-                        ? Next.of(model.fail(new AppError.NothingToAmend()))
+                        ? Next.of(model.fail(new CommitError.NothingToAmend()))
                         : Update.ask(model, new AmendPopup(target)));
     }
 

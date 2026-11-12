@@ -6,7 +6,6 @@ import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
-import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -48,7 +47,7 @@ public final class CherryPickUpdate {
         return model.repoView()
                 .cherryPick()
                 .map(commit -> model.repo().commit(commit.sha()).isDefined()
-                        ? Next.of(model.fail(new AppError.AlreadyPicked(commit.sha())))
+                        ? Next.of(model.fail(new CherryPickError.AlreadyPicked(commit.sha())))
                         : Update.ask(model, popup(model, commit)))
                 .getOrElse(() -> Next.of(model));
     }

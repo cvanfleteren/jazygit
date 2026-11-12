@@ -5,13 +5,13 @@ import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.branch.BranchError.StackRefusal;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.RemoteName;
-import net.vanfleteren.jazygit.state.AppError.StackRefusal;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.github.FromGitHub;
 

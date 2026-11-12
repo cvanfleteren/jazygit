@@ -10,6 +10,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.time.Instant;
+import net.vanfleteren.jazygit.feature.branch.BranchError;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutCmd;
 import net.vanfleteren.jazygit.feature.branch.stack.StackCheckout.Kind;
 import net.vanfleteren.jazygit.feature.branch.stack.StackCheckout.Landing;
@@ -35,7 +36,6 @@ import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Tracking;
 import net.vanfleteren.jazygit.git.model.Upstream;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
-import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
@@ -455,7 +455,8 @@ class CheckOutStackTest {
                 .model();
 
         assertTrue(other.popup(StackPopups.Menu.class).isEmpty());
-        assertInstanceOf(AppError.OtherRepository.class, other.outcome().error().get());
+        assertInstanceOf(
+                BranchError.OtherRepository.class, other.outcome().error().get());
         assertTrue(unstacked.popup().isEmpty());
     }
 }

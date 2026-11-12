@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.branch.rename;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.branch.BranchError;
 import net.vanfleteren.jazygit.feature.branch.rename.RenameBranchMsg.Confirmed;
 import net.vanfleteren.jazygit.feature.branch.rename.RenameBranchMsg.LocallyChosen;
 import net.vanfleteren.jazygit.feature.branch.rename.RenameBranchMsg.Requested;
@@ -8,7 +9,6 @@ import net.vanfleteren.jazygit.feature.branch.rename.RenameBranchMsg.WithUpstrea
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
-import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -42,7 +42,7 @@ public final class RenameBranchUpdate {
         return model.popup(RenameUpstreamPopup.class)
                 .filter(popup -> !renamableUpstream(model, popup.branch()).contains(popup.upstream()))
                 .map(popup -> Next.of(model.withoutPopup(RenameUpstreamPopup.class)
-                        .fail(new AppError.UpstreamChanged(
+                        .fail(new BranchError.UpstreamChanged(
                                 popup.branch(), popup.upstream().shortName()))))
                 .getOrElse(() -> Update.confirm(
                         model,

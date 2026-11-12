@@ -5,10 +5,11 @@ import static net.vanfleteren.jazygit.state.TestModels.loaded;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.branch.BranchError;
 import net.vanfleteren.jazygit.feature.branch.pull.PullCmd;
 import net.vanfleteren.jazygit.feature.branch.push.SetUpstreamPopup;
+import net.vanfleteren.jazygit.feature.commit.CommitError;
 import net.vanfleteren.jazygit.git.model.BranchName;
-import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.popup.ErrorPopup;
@@ -30,30 +31,32 @@ class ErrorPopupTest {
 
     @Test
     void aRefusedRequestOpensTheErrorPopup() {
-        Model failed = loaded().fail(new AppError.NothingToCommit());
+        Model failed = loaded().fail(new CommitError.NothingToCommit());
 
-        assertEquals(Option.of(new ErrorPopup(new AppError.NothingToCommit())), failed.popup());
+        assertEquals(Option.of(new ErrorPopup(new CommitError.NothingToCommit())), failed.popup());
     }
 
     @Test
     void anOpenPopupIsNotReplacedByTheErrorPopup() {
         Model failed = loaded().openPopup(new SetUpstreamPopup(new BranchName("feature")))
-                .fail(new AppError.InvalidUpstream("x"));
+                .fail(new BranchError.InvalidUpstream("x"));
 
         assertEquals(Option.of(new SetUpstreamPopup(new BranchName("feature"))), failed.popup());
         assertEquals(
-                Option.of(new AppError.InvalidUpstream("x")), failed.outcome().error());
+                Option.of(new BranchError.InvalidUpstream("x")),
+                failed.outcome().error());
     }
 
     @Test
     void dismissingClosesThePopupAndKeepsTheErrorInTheCommandLog() {
-        Model failed = loaded().fail(new AppError.NothingToCommit());
+        Model failed = loaded().fail(new CommitError.NothingToCommit());
 
         Model dismissed =
                 Update.update(failed, new PopupMsg.Dismissed(ErrorPopup.class)).model();
 
         assertEquals(Option.none(), dismissed.popup());
         assertEquals(
-                Option.of(new AppError.NothingToCommit()), dismissed.outcome().error());
+                Option.of(new CommitError.NothingToCommit()),
+                dismissed.outcome().error());
     }
 }

@@ -11,6 +11,8 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.time.Instant;
+import net.vanfleteren.jazygit.feature.branch.BranchError;
+import net.vanfleteren.jazygit.feature.branch.BranchError.StackRefusal;
 import net.vanfleteren.jazygit.feature.commit.create.CommitPopup;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
@@ -42,7 +44,6 @@ import net.vanfleteren.jazygit.git.model.Tracking;
 import net.vanfleteren.jazygit.git.model.Upstream;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.AppError;
-import net.vanfleteren.jazygit.state.AppError.StackRefusal;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
@@ -117,7 +118,7 @@ class RebaseStackTest {
     }
 
     private static Option<StackRefusal> refusal(Model model, List<Entry> entries) {
-        return plan(model, entries).swap().toOption().map(error -> ((AppError.StackNotRebased) error).why());
+        return plan(model, entries).swap().toOption().map(error -> ((BranchError.StackNotRebased) error).why());
     }
 
     @Test

@@ -1,13 +1,13 @@
 package net.vanfleteren.jazygit.feature.branch.push;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.branch.BranchError;
 import net.vanfleteren.jazygit.feature.branch.push.PushCmd.Push;
 import net.vanfleteren.jazygit.feature.branch.push.PushCmd.PushSettingUpstream;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
-import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -68,7 +68,7 @@ public final class PushUpdate {
                         .map(upstream -> diverged(known)
                                 ? Update.ask(model, new ForcePushPopup(branch))
                                 : sameName(known) && known.behind() > 0
-                                        ? Next.of(model.fail(new AppError.BehindUpstream(branch)))
+                                        ? Next.of(model.fail(new BranchError.BehindUpstream(branch)))
                                         : Update.start(
                                                 model.clearError(), new Push(branch, upstream, PushMode.FAST_FORWARD)))
                         .getOrElse(() -> Update.ask(model, new SetUpstreamPopup(branch))))
@@ -92,7 +92,7 @@ public final class PushUpdate {
     private static Next upstreamConfirmed(Model model, String text) {
         Option<RemoteBranch> upstream = RemoteBranch.parse(text);
         return upstream.isEmpty()
-                ? Next.of(model.fail(new AppError.InvalidUpstream(text)))
+                ? Next.of(model.fail(new BranchError.InvalidUpstream(text)))
                 : Update.confirm(
                         model,
                         SetUpstreamPopup.class,

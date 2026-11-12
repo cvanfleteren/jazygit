@@ -8,7 +8,9 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.time.Instant;
+import net.vanfleteren.jazygit.feature.branch.BranchError;
 import net.vanfleteren.jazygit.feature.branch.push.PushCmd;
+import net.vanfleteren.jazygit.feature.worktree.WorktreeError;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
@@ -25,7 +27,6 @@ import net.vanfleteren.jazygit.git.model.RepoStatus;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Tracking;
 import net.vanfleteren.jazygit.git.model.Upstream;
-import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
@@ -156,7 +157,7 @@ class MoveUpdateTest {
 
         assertEquals(List.of(), next.cmds());
         assertEquals(
-                Option.of(new AppError.NoBranchCheckedOut()),
+                Option.of(new BranchError.NoBranchCheckedOut()),
                 next.model().outcome().error());
     }
 
@@ -212,7 +213,7 @@ class MoveUpdateTest {
         assertEquals(Option.none(), refused.popup(MoveTargetPopup.class));
         assertEquals(Option.none(), refused.popup(MoveNamePopup.class));
         assertEquals(
-                Option.of(new AppError.MovedThroughMerge(MIDDLE.sha(), FEATURE, TIP.sha(), ROOT.sha())),
+                Option.of(new BranchError.MovedThroughMerge(MIDDLE.sha(), FEATURE, TIP.sha(), ROOT.sha())),
                 refused.outcome().error());
     }
 
@@ -246,7 +247,7 @@ class MoveUpdateTest {
 
         assertEquals(List.of(), next.cmds());
         assertEquals(
-                Option.of(new AppError.CheckedOutElsewhere(MoveCmd.MOVE, ELSEWHERE, "/elsewhere")),
+                Option.of(new WorktreeError.CheckedOutElsewhere(MoveCmd.MOVE, ELSEWHERE, "/elsewhere")),
                 next.model().outcome().error());
     }
 
@@ -256,7 +257,7 @@ class MoveUpdateTest {
 
         assertEquals(List.of(), next.cmds());
         assertEquals(
-                Option.of(new AppError.ChangesBeforeMove(new BranchRef.Local(MAIN))),
+                Option.of(new BranchError.ChangesBeforeMove(new BranchRef.Local(MAIN))),
                 next.model().outcome().error());
     }
 
@@ -266,7 +267,7 @@ class MoveUpdateTest {
 
         assertEquals(List.of(), next.cmds());
         assertEquals(
-                Option.of(new AppError.ChangesBeforeMove(new BranchRef.Remote(ORIGIN_MAIN))),
+                Option.of(new BranchError.ChangesBeforeMove(new BranchRef.Remote(ORIGIN_MAIN))),
                 next.model().outcome().error());
     }
 

@@ -24,6 +24,7 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
+import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Msg;
@@ -143,7 +144,7 @@ class ArchitectureTest {
                     "..jazygit.feature..", "..jazygit.ui..", "..jazygit.keys..", "..jazygit.i18n..", "dev.tamboui..");
     // The updates, the messages, the popups and the model, which are pure; nested classes included.
     private static final String PURE =
-            ".*\\.(\\w*(Update|Msg|Popup)|Model|Preview|Loadable|AppError|Operation|LogEntry|CommandLog)(\\$.*)?";
+            ".*\\.(\\w*(Update|Msg|Popup)|Model|Preview|Loadable|AppError|Phrase|Operation|LogEntry|CommandLog)(\\$.*)?";
     /**
      * The updates, the messages they handle, the popups and the model are pure: running git or gh is left to
      * the commands, showing anything to the views. The commands that ran are only passed on as data.
@@ -190,6 +191,46 @@ class ArchitectureTest {
             .haveSimpleNameEndingWith("Msg")
             .should(ArchCondition.from(DescribedPredicate.describe(
                     "be sealed", type -> type.reflect().isSealed())));
+    /**
+     * The errors of a feature are a sealed set of its own, as its messages are: the core only knows that they say
+     * themselves as a phrase, so adding one changes nothing outside the feature.
+     */
+    @ArchTest
+    static final ArchRule featureErrorsAreSealed = classes()
+            .that()
+            .areInterfaces()
+            .and()
+            .areAssignableTo(AppError.class)
+            .and()
+            .doNotBelongToAnyOf(AppError.class)
+            .should(ArchCondition.from(DescribedPredicate.describe(
+                    "be sealed", type -> type.reflect().isSealed())));
+    /**
+     * A feature's errors are pure values, as the core's are: saying themselves runs nothing, and reads neither the
+     * clock nor chance.
+     */
+    @ArchTest
+    static final ArchRule featureErrorsArePure = noClasses()
+            .that()
+            .areAssignableTo(AppError.class)
+            .should()
+            .dependOnClassesThat(effects())
+            .orShould()
+            .accessTargetWhere(tellsTheTimeOrChance());
+    /**
+     * A feature's error is one of its sealed set: none of a feature implements {@link AppError} itself.
+     */
+    @ArchTest
+    static final ArchRule featureErrorsGoThroughTheirSet = classes()
+            .that()
+            .resideInAPackage("..jazygit.feature..")
+            .and()
+            .areNotInterfaces()
+            .and()
+            .areAssignableTo(AppError.class)
+            .should(ArchCondition.from(DescribedPredicate.describe(
+                    "implement AppError through the sealed error interface of their feature",
+                    type -> type.getRawInterfaces().stream().noneMatch(face -> face.isEquivalentTo(AppError.class)))));
     /**
      * An update is only functions: a class that cannot be made, of static methods and constants.
      */

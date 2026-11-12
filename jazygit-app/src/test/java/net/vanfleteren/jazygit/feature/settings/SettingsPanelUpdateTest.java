@@ -280,7 +280,8 @@ class SettingsPanelUpdateTest {
         assertEquals(TestModels.PLAIN.settings(), next.model().preferences().settings());
         assertEquals(List.empty(), next.cmds());
         assertEquals(
-                Option.of(new ErrorPopup(new AppError.GhExecutableUnusable(Option.of("/nowhere/gh"), failure))),
+                Option.of(
+                        new ErrorPopup(new SettingsPanelError.GhExecutableUnusable(Option.of("/nowhere/gh"), failure))),
                 next.model().popup(ErrorPopup.class));
     }
 

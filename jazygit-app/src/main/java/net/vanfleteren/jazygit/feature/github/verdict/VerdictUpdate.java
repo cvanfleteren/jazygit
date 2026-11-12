@@ -7,6 +7,8 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.util.function.Function;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesCmd.LoadReviewRemarks;
+import net.vanfleteren.jazygit.feature.github.GitHubError;
+import net.vanfleteren.jazygit.feature.github.GitHubError.CannotReview.Why;
 import net.vanfleteren.jazygit.feature.github.comment.CommentCmd;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestUpdate;
@@ -18,7 +20,6 @@ import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.gh.model.Verdict;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.AppError;
-import net.vanfleteren.jazygit.state.AppError.CannotReview.Why;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
@@ -96,7 +97,7 @@ public final class VerdictUpdate {
     public static Model followed(Model model, VerdictPopup was, VerdictPopup now) {
         boolean settled = was.pending()
                 && !now.pending()
-                && model.outcome().error().contains(new AppError.CannotReview(Why.PENDING_REVIEW));
+                && model.outcome().error().contains(new GitHubError.CannotReview(Why.PENDING_REVIEW));
         return (settled ? model.clearError() : model).openPopup(now);
     }
 
@@ -213,6 +214,6 @@ public final class VerdictUpdate {
     }
 
     private static Model refused(Model model, Why why) {
-        return model.fail(new AppError.CannotReview(why));
+        return model.fail(new GitHubError.CannotReview(why));
     }
 }

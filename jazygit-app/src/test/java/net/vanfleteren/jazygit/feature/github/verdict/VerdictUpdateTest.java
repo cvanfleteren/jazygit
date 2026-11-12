@@ -14,6 +14,8 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesCmd.LoadReviewRemarks;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesMsg;
+import net.vanfleteren.jazygit.feature.github.GitHubError;
+import net.vanfleteren.jazygit.feature.github.GitHubError.CannotReview.Why;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestCmd.LoadPullRequestDetails;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.feature.github.verdict.VerdictCmd.EditReview;
@@ -37,7 +39,6 @@ import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.AppError;
-import net.vanfleteren.jazygit.state.AppError.CannotReview.Why;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -147,9 +148,9 @@ class VerdictUpdateTest {
         Next confirmed = Update.update(asked, new VerdictMsg.Confirmed());
 
         assertTrue(asked.popup(VerdictPopup.class).isDefined());
-        assertEquals(Option.of(new AppError.CannotReview(Why.PENDING_REVIEW)), error(asked));
+        assertEquals(Option.of(new GitHubError.CannotReview(Why.PENDING_REVIEW)), error(asked));
         assertEquals(List.empty(), confirmed.cmds());
-        assertEquals(Option.of(new AppError.CannotReview(Why.PENDING_REVIEW)), error(confirmed.model()));
+        assertEquals(Option.of(new GitHubError.CannotReview(Why.PENDING_REVIEW)), error(confirmed.model()));
     }
 
     @Test
@@ -179,7 +180,7 @@ class VerdictUpdateTest {
         Next typed = Update.update(reviewing(Verdict.REQUEST_CHANGES, "  Rename it\n"), new VerdictMsg.Confirmed());
 
         assertEquals(List.empty(), blank.cmds());
-        assertEquals(Option.of(new AppError.CannotReview(Why.NO_REASON)), error(blank.model()));
+        assertEquals(Option.of(new GitHubError.CannotReview(Why.NO_REASON)), error(blank.model()));
         assertEquals(Option.of(false), blank.model().popup(VerdictPopup.class).map(VerdictPopup::sending));
         assertEquals(List.of(new SubmitReview(42, "PR_42", Verdict.REQUEST_CHANGES, "  Rename it\n")), typed.cmds());
     }
@@ -286,12 +287,12 @@ class VerdictUpdateTest {
 
     @Test
     void anotherErrorStaysWhenThePopupFollowsTheDialog() {
-        Model failed = reviewing(Verdict.REQUEST_CHANGES, "").fail(new AppError.CannotReview(Why.NO_REASON));
+        Model failed = reviewing(Verdict.REQUEST_CHANGES, "").fail(new GitHubError.CannotReview(Why.NO_REASON));
         VerdictPopup was = failed.popup(VerdictPopup.class).get();
 
         Model followed = VerdictUpdate.followed(failed, was, was.following(SHOWN));
 
-        assertEquals(Option.of(new AppError.CannotReview(Why.NO_REASON)), error(followed));
+        assertEquals(Option.of(new GitHubError.CannotReview(Why.NO_REASON)), error(followed));
     }
 
     @Test
@@ -309,25 +310,25 @@ class VerdictUpdateTest {
     @Test
     void theDiffSaysWhyItCannotBeReviewed() {
         assertEquals(
-                Option.of(new AppError.CannotReview(Why.OWN_PULL_REQUEST)),
+                Option.of(new GitHubError.CannotReview(Why.OWN_PULL_REQUEST)),
                 error(Update.update(
                                 diff(remarks(State.OPEN, false, new Reviewing("PR_7", true, false))),
                                 new VerdictMsg.DiffAsked())
                         .model()));
         assertEquals(
-                Option.of(new AppError.CannotReview(Why.PENDING_REVIEW)),
+                Option.of(new GitHubError.CannotReview(Why.PENDING_REVIEW)),
                 error(Update.update(
                                 diff(remarks(State.OPEN, false, new Reviewing("PR_7", false, true))),
                                 new VerdictMsg.DiffAsked())
                         .model()));
         assertEquals(
-                Option.of(new AppError.CannotReview(Why.NOT_OPEN)),
+                Option.of(new GitHubError.CannotReview(Why.NOT_OPEN)),
                 error(Update.update(
                                 diff(remarks(State.CLOSED, false, new Reviewing("PR_7", false, false))),
                                 new VerdictMsg.DiffAsked())
                         .model()));
         assertEquals(
-                Option.of(new AppError.CannotReview(Why.NOT_READ)),
+                Option.of(new GitHubError.CannotReview(Why.NOT_READ)),
                 error(Update.update(loaded(), new VerdictMsg.DiffAsked()).model()));
     }
 
