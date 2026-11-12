@@ -61,7 +61,7 @@ public final class BranchChecksUpdate {
     }
 
     private static Next startRuns(Next next, LoadBranchCheckRuns read) {
-        return new Next(next.model(), next.cmds().append(read));
+        return next.and(read);
     }
 
     /**

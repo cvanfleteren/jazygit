@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.feature.copy;
 
-import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -20,7 +19,7 @@ public final class CopyUpdate {
     public static Next update(Model model, CopyMsg msg) {
         return switch (msg) {
             case CopyMsg.Asked(DiffCursorAt at) ->
-                copy(model, at).map(cmd -> new Next(model, List.of(cmd))).getOrElse(() -> Next.of(model));
+                copy(model, at).map(cmd -> Next.of(model, cmd)).getOrElse(() -> Next.of(model));
             case CopyMsg.Done(Notice notice) -> Next.of(model.inform(notice));
         };
     }

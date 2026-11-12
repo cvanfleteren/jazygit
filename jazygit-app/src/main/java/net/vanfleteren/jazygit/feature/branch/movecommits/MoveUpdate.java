@@ -224,11 +224,8 @@ public final class MoveUpdate {
     private static Next moved(Model model, MoveCmd.Move cmd, List<ExecutedCommand> commands) {
         Next checkedOut = new CheckoutMsg.CheckedOut(cmd, commands).apply(model);
         return cmd.forcePush()
-                .map(upstream -> {
-                    Next pushing = Update.start(
-                            checkedOut.model(), new PushCmd.Push(cmd.from(), upstream, PushMode.FORCE_WITH_LEASE));
-                    return new Next(pushing.model(), checkedOut.cmds().appendAll(pushing.cmds()));
-                })
+                .map(upstream -> checkedOut.then(
+                        m -> Update.start(m, new PushCmd.Push(cmd.from(), upstream, PushMode.FORCE_WITH_LEASE))))
                 .getOrElse(checkedOut);
     }
 }

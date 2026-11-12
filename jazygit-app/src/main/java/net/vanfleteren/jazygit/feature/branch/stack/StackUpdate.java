@@ -30,6 +30,8 @@ import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.git.model.StackLayer;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Failure;
@@ -58,145 +60,234 @@ public final class StackUpdate {
 
     public static Next update(Model model, StackMsg msg) {
         return switch (msg) {
-            case Toggled(int stack) ->
-                Next.of(model.mapRepoView(repoView -> repoView.withClosedStacks(
-                        repoView.closedStacks().contains(stack)
-                                ? repoView.closedStacks().remove(stack)
-                                : repoView.closedStacks().add(stack))));
-            case StackMsg.ViewToggled() ->
-                Next.of(model.mapRepoView(repoView -> repoView.withUnstacked(!repoView.unstacked())));
+            case Toggled(int stack) -> toggled(model, stack);
+            case StackMsg.ViewToggled() -> viewToggled(model);
             case MenuRequested(Option<BranchName> branch, Option<Integer> stack) -> menu(model, branch, stack);
             case MakeChosen() -> make(model);
             case AddChosen() -> add(model);
             case StackOnChosen() -> stackOn(model);
             case TargetChosen(StackPopups.Target target) -> stackedOn(model, target);
-            case UnstackChosen() ->
-                chosen(
-                        model,
-                        menu -> menu.canUnstack()
-                                ? Update.ask(
-                                        model.withoutPopup(StackPopups.Menu.class),
-                                        new StackPopups.Unstack(menu.stack().get()))
-                                : Next.of(model));
-            case BottomChosen(int row) ->
-                picked(
-                        model,
-                        pick -> pick.choice()
-                                .withBottom(row)
-                                .map(pick::withChoice)
-                                .getOrElse(() -> pick.withRefused(
-                                        pick.addTo().isDefined()
-                                                ? "dialog.addToStack.bottomFixed"
-                                                : "dialog.makeStack.bottomAbove")));
-            case TopChosen(int row) ->
-                picked(
-                        model,
-                        pick -> pick.choice()
-                                .withTop(row)
-                                .map(pick::withChoice)
-                                .getOrElse(() -> pick.withRefused("dialog.makeStack.topBelow")));
+            case UnstackChosen() -> unstack(model);
+            case BottomChosen(int row) -> bottomChosen(model, row);
+            case TopChosen(int row) -> topChosen(model, row);
             case PickConfirmed() -> confirmed(model);
-            // Linked as asked, and rebased once GitHub lists the stack (ADR 74).
-            case StackMsg.LinkAndRebaseChosen() ->
-                model.popup(StackPopups.Confirm.class)
-                        .filter(confirm -> !confirm.diverged().isEmpty())
-                        .map(confirm -> Update.start(
-                                model.withoutPopup(StackPopups.Confirm.class).clearError(),
-                                confirm.cmd().rebasing()))
-                        .getOrElse(() -> Next.of(model));
-            case Changed(StackCmd cmd, List<ExecutedCommand> commands) -> {
-                Next done = OperationUpdate.succeeded(model, cmd, commands);
-                yield new Next(
-                        done.model()
-                                .mapGitHub(gitHub -> gitHub.withStackChange(
-                                        Option.of(cmd.change(model.now().plus(SETTLING))))),
-                        done.cmds());
-            }
-            // What it changed before it failed shows: the pull requests are read again.
-            case StackMsg.ChangeFailed(StackCmd cmd, Failure failure) -> {
-                Next failed = OperationUpdate.update(model, new OperationMsg.Failed(cmd, failure));
-                yield failure.commands().isEmpty() ? failed : PullRequestsUpdate.loadAnyway(failed);
-            }
+            case StackMsg.LinkAndRebaseChosen() -> linkAndRebase(model);
+            case Changed(StackCmd cmd, List<ExecutedCommand> commands) -> changed(model, cmd, commands);
+            case StackMsg.ChangeFailed(StackCmd cmd, Failure failure) -> changeFailed(model, cmd, failure);
             case Tick() -> settling(model);
-            case StackMsg.RebaseChosen() ->
-                chosen(
-                        model,
-                        menu -> menu.stack()
-                                .map(stack -> StackRebase.of(model, stack)
-                                        .fold(
-                                                refused -> Next.of(model.withoutPopup(StackPopups.Menu.class)
-                                                        .fail(refused)),
-                                                rebase -> Next.of(
-                                                        model.withoutPopup(StackPopups.Menu.class)
-                                                                .clearError(),
-                                                        new StackRebaseCmd.ReadStack(rebase))))
-                                .getOrElse(() -> Next.of(model)));
-            case StackMsg.PushChosen() ->
-                chosen(
-                        model,
-                        menu -> menu.stack()
-                                .map(stack -> pushed(model.withoutPopup(StackPopups.Menu.class), stack))
-                                .getOrElse(() -> Next.of(model)));
-            // Pushed as well unless asked not to: GitHub sees the stack rebased only once it is (ADR 74). The menu is
-            // closed by now, so a dialog that is open came up since, as one the user types in while a linked stack
-            // settles: it stays, and the user is told to rebase from the menu.
-            case StackMsg.StackRead(StackRebase rebase, var commits) ->
-                model.popup().isDefined()
-                        ? Next.of(model.inform(new Notice.StackNotAsked(rebase.stack())))
-                        : Update.ask(
-                                model,
-                                new StackPopups.RebaseConfirm(new StackRebaseCmd.RebaseStack(rebase, commits, true)));
-            case StackMsg.StackReadFailed(int stack, var failure) ->
-                Next.of(model.fail(
-                        new AppError.OperationFailed(StackRebaseCmd.REBASE_STACK, Option.of("#" + stack), failure)));
-            // A pull brings in what is there only when the branch follows it.
+            case StackMsg.RebaseChosen() -> rebaseChosen(model);
+            case StackMsg.PushChosen() -> pushChosen(model);
+            case StackMsg.StackRead(StackRebase rebase, var commits) -> stackRead(model, rebase, commits);
+            case StackMsg.StackReadFailed(int stack, var failure) -> stackReadFailed(model, stack, failure);
             case StackMsg.StackBehindRemote(int stack, BranchName branch, var remote) ->
-                Next.of(model.fail(new AppError.StackNotRebased(
-                        stack,
-                        branch.value(),
-                        model.repo()
-                                        .branch(branch)
-                                        .flatMap(Branch::remoteUpstream)
-                                        .contains(remote)
-                                ? AppError.StackRefusal.BEHIND_REMOTE
-                                : AppError.StackRefusal.BEHIND_UNFOLLOWED)));
-            case StackMsg.RebaseLocallyChosen() ->
-                Update.confirm(
-                        model,
-                        StackPopups.RebaseConfirm.class,
-                        popup -> Option.of(popup.cmd().locally()));
+                behindRemote(model, stack, branch, remote);
+            case StackMsg.RebaseLocallyChosen() -> rebaseLocally(model);
             case StackMsg.PullRequestMenuRequested(PullRequestSummary pullRequest) ->
                 pullRequestMenu(model, pullRequest);
-            case StackMsg.CheckoutChosen() ->
-                chosen(
-                        model,
-                        menu -> menu.canCheckOut()
-                                ? Update.start(
-                                        model.withoutPopup(StackPopups.Menu.class)
-                                                .clearError(),
-                                        new StackCheckoutCmd.Fetch(
-                                                menu.stack().get(),
-                                                StackCheckout.remote(
-                                                        model, menu.stack().get()),
-                                                menu.on()))
-                                : Next.of(model));
-            // Asked about once fetched; not in the place of a dialog opened meanwhile.
-            case StackMsg.StackFetched(var cmd, var commands, StackCheckout checkout) -> {
-                Next done = OperationUpdate.succeeded(model, cmd, commands);
-                yield new Next(done.model().openPopupIfFree(new StackPopups.Checkout(checkout)), done.cmds());
-            }
-            case StackMsg.CheckoutConfirmed(StackCheckout.Landing landing) ->
-                model.popup(StackPopups.Checkout.class)
-                        .map(StackPopups.Checkout::checkout)
-                        .filter(StackCheckout::startable)
-                        .filter(checkout -> landing == StackCheckout.Landing.STAY
-                                || checkout.target(landing).isDefined())
-                        .map(checkout -> Update.start(
-                                model.withoutPopup(StackPopups.Checkout.class).clearError(),
-                                new StackCheckoutCmd.CatchUp(checkout, landing)))
-                        .getOrElse(() -> Next.of(model));
+            case StackMsg.CheckoutChosen() -> checkoutChosen(model);
+            case StackMsg.StackFetched(var cmd, var commands, StackCheckout checkout) ->
+                fetched(model, cmd, commands, checkout);
+            case StackMsg.CheckoutConfirmed(StackCheckout.Landing landing) -> checkoutConfirmed(model, landing);
             case StackMsg.CaughtUp(var cmd, var commands) -> caughtUp(model, cmd, commands);
         };
+    }
+
+    /**
+     * Opens stack {@code stack} in the branches pane, or closes it.
+     */
+    private static Next toggled(Model model, int stack) {
+        return Next.of(model.mapRepoView(repoView -> repoView.withClosedStacks(
+                repoView.closedStacks().contains(stack)
+                        ? repoView.closedStacks().remove(stack)
+                        : repoView.closedStacks().add(stack))));
+    }
+
+    /**
+     * Shows the stacks in the branches pane, or lists their branches as any other.
+     */
+    private static Next viewToggled(Model model) {
+        return Next.of(model.mapRepoView(repoView -> repoView.withUnstacked(!repoView.unstacked())));
+    }
+
+    /**
+     * Asks about taking the stack of the menu apart, where that applies.
+     */
+    private static Next unstack(Model model) {
+        return chosen(
+                model,
+                menu -> menu.canUnstack()
+                        ? Update.ask(
+                                model.withoutPopup(StackPopups.Menu.class),
+                                new StackPopups.Unstack(menu.stack().get()))
+                        : Next.of(model));
+    }
+
+    /**
+     * Makes row {@code row} the bottom of the stack being made, or says why it cannot be.
+     */
+    private static Next bottomChosen(Model model, int row) {
+        return picked(
+                model,
+                pick -> pick.choice()
+                        .withBottom(row)
+                        .map(pick::withChoice)
+                        .getOrElse(() -> pick.withRefused(
+                                pick.addTo().isDefined()
+                                        ? "dialog.addToStack.bottomFixed"
+                                        : "dialog.makeStack.bottomAbove")));
+    }
+
+    /**
+     * Makes row {@code row} the top of the stack being made, or says why it cannot be.
+     */
+    private static Next topChosen(Model model, int row) {
+        return picked(
+                model,
+                pick -> pick.choice()
+                        .withTop(row)
+                        .map(pick::withChoice)
+                        .getOrElse(() -> pick.withRefused("dialog.makeStack.topBelow")));
+    }
+
+    /**
+     * Linked as asked, and rebased once GitHub lists the stack (ADR 74).
+     */
+    private static Next linkAndRebase(Model model) {
+        return model.popup(StackPopups.Confirm.class)
+                .filter(confirm -> !confirm.diverged().isEmpty())
+                .map(confirm -> Update.start(
+                        model.withoutPopup(StackPopups.Confirm.class).clearError(),
+                        confirm.cmd().rebasing()))
+                .getOrElse(() -> Next.of(model));
+    }
+
+    /**
+     * Once {@code cmd} changed the stacks: the pull requests are read again until they show the change.
+     */
+    private static Next changed(Model model, StackCmd cmd, List<ExecutedCommand> commands) {
+        return OperationUpdate.succeeded(model, cmd, commands)
+                .map(done -> done.mapGitHub(gitHub ->
+                        gitHub.withStackChange(Option.of(cmd.change(model.now().plus(SETTLING))))));
+    }
+
+    /**
+     * What it changed before it failed shows: the pull requests are read again.
+     */
+    private static Next changeFailed(Model model, StackCmd cmd, Failure failure) {
+        Next failed = OperationUpdate.update(model, new OperationMsg.Failed(cmd, failure));
+        return failure.commands().isEmpty() ? failed : PullRequestsUpdate.loadAnyway(failed);
+    }
+
+    /**
+     * Reads the commits of the stack of the menu, to ask about rebasing it; or says why it is not rebased.
+     */
+    private static Next rebaseChosen(Model model) {
+        return chosen(
+                model,
+                menu -> menu.stack()
+                        .map(stack -> StackRebase.of(model, stack)
+                                .fold(
+                                        refused -> Next.of(model.withoutPopup(StackPopups.Menu.class)
+                                                .fail(refused)),
+                                        rebase -> Next.of(
+                                                model.withoutPopup(StackPopups.Menu.class)
+                                                        .clearError(),
+                                                new StackRebaseCmd.ReadStack(rebase))))
+                        .getOrElse(() -> Next.of(model)));
+    }
+
+    /**
+     * Pushes the stack of the menu.
+     */
+    private static Next pushChosen(Model model) {
+        return chosen(
+                model,
+                menu -> menu.stack()
+                        .map(stack -> pushed(model.withoutPopup(StackPopups.Menu.class), stack))
+                        .getOrElse(() -> Next.of(model)));
+    }
+
+    /**
+     * Pushed as well unless asked not to: GitHub sees the stack rebased only once it is (ADR 74). The menu is closed by
+     * now, so a dialog that is open came up since, as one the user types in while a linked stack settles: it stays,
+     * and the user is told to rebase from the menu.
+     */
+    private static Next stackRead(Model model, StackRebase rebase, List<StackLayer.Commits> commits) {
+        return model.popup().isDefined()
+                ? Next.of(model.inform(new Notice.StackNotAsked(rebase.stack())))
+                : Update.ask(
+                        model, new StackPopups.RebaseConfirm(new StackRebaseCmd.RebaseStack(rebase, commits, true)));
+    }
+
+    /**
+     * Says the commits of stack {@code stack} could not be read.
+     */
+    private static Next stackReadFailed(Model model, int stack, Failure failure) {
+        return Next.of(
+                model.fail(new AppError.OperationFailed(StackRebaseCmd.REBASE_STACK, Option.of("#" + stack), failure)));
+    }
+
+    /**
+     * Says {@code branch} is not rebased, as it lacks commits of {@code remote}. A pull brings in what is there only
+     * when the branch follows it.
+     */
+    private static Next behindRemote(Model model, int stack, BranchName branch, RemoteBranch remote) {
+        return Next.of(model.fail(new AppError.StackNotRebased(
+                stack,
+                branch.value(),
+                model.repo().branch(branch).flatMap(Branch::remoteUpstream).contains(remote)
+                        ? AppError.StackRefusal.BEHIND_REMOTE
+                        : AppError.StackRefusal.BEHIND_UNFOLLOWED)));
+    }
+
+    /**
+     * Rebases the stack asked about without pushing it.
+     */
+    private static Next rebaseLocally(Model model) {
+        return Update.confirm(
+                model,
+                StackPopups.RebaseConfirm.class,
+                popup -> Option.of(popup.cmd().locally()));
+    }
+
+    /**
+     * Fetches the branches of the stack of the menu, to check it out, where that applies.
+     */
+    private static Next checkoutChosen(Model model) {
+        return chosen(
+                model,
+                menu -> menu.canCheckOut()
+                        ? Update.start(
+                                model.withoutPopup(StackPopups.Menu.class).clearError(),
+                                new StackCheckoutCmd.Fetch(
+                                        menu.stack().get(),
+                                        StackCheckout.remote(model, menu.stack().get()),
+                                        menu.on()))
+                        : Next.of(model));
+    }
+
+    /**
+     * Asked about once fetched; not in the place of a dialog opened meanwhile.
+     */
+    private static Next fetched(
+            Model model, StackCheckoutCmd.Fetch cmd, List<ExecutedCommand> commands, StackCheckout checkout) {
+        return OperationUpdate.succeeded(model, cmd, commands)
+                .map(done -> done.openPopupIfFree(new StackPopups.Checkout(checkout)));
+    }
+
+    /**
+     * Checks out the stack asked about, landing where {@code landing} says, if it can land there.
+     */
+    private static Next checkoutConfirmed(Model model, StackCheckout.Landing landing) {
+        return model.popup(StackPopups.Checkout.class)
+                .map(StackPopups.Checkout::checkout)
+                .filter(StackCheckout::startable)
+                .filter(checkout -> landing == StackCheckout.Landing.STAY
+                        || checkout.target(landing).isDefined())
+                .map(checkout -> Update.start(
+                        model.withoutPopup(StackPopups.Checkout.class).clearError(),
+                        new StackCheckoutCmd.CatchUp(checkout, landing)))
+                .getOrElse(() -> Next.of(model));
     }
 
     /**
@@ -236,22 +327,21 @@ public final class StackUpdate {
      */
     private static Next caughtUp(Model model, StackCheckoutCmd.CatchUp cmd, List<ExecutedCommand> commands) {
         StackCheckout checkout = cmd.checkout();
-        Next done = OperationUpdate.succeeded(model, cmd, commands);
-        Next switched = checkout.target(cmd.landing())
-                .map(branch -> model.repo().branch(branch).isDefined()
-                        ? CheckoutUpdate.update(done.model(), new CheckoutMsg.Requested(branch))
-                        : CheckoutUpdate.place(done.model(), new CheckoutRequest.Local(branch)))
-                .getOrElse(() -> Next.of(done.model()));
-        // Said once the checkout is started, which clears what was said; not in the place of why it was refused.
-        Model said = switched.model().outcome().error().isDefined()
-                ? switched.model()
-                : switched.model()
-                        .inform(new Notice.StackCheckedOut(
+        return OperationUpdate.succeeded(model, cmd, commands)
+                .then(done -> checkout.target(cmd.landing())
+                        .map(branch -> model.repo().branch(branch).isDefined()
+                                ? CheckoutUpdate.update(done, new CheckoutMsg.Requested(branch))
+                                : CheckoutUpdate.place(done, new CheckoutRequest.Local(branch)))
+                        .getOrElse(() -> Next.of(done)))
+                // Said once the checkout is started, which clears what was said; not in the place of why it was
+                // refused.
+                .map(switched -> switched.outcome().error().isDefined()
+                        ? switched
+                        : switched.inform(new Notice.StackCheckedOut(
                                 checkout.stack(),
                                 checkout.count(StackCheckout.Kind.MADE),
                                 checkout.count(StackCheckout.Kind.FAST_FORWARDED),
-                                checkout.kept()));
-        return new Next(said, done.cmds().appendAll(switched.cmds()));
+                                checkout.kept())));
     }
 
     /**
