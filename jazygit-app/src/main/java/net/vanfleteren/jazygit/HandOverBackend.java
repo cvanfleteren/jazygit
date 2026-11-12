@@ -73,7 +73,7 @@ final class HandOverBackend implements Backend {
 
     /**
      * Hands the terminal over: stops reading keys, and puts the terminal back as it was before the app started, as
-     * {@code config} set it up.
+     * {@code config} set it up, keyboard enhancements included.
      */
     void leave(TuiConfig config) throws IOException {
         reading.lock();
@@ -89,6 +89,11 @@ final class HandOverBackend implements Backend {
             backend.disableMouseCapture();
         }
         backend.showCursor();
+        // The editor gets the keys as a terminal sends them by default. Kitty keeps the enhancements per screen,
+        // so they go off before the alternate screen is left, as TamboUI's own shutdown does.
+        if (config.keyboardProtocol().flags() > 0) {
+            backend.disableKeyboardProtocol();
+        }
         if (config.alternateScreen()) {
             backend.writeRaw(STOP_REPORTING_FOCUS);
             backend.leaveAlternateScreen();
@@ -113,6 +118,7 @@ final class HandOverBackend implements Backend {
             backend.enterAlternateScreen();
             backend.writeRaw(REPORT_FOCUS);
         }
+        backend.enableKeyboardProtocol(config.keyboardProtocol());
         if (config.hideCursor()) {
             backend.hideCursor();
         }

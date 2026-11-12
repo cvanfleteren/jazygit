@@ -9,8 +9,8 @@ import io.vavr.control.Option;
 
 /**
  * The keys of readline that edit the text in a field, beyond the ones the field already knows, and what they do to
- * the state of the field. The fields of the toolkit take Ctrl+Left as a plain Left, so these keys have to reach
- * them first.
+ * the state of the field. The fields of the toolkit know Ctrl+Left, Ctrl+Right, Ctrl+W and Ctrl+Delete, but
+ * with words of their own, and none of readline's other keys; so these keys have to reach them first.
  *
  * <p>Alt+Backspace only works where the terminal input tells it from Escape followed by Backspace.
  */
