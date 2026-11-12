@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.git.model.ParsedDiff.ParsedFile;
 import net.vanfleteren.jazygit.git.model.ParsedDiff.ParsedLine;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.Hunk;
+import net.vanfleteren.jazygit.syntax.Lexer;
 import net.vanfleteren.jazygit.syntax.Token;
 import org.junit.jupiter.api.Test;
 
@@ -179,24 +180,27 @@ class ParsedDiffTest {
     }
 
     @Test
-    void theTokensOfAFileThatAreEqualAreOneToken() {
-        List<List<Option<List<Token>>>> lexed = List.of(
-                List.of(Option.of(List.of(new Token(0, 3, Token.Kind.KEYWORD), new Token(4, 2, Token.Kind.NUMBER)))),
-                List.of(Option.none(), Option.of(List.of(new Token(0, 3, Token.Kind.KEYWORD)))));
+    void eachTokenIsKeptInAnIntAndMadeAgainAsItWas() {
+        DiffLine line = new DiffLine(DiffLine.Kind.ADDED, "x".repeat(Lexer.MAX_LINE), DiffLine.NONE, 1);
+        Array<Token> tokens = Array.of(
+                new Token(0, 3, Token.Kind.KEYWORD),
+                new Token(4, 2, Token.Kind.NUMBER),
+                new Token(10, 5, Token.Kind.STRING),
+                new Token(Lexer.MAX_LINE - 7, 7, Token.Kind.COMMENT));
 
-        List<List<Option<Array<Token>>>> shared = ParsedDiff.shared(lexed);
+        ParsedLine lexed = ParsedLine.of(line, List.empty(), Option.of(tokens));
 
-        assertEquals(lexed.map(hunk -> hunk.map(line -> line.map(Array::ofAll))), shared);
-        assertSame(shared.head().head().get().head(), shared.last().last().get().head());
+        assertEquals(Option.of(tokens), lexed.tokens());
+        assertEquals(tokens.size(), lexed.lexed().length);
     }
 
     @Test
     void theLexedLinesWithoutATokenShareOneEmptyArray() {
-        List<List<Option<Array<Token>>>> shared =
-                ParsedDiff.shared(List.of(List.of(Option.of(List.empty()), Option.of(List.empty()))));
+        DiffLine line = new DiffLine(DiffLine.Kind.CONTEXT, "  ", 1, 1);
 
-        assertSame(Array.empty(), shared.head().head().get());
-        assertSame(Array.empty(), shared.head().last().get());
+        assertSame(
+                ParsedLine.of(line, List.empty(), Option.of(List.empty())).lexed(),
+                ParsedLine.of(line, List.empty(), Option.of(Array.empty())).lexed());
     }
 
     @Test
