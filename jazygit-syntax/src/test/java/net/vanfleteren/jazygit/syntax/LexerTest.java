@@ -35,13 +35,15 @@ class LexerTest {
     @Test
     void theTagsOfADocCommentAreNoAnnotationsInAHunkThatStartsInsideIt() {
         assertEquals(List.of(), tokens(Language.JAVA, "     * @param x the {@link Foo}"));
-        assertEquals(List.of(), tokens(Language.JAVA, "     * @return it"));
+        assertEquals(List.of(), tokens(Language.JAVA, "     * @author someone"));
         assertEquals(List.of(), tokens(Language.JAVA, "     the {@code Foo}, as {@inheritDoc} says"));
     }
 
     @Test
     void theTagsOfADocCommentThatIsReadFromItsStartAreItsComment() {
-        assertEquals(List.of("COMMENT /** @deprecated use {@link B} */"), tokens(Language.JAVA, "/** @deprecated use {@link B} */"));
+        assertEquals(
+                List.of("COMMENT /** @deprecated use {@link B} */"),
+                tokens(Language.JAVA, "/** @deprecated use {@link B} */"));
     }
 
     @Test
