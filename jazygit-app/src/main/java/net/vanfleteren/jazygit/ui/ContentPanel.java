@@ -1099,21 +1099,24 @@ public final class ContentPanel {
              * of their lines, so those that start on it are looked up, not kept apart for each line.
              */
             boolean filling(int row) {
-                int low = 0;
-                int high = stops.size();
-                while (low < high) {
-                    int middle = (low + high) >>> 1;
-                    if (stops.get(middle).row() < row) {
-                        low = middle + 1;
-                    } else {
-                        high = middle;
-                    }
+                return stops.drop(firstFrom(row, 0, stops.size()))
+                        .takeWhile(stop -> stop.row() == row)
+                        .exists(stop -> switch (stop.mark().anchor()) {
+                            case Anchor.File _, Anchor.OnLine _, Anchor.Gap _ -> true;
+                            case Anchor.Lead _, Anchor.Thread _, Anchor.Comment _ -> false;
+                        });
+            }
+
+            /**
+             * The index of the first of the stops from {@code low} up to {@code high} that starts on or after
+             * {@code row}, found by halving.
+             */
+            private int firstFrom(int row, int low, int high) {
+                if (low >= high) {
+                    return low;
                 }
-                return stops.drop(low).takeWhile(stop -> stop.row() == row).exists(stop -> switch (stop.mark()
-                        .anchor()) {
-                    case Anchor.File _, Anchor.OnLine _, Anchor.Gap _ -> true;
-                    case Anchor.Lead _, Anchor.Thread _, Anchor.Comment _ -> false;
-                });
+                int middle = (low + high) >>> 1;
+                return stops.get(middle).row() < row ? firstFrom(row, middle + 1, high) : firstFrom(row, low, middle);
             }
 
             /**

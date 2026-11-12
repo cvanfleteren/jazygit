@@ -232,6 +232,36 @@ class DiffCursorTest {
     }
 
     @Test
+    void theCursorOnAnAnchorThatIsTwiceIsOnTheOneNearestWhereItWas() {
+        Vector<RichDiff.Stop> stops = Vector.of(stop(FILE, 1, 0), line(ONE, 1), line(FILE, 2));
+
+        assertEquals(
+                2,
+                DiffCursor.of(stops, 2, 3, 5, 0, Option.of(FILE), Option.none())
+                        .get()
+                        .stop());
+        assertEquals(
+                0,
+                DiffCursor.of(stops, 0, 3, 5, 0, Option.of(FILE), Option.none())
+                        .get()
+                        .stop());
+    }
+
+    @Test
+    void aMarkThatIsInTwoHunksIsTheOneInTheHunkOfTheCursor() {
+        // Line 1 of the first hunk, and line 1 again in a second hunk far from it, as the cursor is.
+        RichDiff.Stop other = new RichDiff.Stop(new RichDiff.Mark(ONE, 1, 8, Option.of(new DiffStops.HunkAt(0, 1))), 2);
+        RichDiff.Stop cursorOn =
+                new RichDiff.Stop(new RichDiff.Mark(TWO, 1, 8, Option.of(new DiffStops.HunkAt(0, 1))), 3);
+        Vector<RichDiff.Stop> stops = Vector.of(line(ONE, 0), stop(FILE, 1, 1), other, cursorOn);
+
+        DiffCursor cursor =
+                DiffCursor.of(stops, 0, 4, 5, 0, Option.of(TWO), Option.of(ONE)).get();
+
+        assertEquals(Option.of(2), cursor.mark());
+    }
+
+    @Test
     void aMarkThatIsNotALineOfTheHunkOfTheCursorIsDropped() {
         assertEquals(
                 Option.none(),
