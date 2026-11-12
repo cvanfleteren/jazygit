@@ -131,8 +131,11 @@ class ParsedDiffTest {
                 lines.get(1).words());
         // The whole line is not kept: a line made with it is the line made with none.
         assertEquals(
-                new ParsedLine(lines.head().line(), List.empty(), Option.none()),
-                new ParsedLine(lines.head().line(), lines.head().words(), Option.none()));
+                List.of(true, false, false, true),
+                lines.map(line -> line.compared().isEmpty()));
+        assertEquals(
+                ParsedLine.of(lines.head().line(), List.empty(), Option.none()),
+                ParsedLine.of(lines.head().line(), lines.head().words(), Option.none()));
     }
 
     @Test
