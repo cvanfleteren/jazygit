@@ -58,8 +58,6 @@ import org.junit.jupiter.api.Test;
 class PullRequestDialogTest {
 
     private static final Instant NOW = Instant.parse("2026-10-13T12:00:00Z");
-    // A terminal the whole popup fits on, so the actions are drawn and take the keys.
-    private static final dev.tamboui.layout.Size SCREEN = new dev.tamboui.layout.Size(120, 50);
     private static final PullRequest PR =
             new PullRequest(42, new GhBranch("support_rename"), true, Checks.FAILING, Review.CHANGES_REQUESTED);
     private static final PullRequestDetails DETAILS = new PullRequestDetails(
@@ -246,6 +244,25 @@ class PullRequestDialogTest {
 
         assertTrue(screen.contains("Pull request #42 · not up to date"), screen);
         assertTrue(screen.contains("Add rename support to the files panel"), screen);
+    }
+
+    @Test
+    void theActionsAndEscapeWorkOnAScreenTheyAreCutOffFrom() throws Exception {
+        Model model = TestModels.loaded()
+                .openPopup(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                        .with(Either.right(DETAILS), 0));
+        try (ToolkitTestRunner runner = start(model)) {
+            assertFalse(RenderedText.ofSize(runner, () -> view(model), 80, 24).contains("Refresh"));
+
+            SettledPilot.of(runner).press('R');
+            SettledPilot.of(runner).pause();
+            SettledPilot.of(runner).press(KeyCode.ESCAPE);
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(
+                java.util.List.of(new PullRequestMsg.RefreshChosen(), new PopupMsg.Dismissed(PullRequestPopup.class)),
+                dispatched);
     }
 
     @Test
@@ -905,7 +922,7 @@ class PullRequestDialogTest {
         Supplier<Element> view =
                 () -> stack(text("background"), moving.render(cursor.on(model)).get());
         java.util.List<String> screens = new ArrayList<>();
-        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(view, SCREEN)) {
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(view)) {
             SettledPilot.focus(runner, PullRequestDialog.ID);
             for (KeyCode key : keys) {
                 SettledPilot.of(runner).press(key);
@@ -928,8 +945,11 @@ class PullRequestDialogTest {
         }
     }
 
+    /**
+     * The popup for {@code model} on the default 80x24 terminal, shorter than the popup: its actions are cut off.
+     */
     private ToolkitTestRunner start(Model model) throws Exception {
-        ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(model), SCREEN);
+        ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(model));
         SettledPilot.focus(runner, PullRequestDialog.ID);
         RenderedText.of(runner, () -> view(model));
         return runner;

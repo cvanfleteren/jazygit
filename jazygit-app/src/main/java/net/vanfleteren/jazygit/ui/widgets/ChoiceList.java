@@ -337,6 +337,16 @@ public final class ChoiceList<P extends Popup> {
     }
 
     /**
+     * What {@code event} does in the list for {@code popup}, opening at the first option, as the list it
+     * {@link #render(Model, Popup) renders} handles it. For a popup that can be taller than the screen: when the list
+     * is cut off, it is not drawn, and so gets no keys itself.
+     */
+    public EventResult handleKey(Model model, P popup, KeyEvent event) {
+        List<Row> rows = rows(model, popup);
+        return handleKey(view(rows, model.listCursor(), Option.none()), rows, down(rows), event);
+    }
+
+    /**
      * @param down in two columns, how many options fill the first
      */
     private EventResult handleKey(FilteredCursor<Line> view, List<Row> rows, Option<Integer> down, KeyEvent event) {
