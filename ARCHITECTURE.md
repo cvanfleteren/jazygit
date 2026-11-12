@@ -495,12 +495,12 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
   the rule as git printed it, as its lines have no numbers. The first hunk of a file has no rule otherwise: the bar of
   the file is right above it.
 - **The syntax of the code** in the rich view is coloured as ADR 53 says. `git.model.syntax.DiffLexer`, the one
-  `Highlighter`, finds the keywords, strings, comments, numbers and annotations (`Token`, ADR 113) of each line, for a file whose
-  `Language` it knows by its name, its extension or its shebang, with `syntax.Lexer` of `jazygit-syntax`; a `Grammar`
-  says what a language's tokens look like. A hunk is lexed as its old and its new text, each from the start of the
-  hunk on; a line longer than `Lexer.MAX_LINE` (2 000 `char`s) is not, and the line after it starts outside of
-  everything. Each `ParsedLine`
-  holds them beside its words, found where the diff is read, or none for a line that was not lexed.
+  `Highlighter`, finds the keywords, strings, comments, numbers and annotations (`Token`, ADR 113) of each line, for
+  a file whose `Language` it knows by its name, its extension or its shebang, with `syntax.Lexer` of
+  `jazygit-syntax`; a `Grammar` says what a language's tokens look like. A hunk is lexed as its old and its new
+  text, each from the start of the hunk on; a line longer than `Lexer.MAX_LINE` (2 000 `char`s) is not, and the line
+  after it starts outside of everything. Each `ParsedLine` holds them beside its words, found where the diff is read,
+  or none for a line that was not lexed.
   `RichDiff` cuts a line where a word or a token starts or ends, in one pass: a changed line keeps the background of
   its class and takes the colour of the `syntax-*` class of a token, and of `syntax-text` outside one; a context line
   takes only the colours of its tokens. A line that was not lexed, a changed line whose class has no background (the
