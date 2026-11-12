@@ -6,7 +6,6 @@ import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.elements.TextInputElement;
 import dev.tamboui.toolkit.event.EventResult;
-import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.widgets.input.TextInputState;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
@@ -78,7 +77,7 @@ public final class TextInputDialog<P extends TextPopup> implements PopupView {
     private StyledElement<?> field() {
         TextInputElement field = textInput(input)
                 .onSubmit(this::confirm)
-                .onKeyEvent(event -> event.code() == KeyCode.ESCAPE ? cancelled() : EventResult.UNHANDLED);
+                .onKeyEvent(event -> event.isCancel() ? cancelled() : EventResult.UNHANDLED);
         return new LineEditInput(spec.placeholder().map(field::placeholder).getOrElse(field), input, spec.id())
                 .onChange(text -> dispatch.accept(new PopupMsg.TextEdited(text)));
     }

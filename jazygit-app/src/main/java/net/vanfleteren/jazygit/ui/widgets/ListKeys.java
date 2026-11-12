@@ -2,7 +2,6 @@ package net.vanfleteren.jazygit.ui.widgets;
 
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.bindings.Actions;
-import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.MouseEvent;
 import dev.tamboui.tui.event.MouseEventKind;
@@ -49,7 +48,7 @@ public final class ListKeys {
      */
     static Option<ListKey> classify(KeyEvent event, FilteredList list, boolean canFilter, FilterLine line) {
         Option<String> typed = list.cursor().filter();
-        if (event.code() == KeyCode.ESCAPE) {
+        if (event.isCancel()) {
             return Option.of(typed.isDefined() ? new ListKey.CloseFilter() : new ListKey.Cancel());
         }
         if (typed.isEmpty() && canFilter && ListFilter.opens(event)) {

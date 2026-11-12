@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.keys;
 
-import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import net.vanfleteren.jazygit.feature.cherrypick.CherryPickMsg;
 import net.vanfleteren.jazygit.feature.diff.DiffOptionsMsg;
@@ -98,7 +97,7 @@ final class GlobalKeys {
      * Whether {@code event} is Escape, which lets go of the commit copied to cherry-pick.
      */
     static boolean isEscape(KeyEvent event) {
-        return event.code() == KeyCode.ESCAPE;
+        return event.isCancel();
     }
 
     /**

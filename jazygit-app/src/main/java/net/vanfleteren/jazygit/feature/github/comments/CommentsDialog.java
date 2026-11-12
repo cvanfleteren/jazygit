@@ -269,7 +269,7 @@ public final class CommentsDialog implements PopupView {
     }
 
     private EventResult keys(CommentsPopup popup, KeyEvent event) {
-        if (event.code() == KeyCode.ESCAPE) {
+        if (event.isCancel()) {
             dispatch.accept(new CommentsMsg.Closed());
         } else if (event.isChar('J')) {
             scroll.scrollBy(1);

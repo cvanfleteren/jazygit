@@ -3,6 +3,8 @@ package net.vanfleteren.jazygit.keys;
 import static org.junit.jupiter.api.Assertions.*;
 
 import dev.tamboui.tui.event.KeyEvent;
+import dev.tamboui.tui.event.KeyEventKind;
+import dev.tamboui.tui.event.KeyModifiers;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutMsg;
@@ -136,6 +138,20 @@ class KeymapTest {
         assertEquals(
                 Option.of(new DeleteBranchMsg.RemoteRequested(remote)),
                 keymap.handle(Scopes.REMOTE_BRANCHES, KeyEvent.ofChar('d'), Option.of(remote)));
+    }
+
+    @Test
+    void aKeyLetGoDoesNothing() {
+        // Terminals in the full Kitty keyboard protocol tell when a key is let go, as well as when it is pressed.
+        KeyEvent released = KeyEvent.ofChar(' ', KeyModifiers.NONE, KeyEventKind.RELEASE);
+
+        assertEquals(Option.none(), keymap.handle(Scopes.BRANCHES, released, Option.of(new BranchName("x"))));
+        assertEquals(
+                Option.none(),
+                keymap.handle(
+                        Scopes.BRANCHES,
+                        KeyEvent.ofChar('?', KeyModifiers.NONE, KeyEventKind.RELEASE),
+                        Option.of(new BranchName("x"))));
     }
 
     @Test

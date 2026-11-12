@@ -119,11 +119,11 @@ public final class BasesField<B> {
      */
     private EventResult keys(View<B> view, KeyEvent event, Function<KeyEvent, EventResult> common) {
         FilteredCursor<B> shown = view.list();
-        if (event.code() == KeyCode.ESCAPE && shown.cursor().filter().isDefined()) {
+        if (event.isCancel() && shown.cursor().filter().isDefined()) {
             dispatch.accept(view.filtered(Option.none()));
             return EventResult.HANDLED;
         }
-        if (event.code() == KeyCode.ENTER) {
+        if (event.isConfirm()) {
             return EventResult.FOCUS_NEXT;
         }
         EventResult handled = common.apply(event);

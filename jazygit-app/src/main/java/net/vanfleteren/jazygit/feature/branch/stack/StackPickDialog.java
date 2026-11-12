@@ -153,9 +153,9 @@ final class StackPickDialog implements PopupView {
     }
 
     private EventResult keys(KeyEvent event, ListCursor cursor, int line, int rows) {
-        if (event.code() == KeyCode.ESCAPE) {
+        if (event.isCancel()) {
             dispatch.accept(new PopupMsg.Dismissed(StackPopups.Pick.class));
-        } else if (event.code() == KeyCode.ENTER) {
+        } else if (event.isConfirm()) {
             dispatch.accept(new StackMsg.PickConfirmed());
         } else if (event.isChar('b')) {
             dispatch.accept(new StackMsg.BottomChosen(line));

@@ -9,7 +9,6 @@ import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.elements.DialogElement;
 import dev.tamboui.toolkit.elements.ListElement;
 import dev.tamboui.toolkit.event.EventResult;
-import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
@@ -215,7 +214,7 @@ public final class HelpDialog implements PopupView {
     }
 
     private EventResult handleKey(FilteredCursor<Row> view, KeyEvent event) {
-        if (event.code() == KeyCode.ESCAPE || Keymap.HELP_KEY.equals(event.string())) {
+        if (event.isCancel() || Keymap.HELP_KEY.equals(event.string())) {
             dispatch.accept(new PopupMsg.Dismissed(HelpPopup.class));
             return EventResult.HANDLED;
         }

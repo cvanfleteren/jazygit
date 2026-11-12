@@ -98,11 +98,14 @@ public final class Keymap {
 
     /**
      * What the keys of {@code scope} do in the event {@code event}: help for {@code ?}, otherwise the message
-     * of the key, if the scope has it.
+     * of the key, if the scope has it. A key let go does nothing.
      *
      * @param selection what is selected in the panel, if anything
      */
     public <S> Option<Msg> handle(Scope<S> scope, KeyEvent event, Option<S> selection) {
+        if (event.isRelease()) {
+            return Option.none();
+        }
         if (HELP_KEY.equals(name(event))) {
             return Option.of(new HelpMsg.Requested(scope.id(), actions(scope, selection)));
         }
@@ -241,10 +244,11 @@ public final class Keymap {
         }
 
         /**
-         * Whether {@code event} is this key, with the same Ctrl and Alt held.
+         * Whether {@code event} is this key, with the same Ctrl and Alt held. A key let go is none, as with TamboUI's
+         * own bindings.
          */
         public boolean matches(KeyEvent event) {
-            return key.equals(name(event));
+            return !event.isRelease() && key.equals(name(event));
         }
 
         /**

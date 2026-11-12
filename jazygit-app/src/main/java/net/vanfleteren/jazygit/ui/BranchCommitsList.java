@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.ui;
 
 import dev.tamboui.toolkit.elements.Panel;
-import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
@@ -43,7 +42,7 @@ class BranchCommitsList {
                 id,
                 LoadableList.Reselect.following(Commit::sha),
                 highlights);
-        list.onKey(event -> event.code() == KeyCode.ENTER
+        list.onKey(event -> event.isConfirm()
                 ? selectedCommit().map(commit -> openCommit)
                 : PaneKeys.sending(keymap.handle(Scopes.BRANCH_COMMITS, event, selectedCommit()), dispatch));
     }

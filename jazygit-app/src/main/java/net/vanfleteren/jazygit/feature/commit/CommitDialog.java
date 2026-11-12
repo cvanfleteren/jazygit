@@ -166,7 +166,7 @@ public final class CommitDialog implements PopupView {
      * handler takes every key then, so the fields handle Escape themselves.
      */
     private EventResult keys(KeyEvent event) {
-        if (event.code() == KeyCode.ESCAPE) {
+        if (event.isCancel()) {
             cancel();
             return EventResult.HANDLED;
         }
