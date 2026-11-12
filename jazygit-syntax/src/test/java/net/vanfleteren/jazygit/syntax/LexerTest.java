@@ -21,6 +21,28 @@ class LexerTest {
     }
 
     @Test
+    void findsTheAnnotationsOfALine() {
+        assertEquals(
+                List.of("ANNOTATION @Override", "ANNOTATION @lombok.Getter", "KEYWORD public"),
+                tokens(Language.JAVA, "  @Override @lombok.Getter(value) public"));
+    }
+
+    @Test
+    void anAtAfterAWordOrBeforeNoNameStartsNoAnnotation() {
+        assertEquals(List.of(), tokens(Language.JAVA, "mail@example @ (x)"));
+    }
+
+    @Test
+    void aLanguageWithoutAnnotationsHasNone() {
+        assertEquals(List.of(), tokens(Language.GO, "x := @Override"));
+    }
+
+    @Test
+    void findsTheDecoratorsOfPython() {
+        assertEquals(List.of("ANNOTATION @dataclass", "KEYWORD class"), tokens(Language.PYTHON, "@dataclass class A"));
+    }
+
+    @Test
     void anEscapedQuoteDoesNotEndAString() {
         assertEquals(List.of("STRING \"say \\\"hi\\\"\""), tokens(Language.JAVA, "\"say \\\"hi\\\"\";"));
     }

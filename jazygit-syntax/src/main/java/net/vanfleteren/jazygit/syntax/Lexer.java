@@ -104,9 +104,29 @@ public final class Lexer {
             return end - at <= LONGEST_KEYWORD && grammar.keyword(line.substring(at, end))
                     ? scan.token(at, end, Kind.KEYWORD)
                     : scan.to(end);
+        } else if (c == '@' && grammar.annotations() && !scan.afterWord() && nameStarts(line, at + 1)) {
+            return scan.token(at, annotationEnd(line, at + 1), Kind.ANNOTATION);
         }
         // Past what can start nothing in one step, as most of a line is spaces and punctuation.
-        return scan.to(first(line, at + 1, i -> wordPart(line.charAt(i)) || OPENINGS.indexOf(line.charAt(i)) >= 0));
+        return scan.to(first(
+                line,
+                at + 1,
+                i -> wordPart(line.charAt(i)) || OPENINGS.indexOf(line.charAt(i)) >= 0 || line.charAt(i) == '@'));
+    }
+
+    /**
+     * Whether a name starts at {@code at} in {@code line}: a letter or an underscore.
+     */
+    private static boolean nameStarts(String line, int at) {
+        return at < line.length() && (Character.isLetter(line.charAt(at)) || line.charAt(at) == '_');
+    }
+
+    /**
+     * Where the name of the annotation from {@code from} ends: its words, and a point followed by a name, like
+     * {@code lombok.Getter}.
+     */
+    private static int annotationEnd(String line, int from) {
+        return first(line, from, i -> !wordPart(line.charAt(i)) && !(line.charAt(i) == '.' && nameStarts(line, i + 1)));
     }
 
     /**
