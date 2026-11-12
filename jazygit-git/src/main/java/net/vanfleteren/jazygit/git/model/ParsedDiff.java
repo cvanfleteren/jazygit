@@ -154,6 +154,33 @@ public record ParsedDiff(List<String> preamble, List<ParsedFile> files) {
      * A line of a hunk, with its segments as {@link WordDiff#segments} has them, and its tokens as the
      * {@link Highlighter} found them, or none when it was not lexed: in an array, which takes less than a list of
      * them, each token shared with the lines of its file that have it too ({@link #shared}).
+     *
+     * <p>Most lines of a diff have no changed words: their one segment, the whole line unchanged, is not kept but
+     * made again when {@link #words} is asked for, which is only for the lines that are drawn. A long diff has tens of
+     * thousands of lines, and that segment and the list that holds it took more than a tenth of what it was parsed
+     * into.
      */
-    public record ParsedLine(DiffLine line, List<Segment> words, Option<Array<Token>> tokens) {}
+    public record ParsedLine(DiffLine line, List<Segment> words, Option<Array<Token>> tokens) {
+
+        /**
+         * The line with {@code words}, kept as none when they are the whole line, unchanged.
+         */
+        public ParsedLine {
+            words = whole(line, words) ? List.empty() : words;
+        }
+
+        /**
+         * Its segments: the whole line, unchanged, when it has no others.
+         */
+        @Override
+        public List<Segment> words() {
+            return words.isEmpty() ? List.of(new Segment(line.text(), false)) : words;
+        }
+
+        private static boolean whole(DiffLine line, List<Segment> words) {
+            return words.size() == 1
+                    && !words.head().changed()
+                    && words.head().text().equals(line.text());
+        }
+    }
 }

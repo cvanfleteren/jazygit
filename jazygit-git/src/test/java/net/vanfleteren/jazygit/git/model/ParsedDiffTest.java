@@ -108,6 +108,34 @@ class ParsedDiffTest {
     }
 
     @Test
+    void aLineWithoutChangedWordsKeepsNoSegmentButGivesItselfWhole() {
+        ParsedDiff diff = ParsedDiff.of("""
+                diff --git a/a.txt b/a.txt
+                --- a/a.txt
+                +++ b/a.txt
+                @@ -1,3 +1,2 @@
+                 same
+                -ten = 1
+                +ten = 2
+                -gone
+                """);
+        List<ParsedLine> lines = diff.files().head().hunks().head().lines();
+
+        // Only the pair whose words were compared keeps its segments.
+        assertEquals(
+                List.of(true, false, false, true),
+                lines.map(line -> line.words()
+                        .equals(List.of(new WordDiff.Segment(line.line().text(), false)))));
+        assertEquals(
+                List.of(new WordDiff.Segment("ten = ", false), new WordDiff.Segment("1", true)),
+                lines.get(1).words());
+        // The whole line is not kept: a line made with it is the line made with none.
+        assertEquals(
+                new ParsedLine(lines.head().line(), List.empty(), Option.none()),
+                new ParsedLine(lines.head().line(), lines.head().words(), Option.none()));
+    }
+
+    @Test
     void theCodeOfEachFileIsLexedInItsLanguage() {
         ParsedDiff diff = ParsedDiff.of("""
                 diff --git a/A.java b/A.java
