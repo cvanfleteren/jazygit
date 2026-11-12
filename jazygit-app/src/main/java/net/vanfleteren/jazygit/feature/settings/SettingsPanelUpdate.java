@@ -30,8 +30,6 @@ public final class SettingsPanelUpdate {
 
     public static Next update(Model model, SettingsPanelMsg msg) {
         return switch (msg) {
-            // The key works everywhere, but does not take away a dialog that is open.
-            case SettingsPanelMsg.Requested() when model.popup().isDefined() -> Next.of(model);
             case SettingsPanelMsg.Requested() -> requested(model);
             case SettingsPanelMsg.GitHubRead(GitHubSetup gitHub) -> gitHubRead(model, gitHub);
             // Cancelling the theme goes back to the settings, on the setting it was asked for from.
