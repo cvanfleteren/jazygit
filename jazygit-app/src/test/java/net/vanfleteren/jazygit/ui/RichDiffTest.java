@@ -679,6 +679,50 @@ class RichDiffTest {
                 drawn.widest().getAsInt());
     }
 
+    @Test
+    void theNumbersOfAChangedLineAreStyledForItsChangeOverThoseOfTheOthers() {
+        Style number = Style.EMPTY.fg(Color.DARK_GRAY);
+        Theme.SpanStyles styles = cssClass -> switch (cssClass) {
+            case Theme.Classes.DIFF_LINE_NUMBER -> number;
+            case Theme.Classes.DIFF_ADDED_LINE_NUMBER -> Style.EMPTY.bg(Color.GREEN);
+            case Theme.Classes.DIFF_REMOVED_LINE_NUMBER -> Style.EMPTY.bg(Color.RED);
+            default -> Style.EMPTY;
+        };
+        List<Line> lines = lines(ParsedDiff.of("""
+                diff --git a/A.java b/A.java
+                --- a/A.java
+                +++ b/A.java
+                @@ -1,2 +1,2 @@
+                 class A {
+                -String s = "ab";
+                +String s = "ac";
+                """), false, styles);
+
+        assertEquals(number, gutter(lines, "class A {"));
+        assertEquals(number.bg(Color.GREEN), gutter(lines, "\"ac\";"));
+        assertEquals(number.bg(Color.RED), gutter(lines, "\"ab\";"));
+    }
+
+    /**
+     * The style of the gutter of the line of {@code lines} whose text ends with {@code end}.
+     */
+    private static Style gutter(List<Line> lines, String end) {
+        return lines.find(line -> List.ofAll(line.spans())
+                        .map(Span::content)
+                        .mkString()
+                        .strip()
+                        .endsWith(end))
+                .get()
+                .spans()
+                .getFirst()
+                .style();
+    }
+
+    @Test
+    void anAnnotationTakesTheColourOfAnnotations() {
+        assertEquals(Theme.Classes.SYNTAX_ANNOTATION, RichDiff.syntaxClass(Token.Kind.ANNOTATION));
+    }
+
     private static final String STRING_CHANGED = """
             diff --git a/A.java b/A.java
             --- a/A.java

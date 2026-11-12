@@ -175,7 +175,7 @@ public final class AheadUpdate {
     static Next read(Model model, LoadAhead load, Either<Failure, Option<Ahead>> ahead) {
         Next kept = ahead.fold(failure -> Next.of(failed(model, load, failure)), read -> loaded(model, load, read));
         LoadAhead current = load.branch().fold(() -> ofHead(kept.model()), branch -> of(kept.model(), branch));
-        return current.equals(load) ? kept : new Next(kept.model(), kept.cmds().append(current));
+        return current.equals(load) ? kept : kept.and(current);
     }
 
     /**

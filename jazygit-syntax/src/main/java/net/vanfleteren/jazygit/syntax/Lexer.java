@@ -104,9 +104,52 @@ public final class Lexer {
             return end - at <= LONGEST_KEYWORD && grammar.keyword(line.substring(at, end))
                     ? scan.token(at, end, Kind.KEYWORD)
                     : scan.to(end);
+        } else if (c == '@' && grammar.annotations() && annotationStarts(scan)) {
+            return scan.token(at, annotationEnd(line, at + 1), Kind.ANNOTATION);
         }
         // Past what can start nothing in one step, as most of a line is spaces and punctuation.
-        return scan.to(first(line, at + 1, i -> wordPart(line.charAt(i)) || OPENINGS.indexOf(line.charAt(i)) >= 0));
+        return scan.to(first(
+                line,
+                at + 1,
+                i -> wordPart(line.charAt(i)) || OPENINGS.indexOf(line.charAt(i)) >= 0 || line.charAt(i) == '@'));
+    }
+
+    /**
+     * Whether the {@code @} at the scan starts an annotation (ADR 113): a name follows it, and it is not part of a word,
+     * like an address, nor a tag of a doc comment that the scan does not know it is in, as in a hunk that starts
+     * inside one: a lowercase one in braces, like {@code {@link Foo}}, or one on a line that starts with
+     * {@code *}, like {@code * @param}. An annotation in braces starts uppercase, like those of an array value.
+     */
+    private static boolean annotationStarts(Scan scan) {
+        String line = scan.line();
+        int at = scan.at();
+        return nameStarts(line, at + 1)
+                && !scan.afterWord()
+                && !(at > 0 && line.charAt(at - 1) == '{' && Character.isLowerCase(line.charAt(at + 1)))
+                && !docLine(line);
+    }
+
+    /**
+     * Whether {@code line} goes on a doc comment: it starts with {@code *}, after spaces, and does not end it there.
+     */
+    private static boolean docLine(String line) {
+        String stripped = line.stripLeading();
+        return stripped.startsWith("*") && !stripped.startsWith("*/");
+    }
+
+    /**
+     * Whether a name starts at {@code at} in {@code line}: a letter or an underscore.
+     */
+    private static boolean nameStarts(String line, int at) {
+        return at < line.length() && (Character.isLetter(line.charAt(at)) || line.charAt(at) == '_');
+    }
+
+    /**
+     * Where the name of the annotation from {@code from} ends: its words, and a point followed by a name, like
+     * {@code lombok.Getter}.
+     */
+    private static int annotationEnd(String line, int from) {
+        return first(line, from, i -> !wordPart(line.charAt(i)) && !(line.charAt(i) == '.' && nameStarts(line, i + 1)));
     }
 
     /**

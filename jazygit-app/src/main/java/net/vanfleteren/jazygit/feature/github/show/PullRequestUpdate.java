@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.feature.github.show;
 
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
+import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.util.function.Function;
@@ -18,11 +19,13 @@ import net.vanfleteren.jazygit.feature.github.verdict.VerdictUpdate;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
+import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.keys.Scopes;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.diff.Changes;
@@ -44,30 +47,8 @@ public final class PullRequestUpdate {
         return switch (msg) {
             case PullRequestMsg.Requested(BranchName branch) -> requested(model, branch);
             case PullRequestMsg.FilesRequested(BranchName branch) -> filesRequested(model, branch);
-            // A pull request of another repository is opened in the browser, as gh acts on this one; so is one
-            // while it is not known yet which repository this is, which does no harm.
-            case PullRequestMsg.SummaryRequested(var pullRequest)
-            when model.prOverview().ofThisRepository(pullRequest).getOrElse(false) ->
-                show(
-                        model,
-                        FromGitHub.branch(pullRequest.headBranch()),
-                        pullRequest.pullRequest(),
-                        pullRequest.fromFork(),
-                        false);
-            case PullRequestMsg.SummaryRequested(var pullRequest) ->
-                Update.start(model.clearError(), new BrowsePullRequestCmd(pullRequest));
-            // Its files are listed in the files pane, which only has those of this repository.
-            case PullRequestMsg.SummaryFilesRequested(var pullRequest)
-            when model.prOverview().ofThisRepository(pullRequest).getOrElse(false) ->
-                files(
-                        model.clearError(),
-                        FromGitHub.branch(pullRequest.headBranch()),
-                        pullRequest.pullRequest(),
-                        pullRequest.fromFork());
-            case PullRequestMsg.SummaryFilesRequested(var pullRequest) ->
-                Update.start(model.clearError(), new BrowsePullRequestCmd(pullRequest));
-            // The branches pane shows the pull request as it was just read too, also when the dialog is closed.
-            // How long its checks take is learned from them too (ADR 32).
+            case PullRequestMsg.SummaryRequested(var pullRequest) -> summaryRequested(model, pullRequest);
+            case PullRequestMsg.SummaryFilesRequested(var pullRequest) -> summaryFilesRequested(model, pullRequest);
             // A read that a later one was taken before, or that started before a change, is not taken: it would show
             // older details, or the change undone, here and on the branch; failing, it says nothing of them (ADR 34).
             case PullRequestMsg.DetailsLoaded(int number, long read, var details)
@@ -75,46 +56,12 @@ public final class PullRequestUpdate {
             case PullRequestMsg.DetailsFailed(int number, long read, var failure)
             when !model.gitHub().current(number, read) -> Next.of(notTaken(model, number, read));
             case PullRequestMsg.DetailsLoaded(int number, long read, var details) ->
-                filesIfWanted(
-                        model,
-                        CheckTimesUpdate.read(
-                                Next.of(shown(
-                                        model.mapGitHub(gitHub ->
-                                                gitHub.withRead(details).withReadTaken(number, read)),
-                                        number,
-                                        read,
-                                        Either.right(details))),
-                                details.repository(),
-                                details.checks()));
+                detailsLoaded(model, number, read, details);
             case PullRequestMsg.DetailsFailed(int number, long read, var failure) ->
-                Next.of(shown(
-                        model.mapGitHub(gitHub -> gitHub.withReadTaken(number, read)),
-                        number,
-                        read,
-                        Either.left(failure)));
-            // The dialog stays open, so the pull request can still be merged or closed from it.
-            case PullRequestMsg.OpenConfirmed() ->
-                model.popup(PullRequestPopup.class)
-                        .map(popup -> Update.start(
-                                model.clearError(),
-                                new OpenPullRequest(
-                                        popup.branch(), popup.pullRequest().number())))
-                        .getOrElse(() -> Next.of(model));
-            // The dialog closes, and the files show in the files pane of the repository screen, which the focus goes
-            // to; Escape there gives it to the branches pane (ADR 55).
-            case PullRequestMsg.FilesChosen() ->
-                model.popup(PullRequestPopup.class)
-                        .flatMap(PullRequestPopup::commits)
-                        .map(commits -> files(model.withoutPopup(PullRequestPopup.class), commits))
-                        .getOrElse(() -> Next.of(model));
-            case PullRequestMsg.MergeChosen(MergeMethod method) ->
-                Update.confirm(
-                        model,
-                        PullRequestPopup.class,
-                        popup -> Option.when(
-                                mergeable(model, popup),
-                                () -> new MergePullRequest(
-                                        popup.branch(), popup.pullRequest().number(), popup.head(), method)));
+                detailsFailed(model, number, read, failure);
+            case PullRequestMsg.OpenConfirmed() -> openConfirmed(model);
+            case PullRequestMsg.FilesChosen() -> filesChosen(model);
+            case PullRequestMsg.MergeChosen(MergeMethod method) -> mergeChosen(model, method);
             case PullRequestMsg.MergeAsked(MergePullRequest cmd, var status, var commands) ->
                 MergeUpdate.asked(model, cmd, status, commands);
             case PullRequestMsg.MergeTick() -> MergeUpdate.tick(model);
@@ -122,59 +69,168 @@ public final class PullRequestUpdate {
                 MergeUpdate.checked(model, number, id, status);
             case PullRequestMsg.MergeCheckFailed(int number, String id, var failure) ->
                 MergeUpdate.checkFailed(model, number, id);
-            case PullRequestMsg.CloseChosen() ->
-                Update.confirm(
-                        model,
-                        PullRequestPopup.class,
-                        popup -> Option.when(
-                                popup.open(),
-                                () -> new ClosePullRequest(
-                                        popup.branch(), popup.pullRequest().number())));
-            // The dialog stays open, to show the pull request as it now is.
-            case PullRequestMsg.DraftChosen() ->
-                model.popup(PullRequestPopup.class)
-                        .filter(popup -> draftChangeable(model, popup))
-                        .flatMap(popup -> popup.draft()
-                                .map(draft -> Update.start(
-                                        model.clearError(),
-                                        new SetDraft(
-                                                popup.branch(),
-                                                popup.pullRequest().number(),
-                                                !draft))))
-                        .getOrElse(() -> Next.of(model));
-            // Done like any operation, which reads the pull requests again. The dialog shows the change at once, and
-            // a read of it that started before is not taken (ADR 34).
-            case PullRequestMsg.DraftSet(SetDraft cmd, var commands) -> {
-                Next done = OperationUpdate.succeeded(model, cmd, commands);
-                yield PrOverviewUpdate.reloadIfShown(new Next(
-                        mapShown(
-                                done.model().mapGitHub(gitHub -> gitHub.withChanged(cmd.number())),
-                                cmd.number(),
-                                popup -> popup.withDraft(cmd.draft())),
-                        done.cmds()));
-            }
-            case PullRequestMsg.Ended(ChangingCmd cmd, var commands) -> {
-                // Done like any operation. The pull request is no longer open, which reading them again confirms.
-                // A merge ends through MergeAsked instead.
-                Next done = OperationUpdate.succeeded(model, cmd, commands);
-                Model ended = done.model()
-                        .mapGitHub(gitHub -> gitHub.withPullRequests(gitHub.pullRequests()
-                                .map(open -> open.filterValues(pr -> pr.number() != cmd.number()))));
-                // A read that is still running may have missed it, and would show it open again.
-                yield PrOverviewUpdate.reloadIfShown(
-                        FetchUpdate.requested(PullRequestsUpdate.loadAnyway(new Next(ended, done.cmds()))));
-            }
-            // Only the dialog itself is read again, not the one kept under a popup opened from it. R while it reads by
-            // itself shows that read as asked for, rather than starting a second one.
-            case PullRequestMsg.RefreshChosen() ->
-                model.popup(PullRequestPopup.class)
-                        .filter(popup -> popup.reading() == Reading.BY_ITSELF
-                                && readRunning(model, popup)
-                                && !busy(model, popup))
-                        .map(popup -> Next.of(model.openPopup(popup.asked())))
-                        .getOrElse(() -> readAgain(model, popup -> true, Reading.ASKED));
+            case PullRequestMsg.CloseChosen() -> closeChosen(model);
+            case PullRequestMsg.DraftChosen() -> draftChosen(model);
+            case PullRequestMsg.DraftSet(SetDraft cmd, var commands) -> draftSet(model, cmd, commands);
+            case PullRequestMsg.Ended(ChangingCmd cmd, var commands) -> ended(model, cmd, commands);
+            case PullRequestMsg.RefreshChosen() -> refreshChosen(model);
             case PullRequestMsg.Tick() -> readAgain(model, popup -> popup.dueByItself(model.now()), Reading.BY_ITSELF);
         };
+    }
+
+    /**
+     * Shows a pull request listed on the pull requests screen. One of another repository is opened in the browser,
+     * as gh acts on this one; so is one while it is not known yet which repository this is, which does no harm.
+     */
+    private static Next summaryRequested(Model model, PullRequestSummary pullRequest) {
+        return model.prOverview().ofThisRepository(pullRequest).getOrElse(false)
+                ? show(
+                        model,
+                        FromGitHub.branch(pullRequest.headBranch()),
+                        pullRequest.pullRequest(),
+                        pullRequest.fromFork(),
+                        false)
+                : Update.start(model.clearError(), new BrowsePullRequestCmd(pullRequest));
+    }
+
+    /**
+     * Shows the files a pull request listed on the pull requests screen changes. They are listed in the files pane,
+     * which only has those of this repository; one of another repository is opened in the browser.
+     */
+    private static Next summaryFilesRequested(Model model, PullRequestSummary pullRequest) {
+        return model.prOverview().ofThisRepository(pullRequest).getOrElse(false)
+                ? files(
+                        model.clearError(),
+                        FromGitHub.branch(pullRequest.headBranch()),
+                        pullRequest.pullRequest(),
+                        pullRequest.fromFork())
+                : Update.start(model.clearError(), new BrowsePullRequestCmd(pullRequest));
+    }
+
+    /**
+     * Shows the details read {@code read} brought of pull request {@code number}. The branches pane shows the pull
+     * request as it was just read too, also when the dialog is closed. How long its checks take is learned from them
+     * too (ADR 32).
+     */
+    private static Next detailsLoaded(Model model, int number, long read, PullRequestDetails details) {
+        return filesIfWanted(
+                model,
+                CheckTimesUpdate.read(
+                        Next.of(shown(
+                                model.mapGitHub(
+                                        gitHub -> gitHub.withRead(details).withReadTaken(number, read)),
+                                number,
+                                read,
+                                Either.right(details))),
+                        details.repository(),
+                        details.checks()));
+    }
+
+    /**
+     * Shows that read {@code read} of pull request {@code number} failed.
+     */
+    private static Next detailsFailed(Model model, int number, long read, Failure failure) {
+        return Next.of(shown(
+                model.mapGitHub(gitHub -> gitHub.withReadTaken(number, read)), number, read, Either.left(failure)));
+    }
+
+    /**
+     * Opens the pull request shown in the browser. The dialog stays open, so the pull request can still be merged
+     * or closed from it.
+     */
+    private static Next openConfirmed(Model model) {
+        return model.popup(PullRequestPopup.class)
+                .map(popup -> Update.start(
+                        model.clearError(),
+                        new OpenPullRequest(popup.branch(), popup.pullRequest().number())))
+                .getOrElse(() -> Next.of(model));
+    }
+
+    /**
+     * The dialog closes, and the files show in the files pane of the repository screen, which the focus goes to;
+     * Escape there gives it to the branches pane (ADR 55).
+     */
+    private static Next filesChosen(Model model) {
+        return model.popup(PullRequestPopup.class)
+                .flatMap(PullRequestPopup::commits)
+                .map(commits -> files(model.withoutPopup(PullRequestPopup.class), commits))
+                .getOrElse(() -> Next.of(model));
+    }
+
+    /**
+     * Asks to confirm merging the pull request shown as {@code method} says, when it can be merged.
+     */
+    private static Next mergeChosen(Model model, MergeMethod method) {
+        return Update.confirm(
+                model,
+                PullRequestPopup.class,
+                popup -> Option.when(
+                        mergeable(model, popup),
+                        () -> new MergePullRequest(
+                                popup.branch(), popup.pullRequest().number(), popup.head(), method)));
+    }
+
+    /**
+     * Asks to confirm closing the pull request shown, when it is open.
+     */
+    private static Next closeChosen(Model model) {
+        return Update.confirm(
+                model,
+                PullRequestPopup.class,
+                popup -> Option.when(
+                        popup.open(),
+                        () -> new ClosePullRequest(
+                                popup.branch(), popup.pullRequest().number())));
+    }
+
+    /**
+     * Turns the pull request shown into a draft, or marks it ready for review. The dialog stays open, to show the
+     * pull request as it now is.
+     */
+    private static Next draftChosen(Model model) {
+        return model.popup(PullRequestPopup.class)
+                .filter(popup -> draftChangeable(model, popup))
+                .flatMap(popup -> popup.draft()
+                        .map(draft -> Update.start(
+                                model.clearError(),
+                                new SetDraft(popup.branch(), popup.pullRequest().number(), !draft))))
+                .getOrElse(() -> Next.of(model));
+    }
+
+    /**
+     * Done like any operation, which reads the pull requests again. The dialog shows the change at once, and a read
+     * of it that started before is not taken (ADR 34).
+     */
+    private static Next draftSet(Model model, SetDraft cmd, List<ExecutedCommand> commands) {
+        return PrOverviewUpdate.reloadIfShown(OperationUpdate.succeeded(model, cmd, commands)
+                .map(done -> mapShown(
+                        done.mapGitHub(gitHub -> gitHub.withChanged(cmd.number())),
+                        cmd.number(),
+                        popup -> popup.withDraft(cmd.draft()))));
+    }
+
+    /**
+     * Done like any operation. The pull request is no longer open, which reading them again confirms. A merge ends
+     * through MergeAsked instead.
+     */
+    private static Next ended(Model model, ChangingCmd cmd, List<ExecutedCommand> commands) {
+        Next ended = OperationUpdate.succeeded(model, cmd, commands)
+                .map(done -> done.mapGitHub(gitHub -> gitHub.withPullRequests(
+                        gitHub.pullRequests().map(open -> open.filterValues(pr -> pr.number() != cmd.number())))));
+        // A read that is still running may have missed it, and would show it open again.
+        return PrOverviewUpdate.reloadIfShown(FetchUpdate.requested(PullRequestsUpdate.loadAnyway(ended)));
+    }
+
+    /**
+     * Reads the pull request shown again. Only the dialog itself is read again, not the one kept under a popup opened
+     * from it. R while it reads by itself shows that read as asked for, rather than starting a second one.
+     */
+    private static Next refreshChosen(Model model) {
+        return model.popup(PullRequestPopup.class)
+                .filter(popup ->
+                        popup.reading() == Reading.BY_ITSELF && readRunning(model, popup) && !busy(model, popup))
+                .map(popup -> Next.of(model.openPopup(popup.asked())))
+                .getOrElse(() -> readAgain(model, popup -> true, Reading.ASKED));
     }
 
     /**
@@ -360,10 +416,7 @@ public final class PullRequestUpdate {
     private static Next filesIfWanted(Model before, Next shown) {
         return before.popup(PullRequestPopup.class)
                 .filter(PullRequestPopup::filesWanted)
-                .map(popup -> {
-                    Next files = update(shown.model(), new PullRequestMsg.FilesChosen());
-                    return new Next(files.model(), shown.cmds().appendAll(files.cmds()));
-                })
+                .map(popup -> shown.then(PullRequestUpdate::filesChosen))
                 .getOrElse(shown);
     }
 

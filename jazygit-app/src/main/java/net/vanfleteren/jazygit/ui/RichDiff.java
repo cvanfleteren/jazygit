@@ -505,8 +505,9 @@ final class RichDiff {
     }
 
     /**
-     * The gutter of {@code row}: the numbers of its line in the old and the new file, and where a review thread ends
-     * on it, or covers it, a mark in {@link Theme.Classes#DIFF_THREAD} in place of the rule (ADR 55).
+     * The gutter of {@code row}: the numbers of its line in the old and the new file, styled for an added or a removed
+     * line when it is one, and where a review thread ends on it, or covers it, a mark in
+     * {@link Theme.Classes#DIFF_THREAD} in place of the rule (ADR 55).
      */
     private static List<Span> gutter(Row row, Layout layout) {
         DiffLine line = row.parsed().line();
@@ -516,12 +517,17 @@ final class RichDiff {
                 .map(version -> versionNumber(version, line, layout.digits()))
                 .getOrElse(() ->
                         number(line.oldNumber(), layout.digits()) + " " + number(line.newNumber(), layout.digits()));
+        Style numbered = switch (line.kind()) {
+            case ADDED -> styles.refined(Theme.Classes.DIFF_LINE_NUMBER, Theme.Classes.DIFF_ADDED_LINE_NUMBER);
+            case REMOVED -> styles.refined(Theme.Classes.DIFF_LINE_NUMBER, Theme.Classes.DIFF_REMOVED_LINE_NUMBER);
+            case CONTEXT, NOTE -> styles.of(Theme.Classes.DIFF_LINE_NUMBER);
+        };
         return !remarks.threads().isEmpty() || remarks.covered()
                 ? List.of(
-                        styled(numbers + " ", Theme.Classes.DIFF_LINE_NUMBER, styles),
+                        Span.styled(numbers + " ", numbered),
                         styled(remarks.threads().isEmpty() ? "┃" : "●", Theme.Classes.DIFF_THREAD, styles),
-                        styled(" ", Theme.Classes.DIFF_LINE_NUMBER, styles))
-                : List.of(styled(numbers + GUTTER_END, Theme.Classes.DIFF_LINE_NUMBER, styles));
+                        Span.styled(" ", numbered))
+                : List.of(Span.styled(numbers + GUTTER_END, numbered));
     }
 
     /**
@@ -641,6 +647,7 @@ final class RichDiff {
             case STRING -> Theme.Classes.SYNTAX_STRING;
             case COMMENT -> Theme.Classes.SYNTAX_COMMENT;
             case NUMBER -> Theme.Classes.SYNTAX_NUMBER;
+            case ANNOTATION -> Theme.Classes.SYNTAX_ANNOTATION;
         };
     }
 

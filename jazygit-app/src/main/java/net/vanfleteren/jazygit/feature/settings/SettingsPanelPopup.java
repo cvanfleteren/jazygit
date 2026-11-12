@@ -18,6 +18,8 @@ import net.vanfleteren.jazygit.state.preferences.RepositoryTheme;
  * @param browsers        the browser set for each GitHub account (ADR 88)
  * @param file            the settings file, which {@code e} opens; none while it is read, or when the settings are
  *                        kept in no file (ADR 111)
+ * @param opensAt         the key of the setting highlighted when the panel opens, like the one a dialog was opened
+ *                        from that cancelling goes back from; else the first
  */
 @With
 public record SettingsPanelPopup(
@@ -27,5 +29,21 @@ public record SettingsPanelPopup(
         Option<GitHubSetup> gitHub,
         boolean animations,
         AccountBrowsers browsers,
-        Option<String> file)
-        implements Popup {}
+        Option<String> file,
+        Option<Character> opensAt)
+        implements Popup {
+
+    /**
+     * The settings, opening with the first one highlighted.
+     */
+    public SettingsPanelPopup(
+            ThemeName theme,
+            RepositoryTheme repositoryTheme,
+            Option<String> ghExecutable,
+            Option<GitHubSetup> gitHub,
+            boolean animations,
+            AccountBrowsers browsers,
+            Option<String> file) {
+        this(theme, repositoryTheme, ghExecutable, gitHub, animations, browsers, file, Option.none());
+    }
+}

@@ -283,6 +283,6 @@ public final class LayoutUpdate {
     private static Next keep(Model model, Settings chosen) {
         Settings kept = model.preferences().settings();
         Model shown = model.mapPreferences(preferences -> preferences.withSettings(chosen));
-        return chosen.equals(kept) ? Next.of(shown) : new Next(shown, List.of(new SaveSettings(kept, chosen)));
+        return chosen.equals(kept) ? Next.of(shown) : Next.of(shown, new SaveSettings(kept, chosen));
     }
 }

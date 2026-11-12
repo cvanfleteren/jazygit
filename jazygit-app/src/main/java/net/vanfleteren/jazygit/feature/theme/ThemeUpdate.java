@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.operation.CommandLog;
+import net.vanfleteren.jazygit.state.popup.Popup;
 import net.vanfleteren.jazygit.state.preferences.RepositoryTheme;
 import net.vanfleteren.jazygit.state.preferences.SaveSettings;
 
@@ -27,21 +28,20 @@ public final class ThemeUpdate {
         return switch (msg) {
             // The key works everywhere, also while a dialog is open, which it does not take away.
             case ThemeMsg.Requested(ThemeScope scope) ->
-                Next.of(model.openPopupIfFree(new ThemePopup(
-                        model.preferences().theme(),
-                        model.preferences().themeOverride(),
-                        scope,
-                        model.preferences().repositoryTheme(),
-                        model.preferences().settings().theme())));
+                Next.of(model.openPopupIfFree(asked(model, scope, Option.none())));
             // Shown as a theme for this session only, which choosing or cancelling replaces.
             case ThemeMsg.Previewed(ThemeName theme) -> Next.of(preview(model, popup -> theme));
             case ThemeMsg.FallbackPreviewed() -> Next.of(preview(model, ThemePopup::fallback));
+            // Back to the popup the theme was asked for from, if any.
             case ThemeMsg.Cancelled() ->
                 Next.of(model.popup(ThemePopup.class)
-                        .map(popup ->
-                                model.mapPreferences(preferences -> preferences.withThemeOverride(popup.overridden())))
-                        .getOrElse(model)
-                        .withoutPopup(ThemePopup.class));
+                        .map(popup -> {
+                            Model closed = model.mapPreferences(
+                                            preferences -> preferences.withThemeOverride(popup.overridden()))
+                                    .withoutPopup(ThemePopup.class);
+                            return popup.behind().map(closed::openPopup).getOrElse(closed);
+                        })
+                        .getOrElse(model));
             case ThemeMsg.Chosen(ThemeName theme) ->
                 model.popup(ThemePopup.class)
                         .map(popup -> switch (popup.scope()) {
@@ -63,6 +63,24 @@ public final class ThemeUpdate {
     }
 
     /**
+     * Asks for the theme to use where {@code scope} says from {@code from}, the popup open now, which the theme popup
+     * takes the place of until it is cancelled.
+     */
+    public static Next requestedFrom(Model model, ThemeScope scope, Popup from) {
+        return Next.of(model.openPopup(asked(model, scope, Option.of(from))));
+    }
+
+    private static ThemePopup asked(Model model, ThemeScope scope, Option<Popup> behind) {
+        return new ThemePopup(
+                model.preferences().theme(),
+                model.preferences().themeOverride(),
+                scope,
+                model.preferences().repositoryTheme(),
+                model.preferences().settings().theme(),
+                behind);
+    }
+
+    /**
      * {@code model} showing the theme {@code theme} gives the open popup; unchanged when it is closed.
      */
     private static Model preview(Model model, Function<ThemePopup, ThemeName> theme) {
@@ -78,7 +96,7 @@ public final class ThemeUpdate {
                 preferences -> preferences.withSettings(chosen).withThemeOverride(Option.none()));
         return chosen.equals(model.preferences().settings())
                 ? Next.of(shown)
-                : new Next(shown, List.of(new SaveSettings(model.preferences().settings(), chosen)));
+                : Next.of(shown, new SaveSettings(model.preferences().settings(), chosen));
     }
 
     /**
@@ -88,6 +106,6 @@ public final class ThemeUpdate {
         RepositoryTheme before = model.preferences().repositoryTheme();
         Model shown = model.mapPreferences(preferences ->
                 preferences.withRepositoryTheme(before.withOwn(theme)).withThemeOverride(Option.none()));
-        return before.own().equals(theme) ? Next.of(shown) : new Next(shown, List.of(new ThemeCmd(theme)));
+        return before.own().equals(theme) ? Next.of(shown) : Next.of(shown, new ThemeCmd(theme));
     }
 }

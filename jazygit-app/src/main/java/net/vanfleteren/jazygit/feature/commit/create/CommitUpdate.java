@@ -23,10 +23,8 @@ public final class CommitUpdate {
         return switch (msg) {
             case Requested() -> requested(model);
             case StageAllConfirmed() -> stageAllConfirmed(model);
-            case StagedForCommit(var cmd, List<ExecutedCommand> commands) -> {
-                Next staged = OperationUpdate.succeeded(model, cmd, commands);
-                yield new Next(staged.model().openPopupIfFree(new CommitPopup()), staged.cmds());
-            }
+            case StagedForCommit(var cmd, List<ExecutedCommand> commands) ->
+                OperationUpdate.succeeded(model, cmd, commands).map(m -> m.openPopupIfFree(new CommitPopup()));
         };
     }
 

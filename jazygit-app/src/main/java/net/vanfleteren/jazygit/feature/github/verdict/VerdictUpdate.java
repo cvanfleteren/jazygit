@@ -72,10 +72,9 @@ public final class VerdictUpdate {
                         .fail(new AppError.OperationFailed(CommentCmd.EDIT_COMMENT, Option.none(), failure)));
             case VerdictMsg.Sent(SubmitReview cmd, var commands) -> sent(model, cmd, commands);
             // The popup stays open, with the text, to send it again or to copy it.
-            case VerdictMsg.SendFailed(SubmitReview cmd, Failure failure) -> {
-                Next failed = OperationUpdate.update(model, new OperationMsg.Failed(cmd, failure));
-                yield new Next(changed(failed.model(), popup -> popup.withSending(false), false), failed.cmds());
-            }
+            case VerdictMsg.SendFailed(SubmitReview cmd, Failure failure) ->
+                OperationUpdate.update(model, new OperationMsg.Failed(cmd, failure))
+                        .map(failed -> changed(failed, popup -> popup.withSending(false), false));
         };
     }
 
@@ -169,20 +168,21 @@ public final class VerdictUpdate {
      * are current, quietly (ADR 34); from the diff, its remarks are read again, as {@code R} reads them.
      */
     private static Next sent(Model model, SubmitReview cmd, List<ExecutedCommand> commands) {
-        Next done = OperationUpdate.succeeded(model, cmd, commands);
-        Model changed = done.model().mapGitHub(gitHub -> gitHub.withChanged(cmd.number()));
-        return changed.popup(VerdictPopup.class)
+        Next done = OperationUpdate.succeeded(model, cmd, commands)
+                .map(succeeded -> succeeded.mapGitHub(gitHub -> gitHub.withChanged(cmd.number())));
+        return done.model()
+                .popup(VerdictPopup.class)
                 .filter(popup -> popup.sending() && popup.number() == cmd.number())
-                .map(popup -> popup.from()
+                .map(popup -> done.then(changed -> popup.from()
                         .map(from -> PullRequestUpdate.read(changed, cmd.number())
-                                .apply((given, load) -> new Next(
+                                .apply((given, load) -> Next.of(
                                         given.openPopup(from.withPullRequestPopup(from.pullRequestPopup()
                                                 .readingAgain(Reading.BY_ITSELF, model.now(), load.read()))),
-                                        done.cmds().append(load))))
-                        .getOrElse(() -> new Next(
+                                        load)))
+                        .getOrElse(() -> Next.of(
                                 changed.withoutPopup(VerdictPopup.class),
-                                done.cmds().append(LoadReviewRemarks.after(changed, cmd.number(), HashSet.empty())))))
-                .getOrElse(() -> new Next(changed, done.cmds()));
+                                LoadReviewRemarks.after(changed, cmd.number(), HashSet.empty())))))
+                .getOrElse(done);
     }
 
     /**

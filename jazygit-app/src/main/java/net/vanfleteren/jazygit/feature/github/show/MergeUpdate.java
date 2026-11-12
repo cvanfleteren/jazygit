@@ -26,10 +26,12 @@ final class MergeUpdate {
      * done like any operation, then kept as the merge of its pull request, and of the ones below it in its stack.
      */
     static Next asked(Model model, MergePullRequest cmd, MergeStatus status, List<ExecutedCommand> commands) {
-        Next done = OperationUpdate.succeeded(model, cmd, commands);
         PullRequestMerge merge = PullRequestMerge.asked(
                 cmd.number(), cmd.branch(), model.gitHub().below(cmd.number()), status, model.now());
-        return went(new Next(done.model().mapGitHub(gitHub -> gitHub.withMerge(merge)), done.cmds()), merge);
+        return went(
+                OperationUpdate.succeeded(model, cmd, commands)
+                        .map(done -> done.mapGitHub(gitHub -> gitHub.withMerge(merge))),
+                merge);
     }
 
     /**
@@ -86,16 +88,15 @@ final class MergeUpdate {
      * as its base branch changed; a merge that failed is shown as any failed operation.
      */
     private static Next went(Next next, PullRequestMerge merge) {
-        Model model = next.model();
         return switch (merge.status()) {
             case MergeStatus.Pending pending -> next;
             // A read that is still running may have missed it, and would show it open again.
             case MergeStatus.Merged merged ->
                 PrOverviewUpdate.reloadIfShown(FetchUpdate.requested(PullRequestsUpdate.loadAnyway(next)));
             case MergeStatus.Enqueued enqueued ->
-                new Next(model.inform(new Notice.MergeEnqueued(merge.branch())), next.cmds());
+                next.map(model -> model.inform(new Notice.MergeEnqueued(merge.branch())));
             case MergeStatus.Failed(String message) ->
-                new Next(model.fail(new AppError.MergeFailed(merge.branch(), message)), next.cmds());
+                next.map(model -> model.fail(new AppError.MergeFailed(merge.branch(), message)));
         };
     }
 }

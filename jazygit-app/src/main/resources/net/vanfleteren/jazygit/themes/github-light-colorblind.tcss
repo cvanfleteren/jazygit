@@ -86,6 +86,9 @@ Span.diff-hunk { color: $muted; background: #ddf4ff; }
 /* The rich view of a diff (ADR 44): a bar for each file, the line numbers, and the changed lines and words. */
 Span.diff-file-header { color: $fg; background: $subtle; text-style: bold; }
 Span.diff-line-number { color: $muted; }
+/* The numbers of a changed line, on a stronger tint than the line, as GitHub draws them. */
+Span.diff-added-line-number { color: $fg; background: #b6e3ff; }
+Span.diff-removed-line-number { color: $fg; background: #ffe7c4; }
 /*
  * The review remarks of a pull request in its diff (ADR 55): their rule and their marks in the gutter, and
  * the header of each comment: a band behind it, and its author.
@@ -104,6 +107,7 @@ Span.syntax-keyword { color: #b35900; }
 Span.syntax-string { color: #0a3069; }
 Span.syntax-comment { color: #6e7781; }
 Span.syntax-number { color: #0550ae; }
+Span.syntax-annotation { color: #0550ae; }
 
 Span.current-branch { color: $attention; text-style: bold; }
 Span.sha { color: $accent; }

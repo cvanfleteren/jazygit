@@ -161,14 +161,13 @@ public final class LoadUpdate {
      * Runs the search again on the log just read, unless keeping what is not on its base already did.
      */
     private static Next commitsLoaded(Next read) {
-        return new Next(
-                read.model(),
-                read.cmds()
-                        .appendAll(read.model()
-                                .repoView()
-                                .commitSearch()
-                                .map(SearchCommits::of)
-                                .filter(search -> !read.cmds().contains(search))));
+        return read.then(model -> new Next(
+                model,
+                model.repoView()
+                        .commitSearch()
+                        .<Cmd>map(SearchCommits::of)
+                        .filter(search -> !read.cmds().contains(search))
+                        .toList()));
     }
 
     /**
@@ -243,12 +242,12 @@ public final class LoadUpdate {
      * commits ahead whose base moved, or is another one by the parents read with the branches, are read again.
      */
     private static Next branchesLoaded(Model before, Model next) {
-        Next reloaded = reloadDivergence(
-                before,
-                reloadMovedLog(
-                        closeGoneBranchCommits(next),
-                        branch -> !tipOf(before, branch).equals(tipOf(next, branch))));
-        return new Next(reloaded.model(), reloaded.cmds().appendAll(AheadUpdate.basesRead(before, next)));
+        return reloadDivergence(
+                        before,
+                        reloadMovedLog(
+                                closeGoneBranchCommits(next),
+                                branch -> !tipOf(before, branch).equals(tipOf(next, branch))))
+                .then(reloaded -> new Next(reloaded, AheadUpdate.basesRead(before, next)));
     }
 
     /**
@@ -263,11 +262,11 @@ public final class LoadUpdate {
                 .map(view -> switch (validity(model, view)) {
                     case Validity.Keep() ->
                         view.refs().exists(ref -> !tipOf(before, ref).equals(tipOf(model, ref)))
-                                ? new Next(model, next.cmds().append(LoadDivergence.of(view)))
+                                ? next.and(LoadDivergence.of(view))
                                 : next;
-                    case Validity.Close() -> new Next(withoutDivergence(model), next.cmds());
+                    case Validity.Close() -> next.map(LoadUpdate::withoutDivergence);
                     case Validity.CloseWith(AppError error) ->
-                        new Next(withoutDivergence(model).fail(error), next.cmds());
+                        next.map(kept -> withoutDivergence(kept).fail(error));
                 })
                 .getOrElse(next);
     }

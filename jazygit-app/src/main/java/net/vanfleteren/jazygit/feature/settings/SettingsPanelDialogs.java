@@ -3,13 +3,13 @@ package net.vanfleteren.jazygit.feature.settings;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
-import net.vanfleteren.jazygit.feature.theme.ThemeDialog;
 import net.vanfleteren.jazygit.gh.model.ChosenBrowser;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.preferences.RepositoryTheme;
 import net.vanfleteren.jazygit.ui.ErrorText;
+import net.vanfleteren.jazygit.ui.HomeDir;
 import net.vanfleteren.jazygit.ui.PopupSlot;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog.Choice;
@@ -54,59 +54,68 @@ public final class SettingsPanelDialogs {
                     Messages.get("dialog.settings.account.title", popup.gitHub().host()),
             popup -> accounts(popup.gitHub()).map(PickDialog.Row::of),
             shown -> new SettingsPanelMsg.AccountChosen(user(shown)));
+    // The keys of the settings that open the theme dialog, which the panel highlights again when it is cancelled.
+    static final char THEME_KEY = 't';
+    static final char REPOSITORY_THEME_KEY = 'r';
     // Wide enough for the usual gh executable and account, so it does not grow once they are read.
     private static final int WIDTH = 80;
     /**
      * The settings, one per line under the heading of what they are about, each changed by its key.
      */
     public static final ChoiceDialog.Spec<SettingsPanelPopup> PANEL = new ChoiceDialog.Spec<>(
-            "settings",
-            SettingsPanelPopup.class,
-            popup -> Messages.get("dialog.settings.title"),
-            List.of(
-                    new Choice<SettingsPanelPopup>(
-                                    't',
-                                    popup -> Messages.get("dialog.settings.theme", themeLabel(popup.theme())),
-                                    SettingsPanelMsg.ThemeRequested::new)
-                            .withHeading("dialog.settings.group.appearance")
-                            .withDetails("dialog.settings.theme.details"),
-                    new Choice<SettingsPanelPopup>(
-                                    'r',
-                                    SettingsPanelDialogs::repositoryTheme,
-                                    SettingsPanelMsg.RepositoryThemeRequested::new)
-                            .withDetails("dialog.settings.repositoryTheme.details"),
-                    new Choice<SettingsPanelPopup>(
-                                    'm',
-                                    popup -> Messages.get(
-                                            "dialog.settings.animations",
-                                            Messages.get(
-                                                    popup.animations() ? "dialog.settings.on" : "dialog.settings.off")),
-                                    SettingsPanelMsg.AnimationsToggled::new)
-                            .withDetails("dialog.settings.animations.details"),
-                    new Choice<SettingsPanelPopup>(
-                                    'g',
-                                    SettingsPanelDialogs::ghExecutable,
-                                    SettingsPanelMsg.GhExecutableRequested::new)
-                            .withHeading("dialog.settings.group.github")
-                            .withDetails("dialog.settings.gh.details"),
-                    new Choice<SettingsPanelPopup>(
-                                    'a',
-                                    SettingsPanelDialogs::account,
-                                    SettingsPanelMsg.AccountRequested::new,
-                                    (model, popup) -> popup.gitHub()
-                                            .exists(gitHub -> gitHub.logins().isRight()))
-                            .withDetails("dialog.settings.account.details"),
-                    new Choice<SettingsPanelPopup>(
-                                    'b',
-                                    SettingsPanelDialogs::browser,
-                                    SettingsPanelMsg.BrowserRequested::new,
-                                    (model, popup) -> popup.gitHub()
-                                            .exists(gitHub -> gitHub.account().isDefined()))
-                            .withDetails("dialog.settings.browser.details"),
-                    new Choice<SettingsPanelPopup>('e', SettingsPanelDialogs::file, SettingsPanelMsg.FileRequested::new)
-                            .withHeading("dialog.settings.group.file")
-                            .withDetails("dialog.settings.file.details")),
-            WIDTH);
+                    "settings",
+                    SettingsPanelPopup.class,
+                    popup -> Messages.get("dialog.settings.title"),
+                    List.of(
+                            new Choice<SettingsPanelPopup>(
+                                            THEME_KEY,
+                                            popup -> Messages.get("dialog.settings.theme", themeLabel(popup.theme())),
+                                            SettingsPanelMsg.ThemeRequested::new)
+                                    .withHeading("dialog.settings.group.appearance")
+                                    .withDetails("dialog.settings.theme.details"),
+                            new Choice<SettingsPanelPopup>(
+                                            REPOSITORY_THEME_KEY,
+                                            SettingsPanelDialogs::repositoryTheme,
+                                            SettingsPanelMsg.RepositoryThemeRequested::new)
+                                    .withDetails("dialog.settings.repositoryTheme.details"),
+                            new Choice<SettingsPanelPopup>(
+                                            'm',
+                                            popup -> Messages.get(
+                                                    "dialog.settings.animations",
+                                                    Messages.get(
+                                                            popup.animations()
+                                                                    ? "dialog.settings.on"
+                                                                    : "dialog.settings.off")),
+                                            SettingsPanelMsg.AnimationsToggled::new)
+                                    .withDetails("dialog.settings.animations.details"),
+                            new Choice<SettingsPanelPopup>(
+                                            'g',
+                                            SettingsPanelDialogs::ghExecutable,
+                                            SettingsPanelMsg.GhExecutableRequested::new)
+                                    .withHeading("dialog.settings.group.github")
+                                    .withDetails("dialog.settings.gh.details"),
+                            new Choice<SettingsPanelPopup>(
+                                            'a',
+                                            SettingsPanelDialogs::account,
+                                            SettingsPanelMsg.AccountRequested::new,
+                                            (model, popup) -> popup.gitHub()
+                                                    .exists(gitHub ->
+                                                            gitHub.logins().isRight()))
+                                    .withDetails("dialog.settings.account.details"),
+                            new Choice<SettingsPanelPopup>(
+                                            'b',
+                                            SettingsPanelDialogs::browser,
+                                            SettingsPanelMsg.BrowserRequested::new,
+                                            (model, popup) -> popup.gitHub()
+                                                    .exists(gitHub ->
+                                                            gitHub.account().isDefined()))
+                                    .withDetails("dialog.settings.browser.details"),
+                            new Choice<SettingsPanelPopup>(
+                                            'e', SettingsPanelDialogs::file, SettingsPanelMsg.FileRequested::new)
+                                    .withHeading("dialog.settings.group.file")
+                                    .withDetails("dialog.settings.file.details")),
+                    WIDTH)
+            .openingAt(SettingsPanelPopup::opensAt);
     // How a warning starts.
     private static final String WARNING = "⚠ ";
 
@@ -135,7 +144,7 @@ public final class SettingsPanelDialogs {
                         .map(inherited -> Messages.get(
                                 "dialog.theme.inherited",
                                 themeLabel(inherited.theme()),
-                                ThemeDialog.origin(inherited.origin()))))
+                                HomeDir.shown(inherited.origin()))))
                 .getOrElse(() -> Messages.get("dialog.settings.repositoryTheme.none"));
         return Messages.get("dialog.settings.repositoryTheme", shown);
     }
@@ -146,7 +155,7 @@ public final class SettingsPanelDialogs {
     static String file(SettingsPanelPopup popup) {
         return Messages.get(
                 "dialog.settings.file",
-                popup.file().map(ThemeDialog::origin).getOrElse(() -> Messages.get("dialog.settings.reading")));
+                popup.file().map(HomeDir::shown).getOrElse(() -> Messages.get("dialog.settings.reading")));
     }
 
     private static String themeLabel(ThemeName theme) {

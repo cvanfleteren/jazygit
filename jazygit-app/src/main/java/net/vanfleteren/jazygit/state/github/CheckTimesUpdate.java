@@ -33,7 +33,7 @@ public final class CheckTimesUpdate {
         Model after = next.model();
         return after.gitHub().checkTimes().equals(model.gitHub().checkTimes())
                 ? next
-                : new Next(after.checkTimesChanged(model), next.cmds(), next.quit());
+                : next.map(changed -> changed.checkTimesChanged(model));
     }
 
     private static Next learn(Model model, CheckTimesMsg msg) {
@@ -88,11 +88,7 @@ public final class CheckTimesUpdate {
                 known(model, repository).map(times -> times.history().unknown(samples));
         return unknown.exists(List::isEmpty)
                 ? topUpIfDue(next, repository, topUp)
-                : new Next(
-                        model,
-                        next.cmds()
-                                .append(new RecordCheckTimes(
-                                        repository, unknown.getOrElse(samples), model.now(), topUp)));
+                : next.and(new RecordCheckTimes(repository, unknown.getOrElse(samples), model.now(), topUp));
     }
 
     private static Next topUpIfDue(Model model, String repository, boolean topUp) {
@@ -102,9 +98,8 @@ public final class CheckTimesUpdate {
     private static Next topUpIfDue(Next next, String repository, boolean topUp) {
         Model model = next.model();
         return topUp && known(model, repository).exists(times -> times.topUpDue(model.now()))
-                ? new Next(
-                        mapKnown(model, repository, times -> times.withTopUp(model.now())),
-                        next.cmds().append(new TopUpCheckTimes(repository, model.now())))
+                ? next.map(known -> mapKnown(known, repository, times -> times.withTopUp(model.now())))
+                        .and(new TopUpCheckTimes(repository, model.now()))
                 : next;
     }
 

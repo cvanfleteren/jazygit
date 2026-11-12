@@ -367,7 +367,8 @@ class UpdateTest {
     void aCommandAskedForTwiceInOneMessageIsAskedForOnce() {
         assertEquals(
                 List.of(new LoadStatus(), LoadBranches.LISTED),
-                new Next(loaded(), List.of(new LoadStatus(), LoadBranches.LISTED, new LoadStatus())).cmds());
+                Update.once(new Next(loaded(), List.of(new LoadStatus(), LoadBranches.LISTED, new LoadStatus())))
+                        .cmds());
     }
 
     @Test
@@ -380,5 +381,44 @@ class UpdateTest {
 
         assertTrue(busy.jobs().busy().containsKey(feature));
         assertFalse(done.jobs().busy().containsKey(feature));
+    }
+
+    @Test
+    void mapChangesTheModelAndKeepsTheCommandsAndTheQuit() {
+        Cmd cmd = new LoadStatus();
+        Next next = Next.of(Model.initial("a"), cmd).quitting().map(m -> Model.initial("b"));
+
+        assertEquals("b", next.model().repositoryName());
+        assertEquals(List.of(cmd), next.cmds());
+        assertTrue(next.quit());
+    }
+
+    @Test
+    void andAddsCommandsAfterTheOnesItHas() {
+        Cmd first = new LoadStatus();
+        Cmd second = TestModels.loadCommits();
+        Next next = Next.of(Model.initial("a"), first).and(second);
+
+        assertEquals(List.of(first, second), next.cmds());
+        assertFalse(next.quit());
+    }
+
+    @Test
+    void thenRunsTheCommandsOfBothInOrderAndStopsIfEitherDoes() {
+        Cmd first = new LoadStatus();
+        Cmd second = TestModels.loadCommits();
+        Next next = Next.of(Model.initial("a"), first)
+                .then(m -> Next.of(Model.initial("b"), second).quitting());
+
+        assertEquals("b", next.model().repositoryName());
+        assertEquals(List.of(first, second), next.cmds());
+        assertTrue(next.quit());
+    }
+
+    @Test
+    void aCommandAskedForTwiceIsKeptByNextAndStartedOnceByTheStep() {
+        Cmd cmd = new LoadStatus();
+
+        assertEquals(2, Next.of(Model.initial("a"), cmd).and(cmd).cmds().size());
     }
 }

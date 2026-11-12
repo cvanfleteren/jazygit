@@ -116,6 +116,6 @@ public final class PullRequestsUpdate {
                                 .equals(GitHubBases.of(next.model().gitHub()))
                         || next.model().jobs().runs(load)
                 ? next
-                : new Next(next.model(), next.cmds().append(load));
+                : next.and(load);
     }
 }

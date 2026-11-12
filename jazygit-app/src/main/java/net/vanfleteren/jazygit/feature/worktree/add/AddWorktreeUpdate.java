@@ -91,24 +91,18 @@ public final class AddWorktreeUpdate {
     private static Next added(Model model, AddWorktreeCmd cmd, String location, List<ExecutedCommand> commands) {
         Option<Notice> kept = kept(cmd.source());
         if (cmd.switching()) {
-            Next succeeded = OperationUpdate.succeeded(model, cmd, commands);
             Landing there = new Landing(BranchesTab.LOCAL, model.repoView().focusedPane());
-            return new Next(
-                    succeeded.model(),
-                    succeeded
-                            .cmds()
-                            .append(new RecentReposCmd.SwitchTo(
-                                    location,
-                                    kept.map(notice -> there.followedBy(new Informed(notice)))
-                                            .getOrElse(there))));
+            return OperationUpdate.succeeded(model, cmd, commands)
+                    .and(new RecentReposCmd.SwitchTo(
+                            location,
+                            kept.map(notice -> there.followedBy(new Informed(notice)))
+                                    .getOrElse(there)));
         }
-        Next succeeded = OperationUpdate.succeeded(
-                model.mapRepoView(repoView -> repoView.withBranchesTab(BranchesTab.WORKTREES)), cmd, commands);
-        return new Next(
-                kept.map(succeeded.model()::inform)
-                        .getOrElse(succeeded.model())
-                        .openPopupIfFree(new SwitchToAddedPopup(cmd.source().label(), location)),
-                succeeded.cmds());
+        return OperationUpdate.succeeded(
+                        model.mapRepoView(repoView -> repoView.withBranchesTab(BranchesTab.WORKTREES)), cmd, commands)
+                .map(succeeded -> kept.map(succeeded::inform)
+                        .getOrElse(succeeded)
+                        .openPopupIfFree(new SwitchToAddedPopup(cmd.source().label(), location)));
     }
 
     /**

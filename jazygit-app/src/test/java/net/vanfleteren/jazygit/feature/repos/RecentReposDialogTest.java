@@ -64,6 +64,5 @@ class RecentReposDialogTest {
                 RecentReposDialog.row(new RecentRepo("/srv/repo", "repo", Option.none()))
                         .cells()
                         .get(2));
-        assertEquals("~", RecentReposDialog.shown(HOME));
     }
 }

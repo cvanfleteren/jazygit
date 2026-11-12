@@ -35,11 +35,8 @@ final class GitHubReads {
      */
     static Next loadAnyway(Next next, Cmd read) {
         return next.model().jobs().runs(read)
-                ? new Next(
-                        next.model()
-                                .mapGitHub(gitHub ->
-                                        gitHub.withAgain(gitHub.again().add(read))),
-                        next.cmds())
+                ? next.map(model -> model.mapGitHub(
+                        gitHub -> gitHub.withAgain(gitHub.again().add(read))))
                 : start(next, read);
     }
 
@@ -53,6 +50,6 @@ final class GitHubReads {
     }
 
     private static Next start(Next next, Cmd read) {
-        return new Next(next.model(), next.cmds().append(read));
+        return next.and(read);
     }
 }

@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.feature.commit.create.CommitPopup;
 import net.vanfleteren.jazygit.feature.diff.DiffOptionsUpdate;
+import net.vanfleteren.jazygit.feature.theme.ThemeMsg;
 import net.vanfleteren.jazygit.feature.theme.ThemePopup;
 import net.vanfleteren.jazygit.feature.theme.ThemeScope;
 import net.vanfleteren.jazygit.gh.GhError;
@@ -124,8 +125,38 @@ class SettingsPanelUpdateTest {
 
         assertEquals(
                 Option.of(new ThemePopup(
-                        ThemeName.DARK, Option.none(), ThemeScope.EVERYWHERE, RepositoryTheme.NONE, ThemeName.DARK)),
+                        ThemeName.DARK,
+                        Option.none(),
+                        ThemeScope.EVERYWHERE,
+                        RepositoryTheme.NONE,
+                        ThemeName.DARK,
+                        Option.of(READ.withOpensAt(Option.of('t'))))),
                 choosing.popup(ThemePopup.class));
+    }
+
+    @Test
+    void cancellingTheThemeGoesBackToTheSettingsOnTheTheme() {
+        Model open = TestModels.loaded().openPopup(READ);
+        Model choosing =
+                Update.update(open, new SettingsPanelMsg.ThemeRequested()).model();
+        Model previewed =
+                Update.update(choosing, new ThemeMsg.Previewed(ThemeName.LIGHT)).model();
+
+        Model cancelled = Update.update(previewed, new ThemeMsg.Cancelled()).model();
+
+        assertEquals(Option.of(READ.withOpensAt(Option.of('t'))), cancelled.popup(SettingsPanelPopup.class));
+        assertEquals(ThemeName.DARK, cancelled.preferences().theme());
+    }
+
+    @Test
+    void cancellingTheRepositoryThemeGoesBackToTheSettingsOnTheRepositoryTheme() {
+        Model open = TestModels.loaded().openPopup(READ);
+        Model choosing = Update.update(open, new SettingsPanelMsg.RepositoryThemeRequested())
+                .model();
+
+        Model cancelled = Update.update(choosing, new ThemeMsg.Cancelled()).model();
+
+        assertEquals(Option.of(READ.withOpensAt(Option.of('r'))), cancelled.popup(SettingsPanelPopup.class));
     }
 
     @Test
