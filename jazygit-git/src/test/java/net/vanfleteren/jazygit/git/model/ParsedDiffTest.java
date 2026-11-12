@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.git.model;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.Array;
 import io.vavr.collection.List;
@@ -182,16 +183,20 @@ class ParsedDiffTest {
     @Test
     void eachTokenIsKeptInAnIntAndMadeAgainAsItWas() {
         DiffLine line = new DiffLine(DiffLine.Kind.ADDED, "x".repeat(Lexer.MAX_LINE), DiffLine.NONE, 1);
-        Array<Token> tokens = Array.of(
-                new Token(0, 3, Token.Kind.KEYWORD),
-                new Token(4, 2, Token.Kind.NUMBER),
-                new Token(10, 5, Token.Kind.STRING),
-                new Token(Lexer.MAX_LINE - 7, 7, Token.Kind.COMMENT));
+        // Each kind, at even and odd starts and lengths, and one that ends where the longest line lexed does.
+        Array<Token> tokens = Array.of(Token.Kind.values())
+                .zipWithIndex((kind, at) -> new Token(10 * at + at % 2, 2 + at % 2, kind))
+                .append(new Token(Lexer.MAX_LINE - Lexer.MAX_LINE / 2, Lexer.MAX_LINE / 2, Token.Kind.ANNOTATION));
 
         ParsedLine lexed = ParsedLine.of(line, List.empty(), Option.of(tokens));
 
         assertEquals(Option.of(tokens), lexed.tokens());
         assertEquals(tokens.size(), lexed.lexed().length);
+    }
+
+    @Test
+    void whereATokenStartsAndHowLongItIsFitInAPackedTokenForEveryLineThatIsLexed() {
+        assertTrue(Lexer.MAX_LINE < 1 << ParsedLine.BITS);
     }
 
     @Test

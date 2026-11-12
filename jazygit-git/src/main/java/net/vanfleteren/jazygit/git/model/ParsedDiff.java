@@ -150,10 +150,13 @@ public record ParsedDiff(List<String> preamble, List<ParsedFile> files) {
          */
         static final int[] NO_TOKENS = new int[0];
 
-        // Where a token starts and how long it is take 15 bits each: a line longer than Lexer.MAX_LINE is not lexed.
-        private static final int BITS = 15;
+        // The kind of a token takes as many bits as there are kinds to tell apart; where it starts and how long it is
+        // share the others, half each, which is far more than a line of Lexer.MAX_LINE takes: a longer one is not
+        // lexed.
+        private static final int KIND_BITS =
+                Integer.SIZE - Integer.numberOfLeadingZeros(Token.Kind.values().length - 1);
+        static final int BITS = (Integer.SIZE - KIND_BITS) / 2;
         private static final int MOST = (1 << BITS) - 1;
-        private static final int KIND_BITS = 2;
         private static final Array<Token.Kind> KINDS = Array.of(Token.Kind.values());
 
         private final DiffLine line;
