@@ -58,6 +58,8 @@ import org.junit.jupiter.api.Test;
 class PullRequestDialogTest {
 
     private static final Instant NOW = Instant.parse("2026-10-13T12:00:00Z");
+    // A terminal the whole popup fits on, so the actions are drawn and take the keys.
+    private static final dev.tamboui.layout.Size SCREEN = new dev.tamboui.layout.Size(120, 50);
     private static final PullRequest PR =
             new PullRequest(42, new GhBranch("support_rename"), true, Checks.FAILING, Review.CHANGES_REQUESTED);
     private static final PullRequestDetails DETAILS = new PullRequestDetails(
@@ -903,7 +905,7 @@ class PullRequestDialogTest {
         Supplier<Element> view =
                 () -> stack(text("background"), moving.render(cursor.on(model)).get());
         java.util.List<String> screens = new ArrayList<>();
-        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(view)) {
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(view, SCREEN)) {
             SettledPilot.focus(runner, PullRequestDialog.ID);
             for (KeyCode key : keys) {
                 SettledPilot.of(runner).press(key);
@@ -927,7 +929,7 @@ class PullRequestDialogTest {
     }
 
     private ToolkitTestRunner start(Model model) throws Exception {
-        ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(model));
+        ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(model), SCREEN);
         SettledPilot.focus(runner, PullRequestDialog.ID);
         RenderedText.of(runner, () -> view(model));
         return runner;
