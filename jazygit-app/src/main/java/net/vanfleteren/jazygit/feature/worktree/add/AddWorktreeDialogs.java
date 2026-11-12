@@ -5,6 +5,7 @@ import io.vavr.control.Option;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.ui.HomeDir;
 import net.vanfleteren.jazygit.ui.PopupSlot;
 import net.vanfleteren.jazygit.ui.widgets.ConfirmDialog;
 import net.vanfleteren.jazygit.ui.widgets.TextInputDialog;
@@ -62,7 +63,7 @@ public final class AddWorktreeDialogs {
             "switch-to-added-worktree",
             SwitchToAddedPopup.class,
             popup -> Messages.get("dialog.switchToAddedWorktree.title", popup.label()),
-            popup -> Messages.get("dialog.switchToAddedWorktree.message", popup.location()),
+            popup -> Messages.get("dialog.switchToAddedWorktree.message", HomeDir.shown(popup.location())),
             AddWorktreeMsg.SwitchConfirmed::new);
 
     private AddWorktreeDialogs() {}

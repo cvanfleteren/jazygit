@@ -2,7 +2,6 @@ package net.vanfleteren.jazygit.feature.repos;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import java.io.File;
 import java.nio.file.Path;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.git.model.BranchName;
@@ -10,6 +9,7 @@ import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.ui.HomeDir;
 import net.vanfleteren.jazygit.ui.PopupSlot;
 import net.vanfleteren.jazygit.ui.Theme;
 import net.vanfleteren.jazygit.ui.widgets.PickDialog;
@@ -30,7 +30,6 @@ public final class RecentReposDialog {
             Option.of("dialog.recentRepos.none"));
     // The characters of a name or a branch shown at most, so that long ones do not push the rest away.
     private static final int CAP = 30;
-    private static final String HOME = System.getProperty("user.home");
 
     private RecentReposDialog() {}
 
@@ -56,7 +55,7 @@ public final class RecentReposDialog {
                                 .capped(CAP),
                         Cell.styled(
                                 Option.of(directory.getParent())
-                                        .map(parent -> shown(parent.toString()))
+                                        .map(parent -> HomeDir.shown(parent.toString()))
                                         .getOrElse(""),
                                 Theme.Classes.REPO_LOCATION)));
     }
@@ -67,14 +66,5 @@ public final class RecentReposDialog {
                 Cell.styled(branch.value(), Theme.Classes.REPO_BRANCH);
             case Head.Detached(Sha at) -> Cell.styled(at.shortSha(), Theme.Classes.DIM);
         };
-    }
-
-    /**
-     * How {@code directory} is shown: from {@code ~} when it is in the home directory.
-     */
-    public static String shown(String directory) {
-        return directory.equals(HOME) || directory.startsWith(HOME + File.separator)
-                ? "~" + directory.substring(HOME.length())
-                : directory;
     }
 }

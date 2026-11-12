@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.popup.ConfirmablePopup;
 import net.vanfleteren.jazygit.state.popup.Popup;
 import net.vanfleteren.jazygit.state.popup.PopupMsg;
+import net.vanfleteren.jazygit.ui.TextWidth;
 
 /**
  * The standard popup asking to confirm an action: a title, a message, and a hint, by default that Enter
@@ -21,6 +22,8 @@ import net.vanfleteren.jazygit.state.popup.PopupMsg;
 public final class ConfirmDialog<P extends Popup> implements PopupView {
 
     private static final int WIDTH = 60;
+    // As wide as a word that does not fit asks, such as a path, but no wider than this.
+    private static final int MAX_WIDTH = 100;
     // The blank line and the hint below the message, plus the top and bottom border.
     private static final int EXTRA_HEIGHT = 2 + 2;
     private final Spec<P> spec;
@@ -45,18 +48,33 @@ public final class ConfirmDialog<P extends Popup> implements PopupView {
     public Option<Element> render(Model model) {
         return model.popup(spec.popupType()).map(popup -> {
             String text = spec.message().apply(popup);
-            int messageHeight = DialogFrame.wrappedHeight(text, WIDTH, Integer.MAX_VALUE);
-            return DialogFrame.withHint(
-                            spec.title().apply(popup),
-                            WIDTH,
-                            spec.hintKey(),
-                            List.of(DialogFrame.wrapped(text, WIDTH, Integer.MAX_VALUE)))
-                    .id(spec.id())
-                    .focusable()
-                    .length(messageHeight + EXTRA_HEIGHT)
-                    .onConfirm(() -> dispatch.accept(spec.onConfirm().get()))
-                    .onCancel(() -> dispatch.accept(spec.onCancel().get()));
+            String title = spec.title().apply(popup);
+            return new FittedDialog(width(text), width -> dialog(title, text, width));
         });
+    }
+
+    /**
+     * The popup showing {@code text}, {@code width} wide, as high as the text takes at that width.
+     */
+    private Element dialog(String title, String text, int width) {
+        int messageHeight = DialogFrame.wrappedHeight(text, width, Integer.MAX_VALUE);
+        return DialogFrame.withHint(
+                        title, width, spec.hintKey(), List.of(DialogFrame.wrapped(text, width, Integer.MAX_VALUE)))
+                .id(spec.id())
+                .focusable()
+                .length(messageHeight + EXTRA_HEIGHT)
+                .onConfirm(() -> dispatch.accept(spec.onConfirm().get()))
+                .onCancel(() -> dispatch.accept(spec.onCancel().get()));
+    }
+
+    /**
+     * The width that shows {@code message}: {@value #WIDTH}, or wider to keep a longer word, such as a path, on one
+     * line, up to {@value #MAX_WIDTH}.
+     */
+    static int width(String message) {
+        int longestWord =
+                List.of(message.split("\\s+")).map(TextWidth::of).max().getOrElse(0);
+        return Math.clamp(DialogFrame.FRAME + longestWord, WIDTH, MAX_WIDTH);
     }
 
     /**

@@ -3,13 +3,13 @@ package net.vanfleteren.jazygit.feature.settings;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
-import net.vanfleteren.jazygit.feature.theme.ThemeDialog;
 import net.vanfleteren.jazygit.gh.model.ChosenBrowser;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.preferences.RepositoryTheme;
 import net.vanfleteren.jazygit.ui.ErrorText;
+import net.vanfleteren.jazygit.ui.HomeDir;
 import net.vanfleteren.jazygit.ui.PopupSlot;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog.Choice;
@@ -144,7 +144,7 @@ public final class SettingsPanelDialogs {
                         .map(inherited -> Messages.get(
                                 "dialog.theme.inherited",
                                 themeLabel(inherited.theme()),
-                                ThemeDialog.origin(inherited.origin()))))
+                                HomeDir.shown(inherited.origin()))))
                 .getOrElse(() -> Messages.get("dialog.settings.repositoryTheme.none"));
         return Messages.get("dialog.settings.repositoryTheme", shown);
     }
@@ -155,7 +155,7 @@ public final class SettingsPanelDialogs {
     static String file(SettingsPanelPopup popup) {
         return Messages.get(
                 "dialog.settings.file",
-                popup.file().map(ThemeDialog::origin).getOrElse(() -> Messages.get("dialog.settings.reading")));
+                popup.file().map(HomeDir::shown).getOrElse(() -> Messages.get("dialog.settings.reading")));
     }
 
     private static String themeLabel(ThemeName theme) {
