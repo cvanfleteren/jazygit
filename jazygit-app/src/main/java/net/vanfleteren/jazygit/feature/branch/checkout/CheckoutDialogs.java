@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.git.model.Worktree;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.ui.BranchesPanel;
+import net.vanfleteren.jazygit.ui.HomeDir;
 import net.vanfleteren.jazygit.ui.PopupSlot;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog.Choice;
@@ -34,8 +35,8 @@ public final class CheckoutDialogs {
             "switch-worktree",
             SwitchWorktreePopup.class,
             popup -> Messages.get("dialog.switchWorktree.title", popup.branch().value()),
-            popup ->
-                    Messages.get("dialog.switchWorktree.message", popup.branch().value(), popup.worktree()),
+            popup -> Messages.get(
+                    "dialog.switchWorktree.message", popup.branch().value(), HomeDir.shown(popup.worktree())),
             CheckoutMsg.SwitchWorktreeConfirmed::new);
 
     /**

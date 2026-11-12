@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.ui.ErrorText;
+import net.vanfleteren.jazygit.ui.HomeDir;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog.Choice;
 import net.vanfleteren.jazygit.ui.widgets.PickDialog;
@@ -28,7 +29,7 @@ public final class StartDialogs {
                     NoRepositoryPopup.class,
                     popup -> Messages.get(
                             popup.exists() ? "dialog.start.notARepository" : "dialog.start.notFound",
-                            RecentReposDialog.shown(popup.directory())),
+                            HomeDir.shown(popup.directory())),
                     List.of(
                             new Choice<NoRepositoryPopup>('i', "dialog.start.init", StartMsg.InitChosen::new)
                                     .shownWhen((model, popup) -> popup.exists()),
@@ -44,7 +45,7 @@ public final class StartDialogs {
                     OpenFolderPopup.class,
                     popup -> Messages.get(
                             "dialog.start.openFolder.title",
-                            RecentReposDialog.shown(popup.outside().directory())),
+                            HomeDir.shown(popup.outside().directory())),
                     Option.of(Messages.get("dialog.start.openFolder.placeholder")),
                     StartMsg.FolderConfirmed::new)
             .cancelledBy(StartMsg.FolderCancelled::new);
@@ -81,7 +82,7 @@ public final class StartDialogs {
      */
     private static Option<String> problem(OpenFolderPopup popup) {
         return popup.notFound()
-                .map(directory -> Messages.get("dialog.start.openFolder.notFound", RecentReposDialog.shown(directory)))
+                .map(directory -> Messages.get("dialog.start.openFolder.notFound", HomeDir.shown(directory)))
                 .orElse(() -> popup.problem().map(ErrorText::of));
     }
 

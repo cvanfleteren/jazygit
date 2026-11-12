@@ -8,6 +8,7 @@ import java.util.function.Consumer;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.ui.HomeDir;
 import net.vanfleteren.jazygit.ui.PopupSlot;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog.Choice;
@@ -70,17 +71,8 @@ public final class ThemeDialog {
         String theme = Messages.get("dialog.theme." + popup.fallback().id());
         return popup.repository()
                 .inherited()
-                .map(inherited -> Messages.get("dialog.theme.inherited", theme, origin(inherited.origin())))
+                .map(inherited -> Messages.get("dialog.theme.inherited", theme, HomeDir.shown(inherited.origin())))
                 .getOrElse(() -> Messages.get("dialog.theme.saved", theme));
-    }
-
-    /**
-     * {@code origin}, the file of the git configuration a theme is set in, starting with {@code ~} for the home
-     * directory, as the user wrote it in an {@code includeIf}.
-     */
-    public static String origin(String origin) {
-        String home = System.getProperty("user.home");
-        return origin.startsWith(home + "/") ? "~" + origin.substring(home.length()) : origin;
     }
 
     /**
