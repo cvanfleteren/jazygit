@@ -645,7 +645,7 @@ class ContentPanelTest {
         }));
 
         java.util.List<Line> windowed =
-                ContentPanel.windowed(lines, 1, 40, 10, 0, HashSet.empty()).lines();
+                ContentPanel.windowed(lines, 1, 40, 10, 0, row -> false).lines();
 
         assertEquals(100, windowed.size());
         assertEquals(20, drawn.get());
@@ -656,13 +656,13 @@ class ContentPanelTest {
         assertEquals("", windowed.get(60).rawContent());
         // At the end, the lines an area twice as high would show from its last line at its bottom.
         java.util.List<Line> atEnd =
-                ContentPanel.windowed(lines, 0, 95, 10, 0, HashSet.empty()).lines();
+                ContentPanel.windowed(lines, 0, 95, 10, 0, row -> false).lines();
         assertEquals("080", atEnd.get(80).rawContent());
         assertEquals("", atEnd.get(79).rawContent());
         // Before the area was ever drawn, none of them, though it still gets as many.
         int before = drawn.get();
         java.util.List<Line> undrawn =
-                ContentPanel.windowed(lines, 0, 50, 0, 0, HashSet.empty()).lines();
+                ContentPanel.windowed(lines, 0, 50, 0, 0, row -> false).lines();
         assertEquals(100, undrawn.size());
         assertEquals("", undrawn.get(50).rawContent());
         assertEquals(before, drawn.get());
@@ -690,7 +690,7 @@ class ContentPanelTest {
                 Line.from(Span.raw("ab"), Span.styled(" ", green))));
 
         java.util.List<Line> windowed =
-                ContentPanel.windowed(lines, 1, 0, 10, 6, HashSet.of(0)).lines();
+                ContentPanel.windowed(lines, 1, 0, 10, 6, row -> row == 0).lines();
 
         // Filled to the edge of the area where it is scrolled to, then cut sideways.
         assertEquals(Line.from(Span.raw("b"), Span.styled("     ", green)), windowed.get(0));

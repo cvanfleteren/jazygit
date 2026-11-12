@@ -51,11 +51,11 @@ class DiffCursorTest {
     }
 
     /**
-     * The cursor of a diff of {@code lines} lines with {@code stops}, indexed as the area indexes them once for a diff.
+     * The cursor of a diff of {@code lines} lines with {@code stops}, looked for from the first stop.
      */
     private static Option<DiffCursor> cursor(
             Vector<RichDiff.Stop> stops, int lines, int height, int row, Option<Anchor> at, Option<Anchor> mark) {
-        return DiffCursor.of(stops, DiffCursor.indexes(stops), lines, height, row, at, mark);
+        return DiffCursor.of(stops, 0, lines, height, row, at, mark);
     }
 
     private static DiffCursor on(Anchor anchor, int row) {
@@ -242,10 +242,17 @@ class DiffCursorTest {
     }
 
     @Test
-    void theIndexOfTheStopOfAnAnchorIsThatOfTheFirstWithIt() {
-        assertEquals(
-                io.vavr.collection.HashMap.of(FILE, 0, ONE, 1),
-                DiffCursor.indexes(Vector.of(stop(FILE, 1, 0), line(ONE, 1), line(FILE, 2))));
+    void theStopOfAnAnchorIsTheOneWithItClosestToWhereItIsLookedForFrom() {
+        Vector<RichDiff.Stop> stops = Vector.of(stop(FILE, 1, 0), line(ONE, 1), line(TWO, 2), line(FILE, 3));
+
+        assertEquals(Option.of(0), DiffCursor.index(stops, FILE, 0));
+        assertEquals(Option.of(3), DiffCursor.index(stops, FILE, 2));
+        assertEquals(Option.of(1), DiffCursor.index(stops, ONE, 3));
+        // As far before as after, the one before.
+        assertEquals(Option.of(1), DiffCursor.index(stops, ONE, 99));
+        assertEquals(Option.of(0), DiffCursor.index(Vector.of(stop(FILE, 1, 0), line(ONE, 1), line(FILE, 2)), FILE, 1));
+        assertEquals(Option.none(), DiffCursor.index(stops, THREE, 1));
+        assertEquals(Option.none(), DiffCursor.index(Vector.empty(), FILE, 0));
     }
 
     @Test

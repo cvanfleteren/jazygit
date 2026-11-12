@@ -26,7 +26,6 @@ import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
-import io.vavr.collection.Set;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import java.time.Instant;
@@ -36,6 +35,7 @@ import java.util.AbstractList;
 import java.util.Locale;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
+import java.util.function.IntPredicate;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
@@ -273,7 +273,7 @@ public final class ContentPanel {
      * {@link #filled} to the edge of an area {@code width} columns wide (ADR 80). Only the lines that show are drawn
      * ({@link Rows}).
      */
-    static Text windowed(Rows lines, int column, int row, int height, int width, Set<Integer> filling) {
+    static Text windowed(Rows lines, int column, int row, int height, int width, IntPredicate filling) {
         Tuple2<Integer, Integer> window = window(lines.size(), row, height);
         int top = window._1();
         int bottom = window._2();
@@ -285,7 +285,7 @@ public final class ContentPanel {
                     return BLANK;
                 }
                 Line drawn = lines.get(index);
-                Line line = filling.contains(index) ? filled(drawn, column + width) : drawn;
+                Line line = filling.test(index) ? filled(drawn, column + width) : drawn;
                 return column == 0 ? line : sideways(line, column);
             }
 
@@ -756,8 +756,11 @@ public final class ContentPanel {
                     && (!rendering(body) || before.width() == width));
             // The hunk a range is open in is shown as git gives it, so a range holds the lines it shows (ADR 83). A new
             // body has its hunk looked up in its diff, so it is drawn once, in the order it is shown in.
+            // The stop the cursor was on, which the stops of the cursor and the range are looked for from.
+            int near = cursor.map(DiffCursor::stop).getOrElse(0);
             Option<DiffStops.HunkAt> asGiven = told.mark()
-                    .flatMap(mark -> last.map(before -> before.hunk(mark)).getOrElse(() -> markedHunk(body, mark)));
+                    .flatMap(mark ->
+                            last.map(before -> before.hunk(mark, near)).getOrElse(() -> markedHunk(body, mark)));
             Styled current = last.filter(before -> before.asGiven().equals(asGiven))
                     .getOrElse(() -> Styled.of(body, theme, asGiven, style.drawn(body, asGiven, width), width));
             styled = Option.of(current);
@@ -769,9 +772,9 @@ public final class ContentPanel {
             Scrolled at = last.orElse(sameChanges)
                     .filter(before -> before != current)
                     .flatMap(before -> told.cursor()
-                            .flatMap(cursorAt -> before.row(cursorAt)
-                                    .orElse(() -> drawnOn.flatMap(before::row))
-                                    .flatMap(was -> current.row(cursorAt).map(is -> is - was))))
+                            .flatMap(cursorAt -> before.row(cursorAt, near)
+                                    .orElse(() -> drawnOn.flatMap(on -> before.row(on, near)))
+                                    .flatMap(was -> current.row(cursorAt, near).map(is -> is - was))))
                     .filter(shift -> shift != 0)
                     .map(shift -> {
                         Scrolled shifted = new Scrolled(
@@ -787,7 +790,7 @@ public final class ContentPanel {
             RichTextState state = element.state();
             cursor = DiffCursor.of(
                     current.stops(),
-                    current.indexes(),
+                    near,
                     current.lines().size(),
                     state.viewportHeight(),
                     at.row(),
@@ -806,7 +809,7 @@ public final class ContentPanel {
             Rows lines = cursor.filter(ignored -> focused)
                     .map(on -> on.tinted(kept, styles.of(Theme.Classes.DIFF_CURSOR)))
                     .getOrElse(kept);
-            element.text(windowed(lines, column, row, state.viewportHeight(), state.viewportWidth(), current.filling()))
+            element.text(windowed(lines, column, row, state.viewportHeight(), state.viewportWidth(), current::filling))
                     .title(shown.title());
             // The state clamps a scroll to the lines it was last drawn with: a longer body, as a version of the file
             // in place of its diff, would show only the blank lines around where it was cut off (ADR 78, 102).
@@ -1052,10 +1055,7 @@ public final class ContentPanel {
          * the stops of its cursor start, if it has one.
          *
          * @param asGiven the hunk shown as git gives it, as a range is open in it (ADR 83)
-         * @param indexes the index of the stop of each anchor, {@link DiffCursor#indexes}
          * @param widest  how wide the widest of {@code lines} is, which the tint of the cursor never makes wider
-         * @param filling the lines drawn to the edge of the area (ADR 80): the bar of each file, the lines of the diff
-         *                and the markers of the lines it leaves out, not the threads on them
          * @param places  where each line of a version rendered is drawn, in order (ADR 103)
          * @param width   how wide a version rendered was drawn
          */
@@ -1065,9 +1065,7 @@ public final class ContentPanel {
                 Option<DiffStops.HunkAt> asGiven,
                 Rows lines,
                 Vector<RichDiff.Stop> stops,
-                Map<Anchor, Integer> indexes,
                 int widest,
-                Set<Integer> filling,
                 Vector<RichDiff.Place> places,
                 int width) {
 
@@ -1081,16 +1079,9 @@ public final class ContentPanel {
                         asGiven,
                         lines,
                         stops,
-                        DiffCursor.indexes(stops),
                         // The render thread waits for it, as it does for the lines to be drawn; the lines of a diff
                         // are not drawn for it.
                         drawn.widest().getAsInt(),
-                        stops.filter(stop -> switch (stop.mark().anchor()) {
-                                    case Anchor.File _, Anchor.OnLine _, Anchor.Gap _ -> true;
-                                    case Anchor.Lead _, Anchor.Thread _, Anchor.Comment _ -> false;
-                                })
-                                .map(RichDiff.Stop::row)
-                                .toSet(),
                         drawn.places().toVector(),
                         width);
             }
@@ -1099,22 +1090,47 @@ public final class ContentPanel {
              * This body with {@code kept}, its lines with others kept drawn.
              */
             Styled withLines(Rows kept) {
-                return new Styled(body, theme, asGiven, kept, stops, indexes, widest, filling, places, width);
+                return new Styled(body, theme, asGiven, kept, stops, widest, places, width);
             }
 
             /**
-             * The hunk of the line {@code anchor}, if it is a line of this body.
+             * Whether line {@code row} is drawn to the edge of the area (ADR 80): the bar of each file, the lines of
+             * the diff and the markers of the lines it leaves out, not the threads on them. The stops are in the order
+             * of their lines, so those that start on it are looked up, not kept apart for each line.
              */
-            Option<DiffStops.HunkAt> hunk(Anchor anchor) {
-                return indexes.get(anchor)
+            boolean filling(int row) {
+                int low = 0;
+                int high = stops.size();
+                while (low < high) {
+                    int middle = (low + high) >>> 1;
+                    if (stops.get(middle).row() < row) {
+                        low = middle + 1;
+                    } else {
+                        high = middle;
+                    }
+                }
+                return stops.drop(low).takeWhile(stop -> stop.row() == row).exists(stop -> switch (stop.mark()
+                        .anchor()) {
+                    case Anchor.File _, Anchor.OnLine _, Anchor.Gap _ -> true;
+                    case Anchor.Lead _, Anchor.Thread _, Anchor.Comment _ -> false;
+                });
+            }
+
+            /**
+             * The hunk of the line {@code anchor}, if it is a line of this body, looked for from the stop at
+             * {@code near} ({@link DiffCursor#index}).
+             */
+            Option<DiffStops.HunkAt> hunk(Anchor anchor, int near) {
+                return DiffCursor.index(stops, anchor, near)
                         .flatMap(index -> stops.get(index).mark().hunk());
             }
 
             /**
-             * The line the stop {@code anchor} starts on, if it is a stop of this body.
+             * The line the stop {@code anchor} starts on, if it is a stop of this body, looked for from the stop at
+             * {@code near} ({@link DiffCursor#index}).
              */
-            Option<Integer> row(Anchor anchor) {
-                return indexes.get(anchor)
+            Option<Integer> row(Anchor anchor, int near) {
+                return DiffCursor.index(stops, anchor, near)
                         .map(index -> stops.get(index).row())
                         .orElse(() -> places.find(place -> place.anchor().equals(anchor))
                                 .map(RichDiff.Place::row));
