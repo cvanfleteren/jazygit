@@ -9,6 +9,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.UnaryOperator;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.RepoStatus;
@@ -130,7 +131,22 @@ public final class Update {
                 now);
     }
 
+    /**
+     * What {@code msg} makes of {@code model}. A command is asked for once: one equal to one asked for before it is
+     * dropped, once here, as the model only knows what runs once the message is handled (ADR 39).
+     */
     public static Next update(Model model, Msg msg) {
+        return once(handled(model, msg));
+    }
+
+    /**
+     * {@code next}, with each command in it once.
+     */
+    public static Next once(Next next) {
+        return new Next(next.model(), next.cmds().distinct(), next.quit());
+    }
+
+    private static Next handled(Model model, Msg msg) {
         return arrived(handle(model, msg));
     }
 
@@ -154,11 +170,7 @@ public final class Update {
                 .filter(msg -> model.repo().status() instanceof Loadable.Loaded
                         && model.repo().branches() instanceof Loadable.Loaded
                         && model.repo().worktrees() instanceof Loadable.Loaded)
-                .map(msg -> {
-                    Next handled = update(model.mapJobs(jobs -> jobs.withOnArrival(Option.none())), msg);
-                    return new Next(
-                            handled.model(), next.cmds().appendAll(handled.cmds()), next.quit() || handled.quit());
-                })
+                .map(msg -> next.then(m -> handled(m.mapJobs(jobs -> jobs.withOnArrival(Option.none())), msg)))
                 .getOrElse(next);
     }
 
@@ -176,10 +188,7 @@ public final class Update {
         return missed.foldLeft(
                 Next.of(model.mapJobs(jobs ->
                         jobs.withAway(false).withMissed(LinkedHashSet.empty()).withAwayAt(HashMap.empty()))),
-                (next, msg) -> {
-                    Next handled = update(next.model(), msg);
-                    return new Next(handled.model(), next.cmds().appendAll(handled.cmds()));
-                });
+                (next, msg) -> next.then(m -> handled(m, msg)));
     }
 
     /**
@@ -195,9 +204,10 @@ public final class Update {
      */
     private static Step stamped(Next next, Instant now) {
         long first = next.model().jobs().nextId();
+        List<Cmd> cmds = next.cmds().distinct();
         return new Step(
-                next.model().mapJobs(jobs -> jobs.withStarted(next.cmds(), now)),
-                next.cmds().zipWithIndex().map(cmd -> new Launch(first + cmd._2(), cmd._1())),
+                next.model().mapJobs(jobs -> jobs.withStarted(cmds, now)),
+                cmds.zipWithIndex().map(cmd -> new Launch(first + cmd._2(), cmd._1())),
                 next.quit());
     }
 
@@ -383,19 +393,39 @@ public final class Update {
     }
 
     /**
-     * The next model, and the commands to run for it. A command is asked for once: one equal to one asked for before
-     * it is dropped, as the model only knows what runs once the message is handled (ADR 39).
+     * The next model, and the commands to run for it. A command is asked for once: {@link #update(Model, Msg)} and the start
+     * of a session drop one equal to one asked for before it, once per step, as the model only knows what runs once
+     * the message is handled (ADR 39).
      *
      * @param quit whether the app stops once this is applied
      */
     public record Next(Model model, List<Cmd> cmds, boolean quit) {
 
-        public Next {
-            cmds = cmds.distinct();
-        }
-
         public Next(Model model, List<Cmd> cmds) {
             this(model, cmds, false);
+        }
+
+        /**
+         * This, with {@code f} applied to its model: the commands and whether the app stops stay.
+         */
+        public Next map(UnaryOperator<Model> f) {
+            return new Next(f.apply(model), cmds, quit);
+        }
+
+        /**
+         * This, and {@code more} commands to run after its own.
+         */
+        public Next and(Cmd... more) {
+            return new Next(model, cmds.appendAll(List.of(more)), quit);
+        }
+
+        /**
+         * This, followed by what {@code f} makes of its model: the commands of both run, in that order, and the app
+         * stops if either says so.
+         */
+        public Next then(Function<Model, Next> f) {
+            Next next = f.apply(model);
+            return new Next(next.model(), cmds.appendAll(next.cmds()), quit || next.quit());
         }
 
         /**
