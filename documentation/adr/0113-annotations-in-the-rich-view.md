@@ -23,7 +23,10 @@ like one:
   Python (decorators); a `Grammar` says whether its language has them.
 - An `@` starts no annotation:
   - right after a letter, a digit or an underscore, as in an address;
-  - right after `{`, as in `{@link Foo}` and `{@code x}`;
+  - right after `{` when its name starts lowercase, as in `{@link Foo}` and `{@code x}`, the inline tags of a doc
+    comment, which are all lowercase. Annotations start uppercase, also in braces, as in an array value
+    `{@UniqueConstraint(…)}` or an anonymous class `{@Override …`, so those are coloured. Not: no annotation after
+    `{` at all, which left the first annotation of an array value plain and coloured the ones after it;
   - on a line that starts with `*` after spaces, but not with `*/`: a line of a doc comment, as in ` * @param x`.
   So the tags of a doc comment in a hunk that starts inside it are drawn as before.
 - The class `syntax-annotation`, set in every theme that colours syntax: in its colour of numbers, as GitHub does,
@@ -33,6 +36,7 @@ like one:
 
 - Annotations and decorators are coloured in the languages above.
 - Python's `a @b`, a matrix product without a space after the operator, is coloured as a decorator.
+- A lowercase decorator right after `{`, like MobX's `{@observable x}` on one line, is not coloured.
 - In a hunk that starts inside a doc comment, a tag on a line that does not start with `*` and is not in braces is
   coloured as an annotation; Javadoc lines nearly always start with `*`.
 - A theme has one more class to keep.

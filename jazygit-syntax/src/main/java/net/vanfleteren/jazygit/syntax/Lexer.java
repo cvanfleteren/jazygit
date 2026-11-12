@@ -117,15 +117,15 @@ public final class Lexer {
     /**
      * Whether the {@code @} at the scan starts an annotation (ADR 113): a name follows it, and it is not part of a word,
      * like an address, nor a tag of a doc comment that the scan does not know it is in, as in a hunk that starts
-     * inside one: one in braces, like {@code {@link Foo}}, or on a line that starts with {@code *}, like
-     * {@code * @param}.
+     * inside one: a lowercase one in braces, like {@code {@link Foo}}, or one on a line that starts with
+     * {@code *}, like {@code * @param}. An annotation in braces starts uppercase, like those of an array value.
      */
     private static boolean annotationStarts(Scan scan) {
         String line = scan.line();
         int at = scan.at();
         return nameStarts(line, at + 1)
                 && !scan.afterWord()
-                && !(at > 0 && line.charAt(at - 1) == '{')
+                && !(at > 0 && line.charAt(at - 1) == '{' && Character.isLowerCase(line.charAt(at + 1)))
                 && !docLine(line);
     }
 

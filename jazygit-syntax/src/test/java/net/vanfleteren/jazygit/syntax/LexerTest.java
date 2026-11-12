@@ -47,6 +47,23 @@ class LexerTest {
     }
 
     @Test
+    void anAnnotationInBracesIsOne() {
+        assertEquals(
+                List.of("ANNOTATION @Table", "ANNOTATION @UniqueConstraint"),
+                tokens(Language.JAVA, "@Table(uniqueConstraints = {@UniqueConstraint(x)})"));
+        assertEquals(
+                List.of(
+                        "ANNOTATION @JsonSubTypes",
+                        "ANNOTATION @Type",
+                        "KEYWORD class",
+                        "ANNOTATION @Type",
+                        "KEYWORD class"),
+                tokens(Language.JAVA, "@JsonSubTypes({@Type(A.class), @Type(B.class)})"));
+        assertEquals(
+                List.of("KEYWORD new", "ANNOTATION @Override"), tokens(Language.JAVA, "new Runnable() {@Override"));
+    }
+
+    @Test
     void anAnnotationAfterTheEndOfADocCommentIsOne() {
         assertEquals(List.of("ANNOTATION @Override"), tokens(Language.JAVA, "     */ @Override"));
     }
