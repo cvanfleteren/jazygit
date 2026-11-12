@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
+import dev.tamboui.tui.event.KeyEventKind;
+import dev.tamboui.tui.event.KeyModifiers;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.state.popup.ListCursor;
 import org.junit.jupiter.api.Test;
@@ -48,6 +50,24 @@ class ListKeysTest {
     void enterConfirmsWhetherTheFilterIsOpenOrNot() {
         assertEquals(Option.of(new ListKey.Confirm()), classify(KeyEvent.ofKey(KeyCode.ENTER), CLOSED, true));
         assertEquals(Option.of(new ListKey.Confirm()), classify(KeyEvent.ofKey(KeyCode.ENTER), OPEN, true));
+    }
+
+    @Test
+    void theKeypadsEnterConfirmsTooButNotWithCtrlOrAlt() {
+        assertEquals(Option.of(new ListKey.Confirm()), classify(KeyEvent.ofKey(KeyCode.KP_ENTER), CLOSED, true));
+        assertEquals(Option.none(), classify(KeyEvent.ofKey(KeyCode.ENTER, KeyModifiers.CTRL), CLOSED, true));
+        assertEquals(Option.none(), classify(KeyEvent.ofKey(KeyCode.ENTER, KeyModifiers.ALT), CLOSED, true));
+    }
+
+    @Test
+    void enterOrEscapeLetGoDoesNothing() {
+        // Terminals in the full Kitty keyboard protocol tell when a key is let go, as well as when it is pressed.
+        assertEquals(
+                Option.none(),
+                classify(KeyEvent.ofKey(KeyCode.ENTER, KeyModifiers.NONE, KeyEventKind.RELEASE), CLOSED, true));
+        assertEquals(
+                Option.none(),
+                classify(KeyEvent.ofKey(KeyCode.ESCAPE, KeyModifiers.NONE, KeyEventKind.RELEASE), CLOSED, true));
     }
 
     private static Option<ListKey> classify(KeyEvent event, FilteredList list, boolean canFilter) {

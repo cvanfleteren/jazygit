@@ -2,12 +2,14 @@ package net.vanfleteren.jazygit.keys;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.KeyEventKind;
 import dev.tamboui.tui.event.KeyModifiers;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutMsg;
+import net.vanfleteren.jazygit.feature.branch.commits.BranchCommitsMsg;
 import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchMsg;
 import net.vanfleteren.jazygit.feature.diff.DiffOptionsMsg;
 import net.vanfleteren.jazygit.feature.github.browse.BrowseMsg;
@@ -17,6 +19,7 @@ import net.vanfleteren.jazygit.feature.layout.LayoutMsg;
 import net.vanfleteren.jazygit.feature.repos.RecentReposMsg;
 import net.vanfleteren.jazygit.feature.settings.SettingsPanelMsg;
 import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.github.prs.PrOverviewMsg;
@@ -112,6 +115,18 @@ class KeymapTest {
                 () -> once.add(
                         Scopes.BRANCHES,
                         Keymap.Binding.onSelected(Keymap.HELP_KEY, "help.global.quit", CheckoutMsg.Requested::new)));
+    }
+
+    @Test
+    void theKeypadsEnterIsEnterButNotWithCtrl() {
+        BranchName branch = new BranchName("x");
+
+        assertEquals(
+                Option.of(new BranchCommitsMsg.Opened(new BranchRef.Local(branch))),
+                keymap.handle(Scopes.BRANCHES, KeyEvent.ofKey(KeyCode.KP_ENTER), Option.of(branch)));
+        assertEquals(
+                Option.none(),
+                keymap.handle(Scopes.BRANCHES, KeyEvent.ofKey(KeyCode.KP_ENTER, KeyModifiers.CTRL), Option.of(branch)));
     }
 
     @Test

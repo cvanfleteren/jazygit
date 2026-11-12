@@ -55,12 +55,14 @@ public final class Keymap {
     /**
      * The key {@code event} is, as {@link Binding#key() bindings} name it: the character, {@link #ESCAPE} or
      * {@link #ENTER}, prefixed with {@code ctrl+} and {@code alt+} when those are held. Shift is left out, as it is
-     * already in the character.
+     * already in the character. The keypad's Enter is Enter, as it confirms where the bindings of TamboUI are asked.
      */
     static String name(KeyEvent event) {
         return (event.hasCtrl() ? "ctrl+" : "")
                 + (event.hasAlt() ? "alt+" : "")
-                + (event.code() == KeyCode.ESCAPE ? ESCAPE : event.code() == KeyCode.ENTER ? ENTER : event.string());
+                + (event.code() == KeyCode.ESCAPE
+                        ? ESCAPE
+                        : event.code() == KeyCode.ENTER || event.code() == KeyCode.KP_ENTER ? ENTER : event.string());
     }
 
     /**
