@@ -53,13 +53,15 @@ public final class LineEditInput extends StyledElement<LineEditInput> {
             return EventResult.UNHANDLED;
         }
         String before = state.text();
-        // Left unhandled, the text input itself, registered under the same id, is tried next, then its handlers.
+        // The text input runs its own onKeyEvent handler for a key it does not use; the router tries no other
+        // element under the same id.
         boolean handled = LineEdit.handle(state, event)
                 || input.handleKeyEvent(event, true).isHandled();
         if (!state.text().equals(before)) {
             onChange.accept(state.text());
         }
-        return handled ? EventResult.HANDLED : EventResult.UNHANDLED;
+        // A key neither uses goes to the handler set with onKeyEvent on this element.
+        return handled ? EventResult.HANDLED : super.handleKeyEvent(event, true);
     }
 
     @Override

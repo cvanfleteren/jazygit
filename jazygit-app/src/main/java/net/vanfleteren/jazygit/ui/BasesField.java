@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.state.popup.ListCursor;
 import net.vanfleteren.jazygit.ui.widgets.FilteredCursor;
 import net.vanfleteren.jazygit.ui.widgets.FocusBordered;
 import net.vanfleteren.jazygit.ui.widgets.FocusHighlighted;
+import net.vanfleteren.jazygit.ui.widgets.KeysFirst;
 import net.vanfleteren.jazygit.ui.widgets.ListFilter;
 import net.vanfleteren.jazygit.ui.widgets.ListKeys;
 
@@ -81,13 +82,8 @@ public final class BasesField<B> {
                                 .<StyledElement<?>>map(line -> text(name.apply(line)))
                                 .toJavaArray(StyledElement[]::new))
                         .selected(shown.selected());
-        rows.onKeyEvent(event -> keys(view, event, keys))
-                .onMouseEvent(event -> ListKeys.wheel(
-                        event,
-                        shown.selected(),
-                        shown.size(),
-                        shown::highlightable,
-                        line -> dispatch.accept(view.at(line))));
+        rows.onMouseEvent(event -> ListKeys.wheel(
+                event, shown.selected(), shown.size(), shown::highlightable, line -> dispatch.accept(view.at(line))));
         String named = name.apply(base);
         // In a panel, which the themes give the border of the fields; a list's own border is not themed.
         return new FocusBordered(
@@ -96,7 +92,11 @@ public final class BasesField<B> {
                                         .filter()
                                         .map(typed -> Messages.get("dialog.newPullRequest.baseFiltered", named, typed))
                                         .getOrElse(() -> Messages.get("dialog.newPullRequest.base", named)),
-                                shown.lines().isEmpty() ? rows : new FocusHighlighted(rows))
+                                // Enter moves the focus on, which a list drops from its onKeyEvent handler.
+                                new KeysFirst(
+                                        shown.lines().isEmpty() ? rows : new FocusHighlighted(rows),
+                                        id,
+                                        event -> keys(view, event, keys)))
                         .length(ROWS + 2),
                 id);
     }
