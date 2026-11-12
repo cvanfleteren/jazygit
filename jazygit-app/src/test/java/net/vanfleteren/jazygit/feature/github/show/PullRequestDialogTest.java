@@ -247,6 +247,25 @@ class PullRequestDialogTest {
     }
 
     @Test
+    void theActionsAndEscapeWorkOnAScreenTheyAreCutOffFrom() throws Exception {
+        Model model = TestModels.loaded()
+                .openPopup(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
+                        .with(Either.right(DETAILS), 0));
+        try (ToolkitTestRunner runner = start(model)) {
+            assertFalse(RenderedText.ofSize(runner, () -> view(model), 80, 24).contains("Refresh"));
+
+            SettledPilot.of(runner).press('R');
+            SettledPilot.of(runner).pause();
+            SettledPilot.of(runner).press(KeyCode.ESCAPE);
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(
+                java.util.List.of(new PullRequestMsg.RefreshChosen(), new PopupMsg.Dismissed(PullRequestPopup.class)),
+                dispatched);
+    }
+
+    @Test
     void refreshIsChosenWithCapitalR() throws Exception {
         Model model = TestModels.loaded()
                 .openPopup(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
@@ -926,6 +945,9 @@ class PullRequestDialogTest {
         }
     }
 
+    /**
+     * The popup for {@code model} on the default 80x24 terminal, shorter than the popup: its actions are cut off.
+     */
     private ToolkitTestRunner start(Model model) throws Exception {
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(model));
         SettledPilot.focus(runner, PullRequestDialog.ID);
