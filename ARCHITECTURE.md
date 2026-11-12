@@ -20,7 +20,7 @@ The Maven build has seven modules under the parent `pom.xml`, and an eighth with
 | Module | Holds | Depends on |
 |---|---|---|
 | `jazygit-json` | `json`: JSON as plain values (`Json`), and the decoders that turn it into records (`Decoder`), ADR 42. | vavr, Parsson's streaming parser |
-| `jazygit-syntax` | `syntax`: the scanner that finds the keywords, strings, comments and numbers of a line of code (`Lexer`, `Language`, `Token`), ADR 53. | vavr |
+| `jazygit-syntax` | `syntax`: the scanner that finds the keywords, strings, comments, numbers and annotations of a line of code (`Lexer`, `Language`, `Token`), ADR 53, 113. | vavr |
 | `jazygit-process` | `process`: running a program, and what it did as a value (`Exec`, `ExecutedCommand`). | vavr, zt-exec |
 | `jazygit-git` | `git`, `git.model`: running git, and what it reports as values. | `jazygit-process`, `jazygit-syntax`, vavr |
 | `jazygit-gh` | `gh`, `gh.model`, `gh.timing`: running gh, and what GitHub reports as values. | `jazygit-process`, `jazygit-json`, vavr |
@@ -495,7 +495,7 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
   the rule as git printed it, as its lines have no numbers. The first hunk of a file has no rule otherwise: the bar of
   the file is right above it.
 - **The syntax of the code** in the rich view is coloured as ADR 53 says. `git.model.syntax.DiffLexer`, the one
-  `Highlighter`, finds the keywords, strings, comments and numbers (`Token`) of each line, for a file whose
+  `Highlighter`, finds the keywords, strings, comments, numbers and annotations (`Token`, ADR 113) of each line, for a file whose
   `Language` it knows by its name, its extension or its shebang, with `syntax.Lexer` of `jazygit-syntax`; a `Grammar`
   says what a language's tokens look like. A hunk is lexed as its old and its new text, each from the start of the
   hunk on; a line longer than `Lexer.MAX_LINE` (2 000 `char`s) is not, and the line after it starts outside of

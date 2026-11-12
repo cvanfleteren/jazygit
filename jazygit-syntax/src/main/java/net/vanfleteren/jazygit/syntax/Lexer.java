@@ -104,7 +104,7 @@ public final class Lexer {
             return end - at <= LONGEST_KEYWORD && grammar.keyword(line.substring(at, end))
                     ? scan.token(at, end, Kind.KEYWORD)
                     : scan.to(end);
-        } else if (c == '@' && grammar.annotations() && !scan.afterWord() && nameStarts(line, at + 1)) {
+        } else if (c == '@' && grammar.annotations() && annotationStarts(scan)) {
             return scan.token(at, annotationEnd(line, at + 1), Kind.ANNOTATION);
         }
         // Past what can start nothing in one step, as most of a line is spaces and punctuation.
@@ -112,6 +112,29 @@ public final class Lexer {
                 line,
                 at + 1,
                 i -> wordPart(line.charAt(i)) || OPENINGS.indexOf(line.charAt(i)) >= 0 || line.charAt(i) == '@'));
+    }
+
+    /**
+     * Whether the {@code @} at the scan starts an annotation (ADR 113): a name follows it, and it is not part of a word,
+     * like an address, nor a tag of a doc comment that the scan does not know it is in, as in a hunk that starts
+     * inside one: one in braces, like {@code {@link Foo}}, or on a line that starts with {@code *}, like
+     * {@code * @param}.
+     */
+    private static boolean annotationStarts(Scan scan) {
+        String line = scan.line();
+        int at = scan.at();
+        return nameStarts(line, at + 1)
+                && !scan.afterWord()
+                && !(at > 0 && line.charAt(at - 1) == '{')
+                && !docLine(line);
+    }
+
+    /**
+     * Whether {@code line} goes on a doc comment: it starts with {@code *}, after spaces, and does not end it there.
+     */
+    private static boolean docLine(String line) {
+        String stripped = line.stripLeading();
+        return stripped.startsWith("*") && !stripped.startsWith("*/");
     }
 
     /**

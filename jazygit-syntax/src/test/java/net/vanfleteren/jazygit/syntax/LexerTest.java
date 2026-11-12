@@ -33,6 +33,23 @@ class LexerTest {
     }
 
     @Test
+    void theTagsOfADocCommentAreNoAnnotationsInAHunkThatStartsInsideIt() {
+        assertEquals(List.of(), tokens(Language.JAVA, "     * @param x the {@link Foo}"));
+        assertEquals(List.of(), tokens(Language.JAVA, "     * @return it"));
+        assertEquals(List.of(), tokens(Language.JAVA, "     the {@code Foo}, as {@inheritDoc} says"));
+    }
+
+    @Test
+    void theTagsOfADocCommentThatIsReadFromItsStartAreItsComment() {
+        assertEquals(List.of("COMMENT /** @deprecated use {@link B} */"), tokens(Language.JAVA, "/** @deprecated use {@link B} */"));
+    }
+
+    @Test
+    void anAnnotationAfterTheEndOfADocCommentIsOne() {
+        assertEquals(List.of("ANNOTATION @Override"), tokens(Language.JAVA, "     */ @Override"));
+    }
+
+    @Test
     void aLanguageWithoutAnnotationsHasNone() {
         assertEquals(List.of(), tokens(Language.GO, "x := @Override"));
     }
