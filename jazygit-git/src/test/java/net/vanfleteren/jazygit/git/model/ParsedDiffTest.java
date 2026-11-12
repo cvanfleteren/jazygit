@@ -2,13 +2,16 @@ package net.vanfleteren.jazygit.git.model;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.Array;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.ParsedDiff.ParsedFile;
 import net.vanfleteren.jazygit.git.model.ParsedDiff.ParsedLine;
+import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.Hunk;
+import net.vanfleteren.jazygit.syntax.Lexer;
 import net.vanfleteren.jazygit.syntax.Token;
 import org.junit.jupiter.api.Test;
 
@@ -108,6 +111,37 @@ class ParsedDiffTest {
     }
 
     @Test
+    void aLineWithoutChangedWordsKeepsNoSegmentButGivesItselfWhole() {
+        ParsedDiff diff = ParsedDiff.of("""
+                diff --git a/a.txt b/a.txt
+                --- a/a.txt
+                +++ b/a.txt
+                @@ -1,3 +1,2 @@
+                 same
+                -ten = 1
+                +ten = 2
+                -gone
+                """);
+        List<ParsedLine> lines = diff.files().head().hunks().head().lines();
+
+        // Only the pair whose words were compared keeps its segments.
+        assertEquals(
+                List.of(true, false, false, true),
+                lines.map(line -> line.words()
+                        .equals(List.of(new WordDiff.Segment(line.line().text(), false)))));
+        assertEquals(
+                List.of(new WordDiff.Segment("ten = ", false), new WordDiff.Segment("1", true)),
+                lines.get(1).words());
+        // The whole line is not kept: a line made with it is the line made with none.
+        assertEquals(
+                List.of(true, false, false, true),
+                lines.map(line -> line.compared().isEmpty()));
+        assertEquals(
+                ParsedLine.of(lines.head().line(), List.empty(), Option.none()),
+                ParsedLine.of(lines.head().line(), lines.head().words(), Option.none()));
+    }
+
+    @Test
     void theCodeOfEachFileIsLexedInItsLanguage() {
         ParsedDiff diff = ParsedDiff.of("""
                 diff --git a/A.java b/A.java
@@ -134,24 +168,44 @@ class ParsedDiffTest {
     }
 
     @Test
-    void theTokensOfAFileThatAreEqualAreOneToken() {
-        List<List<Option<List<Token>>>> lexed = List.of(
-                List.of(Option.of(List.of(new Token(0, 3, Token.Kind.KEYWORD), new Token(4, 2, Token.Kind.NUMBER)))),
-                List.of(Option.none(), Option.of(List.of(new Token(0, 3, Token.Kind.KEYWORD)))));
+    void aLineThatWasNotLexedIsToldFromALexedLineWithoutTokens() {
+        DiffLine line = new DiffLine(DiffLine.Kind.CONTEXT, "  ", 1, 1);
 
-        List<List<Option<Array<Token>>>> shared = ParsedDiff.shared(lexed);
+        assertEquals(
+                Option.none(), ParsedLine.of(line, List.empty(), Option.none()).tokens());
+        assertEquals(
+                Option.of(Array.empty()),
+                ParsedLine.of(line, List.empty(), Option.of(Array.empty())).tokens());
+        assertEquals(
+                ParsedLine.of(line, List.empty(), Option.none()), ParsedLine.of(line, List.empty(), Option.none()));
+    }
 
-        assertEquals(lexed.map(hunk -> hunk.map(line -> line.map(Array::ofAll))), shared);
-        assertSame(shared.head().head().get().head(), shared.last().last().get().head());
+    @Test
+    void eachTokenIsKeptInAnIntAndMadeAgainAsItWas() {
+        DiffLine line = new DiffLine(DiffLine.Kind.ADDED, "x".repeat(Lexer.MAX_LINE), DiffLine.NONE, 1);
+        // Each kind, at even and odd starts and lengths, and one that ends where the longest line lexed does.
+        Array<Token> tokens = Array.of(Token.Kind.values())
+                .zipWithIndex((kind, at) -> new Token(10 * at + at % 2, 2 + at % 2, kind))
+                .append(new Token(Lexer.MAX_LINE - Lexer.MAX_LINE / 2, Lexer.MAX_LINE / 2, Token.Kind.ANNOTATION));
+
+        ParsedLine lexed = ParsedLine.of(line, List.empty(), Option.of(tokens));
+
+        assertEquals(Option.of(tokens), lexed.tokens());
+        assertEquals(tokens.size(), lexed.lexed().length);
+    }
+
+    @Test
+    void whereATokenStartsAndHowLongItIsFitInAPackedTokenForEveryLineThatIsLexed() {
+        assertTrue(Lexer.MAX_LINE < 1 << ParsedLine.BITS);
     }
 
     @Test
     void theLexedLinesWithoutATokenShareOneEmptyArray() {
-        List<List<Option<Array<Token>>>> shared =
-                ParsedDiff.shared(List.of(List.of(Option.of(List.empty()), Option.of(List.empty()))));
+        DiffLine line = new DiffLine(DiffLine.Kind.CONTEXT, "  ", 1, 1);
 
-        assertSame(Array.empty(), shared.head().head().get());
-        assertSame(Array.empty(), shared.head().last().get());
+        assertSame(
+                ParsedLine.of(line, List.empty(), Option.of(List.empty())).lexed(),
+                ParsedLine.of(line, List.empty(), Option.of(Array.empty())).lexed());
     }
 
     @Test

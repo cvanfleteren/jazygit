@@ -66,6 +66,9 @@ public final class CoreRules {
             .areStatic()
             .and()
             .doNotHaveModifier(JavaModifier.SYNTHETIC)
+            // Its sentinels are empty arrays, which nothing can change (Values.PACKED).
+            .and()
+            .areNotDeclaredIn(Values.PACKED)
             .should()
             .beFinal()
             .andShould()

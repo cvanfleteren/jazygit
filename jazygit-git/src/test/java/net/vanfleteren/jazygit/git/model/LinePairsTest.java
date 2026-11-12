@@ -70,7 +70,7 @@ class LinePairsTest {
         // With no budget left, the pair is not compared.
         List<ParsedLine> lines = diffLines.zipWith(
                 WordDiff.segments(List.of(diffLines), 0).head(),
-                (line, words) -> new ParsedLine(line, words, Option.none()));
+                (line, words) -> ParsedLine.of(line, words, Option.none()));
 
         assertEquals(List.of(List.of(0), List.of(1)), LinePairs.groups(lines));
     }
@@ -123,7 +123,7 @@ class LinePairsTest {
         List<ParsedLine> removed = List.range(0, pairs).map(at -> changed(DiffLine.Kind.REMOVED, at));
         List<ParsedLine> added = List.range(0, pairs).map(at -> changed(DiffLine.Kind.ADDED, at));
         List<ParsedLine> lines = removed.append(
-                        new ParsedLine(DiffLine.note("\\ No newline at end of file"), List.empty(), Option.none()))
+                        ParsedLine.of(DiffLine.note("\\ No newline at end of file"), List.empty(), Option.none()))
                 .appendAll(added);
 
         // Each line takes a step; a pass over the block for each pair took tens of seconds.
@@ -151,7 +151,7 @@ class LinePairsTest {
      * A context line numbered {@code at}.
      */
     private static ParsedLine context(int at) {
-        return new ParsedLine(
+        return ParsedLine.of(
                 new DiffLine(DiffLine.Kind.CONTEXT, "same " + at, Option.some(at + 1), Option.some(at + 1)),
                 List.of(new WordDiff.Segment("same " + at, false)),
                 Option.none());
@@ -162,7 +162,7 @@ class LinePairsTest {
      */
     private static ParsedLine changed(DiffLine.Kind kind, int at) {
         Option<Integer> number = Option.some(at + 1);
-        return new ParsedLine(
+        return ParsedLine.of(
                 new DiffLine(
                         kind,
                         "line " + at,

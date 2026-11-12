@@ -48,6 +48,9 @@ public final class ModelRules {
             .resideInAnyPackage("..jazygit.git.model..", "..jazygit.gh.model..")
             .and()
             .doNotHaveModifier(JavaModifier.SYNTHETIC)
+            // Its arrays are its own, and it is taken for a value itself (Values.PACKED).
+            .and()
+            .areNotDeclaredIn(Values.PACKED)
             .should(Values.holdAValue());
     /**
      * The models are made of records and interfaces, not of classes that extend each other.

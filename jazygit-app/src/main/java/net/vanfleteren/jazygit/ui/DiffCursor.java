@@ -3,9 +3,7 @@ package net.vanfleteren.jazygit.ui;
 import dev.tamboui.style.Style;
 import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
-import io.vavr.Tuple;
 import io.vavr.collection.List;
-import io.vavr.collection.Map;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.state.diff.Anchor;
@@ -33,36 +31,50 @@ record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int stop, 
      * {@code mark} while that is a line of the hunk of the cursor; the view scrolled so it shows it. None when the diff
      * has no stop.
      *
-     * @param indexes the index of the stop of each anchor of {@code stops}, {@link #indexes}, made once for the diff:
-     *                a frame of a long diff then finds the stop the cursor is on without going through all of them
+     * @param near the index of a stop the cursor was on, which its stop is looked for from ({@link #index}): a frame
+     *             of a long diff then finds the stop the cursor is on without going through all of them
      */
     static Option<DiffCursor> of(
             Vector<RichDiff.Stop> stops,
-            Map<Anchor, Integer> indexes,
+            int near,
             int lines,
             int height,
             int row,
             Option<Anchor> at,
             Option<Anchor> mark) {
-        int on = at.flatMap(anchor -> indexes.get(anchor)
+        int on = at.flatMap(anchor -> index(stops, anchor, near)
                         .orElse(() -> DiffStops.nearest(
                                         stops.map(stop -> stop.mark().anchor()), anchor)
-                                .flatMap(indexes::get)))
+                                .flatMap(nearest -> index(stops, nearest, near))))
                 .getOrElse(0);
         return Option.when(!stops.isEmpty(), () -> {
             DiffCursor cursor = new DiffCursor(stops, lines, Math.max(1, height), on, row, Option.none()).clamped();
-            return cursor.withMark(mark.flatMap(indexes::get).filter(cursor::sameHunk))
+            return cursor.withMark(mark.flatMap(anchor -> index(stops, anchor, cursor.stop()))
+                            .filter(cursor::sameHunk))
                     .shown();
         });
     }
 
     /**
-     * The index of the stop of each anchor of {@code stops}; the first, should two have the same.
+     * The index of the stop of {@code anchor} in {@code stops}, looked for from the stop at {@code near} outwards, the
+     * one before it first; the closest, should two have the same. The cursor and a range stay near the stop they were
+     * on, so a long diff keeps no table of where each of its stops is (a stop a line).
      */
-    static Map<Anchor, Integer> indexes(Vector<RichDiff.Stop> stops) {
-        return stops.zipWithIndex()
-                .reverse()
-                .toMap(stop -> Tuple.of(stop._1().mark().anchor(), stop._2()));
+    static Option<Integer> index(Vector<RichDiff.Stop> stops, Anchor anchor, int near) {
+        int from = Math.clamp(near, 0, Math.max(0, stops.size() - 1));
+        // A loop, not a recursion over how far away, which a stop missing from a long diff would take as deep as it
+        // has stops; and four times as fast as an iterator of the indexes, for a jump across the diff.
+        for (int away = 0; away < stops.size(); away++) {
+            if (from >= away && stops.get(from - away).mark().anchor().equals(anchor)) {
+                return Option.some(from - away);
+            }
+            if (away > 0
+                    && from + away < stops.size()
+                    && stops.get(from + away).mark().anchor().equals(anchor)) {
+                return Option.some(from + away);
+            }
+        }
+        return Option.none();
     }
 
     /**

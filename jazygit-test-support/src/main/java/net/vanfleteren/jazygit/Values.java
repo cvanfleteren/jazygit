@@ -21,6 +21,13 @@ import java.util.Map;
  */
 public final class Values {
 
+    /**
+     * The one class of a model that is no record and keeps arrays: a line of a parsed diff, whose tokens are packed
+     * in an {@code int[]} each, as a diff of tens of thousands of lines kept an object for each token otherwise. It
+     * never changes the arrays nor hands them out, so it is taken for a value, and its fields are not looked at.
+     */
+    public static final String PACKED = "net.vanfleteren.jazygit.git.model.ParsedDiff$ParsedLine";
+
     // The JDK's types, outside java.time, that never change.
     private static final List<Class<?>> VALUES = List.of(
             String.class,
@@ -96,6 +103,7 @@ public final class Values {
                         || pkg.equals("java.time")
                         || pkg.equals("java.util.function")
                         || VALUES.exists(raw::isEquivalentTo)
+                        || raw.getName().equals(PACKED)
                         || pkg.startsWith("net.vanfleteren.jazygit") && raw.isInterface())
                 && (!(type instanceof JavaParameterizedType parameterized)
                         || pkg.equals("java.util.function")

@@ -1,11 +1,12 @@
 package net.vanfleteren.jazygit.git.model;
 
 import io.vavr.Tuple;
-import io.vavr.Tuple2;
 import io.vavr.collection.Array;
-import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
+import io.vavr.collection.Seq;
 import io.vavr.control.Option;
+import java.util.Arrays;
+import java.util.Objects;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.FileDiff;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.Hunk;
@@ -55,45 +56,13 @@ public record ParsedDiff(List<String> preamble, List<ParsedFile> files) {
                 file,
                 file.hunks()
                         .zipWith(
-                                words.zip(shared(HIGHLIGHTER.tokens(file))),
+                                words.zip(HIGHLIGHTER.tokens(file)),
                                 (hunk, marks) -> new ParsedHunk(
                                         hunk,
                                         hunk.lines()
                                                 .zipWith(
                                                         marks._1.zip(marks._2),
-                                                        (line, mark) -> new ParsedLine(line, mark._1, mark._2)))));
-    }
-
-    /**
-     * {@code tokens}, those of each line of each hunk of a file, each line's in an array, and each token that equals
-     * one before it that one: a long file has hundreds of thousands of tokens, but few that differ, and they are
-     * kept as long as the diff is.
-     */
-    static List<List<Option<Array<Token>>>> shared(List<List<Option<List<Token>>>> tokens) {
-        return tokens.foldLeft(
-                        Tuple.of(HashMap.<Token, Token>empty(), List.<List<Option<Array<Token>>>>empty()),
-                        (done, hunk) -> {
-                            Tuple2<HashMap<Token, Token>, List<Option<Array<Token>>>> lines = hunk.foldLeft(
-                                    Tuple.of(done._1, List.<Option<Array<Token>>>empty()),
-                                    (inHunk, line) -> line.map(lexed -> shared(inHunk._1, lexed))
-                                            .map(same -> Tuple.of(same._1, inHunk._2.prepend(Option.some(same._2))))
-                                            .getOrElse(() -> Tuple.of(inHunk._1, inHunk._2.prepend(Option.none()))));
-                            return Tuple.of(lines._1, done._2.prepend(lines._2.reverse()));
-                        })
-                ._2
-                .reverse();
-    }
-
-    /**
-     * {@code tokens} in an array, each one that is in {@code seen} that one, and {@code seen} with the others.
-     */
-    private static Tuple2<HashMap<Token, Token>, Array<Token>> shared(HashMap<Token, Token> seen, List<Token> tokens) {
-        Tuple2<HashMap<Token, Token>, List<Token>> done = tokens.foldLeft(
-                Tuple.of(seen, List.<Token>empty()),
-                (sofar, token) -> sofar._1
-                        .computeIfAbsent(token, same -> same)
-                        .map((one, all) -> Tuple.of(all, sofar._2.prepend(one))));
-        return Tuple.of(done._1, Array.ofAll(done._2.reverse()));
+                                                        (line, mark) -> ParsedLine.of(line, mark._1, mark._2)))));
     }
 
     /**
@@ -113,7 +82,7 @@ public record ParsedDiff(List<String> preamble, List<ParsedFile> files) {
             return new ParsedDiff(preamble.append(note), files);
         }
         ParsedFile last = files.last();
-        ParsedLine noted = new ParsedLine(DiffLine.note(note), List.of(new Segment(note, false)), Option.none());
+        ParsedLine noted = ParsedLine.of(DiffLine.note(note), List.empty(), Option.none());
         List<ParsedHunk> hunks = last.hunks().isEmpty()
                 ? List.of(new ParsedHunk(new Hunk("", List.of(noted.line())), List.of(noted)))
                 : last.hunks().init().append(last.hunks().last().with(noted));
@@ -152,8 +121,153 @@ public record ParsedDiff(List<String> preamble, List<ParsedFile> files) {
 
     /**
      * A line of a hunk, with its segments as {@link WordDiff#segments} has them, and its tokens as the
-     * {@link Highlighter} found them, or none when it was not lexed: in an array, which takes less than a list of
-     * them, each token shared with the lines of its file that have it too ({@link #shared}).
+     * {@link Highlighter} found them, or none when it was not lexed. It is made with {@link #of} only. A class
+     * rather than a record, so that what it keeps stays its own: a record's constructor and accessors are as public
+     * as the record, and would give away the sentinels and the packed tokens below. It is the one model that keeps
+     * arrays, which it never changes nor hands out but to its own tests: the architecture rules make an exception
+     * for it by name ({@code Values.PACKED} in jazygit-test-support).
+     *
+     * <p>Most lines of a diff have no changed words: their one segment, the whole line unchanged, is not kept but
+     * made when {@link #words} is asked for, which is only for the lines that are drawn. A long diff has tens of
+     * thousands of lines, and that segment and the list that holds it took more than a tenth of what it was parsed
+     * into.
+     *
+     * <p>Its tokens are kept the same way: each packed in an {@code int} ({@link #packed}), as an array of
+     * {@link Token}s took an object for the array, one for the list of its elements and one for each token, and an
+     * option around them. {@link #tokens} makes them again, only for the lines that are drawn. A line that was not
+     * lexed keeps the sentinel {@link #NOT_LEXED}; one that was lexed and has no tokens, the one empty array
+     * {@link #NO_TOKENS}, which is drawn otherwise.
      */
-    public record ParsedLine(DiffLine line, List<Segment> words, Option<Array<Token>> tokens) {}
+    public static final class ParsedLine {
+
+        /**
+         * The tokens of a line that was not lexed, told apart from {@link #NO_TOKENS} by identity.
+         */
+        static final int[] NOT_LEXED = new int[0];
+
+        /**
+         * The tokens of a lexed line without any, which all such lines share.
+         */
+        static final int[] NO_TOKENS = new int[0];
+
+        // The kind of a token takes as many bits as there are kinds to tell apart; where it starts and how long it is
+        // share the others, half each, which is far more than a line of Lexer.MAX_LINE takes: a longer one is not
+        // lexed.
+        private static final int KIND_BITS =
+                Integer.SIZE - Integer.numberOfLeadingZeros(Token.Kind.values().length - 1);
+        static final int BITS = (Integer.SIZE - KIND_BITS) / 2;
+        private static final int MOST = (1 << BITS) - 1;
+        private static final Array<Token.Kind> KINDS = Array.of(Token.Kind.values());
+
+        private final DiffLine line;
+        // Its segments when its words were compared with another line's and they are not the whole line unchanged;
+        // else none.
+        private final List<Segment> compared;
+        // Its tokens, each packed in an int, or the sentinel NOT_LEXED when it was not lexed.
+        private final int[] lexed;
+
+        private ParsedLine(DiffLine line, List<Segment> compared, int[] lexed) {
+            this.line = line;
+            this.compared = compared;
+            this.lexed = lexed;
+        }
+
+        /**
+         * {@code line} with its segments {@code words}, which are not kept when they are the whole line unchanged,
+         * and its {@code tokens}, none when it was not lexed.
+         */
+        public static ParsedLine of(DiffLine line, List<Segment> words, Option<? extends Seq<Token>> tokens) {
+            return new ParsedLine(
+                    line,
+                    whole(line, words) ? List.empty() : words,
+                    tokens.map(ParsedLine::packed).getOrElse(NOT_LEXED));
+        }
+
+        /**
+         * The line of the diff, as it was parsed.
+         */
+        public DiffLine line() {
+            return line;
+        }
+
+        /**
+         * Its segments as they are kept: none for the whole line, unchanged.
+         */
+        List<Segment> compared() {
+            return compared;
+        }
+
+        /**
+         * Its tokens as they are kept: packed, or {@link #NOT_LEXED}.
+         */
+        int[] lexed() {
+            return lexed;
+        }
+
+        /**
+         * Its segments: the whole line, unchanged, when its words were not compared or none of them changed.
+         */
+        public List<Segment> words() {
+            return compared.isEmpty() ? List.of(new Segment(line.text(), false)) : compared;
+        }
+
+        /**
+         * Its tokens, as the {@link Highlighter} found them; none when it was not lexed.
+         */
+        public Option<Array<Token>> tokens() {
+            return Option.when(
+                    lexed != NOT_LEXED,
+                    () -> Array.ofAll(Arrays.stream(lexed).boxed()).map(ParsedLine::unpacked));
+        }
+
+        /**
+         * {@code tokens}, each in an {@code int}: where it starts, how long it is and its kind.
+         */
+        static int[] packed(Seq<Token> tokens) {
+            return tokens.isEmpty()
+                    ? NO_TOKENS
+                    : tokens.toJavaStream().mapToInt(ParsedLine::packed).toArray();
+        }
+
+        private static int packed(Token token) {
+            if (token.start() > MOST || token.length() > MOST) {
+                throw new IllegalArgumentException("A token past column " + MOST + " cannot be packed: " + token);
+            }
+            return (token.start() << (BITS + KIND_BITS))
+                    | (token.length() << KIND_BITS)
+                    | token.kind().ordinal();
+        }
+
+        private static Token unpacked(int packed) {
+            return new Token(
+                    packed >>> (BITS + KIND_BITS),
+                    (packed >>> KIND_BITS) & MOST,
+                    KINDS.get(packed & ((1 << KIND_BITS) - 1)));
+        }
+
+        private static boolean whole(DiffLine line, List<Segment> words) {
+            return words.size() == 1
+                    && !words.head().changed()
+                    && words.head().text().equals(line.text());
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            return other instanceof ParsedLine that
+                    && line.equals(that.line)
+                    && compared.equals(that.compared)
+                    && (lexed == NOT_LEXED) == (that.lexed == NOT_LEXED)
+                    && Arrays.equals(lexed, that.lexed);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(line, compared, lexed == NOT_LEXED, Arrays.hashCode(lexed));
+        }
+
+        @Override
+        public String toString() {
+            return "ParsedLine[line=" + line + ", compared=" + compared + ", tokens=" + tokens() + "]";
+        }
+    }
 }
