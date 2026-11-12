@@ -97,7 +97,7 @@ class FetchUpdateTest {
 
     @Test
     void aFetchRequestedTwiceInOneMessageListsTheRemotesOnce() {
-        Next twice = FetchUpdate.requested(FetchUpdate.requested(Next.of(loaded())));
+        Next twice = Update.once(FetchUpdate.requested(FetchUpdate.requested(Next.of(loaded()))));
 
         assertEquals(List.of(LIST), twice.cmds());
     }
