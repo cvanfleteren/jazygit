@@ -14,6 +14,7 @@ import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Duration;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.git.model.FileVersion;
@@ -618,6 +619,64 @@ class RichDiffTest {
 
         // The marker after the last hunk is as wide as it says.
         assertEquals(List.of(17, 17, 17, 12), lines.map(RichDiffTest::width));
+    }
+
+    @Test
+    void theWidestLineIsMeasuredWithoutDrawingTheLinesOfTheDiff() {
+        AtomicInteger gutters = new AtomicInteger();
+        Theme.SpanStyles counting = cssClass -> {
+            if (cssClass.equals(Theme.Classes.DIFF_LINE_NUMBER)) {
+                gutters.incrementAndGet();
+            }
+            return SYNTAX_STYLES.of(cssClass);
+        };
+        RichDiff.Drawn drawn = RichDiff.drawn(ParsedDiff.of("""
+                         a.txt | 2 +-
+                         a summary longer than any line of the diff, which is measured as it is drawn
+
+                        diff --git a/A.java b/A.java
+                        --- a/A.java
+                        +++ b/A.java
+                        @@ -1,3 +1,3 @@
+                         class A {
+                        -    String s = "ab"; // a line longer than the others
+                        +    String s = "ac"; // a line longer than the others, and longer still
+                        \\ No newline at end of file
+                         }
+                        diff --git a/f.txt b/f.txt
+                        --- a/f.txt
+                        +++ b/f.txt
+                        @@ -1 +1 @@
+                        -a ❤️
+                        +a ✔️
+                        """), true, true, Option.none(), counting);
+
+        // The markers of the lines left out are drawn already, and resolve the class of the gutter too.
+        int markers = gutters.get();
+        int widest = drawn.widest().getAsInt();
+
+        assertEquals(markers, gutters.get());
+        assertEquals(drawn.lines().map(RichDiffTest::width).max().get(), widest);
+        assertEquals(widest, drawn.after(List.of(Line.from("short"))).widest().getAsInt());
+        assertEquals(
+                200, drawn.after(List.of(Line.from("x".repeat(200)))).widest().getAsInt());
+    }
+
+    @Test
+    void theWidestLineOfADiffIsItsBarWhenNoOtherLineIsWider() {
+        RichDiff.Drawn drawn = RichDiff.drawn(ParsedDiff.of("""
+                        diff --git a/A.java b/A.java
+                        --- a/A.java
+                        +++ b/A.java
+                        @@ -1,2 +1,2 @@
+                         class A {
+                        -    String s = "ab"; // a line longer than the others
+                        +    String s = "ac"; // a line longer than the others, and longer still
+                        """), true, true, Option.none(), SYNTAX_STYLES);
+
+        assertEquals(
+                drawn.lines().map(RichDiffTest::width).max().get(),
+                drawn.widest().getAsInt());
     }
 
     private static final String STRING_CHANGED = """

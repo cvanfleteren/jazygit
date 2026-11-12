@@ -1106,7 +1106,7 @@ class ContentPanelTest {
     }
 
     @Test
-    void aLongRichDiffIsMeasuredOnceAndThenOnlyTheLinesThatShowAreDrawn() throws Exception {
+    void aLongRichDiffIsMeasuredWithoutDrawingItsLinesAndOnlyTheLinesThatShowAreDrawn() throws Exception {
         // Each line of the diff resolves the class of its gutter once each time it is drawn.
         java.util.concurrent.atomic.AtomicInteger gutters = new java.util.concurrent.atomic.AtomicInteger();
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
@@ -1142,10 +1142,11 @@ class ContentPanelTest {
             SettledPilot.focus(testRunner, area);
             String screen = RenderedText.ofLarge(testRunner, () -> counting.render(model, area));
             assertTrue(screen.contains("+ line 0"), screen);
-            // Measured once, all of them; drawn, only those of an area up to twice as high as the screen: not all of
-            // them again for the frame the area is first drawn in only to learn its size.
+            // Measured without drawing any, as no line of a diff is wider than its file; drawn, only those of an area
+            // up to twice as high as the screen: not all of them for the frame the area is first drawn in only to
+            // learn its size.
             int shown = gutters.get();
-            assertTrue(shown >= lines && shown <= lines + 2 * 30, "drew " + shown);
+            assertTrue(shown > 0 && shown <= 2 * 30, "drew " + shown);
 
             // In the size the runner draws in, which can show more lines than the screen above.
             SettledPilot.of(testRunner).pause();
