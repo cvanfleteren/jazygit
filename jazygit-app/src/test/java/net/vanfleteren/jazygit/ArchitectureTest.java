@@ -206,15 +206,31 @@ class ArchitectureTest {
             .should(ArchCondition.from(DescribedPredicate.describe(
                     "be sealed", type -> type.reflect().isSealed())));
     /**
-     * A feature's errors are pure values, as the core's are.
+     * A feature's errors are pure values, as the core's are: saying themselves runs nothing, and reads neither the
+     * clock nor chance.
      */
     @ArchTest
     static final ArchRule featureErrorsArePure = noClasses()
             .that()
             .areAssignableTo(AppError.class)
             .should()
-            .dependOnClassesThat()
-            .resideInAnyPackage("..jazygit.ui..", "..jazygit.i18n..", "dev.tamboui..");
+            .dependOnClassesThat(effects())
+            .orShould()
+            .accessTargetWhere(tellsTheTimeOrChance());
+    /**
+     * A feature's error is one of its sealed set: none of a feature implements {@link AppError} itself.
+     */
+    @ArchTest
+    static final ArchRule featureErrorsGoThroughTheirSet = classes()
+            .that()
+            .resideInAPackage("..jazygit.feature..")
+            .and()
+            .areNotInterfaces()
+            .and()
+            .areAssignableTo(AppError.class)
+            .should(ArchCondition.from(DescribedPredicate.describe(
+                    "implement AppError through the sealed error interface of their feature",
+                    type -> type.getRawInterfaces().stream().noneMatch(face -> face.isEquivalentTo(AppError.class)))));
     /**
      * An update is only functions: a class that cannot be made, of static methods and constants.
      */
