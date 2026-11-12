@@ -28,7 +28,7 @@
     <properties>
         <maven.compiler.release>25</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <tamboui.version>0.6.0</tamboui.version>
+        <tamboui.version>0.7.0</tamboui.version>
         <junit.version>6.1.3</junit.version>
         <lombok.version>1.18.48</lombok.version>
         <slf4j.version>2.0.20</slf4j.version>
@@ -46,7 +46,7 @@
         <checkstyle.version>14.4.0</checkstyle.version>
         <errorprone.version>2.52.0</errorprone.version>
         <native-maven-plugin.version>1.1.18</native-maven-plugin.version>
-        <pitest.version>1.30.1</pitest.version>
+        <pitest.version>1.30.2</pitest.version>
         <pitest-junit5-plugin.version>1.2.3</pitest-junit5-plugin.version>
         <pitest.threads>8</pitest.threads>
         <jmh.version>1.37</jmh.version>
