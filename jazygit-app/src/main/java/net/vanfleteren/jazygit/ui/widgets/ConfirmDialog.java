@@ -48,19 +48,23 @@ public final class ConfirmDialog<P extends Popup> implements PopupView {
     public Option<Element> render(Model model) {
         return model.popup(spec.popupType()).map(popup -> {
             String text = spec.message().apply(popup);
-            int width = width(text);
-            int messageHeight = DialogFrame.wrappedHeight(text, width, Integer.MAX_VALUE);
-            return DialogFrame.withHint(
-                            spec.title().apply(popup),
-                            width,
-                            spec.hintKey(),
-                            List.of(DialogFrame.wrapped(text, width, Integer.MAX_VALUE)))
-                    .id(spec.id())
-                    .focusable()
-                    .length(messageHeight + EXTRA_HEIGHT)
-                    .onConfirm(() -> dispatch.accept(spec.onConfirm().get()))
-                    .onCancel(() -> dispatch.accept(spec.onCancel().get()));
+            String title = spec.title().apply(popup);
+            return new FittedDialog(width(text), width -> dialog(title, text, width));
         });
+    }
+
+    /**
+     * The popup showing {@code text}, {@code width} wide, as high as the text takes at that width.
+     */
+    private Element dialog(String title, String text, int width) {
+        int messageHeight = DialogFrame.wrappedHeight(text, width, Integer.MAX_VALUE);
+        return DialogFrame.withHint(
+                        title, width, spec.hintKey(), List.of(DialogFrame.wrapped(text, width, Integer.MAX_VALUE)))
+                .id(spec.id())
+                .focusable()
+                .length(messageHeight + EXTRA_HEIGHT)
+                .onConfirm(() -> dispatch.accept(spec.onConfirm().get()))
+                .onCancel(() -> dispatch.accept(spec.onCancel().get()));
     }
 
     /**

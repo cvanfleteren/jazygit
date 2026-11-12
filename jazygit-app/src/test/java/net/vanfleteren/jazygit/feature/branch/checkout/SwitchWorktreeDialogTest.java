@@ -51,6 +51,17 @@ class SwitchWorktreeDialogTest {
     }
 
     @Test
+    void aScreenNarrowerThanThePathStillShowsTheQuestionAndTheHint() throws Exception {
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view)) {
+            SettledPilot.focus(runner, CheckoutDialogs.SWITCH_WORKTREE.id());
+            String screen = RenderedText.ofSize(runner, this::view, 70, 20);
+
+            assertTrue(screen.contains("Switch to that worktree?"), screen);
+            assertTrue(screen.contains("(enter) confirm   (esc) cancel"), screen);
+        }
+    }
+
+    @Test
     void showsAWorktreeInTheHomeDirectoryFromATilde() {
         Model home = TestModels.loaded()
                 .openPopup(new SwitchWorktreePopup(
