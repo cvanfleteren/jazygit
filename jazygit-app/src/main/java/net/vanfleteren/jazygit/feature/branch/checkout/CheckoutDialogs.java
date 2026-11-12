@@ -35,8 +35,7 @@ public final class CheckoutDialogs {
             "switch-worktree",
             SwitchWorktreePopup.class,
             popup -> Messages.get("dialog.switchWorktree.title", popup.branch().value()),
-            popup -> Messages.get(
-                    "dialog.switchWorktree.message", popup.branch().value(), HomeDir.shown(popup.worktree())),
+            popup -> Messages.get("dialog.switchWorktree.message", HomeDir.shown(popup.worktree())),
             CheckoutMsg.SwitchWorktreeConfirmed::new);
 
     /**

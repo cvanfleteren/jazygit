@@ -44,9 +44,7 @@ class SwitchWorktreeDialogTest {
 
             int path = lines.indexOf(WORKTREE);
             assertTrue(path > 0, String.join("\n", lines));
-            assertEquals(
-                    "Branch worktree-theme-esc-back-to-settings is checked out in the worktree at",
-                    lines.get(path - 1));
+            assertEquals("This branch is checked out in the worktree at", lines.get(path - 1));
             assertEquals("", lines.get(path + 1));
             assertEquals("Switch to that worktree?", lines.get(path + 2));
         }
@@ -59,7 +57,7 @@ class SwitchWorktreeDialogTest {
                         new BranchName("feature"), System.getProperty("user.home") + "/repos/app-feature"));
 
         assertEquals(
-                "Branch feature is checked out in the worktree at\n~/repos/app-feature\n\nSwitch to that worktree?",
+                "This branch is checked out in the worktree at\n~/repos/app-feature\n\nSwitch to that worktree?",
                 CheckoutDialogs.SWITCH_WORKTREE
                         .message()
                         .apply(home.popup(SwitchWorktreePopup.class).get()));
