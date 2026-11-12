@@ -2,10 +2,12 @@ package net.vanfleteren.jazygit.feature.branch.movecommits;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.branch.BranchError;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutMsg;
 import net.vanfleteren.jazygit.feature.branch.movecommits.MoveMsg.*;
 import net.vanfleteren.jazygit.feature.branch.push.PushCmd;
 import net.vanfleteren.jazygit.feature.branch.upstream.UpstreamUpdate;
+import net.vanfleteren.jazygit.feature.worktree.WorktreeError;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
@@ -73,7 +75,7 @@ public final class MoveUpdate {
                         .map(commit -> Next.of(
                                 model.clearError(), new MoveCmd.ReadRange(from.name(), sha, from.remoteUpstream())))
                         .getOrElse(() -> Next.of(model)))
-                .getOrElse(() -> Next.of(model.fail(new AppError.NoBranchCheckedOut())));
+                .getOrElse(() -> Next.of(model.fail(new BranchError.NoBranchCheckedOut())));
     }
 
     /**
@@ -91,7 +93,7 @@ public final class MoveUpdate {
                                 .flatMap(merge -> commit.parents()
                                         .headOption()
                                         .map(parent -> Next.of(model.fail(
-                                                new AppError.MovedThroughMerge(oldest, from, merge, parent)))))
+                                                new BranchError.MovedThroughMerge(oldest, from, merge, parent)))))
                                 .getOrElse(() -> asked(
                                         model,
                                         new MoveRequest(
@@ -135,8 +137,8 @@ public final class MoveUpdate {
                 name -> model.repo()
                         .branch(name)
                         .map(known -> known.worktreeLocation()
-                                .map(worktree -> Next.of(
-                                        model.fail(new AppError.CheckedOutElsewhere(MoveCmd.MOVE, name, worktree))))
+                                .map(worktree -> Next.of(model.fail(
+                                        new WorktreeError.CheckedOutElsewhere(MoveCmd.MOVE, name, worktree))))
                                 .getOrElse(() -> model.idleBranch(name)
                                         .map(idle -> targeted(model, request, new MoveTarget.Existing(name)))
                                         .getOrElse(() -> Next.of(model))))
@@ -196,7 +198,7 @@ public final class MoveUpdate {
         boolean changed = Update.files(model).exists(file -> file.type() != ChangeType.UNTRACKED);
         return copiedOnto(target)
                 .filter(onto -> changed)
-                .map(onto -> Next.of(model.fail(new AppError.ChangesBeforeMove(onto))))
+                .map(onto -> Next.of(model.fail(new BranchError.ChangesBeforeMove(onto))))
                 .getOrElse(() -> request.pushed()
                         ? Update.ask(model, new MovePushedPopup(request, target))
                         : Update.start(model.clearError(), move(request, target, false)));

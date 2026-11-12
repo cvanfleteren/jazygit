@@ -49,9 +49,9 @@ public final class SettingsPanelUpdate {
             // The app shows the repository again already, with a model of its own.
             case SettingsPanelMsg.AccountSet(), SettingsPanelMsg.Reopened() -> Next.of(model);
             case SettingsPanelMsg.AccountNotSet(var failure) ->
-                Next.of(model.fail(new AppError.GitHubAccountNotSet(failure)));
+                Next.of(model.fail(new SettingsPanelError.GitHubAccountNotSet(failure)));
             case SettingsPanelMsg.NotReopened(var failure) ->
-                Next.of(model.fail(new AppError.SettingsNotApplied(failure)));
+                Next.of(model.fail(new SettingsPanelError.SettingsNotApplied(failure)));
             case SettingsPanelMsg.FileRequested() -> Next.of(model.clearError(), new SettingsPanelCmd.EditFile());
             case SettingsPanelMsg.FileRead(var file, var loaded) -> fileRead(model, file, loaded);
             // The file is read again when the panel opens next.
@@ -133,7 +133,7 @@ public final class SettingsPanelUpdate {
             return Next.of(model);
         }
         return version.fold(
-                failure -> Next.of(model.fail(new AppError.GhExecutableUnusable(executable, failure))),
+                failure -> Next.of(model.fail(new SettingsPanelError.GhExecutableUnusable(executable, failure))),
                 works -> useGhExecutable(model, executable));
     }
 

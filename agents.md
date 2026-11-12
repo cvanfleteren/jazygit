@@ -7,6 +7,9 @@ The ArchUnit tests (`*ArchitectureTest`) enforce these rules; a build that break
 ### The Elm loop
 - Messages, commands and popups are values: records, or enums. Each feature's `XxxMsg` is a sealed interface, so its
   update switches over every message without a `default`.
+- An error is a value that says itself as a `Phrase` (a message key and what goes into it), never as text. Each feature
+  keeps its errors in a sealed `XxxError extends AppError` of its own; `AppError` keeps only what belongs to no feature,
+  so a new error edits neither it nor `ErrorText`.
 - An `XxxUpdate` is a final class with a private constructor and only static methods and static fields: it is only
   functions.
 - Updates make commands; only `Program` (and `StartApp`, for the start screen) runs them through `Cmd.run` or `perform`.

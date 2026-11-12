@@ -1,9 +1,9 @@
 package net.vanfleteren.jazygit.feature.github.review;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.feature.github.GitHubError;
 import net.vanfleteren.jazygit.gh.model.Reaction;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
-import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
@@ -51,7 +51,7 @@ public sealed interface ReviewMsg extends Msg {
     /**
      * The user pressed a key the cursor is not on the right stop for, as {@code why} says.
      */
-    record Refused(AppError.CannotReview.Why why) implements ReviewMsg {}
+    record Refused(GitHubError.CannotReview.Why why) implements ReviewMsg {}
 
     /**
      * The user changed the comment to {@code text}.

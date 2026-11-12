@@ -98,7 +98,7 @@ class RecentReposUpdateTest {
                 .model();
 
         assertEquals(
-                Option.of(new ErrorPopup(new AppError.RepositoryNotOpened("/repos/a", failure))),
+                Option.of(new ErrorPopup(new RecentReposError.RepositoryNotOpened("/repos/a", failure))),
                 model.popup(ErrorPopup.class));
     }
 

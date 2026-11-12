@@ -1,9 +1,11 @@
 package net.vanfleteren.jazygit.feature.branch.nuke;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.branch.BranchError;
 import net.vanfleteren.jazygit.feature.branch.nuke.NukeBranchMsg.Confirmed;
 import net.vanfleteren.jazygit.feature.branch.nuke.NukeBranchMsg.NotAllNuked;
 import net.vanfleteren.jazygit.feature.branch.nuke.NukeBranchMsg.Requested;
+import net.vanfleteren.jazygit.feature.worktree.WorktreeError;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
@@ -36,7 +38,7 @@ public final class NukeBranchUpdate {
                                 .filter(popup.cmd()::equals));
             case NotAllNuked(NukeBranchCmd cmd, var commands, var left, var failures) ->
                 Update.refresh(OperationUpdate.done(model, cmd, commands)
-                        .fail(new AppError.NotAllNuked(cmd.branch(), left, failures)));
+                        .fail(new BranchError.NotAllNuked(cmd.branch(), left, failures)));
         };
     }
 
@@ -58,14 +60,14 @@ public final class NukeBranchUpdate {
      */
     private static Option<AppError> refused(Model model, Branch branch) {
         return Option.<AppError>when(
-                        branch.isDefault(), () -> new AppError.DefaultBranch(new BranchRef.Local(branch.name())))
+                        branch.isDefault(), () -> new BranchError.DefaultBranch(new BranchRef.Local(branch.name())))
                 .orElse(() -> Option.when(branch.current(), () -> model.repo().currentWorktree())
                         .flatMap(shown -> shown)
-                        .map(shown -> new AppError.ShownWorktreeNotRemovable(shown.name())))
+                        .map(shown -> new WorktreeError.ShownWorktreeNotRemovable(shown.name())))
                 .orElse(() -> worktree(model, branch)
                         .flatMap(other -> other)
                         .filter(Worktree::main)
-                        .map(main -> new AppError.MainWorktreeNotRemovable(main.name())));
+                        .map(main -> new WorktreeError.MainWorktreeNotRemovable(main.name())));
     }
 
     /**

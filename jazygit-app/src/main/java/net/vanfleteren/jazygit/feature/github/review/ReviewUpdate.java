@@ -12,6 +12,8 @@ import io.vavr.control.Option;
 import java.util.function.Function;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesCmd;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesCmd.LoadReviewRemarks;
+import net.vanfleteren.jazygit.feature.github.GitHubError;
+import net.vanfleteren.jazygit.feature.github.GitHubError.CannotReview.Why;
 import net.vanfleteren.jazygit.feature.github.browse.BrowseRemarkCmd;
 import net.vanfleteren.jazygit.feature.github.review.ReviewCmd.DeleteComment;
 import net.vanfleteren.jazygit.feature.github.review.ReviewCmd.EditComment;
@@ -30,7 +32,6 @@ import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.*;
-import net.vanfleteren.jazygit.state.AppError.CannotReview.Why;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.diff.*;
 import net.vanfleteren.jazygit.state.operation.*;
@@ -792,7 +793,7 @@ public final class ReviewUpdate {
     }
 
     private static Model refused(Model model, Why why) {
-        return model.fail(new AppError.CannotReview(why));
+        return model.fail(new GitHubError.CannotReview(why));
     }
 
     private static Model mapView(Model model, Function<CommitFilesView, CommitFilesView> f) {

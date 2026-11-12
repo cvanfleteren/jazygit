@@ -1,10 +1,10 @@
 package net.vanfleteren.jazygit.feature.worktree.open;
 
+import net.vanfleteren.jazygit.feature.worktree.WorktreeError;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.Worktree;
 import net.vanfleteren.jazygit.settings.EditorProgram;
 import net.vanfleteren.jazygit.settings.Editors;
-import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -43,7 +43,7 @@ public final class OpenInEditorUpdate {
                 .map(worktrees -> worktrees
                         .find(worktree -> worktree.workingOn().contains(branch))
                         .map(worktree -> worktree(model, worktree))
-                        .getOrElse(() -> Next.of(model.fail(new AppError.NotInWorktree(branch)))))
+                        .getOrElse(() -> Next.of(model.fail(new WorktreeError.NotInWorktree(branch)))))
                 .getOrElse(() -> Next.of(model));
     }
 
@@ -52,7 +52,7 @@ public final class OpenInEditorUpdate {
      */
     private static Next worktree(Model model, Worktree worktree) {
         return worktree.prunable()
-                ? Next.of(model.fail(new AppError.WorktreeMissing(worktree.name())))
+                ? Next.of(model.fail(new WorktreeError.WorktreeMissing(worktree.name())))
                 : editors(model, worktree.location());
     }
 
@@ -63,7 +63,7 @@ public final class OpenInEditorUpdate {
     private static Next editors(Model model, String location) {
         Editors editors = model.preferences().settings().editors();
         if (editors.isEmpty()) {
-            return Next.of(model.fail(new AppError.NoEditorSet()));
+            return Next.of(model.fail(new WorktreeError.NoEditorSet()));
         }
         return editors.all().size() == 1
                 ? open(model, editors.all().head(), location)

@@ -13,6 +13,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.function.Supplier;
+import net.vanfleteren.jazygit.feature.worktree.WorktreeError;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.GitFailure;
@@ -158,7 +159,8 @@ class OpenInEditorUpdateTest {
 
         assertEquals(List.empty(), next.cmds());
         assertInstanceOf(
-                AppError.WorktreeMissing.class, next.model().outcome().error().get());
+                WorktreeError.WorktreeMissing.class,
+                next.model().outcome().error().get());
     }
 
     @Test
@@ -181,7 +183,8 @@ class OpenInEditorUpdateTest {
 
         assertEquals(List.empty(), next.cmds());
         assertInstanceOf(
-                AppError.WorktreeMissing.class, next.model().outcome().error().get());
+                WorktreeError.WorktreeMissing.class,
+                next.model().outcome().error().get());
     }
 
     @Test

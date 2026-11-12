@@ -5,6 +5,8 @@ import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.branch.BranchError;
+import net.vanfleteren.jazygit.feature.branch.BranchError.StackRefusal;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.git.model.Branch;
@@ -17,7 +19,6 @@ import net.vanfleteren.jazygit.git.model.Revision;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.StackLayer;
 import net.vanfleteren.jazygit.state.AppError;
-import net.vanfleteren.jazygit.state.AppError.StackRefusal;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.github.FromGitHub;
 
@@ -160,6 +161,6 @@ public record StackRebase(
     }
 
     private static <T> Either<AppError, T> refused(PullRequestStack stack, StackPush.Refused why) {
-        return Either.left(new AppError.StackNotRebased(stack.number(), why.branch(), why.why()));
+        return Either.left(new BranchError.StackNotRebased(stack.number(), why.branch(), why.why()));
     }
 }

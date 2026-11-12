@@ -11,6 +11,8 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesCmd;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesMsg;
+import net.vanfleteren.jazygit.feature.github.GitHubError;
+import net.vanfleteren.jazygit.feature.github.GitHubError.CannotReview.Why;
 import net.vanfleteren.jazygit.feature.github.browse.BrowseRemarkCmd;
 import net.vanfleteren.jazygit.feature.github.review.ReviewPopup.Target;
 import net.vanfleteren.jazygit.gh.GhError;
@@ -34,7 +36,6 @@ import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.*;
-import net.vanfleteren.jazygit.state.AppError.CannotReview.Why;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.diff.*;
 import net.vanfleteren.jazygit.state.load.*;
@@ -172,9 +173,9 @@ class ReviewUpdateTest {
 
         Next again = Update.update(resolving.model(), new ReviewMsg.ResolveAsked(at(onThread("T1"))));
         assertEquals(List.empty(), again.cmds());
-        assertEquals(Option.of(new AppError.CannotReview(Why.SENDING)), error(again.model()));
+        assertEquals(Option.of(new GitHubError.CannotReview(Why.SENDING)), error(again.model()));
         assertEquals(
-                Option.of(new AppError.CannotReview(Why.SENDING)),
+                Option.of(new GitHubError.CannotReview(Why.SENDING)),
                 error(Update.update(resolving.model(), new ReviewMsg.ThreadToggled(at(onThread("T1"))))
                         .model()));
 
@@ -205,7 +206,7 @@ class ReviewUpdateTest {
         assertEquals(HashSet.of(new ReviewThread.Id("T1")), view(stale).sending());
         Next again = Update.update(stale, new ReviewMsg.ResolveAsked(at(onThread("T1"))));
         assertEquals(List.empty(), again.cmds());
-        assertEquals(Option.of(new AppError.CannotReview(Why.SENDING)), error(again.model()));
+        assertEquals(Option.of(new GitHubError.CannotReview(Why.SENDING)), error(again.model()));
     }
 
     @Test
@@ -252,7 +253,7 @@ class ReviewUpdateTest {
         Next refused = Update.update(files(), new ReviewMsg.ResolveAsked(at(onThread("T2"))));
 
         assertEquals(List.empty(), refused.cmds());
-        assertEquals(Option.of(new AppError.CannotReview(Why.NO_UNRESOLVE)), error(refused.model()));
+        assertEquals(Option.of(new GitHubError.CannotReview(Why.NO_UNRESOLVE)), error(refused.model()));
     }
 
     @Test
@@ -291,7 +292,7 @@ class ReviewUpdateTest {
     @Test
     void theKeysOfAThreadNeedTheCursorOnOne() {
         assertEquals(
-                Option.of(new AppError.CannotReview(Why.NOT_ON_THREAD)),
+                Option.of(new GitHubError.CannotReview(Why.NOT_ON_THREAD)),
                 error(Update.update(files(), new ReviewMsg.ReplyAsked(at(line(Side.RIGHT, 2))))
                         .model()));
     }
@@ -299,13 +300,13 @@ class ReviewUpdateTest {
     @Test
     void nothingIsSentForAPullRequestThatMovedOnOrIsMerged() {
         assertEquals(
-                Option.of(new AppError.CannotReview(Why.MOVED_ON)),
+                Option.of(new GitHubError.CannotReview(Why.MOVED_ON)),
                 error(Update.update(
                                 files(PullRequestDetails.State.CLOSED, "c".repeat(40)),
                                 new ReviewMsg.ResolveAsked(at(onThread("T1"))))
                         .model()));
         assertEquals(
-                Option.of(new AppError.CannotReview(Why.MERGED)),
+                Option.of(new GitHubError.CannotReview(Why.MERGED)),
                 error(Update.update(
                                 files(PullRequestDetails.State.MERGED, HEAD),
                                 new ReviewMsg.StartAsked(at(line(Side.RIGHT, 2))))
@@ -586,13 +587,13 @@ class ReviewUpdateTest {
     @Test
     void aThreadIsOnTheLinesOfOneHunk() {
         assertEquals(
-                Option.of(new AppError.CannotReview(Why.NOT_ONE_HUNK)),
+                Option.of(new GitHubError.CannotReview(Why.NOT_ONE_HUNK)),
                 error(Update.update(
                                 files(),
                                 new ReviewMsg.StartAsked(at(line(Side.RIGHT, 10), Option.of(line(Side.RIGHT, 2)))))
                         .model()));
         assertEquals(
-                Option.of(new AppError.CannotReview(Why.NOT_ON_LINE)),
+                Option.of(new GitHubError.CannotReview(Why.NOT_ON_LINE)),
                 error(Update.update(files(), new ReviewMsg.StartAsked(at(onThread("T1"))))
                         .model()));
     }
@@ -613,7 +614,7 @@ class ReviewUpdateTest {
                 popup.target());
         assertEquals(List.of(" line20", " line21"), popup.quoted());
         assertEquals(
-                Option.of(new AppError.CannotReview(Why.NOT_ONE_HUNK)),
+                Option.of(new GitHubError.CannotReview(Why.NOT_ONE_HUNK)),
                 error(Update.update(
                                 expanded,
                                 new ReviewMsg.StartAsked(at(line(Side.RIGHT, 13), Option.of(line(Side.RIGHT, 20)))))
@@ -634,11 +635,11 @@ class ReviewUpdateTest {
                 files().mapRepoView(view -> view.withVersions(view.versions().put(AREA, shown)));
 
         assertEquals(
-                Option.of(new AppError.CannotReview(Why.IN_VERSION)),
+                Option.of(new GitHubError.CannotReview(Why.IN_VERSION)),
                 error(Update.update(inVersion, new ReviewMsg.StartAsked(at(line(Side.RIGHT, 10))))
                         .model()));
         assertEquals(
-                Option.of(new AppError.CannotReview(Why.IN_VERSION)),
+                Option.of(new GitHubError.CannotReview(Why.IN_VERSION)),
                 error(Update.update(inVersion, new ReviewMsg.StartAsked(at(new Anchor.File("a.txt"))))
                         .model()));
     }
@@ -805,7 +806,7 @@ class ReviewUpdateTest {
         Next refused = Update.update(files(), new ReviewMsg.DeleteAsked(at(onThread("T2"))));
 
         assertTrue(refused.model().popup(DeleteCommentPopup.class).isEmpty());
-        assertEquals(Option.of(new AppError.CannotReview(Why.COLLAPSED)), error(refused.model()));
+        assertEquals(Option.of(new GitHubError.CannotReview(Why.COLLAPSED)), error(refused.model()));
     }
 
     /**
@@ -850,13 +851,13 @@ class ReviewUpdateTest {
         Next refused = Update.update(theirs, new ReviewMsg.DeleteAsked(at(onComment("R1", "T1"))));
 
         assertTrue(refused.model().popup(DeleteCommentPopup.class).isEmpty());
-        assertEquals(Option.of(new AppError.CannotReview(Why.NO_DELETE)), error(refused.model()));
+        assertEquals(Option.of(new GitHubError.CannotReview(Why.NO_DELETE)), error(refused.model()));
     }
 
     @Test
     void whileItsFirstCommentIsDeletedAThreadTakesNoReplyResolveNorSpaceAndTheCommentNoSecondDelete() {
         Model deleting = deleting(files(), onThread("T1")).model();
-        Option<AppError> beingDeleted = Option.of(new AppError.CannotReview(Why.DELETING));
+        Option<AppError> beingDeleted = Option.of(new GitHubError.CannotReview(Why.DELETING));
 
         assertEquals(
                 beingDeleted,
@@ -887,7 +888,7 @@ class ReviewUpdateTest {
                 .model();
 
         assertEquals(
-                Option.of(new AppError.CannotReview(Why.SENDING)),
+                Option.of(new GitHubError.CannotReview(Why.SENDING)),
                 error(Update.update(resolving, new ReviewMsg.DeleteAsked(at(onComment("R1", "T1"))))
                         .model()));
     }
@@ -1015,13 +1016,13 @@ class ReviewUpdateTest {
 
         Model more = files(PullRequestDetails.State.OPEN, HEAD, List.of(OPEN, firstOnly(SETTLED, 4)));
         assertEquals(
-                Option.of(new AppError.CannotReview(Why.COLLAPSED)),
+                Option.of(new GitHubError.CannotReview(Why.COLLAPSED)),
                 error(Update.update(more, new ReviewMsg.DeleteAsked(at(onThread("T2"))))
                         .model()));
         // Both comments read, and one more on GitHub.
         Model bothAndMore = files(PullRequestDetails.State.OPEN, HEAD, List.of(OPEN, withMore(SETTLED, 1)));
         assertEquals(
-                Option.of(new AppError.CannotReview(Why.COLLAPSED)),
+                Option.of(new GitHubError.CannotReview(Why.COLLAPSED)),
                 error(Update.update(bothAndMore, new ReviewMsg.DeleteAsked(at(onThread("T2"))))
                         .model()));
     }
@@ -1040,7 +1041,7 @@ class ReviewUpdateTest {
         Model replying = Update.update(deleted.model(), new ReviewMsg.ReplyAsked(at(onThread("T1"))))
                 .model();
         assertTrue(replying.popup(ReviewPopup.class).isEmpty());
-        assertEquals(Option.of(new AppError.CannotReview(Why.NOT_READ)), error(replying));
+        assertEquals(Option.of(new GitHubError.CannotReview(Why.NOT_READ)), error(replying));
     }
 
     @Test
@@ -1177,7 +1178,7 @@ class ReviewUpdateTest {
                 Update.update(Update.update(asked, new ReviewMsg.Edited("  \n")).model(), new ReviewMsg.Confirmed());
         assertEquals(List.empty(), emptied.cmds());
         assertFalse(emptied.model().popup(ReviewPopup.class).get().sending());
-        assertEquals(Option.of(new AppError.CannotReview(Why.EMPTY)), error(emptied.model()));
+        assertEquals(Option.of(new GitHubError.CannotReview(Why.EMPTY)), error(emptied.model()));
 
         // A change of whitespace only is a change.
         assertEquals(
@@ -1192,24 +1193,24 @@ class ReviewUpdateTest {
     @Test
     void aCommentIsEditedWithTheRightToAndAsADeleteIsWhateverTheCommitsItWasReadAt() {
         assertEquals(
-                Option.of(new AppError.CannotReview(Why.NO_EDIT)),
+                Option.of(new GitHubError.CannotReview(Why.NO_EDIT)),
                 error(Update.update(
                                 withRights(files(), new CommentRights(false, true, true)),
                                 new ReviewMsg.EditAsked(at(onComment("R1", "T1"))))
                         .model()));
         assertEquals(
-                Option.of(new AppError.CannotReview(Why.COLLAPSED)),
+                Option.of(new GitHubError.CannotReview(Why.COLLAPSED)),
                 error(Update.update(files(), new ReviewMsg.EditAsked(at(onThread("T2"))))
                         .model()));
         Model resolving = Update.update(files(), new ReviewMsg.ResolveAsked(at(onThread("T1"))))
                 .model();
         assertEquals(
-                Option.of(new AppError.CannotReview(Why.SENDING)),
+                Option.of(new GitHubError.CannotReview(Why.SENDING)),
                 error(Update.update(resolving, new ReviewMsg.EditAsked(at(onComment("R1", "T1"))))
                         .model()));
         Model deleting = deleting(files(), onComment("R1", "T1")).model();
         assertEquals(
-                Option.of(new AppError.CannotReview(Why.DELETING)),
+                Option.of(new GitHubError.CannotReview(Why.DELETING)),
                 error(Update.update(deleting, new ReviewMsg.EditAsked(at(onComment("R1", "T1"))))
                         .model()));
 
@@ -1340,7 +1341,7 @@ class ReviewUpdateTest {
         Next again = Update.update(sending, new ReviewMsg.ReactAsked(at(onComment("R1", "T1"))));
 
         assertTrue(again.model().popup(ReactionPopup.class).isEmpty());
-        assertEquals(Option.of(new AppError.CannotReview(Why.REACTING)), error(again.model()));
+        assertEquals(Option.of(new GitHubError.CannotReview(Why.REACTING)), error(again.model()));
         // Another comment takes one meanwhile.
         assertTrue(Update.update(sending, new ReviewMsg.ReactAsked(at(onComment("C1", "T1"))))
                 .model()
@@ -1410,7 +1411,7 @@ class ReviewUpdateTest {
 
         assertEquals(List.empty(), chosen.cmds());
         assertTrue(chosen.model().popup(ReactionPopup.class).isEmpty());
-        assertEquals(Option.of(new AppError.CannotReview(Why.NOT_ON_THREAD)), error(chosen.model()));
+        assertEquals(Option.of(new GitHubError.CannotReview(Why.NOT_ON_THREAD)), error(chosen.model()));
         assertEquals(HashSet.empty(), view(chosen.model()).reacting());
     }
 
@@ -1421,7 +1422,7 @@ class ReviewUpdateTest {
         Next refused = Update.update(locked, new ReviewMsg.ReactAsked(at(onComment("R1", "T1"))));
 
         assertTrue(refused.model().popup(ReactionPopup.class).isEmpty());
-        assertEquals(Option.of(new AppError.CannotReview(Why.NO_REACT)), error(refused.model()));
+        assertEquals(Option.of(new GitHubError.CannotReview(Why.NO_REACT)), error(refused.model()));
     }
 
     @Test
@@ -1478,7 +1479,7 @@ class ReviewUpdateTest {
             for (ReviewMsg msg : asked) {
                 Next refused = Update.update(model, msg);
                 assertEquals(List.empty(), refused.cmds());
-                assertEquals(Option.of(new AppError.CannotReview(Why.NOT_READ)), error(refused.model()));
+                assertEquals(Option.of(new GitHubError.CannotReview(Why.NOT_READ)), error(refused.model()));
             }
         }
     }
@@ -1493,7 +1494,7 @@ class ReviewUpdateTest {
         Next refused = Update.update(locked, new ReviewMsg.ReplyAsked(at(onThread("T1"))));
 
         assertTrue(refused.model().popup(ReviewPopup.class).isEmpty());
-        assertEquals(Option.of(new AppError.CannotReview(Why.NO_REPLY)), error(refused.model()));
+        assertEquals(Option.of(new GitHubError.CannotReview(Why.NO_REPLY)), error(refused.model()));
     }
 
     @Test
@@ -1523,7 +1524,7 @@ class ReviewUpdateTest {
         assertEquals(List.empty(), deleted.cmds());
         assertTrue(deleted.model().popup(DeleteCommentPopup.class).isEmpty());
         assertEquals(HashSet.empty(), view(deleted.model()).deleting());
-        assertEquals(Option.of(new AppError.CannotReview(Why.NOT_READ)), error(deleted.model()));
+        assertEquals(Option.of(new GitHubError.CannotReview(Why.NOT_READ)), error(deleted.model()));
 
         Model reactOther = files().openPopup(new ReactionPopup(
                 8, new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("R1"), Reactions.NONE));
@@ -1531,7 +1532,7 @@ class ReviewUpdateTest {
         assertEquals(List.empty(), reacted.cmds());
         assertTrue(reacted.model().popup(ReactionPopup.class).isEmpty());
         assertEquals(HashSet.empty(), view(reacted.model()).reacting());
-        assertEquals(Option.of(new AppError.CannotReview(Why.NOT_READ)), error(reacted.model()));
+        assertEquals(Option.of(new GitHubError.CannotReview(Why.NOT_READ)), error(reacted.model()));
 
         // Without its popup open, confirming does nothing.
         assertEquals(

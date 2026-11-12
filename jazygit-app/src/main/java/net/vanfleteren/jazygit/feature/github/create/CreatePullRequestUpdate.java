@@ -3,10 +3,12 @@ package net.vanfleteren.jazygit.feature.github.create;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.branch.BranchError;
 import net.vanfleteren.jazygit.feature.branch.push.PushCmd;
 import net.vanfleteren.jazygit.feature.branch.push.PushCmd.Push;
 import net.vanfleteren.jazygit.feature.branch.push.PushCmd.PushSettingUpstream;
 import net.vanfleteren.jazygit.feature.fetch.FetchUpdate;
+import net.vanfleteren.jazygit.feature.github.GitHubError;
 import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestCmd.Base;
 import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestCmd.CreatePullRequest;
 import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestCmd.PushFirst;
@@ -248,7 +250,7 @@ public final class CreatePullRequestUpdate {
                 .map(upstream -> branch.ahead() == 0
                         ? ask(model, branch)
                         : branch.behind() > 0
-                                ? Next.of(model.fail(new AppError.Diverged(branch.name(), upstream)))
+                                ? Next.of(model.fail(new BranchError.Diverged(branch.name(), upstream)))
                                 : Update.ask(
                                         model, new PushFirstPopup(branch.name(), upstream, Option.of(branch.ahead()))))
                 .getOrElse(
@@ -291,7 +293,7 @@ public final class CreatePullRequestUpdate {
         return bases.headOption()
                 .map(first ->
                         Next.of(model, new ReadTitle(branch.name(), branch.pushTarget(), bases, baseRef(model, first))))
-                .getOrElse(() -> Next.of(model.fail(new AppError.NoBase(branch.name()))));
+                .getOrElse(() -> Next.of(model.fail(new GitHubError.NoBase(branch.name()))));
     }
 
     /**

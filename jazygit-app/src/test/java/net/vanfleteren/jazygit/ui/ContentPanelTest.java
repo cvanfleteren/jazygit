@@ -1341,7 +1341,7 @@ class ContentPanelTest {
             SettledPilot.of(testRunner).pause();
             assertEquals(
                     new net.vanfleteren.jazygit.feature.github.review.ReviewMsg.Refused(
-                            net.vanfleteren.jazygit.state.AppError.CannotReview.Why.NOT_ON_LINE),
+                            net.vanfleteren.jazygit.feature.github.GitHubError.CannotReview.Why.NOT_ON_LINE),
                     dispatched.getLast());
 
             SettledPilot.of(testRunner).press('k');

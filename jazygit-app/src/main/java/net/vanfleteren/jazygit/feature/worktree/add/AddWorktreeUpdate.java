@@ -4,6 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.collection.Stream;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.repos.RecentReposCmd;
+import net.vanfleteren.jazygit.feature.worktree.WorktreeError;
 import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeMsg.*;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
@@ -51,7 +52,7 @@ public final class AddWorktreeUpdate {
             // It comes by itself, so it does not take away a dialog the user opened meanwhile.
             case StartResolved(String typed, var commit) ->
                 commit.map(sha -> Next.of(model.openPopupIfFree(NewWorktreeBranchPopup.fromCommit(typed, sha))))
-                        .getOrElse(() -> Next.of(model.fail(new AppError.UnknownRevision(typed))));
+                        .getOrElse(() -> Next.of(model.fail(new WorktreeError.UnknownRevision(typed))));
             case StartNotResolved(String typed, var failure) ->
                 Next.of(model.fail(
                         new AppError.OperationFailed(AddWorktreeCmd.ADD_WORKTREE, Option.of(typed), failure)));
@@ -135,7 +136,7 @@ public final class AddWorktreeUpdate {
                 .map(known -> known.current()
                         ? update(model, new NewBranchRequested(branch))
                         : known.worktreeLocation()
-                                .map(worktree -> Next.of(model.fail(new AppError.CheckedOutElsewhere(
+                                .map(worktree -> Next.of(model.fail(new WorktreeError.CheckedOutElsewhere(
                                         AddWorktreeCmd.ADD_WORKTREE, branch, worktree))))
                                 .getOrElse(() -> switching ? askSwitching(model, source) : ask(model, source)))
                 .getOrElse(() -> Next.of(model));

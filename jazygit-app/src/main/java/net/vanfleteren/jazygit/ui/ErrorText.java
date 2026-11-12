@@ -1,18 +1,16 @@
 package net.vanfleteren.jazygit.ui;
 
 import io.vavr.control.Option;
-import java.util.Locale;
 import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
-import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.i18n.Messages;
-import net.vanfleteren.jazygit.settings.EditorProgram;
 import net.vanfleteren.jazygit.settings.SettingsProblem;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Failure;
+import net.vanfleteren.jazygit.state.Phrase;
 
 /**
  * Describes errors to the user. The only place that turns them into text.
@@ -22,114 +20,21 @@ public final class ErrorText {
     private ErrorText() {}
 
     public static String of(AppError error) {
-        return switch (error) {
-            case AppError.OperationFailed(var operation, Option<String> subject, Failure failure) ->
-                Messages.get(
-                        operation.errorKey(),
-                        subject.toList().<Object>map(s -> s).append(of(failure)).toJavaArray());
-            case AppError.MergeFailed(BranchName branch, String message) ->
-                Messages.get("error.mergePr.failed", branch.value(), message);
-            case AppError.NothingToCommit() -> Messages.get("error.commit.nothing");
-            case AppError.NothingToAmend() -> Messages.get("error.amend.nothing");
-            case AppError.MergeNotAmendable() -> Messages.get("error.amendCommit.merge");
-            case AppError.NothingToStash() -> Messages.get("error.stash.nothing");
-            case AppError.Unchanged(String path) -> Messages.get("error.unchanged", path.isEmpty() ? "/" : path);
-            case AppError.AlreadyPicked(Sha sha) -> Messages.get("error.cherryPick.already", sha.shortSha());
-            case AppError.ConflictsRemain(int files) -> Messages.get("error.conflictsRemain", files);
-            case AppError.Unfinished(var operation, Option<String> subject, var inProgress, int conflicts) ->
-                Messages.get(
-                        operation.errorKey(),
-                        subject.toList()
-                                .<Object>map(s -> s)
-                                .append(inProgress
-                                        .map(op -> Messages.get("error.inProgress", InProgressText.kind(op)))
-                                        .getOrElse(() -> Messages.get("error.conflictsRemain", conflicts)))
-                                .toJavaArray());
-            case AppError.InvalidUpstream(String text) -> Messages.get("error.upstream.invalid", text.strip());
-            case AppError.UnknownRevision(String text) -> Messages.get("error.revision.unknown", text);
-            case AppError.BehindUpstream(BranchName branch) -> Messages.get("error.push.behind", branch.value());
-            case AppError.NoUpstream(BranchName branch) -> Messages.get("error.upstream.none", branch.value());
-            case AppError.UpstreamGone(BranchName branch, String upstream) ->
-                Messages.get("error.upstream.gone", branch.value(), upstream);
-            case AppError.UpstreamChanged(BranchName branch, String upstream) ->
-                Messages.get("error.upstream.changed", branch.value(), upstream);
-            case AppError.NoBaseBranch(BranchName branch) -> Messages.get("error.divergence.noBase", branch.value());
-            case AppError.IsBaseBranch(BranchName branch) -> Messages.get("error.divergence.isBase", branch.value());
-            case AppError.NoBranchCheckedOut() -> Messages.get("error.detached");
-            case AppError.UnpushedCommits(BranchName branch) ->
-                Messages.get("error.fastForward.unpushed", branch.value());
-            case AppError.StackNotRebased(int stack, String branch, var why) ->
-                Messages.get(
-                        "error.stackNotRebased",
-                        String.valueOf(stack),
-                        Messages.get("error.stackNotRebased." + why.name().toLowerCase(java.util.Locale.ROOT), branch));
-            case AppError.StackNotPushed(int stack, String branch, var why) ->
-                Messages.get(
-                        "error.stackNotPushed",
-                        String.valueOf(stack),
-                        Messages.get("error.stackNotRebased." + why.name().toLowerCase(java.util.Locale.ROOT), branch));
-            case AppError.CheckedOutElsewhere(var operation, BranchName branch, var worktree) ->
-                Messages.get(operation.errorKey(), branch.value(), Messages.get("error.checkedOutElsewhere", worktree));
-            case AppError.MainWorktreeNotRemovable(String worktree) ->
-                Messages.get("error.removeWorktree.main", worktree);
-            case AppError.ShownWorktreeNotRemovable(String worktree) ->
-                Messages.get("error.removeWorktree.shown", worktree);
-            case AppError.WorktreeLocked(String worktree, String reason) ->
-                reason.isBlank()
-                        ? Messages.get("error.removeWorktree.locked", worktree)
-                        : Messages.get("error.removeWorktree.lockedBecause", worktree, reason);
-            case AppError.WorktreeShownAlready(String worktree) -> Messages.get("error.switchWorktree.shown", worktree);
-            case AppError.WorktreeMissing(String worktree) -> Messages.get("error.switchWorktree.missing", worktree);
-            case AppError.NotInWorktree(BranchName branch) ->
-                Messages.get("error.openInEditor.notInWorktree", branch.value());
-            case AppError.NoEditorSet() ->
-                Messages.get(
-                        "error.openInEditor.noEditor",
-                        // On lines of their own, as TOML has them, so it can be pasted as it is.
-                        "[[editors]]\nname = \"IntelliJ\"\ncommand = [\"idea\", \"" + EditorProgram.DIR + "\"]");
-            case AppError.NothingToPrune() -> Messages.get("error.pruneWorktrees.nothing");
-            case AppError.MainWorktreeNotLockable() -> Messages.get("error.lockWorktree.main");
-            case AppError.Diverged(BranchName branch, RemoteBranch upstream) ->
-                Messages.get("error.pullRequest.diverged", branch.value(), upstream.shortName());
-            case AppError.NoBase(BranchName branch) -> Messages.get("error.pullRequest.noBase", branch.value());
-            case AppError.OtherRepository(String pullRequest) ->
-                Messages.get("error.checkoutPr.otherRepository", pullRequest);
-            case AppError.ChangesBeforeCheckout(String pullRequest) ->
-                Messages.get("error.checkoutPr.changes", pullRequest);
-            case AppError.PullRequestCheckedOutHere(String pullRequest) ->
-                Messages.get("error.checkoutPr.here", pullRequest);
-            case AppError.ChangesBeforeMove(BranchRef target) ->
-                Messages.get("error.moveCommits.changes", target.name());
-            case AppError.MovedThroughMerge(Sha oldest, BranchName branch, Sha merge, Sha parent) ->
-                Messages.get(
-                        "error.moveCommits.throughMerge",
-                        oldest.shortSha(),
-                        branch.value(),
-                        merge.shortSha(),
-                        parent.shortSha());
-            case AppError.DefaultBranch(BranchRef branch) -> Messages.get("error.deleteBranch.default", branch.name());
-            case AppError.NotAllNuked(BranchName branch, var left, var failures) ->
-                Messages.get(
-                        "error.nukeBranch.notAll",
-                        branch.value(),
-                        left.mkString(", "),
-                        failures.map(ErrorText::of).mkString("; "));
-            case AppError.NotOnRemote(BranchName branch) -> Messages.get("error.browse.notOnRemote", branch.value());
-            case AppError.PullRequestsNotRead() -> Messages.get("error.pullRequest.notRead");
-            case AppError.PullRequestsUnavailable(Failure failure) ->
-                Messages.get("error.pullRequest.unavailable", of(failure));
-            case AppError.CannotReview(AppError.CannotReview.Why why) ->
-                Messages.get("error.review." + why.name().toLowerCase(Locale.ROOT));
-            case AppError.SettingsNotLoaded(SettingsProblem problem) -> of(problem);
-            case AppError.SettingsNotReread(SettingsProblem problem) -> reread(problem);
-            case AppError.SettingsNotSaved(Failure failure) -> Messages.get("error.settings.notSaved", of(failure));
-            case AppError.RepositoryNotOpened(String directory, Failure failure) ->
-                Messages.get("error.recentRepos.notOpened", directory, of(failure));
-            case AppError.GhExecutableUnusable(Option<String> executable, Failure failure) ->
-                Messages.get("error.settings.ghUnusable", executable.getOrElse("gh"), of(failure));
-            case AppError.GitHubAccountNotSet(Failure failure) ->
-                Messages.get("error.settings.accountNotSet", of(failure));
-            case AppError.SettingsNotApplied(Failure failure) -> Messages.get("error.settings.notApplied", of(failure));
+        return of(error.phrase());
+    }
+
+    /**
+     * {@code phrase} in the user's language.
+     */
+    public static String of(Phrase phrase) {
+        return switch (phrase) {
+            case Phrase.Keyed(String key, var args) ->
+                Messages.get(key, args.map(ErrorText::argument).toJavaArray());
+            case Phrase.Verbatim(String text) -> text;
+            case Phrase.Count(int count) -> String.valueOf(count);
+            case Phrase.Failed(Failure failure) -> of(failure);
+            case Phrase.Joined(String separator, var parts) ->
+                parts.map(ErrorText::of).mkString(separator);
         };
     }
 
@@ -149,14 +54,7 @@ public final class ErrorText {
     }
 
     public static String of(SettingsProblem problem) {
-        return switch (problem) {
-            case SettingsProblem.Unreadable(var file, String reason) ->
-                Messages.get("settings.unreadable", file, reason);
-            case SettingsProblem.Invalid(var file, var keys) ->
-                Messages.get("settings.invalid", file, keys.mkString(", "));
-            case SettingsProblem.Unwritable(var file, String reason) ->
-                Messages.get("settings.unwritable", file, reason);
-        };
+        return of(AppError.settingsProblem(problem));
     }
 
     public static String of(GhError error) {
@@ -233,16 +131,9 @@ public final class ErrorText {
     }
 
     /**
-     * What is wrong in the settings file read again, whose settings in use stay rather than going back to the
-     * defaults (ADR 111).
+     * What goes into a message for {@code phrase}: a number stays one, for the message to format.
      */
-    private static String reread(SettingsProblem problem) {
-        return switch (problem) {
-            case SettingsProblem.Unreadable(var file, String reason) ->
-                Messages.get("settings.reread.unreadable", file, reason);
-            case SettingsProblem.Invalid(var file, var keys) ->
-                Messages.get("settings.reread.invalid", file, keys.mkString(", "));
-            case SettingsProblem.Unwritable unwritable -> of(unwritable);
-        };
+    private static Object argument(Phrase phrase) {
+        return phrase instanceof Phrase.Count(int count) ? count : of(phrase);
     }
 }

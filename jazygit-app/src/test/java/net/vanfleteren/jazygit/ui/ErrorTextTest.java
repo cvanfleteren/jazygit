@@ -3,11 +3,11 @@ package net.vanfleteren.jazygit.ui;
 import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.branch.BranchError;
 import net.vanfleteren.jazygit.git.GitError.CommandFailed;
 import net.vanfleteren.jazygit.git.GitError.StashNotRestored;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.Sha;
-import net.vanfleteren.jazygit.state.AppError;
 import org.junit.jupiter.api.Test;
 
 class ErrorTextTest {
@@ -21,7 +21,7 @@ class ErrorTextTest {
 
     @Test
     void aCommitThatCameInThroughAMergeNamesTheMergeAndWhereTheBranchWouldBeLeft() {
-        var error = new AppError.MovedThroughMerge(
+        var error = new BranchError.MovedThroughMerge(
                 new Sha("aaaaaaaaaa"), new BranchName("main"), new Sha("bbbbbbbbbb"), new Sha("cccccccccc"));
 
         assertEquals(

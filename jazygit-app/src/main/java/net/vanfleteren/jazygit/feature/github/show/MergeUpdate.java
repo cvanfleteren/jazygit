@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.github.show;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.fetch.FetchUpdate;
+import net.vanfleteren.jazygit.feature.github.GitHubError;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestCmd.CheckMerge;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestCmd.MergePullRequest;
 import net.vanfleteren.jazygit.gh.model.MergeStatus;
@@ -96,7 +97,7 @@ final class MergeUpdate {
             case MergeStatus.Enqueued enqueued ->
                 next.map(model -> model.inform(new Notice.MergeEnqueued(merge.branch())));
             case MergeStatus.Failed(String message) ->
-                next.map(model -> model.fail(new AppError.MergeFailed(merge.branch(), message)));
+                next.map(model -> model.fail(new GitHubError.MergeFailed(merge.branch(), message)));
         };
     }
 }

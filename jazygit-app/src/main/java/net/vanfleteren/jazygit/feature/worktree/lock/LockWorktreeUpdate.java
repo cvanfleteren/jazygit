@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.feature.worktree.lock;
 
+import net.vanfleteren.jazygit.feature.worktree.WorktreeError;
 import net.vanfleteren.jazygit.feature.worktree.lock.LockWorktreeMsg.Requested;
-import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -27,7 +27,7 @@ public final class LockWorktreeUpdate {
         return model.repo()
                 .worktree(location)
                 .map(worktree -> worktree.main()
-                        ? Next.of(model.fail(new AppError.MainWorktreeNotLockable()))
+                        ? Next.of(model.fail(new WorktreeError.MainWorktreeNotLockable()))
                         : Update.start(model.clearError(), new LockWorktreeCmd(location, !worktree.isLocked())))
                 .getOrElse(() -> Next.of(model));
     }
