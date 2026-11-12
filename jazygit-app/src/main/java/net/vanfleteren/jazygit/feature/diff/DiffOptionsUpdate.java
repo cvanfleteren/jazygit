@@ -61,8 +61,8 @@ public final class DiffOptionsUpdate {
     private static Next styleToggled(Model model) {
         Settings previous = model.preferences().settings();
         Settings chosen = previous.withDiffStyle(previous.diffStyle().toggled());
-        Next changed = changed(model.mapPreferences(preferences -> preferences.withSettings(chosen)));
-        return new Next(changed.model(), changed.cmds().append(new SaveSettings(previous, chosen)));
+        return changed(model.mapPreferences(preferences -> preferences.withSettings(chosen)))
+                .and(new SaveSettings(previous, chosen));
     }
 
     /**
@@ -72,9 +72,9 @@ public final class DiffOptionsUpdate {
     private static Next wordsToggled(Model model) {
         Settings previous = model.preferences().settings();
         Settings chosen = previous.withDiffWords(!previous.diffWords());
-        return new Next(
+        return Next.of(
                 model.mapPreferences(preferences -> preferences.withSettings(chosen)),
-                List.of(new SaveSettings(previous, chosen)));
+                new SaveSettings(previous, chosen));
     }
 
     /**

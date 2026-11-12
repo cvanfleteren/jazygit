@@ -124,8 +124,7 @@ public final class PrOverviewUpdate {
      * {@code next}, with what {@code read} tells of the pull requests of the branches too.
      */
     private static Next withBranches(Next next, PullRequestsMsg read) {
-        Next branches = PullRequestsUpdate.update(next.model(), read);
-        return new Next(branches.model(), next.cmds().appendAll(branches.cmds()));
+        return next.then(model -> PullRequestsUpdate.update(model, read));
     }
 
     /**
@@ -159,9 +158,7 @@ public final class PrOverviewUpdate {
      * {@code next}, also running {@code loads}, but the ones still running.
      */
     private static Next loaded(Next next, List<Cmd> loads) {
-        return new Next(
-                next.model(),
-                next.cmds().appendAll(notRunning(loads, next.model().jobs())));
+        return next.then(model -> new Next(model, notRunning(loads, model.jobs())));
     }
 
     /**

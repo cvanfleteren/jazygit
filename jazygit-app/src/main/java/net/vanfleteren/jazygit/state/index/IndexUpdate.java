@@ -38,12 +38,10 @@ public final class IndexUpdate {
         boolean free =
                 !jobs.away() && !last.adopt() && !jobs.runsOperation() && !jobs.runs(RefreshIndex.class::isInstance);
         return due && free
-                ? new Next(
-                        model.mapJobs(those ->
-                                those.withIndexRefresh(new IndexRefresh(index, Option.of(model.now()), false))),
-                        next.cmds().append(new RefreshIndex()),
-                        next.quit())
-                : new Next(model.mapJobs(those -> those.withIndexRefresh(last)), next.cmds(), next.quit());
+                ? next.map(current -> current.mapJobs(those ->
+                                those.withIndexRefresh(new IndexRefresh(index, Option.of(model.now()), false))))
+                        .and(new RefreshIndex())
+                : next.map(current -> current.mapJobs(those -> those.withIndexRefresh(last)));
     }
 
     /**

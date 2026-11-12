@@ -96,7 +96,7 @@ public final class ThemeUpdate {
                 preferences -> preferences.withSettings(chosen).withThemeOverride(Option.none()));
         return chosen.equals(model.preferences().settings())
                 ? Next.of(shown)
-                : new Next(shown, List.of(new SaveSettings(model.preferences().settings(), chosen)));
+                : Next.of(shown, new SaveSettings(model.preferences().settings(), chosen));
     }
 
     /**
@@ -106,6 +106,6 @@ public final class ThemeUpdate {
         RepositoryTheme before = model.preferences().repositoryTheme();
         Model shown = model.mapPreferences(preferences ->
                 preferences.withRepositoryTheme(before.withOwn(theme)).withThemeOverride(Option.none()));
-        return before.own().equals(theme) ? Next.of(shown) : new Next(shown, List.of(new ThemeCmd(theme)));
+        return before.own().equals(theme) ? Next.of(shown) : Next.of(shown, new ThemeCmd(theme));
     }
 }
