@@ -43,6 +43,7 @@ import net.vanfleteren.jazygit.ui.TimeText;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceDialog.Choice;
 import net.vanfleteren.jazygit.ui.widgets.ChoiceList;
 import net.vanfleteren.jazygit.ui.widgets.DialogFrame;
+import net.vanfleteren.jazygit.ui.widgets.KeysFirst;
 import net.vanfleteren.jazygit.ui.widgets.PopupView;
 import net.vanfleteren.jazygit.ui.widgets.WithDetails;
 
@@ -343,8 +344,15 @@ public final class PullRequestDialog implements PopupView {
                     // The lines, a blank line, the actions, the blank line and the hint, plus the border.
                     .length(CONTENT_HEIGHT + 1 + actions.height(model, popup) + 2 + 2);
             // The tallest popup: what the actions do shows only when there is room for it under the whole popup.
-            return WithDetails.uncut(
-                    dialog, actions.highlightedDetails(model, popup, Option.none()), actions.details(model, popup));
+            // On a screen shorter than the popup the actions are cut off, and so not drawn; the popup as a whole
+            // takes their keys, so they and Escape still work.
+            return new KeysFirst(
+                    WithDetails.uncut(
+                            dialog,
+                            actions.highlightedDetails(model, popup, Option.none()),
+                            actions.details(model, popup)),
+                    ID,
+                    event -> actions.handleKey(model, popup, event));
         });
     }
 
