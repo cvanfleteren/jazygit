@@ -17,9 +17,10 @@ import net.vanfleteren.jazygit.ui.edit.LineEdit;
 
 /**
  * A text input that also knows the {@link LineEdit readline keys}. The plain text input handles its keys before
- * any handler that can be attached to it, and takes Ctrl+Left as a plain Left; so this element registers itself
- * with the same id, ahead of the text input, to see the keys first. It hands the keys on to the text input itself,
- * so it can tell when the text changed. Handlers attached to the text input still get the keys neither takes.
+ * any handler that can be attached to it, and moves and deletes by words of its own; so this element registers
+ * itself with the same id, ahead of the text input, to see the keys first. It hands the keys on to the text input
+ * itself, so it can tell when the text changed. Handlers attached to the text input or to this element still get
+ * the keys neither takes.
  */
 public final class LineEditInput extends StyledElement<LineEditInput> {
 

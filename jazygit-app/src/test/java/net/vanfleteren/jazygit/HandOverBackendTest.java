@@ -3,7 +3,9 @@ package net.vanfleteren.jazygit;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import dev.tamboui.terminal.KittyKeyboardSupport;
 import dev.tamboui.terminal.TestBackend;
+import dev.tamboui.tui.TuiConfig;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayDeque;
@@ -76,6 +78,24 @@ class HandOverBackendTest {
         assertEquals((int) '[', backend.peek(10));
         assertEquals(List.of((int) '[', (int) 'A', 27, NO_KEY), keys(backend, 4));
         assertTrue(focus.isEmpty());
+    }
+
+    @Test
+    void theKeyboardEnhancementsAreOffWhileTheTerminalIsHandedOver() throws IOException {
+        TestBackend terminal = typed("");
+        HandOverBackend backend = new HandOverBackend(terminal, focused -> {});
+        TuiConfig config = TuiConfig.defaults();
+
+        backend.leave(config);
+        String left = terminal.rawOutput();
+        backend.comeBack(config);
+        String back = terminal.rawOutput().substring(left.length());
+
+        assertTrue(left.contains(KittyKeyboardSupport.popSequence()), left);
+        assertTrue(
+                back.contains(KittyKeyboardSupport.pushSequence(
+                        config.keyboardProtocol().flags())),
+                back);
     }
 
     @Test
