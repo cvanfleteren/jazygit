@@ -9,6 +9,8 @@ import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.RenderContext;
 import dev.tamboui.toolkit.element.Size;
 import dev.tamboui.toolkit.elements.ListElement;
+import dev.tamboui.toolkit.event.EventResult;
+import dev.tamboui.tui.event.KeyEvent;
 import net.vanfleteren.jazygit.ui.Theme;
 import net.vanfleteren.jazygit.ui.Theme.Highlights;
 
@@ -30,6 +32,14 @@ public record FocusHighlighted(ListElement<?> list) implements Element {
         list.highlightStyle(
                 context.isFocused(list.id()) || inactive.equals(Style.EMPTY) ? highlights.of(true) : inactive);
         list.render(frame, area, context);
+    }
+
+    /**
+     * The keys go to the list, as to a list that is not wrapped.
+     */
+    @Override
+    public EventResult handleKeyEvent(KeyEvent event, boolean focused) {
+        return list.handleKeyEvent(event, focused);
     }
 
     @Override
