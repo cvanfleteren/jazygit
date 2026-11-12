@@ -73,6 +73,18 @@ class PushFirstDialogTest {
         }
     }
 
+    @Test
+    void theTitleNamesALongBranchWholeWhenItsTargetIsNamedOtherwise() throws Exception {
+        BranchName longName = new BranchName("feature/a-rather-long-descriptive-branch-name-for-the-push-first-dialog");
+        open = TestModels.loaded()
+                .openPopup(
+                        new PushFirstPopup(longName, new RemoteBranch("origin", new BranchName("fx")), Option.none()));
+        try (ToolkitTestRunner runner = start()) {
+            String screen = RenderedText.ofLarge(runner, this::view);
+            assertTrue(screen.contains("Push " + longName.value() + " first"), screen);
+        }
+    }
+
     private ToolkitTestRunner start() throws Exception {
         ToolkitTestRunner runner = ToolkitTestRunner.runTest(this::view);
         SettledPilot.focus(runner, CreatePullRequestDialogs.PUSH_FIRST.id());

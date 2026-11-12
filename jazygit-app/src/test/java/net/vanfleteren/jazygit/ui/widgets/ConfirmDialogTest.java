@@ -92,23 +92,30 @@ class ConfirmDialogTest {
 
     @Test
     void aMessageOfShortWordsIsSixtyWide() {
-        assertEquals(60, ConfirmDialog.width(LONG));
+        assertEquals(60, ConfirmDialog.width("Title", LONG));
     }
 
     @Test
     void aLongerWordWidensTheDialogToKeepItOnOneLine() {
-        assertEquals(72, ConfirmDialog.width("At\n" + "x".repeat(70) + "\nok?"));
+        assertEquals(72, ConfirmDialog.width("Title", "At\n" + "x".repeat(70) + "\nok?"));
+    }
+
+    @Test
+    void aLongerTitleWidensTheDialogToShowItWhole() {
+        // A title of 81 columns, and the border on both sides.
+        assertEquals(83, ConfirmDialog.width("Push " + "x".repeat(70) + " first", "Push it?"));
     }
 
     @Test
     void theDialogIsNoWiderThanAHundred() {
-        assertEquals(100, ConfirmDialog.width("x".repeat(200)));
+        assertEquals(100, ConfirmDialog.width("Title", "x".repeat(200)));
+        assertEquals(100, ConfirmDialog.width("x".repeat(200), "Push it?"));
     }
 
     @Test
     void aWordOfWideCharactersIsMeasuredInColumns() {
         // 35 characters of two columns each.
-        assertEquals(72, ConfirmDialog.width("漢".repeat(35)));
+        assertEquals(72, ConfirmDialog.width("Title", "漢".repeat(35)));
     }
 
     @Test
