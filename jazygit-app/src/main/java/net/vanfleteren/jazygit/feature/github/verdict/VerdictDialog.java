@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.ui.CommentComposer;
+import net.vanfleteren.jazygit.ui.TextWidth;
 import net.vanfleteren.jazygit.ui.Theme;
 import net.vanfleteren.jazygit.ui.widgets.PopupView;
 
@@ -95,10 +96,10 @@ public final class VerdictDialog implements PopupView {
         // The box takes the focus, so its border shows it as that of the text does.
         return panel(row(
                         mark(Verdict.APPROVE, chosen),
-                        text(approve).length(approve.length()),
+                        text(approve).length(TextWidth.of(approve)),
                         text("").length(GAP),
                         mark(Verdict.REQUEST_CHANGES, chosen),
-                        text(changes).length(changes.length())))
+                        text(changes).length(TextWidth.of(changes))))
                 .title(Messages.get("dialog.verdict.choices"))
                 .id(CHOICES_ID)
                 .addClass(Theme.Classes.CHOICES)

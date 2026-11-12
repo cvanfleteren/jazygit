@@ -41,6 +41,7 @@ import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.github.prs.PrOverview;
 import net.vanfleteren.jazygit.state.operation.Notice;
+import net.vanfleteren.jazygit.ui.TextWidth;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -458,5 +459,23 @@ class CheckOutStackTest {
         assertInstanceOf(
                 BranchError.OtherRepository.class, other.outcome().error().get());
         assertTrue(unstacked.popup().isEmpty());
+    }
+
+    @Test
+    void whatHappensToEachBranchStartsInOneColumnAlsoAfterABranchOfWideCharacters() {
+        BranchName wide = new BranchName("feat/日本語");
+        StackCheckout checkout = new StackCheckout(
+                12,
+                List.of(
+                        new StackCheckout.Line(10, A, origin(A), Kind.UP_TO_DATE, 0, Option.none()),
+                        new StackCheckout.Line(11, wide, origin(wide), Kind.UP_TO_DATE, 0, Option.none())),
+                List.empty(),
+                Option.none());
+
+        List<Integer> columns = List.of(StackDialogs.checkedOut(checkout).split("\n"))
+                .take(2)
+                .map(line -> TextWidth.of(line.substring(0, line.indexOf("up to date"))));
+
+        assertEquals(List.of(18, 18), columns);
     }
 }
