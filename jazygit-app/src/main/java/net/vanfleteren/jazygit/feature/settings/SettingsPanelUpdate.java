@@ -3,7 +3,6 @@ package net.vanfleteren.jazygit.feature.settings;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.diff.DiffOptionsUpdate;
-import net.vanfleteren.jazygit.feature.theme.ThemeMsg;
 import net.vanfleteren.jazygit.feature.theme.ThemeScope;
 import net.vanfleteren.jazygit.feature.theme.ThemeUpdate;
 import net.vanfleteren.jazygit.settings.Settings;
@@ -50,12 +49,11 @@ public final class SettingsPanelUpdate {
                 Next.of(model.popup(SettingsPanelPopup.class)
                         .map(panel -> model.openPopup(panel.withGitHub(Option.of(gitHub))))
                         .getOrElse(model));
+            // Cancelling the theme goes back to the settings, on the setting it was asked for from.
             case SettingsPanelMsg.ThemeRequested() ->
-                ThemeUpdate.update(
-                        model.withoutPopup(SettingsPanelPopup.class), new ThemeMsg.Requested(ThemeScope.EVERYWHERE));
+                askTheme(model, ThemeScope.EVERYWHERE, SettingsPanelDialogs.THEME_KEY);
             case SettingsPanelMsg.RepositoryThemeRequested() ->
-                ThemeUpdate.update(
-                        model.withoutPopup(SettingsPanelPopup.class), new ThemeMsg.Requested(ThemeScope.REPOSITORY));
+                askTheme(model, ThemeScope.REPOSITORY, SettingsPanelDialogs.REPOSITORY_THEME_KEY);
             case SettingsPanelMsg.AnimationsToggled() ->
                 model.popup(SettingsPanelPopup.class)
                         .map(panel -> toggleAnimations(model, panel))
@@ -132,6 +130,12 @@ public final class SettingsPanelUpdate {
                         .fail(new AppError.OperationFailed(
                                 SettingsPanelCmd.EditFile.EDIT_SETTINGS, Option.none(), failure)));
         };
+    }
+
+    private static Next askTheme(Model model, ThemeScope scope, char key) {
+        return model.popup(SettingsPanelPopup.class)
+                .map(panel -> ThemeUpdate.requestedFrom(model, scope, panel.withOpensAt(Option.of(key))))
+                .getOrElse(() -> Next.of(model));
     }
 
     /**
