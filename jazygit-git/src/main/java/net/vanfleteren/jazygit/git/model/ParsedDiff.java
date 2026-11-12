@@ -161,16 +161,35 @@ public record ParsedDiff(List<String> preamble, List<ParsedFile> files) {
      * thousands of lines, and that segment and the list that holds it took more than a tenth of what it was parsed
      * into.
      *
+     * <p>Whether it was lexed is not kept as an option either, which took a {@code Some} for each line: a line that
+     * was not lexed keeps a sentinel in place of its tokens, and {@link #tokens} gives them as an option.
+     *
      * @param compared its segments when its words were compared with another line's and they are not the whole line
      *                 unchanged; else none
+     * @param lexed    its tokens, or the sentinel {@link #NOT_LEXED} when it was not lexed
      */
-    public record ParsedLine(DiffLine line, List<Segment> compared, Option<Array<Token>> tokens) {
+    public record ParsedLine(DiffLine line, List<Segment> compared, Array<Token> lexed) {
 
         /**
-         * {@code line} with its segments {@code words}, which are not kept when they are the whole line unchanged.
+         * The tokens of a line that was not lexed. Not {@link Array#empty()}: that is what a lexed line without tokens
+         * has ({@link #shared}), which a line that was not lexed is drawn otherwise than. It is told apart by
+         * identity; its one token is never read.
+         */
+        static final Array<Token> NOT_LEXED = Array.of(new Token(-1, 0, Token.Kind.KEYWORD));
+
+        /**
+         * {@code line} with its segments {@code words}, which are not kept when they are the whole line unchanged,
+         * and its {@code tokens}, none when it was not lexed.
          */
         public static ParsedLine of(DiffLine line, List<Segment> words, Option<Array<Token>> tokens) {
-            return new ParsedLine(line, whole(line, words) ? List.empty() : words, tokens);
+            return new ParsedLine(line, whole(line, words) ? List.empty() : words, tokens.getOrElse(NOT_LEXED));
+        }
+
+        /**
+         * Its tokens, as the {@link Highlighter} found them; none when it was not lexed.
+         */
+        public Option<Array<Token>> tokens() {
+            return Option.when(lexed != NOT_LEXED, lexed);
         }
 
         /**

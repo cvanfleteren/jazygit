@@ -8,6 +8,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.ParsedDiff.ParsedFile;
 import net.vanfleteren.jazygit.git.model.ParsedDiff.ParsedLine;
+import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.Hunk;
 import net.vanfleteren.jazygit.syntax.Token;
 import org.junit.jupiter.api.Test;
@@ -162,6 +163,19 @@ class ParsedDiffTest {
                                 Option.of(Array.of(new Token(0, 4, Token.Kind.KEYWORD)))),
                         List.of(Option.<Array<Token>>none(), Option.<Array<Token>>none())),
                 diff.files().flatMap(ParsedFile::hunks).map(hunk -> hunk.lines().map(ParsedLine::tokens)));
+    }
+
+    @Test
+    void aLineThatWasNotLexedIsToldFromALexedLineWithoutTokens() {
+        DiffLine line = new DiffLine(DiffLine.Kind.CONTEXT, "  ", 1, 1);
+
+        assertEquals(
+                Option.none(), ParsedLine.of(line, List.empty(), Option.none()).tokens());
+        assertEquals(
+                Option.of(Array.empty()),
+                ParsedLine.of(line, List.empty(), Option.of(Array.empty())).tokens());
+        assertEquals(
+                ParsedLine.of(line, List.empty(), Option.none()), ParsedLine.of(line, List.empty(), Option.none()));
     }
 
     @Test
