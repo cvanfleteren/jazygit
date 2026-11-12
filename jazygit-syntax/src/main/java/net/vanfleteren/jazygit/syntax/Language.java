@@ -18,31 +18,33 @@ import net.vanfleteren.jazygit.syntax.Grammar.Mode;
 public enum Language {
     JAVA(
             Grammar.code(
-                    """
+                            """
                     abstract assert boolean break byte case catch char class const continue default do double else
                     enum extends final finally float for goto if implements import instanceof int interface long
                     native new package permits private protected public record return sealed short static strictfp
                     super switch synchronized this throw throws transient try var void volatile when while yield true
                     false null
                     """,
-                    List.of("//"),
-                    List.of(comment("/*", "*/")),
-                    List.of(quoted("\"\"\"").overLines(), quoted("\""), quoted("'"))),
+                            List.of("//"),
+                            List.of(comment("/*", "*/")),
+                            List.of(quoted("\"\"\"").overLines(), quoted("\""), quoted("'")))
+                    .withAnnotations(),
             "",
             "java",
             ""),
     KOTLIN(
             Grammar.code(
-                    """
+                            """
                     abstract actual annotation as break catch class companion const constructor continue crossinline
                     do else enum expect external false final finally for fun if import in infix init inline inner
                     interface internal is lateinit noinline null object open operator override package private
                     protected public reified return sealed super suspend tailrec this throw true try typealias typeof
                     val var vararg when where while
                     """,
-                    List.of("//"),
-                    List.of(comment("/*", "*/")),
-                    List.of(raw("\"\"\"").overLines(), quoted("\""), quoted("'"))),
+                            List.of("//"),
+                            List.of(comment("/*", "*/")),
+                            List.of(raw("\"\"\"").overLines(), quoted("\""), quoted("'")))
+                    .withAnnotations(),
             "",
             "kt kts",
             ""),
@@ -51,30 +53,36 @@ public enum Language {
      */
     JAVASCRIPT(
             Grammar.code(
-                    """
+                            """
                     abstract as async await break case catch class const continue debugger declare default delete do
                     else enum export extends false finally for function if implements import in infer instanceof
                     interface keyof let namespace new null package private protected public readonly return satisfies
                     static super switch this throw true try typeof undefined var void while with yield
                     """,
-                    List.of("//"),
-                    List.of(comment("/*", "*/")),
-                    List.of(quoted("`").overLines(), quoted("\""), quoted("'"))),
+                            List.of("//"),
+                            List.of(comment("/*", "*/")),
+                            List.of(quoted("`").overLines(), quoted("\""), quoted("'")))
+                    .withAnnotations(),
             "",
             "js mjs cjs jsx ts mts cts tsx",
             "node deno bun"),
     PYTHON(
             Grammar.code(
-                    """
+                            """
                     False None True and as assert async await break case class continue def del elif else except
                     finally for from global if import in is lambda nonlocal not or pass raise return try while with
                     yield
                     """,
-                    List.of("#"),
-                    List.empty(),
-                    prefixed(
-                            List.of(quoted("\"\"\"").overLines(), quoted("'''").overLines(), quoted("\""), quoted("'")),
-                            "r b f u R B F U rb rB Rb RB br bR Br BR fr fR Fr FR rf rF Rf RF")),
+                            List.of("#"),
+                            List.empty(),
+                            prefixed(
+                                    List.of(
+                                            quoted("\"\"\"").overLines(),
+                                            quoted("'''").overLines(),
+                                            quoted("\""),
+                                            quoted("'")),
+                                    "r b f u R B F U rb rB Rb RB br bR Br BR fr fR Fr FR rf rF Rf RF"))
+                    .withAnnotations(),
             "",
             "py pyi pyw",
             "python"),
@@ -167,13 +175,20 @@ public enum Language {
                     false,
                     List.empty(),
                     List.of(comment("<!--", "-->")),
-                    List.of(raw("\"").overLines(), raw("'").overLines())),
+                    List.of(raw("\"").overLines(), raw("'").overLines()),
+                    false),
             "",
             "xml html htm xhtml svg xsd xsl xslt fxml iml plist csproj props targets",
             ""),
     MARKDOWN(
             new Grammar(
-                    Mode.MARKDOWN, HashSet.empty(), false, List.empty(), List.of(comment("<!--", "-->")), List.empty()),
+                    Mode.MARKDOWN,
+                    HashSet.empty(),
+                    false,
+                    List.empty(),
+                    List.of(comment("<!--", "-->")),
+                    List.empty(),
+                    false),
             "",
             "md markdown mdx",
             "");

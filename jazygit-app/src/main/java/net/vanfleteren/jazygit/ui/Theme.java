@@ -62,6 +62,7 @@ public final class Theme {
         // Resolving a class goes over every rule of the theme, and a diff has spans of a few classes on each of its
         // lines, drawn on many threads at once: each class is resolved once for each theme, which only changes whole.
         Map<Tuple2<Option<String>, String>, Style> resolved = new ConcurrentHashMap<>();
+        Map<Tuple3<Option<String>, String, String>, Style> refined = new ConcurrentHashMap<>();
         // A piece of code in a changed line takes the background of its line and the colour of its token: one style
         // for each pair of them, not one for each piece, which a long diff has hundreds of thousands of.
         Map<Tuple3<Option<String>, String, String>, Style> code = new ConcurrentHashMap<>();
@@ -71,6 +72,14 @@ public final class Theme {
                 return resolved.computeIfAbsent(
                         Tuple.of(Option.ofOptional(engine.getActiveStylesheet()), cssClass),
                         key -> engine.resolve(new Node("Span", Set.of(cssClass)))
+                                .toStyle());
+            }
+
+            @Override
+            public Style refined(String cssClass, String refinement) {
+                return refined.computeIfAbsent(
+                        Tuple.of(Option.ofOptional(engine.getActiveStylesheet()), cssClass, refinement),
+                        key -> engine.resolve(new Node("Span", Set.of(cssClass, refinement)))
                                 .toStyle());
             }
 
@@ -170,6 +179,15 @@ public final class Theme {
         Style of(String cssClass);
 
         /**
+         * The style of a span of {@code cssClass} that has {@code refinement} too: what the rules for
+         * {@code refinement} say over what those for {@code cssClass} do, which is all it gets when the theme has no
+         * rules for {@code refinement}.
+         */
+        default Style refined(String cssClass, String refinement) {
+            return of(cssClass).patch(of(refinement));
+        }
+
+        /**
          * The style of code in a line of {@code lineClass}: its background and attributes, in the colour of
          * {@code codeClass}, or without a colour of its own, so its text takes the terminal's, when that class gives
          * it none.
@@ -236,6 +254,10 @@ public final class Theme {
         // The rich view of a diff (ADR 44).
         public static final String DIFF_FILE_HEADER = "diff-file-header";
         public static final String DIFF_LINE_NUMBER = "diff-line-number";
+        // The line numbers of an added and of a removed line: what these rules say over what the rule of
+        // DIFF_LINE_NUMBER does, so a theme without them numbers changed lines as the others.
+        public static final String DIFF_ADDED_LINE_NUMBER = "diff-added-line-number";
+        public static final String DIFF_REMOVED_LINE_NUMBER = "diff-removed-line-number";
         public static final String DIFF_THREAD = "diff-thread";
         public static final String DIFF_THREAD_HEADER = "diff-thread-header";
         public static final String DIFF_THREAD_AUTHOR = "diff-thread-author";
@@ -251,6 +273,7 @@ public final class Theme {
         public static final String SYNTAX_STRING = "syntax-string";
         public static final String SYNTAX_COMMENT = "syntax-comment";
         public static final String SYNTAX_NUMBER = "syntax-number";
+        public static final String SYNTAX_ANNOTATION = "syntax-annotation";
         public static final String SYNTAX_TEXT = "syntax-text";
         public static final String CURRENT_BRANCH = "current-branch";
         public static final String SHA = "sha";

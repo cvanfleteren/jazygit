@@ -14,6 +14,7 @@ import java.util.Locale;
  * @param lineComments  what starts a comment that runs to the end of the line
  * @param blockComments the comments that end where they say
  * @param strings       its kinds of strings, the longest openings first
+ * @param annotations   whether a name after {@code @} is an annotation, or a decorator
  */
 record Grammar(
         Mode mode,
@@ -21,7 +22,8 @@ record Grammar(
         boolean ignoreCase,
         List<String> lineComments,
         List<Delimited> blockComments,
-        List<Delimited> strings) {
+        List<Delimited> strings,
+        boolean annotations) {
 
     Grammar {
         strings = strings.sortBy(string -> -string.open().length());
@@ -32,7 +34,7 @@ record Grammar(
      */
     static Grammar code(
             String keywords, List<String> lineComments, List<Delimited> blockComments, List<Delimited> strings) {
-        return new Grammar(Mode.CODE, words(keywords), false, lineComments, blockComments, strings);
+        return new Grammar(Mode.CODE, words(keywords), false, lineComments, blockComments, strings, false);
     }
 
     /**
@@ -40,7 +42,20 @@ record Grammar(
      */
     Grammar ignoringCase() {
         return new Grammar(
-                mode, keywords.map(word -> word.toLowerCase(Locale.ROOT)), true, lineComments, blockComments, strings);
+                mode,
+                keywords.map(word -> word.toLowerCase(Locale.ROOT)),
+                true,
+                lineComments,
+                blockComments,
+                strings,
+                annotations);
+    }
+
+    /**
+     * This grammar, in which a name after {@code @} is an annotation, or a decorator.
+     */
+    Grammar withAnnotations() {
+        return new Grammar(mode, keywords, ignoreCase, lineComments, blockComments, strings, true);
     }
 
     /**
@@ -56,7 +71,7 @@ record Grammar(
 
     enum Mode {
         /**
-         * Keywords, comments, strings and numbers.
+         * Keywords, comments, strings, numbers and annotations.
          */
         CODE,
         /**

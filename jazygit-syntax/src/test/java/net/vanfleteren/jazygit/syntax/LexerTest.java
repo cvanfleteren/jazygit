@@ -21,6 +21,64 @@ class LexerTest {
     }
 
     @Test
+    void findsTheAnnotationsOfALine() {
+        assertEquals(
+                List.of("ANNOTATION @Override", "ANNOTATION @lombok.Getter", "KEYWORD public"),
+                tokens(Language.JAVA, "  @Override @lombok.Getter(value) public"));
+    }
+
+    @Test
+    void anAtAfterAWordOrBeforeNoNameStartsNoAnnotation() {
+        assertEquals(List.of(), tokens(Language.JAVA, "mail@example @ (x)"));
+    }
+
+    @Test
+    void theTagsOfADocCommentAreNoAnnotationsInAHunkThatStartsInsideIt() {
+        assertEquals(List.of(), tokens(Language.JAVA, "     * @param x the {@link Foo}"));
+        assertEquals(List.of(), tokens(Language.JAVA, "     * @author someone"));
+        assertEquals(List.of(), tokens(Language.JAVA, "     the {@code Foo}, as {@inheritDoc} says"));
+    }
+
+    @Test
+    void theTagsOfADocCommentThatIsReadFromItsStartAreItsComment() {
+        assertEquals(
+                List.of("COMMENT /** @deprecated use {@link B} */"),
+                tokens(Language.JAVA, "/** @deprecated use {@link B} */"));
+    }
+
+    @Test
+    void anAnnotationInBracesIsOne() {
+        assertEquals(
+                List.of("ANNOTATION @Table", "ANNOTATION @UniqueConstraint"),
+                tokens(Language.JAVA, "@Table(uniqueConstraints = {@UniqueConstraint(x)})"));
+        assertEquals(
+                List.of(
+                        "ANNOTATION @JsonSubTypes",
+                        "ANNOTATION @Type",
+                        "KEYWORD class",
+                        "ANNOTATION @Type",
+                        "KEYWORD class"),
+                tokens(Language.JAVA, "@JsonSubTypes({@Type(A.class), @Type(B.class)})"));
+        assertEquals(
+                List.of("KEYWORD new", "ANNOTATION @Override"), tokens(Language.JAVA, "new Runnable() {@Override"));
+    }
+
+    @Test
+    void anAnnotationAfterTheEndOfADocCommentIsOne() {
+        assertEquals(List.of("ANNOTATION @Override"), tokens(Language.JAVA, "     */ @Override"));
+    }
+
+    @Test
+    void aLanguageWithoutAnnotationsHasNone() {
+        assertEquals(List.of(), tokens(Language.GO, "x := @Override"));
+    }
+
+    @Test
+    void findsTheDecoratorsOfPython() {
+        assertEquals(List.of("ANNOTATION @dataclass", "KEYWORD class"), tokens(Language.PYTHON, "@dataclass class A"));
+    }
+
+    @Test
     void anEscapedQuoteDoesNotEndAString() {
         assertEquals(List.of("STRING \"say \\\"hi\\\"\""), tokens(Language.JAVA, "\"say \\\"hi\\\"\";"));
     }

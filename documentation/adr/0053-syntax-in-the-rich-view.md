@@ -134,3 +134,5 @@ tell from the hunk alone.
 - A theme has four more classes to keep.
 
 Amended by ADR 56: a `ParsedDiff` is one tree of files, hunks and lines, each line with its tokens.
+
+Amended by ADR 113: annotations are a fifth kind of token.

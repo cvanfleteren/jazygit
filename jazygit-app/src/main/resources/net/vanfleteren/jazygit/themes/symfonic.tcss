@@ -102,6 +102,7 @@ Span.syntax-keyword { color: $accent; }
 Span.syntax-string { color: $lavender; }
 Span.syntax-comment { color: $muted; }
 Span.syntax-number { color: #4fb3ff; }
+Span.syntax-annotation { color: #4fb3ff; }
 
 Span.current-branch { color: $warn; text-style: bold; }
 Span.sha { color: $warn; }

@@ -20,6 +20,10 @@ public record Token(int start, int length, Kind kind) {
         KEYWORD,
         STRING,
         COMMENT,
-        NUMBER
+        NUMBER,
+        /**
+         * An annotation, or a decorator: {@code @Override}, {@code @lombok.Getter}.
+         */
+        ANNOTATION
     }
 }

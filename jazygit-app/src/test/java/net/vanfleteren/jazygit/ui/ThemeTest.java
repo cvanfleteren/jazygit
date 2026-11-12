@@ -66,6 +66,33 @@ class ThemeTest {
     }
 
     @Test
+    void theGitHubThemeNumbersChangedLinesOnATintAndAnnotationsInBlue() {
+        var engine = Theme.createEngine().get();
+        Theme.activate(engine, ThemeName.GITHUB_DARK);
+        Theme.SpanStyles styles = Theme.spanStyles(engine);
+
+        Style added = styles.refined(Theme.Classes.DIFF_LINE_NUMBER, Theme.Classes.DIFF_ADDED_LINE_NUMBER);
+        Style removed = styles.refined(Theme.Classes.DIFF_LINE_NUMBER, Theme.Classes.DIFF_REMOVED_LINE_NUMBER);
+
+        assertEquals(java.util.Optional.of(Color.hex("#1c4328")), added.bg());
+        assertEquals(java.util.Optional.of(Color.hex("#e6edf3")), added.fg());
+        assertEquals(java.util.Optional.of(Color.hex("#542426")), removed.bg());
+        assertEquals(
+                java.util.Optional.of(Color.hex("#79c0ff")),
+                styles.of(Theme.Classes.SYNTAX_ANNOTATION).fg());
+    }
+
+    @Test
+    void aThemeWithoutRulesForTheNumbersOfChangedLinesNumbersThemAsTheOthers() {
+        var engine = Theme.createEngine().get();
+        Theme.SpanStyles styles = Theme.spanStyles(engine);
+
+        assertEquals(
+                styles.of(Theme.Classes.DIFF_LINE_NUMBER),
+                styles.refined(Theme.Classes.DIFF_LINE_NUMBER, Theme.Classes.DIFF_ADDED_LINE_NUMBER));
+    }
+
+    @Test
     void codeInAChangedLineSharesOneStyleForEachPairOfClassesAndFollowsTheTheme() {
         var engine = Theme.createEngine().get();
         Theme.SpanStyles styles = Theme.spanStyles(engine);
