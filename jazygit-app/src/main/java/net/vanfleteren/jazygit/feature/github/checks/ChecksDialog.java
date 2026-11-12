@@ -233,7 +233,7 @@ public final class ChecksDialog implements PopupView {
      * @param last  the furthest the checks scroll to: the first one shown when the last one is at the bottom
      */
     private EventResult keys(KeyEvent event, ListCursor cursor, int first, int last) {
-        if (event.code() == KeyCode.ESCAPE || event.code() == KeyCode.ENTER) {
+        if (event.isCancel() || event.isConfirm()) {
             dispatch.accept(new ChecksMsg.Closed());
         } else if (event.isChar('R')) {
             dispatch.accept(new ChecksMsg.RefreshChosen());

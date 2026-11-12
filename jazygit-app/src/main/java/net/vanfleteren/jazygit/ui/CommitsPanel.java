@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.ui;
 
 import dev.tamboui.toolkit.elements.Panel;
-import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
@@ -56,9 +55,9 @@ public class CommitsPanel {
     public CommitsPanel(Consumer<Msg> dispatch, Runnable openCommit, Theme.Highlights highlights) {
         list = new LoadableList<>(Messages.get("panel.commits.title"), ID, CommitsPanel::reselect, highlights);
         list.onKey(event -> typing.map(text -> typed(text, event, dispatch))
-                .orElse(() -> event.code() == KeyCode.ENTER && selectedCommit().isDefined()
+                .orElse(() -> event.isConfirm() && selectedCommit().isDefined()
                         ? Option.of(openCommit)
-                        : searching && event.code() == KeyCode.ESCAPE
+                        : searching && event.isCancel()
                                 ? PaneKeys.sending(Option.of(new CommitSearchMsg.Cleared()), dispatch)
                                 : PaneKeys.sending(keymap.handle(Scopes.COMMITS, event, selectedCommit()), dispatch)));
     }
@@ -68,9 +67,9 @@ public class CommitsPanel {
      * it, Escape closes it, and the other keys do nothing, but for those the list moves with, which it took before.
      */
     private Runnable typed(String text, KeyEvent event, Consumer<Msg> dispatch) {
-        Option<Msg> msg = event.code() == KeyCode.ESCAPE
+        Option<Msg> msg = event.isCancel()
                 ? Option.of(new CommitSearchMsg.Cancelled())
-                : event.code() == KeyCode.ENTER
+                : event.isConfirm()
                         ? Option.of(new CommitSearchMsg.Submitted())
                         : searchLine.edit(text, event).map(CommitSearchMsg.Edited::new);
         return () -> msg.forEach(dispatch);

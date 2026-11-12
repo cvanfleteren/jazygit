@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.ui;
 
 import dev.tamboui.toolkit.elements.Panel;
-import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
@@ -38,7 +37,7 @@ public final class StashPanel {
     public StashPanel(Consumer<Msg> dispatch, Runnable openStash, Theme.Highlights highlights) {
         list = new LoadableList<>(
                 Messages.get("panel.stash.title"), ID, LoadableList.Reselect.following(Stash::sha), highlights);
-        list.onKey(event -> event.code() == KeyCode.ENTER && selectedStash().isDefined()
+        list.onKey(event -> event.isConfirm() && selectedStash().isDefined()
                 ? Option.of(openStash)
                 : PaneKeys.sending(keymap.handle(Scopes.STASH, event, selectedStash()), dispatch));
     }

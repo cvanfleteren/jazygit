@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.ui;
 
 import dev.tamboui.toolkit.elements.Panel;
-import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Duration;
@@ -71,7 +70,7 @@ public final class PullRequestsPanel {
                         .apply(previous.pullRequests(), next.pullRequests(), selected),
                 highlights);
         list.whenEmpty(Messages.get("prs.empty"));
-        list.onKey(event -> event.code() == KeyCode.ENTER
+        list.onKey(event -> event.isConfirm()
                 ? selected().map(pr -> () -> openPullRequest.accept(scope.id()))
                 : PaneKeys.sending(keymap.handle(scope, event, selected()), dispatch));
     }

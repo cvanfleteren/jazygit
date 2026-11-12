@@ -6,7 +6,6 @@ import static dev.tamboui.toolkit.Toolkit.textArea;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.elements.TextAreaElement;
 import dev.tamboui.toolkit.event.EventResult;
-import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.widgets.input.TextAreaState;
 import io.vavr.collection.List;
@@ -119,7 +118,7 @@ public final class CommentComposer {
      * and those take Escape and Ctrl+S too.
      */
     public EventResult keys(KeyEvent event, Actions actions) {
-        if (event.code() == KeyCode.ESCAPE) {
+        if (event.isCancel()) {
             dispatch.accept(actions.cancelled().get());
             return EventResult.HANDLED;
         }

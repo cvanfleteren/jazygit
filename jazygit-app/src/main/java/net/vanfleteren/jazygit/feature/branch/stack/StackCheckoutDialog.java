@@ -2,7 +2,6 @@ package net.vanfleteren.jazygit.feature.branch.stack;
 
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.event.EventResult;
-import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
@@ -57,7 +56,7 @@ final class StackCheckoutDialog implements PopupView {
     }
 
     private EventResult keys(KeyEvent event, StackCheckout checkout) {
-        if (event.code() == KeyCode.ESCAPE || (!checkout.startable() && event.code() == KeyCode.ENTER)) {
+        if (event.isCancel() || (!checkout.startable() && event.isConfirm())) {
             dispatch.accept(new PopupMsg.Dismissed(StackPopups.Checkout.class));
             return EventResult.HANDLED;
         }
@@ -73,7 +72,7 @@ final class StackCheckoutDialog implements PopupView {
         if (!checkout.startable()) {
             return Option.none();
         }
-        if (event.code() == KeyCode.ENTER) {
+        if (event.isConfirm()) {
             return Option.of(checkout.preferred());
         }
         if (event.isChar('t')) {

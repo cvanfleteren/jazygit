@@ -5,7 +5,6 @@ import static dev.tamboui.toolkit.Toolkit.*;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.event.EventResult;
-import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.widgets.input.TextAreaState;
 import dev.tamboui.widgets.input.TextInputState;
@@ -185,7 +184,7 @@ public final class NewPullRequestDialog implements PopupView {
      * Ticks or unticks the stack box on space or Enter; the other keys are those of every field.
      */
     private EventResult stackKeys(KeyEvent event) {
-        if (event.code() == KeyCode.ENTER || (event.isChar(' ') && !event.hasCtrl() && !event.hasAlt())) {
+        if (event.isConfirm() || (event.isChar(' ') && !event.hasCtrl() && !event.hasAlt())) {
             dispatch.accept(new CreatePullRequestMsg.StackToggled());
             return EventResult.HANDLED;
         }
@@ -203,7 +202,7 @@ public final class NewPullRequestDialog implements PopupView {
      * Ticks or unticks the draft box on space or Enter; the other keys are those of every field.
      */
     private EventResult draftKeys(KeyEvent event, boolean draft) {
-        if (event.code() == KeyCode.ENTER || (event.isChar(' ') && !event.hasCtrl() && !event.hasAlt())) {
+        if (event.isConfirm() || (event.isChar(' ') && !event.hasCtrl() && !event.hasAlt())) {
             edited(!draft);
             return EventResult.HANDLED;
         }
@@ -215,7 +214,7 @@ public final class NewPullRequestDialog implements PopupView {
      * gets keys after the global handlers, and those take Escape and Ctrl+S too.
      */
     private EventResult keys(KeyEvent event) {
-        if (event.code() == KeyCode.ESCAPE) {
+        if (event.isCancel()) {
             dispatch.accept(new PopupMsg.Dismissed(NewPullRequestPopup.class));
             return EventResult.HANDLED;
         }

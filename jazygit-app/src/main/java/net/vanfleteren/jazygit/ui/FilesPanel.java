@@ -115,7 +115,7 @@ public class FilesPanel {
                 .map(typing -> moves(event)
                         ? Option.<Runnable>none()
                         : Option.<Runnable>of(() -> typed(typing.text(), event).forEach(dispatch)))
-                .getOrElse(() -> filter.isDefined() && event.code() == KeyCode.ESCAPE
+                .getOrElse(() -> filter.isDefined() && event.isCancel()
                         ? Option.of(() -> dispatch.accept(new FileFilterMsg.Cleared()))
                         : Option.none());
     }
@@ -124,9 +124,9 @@ public class FilesPanel {
      * What {@code event} sends while the line holds {@code text}.
      */
     private Option<Msg> typed(String text, KeyEvent event) {
-        return event.code() == KeyCode.ESCAPE
+        return event.isCancel()
                 ? Option.of(new FileFilterMsg.Cancelled())
-                : event.code() == KeyCode.ENTER
+                : event.isConfirm()
                         ? Option.of(new FileFilterMsg.Submitted())
                         : filterLine.edit(text, event).map(FileFilterMsg.Edited::new);
     }
@@ -150,7 +150,7 @@ public class FilesPanel {
      */
     private static boolean opensDiff(KeyEvent event, FileTreeList<?> tree) {
         return tree.selected().isDefined()
-                && (event.code() == KeyCode.ENTER || (event.matches(Actions.MOVE_RIGHT) && !tree.collapsedSelected()));
+                && (event.isConfirm() || (event.matches(Actions.MOVE_RIGHT) && !tree.collapsedSelected()));
     }
 
     /**

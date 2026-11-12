@@ -2,10 +2,14 @@ package net.vanfleteren.jazygit.keys;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
+import dev.tamboui.tui.event.KeyEventKind;
+import dev.tamboui.tui.event.KeyModifiers;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutMsg;
+import net.vanfleteren.jazygit.feature.branch.commits.BranchCommitsMsg;
 import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchMsg;
 import net.vanfleteren.jazygit.feature.diff.DiffOptionsMsg;
 import net.vanfleteren.jazygit.feature.github.browse.BrowseMsg;
@@ -15,6 +19,7 @@ import net.vanfleteren.jazygit.feature.layout.LayoutMsg;
 import net.vanfleteren.jazygit.feature.repos.RecentReposMsg;
 import net.vanfleteren.jazygit.feature.settings.SettingsPanelMsg;
 import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.github.prs.PrOverviewMsg;
@@ -113,6 +118,18 @@ class KeymapTest {
     }
 
     @Test
+    void theKeypadsEnterIsEnterButNotWithCtrl() {
+        BranchName branch = new BranchName("x");
+
+        assertEquals(
+                Option.of(new BranchCommitsMsg.Opened(new BranchRef.Local(branch))),
+                keymap.handle(Scopes.BRANCHES, KeyEvent.ofKey(KeyCode.KP_ENTER), Option.of(branch)));
+        assertEquals(
+                Option.none(),
+                keymap.handle(Scopes.BRANCHES, KeyEvent.ofKey(KeyCode.KP_ENTER, KeyModifiers.CTRL), Option.of(branch)));
+    }
+
+    @Test
     void aKeyActsOnTheSelection() {
         assertEquals(
                 Option.of(new CheckoutMsg.Requested(new BranchName("x"))),
@@ -136,6 +153,20 @@ class KeymapTest {
         assertEquals(
                 Option.of(new DeleteBranchMsg.RemoteRequested(remote)),
                 keymap.handle(Scopes.REMOTE_BRANCHES, KeyEvent.ofChar('d'), Option.of(remote)));
+    }
+
+    @Test
+    void aKeyLetGoDoesNothing() {
+        // Terminals in the full Kitty keyboard protocol tell when a key is let go, as well as when it is pressed.
+        KeyEvent released = KeyEvent.ofChar(' ', KeyModifiers.NONE, KeyEventKind.RELEASE);
+
+        assertEquals(Option.none(), keymap.handle(Scopes.BRANCHES, released, Option.of(new BranchName("x"))));
+        assertEquals(
+                Option.none(),
+                keymap.handle(
+                        Scopes.BRANCHES,
+                        KeyEvent.ofChar('?', KeyModifiers.NONE, KeyEventKind.RELEASE),
+                        Option.of(new BranchName("x"))));
     }
 
     @Test

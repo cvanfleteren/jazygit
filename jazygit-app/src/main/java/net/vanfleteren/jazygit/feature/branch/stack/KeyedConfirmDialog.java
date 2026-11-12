@@ -2,7 +2,6 @@ package net.vanfleteren.jazygit.feature.branch.stack;
 
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.event.EventResult;
-import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
@@ -60,9 +59,9 @@ final class KeyedConfirmDialog<P extends ConfirmablePopup> implements PopupView 
     }
 
     private EventResult keys(KeyEvent event, boolean offered) {
-        if (event.code() == KeyCode.ENTER) {
+        if (event.isConfirm()) {
             dispatch.accept(new PopupMsg.Confirmed(spec.popupType()));
-        } else if (event.code() == KeyCode.ESCAPE) {
+        } else if (event.isCancel()) {
             dispatch.accept(new PopupMsg.Dismissed(spec.popupType()));
         } else if (offered && event.isChar(spec.key())) {
             dispatch.accept(spec.other().get());

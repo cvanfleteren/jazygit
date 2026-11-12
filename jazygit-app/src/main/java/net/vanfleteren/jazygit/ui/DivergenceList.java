@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.ui;
 
 import dev.tamboui.toolkit.elements.Panel;
-import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import io.vavr.collection.Stream;
 import io.vavr.control.Option;
@@ -45,7 +44,7 @@ class DivergenceList {
                 highlights);
         // The highlight alone marks the selection; a symbol would indent the rows.
         list.highlightSymbol("");
-        list.onKey(event -> event.code() == KeyCode.ENTER
+        list.onKey(event -> event.isConfirm()
                 ? selectedCommit().map(commit -> openCommit)
                 : PaneKeys.sending(keymap.handle(Scopes.DIVERGENCE, event, selectedCommit()), dispatch));
     }

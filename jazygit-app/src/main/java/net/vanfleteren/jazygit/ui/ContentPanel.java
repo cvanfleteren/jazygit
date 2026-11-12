@@ -826,8 +826,7 @@ public final class ContentPanel {
          */
         private EventResult keys(KeyEvent event, boolean focused, ScrolledContent content) {
             // Only the arrow leaves: h scrolls, as j and k move, without going to another panel.
-            boolean leaving =
-                    event.code() == KeyCode.ESCAPE || (focused && event.matches(Actions.MOVE_LEFT) && column == 0);
+            boolean leaving = event.isCancel() || (focused && event.matches(Actions.MOVE_LEFT) && column == 0);
             // Escape, and Left where it leaves as Escape does, drop an open range before they leave the area (ADR 60).
             return cursor.filter(on -> leaving && focused && on.mark().isDefined())
                     .map(ranged -> moved(ranged.marked().get(), content))
