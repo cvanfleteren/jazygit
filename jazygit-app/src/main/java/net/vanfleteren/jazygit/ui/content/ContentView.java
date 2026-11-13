@@ -532,7 +532,8 @@ public final class ContentView {
         return model.repoView()
                 .stashDetail()
                 .map(Preview::shown)
-                .flatMap(detail -> stash(model, detail.key())
+                .flatMap(detail -> model.repo()
+                        .stash(detail.key())
                         .map(stash -> whenLoaded(
                                 title,
                                 detail.value(),
@@ -548,13 +549,6 @@ public final class ContentView {
                         title,
                         model.repo().stashes(),
                         stashes -> stashes.isEmpty() ? dim(title, Messages.get("content.noStashes")) : loading(title)));
-    }
-
-    private static Option<Stash> stash(Model model, Sha sha) {
-        return model.repo()
-                .stashes()
-                .toOption()
-                .flatMap(stashes -> stashes.find(stash -> stash.sha().equals(sha)));
     }
 
     /**

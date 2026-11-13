@@ -104,6 +104,14 @@ public record Repo(
     }
 
     /**
+     * The stash {@code sha}, if the stashes are loaded and it is one of them.
+     */
+    public Option<Stash> stash(Sha sha) {
+        return stashes.toOption()
+                .flatMap(loaded -> loaded.find(stash -> stash.sha().equals(sha)));
+    }
+
+    /**
      * The local branch {@code name}, if the branches are loaded and it is one of them.
      */
     public Option<Branch> branch(BranchName name) {

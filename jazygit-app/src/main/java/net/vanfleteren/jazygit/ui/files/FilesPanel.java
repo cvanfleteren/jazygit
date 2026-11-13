@@ -490,19 +490,13 @@ public class FilesPanel {
     public static String changesName(Model model, Changes of) {
         return switch (of) {
             case Changes.OfCommit(Sha sha) -> sha.shortSha();
-            case Changes.OfStash(Sha sha) -> stashAt(model, sha).map(Stash::ref).getOrElse(sha::shortSha);
+            case Changes.OfStash(Sha sha) ->
+                model.repo().stash(sha).map(Stash::ref).getOrElse(sha::shortSha);
             case Changes.OfPullRequest(var commits) -> "#" + commits.number();
             case Changes.OfBranch(var branch, var base, var sha) ->
                 Messages.get(
                         "panel.commitFiles.branch", branch.value(), base.ref().name());
         };
-    }
-
-    private static Option<Stash> stashAt(Model model, Sha sha) {
-        return model.repo()
-                .stashes()
-                .toOption()
-                .flatMap(stashes -> stashes.find(stash -> stash.sha().equals(sha)));
     }
 
     /**
