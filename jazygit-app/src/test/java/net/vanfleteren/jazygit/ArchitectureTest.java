@@ -73,7 +73,12 @@ class ArchitectureTest {
             .should()
             .onlyDependOnClassesThat()
             .resideInAnyPackage(
-                    "java..", "io.vavr..", "lombok..", "com.electronwill.nightconfig..", "..jazygit.settings..");
+                    "java..",
+                    "io.vavr..",
+                    "lombok..",
+                    "com.electronwill.nightconfig..",
+                    "..jazygit.settings..",
+                    "..jazygit.lens..");
     /**
      * The lens is a tool for any value, which every part may use: it knows nothing of the application.
      */
