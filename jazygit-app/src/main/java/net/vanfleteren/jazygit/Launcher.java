@@ -16,8 +16,8 @@ import net.vanfleteren.jazygit.git.RepositoryIdentity;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.settings.*;
 import net.vanfleteren.jazygit.state.*;
-import net.vanfleteren.jazygit.ui.ErrorText;
-import net.vanfleteren.jazygit.ui.Theme;
+import net.vanfleteren.jazygit.ui.text.ErrorText;
+import net.vanfleteren.jazygit.ui.theme.Theme;
 import org.slf4j.LoggerFactory;
 
 /**

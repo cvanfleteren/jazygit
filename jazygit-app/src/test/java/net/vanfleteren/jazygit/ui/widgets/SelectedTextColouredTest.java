@@ -12,7 +12,7 @@ import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.RenderContext;
 import io.vavr.control.Option;
 import java.util.Optional;
-import net.vanfleteren.jazygit.ui.Theme.SelectedText;
+import net.vanfleteren.jazygit.ui.theme.Theme.SelectedText;
 import org.junit.jupiter.api.Test;
 
 /**

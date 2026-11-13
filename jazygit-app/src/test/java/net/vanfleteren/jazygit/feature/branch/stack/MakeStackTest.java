@@ -40,7 +40,7 @@ import net.vanfleteren.jazygit.state.github.StackChange;
 import net.vanfleteren.jazygit.state.github.prs.LoadRepositoryPullRequests;
 import net.vanfleteren.jazygit.state.operation.Notice;
 import net.vanfleteren.jazygit.state.popup.ListCursor;
-import net.vanfleteren.jazygit.ui.NoticeText;
+import net.vanfleteren.jazygit.ui.text.NoticeText;
 import org.junit.jupiter.api.Test;
 
 /**

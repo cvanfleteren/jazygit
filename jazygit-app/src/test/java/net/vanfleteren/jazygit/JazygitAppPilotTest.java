@@ -32,6 +32,12 @@ import net.vanfleteren.jazygit.state.load.*;
 import net.vanfleteren.jazygit.state.preferences.*;
 import net.vanfleteren.jazygit.state.view.*;
 import net.vanfleteren.jazygit.ui.*;
+import net.vanfleteren.jazygit.ui.branches.BranchesPanel;
+import net.vanfleteren.jazygit.ui.commits.CommitsPanel;
+import net.vanfleteren.jazygit.ui.content.ContentPanel;
+import net.vanfleteren.jazygit.ui.files.FilesPanel;
+import net.vanfleteren.jazygit.ui.stash.StashPanel;
+import net.vanfleteren.jazygit.ui.theme.Theme;
 import org.junit.jupiter.api.Test;
 
 /**

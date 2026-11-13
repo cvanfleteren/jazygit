@@ -1,0 +1,356 @@
+package net.vanfleteren.jazygit.ui.theme;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+import dev.tamboui.css.Styleable;
+import dev.tamboui.css.cascade.PseudoClassState;
+import dev.tamboui.style.Color;
+import dev.tamboui.style.ColorConverter;
+import dev.tamboui.style.Modifier;
+import dev.tamboui.style.ModifierConverter;
+import dev.tamboui.style.PropertyDefinition;
+import dev.tamboui.style.Style;
+import java.util.Set;
+import net.vanfleteren.jazygit.settings.ThemeName;
+import org.junit.jupiter.api.Test;
+
+class ThemeTest {
+
+    @Test
+    void focusedPanelBorderIsHighlightedAndTheOthersDimmed() {
+        var engine = Theme.createEngine().get();
+
+        var plain = engine.resolve(new Node("Panel", Set.of()));
+        var focused = engine.resolve(new Node("Panel", Set.of(Theme.Classes.FOCUSED)));
+
+        assertEquals(java.util.Optional.of(Color.DARK_GRAY), plain.borderColor());
+        assertEquals(java.util.Optional.of(Color.CYAN), focused.borderColor());
+    }
+
+    @Test
+    void activateSwitchesTheStyles() {
+        var engine = Theme.createEngine().get();
+        assertEquals(java.util.Optional.of("dark"), engine.getActiveStylesheet());
+
+        Theme.activate(engine, ThemeName.LIGHT);
+        assertEquals(java.util.Optional.of("light"), engine.getActiveStylesheet());
+        Theme.activate(engine, ThemeName.DARCULA);
+        assertEquals(java.util.Optional.of("darcula"), engine.getActiveStylesheet());
+    }
+
+    @Test
+    void theColourBlindThemeShowsGoodAndBadInBlueAndVermillion() {
+        var engine = Theme.createEngine().get();
+        Theme.activate(engine, ThemeName.DARK_COLORBLIND);
+        Theme.SpanStyles styles = Theme.spanStyles(engine);
+
+        assertEquals(
+                java.util.Optional.of(Color.hex("#56b4e9")),
+                styles.of(Theme.Classes.DIFF_ADDED).fg());
+        assertEquals(
+                java.util.Optional.of(Color.hex("#d55e00")),
+                styles.of(Theme.Classes.DIFF_REMOVED).fg());
+    }
+
+    @Test
+    void codeInAChangedLineTakesTheBackgroundOfTheLineAndTheColourOfTheToken() {
+        var engine = Theme.createEngine().get();
+        Theme.SpanStyles styles = Theme.spanStyles(engine);
+
+        Style code = styles.code(Theme.Classes.DIFF_ADDED_LINE, Theme.Classes.SYNTAX_KEYWORD);
+
+        assertEquals(styles.of(Theme.Classes.DIFF_ADDED_LINE).bg(), code.bg());
+        assertEquals(styles.of(Theme.Classes.SYNTAX_KEYWORD).fg(), code.fg());
+        assertEquals(
+                Theme.SpanStyles.NONE.code(Theme.Classes.DIFF_ADDED_LINE, Theme.Classes.SYNTAX_KEYWORD), Style.EMPTY);
+    }
+
+    @Test
+    void theGitHubThemeNumbersChangedLinesOnATintAndAnnotationsInBlue() {
+        var engine = Theme.createEngine().get();
+        Theme.activate(engine, ThemeName.GITHUB_DARK);
+        Theme.SpanStyles styles = Theme.spanStyles(engine);
+
+        Style added = styles.refined(Theme.Classes.DIFF_LINE_NUMBER, Theme.Classes.DIFF_ADDED_LINE_NUMBER);
+        Style removed = styles.refined(Theme.Classes.DIFF_LINE_NUMBER, Theme.Classes.DIFF_REMOVED_LINE_NUMBER);
+
+        assertEquals(java.util.Optional.of(Color.hex("#1c4328")), added.bg());
+        assertEquals(java.util.Optional.of(Color.hex("#e6edf3")), added.fg());
+        assertEquals(java.util.Optional.of(Color.hex("#542426")), removed.bg());
+        assertEquals(
+                java.util.Optional.of(Color.hex("#79c0ff")),
+                styles.of(Theme.Classes.SYNTAX_ANNOTATION).fg());
+    }
+
+    @Test
+    void aThemeWithoutRulesForTheNumbersOfChangedLinesNumbersThemAsTheOthers() {
+        var engine = Theme.createEngine().get();
+        Theme.SpanStyles styles = Theme.spanStyles(engine);
+
+        assertEquals(
+                styles.of(Theme.Classes.DIFF_LINE_NUMBER),
+                styles.refined(Theme.Classes.DIFF_LINE_NUMBER, Theme.Classes.DIFF_ADDED_LINE_NUMBER));
+    }
+
+    @Test
+    void codeInAChangedLineSharesOneStyleForEachPairOfClassesAndFollowsTheTheme() {
+        var engine = Theme.createEngine().get();
+        Theme.SpanStyles styles = Theme.spanStyles(engine);
+        Style dark = styles.code(Theme.Classes.DIFF_ADDED_LINE, Theme.Classes.SYNTAX_KEYWORD);
+
+        assertSame(dark, styles.code(Theme.Classes.DIFF_ADDED_LINE, Theme.Classes.SYNTAX_KEYWORD));
+        Theme.activate(engine, ThemeName.LIGHT);
+        assertNotEquals(dark, styles.code(Theme.Classes.DIFF_ADDED_LINE, Theme.Classes.SYNTAX_KEYWORD));
+        Theme.activate(engine, ThemeName.DARK);
+        assertSame(dark, styles.code(Theme.Classes.DIFF_ADDED_LINE, Theme.Classes.SYNTAX_KEYWORD));
+    }
+
+    @Test
+    void theStylesOfSpansFollowTheThemeOnceTheyWereResolved() {
+        var engine = Theme.createEngine().get();
+        Theme.SpanStyles styles = Theme.spanStyles(engine);
+        var dark = styles.of(Theme.Classes.DIFF_ADDED);
+
+        Theme.activate(engine, ThemeName.DARK_COLORBLIND);
+        assertEquals(
+                java.util.Optional.of(Color.hex("#56b4e9")),
+                styles.of(Theme.Classes.DIFF_ADDED).fg());
+        Theme.activate(engine, ThemeName.DARK);
+        assertEquals(dark, styles.of(Theme.Classes.DIFF_ADDED));
+        assertNotEquals(dark.fg(), java.util.Optional.of(Color.hex("#56b4e9")));
+    }
+
+    @Test
+    void everyThemeBordersPopupsLikeTheFocusedPanel() {
+        for (ThemeName name : styledThemes()) {
+            var engine = Theme.createEngine().get();
+            Theme.activate(engine, name);
+
+            var popup = engine.resolve(new Node("DialogElement", Set.of())).borderColor();
+            assertTrue(popup.isPresent(), name.id());
+            assertEquals(
+                    engine.resolve(new Node("Panel", Set.of(Theme.Classes.FOCUSED)))
+                            .borderColor(),
+                    popup,
+                    name.id());
+        }
+    }
+
+    @Test
+    void everyThemeBordersAFocusedBoxOfChoicesLikeAFocusedTextArea() {
+        for (ThemeName name : ThemeName.values()) {
+            var engine = Theme.createEngine().get();
+            Theme.activate(engine, name);
+
+            var text = engine.resolve(
+                    new Node("TextAreaElement", Set.of()), PseudoClassState.ofFocused(), java.util.List.of());
+            var choices = engine.resolve(
+                    new Node("Panel", Set.of(Theme.Classes.CHOICES)),
+                    PseudoClassState.ofFocused(),
+                    java.util.List.of());
+            var unfocused = engine.resolve(new Node("Panel", Set.of(Theme.Classes.CHOICES)));
+            assertEquals(text.borderColor(), choices.borderColor(), name.id());
+            assertEquals(text.borderType(), choices.borderType(), name.id());
+            if (text.borderColor().isPresent()) {
+                assertNotEquals(text.borderColor(), unfocused.borderColor(), name.id());
+            }
+        }
+    }
+
+    @Test
+    void everyThemeBordersAPopupLikeAPane() {
+        for (ThemeName name : ThemeName.values()) {
+            var engine = Theme.createEngine().get();
+            Theme.activate(engine, name);
+
+            assertEquals(
+                    engine.resolve(new Node("Panel", Set.of())).borderType(),
+                    engine.resolve(new Node("DialogElement", Set.of())).borderType(),
+                    name.id());
+        }
+    }
+
+    @Test
+    void everyThemeBordersTheFocusedContentAreaLikeTheFocusedPanel() {
+        for (ThemeName name : ThemeName.values()) {
+            var engine = Theme.createEngine().get();
+            Theme.activate(engine, name);
+
+            var focusedPanel = engine.resolve(new Node("Panel", Set.of(Theme.Classes.FOCUSED)));
+            var area = engine.resolve(
+                    new Node("RichTextAreaElement", Set.of()), PseudoClassState.ofFocused(), java.util.List.of());
+            assertEquals(focusedPanel.borderColor(), area.borderColor(), name.id());
+            assertEquals(focusedPanel.borderType(), area.borderType(), name.id());
+        }
+    }
+
+    @Test
+    void everyThemeStylesTheMarkdownInItsOwnColours() {
+        for (ThemeName name : styledThemes()) {
+            var engine = Theme.createEngine().get();
+            Theme.activate(engine, name);
+            var markdown = engine.resolve(new Node("MarkdownElement", Set.of()));
+
+            for (String element : java.util.List.of("heading-1", "heading-2", "link", "inline-code", "code-block")) {
+                assertTrue(
+                        markdown.get(PropertyDefinition.of(element + "-color", ColorConverter.INSTANCE))
+                                .isPresent(),
+                        name.id() + " " + element);
+            }
+            assertEquals(
+                    java.util.Optional.of(Set.of(Modifier.UNDERLINED)),
+                    markdown.get(PropertyDefinition.of("link-text-style", ModifierConverter.INSTANCE)),
+                    name.id());
+            assertTrue(
+                    markdown.get(PropertyDefinition.of("blockquote-text-style", ModifierConverter.INSTANCE))
+                            .filter(modifiers -> modifiers.contains(Modifier.ITALIC))
+                            .isPresent(),
+                    name.id());
+        }
+    }
+
+    @Test
+    void everyThemeStylesThePanelBorders() {
+        for (ThemeName name : styledThemes()) {
+            var engine = Theme.createEngine().get();
+            Theme.activate(engine, name);
+
+            assertTrue(engine.resolve(new Node("Panel", Set.of())).borderColor().isPresent(), name.id());
+        }
+    }
+
+    @Test
+    void everyThemeHidesTheSelectionOfThePanesNotInUseAndOnlyColoursTheBackgroundOfTheOne() {
+        for (ThemeName name : styledThemes()) {
+            var engine = Theme.createEngine().get();
+            Theme.activate(engine, name);
+            Theme.Highlights highlights = Theme.highlights(engine);
+
+            assertEquals(Style.EMPTY, highlights.of(false), name.id());
+            // A colour of its own would hide the colours of the pieces of the row.
+            assertTrue(highlights.of(true).bg().isPresent(), name.id());
+            assertFalse(highlights.of(true).fg().isPresent(), name.id());
+        }
+    }
+
+    @Test
+    void everyThemeGivesPlainTextBehindAPopupAColourOfItsOwn() {
+        for (ThemeName name : styledThemes()) {
+            var engine = Theme.createEngine().get();
+            Theme.activate(engine, name);
+            Theme.Backdrop backdrop = Theme.backdrop(engine);
+
+            assertTrue(backdrop.plain().fg().isPresent(), name.id());
+            assertFalse(backdrop.plainFg().contains(backdrop.plain().fg().get()), name.id());
+        }
+    }
+
+    @Test
+    void everyThemeShowsTheCurrentBranchInBoldAndAColourThatStaysBehindAPopup() {
+        for (ThemeName name : styledThemes()) {
+            var engine = Theme.createEngine().get();
+            Theme.activate(engine, name);
+            Style current = engine.resolve(new Node("Text", Set.of(Theme.Classes.CURRENT)))
+                    .toStyle();
+            Theme.Backdrop backdrop = Theme.backdrop(engine);
+            Style behindPopup = backdrop.dim(current);
+
+            assertTrue(current.addModifiers().contains(Modifier.BOLD), name.id());
+            assertTrue(behindPopup.fg().isPresent(), name.id());
+            assertNotEquals(backdrop.plain().fg(), behindPopup.fg(), name.id());
+        }
+    }
+
+    @Test
+    void theDarkThemesBrightenPlainTextOnTheHighlightedRow() {
+        for (ThemeName name : java.util.List.of(
+                ThemeName.DARK,
+                ThemeName.DARK_COLORBLIND,
+                ThemeName.DARCULA,
+                ThemeName.MONO,
+                ThemeName.EMBER,
+                ThemeName.POWERLINE,
+                ThemeName.LIANTIS_DARK,
+                ThemeName.SYMFONIC,
+                ThemeName.GITHUB_DARK,
+                ThemeName.GITHUB_DARK_COLORBLIND)) {
+            var engine = Theme.createEngine().get();
+            Theme.activate(engine, name);
+            Theme.SelectedText selectedText = Theme.selectedText(engine);
+
+            assertEquals(
+                    Theme.highlights(engine).of(true).bg(), selectedText.rowBg().toJavaOptional(), name.id());
+            assertTrue(selectedText.fg().isDefined(), name.id());
+            assertNotEquals(selectedText.plainFg(), selectedText.fg(), name.id());
+        }
+    }
+
+    @Test
+    void theNoneThemeLeavesEverythingToTheTerminal() {
+        var engine = Theme.createEngine().get();
+        Theme.activate(engine, ThemeName.NONE);
+
+        assertEquals(
+                Style.EMPTY,
+                engine.resolve(new Node("Panel", Set.of(Theme.Classes.FOCUSED))).toStyle());
+        // Only attributes, which no terminal colour can show: the focused pane's border, and the disabled entries.
+        assertTrue(engine.resolve(new Node("Panel", Set.of(Theme.Classes.FOCUSED)))
+                .borderType()
+                .isPresent());
+        assertTrue(engine.resolve(new Node("Panel", Set.of())).borderType().isEmpty());
+        assertEquals(
+                Style.EMPTY.crossedOut(),
+                engine.resolve(new Node("Text", Set.of("disabled"))).toStyle());
+        assertEquals(Style.EMPTY, Theme.spanStyles(engine).of(Theme.Classes.DIFF_ADDED));
+        assertEquals(Style.EMPTY.reversed(), Theme.highlights(engine).of(true));
+        assertEquals(Theme.Backdrop.DIM_ONLY, Theme.backdrop(engine));
+        assertEquals(Theme.SelectedText.UNCHANGED, Theme.selectedText(engine));
+    }
+
+    @Test
+    void theLightThemesKeepPlainTextOnTheHighlightedRowAsItIs() {
+        for (ThemeName name :
+                java.util.List.of(ThemeName.LIGHT, ThemeName.GITHUB_LIGHT, ThemeName.GITHUB_LIGHT_COLORBLIND)) {
+            var engine = Theme.createEngine().get();
+            Theme.activate(engine, name);
+
+            assertTrue(Theme.selectedText(engine).fg().isEmpty(), name.id());
+        }
+    }
+
+    @Test
+    void aThemeWithoutHighlightRulesReversesTheSelectionOfThePaneInUse() {
+        var engine = dev.tamboui.css.engine.StyleEngine.create();
+        engine.addStylesheet("bare", "* { color: white; }");
+        engine.setActiveStylesheet("bare");
+
+        assertEquals(Style.EMPTY.reversed(), Theme.highlights(engine).of(true));
+        assertEquals(Style.EMPTY, Theme.highlights(engine).of(false));
+    }
+
+    @Test
+    void aThemeCanShowTheSelectionOfThePanesNotInUse() {
+        var engine = dev.tamboui.css.engine.StyleEngine.create();
+        engine.addStylesheet("dimmed", "* { color: white; } .inactive-selection { text-style: dim; }");
+        engine.setActiveStylesheet("dimmed");
+
+        assertEquals(Style.EMPTY.dim(), Theme.highlights(engine).of(false));
+    }
+
+    // Every theme but none, which styles nothing.
+    private static java.util.List<ThemeName> styledThemes() {
+        return java.util.Arrays.stream(ThemeName.values())
+                .filter(name -> name != ThemeName.NONE)
+                .toList();
+    }
+
+    private record Node(String styleType, Set<String> cssClasses) implements Styleable {
+        public java.util.Optional<String> cssId() {
+            return java.util.Optional.empty();
+        }
+
+        public java.util.Optional<Styleable> cssParent() {
+            return java.util.Optional.empty();
+        }
+    }
+}

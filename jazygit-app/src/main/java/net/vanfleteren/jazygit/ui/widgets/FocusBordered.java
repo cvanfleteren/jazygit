@@ -8,7 +8,7 @@ import dev.tamboui.toolkit.element.RenderContext;
 import dev.tamboui.toolkit.element.Size;
 import dev.tamboui.toolkit.elements.Panel;
 import io.vavr.collection.List;
-import net.vanfleteren.jazygit.ui.Theme;
+import net.vanfleteren.jazygit.ui.theme.Theme;
 
 /**
  * {@code panel} bordered as a focused left pane while one of the elements {@code focusIds} in it has the focus, as the

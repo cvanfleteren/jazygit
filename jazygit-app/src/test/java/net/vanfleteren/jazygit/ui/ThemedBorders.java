@@ -11,6 +11,7 @@ import dev.tamboui.toolkit.element.ElementRegistry;
 import dev.tamboui.toolkit.event.EventRouter;
 import dev.tamboui.toolkit.focus.FocusManager;
 import java.util.Optional;
+import net.vanfleteren.jazygit.ui.theme.Theme;
 
 /**
  * Renders an element in the dark theme with a given element focused, and tells the colour of the border around a

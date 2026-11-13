@@ -15,15 +15,15 @@ import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.ui.BasesField;
-import net.vanfleteren.jazygit.ui.ErrorText;
-import net.vanfleteren.jazygit.ui.LineEditInput;
-import net.vanfleteren.jazygit.ui.SubmittableTextArea;
-import net.vanfleteren.jazygit.ui.Theme;
+import net.vanfleteren.jazygit.ui.edit.LineEditInput;
+import net.vanfleteren.jazygit.ui.github.BasesField;
+import net.vanfleteren.jazygit.ui.text.ErrorText;
+import net.vanfleteren.jazygit.ui.theme.Theme;
 import net.vanfleteren.jazygit.ui.widgets.DialogFrame;
 import net.vanfleteren.jazygit.ui.widgets.FocusBordered;
 import net.vanfleteren.jazygit.ui.widgets.HintedDialog;
 import net.vanfleteren.jazygit.ui.widgets.PopupView;
+import net.vanfleteren.jazygit.ui.widgets.SubmittableTextArea;
 
 /**
  * Popup editing the pull request that is shown (ADR 59), laid out and keyed as the one that creates one: the list of

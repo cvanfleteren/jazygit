@@ -3,10 +3,10 @@ package net.vanfleteren.jazygit.feature.github.review;
 import io.vavr.collection.Iterator;
 import java.time.Duration;
 import net.vanfleteren.jazygit.i18n.Messages;
-import net.vanfleteren.jazygit.ui.TimeText;
+import net.vanfleteren.jazygit.ui.markdown.MarkdownImages;
+import net.vanfleteren.jazygit.ui.markdown.MarkdownScroll;
+import net.vanfleteren.jazygit.ui.text.TimeText;
 import net.vanfleteren.jazygit.ui.widgets.ConfirmDialog;
-import net.vanfleteren.jazygit.ui.widgets.MarkdownImages;
-import net.vanfleteren.jazygit.ui.widgets.MarkdownScroll;
 
 /**
  * Asking to confirm deleting a comment of a review thread (ADR 64): who wrote it, when, and its first line, as GitHub

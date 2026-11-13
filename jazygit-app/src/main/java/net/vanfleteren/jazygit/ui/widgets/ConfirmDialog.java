@@ -11,7 +11,7 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.popup.ConfirmablePopup;
 import net.vanfleteren.jazygit.state.popup.Popup;
 import net.vanfleteren.jazygit.state.popup.PopupMsg;
-import net.vanfleteren.jazygit.ui.TextWidth;
+import net.vanfleteren.jazygit.ui.text.TextWidth;
 
 /**
  * The standard popup asking to confirm an action: a title, a message, and a hint, by default that Enter

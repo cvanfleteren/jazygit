@@ -8,7 +8,7 @@ import dev.tamboui.text.Span;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.elements.Panel;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.ui.Theme;
+import net.vanfleteren.jazygit.ui.theme.Theme;
 
 /**
  * The border around a left-side pane: its title on top and, once there are rows, the position of

@@ -3,6 +3,8 @@ package net.vanfleteren.jazygit.ui;
 import java.util.function.Function;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.preferences.Screen;
+import net.vanfleteren.jazygit.ui.files.FilesPanel;
+import net.vanfleteren.jazygit.ui.github.PullRequestsPanel;
 import net.vanfleteren.jazygit.ui.widgets.PopupView;
 
 /**

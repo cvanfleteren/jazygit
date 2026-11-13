@@ -27,16 +27,15 @@ import net.vanfleteren.jazygit.settings.DiffLook;
 import net.vanfleteren.jazygit.state.diff.Anchor;
 import net.vanfleteren.jazygit.state.diff.DiffLines;
 import net.vanfleteren.jazygit.state.diff.DiffStops;
-import net.vanfleteren.jazygit.ui.AheadView;
-import net.vanfleteren.jazygit.ui.ContentView.Body;
-import net.vanfleteren.jazygit.ui.ContentView.ShownDiff;
-import net.vanfleteren.jazygit.ui.ContentView.ShownRemarks;
-import net.vanfleteren.jazygit.ui.LogGraph;
-import net.vanfleteren.jazygit.ui.Placeholders;
-import net.vanfleteren.jazygit.ui.RichDiff;
-import net.vanfleteren.jazygit.ui.Rows;
-import net.vanfleteren.jazygit.ui.TextWidth;
-import net.vanfleteren.jazygit.ui.Theme;
+import net.vanfleteren.jazygit.ui.commits.AheadView;
+import net.vanfleteren.jazygit.ui.content.ContentView.Body;
+import net.vanfleteren.jazygit.ui.content.ContentView.ShownDiff;
+import net.vanfleteren.jazygit.ui.diff.RichDiff;
+import net.vanfleteren.jazygit.ui.diff.ShownRemarks;
+import net.vanfleteren.jazygit.ui.text.Placeholders;
+import net.vanfleteren.jazygit.ui.text.Rows;
+import net.vanfleteren.jazygit.ui.text.TextWidth;
+import net.vanfleteren.jazygit.ui.theme.Theme;
 
 /**
  * The text of the content panel, built from what it shows: the diffs, the log, the commits, the stashes and the pull

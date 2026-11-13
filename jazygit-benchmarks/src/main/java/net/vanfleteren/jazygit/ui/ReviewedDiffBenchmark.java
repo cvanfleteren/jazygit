@@ -30,6 +30,9 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
+import net.vanfleteren.jazygit.ui.content.ContentView;
+import net.vanfleteren.jazygit.ui.diff.RichDiff;
+import net.vanfleteren.jazygit.ui.theme.Theme;
 
 /**
  * What the diff of a pull request with review threads costs (ADR 55, 60): placing the threads in it, drawing it, and

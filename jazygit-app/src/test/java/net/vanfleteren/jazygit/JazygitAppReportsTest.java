@@ -41,11 +41,11 @@ import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.view.Preview;
-import net.vanfleteren.jazygit.ui.BranchesPanel;
-import net.vanfleteren.jazygit.ui.CommitsPanel;
-import net.vanfleteren.jazygit.ui.FilesPanel;
 import net.vanfleteren.jazygit.ui.SettledPilot;
-import net.vanfleteren.jazygit.ui.TimeText;
+import net.vanfleteren.jazygit.ui.branches.BranchesPanel;
+import net.vanfleteren.jazygit.ui.commits.CommitsPanel;
+import net.vanfleteren.jazygit.ui.files.FilesPanel;
+import net.vanfleteren.jazygit.ui.text.TimeText;
 import org.junit.jupiter.api.Test;
 
 /**

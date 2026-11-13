@@ -29,7 +29,7 @@ import net.vanfleteren.jazygit.state.load.LoadMsg;
 import net.vanfleteren.jazygit.state.operation.Notice;
 import net.vanfleteren.jazygit.state.popup.Popup;
 import net.vanfleteren.jazygit.state.popup.PopupMsg;
-import net.vanfleteren.jazygit.ui.NoticeText;
+import net.vanfleteren.jazygit.ui.text.NoticeText;
 import org.junit.jupiter.api.Test;
 
 /**

@@ -11,8 +11,8 @@ import dev.tamboui.toolkit.element.Size;
 import dev.tamboui.toolkit.elements.ListElement;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyEvent;
-import net.vanfleteren.jazygit.ui.Theme;
-import net.vanfleteren.jazygit.ui.Theme.Highlights;
+import net.vanfleteren.jazygit.ui.theme.Theme;
+import net.vanfleteren.jazygit.ui.theme.Theme.Highlights;
 
 /**
  * {@code list} with its selected row highlighted as in the left panes: as the theme's selection while the list has

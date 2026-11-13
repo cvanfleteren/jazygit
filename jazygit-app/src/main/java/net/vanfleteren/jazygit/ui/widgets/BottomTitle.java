@@ -2,7 +2,7 @@ package net.vanfleteren.jazygit.ui.widgets;
 
 import dev.tamboui.layout.Rect;
 import dev.tamboui.terminal.Frame;
-import net.vanfleteren.jazygit.ui.TextWidth;
+import net.vanfleteren.jazygit.ui.text.TextWidth;
 
 /**
  * A title in the bottom border of a bordered element, on the right, as the title is shown in the top one.

@@ -18,7 +18,7 @@ import net.vanfleteren.jazygit.state.popup.ConfirmablePopup;
 import net.vanfleteren.jazygit.state.popup.Popup;
 import net.vanfleteren.jazygit.state.popup.PopupMsg;
 import net.vanfleteren.jazygit.state.popup.TextPopup;
-import net.vanfleteren.jazygit.ui.LineEditInput;
+import net.vanfleteren.jazygit.ui.edit.LineEditInput;
 
 /**
  * The standard popup asking for one line of text. Enter confirms it, Escape cancels. Whether it is open, and the

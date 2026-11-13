@@ -14,8 +14,8 @@ import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.preferences.Screen;
 import net.vanfleteren.jazygit.state.view.CommitFilesView;
 import net.vanfleteren.jazygit.state.view.ViewMsg;
-import net.vanfleteren.jazygit.ui.ContentPanel;
 import net.vanfleteren.jazygit.ui.PopupSlot;
+import net.vanfleteren.jazygit.ui.content.ContentPanel;
 
 /**
  * Where the focus is, which TamboUI keeps, not the model: which pane, content area or popup has it, and where it goes

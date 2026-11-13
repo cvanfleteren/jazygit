@@ -13,7 +13,7 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.popup.Popup;
 import net.vanfleteren.jazygit.state.popup.PopupMsg;
-import net.vanfleteren.jazygit.ui.TextWidth;
+import net.vanfleteren.jazygit.ui.text.TextWidth;
 
 /**
  * The standard popup offering a choice between several options, as a {@link ChoiceList} that {@code /} filters.

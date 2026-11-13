@@ -35,10 +35,10 @@ import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.TimerMsg;
 import net.vanfleteren.jazygit.state.github.prs.PrOverviewMsg;
 import net.vanfleteren.jazygit.state.preferences.Screen;
-import net.vanfleteren.jazygit.ui.CommitsPanel;
-import net.vanfleteren.jazygit.ui.FilesPanel;
 import net.vanfleteren.jazygit.ui.SettledPilot;
-import net.vanfleteren.jazygit.ui.TimeText;
+import net.vanfleteren.jazygit.ui.commits.CommitsPanel;
+import net.vanfleteren.jazygit.ui.files.FilesPanel;
+import net.vanfleteren.jazygit.ui.text.TimeText;
 import org.junit.jupiter.api.Test;
 
 /**

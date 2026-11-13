@@ -53,7 +53,7 @@ import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.operation.Notice;
 import net.vanfleteren.jazygit.state.operation.OperationMsg;
 import net.vanfleteren.jazygit.state.popup.PopupMsg;
-import net.vanfleteren.jazygit.ui.ErrorText;
+import net.vanfleteren.jazygit.ui.text.ErrorText;
 import org.junit.jupiter.api.Test;
 
 /**

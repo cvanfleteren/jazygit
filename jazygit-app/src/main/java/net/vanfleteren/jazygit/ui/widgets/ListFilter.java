@@ -8,7 +8,7 @@ import io.vavr.collection.Array;
 import io.vavr.control.Option;
 import java.util.Locale;
 import net.vanfleteren.jazygit.i18n.Messages;
-import net.vanfleteren.jazygit.ui.Theme;
+import net.vanfleteren.jazygit.ui.theme.Theme;
 
 /**
  * The filter of a list in a popup. Typing {@code /} opens a {@link FilterLine} above the list to type it in, and only

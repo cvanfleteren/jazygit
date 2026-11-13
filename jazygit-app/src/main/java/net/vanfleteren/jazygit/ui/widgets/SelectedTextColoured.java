@@ -8,7 +8,7 @@ import dev.tamboui.terminal.Frame;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.RenderContext;
 import dev.tamboui.toolkit.element.Size;
-import net.vanfleteren.jazygit.ui.Theme.SelectedText;
+import net.vanfleteren.jazygit.ui.theme.Theme.SelectedText;
 
 /**
  * {@code content} with the plain text on its highlighted rows coloured as {@code selectedText} says.

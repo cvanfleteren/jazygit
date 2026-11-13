@@ -12,8 +12,8 @@ import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.widgets.input.TextInputState;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.ui.Theme;
 import net.vanfleteren.jazygit.ui.edit.LineEdit;
+import net.vanfleteren.jazygit.ui.theme.Theme;
 
 /**
  * The line above a list to type what it shows in, after a dimmed {@code /}. The list keeps the focus while the line

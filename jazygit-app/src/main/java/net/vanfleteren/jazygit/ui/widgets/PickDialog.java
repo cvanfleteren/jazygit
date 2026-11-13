@@ -22,8 +22,8 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.popup.ListCursor;
 import net.vanfleteren.jazygit.state.popup.Popup;
 import net.vanfleteren.jazygit.state.popup.PopupMsg;
-import net.vanfleteren.jazygit.ui.TextWidth;
-import net.vanfleteren.jazygit.ui.Theme;
+import net.vanfleteren.jazygit.ui.text.TextWidth;
+import net.vanfleteren.jazygit.ui.theme.Theme;
 
 /**
  * The standard popup to pick one of a list of rows that comes from the open popup, like the branches. A row is
