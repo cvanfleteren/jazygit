@@ -42,8 +42,9 @@ browser an account opens links in, and the commands of `gh pr`.
 4. **Every signature keeps its types**: errors, results and parameters are as they were, only moved.
 5. **Each role has a stub, and a fake overrides only what its test needs.** `StubGitHub.of()` gives a `GitHub` with
    every stub, and a test replaces a role with `StubGitHub.of().withPullRequests(new StubPullRequests() { … })`.
-6. **The tests of `CliGitHub` stay as they are**, against the roles through `CliGitHub.of`; they are split per role
-   when they next change, as the git ones were (ADR 71).
+6. **The tests of `CliGitHub` are split per role**, as the git ones were (ADR 71): `CliPullRequestsTest`,
+   `CliReviewsTest`, `CliChecksTest`, `CliStacksTest` and `CliAccountTest`, next to `AccountBrowserTest` and
+   `BrowserTest`, which already tested what `Account` opens. They run a fake gh through `CliGitHub.of`.
 
 ## Consequences
 
