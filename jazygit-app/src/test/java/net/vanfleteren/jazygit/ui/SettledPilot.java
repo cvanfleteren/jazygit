@@ -8,6 +8,7 @@ import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.KeyModifiers;
 import dev.tamboui.tui.event.MouseButton;
+import dev.tamboui.tui.event.PasteEvent;
 import dev.tamboui.tui.event.ResizeEvent;
 import dev.tamboui.tui.pilot.ElementNotFoundException;
 import dev.tamboui.tui.pilot.Pilot;
@@ -79,6 +80,14 @@ public final class SettledPilot implements Pilot {
         Size size = terminalSize(testRunner);
         testRunner.runner().tuiRunner().dispatch(ResizeEvent.of(size.width(), size.height()));
         settle(testRunner, framesDrawn);
+    }
+
+    /**
+     * Pastes {@code text}, as a terminal in bracketed paste mode sends it: as one event.
+     */
+    public static void paste(ToolkitTestRunner testRunner, String text) {
+        testRunner.runner().tuiRunner().dispatch(new PasteEvent(text));
+        settle(testRunner);
     }
 
     private static Size terminalSize(ToolkitTestRunner testRunner) {

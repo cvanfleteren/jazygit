@@ -264,6 +264,20 @@ class PickDialogTest {
     }
 
     @Test
+    void aPasteGoesInTheOpenFilterAndIsIgnoredOtherwise() throws Exception {
+        try (ToolkitTestRunner runner = start()) {
+            SettledPilot.paste(runner, "rel");
+            assertEquals(java.util.List.of(), dispatched);
+            type(runner, "/");
+            SettledPilot.paste(runner, "rel");
+            String screen = RenderedText.ofLarge(runner, this::view);
+            assertTrue(screen.contains("/ rel"), screen);
+            assertTrue(screen.contains("release"), screen);
+            assertFalse(screen.contains("develop"), screen);
+        }
+    }
+
+    @Test
     void escapeClosesTheFilterBeforeItCancels() throws Exception {
         try (ToolkitTestRunner runner = start()) {
             type(runner, "/rel");

@@ -8,6 +8,7 @@ import dev.tamboui.toolkit.elements.TreeElement;
 import dev.tamboui.tui.bindings.Actions;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
+import dev.tamboui.tui.event.PasteEvent;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
@@ -27,6 +28,7 @@ import net.vanfleteren.jazygit.ui.theme.Theme;
 import net.vanfleteren.jazygit.ui.widgets.FilterLine;
 import net.vanfleteren.jazygit.ui.widgets.Pane;
 import net.vanfleteren.jazygit.ui.widgets.PaneKeys;
+import net.vanfleteren.jazygit.ui.widgets.PasteTarget;
 
 /**
  * Left-side panel showing the changed files, as in {@code git status}, as a directory tree; or, while they are open,
@@ -48,6 +50,8 @@ public class FilesPanel {
     private final FileTreeList<CommitFile> commitTree;
     private final Keymap keymap = Keymap.standard();
     private final FilterLine filterLine = new FilterLine();
+    // What a paste does: while the filter line is open, it goes in it.
+    private final Consumer<PasteEvent> paste;
     // The trees' key handlers also see keys typed in other panes, so they must know whether the pane has focus.
     private boolean focused;
     // All files of the working tree, as last merged, with the status and the paths they were merged from: merging
@@ -73,6 +77,8 @@ public class FilesPanel {
      * @param highlights how the highlighted node is shown, also when the pane is not in use
      */
     public FilesPanel(Consumer<Msg> dispatch, Runnable openDiff, Theme.Highlights highlights) {
+        paste = event -> filter.filter(FileFilter::typing)
+                .forEach(typing -> dispatch.accept(new FileFilterMsg.Edited(filterLine.paste(typing.text(), event))));
         statusTree = new FileTreeList<>(
                 ID,
                 file -> file.entry().type().marker() + " " + name(file),
@@ -457,7 +463,8 @@ public class FilesPanel {
      */
     private Element withLine(Element tree) {
         return filter.filter(FileFilter::typing)
-                .<Element>map(typing -> Toolkit.column(filterLine.field(typing.text()), tree))
+                .<Element>map(
+                        typing -> new PasteTarget(Toolkit.column(filterLine.field(typing.text()), tree), ID, paste))
                 .getOrElse(tree);
     }
 

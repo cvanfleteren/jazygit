@@ -47,8 +47,10 @@ final class TerminalHandOver implements Terminal {
                         HandOverBackend.system(focused -> runner.get().runOnRenderThread(() -> focus.accept(focused))))
                 .onFailure(BugLog::log)
                 .toOption();
-        // Frames are drawn when something changed, not on ticks.
-        TuiConfig.Builder builder = TuiConfig.builder().mouseCapture(true).noTick();
+        // Frames are drawn when something changed, not on ticks. A paste comes as one event, drawn once, rather than
+        // as a key per character.
+        TuiConfig.Builder builder =
+                TuiConfig.builder().mouseCapture(true).bracketedPaste(true).noTick();
         config = backend.map(builder::backend).getOrElse(builder).build();
         return config;
     }

@@ -10,6 +10,8 @@ import dev.tamboui.toolkit.elements.TextAreaElement;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
+import dev.tamboui.tui.event.PasteEvent;
+import dev.tamboui.tui.event.TextEditing;
 import dev.tamboui.widgets.input.TextAreaState;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
@@ -63,7 +65,7 @@ public final class SubmittableTextArea extends StyledElement<SubmittableTextArea
     }
 
     /**
-     * Calls {@code onChange} with the text whenever a key changed it.
+     * Calls {@code onChange} with the text whenever a key or a paste changed it.
      */
     public SubmittableTextArea onChange(Consumer<String> onChange) {
         this.onChange = onChange;
@@ -89,6 +91,19 @@ public final class SubmittableTextArea extends StyledElement<SubmittableTextArea
         }
         // A key neither uses goes to the handler set with onKeyEvent on this element.
         return handled ? EventResult.HANDLED : super.handleKeyEvent(event, true);
+    }
+
+    /**
+     * Puts what is pasted in at the cursor, line breaks and all.
+     */
+    @Override
+    public EventResult handlePasteEvent(PasteEvent event) {
+        String before = state.text();
+        TextEditing.handle(state, event);
+        if (!state.text().equals(before)) {
+            onChange.accept(state.text());
+        }
+        return EventResult.HANDLED;
     }
 
     @Override

@@ -10,6 +10,8 @@ import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.elements.TextInputElement;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyEvent;
+import dev.tamboui.tui.event.PasteEvent;
+import dev.tamboui.tui.event.TextEditing;
 import dev.tamboui.widgets.input.TextInputState;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
@@ -40,7 +42,7 @@ public final class LineEditInput extends StyledElement<LineEditInput> {
     }
 
     /**
-     * Calls {@code onChange} with the text whenever a key changed it.
+     * Calls {@code onChange} with the text whenever a key or a paste changed it.
      */
     public LineEditInput onChange(Consumer<String> onChange) {
         this.onChange = onChange;
@@ -62,6 +64,19 @@ public final class LineEditInput extends StyledElement<LineEditInput> {
         }
         // A key neither uses goes to the handler set with onKeyEvent on this element.
         return handled ? EventResult.HANDLED : super.handleKeyEvent(event, true);
+    }
+
+    /**
+     * Puts what is pasted in at the cursor, on one line: its line breaks become spaces.
+     */
+    @Override
+    public EventResult handlePasteEvent(PasteEvent event) {
+        String before = state.text();
+        TextEditing.handle(state, event);
+        if (!state.text().equals(before)) {
+            onChange.accept(state.text());
+        }
+        return EventResult.HANDLED;
     }
 
     @Override
