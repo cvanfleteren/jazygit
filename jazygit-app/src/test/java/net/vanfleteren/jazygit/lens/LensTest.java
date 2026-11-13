@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.state;
+package net.vanfleteren.jazygit.lens;
 
 import static org.junit.jupiter.api.Assertions.*;
 

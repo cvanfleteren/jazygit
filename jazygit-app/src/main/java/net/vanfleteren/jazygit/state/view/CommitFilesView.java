@@ -17,7 +17,7 @@ import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.image.Picture;
-import net.vanfleteren.jazygit.state.Lens;
+import net.vanfleteren.jazygit.lens.Lens;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.diff.Changes;

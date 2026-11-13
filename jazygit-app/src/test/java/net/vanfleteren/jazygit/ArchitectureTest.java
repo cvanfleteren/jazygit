@@ -75,6 +75,16 @@ class ArchitectureTest {
             .resideInAnyPackage(
                     "java..", "io.vavr..", "lombok..", "com.electronwill.nightconfig..", "..jazygit.settings..");
     /**
+     * The lens is a tool for any value, which every part may use: it knows nothing of the application.
+     */
+    @ArchTest
+    static final ArchRule lensKnowsNothingOfTheApplication = classes()
+            .that()
+            .resideInAPackage("..jazygit.lens..")
+            .should()
+            .onlyDependOnClassesThat()
+            .resideInAnyPackage("java..", "io.vavr..", "..jazygit.lens..");
+    /**
      * How the settings file is read and written stays inside the settings.
      */
     @ArchTest
