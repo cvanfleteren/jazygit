@@ -11,7 +11,6 @@ import dev.tamboui.tui.event.KeyCode;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.state.*;
-import net.vanfleteren.jazygit.state.UpstreamError;
 import net.vanfleteren.jazygit.state.popup.*;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
