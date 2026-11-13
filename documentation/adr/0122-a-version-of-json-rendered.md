@@ -31,14 +31,19 @@ its scroll in the model, its stops from `DiffCursor` and its gutter of marks.
 - The seam of ADR 103 is given which nodes of the version are closed, and each row it gives says which node it opens
   or closes, if any. Markdown is given them too, and gives no nodes. Not: a seam for JSON only.
 - Text that is not JSON is shown as source, under one line saying where reading it stopped: `Not rendered: line 12,
-  expected ','`. A version cut at the limit of ADR 79 is not JSON either: the line says it was cut. Not: what could be
-  read rendered, up to where it stops, as Markdown is: half a value is no tree.
+  column 3, expected ','`. jazygit writes that line itself, from the location Parsson gives and the token it expected,
+  as a character. Not: Parsson's own text, `Invalid token=CURLYCLOSE at (line no=12, ...)`. A version cut at the limit
+  of ADR 79 is not JSON either: the line says it was cut. JSON nested deeper than the reader goes, `MAX_DEPTH`, is shown
+  as source too: the line says how deep it may go. Not: what could be read rendered, up to where it stops, as Markdown
+  is: half a value is no tree.
 
 ### How it is read
 
 - `jazygit-json` reads JSON a second way, for rendering: each key and each value with the line it starts on, the
-  line a container ends on, and a number as it is written, `1e3` staying `1e3`. Two fields with the same key are both
-  kept. It shares the reader that reads `Json`. `Json` stays as it is, for decoding what `gh` gives. Not: a reader of
+  line a container ends on, and a number as it is written, `1e3` staying `1e3`. Of two fields with the same key, the
+  last holds, as it does when `Json` is read, and as nearly every reader of JSON has it; the lines of those before it
+  are kept with it. It shares the reader that reads `Json`. Not: both fields kept, which no program reading the file
+  sees, and which would give two nodes one path. `Json` stays as it is, for decoding what `gh` gives. Not: a reader of
   its own in the app.
 
 ### How it is drawn
@@ -57,6 +62,9 @@ its scroll in the model, its stops from `DiffCursor` and its gutter of marks.
   table wider than the area scrolls sideways, as a table of Markdown does (ADR 103).
 - An object in an array is named by one of its fields: `name`, `title`, `id`, `login`, `key` or `path`, the first of
   these it has, or else its first scalar: `2  name: "acceptance" {4}`. That field is not drawn again in it.
+- A field whose key the object has more than once is drawn once, with its last value, and a dim note of the lines of
+  the others: `name  "build"  (also on line 4, ignored)`. A key written twice is most likely a mistake, and is not
+  hidden.
 - A string is drawn in quotes, its newlines as `↵`. A long string is not wrapped: it scrolls sideways, as the lines of a
   diff do.
 - A root that is an array is drawn as any array: an array of records is a table. A root that is a scalar is one row.
@@ -70,11 +78,15 @@ its scroll in the model, its stops from `DiffCursor` and its gutter of marks.
   row, its count followed by a preview: its first values, or the keys of its objects,
   `checks [25]  {name, conclusion, durationSeconds}`.
 - A node of more than 20 entries starts closed. Every other node starts open.
-- A node is named by its path from the root, as a JSON Pointer: `/checks/9`, `/jobs/2/steps`. Which nodes the user
-  closed or opened, away from how they start, is kept in the model, with the version, as rendered is (ADR 103), and
-  dropped with it. Read again, as the file in the working tree changes or a pull request is pushed, the version keeps
-  those whose path is still there. The new version and the original share them, so Ctrl+O shows both folded alike; a
-  path only one side has holds there only. Not: kept by the widget, as the tree of files keeps its own: which nodes are
+- A node is named by its path from the root, as a JSON Pointer: `/checks/9`, `/jobs/2/steps`. As the last of two
+  fields with the same key holds, a path names one node.
+- What the user chose for a node, open or closed, is kept by its path in the model, with the version, as rendered is
+  (ADR 103), and dropped with it. A node the user did not choose for starts as above. Read again, as the file in the
+  working tree changes or a pull request is pushed, the version keeps the choices whose path is still there, and a
+  node keeps what was chosen for it however many entries it now has. The new version and the original share them, so
+  Ctrl+O shows a node the user chose for folded alike on both sides; a path only one side has holds there only. Not:
+  kept as nodes toggled away from how they start, which shows a node open on one side and closed on the other when it
+  starts closed on one of them only. Not: kept by the widget, as the tree of files keeps its own: which nodes are
   closed says which rows there are, and the scroll and the stops of the area are made from the rows.
 - Not now: folding the source of a version, by its brackets, or YAML and code by their indentation. They would be for
   every version, not for JSON rendered, and are for an ADR of their own.
@@ -110,8 +122,11 @@ its scroll in the model, its stops from `DiffCursor` and its gutter of marks.
 ## Consequences
 
 - The seam of ADR 103 holds folding: a renderer is given closed nodes, and its rows may name one.
-- A version holds the nodes toggled away from how they start, keyed by path, next to whether it is rendered.
+- A version holds, by path, the nodes the user opened or closed, next to whether it is rendered.
 - `jazygit-json` has a reader that keeps lines and numbers as written, besides `Json`.
+- Rows know the lines they stand for, not the columns, and a diff knows which lines changed, not which parts of them.
+  So in JSON written on one line, a change anywhere marks every row, and Ctrl+T puts the cursor on the first row, or on
+  that one line. Columns in the reader would help the cursor only, not the marks: they are left out.
 - A rendered version has a cursor row by row when its renderer gives nodes; Markdown keeps scrolling.
 - JSON larger than the limit of ADR 79, as a big `package-lock.json`, is cut, and so shows as source.
 - Folding the source of any version, by brackets or indentation, can come later with an ADR of its own.
