@@ -201,13 +201,14 @@ public final class Update {
     }
 
     /**
-     * {@code next}, with each of its commands given the next id and running from {@code now} on.
+     * {@code next}, with each of its commands given the next id and running from {@code now} on; a read of the open
+     * pull requests also gets the id of a read of GitHub (ADR 119).
      */
     private static Step stamped(Next next, Instant now) {
         long first = next.model().jobs().nextId();
         List<Cmd> cmds = next.cmds().distinct();
         return new Step(
-                next.model().mapJobs(jobs -> jobs.withStarted(cmds, now)),
+                next.model().mapJobs(jobs -> jobs.withStarted(cmds, now)).mapGitHub(gitHub -> gitHub.withStarted(cmds)),
                 cmds.zipWithIndex().map(cmd -> new Launch(first + cmd._2(), cmd._1())),
                 next.quit());
     }

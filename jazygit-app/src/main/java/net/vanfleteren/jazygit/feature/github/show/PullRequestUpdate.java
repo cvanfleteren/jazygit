@@ -118,7 +118,7 @@ public final class PullRequestUpdate {
                 CheckTimesUpdate.read(
                         Next.of(shown(
                                 model.mapGitHub(
-                                        gitHub -> gitHub.withRead(details).withReadTaken(number, read)),
+                                        gitHub -> gitHub.withRead(details, read).withReadTaken(number, read)),
                                 number,
                                 read,
                                 Either.right(details))),

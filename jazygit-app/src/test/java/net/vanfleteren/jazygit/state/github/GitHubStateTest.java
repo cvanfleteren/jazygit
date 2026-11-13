@@ -8,6 +8,7 @@ import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
+import net.vanfleteren.jazygit.gh.model.MergeStatus;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -19,6 +20,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Size;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Status;
 import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.state.github.prs.LoadRepositoryPullRequests;
 import org.junit.jupiter.api.Test;
 
 class GitHubStateTest {
@@ -57,26 +59,76 @@ class GitHubStateTest {
                                 Review.CHANGES_REQUESTED,
                                 Option.none(),
                                 Option.none()))),
-                LISTED.withRead(details(42, "feature", State.OPEN)).pullRequests());
+                LISTED.withRead(details(42, "feature", State.OPEN), 0).pullRequests());
     }
 
     @Test
     void aListedPullRequestThatWasReadMergedOrClosedIsNoLongerListed() {
         Option<Map<BranchName, PullRequest>> none = Option.of(HashMap.empty());
 
-        assertEquals(none, LISTED.withRead(details(42, "feature", State.MERGED)).pullRequests());
-        assertEquals(none, LISTED.withRead(details(42, "feature", State.CLOSED)).pullRequests());
+        assertEquals(
+                none, LISTED.withRead(details(42, "feature", State.MERGED), 0).pullRequests());
+        assertEquals(
+                none, LISTED.withRead(details(42, "feature", State.CLOSED), 0).pullRequests());
     }
 
     @Test
     void aPullRequestThatIsNotListedIsNotAdded() {
         // E.g. one from a fork, which the list leaves out, from a branch with the name of one here.
-        assertEquals(LISTED, LISTED.withRead(details(7, "main", State.OPEN)));
-        assertEquals(LISTED, LISTED.withRead(details(7, "feature", State.OPEN)));
+        assertEquals(LISTED, LISTED.withRead(details(7, "main", State.OPEN), 0));
+        assertEquals(LISTED, LISTED.withRead(details(7, "feature", State.OPEN), 0));
     }
 
     @Test
     void beforeThePullRequestsAreReadNoneAreListed() {
-        assertEquals(GitHubState.NOT_READ, GitHubState.NOT_READ.withRead(details(42, "feature", State.OPEN)));
+        assertEquals(GitHubState.NOT_READ, GitHubState.NOT_READ.withRead(details(42, "feature", State.OPEN), 0));
+    }
+
+    @Test
+    void aReadOfTheOpenPullRequestsGetsTheIdOfTheNextRead() {
+        GitHubState read = GitHubState.NOT_READ.withReadGivenOut();
+
+        GitHubState started = read.withStarted(List.of(new LoadRepositoryPullRequests()));
+
+        assertEquals(1, started.listRead());
+        assertEquals(2, started.nextRead());
+        assertEquals(read, read.withStarted(List.of(new LoadProtectedBranches())));
+    }
+
+    private static final PullRequest PENDING_PR =
+            new PullRequest(42, new GhBranch("feature"), false, Checks.PENDING, Review.APPROVED);
+    private static final MergeStatus.Failed CONFLICTS = new MergeStatus.Failed("conflicts");
+
+    private static GitHubState failed(GitHubState state) {
+        return state.withMerge(PullRequestMerge.asked(42, FEATURE, List.empty(), CONFLICTS, Instant.EPOCH));
+    }
+
+    @Test
+    void aListReadThatStartedBeforeTheMergeFailedDoesNotDropTheFailure() {
+        // The list is read while the checks run; the dialog then reads them passing, and the merge fails anyway.
+        GitHubState reading = GitHubState.NOT_READ
+                .withListed(List.of(PENDING_PR))
+                .withStarted(List.of(new LoadRepositoryPullRequests()))
+                .withReadGivenOut()
+                .withPullRequests(Option.of(HashMap.of(FEATURE, FEATURE_PR)));
+        GitHubState failed = failed(reading);
+
+        GitHubState stale = failed.withListed(List.of(PENDING_PR));
+        GitHubState again = stale.withStarted(List.of(new LoadRepositoryPullRequests()));
+
+        assertEquals(Option.of(CONFLICTS), stale.merge(42));
+        assertEquals(Option.of(CONFLICTS), again.withListed(List.of(FEATURE_PR)).merge(42));
+        assertEquals(Option.none(), again.withListed(List.of(PENDING_PR)).merge(42));
+    }
+
+    @Test
+    void aDetailsReadGivenOutAfterTheMergeFailedDropsTheFailureOnceThePullRequestChanged() {
+        GitHubState before = LISTED.withReadGivenOut();
+        GitHubState failed = failed(before);
+        long after = failed.nextRead();
+        PullRequestDetails changed = details(42, "feature", State.OPEN);
+
+        assertEquals(Option.of(CONFLICTS), failed.withRead(changed, after - 1).merge(42));
+        assertEquals(Option.none(), failed.withRead(changed, after).merge(42));
     }
 }
