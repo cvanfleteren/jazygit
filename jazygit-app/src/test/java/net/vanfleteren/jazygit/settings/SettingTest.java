@@ -1,8 +1,10 @@
 package net.vanfleteren.jazygit.settings;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.vavr.Tuple;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
@@ -48,6 +50,21 @@ class SettingTest {
     }
 
     @Test
+    void theDefaultsKeepOnlyTheThemeInTheFile() {
+        assertEquals(
+                List.of(List.of("ui", "theme")),
+                Settings.DEFAULT.entries().keySet().toList());
+    }
+
+    @Test
+    void aSettingSetBackToItsDefaultHasNoEntry() {
+        Settings back = CHANGED.withRepositoryWidth(Settings.DEFAULT.repositoryWidth());
+
+        assertTrue(CHANGED.entries().containsKey(List.of("ui", "repository-width")));
+        assertFalse(back.entries().containsKey(List.of("ui", "repository-width")));
+    }
+
+    @Test
     void aSettingIsTakenOverOnItsOwn() {
         Settings taken = Setting.ALL
                 .find(setting -> setting.key().equals(Settings.DIFF_STYLE))
@@ -61,20 +78,16 @@ class SettingTest {
      * What the file has at {@code path}, as it is read: a value, or a table of what is under it.
      */
     private static Option<Object> found(Map<List<String>, Object> entries, List<String> path) {
-        Option<Object> value = entries.get(path);
-        if (value.isDefined()) {
-            return value;
-        }
-        Map<List<String>, Object> under = entries.filterKeys(key -> key.size() > path.size() && key.startsWith(path));
-        if (under.isEmpty()) {
-            return Option.none();
-        }
-        java.util.Map<String, Object> table = new java.util.LinkedHashMap<>();
-        under.keySet()
-                .map(key -> key.get(path.size()))
-                .distinct()
-                .forEach(name ->
-                        table.put(name, found(entries, path.append(name)).get()));
-        return Option.some(table);
+        return entries.get(path)
+                .orElse(() -> Option.of(entries.keySet()
+                                .toList()
+                                .filter(key -> key.size() > path.size() && key.startsWith(path))
+                                .map(key -> key.get(path.size()))
+                                .distinct())
+                        .filter(List::nonEmpty)
+                        // The names under the path all lead somewhere.
+                        .map(names -> names.toLinkedMap(name -> Tuple.of(
+                                        name, found(entries, path.append(name)).get()))
+                                .toJavaMap()));
     }
 }

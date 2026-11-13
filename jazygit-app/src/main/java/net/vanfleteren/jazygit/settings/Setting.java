@@ -4,6 +4,7 @@ import io.vavr.collection.LinkedHashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import net.vanfleteren.jazygit.lens.Lens;
 
@@ -15,81 +16,79 @@ import net.vanfleteren.jazygit.lens.Lens;
  * <p>Adding a setting is a component of {@link Settings}, its default in {@link Settings#DEFAULT}, and a line in
  * {@link #ALL}.
  *
- * @param key     its key in the settings file, as {@link Settings#read} reports it when it is not valid
- * @param lens    where it is in some settings
- * @param decode  what the file's value holds of it, with the keys of what is wrong in that value
- * @param entries how it is kept in the settings file, by the path of each key; none when it is not kept there
- * @param <T>     what it is
+ * @param key           its key in the settings file, as {@link Settings#read} reports it when it is not valid
+ * @param lens          where it is in some settings
+ * @param decode        what the file's value holds of it, with the keys of what is wrong in that value
+ * @param entries       how it is kept in the settings file at its key, by the path of each key; none when it is not
+ *                      kept there
+ * @param keptAtDefault whether it is kept in the file at its default too; otherwise it has no entry then
+ * @param <T>           what it is
  */
 record Setting<T>(
         String key,
         Lens<Settings, T> lens,
         Function<Object, Decoded<T>> decode,
-        Function<T, Map<List<String>, Object>> entries) {
+        BiFunction<String, T, Map<List<String>, Object>> entries,
+        boolean keptAtDefault) {
 
     /**
      * Every setting the settings file holds, in the order a new file has them.
      */
     static final List<Setting<?>> ALL = List.of(
-            // The theme is written even at its default.
             of(
-                    Settings.THEME,
-                    Lens.of(Settings::theme, Settings::withTheme),
-                    value -> text(value).flatMap(ThemeName::of),
-                    always(Settings.THEME, ThemeName::id)),
+                            Settings.THEME,
+                            Lens.of(Settings::theme, Settings::withTheme),
+                            value -> text(value).flatMap(ThemeName::of),
+                            as(ThemeName::id))
+                    .alsoAtDefault(),
             of(
                     Settings.GH_EXECUTABLE,
                     Lens.of(Settings::ghExecutable, Settings::withGhExecutable),
                     value -> text(value).filter(path -> !path.isBlank()).map(Option::some),
-                    path -> path.map(set -> entry(Settings.GH_EXECUTABLE, set)).getOrElse(LinkedHashMap.empty())),
+                    (key, path) -> path.map(set -> entry(key, set)).getOrElse(LinkedHashMap.empty())),
             of(
                     Settings.REPOSITORY_WIDTH,
                     Lens.of(Settings::repositoryWidth, Settings::withRepositoryWidth),
                     Settings::width,
-                    unlessDefault(Settings.REPOSITORY_WIDTH, Settings.DEFAULT_WIDTH, width -> width)),
+                    as(width -> width)),
             of(
                     Settings.PULL_REQUESTS_WIDTH,
                     Lens.of(Settings::pullRequestsWidth, Settings::withPullRequestsWidth),
                     Settings::width,
-                    unlessDefault(Settings.PULL_REQUESTS_WIDTH, Settings.DEFAULT_WIDTH, width -> width)),
+                    as(width -> width)),
             of(
                     Settings.DIFF_STYLE,
                     Lens.of(Settings::diffStyle, Settings::withDiffStyle),
                     value -> text(value).flatMap(DiffStyle::of),
-                    unlessDefault(Settings.DIFF_STYLE, Settings.DEFAULT.diffStyle(), DiffStyle::id)),
+                    as(DiffStyle::id)),
             of(
                     Settings.DIFF_SYNTAX,
                     Lens.of(Settings::diffSyntax, Settings::withDiffSyntax),
                     Setting::bool,
-                    unlessDefault(Settings.DIFF_SYNTAX, Settings.DEFAULT.diffSyntax(), on -> on)),
-            of(
-                    Settings.DIFF_WORDS,
-                    Lens.of(Settings::diffWords, Settings::withDiffWords),
-                    Setting::bool,
-                    unlessDefault(Settings.DIFF_WORDS, Settings.DEFAULT.diffWords(), on -> on)),
+                    as(on -> on)),
+            of(Settings.DIFF_WORDS, Lens.of(Settings::diffWords, Settings::withDiffWords), Setting::bool, as(on -> on)),
             // The TOML writer writes a java.util list as an array.
             of(
                     Settings.REPOSITORY_HEIGHTS,
                     Lens.of(Settings::repositoryHeights, Settings::withRepositoryHeights),
                     value -> Settings.heights(value, Settings.DEFAULT_REPOSITORY_HEIGHTS.size()),
-                    unlessDefault(Settings.REPOSITORY_HEIGHTS, Settings.DEFAULT_REPOSITORY_HEIGHTS, List::toJavaList)),
+                    as(List::toJavaList)),
             of(
                     Settings.PULL_REQUESTS_HEIGHTS,
                     Lens.of(Settings::pullRequestsHeights, Settings::withPullRequestsHeights),
                     value -> Settings.heights(value, Settings.DEFAULT_PULL_REQUESTS_HEIGHTS.size()),
-                    unlessDefault(
-                            Settings.PULL_REQUESTS_HEIGHTS, Settings.DEFAULT_PULL_REQUESTS_HEIGHTS, List::toJavaList)),
+                    as(List::toJavaList)),
             of(
                     Settings.ANIMATIONS,
                     Lens.of(Settings::animations, Settings::withAnimations),
                     Setting::bool,
-                    unlessDefault(Settings.ANIMATIONS, Settings.DEFAULT.animations(), on -> on)),
+                    as(on -> on)),
             // The browsers are a table of tables, by host and then by login.
             of(
                     Settings.BROWSERS,
                     Lens.of(Settings::browsers, Settings::withBrowsers),
                     AccountBrowsers::read,
-                    AccountBrowsers::entries),
+                    (key, browsers) -> browsers.entries()),
             // An entry of the editors that is wrong is left out, and reported; the others still apply. Only editors
             // that are no array at all are not valid as a whole. The user writes them, and saving leaves them as
             // they are.
@@ -100,17 +99,18 @@ record Setting<T>(
                         Editors.Read read = Editors.read(value);
                         return new Decoded<>(Option.some(read.editors()), read.invalid());
                     },
-                    editors -> LinkedHashMap.empty()));
+                    (key, editors) -> LinkedHashMap.empty(),
+                    false));
 
     /**
      * A setting whose value in the file is valid as a whole or not at all: {@code valid} is what it holds, if it is
-     * valid.
+     * valid. It has no entry in the file at its default.
      */
     static <T> Setting<T> of(
             String key,
             Lens<Settings, T> lens,
             Function<Object, Option<T>> valid,
-            Function<T, Map<List<String>, Object>> entries) {
+            BiFunction<String, T, Map<List<String>, Object>> entries) {
         return new Setting<>(
                 key,
                 lens,
@@ -118,7 +118,15 @@ record Setting<T>(
                     Option<T> read = valid.apply(value);
                     return new Decoded<>(read, Option.when(read.isEmpty(), key).toList());
                 },
-                entries);
+                entries,
+                false);
+    }
+
+    /**
+     * This setting, kept in the file at its default too.
+     */
+    Setting<T> alsoAtDefault() {
+        return new Setting<>(key, lens, decode, entries, true);
     }
 
     /**
@@ -137,10 +145,14 @@ record Setting<T>(
     }
 
     /**
-     * How {@code settings} keep this setting in the settings file.
+     * How {@code settings} keep this setting in the settings file: nothing when it is at its default, as
+     * {@link Settings#DEFAULT} has it, unless it is kept there too.
      */
     Map<List<String>, Object> entriesOf(Settings settings) {
-        return lens.get(settings).map(entries).getOrElse(LinkedHashMap.empty());
+        return lens.get(settings)
+                .filter(value -> keptAtDefault || !lens.get(Settings.DEFAULT).contains(value))
+                .map(value -> entries.apply(key, value))
+                .getOrElse(LinkedHashMap.empty());
     }
 
     /**
@@ -158,18 +170,10 @@ record Setting<T>(
     }
 
     /**
-     * The setting kept at {@code key} as {@code written}, whatever it is.
+     * The setting kept at its key as {@code written}.
      */
-    private static <T> Function<T, Map<List<String>, Object>> always(String key, Function<T, Object> written) {
-        return value -> entry(key, written.apply(value));
-    }
-
-    /**
-     * The setting kept at {@code key} as {@code written}, but not when it is {@code standard}, its default.
-     */
-    private static <T> Function<T, Map<List<String>, Object>> unlessDefault(
-            String key, T standard, Function<T, Object> written) {
-        return value -> value.equals(standard) ? LinkedHashMap.empty() : entry(key, written.apply(value));
+    private static <T> BiFunction<String, T, Map<List<String>, Object>> as(Function<T, Object> written) {
+        return (key, value) -> entry(key, written.apply(value));
     }
 
     private static Map<List<String>, Object> entry(String key, Object value) {
