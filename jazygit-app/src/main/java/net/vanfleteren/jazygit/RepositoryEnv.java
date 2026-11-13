@@ -42,7 +42,7 @@ final class RepositoryEnv {
         return new Env(
                 CliGit.withCredentials(git, () -> token.environment().getOrElse(HashMap.empty())),
                 // The browser of an account is read as a link opens, so one set since holds (ADR 88).
-                new CliGitHub(
+                CliGitHub.of(
                         git.worktree(),
                         settings.gh(),
                         token,

@@ -35,7 +35,7 @@ class RecentReposUpdateTest {
     Path dir;
 
     private static Env env(Path current, RecentRepositories recent, Repositories repositories) {
-        return new Env(StubGit.of(current), StubGitHub.empty(), SettingsStore.NONE, recent, repositories);
+        return new Env(StubGit.of(current), StubGitHub.of(), SettingsStore.NONE, recent, repositories);
     }
 
     private Path repo(String name) throws Exception {

@@ -58,7 +58,7 @@ class VerdictUpdateTest {
     private static final ExecutedCommand GH = ExecutedCommand.of("gh", "api", "graphql");
 
     private static PullRequestDetails details(Status status, Reviewing reviewing) {
-        PullRequestDetails read = StubGitHub.empty().pullRequestDetails(42).get();
+        PullRequestDetails read = StubGitHub.of().pullRequests().details(42).get();
         Conversation conversation = read.conversation();
         return read.withStatus(status)
                 .withConversation(new Conversation(

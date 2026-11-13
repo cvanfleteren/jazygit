@@ -107,7 +107,7 @@ public record AddWorktreeCmd(WorktreeSource source, String location, boolean swi
      */
     private static Either<Failure, List<ExecutedCommand>> checkout(
             Git git, GitHub gitHub, Path path, int number, List<ExecutedCommand> added) {
-        return gitHub.checkoutPullRequest(number, path).map(added::appendAll).mapLeft(failure -> {
+        return gitHub.pullRequests().checkout(number, path).map(added::appendAll).mapLeft(failure -> {
             Either<GitFailure, List<ExecutedCommand>> removed = git.worktrees().remove(path, true);
             return new Failure.GitHub(
                     failure.error(),

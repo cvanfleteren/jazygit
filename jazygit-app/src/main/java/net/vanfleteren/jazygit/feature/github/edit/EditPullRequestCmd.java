@@ -78,12 +78,12 @@ public sealed interface EditPullRequestCmd extends Cmd {
         @Override
         public Msg run(Env env) {
             Either<GhFailure, List<ExecutedCommand>> saved =
-                    edit.changes() ? env.gitHub().editPullRequest(number, edit) : Either.right(List.empty());
+                    edit.changes() ? env.gitHub().pullRequests().edit(number, edit) : Either.right(List.empty());
             return saved.mapLeft(Failure::of)
                     .fold(
                             this::failed,
                             edited -> draft.map(drafting -> env.gitHub()
-                                            .setDraft(number, drafting)
+                                            .pullRequests().setDraft(number, drafting)
                                             .fold(
                                                     failure -> partly(edited, failure),
                                                     drafted -> succeeded(edited.appendAll(drafted))))

@@ -39,6 +39,8 @@ import net.vanfleteren.jazygit.feature.worktree.switchto.SwitchWorktreeMsg;
 import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.GhFailure;
 import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.gh.StubPullRequests;
+import net.vanfleteren.jazygit.gh.GitHub;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
@@ -194,7 +196,7 @@ class WorktreeUpdateTest {
         NewBranchStart fromFeature = new NewBranchStart.From(new BranchRef.Local(FEATURE), Option.of(FEATURE));
 
         new AddWorktreeCmd(new WorktreeSource.Created(new BranchName("topic"), fromFeature), "/repos/app-topic")
-                .run(new Env(git, net.vanfleteren.jazygit.gh.StubGitHub.empty()));
+                .run(new Env(git, net.vanfleteren.jazygit.gh.StubGitHub.of()));
 
         assertEquals(java.util.List.of(fromFeature), ran);
     }
@@ -304,7 +306,7 @@ class WorktreeUpdateTest {
 
         assertEquals(
                 new AddWorktreeMsg.StartResolved("v1", Option.of(new Sha("abc123"))),
-                new ResolveStartCmd("v1").run(new Env(git, StubGitHub.empty())));
+                new ResolveStartCmd("v1").run(new Env(git, StubGitHub.of())));
     }
 
     @Test
@@ -327,7 +329,7 @@ class WorktreeUpdateTest {
             }
         });
 
-        Msg msg = new ResolveStartCmd("v1").run(new Env(git, StubGitHub.empty()));
+        Msg msg = new ResolveStartCmd("v1").run(new Env(git, StubGitHub.of()));
 
         assertInstanceOf(AddWorktreeMsg.StartNotResolved.class, msg);
         assertEquals(
@@ -392,13 +394,13 @@ class WorktreeUpdateTest {
                 return Either.right(StubGit.executed("git worktree add"));
             }
         });
-        StubGitHub gitHub = new StubGitHub() {
+        GitHub gitHub = StubGitHub.of().withPullRequests(new StubPullRequests() {
             @Override
-            public Either<GhFailure, List<ExecutedCommand>> checkoutPullRequest(int number, Path in) {
+            public Either<GhFailure, List<ExecutedCommand>> checkout(int number, Path in) {
                 ran.add("gh " + number + " " + in);
                 return Either.right(StubGit.executed("gh pr checkout 9"));
             }
-        };
+});
 
         new AddWorktreeCmd(
                         new WorktreeSource.Detached(new Revision.Commit(new Sha("abc123")), "abc123"),
@@ -425,14 +427,14 @@ class WorktreeUpdateTest {
                 return Either.right(StubGit.executed("git worktree remove --force"));
             }
         });
-        StubGitHub fails = new StubGitHub() {
+        GitHub fails = StubGitHub.of().withPullRequests(new StubPullRequests() {
             @Override
-            public Either<GhFailure, List<ExecutedCommand>> checkoutPullRequest(int number, Path in) {
+            public Either<GhFailure, List<ExecutedCommand>> checkout(int number, Path in) {
                 return Either.left(new GhFailure(
                         new GhError.CommandFailed(Option.of("no such pull request"), 1),
                         StubGit.executed("gh pr checkout 9")));
             }
-        };
+});
 
         Msg failed = new AddWorktreeCmd(new WorktreeSource.PullRequest(pullRequest()), "/repos/app-pr-9")
                 .run(new Env(git, fails));
@@ -455,14 +457,14 @@ class WorktreeUpdateTest {
                 return Either.left(new GitFailure(locked, StubGit.executed("git worktree remove --force")));
             }
         });
-        StubGitHub fails = new StubGitHub() {
+        GitHub fails = StubGitHub.of().withPullRequests(new StubPullRequests() {
             @Override
-            public Either<GhFailure, List<ExecutedCommand>> checkoutPullRequest(int number, Path in) {
+            public Either<GhFailure, List<ExecutedCommand>> checkout(int number, Path in) {
                 return Either.left(new GhFailure(
                         new GhError.CommandFailed(Option.of("no such pull request"), 1),
                         StubGit.executed("gh pr checkout 9")));
             }
-        };
+});
 
         Msg failed = new AddWorktreeCmd(new WorktreeSource.PullRequest(pullRequest()), "/repos/app-pr-9")
                 .run(new Env(git, fails));
@@ -493,14 +495,14 @@ class WorktreeUpdateTest {
                 return Either.left(new GitFailure(changed, StubGit.executed("git worktree remove --force")));
             }
         });
-        StubGitHub fails = new StubGitHub() {
+        GitHub fails = StubGitHub.of().withPullRequests(new StubPullRequests() {
             @Override
-            public Either<GhFailure, List<ExecutedCommand>> checkoutPullRequest(int number, Path in) {
+            public Either<GhFailure, List<ExecutedCommand>> checkout(int number, Path in) {
                 return Either.left(new GhFailure(
                         new GhError.CommandFailed(Option.of("no such pull request"), 1),
                         StubGit.executed("gh pr checkout 9")));
             }
-        };
+});
 
         Msg failed = new AddWorktreeCmd(new WorktreeSource.PullRequest(pullRequest()), "/repos/app-pr-9")
                 .run(new Env(git, fails));
@@ -596,7 +598,7 @@ class WorktreeUpdateTest {
 
     @Test
     void anAddedWorktreeIsWhereTheLocationTakenFromTheWorkingTreeIs() {
-        Env env = new Env(StubGit.of(Path.of("/repos/app")), net.vanfleteren.jazygit.gh.StubGitHub.empty());
+        Env env = new Env(StubGit.of(Path.of("/repos/app")), net.vanfleteren.jazygit.gh.StubGitHub.of());
 
         Msg added = new AddWorktreeCmd(new WorktreeSource.Existing(FEATURE), "../app-feature").run(env);
 
@@ -810,7 +812,7 @@ class WorktreeUpdateTest {
                                 new GitError.WorktreeHasChanges("changed"),
                                 StubGit.executed("git worktree remove /repos/app-taken"))),
                         StubGit.ran("git worktree lock /repos/app-taken")),
-                net.vanfleteren.jazygit.gh.StubGitHub.empty());
+                net.vanfleteren.jazygit.gh.StubGitHub.of());
 
         assertEquals(
                 new RemoveWorktreeMsg.NeedsForce(
@@ -837,7 +839,7 @@ class WorktreeUpdateTest {
                         new java.util.ArrayList<>(),
                         Either.left(new GitFailure(new GitError.WorktreeHasChanges("changed"), List.empty())),
                         StubGit.refused("git worktree lock /repos/app-taken", "already locked")),
-                net.vanfleteren.jazygit.gh.StubGitHub.empty());
+                net.vanfleteren.jazygit.gh.StubGitHub.of());
 
         Msg failed = remove.run(changed);
 
@@ -913,7 +915,7 @@ class WorktreeUpdateTest {
         RemoveWorktreeCmd changed = new RemoveWorktreeCmd("/repos/app-changed", false, Option.of(TAKEN));
         assertEquals(
                 new RemoveWorktreeMsg.NeedsForce(changed, List.empty()),
-                changed.run(new Env(git, net.vanfleteren.jazygit.gh.StubGitHub.empty())));
+                changed.run(new Env(git, net.vanfleteren.jazygit.gh.StubGitHub.of())));
         assertEquals(java.util.List.of("remove /repos/app-changed false"), ran);
     }
 
@@ -934,7 +936,7 @@ class WorktreeUpdateTest {
                 });
         RemoveWorktreeCmd remove = new RemoveWorktreeCmd("/repos/app-taken", false, Option.of(TAKEN));
 
-        Msg failed = remove.run(new Env(git, net.vanfleteren.jazygit.gh.StubGitHub.empty()));
+        Msg failed = remove.run(new Env(git, net.vanfleteren.jazygit.gh.StubGitHub.of()));
 
         assertEquals(
                 remove.failed(Failure.of(new GitFailure(

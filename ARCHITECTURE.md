@@ -53,7 +53,7 @@ graph TD
     State["state.*<br/><i>Model, Msg, Update, Cmd, Program;<br/>load, view, diff, github,<br/>operation, index, popup, preferences</i>"]
     Git["git<br/><i>Git, its roles, CliGit, Cli*, GitProcess, GitError</i>"]
     GitModel["git.model<br/><i>Branch, Commit, RepoStatus, Sha, ...</i>"]
-    Gh["gh<br/><i>GitHub, CliGitHub, GhProcess, GhError</i>"]
+    Gh["gh<br/><i>GitHub, its roles, CliGitHub, Cli*, GhProcess, GhError</i>"]
     GhModel["gh.model<br/><i>PullRequest, PullRequestDetails, ...</i>"]
     Process["process<br/><i>Exec, ExecutedCommand, CommandLine</i>"]
     I18n["i18n<br/><i>Messages</i>"]
@@ -1071,9 +1071,16 @@ helpers. A test replaces the roles it needs on `StubGit.of()`, as in
 
 ## The GitHub layer
 
-`gh.GitHub` is what the TUI does with GitHub; `CliGitHub` does it with the `gh` command line tool, which finds
-the GitHub repository from the git remotes itself. It mirrors the git layer without depending on it:
+`gh.GitHub` is what the TUI does with GitHub; `CliGitHub` gives one that does it with the `gh` command line tool,
+which finds the GitHub repository from the git remotes itself. It mirrors the git layer without depending on it:
 `GhCommand` (run with `GH_PROMPT_DISABLED=1`), `GhProcess`, and its own errors, `GhError` and `GhFailure`.
+
+As the git operations are, the gh operations are split into roles (ADR 114): `PullRequests`, `Reviews` (the
+conversation and the review threads), `Checks`, `Stacks` and `Account` (who gh runs as, and everything it opens in
+the browser set for that account). Each is implemented by a package-private `Cli` class, such as `CliReviews`, and a
+`GitHub` record holds one of each (`gitHub.reviews().reply(number, comment, body)`). An ArchUnit rule keeps the
+application away from the `Cli` classes but `CliGitHub`. A test replaces the roles it needs on `StubGitHub.of()`, as
+in `StubGitHub.of().withPullRequests(new StubPullRequests() { … })`.
 
 - **Reading:** gh prints the JSON GitHub answers, without `--jq`, and `GhProcess.readJson` decodes it with a
   `Decoder` of `jazygit-json` (ADR 42). Each read is a class of its own, with its command, its GraphQL and its

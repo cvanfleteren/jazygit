@@ -232,7 +232,7 @@ class NukeBranchTest {
                 });
         NukeBranchCmd cmd = new NukeBranchCmd(FEATURE, Option.of("/repos/app-feature"), Option.of(ORIGIN_FEATURE));
 
-        Msg done = cmd.run(new Env(git, StubGitHub.empty()));
+        Msg done = cmd.run(new Env(git, StubGitHub.of()));
 
         assertEquals(java.util.List.of("remove /repos/app-feature", "delete feature", "delete origin/feature"), ran);
         OperationMsg.Succeeded succeeded = assertInstanceOf(OperationMsg.Succeeded.class, done);
@@ -267,7 +267,7 @@ class NukeBranchTest {
                 });
         NukeBranchCmd cmd = new NukeBranchCmd(FEATURE, Option.of("/repos/app-feature"), Option.of(ORIGIN_FEATURE));
 
-        Msg done = cmd.run(new Env(git, StubGitHub.empty()));
+        Msg done = cmd.run(new Env(git, StubGitHub.of()));
 
         assertEquals(java.util.List.of("delete origin/feature"), ran);
         NukeBranchMsg.NotAllNuked notAll = assertInstanceOf(NukeBranchMsg.NotAllNuked.class, done);

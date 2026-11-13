@@ -234,7 +234,7 @@ class OpenInEditorUpdateTest {
                 return result;
             }
         };
-        Env env = new Env(StubGit.of().withEditor(recording(events)), StubGitHub.empty())
+        Env env = new Env(StubGit.of().withEditor(recording(events)), StubGitHub.of())
                 .withApp(Repositories.NONE, terminal);
 
         Msg result = new OpenInEditorCmd(NVIM, LINKED_PATH.toString()).run(env);
@@ -253,7 +253,7 @@ class OpenInEditorUpdateTest {
                 return program.get();
             }
         };
-        Env env = new Env(StubGit.of().withEditor(recording(events)), StubGitHub.empty())
+        Env env = new Env(StubGit.of().withEditor(recording(events)), StubGitHub.of())
                 .withApp(Repositories.NONE, terminal);
 
         Msg result = new OpenInEditorCmd(IDEA, LINKED_PATH.toString()).run(env);
@@ -273,7 +273,7 @@ class OpenInEditorUpdateTest {
                                 List.empty()));
                     }
                 }),
-                StubGitHub.empty());
+                StubGitHub.of());
         OpenInEditorCmd cmd = new OpenInEditorCmd(IDEA, LINKED_PATH.toString());
 
         Model failed = Update.update(model(List.of(IDEA)), cmd.run(env)).model();

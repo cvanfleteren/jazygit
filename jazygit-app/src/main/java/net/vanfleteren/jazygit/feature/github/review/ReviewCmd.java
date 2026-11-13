@@ -92,18 +92,18 @@ public sealed interface ReviewCmd extends Cmd {
             return switch (target) {
                 case Target.Reply(var ignored, ReviewThread.Comment.RestId comment) ->
                     env.gitHub()
-                            .replyToReviewThread(number, comment, body)
+                            .reviews().reply(number, comment, body)
                             .mapLeft(Failure::of)
                             .fold(this::failed, this::succeeded);
                 case Target.Start(Sha commit, String path, var lines) ->
                     env.gitHub()
-                            .startReviewThread(
+                            .reviews().startThread(
                                     number, new GhCommit(commit.value()), new NewReviewThread(path, lines, body))
                             .mapLeft(Failure::of)
                             .fold(this::failed, this::succeeded);
                 case Target.Edit(var ignored, ReviewThread.Comment.Id comment, String original) ->
                     env.gitHub()
-                            .editReviewComment(comment, body)
+                            .reviews().editRemark(comment, body)
                             .mapLeft(Failure::of)
                             .fold(
                                     this::failed,
@@ -141,7 +141,7 @@ public sealed interface ReviewCmd extends Cmd {
         @Override
         public Msg run(Env env) {
             return env.gitHub()
-                    .resolveReviewThread(thread, resolved)
+                    .reviews().resolve(thread, resolved)
                     .mapLeft(Failure::of)
                     .fold(this::failed, this::succeeded);
         }
@@ -177,7 +177,7 @@ public sealed interface ReviewCmd extends Cmd {
         @Override
         public Msg run(Env env) {
             return env.gitHub()
-                    .deleteReviewComment(comment)
+                    .reviews().deleteRemark(comment)
                     .mapLeft(Failure::of)
                     .fold(this::failed, this::succeeded);
         }
@@ -213,7 +213,7 @@ public sealed interface ReviewCmd extends Cmd {
         @Override
         public Msg run(Env env) {
             return env.gitHub()
-                    .reactToReviewComment(comment, reaction, given)
+                    .reviews().react(comment, reaction, given)
                     .mapLeft(Failure::of)
                     .fold(this::failed, this::succeeded);
         }

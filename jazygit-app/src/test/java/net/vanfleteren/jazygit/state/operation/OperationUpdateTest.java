@@ -128,7 +128,7 @@ class OperationUpdateTest {
             }
         });
 
-        Msg msg = Program.perform(new Env(throwing, StubGitHub.empty()), PUSH);
+        Msg msg = Program.perform(new Env(throwing, StubGitHub.of()), PUSH);
 
         OperationMsg.Failed failed = assertInstanceOf(OperationMsg.Failed.class, msg);
         assertInstanceOf(Failure.Bug.class, failed.failure());
@@ -148,7 +148,7 @@ class OperationUpdateTest {
         });
         java.util.List<Throwable> bugs = new java.util.ArrayList<>();
 
-        Msg msg = Program.perform(new Env(throwing, StubGitHub.empty()), PUSH, bugs::add);
+        Msg msg = Program.perform(new Env(throwing, StubGitHub.of()), PUSH, bugs::add);
 
         assertInstanceOf(
                 Failure.Bug.class,
@@ -173,7 +173,7 @@ class OperationUpdateTest {
             }
         });
 
-        Msg msg = Program.perform(new Env(stopping, StubGitHub.empty()), MERGE);
+        Msg msg = Program.perform(new Env(stopping, StubGitHub.of()), MERGE);
 
         assertEquals(
                 new OperationMsg.Stopped(

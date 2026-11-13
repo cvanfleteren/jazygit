@@ -64,7 +64,7 @@ public sealed interface CommentCmd extends Cmd {
         @Override
         public Msg run(Env env) {
             return env.gitHub()
-                    .commentOnPullRequest(number, body)
+                    .reviews().comment(number, body)
                     .mapLeft(Failure::of)
                     .fold(this::failed, this::succeeded);
         }

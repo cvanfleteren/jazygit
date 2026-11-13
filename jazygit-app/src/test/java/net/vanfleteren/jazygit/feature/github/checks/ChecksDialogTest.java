@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.gh.GitHub;
 import net.vanfleteren.jazygit.gh.model.CheckRun;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
@@ -586,7 +587,7 @@ class ChecksDialogTest {
      * Pull request 42 of owner/repo, from main, with the checks {@code checks}.
      */
     private static PullRequestDetails pullRequest(List<Check> checks) {
-        PullRequestDetails stub = StubGitHub.empty().pullRequestDetails(42).get();
+        PullRequestDetails stub = StubGitHub.of().pullRequests().details(42).get();
         return new PullRequestDetails(
                 42,
                 stub.title(),

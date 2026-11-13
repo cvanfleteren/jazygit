@@ -48,7 +48,7 @@ class EditPullRequestDialogTest {
     private static final RemoteBranch MAIN = new RemoteBranch("origin", new BranchName("main"));
     private static final RemoteBranch RELEASE = new RemoteBranch("origin", new BranchName("release"));
     private static final PullRequestDetails DETAILS =
-            StubGitHub.empty().pullRequestDetails(42).get().withBody("Why");
+            StubGitHub.of().pullRequests().details(42).get().withBody("Why");
     private static final PullRequestPopup SHOWN = PullRequestPopup.loading(
                     new BranchName("feature"),
                     new PullRequest(42, new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED),

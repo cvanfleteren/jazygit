@@ -117,6 +117,16 @@ class ArchitectureTest {
                     .and(simpleNameStartingWith("Cli"))
                     .and(not(simpleName("CliGit"))));
     /**
+     * The application reaches GitHub through a {@code GitHub} and its roles, which {@code CliGitHub} gives for a real
+     * repository; the {@code Cli} classes behind the roles are none of its business (ADR 114).
+     */
+    @ArchTest
+    static final ArchRule gitHubIsReachedThroughItsRoles = noClasses()
+            .should()
+            .dependOnClassesThat(resideInAPackage("..jazygit.gh")
+                    .and(simpleNameStartingWith("Cli"))
+                    .and(not(simpleName("CliGitHub"))));
+    /**
      * {@code Exec} is the only place that starts a program.
      */
     @ArchTest

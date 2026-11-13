@@ -31,7 +31,7 @@ class SettingsUpdateTest {
     private static final SaveSettings SAVE = new SaveSettings(Settings.DEFAULT, DARCULA);
 
     private static Env env(SettingsStore settings) {
-        return new Env(StubGit.of(), StubGitHub.empty(), settings);
+        return new Env(StubGit.of(), StubGitHub.of(), settings);
     }
 
     private static SettingsStore saving(Either<SettingsProblem, Settings> outcome) {

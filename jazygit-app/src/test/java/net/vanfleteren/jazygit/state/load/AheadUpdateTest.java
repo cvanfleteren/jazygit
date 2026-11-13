@@ -162,7 +162,7 @@ class AheadUpdateTest {
         assertEquals(
                 new LoadMsg.AheadLoaded(
                         load, Option.of(new Ahead(FEATURE_TIP, origin("main"), List.empty(), false, Option.none()))),
-                load.run(new Env(StubGit.of(), StubGitHub.empty())));
+                load.run(new Env(StubGit.of(), StubGitHub.of())));
     }
 
     @Test

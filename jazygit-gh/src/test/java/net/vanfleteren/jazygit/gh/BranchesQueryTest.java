@@ -118,6 +118,6 @@ class BranchesQueryTest {
 
         assertEquals(
                 Either.left(new GhError.TooOld("2.48")),
-                new CliGitHub(dir, gh.toString(), GhToken.NONE).branchChecks());
+                CliGitHub.of(dir, gh.toString(), GhToken.NONE).checks().ofBranches());
     }
 }

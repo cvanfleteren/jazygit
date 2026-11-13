@@ -59,7 +59,7 @@ class AllFilesUpdateTest {
             }
         };
         return TestModels.program(
-                new Env(StubGit.of().withStatus(status), StubGitHub.empty()),
+                new Env(StubGit.of().withStatus(status), StubGitHub.of()),
                 Runnable::run,
                 Runnable::run,
                 Runnable::run);

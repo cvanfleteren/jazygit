@@ -25,6 +25,8 @@ import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.GhFailure;
 import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.gh.StubPullRequests;
+import net.vanfleteren.jazygit.gh.GitHub;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
@@ -73,21 +75,21 @@ class EditPullRequestUpdateTest {
     private static final PullRequest FEATURE_PR =
             new PullRequest(42, new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED);
     private static final PullRequestDetails DETAILS =
-            StubGitHub.empty().pullRequestDetails(42).get().withBody("Why");
+            StubGitHub.of().pullRequests().details(42).get().withBody("Why");
     private static final PullRequestPopup SHOWN = shown(DETAILS);
     private static final PullRequestFields OPENED = new PullRequestFields("A pull request", "Why", ORIGIN_MAIN, false);
     private static final EditPullRequestPopup EDITING =
             new EditPullRequestPopup(SHOWN, List.of(ORIGIN_MAIN, ORIGIN_RELEASE), OPENED, OPENED, true, true, false);
     private static final ExecutedCommand NVIM = ExecutedCommand.of("nvim", "PR_BODY.md");
     // GitHub, where making pull request 42 a draft fails.
-    private static final StubGitHub NOT_READY = new StubGitHub() {
+    private static final GitHub NOT_READY = StubGitHub.of().withPullRequests(new StubPullRequests() {
         @Override
         public Either<GhFailure, List<ExecutedCommand>> setDraft(int number, boolean draft) {
             return Either.left(new GhFailure(
                     new GhError.CommandFailed(Option.of("could not convert"), 1),
                     List.of(ExecutedCommand.of("gh", "pr", "ready", "42", "--undo"))));
         }
-    };
+});
 
     private static PullRequestPopup shown(PullRequestDetails details) {
         return PullRequestPopup.loading(FEATURE, FEATURE_PR, Instant.EPOCH, 0).with(Either.right(details), 0);
@@ -124,11 +126,11 @@ class EditPullRequestUpdateTest {
         return withBranches().openPopup(EDITING.withFields(fields));
     }
 
-    private static Env env(Git git, StubGitHub gitHub, Terminal terminal) {
+    private static Env env(Git git, GitHub gitHub, Terminal terminal) {
         return new Env(git, gitHub, SettingsStore.NONE, RecentRepositories.NONE, Repositories.NONE, terminal);
     }
 
-    private static Env env(StubGitHub gitHub) {
+    private static Env env(GitHub gitHub) {
         return env(StubGit.of(), gitHub, Terminal.NONE);
     }
 
@@ -356,7 +358,7 @@ class EditPullRequestUpdateTest {
         Next saving = saving(OPENED.withBody("Because"));
         SavePullRequest cmd = (SavePullRequest) saving.cmds().head();
 
-        Next saved = Update.update(saving.model(), cmd.run(env(StubGitHub.empty())));
+        Next saved = Update.update(saving.model(), cmd.run(env(StubGitHub.of())));
 
         assertEquals(
                 Option.of(SHOWN.readingAgain(Reading.BY_ITSELF, saved.model().now(), lastRead(saved.model()))),
@@ -374,7 +376,7 @@ class EditPullRequestUpdateTest {
         Next saving = saving(OPENED.withDraft(true));
         SavePullRequest cmd = (SavePullRequest) saving.cmds().head();
 
-        Next saved = Update.update(saving.model(), cmd.run(env(StubGitHub.empty())));
+        Next saved = Update.update(saving.model(), cmd.run(env(StubGitHub.of())));
 
         assertEquals(
                 List.of("gh pr ready 42 --undo"),
@@ -401,14 +403,14 @@ class EditPullRequestUpdateTest {
     void anEditGitHubRefusesKeepsThePopupWithWhatWasTypedAndShowsWhy() {
         Next saving = saving(OPENED.withTitle("New"));
         SavePullRequest cmd = (SavePullRequest) saving.cmds().head();
-        StubGitHub refusing = new StubGitHub() {
+        GitHub refusing = StubGitHub.of().withPullRequests(new StubPullRequests() {
             @Override
-            public Either<GhFailure, List<ExecutedCommand>> editPullRequest(int number, PullRequestEdit edit) {
+            public Either<GhFailure, List<ExecutedCommand>> edit(int number, PullRequestEdit edit) {
                 return Either.left(new GhFailure(
                         new GhError.CommandFailed(Option.of("could not edit: network down"), 1),
                         List.of(ExecutedCommand.of("gh", "pr", "edit", "42"))));
             }
-        };
+});
 
         Next failed = Update.update(saving.model(), cmd.run(env(refusing)));
 
@@ -503,7 +505,7 @@ class EditPullRequestUpdateTest {
 
         assertEquals(
                 new EditPullRequestMsg.EditorClosed("Because", List.of(NVIM)),
-                new EditBody("Why").run(env(git, StubGitHub.empty(), terminal)));
+                new EditBody("Why").run(env(git, StubGitHub.of(), terminal)));
         assertEquals(java.util.List.of("leave", "edit PR_BODY.md Why", "come back"), events);
     }
 
@@ -530,7 +532,7 @@ class EditPullRequestUpdateTest {
         });
 
         Model failed = Update.update(
-                        editing(OPENED), new EditBody("Why").run(env(git, StubGitHub.empty(), Terminal.NONE)))
+                        editing(OPENED), new EditBody("Why").run(env(git, StubGitHub.of(), Terminal.NONE)))
                 .model();
 
         assertEquals(Option.of(EDITING), failed.popup());

@@ -96,7 +96,7 @@ class ForceDeleteTest {
     }
 
     private static Env env(Git git) {
-        return new Env(git, StubGitHub.empty());
+        return new Env(git, StubGitHub.of());
     }
 
     @Test

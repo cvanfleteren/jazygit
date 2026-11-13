@@ -66,7 +66,7 @@ final class SummaryFragment {
     static final Decoder<Tuple5<Boolean, Boolean, Review, Checks, Instant>> STATE = map5(
             field("isDraft", bool()),
             field("isCrossRepository", bool()),
-            field("reviewDecision", nullable(string())).map(decision -> CliGitHub.review(decision.getOrElse(""))),
+            field("reviewDecision", nullable(string())).map(decision -> CliPullRequests.review(decision.getOrElse(""))),
             CHECKS,
             field("updatedAt", instant()),
             Tuple::of);

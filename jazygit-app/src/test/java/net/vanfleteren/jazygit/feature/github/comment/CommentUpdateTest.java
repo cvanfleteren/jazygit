@@ -28,6 +28,8 @@ import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.GhFailure;
 import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.gh.StubReviews;
+import net.vanfleteren.jazygit.gh.GitHub;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
@@ -65,7 +67,7 @@ class CommentUpdateTest {
     private static final PullRequest FEATURE_PR =
             new PullRequest(42, new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED);
     private static final PullRequestDetails DETAILS =
-            StubGitHub.empty().pullRequestDetails(42).get();
+            StubGitHub.of().pullRequests().details(42).get();
     private static final PullRequestPopup SHOWN =
             PullRequestPopup.loading(FEATURE, FEATURE_PR, Instant.EPOCH, 0).with(Either.right(DETAILS), 0);
     private static final ExecutedCommand NVIM = ExecutedCommand.of("nvim", "PR_COMMENT.md");
@@ -78,7 +80,7 @@ class CommentUpdateTest {
         return loaded().openPopup(CommentPopup.on(SHOWN).withText(text));
     }
 
-    private static Env env(Git git, StubGitHub gitHub, Terminal terminal) {
+    private static Env env(Git git, GitHub gitHub, Terminal terminal) {
         return new Env(git, gitHub, SettingsStore.NONE, RecentRepositories.NONE, Repositories.NONE, terminal);
     }
 
@@ -141,7 +143,7 @@ class CommentUpdateTest {
         Model busy = TestModels.running(commenting("Looks good"), drafting);
         Next sending = Update.update(busy, new CommentMsg.Confirmed());
         AddComment cmd = (AddComment) sending.cmds().head();
-        Env env = env(StubGit.of(), StubGitHub.empty(), Terminal.NONE);
+        Env env = env(StubGit.of(), StubGitHub.of(), Terminal.NONE);
 
         Model sent = Update.update(sending.model(), cmd.run(env)).model();
 
@@ -155,7 +157,7 @@ class CommentUpdateTest {
         SetDraft drafting = new SetDraft(FEATURE, 42, true);
         Model commenting = commenting("half a thought");
 
-        Model drafted = Update.update(commenting, drafting.run(env(StubGit.of(), StubGitHub.empty(), Terminal.NONE)))
+        Model drafted = Update.update(commenting, drafting.run(env(StubGit.of(), StubGitHub.of(), Terminal.NONE)))
                 .model();
         Model back = Update.update(drafted, new CommentMsg.Cancelled()).model();
 
@@ -232,7 +234,7 @@ class CommentUpdateTest {
         Next sending = Update.update(commenting, new CommentMsg.Confirmed());
         AddComment cmd = (AddComment) sending.cmds().head();
 
-        Next sent = Update.update(sending.model(), cmd.run(env(StubGit.of(), StubGitHub.empty(), Terminal.NONE)));
+        Next sent = Update.update(sending.model(), cmd.run(env(StubGit.of(), StubGitHub.of(), Terminal.NONE)));
 
         assertEquals(
                 Option.of(comments.withHighlighted(Option.none())
@@ -250,7 +252,7 @@ class CommentUpdateTest {
         Next sending = Update.update(commenting("Looks good"), new CommentMsg.Confirmed());
         AddComment cmd = (AddComment) sending.cmds().head();
 
-        Next sent = Update.update(sending.model(), cmd.run(env(StubGit.of(), StubGitHub.empty(), Terminal.NONE)));
+        Next sent = Update.update(sending.model(), cmd.run(env(StubGit.of(), StubGitHub.of(), Terminal.NONE)));
 
         assertEquals(
                 Option.of(SHOWN.readingAgain(Reading.BY_ITSELF, sent.model().now(), lastRead(sent.model()))),
@@ -289,14 +291,14 @@ class CommentUpdateTest {
     void aCommentGitHubRefusesKeepsThePopupWithTheCommentAndShowsWhy() {
         Next sending = Update.update(commenting("Looks good"), new CommentMsg.Confirmed());
         AddComment cmd = (AddComment) sending.cmds().head();
-        StubGitHub refusing = new StubGitHub() {
+        GitHub refusing = StubGitHub.of().withReviews(new StubReviews() {
             @Override
-            public Either<GhFailure, List<ExecutedCommand>> commentOnPullRequest(int number, String body) {
+            public Either<GhFailure, List<ExecutedCommand>> comment(int number, String body) {
                 return Either.left(new GhFailure(
                         new GhError.CommandFailed(Option.of("could not add comment: network down"), 1),
                         List.of(ExecutedCommand.of("gh", "pr", "comment", "42", "--body", body))));
             }
-        };
+});
 
         Next failed = Update.update(sending.model(), cmd.run(env(StubGit.of(), refusing, Terminal.NONE)));
 
@@ -339,7 +341,7 @@ class CommentUpdateTest {
 
         assertEquals(
                 new CommentMsg.EditorClosed("Looks good", List.of(NVIM)),
-                new EditComment("draft").run(env(git, StubGitHub.empty(), terminal)));
+                new EditComment("draft").run(env(git, StubGitHub.of(), terminal)));
         assertEquals(java.util.List.of("leave", "edit PR_COMMENT.md draft", "come back"), events);
     }
 
@@ -366,7 +368,7 @@ class CommentUpdateTest {
         });
 
         Model failed = Update.update(
-                        commenting("draft"), new EditComment("draft").run(env(git, StubGitHub.empty(), Terminal.NONE)))
+                        commenting("draft"), new EditComment("draft").run(env(git, StubGitHub.of(), Terminal.NONE)))
                 .model();
 
         assertEquals(Option.of(CommentPopup.on(SHOWN).withText("draft")), failed.popup());

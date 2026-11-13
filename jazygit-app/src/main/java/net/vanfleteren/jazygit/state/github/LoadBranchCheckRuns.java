@@ -28,7 +28,7 @@ public record LoadBranchCheckRuns(List<BranchName> branches) implements Cmd {
     @Override
     public Msg run(Env env) {
         return env.gitHub()
-                .branchCheckRuns(branches.map(BranchName::value))
+                .checks().runs(branches.map(BranchName::value))
                 .mapLeft(Failure::of)
                 .fold(this::failed, runs -> new BranchChecksMsg.RunsLoaded(PendingChecks.of(runs)));
     }

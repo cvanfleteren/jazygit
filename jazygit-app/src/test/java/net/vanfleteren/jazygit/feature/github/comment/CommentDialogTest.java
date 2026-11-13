@@ -41,7 +41,7 @@ class CommentDialogTest {
                     new PullRequest(42, new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED),
                     Instant.EPOCH,
                     0)
-            .with(Either.right(StubGitHub.empty().pullRequestDetails(42).get()), 0);
+            .with(Either.right(StubGitHub.of().pullRequests().details(42).get()), 0);
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     private Model model = TestModels.loaded().openPopup(CommentPopup.on(SHOWN));

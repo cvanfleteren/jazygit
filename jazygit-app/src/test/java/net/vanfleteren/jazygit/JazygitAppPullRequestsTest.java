@@ -17,6 +17,7 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.gh.StubPullRequests;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.MyPullRequests;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
@@ -39,7 +40,7 @@ class JazygitAppPullRequestsTest {
 
     @Test
     void enterMovesTheFocusToTheHighlightedPullRequestAndALetterDoesWhatTheKeymapSays() throws Exception {
-        TestApp app = new TestApp(new Env(SampleData.git(), new ReviewRequested()));
+        TestApp app = new TestApp(new Env(SampleData.git(), StubGitHub.of().withPullRequests(new ReviewRequested())));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {
             app.start(testRunner);
             Pilot pilot = SettledPilot.of(testRunner, app.drawnAt::size);
@@ -75,7 +76,7 @@ class JazygitAppPullRequestsTest {
 
     @Test
     void qAndCtrlCDoNotQuitFromTheMarkdownDialog() throws Exception {
-        TestApp app = new TestApp(new Env(SampleData.git(), new ReviewRequested()));
+        TestApp app = new TestApp(new Env(SampleData.git(), StubGitHub.of().withPullRequests(new ReviewRequested())));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {
             app.start(testRunner);
             Pilot pilot = SettledPilot.of(testRunner, app.drawnAt::size);
@@ -109,10 +110,10 @@ class JazygitAppPullRequestsTest {
     /**
      * GitHub, where the user's review is requested on one pull request.
      */
-    private static final class ReviewRequested implements StubGitHub {
+    private static final class ReviewRequested implements StubPullRequests {
 
         @Override
-        public Either<GhError, MyPullRequests> myPullRequests() {
+        public Either<GhError, MyPullRequests> mine() {
             return Either.right(new MyPullRequests(
                     new PullRequestList(
                             List.of(new PullRequestSummary(

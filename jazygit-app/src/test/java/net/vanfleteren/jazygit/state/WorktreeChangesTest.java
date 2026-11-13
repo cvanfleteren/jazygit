@@ -129,7 +129,7 @@ class WorktreeChangesTest {
         assertTrue(load.background());
         assertEquals(
                 new LoadMsg.WorktreeChangesLoaded(load.worktrees(), HashMap.of(LINKED.toString(), true)),
-                load.run(new Env(git, StubGitHub.empty())));
+                load.run(new Env(git, StubGitHub.of())));
     }
 
     @Test

@@ -33,7 +33,7 @@ public record LoadPullRequestPreview(PullRequestSummary key) implements Cmd {
     @Override
     public Msg run(Env env) {
         return env.gitHub()
-                .pullRequestPreview(key.url())
+                .pullRequests().preview(key.url())
                 .mapLeft(Failure::of)
                 .fold(this::failed, preview -> new PrOverviewMsg.PreviewLoaded(key, preview));
     }

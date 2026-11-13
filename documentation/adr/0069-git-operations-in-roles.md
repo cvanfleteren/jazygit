@@ -112,3 +112,5 @@ Amended by ADR 71: `CliBaseDistance` and `CliPullRequest` stay helpers of their 
 within their role, and the tests are split per role in a later change.
 
 Amended by ADR 75: `GitFailure` is no longer generic, and `ProcessError` is folded into `GitError`.
+
+Amended by ADR 114: the GitHub operations are split into roles as well, as decision 8 left open.

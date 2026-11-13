@@ -42,7 +42,7 @@ class CliGitHubTest {
                         + "echo \" $* \" > '" + dir.resolve("asked") + "'\n"
                         + "cat <<'EOF'\n" + answer + "\nEOF\n");
         gh.toFile().setExecutable(true);
-        return new CliGitHub(dir, gh.toString(), GhToken.NONE).pullRequestDetails(95);
+        return CliGitHub.of(dir, gh.toString(), GhToken.NONE).pullRequests().details(95);
     }
 
     @Test
@@ -63,7 +63,7 @@ class CliGitHubTest {
     void browsingOpensTheBranchByItsNameOnTheRemote() {
         assertEquals(
                 List.of("gh", "browse", "--branch", "feature/login"),
-                CliGitHub.browseCommand(new GhBranch("feature/login")).commandLine("gh"));
+                CliAccount.browseCommand(new GhBranch("feature/login")).commandLine("gh"));
     }
 
     @Test
@@ -81,7 +81,7 @@ class CliGitHubTest {
                         "Add login",
                         "--body",
                         ""),
-                CliGitHub.createCommand(
+                CliPullRequests.createCommand(
                                 new GhBranch("feature"),
                                 new GhBranch("main"),
                                 new NewPullRequest("Add login", "", false))
@@ -101,7 +101,7 @@ class CliGitHubTest {
                         "--body",
                         "Why",
                         "--draft"),
-                CliGitHub.createCommand(
+                CliPullRequests.createCommand(
                                 new GhBranch("feature"),
                                 new GhBranch("main"),
                                 new NewPullRequest("Add login", "Why", true))
@@ -113,14 +113,14 @@ class CliGitHubTest {
     void aCommentIsAddedWithItsBodyAsTyped() {
         assertEquals(
                 List.of("gh", "pr", "comment", "12", "--body", "Looks good\n\n- one nit"),
-                CliGitHub.commentCommand(12, "Looks good\n\n- one nit")
+                CliReviews.commentCommand(12, "Looks good\n\n- one nit")
                         .executed()
                         .commandLine());
     }
 
     @Test
     void aCommentOfTheConversationIsDeletedByItsNodeId() {
-        List<String> args = CliGitHub.deleteCommentCommand(new PullRequestComment.Id("IC_1"))
+        List<String> args = CliReviews.deleteCommentCommand(new PullRequestComment.Id("IC_1"))
                 .executed()
                 .commandLine();
 
@@ -133,24 +133,26 @@ class CliGitHubTest {
      * A gh that fails as GitHub answers a mutation on a node it does not have, or, when not gone, as it answers one
      * the viewer may not make.
      */
-    private static CliGitHub failing(Path dir, boolean gone) throws Exception {
+    private static GitHub failing(Path dir, boolean gone) throws Exception {
         String answer = gone
                 ? "echo '{\"errors\":[{\"type\":\"NOT_FOUND\"}]}'\n"
                         + "echo \"gh: Could not resolve to a node with the global id of 'IC_1'.\" >&2\n"
                 : "echo 'gh: Resource not accessible by integration' >&2\n";
         Path gh = Files.writeString(dir.resolve("gh"), "#!/bin/sh\n" + answer + "exit 1\n");
         gh.toFile().setExecutable(true);
-        return new CliGitHub(dir, gh.toString(), GhToken.NONE);
+        return CliGitHub.of(dir, gh.toString(), GhToken.NONE);
     }
 
     @Test
     void aCommentThatIsGoneAlreadyCountsAsDeleted(@TempDir Path dir) throws Exception {
         assumeTrue(Files.isExecutable(Path.of("/bin/sh")), "no POSIX shell");
-        CliGitHub gitHub = failing(dir, true);
+        GitHub gitHub = failing(dir, true);
 
-        assertTrue(gitHub.deleteReviewComment(new ReviewThread.Comment.Id("PRRC_1"))
+        assertTrue(gitHub.reviews()
+                .deleteRemark(new ReviewThread.Comment.Id("PRRC_1"))
                 .isRight());
-        assertTrue(gitHub.deletePullRequestComment(new PullRequestComment.Id("IC_1"))
+        assertTrue(gitHub.reviews()
+                .deleteComment(new PullRequestComment.Id("IC_1"))
                 .isRight());
     }
 
@@ -161,14 +163,15 @@ class CliGitHubTest {
         assertEquals(
                 new GhError.CommandFailed(Option.of("gh: Resource not accessible by integration"), 1),
                 failing(dir, false)
-                        .deleteReviewComment(new ReviewThread.Comment.Id("PRRC_1"))
+                        .reviews()
+                        .deleteRemark(new ReviewThread.Comment.Id("PRRC_1"))
                         .getLeft()
                         .error());
     }
 
     @Test
     void aCommentOfTheConversationIsEditedByItsNodeIdWithItsBodyAsTyped() {
-        List<String> args = CliGitHub.editCommentCommand(new PullRequestComment.Id("IC_1"), "@all see")
+        List<String> args = CliReviews.editCommentCommand(new PullRequestComment.Id("IC_1"), "@all see")
                 .executed()
                 .commandLine();
 
@@ -178,10 +181,10 @@ class CliGitHubTest {
     }
 
     // A gh that answers an edit with answer.
-    private static CliGitHub answering(Path dir, String answer) throws Exception {
+    private static GitHub answering(Path dir, String answer) throws Exception {
         Path gh = Files.writeString(dir.resolve("gh"), "#!/bin/sh\ncat <<'EOF'\n" + answer + "\nEOF\n");
         gh.toFile().setExecutable(true);
-        return new CliGitHub(dir, gh.toString(), GhToken.NONE);
+        return CliGitHub.of(dir, gh.toString(), GhToken.NONE);
     }
 
     @Test
@@ -192,7 +195,8 @@ class CliGitHubTest {
                 "Fixed",
                 answering(dir, """
                                 {"data": {"updateIssueComment": {"issueComment": {"body": "Fixed"}}}}""")
-                        .editPullRequestComment(new PullRequestComment.Id("IC_1"), "Fixed ")
+                        .reviews()
+                        .editComment(new PullRequestComment.Id("IC_1"), "Fixed ")
                         .get()
                         .body());
         assertEquals(
@@ -200,7 +204,8 @@ class CliGitHubTest {
                 answering(dir, """
                                 {"data": {"updatePullRequestReviewComment": \
                                 {"pullRequestReviewComment": {"body": "Fixed"}}}}""")
-                        .editReviewComment(new ReviewThread.Comment.Id("PRRC_1"), "Fixed ")
+                        .reviews()
+                        .editRemark(new ReviewThread.Comment.Id("PRRC_1"), "Fixed ")
                         .get()
                         .body());
     }
@@ -208,16 +213,18 @@ class CliGitHubTest {
     @Test
     void anEditOfACommentThatIsGoneFailsAsGone(@TempDir Path dir) throws Exception {
         assumeTrue(Files.isExecutable(Path.of("/bin/sh")), "no POSIX shell");
-        CliGitHub gitHub = failing(dir, true);
+        GitHub gitHub = failing(dir, true);
 
         assertEquals(
                 new GhError.Gone(),
-                gitHub.editReviewComment(new ReviewThread.Comment.Id("PRRC_1"), "Fixed")
+                gitHub.reviews()
+                        .editRemark(new ReviewThread.Comment.Id("PRRC_1"), "Fixed")
                         .getLeft()
                         .error());
         assertEquals(
                 new GhError.Gone(),
-                gitHub.editPullRequestComment(new PullRequestComment.Id("IC_1"), "Fixed")
+                gitHub.reviews()
+                        .editComment(new PullRequestComment.Id("IC_1"), "Fixed")
                         .getLeft()
                         .error());
     }
@@ -226,12 +233,12 @@ class CliGitHubTest {
     void anEditOnlyPassesWhatItChanges() {
         assertEquals(
                 List.of("gh", "pr", "edit", "12", "--body", ""),
-                CliGitHub.editCommand(12, new PullRequestEdit(Option.none(), Option.of(""), Option.none()))
+                CliPullRequests.editCommand(12, new PullRequestEdit(Option.none(), Option.of(""), Option.none()))
                         .executed()
                         .commandLine());
         assertEquals(
                 List.of("gh", "pr", "edit", "12", "--title", "Add login", "--body", "Why\n", "--base", "release"),
-                CliGitHub.editCommand(
+                CliPullRequests.editCommand(
                                 12,
                                 new PullRequestEdit(
                                         Option.of("Add login"), Option.of("Why\n"), Option.of(new GhBranch("release"))))
@@ -241,18 +248,18 @@ class CliGitHubTest {
 
     @Test
     void theVersionIsInTheFirstLine() {
-        assertEquals(Either.right("2.102.0"), CliGitHub.parseVersion("""
+        assertEquals(Either.right("2.102.0"), CliAccount.parseVersion("""
                 gh version 2.102.0 (2026-09-30)
                 https://github.com/cli/cli/releases/tag/v2.102.0
                 """));
         assertEquals(
                 Either.left(new GhError.UnexpectedOutput("Usage: something else")),
-                CliGitHub.parseVersion("Usage: something else"));
+                CliAccount.parseVersion("Usage: something else"));
     }
 
     @Test
     void ghRunsFromItsExecutableButIsLoggedAsGh() {
-        GhCommand command = CliGitHub.browseCommand(new GhBranch("main"));
+        GhCommand command = CliAccount.browseCommand(new GhBranch("main"));
 
         assertEquals("/opt/gh/bin/gh", command.commandLine("/opt/gh/bin/gh").head());
         assertEquals(
@@ -262,16 +269,17 @@ class CliGitHubTest {
     @Test
     void theNumberOfACreatedPullRequestIsInTheUrlGhPrints() {
         assertEquals(
-                Option.of(12), CliGitHub.createdNumber("\nCreating pull request...\nhttps://github.com/o/r/pull/12\n"));
-        assertEquals(Option.none(), CliGitHub.createdNumber("nothing useful"));
+                Option.of(12),
+                CliPullRequests.createdNumber("\nCreating pull request...\nhttps://github.com/o/r/pull/12\n"));
+        assertEquals(Option.none(), CliPullRequests.createdNumber("nothing useful"));
     }
 
     @Test
     void readsTheReviewDecision() {
-        assertEquals(Review.REQUIRED, CliGitHub.review("REVIEW_REQUIRED"));
-        assertEquals(Review.APPROVED, CliGitHub.review("APPROVED"));
-        assertEquals(Review.CHANGES_REQUESTED, CliGitHub.review("CHANGES_REQUESTED"));
-        assertEquals(Review.NONE, CliGitHub.review(""));
+        assertEquals(Review.REQUIRED, CliPullRequests.review("REVIEW_REQUIRED"));
+        assertEquals(Review.APPROVED, CliPullRequests.review("APPROVED"));
+        assertEquals(Review.CHANGES_REQUESTED, CliPullRequests.review("CHANGES_REQUESTED"));
+        assertEquals(Review.NONE, CliPullRequests.review(""));
     }
 
     @Test
@@ -329,8 +337,9 @@ class CliGitHubTest {
                         + "esac\n");
         gh.toFile().setExecutable(true);
 
-        PullRequestDetails details = new CliGitHub(dir, gh.toString(), GhToken.NONE)
-                .pullRequestDetails(95)
+        PullRequestDetails details = CliGitHub.of(dir, gh.toString(), GhToken.NONE)
+                .pullRequests()
+                .details(95)
                 .get();
 
         assertEquals(95, details.number());
@@ -362,7 +371,7 @@ class CliGitHubTest {
         gh.toFile().setExecutable(true);
 
         Either<GhFailure, List<ExecutedCommand>> outcome =
-                new CliGitHub(main, gh.toString(), GhToken.NONE).checkoutPullRequest(9, Path.of("../other"));
+                CliGitHub.of(main, gh.toString(), GhToken.NONE).pullRequests().checkout(9, Path.of("../other"));
 
         assertEquals(
                 new GhError.CommandFailed(Option.of(other + " pr checkout 9"), 1),
@@ -376,13 +385,15 @@ class CliGitHubTest {
         assertEquals(
                 new GhError.Gone(),
                 failing(dir, true)
-                        .reactToReviewComment(new ReviewThread.Comment.Id("PRRC_1"), Reaction.EYES, true)
+                        .reviews()
+                        .react(new ReviewThread.Comment.Id("PRRC_1"), Reaction.EYES, true)
                         .getLeft()
                         .error());
         assertEquals(
                 new GhError.CommandFailed(Option.of("gh: Resource not accessible by integration"), 1),
                 failing(dir, false)
-                        .reactToReviewComment(new ReviewThread.Comment.Id("PRRC_1"), Reaction.EYES, false)
+                        .reviews()
+                        .react(new ReviewThread.Comment.Id("PRRC_1"), Reaction.EYES, false)
                         .getLeft()
                         .error());
     }

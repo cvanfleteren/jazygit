@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import net.vanfleteren.jazygit.feature.github.comment.CommentMsg;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.gh.GitHub;
 import net.vanfleteren.jazygit.gh.model.CommentRights;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
@@ -48,7 +49,7 @@ class CommentsDialogTest {
                     new PullRequest(42, new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED),
                     Instant.EPOCH,
                     0)
-            .with(Either.right(StubGitHub.empty().pullRequestDetails(42).get()), 0);
+            .with(Either.right(StubGitHub.of().pullRequests().details(42).get()), 0);
     private static final Size WIDE = new Size(140, 30);
     // Under 100 columns, the list is above the comment, a third of the popup high.
     private static final Size NARROW = new Size(90, 24);
@@ -321,8 +322,8 @@ class CommentsDialogTest {
     @Test
     void clickingAReferenceOrABareURLInTheCommentOpensIt() throws Exception {
         PullRequestPopup ofRepository = SHOWN.with(
-                Either.right(StubGitHub.empty()
-                        .pullRequestDetails(42)
+                Either.right(StubGitHub.of()
+                        .pullRequests().details(42)
                         .get()
                         .withRepository("owner/repo")
                         .withUrl("https://github.com/owner/repo")),

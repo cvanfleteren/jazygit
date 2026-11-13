@@ -9,6 +9,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.gh.GitHub;
 import net.vanfleteren.jazygit.gh.model.GhAccount;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
@@ -143,7 +144,7 @@ class PullRequestsUpdateTest {
                 Update.update(loaded(), new PullRequestsMsg.Refresh()).cmds());
         assertInstanceOf(
                 PrOverviewMsg.RepositoryLoaded.class,
-                new LoadRepositoryPullRequests().run(new Env(StubGit.of(), StubGitHub.empty())));
+                new LoadRepositoryPullRequests().run(new Env(StubGit.of(), StubGitHub.of())));
     }
 
     @Test

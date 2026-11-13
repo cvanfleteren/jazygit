@@ -69,7 +69,7 @@ class ReadWholeFileTest {
     private static String read(Source source) {
         ReadWholeFile read = new ReadWholeFile(
                 new AreaId("area"), new ScrolledContent.Diff(DiffText.of("")), source, "a.txt", DiffOptions.DEFAULT);
-        LoadMsg.WholeFileRead msg = (LoadMsg.WholeFileRead) read.run(new Env(git(), StubGitHub.empty()));
+        LoadMsg.WholeFileRead msg = (LoadMsg.WholeFileRead) read.run(new Env(git(), StubGitHub.of()));
         assertEquals(read, msg.cmd());
         return msg.whole().text();
     }

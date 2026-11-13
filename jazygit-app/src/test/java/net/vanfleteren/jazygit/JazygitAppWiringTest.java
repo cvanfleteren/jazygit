@@ -96,7 +96,7 @@ class JazygitAppWiringTest {
     @Test
     void theStatusIsReadAgainWithoutInput() throws Exception {
         AtomicInteger reads = new AtomicInteger();
-        TestApp app = new TestApp(new Env(new CountsStatus(reads).git(), StubGitHub.empty()));
+        TestApp app = new TestApp(new Env(new CountsStatus(reads).git(), StubGitHub.of()));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, TestApp.SIZE, tickless())) {
             app.start(testRunner);
             int started = reads.get();

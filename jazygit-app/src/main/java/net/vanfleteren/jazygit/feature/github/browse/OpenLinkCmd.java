@@ -27,6 +27,6 @@ public record OpenLinkCmd(String url) implements OperationCmd {
 
     @Override
     public Msg run(Env env) {
-        return env.gitHub().openLink(url).mapLeft(Failure::of).fold(this::failed, this::succeeded);
+        return env.gitHub().account().openLink(url).mapLeft(Failure::of).fold(this::failed, this::succeeded);
     }
 }

@@ -16,6 +16,8 @@ import java.util.function.UnaryOperator;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.gh.StubChecks;
+import net.vanfleteren.jazygit.gh.GitHub;
 import net.vanfleteren.jazygit.gh.model.CheckRun;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
@@ -105,7 +107,7 @@ class CheckTimesUpdateTest {
     }
 
     private static Env env(CheckTimingsStore store) {
-        return new Env(StubGit.of(), StubGitHub.empty(), null, null, null, store, Repositories.NONE, Terminal.NONE);
+        return new Env(StubGit.of(), StubGitHub.of(), null, null, null, store, Repositories.NONE, Terminal.NONE);
     }
 
     /**
@@ -284,12 +286,12 @@ class CheckTimesUpdateTest {
         AtomicReference<Kept> file = new AtomicReference<>(new Kept(List.of(learned), Option.of(other)));
         Env env = new Env(
                 StubGit.of(),
-                new StubGitHub() {
+                StubGitHub.of().withChecks(new StubChecks() {
                     @Override
-                    public Either<GhError, RecentChecks> recentChecks() {
+                    public Either<GhError, RecentChecks> recent() {
                         throw new AssertionError("read from GitHub again");
                     }
-                },
+}),
                 null,
                 null,
                 null,

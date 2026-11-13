@@ -30,7 +30,7 @@ class ThemeCmdTest {
                     return Either.right(List.empty());
                 }
             }),
-            StubGitHub.empty());
+            StubGitHub.of());
 
     @Test
     void aThemeIsKeptByItsId() {

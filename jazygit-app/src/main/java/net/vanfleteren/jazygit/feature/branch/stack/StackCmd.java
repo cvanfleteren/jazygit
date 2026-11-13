@@ -65,7 +65,7 @@ public sealed interface StackCmd extends OperationCmd {
 
         @Override
         public Msg run(Env env) {
-            return env.gitHub().unstack(stack).mapLeft(Failure::of).fold(this::failed, this::succeeded);
+            return env.gitHub().stacks().unstack(stack).mapLeft(Failure::of).fold(this::failed, this::succeeded);
         }
 
         @Override
@@ -123,14 +123,14 @@ public sealed interface StackCmd extends OperationCmd {
                     Either.right(List.empty()),
                     (done, change) -> done.flatMap(commands -> partly(
                             commands,
-                            gitHub.editPullRequest(
+                            gitHub.pullRequests().edit(
                                     change.number(),
                                     new PullRequestEdit(Option.none(), Option.none(), Option.of(change.to()))))));
             return rebased.flatMap(commands -> partly(
                             commands,
                             stack.fold(
-                                    () -> gitHub.createStack(pullRequests),
-                                    number -> gitHub.addToStack(number, pullRequests))))
+                                    () -> gitHub.stacks().create(pullRequests),
+                                    number -> gitHub.stacks().add(number, pullRequests))))
                     .mapLeft(Failure::of)
                     .fold(this::failed, this::succeeded);
         }

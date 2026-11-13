@@ -26,7 +26,7 @@ public record LoadRepositoryPullRequests() implements Cmd {
     @Override
     public Msg run(Env env) {
         return env.gitHub()
-                .repositoryPullRequests()
+                .pullRequests().ofRepository()
                 .mapLeft(Failure::of)
                 .fold(
                         this::failed,
