@@ -312,18 +312,16 @@ public final class ScrollArea {
                     .getOrElse(EventResult.HANDLED);
         }
         if (event.kind() == MouseEventKind.SCROLL_UP) {
-            return cursor.map(on -> moved(on.scrolled(-WHEEL_LINES), content))
-                    .getOrElse(() -> {
-                        state.scrollUp(WHEEL_LINES);
-                        return scrolled(content);
-                    });
+            return cursor.map(on -> moved(on.scrolled(-WHEEL_LINES), content)).getOrElse(() -> {
+                state.scrollUp(WHEEL_LINES);
+                return scrolled(content);
+            });
         }
         if (event.kind() == MouseEventKind.SCROLL_DOWN) {
-            return cursor.map(on -> moved(on.scrolled(WHEEL_LINES), content))
-                    .getOrElse(() -> {
-                        state.scrollDown(WHEEL_LINES);
-                        return scrolled(content);
-                    });
+            return cursor.map(on -> moved(on.scrolled(WHEEL_LINES), content)).getOrElse(() -> {
+                state.scrollDown(WHEEL_LINES);
+                return scrolled(content);
+            });
         }
         return EventResult.UNHANDLED;
     }
@@ -509,8 +507,8 @@ public final class ScrollArea {
         Option<Integer> row(Anchor anchor, int near) {
             return DiffCursor.index(stops, anchor, near)
                     .map(index -> stops.get(index).row())
-                    .orElse(() -> places.find(place -> place.anchor().equals(anchor))
-                            .map(RichDiff.Place::row));
+                    .orElse(() ->
+                            places.find(place -> place.anchor().equals(anchor)).map(RichDiff.Place::row));
         }
 
         /**
