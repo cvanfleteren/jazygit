@@ -28,4 +28,34 @@ public record AreaId(String value) {
      * The area of a file without changes highlighted among all files of the working tree (ADR 108).
      */
     public static final AreaId FILE_CONTENT = new AreaId("file-content");
+
+    /**
+     * The area of the commit highlighted in the commits pane.
+     */
+    public static final AreaId COMMIT = new AreaId("commit-changes");
+
+    /**
+     * The area of what the stash highlighted in the stash pane stashed.
+     */
+    public static final AreaId STASH = new AreaId("stash-changes");
+
+    /**
+     * The area of the commit highlighted in the divergence the branches pane lists.
+     */
+    public static final AreaId DIVERGENCE = new AreaId("divergence-commit");
+
+    /**
+     * The area of the commit highlighted in the commits of a branch the branches pane lists.
+     */
+    public static final AreaId BRANCH_COMMIT = new AreaId("branch-commit");
+
+    /**
+     * The area of the pull request highlighted in whichever list of the pull requests screen is in use.
+     */
+    public static final AreaId PULL_REQUEST = new AreaId("pull-request-preview");
+
+    /**
+     * The area of the log of the branch highlighted in the branches pane.
+     */
+    public static final AreaId LOG = new AreaId("branch-log");
 }

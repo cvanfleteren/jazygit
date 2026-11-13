@@ -162,12 +162,11 @@ public final class VersionUpdate {
                 content.shown()
                         .value()
                         .toOption()
-                        .flatMap(read -> read instanceof FileContent.Text(DiffText asDiff)
-                                ? Option.of(Tuple.<AreaId, ScrolledContent>of(
-                                        AreaId.FILE_CONTENT,
-                                        new ScrolledContent.Unchanged(
-                                                content.shown().key(), asDiff)))
-                                : Option.none())
+                        .filter(FileContent.Text.class::isInstance)
+                        .map(FileContent.Text.class::cast)
+                        .map(text -> Tuple.<AreaId, ScrolledContent>of(
+                                AreaId.FILE_CONTENT,
+                                new ScrolledContent.Unchanged(content.shown().key(), text.asDiff())))
                         .toList();
             case UnchangedNode.Directory _ -> List.empty();
         };

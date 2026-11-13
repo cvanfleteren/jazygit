@@ -53,8 +53,8 @@ public final class VersionAction {
                         onFile("ctrl+t", "help.files.render", VersionMsg.FilesRenderToggled::new))
                 .add(
                         Scopes.COMMIT_FILES,
-                        onFile("ctrl+o", "help.files.version", VersionMsg.FilesCycled::new),
-                        onFile("ctrl+t", "help.files.render", VersionMsg.FilesRenderToggled::new));
+                        onFile("ctrl+o", "help.commitFiles.version", VersionMsg.FilesCycled::new),
+                        onFile("ctrl+t", "help.commitFiles.render", VersionMsg.FilesRenderToggled::new));
     }
 
     /**

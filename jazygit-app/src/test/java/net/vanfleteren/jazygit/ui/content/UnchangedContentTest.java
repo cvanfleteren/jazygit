@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.ui.content;
 import static org.junit.jupiter.api.Assertions.*;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
+import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.diff.VersionMsg;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
@@ -96,6 +97,37 @@ class UnchangedContentTest {
         Update.Next rendered = Update.update(shown, new VersionMsg.RenderToggled(at));
         assertTrue(rendered.cmds().isEmpty());
         assertTrue(rendered.model().repoView().versions().get(area).exists(version -> version.rendered()));
+    }
+
+    @Test
+    void fromTheFilesPaneCtrlTRendersItWithoutReadingItAgainAndCtrlODoesNothing() throws Exception {
+        Model shown = showing("README.md", new FileContent.Text(DiffText.of(README)));
+
+        assertEquals(shown, Update.update(shown, new VersionMsg.FilesCycled()).model());
+
+        Update.Next rendered = Update.update(shown, new VersionMsg.FilesRenderToggled());
+        assertTrue(rendered.cmds().isEmpty());
+        assertTrue(rendered.model()
+                .repoView()
+                .versions()
+                .get(ContentArea.FILE_CONTENT.id())
+                .exists(version -> version.rendered()));
+        // Kept with what the area shows, so drawn: the title says it is rendered.
+        String screen = screen(rendered.model());
+        assertTrue(screen.contains("File · rendered"), screen);
+    }
+
+    @Test
+    void fromTheFilesPaneADirectoryOrWhatIsNoTextShowsNoVersion() {
+        List.of(showing(new UnchangedNode.Directory("docs", 3)), showing("logo.png", new FileContent.Binary(12_800)))
+                .forEach(shown -> {
+                    Update.Next cycled = Update.update(shown, new VersionMsg.FilesCycled());
+                    Update.Next rendered = Update.update(shown, new VersionMsg.FilesRenderToggled());
+                    assertEquals(shown, cycled.model());
+                    assertEquals(shown, rendered.model());
+                    assertTrue(cycled.cmds().isEmpty());
+                    assertTrue(rendered.cmds().isEmpty());
+                });
     }
 
     @Test
