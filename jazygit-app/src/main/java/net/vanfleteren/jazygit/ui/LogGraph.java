@@ -9,7 +9,7 @@ import net.vanfleteren.jazygit.git.model.CommitGraph;
 /**
  * The rails of a commit graph as text, like {@code git log --graph} draws them.
  */
-final class LogGraph {
+public final class LogGraph {
 
     private LogGraph() {}
 
@@ -17,7 +17,7 @@ final class LogGraph {
      * The gutters of the commits of {@code nodes}, in their order. Like git, a rail that comes to wait for the same
      * commit as a rail to its left ends right away, so it is no longer drawn where it would join that commit.
      */
-    static List<Gutter> gutters(List<CommitGraph.Node> nodes) {
+    public static List<Gutter> gutters(List<CommitGraph.Node> nodes) {
         return nodes.foldLeft(new Drawn(List.empty(), List.empty()), Drawn::next)
                 .latestFirst()
                 .reverse();
@@ -122,14 +122,14 @@ final class LogGraph {
      * @param next    before the lines after the first one, in order, until {@code rest} takes over
      * @param rest    before each line after those
      */
-    record Gutter(List<String> joining, String first, Option<String> opening, List<String> next, String rest) {
+    public record Gutter(List<String> joining, String first, Option<String> opening, List<String> next, String rest) {
 
         /**
          * The {@code lines} with the rails before them, after the lines on which rails join, and for a merge the
          * line {@code openingText} after the first one; no lines stay none. Blank lines are added when {@code next}
          * needs more lines than there are.
          */
-        List<String> draw(List<String> lines, String openingText) {
+        public List<String> draw(List<String> lines, String openingText) {
             List<String> padded = lines.isEmpty()
                     ? lines
                     : lines.appendAll(List.fill(Math.max(0, 1 + next.size() - lines.size()), ""));

@@ -6,7 +6,7 @@ import net.vanfleteren.jazygit.state.Failure;
 /**
  * What a list shows for data that is still loading or failed to load.
  */
-final class Placeholders {
+public final class Placeholders {
 
     private Placeholders() {}
 
@@ -14,7 +14,7 @@ final class Placeholders {
         return Messages.get("placeholder.loading");
     }
 
-    static String error(Failure failure) {
+    public static String error(Failure failure) {
         return Messages.get("placeholder.error", ErrorText.of(failure));
     }
 }

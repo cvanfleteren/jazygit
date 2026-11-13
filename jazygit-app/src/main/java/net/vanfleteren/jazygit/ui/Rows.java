@@ -20,7 +20,7 @@ import java.util.function.UnaryOperator;
  * @param lines what draws each line, in order
  * @param drawn the lines kept drawn, by index
  */
-record Rows(Vector<Supplier<Line>> lines, Map<Integer, Line> drawn) {
+public record Rows(Vector<Supplier<Line>> lines, Map<Integer, Line> drawn) {
 
     /**
      * {@code lines}, drawn already.
@@ -32,7 +32,7 @@ record Rows(Vector<Supplier<Line>> lines, Map<Integer, Line> drawn) {
     /**
      * The lines {@code lines} draws.
      */
-    static Rows drawn(Seq<Supplier<Line>> lines) {
+    public static Rows drawn(Seq<Supplier<Line>> lines) {
         return new Rows(lines.toVector(), HashMap.empty());
     }
 
@@ -43,21 +43,21 @@ record Rows(Vector<Supplier<Line>> lines, Map<Integer, Line> drawn) {
         return () -> line;
     }
 
-    int size() {
+    public int size() {
         return lines.size();
     }
 
     /**
      * Line {@code index}, drawn.
      */
-    Line get(int index) {
+    public Line get(int index) {
         return drawn.get(index).getOrElse(() -> lines.get(index).get());
     }
 
     /**
      * These lines with those from {@code from} up to {@code until} kept drawn, and no others.
      */
-    Rows keeping(int from, int until) {
+    public Rows keeping(int from, int until) {
         return new Rows(lines, HashMap.ofEntries(Vector.range(from, until).map(index -> Tuple.of(index, get(index)))));
     }
 

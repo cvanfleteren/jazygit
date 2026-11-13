@@ -71,7 +71,8 @@ The updates, messages, popups and the model are pure. Pure code:
   (`SubmittableTextArea`). Tab and Shift+Tab only move focus; a popup's "switch" key is a free Ctrl chord.
 - The standard binding set is in use: `Actions.MOVE_UP/DOWN` match the arrows only, so a widget that wants j/k checks
   `event.isChar` itself.
-- `RichTextAreaElement` ignores its horizontal scroll; `ContentPanel` cuts the columns off the lines itself.
+- `RichTextAreaElement` ignores its horizontal scroll; `ScrollArea` (`ui.content`) cuts the columns off the lines
+  itself.
 - A click focuses the clicked pane through the app's global mouse handler (`FocusKeeper.clicked`), since the router
   stops at the container that forwards the click.
 

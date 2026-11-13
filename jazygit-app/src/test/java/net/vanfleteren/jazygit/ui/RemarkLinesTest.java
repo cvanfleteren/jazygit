@@ -34,6 +34,7 @@ import net.vanfleteren.jazygit.state.diff.DiffStops;
 import net.vanfleteren.jazygit.state.diff.Expansion;
 import net.vanfleteren.jazygit.ui.ContentView.ShownDiff;
 import net.vanfleteren.jazygit.ui.ContentView.ShownRemarks;
+import net.vanfleteren.jazygit.ui.content.ContentText;
 import net.vanfleteren.jazygit.ui.widgets.MarkdownImages;
 import org.junit.jupiter.api.Test;
 
@@ -222,11 +223,11 @@ class RemarkLinesTest {
 
         assertEquals(
                 Option.of(new DiffStops.HunkAt(0, 0)),
-                ContentPanel.markedHunk(body, new Anchor.OnLine("a.txt", Side.LEFT, 2)));
+                ContentText.markedHunk(body, new Anchor.OnLine("a.txt", Side.LEFT, 2)));
         assertEquals(
                 Option.of(new DiffStops.HunkAt(1, 0)),
-                ContentPanel.markedHunk(body, new Anchor.OnLine("b.txt", Side.RIGHT, 2)));
-        assertEquals(Option.none(), ContentPanel.markedHunk(body, new Anchor.OnLine("c.txt", Side.RIGHT, 2)));
+                ContentText.markedHunk(body, new Anchor.OnLine("b.txt", Side.RIGHT, 2)));
+        assertEquals(Option.none(), ContentText.markedHunk(body, new Anchor.OnLine("c.txt", Side.RIGHT, 2)));
     }
 
     @Test
@@ -839,7 +840,7 @@ class RemarkLinesTest {
 
     @Test
     void thePlainViewCountsTheRemarksOfEachFileAtItsStart() {
-        Text text = new Text(ContentPanel.diffText(
+        Text text = new Text(ContentText.diffText(
                 new ShownDiff(DiffText.of(DIFF), Option.none()),
                 new DiffLook(DiffStyle.PLAIN, true, true),
                 Option.of(shown(Collapsed.NONE, thread(2, false, "a"), thread(3, true, "b"))),
@@ -853,7 +854,7 @@ class RemarkLinesTest {
 
     @Test
     void whyTheRemarksCouldNotBeReadComesFirst() {
-        Text text = new Text(ContentPanel.diffText(
+        Text text = new Text(ContentText.diffText(
                 new ShownDiff(DiffText.of(DIFF), Option.none()),
                 new DiffLook(DiffStyle.RICH, true, true),
                 Option.of(new ShownRemarks(

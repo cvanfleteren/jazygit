@@ -10,7 +10,7 @@ import net.vanfleteren.jazygit.state.PaneId;
 /**
  * A scrollable area of the content panel, and the pane whose highlighted row it shows.
  */
-enum ContentArea {
+public enum ContentArea {
     STAGED("diff-staged", FilesPanel.ID),
     UNSTAGED("diff-unstaged", FilesPanel.ID),
     COMMIT("commit-changes", CommitsPanel.ID),
@@ -41,7 +41,7 @@ enum ContentArea {
         this.pane = pane;
     }
 
-    AreaId id() {
+    public AreaId id() {
         return id;
     }
 
