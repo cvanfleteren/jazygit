@@ -9,10 +9,10 @@ import io.vavr.control.Option;
 
 /**
  * The keys of readline that edit the text in a field, beyond the ones the field already knows, and what they do to
- * the state of the field. The fields of the toolkit know Ctrl+Left, Ctrl+Right and Ctrl+W, and are left those: their
- * words, which take {@code foo-bar} whole and stop at {@code /}, suit branch names and paths, as fish's Ctrl+W does.
- * They know none of readline's other keys, and Ctrl+Delete with words of their own; so these keys have to reach them
- * first.
+ * the state of the field. The fields of the toolkit know Ctrl+Left, Ctrl+Right, Ctrl+W, Ctrl+Backspace and
+ * Ctrl+Delete, and are left those: their words, which take {@code foo-bar} whole and stop at {@code /}, suit branch
+ * names and paths, as fish's Ctrl+W does. They know none of readline's other keys, whose Alt ones stop at {@code -}
+ * as well; so these keys have to reach them first.
  *
  * <p>Alt+Backspace only works where the terminal input tells it from Escape followed by Backspace.
  */
@@ -29,11 +29,9 @@ public final class LineEdit {
                     ? ctrl(Character.toLowerCase(event.codePoint()))
                     : event.hasAlt() && !event.hasCtrl() ? alt(event.codePoint()) : Option.none();
         }
-        return switch (event.code()) {
-            case DELETE -> Option.when(event.hasCtrl() && !event.hasAlt(), LineCommand.KILL_WORD);
-            case BACKSPACE -> Option.when(event.hasAlt() && !event.hasCtrl(), LineCommand.BACKWARD_KILL_WORD);
-            default -> Option.none();
-        };
+        return Option.when(
+                event.code() == KeyCode.BACKSPACE && event.hasAlt() && !event.hasCtrl(),
+                LineCommand.BACKWARD_KILL_WORD);
     }
 
     private static Option<LineCommand> ctrl(int key) {

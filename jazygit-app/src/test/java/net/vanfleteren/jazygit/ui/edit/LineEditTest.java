@@ -35,12 +35,6 @@ class LineEditTest {
     }
 
     @Test
-    void ctrlDeleteGoesByWords() {
-        assertEquals(
-                Option.of(LineCommand.KILL_WORD), LineEdit.command(KeyEvent.ofKey(KeyCode.DELETE, KeyModifiers.CTRL)));
-    }
-
-    @Test
     void otherKeysAreLeftToTheField() {
         assertEquals(Option.none(), LineEdit.command(KeyEvent.ofChar('w')));
         assertEquals(Option.none(), LineEdit.command(KeyEvent.ofChar('b', KeyModifiers.CTRL)));
@@ -51,6 +45,7 @@ class LineEditTest {
         assertEquals(Option.none(), LineEdit.command(KeyEvent.ofChar('w', KeyModifiers.CTRL)));
         assertEquals(Option.none(), LineEdit.command(KeyEvent.ofKey(KeyCode.LEFT, KeyModifiers.CTRL)));
         assertEquals(Option.none(), LineEdit.command(KeyEvent.ofKey(KeyCode.RIGHT, KeyModifiers.CTRL)));
+        assertEquals(Option.none(), LineEdit.command(KeyEvent.ofKey(KeyCode.DELETE, KeyModifiers.CTRL)));
     }
 
     @Test

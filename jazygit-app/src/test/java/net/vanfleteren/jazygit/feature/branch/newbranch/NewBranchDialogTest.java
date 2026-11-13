@@ -76,7 +76,8 @@ class NewBranchDialogTest {
             SettledPilot.of(runner).press('w', KeyModifiers.CTRL);
             type(runner, "topic");
             SettledPilot.of(runner).press(KeyCode.LEFT, KeyModifiers.CTRL);
-            type(runner, "my-");
+            SettledPilot.of(runner).press(KeyCode.DELETE, KeyModifiers.CTRL);
+            type(runner, "my-topic");
             SettledPilot.of(runner).press(KeyCode.ENTER);
             SettledPilot.of(runner).pause();
         }
