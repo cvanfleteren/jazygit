@@ -25,6 +25,7 @@ import net.vanfleteren.jazygit.git.model.Pathed;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
+import net.vanfleteren.jazygit.state.view.FileStepMsg;
 import net.vanfleteren.jazygit.ui.text.Placeholders;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import net.vanfleteren.jazygit.ui.widgets.ListFilter;
@@ -66,6 +67,9 @@ final class FileTreeList<T extends Pathed> {
     private boolean unread;
     // The nodes drawn for the frame being rendered, with what they were drawn as, to find the one clicked on.
     private List<Drawn<T>> drawn = List.of();
+    // The node a step moved the highlight to (ADR 117), until the tree is drawn again: the widget says which node is
+    // highlighted from the rows it last drew, which a directory opened on the way changed.
+    private Option<TreeNode<FileTree<T>>> steppedTo = Option.none();
 
     /**
      * @param id         the id of the pane the tree is drawn in
@@ -178,6 +182,7 @@ final class FileTreeList<T extends Pathed> {
             unread = true;
         } else if (unread) {
             unread = false;
+            steppedTo = Option.none();
             tree.selected(start.applyAsInt(visible(roots)));
         }
         return tree;
@@ -246,14 +251,60 @@ final class FileTreeList<T extends Pathed> {
      * The highlighted node, unless it is a placeholder.
      */
     Option<FileTree<T>> selected() {
-        return Option.of(tree.selectedNode()).flatMap(node -> Option.of(node.data()));
+        return selectedNode().flatMap(node -> Option.of(node.data()));
+    }
+
+    /**
+     * The highlighted node: the one a step moved the highlight to until the tree is drawn again, else the widget's.
+     */
+    private Option<TreeNode<FileTree<T>>> selectedNode() {
+        return steppedTo.orElse(() -> Option.of(tree.selectedNode()));
     }
 
     /**
      * Whether the highlighted node is a collapsed directory.
      */
     boolean collapsedSelected() {
-        return Option.of(tree.selectedNode()).exists(node -> node.data() instanceof FileTree.Dir && !node.isExpanded());
+        return selectedNode().exists(node -> node.data() instanceof FileTree.Dir && !node.isExpanded());
+    }
+
+    /**
+     * Moves the highlight to the file {@code step} of the highlighted node, among all files of the tree in its order,
+     * those in a collapsed directory too, and opens the directories leading to it; says whether there was one to move
+     * to (ADR 117). The directories stay open, as when they are opened by hand.
+     */
+    boolean step(FileStepMsg.Step step) {
+        List<TreeNode<FileTree<T>>> all = nodes(roots);
+        int at = selectedNode().map(node -> all.indexWhere(n -> n == node)).getOrElse(-1);
+        return stepped(all.map(TreeNode::data), at, step)
+                .map(all::get)
+                .peek(this::highlight)
+                .isDefined();
+    }
+
+    /**
+     * The index in {@code nodes}, all nodes of a tree depth first, of the file {@code step} of the node at {@code at}:
+     * the first file after it, or the last before it. A directory's first file comes after it. None when there is
+     * none; with nothing highlighted, {@code at} is -1, and the next file is the first.
+     */
+    static Option<Integer> stepped(List<? extends FileTree<?>> nodes, int at, FileStepMsg.Step step) {
+        int found = step == FileStepMsg.Step.NEXT
+                ? nodes.indexWhere(FileTree.File.class::isInstance, at + 1)
+                : at <= 0 ? -1 : nodes.lastIndexWhere(FileTree.File.class::isInstance, at - 1);
+        return Option.when(found >= 0, found);
+    }
+
+    /**
+     * Highlights {@code node}, opening the directories that hold it.
+     */
+    private void highlight(TreeNode<FileTree<T>> node) {
+        String path = node.data().path();
+        nodes(roots)
+                .filter(n -> n.data() instanceof FileTree.Dir<T> dir
+                        && (dir.path().isEmpty() || path.startsWith(dir.path() + "/")))
+                .forEach(n -> n.expanded(true));
+        tree.selected(visible(roots).indexWhere(n -> n == node));
+        steppedTo = Option.of(node);
     }
 
     /**
@@ -278,6 +329,7 @@ final class FileTreeList<T extends Pathed> {
                 .map(d -> visible(roots).indexOf(d.node()))
                 .filter(index -> index >= 0)
                 .map(index -> {
+                    steppedTo = Option.none();
                     tree.selected(index);
                     return EventResult.HANDLED;
                 })
@@ -288,6 +340,8 @@ final class FileTreeList<T extends Pathed> {
      * Draws {@code node}, remembering where, for {@link #click}.
      */
     private StyledElement<?> drawNode(TreeNode<FileTree<T>> node) {
+        // Drawn again, the widget knows the rows a step opened.
+        steppedTo = Option.none();
         StyledElement<?> element =
                 node.data() instanceof FileTree.File<T> file ? drawFile.apply(file) : Toolkit.text(node.label());
         drawn = drawn.prepend(new Drawn<>(node, element));
@@ -364,6 +418,7 @@ final class FileTreeList<T extends Pathed> {
 
     @SuppressWarnings("unchecked")
     private void show(List<TreeNode<FileTree<T>>> roots) {
+        steppedTo = Option.none();
         this.roots = roots;
         tree.roots(roots.toJavaArray(TreeNode[]::new));
     }

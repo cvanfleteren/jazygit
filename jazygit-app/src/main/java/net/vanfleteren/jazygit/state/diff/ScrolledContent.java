@@ -43,7 +43,7 @@ public sealed interface ScrolledContent {
             case StashChanges(var sha, DiffText changes) -> Option.of(changes);
             case FileChanges(var of, var files, DiffText diff) -> Option.of(diff);
             case Unchanged(var path, DiffText asDiff) -> Option.of(asDiff);
-            case BranchLog _, PullRequest _ -> Option.none();
+            case BranchLog _, PullRequest _, Note _ -> Option.none();
         };
     }
 
@@ -83,4 +83,9 @@ public sealed interface ScrolledContent {
      * A pull request, and what it says and changes.
      */
     record PullRequest(PullRequestSummary pullRequest, PullRequestPreview preview) implements ScrolledContent {}
+
+    /**
+     * What the files pane says in place of a diff or a file's content, {@code text} (ADR 117).
+     */
+    record Note(String text) implements ScrolledContent {}
 }

@@ -24,6 +24,9 @@ public enum ContentArea {
     COMMIT_FILE(AreaId.COMMIT_FILE, FilesPanel.ID),
     // A file without changes highlighted among all files of the working tree, as it is on disk (ADR 108).
     FILE_CONTENT(AreaId.FILE_CONTENT, FilesPanel.ID),
+    // What the files pane shows in place of a diff or a file's content, which holds the focus while the files are
+    // walked from the content panel (ADR 117).
+    FILE_NOTE(AreaId.FILE_NOTE, FilesPanel.ID),
     // The commit highlighted in the divergence the branches pane lists.
     DIVERGENCE(AreaId.DIVERGENCE, BranchesPanel.ID),
     // The commit highlighted in the commits of a branch the branches pane lists.

@@ -74,6 +74,17 @@ class ContentViewTest {
     }
 
     /**
+     * What the files pane says in place of a diff: a note, an area that holds the focus (ADR 117).
+     */
+    private static Shown note(String title, String text, Tone tone) {
+        return new Shown.Area(ContentArea.FILE_NOTE, title, new ScrolledContent.Note(text), new Body.Note(text, tone));
+    }
+
+    private static Shown note(String title, String text) {
+        return note(title, text, Tone.DIM);
+    }
+
+    /**
      * The pull requests screen, with {@code preview} of the highlighted pull request, once one is highlighted.
      */
     private static Model pullRequests(Option<Preview<PullRequestSummary, PullRequestPreview>> preview) {
@@ -219,14 +230,14 @@ class ContentViewTest {
 
     @Test
     void withoutChangedFilesTheFilesSaySoInsteadOfLoading() {
-        assertEquals(dim("Diff", "No changed files"), ContentView.of(TestModels.loaded(), FilesPanel.ID));
+        assertEquals(note("Diff", "No changed files"), ContentView.of(TestModels.loaded(), FilesPanel.ID));
     }
 
     @Test
     void eachPaneShowsLoadingWhileTheRepositoryLoads() {
         Model loading = TestModels.loading("repo");
 
-        assertEquals(loading("Diff"), ContentView.of(loading, FilesPanel.ID));
+        assertEquals(note("Diff", Placeholders.loading()), ContentView.of(loading, FilesPanel.ID));
         assertEquals(loading("Log"), ContentView.of(loading, BranchesPanel.ID));
         assertEquals(loading("Commit"), ContentView.of(loading, CommitsPanel.ID));
         assertEquals(loading("Stash"), ContentView.of(loading, StashPanel.ID));
@@ -334,9 +345,7 @@ class ContentViewTest {
                         new ScrolledContent.FileChanges(of, List.of(file), DiffText.of("+a\n")),
                         new Body.Diff(whole("+a\n"), RICH_LOOK)),
                 ContentView.of(selected, FilesPanel.ID));
-        assertEquals(
-                new Shown.Message("Files of aaaa", Placeholders.loading(), Tone.DIM),
-                ContentView.of(open, FilesPanel.ID));
+        assertEquals(note("Files of aaaa", Placeholders.loading()), ContentView.of(open, FilesPanel.ID));
     }
 
     @Test
@@ -360,7 +369,7 @@ class ContentViewTest {
         assertInstanceOf(Shown.Area.class, ContentView.of(selected, FilesPanel.ID));
 
         // While the remarks are read.
-        assertEquals(loading("Files of #7"), ContentView.of(unresolved, FilesPanel.ID));
+        assertEquals(note("Files of #7", Placeholders.loading()), ContentView.of(unresolved, FilesPanel.ID));
 
         Model none = Update.update(
                         unresolved,
@@ -371,15 +380,15 @@ class ContentViewTest {
                                 HashSet.empty(),
                                 0))
                 .model();
-        assertEquals(dim("Files of #7", "No file has unresolved remarks"), ContentView.of(none, FilesPanel.ID));
+        assertEquals(note("Files of #7", "No file has unresolved remarks"), ContentView.of(none, FilesPanel.ID));
         assertEquals(
-                dim("Files of #7", "No file has remarks"),
+                note("Files of #7", "No file has remarks"),
                 ContentView.of(
                         Update.update(none, new CommitFilesMsg.ListedCycled()).model(), FilesPanel.ID));
 
         Failure failure = new Failure.Bug(new Exception("no network"));
         assertEquals(
-                new Shown.Message("Files of #7", Placeholders.error(failure), Tone.ERROR),
+                note("Files of #7", Placeholders.error(failure), Tone.ERROR),
                 ContentView.of(
                         Update.update(unresolved, new CommitFilesMsg.RemarksFailed(7, failure, HashSet.empty(), 0))
                                 .model(),
@@ -401,7 +410,7 @@ class ContentViewTest {
                 .model();
 
         assertEquals(
-                dim("Diff · ignoring whitespace", "No changes besides whitespace"),
+                note("Diff · ignoring whitespace", "No changes besides whitespace"),
                 ContentView.of(blank, FilesPanel.ID));
         assertEquals(
                 List.of("Unstaged changes · ignoring whitespace"),

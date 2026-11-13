@@ -30,6 +30,12 @@ public record AreaId(String value) {
     public static final AreaId FILE_CONTENT = new AreaId("file-content");
 
     /**
+     * The area of what the files pane shows in place of a diff or a file's content, such as that a file is binary, or
+     * still read: it holds the focus while the files are walked from the content panel (ADR 117).
+     */
+    public static final AreaId FILE_NOTE = new AreaId("file-note");
+
+    /**
      * The area of the commit highlighted in the commits pane.
      */
     public static final AreaId COMMIT = new AreaId("commit-changes");
