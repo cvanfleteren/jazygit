@@ -477,6 +477,7 @@ class ProgramTest {
         settle();
 
         program.dispatch(new NewBranchMsg.Requested(new BranchName("other")));
+        settle();
         program.dispatch(new PopupMsg.TextEdited("topic"));
         program.dispatch(new NewBranchMsg.Confirmed());
         settle();
@@ -499,6 +500,7 @@ class ProgramTest {
         repo.checkoutError = "fatal: exists";
 
         program.dispatch(new NewBranchMsg.Requested(new BranchName("other")));
+        settle();
         program.dispatch(new PopupMsg.TextEdited("topic"));
         program.dispatch(new NewBranchMsg.Confirmed());
         settle();

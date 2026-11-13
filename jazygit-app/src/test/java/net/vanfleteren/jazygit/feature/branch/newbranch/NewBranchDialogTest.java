@@ -30,9 +30,8 @@ import org.junit.jupiter.api.Test;
 class NewBranchDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
-    private Model open = Update.update(
-                    TestModels.loaded(SampleData.git()), new NewBranchMsg.Requested(new BranchName("main")))
-            .model();
+    private Model open =
+            NameAsked.asked(TestModels.loaded(SampleData.git()), new NewBranchMsg.Requested(new BranchName("main")));
     // As in the app, an edit changes the model the popup shows; the other messages are only kept.
     private final net.vanfleteren.jazygit.ui.widgets.TextInputDialog<NewBranchPopup> dialog =
             new net.vanfleteren.jazygit.ui.widgets.TextInputDialog<>(NewBranchDialogs.NEW_BRANCH, msg -> {
@@ -59,6 +58,23 @@ class NewBranchDialogTest {
 
         assertEquals(Option.of("topic"), open.popup(NewBranchPopup.class).map(NewBranchPopup::name));
         assertEquals(new NewBranchMsg.Confirmed(), dispatched.getLast());
+    }
+
+    @Test
+    void whatIsTypedGoesAfterTheTemplate() throws Exception {
+        open = NameAsked.asked(
+                TestModels.loaded(SampleData.git()),
+                new NewBranchMsg.Requested(new BranchName("main")),
+                Option.of("ART03DEV01-"));
+        try (ToolkitTestRunner runner = start()) {
+            type(runner, "42-topic");
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(
+                Option.of("ART03DEV01-42-topic"),
+                open.popup(NewBranchPopup.class).map(NewBranchPopup::name));
     }
 
     @Test

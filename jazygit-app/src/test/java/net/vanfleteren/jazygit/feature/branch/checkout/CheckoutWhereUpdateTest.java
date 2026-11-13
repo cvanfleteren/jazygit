@@ -13,6 +13,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutCmd.Checkout;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutCmd.CheckoutRemote;
+import net.vanfleteren.jazygit.feature.branch.newbranch.NameAsked;
 import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchCmd;
 import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchMsg;
 import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchPopup;
@@ -238,7 +239,7 @@ class CheckoutWhereUpdateTest {
     @Test
     void aNewBranchIsAskedWhereToo() {
         Model model = inLinked();
-        Model naming = Update.update(model, new NewBranchMsg.Requested(FEATURE)).model();
+        Model naming = NameAsked.asked(model, new NewBranchMsg.Requested(FEATURE));
 
         Model asked = Update.update(typed(naming, "topic"), new NewBranchMsg.Confirmed())
                 .model();
@@ -264,8 +265,7 @@ class CheckoutWhereUpdateTest {
     @Test
     void aNewBranchInTheMainWorktreeIsCreatedWithoutAsking() {
         Model inMain = TestModels.loaded();
-        Model naming =
-                Update.update(inMain, new NewBranchMsg.Requested(FEATURE)).model();
+        Model naming = NameAsked.asked(inMain, new NewBranchMsg.Requested(FEATURE));
 
         Next next = Update.update(typed(naming, "topic"), new NewBranchMsg.Confirmed());
 

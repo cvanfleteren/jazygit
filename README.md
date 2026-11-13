@@ -33,6 +33,22 @@ Press `?` in any pane for all its keys. There are several themes, a colour-blind
 can have a theme of its own, kept as `jazygit.theme` in its git configuration; set it in an `includeIf "gitdir:~/work/"`
 of your `~/.gitconfig`, and every work repository has it.
 
+The name of a new branch can start out with the same text every time, like the key of a ticket, with the cursor after
+it. It is kept as `jazygit.newBranchNameTemplate` in the git configuration:
+
+```sh
+git config jazygit.newBranchNameTemplate ART03DEV01-            # this repository
+git config --global jazygit.newBranchNameTemplate ART03DEV01-   # every repository
+```
+
+or, for every repository in a directory, in the file an `includeIf "gitdir:~/work/art03/"` of your `~/.gitconfig`
+includes:
+
+```ini
+[jazygit]
+    newBranchNameTemplate = ART03DEV01-
+```
+
 ## Getting it
 
 Download the jar, or the native Linux executable, from [Releases](https://github.com/cvanfleteren/jazygit/releases).
