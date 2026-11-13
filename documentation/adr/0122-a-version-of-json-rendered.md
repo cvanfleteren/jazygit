@@ -52,7 +52,7 @@ its scroll in the model, its stops from `DiffCursor` and its gutter of marks.
 
 ### How it is drawn
 
-- A tree, with guides of `├─`, `└─` and `│`, as tamboui's `GuideStyle.UNICODE` draws them, so it looks as the tree of
+- A tree, with guides of `├──`, `└──` and `│`, as tamboui's `GuideStyle.UNICODE` draws them, so it looks as the tree of
   files does. A field is drawn as its key and its value, an element of an array as its index and its value. Keys keep
   the order of the file. Not: sorted keys, which hide the order the author gave them, and scatter the rows of a
   change.
@@ -75,8 +75,9 @@ its scroll in the model, its stops from `DiffCursor` and its gutter of marks.
   diff do.
 - A root that is an array is drawn as any array: an array of records is a table. A root that is a scalar is one row.
 - The colours are those of the syntax of the rich view (ADR 53): the kinds of token that colour JSON as source colour
-  its keys, strings, numbers and literals, so Ctrl+T shows the same colours either way. Guides, counts, indices and
-  previews are dim. Not: styles of the theme of their own.
+  its strings, numbers and literals, so Ctrl+T shows the same colours either way. A key is plain: as source colours it
+  as a string, the key and the string after it would read as one. Guides, counts, indices and previews are dim. Not:
+  styles of the theme of their own.
 
 ### Folding
 

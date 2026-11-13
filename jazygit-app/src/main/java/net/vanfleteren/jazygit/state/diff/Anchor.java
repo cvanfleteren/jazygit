@@ -47,6 +47,14 @@ public sealed interface Anchor {
     record Gap(String path, int from, Option<Integer> until) implements Anchor {}
 
     /**
+     * A row of a version of JSON rendered of the file with the path {@code path}: what is at {@code pointer}, a JSON
+     * Pointer, drawn from {@code line} on (ADR 122). It is found again by its path and pointer, in the new version and
+     * the original alike; when it is gone, as when a node closed over it, at the closest node it is in, and else as its
+     * line.
+     */
+    record Node(String path, String pointer, OnLine line) implements Anchor {}
+
+    /**
      * The review thread with the id {@code id}, which was after {@code line} when the anchor was made, if after one:
      * where the cursor goes when the thread is gone. It is found again by its id, wherever it is now
      * ({@link DiffStops#nearest}).

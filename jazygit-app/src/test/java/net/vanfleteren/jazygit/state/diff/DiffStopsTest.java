@@ -211,6 +211,34 @@ class DiffStopsTest {
     }
 
     @Test
+    void aRowOfJsonRenderedIsFoundByItsPathElseAtTheClosestNodeItIsInElseAsItsLine() {
+        Anchor.Node jobs = new Anchor.Node("a.txt", "/jobs", line(Side.RIGHT, 2));
+        Anchor.Node build = new Anchor.Node("a.txt", "/jobs/0", line(Side.RIGHT, 3));
+        List<Anchor> stops = List.of(A, jobs, build);
+
+        // The original draws the same node from another line.
+        assertEquals(
+                Option.of(build), DiffStops.nearest(stops, new Anchor.Node("a.txt", "/jobs/0", line(Side.LEFT, 9))));
+        // A node closed over it.
+        assertEquals(
+                Option.of(jobs),
+                DiffStops.nearest(List.of(A, jobs), new Anchor.Node("a.txt", "/jobs/0/steps", line(Side.RIGHT, 5))));
+        // Not the node /job, whose path only starts as /jobs does: the row drawn from the closest line.
+        Anchor.Node job = new Anchor.Node("a.txt", "/job", line(Side.RIGHT, 1));
+        Anchor.Node close = new Anchor.Node("a.txt", "/x", line(Side.RIGHT, 3));
+        assertEquals(Option.of(close), DiffStops.nearest(List.of(A, job, close), build));
+    }
+
+    @Test
+    void aLineGoesToTheFirstRowOfJsonRenderedDrawnFromTheClosestLine() {
+        Anchor.Node first = new Anchor.Node("a.txt", "/a", line(Side.RIGHT, 2));
+        Anchor.Node second = new Anchor.Node("a.txt", "/b", line(Side.RIGHT, 2));
+        Anchor.Node far = new Anchor.Node("a.txt", "/c", line(Side.RIGHT, 9));
+
+        assertEquals(Option.of(first), DiffStops.nearest(List.of(A, first, second, far), line(Side.RIGHT, 4)));
+    }
+
+    @Test
     void withoutStopsTheCursorIsNowhere() {
         assertEquals(Option.none(), DiffStops.nearest(List.empty(), LEAD));
     }

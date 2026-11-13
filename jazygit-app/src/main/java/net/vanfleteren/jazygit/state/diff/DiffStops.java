@@ -36,7 +36,9 @@ public final class DiffStops {
      * to the marker of the same file that starts closest to it, else as a line where it starts (ADR 77); a thread to
      * the line it was
      * after, and from there as a line; a comment to its thread, and from there as a thread (ADR 62); a bar and the
-     * lead to the first stop. None when there is no stop.
+     * lead to the first stop. A row of JSON rendered goes to the row of the same path, else to the closest node it is in,
+     * else as its line; a line goes to the row of JSON rendered drawn from the closest line before the bar of its file
+     * (ADR 122). None when there is no stop.
      */
     public static Option<Anchor> nearest(Seq<Anchor> stops, Anchor at) {
         Option<Anchor> found = switch (at) {
@@ -54,6 +56,7 @@ public final class DiffStops {
                                         && p.equals(path)
                                         && s == side)
                                 .minBy(stop -> Math.abs(((Anchor.OnLine) stop).number() - number)))
+                        .orElse(() -> nearestRow(stops, (Anchor.OnLine) at))
                         .orElse(() -> stops.find(new Anchor.File(path)::equals));
             case Anchor.Gap(String path, int from, var until) ->
                 stops.find(at::equals)
@@ -61,10 +64,33 @@ public final class DiffStops {
                                         stop -> stop instanceof Anchor.Gap(var p, var f, var u) && p.equals(path))
                                 .minBy(stop -> Math.abs(((Anchor.Gap) stop).from() - from)))
                         .orElse(() -> nearest(stops, new Anchor.OnLine(path, ReviewThread.Side.RIGHT, from)));
+            case Anchor.Node(String path, String pointer, Anchor.OnLine line) ->
+                stops.find(stop -> stop instanceof Anchor.Node(var p, var o, var ignored)
+                                && p.equals(path)
+                                && o.equals(pointer))
+                        .orElse(() -> stops.filter(stop -> stop instanceof Anchor.Node(var p, var o, var ignored)
+                                        && p.equals(path)
+                                        && pointer.startsWith(o + "/"))
+                                .maxBy(stop -> ((Anchor.Node) stop).pointer().length()))
+                        .orElse(() -> nearest(stops, line));
             case Anchor.File file -> stops.find(file::equals);
             case Anchor.Lead lead -> stops.find(lead::equals);
         };
         return found.orElse(stops::headOption);
+    }
+
+    /**
+     * The row of a version of JSON rendered drawn from the line closest to {@code line}, of its file and side, the
+     * first of those drawn from it (ADR 122).
+     */
+    private static Option<Anchor> nearestRow(Seq<Anchor> stops, Anchor.OnLine line) {
+        Seq<Anchor.Node> rows = stops.filter(Anchor.Node.class::isInstance)
+                .map(Anchor.Node.class::cast)
+                .filter(row -> row.path().equals(line.path()) && row.line().side() == line.side());
+        return rows.minBy(row -> Math.abs(row.line().number() - line.number()))
+                .flatMap(closest ->
+                        rows.find(row -> row.line().number() == closest.line().number()))
+                .map(row -> row);
     }
 
     /**

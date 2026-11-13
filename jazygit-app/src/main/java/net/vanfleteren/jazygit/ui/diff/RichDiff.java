@@ -304,10 +304,19 @@ public final class RichDiff {
                         version == FileVersion.NEW ? Theme.Classes.DIFF_ADDED : Theme.Classes.DIFF_REMOVED,
                         styles));
         Span unchanged = Span.raw(" ");
-        List<RenderedMarkdown.Block> blocks =
-                RenderedMarkdown.blocks(lines.map(DiffLine::text), Math.max(1, width - RENDERED_GUTTER), styles);
         String bar = bar(parsed, version);
         int tinted = Math.max(width(bar), width);
+        Marked header = new Marked(
+                Rows.kept(Line.from(
+                        styled(bar, Theme.Classes.DIFF_FILE_HEADER, styles),
+                        styled(" ".repeat(Math.max(0, tinted - width(bar))), Theme.Classes.DIFF_FILE_HEADER, styles))),
+                Option.of(new Mark(new Anchor.File(path), 1, tinted, Option.none())));
+        if (Rendered.of(path).contains(Rendered.JSON)) {
+            return json(path, lines, fold, width, tinted, changed, unchanged, styles)
+                    .prepend(header);
+        }
+        List<RenderedMarkdown.Block> blocks =
+                RenderedMarkdown.blocks(lines.map(DiffLine::text), Math.max(1, width - RENDERED_GUTTER), styles);
         List<Marked> body = blocks.zipWithIndex().flatMap(at -> {
             RenderedMarkdown.Block block = at._1();
             Span gutter = Vector.rangeClosed(block.first(), block.last())
@@ -336,20 +345,72 @@ public final class RichDiff {
                             row._2() == 0 ? placed : List.empty()));
             return block.spaced() ? rows.prepend(Marked.plain(Line.from(""))) : rows;
         });
-        return List.of(new Marked(
-                        Rows.kept(Line.from(
-                                styled(bar, Theme.Classes.DIFF_FILE_HEADER, styles),
-                                styled(
-                                        " ".repeat(Math.max(0, tinted - width(bar))),
-                                        Theme.Classes.DIFF_FILE_HEADER,
-                                        styles))),
-                        Option.of(new Mark(new Anchor.File(path), 1, tinted, Option.none()))))
+        return List.of(header)
                 .appendAll(body)
                 .appendAll(Option.when(
                                 fold.read() == Expansion.Read.CUT,
                                 () -> Marked.plain(Line.from(
                                         styled(Messages.get("content.file.renderedCut"), Theme.Classes.DIM, styles))))
                         .toList());
+    }
+
+    /**
+     * The rows of a version of JSON rendered, its source {@code lines}, read as {@code fold} says, {@code width}
+     * columns wide, its gutter included (ADR 122): each a stop of the cursor, but the keys of a table, with a bar in
+     * the gutter when a line it stands for changed, those lines placed on it. JSON that cannot be read is its source,
+     * after a line that says why, its lines placed on them, and no stops but the bar of the file.
+     */
+    private static List<Marked> json(
+            String path,
+            Vector<DiffLine> lines,
+            Expansion.Fold fold,
+            int width,
+            int tinted,
+            Span changed,
+            Span unchanged,
+            Theme.SpanStyles styles) {
+        Function<Integer, Option<DiffLine>> line =
+                number -> Option.when(number >= 1 && number <= lines.size(), () -> lines.get(number - 1));
+        Function<List<Integer>, Span> gutter = numbers -> numbers.exists(
+                        number -> line.apply(number).exists(diffLine -> diffLine.kind() != DiffLine.Kind.CONTEXT))
+                ? changed
+                : unchanged;
+        Function<List<Integer>, List<Anchor>> placed = numbers -> numbers.flatMap(line::apply)
+                .flatMap(diffLine -> Anchor.of(path, diffLine))
+                .map(anchor -> (Anchor) anchor);
+        return RenderedJson.rows(
+                        lines.map(DiffLine::text),
+                        fold.read() == Expansion.Read.CUT,
+                        Math.max(1, width - RENDERED_GUTTER),
+                        fold.nodes(),
+                        styles)
+                .fold(
+                        why -> {
+                            LexedHighlighter lexed = new LexedHighlighter(styles);
+                            List<Marked> source = lines.zipWithIndex()
+                                    .map(at -> new Marked(
+                                            Rows.kept(Line.from(List.of(
+                                                            gutter.apply(List.of(at._2() + 1)), Span.raw(" "))
+                                                    .appendAll(List.ofAll(lexed.highlight(
+                                                                    at._1().text(), "json", Style.EMPTY, null))
+                                                            .flatMap(drawn -> drawn.spans()))
+                                                    .toJavaList())),
+                                            Option.none(),
+                                            placed.apply(List.of(at._2() + 1))))
+                                    .toList();
+                            return source.prepend(Marked.plain(Line.from(styled(why, Theme.Classes.DIM, styles))));
+                        },
+                        rows -> rows.map(row -> new Marked(
+                                Rows.kept(Line.from(List.of(gutter.apply(row.lines()), Span.raw(" "))
+                                        .appendAll(row.line().spans())
+                                        .toJavaList())),
+                                row.pointer()
+                                        .flatMap(pointer -> line.apply(
+                                                        row.lines().head())
+                                                .flatMap(diffLine -> Anchor.of(path, diffLine))
+                                                .map(on -> new Mark(
+                                                        new Anchor.Node(path, pointer, on), 1, tinted, Option.none()))),
+                                placed.apply(row.lines()))));
     }
 
     /**

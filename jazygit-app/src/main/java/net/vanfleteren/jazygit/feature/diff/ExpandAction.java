@@ -10,7 +10,8 @@ import net.vanfleteren.jazygit.state.diff.DiffCursorAt;
 
 /**
  * Showing the lines a marker of a rich diff leaves out, from its cursor (ADR 77): in every rich diff, and in the diff
- * of a pull request's files next to the keys of its review.
+ * of a pull request's files next to the keys of its review. Enter also opens or closes a node of JSON rendered
+ * (ADR 122).
  */
 public final class ExpandAction {
 
@@ -22,9 +23,24 @@ public final class ExpandAction {
                                     scope,
                                     onGap("]", "help.diff.expandDown", ExpandMsg.Toward.DOWN),
                                     onGap("[", "help.diff.expandUp", ExpandMsg.Toward.UP),
-                                    onGap(Keymap.ENTER, "help.diff.expandAll", ExpandMsg.Toward.ALL))));
+                                    enter())));
 
     private ExpandAction() {}
+
+    /**
+     * Enter, which shows all the lines a marker leaves out while the cursor is on one, and opens or closes the node of
+     * a version of JSON rendered it is on (ADR 122): one key bound once, as a version rendered has no markers.
+     */
+    private static Binding<DiffCursorAt> enter() {
+        Binding<DiffCursorAt> gap = onGap(Keymap.ENTER, "help.diff.expandAll", ExpandMsg.Toward.ALL);
+        return new Binding<>(
+                Keymap.ENTER,
+                "help.diff.expandAll",
+                at -> gap.action()
+                        .apply(at)
+                        .orElse(() -> at.filter(cursor -> cursor.cursor() instanceof Anchor.Node)
+                                .map(FoldMsg.Toggled::new)));
+    }
 
     /**
      * {@code key}, which shows the lines {@code toward} says while the cursor is on a marker, and does nothing

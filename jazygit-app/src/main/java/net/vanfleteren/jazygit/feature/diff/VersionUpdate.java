@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.diff.Anchor;
 import net.vanfleteren.jazygit.state.diff.DiffCursorAt;
 import net.vanfleteren.jazygit.state.diff.Rendered;
 import net.vanfleteren.jazygit.state.diff.Scrolled;
@@ -110,7 +111,7 @@ public final class VersionUpdate {
                     was.content(),
                     was.row(),
                     was.column(),
-                    was.cursor().map(on -> version.moved(on, next.version())),
+                    was.cursor().map(on -> version.moved(source(on, next), next.version())),
                     Option.none());
             Model shown = model.mapRepoView(
                             view -> view.withVersions(view.versions().put(area, version)))
@@ -219,6 +220,18 @@ public final class VersionUpdate {
                 .filter(file -> !file.read().options().ignoreWhitespace())
                 .flatMap(file -> file.whole().toOption())
                 .map(Loadable.Loaded::new);
+    }
+
+    /**
+     * Where the cursor on {@code on} is in what {@code next} shows: a row of JSON rendered stays where it is while the
+     * version shows rendered, so Ctrl+O keeps it on the same node in the other version, and is its line once it shows
+     * as source or as the diff (ADR 122).
+     */
+    private static Anchor source(Anchor on, Shows next) {
+        return on instanceof Anchor.Node node
+                        && !(next.rendered() && next.version().isDefined())
+                ? node.line()
+                : on;
     }
 
     /**
