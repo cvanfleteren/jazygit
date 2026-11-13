@@ -390,11 +390,7 @@ class ProgramTest {
         AtomicInteger changes = new AtomicInteger();
         Queue<Runnable> queued = new ArrayDeque<>();
         Program told = program(
-                new Env(repo.git(), StubGitHub.of()),
-                queued::add,
-                queued::add,
-                queued::add,
-                changes::incrementAndGet);
+                new Env(repo.git(), StubGitHub.of()), queued::add, queued::add, queued::add, changes::incrementAndGet);
         told.dispatch(new TimerMsg.Tick());
         drain(queued);
         int loaded = changes.get();

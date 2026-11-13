@@ -123,9 +123,11 @@ public sealed interface StackCmd extends OperationCmd {
                     Either.right(List.empty()),
                     (done, change) -> done.flatMap(commands -> partly(
                             commands,
-                            gitHub.pullRequests().edit(
-                                    change.number(),
-                                    new PullRequestEdit(Option.none(), Option.none(), Option.of(change.to()))))));
+                            gitHub.pullRequests()
+                                    .edit(
+                                            change.number(),
+                                            new PullRequestEdit(
+                                                    Option.none(), Option.none(), Option.of(change.to()))))));
             return rebased.flatMap(commands -> partly(
                             commands,
                             stack.fold(

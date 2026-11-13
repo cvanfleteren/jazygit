@@ -38,9 +38,9 @@ import net.vanfleteren.jazygit.feature.worktree.remove.RemoveWorktreePopup;
 import net.vanfleteren.jazygit.feature.worktree.switchto.SwitchWorktreeMsg;
 import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.GhFailure;
+import net.vanfleteren.jazygit.gh.GitHub;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.StubPullRequests;
-import net.vanfleteren.jazygit.gh.GitHub;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
@@ -400,7 +400,7 @@ class WorktreeUpdateTest {
                 ran.add("gh " + number + " " + in);
                 return Either.right(StubGit.executed("gh pr checkout 9"));
             }
-});
+        });
 
         new AddWorktreeCmd(
                         new WorktreeSource.Detached(new Revision.Commit(new Sha("abc123")), "abc123"),
@@ -434,7 +434,7 @@ class WorktreeUpdateTest {
                         new GhError.CommandFailed(Option.of("no such pull request"), 1),
                         StubGit.executed("gh pr checkout 9")));
             }
-});
+        });
 
         Msg failed = new AddWorktreeCmd(new WorktreeSource.PullRequest(pullRequest()), "/repos/app-pr-9")
                 .run(new Env(git, fails));
@@ -464,7 +464,7 @@ class WorktreeUpdateTest {
                         new GhError.CommandFailed(Option.of("no such pull request"), 1),
                         StubGit.executed("gh pr checkout 9")));
             }
-});
+        });
 
         Msg failed = new AddWorktreeCmd(new WorktreeSource.PullRequest(pullRequest()), "/repos/app-pr-9")
                 .run(new Env(git, fails));
@@ -502,7 +502,7 @@ class WorktreeUpdateTest {
                         new GhError.CommandFailed(Option.of("no such pull request"), 1),
                         StubGit.executed("gh pr checkout 9")));
             }
-});
+        });
 
         Msg failed = new AddWorktreeCmd(new WorktreeSource.PullRequest(pullRequest()), "/repos/app-pr-9")
                 .run(new Env(git, fails));

@@ -63,7 +63,8 @@ public sealed interface VerdictCmd extends Cmd {
         @Override
         public Msg run(Env env) {
             return env.gitHub()
-                    .reviews().submit(pullRequest, verdict, body)
+                    .reviews()
+                    .submit(pullRequest, verdict, body)
                     .mapLeft(Failure::of)
                     .fold(this::failed, this::succeeded);
         }

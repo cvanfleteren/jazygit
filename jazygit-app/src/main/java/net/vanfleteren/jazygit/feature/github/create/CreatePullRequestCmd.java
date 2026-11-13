@@ -272,7 +272,8 @@ public sealed interface CreatePullRequestCmd extends Cmd {
         @Override
         public Msg run(Env env) {
             return env.gitHub()
-                    .pullRequests().create(OnGitHub.branch(head), OnGitHub.branch(base), pullRequest)
+                    .pullRequests()
+                    .create(OnGitHub.branch(head), OnGitHub.branch(base), pullRequest)
                     .mapLeft(Failure::of)
                     .fold(
                             this::failed,

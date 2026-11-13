@@ -83,7 +83,8 @@ public sealed interface EditPullRequestCmd extends Cmd {
                     .fold(
                             this::failed,
                             edited -> draft.map(drafting -> env.gitHub()
-                                            .pullRequests().setDraft(number, drafting)
+                                            .pullRequests()
+                                            .setDraft(number, drafting)
                                             .fold(
                                                     failure -> partly(edited, failure),
                                                     drafted -> succeeded(edited.appendAll(drafted))))

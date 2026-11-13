@@ -14,9 +14,8 @@ import io.vavr.control.Option;
 import java.time.Duration;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.GhError;
-import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.StubChecks;
-import net.vanfleteren.jazygit.gh.GitHub;
+import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.BranchChecks;
 import net.vanfleteren.jazygit.gh.model.CheckRun;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
@@ -121,7 +120,7 @@ class BranchChecksUpdateTest {
                                 return Either.right(new BranchChecks(
                                         "owner/repo", HashMap.of(new GhBranch("main"), Checks.PASSING)));
                             }
-})));
+                        })));
 
         assertEquals(
                 new BranchChecksMsg.Loaded(new GitHubChecks(

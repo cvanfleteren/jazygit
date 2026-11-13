@@ -12,9 +12,9 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.feature.branch.stack.StackChoice.BaseChange;
 import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.GhFailure;
+import net.vanfleteren.jazygit.gh.GitHub;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.StubStacks;
-import net.vanfleteren.jazygit.gh.GitHub;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
@@ -390,7 +390,7 @@ class MakeStackTest {
                 return Either.left(
                         new GhFailure(new GhError.CommandFailed(Option.of("HTTP 404: Not Found"), 1), List.empty()));
             }
-});
+        });
 
         Msg done = cmd.run(new Env(StubGit.of(), refusing));
 

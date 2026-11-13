@@ -68,7 +68,8 @@ public sealed interface SettingsPanelCmd extends Cmd {
         @Override
         public Msg run(Env env) {
             return new SettingsPanelMsg.GhExecutableChecked(
-                    executable, env.gitHub().account().version(executable.getOrElse("gh")).mapLeft(Failure.GitHub::new));
+                    executable,
+                    env.gitHub().account().version(executable.getOrElse("gh")).mapLeft(Failure.GitHub::new));
         }
 
         @Override

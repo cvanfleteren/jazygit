@@ -24,9 +24,9 @@ import net.vanfleteren.jazygit.feature.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.GhFailure;
+import net.vanfleteren.jazygit.gh.GitHub;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.StubPullRequests;
-import net.vanfleteren.jazygit.gh.GitHub;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
@@ -89,7 +89,7 @@ class EditPullRequestUpdateTest {
                     new GhError.CommandFailed(Option.of("could not convert"), 1),
                     List.of(ExecutedCommand.of("gh", "pr", "ready", "42", "--undo"))));
         }
-});
+    });
 
     private static PullRequestPopup shown(PullRequestDetails details) {
         return PullRequestPopup.loading(FEATURE, FEATURE_PR, Instant.EPOCH, 0).with(Either.right(details), 0);
@@ -410,7 +410,7 @@ class EditPullRequestUpdateTest {
                         new GhError.CommandFailed(Option.of("could not edit: network down"), 1),
                         List.of(ExecutedCommand.of("gh", "pr", "edit", "42"))));
             }
-});
+        });
 
         Next failed = Update.update(saving.model(), cmd.run(env(refusing)));
 
@@ -531,8 +531,7 @@ class EditPullRequestUpdateTest {
             }
         });
 
-        Model failed = Update.update(
-                        editing(OPENED), new EditBody("Why").run(env(git, StubGitHub.of(), Terminal.NONE)))
+        Model failed = Update.update(editing(OPENED), new EditBody("Why").run(env(git, StubGitHub.of(), Terminal.NONE)))
                 .model();
 
         assertEquals(Option.of(EDITING), failed.popup());

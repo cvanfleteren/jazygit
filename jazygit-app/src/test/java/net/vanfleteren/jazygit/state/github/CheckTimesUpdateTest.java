@@ -15,9 +15,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.UnaryOperator;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.gh.GhError;
-import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.StubChecks;
-import net.vanfleteren.jazygit.gh.GitHub;
+import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.CheckRun;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
@@ -291,7 +290,7 @@ class CheckTimesUpdateTest {
                     public Either<GhError, RecentChecks> recent() {
                         throw new AssertionError("read from GitHub again");
                     }
-}),
+                }),
                 null,
                 null,
                 null,

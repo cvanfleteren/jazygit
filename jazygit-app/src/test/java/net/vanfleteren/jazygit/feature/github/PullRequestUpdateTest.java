@@ -44,9 +44,9 @@ import net.vanfleteren.jazygit.feature.worktree.add.WorktreeSource;
 import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.GhFailure;
 import net.vanfleteren.jazygit.gh.GitHub;
+import net.vanfleteren.jazygit.gh.PullRequests;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.StubPullRequests;
-import net.vanfleteren.jazygit.gh.PullRequests;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
@@ -1230,7 +1230,8 @@ class PullRequestUpdateTest {
                                 42,
                                 lastRead(shown),
                                 withARunningCheck(StubGitHub.of()
-                                        .pullRequests().details(42)
+                                        .pullRequests()
+                                        .details(42)
                                         .get())))
                 .model();
 
@@ -1250,7 +1251,8 @@ class PullRequestUpdateTest {
                                 42,
                                 lastRead(shown),
                                 withARunningCheck(StubGitHub.of()
-                                        .pullRequests().details(42)
+                                        .pullRequests()
+                                        .details(42)
                                         .get())))
                 .model();
         Model reading = Update.update(running.withNow(running.now().plusSeconds(10)), new PullRequestMsg.Tick())
@@ -1893,7 +1895,9 @@ class PullRequestUpdateTest {
                         Update.update(withPr(), new PullRequestMsg.Requested(FEATURE))
                                 .model(),
                         new PullRequestMsg.DetailsLoaded(
-                                42, 0, StubGitHub.of().pullRequests().details(42).get()))
+                                42,
+                                0,
+                                StubGitHub.of().pullRequests().details(42).get()))
                 .model();
         Next drafting = Update.update(read, new PullRequestMsg.DraftChosen());
         SetDraft cmd = (SetDraft) drafting.cmds().head();
@@ -1932,7 +1936,7 @@ class PullRequestUpdateTest {
                     int number, Option<GhCommit> head, MergeMethod method) {
                 return Either.right(new PullRequests.Merging(new MergeStatus.Merged(), List.empty()));
             }
-});
+        });
     }
 
     /**
@@ -1998,7 +2002,9 @@ class PullRequestUpdateTest {
                         Update.update(asked(withPr()), new PullRequestMsg.Requested(FEATURE))
                                 .model(),
                         new PullRequestMsg.DetailsLoaded(
-                                42, 0, StubGitHub.of().pullRequests().details(42).get()))
+                                42,
+                                0,
+                                StubGitHub.of().pullRequests().details(42).get()))
                 .model();
 
         assertEquals(
@@ -2246,7 +2252,7 @@ class PullRequestUpdateTest {
                                 1),
                         List.of(ExecutedCommand.of("gh", "api", "--method", "PUT", "merge-async"))));
             }
-});
+        });
 
         Next failed = Update.update(merging.model(), cmd.run(new Env(StubGit.of(), refusing)));
 

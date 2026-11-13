@@ -15,7 +15,6 @@ import net.vanfleteren.jazygit.feature.branch.BranchError;
 import net.vanfleteren.jazygit.feature.branch.BranchError.StackRefusal;
 import net.vanfleteren.jazygit.feature.commit.create.CommitPopup;
 import net.vanfleteren.jazygit.gh.StubGitHub;
-import net.vanfleteren.jazygit.gh.GitHub;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;

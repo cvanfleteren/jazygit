@@ -27,9 +27,9 @@ import net.vanfleteren.jazygit.feature.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.GhFailure;
+import net.vanfleteren.jazygit.gh.GitHub;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.StubReviews;
-import net.vanfleteren.jazygit.gh.GitHub;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
@@ -298,7 +298,7 @@ class CommentUpdateTest {
                         new GhError.CommandFailed(Option.of("could not add comment: network down"), 1),
                         List.of(ExecutedCommand.of("gh", "pr", "comment", "42", "--body", body))));
             }
-});
+        });
 
         Next failed = Update.update(sending.model(), cmd.run(env(StubGit.of(), refusing, Terminal.NONE)));
 

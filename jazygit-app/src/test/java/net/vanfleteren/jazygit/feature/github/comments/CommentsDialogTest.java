@@ -20,7 +20,6 @@ import java.util.ArrayList;
 import net.vanfleteren.jazygit.feature.github.comment.CommentMsg;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.gh.StubGitHub;
-import net.vanfleteren.jazygit.gh.GitHub;
 import net.vanfleteren.jazygit.gh.model.CommentRights;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
@@ -323,7 +322,8 @@ class CommentsDialogTest {
     void clickingAReferenceOrABareURLInTheCommentOpensIt() throws Exception {
         PullRequestPopup ofRepository = SHOWN.with(
                 Either.right(StubGitHub.of()
-                        .pullRequests().details(42)
+                        .pullRequests()
+                        .details(42)
                         .get()
                         .withRepository("owner/repo")
                         .withUrl("https://github.com/owner/repo")),

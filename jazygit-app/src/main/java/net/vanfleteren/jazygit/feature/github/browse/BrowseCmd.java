@@ -28,6 +28,10 @@ public record BrowseCmd(RemoteBranch branch) implements OperationCmd {
 
     @Override
     public Msg run(Env env) {
-        return env.gitHub().account().browse(OnGitHub.branch(branch)).mapLeft(Failure::of).fold(this::failed, this::succeeded);
+        return env.gitHub()
+                .account()
+                .browse(OnGitHub.branch(branch))
+                .mapLeft(Failure::of)
+                .fold(this::failed, this::succeeded);
     }
 }

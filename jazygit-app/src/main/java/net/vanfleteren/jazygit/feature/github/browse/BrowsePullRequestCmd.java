@@ -31,7 +31,8 @@ public record BrowsePullRequestCmd(PullRequestSummary pullRequest) implements Op
     @Override
     public Msg run(Env env) {
         return env.gitHub()
-                .account().openPullRequest(pullRequest.url())
+                .account()
+                .openPullRequest(pullRequest.url())
                 .mapLeft(Failure::of)
                 .fold(this::failed, this::succeeded);
     }

@@ -26,7 +26,8 @@ public record LoadProtectedBranches() implements Cmd {
     @Override
     public Msg run(Env env) {
         return env.gitHub()
-                .checks().protectedBranches()
+                .checks()
+                .protectedBranches()
                 .mapLeft(Failure::of)
                 .fold(this::failed, PullRequestsMsg.ProtectedLoaded::new);
     }
