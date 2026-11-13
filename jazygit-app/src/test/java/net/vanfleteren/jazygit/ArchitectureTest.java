@@ -23,6 +23,12 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
+import net.vanfleteren.jazygit.gh.process.GhError;
+import net.vanfleteren.jazygit.gh.process.GhFailure;
+import net.vanfleteren.jazygit.gh.process.GhToken;
+import net.vanfleteren.jazygit.git.process.GitError;
+import net.vanfleteren.jazygit.git.process.GitFailure;
+import net.vanfleteren.jazygit.git.process.HeadFile;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Cmd;
@@ -124,11 +130,7 @@ class ArchitectureTest {
     static final ArchRule gitKeepsHowItRunsToItself = noClasses()
             .should()
             .dependOnClassesThat(resideInAPackage("..jazygit.git.process..")
-                    .and(simpleName("GitProcess")
-                            .or(simpleName("GitCommand"))
-                            .or(simpleName("GitArgs"))
-                            .or(simpleName("GitOutput"))
-                            .or(simpleName("TempFiles"))));
+                    .and(not(belongToAnyOf(GitError.class, GitFailure.class, HeadFile.class))));
     /**
      * The application reaches GitHub through a {@code GitHub} and its roles, which {@code CliGitHub} gives for a real
      * repository; the {@code Cli} classes behind the roles are none of its business (ADR 114).
@@ -148,9 +150,7 @@ class ArchitectureTest {
             .should()
             .dependOnClassesThat(resideInAPackage("..jazygit.gh.graphql..")
                     .or(resideInAPackage("..jazygit.gh.process..")
-                            .and(simpleName("GhProcess")
-                                    .or(simpleName("GhCommand"))
-                                    .or(simpleName("SshHost")))));
+                            .and(not(belongToAnyOf(GhError.class, GhFailure.class, GhToken.class)))));
     /**
      * {@code Exec} is the only place that starts a program.
      */
