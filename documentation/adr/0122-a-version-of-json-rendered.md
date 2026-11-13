@@ -31,8 +31,10 @@ its scroll in the model, its stops from `DiffCursor` and its gutter of marks.
 - The seam of ADR 103 is given which nodes of the version are closed, and each row it gives says which node it opens
   or closes, if any. Markdown is given them too, and gives no nodes. Not: a seam for JSON only.
 - Text that is not JSON is shown as source, under one line saying where reading it stopped: `Not rendered: line 12,
-  column 3, expected ','`. jazygit writes that line itself, from the location Parsson gives and the token it expected,
-  as a character. Not: Parsson's own text, `Invalid token=CURLYCLOSE at (line no=12, ...)`. A version cut at the limit
+  column 3, unexpected ']'`, or `unexpected end` where the text stops. jazygit writes that line itself, from the
+  location Parsson gives and the character of the text found there. Not: what was expected, which Parsson gives only
+  in the words of its message, often as more than one token, and not at all for a character it cannot read. Not:
+  Parsson's own text, `Invalid token=CURLYCLOSE at (line no=12, ...)`. A version cut at the limit
   of ADR 79 is not JSON either: the line says it was cut. JSON nested deeper than the reader goes, `MAX_DEPTH`, is shown
   as source too: the line says how deep it may go. Not: what could be read rendered, up to where it stops, as Markdown
   is: half a value is no tree.
@@ -64,7 +66,9 @@ its scroll in the model, its stops from `DiffCursor` and its gutter of marks.
   these it has, or else its first scalar: `2  name: "acceptance" {4}`. That field is not drawn again in it.
 - A field whose key the object has more than once is drawn once, with its last value, and a dim note of the lines of
   the others: `name  "build"  (also on line 4, ignored)`. A key written twice is most likely a mistake, and is not
-  hidden.
+  hidden. It is drawn where the last one is written, among the fields around it. Not: where the first one is, as a
+  `LinkedHashMap` keeps a key put again, so the reader for rendering does not build one. Its row stands for the lines
+  of every one of them, so a change to an ignored one marks it; Ctrl+T maps its cursor to the last one.
 - A string is drawn in quotes, its newlines as `↵`. A long string is not wrapped: it scrolls sideways, as the lines of a
   diff do.
 - A root that is an array is drawn as any array: an array of records is a table. A root that is a scalar is one row.
