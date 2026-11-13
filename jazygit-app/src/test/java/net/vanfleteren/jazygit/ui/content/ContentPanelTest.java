@@ -10,6 +10,8 @@ import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
+import dev.tamboui.tui.event.KeyEventKind;
+import dev.tamboui.tui.event.KeyModifiers;
 import dev.tamboui.tui.event.MouseButton;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
@@ -905,6 +907,42 @@ class ContentPanelTest {
                 List.of(1, 0, 0),
                 List.ofAll(dispatched)
                         .map(msg -> ((ViewMsg.ContentScrolled) msg).to().column()));
+    }
+
+    @Test
+    void leftHeldDownStopsAtTheStartOfTheLinesAndLeavesOnlyOnTheNextPress() throws Exception {
+        java.util.concurrent.atomic.AtomicInteger leaves = new java.util.concurrent.atomic.AtomicInteger();
+        ContentPanel scrolling = new ContentPanel(Theme.SpanStyles.NONE, () -> {
+            leaves.incrementAndGet();
+            return true;
+        });
+        Model selected = showingCommit("+" + "x".repeat(300));
+        String area = scrolling.areaOfPane(selected, CommitsPanel.ID).get();
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> scrolling.render(selected, area))) {
+            SettledPilot.focus(testRunner, area);
+            RenderedText.ofLarge(testRunner, () -> scrolling.render(selected, area));
+            SettledPilot.of(testRunner).press(KeyCode.RIGHT);
+            SettledPilot.of(testRunner).press(KeyCode.LEFT);
+            // The terminal repeats Left while it is held: past the start of the lines, it neither leaves nor
+            // reaches anything else.
+            heldDown(testRunner, KeyCode.LEFT);
+            heldDown(testRunner, KeyCode.LEFT);
+            SettledPilot.of(testRunner).pause();
+            assertEquals(0, leaves.get());
+            SettledPilot.of(testRunner).press(KeyCode.LEFT);
+            SettledPilot.of(testRunner).pause();
+        }
+
+        assertEquals(1, leaves.get());
+    }
+
+    /**
+     * Sends {@code code} as a terminal does while the key is held down, and lets the frames it asks for settle.
+     */
+    private static void heldDown(ToolkitTestRunner testRunner, KeyCode code) {
+        testRunner.runner().tuiRunner().dispatch(KeyEvent.ofKey(code, KeyModifiers.NONE, KeyEventKind.REPEAT));
+        SettledPilot.settle(testRunner);
     }
 
     @Test
