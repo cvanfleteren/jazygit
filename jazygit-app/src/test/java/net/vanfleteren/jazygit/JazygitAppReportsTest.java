@@ -149,7 +149,7 @@ class JazygitAppReportsTest {
     @Test
     void theSpinnerOfABusyBranchTurnsWithoutInput() throws Exception {
         CountDownLatch pulled = new CountDownLatch(1);
-        TestApp app = new TestApp(new Env(new PullsSlowly(pulled).git(), StubGitHub.empty()));
+        TestApp app = new TestApp(new Env(new PullsSlowly(pulled).git(), StubGitHub.of()));
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, SIZE, tickless())) {
             app.start(testRunner);
             SettledPilot.focus(testRunner, BranchesPanel.ID, app.drawnAt::size);

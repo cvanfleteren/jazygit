@@ -28,7 +28,7 @@ class PushCmdTest {
 
     @Test
     void aPushThatPushDefaultRefusesSaysSoRatherThanFailing() {
-        Msg msg = PUSH.run(new Env(pushFailingWith(new GitError.PushRefused("simple", DEVELOP)), StubGitHub.empty()));
+        Msg msg = PUSH.run(new Env(pushFailingWith(new GitError.PushRefused("simple", DEVELOP)), StubGitHub.of()));
 
         assertEquals(new PushMsg.Refused(PUSH, new SetUpstreamPopup.Refusal("simple", DEVELOP), List.empty()), msg);
     }
@@ -37,7 +37,7 @@ class PushCmdTest {
     void anyOtherFailureOfAPushFailsIt() {
         Msg msg = PUSH.run(new Env(
                 pushFailingWith(new GitError.CommandFailed(io.vavr.control.Option.none(), 1, "rejected")),
-                StubGitHub.empty()));
+                StubGitHub.of()));
 
         assertInstanceOf(OperationMsg.Failed.class, msg);
     }

@@ -143,7 +143,7 @@ class PullRequestsUpdateTest {
                 Update.update(loaded(), new PullRequestsMsg.Refresh()).cmds());
         assertInstanceOf(
                 PrOverviewMsg.RepositoryLoaded.class,
-                new LoadRepositoryPullRequests().run(new Env(StubGit.of(), StubGitHub.empty())));
+                new LoadRepositoryPullRequests().run(new Env(StubGit.of(), StubGitHub.of())));
     }
 
     @Test

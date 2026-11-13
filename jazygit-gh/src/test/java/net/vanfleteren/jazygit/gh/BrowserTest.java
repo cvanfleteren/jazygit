@@ -96,7 +96,8 @@ class BrowserTest {
         Path browser = script("browser", "echo \"$@\" > '" + opened + "'\n");
         Path gh = script("gh", "echo \"$*\" > '" + dir.resolve("asked") + "'\necho '" + browser + "'\n");
 
-        assertTrue(new CliGitHub(dir, gh.toString(), GhToken.NONE, HashMap.<String, String>empty()::get, "Linux")
+        assertTrue(CliGitHub.of(dir, gh.toString(), GhToken.NONE, HashMap.<String, String>empty()::get, "Linux")
+                .account()
                 .openInBrowser(COMMENT)
                 .isRight());
         assertEquals("config get browser --host github.com\n", Files.readString(dir.resolve("asked")));
@@ -135,7 +136,8 @@ class BrowserTest {
         Path browser = script("browser", "echo \"$@\" > '" + opened + "'\n");
         Path gh = script("gh", "echo \"$*\" > '" + dir.resolve("asked") + "'\necho '" + browser + "'\n");
 
-        assertTrue(new CliGitHub(dir, gh.toString(), GhToken.NONE, HashMap.<String, String>empty()::get, "Linux")
+        assertTrue(CliGitHub.of(dir, gh.toString(), GhToken.NONE, HashMap.<String, String>empty()::get, "Linux")
+                .account()
                 .openLink("https://example.com")
                 .isRight());
         assertEquals("config get browser --host github.com\n", Files.readString(dir.resolve("asked")));
@@ -163,8 +165,9 @@ class BrowserTest {
     }
 
     // GitHub through a gh that says no browser is set and does nothing else, in that environment and on that system.
-    private CliGitHub github(Map<String, String> environment, String os) throws Exception {
-        return new CliGitHub(dir, script("gh", "exit 0\n").toString(), GhToken.NONE, environment::get, os);
+    private Account github(Map<String, String> environment, String os) throws Exception {
+        return CliGitHub.of(dir, script("gh", "exit 0\n").toString(), GhToken.NONE, environment::get, os)
+                .account();
     }
 
     private Path script(String name, String body) throws Exception {

@@ -290,7 +290,7 @@ class RemoteWorktreeUpdateTest {
                         return Either.right(List.empty());
                     }
                 });
-        Env env = new Env(git, StubGitHub.empty());
+        Env env = new Env(git, StubGitHub.of());
 
         new AddWorktreeCmd(new WorktreeSource.Existing(MINE, new CatchUp.FastForward(ORIGIN_FEAT)), "/repos/app-mine")
                 .run(env);

@@ -179,7 +179,7 @@ final class DetailsQuery {
             Reviewing::new);
 
     static final Decoder<Conversation> CONVERSATION = map6(
-            field("reviewDecision", nullable(string())).map(decision -> CliGitHub.review(decision.getOrElse(""))),
+            field("reviewDecision", nullable(string())).map(decision -> CliPullRequests.review(decision.getOrElse(""))),
             REVIEWERS,
             at("comments.totalCount", integer()),
             field("reviewThreads", THREADS),

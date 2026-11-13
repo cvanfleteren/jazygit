@@ -26,7 +26,8 @@ public record LoadMyPullRequests() implements Cmd {
     @Override
     public Msg run(Env env) {
         return env.gitHub()
-                .myPullRequests()
+                .pullRequests()
+                .mine()
                 .mapLeft(Failure::of)
                 .fold(this::failed, read -> new PrOverviewMsg.MineLoaded(read));
     }

@@ -71,7 +71,11 @@ public sealed interface PullRequestCmd extends Cmd {
 
         @Override
         public Msg run(Env env) {
-            return env.gitHub().openPullRequest(number).mapLeft(Failure::of).fold(this::failed, this::succeeded);
+            return env.gitHub()
+                    .account()
+                    .openPullRequest(number)
+                    .mapLeft(Failure::of)
+                    .fold(this::failed, this::succeeded);
         }
     }
 
@@ -90,7 +94,8 @@ public sealed interface PullRequestCmd extends Cmd {
         @Override
         public Msg run(Env env) {
             return env.gitHub()
-                    .mergePullRequest(number, head, method)
+                    .pullRequests()
+                    .merge(number, head, method)
                     .mapLeft(Failure::of)
                     .fold(
                             this::failed,
@@ -116,6 +121,7 @@ public sealed interface PullRequestCmd extends Cmd {
         @Override
         public Msg run(Env env) {
             return env.gitHub()
+                    .pullRequests()
                     .mergeStatus(number, id)
                     .mapLeft(Failure::of)
                     .fold(this::failed, status -> new PullRequestMsg.MergeChecked(number, id, status));
@@ -139,7 +145,11 @@ public sealed interface PullRequestCmd extends Cmd {
 
         @Override
         public Msg run(Env env) {
-            return env.gitHub().closePullRequest(number).mapLeft(Failure::of).fold(this::failed, this::succeeded);
+            return env.gitHub()
+                    .pullRequests()
+                    .close(number)
+                    .mapLeft(Failure::of)
+                    .fold(this::failed, this::succeeded);
         }
     }
 
@@ -171,7 +181,11 @@ public sealed interface PullRequestCmd extends Cmd {
 
         @Override
         public Msg run(Env env) {
-            return env.gitHub().setDraft(number, draft).mapLeft(Failure::of).fold(this::failed, this::succeeded);
+            return env.gitHub()
+                    .pullRequests()
+                    .setDraft(number, draft)
+                    .mapLeft(Failure::of)
+                    .fold(this::failed, this::succeeded);
         }
 
         @Override
@@ -194,7 +208,8 @@ public sealed interface PullRequestCmd extends Cmd {
         @Override
         public Msg run(Env env) {
             return env.gitHub()
-                    .pullRequestDetails(number)
+                    .pullRequests()
+                    .details(number)
                     .mapLeft(Failure::of)
                     .fold(this::failed, details -> new PullRequestMsg.DetailsLoaded(number, read, details));
         }

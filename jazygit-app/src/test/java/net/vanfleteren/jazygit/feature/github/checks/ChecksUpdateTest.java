@@ -93,7 +93,7 @@ class ChecksUpdateTest {
     private static final PullRequest FEATURE_PR =
             new PullRequest(42, new GhBranch("feature"), false, Checks.PENDING, Review.APPROVED);
     private static final PullRequestDetails DETAILS =
-            StubGitHub.empty().pullRequestDetails(42).get();
+            StubGitHub.of().pullRequests().details(42).get();
     private static final PullRequestPopup DIALOG = PullRequestPopup.loading(
                     new BranchName("mine"), FEATURE_PR, Instant.EPOCH, 0)
             .with(Either.right(DETAILS), 0);

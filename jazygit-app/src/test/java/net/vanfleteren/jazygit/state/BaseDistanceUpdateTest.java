@@ -58,7 +58,7 @@ class BaseDistanceUpdateTest {
                         LoadBranches.LISTED,
                         READ,
                         Option.of(new LoadMsg.Bases(PARENTS, HashMap.of(FEATURE, DISTANCE)))),
-                LoadBranches.LISTED.run(new Env(git, StubGitHub.empty())));
+                LoadBranches.LISTED.run(new Env(git, StubGitHub.of())));
     }
 
     @Test
@@ -86,7 +86,7 @@ class BaseDistanceUpdateTest {
         assertEquals(
                 new LoadMsg.BranchesLoaded(
                         load, READ, Option.of(new LoadMsg.Bases(HashMap.empty(), HashMap.of(FEATURE, DISTANCE)))),
-                load.run(new Env(git, StubGitHub.empty())));
+                load.run(new Env(git, StubGitHub.of())));
     }
 
     @Test
@@ -105,7 +105,7 @@ class BaseDistanceUpdateTest {
 
         assertEquals(
                 new LoadMsg.BranchesLoaded(LoadBranches.LISTED, READ, Option.none()),
-                LoadBranches.LISTED.run(new Env(git, StubGitHub.empty())));
+                LoadBranches.LISTED.run(new Env(git, StubGitHub.of())));
     }
 
     @Test

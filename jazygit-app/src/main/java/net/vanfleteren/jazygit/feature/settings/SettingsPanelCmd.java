@@ -33,14 +33,14 @@ public sealed interface SettingsPanelCmd extends Cmd {
 
         @Override
         public Msg run(Env env) {
-            Option<GhAccount> account = env.gitHub().account();
+            Option<GhAccount> account = env.gitHub().account().current();
             return new SettingsPanelMsg.GitHubRead(new GitHubSetup(
-                    env.gitHub().version(executable).mapLeft(Failure.GitHub::new),
+                    env.gitHub().account().version(executable).mapLeft(Failure.GitHub::new),
                     GitHubAccount.host(env.git()),
                     env.git().config().local(GitHubAccount.USER_KEY).getOrElse(Option.none()),
-                    env.gitHub().logins().mapLeft(Failure.GitHub::new),
+                    env.gitHub().account().logins().mapLeft(Failure.GitHub::new),
                     account,
-                    account.flatMap(known -> env.gitHub().ghBrowser(known.host()))));
+                    account.flatMap(known -> env.gitHub().account().ghBrowser(known.host()))));
         }
 
         @Override
@@ -68,7 +68,8 @@ public sealed interface SettingsPanelCmd extends Cmd {
         @Override
         public Msg run(Env env) {
             return new SettingsPanelMsg.GhExecutableChecked(
-                    executable, env.gitHub().version(executable.getOrElse("gh")).mapLeft(Failure.GitHub::new));
+                    executable,
+                    env.gitHub().account().version(executable.getOrElse("gh")).mapLeft(Failure.GitHub::new));
         }
 
         @Override

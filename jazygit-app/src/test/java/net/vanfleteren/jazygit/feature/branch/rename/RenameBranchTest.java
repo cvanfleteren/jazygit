@@ -182,7 +182,7 @@ class RenameBranchTest {
                 });
         RenameBranchCmd cmd = new RenameBranchCmd(FEATURE, TOPIC, Option.of(ORIGIN_FEATURE));
 
-        Msg done = cmd.run(new Env(git, StubGitHub.empty()));
+        Msg done = cmd.run(new Env(git, StubGitHub.of()));
 
         assertEquals(java.util.List.of("rename feature topic", "rename origin/feature for topic"), ran);
         assertEquals(

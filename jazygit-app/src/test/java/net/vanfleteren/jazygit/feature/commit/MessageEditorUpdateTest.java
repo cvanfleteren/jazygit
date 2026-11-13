@@ -139,7 +139,6 @@ class MessageEditorUpdateTest {
     }
 
     private static Env env(Git git, Terminal terminal) {
-        return new Env(
-                git, StubGitHub.empty(), SettingsStore.NONE, RecentRepositories.NONE, Repositories.NONE, terminal);
+        return new Env(git, StubGitHub.of(), SettingsStore.NONE, RecentRepositories.NONE, Repositories.NONE, terminal);
     }
 }

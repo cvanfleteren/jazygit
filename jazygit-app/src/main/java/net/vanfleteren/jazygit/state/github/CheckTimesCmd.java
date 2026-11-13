@@ -115,7 +115,8 @@ public sealed interface CheckTimesCmd extends Cmd {
 
         private Msg topUp(Env env) {
             return env.gitHub()
-                    .recentChecks()
+                    .checks()
+                    .recent()
                     .mapLeft(Failure::of)
                     .fold(this::failed, recent -> new CheckTimesMsg.ToppedUp(repository, recent));
         }

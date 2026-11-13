@@ -44,7 +44,9 @@ import net.vanfleteren.jazygit.feature.worktree.add.WorktreeSource;
 import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.GhFailure;
 import net.vanfleteren.jazygit.gh.GitHub;
+import net.vanfleteren.jazygit.gh.PullRequests;
 import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.gh.StubPullRequests;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
@@ -125,7 +127,7 @@ class PullRequestUpdateTest {
     }
 
     private static Env env() {
-        return new Env(StubGit.of(), StubGitHub.empty());
+        return new Env(StubGit.of(), StubGitHub.of());
     }
 
     /**
@@ -280,7 +282,7 @@ class PullRequestUpdateTest {
 
         assertEquals(
                 new CreatePullRequestMsg.ParentRead(FEATURE, Option.of(RELEASE.name())),
-                readParent().run(new Env(git, StubGitHub.empty())));
+                readParent().run(new Env(git, StubGitHub.of())));
     }
 
     @Test
@@ -323,7 +325,7 @@ class PullRequestUpdateTest {
 
         assertEquals(
                 new CreatePullRequestMsg.ParentRead(FEATURE, Option.of(AHEAD.name())),
-                readParent().run(new Env(git, StubGitHub.empty())));
+                readParent().run(new Env(git, StubGitHub.of())));
     }
 
     @Test
@@ -337,7 +339,7 @@ class PullRequestUpdateTest {
 
         assertEquals(
                 new CreatePullRequestMsg.ParentRead(FEATURE, Option.none()),
-                readParent().run(new Env(git, StubGitHub.empty())));
+                readParent().run(new Env(git, StubGitHub.of())));
     }
 
     private static BranchRef remote(String branch) {
@@ -370,7 +372,7 @@ class PullRequestUpdateTest {
                         return Either.right(counts.get(base).get());
                     }
                 }),
-                StubGitHub.empty());
+                StubGitHub.of());
     }
 
     /**
@@ -544,7 +546,7 @@ class PullRequestUpdateTest {
 
         assertEquals(
                 new CreatePullRequestMsg.BaseTitleRead(FEATURE, RELEASE.name(), Option.of("Fix release")),
-                new RereadTitle(FEATURE, RELEASE.name(), remote("release")).run(new Env(git, StubGitHub.empty())));
+                new RereadTitle(FEATURE, RELEASE.name(), remote("release")).run(new Env(git, StubGitHub.of())));
     }
 
     private static final Branch DEV = Fixtures.branch(
@@ -604,7 +606,7 @@ class PullRequestUpdateTest {
 
         assertEquals(
                 new CreatePullRequestMsg.ParentRead(FEATURE, Option.of(DEV.name())),
-                read.run(new Env(git, StubGitHub.empty())));
+                read.run(new Env(git, StubGitHub.of())));
     }
 
     @Test
@@ -614,7 +616,7 @@ class PullRequestUpdateTest {
 
         assertEquals(
                 new CreatePullRequestMsg.ParentRead(FEATURE, Option.of(DEV.name())),
-                read.run(new Env(parentRecorded("dev"), StubGitHub.empty())));
+                read.run(new Env(parentRecorded("dev"), StubGitHub.of())));
     }
 
     @Test
@@ -625,7 +627,7 @@ class PullRequestUpdateTest {
 
         assertEquals(
                 new CreatePullRequestMsg.ParentRead(FEATURE, Option.of(new BranchName("stable"))),
-                read.run(new Env(parentRecorded("main"), StubGitHub.empty())));
+                read.run(new Env(parentRecorded("main"), StubGitHub.of())));
     }
 
     private static Git parentRecorded(String name) {
@@ -976,7 +978,7 @@ class PullRequestUpdateTest {
     void theDetailsReadShowInThePopup() {
         Model shown = Update.update(withPr(), new PullRequestMsg.Requested(new BranchName("feature")))
                 .model();
-        PullRequestDetails details = StubGitHub.empty().pullRequestDetails(42).get();
+        PullRequestDetails details = StubGitHub.of().pullRequests().details(42).get();
 
         Model loaded = Update.update(shown, new LoadPullRequestDetails(42, lastRead(shown)).run(env()))
                 .model();
@@ -991,7 +993,7 @@ class PullRequestUpdateTest {
     void theDetailsReadShowOnTheBranchToo() {
         Model shown =
                 Update.update(withPr(), new PullRequestMsg.Requested(FEATURE)).model();
-        PullRequestDetails details = StubGitHub.empty().pullRequestDetails(42).get();
+        PullRequestDetails details = StubGitHub.of().pullRequests().details(42).get();
         PullRequestDetails failing = new PullRequestDetails(
                 42,
                 details.title(),
@@ -1036,7 +1038,7 @@ class PullRequestUpdateTest {
     void aPullRequestTheDetailsShowMergedIsNoLongerOnTheBranch() {
         Model shown =
                 Update.update(withPr(), new PullRequestMsg.Requested(FEATURE)).model();
-        PullRequestDetails details = StubGitHub.empty().pullRequestDetails(42).get();
+        PullRequestDetails details = StubGitHub.of().pullRequests().details(42).get();
         PullRequestDetails merged = details.withStatus(new Status(
                 PullRequestDetails.State.MERGED,
                 details.status().draft(),
@@ -1068,7 +1070,7 @@ class PullRequestUpdateTest {
     void detailsReadAfterThePopupClosedOrForAnotherPullRequestAreDropped() {
         Model shown = Update.update(withPr(), new PullRequestMsg.Requested(new BranchName("feature")))
                 .model();
-        PullRequestDetails details = StubGitHub.empty().pullRequestDetails(7).get();
+        PullRequestDetails details = StubGitHub.of().pullRequests().details(7).get();
 
         Model other = Update.update(shown, new PullRequestMsg.DetailsLoaded(7, lastRead(shown), details))
                 .model();
@@ -1227,8 +1229,9 @@ class PullRequestUpdateTest {
                         new PullRequestMsg.DetailsLoaded(
                                 42,
                                 lastRead(shown),
-                                withARunningCheck(StubGitHub.empty()
-                                        .pullRequestDetails(42)
+                                withARunningCheck(StubGitHub.of()
+                                        .pullRequests()
+                                        .details(42)
                                         .get())))
                 .model();
 
@@ -1247,8 +1250,9 @@ class PullRequestUpdateTest {
                         new PullRequestMsg.DetailsLoaded(
                                 42,
                                 lastRead(shown),
-                                withARunningCheck(StubGitHub.empty()
-                                        .pullRequestDetails(42)
+                                withARunningCheck(StubGitHub.of()
+                                        .pullRequests()
+                                        .details(42)
                                         .get())))
                 .model();
         Model reading = Update.update(running.withNow(running.now().plusSeconds(10)), new PullRequestMsg.Tick())
@@ -1296,7 +1300,7 @@ class PullRequestUpdateTest {
         Model quiet = Update.update(aMinuteOn(showingDetails()), new PullRequestMsg.Tick())
                 .model();
         long older = lastRead(quiet);
-        PullRequestDetails details = StubGitHub.empty().pullRequestDetails(42).get();
+        PullRequestDetails details = StubGitHub.of().pullRequests().details(42).get();
         Model reopened = Update.update(
                         Update.update(quiet, new PopupMsg.Dismissed(PullRequestPopup.class))
                                 .model(),
@@ -1375,7 +1379,7 @@ class PullRequestUpdateTest {
     private static Model showingCommits(PullRequestDetails.State state, boolean known) {
         Model shown =
                 Update.update(withPr(), new PullRequestMsg.Requested(FEATURE)).model();
-        PullRequestDetails read = StubGitHub.empty().pullRequestDetails(42).get();
+        PullRequestDetails read = StubGitHub.of().pullRequests().details(42).get();
         PullRequestDetails details = read.withRepository("owner/repo")
                 .withUrl("https://github.com/owner/repo")
                 .withStatus(read.status().withState(state))
@@ -1431,7 +1435,7 @@ class PullRequestUpdateTest {
      * The details of pull request 42 as read, of {@code owner/repo} on github.com, at known commits.
      */
     private static PullRequestDetails readAtCommits(PullRequestDetails.State state) {
-        PullRequestDetails read = StubGitHub.empty().pullRequestDetails(42).get();
+        PullRequestDetails read = StubGitHub.of().pullRequests().details(42).get();
         return read.withRepository("owner/repo")
                 .withUrl("https://github.com/owner/repo")
                 .withStatus(read.status().withState(state))
@@ -1785,7 +1789,7 @@ class PullRequestUpdateTest {
         Model comments = Update.update(
                         refreshing, new net.vanfleteren.jazygit.feature.github.comments.CommentsMsg.Requested())
                 .model();
-        PullRequestDetails details = StubGitHub.empty().pullRequestDetails(42).get();
+        PullRequestDetails details = StubGitHub.of().pullRequests().details(42).get();
 
         Model read = Update.update(
                         comments, new PullRequestMsg.DetailsLoaded(42, lastRead(comments), details.withDraft(true)))
@@ -1838,7 +1842,7 @@ class PullRequestUpdateTest {
                         new PullRequestMsg.DetailsLoaded(
                                 42,
                                 lastRead(shown),
-                                StubGitHub.empty().pullRequestDetails(42).get()))
+                                StubGitHub.of().pullRequests().details(42).get()))
                 .model();
         Next merging = TestModels.stepped(read, new PullRequestMsg.MergeChosen(MergeMethod.SQUASH));
         Next closing = TestModels.stepped(read, new PullRequestMsg.CloseChosen());
@@ -1869,7 +1873,7 @@ class PullRequestUpdateTest {
                         new PullRequestMsg.DetailsLoaded(
                                 42,
                                 lastRead(shown),
-                                StubGitHub.empty().pullRequestDetails(42).get()))
+                                StubGitHub.of().pullRequests().details(42).get()))
                 .model();
         Next drafting = TestModels.stepped(read, new PullRequestMsg.DraftChosen());
 
@@ -1891,7 +1895,9 @@ class PullRequestUpdateTest {
                         Update.update(withPr(), new PullRequestMsg.Requested(FEATURE))
                                 .model(),
                         new PullRequestMsg.DetailsLoaded(
-                                42, 0, StubGitHub.empty().pullRequestDetails(42).get()))
+                                42,
+                                0,
+                                StubGitHub.of().pullRequests().details(42).get()))
                 .model();
         Next drafting = Update.update(read, new PullRequestMsg.DraftChosen());
         SetDraft cmd = (SetDraft) drafting.cmds().head();
@@ -1923,14 +1929,14 @@ class PullRequestUpdateTest {
     /**
      * GitHub that merges each pull request as soon as it is asked to.
      */
-    private static StubGitHub mergingAtOnce() {
-        return new StubGitHub() {
+    private static GitHub mergingAtOnce() {
+        return StubGitHub.of().withPullRequests(new StubPullRequests() {
             @Override
-            public Either<GhFailure, GitHub.Merging> mergePullRequest(
+            public Either<GhFailure, PullRequests.Merging> merge(
                     int number, Option<GhCommit> head, MergeMethod method) {
-                return Either.right(new GitHub.Merging(new MergeStatus.Merged(), List.empty()));
+                return Either.right(new PullRequests.Merging(new MergeStatus.Merged(), List.empty()));
             }
-        };
+        });
     }
 
     /**
@@ -1996,7 +2002,9 @@ class PullRequestUpdateTest {
                         Update.update(asked(withPr()), new PullRequestMsg.Requested(FEATURE))
                                 .model(),
                         new PullRequestMsg.DetailsLoaded(
-                                42, 0, StubGitHub.empty().pullRequestDetails(42).get()))
+                                42,
+                                0,
+                                StubGitHub.of().pullRequests().details(42).get()))
                 .model();
 
         assertEquals(
@@ -2228,14 +2236,14 @@ class PullRequestUpdateTest {
                         new PullRequestMsg.DetailsLoaded(
                                 42,
                                 lastRead(shown),
-                                StubGitHub.empty().pullRequestDetails(42).get()))
+                                StubGitHub.of().pullRequests().details(42).get()))
                 .model();
         Next merging = Update.update(read, new PullRequestMsg.MergeChosen(MergeMethod.SQUASH));
         MergePullRequest cmd = (MergePullRequest) merging.cmds().head();
         // What gh says when e.g. a required check fails or a review is missing.
-        StubGitHub refusing = new StubGitHub() {
+        GitHub refusing = StubGitHub.of().withPullRequests(new StubPullRequests() {
             @Override
-            public Either<GhFailure, GitHub.Merging> mergePullRequest(
+            public Either<GhFailure, PullRequests.Merging> merge(
                     int number, Option<GhCommit> head, MergeMethod method) {
                 return Either.left(new GhFailure(
                         new GhError.CommandFailed(
@@ -2244,7 +2252,7 @@ class PullRequestUpdateTest {
                                 1),
                         List.of(ExecutedCommand.of("gh", "api", "--method", "PUT", "merge-async"))));
             }
-        };
+        });
 
         Next failed = Update.update(merging.model(), cmd.run(new Env(StubGit.of(), refusing)));
 
@@ -2259,7 +2267,7 @@ class PullRequestUpdateTest {
                 errorText(failed.model()));
         assertEquals(Option.none(), failed.model().jobs().busy().get(new BranchRef.Local(new BranchName("feature"))));
         assertEquals(
-                StubGitHub.empty().pullRequestDetails(42).get().listed(),
+                StubGitHub.of().pullRequests().details(42).get().listed(),
                 failed.model().gitHub().pullRequests().flatMap(open -> open.get(new BranchName("feature"))));
     }
 
@@ -2336,7 +2344,7 @@ class PullRequestUpdateTest {
                 new NewPullRequest("Login", "", true));
         Model creating = confirmed(cmd.pullRequest()).model();
 
-        Next done = TestModels.done(creating, cmd, cmd.run(new Env(StubGit.of(), StubGitHub.empty())));
+        Next done = TestModels.done(creating, cmd, cmd.run(new Env(StubGit.of(), StubGitHub.of())));
 
         assertTrue(
                 done.cmds().contains(new LoadRepositoryPullRequests()),

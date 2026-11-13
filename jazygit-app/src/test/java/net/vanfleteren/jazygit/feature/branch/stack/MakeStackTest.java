@@ -12,7 +12,9 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.feature.branch.stack.StackChoice.BaseChange;
 import net.vanfleteren.jazygit.gh.GhError;
 import net.vanfleteren.jazygit.gh.GhFailure;
+import net.vanfleteren.jazygit.gh.GitHub;
 import net.vanfleteren.jazygit.gh.StubGitHub;
+import net.vanfleteren.jazygit.gh.StubStacks;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
@@ -224,7 +226,7 @@ class MakeStackTest {
         assertEquals("2 pull requests stay open, unlinked.", StackDialogs.unstacked(popup));
         assertEquals(
                 List.of("gh", "api", "--method", "POST", "repos/{owner}/{repo}/stacks/12/unstack"),
-                ((StackMsg.Changed) popup.confirm().get().run(new Env(StubGit.of(), StubGitHub.empty())))
+                ((StackMsg.Changed) popup.confirm().get().run(new Env(StubGit.of(), StubGitHub.of())))
                         .commands()
                         .head()
                         .commandLine());
@@ -354,7 +356,7 @@ class MakeStackTest {
                 List.of(96, 97, 98),
                 Option.none());
 
-        Msg done = cmd.run(new Env(StubGit.of(), StubGitHub.empty()));
+        Msg done = cmd.run(new Env(StubGit.of(), StubGitHub.of()));
 
         assertEquals(
                 List.of(
@@ -382,13 +384,13 @@ class MakeStackTest {
                 List.of(new BaseChange(97, Option.of(new GhBranch("main")), new GhBranch("feat/a"))),
                 List.of(96, 97),
                 Option.none());
-        StubGitHub refusing = new StubGitHub() {
+        GitHub refusing = StubGitHub.of().withStacks(new StubStacks() {
             @Override
-            public Either<GhFailure, List<ExecutedCommand>> createStack(List<Integer> pullRequests) {
+            public Either<GhFailure, List<ExecutedCommand>> create(List<Integer> pullRequests) {
                 return Either.left(
                         new GhFailure(new GhError.CommandFailed(Option.of("HTTP 404: Not Found"), 1), List.empty()));
             }
-        };
+        });
 
         Msg done = cmd.run(new Env(StubGit.of(), refusing));
 

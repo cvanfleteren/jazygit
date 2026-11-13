@@ -26,6 +26,6 @@ public record BrowseRemarkCmd(PullRequestLink link) implements OperationCmd {
 
     @Override
     public Msg run(Env env) {
-        return env.gitHub().openInBrowser(link).mapLeft(Failure::of).fold(this::failed, this::succeeded);
+        return env.gitHub().account().openInBrowser(link).mapLeft(Failure::of).fold(this::failed, this::succeeded);
     }
 }

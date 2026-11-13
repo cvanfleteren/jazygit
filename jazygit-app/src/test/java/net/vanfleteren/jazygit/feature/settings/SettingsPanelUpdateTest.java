@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.feature.theme.ThemeMsg;
 import net.vanfleteren.jazygit.feature.theme.ThemePopup;
 import net.vanfleteren.jazygit.feature.theme.ThemeScope;
 import net.vanfleteren.jazygit.gh.GhError;
+import net.vanfleteren.jazygit.gh.StubAccount;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.ChosenBrowser;
 import net.vanfleteren.jazygit.gh.model.GhAccount;
@@ -418,12 +419,12 @@ class SettingsPanelUpdateTest {
                                         HashMap.of(new RemoteName("origin"), "git@github.com:team/repo.git"));
                             }
                         }),
-                new StubGitHub() {
+                StubGitHub.of().withAccount(new StubAccount() {
                     @Override
                     public Either<GhError, List<GhLogin>> logins() {
                         return Either.right(SETUP.logins().get());
                     }
-                });
+                }));
 
         Msg read = new SettingsPanelCmd.ReadGitHub("gh").run(env);
 
@@ -449,7 +450,7 @@ class SettingsPanelUpdateTest {
                         return Either.right(List.empty());
                     }
                 }),
-                StubGitHub.empty(),
+                StubGitHub.of(),
                 SettingsStore.NONE,
                 RecentRepositories.NONE,
                 (directory, landing) -> {
@@ -502,7 +503,7 @@ class SettingsPanelUpdateTest {
     }
 
     private static Env env(Git git, SettingsStore settings, Terminal terminal) {
-        return new Env(git, StubGitHub.empty(), settings, RecentRepositories.NONE, Repositories.NONE, terminal);
+        return new Env(git, StubGitHub.of(), settings, RecentRepositories.NONE, Repositories.NONE, terminal);
     }
 
     @Test

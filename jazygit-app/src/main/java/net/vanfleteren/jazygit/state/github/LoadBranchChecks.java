@@ -26,7 +26,8 @@ public record LoadBranchChecks() implements Cmd {
     @Override
     public Msg run(Env env) {
         return env.gitHub()
-                .branchChecks()
+                .checks()
+                .ofBranches()
                 .mapLeft(Failure::of)
                 .fold(
                         this::failed,

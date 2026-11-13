@@ -34,7 +34,8 @@ public record CheckoutPullRequestCmd(PullRequestSummary pullRequest) implements 
     @Override
     public Msg run(Env env) {
         return env.gitHub()
-                .checkoutPullRequest(pullRequest.number())
+                .pullRequests()
+                .checkout(pullRequest.number())
                 .mapLeft(Failure::of)
                 .fold(this::failed, this::succeeded);
     }

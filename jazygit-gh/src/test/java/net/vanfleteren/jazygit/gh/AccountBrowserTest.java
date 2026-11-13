@@ -38,7 +38,7 @@ class AccountBrowserTest {
     void theAccountIsGhsActiveOneWhenTheRepositoryIsConfiguredToUseNone() throws Exception {
         assertEquals(
                 Option.of(ACTIVE),
-                github(GhToken.NONE, HashMap.empty(), account -> Option.none()).account());
+                github(GhToken.NONE, HashMap.empty(), account -> Option.none()).current());
         assertEquals("config get user -h github.com\n", Files.readString(dir.resolve("asked")));
     }
 
@@ -49,7 +49,7 @@ class AccountBrowserTest {
 
         assertEquals(
                 Option.of(work),
-                github(token, HashMap.empty(), account -> Option.none()).account());
+                github(token, HashMap.empty(), account -> Option.none()).current());
         assertTrue(Files.notExists(dir.resolve("asked")));
     }
 
@@ -58,16 +58,16 @@ class AccountBrowserTest {
         assertEquals(
                 Option.none(),
                 github(GhToken.NONE, HashMap.of("GH_TOKEN", "t"), account -> Option.none())
-                        .account());
+                        .current());
         assertEquals(
                 Option.none(),
                 github(GhToken.NONE, HashMap.of("GITHUB_TOKEN", "t"), account -> Option.none())
-                        .account());
+                        .current());
         // A token for an enterprise server does not change who gh is on github.com.
         assertEquals(
                 Option.of(ACTIVE),
                 github(GhToken.NONE, HashMap.of("GH_ENTERPRISE_TOKEN", "t"), account -> Option.none())
-                        .account());
+                        .current());
     }
 
     @Test
@@ -114,7 +114,7 @@ class AccountBrowserTest {
 
     @Test
     void ghOpensInTheAccountsBrowserToo() throws Exception {
-        CliGitHub github = github(GhToken.NONE, HashMap.empty(), browserOf(ACTIVE, "firefox -P work"));
+        Account github = github(GhToken.NONE, HashMap.empty(), browserOf(ACTIVE, "firefox -P work"));
 
         assertTrue(github.openPullRequest(7).isRight());
         assertEquals("firefox -P work\n", Files.readString(dir.resolve("browser")));
@@ -138,7 +138,7 @@ class AccountBrowserTest {
      * GitHub through a gh whose active account on github.com is {@code cvf}: it writes down what it is asked to read
      * in {@code asked}, and the {@code GH_BROWSER} it opens something with in {@code browser}.
      */
-    private CliGitHub github(
+    private Account github(
             GhToken token,
             Map<String, String> environment,
             java.util.function.Function<GhAccount, Option<String>> browsers)
@@ -154,7 +154,8 @@ class AccountBrowserTest {
                     ;;
                 esac
                 """.formatted(dir.resolve("asked"), dir.resolve("browser")));
-        return new CliGitHub(dir, gh.toString(), token, () -> GhAccount.GITHUB, browsers, environment::get, "Linux");
+        return CliGitHub.of(dir, gh.toString(), token, () -> GhAccount.GITHUB, browsers, environment::get, "Linux")
+                .account();
     }
 
     private Path script(String name, String body) throws Exception {

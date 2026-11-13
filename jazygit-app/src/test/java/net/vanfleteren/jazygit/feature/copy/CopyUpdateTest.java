@@ -192,7 +192,7 @@ class CopyUpdateTest {
     private static Env env(Terminal terminal) {
         return new Env(
                 StubGit.of(),
-                StubGitHub.empty(),
+                StubGitHub.of(),
                 SettingsStore.NONE,
                 RecentRepositories.NONE,
                 Repositories.NONE,

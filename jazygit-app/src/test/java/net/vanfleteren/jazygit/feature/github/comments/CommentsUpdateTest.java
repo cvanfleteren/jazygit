@@ -40,7 +40,7 @@ class CommentsUpdateTest {
     private static final PullRequest FEATURE_PR =
             new PullRequest(42, new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED);
     private static final PullRequestDetails DETAILS =
-            StubGitHub.empty().pullRequestDetails(42).get();
+            StubGitHub.of().pullRequests().details(42).get();
     private static final PullRequestPopup SHOWN =
             PullRequestPopup.loading(FEATURE, FEATURE_PR, Instant.EPOCH, 0).with(Either.right(DETAILS), 0);
     private static final PullRequestComment DESCRIPTION =
