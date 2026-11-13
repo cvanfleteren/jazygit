@@ -2,6 +2,8 @@ package net.vanfleteren.jazygit.ui.diff;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import dev.tamboui.style.Color;
+import dev.tamboui.style.Style;
 import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
 import io.vavr.collection.HashMap;
@@ -9,6 +11,7 @@ import io.vavr.collection.LinkedHashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.git.model.FileVersion;
@@ -101,6 +104,20 @@ class RenderedMarkdownTest {
         assertEquals(
                 List.of("  Intro text.", "", "+ New text.", "", "  • one", "  • two"),
                 lines.tail().map(String::stripTrailing));
+    }
+
+    @Test
+    void aThemeThatTintsChangedLinesHasABarInTheColourOfTheirMarkerNotOfTheTint() {
+        Theme.SpanStyles styles = cssClass -> switch (cssClass) {
+            case Theme.Classes.DIFF_ADDED_LINE -> Style.EMPTY.fg(Color.GREEN).bg(Color.BLACK);
+            case Theme.Classes.DIFF_ADDED -> Style.EMPTY.fg(Color.LIGHT_GREEN);
+            default -> Style.EMPTY;
+        };
+
+        Span bar = drawn(FileVersion.NEW, false, styles).lines().get(3).spans().getFirst();
+
+        assertEquals("▎", bar.content());
+        assertEquals(Optional.of(Color.LIGHT_GREEN), bar.style().fg());
     }
 
     @Test
@@ -266,6 +283,10 @@ class RenderedMarkdownTest {
     }
 
     private static RichDiff.Drawn drawn(FileVersion version, boolean cut) {
+        return drawn(version, cut, Theme.SpanStyles.NONE);
+    }
+
+    private static RichDiff.Drawn drawn(FileVersion version, boolean cut, Theme.SpanStyles styles) {
         ParsedDiff.ParsedFile whole = ParsedDiff.of(README).files().head();
         return RichDiff.drawn(
                 new Expansion.Folded(
@@ -275,7 +296,7 @@ class RenderedMarkdownTest {
                 true,
                 Option.none(),
                 Option.none(),
-                Theme.SpanStyles.NONE,
+                styles,
                 40);
     }
 

@@ -294,15 +294,12 @@ public final class RichDiff {
                 .filter(line -> line.kind() != DiffLine.Kind.NOTE)
                 .toVector();
         Change change = version == FileVersion.NEW ? Change.ADDED : Change.REMOVED;
-        // A theme that tints a changed line has the bar take the colour of the tint; one that does not, as mono, has
-        // the marker the line would have.
-        Span changed = styles.of(change.lineClass())
-                .bg()
-                .map(tint -> Span.styled(RENDERED_BAR, Style.EMPTY.fg(tint)))
-                .orElseGet(() -> styled(
-                        change.marker(),
-                        version == FileVersion.NEW ? Theme.Classes.DIFF_ADDED : Theme.Classes.DIFF_REMOVED,
-                        styles));
+        // A theme that tints a changed line has a bar in the colour of its marker, green for an added one as GitHub's
+        // is: the tint itself is a background, too dark to be seen as a bar. One that does not tint, as mono, has the
+        // marker the line would have.
+        String markerClass = version == FileVersion.NEW ? Theme.Classes.DIFF_ADDED : Theme.Classes.DIFF_REMOVED;
+        Span changed = styled(
+                styles.of(change.lineClass()).bg().isPresent() ? RENDERED_BAR : change.marker(), markerClass, styles);
         Span unchanged = Span.raw(" ");
         List<RenderedMarkdown.Block> blocks =
                 RenderedMarkdown.blocks(lines.map(DiffLine::text), Math.max(1, width - RENDERED_GUTTER), styles);
