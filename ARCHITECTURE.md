@@ -487,8 +487,8 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
   (`DiffOptionsMsg.WordsToggled`, kept as `ui.diff-words`) switches whether the rich view highlights the words that
   changed in a changed line, or draws the line in its line colour alone; it saves it, and only draws the diffs again,
   as the words were compared when they were read.
-- **The rich view** is drawn by `ui.diff.RichDiff` from a `ParsedDiff`, one tree of files, hunks and lines, each line with
-  its words and its tokens (ADR 56): `UnifiedDiff`, the diff parsed into files, hunks and numbered lines, which
+- **The rich view** is drawn by `ui.diff.RichDiff` from a `ParsedDiff`, one tree of files, hunks and lines, each line
+  with its words and its tokens (ADR 56): `UnifiedDiff`, the diff parsed into files, hunks and numbered lines, which
   `ParsedDiff.diff()` gives back, and `WordDiff`, which pairs the removed and added lines of a block and finds the words
   that
   changed in a pair, with the whitespace between two changed words highlighted with them (ADR 54), and `LinePairs`,
@@ -535,11 +535,11 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
   `CommitFilesView.remarks`; threads read at other commits
   read the files again at those, unless the pull request was found merged or closed, which keeps them and says so in
   the title (`CommitFilesView.ended`); threads read at other commits than the files are then not placed on lines
-  (`CommitFilesView.remarksAtItsCommits`). `ui.diff.RichDiff` draws them after their lines as `ui.diff.RemarkLines` blocks,
-  their Markdown drawn by tamboui's `MarkdownView` into a buffer off the screen and read back as lines, styled as the
-  theme styles `MarkdownElement` (`Theme.SpanStyles.markdown`). `c` lists only the files with an unresolved thread,
-  or with any, and every file again (`CommitFilesView.listed`, ADR 57): the files pane draws `listedFiles()`, the
-  files kept, and says why none is with a `FileTreeList.Placeholder`, as the content panel does then.
+  (`CommitFilesView.remarksAtItsCommits`). `ui.diff.RichDiff` draws them after their lines as `ui.diff.RemarkLines`
+  blocks, their Markdown drawn by tamboui's `MarkdownView` into a buffer off the screen and read back as lines, styled
+  as the theme styles `MarkdownElement` (`Theme.SpanStyles.markdown`). `c` lists only the files with an unresolved
+  thread, or with any, and every file again (`CommitFilesView.listed`, ADR 57): the files pane draws `listedFiles()`,
+  the files kept, and says why none is with a `FileTreeList.Placeholder`, as the content panel does then.
 - **The files of a branch** (ADR 61): `f` in the branches pane (`PullRequestMsg.FilesRequested`) opens those of its
   open pull request at once when the pull requests were listed with its commits (`PullRequest.commits`, read with
   `SummaryFragment`); else it opens the dialog, which goes on to them once its details are read
@@ -554,9 +554,9 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
   number, a thread by its id, a comment of an open thread), and `state.diff.DiffStops`, pure, says where it goes when
   its stop is gone (`DiffStops.nearest`). `RichDiff.drawn` works out the stops as it draws the diff and marks the row
   each starts on (`RichDiff.Drawn`); a key of the review needs only the lines among them, which `state.diff.DiffLines`
-  works out from the diff alone, without placing the threads. `ui.diff.DiffCursor` moves it: `j`/`k` and the arrows, through
-  a stop higher than the view before the next one, the pages and the wheel pulling it along, a click on a row, a range
-  of one hunk with `v`, the next thread with `n`. The area sends where it moved it and the view in one
+  works out from the diff alone, without placing the threads. `ui.diff.DiffCursor` moves it: `j`/`k` and the arrows,
+  through a stop higher than the view before the next one, the pages and the wheel pulling it along, a click on a row, a
+  range of one hunk with `v`, the next thread with `n`. The area sends where it moved it and the view in one
   `ViewMsg.ContentScrolled`: `Scrolled` holds the anchor of the cursor and of the other end of its range, and keeps the
   cursor when the same changes are read again (`ScrolledContent.sameChanges`). Until the model has it, the area draws
   where it told it, so a key right after another acts on where that one took the cursor. Its tint, `diff-cursor`, is
