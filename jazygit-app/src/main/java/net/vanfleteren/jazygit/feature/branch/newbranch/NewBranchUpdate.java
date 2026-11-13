@@ -7,7 +7,6 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.Revision;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 
 /**
@@ -28,8 +27,10 @@ public final class NewBranchUpdate {
                         model.repo()
                                 .remoteBranch(remote)
                                 .map(known -> new NewBranchPopup(remote.tracking(), Option.of(remote.branch()))));
+            // The read may wait behind other git commands: a popup that opened meanwhile, or the same one asked for
+            // twice, is not taken away, and an error shown meanwhile stays.
             case NewBranchMsg.NameTemplateRead(var popup, var template) ->
-                Update.ask(model, popup.withText(template.getOrElse("")));
+                Next.of(model.openPopupIfFree(popup.withText(template.getOrElse(""))));
             // Checking it out may ask where, in a linked worktree (ADR 68).
             case NewBranchMsg.Confirmed() ->
                 model.popup(NewBranchPopup.class)
@@ -47,9 +48,11 @@ public final class NewBranchUpdate {
 
     /**
      * Asks for the name of a new branch with {@code popup}, if there is one, once what the name starts out as is
-     * read (ADR 121); none when the branch cannot be made, and then nothing happens.
+     * read (ADR 121); none when the branch cannot be made, and then nothing happens. The error shown is cleared now,
+     * as the user asks, not once the read is back.
      */
     private static Next named(Model model, Option<NewBranchPopup> popup) {
-        return popup.map(asking -> Next.of(model, new ReadNameTemplate(asking))).getOrElse(() -> Next.of(model));
+        return popup.map(asking -> Next.of(model.clearError(), new ReadNameTemplate(asking)))
+                .getOrElse(() -> Next.of(model));
     }
 }

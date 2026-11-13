@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.branch.rename.RenameBranchPopup;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.StubConfig;
@@ -17,6 +18,7 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.popup.PopupMsg;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -64,6 +66,46 @@ class NameTemplateTest {
                 Option.of(ASKING),
                 NameAsked.asked(TestModels.loaded(SampleData.git()), new NewBranchMsg.Requested(MAIN))
                         .popup());
+    }
+
+    @Test
+    void aPopupThatOpenedWhileTheTemplateWasReadStaysOpen() {
+        Model requested = Update.update(TestModels.loaded(SampleData.git()), new NewBranchMsg.Requested(MAIN))
+                .model();
+        RenameBranchPopup typing = new RenameBranchPopup(MAIN, "typed");
+
+        Model read = Update.update(
+                        requested.openPopup(typing), new NewBranchMsg.NameTemplateRead(ASKING, Option.of("ART-")))
+                .model();
+
+        assertEquals(Option.of(typing), read.popup());
+    }
+
+    @Test
+    void anErrorShownWhileTheTemplateWasReadStays() {
+        Model requested = Update.update(
+                        TestModels.withCheckoutError(TestModels.loaded(SampleData.git()), "old", "stale"),
+                        new NewBranchMsg.Requested(MAIN))
+                .model();
+        assertEquals(Option.none(), requested.outcome().error());
+        Model failed = TestModels.withCheckoutError(requested, "feature", "boom");
+
+        Model read = Update.update(failed, new NewBranchMsg.NameTemplateRead(ASKING, Option.of("ART-")))
+                .model();
+
+        assertEquals(failed.outcome().error(), read.outcome().error());
+    }
+
+    @Test
+    void askingTwiceKeepsWhatWasTypedInTheFirst() {
+        Model asked = NameAsked.asked(
+                TestModels.loaded(SampleData.git()), new NewBranchMsg.Requested(MAIN), Option.of("ART-"));
+        Model typed = Update.update(asked, new PopupMsg.TextEdited("ART-42")).model();
+
+        Model again = Update.update(typed, new NewBranchMsg.NameTemplateRead(ASKING, Option.of("ART-")))
+                .model();
+
+        assertEquals(Option.of(ASKING.withText("ART-42")), again.popup());
     }
 
     @Test

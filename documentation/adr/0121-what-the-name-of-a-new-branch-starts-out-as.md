@@ -22,8 +22,11 @@ last value holding).
 2. **It is text, taken as it is.** The name starts out as that text, with the cursor after it. There are no variables
    in it, and braces are only braces: `fix-{old}-` starts the name as `fix-{old}-`.
 3. **It is read each time a name is asked for**, so a change in the configuration holds for the next new branch,
-   without reading the repository again. Asking for a new branch starts `ReadNameTemplate`, which carries the popup
-   that is to ask; its `NameTemplateRead` opens it, with the name as the template, or empty without one.
+   without reading the repository again. Asking for a new branch clears the error shown and starts
+   `ReadNameTemplate`, which carries the popup that is to ask; its `NameTemplateRead` opens it, with the name as the
+   template, or empty without one. It opens only when no popup is open: the read waits behind the git commands before
+   it, and a popup that came up meanwhile, or the same one asked for twice, is not taken away, nor is an error shown
+   meanwhile cleared.
 4. **It holds for every new branch whose name the user makes up:** one made from a local branch, from a commit, or
    from a remote branch. A new branch that is to follow a remote branch, asked for when the name it has on the remote
    is taken (`NewBranchPopup.following`), still starts out as that name. Renaming a branch starts out as its name, as
@@ -35,7 +38,8 @@ last value holding).
 
 ## Consequences
 
-- The popup asking for the name of a new branch opens once a `git config` has run, a few milliseconds after the key.
+- The popup asking for the name of a new branch opens once a `git config` has run: a few milliseconds after the key,
+  or once the git command running before it is done. When another popup opened meanwhile, it does not open at all.
 - Tests that ask for a new branch go through `NameAsked`, which answers the read.
 - Variables in the template, like the ticket in the name of the current branch, are for a later ADR. Since braces are
   taken as they are now, that ADR has to say what becomes of a template that has them already.
