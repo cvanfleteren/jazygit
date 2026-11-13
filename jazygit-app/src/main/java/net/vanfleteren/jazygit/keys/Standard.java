@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.feature.discard.DiscardKeys;
 import net.vanfleteren.jazygit.feature.edit.EditKeys;
 import net.vanfleteren.jazygit.feature.files.all.AllFilesAction;
 import net.vanfleteren.jazygit.feature.files.filter.FileFilterAction;
+import net.vanfleteren.jazygit.feature.files.step.FileStepAction;
 import net.vanfleteren.jazygit.feature.github.GitHubFeature;
 import net.vanfleteren.jazygit.feature.stage.StageKeys;
 import net.vanfleteren.jazygit.feature.stash.StashKeys;
@@ -39,6 +40,7 @@ final class Standard {
                     ExpandAction.ACTION.keys(),
                     VersionAction.ACTION.keys(),
                     CopyAction.ACTION.keys(),
+                    FileStepAction.ACTION.keys(),
                     GlobalKeys::register)
             .foldLeft(Keymap.empty(), (keymap, feature) -> feature.apply(keymap));
 

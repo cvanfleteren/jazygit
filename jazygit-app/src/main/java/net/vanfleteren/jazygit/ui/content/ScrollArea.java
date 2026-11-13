@@ -40,6 +40,7 @@ import net.vanfleteren.jazygit.state.diff.DiffCursorAt;
 import net.vanfleteren.jazygit.state.diff.DiffStops;
 import net.vanfleteren.jazygit.state.diff.Scrolled;
 import net.vanfleteren.jazygit.state.diff.ScrolledContent;
+import net.vanfleteren.jazygit.state.view.FileStepMsg;
 import net.vanfleteren.jazygit.state.view.ViewMsg;
 import net.vanfleteren.jazygit.ui.content.ContentView.Body;
 import net.vanfleteren.jazygit.ui.content.ContentView.Shown;
@@ -218,6 +219,11 @@ public final class ScrollArea {
                 .orElse(() -> cursor.flatMap(on -> move(on, event)).map(to -> moved(to, content)))
                 .orElse(() -> cursor.flatMap(on -> KEYMAP.handle(
                                 review ? Scopes.PULL_REQUEST_DIFF : Scopes.DIFF, event, Option.of(at(on, content))))
+                        .map(this::reviewed))
+                // Without a cursor, as in the plain style, only the keys that move to another file act (ADR 117).
+                .orElse(() -> Option.when(cursor.isEmpty(), () -> KEYMAP.handle(Scopes.DIFF, event, Option.none()))
+                        .flatMap(msg -> msg)
+                        .filter(FileStepMsg.class::isInstance)
                         .map(this::reviewed))
                 .getOrElse(() -> scroll(event) ? scrolled(content) : EventResult.UNHANDLED);
     }

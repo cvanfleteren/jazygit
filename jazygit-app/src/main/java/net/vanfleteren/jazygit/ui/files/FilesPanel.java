@@ -360,6 +360,16 @@ public class FilesPanel {
     }
 
     /**
+     * Moves the highlight of the tree shown in {@code model} to its file {@code step} of the highlighted node, as
+     * {@link FileTreeList#step} does, and says whether there was one (ADR 117). The pane does not get the focus.
+     */
+    public boolean step(Model model, FileStepMsg.Step step) {
+        return model.repoView().commitFiles().isDefined()
+                ? commitTree.step(step)
+                : workingTree(model.repoView()).step(step);
+    }
+
+    /**
      * The tree of the working tree shown: of all its files, or of its changed ones (ADR 108).
      */
     private FileTreeList<FileEntry> workingTree(RepoView view) {

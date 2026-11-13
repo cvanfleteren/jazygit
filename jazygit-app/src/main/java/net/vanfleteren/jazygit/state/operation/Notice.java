@@ -81,4 +81,14 @@ public sealed interface Notice {
      * Nothing was copied, as the terminal could not be written to (ADR 94).
      */
     record CopyFailed() implements Notice {}
+
+    /**
+     * The highlight of the files pane was on its last file, so there was no next file to move to (ADR 117).
+     */
+    record NoNextFile() implements Notice {}
+
+    /**
+     * The highlight of the files pane was on its first file, so there was no previous file to move to (ADR 117).
+     */
+    record NoPreviousFile() implements Notice {}
 }
