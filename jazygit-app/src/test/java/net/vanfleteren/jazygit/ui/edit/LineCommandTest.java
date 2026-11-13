@@ -61,20 +61,6 @@ class LineCommandTest {
     @CsvSource(
             delimiter = '>',
             value = {
-                "git checkout feature/foo-bar| > git checkout |",
-                "git checkout feature/foo|-bar > git checkout |-bar",
-                "git checkout   | > git |",
-                "|git > |git",
-                "first\\n|second > |second",
-            })
-    void unixWordRuboutDeletesBackToWhitespace(String before, String after) {
-        assertCommand(LineCommand.UNIX_WORD_RUBOUT, before, after);
-    }
-
-    @ParameterizedTest
-    @CsvSource(
-            delimiter = '>',
-            value = {
                 "feature/foo-bar| > feature/foo-|",
                 "feature/foo-| > feature/|",
                 "|feature > |feature",

@@ -9,8 +9,10 @@ import io.vavr.control.Option;
 
 /**
  * The keys of readline that edit the text in a field, beyond the ones the field already knows, and what they do to
- * the state of the field. The fields of the toolkit know Ctrl+Left, Ctrl+Right, Ctrl+W and Ctrl+Delete, but
- * with words of their own, and none of readline's other keys; so these keys have to reach them first.
+ * the state of the field. The fields of the toolkit know Ctrl+Left, Ctrl+Right and Ctrl+W, and are left those: their
+ * words, which take {@code foo-bar} whole and stop at {@code /}, suit branch names and paths, as fish's Ctrl+W does.
+ * They know none of readline's other keys, and Ctrl+Delete with words of their own; so these keys have to reach them
+ * first.
  *
  * <p>Alt+Backspace only works where the terminal input tells it from Escape followed by Backspace.
  */
@@ -28,8 +30,6 @@ public final class LineEdit {
                     : event.hasAlt() && !event.hasCtrl() ? alt(event.codePoint()) : Option.none();
         }
         return switch (event.code()) {
-            case LEFT -> Option.when(event.hasCtrl() && !event.hasAlt(), LineCommand.BACKWARD_WORD);
-            case RIGHT -> Option.when(event.hasCtrl() && !event.hasAlt(), LineCommand.FORWARD_WORD);
             case DELETE -> Option.when(event.hasCtrl() && !event.hasAlt(), LineCommand.KILL_WORD);
             case BACKSPACE -> Option.when(event.hasAlt() && !event.hasCtrl(), LineCommand.BACKWARD_KILL_WORD);
             default -> Option.none();
@@ -40,7 +40,6 @@ public final class LineEdit {
         return switch (key) {
             case 'a' -> Option.of(LineCommand.BEGINNING_OF_LINE);
             case 'e' -> Option.of(LineCommand.END_OF_LINE);
-            case 'w' -> Option.of(LineCommand.UNIX_WORD_RUBOUT);
             case 'u' -> Option.of(LineCommand.UNIX_LINE_DISCARD);
             case 'k' -> Option.of(LineCommand.KILL_LINE);
             default -> Option.none();

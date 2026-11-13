@@ -62,7 +62,7 @@ class NewBranchDialogTest {
     }
 
     @Test
-    void theReadlineKeysEditTheName() throws Exception {
+    void theWordKeysEditTheNameAPartOfThePathAtATime() throws Exception {
         java.util.List<KeyEvent> global = new ArrayList<>();
         try (ToolkitTestRunner runner = start()) {
             // The app's global Ctrl+W shows whitespace in the diffs, after the field had its chance.
@@ -73,13 +73,16 @@ class NewBranchDialogTest {
                 return EventResult.UNHANDLED;
             });
             type(runner, "feature/foo-bar");
-            SettledPilot.of(runner).press(KeyCode.LEFT, KeyModifiers.CTRL);
             SettledPilot.of(runner).press('w', KeyModifiers.CTRL);
+            type(runner, "topic");
+            SettledPilot.of(runner).press(KeyCode.LEFT, KeyModifiers.CTRL);
+            type(runner, "my-");
             SettledPilot.of(runner).press(KeyCode.ENTER);
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(Option.of("bar"), open.popup(NewBranchPopup.class).map(NewBranchPopup::name));
+        assertEquals(
+                Option.of("feature/my-topic"), open.popup(NewBranchPopup.class).map(NewBranchPopup::name));
         assertEquals(new NewBranchMsg.Confirmed(), dispatched.getLast());
         assertEquals(java.util.List.of(), global);
     }
