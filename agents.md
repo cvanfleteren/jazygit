@@ -79,6 +79,12 @@ The updates, messages, popups and the model are pure. Pure code:
 
 ## Process
 
+### ARCHITECTURE.md
+
+- `ARCHITECTURE.md` is a short map of the shape of the code: modules, layers, the runtime loop, what a feature is made
+  of. Update it only when that shape changes, never to describe a feature; feature details belong in the code, its
+  Javadoc and the ADRs.
+
 ### ADR
 
 - Decisions with a big impact on the architecture or were impactful design decisions had to be made are recorded in an

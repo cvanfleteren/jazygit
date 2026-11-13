@@ -12,35 +12,27 @@ It follows the **Elm architecture**:
 
 Rendering never talks to git, and update functions never do IO.
 
-## Modules
+This file is a map of the shape of the code: the modules, the layers, the loop and what a feature is made of. It
+does not describe features; the code, its Javadoc and the tests do. Why things are as they are is in the ADRs, in
+`documentation/adr`. Change this file only when the shape changes.
 
-The Maven build has seven modules under the parent `pom.xml`, and an eighth with `-Pbench`. The core is
-`jazygit-process`, `jazygit-git` and `jazygit-gh`:
+## Modules
 
 | Module | Holds | Depends on |
 |---|---|---|
-| `jazygit-json` | `json`: JSON as plain values (`Json`), and the decoders that turn it into records (`Decoder`), ADR 42. | vavr, Parsson's streaming parser |
-| `jazygit-syntax` | `syntax`: the scanner that finds the keywords, strings, comments, numbers and annotations of a line of code (`Lexer`, `Language`, `Token`), ADR 53, 113. | vavr |
+| `jazygit-json` | `json`: JSON as plain values, and decoders into records (ADR 42). | vavr, Parsson |
+| `jazygit-syntax` | `syntax`: the lexer that finds the tokens of a line of code (ADR 53, 113). | vavr |
 | `jazygit-process` | `process`: running a program, and what it did as a value (`Exec`, `ExecutedCommand`). | vavr, zt-exec |
-| `jazygit-git` | `git`, `git.model`: running git, and what it reports as values. | `jazygit-process`, `jazygit-syntax`, vavr |
-| `jazygit-gh` | `gh`, `gh.model`, `gh.timing`: running gh, and what GitHub reports as values. | `jazygit-process`, `jazygit-json`, vavr |
-| `jazygit-app` | Everything else: `JazygitApp`, `cli`, `state`, `feature.*`, `ui`, `keys`, `settings`, `i18n`, and all resources. Builds the fat jar and the native image. | `jazygit-git`, `jazygit-gh`, TamboUI, picocli, night-config |
-| `jazygit-test-support` | What the architecture tests share: `Values`, and the rules of the core (`CoreRules`, `ModelRules`). Only ever a test dependency. | ArchUnit, vavr |
-| `jazygit-benchmarks` | JMH benchmarks of pure parts of the core and the app: `WordDiffBenchmark` times parsing a diff and comparing the words of its changed lines, for the rich view (ADR 44); `RichDiffBenchmark` what reading a diff costs and what drawing it costs the render thread (ADR 50). Only built with `-Pbench`, so no part of `verify` or CI. | `jazygit-git`, `jazygit-app`, JMH |
+| `jazygit-git` | `git`, `git.model`: running git, and what it reports as values. | process, syntax |
+| `jazygit-gh` | `gh`, `gh.model`: running gh, and what GitHub reports as values. | process, json |
+| `jazygit-app` | Everything else: `JazygitApp`, `state`, `feature.*`, `ui`, `keys`, `settings`, `i18n`. Builds the fat jar and the native image. | git, gh, TamboUI, picocli, night-config |
+| `jazygit-test-support` | What the architecture tests share (`CoreRules`, `ModelRules`). Test scope only. | ArchUnit |
+| `jazygit-benchmarks` | JMH benchmarks, only built with `-Pbench`. | git, app, JMH |
 
 The packages keep their names (`net.vanfleteren.jazygit.git`, ...), whichever module they are in. The core
-cannot see the application, TamboUI, picocli or night-config, and git and gh cannot see each other, so the compiler
-stops any such dependency. The rules inside the core (the models are pure, failures are values) are in
-`CoreRules` and `ModelRules`, which `ProcessArchitectureTest`, `GitArchitectureTest` and `GhArchitectureTest` take
-in. The test-jars of git and gh share `StubGit` with a stub of each role, `SampleData` and `StubGitHub` with the app's
-tests.
-`jazygit-json` knows nothing of jazygit; only its `JsonReader` uses Parsson, and the core and the app do not use it
-at all (`JsonArchitectureTest`, `CoreRules`, `ArchitectureTest`). `jazygit-syntax` knows nothing of jazygit either,
-not even of a diff: it lexes a line from where the line before it left the scanner, and uses only the JDK and vavr
-(`SyntaxArchitectureTest`).
-
-`mvn verify` at the root builds and tests all seven. `./run.sh` runs the fat jar from `jazygit-app/target`, and
-`mvn -T1 -Pnative package` (serial, as native-maven-plugin is not thread-safe) builds `jazygit-app/target/jazygit`.
+(`process`, `git`, `gh`, `json`, `syntax`) cannot see the application, TamboUI, picocli or night-config, and git and
+gh cannot see each other, so the compiler stops any such dependency. The rules inside the core (the models are pure,
+failures are values) are ArchUnit tests: `CoreRules` and `ModelRules`, run by each module's `*ArchitectureTest`.
 
 ## Packages
 
@@ -49,15 +41,15 @@ graph TD
     App["JazygitApp, Launcher, RepositorySession, ...<br/><i>start, session, layout, popups, focus</i>"]
     UI["ui<br/><i>panels and widgets: render a Model</i>"]
     Keys["keys<br/><i>Keymap: every shortcut, declared once</i>"]
-    Feature["feature.*<br/><i>branch, commit, stage, stash, discard,<br/>github, fetch, error, help, theme, repos,<br/>settings, worktree, inprogress, edit, start</i>"]
-    State["state.*<br/><i>Model, Msg, Update, Cmd, Program;<br/>load, view, diff, github,<br/>operation, index, popup, preferences</i>"]
-    Git["git<br/><i>Git, its roles, CliGit, Cli*, GitProcess, GitError</i>"]
-    GitModel["git.model<br/><i>Branch, Commit, RepoStatus, Sha, ...</i>"]
-    Gh["gh<br/><i>GitHub, its roles, CliGitHub, Cli*, GhProcess, GhError</i>"]
-    GhModel["gh.model<br/><i>PullRequest, PullRequestDetails, ...</i>"]
-    Process["process<br/><i>Exec, ExecutedCommand, CommandLine</i>"]
+    Feature["feature.*<br/><i>one package per feature</i>"]
+    State["state.*<br/><i>Model, Msg, Update, Cmd, Program,<br/>and a subpackage per part of the Model</i>"]
+    Git["git<br/><i>Git, its roles, Cli*, GitProcess, GitError</i>"]
+    GitModel["git.model"]
+    Gh["gh<br/><i>GitHub, its roles, Cli*, GhProcess, GhError</i>"]
+    GhModel["gh.model"]
+    Process["process<br/><i>Exec</i>"]
     I18n["i18n<br/><i>Messages</i>"]
-    Settings["settings<br/><i>Settings, SettingsFile, SettingsPaths,<br/>RecentRepositoriesFile</i>"]
+    Settings["settings<br/><i>config.toml, state.toml</i>"]
 
     App --> UI
     App --> State
@@ -90,524 +82,17 @@ graph TD
     Feature --> I18n
 ```
 
-The arrows are the dependencies allowed. Inside `jazygit-app`, `ArchitectureTest` fails on any other;
-inside the core, the compiler does: it cannot reach the app's packages at all, nor git those of gh.
+The arrows are the dependencies allowed. Inside `jazygit-app`, `ArchitectureTest` fails on any other; it is the
+source of truth when the two disagree.
 
 - **The parts have no cycles**, with one exception: `Keymap.standard()` lists the keys of the features, which
   declare them with the types of `keys` (dotted).
-- **Nor have the parts of `state`**, its subpackages: `diff` ← `view` ← `load` ← `github` ← `operation` ← `popup`,
-  with `index` and `preferences` below `load` and `github`. The core, `state` itself, uses them all, and they all use
-  it, as the `Model` holds them and they work on it. What a part keeps of a read is data, not the read: a read knows
-  where in the `Model` it puts what it read (`Target`), so a `Version` keeps the `WholeFile` it shows, and
-  `ReadVersion.of` makes the read of it again (ADR 107).
-- **Views use `ui`, but only to draw:**
-  - The dialogs of a feature use the widgets of `ui`.
-  - `ui` uses `git` and `gh` only for the errors, which `ErrorText` describes.
-  - Nothing in `ui`, `keys` or a dialog runs git or gh.
-  - The parts of `ui` depend on each other one way only, from the shell in `ui` through the content and the
-    panes of the features down to the widgets, the text and the theme (`ArchitectureTest.uiIsFreeOfCycles`,
-    `uiPartsDoNotUseTheShell`).
-- **`git` and `gh` know nothing of each other**, nor of anything above them: they live in `jazygit-git` and
-  `jazygit-gh`.
+- **Nor have the subpackages of `state`** (`diff`, `view`, `load`, `github`, `operation`, `popup`, `index`,
+  `preferences`). `state` itself uses them all, and they all use it, as the `Model` holds them.
+- **Views use `ui` only to draw.** Nothing in `ui`, `keys` or a dialog runs git or gh. `ErrorText` in `ui` is the only
+  place that turns errors into text.
 - **Only views use `i18n`.** `state` does not.
 - **`settings` knows nothing of the application**, and is the only part that reads or writes TOML.
-
-| Package | Responsibility |
-|---|---|
-| `JazygitApp` | Lays out the panes and the content, shows the open popup and routes the keys and the mouse to the model. Next to it: `Launcher` reads the command line and opens the repository; `RepositorySession` runs the `Program` and its threads, and opens another repository in its place; `TerminalHandOver` sets the terminal up and hands it to an editor; `Timers` dispatches what happens every so often; `Popups` lists the popups of the features; `FocusKeeper` keeps where the focus is; `ui.LeftColumn` lays out the panes of the screen shown. |
-| `ui` | The shell (`LeftColumn`, `PopupSlot`, `StatusPanel`, `CommandLogPanel`, `FetchLine`, the slides and borders) that lays out the parts below it. |
-| `ui.files`, `ui.branches`, `ui.commits`, `ui.stash`, `ui.github` | The panes of each feature (`FilesPanel`, `BranchesPanel`, `CommitsPanel`, `StashPanel`, `PullRequestsPanel`, ...) that render a `Model` and turn key events into `Msg`s, with what only they draw: the branch lists, the check rows, the comment composer. |
-| `ui.content` | The content panel: `ContentView` says what it shows, `ContentPanel` and `ScrollArea` draw it, `ContentText` builds its text. |
-| `ui.diff` | The rich view of a diff (`RichDiff`), its cursor, and the review threads drawn in it (`RemarkLines`, `ShownRemarks`). |
-| `ui.markdown` | Markdown drawn into lines, with its links and images. |
-| `ui.widgets`, `ui.edit` | The dialog widgets (`ConfirmDialog`, `ChoiceDialog`, `TextInputDialog`, `PickDialog`) and the `DialogFrame` they are drawn in, with `WithDetails` for a box of details under one; the list every pane is built on (`LoadableList`); the editing of a line or a text. |
-| `ui.text`, `ui.theme` | What everything above draws with: `Theme`, the width of text, times, placeholders, and `ErrorText`, the only place that turns errors into text. |
-| `keys` | `Keymap`: the keys of each panel (`Scope`) and the global keys. Panels react to keys from it, and the help popup lists them from it. |
-| `feature.*` | One package per feature. Each one holds the feature's messages, its update functions, its commands, and its popups, dialogs and keys. |
-| `state` | The Elm core: `Model`, `Msg`, `Update`, `Cmd`, `Program`, `Env`, `Loadable`, `Lens`, `Repo`, `Jobs`, `GitHubBases`, and the errors as data (`AppError`, `Phrase`, `Failure`). The other parts of the `Model` each have a subpackage, with their messages, updates and commands: |
-| `state.load` | The reads of the repository: `Load` and every one of them (`LoadStatus`, `LoadBranches`, `ReadWholeFile`, ...), with `Target` and `Targeted`, where a read puts what it read; `LoadMsg`, `LoadUpdate`; what is ahead on the base (`AheadUpdate`); the updates that start reads: the highlights of the panes and the previews read for them (`SelectionMsg`, `SelectionUpdate`), and the search of the commits (`CommitSearchMsg`, `CommitSearchUpdate`). |
-| `state.view` | What the repository screen shows: `RepoView` and its views (`CommitFilesView`, `BranchCommitsView`, `DivergenceView`, `CommitSearch`), `Preview`, the filter of the files tree (`FileFilter`, `FileFilterMsg`, `FileFilterUpdate`, ADR 105), focus and scrolling (`ViewMsg`). |
-| `state.diff` | The content area: `ScrolledContent`, `Scrolled`, `Version`, `Expansion`, the file read whole they keep (`WholeFile`) and whose changes it is (`Changes`, `BaseTip`), and the lines of a diff with the remarks on them (`DiffLines`, `DiffStops`, `PlacedRemarks`, `Collapsed`). |
-| `state.github` | What is read from GitHub: `GitHubState`, the pull requests (`PullRequestsMsg`, `PullRequestsUpdate`), the checks and how long they take (`BranchChecksUpdate`, `CheckTimesUpdate`), and how those reads are paced (`GitHubReads`, `FailingRead`); the pull requests screen, in `state.github.prs` (`PrOverview`, `PrOverviewMsg`, `PrOverviewUpdate`). |
-| `state.operation` | The operations (`Operation`, `OperationCmd`, `OperationMsg`, `OperationUpdate`), the command log (`CommandLog`, `LogEntry`) and how the last one went (`Outcome`, `Notice`). |
-| `state.index` | Writing the index anew (`IndexRefresh`, `IndexUpdate`). |
-| `state.popup` | `Popup` and the kinds of it all features share (`ConfirmablePopup`, `TextPopup`, `ErrorPopup`), `PopupMsg`. |
-| `state.preferences` | `Preferences`, `Screen`, `LeftPanes`, `RepositoryTheme`, and saving the settings (`SettingsMsg`, `SettingsUpdate`). |
-| `git` | Everything that touches the repository, all through the `git` command line. All results are `Either` values. |
-| `git.model` | Immutable value types describing the repository. |
-| `gh` | Everything that talks to GitHub, all through the `gh` command line. It knows nothing of `git`, and `git` knows nothing of it; the features combine them. |
-| `gh.model` | Immutable value types describing GitHub: `PullRequest`, `PullRequestDetails`, `MergeMethod`, `GhAccount`, `GhLogin`. |
-| `process` | `Exec`, the only place that starts a program, for `git` and `gh` alike, and its `ExecFailure`; `Limit`, how much of its output is read (ADR 79); `ExecutedCommand`, a command as it ran; `CommandLine`, how a command line is written. |
-| `i18n` | `Messages`: the user-facing texts, from `messages.properties`. |
-| `settings` | What the user keeps from one session to the next (`Settings`, `ThemeName`), where it is kept (`SettingsPaths`) and the TOML file it is kept in (`SettingsFile`, behind `SettingsStore`); the state jazygit keeps by itself, the recent repositories (`RecentRepositoriesFile`, behind `RecentRepositories`). |
-
-## Settings
-
-The settings live in `config.toml`, in the directory that is the standard for the OS:
-
-- **Linux:** `$XDG_CONFIG_HOME/jazygit` if that is set to an absolute path, else `~/.config/jazygit`.
-- **macOS:** `$XDG_CONFIG_HOME/jazygit` if that is set, else `~/Library/Application Support/jazygit`.
-- **Windows:** `%APPDATA%\jazygit`.
-- **`$JAZYGIT_CONFIG_DIR`** overrides the directory on all of them.
-
-`main` loads them before the app starts, so the first frame is drawn in the right theme. A problem with the
-file never stops the app:
-
-- A missing file gives the defaults. The file is only made when a setting is first changed.
-- A file that cannot be read, or a value that is not valid, gives the defaults, and the command log says so.
-- Keys jazygit does not know are ignored.
-
-A change in the app, like choosing a theme, updates the `Model` and returns a `SaveSettings` with the
-settings before and after. It writes only the settings that changed, so a hand edit made while jazygit runs
-stays. Saving keeps the other keys, their order and their comments. It writes a temporary file and moves it
-over the old one, and leaves a file that is not valid TOML alone. A symlinked `config.toml` stays a link: the
-file it leads to is replaced and keeps its permissions. A `.lock` file beside `config.toml` and `state.toml`
-themselves, not beside what a link leads to, is locked while they are read and written, so two jazygits do not
-undo each other. It is kept, as a lock nobody can see is none. When the whole directory is the link (GNU Stow
-does that when `~/.config/jazygit` does not exist yet), the lock is in the dotfiles repository after all: add
-`config.toml.lock` and `state.toml.lock` to its `.gitignore`. When saving fails, the error is shown, and
-the setting still holds until jazygit stops.
-
-Ctrl+S shows the settings (`feature.settings`): the gh executable, the theme, and the GitHub account of the
-repository. The keys in `config.toml` are `ui.theme`, `ui.diff-style` (which Ctrl+D switches, ADR 44),
-`ui.diff-syntax` (`false` draws the code of the rich view in one colour, ADR 53), `ui.diff-words` (which Ctrl+E
-switches; `false` draws a changed line of the rich view in its line colour alone, its changed words not highlighted) and
-`github.executable`, the gh to run when it is not the one on the PATH; a new one is only kept once
-`<executable> --version` runs. Changing the gh executable or the
-account shows the repository again through `Env.repositories()`, as switching to a recent repository does, so a
-new `Env` runs gh as the settings say now.
-
-## Recent repositories
-
-The repositories opened last are state, not settings: jazygit writes them by itself, and they are not meant
-to be edited. They live in `state.toml`, as `recent-repositories`: the roots of their working trees, the
-last one opened first, at most 20. What is kept of one GitHub repository is in a directory of its own next to it,
-`repos/<owner>/<name>/`, a file per concern (ADR 63): `unseen-pull-requests.toml` (ADR 29), `check-timings.toml`
-(ADR 32) and `collapsed.toml`, the review threads and comments `Space` collapsed or opened per pull request, kept 30
-days after the last flip of each (`CollapsedFile`, ADR 62). Each id is kept with whether it was collapsed by default
-then, so one whose default changed since, as a thread resolved meanwhile, is as it starts. At startup
-`FormerState` deletes the `check-timings.toml` and the `unseen-pull-requests` of `state.toml` that held them for all
-repositories at once.
-
-- **Linux:** `$XDG_STATE_HOME/jazygit` if that is set to an absolute path, else `~/.local/state/jazygit`.
-- **macOS:** `$XDG_STATE_HOME/jazygit` if that is set, else `~/Library/Application Support/jazygit`.
-- **Windows:** `%LOCALAPPDATA%\jazygit`.
-- **`$JAZYGIT_STATE_DIR`** overrides the directory on all of them.
-
-`main` records the repository it opens. Every change reads the file again first, so what another jazygit
-recorded meanwhile stays. A file that cannot be read gives none, and is written anew; failing to write is not
-shown, as the list is only a convenience.
-
-Ctrl+R lists the others, leaving out the ones whose directory is gone, which are forgotten too. Choosing one
-runs `RecentReposCmd.SwitchTo`, which asks `Env.repositories()` to open it. `RepositorySession` does that: it opens
-the repository on the thread of the command and then, on the render thread, stops the runtime of the old one
-without waiting for the git command that runs, and starts a new `Program` for the new one from scratch. The
-theme and the settings of the session stay. A repository that cannot be opened is forgotten, and the error is
-shown in the one still open.
-
-## Starting outside a repository
-
-When the start directory is in no repository, or does not exist, `Launcher` runs `StartApp` before `JazygitApp`
-(`feature.start`, see `documentation/adr/0028-start-outside-a-repository.md`). It asks what to open instead:
-
-- `i` makes the folder a repository with a plain `git init` (`CliGit.init`), unless it does not exist;
-- `o` asks for the path of another folder, relative to the folder asked about, or from `~`. One inside a repository
-  opens it; one outside any is asked about in turn; a path that names no folder is said under the input;
-- `r` lists the recent repositories, when there are any;
-- `q`, Escape and Ctrl+C quit, with exit code 0.
-
-`StartApp` is Elm-like too, but small: its model is the app's `Model`, with no repository, so its dialogs are the
-app's own. `StartMsg` updates it, and the `StartCmd`s it asks for run on a thread of their own; they need no `Env`,
-as there is no repository yet. A repository that opens (`StartMsg.Opened`) ends it, with the working tree that
-`main` then opens as it would have opened the start directory. The theme and the settings are loaded first, so it
-is drawn as the app is.
-
-## Worktrees
-
-The worktrees of the repository are read with the other periodic loads, into `Model.worktrees`, and listed on the
-third tab of the branches pane (`feature.worktree`). The one shown is marked, and so are the main one, a locked
-one and one whose directory is gone.
-
-- **Adding:** what a new worktree checks out is a `WorktreeSource`: an existing branch, a new branch, a revision on
-  no branch, or a pull request. Each way of adding one asks for it, then where the worktree goes, next to the main
-  worktree by default, as `<main>-<branch>`; a leading `~` is the home directory. Once added, the pane shows the
-  worktrees and switching to the new one is offered.
-  - `w` on a local branch checks it out (`git worktree add <path> <branch>`); `W` on a branch, local or remote, asks
-    for a new branch made from it (`-b`).
-  - `n` on the worktrees asks where to start, the checked out branch to begin with, then for a new branch, which
-    may be left blank: the worktree then checks out the local branch typed, when no worktree has it, or else what was
-    typed on no branch (`--detach`).
-  - `w` on a pull request of the repository adds a worktree on no branch and has `gh pr checkout` run in it, so a
-    pull request from a fork gets its branch as checking it out in place gives it; when gh fails, the worktree is
-    removed again. The changes of the worktree shown stay there.
-- **Switching:** space on a worktree opens it in place of the one shown, as switching to a recent repository
-  does (`RecentReposCmd.SwitchTo`), which makes it a recent one too.
-- **Removing:** `d` removes a worktree other than the main one and the one shown (`git worktree remove`), keeping
-  its branch or deleting it locally too, once the worktree is gone (`RemoveWorktreeCmd.deleting`). When git refuses
-  because it has changes (`GitError.WorktreeHasChanges`), removing it anyway (`--force`) is offered, still deleting
-  the branch when that was chosen.
-- **A branch checked out in another worktree** is marked `wt` in the list of branches (ADR 45). git checks a branch
-  out in one worktree at a time, so what it would refuse is not run: checking the branch out offers to switch to
-  that worktree instead, and fast-forwarding it or adding a worktree for it fail up front with an
-  `WorktreeError.CheckedOutElsewhere` that names the worktree. Deleting it offers to remove that worktree and then delete
-  the branch locally, the same removal as above, besides deleting it on its remote; only when the worktree cannot be
-  removed either and the branch is not on its remote does deleting it fail up front. The branch feature depends on
-  the worktree feature for this, so the keys switching the tabs of the branches pane, the worktrees' too, are the
-  branch feature's.
-
-## The distance from the base
-
-A local branch shows how many commits it has that its base does not, and how many of its base it does not have,
-`⇡1 ⇣58`, the base being that of ADR 20: its parent, else the main branch, from `origin` when it is there.
-A branch whose base is its upstream shows only `↑`/`↓`. Every read of the branches (`LoadBranches`) reads the
-parents with them (`Branches.parents`, one `git config --get-regexp`) and counts the distances against the tips
-and the main branch it just read (`Branches.baseDistance`, `CliBaseDistance`: one
-`for-each-ref --format=%(ahead-behind:<commit>)` for every base at once), and comes back with all three in
-`LoadMsg.BranchesLoaded`, which keeps the parents in `Repo.parents` and a `BaseDistance` per branch in
-`Repo.baseDistance` (ADR 49, 58). Parents that cannot be read, or a read that fails, leave the parents and counts read
-before. The title of the log of a branch takes both counts from there, once they are read against the
-base its log was compared with and at the tip it was read from; until then, from the commits read. ADR 46
-counted only those behind; the count of those ahead came later, from the same `%(ahead-behind:)`.
-
-## Divergence
-
-`u` on a local branch offers, besides resetting the checked out branch onto its upstream, to view how the
-highlighted branch diverged (`feature.branch`, `UpstreamUpdate`):
-
-- **From its upstream** (`v`): the branch it follows, `Upstream.branch`: the remote-tracking one, or the local one
-  for an upstream in the repository itself.
-- **From the base branch** (`b`): `origin/<main>`, else the local `<main>`, where `<main>` is the branch
-  `Branch.isDefault`
-  marks. The main branch itself has no base.
-
-`Model.divergence` (`state.view.DivergenceView`) holds the two branches, the commits only on either of them, read with
-`History.divergence` (two `git log a ^b` of at most 300 commits each, and `rev-list --left-right --count` for
-how many there are), and the preview of the highlighted one. While it is open, the branches pane lists it in place of
-the local branches: the commits only on the other branch, then the ones only on the local branch, each under the
-name of its branch. The highlight skips those names. The content panel shows the highlighted commit as the commits
-pane does, in a scroll area of its own, so the two panes do not take each other's preview. Escape, or switching
-tabs, closes it.
-
-It is read again when either branch moves, as the periodic loads of the branches tell. When the branch is gone, it
-closes; when the upstream is gone, or the base branch, it closes with the error that says so.
-
-## The commits of a branch
-
-Enter on a branch, local or remote, lists its commits in place of the branches (`feature.branch.commits`,
-`ui.branches.BranchCommitsList`), drawn by the same `CommitsPanel.rows` and `marked` as the commits pane: the commits
-on the base dimmed, and with `b` only the others and the fork point. Enter on a commit moves the focus to its diff;
-Escape, or switching tabs, goes back to the branches.
-
-`RepoView.branchCommits` (`state.view.BranchCommitsView`) holds only the branch and the preview of the highlighted
-commit. The commits are not held twice: while the list is open, the branch stays the one highlighted in the branches
-pane, so its log is `RepoView.branchLog` and what is ahead `RepoView.branchAhead`, read and read again as for the
-highlighted branch. A log read for another branch shows as loading. When the branch is gone, the list closes. The
-content panel shows the highlighted commit as the commits pane does, in a scroll area of its own. See ADR 23.
-
-## Searching the commits
-
-`/` in the commits pane opens a line above the list to type a query in (`RepoView.searchLine`); Enter runs it through
-`History.search`, and the pane then lists what it found in place of the log of HEAD (`RepoView.commitSearch`,
-`state.view.CommitSearch`), flat, without the rails of merges, until Escape clears it. Its messages and update are in
-`state.load` (`CommitSearchMsg`, `CommitSearchUpdate`), as the pane sends them; `feature.commit.search` only declares
-the key. `git.model.CommitQuery` parses the query: bare words for the message, `author:`, `path:` and `-S:`, smart case.
-See ADR 4.
-
-The search runs again each time the log is read again, so it stays right after an operation, and the commit
-operations find the commits it found through `Model.commit`, also those older than the log reads.
-
-## The commits not on the base
-
-The commits pane and the log of the highlighted branch dim the commits that are on the base of their branch: the
-branch it was made from (`gh-merge-base`), else the main branch, `origin/` first. Their titles count the others.
-`b`, in either pane, lists only those and the fork point (`RepoView.onlyAhead`), and a search then leaves the base
-out. `LoadAhead` reads it into `Repo.ahead` for HEAD and `RepoView.branchAhead` for the highlighted branch:
-together with the log it goes with (`LoadCommits`, `LoadBranchLog`), so that a log is never shown undimmed
-first, and on its own again when the base moves; `state.load.AheadUpdate` decides what to read, and
-`ui.commits.AheadView` how the panes show it. `feature.ahead` only declares the keys. See ADR 20.
-
-## The pull requests screen
-
-Ctrl+P switches the left of the screen between the repository and the pull requests (`Model.screen`,
-`state.preferences.Screen`); the status panel names both, the one shown in bold. What the pull requests screen shows
-lives in one part of the model, `Model.prOverview` (`state.github.prs.PrOverview`), with its own messages and its own
-update, which works on that part alone (`PrOverviewMsg`, `PrOverviewUpdate`); only switching screens, and whether the
-screen is shown, look at the rest. It lives in `state.github`, next to the other reads of GitHub, so the GitHub feature
-can read it again after changing a pull request. The design and the steps still to come are in `prs.md`.
-
-- The panes, top to bottom, are **This repo**, **Review requested** and **My PRs**. **Review requested** and
-  **My PRs** list the open pull requests that ask for the user's review and the ones they opened, in any repository:
-  one `gh api graphql` with two searches (`review-requested:@me`, `author:@me`), at most 50 each; the title says how
-  many match when there are more. **This repo** lists the open pull requests of the repository, forks included, at
-  all pages of them: the same read the branches pane shows, which also tells which repository it is
-  (`PrOverview.repositoryName`). The three share one fragment and its decoder (`SummaryFragment`), with the
-  checks of the last commit of each.
-- They are read when the screen is shown, every minute while it is shown (`PrOverviewMsg.Tick`, from `Timers`),
-  with `r`, and after a pull request was merged, closed or turned into a draft. Failing to read them again keeps the
-  ones read; `PrOverview.freshness` keeps when they were last read and which read failed since, which the line at the
-  bottom says on this screen ("read 2m ago · last read failed"). gh runs as the account of the repository, so the lists
-  are that account's.
-- **This repo** is the read of the pull requests the branches show too (`LoadRepositoryPullRequests`, all pages):
-  the branches take those that are not from a fork (`RepositoryPullRequests.ofBranches`, ADR 58). So it is read at
-  the start, after every fetch, push or change on GitHub, also while the screen is hidden; a tick of the screen only
-  reads the user's own pull requests, while it is shown. The pull requests opened since, but not by the user, are
-  unseen until their row is highlighted; the name of the screen
-  counts them (`PRs ●2`) and their rows are marked (ADR 29). `PrOverview.unseen` holds them, with the highest number
-  read, and `SaveUnseenPullRequests` keeps them in the repository's `unseen-pull-requests.toml`.
-- `o` shows the pull request dialog, as for a branch, for a pull request of the repository, wherever it is listed;
-  one of another repository opens in the browser, as `O` does for any (`gh pr view <url> --web`).
-- **The preview**: the content panel shows the pull request highlighted in the pane in use like a commit: a header,
-  its title and description, `---`, and its diff, read with `gh pr view <url> --json baseRefName,body` and
-  `gh pr diff <url>`, so also for repositories that are not cloned; the diff is read only up to where git's are cut off,
-  50 000 lines or 4 MiB
-  (ADR 79). It is read
-  again when the pull request changed (`PrOverview.preview` is keyed by its summary), and the one shown before
-  stays while it is read. Enter moves the focus into it, Escape back to the pane it shows.
-- **Checking out**: space checks out a pull request of the repository in place, from a fork too, with
-  `gh pr checkout <n>` (`CheckoutPullRequestCmd.CHECKOUT_PR`), which waits until the repository is in the middle of
-  nothing. It is
-  refused up front when the working tree has changes, untracked files apart (`GitHubError.ChangesBeforeCheckout`), and
-  for a pull request of another repository (`BranchError.OtherRepository`). Which repository this is is known once its
-  pull requests were read; until then, checking out says they are still being read, or why they could not be.
-- Each screen keeps where its focus was: `ViewMsg.Focused` goes to `Model.focusedPane` or `PrOverview.focusedPane`,
-  whichever screen is shown (`Model.shownPane`), and `FocusKeeper` gives it back when the screen is shown again.
-
-## Diff options
-
-How the diffs of the files and the commits are read is a `DiffOptions` (in `git.model`), which
-`Preferences.diffOptions()` makes of what the user chose. It says whether changes to whitespace only are left out,
-which Ctrl+W toggles anywhere outside a dialog (`feature.diff`) for the session only, and whether a merge is read
-against its first parent, which the diff style decides (below), and how many lines are shown around a change
-(`DiffContext`, ADR 76), which `}` and `{` step along 0, 1, 3, 5, 10, 20, 50 and the whole file, for the session
-only; side-by-side diffs are to follow them there.
-
-- `Diffs.uncommitted` and `Diffs.commitChanges` take the options, which `CliDiffs.flags` turns into git's
-  (`-U<n>`, always, so the user's `diff.context` does not count, and `--ignore-all-space`). A file whose changes are all
-  whitespace is then left out of the diff entirely, also from
-  the files `git show --stat` lists.
-- `LoadFileDiff`, `LoadCommitDetail` and `LoadStashDetail` carry the options, and so do the messages
-  they send back. They are the `DiffLoad`s: what one of them read with other options than the model's, or
-  failed to, arrives too late and is dropped by `LoadUpdate.update` in one place, as what was read for another
-  highlighted item is.
-- Toggling reads the diffs shown again (the files, the commit, the commit of a divergence and the commit of a
-  branch's commits), which keep showing as they were until they are read.
-- The titles of the diffs say how much context is shown when it is not three lines, and when whitespace is ignored,
-  and a diff that comes back blank says that only
-  whitespace changed.
-- The diff of a pull request on its screen is read with `gh pr diff`, which has no such options, so it shows all
-  changes with three lines of context.
-
-### Showing more of one hunk
-
-See `documentation/adr/0077-showing-more-of-one-hunk.md`.
-
-- The rich view draws a marker in place of the rule between two hunks, above the first and after the last
-  (`Folding.gaps`, from the hunk headers): how many lines it leaves out, or `more` after the last until the file is
-  read whole. A marker is a stop of the cursor, `Anchor.Gap`.
-- On a marker, `]`, `[` and Enter (`Scopes.DIFF`, and `Scopes.PULL_REQUEST_DIFF` next to the keys of the review;
-  `feature.diff.ExpandAction`) send `ExpandMsg.Asked` with the `DiffCursorAt`; a click on one is Enter.
-- `ExpandUpdate` keeps the lines asked for in `RepoView.expanded`, by the id of the area, as an `Expansion` of what the
-  area showed. The first expansion in a file starts `ReadWholeFile`, a `DiffLoad` targeted at that file of the
-  expansion, which reads its diff again as it was read (`Source`) with `DiffContext.WHOLE_FILE`.
-- `ContentView` gives each diff shown the expansion of its area (`ShownDiff.expanded`); `ShownDiff.folded` folds each
-  file read whole with `Folding.fold` to the context of the moment and the lines expanded, unless it no longer has the
-  changes the diff shown has. The review starts threads on the folded diff too.
-- Changing the options drops every expansion (`DiffOptionsUpdate`); a diff of the working tree read again reads its
-  files read whole again (`LoadUpdate`).
-
-### The original or the new version of a file
-
-See `documentation/adr/0102-the-original-or-the-new-version-of-a-file.md`.
-
-- Ctrl+O (`Scopes.DIFF` and `Scopes.PULL_REQUEST_DIFF`; `feature.diff.VersionAction`) sends `VersionMsg.Cycled` with
-  the `DiffCursorAt`. `VersionUpdate` acts only on an area whose diff holds one file with versions to show
-  (`FileVersion.shown`), and cycles it through the diff, the new version and the original (`FileVersion.after`).
-- The version is kept in `RepoView.versions`, by the id of the area, as a `Version`. The first time, it starts
-  `ReadVersion`: the read of `ReadWholeFile`, with whitespace never ignored, and no `DiffLoad`, so changing the options
-  keeps it. A file an expansion read whole without ignoring whitespace is not read again. Another item highlighted
-  drops every version (`SelectionUpdate.selected`); a diff of the working tree read again reads its versions again.
-- `ContentView` gives each diff shown the version of its area (`ShownDiff.versioned`); `Version.applied` puts
-  `FileVersion.of` the file read whole in place of the file, with an `Expansion.Fold` that names the version.
-  `RichDiff` then draws its bar, its numbers in their column of the diff's gutter, the other blank, no markers, and
-  no stops in a hunk, so no range is started.
-- `Version.moved` takes the cursor to the line of the version shown: from `VersionUpdate`, or from `LoadUpdate` once the
-  read arrives. `ScrollArea` keeps the row of the cursor on the screen from the line it was drawn on. `DiffLines`
-  shows the version too, so `y` copies its lines, and the review refuses to start a thread in it (`Why.IN_VERSION`).
-
-### A version of Markdown rendered
-
-See `documentation/adr/0103-a-version-of-markdown-rendered.md`.
-
-- Ctrl+T (`feature.diff.VersionAction`, next to Ctrl+O) sends `VersionMsg.RenderToggled`. `VersionUpdate` acts as for
-  Ctrl+O, and only on a file `state.diff.Rendered` knows by its extension, the one table of the files with a renderer.
-  It sets `Version.rendered`: on the diff, it renders and shows the new version, or the original of a deleted file; on a
-  version rendered, it shows it as source. Ctrl+O keeps `rendered` as it cycles.
-- `Version.applied` passes `rendered` on in the `Expansion.Fold`. `RichDiff.rendered` draws the file: its bar, the only
-  stop of the cursor, whose lines the rows after it are, so `j` and `k` scroll; then each block `RenderedMarkdown` draws,
-  with `▎` (or `+`/`-` in a theme without tinted lines) beside a block that holds a changed line, and a
-  `RichDiff.Place` for each of its lines on its first row.
-- `RenderedMarkdown` parses with commonmark's source spans, a block for each top-level node and for each item of a
-  top-level list, and draws each with `MarkdownLines` (drawn out of `RemarkLines`, which draws the text of review
-  remarks with it), its code blocks coloured by `LexedHighlighter`, jazygit's lexer behind tamboui's
-  `SyntaxHighlighter`. A table it draws itself (`RenderedMarkdown.table`), each column as wide as its widest cell, as
-  tamboui's table shares the width out evenly; it finds tables with commonmark's `TablesExtension`, and draws each cell
-  as text only (`inlineOnly`). Each block gets only the link definitions it refers to (`referred`), and the blocks are
-  drawn on the common pool. Comments of HTML are found by the parser, so none in code is taken out.
-- A version rendered is drawn as wide as its area: `ScrollArea.Styler` gets the width the text area last had, and a
-  body that is `rendering` is styled again when it changes. `Styled.row` finds a line by its place too, so the line of
-  the cursor keeps its row as the version renders; a key on the bar acts on `Styled.top`, the first line of the block
-  at the top, so the version shown as source again has the cursor there. `CopyUpdate` copies nothing from it.
-
-### Copying lines of a diff
-
-See `documentation/adr/0094-copying-lines-of-a-diff.md`.
-
-- `y` (`Scopes.DIFF` and `Scopes.PULL_REQUEST_DIFF`; `feature.copy.CopyAction`) sends `CopyMsg.Asked` with the
-  `DiffCursorAt`. `CopyAction` also binds `v` in `Scopes.DIFF` to `DiffCursorAt.marked`, so every rich diff has
-  ranges; in `Scopes.PULL_REQUEST_DIFF` the review binds it.
-- `CopyUpdate` works the text out from the diff the area shows, folded with its expansion, through `DiffLines`: the
-  line of the cursor or the lines of its range, without their markers, or the path on the bar of a file. It asks for
-  `CopyCmd`, which reports `CopyMsg.Done` with a `Notice` for the command log.
-- `Env.terminal().copy` asks the terminal: `TerminalHandOver` writes an OSC 52 sequence through `HandOverBackend` on the
-  render thread, between two frames; `Terminal.NONE` copies nothing.
-
-### The diff style and the files of a commit
-
-See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
-`documentation/adr/0047-the-rich-view-for-the-working-tree.md`.
-
-- **The diff style** (`settings.DiffStyle`, kept as `ui.diff-style`) says how the diffs git reads are drawn: the
-  staged and unstaged changes of the working tree, and the changes of a commit or a stash. `PLAIN` is git's text,
-  `RICH` the rich view. Ctrl+D switches it (`DiffOptionsMsg.StyleToggled`), saves it and reads the diffs shown again,
-  as Ctrl+W does: `RICH` reads a merge against its first parent (`DiffOptions.firstParent`,
-  `--diff-merges=first-parent`), as the rich view does not draw git's combined diff of a merge. A path left
-  unmerged by a conflict still shows as a combined diff (`diff --cc`) in the working tree: `UnifiedDiff` makes it a
-  `CONFLICTED` file, whose lines are kept as git printed them. The staged and the unstaged areas are each a
-  `DiffText` of their own, so each is parsed and its words compared on its own. Ctrl+E
-  (`DiffOptionsMsg.WordsToggled`, kept as `ui.diff-words`) switches whether the rich view highlights the words that
-  changed in a changed line, or draws the line in its line colour alone; it saves it, and only draws the diffs again,
-  as the words were compared when they were read.
-- **The rich view** is drawn by `ui.diff.RichDiff` from a `ParsedDiff`, one tree of files, hunks and lines, each line
-  with its words and its tokens (ADR 56): `UnifiedDiff`, the diff parsed into files, hunks and numbered lines, which
-  `ParsedDiff.diff()` gives back, and `WordDiff`, which pairs the removed and added lines of a block and finds the words
-  that
-  changed in a pair, with the whitespace between two changed words highlighted with them (ADR 54), and `LinePairs`,
-  which shows a block whose pairs all have changed words a pair at a time (ADR 83). All are pure, in `git.model`. A
-  `DiffText` is parsed where it is made, on the thread that read it
-  from git (ADR 50), so the render thread only styles it; the line the content panel adds after a diff, that it is
-  truncated or that only whitespace changed, is added as a note (`ParsedDiff.withNote`). The content panel styles a
-  body only when it changes, not on every frame. It styles it in parallel on the common pool, while the render thread
-  waits: each file is measured on a thread of its own, then each of its lines is styled on one, and the lines are put
-  back in order. A hunk starts with a dimmed rule in the gutter, not with git's
-  `@@ -a,b +c,d @@` line, whose numbers the gutter shows already, nor the section heading git gives after them, a line
-  from above the hunk that reads as one of its own. Only a header whose numbers cannot be read (`Hunk.numbered`) follows
-  the rule as git printed it, as its lines have no numbers. The first hunk of a file has no rule otherwise: the bar of
-  the file is right above it.
-- **The syntax of the code** in the rich view is coloured as ADR 53 says. `git.model.syntax.DiffLexer`, the one
-  `Highlighter`, finds the keywords, strings, comments, numbers and annotations (`Token`, ADR 113) of each line, for
-  a file whose `Language` it knows by its name, its extension or its shebang, with `syntax.Lexer` of
-  `jazygit-syntax`; a `Grammar` says what a language's tokens look like. A hunk is lexed as its old and its new
-  text, each from the start of the hunk on; a line longer than `Lexer.MAX_LINE` (2 000 `char`s) is not, and the line
-  after it starts outside of everything. Each `ParsedLine` holds them beside its words, found where the diff is read,
-  or none for a line that was not lexed.
-  `RichDiff` cuts a line where a word or a token starts or ends, in one pass: a changed line keeps the background of
-  its class and takes the colour of the `syntax-*` class of a token, and of `syntax-text` outside one; a context line
-  takes only the colours of its tokens. A line that was not lexed, a changed line whose class has no background (the
-  themes `mono` and `none`), and every diff while `ui.diff-syntax` is `false` (`settings.DiffLook`), are drawn as
-  before.
-- **The files of a commit or a stash**, which `F` opens from the commits, divergence, branch commits and stash panes
-  (`feature.diff.CommitFilesAction`), are a `CommitFilesView` in `RepoView.commitFiles`: whose changes they are, the
-  pane they were opened from, the `CommitFile`s read (`LoadCommitFiles`), and the diff of the highlighted node
-  as a `Preview` (`LoadCommitFileDiff`, a `DiffLoad` with a slot of its own). The files pane lists them in place
-  of the working tree's (`ui.files.FileTreeList`, one per tree, so each keeps its own highlight and collapsed
-  directories), and the content panel shows the diff in `ContentArea.COMMIT_FILE`. They open on the first directory
-  that holds files directly (`FileTreeList.firstWithDiff`), whose diff shows something: the root only when files
-  changed at the top of the repository.
-- **The files of a pull request** (ADR 55), which `f` in the pull request dialog opens for one that is not merged at
-  commits that are known (`PullRequestPopup.commits`), are a `CommitFilesView` of `Changes.OfPullRequest`: its
-  `PullRequestCommits`, the head and base commits GitHub gave with its details (`headRefOid`, `baseRefOid`). git reads
-  them as GitHub shows them, `<base>...<head>` (`CliPullRequest`). Reading its files fetches those commits first when
-  the repository lacks them, `refs/pull/<n>/head` and the base commit by its sha from the remote whose URL names its
-  repository, on its host if one is (`CliPullRequest.remoteOf`), with `--no-write-fetch-head` and `--refmap=`, so that
-  no ref is written, not even a remote-tracking branch, and it needs no guard of the remote refs (ADR 27). That load
-  runs in the background. The dialog closes and the repository screen shows; Escape gives the focus to the branches
-  pane. Its review threads are read with it (`CommitFilesCmd.LoadReviewRemarks`, again with `R`), kept in
-  `CommitFilesView.remarks`; threads read at other commits
-  read the files again at those, unless the pull request was found merged or closed, which keeps them and says so in
-  the title (`CommitFilesView.ended`); threads read at other commits than the files are then not placed on lines
-  (`CommitFilesView.remarksAtItsCommits`). `ui.diff.RichDiff` draws them after their lines as `ui.diff.RemarkLines`
-  blocks, their Markdown drawn by tamboui's `MarkdownView` into a buffer off the screen and read back as lines, styled
-  as the theme styles `MarkdownElement` (`Theme.SpanStyles.markdown`). `c` lists only the files with an unresolved
-  thread, or with any, and every file again (`CommitFilesView.listed`, ADR 57): the files pane draws `listedFiles()`,
-  the files kept, and says why none is with a `FileTreeList.Placeholder`, as the content panel does then.
-- **The files of a branch** (ADR 61): `f` in the branches pane (`PullRequestMsg.FilesRequested`) opens those of its
-  open pull request at once when the pull requests were listed with its commits (`PullRequest.commits`, read with
-  `SummaryFragment`); else it opens the dialog, which goes on to them once its details are read
-  (`PullRequestPopup.filesWanted`). Without an open pull request, as far as is known, `CommitFilesUpdate.againstBase`
-  lists those of `Changes.OfBranch`: the branch against its base of ADR 20, as `AheadUpdate.of` finds it, at the tips
-  the branches read last have, diffed as a pull request is but with nothing fetched (`Diffs.rangeFiles`).
-  It has no review threads.
-- **Their focus:** `FocusKeeper` moves the focus into the files pane when they open, and back to the pane they were
-  opened from when Escape closes them. `Model.withShownPane` closes them when another pane gets the focus, and
-  `LoadUpdate` when the stash they are of is dropped.
-- **The cursor of the rich view** (ADR 60): it stops on an `Anchor` (the lead, a file's bar, a line by its side and
-  number, a thread by its id, a comment of an open thread), and `state.diff.DiffStops`, pure, says where it goes when
-  its stop is gone (`DiffStops.nearest`). `RichDiff.drawn` works out the stops as it draws the diff and marks the row
-  each starts on (`RichDiff.Drawn`); a key of the review needs only the lines among them, which `state.diff.DiffLines`
-  works out from the diff alone, without placing the threads. `ui.diff.DiffCursor` moves it: `j`/`k` and the arrows,
-  through a stop higher than the view before the next one, the pages and the wheel pulling it along, a click on a row, a
-  range of one hunk with `v`, the next thread with `n`. The area sends where it moved it and the view in one
-  `ViewMsg.ContentScrolled`: `Scrolled` holds the anchor of the cursor and of the other end of its range, and keeps the
-  cursor when the same changes are read again (`ScrolledContent.sameChanges`). Until the model has it, the area draws
-  where it told it, so a key right after another acts on where that one took the cursor. Its tint, `diff-cursor`, is
-  laid over the text the area keeps styled, so moving it styles nothing again.
-- **Commenting on a pull request's diff** (ADR 60): while the content panel shows the files of a pull request, its
-  keys are those of `Scopes.PULL_REQUEST_DIFF`, whose selection is the cursor (`DiffCursorAt`, with where `n`, `N` and
-  `v` take it). `feature.github.review` starts a thread on a line, a range or a file and replies to one from a
-  `ReviewPopup`, drawn by `ReviewDialog` with the `ui.github.CommentComposer` the comment on a pull request shares, and
-  resolves one at once; `ReviewThreadMutations` sends a thread and a reply as REST review comments, published at once
-  (GraphQL would leave them pending), and a resolve with `gh api graphql`. Each needs the threads read at the
-  commits of the files and a pull request that is not merged, else it says why (`GitHubError.CannotReview`); the ids of
-  the threads something is sent for (`CommitFilesView.sending`) take no other key until the threads are read again.
-  `Space` collapses or opens the thread or the comment of the cursor against its default (ADR 62): the ids flipped
-  are `CommitFilesView.collapsed` (`state.diff.Collapsed`), which `ui.diff.RemarkLines` reads as it draws the threads
-  and their stops (`DiffStops.anchors`), so each comment of an open thread is a stop of its own (`Anchor.Comment`).
-
-## The editor
-
-`e` on a file in the files pane opens it in git's editor (`feature.edit`): the one `git var GIT_EDITOR` names, so
-`$GIT_EDITOR`, `core.editor`, `$VISUAL`, `$EDITOR`, else `vi`, as for a commit message. `CliEditor` runs it as git
-does: the program itself when it is a plain name, else through `sh -c '<editor> "$@"'`, so `code --wait` works. It
-is an `EditCmd.EDIT` like any other: the command log shows it, an editor that exits with an error is shown as a
-failure, and the repository is read again once it is closed.
-
-Ctrl+O in the commit and reword dialogs opens the message typed so far in the same editor (`MessageEditorMsg`,
-`MessageEditorCmd`). `CliEditor.editMessage` writes it to a file named `COMMIT_EDITMSG` in a temporary directory, so
-editors treat it as a commit message, and reads it back once the editor is closed. No comments are added to it, so
-lines starting with `#` are kept. The message being typed lives in the popup (`MessagePopup.message`), so the
-editor starts from it, and what comes back replaces it; the fields then show it, as they show any message the
-model has. The dialog stays open meanwhile, and a failing editor
-leaves it as it was.
-
-The editor needs the terminal, which the TUI owns. `Env.terminal()` (`state.Terminal`) hands it over: `EditCmd`
-and `MessageEditorCmd` run the editor inside `terminal().handOver(...)`, on the `git-io` thread. `TerminalHandOver`
-implements it with `HandOverBackend`, the TamboUI backend the app gives the runner. It wraps the backend TamboUI picks
-by itself (`BackendFactory.create()`, so `tamboui.backend` or `TAMBOUI_BACKEND` still chooses), and forwards to it:
-
-- **Leaving**, on the render thread between two frames: it stops reading keys, then puts the terminal back as it
-  was before the app started (no mouse capture or bracketed paste, cursor shown, main screen, cooked mode), and
-  from then on drops what the app draws.
-- **Meanwhile** the app keeps running, as it does not block the render thread: the model's ticks and the outcome
-  of commands would otherwise pile up and be handled one by one afterwards. Loads and fetches carry on; what they
-  draw is dropped. Coming back asks for a frame, as nothing else might draw one (see
-  [When a frame is drawn](#when-a-frame-is-drawn)).
-- **Coming back**, on the render thread again: it sets the terminal up as before, reads keys again, and clears
-  TamboUI's buffers, so the next frame draws the whole screen.
-
-While the terminal is handed over, a read waits out its timeout without touching the terminal; one under way is let
-finish first. This takes a backend whose timed-out read leaves nothing behind, as the Panama backend, which polls the
-terminal. A backend that leaves a thread blocked on reading the terminal after a timed-out read would not do for this:
-that thread would take the first key typed in the editor.
 
 ## The runtime loop
 
@@ -615,30 +100,11 @@ that thread would take the first key typed in the editor.
 
 - **ui**: the TamboUI render thread. It is the only thread that reads or replaces the model.
 - **io**: a single `git-io` thread, so the commands the user asks for never run concurrently.
-- **background**: a `git-fetch` thread for commands that are slow and that nobody waits for
-  (`Cmd.background()`), so they don't hold up the others: the fetch, and reading the pull requests.
-  - A fetch can run next to a command on `git-io`. git locks what it writes, so the two never corrupt the
-    repository.
-  - But `FETCH_HEAD` has no lock, and a ref that is locked makes the other command fail rather than wait. So a
-    command that writes the remote-tracking refs or `FETCH_HEAD` (fetching, pulling, pushing, deleting a branch
-    on its remote, checking out a pull request through gh) names a guard, `Cmd.guard()`. `Program` holds a lock
-    per guard and takes it on the command's own thread around performing it, so such commands run one after the
-    other, wherever they run. The background fetch also writes no `FETCH_HEAD`. See ADR 27.
+- **background**: a `git-fetch` thread for slow commands nobody waits for (`Cmd.background()`), like the fetch.
+  Commands that write remote-tracking refs or `FETCH_HEAD` name a `Cmd.guard()`, so they run one after the other
+  wherever they run (ADR 27).
 
-Every command answers with a `Msg`, also one that throws. `Program.perform` turns whatever it throws into a
-`Failure.Bug`, and writes the stack trace to `jazygit-bugs.log` in the temporary directory, as the terminal
-belongs to the TUI. Without an answer, the command's load would keep running, or its branch would stay busy.
-
-`--debug` writes a debug log, `debug.log` next to the state file, through SLF4J's simple logger, each line with
-its date and time: every program `Exec` runs, reads as well as writes, with its arguments, directory, duration and
-how it ended, the type of every message `Program` handles but the
-clock's ticks, and the stack traces of the bugs. `DebugLog` sets the logger up before anything logs; without
-`--debug` it logs nothing, so nothing reaches the TUI's terminal. The environment of a command is never logged,
-as it can hold the gh token.
-
-When the app stops, the commands still queued on `git-io` are dropped. The one that runs is not interrupted,
-which would kill git half-way, say in the middle of a rebase. It gets two seconds to finish, and otherwise
-finishes by itself once the app is gone.
+Every command answers with a `Msg`, also one that throws: `Program.perform` turns that into a `Failure.Bug`.
 
 ```mermaid
 flowchart LR
@@ -652,142 +118,22 @@ flowchart LR
         Render -- "reports, after the frame" --> Dispatch
     end
     subgraph io["git-io thread"]
-        Perform["Program.perform(env, cmd)<br/>cmd.run(env)"] --> Result["Msg.Done(id, msg)<br/><i>OperationMsg / LoadMsg / ...</i>"]
+        Perform["Program.perform(env, cmd)<br/>cmd.run(env)"] --> Result["Msg.Done(id, msg)"]
     end
     Next -- "each Launch(id, cmd)" --> Perform
     Result -- "ui.execute" --> Dispatch
 ```
 
-### When a frame is drawn
-
-TamboUI's own 40 ms tick is turned off (`noTick()`), so a frame is only drawn when something asks for one (see
-`documentation/adr/0014-redraw-on-change.md`):
-
-- **An event that is handled**, or a resize: TamboUI draws after those by itself.
-- **A model that draws differently**: `Program` calls `modelChanged` when a message leaves a model whose
-  `Model.drawn()` differs from the one before. `Model.drawn()` leaves out what only starts loads
-  (`Jobs.readAt`, `Jobs.worktreeChangesRead`) and the commands that run (`Jobs.running`), but for the operations
-  that keep a branch busy, whose spinner shows at once; and it takes the time to the second, so the periodic loads of an
-  idle app draw nothing. This covers
-  the outcome of commands, the model's ticks and the reports of the widgets.
-- **`JazygitApp.requestRedraw()`**, for what the model does not see: a turning spinner (every 120 ms while
-  `Spinners.shown`), a frame that moved the focus (`redrawIfFocusMoves`), a mouse press (a click on nothing clears
-  the focus, which the next frame gives back to what had it), switching repositories and coming back from a
-  handed-over terminal.
-
-`modelChanged` calls `requestRedraw()` too. It dispatches a `Redraw` event, which a global handler handles, so
-TamboUI draws a frame. At most one is queued (`redrawPending`), and a frame drawn for another reason meanwhile makes
-it draw none: a burst of changes draws once. Anything that changes the screen without changing the model, or
-without an event that is handled, must ask for a frame itself; nothing else draws it.
-
-### The view reports back
-
-The cursors and the focus are the widgets' (see [Core types](#core-types)), but the model needs to know what
-they point at: the content panel shows the preview of the item highlighted in a pane, and a closing popup gives
-the focus back to where it was. Whatever moved them (a key a list handles itself, a click, Tab, a list that
-reselects after a reload, a popup that opens or closes), `JazygitApp.render` compares the widgets with the model
-they were just rendered from, and makes the messages that tell it the difference (`JazygitApp.reports`):
-
-- the item highlighted in each pane of the screen shown (`SelectionMsg`, `PrOverviewMsg.Highlighted`), from
-  each panel's `selectionChange`;
-- the element with the focus outside the popups (`ViewMsg.Focused`).
-
-They are dispatched once the frame is drawn (`TuiRunner.runLater`), never during a render, which draws one
-model throughout. The next frame draws what they change, and reports nothing once the model agrees with the
-widgets. A report can come twice, when a frame is drawn before the first one is dispatched, so each of them
-leaves a model that already has its value as it is. This is the only way the view tells the model something
-no message from a user's event did.
-
-Every `jazygit.refreshInterval` (1 s by default, ADR 52) a `TimerMsg.Tick` triggers `Update.tick`, which re-reads the
-status, and checks the files of the git directory that the local and remote branches (one load, `LoadBranches`), the
-stashes and the worktrees are read from (`CheckMetadata`). That check runs no git: it stamps the HEADs, the config,
-`packed-refs`, the directories of the local refs, the files of the remote-tracking refs, the stash reflog, the
-worktrees' admin files, and in a reftable repository its tables (`GitMetadata`). Only a load whose stamp differs from
-the one it was last started with (`Jobs.readAt`) runs again, so an idle app runs one git process per tick instead of
-four. The highlighted diff is guarded the same way after each status (`CheckFileDiff`, which stamps its files and
-the index), as a file can change without its status changing (ADR 58). An operation that is done reads all of them at
-once
-(`Update.refresh`), without waiting for the files to tell. That keeps the screen in sync with changes made outside
-the app. A periodic load is skipped while an equal one is still running (`Jobs.runs`). See
-`documentation/adr/0015-check-metadata-before-loading.md`.
-
-While the terminal does not have the focus, the messages of the timers that read something (`Msg.Periodic`: the
-tick, the fetch, the pull requests screen and the dialogs of checks) are handled only once every
-`Msg.Periodic.whileAway()` (`Jobs.awayAt`: the tick every 15 s, the fetch and the pull requests every 5 minutes, the
-dialogs of checks every minute), and kept in `Jobs.missed` otherwise; each that is kept is handled once when it has
-the focus again (`TerminalMsg.Focused`). The time shown then moves on every 5 s (`Model.AWAY_CLOCK`), so a frame is
-drawn every 5 s rather than every second. The app asks the terminal to report
-the focus; `HandOverBackend` takes the reports out of the keys, which TamboUI reads as an unknown key, and a key read
-while away counts as the focus being back. See `documentation/adr/0058-less-reading-in-the-background.md` and
-`documentation/adr/0067-reading-less-rather-than-nothing-in-the-background.md`.
-
-The status of a tick takes no optional locks, so it never writes back what it refreshed of the index: files a checkout
-just wrote, or a tool touched, would be hashed again on every tick. `CheckMetadata` therefore also stamps the
-index (`GitMetadata.index`), and once that changed and settled, or 5 minutes after the last time anyway, while the
-terminal has the focus and no operation runs, `IndexUpdate.checked` asks for `RefreshIndex`,
-`git update-index -q --unmerged --refresh`. `Jobs.indexRefresh` keeps what the index looked like then; the first stamp
-after a refresh that wrote it is taken as what that refresh left, not as a change. A refresh that could not lock the
-index changes nothing shown. See `documentation/adr/0093-the-index-written-anew-now-and-then.md` and
-`documentation/adr/0097-the-index-written-anew-once-it-changed.md`.
-
-A read that failed is tried again on a tick only once it waited 1, 2, 4… up to 64 ticks after each failure in a row
-(`Jobs.retries`, `Jobs.retryDue`); `Update.refresh` tries it at once. The previews (a branch's log, a commit's or a
-stash's changes, the files' diff) each take a slot, so highlighting faster than git answers only reads the last item;
-a load cancelled that way reports nothing, and is only done (ADR 101). See
-`documentation/adr/0031-preview-slots-and-retry-backoff.md`.
-
-Every message is handled at the time it is: `Program` hands it to `Update.step(model, msg, now)`, which sets
-`Model.now` before the message is applied. `TimerMsg.Clock` comes every second, apart from that, only to wake the
-model up when nothing else happens, so the ages move on. The view rounds them: in minutes ("now" under one), and how
-long ago the remotes were fetched, or the pull requests read, in steps of 10 s under a minute. `Model.drawn()` takes
-the time to the second, so an idle app draws a frame a second, and every 5 s while the terminal does not have the
-focus. See `documentation/adr/0021-a-clock-apart-from-the-refresh.md`,
-`documentation/adr/0022-fetched-ago-in-steps-of-10s.md` and `documentation/adr/0033-show-that-work-is-being-done.md`.
-
-`Update.step` also stamps the commands the message asks for: each gets the next id (`Jobs.nextId`) and runs, in
-`Jobs.running`, from that time on, until `Program` reports it done with `Msg.Done(id, result)`: what it reported, the
-failure of a bug, or what a command that a newer one for its slot cancelled reports, if anything. `Msg.Done` takes it
-out of `running` and applies what it carries. The handlers never see an id: they return `Next(model, cmds)`, and
-`Program` only gets the stamped `Launch(id, cmd)`s of a `Step`. `Update.begin` stamps the first loads the same way.
-With `--debug`, each command that is done is logged with how long it ran and what it reported.
-
-`Jobs.running` is all the model knows of what runs (ADR 39): whether a load or a read of GitHub runs already is
-`Jobs.runs(cmd)`, the branches an operation runs on are `Jobs.busy()`, from the `busyBranch()` of the
-`OperationCmd`s that run, and a fetch runs while a `FetchCmd` does. As a message's commands only run once it is
-handled, `Next` drops a command equal to one the same message asked for before.
-
-The line under everything else (`ui.FetchLine`) shows what runs, on its right, before how fresh the screen is: a
-spinner, the label of the command that ran longest of those that ran 300 ms (`Jobs.SHOWN_AFTER`), and how many more
-did, like `Fetching origin +2`. A command says what it shows as with `Cmd.label()`, a message key with its arguments
-(`Label`); an operation shows its command log title and what it is done to, and one without a label shows
-`Working…`. When the last command that showed is done, `Msg.Done` keeps its label in `Jobs.lingering` for 300 ms more,
-so the indicator does not blink out between two commands. Whether a command ran long enough is told by the clock the
-frame is drawn at, so `Jobs.running` is not drawn (`Model.drawn()`); `Spinners.shown` draws frames while a command
-runs or a label lingers. See `documentation/adr/0033-show-that-work-is-being-done.md`.
-
-Every minute a `FetchMsg.Tick` fetches from the remotes in the background, unless the previous fetch is
-still running. `FetchUpdate` lists the remotes (those `git fetch --all` would fetch) and fetches them one after
-the other with `git fetch --porcelain --prune <remote>`, so branches deleted on the remote show as gone, whatever
-`fetch.prune` says; `--porcelain` tells whether a remote-tracking branch changed (`Jobs.fetchChanged`). Each
-`FetchCmd.Fetch` carries the remotes still to fetch from after it, and its
-message hands them back; the one that runs shows at the bottom of the screen as its label. When none are left, the
-repository is read again, if the fetch changed a remote-tracking branch (ADR 58).
-`Model.lastFetch` (a `Freshness`) holds when a remote was last fetched from, as `FetchCmd.Fetch` timed it, and the
-remotes that failed the last time; the right of the line at the bottom says it, as "fetched 2m ago", with "last fetch
-failed" when one did.
-Neither the commands nor the failures are shown, since fetching also runs while offline, and a failing remote
-doesn't stop the others. Once the fetch is done, the open pull requests are read again with `gh` (also once at
-startup), into `Model.pullRequests`, which is none until they were read once. That read is the one of the pull
-requests screen (`LoadRepositoryPullRequests`, ADR 58); `PullRequestsUpdate` starts it, next to the other periodic
-reads, so the fetch does not depend on the GitHub feature. A read from GitHub that keeps failing, as without a
-remote on GitHub, is started by the timers less and less often (`FailingRead`). While it runs, the line
-at the bottom says so, and another read does not start (`GitHubReads`); a failure there is
-not shown either, as gh may be missing or logged out.
-
-A change made on GitHub (creating, merging or closing a pull request) asks for a fetch at once, through
-`FetchUpdate.requested`, so the branches show it without waiting for the next tick. When a fetch is already
-running, it may have missed the change, so `Jobs.fetchAgain` makes another one follow it. The pull requests are
-read again at once too, even when a read is running, as that one may have missed the change as well.
+- **A frame is drawn only when asked for** (ADR 14): after an event that is handled, when `Model.drawn()` changed, or
+  through `JazygitApp.requestRedraw()` for what the model does not see. Anything that changes the screen without
+  either must ask for a frame itself.
+- **The view reports back.** Cursors and focus live in the widgets (ADR 2). After each frame,
+  `JazygitApp.reports` compares the widgets with the model and dispatches what differs (`SelectionMsg`,
+  `ViewMsg.Focused`). This is the only way the view tells the model something no user event did.
+- **What runs is in the model.** `Update.step` stamps each command with an id into `Jobs.running`; `Msg.Done`
+  takes it out (ADR 39). Busy branches, running loads and the activity line all derive from that.
+- **The repository is read on ticks**, guarded by stamps of git's files so an idle app runs almost no git
+  (ADR 15, 58, 67, 93).
 
 ## Core types
 
@@ -811,15 +157,10 @@ classDiagram
         +slot() Option
         +guard() Option
     }
-    class Load {
-        <<sealed interface>>
-    }
     class OperationCmd {
         <<interface>>
         +operation() Operation
-        +subject() Option
         +busyBranch() Option
-        +succeeded(List) Msg
     }
     class GitOperationCmd {
         <<interface>>
@@ -827,24 +168,6 @@ classDiagram
     }
     class Model {
         <<record>>
-        Loadable status
-        Loadable branches
-        Loadable commits
-        Loadable stashes
-        Option popup
-        Option error
-        List commandLog
-        Jobs jobs
-        ...
-    }
-    class Loadable {
-        <<sealed interface>>
-    }
-    Loading --|> Loadable
-    Loaded --|> Loadable
-    Failed --|> Loadable
-    class Popup {
-        <<interface>>
     }
     Msg ..> Next : apply returns
     Next o-- Model
@@ -852,78 +175,23 @@ classDiagram
     Load --|> Cmd
     OperationCmd --|> Cmd
     GitOperationCmd --|> OperationCmd
-    Model o-- Loadable
-    Model o-- Popup
     Cmd ..> Msg : run returns
 ```
 
-- **`Msg` applies itself.** Each feature has a sealed sub-interface, for example `RewordMsg`, whose
-  `apply` delegates to that feature's update class (`RewordUpdate`). Adding a feature therefore needs
-  no change to `Update` or `Msg`. The one-line `apply` overrides, one per feature message interface, are
-  the price of avoiding a central dispatch, and are kept on purpose.
-- **A popup closes by itself (ADR 38).** Escape on a dialog sends `PopupMsg.Dismissed(type)`, which closes
-  the open popup if it is of that type. The specs of the dialog widgets send it by default; a feature declares a
-  `Cancelled` message of its own, with `cancelledBy` on the spec, only when Escape does more than close. Likewise,
-  a popup whose confirmation only starts its operation is a `ConfirmablePopup`: its `confirm()` makes the command,
-  and Enter sends `PopupMsg.Confirmed(type)`, which `Spec.confirming(...)` sets up.
-- **`Cmd` is immutable data** that knows how to run itself against an `Env` (the `Git` and the
-  `GitHub`) and how to report failure:
-  - `run` folds the `Either` of a role into a `Msg`.
-  - `failed(Failure)` turns a failure into the failure `Msg`. A `Failure` is data: `Failure.Git` (the
-    `GitError`, the commands that ran, and why the cleanup failed if it did), `Failure.GitHub` (the `GhError`
-    and the commands that ran) or `Failure.Bug` (the command threw, which `Program.perform` catches).
-    `Failure.of` makes one of a `GitFailure`, a `GhFailure`, a `GitError` or a `GhError`, so a command reports
-    the `Either` of a role with `.mapLeft(Failure::of).fold(this::failed, …)`.
-- **`Load`** reads part of the repository into the model, as a `Loadable`. Every `LoadMsg` names its
-  load, so `LoadUpdate` knows which read came back or failed; `Msg.Done` has taken it out of what runs.
-- **`OperationCmd`** changes the repository. It names its `Operation`, the branch it is done to, and the branch
-  it keeps busy. An `Operation` is a record that the feature declares next to its commands (`DropCmd.DROP`,
-  ...): the command log title, the error message, whether it waits until nothing is unfinished, and what a
-  branch it keeps busy shows next to its spinner. Its outcome is an
-  `OperationMsg.Succeeded`, `OperationMsg.Stopped` (it stopped on conflicts, left for the user) or
-  `OperationMsg.Failed`, which `OperationUpdate` handles the same way for every operation: it logs the
-  commands, releases the busy branch, stores an `AppError.OperationFailed`, a `Notice` or neither, and reads
-  the repository again. A feature only adds its own messages for outcomes that really
-  are special, like `CheckoutMsg.NeedsStash`; `OperationUpdate.succeeded` is what any success does, which
-  such a message adds to. A `GitOperationCmd` is one done through git alone: it only implements
-  `perform(Git)`. The others, like creating a pull request, implement `run(Env)` themselves.
-- **Operations are started through `Update`.**
-  - `Update.start` marks the operation's branch busy.
-  - `Update.ask` opens the popup that asks about an operation, which clears the error of the last one.
-  - `Update.confirm` closes that popup and starts the operation made of it.
-  - A branch that is busy (`Model.idleBranch`) takes no other operation until it is done.
-- **Errors are data until the view.** `Model.error` is an `Option<AppError>` and `Loadable.Failed` holds a
-  `Failure`; `ErrorText` in `ui` turns them into text. An `AppError` says itself as a `Phrase`: a message key and
-  what goes into it, never text, which `ErrorText` looks up. `AppError` is open, as `Msg` is: each feature keeps its
-  own errors as a sealed `XxxError` (`BranchError`, `WorktreeError`, `GitHubError`, ...), and only those that belong
-  to no feature, or that the core reports, stay in `AppError`, so adding an error changes nothing outside the
-  feature (`ArchitectureTest.featureErrorsAreSealed`). `Model.fail` stores the error, which the command log shows,
-  and opens an `ErrorPopup`, unless another popup is open, which then keeps what the user entered.
-- **Popups are part of the model.** `model.popup()` says which dialog is open. `JazygitApp` renders the
-  dialog that matches it and moves the focus into it, then back to the pane it came from once
-  the popup closes. Each feature lists its dialogs, with the pane they give the focus back to, as
-  `PopupSlot`s in `XxxDialogs.popups(dispatch)`; `Popups` only names the features.
-  A popup that comes up by itself (`Model.openPopupIfFree`), like the outcome of a command or the theme key, does not
-  replace a dialog the user is typing in.
-- **The cursors of the panes and the focus are view state.** The highlighted row of a pane lives in its TamboUI
-  list, not in the `Model`: no update needs to know where it is. What the model needs is the item highlighted,
-  which the view reports back as a `SelectionMsg` ([The view reports back](#the-view-reports-back)). The cursor of
-  a popup's list is the exception, as its update needs it (`ListCursor`). The dialogs read it through a
-  `FilteredCursor`, which tells the lines its filter shows and the one it highlights, and keeps that one
-  highlighted while the filter changes.
-  The focus lives in TamboUI's `FocusManager`. The model only remembers, per screen, which pane had it last
-  outside the popups (`ViewMsg.Focused`, `Model.shownPane`, and `PrOverview.listPane` for the list of pull requests in
-  use), so a closing popup or a screen shown again can give it back. No update decides anything on it.
-  Everything else a panel shows comes from the model it is rendered with: the rows of a `LoadableList` are
-  given to `render`, so a panel keeps no copy of the model between renders.
-- **What a dialog is filled in with is part of the model.** The popup holds the text as far as it was typed: a
-  `TextPopup` for the `TextInputDialog`s, a `MessagePopup` for the commit and reword dialogs, `NewPullRequestPopup`
-  for a new pull request. The fields show it, and send an edit message for every key that changes it
-  (`PopupMsg.TextEdited`, `MessageEdited`, `PullRequestEdited`); the confirming message carries nothing, as its update
-  reads the popup. A field only keeps its caret, and the commit dialog where Up and Down are in the earlier
-  summaries (`SummaryHistory`). See `documentation/adr/0002-model-and-view-state.md`.
-- **The command log** (`Model.commandLog`) lists every git command that changed the repository, under the
-  `Operation` that ran them, whether it succeeded or failed.
+- **`Msg` applies itself.** Each feature has a sealed sub-interface (`RewordMsg`) whose `apply` delegates to that
+  feature's update class (`RewordUpdate`), so adding a feature changes neither `Update` nor `Msg`.
+- **`Cmd` is immutable data** that runs itself against an `Env` (the `Git` and the `GitHub`) and folds the `Either`
+  it gets into a `Msg`, a failure through `failed(Failure)`.
+- **`Load`** reads part of the repository into the model as a `Loadable` (`Loading`, `Loaded`, `Failed`).
+- **`OperationCmd`** changes the repository. Its outcome is `OperationMsg.Succeeded`, `Stopped` (on conflicts) or
+  `Failed`, which `OperationUpdate` handles alike for every operation: log the commands, free the branch, store the
+  error or notice, read the repository again. A `GitOperationCmd` needs only `perform(Git)`.
+- **Errors are data until the view.** An `AppError` says itself as a `Phrase` (a message key and its arguments);
+  `ErrorText` turns it into text. Each feature keeps its own sealed `XxxError`.
+- **Popups, and what is typed in them, are part of the model** (ADR 2, 38). `model.popup()` says which dialog is
+  open; Escape and Enter go through `PopupMsg.Dismissed` and `PopupMsg.Confirmed` unless a feature needs more.
+- **Cursors and focus are view state** (ADR 2): they live in TamboUI, and the model learns what they point at from
+  the reports above.
 
 ### The anatomy of a feature
 
@@ -931,277 +199,33 @@ Each feature package follows the same shape:
 
 | Type | Example (reword) | Role |
 |---|---|---|
-| `XxxMsg` | `RewordMsg` | Sealed set of messages, usually `Requested`, with `Confirmed` and `Cancelled` only when Enter or Escape does more than start the popup's operation or close it (ADR 38); a feature with several dialogs or outcomes names them after those (`StashMsg.DropRequested`, `PullRequestMsg.MergeChosen`). |
-| `XxxUpdate` | `RewordUpdate` | Pure transitions for those messages; `Update.confirm` closes a popup and starts the operation made of it. |
-| `XxxCmd` | `RewordCmd` | The operation the feature asks for, an `OperationCmd`. |
+| `XxxMsg` | `RewordMsg` | Sealed set of the feature's messages. |
+| `XxxUpdate` | `RewordUpdate` | Pure transitions for those messages. |
+| `XxxCmd` | `RewordCmd` | The IO the feature asks for, usually an `OperationCmd` with its `Operation`. |
 | `XxxPopup` | `RewordPopup` | What the open dialog is about; it lives in the model. |
-| `XxxDialogs` | `SquashDialogs.SQUASH`, `CommitDialog.reword` | The popups, mostly as data (`ConfirmDialog.Spec`, `ChoiceDialog.Spec`, `TextInputDialog.Spec`, `PickDialog.Spec`) that `popups(dispatch)` turns into widgets, as the `PopupSlot`s `JazygitApp` shows; `XxxDialog` for a feature with one, or a dialog of its own. |
-| `XxxKeys` | `StashKeys` | Adds the feature's keys to the immutable `Keymap`. |
-| `XxxAction` | `DropAction` | In the features split into operations, an operation's keys and popups together, a `FeatureAction` its `XxxFeature` lists. |
-| `XxxFeature` | `CommitFeature` | The operations of such a feature: what `Keymap` and `Popups` know of it. |
+| `XxxDialogs` | `CommitDialog.reword` | The dialogs, mostly as data (`ConfirmDialog.Spec`, ...), as `PopupSlot`s. |
+| `XxxKeys` / `XxxAction` | `DropAction` | The keys, added to the immutable `Keymap`; an action bundles one operation's keys and popups. |
+| `XxxFeature` | `CommitFeature` | Lists a feature's actions: what `Keymap` and `Popups` know of it. |
 
-The commit, branch, github and worktree features give each of their operations a subpackage of its own, which holds
-all of it: its `XxxMsg`, `XxxUpdate` and popups, its command (`DropCmd`, with its `Operation`), its dialogs
-(`DropDialogs`) and its keys, which its `XxxAction` (`DropAction.ACTION`, a `FeatureAction`) brings together. The
-feature's `XxxFeature` lists the actions, in the order their keys are listed in a panel, and is what `Keymap` and
-`Popups` know of it; adding an operation is adding its subpackage and one line there. A few keys that belong to
-no operation, like switching the lists of the branches pane from the worktrees, are listed there too.
+The larger features (commit, branch, github, worktree) give each operation a subpackage holding all of the above;
+adding an operation is adding its subpackage and one line in the `XxxFeature`.
 
-- **commit:** `create`, `amend`, `reword`, `squash`, `fixup`, `drop`, `reset`. They share the message dialog that
-  committing and rewording both use (`CommitDialog`, `MessagePopup`, `MessageEditor*`). Amending is one operation
-  with an `AmendTarget`: the last commit, which is amended in place, also while something is in progress, or an
-  older one, which rebases the commits after it and so waits until nothing is.
-- **branch:** `checkout`, `push`, `pull`, `newbranch`, `merge`, `rebase`, `rename`, `delete`, `nuke`, `upstream`, and
-  `tabs` for switching between the local branches, the remote ones and the worktrees. They share `BranchCmd`, the
-  branch a command acts on and whether it keeps it busy or checks it out, and `Branches`, which knows which
-  branches are checked out where.
-- **github:** `show` for the pull request dialog and what is done from it, `create`, `checkout`, `browse`.
-- **worktree:** `add`, `switchto`, `remove`. They share `WorktreeCmd`, which reads a location as a path.
+## The git and GitHub layers
 
-`ErrorPopup` lives in `state`, as `Model.fail` opens it; the error feature only closes it.
-
-## The git layer
-
-```mermaid
-classDiagram
-    class Git {
-        <<record>>
-        worktree() Path
-        repositoryName() String
-        status() Status
-        diffs() Diffs
-        history() History
-        branches() Branches
-        checkout() Checkout
-        commits() Commits
-        integrate() Integrate
-        remotes() Remotes
-        stashes() Stashes
-        worktrees() Worktrees
-        index() Index
-        editor() Editor
-        config() Config
-        ...
-    }
-    class CliGit {
-        +open(Path) Either of GitError or Git
-        +init(Path) Either of GitFailure or Git
-        +withCredentials(Git, credentials) Git
-    }
-    class Stashes {
-        <<interface>>
-        list() Either of GitError or stashes
-        pop(Stash) Either of GitFailure or commands
-        ...
-    }
-    CliGit ..> Git : gives
-    Git --> Stashes : stashes()
-    CliStashes ..|> Stashes
-    CliCheckout ..|> Checkout
-    CliStatus ..|> Status
-    CliIndex ..|> Index
-    CliEditor ..|> Editor
-    CliConfig ..|> Config
-    CliDiffs ..|> Diffs
-    CliHistory ..|> History
-    CliBranches ..|> Branches
-    CliCommits ..|> Commits
-    CliIntegrate ..|> Integrate
-    CliRemotes ..|> Remotes
-    CliIntegrate ..> CliRebase
-    CliCommits ..> CliRebase
-    CliWorktrees ..|> Worktrees
-    CliRebase ..> Unfinished
-    CliIntegrate ..> Unfinished
-    CliBranches ..> Unfinished
-    Unfinished ..> GitProcess
-```
-
-Every `Cli*` class runs git through `GitProcess`; only a few of those arrows are drawn.
-
-The operations are split into 13 roles (ADR 69): an interface per role, such as `Stashes`, implemented by a
-package-private `Cli` class that holds the code, such as `CliStashes`. A `Git` record holds one of each, with the
-worktree and the name of the repository (`git.stashes().pop(stash)`), and `CliGit` gives the one of a real
-repository; an ArchUnit rule keeps the application away from the other `Cli` classes. What a `Cli` class calls in
-another stays a static method of that one. The `Cli*` classes the diagram points to with a dotted arrow are static
-helpers. A test replaces the roles it needs on `StubGit.of()`, as in
-`StubGit.of().withBranches(new StubBranches() { … })`.
-
-- **Everything goes through the `git` command line**, so the repository is read and changed exactly as
-  git itself does: its configuration, hooks, credentials and repository formats included.
-  - **Reads:**
-    - `CliStatus` reads `git status --porcelain=v2`.
-    - `CliBranches` runs one `git for-each-ref` for the local and the remote-tracking branches together
-      (`AllBranches`), so both are read at the same moment and in one process. The local ones come with their
-      upstream and ahead/behind counts and the other worktree each is checked out in (`%(worktreepath)`,
-      `Branch.worktree`); they need the remote ones anyway, to tell which are pushed and which is the default.
-      The branches pane shows the remote-tracking ones on its second tab (`Model.branchesTab`, switched with `[`
-      and `]`).
-    - `CliWorktrees` reads `git worktree list --porcelain -z`, which the branches pane shows on its third tab.
-    - **Linked worktrees** are read like any repository: nothing assumes `.git` is a directory. What lives in
-      the repository's own directory, like the index or `MERGE_HEAD`, is found with `git rev-parse --git-path`.
-    - **What the repository is in the middle of** (a merge, rebase, cherry-pick or revert) is told by the files
-      git keeps meanwhile. Where they are is asked once, when the repository is opened, and kept on the
-      status (`CliInProgress.Markers`): every status read then only looks at those files, without starting
-      git. This assumes they never move while a repository is open, which holds as a `Git` is for one working
-      tree, whose git directory stays where it is.
-    - `CliHistory` runs `git rev-parse` and `git log -z`.
-    - `CliStashes` lists the stashes with the `git log --walk-reflogs … refs/stash` that `git stash list` runs
-      itself, which saves a process. The stashes are the reflog of `refs/stash`, as git's documentation of
-      `git stash` says. Without a stash there is no reflog, which `--ignore-missing` makes an empty list.
-    - `CliRemotes` reads the remotes.
-    - These each have a pure parser for git's output. `CliDiffs` returns git's text, read only up to 50 000 lines
-      or 4 MiB and cut off there (`CliDiffs.LIMIT`, ADR 79), and parses the files `--name-status -z` lists, for a
-      commit, a range, a stash and a pull request.
-  - **Writes:** `CliCheckout`, `CliBranches` (rename, delete), `CliIndex` (stage, commit, discard),
-    `CliCommits`, `CliIntegrate`, `CliRebase`, `CliStashes`, `CliRemotes` (push, pull, fetch, delete on the remote) and
-    `CliWorktrees` (add, remove).
-  - **Opening:** `CliGit.open` asks `git rev-parse` whether the directory is in a repository,
-    whether that is bare, where its working tree is, and where git keeps the files that tell what it is in the
-    middle of.
-- **`GitProcess.run(worktree, GitCommand)`** is the only place that starts git, through `process.Exec`:
-  - A `GitCommand` is data: the arguments, the environment and a timeout.
-  - Every command runs with `LC_ALL=C` (git's messages are matched in English), `GIT_TERMINAL_PROMPT=0`
-    (fail rather than wait for credentials) and `GIT_EDITOR=false` (fail rather than open an editor on the
-    terminal the TUI owns; a command that is to edit something says how).
-  - **Timeouts and locks:** a command that changes the repository gets 5 minutes, for its hooks. A read
-    (`GitCommand.reading`) gets 30 seconds and takes no optional locks, so it never writes the index it refreshed:
-    `RefreshIndex` (`git update-index -q --unmerged --refresh`) does that once the index changed, while the
-    terminal has the focus (ADR 93, ADR 97).
-  - **Paths:** a command on paths takes them literally (`withLiteralPaths`), never as patterns, so
-    discarding a file named `*.txt` discards only that file.
-  - **Remotes:** a command that talks to a remote runs ssh in batch mode (`CliRemotes.toRemote`), so a
-    passphrase or unknown host fails rather than prompts.
-  - It returns `Either<GitFailure, Output>`. A failure's `CommandFailed` holds the line
-    that explains it (the first `error:` or `fatal:` line, else the first line) and what git printed: its output
-    up to 64 MiB, more is `TooMuchOutput`, and the first 64 KiB of its errors (ADR 79). A diff is read with
-    `GitProcess.read(worktree, command, limit)`, which stops git once it printed more than the limit, and
-    keeps the whole lines git printed when it takes too long.
-
-## The GitHub layer
-
-`gh.GitHub` is what the TUI does with GitHub; `CliGitHub` gives one that does it with the `gh` command line tool,
-which finds the GitHub repository from the git remotes itself. It mirrors the git layer without depending on it:
-`GhCommand` (run with `GH_PROMPT_DISABLED=1`), `GhProcess`, and its own errors, `GhError` and `GhFailure`.
-
-As the git operations are, the gh operations are split into roles (ADR 114): `PullRequests`, `Reviews` (the
-conversation and the review threads), `Checks`, `Stacks` and `Account` (who gh runs as, and everything it opens in
-the browser set for that account). Each is implemented by a package-private `Cli` class, such as `CliReviews`, and a
-`GitHub` record holds one of each (`gitHub.reviews().reply(number, comment, body)`). An ArchUnit rule keeps the
-application away from the `Cli` classes but `CliGitHub`. A test replaces the roles it needs on `StubGitHub.of()`, as
-in `StubGitHub.of().withPullRequests(new StubPullRequests() { … })`.
-
-- **Reading:** gh prints the JSON GitHub answers, without `--jq`, and `GhProcess.readJson` decodes it with a
-  `Decoder` of `jazygit-json` (ADR 42). Each read is a class of its own, with its command, its GraphQL and its
-  decoder: `RepositoryPullRequestsQuery`, `MyPullRequestsQuery`, `DetailsQuery` (which also tells how far a pull
-  request is behind its base, ADR 58), `BranchesQuery`, `BranchCheckRunsQuery`, `RecentChecksQuery`, `CommentsQuery`,
-  `ReviewThreadsQuery`, `PreviewQuery`, `LoginsQuery` and `MergeQuery`. What several share is a fragment, its GraphQL
-  next to its decoder:
-  `CheckFragment` (a check, and how the states of checks fold into one: failing, else pending, else passing),
-  `SuiteFragment` (the workflow runs that wait to start, ADR 35), `StackFragment` and `SummaryFragment`. A node of
-  a union asks for its `__typename`, by which it is decoded. What cannot be decoded is `GhError.UnexpectedOutput`,
-  with the path to where and why.
-- **The pull requests of the branches** (fork pull requests left out) and **the branches**: `gh api graphql
-  --paginate --slurp`, all pages as one array, which needs gh 2.48 or newer; an older one is `GhError.TooOld`.
-- **The details of one pull request**, for its dialog: one `gh api graphql` query, gh filling in the repository of
-  the working tree for `{owner}` and `{repo}`, as `gh pr view --json` has no review threads (ADR 7). Every list is
-  read up to 100, the review threads the newest 100. `PullRequestDetails` holds what it reads in the parts its
-  dialog shows together: `Status`, `Branches`, `Activity`, `Size` and `Conversation`.
-- **The review threads of one pull request** (ADR 55), to show next to their lines: `gh api graphql --paginate
-  --slurp`, 100 threads a page and 50 comments a thread, as `ReviewRemarks`, with the head and base commits they
-  were read at. A comment of a review not submitted yet is left out. `state.diff.PlacedRemarks` places them in a parsed
-  diff: by path (either of a rename), side (`LEFT` the old file, `RIGHT` the new one) and line number, one about a
-  whole file under its bar, and one that cannot be placed at the end of its file.
-- **Creating and opening:** `gh pr create --head <branch on the remote> --base <base> --fill` and
-  `gh pr view <n> --web`. The name of the branch on its remote is the branch's push target, as the branches
-  were read (`Branch.pushTarget`), which `PullRequestUpdate` puts in `PullRequestCmd.CreatePullRequest`.
-- **Merging and closing:** `gh pr merge <n> --merge|--squash|--rebase` and `gh pr close <n>`, chosen in the
-  pull request dialog. The branch is kept. Once done, the pull request is dropped from the open ones and they
-  are read again.
-
-### The account of a repository
-
-gh can be logged in to several accounts, but which one it uses is global. A repository can be configured to use
-another one, without changing that: the key `jazygit.githubUser` in its own git configuration names the login,
-on the GitHub host of its remotes (`origin`'s, else the first one named like GitHub; an ssh host alias is
-resolved with `ssh -G`). The settings list the accounts with `gh auth status --json hosts`.
-
-`GhToken` asks `gh auth token --user <login> --hostname <host>` once, the first time it is needed, and keeps
-the token in memory only. `GhProcess` sets it as `GH_TOKEN` (`GH_ENTERPRISE_TOKEN` and `GH_HOST` for a
-GitHub Enterprise Server) for every gh command, and `CliGit.withCredentials` sets it for git's
-commands that talk to a remote, for gh's credential helper. A token GitHub rejects is asked again once. A
-token gh does not have is kept as `GhError.TokenUnavailable`: gh does not run as another account, the error
-is shown once, and git still talks to the remotes without it. Without a configured account, nothing is set,
-and gh uses its active one.
-
-### Errors as values
-
-No git operation throws on purpose: one that does is a bug, which `Program.perform` reports as a
-`Failure.Bug`. A read returns `Either<GitError, T>`. An operation that changes the repository
-returns `Either<GitFailure, List<ExecutedCommand>>`:
-
-- On success, the right side is the commands that ran.
-- On failure, a `GitFailure` pairs the error with the commands that ran up to and including the
-  failing one.
-
-An `ExecutedCommand` holds the program and its arguments as they were run; `line()` writes it as one would
-type it in a shell, which is how the command log shows it. The environment is left out, so a command that
-runs with, say, `GIT_SEQUENCE_EDITOR` set does not quite do the same when typed again.
-
-Every operation fails with a `GitError` (ADR 75). The first five below are the failures that running any git
-command can have; the others are an operation's own. Which ones an operation can have is documented on it.
-
-```mermaid
-classDiagram
-    direction BT
-    class GitError {
-        <<sealed>>
-    }
-
-    GitUnavailable --|> GitError
-    TimedOut --|> GitError
-    Interrupted --|> GitError
-    CommandFailed --|> GitError
-    UnexpectedOutput --|> GitError
-    LocalChanges --|> GitError
-    WorktreeHasChanges --|> GitError
-    StashNotRestored --|> GitError
-    TempFileFailed --|> GitError
-    UnknownBranch --|> GitError
-    RefusedPath --|> GitError
-    StashGone --|> GitError
-    StoppedOnConflicts --|> GitError
-    NotARepository --|> GitError
-    NoWorkTree --|> GitError
-```
-
-Some helpers combine these results:
-
-- `GitFailure.sequence(...)` runs steps in order and stops at the first failure. That failure also
-  carries the commands of the steps before it.
-- `GitFailure.followedBy(cleanup)` adds the commands of a cleanup, like `git rebase --abort`, and records in
-  `cleanupFailed` why it failed, if it did.
-- `GitProcess.log`, `read` and `ask` run a command for its effect, to read something, or to ask a question
-  git answers "no" to by exiting with 1 silently.
-- `Unfinished.runOrUndo` runs a merge, rebase, pull or cherry-pick and looks at what it left when it fails.
-  - It first reads whether the repository is already in the middle of something: a merge, rebase,
-    cherry-pick or revert, or unresolved conflicts.
-  - If it is, git refuses to start the command, and nothing is undone. What is unfinished is the user's.
-  - If the command stopped on conflicts, it is left so, for the user to resolve them (in the app or outside
-    it) and continue or abort (M). The failure becomes a `StoppedOnConflicts`, saying what is in progress and
-    how many files conflict. `GitOperationCmd` reports that as `OperationMsg.Stopped`, not as a failure, and
-    `OperationUpdate` shows it as a `Notice` in the command log instead of an error.
-  - If it stopped half-way otherwise, like a cherry-pick that turns out empty, it is undone: a rebase or
-    cherry-pick that is still going is aborted. `runOrStop` is the variant with nothing to undo, for merges.
-
-Parsing never throws: the parsers in `GitOutput` and the `Cli*` classes return
-`Either<UnexpectedOutput, T>`, so output git was not expected to print is a `GitError` like any other.
-The git package returns data, not messages; `ErrorText` in `ui` turns errors into text.
+- **Everything goes through the command line**, `git` and `gh`, so the repository is read and changed exactly as git
+  does, with its configuration, hooks and credentials.
+- **Roles** (ADR 69, 114): `Git` and `GitHub` are records holding one interface per role (`Stashes`, `Branches`,
+  `PullRequests`, `Reviews`, ...), each implemented by a package-private `Cli*` class. Tests replace the roles they
+  need on `StubGit.of()` and `StubGitHub.of()`.
+- **One place starts a process:** `GitProcess` and `GhProcess`, both through `process.Exec`. A command is data
+  (arguments, environment, timeout) and never prompts: no terminal credentials, no editor, ssh in batch mode.
+- **gh's JSON** is decoded with the `Decoder`s of `jazygit-json` (ADR 42), one query class per read.
+- **Errors as values.** Nothing throws on purpose. A read returns `Either<GitError, T>`; a write returns
+  `Either<GitFailure, List<ExecutedCommand>>`, the failure carrying the commands that ran (ADR 75). Parsers return
+  `Either` too. `Unfinished.runOrUndo` leaves a merge or rebase stopped on conflicts for the user, and undoes one that
+  stopped half-way otherwise.
 
 ## Example: rewording a commit
-
-The user selects a commit in the commits pane, presses `r`, edits the message and confirms. The flow
-below shows what happens.
 
 ```mermaid
 sequenceDiagram
@@ -1209,144 +233,34 @@ sequenceDiagram
     participant Panel as CommitsPanel
     participant Program as Program (render thread)
     participant Update as RewordUpdate
-    participant App as JazygitApp.render
     participant Dialog as CommitDialog.reword
     participant IO as git-io thread
-    participant Commits as git.commits()
-    participant Git as git CLI
+    participant Git as git.commits()
 
     User->>Panel: presses "r" on a commit
     Panel->>Program: dispatch(RewordMsg.Requested(sha))
     Program->>Update: requested(model, sha)
-    Update-->>Program: Next(model + RewordPopup(commit), no cmds)
-    Program->>App: render()
-    App->>Dialog: render(model): popup is a RewordPopup
-    Dialog-->>User: dialog prefilled with the commit's message
-
-    User->>Dialog: edits the summary and submits
+    Update-->>Program: Next(model + RewordPopup, no cmds)
+    Program->>Dialog: render(model)
+    User->>Dialog: edits the message and submits
     Dialog->>Program: dispatch(PopupMsg.Confirmed(RewordPopup))
-    Program->>Update: confirm(model, RewordPopup, RewordPopup::confirm)
-    Update-->>Program: Next(model - popup, [RewordCmd(sha, message)])
-    Program->>IO: io.execute(perform(env, cmd))
-
-    IO->>Commits: reword(sha, message)
-    Commits->>Git: git rev-parse --verify HEAD (is sha HEAD?)
-    alt sha is HEAD
-        Commits->>Git: git commit --amend --only -m ...
-    else an older commit
-        Commits->>Git: git rev-list --parents -n 1 sha
-        Commits->>Git: git -c ... rebase --interactive ... sha^<br/>(GIT_SEQUENCE_EDITOR marks it "reword",<br/>GIT_EDITOR copies the new message in)
-    end
-    Git-->>Commits: exit code
-    Commits-->>IO: Either of GitFailure or commands
-    IO->>Program: ui.execute(dispatch(OperationMsg.Succeeded(reword, commands)))
-
-    Program->>Update: OperationUpdate: Succeeded(reword, commands)
-    Update-->>Program: Next(model + command log entry, [LoadStatus, LoadBranches, LoadStashes])
-    Note over Program,Commits: the loads run on git-io. StatusLoaded sees HEAD moved,<br/>so LoadCommits re-reads the log with the new message
-```
-
-### Step by step
-
-1. **Key press.**
-   - `RewordAction` registered `Binding.onSelected("r", "help.commits.reword", commit -> new
-     RewordMsg.Requested(commit.sha()))`
-     in the `COMMITS` scope.
-   - `CommitsPanel` asks the `Keymap` to handle the key with the selected commit. That yields
-     `RewordMsg.Requested(sha)`, which the panel dispatches. It names the commit, not its row, so a log that
-     was read again meanwhile can't make it another one.
-
-2. **Open the dialog**, a pure step in `RewordUpdate.requested`. If the commit is in the loaded log,
-   `Update.ask` opens a `RewordPopup(commit)` and clears the error. No IO is needed.
-
-3. **Render.**
-   - `JazygitApp.render` asks each dialog to render. `CommitDialog.reword` renders because
-     `model.popup(RewordPopup.class)` is defined, and starts out with the commit's current message.
-   - `JazygitApp` moves the focus into the dialog.
-
-4. **Confirm**, a pure step in `RewordUpdate.confirmed`.
-   - A blank summary keeps the dialog open.
-   - Otherwise `Update.confirm` closes the popup and returns one command: `RewordCmd(sha, message)`.
-
-5. **Perform**, on the `git-io` thread. `Program.perform` calls `Reword.run(env)`, which `GitOperationCmd`
-   implements for every operation done through git alone:
-
-   ```java
-   return perform(env.git())
-           .fold(
-                   failure -> failure.error() instanceof GitError.StoppedOnConflicts(var inProgress, int conflicts)
-                           ? new OperationMsg.Stopped(
-                                   this, failure.commands(), new Notice.StoppedOnConflicts(inProgress, conflicts))
-                           : failed(Failure.of(failure)),
-                   this::succeeded);
-   ```
-
-   where `Reword.perform` is `git.commits().reword(sha, message)`.
-
-6. **The git work**, in `CliRebase.rewordAny`.
-   - `CliHistory.resolve(worktree, "HEAD")` runs `git rev-parse --verify --quiet HEAD^{commit}` to find out
-     whether the commit is `HEAD`. If that fails, it's a `CommandFailed`, or another failure of running git.
-   - **The commit is `HEAD`:** `CliIndex.reword` runs `git commit --allow-empty --amend --only -m … [-m …]`.
-   - **An older commit:** `CliRebase.reword` does the following.
-     1. `TempFiles.using` writes the new message to a temporary file. If that fails, it's a
-        `TempFileFailed`.
-     2. `base` runs `git rev-list --parents -n 1 <sha>` to decide between `<sha>^` and `--root`.
-     3. It runs `git rebase --interactive --autostash --keep-empty --rebase-merges <base>`, set up as
-        follows.
-        - `-c rebase.abbreviateCommands=false -c core.abbrev=no` makes the todo list name every commit as
-          `pick <full sha>`, whatever the user's configuration says.
-        - `GIT_SEQUENCE_EDITOR` is a shell function that turns `pick <sha>` into `reword <sha>`, and
-          `merge -C` into `merge -c`, with plain `grep`, `sed` and `mv`. When the todo list has no such line,
-          it fails, so the rebase stops instead of reporting success for a commit it never touched.
-        - `GIT_EDITOR` is `cp <message file>`.
-        - `-c commit.cleanup=whitespace` keeps lines starting with `#`.
-     4. If the rebase stops on the conflicts of a later commit, it is left so, and the failure becomes a
-        `StoppedOnConflicts` (see above). If it stops half-way otherwise, `Unfinished.runOrUndo` runs
-        `git rebase --abort`, and that line joins the failure's command log. If the abort fails too, the
-        failure records why. The repository is left as it was, unless it was already in the middle of a
-        rebase: then git refused, and the user's rebase is left alone.
-
-7. **Report.** The `Either` becomes one of two messages, which `OperationUpdate` handles:
-   - **Success:** `OperationMsg.Succeeded(reword, commands)`. The commands are logged under
-     `RewordCmd.REWORD`, the error is cleared and `Update.refresh` reads the repository again.
-   - **Stopped on conflicts:** `OperationMsg.Stopped(reword, commands, notice)`. As for a success, but the
-     command log shows the `Notice`, which `NoticeText` turns into text, and the status panel shows the
-     rebase in progress.
-   - **Failure:** `OperationMsg.Failed(reword, Failure.Git(error, commands, cleanupFailed))`. The commands
-     that ran, including the abort, are logged; `Model.error` becomes
-     `AppError.OperationFailed(REWORD, none, failure)`, which `ErrorText` shows as `"Reword failed: …"`;
-     and the repository is read again.
-
-8. **Refresh.** `Update.refresh` starts `LoadStatus`, `LoadBranches` and `LoadStashes`.
-   - When `StatusLoaded` arrives, `LoadUpdate.statusLoaded` sees that `HEAD` moved (the reworded
-     commit and everything after it have new shas) and issues `LoadCommits`.
-   - When `CommitsLoaded` arrives, the commits pane shows the new message.
-
-### The failure path
-
-```mermaid
-flowchart TD
-    Run["Reword.run(env)"] --> Either{"git.commits().reword(...)"}
-    Either -- "Right(commands)" --> Done["OperationMsg.Succeeded(reword, commands)"]
-    Either -- "Left(GitFailure(error, commands, cleanupFailed))" --> FailedWith["failed(Failure.of(failure))"]
-    FailedWith --> Failed["OperationMsg.Failed(reword, Failure.Git(...))"]
-    Failed --> Log["OperationUpdate: CommandLog.append shows rebase, rebase --abort"]
-    Log --> Update["error = AppError.OperationFailed(REWORD, ...)<br/>Update.refresh(model)"]
-    Update --> Text["ErrorText.of(error) when rendered<br/>e.g. 'Reword failed: ' + git's explanation"]
-    Done --> UpdateOk["OperationUpdate: command log += commands<br/>Update.refresh(model)"]
+    Program->>Update: confirm: close popup
+    Update-->>Program: Next(model - popup, [RewordCmd])
+    Program->>IO: perform(env, RewordCmd)
+    IO->>Git: reword(sha, message)
+    Git-->>IO: Either of GitFailure or commands
+    IO->>Program: OperationMsg.Succeeded / Stopped / Failed
+    Program->>Update: OperationUpdate: log, refresh
+    Note over Program,Git: the loads read the repository again, and the pane shows the new message
 ```
 
 ## Testing
 
-- **Update functions** are pure, so most tests build a `Model` (`TestModels`), apply a `Msg` and
-  assert on the next model and its commands. No git is involved.
-- **`ProgramTest`** runs the real loop with queue executors and a fake repository (`StubGit`
-  gives every method a default).
-- **The git layer** is tested against real temporary repositories: `CliGitTest`,
-  `CliCheckoutTest`, `CliDiscardTest`, `CliDiffsTest`, `CliIntegrateTest` and `GitProcessTest`. The parsers
-  (`CliStatus.parse`, `CliBranches.parse`, `CliHistory.parse`) are tested on fixed git output in
-  `CliStatusTest` and `CliParseTest`.
-- **UI tests** use TamboUI's `ToolkitTestRunner` and its pilot.
-- **Acceptance tests** (`acceptance/`, in Python) run the built jar in a pseudo terminal, press keys and check the
-  repository with git. They know nothing of the code; see [acceptance/README.md](acceptance/README.md).
-- **`ArchitectureTest`** checks the dependencies drawn under [Packages](#packages), and that updates are pure.
+- **Update functions** are pure: build a `Model` (`TestModels`), apply a `Msg`, assert on the next model and its
+  commands. No git involved.
+- **`ProgramTest`** runs the real loop with queue executors and `StubGit`.
+- **The git layer** is tested against real temporary repositories; its parsers on fixed git output.
+- **UI tests** use TamboUI's `ToolkitTestRunner` and its pilot, and assert on the rendered screen.
+- **Acceptance tests** (`acceptance/`, Python) run the built jar in a pseudo terminal and check the repository with
+  git; see [acceptance/README.md](acceptance/README.md).
+- **`ArchitectureTest`** and the core's `*ArchitectureTest`s enforce the rules above.
