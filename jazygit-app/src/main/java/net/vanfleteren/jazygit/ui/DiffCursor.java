@@ -23,7 +23,7 @@ import net.vanfleteren.jazygit.state.diff.DiffStops;
  * @param row    the first line the view shows
  * @param mark   the index of the line the range was started on, while one is open
  */
-record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int stop, int row, Option<Integer> mark) {
+public record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int stop, int row, Option<Integer> mark) {
 
     /**
      * The cursor of a diff of {@code lines} lines with {@code stops}, shown {@code height} lines high from
@@ -34,7 +34,7 @@ record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int stop, 
      * @param near the index of a stop the cursor was on, which its stop is looked for from ({@link #index}): a frame
      *             of a long diff then finds the stop the cursor is on without going through all of them
      */
-    static Option<DiffCursor> of(
+    public static Option<DiffCursor> of(
             Vector<RichDiff.Stop> stops,
             int near,
             int lines,
@@ -60,7 +60,7 @@ record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int stop, 
      * one before it first; the closest, should two have the same. The cursor and a range stay near the stop they were
      * on, so a long diff keeps no table of where each of its stops is (a stop a line).
      */
-    static Option<Integer> index(Vector<RichDiff.Stop> stops, Anchor anchor, int near) {
+    public static Option<Integer> index(Vector<RichDiff.Stop> stops, Anchor anchor, int near) {
         int from = Math.clamp(near, 0, Math.max(0, stops.size() - 1));
         // A loop, not a recursion over how far away, which a stop missing from a long diff would take as deep as it
         // has stops; and four times as fast as an iterator of the indexes, for a jump across the diff.
@@ -80,14 +80,14 @@ record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int stop, 
     /**
      * The anchor of the stop the cursor is on.
      */
-    Anchor anchor() {
+    public Anchor anchor() {
         return stops.get(stop).mark().anchor();
     }
 
     /**
      * The anchor of the line the range was started on, while one is open.
      */
-    Option<Anchor> markAnchor() {
+    public Option<Anchor> markAnchor() {
         return mark.map(index -> stops.get(index).mark().anchor());
     }
 
@@ -95,7 +95,7 @@ record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int stop, 
      * {@code j}: through the lines of its stop that are below the screen, else to the next stop; the next line of the
      * hunk while a range is open.
      */
-    DiffCursor down() {
+    public DiffCursor down() {
         if (mark.isDefined()) {
             return Vector.range(stop + 1, stops.size())
                     .find(this::lineOfHunk)
@@ -116,7 +116,7 @@ record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int stop, 
      * {@code k}: through the lines of its stop that are above the screen, else to the stop before; the line before of
      * the hunk while a range is open.
      */
-    DiffCursor up() {
+    public DiffCursor up() {
         if (mark.isDefined()) {
             return Vector.range(0, stop)
                     .findLast(this::lineOfHunk)
@@ -136,28 +136,28 @@ record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int stop, 
     /**
      * PageDown: a page down, the cursor pulled along to the first stop on the screen if it leaves it.
      */
-    DiffCursor pageDown() {
+    public DiffCursor pageDown() {
         return scrolled(height);
     }
 
     /**
      * PageUp: a page up, the cursor pulled along to the last stop on the screen if it leaves it.
      */
-    DiffCursor pageUp() {
+    public DiffCursor pageUp() {
         return scrolled(-height);
     }
 
     /**
      * Home: the first stop, from the top; nothing while a range is open.
      */
-    DiffCursor home() {
+    public DiffCursor home() {
         return mark.isDefined() ? this : at(0, 0);
     }
 
     /**
      * End: the last stop, to the bottom; nothing while a range is open.
      */
-    DiffCursor end() {
+    public DiffCursor end() {
         return mark.isDefined() ? this : at(stops.size() - 1, lines);
     }
 
@@ -166,7 +166,7 @@ record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int stop, 
      * screen when it would leave it. While a range is open, the cursor stays, and the view only scrolls as far as it
      * still shows it.
      */
-    DiffCursor scrolled(int by) {
+    public DiffCursor scrolled(int by) {
         if (mark.isDefined()) {
             return at(stop, Math.clamp(row + by, start(stop) - height + 1, start(stop)));
         }
@@ -180,7 +180,7 @@ record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int stop, 
      * {@code n}: the next thread, the view following it, the first after the last; none when there is no other
      * thread, or a range is open.
      */
-    Option<DiffCursor> nextThread() {
+    public Option<DiffCursor> nextThread() {
         return thread(Vector.range(stop + 1, stops.size())
                 .appendAll(Vector.range(0, stop))
                 .find(this::isThread));
@@ -189,7 +189,7 @@ record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int stop, 
     /**
      * {@code N}: the thread before the cursor, the last before the first.
      */
-    Option<DiffCursor> previousThread() {
+    public Option<DiffCursor> previousThread() {
         return thread(Vector.range(stop + 1, stops.size())
                 .appendAll(Vector.range(0, stop))
                 .findLast(this::isThread));
@@ -200,7 +200,7 @@ record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int stop, 
      * while a range is open, only a line of its hunk, which the range then reaches to. None for a line the view does
      * not show, or one past the end of the diff.
      */
-    Option<DiffCursor> clicked(int line) {
+    public Option<DiffCursor> clicked(int line) {
         return Option.when(line >= 0 && line < height && row + line < lines, () -> containing(row + line))
                 .filter(index -> mark.isEmpty() || lineOfHunk(index))
                 .map(index -> at(index, row));
@@ -215,7 +215,7 @@ record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int stop, 
      * {@code v}: a range started on the line of the cursor, or dropped when one is open; none when the cursor is not
      * on a line, which no range starts on.
      */
-    Option<DiffCursor> marked() {
+    public Option<DiffCursor> marked() {
         return mark.isDefined()
                 ? Option.of(withMark(Option.none()))
                 : Option.when(stops.get(stop).mark().hunk().isDefined(), () -> withMark(Option.of(stop)));
@@ -297,7 +297,7 @@ record DiffCursor(Vector<RichDiff.Stop> stops, int lines, int height, int stop, 
      * the rule of a thread reversed, the lead not at all; while a range is open, each of its lines, marked {@code ┃}
      * in the gutter as the lines a thread covers are. Only those lines are drawn again, once they show.
      */
-    Rows tinted(Rows lines, Style tint) {
+    public Rows tinted(Rows lines, Style tint) {
         RichDiff.Stop on = stops.get(stop);
         int first = on.row();
         int width = on.mark().width();

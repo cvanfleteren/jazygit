@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.state.diff.Anchor;
 import net.vanfleteren.jazygit.state.diff.DiffStops;
+import net.vanfleteren.jazygit.ui.content.ContentText;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -305,7 +306,7 @@ class DiffCursorTest {
         Line tinted = on(ONE, 4).tinted(text, tint).get(4);
 
         assertEquals("", List.ofAll(tinted.spans()).last().content());
-        Line filled = ContentPanel.filled(tinted, 12);
+        Line filled = ContentText.filled(tinted, 12);
         assertEquals(12, filled.width());
         assertEquals(new Span("    ", tint), List.ofAll(filled.spans()).last());
     }

@@ -44,12 +44,12 @@ import net.vanfleteren.jazygit.syntax.Token;
  * says what happened to it, its lines numbered in the old and the new file, and the words that changed in a changed
  * line highlighted.
  */
-final class RichDiff {
+public final class RichDiff {
 
     /**
      * How wide a version is rendered while the width of its area is not known yet (ADR 103).
      */
-    static final int RENDERED_WIDTH = 80;
+    public static final int RENDERED_WIDTH = 80;
     /**
      * The gutter of a version rendered: the bar beside a block that changed, and a space (ADR 103).
      */
@@ -109,7 +109,7 @@ final class RichDiff {
      * Theme.SpanStyles)} draws them, a version of a file rendered (ADR 103) {@code width} columns wide, its gutter
      * included.
      */
-    static Drawn drawn(
+    public static Drawn drawn(
             Expansion.Folded folded,
             boolean syntax,
             boolean words,
@@ -729,7 +729,7 @@ final class RichDiff {
      * @param width  how many columns its tint covers: the width of its file
      * @param hunk   the hunk of a line, which a range stays in; none for what is not a line
      */
-    record Mark(Anchor anchor, int lines, int width, Option<DiffStops.HunkAt> hunk) {}
+    public record Mark(Anchor anchor, int lines, int width, Option<DiffStops.HunkAt> hunk) {}
 
     /**
      * Where a stop of the cursor starts.
@@ -737,7 +737,7 @@ final class RichDiff {
      * @param mark the stop
      * @param row  the line it starts on
      */
-    record Stop(Mark mark, int row) {}
+    public record Stop(Mark mark, int row) {}
 
     /**
      * Where a line of a version rendered is drawn (ADR 103): the first row of the block it is part of. No stop of the
@@ -746,7 +746,7 @@ final class RichDiff {
      * @param anchor the line
      * @param row    the first row of its block
      */
-    record Place(Anchor anchor, int row) {}
+    public record Place(Anchor anchor, int row) {}
 
     /**
      * The lines of a diff, each drawn when it shows ({@link Rows}), where each stop of the cursor in them starts, in
@@ -756,7 +756,7 @@ final class RichDiff {
      *               it, as each is no wider than its file ({@link Marked#width}); other lines are drawn to be measured,
      *               as {@link Rows#widest} does
      */
-    record Drawn(Rows rows, List<Stop> stops, List<Place> places, IntSupplier widest) {
+    public record Drawn(Rows rows, List<Stop> stops, List<Place> places, IntSupplier widest) {
 
         Drawn(Rows rows, List<Stop> stops) {
             this(rows, stops, List.empty(), rows::widest);
@@ -778,28 +778,28 @@ final class RichDiff {
         /**
          * {@code lines}, without a stop: what has no cursor.
          */
-        static Drawn plain(List<Line> lines) {
+        public static Drawn plain(List<Line> lines) {
             return plain(Rows.of(lines));
         }
 
         /**
          * {@code rows}, without a stop: what has no cursor.
          */
-        static Drawn plain(Rows rows) {
+        public static Drawn plain(Rows rows) {
             return new Drawn(rows, List.empty());
         }
 
         /**
          * All the lines, drawn.
          */
-        List<Line> lines() {
+        public List<Line> lines() {
             return rows.all();
         }
 
         /**
          * These lines after {@code before}, their stops moved down by as many lines.
          */
-        Drawn after(List<Line> before) {
+        public Drawn after(List<Line> before) {
             IntSupplier inBody = widest;
             return new Drawn(
                     rows.after(Rows.of(before)),
@@ -812,7 +812,7 @@ final class RichDiff {
         /**
          * These lines with what comes before their first stop as a stop of its own, the lead, if anything does.
          */
-        Drawn withLead() {
+        public Drawn withLead() {
             return stops.headOption()
                     .filter(first -> first.row() > 0)
                     .map(first -> new Drawn(

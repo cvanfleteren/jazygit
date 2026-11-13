@@ -50,7 +50,7 @@ import net.vanfleteren.jazygit.state.view.UnchangedNode;
  * showing the file diff, the branch log, the commit diff/body or what a stash stashed; on the pull requests screen,
  * the highlighted pull request.
  */
-final class ContentView {
+public final class ContentView {
 
     private static final DiffText NO_CHANGES = DiffText.of("");
 
@@ -583,7 +583,7 @@ final class ContentView {
     /**
      * What the content panel shows: a message, or areas with something to scroll through.
      */
-    sealed interface Shown {
+    public sealed interface Shown {
 
         /**
          * The areas shown, top to bottom; none for a message.
@@ -616,7 +616,7 @@ final class ContentView {
     /**
      * What an area shows, as it is styled.
      */
-    sealed interface Body {
+    public sealed interface Body {
 
         /**
          * A unified diff, drawn as {@code look} says: the staged or the unstaged changes of the working tree, or what a
@@ -668,7 +668,7 @@ final class ContentView {
      * @param deleting the ids of the comments being deleted (ADR 64)
      * @param pictures the pictures of the images of the threads that were read, by where they are (ADR 84)
      */
-    record ShownRemarks(
+    public record ShownRemarks(
             List<ReviewThread> threads,
             Instant now,
             Option<Failure> failed,
@@ -695,7 +695,7 @@ final class ContentView {
      * the lines {@code expansion} expanded around its hunks, folded to {@code context} lines (ADR 77), and its file
      * shown as the {@code version} of it the area shows, if it shows one (ADR 102).
      */
-    record ShownDiff(
+    public record ShownDiff(
             DiffText diff,
             Option<String> note,
             Option<Expansion> expansion,
@@ -727,7 +727,7 @@ final class ContentView {
          * The diff shown parsed, its files read whole folded, with what is known of each of them (ADR 77), its file
          * replaced by the version of it shown, if one is (ADR 102).
          */
-        Expansion.Folded folded() {
+        public Expansion.Folded folded() {
             Expansion.Folded expanded = expansion
                     .map(kept -> kept.folded(diff.parsed(), context))
                     .getOrElse(() -> Expansion.Folded.of(diff.parsed()));
@@ -747,14 +747,14 @@ final class ContentView {
         /**
          * The text shown, as the plain view draws it.
          */
-        String text() {
+        public String text() {
             return diff.text() + note.map(line -> line + "\n").getOrElse("");
         }
 
         /**
          * The diff shown parsed, as the rich view draws it; parsed when it was read, but for the note.
          */
-        ParsedDiff parsed() {
+        public ParsedDiff parsed() {
             return folded().diff();
         }
     }

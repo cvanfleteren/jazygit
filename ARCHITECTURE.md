@@ -422,7 +422,7 @@ See `documentation/adr/0102-the-original-or-the-new-version-of-a-file.md`.
   `RichDiff` then draws its bar, its numbers in their column of the diff's gutter, the other blank, no markers, and
   no stops in a hunk, so no range is started.
 - `Version.moved` takes the cursor to the line of the version shown: from `VersionUpdate`, or from `LoadUpdate` once the
-  read arrives. `ContentPanel` keeps the row of the cursor on the screen from the line it was drawn on. `DiffLines`
+  read arrives. `ScrollArea` keeps the row of the cursor on the screen from the line it was drawn on. `DiffLines`
   shows the version too, so `y` copies its lines, and the review refuses to start a thread in it (`Why.IN_VERSION`).
 
 ### A version of Markdown rendered
@@ -444,7 +444,7 @@ See `documentation/adr/0103-a-version-of-markdown-rendered.md`.
   tamboui's table shares the width out evenly; it finds tables with commonmark's `TablesExtension`, and draws each cell
   as text only (`inlineOnly`). Each block gets only the link definitions it refers to (`referred`), and the blocks are
   drawn on the common pool. Comments of HTML are found by the parser, so none in code is taken out.
-- A version rendered is drawn as wide as its area: `ContentPanel.Styler` gets the width the text area last had, and a
+- A version rendered is drawn as wide as its area: `ScrollArea.Styler` gets the width the text area last had, and a
   body that is `rendering` is styled again when it changes. `Styled.row` finds a line by its place too, so the line of
   the cursor keeps its row as the version renders; a key on the bar acts on `Styled.top`, the first line of the block
   at the top, so the version shown as source again has the cursor there. `CopyUpdate` copies nothing from it.

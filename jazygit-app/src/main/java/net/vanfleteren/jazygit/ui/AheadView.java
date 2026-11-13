@@ -18,7 +18,7 @@ import net.vanfleteren.jazygit.i18n.Messages;
  * @param distance how far the branch is from its base, if that was read (ADR 46)
  * @param only     whether only those are listed
  */
-record AheadView(Option<Ahead> ahead, Option<BaseDistance> distance, boolean only) {
+public record AheadView(Option<Ahead> ahead, Option<BaseDistance> distance, boolean only) {
 
     /**
      * {@code title}, followed by how many commits are not on the base and how many of the base are not on the branch,
@@ -58,14 +58,14 @@ record AheadView(Option<Ahead> ahead, Option<BaseDistance> distance, boolean onl
     /**
      * Whether {@code sha} is on the base, and so is dimmed.
      */
-    boolean dimmed(Sha sha) {
+    public boolean dimmed(Sha sha) {
         return ahead.exists(read -> read.shared(sha));
     }
 
     /**
      * What marks {@code sha} as the commit the branch forked from, when it is listed as that.
      */
-    Option<String> mark(Sha sha) {
+    public Option<String> mark(Sha sha) {
         return ahead.filter(read ->
                         only && forkPoint(read).exists(fork -> fork.sha().equals(sha)))
                 .map(read -> Messages.get("panel.forkPoint", read.base().name()));

@@ -35,6 +35,7 @@ import net.vanfleteren.jazygit.state.diff.*;
 import net.vanfleteren.jazygit.state.load.*;
 import net.vanfleteren.jazygit.state.preferences.*;
 import net.vanfleteren.jazygit.state.view.*;
+import net.vanfleteren.jazygit.ui.content.ContentText;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -645,7 +646,7 @@ class ContentPanelTest {
         }));
 
         java.util.List<Line> windowed =
-                ContentPanel.windowed(lines, 1, 40, 10, 0, row -> false).lines();
+                ContentText.windowed(lines, 1, 40, 10, 0, row -> false).lines();
 
         assertEquals(100, windowed.size());
         assertEquals(20, drawn.get());
@@ -656,13 +657,13 @@ class ContentPanelTest {
         assertEquals("", windowed.get(60).rawContent());
         // At the end, the lines an area twice as high would show from its last line at its bottom.
         java.util.List<Line> atEnd =
-                ContentPanel.windowed(lines, 0, 95, 10, 0, row -> false).lines();
+                ContentText.windowed(lines, 0, 95, 10, 0, row -> false).lines();
         assertEquals("080", atEnd.get(80).rawContent());
         assertEquals("", atEnd.get(79).rawContent());
         // Before the area was ever drawn, none of them, though it still gets as many.
         int before = drawn.get();
         java.util.List<Line> undrawn =
-                ContentPanel.windowed(lines, 0, 50, 0, 0, row -> false).lines();
+                ContentText.windowed(lines, 0, 50, 0, 0, row -> false).lines();
         assertEquals(100, undrawn.size());
         assertEquals("", undrawn.get(50).rawContent());
         assertEquals(before, drawn.get());
@@ -675,11 +676,11 @@ class ContentPanelTest {
 
         assertEquals(
                 Line.from(Span.raw(" 1 │ "), Span.styled("+ab", green), Span.styled("      ", green)),
-                ContentPanel.filled(changed, 14));
+                ContentText.filled(changed, 14));
         // A line as wide already, and one that does not end in padding, are left as they are.
-        assertEquals(changed, ContentPanel.filled(changed, 9));
+        assertEquals(changed, ContentText.filled(changed, 9));
         Line context = Line.from(Span.raw(" 1 │ "), Span.raw(" ab"));
-        assertEquals(context, ContentPanel.filled(context, 14));
+        assertEquals(context, ContentText.filled(context, 14));
     }
 
     @Test
@@ -690,7 +691,7 @@ class ContentPanelTest {
                 Line.from(Span.raw("ab"), Span.styled(" ", green))));
 
         java.util.List<Line> windowed =
-                ContentPanel.windowed(lines, 1, 0, 10, 6, row -> row == 0).lines();
+                ContentText.windowed(lines, 1, 0, 10, 6, row -> row == 0).lines();
 
         // Filled to the edge of the area where it is scrolled to, then cut sideways.
         assertEquals(Line.from(Span.raw("b"), Span.styled("     ", green)), windowed.get(0));
@@ -843,16 +844,16 @@ class ContentPanelTest {
         Style green = Style.EMPTY.fg(Color.GREEN);
         Line line = Line.from(Span.styled("ab", red), Span.styled("cd", blue), Span.styled("漢e", green));
 
-        assertEquals(line, ContentPanel.sideways(line, 0));
+        assertEquals(line, ContentText.sideways(line, 0));
         assertEquals(
                 Line.from(Span.styled("b", red), Span.styled("cd", blue), Span.styled("漢e", green)),
-                ContentPanel.sideways(line, 1));
-        assertEquals(Line.from(Span.styled("cd", blue), Span.styled("漢e", green)), ContentPanel.sideways(line, 2));
-        assertEquals(Line.from(Span.styled("d", blue), Span.styled("漢e", green)), ContentPanel.sideways(line, 3));
+                ContentText.sideways(line, 1));
+        assertEquals(Line.from(Span.styled("cd", blue), Span.styled("漢e", green)), ContentText.sideways(line, 2));
+        assertEquals(Line.from(Span.styled("d", blue), Span.styled("漢e", green)), ContentText.sideways(line, 3));
         // Through the wide character: a space for its column past the cut, in the style of its span.
-        assertEquals(Line.from(Span.styled(" e", green)), ContentPanel.sideways(line, 5));
-        assertEquals(Line.from(Span.styled("e", green)), ContentPanel.sideways(line, 6));
-        assertEquals(Line.from(java.util.List.of()), ContentPanel.sideways(line, 9));
+        assertEquals(Line.from(Span.styled(" e", green)), ContentText.sideways(line, 5));
+        assertEquals(Line.from(Span.styled("e", green)), ContentText.sideways(line, 6));
+        assertEquals(Line.from(java.util.List.of()), ContentText.sideways(line, 9));
     }
 
     @Test
@@ -1639,7 +1640,7 @@ class ContentPanelTest {
                 "Subject",
                 "More\ntext");
 
-        List<String> lines = ContentPanel.commitText(
+        List<String> lines = ContentText.commitText(
                         commit,
                         ContentView.shown(DiffText.of(" a.txt | 1 +\n 1 file changed\n\n+added\n")),
                         PLAIN_LOOK,
@@ -1682,7 +1683,7 @@ class ContentPanelTest {
                 Instant.parse("2026-10-09T12:30:00Z"),
                 "https://github.com/owner/repo/pull/12");
 
-        List<String> lines = ContentPanel.pullRequestText(
+        List<String> lines = ContentText.pullRequestText(
                         pr,
                         new PullRequestPreview(new GhBranch("main"), "Why:\r\n\r\nit broke", "+fixed\n", false),
                         Theme.SpanStyles.NONE)
@@ -1704,7 +1705,7 @@ class ContentPanelTest {
         Stash stash =
                 new Stash("stash@{0}", new Sha("5555"), "my work", Option.of(new BranchName("main")), Instant.EPOCH);
 
-        List<String> lines = ContentPanel.stashText(
+        List<String> lines = ContentText.stashText(
                         stash,
                         ContentView.shown(DiffText.of(" a.txt | 1 +\n\n+added line\n")),
                         PLAIN_LOOK,
@@ -1725,7 +1726,7 @@ class ContentPanelTest {
         Commit commit =
                 Fixtures.commit(new Sha("a1b2c3d4e5f6"), "Ada", "ada@example.com", Instant.EPOCH, "Subject", "");
 
-        List<String> lines = ContentPanel.commitText(
+        List<String> lines = ContentText.commitText(
                         commit, ContentView.shown(DiffText.of("x")), PLAIN_LOOK, Theme.SpanStyles.NONE)
                 .lines()
                 .stream()
@@ -1764,7 +1765,7 @@ class ContentPanelTest {
                         "|     First detail",
                         "|     Second detail",
                         "| "),
-                ContentPanel.logLines(List.of(commit), ZoneId.of("Europe/Brussels")));
+                ContentText.logLines(List.of(commit), ZoneId.of("Europe/Brussels")));
     }
 
     @Test
@@ -1772,7 +1773,7 @@ class ContentPanelTest {
         List<Commit> log = net.vanfleteren.jazygit.git.model.CommitGraph.arrange(
                 List.of(merge("m", "b", "f"), plain("f", "a"), plain("b", "a"), plain("a")));
 
-        List<String> lines = ContentPanel.logLines(log, ZoneOffset.UTC);
+        List<String> lines = ContentText.logLines(log, ZoneOffset.UTC);
 
         assertTrue(lines.contains("*   commit m"));
         assertTrue(lines.contains("|\\  Merge: b f"));
@@ -1785,7 +1786,7 @@ class ContentPanelTest {
     @Test
     void logLinesShowTheParentsOfAMergeWhoseOtherParentIsNotListed() {
         List<String> lines =
-                ContentPanel.logLines(List.of(merge("f2", "f1", "mm"), plain("f1", "base")), ZoneOffset.UTC);
+                ContentText.logLines(List.of(merge("f2", "f1", "mm"), plain("f1", "base")), ZoneOffset.UTC);
 
         assertEquals("| Merge: f1 mm", lines.get(lines.indexOf("* commit f2") + 1));
     }
@@ -1822,7 +1823,7 @@ class ContentPanelTest {
                         "| ",
                         "|     First",
                         "| "),
-                ContentPanel.logLines(commits, ZoneOffset.UTC));
+                ContentText.logLines(commits, ZoneOffset.UTC));
     }
 
     @Test

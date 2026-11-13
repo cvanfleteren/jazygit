@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.model.SampleData;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
+import net.vanfleteren.jazygit.ui.content.ContentText;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -110,7 +111,7 @@ class AheadViewTest {
         Theme.SpanStyles styles = cssClass -> cssClass.equals(Theme.Classes.DIM) ? dimmed : Style.EMPTY;
         AheadView only = new AheadView(Option.of(AHEAD), Option.none(), true);
 
-        java.util.List<Line> lines = ContentPanel.logText(only.shown(LOG), ZoneOffset.UTC, only, styles)
+        java.util.List<Line> lines = ContentText.logText(only.shown(LOG), ZoneOffset.UTC, only, styles)
                 .lines();
 
         List<String> firstLines = List.ofAll(lines)
