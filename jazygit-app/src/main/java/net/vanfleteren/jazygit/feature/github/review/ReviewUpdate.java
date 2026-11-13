@@ -1,5 +1,11 @@
 package net.vanfleteren.jazygit.feature.github.review;
 
+import static net.vanfleteren.jazygit.feature.github.review.ReviewLookup.chosen;
+import static net.vanfleteren.jazygit.feature.github.review.ReviewLookup.mapPullRequest;
+import static net.vanfleteren.jazygit.feature.github.review.ReviewLookup.mapView;
+import static net.vanfleteren.jazygit.feature.github.review.ReviewLookup.pullRequestFiles;
+import static net.vanfleteren.jazygit.feature.github.review.ReviewLookup.refused;
+
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.collection.Set;
@@ -7,23 +13,15 @@ import io.vavr.collection.Vector;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.util.function.Function;
-import net.vanfleteren.jazygit.feature.diff.CommitFilesCmd;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesCmd.LoadReviewRemarks;
-import net.vanfleteren.jazygit.feature.github.GitHubError;
 import net.vanfleteren.jazygit.feature.github.GitHubError.CannotReview.Why;
-import net.vanfleteren.jazygit.feature.github.browse.BrowseRemarkCmd;
-import net.vanfleteren.jazygit.feature.github.review.ReviewCmd.DeleteComment;
-import net.vanfleteren.jazygit.feature.github.review.ReviewCmd.React;
 import net.vanfleteren.jazygit.feature.github.review.ReviewCmd.Resolve;
 import net.vanfleteren.jazygit.feature.github.review.ReviewCmd.Send;
 import net.vanfleteren.jazygit.feature.github.review.ReviewPopup.Target;
 import net.vanfleteren.jazygit.feature.github.review.ReviewPopup.Where;
 import net.vanfleteren.jazygit.gh.model.NewReviewThread;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
-import net.vanfleteren.jazygit.gh.model.PullRequestLink;
-import net.vanfleteren.jazygit.gh.model.Reaction;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
-import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -39,10 +37,11 @@ import net.vanfleteren.jazygit.state.view.*;
  * replied to, from a popup that stays open until the comment is sent, so one that fails to send is not lost; a thread
  * is resolved at once. Each is sent on its own, and the review threads are read again once it is, the cursor then on
  * the thread started. Nothing is sent for a pull request whose threads were read at other commits than its files, nor
- * for a merged one; nor twice for a thread while something is sent for it. A comment is deleted after asking, at any
- * commits, and taken out of the threads once GitHub took it, without reading them again (ADR 64); one is edited in the
- * same popup as a reply, at any commits too, and takes what GitHub holds once it is saved, without reading again either
- * (ADR 65). Writing the comment, in that popup or in the editor, is a {@link ComposeUpdate}'s (ADR 115).
+ * for a merged one; nor twice for a thread while something is sent for it. A comment is edited in the same popup as a
+ * reply, at any commits, and takes what GitHub holds once it is saved, without reading the threads again (ADR 65).
+ * Writing the comment, in that popup or in the editor, is a {@link ComposeUpdate}'s (ADR 115); deleting one a {@link
+ * DeleteCommentUpdate}'s, reacting to one a {@link ReactUpdate}'s, and collapsing or opening one a {@link
+ * ThreadUpdate}'s.
  */
 public final class ReviewUpdate {
 
@@ -57,22 +56,12 @@ public final class ReviewUpdate {
             case ReviewMsg.ReplyAsked(DiffCursorAt at) -> asked(model, reply(model, at));
             case ReviewMsg.EditAsked(DiffCursorAt at) -> asked(model, edit(model, at));
             case ReviewMsg.ResolveAsked(DiffCursorAt at) -> resolveAsked(model, at);
-            case ReviewMsg.ThreadToggled(DiffCursorAt at) -> threadToggled(model, at);
-            case ReviewMsg.OpenAsked(DiffCursorAt at) -> openAsked(model, at);
             case ReviewMsg.Refused(Why why) -> Next.of(refused(model, why));
             case ReviewMsg.Sent(Send cmd, var commands) -> sent(model, cmd, commands);
             case ReviewMsg.CommentEdited(Send cmd, String body, var commands) -> edited(model, cmd, body, commands);
             case ReviewMsg.SendFailed(Send cmd, Failure failure) -> sendFailed(model, cmd, failure);
             case ReviewMsg.Resolved(Resolve cmd, var commands) -> resolved(model, cmd, commands);
             case ReviewMsg.ResolveFailed(Resolve cmd, Failure failure) -> resolveFailed(model, cmd, failure);
-            case ReviewMsg.DeleteAsked(DiffCursorAt at) -> deleteAsked(model, at);
-            case ReviewMsg.DeleteConfirmed() -> deleteConfirmed(model);
-            case ReviewMsg.CommentDeleted(DeleteComment cmd, var commands) -> commentDeleted(model, cmd, commands);
-            case ReviewMsg.DeleteFailed(DeleteComment cmd, Failure failure) -> deleteFailed(model, cmd, failure);
-            case ReviewMsg.ReactAsked(DiffCursorAt at) -> reactAsked(model, at);
-            case ReviewMsg.ReactionChosen(Reaction reaction) -> reactionChosen(model, reaction);
-            case ReviewMsg.Reacted(React cmd, var commands) -> reacted(model, cmd, commands);
-            case ReviewMsg.ReactFailed(React cmd, Failure failure) -> reactFailed(model, cmd, failure);
         };
     }
 
@@ -90,33 +79,6 @@ public final class ReviewUpdate {
                             on.number(), on.thread().id(), !on.thread().resolved());
                     return Update.start(sending(model.clearError(), set -> set.add(resolve.thread())), resolve);
                 });
-    }
-
-    /**
-     * Collapsing the thread or the comment of the cursor {@code at}, or opening it. Collapsing a thread or a comment
-     * needs no more than the thread: a merged pull request's too. The first comment of a thread is the thread (ADR 62).
-     * Off a thread, Space does nothing: there is nothing to refuse.
-     */
-    private static Next threadToggled(Model model, DiffCursorAt at) {
-        return pullRequestFiles(model)
-                .toEither(Why.NOT_READ)
-                .flatMap(view -> OnThread.of(view, at.cursor()))
-                .flatMap(OnThread::notSending)
-                .filterOrElse(on -> !on.comment(at.cursor()).exists(on::deleting), on -> Why.DELETING)
-                .fold(
-                        why -> Next.of(why == Why.NOT_ON_THREAD ? model : refused(model, why)),
-                        on -> toggled(model, on, at.cursor()));
-    }
-
-    /**
-     * The comment of the cursor {@code at} opened on GitHub. Opening only reads: it is never refused, whatever the pull
-     * request or its threads are at (ADR 85).
-     */
-    private static Next openAsked(Model model, DiffCursorAt at) {
-        return pullRequestFiles(model)
-                .flatMap(view -> link(view, at.cursor()))
-                .map(link -> Update.start(model.clearError(), new BrowseRemarkCmd(link)))
-                .getOrElse(() -> Next.of(model));
     }
 
     /**
@@ -145,103 +107,6 @@ public final class ReviewUpdate {
     private static Next resolveFailed(Model model, Resolve cmd, Failure failure) {
         return OperationUpdate.update(model, new OperationMsg.Failed(cmd, failure))
                 .map(failed -> sending(failed, set -> set.remove(cmd.thread())));
-    }
-
-    /**
-     * Deleting the comment of the cursor {@code at} asked for: asked about first.
-     */
-    private static Next deleteAsked(Model model, DiffCursorAt at) {
-        return deletable(model, at.cursor())
-                .fold(
-                        why -> Next.of(refused(model, why)),
-                        on -> Update.ask(
-                                model,
-                                new DeleteCommentPopup(on.number(), on.thread().id(), on.comment(), model.now())));
-    }
-
-    /**
-     * Deleting the comment the popup asks about, confirmed, if it is open.
-     */
-    private static Next deleteConfirmed(Model model) {
-        return model.popup(DeleteCommentPopup.class)
-                .map(popup -> confirmDelete(model, popup))
-                .getOrElse(() -> Next.of(model));
-    }
-
-    /**
-     * {@code cmd} deleted its comment. Not read again: what GitHub did is known (ADR 64). The cursor on it goes to its
-     * thread, or its line. Unless it was the last comment read of a thread GitHub has more of: which of those is its
-     * first now, that a reply goes to, is not known until the threads are read again.
-     */
-    private static Next commentDeleted(Model model, DeleteComment cmd, List<ExecutedCommand> commands) {
-        return OperationUpdate.succeeded(model, cmd, commands)
-                .map(done -> mapPullRequest(
-                        done,
-                        cmd.number(),
-                        view -> view.withDeleting(view.deleting().remove(cmd.comment()))))
-                .then(done -> gone(done, cmd.number(), cmd.thread(), cmd.comment()));
-    }
-
-    /**
-     * {@code cmd} failed to delete its comment, which is no longer being deleted.
-     */
-    private static Next deleteFailed(Model model, DeleteComment cmd, Failure failure) {
-        return OperationUpdate.update(model, new OperationMsg.Failed(cmd, failure))
-                .map(failed -> mapPullRequest(
-                        failed,
-                        cmd.number(),
-                        view -> view.withDeleting(view.deleting().remove(cmd.comment()))));
-    }
-
-    /**
-     * Reacting to the comment of the cursor {@code at} asked for: the reaction is chosen first. Reacting does not
-     * number a line: it is done at whatever commits, on a merged pull request too (ADR 86).
-     */
-    private static Next reactAsked(Model model, DiffCursorAt at) {
-        return reactable(model, at.cursor())
-                .fold(
-                        why -> Next.of(refused(model, why)),
-                        on -> Update.ask(
-                                model,
-                                new ReactionPopup(
-                                        on.number(),
-                                        on.thread().id(),
-                                        on.comment().id(),
-                                        on.comment().reactions())));
-    }
-
-    /**
-     * {@code reaction} chosen in the popup, if it is open.
-     */
-    private static Next reactionChosen(Model model, Reaction reaction) {
-        return model.popup(ReactionPopup.class)
-                .map(popup -> confirmReaction(model, popup, reaction))
-                .getOrElse(() -> Next.of(model));
-    }
-
-    /**
-     * {@code cmd} reacted to its comment. Not read again: what GitHub did is known, as for an edit (ADR 65).
-     */
-    private static Next reacted(Model model, React cmd, List<ExecutedCommand> commands) {
-        return OperationUpdate.succeeded(model, cmd, commands)
-                .map(done -> mapPullRequest(
-                        done,
-                        cmd.number(),
-                        view -> view.withReacted(cmd.comment(), cmd.reaction(), cmd.given())
-                                .withReacting(view.reacting().remove(cmd.comment()))));
-    }
-
-    /**
-     * {@code cmd} failed to react to its comment. A comment GitHub no longer has was deleted, as by someone else: it
-     * leaves the threads, as one deleted here does (ADR 64), and the failure says so.
-     */
-    private static Next reactFailed(Model model, React cmd, Failure failure) {
-        Next failed = OperationUpdate.update(model, new OperationMsg.Failed(cmd, failure))
-                .map(done -> mapPullRequest(
-                        done,
-                        cmd.number(),
-                        view -> view.withReacting(view.reacting().remove(cmd.comment()))));
-        return failure.gone() ? failed.then(done -> gone(done, cmd.number(), cmd.thread(), cmd.comment())) : failed;
     }
 
     /**
@@ -480,114 +345,6 @@ public final class ReviewUpdate {
     }
 
     /**
-     * The comment the cursor {@code on} is on, of the files listed, with its thread and those files, if the viewer may
-     * delete it now (ADR 64).
-     */
-    private static Either<Why, OnComment> deletable(Model model, Anchor on) {
-        return chosen(model, on).filterOrElse(found -> found.comment().rights().delete(), found -> Why.NO_DELETE);
-    }
-
-    /**
-     * The comment the cursor {@code on} is on, of the files listed, with its thread and those files, if it may be
-     * deleted or edited now, as the viewer's rights allow (ADR 64, ADR 65): the comment of the cursor, or the first of
-     * a thread, which its stop is; on a collapsed thread only when it has no other, as which is meant is not shown. Not
-     * one being deleted, nor of a thread something is sent for, as a reply to its first comment, whatever the commits
-     * it was read at.
-     */
-    private static Either<Why, OnComment> chosen(Model model, Anchor on) {
-        return pullRequestFiles(model)
-                .filter(view ->
-                        view.remarks().exists(remarks -> remarks.toOption().isDefined()))
-                .toEither(Why.NOT_READ)
-                .flatMap(view -> OnThread.of(view, on))
-                .flatMap(OnThread::notSending)
-                .filterOrElse(
-                        found -> on instanceof Anchor.Comment
-                                || !found.view().collapsed().thread(found.thread())
-                                || found.thread().comments().size()
-                                                + found.thread().more()
-                                        == 1,
-                        found -> Why.COLLAPSED)
-                .flatMap(found -> found.comment(on).toEither(Why.NOT_ON_THREAD).map(found::with))
-                .filterOrElse(found -> !found.deleting(), found -> Why.DELETING);
-    }
-
-    /**
-     * {@code model} once the comment {@code comment} of the thread {@code thread} of pull request {@code number} is
-     * gone from GitHub: taken out of the threads without reading them again (ADR 64). Unless it was the last comment
-     * read of a thread GitHub has more of: which of those is its first now, that a reply goes to, is not known until
-     * the threads are read again.
-     */
-    private static Next gone(Model model, int number, ReviewThread.Id thread, ReviewThread.Comment.Id comment) {
-        Model deleted = mapPullRequest(model, number, view -> view.withoutComment(comment));
-        boolean unread = pullRequestFiles(deleted)
-                .filter(view -> view.pullRequest().contains(number))
-                .exists(view -> view.threads()
-                        .exists(each ->
-                                each.id().equals(thread) && each.comments().isEmpty()));
-        return unread ? Next.of(deleted, LoadReviewRemarks.after(deleted, number, HashSet.empty())) : Next.of(deleted);
-    }
-
-    /**
-     * The comment the cursor {@code on} is on, with its thread and the files listed, if the viewer may react to it now
-     * (ADR 86): chosen as for an edit or a delete, and not while a reaction to it is sent, which a second one, chosen
-     * from what was read before, could undo.
-     */
-    private static Either<Why, OnComment> reactable(Model model, Anchor on) {
-        return chosen(model, on)
-                .filterOrElse(found -> found.comment().rights().react(), found -> Why.NO_REACT)
-                .filterOrElse(found -> !found.reacting(), found -> Why.REACTING);
-    }
-
-    /**
-     * {@code reaction} chosen in {@code popup}: asked again as the comment is now, as the threads may have been read
-     * again, the comment gone, or something be sent for it meanwhile. Whether it is given or taken back is told from
-     * the reactions it has now, not those the popup opened with.
-     */
-    private static Next confirmReaction(Model model, ReactionPopup popup, Reaction reaction) {
-        Anchor on = new Anchor.Comment(popup.comment(), new Anchor.Thread(popup.thread(), Option.none()));
-        return reactable(model, on)
-                .filterOrElse(found -> found.number() == popup.number(), found -> Why.NOT_READ)
-                .fold(why -> Next.of(refused(model.withoutPopup(ReactionPopup.class), why)), found -> {
-                    React react = new React(
-                            popup.number(),
-                            popup.thread(),
-                            popup.comment(),
-                            reaction,
-                            !found.comment().reactions().viewerGave(reaction));
-                    return Update.confirm(model, ReactionPopup.class, open -> Option.of(react))
-                            .map(started -> mapPullRequest(
-                                    started,
-                                    popup.number(),
-                                    view -> view.withReacting(view.reacting().add(popup.comment()))));
-                });
-    }
-
-    /**
-     * Deleting the comment {@code popup} asks about, confirmed: asked again as it is now, as the comment may have gone,
-     * or something be sent for its thread, meanwhile. It says it is being deleted until GitHub answers.
-     */
-    private static Next confirmDelete(Model model, DeleteCommentPopup popup) {
-        Anchor on = new Anchor.Comment(popup.comment().id(), new Anchor.Thread(popup.thread(), Option.none()));
-        return deletable(model, on)
-                .filterOrElse(found -> found.number() == popup.number(), found -> Why.NOT_READ)
-                .fold(
-                        why -> Next.of(refused(model.withoutPopup(DeleteCommentPopup.class), why)),
-                        found -> Update.confirm(
-                                        model,
-                                        DeleteCommentPopup.class,
-                                        open -> Option.of(new DeleteComment(
-                                                open.number(),
-                                                open.thread(),
-                                                open.comment().id())))
-                                .map(started -> mapPullRequest(
-                                        started,
-                                        popup.number(),
-                                        view -> view.withDeleting(view.deleting()
-                                                .add(found.comment().id())))));
-    }
-
-    /**
      * The last line a thread to start is on.
      */
     private static Option<Anchor.OnLine> lastLine(Target target) {
@@ -635,63 +392,6 @@ public final class ReviewUpdate {
                 .toEither(Why.NOT_READ)
                 .filterOrElse(view -> !view.ended().contains(PullRequestDetails.State.MERGED), view -> Why.MERGED)
                 .filterOrElse(CommitFilesView::remarksAtItsCommits, view -> Why.MOVED_ON);
-    }
-
-    /**
-     * {@code found} with the thread, or the comment of it the cursor is {@code on}, collapsed or opened, which is kept
-     * for the next session (ADR 63).
-     */
-    private static Next toggled(Model model, OnThread found, Anchor on) {
-        CommitFilesView view = found.view();
-        Collapsed collapsed = view.collapsed()
-                .flipped(
-                        on instanceof Anchor.Comment(ReviewThread.Comment.Id id, var _)
-                                ? Collapsed.Key.of(id)
-                                : Collapsed.Key.of(found.thread().id()),
-                        view.threads());
-        return new Next(
-                mapView(model, files -> files.withCollapsed(collapsed)),
-                view.of() instanceof Changes.OfPullRequest(PullRequestCommits commits)
-                        ? List.of(new CommitFilesCmd.SaveCollapsed(
-                                commits.repository(), commits.number(), collapsed.toggled(), model.now()))
-                        : List.empty());
-    }
-
-    /**
-     * Where the pull request {@code view} lists the files of is on GitHub, on the comment the cursor {@code on} is on,
-     * if any: the reply it names, or the first of its thread (ADR 85).
-     */
-    private static Option<PullRequestLink> link(CommitFilesView view, Anchor on) {
-        return view.of() instanceof Changes.OfPullRequest(PullRequestCommits commits)
-                ? Option.of(new PullRequestLink(
-                        commits.host(),
-                        commits.repository(),
-                        commits.number(),
-                        OnThread.of(view, on)
-                                .toOption()
-                                .flatMap(found -> found.comment(on))
-                                .map(ReviewThread.Comment::restId)))
-                : Option.none();
-    }
-
-    private static Option<CommitFilesView> pullRequestFiles(Model model) {
-        return model.repoView().commitFiles().filter(view -> view.pullRequest().isDefined());
-    }
-
-    private static Model refused(Model model, Why why) {
-        return model.fail(new GitHubError.CannotReview(why));
-    }
-
-    private static Model mapView(Model model, Function<CommitFilesView, CommitFilesView> f) {
-        return model.mapRepoView(repoView -> repoView.withCommitFiles(
-                repoView.commitFiles().map(view -> view.pullRequest().isDefined() ? f.apply(view) : view)));
-    }
-
-    /**
-     * {@code model} with the files of pull request {@code number} as {@code f} makes them, while they are listed.
-     */
-    private static Model mapPullRequest(Model model, int number, Function<CommitFilesView, CommitFilesView> f) {
-        return mapView(model, view -> view.pullRequest().contains(number) ? f.apply(view) : view);
     }
 
     private static Model sending(Model model, Function<Set<ReviewThread.Id>, Set<ReviewThread.Id>> f) {

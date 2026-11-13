@@ -24,7 +24,7 @@ public final class ReactionDialog {
         return new Choice<>(
                 Character.forDigit(index + 1, 10),
                 popup -> label(popup, reaction),
-                () -> new ReviewMsg.ReactionChosen(reaction));
+                () -> new ReactMsg.ReactionChosen(reaction));
     }
 
     private static String label(ReactionPopup popup, Reaction reaction) {
