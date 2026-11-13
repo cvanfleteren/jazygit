@@ -35,13 +35,16 @@ public final class PushDialogs {
             .withWidth(TextInputDialog.BRANCH_NAME_WIDTH);
 
     /**
-     * Warns that a branch has diverged from its remote branch, and asks to force push it.
+     * Warns that a branch has diverged from its remote branch, or is only behind it so that a force push only drops
+     * commits of the remote, and asks to force push it.
      */
     public static final ConfirmDialog.Spec<ForcePushPopup> FORCE_PUSH = new ConfirmDialog.Spec<>(
             "force-push",
             ForcePushPopup.class,
             popup -> Messages.get("dialog.forcePush.title", popup.branch().value()),
-            popup -> Messages.get("dialog.forcePush.message"),
+            popup -> popup.onlyBehind()
+                    ? Messages.get("dialog.forcePush.behind", popup.behind())
+                    : Messages.get("dialog.forcePush.message"),
             PushMsg.ForceConfirmed::new);
 
     private PushDialogs() {}

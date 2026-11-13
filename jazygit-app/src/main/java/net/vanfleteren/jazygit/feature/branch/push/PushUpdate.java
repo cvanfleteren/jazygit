@@ -39,13 +39,16 @@ public final class PushUpdate {
     }
 
     /**
-     * A refresh may have changed the branch while the popup was open. Only a branch that is still diverged is force
-     * pushed; otherwise the popup closes and the request is handled again, so the user is told why.
+     * A refresh may have changed the branch while the popup was open. Only a branch the popup still describes is force
+     * pushed, as the user was warned of what that drops; otherwise the popup closes and the request is handled again,
+     * which asks again or pushes as it now would.
      */
     private static Next forceConfirmed(Model model, ForcePushPopup popup) {
-        boolean stillDiverged =
-                model.repo().branch(popup.branch()).filter(PushUpdate::diverged).isDefined();
-        return stillDiverged
+        boolean unchanged = model.repo()
+                .branch(popup.branch())
+                .flatMap(PushUpdate::forcePush)
+                .contains(popup);
+        return unchanged
                 ? Update.confirm(
                         model,
                         ForcePushPopup.class,
@@ -59,24 +62,28 @@ public final class PushUpdate {
     private static Next requested(Model model, BranchName branch) {
         // A branch that is being pushed or deleted is not pushed meanwhile. A branch without an upstream on a
         // remote (none, one that is gone, or a local branch, which a push would move) is pushed where the user
-        // says. Pushing a diverged branch needs a force push, which the user must confirm; a branch that is only
-        // behind has nothing to push. That is only known of an upstream of the same name: for one of another name,
-        // push.default says where the push goes when it runs, so it is pushed, and git or push.default refuse what
-        // they would (ADR 40).
+        // says. A branch behind its upstream, diverged or only behind (say, a commit was dropped locally), needs a
+        // force push, which drops commits of the remote, so the user must confirm it. That is only known of an
+        // upstream of the same name: for one of another name, push.default says where the push goes when it runs, so
+        // it is pushed, and git or push.default refuse what they would (ADR 40).
         return model.idleBranch(branch)
                 .map(known -> known.remoteUpstream()
-                        .map(upstream -> diverged(known)
-                                ? Update.ask(model, new ForcePushPopup(branch))
-                                : sameName(known) && known.behind() > 0
-                                        ? Next.of(model.fail(new BranchError.BehindUpstream(branch)))
-                                        : Update.start(
-                                                model.clearError(), new Push(branch, upstream, PushMode.FAST_FORWARD)))
+                        .map(upstream -> forcePush(known)
+                                .map(popup -> Update.ask(model, popup))
+                                .getOrElse(() -> Update.start(
+                                        model.clearError(), new Push(branch, upstream, PushMode.FAST_FORWARD))))
                         .getOrElse(() -> Update.ask(model, new SetUpstreamPopup(branch))))
                 .getOrElse(() -> Next.of(model));
     }
 
-    private static boolean diverged(Branch branch) {
-        return sameName(branch) && branch.ahead() > 0 && branch.behind() > 0;
+    /**
+     * The force push to confirm for {@code branch}: one behind the remote branch of its own name, so that a push drops
+     * commits of that one.
+     */
+    private static Option<ForcePushPopup> forcePush(Branch branch) {
+        return sameName(branch) && branch.behind() > 0
+                ? Option.of(new ForcePushPopup(branch.name(), branch.ahead(), branch.behind()))
+                : Option.none();
     }
 
     /**

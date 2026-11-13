@@ -85,6 +85,37 @@ class ForcePushDialogTest {
     }
 
     @Test
+    void warnsWhatAForcePushOfABranchOnlyBehindDrops() throws Exception {
+        Model behind = Update.update(
+                        TestModels.localBranchesRead(
+                                        TestModels.loaded(),
+                                        List.of(Fixtures.branch(
+                                                new BranchName("main"),
+                                                true,
+                                                new Sha("aaaa"),
+                                                Instant.EPOCH,
+                                                true,
+                                                false,
+                                                Option.of(new Upstream(
+                                                        new BranchRef.Remote(
+                                                                new RemoteBranch("origin", new BranchName("main"))),
+                                                        0,
+                                                        1)))))
+                                .model(),
+                        new PushMsg.Requested(new BranchName("main")))
+                .model();
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(
+                () -> stack(text("background"), dialog.render(behind).get()))) {
+            String screen = RenderedText.ofLarge(
+                    runner,
+                    () -> stack(text("background"), dialog.render(behind).get()));
+            assertTrue(screen.contains("Force push main"), screen);
+            assertTrue(screen.contains("behind the remote branch"), screen);
+            assertTrue(screen.contains("A force push drops the commit on the"), screen);
+        }
+    }
+
+    @Test
     void closedModelShowsNoPopup() {
         assertTrue(dialog.render(TestModels.loaded()).isEmpty());
     }

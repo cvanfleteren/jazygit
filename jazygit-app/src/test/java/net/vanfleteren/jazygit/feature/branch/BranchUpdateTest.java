@@ -409,7 +409,7 @@ class BranchUpdateTest {
 
         assertEquals(List.of(), asked.cmds());
         assertEquals(
-                Option.of(new ForcePushPopup(new BranchName("feature"))),
+                Option.of(new ForcePushPopup(new BranchName("feature"), 1, 2)),
                 asked.model().popup());
         assertEquals(
                 io.vavr.collection.HashSet.empty(), asked.model().jobs().busy().keySet());
@@ -482,19 +482,27 @@ class BranchUpdateTest {
     }
 
     @Test
-    void pushRequestOfABranchOnlyBehindItsUpstreamFailsAndRunsNothing() {
-        Next next = Update.update(featureTracking(0, 2), new PushMsg.Requested(new BranchName("feature")));
+    void pushRequestOfABranchOnlyBehindItsUpstreamAsksToForcePushIt() {
+        Next asked = Update.update(featureTracking(0, 2), new PushMsg.Requested(new BranchName("feature")));
 
-        assertEquals(List.of(), next.cmds());
+        assertEquals(List.of(), asked.cmds());
         assertEquals(
-                Option.of("Branch feature is behind its upstream, so there is nothing to push; pull it instead"),
-                errorText(next.model()));
+                Option.of(new ForcePushPopup(new BranchName("feature"), 0, 2)),
+                asked.model().popup());
         assertEquals(
-                io.vavr.collection.HashSet.empty(), next.model().jobs().busy().keySet());
+                io.vavr.collection.HashSet.empty(), asked.model().jobs().busy().keySet());
+
+        Next confirmed = TestModels.stepped(asked.model(), new PushMsg.ForceConfirmed());
+        assertEquals(
+                List.of(new PushCmd.Push(
+                        new BranchName("feature"),
+                        new RemoteBranch("origin", new BranchName("feature")),
+                        PushMode.FORCE_WITH_LEASE)),
+                confirmed.cmds());
     }
 
     @Test
-    void forceConfirmedClosesThePopupAndExplainsOnceTheBranchIsNoLongerAhead() {
+    void forceConfirmedAsksAgainOnceTheBranchIsNoLongerAhead() {
         Model asked = Update.update(featureTracking(1, 2), new PushMsg.Requested(new BranchName("feature")))
                 .model();
         Model refreshed =
@@ -502,13 +510,31 @@ class BranchUpdateTest {
 
         Next next = Update.update(refreshed, new PushMsg.ForceConfirmed());
 
+        // The warning said it diverged; now all a force push does is drop commits of the remote, which it says.
         assertEquals(List.of(), next.cmds());
-        assertEquals(Option.none(), next.model().popup(ForcePushPopup.class));
         assertEquals(
-                Option.of("Branch feature is behind its upstream, so there is nothing to push; pull it instead"),
-                errorText(next.model()));
+                Option.of(new ForcePushPopup(new BranchName("feature"), 0, 2)),
+                next.model().popup());
         assertEquals(
                 io.vavr.collection.HashSet.empty(), next.model().jobs().busy().keySet());
+    }
+
+    @Test
+    void forceConfirmedPushesWithoutForceOnceTheBranchIsNoLongerBehind() {
+        Model asked = Update.update(featureTracking(1, 2), new PushMsg.Requested(new BranchName("feature")))
+                .model();
+        Model refreshed =
+                localBranchesRead(asked, featureTrackingBranches(3, 0)).model();
+
+        Next next = Update.update(refreshed, new PushMsg.ForceConfirmed());
+
+        assertEquals(
+                List.of(new PushCmd.Push(
+                        new BranchName("feature"),
+                        new RemoteBranch("origin", new BranchName("feature")),
+                        PushMode.FAST_FORWARD)),
+                next.cmds());
+        assertEquals(Option.none(), next.model().popup(ForcePushPopup.class));
     }
 
     @Test

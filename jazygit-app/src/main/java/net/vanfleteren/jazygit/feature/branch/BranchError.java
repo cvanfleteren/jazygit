@@ -28,18 +28,6 @@ public sealed interface BranchError extends AppError {
     }
 
     /**
-     * A push was asked for, but the branch is only behind its upstream: there is nothing to push, and a force push
-     * would drop the commits of others.
-     */
-    record BehindUpstream(BranchName branch) implements BranchError {
-
-        @Override
-        public Phrase phrase() {
-            return Phrase.of("error.push.behind", branch.value());
-        }
-    }
-
-    /**
      * Renaming the upstream of the branch too was chosen, but the branch no longer follows that upstream, or it is no
      * longer on the remote, as the branches were read again while the dialog was open (ADR 90).
      *
