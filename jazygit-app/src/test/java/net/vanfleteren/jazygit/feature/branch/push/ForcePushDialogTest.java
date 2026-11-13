@@ -49,7 +49,7 @@ class ForcePushDialogTest {
                                         1,
                                         2)))))
                 .model();
-        return Update.update(diverged, new PushMsg.Requested(new BranchName("main")))
+        return Update.update(diverged, new PushMsg.ForceChecked(new ForcePushPopup(new BranchName("main"), 1, 2), true))
                 .model();
     }
 
@@ -81,6 +81,37 @@ class ForcePushDialogTest {
             org.junit.jupiter.api.Assertions.assertTrue(
                     screen.contains("Your branch has diverged from the remote branch."), screen);
             org.junit.jupiter.api.Assertions.assertTrue(screen.contains("(enter) confirm   (esc) cancel"), screen);
+        }
+    }
+
+    @Test
+    void warnsWhatAForcePushOfABranchOnlyBehindDrops() throws Exception {
+        Model behind = Update.update(
+                        TestModels.localBranchesRead(
+                                        TestModels.loaded(),
+                                        List.of(Fixtures.branch(
+                                                new BranchName("main"),
+                                                true,
+                                                new Sha("aaaa"),
+                                                Instant.EPOCH,
+                                                true,
+                                                false,
+                                                Option.of(new Upstream(
+                                                        new BranchRef.Remote(
+                                                                new RemoteBranch("origin", new BranchName("main"))),
+                                                        0,
+                                                        1)))))
+                                .model(),
+                        new PushMsg.ForceChecked(new ForcePushPopup(new BranchName("main"), 0, 1), true))
+                .model();
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(
+                () -> stack(text("background"), dialog.render(behind).get()))) {
+            String screen = RenderedText.ofLarge(
+                    runner,
+                    () -> stack(text("background"), dialog.render(behind).get()));
+            assertTrue(screen.contains("Force push main"), screen);
+            assertTrue(screen.contains("behind the remote branch"), screen);
+            assertTrue(screen.contains("A force push drops the commit on the"), screen);
         }
     }
 

@@ -10,7 +10,8 @@ public enum PushMode {
     FAST_FORWARD,
     /**
      * Also over a remote branch that has diverged, but only if it is still where this repository last
-     * saw it ({@code --force-with-lease}).
+     * saw it ({@code --force-with-lease}), and the local branch once had it ({@code --force-if-includes}): not over
+     * what someone else pushed, even once it was fetched (ADR 116).
      */
     FORCE_WITH_LEASE
 }

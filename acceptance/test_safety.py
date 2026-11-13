@@ -62,7 +62,7 @@ def test_a_force_push_does_not_overwrite_what_others_pushed_since_the_last_fetch
     assert repo.subjects("feature") == ["Add the feature", "Add one"]
 
 
-def test_a_branch_that_is_only_behind_its_upstream_is_not_force_pushed(repo, origin, clone, jazygit):
+def test_a_branch_that_is_only_behind_what_others_pushed_is_not_force_pushed(repo, origin, clone, jazygit):
     published(repo, origin)
     teammate = clone()
     teammate("switch", "feature")
@@ -73,11 +73,44 @@ def test_a_branch_that_is_only_behind_its_upstream_is_not_force_pushed(repo, ori
 
     ui.branches.try_to_push("feature")
 
-    close_error(ui, "Branch feature is behind its upstream, so there is nothing to push; pull it instead")
+    close_error(ui, "Branch feature is behind its upstream, which has commits it never had; pull it instead")
     ui.caught_up()
     assert "Force push" not in ui.app.text()
     assert origin.subjects("feature") == ["Add theirs", "Add feature", "Add one"]
     assert repo.subjects("feature") == ["Add feature", "Add one"]
+
+
+def test_a_branch_diverged_from_what_others_pushed_is_not_force_pushed(repo, origin, clone, jazygit):
+    published(repo, origin)
+    teammate = clone()
+    teammate("switch", "feature")
+    teammate.commit("Add theirs", **{"theirs.txt": "theirs\n"})
+    teammate("push")
+    repo("fetch")
+    repo("switch", "feature")
+    repo.commit("Add mine", **{"mine.txt": "mine\n"})
+    repo("switch", "main")
+    ui = jazygit()
+
+    ui.branches.try_to_push("feature")
+
+    close_error(ui, "Branch feature has diverged from its upstream, which has commits it never had")
+    ui.caught_up()
+    assert "Force push" not in ui.app.text()
+    assert origin.subjects("feature") == ["Add theirs", "Add feature", "Add one"]
+    assert repo.subjects("feature") == ["Add mine", "Add feature", "Add one"]
+
+
+def test_a_branch_whose_last_commit_was_dropped_is_force_pushed_once_confirmed(repo, origin, jazygit):
+    published(repo, origin)
+    repo("branch", "--force", "feature", "feature~1")
+    ui = jazygit()
+
+    ui.branches.force_push("feature")
+
+    ui.caught_up()
+    assert origin.subjects("feature") == ["Add one"]
+    assert repo.subjects("feature") == ["Add one"]
 
 
 def test_a_branch_is_not_renamed_to_a_name_git_would_read_as_an_option(repo, jazygit):

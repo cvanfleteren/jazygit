@@ -146,7 +146,7 @@ final class CliRemotes implements Remotes {
                         git(List.of("push")
                                 .appendAll(
                                         mode == PushMode.FORCE_WITH_LEASE
-                                                ? List.of("--force-with-lease")
+                                                ? List.of("--force-with-lease", "--force-if-includes")
                                                 : List.empty())
                                 .append(GitArgs.remote(target.remote()))
                                 .append(refspec(name, target))),

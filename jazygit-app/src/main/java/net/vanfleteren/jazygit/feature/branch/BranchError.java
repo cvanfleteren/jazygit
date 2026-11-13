@@ -28,14 +28,16 @@ public sealed interface BranchError extends AppError {
     }
 
     /**
-     * A push was asked for, but the branch is only behind its upstream: there is nothing to push, and a force push
-     * would drop the commits of others.
+     * A push was asked for, but the branch is behind its upstream, which has commits the branch never had, as
+     * someone else pushed them: a force push would drop them, so it is to be pulled first (ADR 116).
+     *
+     * @param diverged whether the branch also has commits of its own, which a pull then rebases or merges
      */
-    record BehindUpstream(BranchName branch) implements BranchError {
+    record BehindUpstream(BranchName branch, boolean diverged) implements BranchError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("error.push.behind", branch.value());
+            return Phrase.of(diverged ? "error.push.diverged" : "error.push.behind", branch.value());
         }
     }
 

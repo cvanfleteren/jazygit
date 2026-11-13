@@ -21,6 +21,7 @@ import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchMsg;
 import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchPopup;
 import net.vanfleteren.jazygit.feature.branch.pull.PullCmd;
 import net.vanfleteren.jazygit.feature.branch.pull.PullMsg;
+import net.vanfleteren.jazygit.feature.branch.push.ForcePushCheck;
 import net.vanfleteren.jazygit.feature.branch.push.ForcePushPopup;
 import net.vanfleteren.jazygit.feature.branch.push.PushCmd;
 import net.vanfleteren.jazygit.feature.branch.push.PushMsg;
@@ -385,41 +386,32 @@ class BranchUpdateTest {
                         .cmds());
     }
 
+    private static final RemoteBranch ORIGIN_FEATURE = new RemoteBranch("origin", new BranchName("feature"));
+
+    private static ForcePushPopup forcePopup(int ahead, int behind) {
+        return new ForcePushPopup(new BranchName("feature"), ahead, behind);
+    }
+
     @Test
-    void pushRequestOfADivergedBranchAsksForConfirmationInsteadOfPushing() {
-        Model diverged = localBranchesRead(
-                        loaded(),
-                        List.of(
-                                Fixtures.branch(new BranchName("main"), true, new Sha("aaaa")),
-                                Fixtures.branch(
-                                        new BranchName("feature"),
-                                        false,
-                                        new Sha("ffff"),
-                                        Instant.EPOCH,
-                                        true,
-                                        false,
-                                        Option.of(new Upstream(
-                                                new BranchRef.Remote(
-                                                        new RemoteBranch("origin", new BranchName("feature"))),
-                                                1,
-                                                2)))))
-                .model();
+    void pushRequestOfADivergedBranchAsksGitWhetherItHadWhatIsOnTheRemote() {
+        Next asked = Update.update(featureTracking(1, 2), new PushMsg.Requested(new BranchName("feature")));
 
-        Next asked = Update.update(diverged, new PushMsg.Requested(new BranchName("feature")));
-
-        assertEquals(List.of(), asked.cmds());
-        assertEquals(
-                Option.of(new ForcePushPopup(new BranchName("feature"))),
-                asked.model().popup());
+        assertEquals(List.of(new ForcePushCheck(forcePopup(1, 2), ORIGIN_FEATURE)), asked.cmds());
+        assertEquals(Option.none(), asked.model().popup());
         assertEquals(
                 io.vavr.collection.HashSet.empty(), asked.model().jobs().busy().keySet());
+    }
+
+    @Test
+    void aDivergedBranchThatHadWhatIsOnTheRemoteIsForcePushedOnceConfirmed() {
+        Next asked = Update.update(featureTracking(1, 2), new PushMsg.ForceChecked(forcePopup(1, 2), true));
+
+        assertEquals(List.of(), asked.cmds());
+        assertEquals(Option.of(forcePopup(1, 2)), asked.model().popup());
 
         Next confirmed = TestModels.stepped(asked.model(), new PushMsg.ForceConfirmed());
         assertEquals(
-                List.of(new PushCmd.Push(
-                        new BranchName("feature"),
-                        new RemoteBranch("origin", new BranchName("feature")),
-                        PushMode.FORCE_WITH_LEASE)),
+                List.of(new PushCmd.Push(new BranchName("feature"), ORIGIN_FEATURE, PushMode.FORCE_WITH_LEASE)),
                 confirmed.cmds());
         assertEquals(Option.none(), confirmed.model().popup());
         assertEquals(
@@ -429,6 +421,18 @@ class BranchUpdateTest {
         Next cancelled = Update.update(asked.model(), new PopupMsg.Dismissed(ForcePushPopup.class));
         assertEquals(List.of(), cancelled.cmds());
         assertEquals(Option.none(), cancelled.model().popup());
+    }
+
+    @Test
+    void aDivergedBranchBehindWhatSomeoneElsePushedIsNotOfferedAForcePush() {
+        Next next = Update.update(featureTracking(1, 2), new PushMsg.ForceChecked(forcePopup(1, 2), false));
+
+        assertEquals(List.of(), next.cmds());
+        assertEquals(Option.none(), next.model().popup(ForcePushPopup.class));
+        assertEquals(
+                Option.of("Branch feature has diverged from its upstream, which has commits it never had; pull it"
+                        + " first, so a force push does not drop them"),
+                errorText(next.model()));
     }
 
     private static List<Branch> featureTrackingBranches(int ahead, int behind) {
@@ -482,33 +486,88 @@ class BranchUpdateTest {
     }
 
     @Test
-    void pushRequestOfABranchOnlyBehindItsUpstreamFailsAndRunsNothing() {
-        Next next = Update.update(featureTracking(0, 2), new PushMsg.Requested(new BranchName("feature")));
+    void aBranchOnlyBehindWhatItHadIsForcePushedOnceConfirmed() {
+        Next asked = Update.update(featureTracking(0, 2), new PushMsg.Requested(new BranchName("feature")));
+        assertEquals(List.of(new ForcePushCheck(forcePopup(0, 2), ORIGIN_FEATURE)), asked.cmds());
+
+        Next checked = Update.update(asked.model(), new PushMsg.ForceChecked(forcePopup(0, 2), true));
+        assertEquals(Option.of(forcePopup(0, 2)), checked.model().popup());
+
+        Next confirmed = TestModels.stepped(checked.model(), new PushMsg.ForceConfirmed());
+        assertEquals(
+                List.of(new PushCmd.Push(new BranchName("feature"), ORIGIN_FEATURE, PushMode.FORCE_WITH_LEASE)),
+                confirmed.cmds());
+    }
+
+    @Test
+    void aBranchOnlyBehindWhatSomeoneElsePushedIsToBePulled() {
+        Next next = Update.update(featureTracking(0, 2), new PushMsg.ForceChecked(forcePopup(0, 2), false));
 
         assertEquals(List.of(), next.cmds());
+        assertEquals(Option.none(), next.model().popup(ForcePushPopup.class));
         assertEquals(
-                Option.of("Branch feature is behind its upstream, so there is nothing to push; pull it instead"),
+                Option.of("Branch feature is behind its upstream, which has commits it never had; pull it instead"),
                 errorText(next.model()));
         assertEquals(
                 io.vavr.collection.HashSet.empty(), next.model().jobs().busy().keySet());
     }
 
     @Test
-    void forceConfirmedClosesThePopupAndExplainsOnceTheBranchIsNoLongerAhead() {
-        Model asked = Update.update(featureTracking(1, 2), new PushMsg.Requested(new BranchName("feature")))
+    void anAnswerAboutABranchThatChangedMeanwhileAsksGitAgain() {
+        Next next = Update.update(featureTracking(0, 3), new PushMsg.ForceChecked(forcePopup(0, 2), true));
+
+        assertEquals(List.of(new ForcePushCheck(forcePopup(0, 3), ORIGIN_FEATURE)), next.cmds());
+        assertEquals(Option.none(), next.model().popup());
+    }
+
+    @Test
+    void aFailedCheckSaysSoAndOffersNothing() {
+        Next next = Update.update(
+                featureTracking(0, 2),
+                new PushMsg.ForceCheckFailed(
+                        new BranchName("feature"),
+                        net.vanfleteren.jazygit.state.Failure.of(
+                                new net.vanfleteren.jazygit.git.GitError.CommandFailed("boom", 1))));
+
+        assertEquals(List.of(), next.cmds());
+        assertEquals(Option.none(), next.model().popup(ForcePushPopup.class));
+        assertTrue(
+                errorText(next.model()).exists(text -> text.contains("boom")),
+                errorText(next.model()).toString());
+    }
+
+    @Test
+    void forceConfirmedAsksGitAgainOnceTheBranchIsNoLongerAhead() {
+        Model asked = Update.update(featureTracking(1, 2), new PushMsg.ForceChecked(forcePopup(1, 2), true))
                 .model();
         Model refreshed =
                 localBranchesRead(asked, featureTrackingBranches(0, 2)).model();
 
         Next next = Update.update(refreshed, new PushMsg.ForceConfirmed());
 
-        assertEquals(List.of(), next.cmds());
-        assertEquals(Option.none(), next.model().popup(ForcePushPopup.class));
-        assertEquals(
-                Option.of("Branch feature is behind its upstream, so there is nothing to push; pull it instead"),
-                errorText(next.model()));
+        // The warning said it diverged; now all a force push does is drop commits of the remote, which is asked anew.
+        assertEquals(List.of(new ForcePushCheck(forcePopup(0, 2), ORIGIN_FEATURE)), next.cmds());
+        assertEquals(Option.none(), next.model().popup());
         assertEquals(
                 io.vavr.collection.HashSet.empty(), next.model().jobs().busy().keySet());
+    }
+
+    @Test
+    void forceConfirmedPushesWithoutForceOnceTheBranchIsNoLongerBehind() {
+        Model asked = Update.update(featureTracking(1, 2), new PushMsg.ForceChecked(forcePopup(1, 2), true))
+                .model();
+        Model refreshed =
+                localBranchesRead(asked, featureTrackingBranches(3, 0)).model();
+
+        Next next = Update.update(refreshed, new PushMsg.ForceConfirmed());
+
+        assertEquals(
+                List.of(new PushCmd.Push(
+                        new BranchName("feature"),
+                        new RemoteBranch("origin", new BranchName("feature")),
+                        PushMode.FAST_FORWARD)),
+                next.cmds());
+        assertEquals(Option.none(), next.model().popup(ForcePushPopup.class));
     }
 
     @Test

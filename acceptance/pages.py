@@ -549,7 +549,7 @@ class BranchesPane:
         self.ui.changing_repo(f"{branch} to be pushed", keys)
 
     def force_push(self, branch: str):
-        """Pushes the branch that diverged from its upstream, overwriting it, as the app asks to."""
+        """Pushes the branch that is behind its upstream, diverged or not, overwriting it, as the app asks to."""
         self.select(branch)
         self.ui.changing_repo(f"{branch} to be force pushed", lambda: (
             self.app.press("P"), self.ui.confirm(f"Force push {branch}")))
