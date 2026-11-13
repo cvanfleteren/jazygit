@@ -39,7 +39,7 @@ failures are values) are ArchUnit tests: `CoreRules` and `ModelRules`, run by ea
 ```mermaid
 graph TD
     App["JazygitApp, Launcher, RepositorySession, ...<br/><i>start, session, layout, popups, focus</i>"]
-    UI["ui<br/><i>panels and widgets: render a Model</i>"]
+    UI["ui.*<br/><i>panels and widgets: render a Model</i>"]
     Keys["keys<br/><i>Keymap: every shortcut, declared once</i>"]
     Feature["feature.*<br/><i>one package per feature</i>"]
     State["state.*<br/><i>Model, Msg, Update, Cmd, Program,<br/>and a subpackage per part of the Model</i>"]
@@ -89,7 +89,11 @@ source of truth when the two disagree.
   declare them with the types of `keys` (dotted).
 - **Nor have the subpackages of `state`** (`diff`, `view`, `load`, `github`, `operation`, `popup`, `index`,
   `preferences`). `state` itself uses them all, and they all use it, as the `Model` holds them.
-- **Views use `ui` only to draw.** Nothing in `ui`, `keys` or a dialog runs git or gh. `ErrorText` in `ui` is the only
+- **Nor have the subpackages of `ui`**, which follow the panes: the shell (`ui` itself: `LeftColumn`, the status
+  and command log panels) → `content` → the panes (`branches`, `commits`, `files`, `stash`, `github`) and `diff` →
+  `markdown`, `widgets`, `edit` → `text`, `theme`. Nothing in them uses the shell (`uiIsFreeOfCycles`,
+  `uiPartsDoNotUseTheShell`).
+- **Views use `ui` only to draw.** Nothing in `ui`, `keys` or a dialog runs git or gh. `ui.text.ErrorText` is the only
   place that turns errors into text.
 - **Only views use `i18n`.** `state` does not.
 - **`settings` knows nothing of the application**, and is the only part that reads or writes TOML.
