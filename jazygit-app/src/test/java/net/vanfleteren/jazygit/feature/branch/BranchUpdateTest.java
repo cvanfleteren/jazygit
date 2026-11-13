@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchCmd;
 import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchMsg;
 import net.vanfleteren.jazygit.feature.branch.delete.DeleteBranchPopup;
 import net.vanfleteren.jazygit.feature.branch.merge.MergeMsg;
+import net.vanfleteren.jazygit.feature.branch.newbranch.NameAsked;
 import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchCmd;
 import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchMsg;
 import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchPopup;
@@ -141,8 +142,7 @@ class BranchUpdateTest {
 
     @Test
     void theOfferToStashDoesNotTakeAwayADialogTheUserIsTypingIn() {
-        Model typing = Update.update(tracking(), new NewBranchMsg.Requested(new BranchName("main")))
-                .model();
+        Model typing = NameAsked.asked(tracking(), new NewBranchMsg.Requested(new BranchName("main")));
 
         Model next = Update.update(
                         typing,
@@ -175,8 +175,7 @@ class BranchUpdateTest {
                         .cmds());
         assertEquals(
                 Option.none(),
-                Update.update(pushing, new NewBranchMsg.Requested(new BranchName("feature")))
-                        .model()
+                NameAsked.asked(pushing, new NewBranchMsg.Requested(new BranchName("feature")))
                         .popup());
     }
 
@@ -734,8 +733,7 @@ class BranchUpdateTest {
 
     @Test
     void newBranchRequestOpensTheDialogAndCancelClosesIt() {
-        Model open = Update.update(loaded(), new NewBranchMsg.Requested(new BranchName("feature")))
-                .model();
+        Model open = NameAsked.asked(loaded(), new NewBranchMsg.Requested(new BranchName("feature")));
         assertEquals(Option.of(new NewBranchPopup(new BranchName("feature"))), open.popup());
 
         Next cancelled = Update.update(open, new PopupMsg.Dismissed(NewBranchPopup.class));
@@ -752,20 +750,17 @@ class BranchUpdateTest {
 
         assertEquals(
                 Option.of(new NewBranchPopup(new Revision.Commit(new Sha("abc1234567")), Option.none())),
-                Update.update(model, new NewBranchMsg.RequestedAtCommit(commit.sha()))
-                        .model()
+                NameAsked.asked(model, new NewBranchMsg.RequestedAtCommit(commit.sha()))
                         .popup());
         assertEquals(
                 Option.none(),
-                Update.update(model, new NewBranchMsg.RequestedAtCommit(new Sha("elsewhere")))
-                        .model()
+                NameAsked.asked(model, new NewBranchMsg.RequestedAtCommit(new Sha("elsewhere")))
                         .popup());
     }
 
     @Test
     void confirmedNewBranchIsCreatedAtTheBase() {
-        Model open = Update.update(loaded(), new NewBranchMsg.Requested(new BranchName("feature")))
-                .model();
+        Model open = NameAsked.asked(loaded(), new NewBranchMsg.Requested(new BranchName("feature")));
 
         Next next = Update.update(typed(open, " topic "), new NewBranchMsg.Confirmed());
 
@@ -780,8 +775,7 @@ class BranchUpdateTest {
 
     @Test
     void blankNewBranchNameKeepsTheDialogOpen() {
-        Model open = Update.update(loaded(), new NewBranchMsg.Requested(new BranchName("feature")))
-                .model();
+        Model open = NameAsked.asked(loaded(), new NewBranchMsg.Requested(new BranchName("feature")));
 
         Next next = Update.update(typed(open, "  "), new NewBranchMsg.Confirmed());
 

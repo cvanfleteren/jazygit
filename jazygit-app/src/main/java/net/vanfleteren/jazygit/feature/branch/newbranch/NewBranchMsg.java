@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.branch.newbranch;
 
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -28,6 +29,12 @@ public sealed interface NewBranchMsg extends Msg {
      * The user asked for a new branch starting at the remote branch {@code branch}.
      */
     record RequestedAtRemote(RemoteBranch branch) implements NewBranchMsg {}
+
+    /**
+     * What the name of the new branch {@code popup} asks for starts out as was read: {@code template}, or empty for
+     * none (ADR 121).
+     */
+    record NameTemplateRead(NewBranchPopup popup, Option<String> template) implements NewBranchMsg {}
 
     /**
      * The user confirmed the name typed for the new branch.

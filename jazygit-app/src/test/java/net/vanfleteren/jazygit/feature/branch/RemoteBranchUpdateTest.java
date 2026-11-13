@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutCmd;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutCmd.Checkout;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutCmd.CheckoutRemote;
 import net.vanfleteren.jazygit.feature.branch.checkout.CheckoutMsg;
+import net.vanfleteren.jazygit.feature.branch.newbranch.NameAsked;
 import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchCmd;
 import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchMsg;
 import net.vanfleteren.jazygit.feature.branch.newbranch.NewBranchPopup;
@@ -160,8 +161,7 @@ class RemoteBranchUpdateTest {
 
     @Test
     void aNewBranchCanStartAtARemoteBranch() {
-        Model asked = Update.update(withRemotes(), new NewBranchMsg.RequestedAtRemote(ORIGIN_NEW))
-                .model();
+        Model asked = NameAsked.asked(withRemotes(), new NewBranchMsg.RequestedAtRemote(ORIGIN_NEW));
 
         assertEquals(
                 Option.of(new NewBranchPopup(ORIGIN_NEW.tracking(), Option.of(new BranchName("new")))),
