@@ -8,11 +8,12 @@ import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.compose.EditorFile;
 import net.vanfleteren.jazygit.state.operation.Operation;
 import net.vanfleteren.jazygit.state.operation.OperationCmd;
 
 /**
- * Writing a comment on a pull request in the editor, and adding it.
+ * Adding a comment to a pull request.
  */
 public sealed interface CommentCmd extends Cmd {
 
@@ -23,28 +24,9 @@ public sealed interface CommentCmd extends Cmd {
     Operation EDIT_COMMENT = Operation.of("log.title.editComment", "error.editComment.failed");
 
     /**
-     * The file the comment is written in, in the editor; editors take it for Markdown, as GitHub does.
+     * The file the comment is written in, in the editor (ADR 115).
      */
-    String FILE_NAME = "PR_COMMENT.md";
-
-    /**
-     * Opens {@code text} in git's editor, with the terminal handed over to it, and reports how it was saved.
-     */
-    record EditComment(String text) implements CommentCmd {
-
-        @Override
-        public Msg run(Env env) {
-            return env.terminal()
-                    .handOver(() -> env.git().editor().editText(FILE_NAME, text))
-                    .mapLeft(Failure::of)
-                    .fold(this::failed, edited -> new CommentMsg.EditorClosed(edited._1, edited._2));
-        }
-
-        @Override
-        public Msg failed(Failure failure) {
-            return new CommentMsg.EditorFailed(failure);
-        }
-    }
+    EditorFile EDITOR = new EditorFile("PR_COMMENT.md", EDIT_COMMENT);
 
     /**
      * Adds a comment saying {@code body} to pull request {@code number}, from {@code branch}.

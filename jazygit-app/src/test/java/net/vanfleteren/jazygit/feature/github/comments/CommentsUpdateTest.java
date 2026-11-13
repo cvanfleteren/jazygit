@@ -29,6 +29,7 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.compose.ComposeMsg;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -178,7 +179,7 @@ class CommentsUpdateTest {
         CommentsPopup comments = reading.popup(CommentsPopup.class).get();
 
         Model commenting = Update.update(reading, new CommentMsg.Requested()).model();
-        Model cancelled = Update.update(commenting, new CommentMsg.Cancelled()).model();
+        Model cancelled = Update.update(commenting, new ComposeMsg.Cancelled()).model();
 
         assertEquals(Option.of(CommentPopup.on(comments)), commenting.popup());
         assertEquals(Option.of(comments), cancelled.popup());

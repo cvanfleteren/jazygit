@@ -8,16 +8,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.function.Supplier;
 import net.vanfleteren.jazygit.feature.github.comment.CommentCmd.AddComment;
-import net.vanfleteren.jazygit.feature.github.comment.CommentCmd.EditComment;
 import net.vanfleteren.jazygit.feature.github.comments.CommentsCmd.LoadComments;
 import net.vanfleteren.jazygit.feature.github.comments.CommentsPopup;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestCmd;
@@ -55,6 +51,8 @@ import net.vanfleteren.jazygit.state.Terminal;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.compose.ComposeCmd.OpenInEditor;
+import net.vanfleteren.jazygit.state.compose.ComposeMsg;
 import net.vanfleteren.jazygit.state.github.Reading;
 import org.junit.jupiter.api.Test;
 
@@ -119,7 +117,7 @@ class CommentUpdateTest {
 
     @Test
     void whatIsTypedIsKeptInThePopup() {
-        Model typed = Update.update(commenting(""), new CommentMsg.Edited("Looks good"))
+        Model typed = Update.update(commenting(""), new ComposeMsg.Edited("Looks good"))
                 .model();
 
         assertEquals(Option.of(CommentPopup.on(SHOWN).withText("Looks good")), typed.popup());
@@ -127,7 +125,7 @@ class CommentUpdateTest {
 
     @Test
     void sendingAddsTheCommentAsTypedAndKeepsThePopupOpenMeanwhile() {
-        Next sending = Update.update(commenting("  Looks good\n"), new CommentMsg.Confirmed());
+        Next sending = Update.update(commenting("  Looks good\n"), new ComposeMsg.Confirmed());
 
         assertEquals(List.of(new AddComment(FEATURE, 42, "  Looks good\n")), sending.cmds());
         assertEquals(
@@ -141,7 +139,7 @@ class CommentUpdateTest {
     void aCommentSentWhileTheDraftChangesLeavesTheBranchBusyUntilThatIsDone() {
         SetDraft drafting = new SetDraft(FEATURE, 42, true);
         Model busy = TestModels.running(commenting("Looks good"), drafting);
-        Next sending = Update.update(busy, new CommentMsg.Confirmed());
+        Next sending = Update.update(busy, new ComposeMsg.Confirmed());
         AddComment cmd = (AddComment) sending.cmds().head();
         Env env = env(StubGit.of(), StubGitHub.of(), Terminal.NONE);
 
@@ -159,7 +157,7 @@ class CommentUpdateTest {
 
         Model drafted = Update.update(commenting, drafting.run(env(StubGit.of(), StubGitHub.of(), Terminal.NONE)))
                 .model();
-        Model back = Update.update(drafted, new CommentMsg.Cancelled()).model();
+        Model back = Update.update(drafted, new ComposeMsg.Cancelled()).model();
 
         assertEquals(Option.of(true), back.popup(PullRequestPopup.class).flatMap(PullRequestPopup::draft));
         // Changing the draft again turns it back.
@@ -190,25 +188,25 @@ class CommentUpdateTest {
 
     @Test
     void whileItIsSentTheCommentCannotBeChangedSentAgainOrLeft() {
-        Model sending = Update.update(commenting("Looks good"), new CommentMsg.Confirmed())
+        Model sending = Update.update(commenting("Looks good"), new ComposeMsg.Confirmed())
                 .model();
 
         assertEquals(
                 sending,
-                Update.update(sending, new CommentMsg.Edited("Looks bad")).model());
+                Update.update(sending, new ComposeMsg.Edited("Looks bad")).model());
         assertEquals(
-                List.empty(), Update.update(sending, new CommentMsg.Confirmed()).cmds());
-        assertEquals(sending, Update.update(sending, new CommentMsg.Cancelled()).model());
+                List.empty(), Update.update(sending, new ComposeMsg.Confirmed()).cmds());
+        assertEquals(sending, Update.update(sending, new ComposeMsg.Cancelled()).model());
         assertEquals(
                 List.empty(),
-                Update.update(sending, new CommentMsg.EditorRequested()).cmds());
+                Update.update(sending, new ComposeMsg.EditorRequested()).cmds());
     }
 
     @Test
     void aBlankCommentIsNotSent() {
         Model blank = commenting(" \n ");
 
-        Next next = Update.update(blank, new CommentMsg.Confirmed());
+        Next next = Update.update(blank, new ComposeMsg.Confirmed());
 
         assertEquals(List.empty(), next.cmds());
         assertEquals(blank, next.model());
@@ -216,7 +214,7 @@ class CommentUpdateTest {
 
     @Test
     void cancellingDropsTheCommentAndGoesBackToThePullRequest() {
-        Model cancelled = Update.update(commenting("half a thought"), new CommentMsg.Cancelled())
+        Model cancelled = Update.update(commenting("half a thought"), new ComposeMsg.Cancelled())
                 .model();
 
         assertEquals(Option.of(SHOWN), cancelled.popup());
@@ -231,7 +229,7 @@ class CommentUpdateTest {
                 .read(Either.right(List.empty()))
                 .withHighlighted(Option.of(new PullRequestComment.Id("IC_1")));
         Model commenting = loaded().openPopup(CommentPopup.on(comments).withText("Looks good"));
-        Next sending = Update.update(commenting, new CommentMsg.Confirmed());
+        Next sending = Update.update(commenting, new ComposeMsg.Confirmed());
         AddComment cmd = (AddComment) sending.cmds().head();
 
         Next sent = Update.update(sending.model(), cmd.run(env(StubGit.of(), StubGitHub.of(), Terminal.NONE)));
@@ -249,7 +247,7 @@ class CommentUpdateTest {
 
     @Test
     void aSentCommentGoesBackToThePullRequestAndReadsItsDetailsAgain() {
-        Next sending = Update.update(commenting("Looks good"), new CommentMsg.Confirmed());
+        Next sending = Update.update(commenting("Looks good"), new ComposeMsg.Confirmed());
         AddComment cmd = (AddComment) sending.cmds().head();
 
         Next sent = Update.update(sending.model(), cmd.run(env(StubGit.of(), StubGitHub.of(), Terminal.NONE)));
@@ -289,7 +287,7 @@ class CommentUpdateTest {
 
     @Test
     void aCommentGitHubRefusesKeepsThePopupWithTheCommentAndShowsWhy() {
-        Next sending = Update.update(commenting("Looks good"), new CommentMsg.Confirmed());
+        Next sending = Update.update(commenting("Looks good"), new ComposeMsg.Confirmed());
         AddComment cmd = (AddComment) sending.cmds().head();
         GitHub refusing = StubGitHub.of().withReviews(new StubReviews() {
             @Override
@@ -311,43 +309,22 @@ class CommentUpdateTest {
         // It can be sent again.
         assertEquals(
                 List.of(cmd),
-                Update.update(failed.model(), new CommentMsg.Confirmed()).cmds());
+                Update.update(failed.model(), new ComposeMsg.Confirmed()).cmds());
     }
 
     @Test
-    void theCommentIsOpenedInTheEditorWithTheTerminalHandedOver() {
+    void theCommentIsOpenedInTheEditorAsAComment() {
         assertEquals(
-                List.of(new EditComment("draft")),
-                Update.update(commenting("draft"), new CommentMsg.EditorRequested())
+                List.of(new OpenInEditor(CommentCmd.EDITOR, "draft")),
+                Update.update(commenting("draft"), new ComposeMsg.EditorRequested())
                         .cmds());
-
-        java.util.List<String> events = new ArrayList<>();
-        Terminal terminal = new Terminal() {
-            @Override
-            public <T> T handOver(Supplier<T> program) {
-                events.add("leave");
-                T result = program.get();
-                events.add("come back");
-                return result;
-            }
-        };
-        Git git = StubGit.of().withEditor(new StubEditor() {
-            @Override
-            public Either<GitFailure, Tuple2<String, List<ExecutedCommand>>> editText(String fileName, String text) {
-                events.add("edit " + fileName + " " + text);
-                return Either.right(Tuple.of("Looks good", List.of(NVIM)));
-            }
-        });
-
-        assertEquals(
-                new CommentMsg.EditorClosed("Looks good", List.of(NVIM)),
-                new EditComment("draft").run(env(git, StubGitHub.of(), terminal)));
-        assertEquals(java.util.List.of("leave", "edit PR_COMMENT.md draft", "come back"), events);
+        assertEquals("PR_COMMENT.md", CommentCmd.EDITOR.name());
     }
 
     @Test
     void theEditedCommentIsShownInThePopupToSend() {
-        Next edited = Update.update(commenting("draft"), new CommentMsg.EditorClosed("Looks good", List.of(NVIM)));
+        Next edited = Update.update(
+                commenting("draft"), new ComposeMsg.EditorClosed(CommentCmd.EDITOR, "Looks good", List.of(NVIM)));
 
         assertEquals(
                 Option.of(CommentPopup.on(SHOWN).withText("Looks good")),
@@ -368,7 +345,8 @@ class CommentUpdateTest {
         });
 
         Model failed = Update.update(
-                        commenting("draft"), new EditComment("draft").run(env(git, StubGitHub.of(), Terminal.NONE)))
+                        commenting("draft"),
+                        new OpenInEditor(CommentCmd.EDITOR, "draft").run(env(git, StubGitHub.of(), Terminal.NONE)))
                 .model();
 
         assertEquals(Option.of(CommentPopup.on(SHOWN).withText("draft")), failed.popup());

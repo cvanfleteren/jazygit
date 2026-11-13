@@ -87,7 +87,7 @@ source of truth when the two disagree.
 
 - **The parts have no cycles**, with one exception: `Keymap.standard()` lists the keys of the features, which
   declare them with the types of `keys` (dotted).
-- **Nor have the subpackages of `state`** (`diff`, `view`, `load`, `github`, `operation`, `popup`, `index`,
+- **Nor have the subpackages of `state`** (`diff`, `view`, `load`, `github`, `operation`, `popup`, `compose`, `index`,
   `preferences`). `state` itself uses them all, and they all use it, as the `Model` holds them.
 - **Nor have the subpackages of `ui`**, which follow the panes: the shell (`ui` itself: `LeftColumn`, the status
   and command log panels) → `content` → the panes (`branches`, `commits`, `files`, `stash`, `github`) and `diff` →
