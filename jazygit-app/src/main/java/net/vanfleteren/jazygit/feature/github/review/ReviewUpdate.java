@@ -415,7 +415,7 @@ public final class ReviewUpdate {
 
     private static ReviewPopup popup(
             CommitFilesView view, DiffCursorAt at, Target target, Where where, List<String> quoted) {
-        return new ReviewPopup(number(view), target, where, quoted, "", false, at.area(), at.at());
+        return new ReviewPopup(OnThread.number(view), target, where, quoted, "", false, at.area(), at.at());
     }
 
     /**
@@ -676,10 +676,6 @@ public final class ReviewUpdate {
 
     private static Option<CommitFilesView> pullRequestFiles(Model model) {
         return model.repoView().commitFiles().filter(view -> view.pullRequest().isDefined());
-    }
-
-    private static int number(CommitFilesView view) {
-        return view.pullRequest().getOrElse(0);
     }
 
     private static Model refused(Model model, Why why) {

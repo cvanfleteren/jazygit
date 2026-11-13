@@ -33,6 +33,13 @@ record OnThread(CommitFilesView view, ReviewThread thread) {
      * The number of the pull request.
      */
     int number() {
+        return number(view);
+    }
+
+    /**
+     * The number of the pull request whose files {@code view} lists.
+     */
+    static int number(CommitFilesView view) {
         return view.pullRequest().getOrElse(0);
     }
 
@@ -63,7 +70,7 @@ record OnThread(CommitFilesView view, ReviewThread thread) {
      * {@code comment} of this thread.
      */
     OnComment with(ReviewThread.Comment comment) {
-        return new OnComment(view, thread, comment);
+        return new OnComment(this, comment);
     }
 
     /**
