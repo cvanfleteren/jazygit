@@ -104,6 +104,9 @@ inside the core, the compiler does: it cannot reach the app's packages at all, n
   - The dialogs of a feature use the widgets of `ui`.
   - `ui` uses `git` and `gh` only for the errors, which `ErrorText` describes.
   - Nothing in `ui`, `keys` or a dialog runs git or gh.
+  - The parts of `ui` depend on each other one way only, from the shell in `ui` through the content and the
+    panes of the features down to the widgets, the text and the theme (`ArchitectureTest.uiIsFreeOfCycles`,
+    `uiPartsDoNotUseTheShell`).
 - **`git` and `gh` know nothing of each other**, nor of anything above them: they live in `jazygit-git` and
   `jazygit-gh`.
 - **Only views use `i18n`.** `state` does not.
@@ -112,7 +115,13 @@ inside the core, the compiler does: it cannot reach the app's packages at all, n
 | Package | Responsibility |
 |---|---|
 | `JazygitApp` | Lays out the panes and the content, shows the open popup and routes the keys and the mouse to the model. Next to it: `Launcher` reads the command line and opens the repository; `RepositorySession` runs the `Program` and its threads, and opens another repository in its place; `TerminalHandOver` sets the terminal up and hands it to an editor; `Timers` dispatches what happens every so often; `Popups` lists the popups of the features; `FocusKeeper` keeps where the focus is; `ui.LeftColumn` lays out the panes of the screen shown. |
-| `ui` | Panels (`FilesPanel`, `BranchesPanel`, `CommitsPanel`, `ContentPanel`, `CommandLogPanel`, ...) that render a `Model` and turn key events into `Msg`s; the dialog widgets (`ConfirmDialog`, `ChoiceDialog`, `TextInputDialog`, `PickDialog`) and the `DialogFrame` they are drawn in, with `WithDetails` for a box of details under one; `ErrorText`, the only place that turns errors into text. |
+| `ui` | The shell (`LeftColumn`, `PopupSlot`, `StatusPanel`, `CommandLogPanel`, `FetchLine`, the slides and borders) that lays out the parts below it. |
+| `ui.files`, `ui.branches`, `ui.commits`, `ui.stash`, `ui.github` | The panes of each feature (`FilesPanel`, `BranchesPanel`, `CommitsPanel`, `StashPanel`, `PullRequestsPanel`, ...) that render a `Model` and turn key events into `Msg`s, with what only they draw: the branch lists, the check rows, the comment composer. |
+| `ui.content` | The content panel: `ContentView` says what it shows, `ContentPanel` and `ScrollArea` draw it, `ContentText` builds its text. |
+| `ui.diff` | The rich view of a diff (`RichDiff`), its cursor, and the review threads drawn in it (`RemarkLines`, `ShownRemarks`). |
+| `ui.markdown` | Markdown drawn into lines, with its links and images. |
+| `ui.widgets`, `ui.edit` | The dialog widgets (`ConfirmDialog`, `ChoiceDialog`, `TextInputDialog`, `PickDialog`) and the `DialogFrame` they are drawn in, with `WithDetails` for a box of details under one; the list every pane is built on (`LoadableList`); the editing of a line or a text. |
+| `ui.text`, `ui.theme` | What everything above draws with: `Theme`, the width of text, times, placeholders, and `ErrorText`, the only place that turns errors into text. |
 | `keys` | `Keymap`: the keys of each panel (`Scope`) and the global keys. Panels react to keys from it, and the help popup lists them from it. |
 | `feature.*` | One package per feature. Each one holds the feature's messages, its update functions, its commands, and its popups, dialogs and keys. |
 | `state` | The Elm core: `Model`, `Msg`, `Update`, `Cmd`, `Program`, `Env`, `Loadable`, `Lens`, `Repo`, `Jobs`, `GitHubBases`, and the errors as data (`AppError`, `Phrase`, `Failure`). The other parts of the `Model` each have a subpackage, with their messages, updates and commands: |
@@ -285,7 +294,7 @@ closes; when the upstream is gone, or the base branch, it closes with the error 
 ## The commits of a branch
 
 Enter on a branch, local or remote, lists its commits in place of the branches (`feature.branch.commits`,
-`ui.BranchCommitsList`), drawn by the same `CommitsPanel.rows` and `marked` as the commits pane: the commits on the
+`ui.branches.BranchCommitsList`), drawn by the same `CommitsPanel.rows` and `marked` as the commits pane: the commits on the
 base dimmed, and with `b` only the others and the fork point. Enter on a commit moves the focus to its diff; Escape,
 or switching tabs, goes back to the branches.
 
@@ -315,7 +324,7 @@ branch it was made from (`gh-merge-base`), else the main branch, `origin/` first
 out. `LoadAhead` reads it into `Repo.ahead` for HEAD and `RepoView.branchAhead` for the highlighted branch:
 together with the log it goes with (`LoadCommits`, `LoadBranchLog`), so that a log is never shown undimmed
 first, and on its own again when the base moves; `state.load.AheadUpdate` decides what to read, and
-`ui.AheadView` how the panes show it. `feature.ahead` only declares the keys. See ADR 20.
+`ui.commits.AheadView` how the panes show it. `feature.ahead` only declares the keys. See ADR 20.
 
 ## The pull requests screen
 
@@ -478,7 +487,7 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
   (`DiffOptionsMsg.WordsToggled`, kept as `ui.diff-words`) switches whether the rich view highlights the words that
   changed in a changed line, or draws the line in its line colour alone; it saves it, and only draws the diffs again,
   as the words were compared when they were read.
-- **The rich view** is drawn by `ui.RichDiff` from a `ParsedDiff`, one tree of files, hunks and lines, each line with
+- **The rich view** is drawn by `ui.diff.RichDiff` from a `ParsedDiff`, one tree of files, hunks and lines, each line with
   its words and its tokens (ADR 56): `UnifiedDiff`, the diff parsed into files, hunks and numbered lines, which
   `ParsedDiff.diff()` gives back, and `WordDiff`, which pairs the removed and added lines of a block and finds the words
   that
@@ -510,7 +519,7 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
   (`feature.diff.CommitFilesAction`), are a `CommitFilesView` in `RepoView.commitFiles`: whose changes they are, the
   pane they were opened from, the `CommitFile`s read (`LoadCommitFiles`), and the diff of the highlighted node
   as a `Preview` (`LoadCommitFileDiff`, a `DiffLoad` with a slot of its own). The files pane lists them in place
-  of the working tree's (`ui.FileTreeList`, one per tree, so each keeps its own highlight and collapsed
+  of the working tree's (`ui.files.FileTreeList`, one per tree, so each keeps its own highlight and collapsed
   directories), and the content panel shows the diff in `ContentArea.COMMIT_FILE`. They open on the first directory
   that holds files directly (`FileTreeList.firstWithDiff`), whose diff shows something: the root only when files
   changed at the top of the repository.
@@ -526,7 +535,7 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
   `CommitFilesView.remarks`; threads read at other commits
   read the files again at those, unless the pull request was found merged or closed, which keeps them and says so in
   the title (`CommitFilesView.ended`); threads read at other commits than the files are then not placed on lines
-  (`CommitFilesView.remarksAtItsCommits`). `ui.RichDiff` draws them after their lines as `ui.RemarkLines` blocks,
+  (`CommitFilesView.remarksAtItsCommits`). `ui.diff.RichDiff` draws them after their lines as `ui.diff.RemarkLines` blocks,
   their Markdown drawn by tamboui's `MarkdownView` into a buffer off the screen and read back as lines, styled as the
   theme styles `MarkdownElement` (`Theme.SpanStyles.markdown`). `c` lists only the files with an unresolved thread,
   or with any, and every file again (`CommitFilesView.listed`, ADR 57): the files pane draws `listedFiles()`, the
@@ -545,7 +554,7 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
   number, a thread by its id, a comment of an open thread), and `state.diff.DiffStops`, pure, says where it goes when
   its stop is gone (`DiffStops.nearest`). `RichDiff.drawn` works out the stops as it draws the diff and marks the row
   each starts on (`RichDiff.Drawn`); a key of the review needs only the lines among them, which `state.diff.DiffLines`
-  works out from the diff alone, without placing the threads. `ui.DiffCursor` moves it: `j`/`k` and the arrows, through
+  works out from the diff alone, without placing the threads. `ui.diff.DiffCursor` moves it: `j`/`k` and the arrows, through
   a stop higher than the view before the next one, the pages and the wheel pulling it along, a click on a row, a range
   of one hunk with `v`, the next thread with `n`. The area sends where it moved it and the view in one
   `ViewMsg.ContentScrolled`: `Scrolled` holds the anchor of the cursor and of the other end of its range, and keeps the
@@ -555,13 +564,13 @@ See `documentation/adr/0044-a-nicer-commit-diff-with-a-file-tree.md` and
 - **Commenting on a pull request's diff** (ADR 60): while the content panel shows the files of a pull request, its
   keys are those of `Scopes.PULL_REQUEST_DIFF`, whose selection is the cursor (`DiffCursorAt`, with where `n`, `N` and
   `v` take it). `feature.github.review` starts a thread on a line, a range or a file and replies to one from a
-  `ReviewPopup`, drawn by `ReviewDialog` with the `ui.CommentComposer` the comment on a pull request shares, and
+  `ReviewPopup`, drawn by `ReviewDialog` with the `ui.github.CommentComposer` the comment on a pull request shares, and
   resolves one at once; `ReviewThreadMutations` sends a thread and a reply as REST review comments, published at once
   (GraphQL would leave them pending), and a resolve with `gh api graphql`. Each needs the threads read at the
   commits of the files and a pull request that is not merged, else it says why (`GitHubError.CannotReview`); the ids of
   the threads something is sent for (`CommitFilesView.sending`) take no other key until the threads are read again.
   `Space` collapses or opens the thread or the comment of the cursor against its default (ADR 62): the ids flipped
-  are `CommitFilesView.collapsed` (`state.diff.Collapsed`), which `ui.RemarkLines` reads as it draws the threads
+  are `CommitFilesView.collapsed` (`state.diff.Collapsed`), which `ui.diff.RemarkLines` reads as it draws the threads
   and their stops (`DiffStops.anchors`), so each comment of an open thread is a stop of its own (`Anchor.Comment`).
 
 ## The editor
