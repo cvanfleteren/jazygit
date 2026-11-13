@@ -96,6 +96,19 @@ public final class ContentPanel {
     }
 
     /**
+     * The area to give the focus to when the area with id {@code areaId} has it but no longer shows: the area that shows
+     * what the same pane has highlighted now, as the unstaged diff of a file in place of the staged one of the file
+     * highlighted before (ADR 117). None while the area still shows, or nothing takes its place.
+     */
+    public Option<String> replacing(Model model, String areaId) {
+        return paneOfArea(model, areaId)
+                .filter(pane -> !ContentView.of(model, pane.value())
+                        .areas()
+                        .exists(shown -> shown.area().id().value().equals(areaId)))
+                .flatMap(pane -> areaOfPane(model, pane.value()));
+    }
+
+    /**
      * What goes with the pane that has the focus, {@code focusedId}; while a popup has it, what goes with the
      * pane the popup was opened from. That holds also in the frame a popup closes in, as it still has the focus
      * until the focus is given back.

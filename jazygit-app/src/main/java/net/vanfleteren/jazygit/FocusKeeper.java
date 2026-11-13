@@ -89,6 +89,8 @@ final class FocusKeeper {
         }
         followCommitFiles(model);
         leaveCollapsedColumn(model);
+        // An area that no longer shows gives the focus to the one that took its place, not to the first pane.
+        Option.of(focusedId()).flatMap(id -> contentPanel.replacing(model, id)).forEach(this::moveTo);
         String focusedId = focusedId();
         lastFocus = Option.of(focusedId).orElse(lastFocus);
         return focusedId;
@@ -176,6 +178,17 @@ final class FocusKeeper {
      */
     boolean inPaneContent() {
         return contentPanel.paneOfArea(model.get(), focusedId()).isDefined();
+    }
+
+    /**
+     * Whether the content shown for the pane {@code paneId} has the focus, or had it before a popup took it.
+     */
+    boolean inContentOf(Model model, String paneId) {
+        return Option.of(focusedId())
+                .filter(id -> !popups.owns(id))
+                .orElse(model.shownPane())
+                .flatMap(id -> contentPanel.paneOfArea(model, id))
+                .exists(pane -> pane.value().equals(paneId));
     }
 
     /**

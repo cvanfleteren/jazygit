@@ -56,21 +56,30 @@ stays in the content panel, which shows the diff of the file moved to.
 
 - The highlight of the files pane, and which directories are open, stay view state in `FileTreeList` (ADR 2). The
   Model gets nothing new.
-- `ContentPanel` is given a callback beside `leaveScrollArea`, by `JazygitApp` through `FocusKeeper`, which `J` and
-  `K` call with their direction. As `leaveScrollArea` does, it asks `ContentPanel.paneOfArea` which pane the focused
-  area shows the content of. Only for the files pane does it go on: `FilesPanel` moves the highlight of the tree it
-  shows, opening the directories on the way, and says whether it moved. The focus does not move.
+- `J` and `K` are bindings of `Scopes.DIFF` and `Scopes.PULL_REQUEST_DIFF` (`feature.files.step`), so `?` lists them
+  and runs them, and a key bound twice is found. They send `FileStepMsg` with their direction. Without a cursor, as
+  in the plain style, `ScrollArea` hands the keymap only these two keys.
+- `JazygitApp` takes `FileStepMsg` before the program, also run from the help, as `HelpMsg.Chosen`, which closes the
+  help first. It asks `ContentPanel.paneOfArea` which pane the focused area shows the content of, as Escape does
+  through `leaveScrollArea`, or the area that had the focus before a popup took it. Only for the files pane does it go
+  on: `FilesPanel` moves the highlight of the tree it shows, opening the directories on the way, and says whether it
+  moved. When it did not, `FileStepEnded` goes to the program, which says so as a `Notice`. The focus does not move.
 - The highlight moved sends what a highlight moved by hand sends, `SelectionMsg.FilesSelected`,
   `UnchangedFileSelected` or `CommitFilesSelected`, and the content is read as it is then. Nothing records where the
   content shown came from: the area that has the focus says it.
 - Which file is next or previous in a tree, with its filter, is a pure function of the files, tested on its own.
+- `TreeElement` says which node is highlighted from the rows it last drew. Until it draws again, `FileTreeList` keeps
+  the node a step moved to itself, as a directory opened on the way changed the rows.
+- A file whose diff shows in another area than the one before, as a file with only unstaged changes after one with
+  only staged changes, takes the focus with it: `FocusKeeper` gives the focus of an area that no longer shows to the
+  area that shows what its pane has highlighted now, where TamboUI would give it to the first pane.
 
 ### Why this way
 
 - Moving the tree's highlight, not jumping inside the diff shown: the tree keeps saying which file is shown, and the
   diff is read as it is when a file is highlighted by hand.
-- A callback between the views, as Escape already gives the focus back to the pane through `leaveScrollArea`, not a
-  Msg: the update would have to move a highlight the Model does not hold.
+- The app moves the highlight, not the update: the update would have to move a highlight the Model does not hold.
+  The keys still send a Msg, so they are bindings as any other, listed and run by the help.
 - `J` and `K`: free in the content panel, in both scopes and among the global keys. Not `n` and `N`, which move to
   remarks; nor `Ctrl+J`, which many terminals send as Enter. The comments dialog uses them otherwise: there `J` and
   `K` scroll the body of the comment a line, while `j` and `k` move between comments.

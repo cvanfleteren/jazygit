@@ -22,16 +22,21 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.feature.branch.tabs.BranchesTabMsg;
+import net.vanfleteren.jazygit.feature.files.step.FileStepEnded;
+import net.vanfleteren.jazygit.feature.help.HelpMsg;
+import net.vanfleteren.jazygit.feature.help.HelpPopup;
 import net.vanfleteren.jazygit.feature.layout.LayoutMsg;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.settings.*;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.popup.PopupMsg;
 import net.vanfleteren.jazygit.state.preferences.*;
 import net.vanfleteren.jazygit.state.view.*;
 import net.vanfleteren.jazygit.ui.*;
 import net.vanfleteren.jazygit.ui.branches.BranchesPanel;
 import net.vanfleteren.jazygit.ui.content.ContentPanel;
+import net.vanfleteren.jazygit.ui.files.FilesPanel;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import net.vanfleteren.jazygit.ui.widgets.*;
 
@@ -107,10 +112,36 @@ public class JazygitApp extends ToolkitApp {
     }
 
     /**
-     * Hands {@code msg} to the program of the repository shown.
+     * Hands {@code msg} to the program of the repository shown. A key that moves the highlight of the files pane from
+     * the content panel moves it here, as the highlight is the pane's, not the model's (ADR 117); run from the help,
+     * the help closes first.
      */
     private void send(Msg msg) {
-        session.dispatch(msg);
+        switch (msg) {
+            case FileStepMsg(FileStepMsg.Step step) -> stepFile(step);
+            case HelpMsg.Chosen(FileStepMsg(FileStepMsg.Step step)) -> {
+                session.dispatch(new PopupMsg.Dismissed(HelpPopup.class));
+                stepFile(step);
+            }
+            default -> session.dispatch(msg);
+        }
+    }
+
+    /**
+     * Moves the highlight of the files pane to its file {@code step} of the one highlighted, while the content the pane
+     * shows has the focus, or had it before a popup took it; the content then shows that file, and keeps the focus. At
+     * the last or the first file, the model says there is none. On the content of another pane, nothing happens.
+     */
+    private void stepFile(FileStepMsg.Step step) {
+        Model model = model();
+        if (!focus.inContentOf(model, FilesPanel.ID)) {
+            return;
+        }
+        if (leftColumn.stepFile(model, step)) {
+            requestRedraw();
+        } else {
+            session.dispatch(new FileStepEnded(step));
+        }
     }
 
     /**
