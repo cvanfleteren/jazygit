@@ -2,6 +2,8 @@ package net.vanfleteren.jazygit.ui.content;
 
 import static dev.tamboui.toolkit.Toolkit.*;
 
+import dev.tamboui.text.Line;
+import dev.tamboui.text.Span;
 import dev.tamboui.text.Text;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.StyledElement;
@@ -84,28 +86,37 @@ public final class ContentPanel {
 
     /**
      * The id of the area that shows what the pane {@code paneId} has highlighted, to move the focus into:
-     * the staged diff if it shows anything, else the unstaged one, the commit or the log; none while it shows nothing.
+     * the staged diff if it shows anything, else the unstaged one, the commit or the log; none while it shows nothing,
+     * or only a note, which the focus is not moved into (ADR 117).
      */
     public Option<String> areaOfPane(Model model, String paneId) {
-        return ContentView.of(model, paneId)
-                .areas()
-                .iterator()
-                .map(Shown.Area::area)
-                .find(area -> area.pane(model).value().equals(paneId))
+        return shownOf(model, paneId)
+                .find(area -> area != ContentArea.FILE_NOTE)
                 .map(area -> area.id().value());
     }
 
     /**
      * The area to give the focus to when the area with id {@code areaId} has it but no longer shows: the area that shows
      * what the same pane has highlighted now, as the unstaged diff of a file in place of the staged one of the file
-     * highlighted before (ADR 117). None while the area still shows, or nothing takes its place.
+     * highlighted before, or a note in place of a diff (ADR 117). None while the area still shows, or nothing takes its
+     * place.
      */
     public Option<String> replacing(Model model, String areaId) {
         return paneOfArea(model, areaId)
-                .filter(pane -> !ContentView.of(model, pane.value())
-                        .areas()
-                        .exists(shown -> shown.area().id().value().equals(areaId)))
-                .flatMap(pane -> areaOfPane(model, pane.value()));
+                .filter(pane -> !shownOf(model, pane.value())
+                        .exists(area -> area.id().value().equals(areaId)))
+                .flatMap(pane -> shownOf(model, pane.value()).headOption())
+                .map(area -> area.id().value());
+    }
+
+    /**
+     * The areas that show what the pane {@code paneId} has highlighted, top to bottom.
+     */
+    private static List<ContentArea> shownOf(Model model, String paneId) {
+        return ContentView.of(model, paneId)
+                .areas()
+                .map(Shown.Area::area)
+                .filter(area -> area.pane(model).value().equals(paneId));
     }
 
     /**
@@ -156,6 +167,15 @@ public final class ContentPanel {
                 ContentText.stashDrawn(stash, changes, look, styles, width);
             case Body.PullRequest(PullRequestSummary pullRequest, PullRequestPreview preview) ->
                 plain(ContentText.pullRequestText(pullRequest, preview, styles));
+            case Body.Note(String text, Tone tone) ->
+                RichDiff.Drawn.plain(List.of(text.split("\n", -1))
+                        .map(line -> Line.from(Span.styled(
+                                line,
+                                styles.of(
+                                        switch (tone) {
+                                            case DIM -> Theme.Classes.DIM;
+                                            case ERROR -> Theme.Classes.ERROR;
+                                        })))));
         };
     }
 

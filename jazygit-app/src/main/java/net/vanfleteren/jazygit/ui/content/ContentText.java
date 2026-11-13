@@ -455,7 +455,7 @@ public final class ContentText {
             case Body.Diff(ShownDiff shown, var look, var remarks) -> Option.of(shown);
             case Body.CommitChanges(var commit, ShownDiff changes, var look) -> Option.of(changes);
             case Body.StashChanges(var stash, ShownDiff changes, var look) -> Option.of(changes);
-            case Body.BranchLog _, Body.PullRequest _ -> Option.none();
+            case Body.BranchLog _, Body.PullRequest _, Body.Note _ -> Option.none();
         };
         return diff.flatMap(ShownDiff::version)
                 .exists(version -> version.rendering().isDefined());

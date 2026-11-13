@@ -73,6 +73,11 @@ stays in the content panel, which shows the diff of the file moved to.
 - A file whose diff shows in another area than the one before, as a file with only unstaged changes after one with
   only staged changes, takes the focus with it: `FocusKeeper` gives the focus of an area that no longer shows to the
   area that shows what its pane has highlighted now, where TamboUI would give it to the first pane.
+- What the files pane says in place of a diff or a file's content is a note: an area, `ContentArea.FILE_NOTE`, not
+  a message without one. That is a binary file, a link or a submodule among all files, a diff with no changes or only
+  changes to whitespace, and a file still read or that could not be. So a walk that reaches one keeps the focus in
+  the content panel, and the next `J` still goes on. Enter in the files pane does not move the focus into a note,
+  which has nothing to act on; only the focus of an area that no longer shows goes to one.
 
 ### Why this way
 

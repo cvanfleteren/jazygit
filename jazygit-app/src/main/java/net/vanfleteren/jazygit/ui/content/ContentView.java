@@ -95,10 +95,14 @@ public final class ContentView {
 
     /**
      * What the repository screen shows next to the pane {@code mirrored} has highlighted, each diff with the lines
-     * expanded in the area it is shown in (ADR 77).
+     * expanded in the area it is shown in (ADR 77). What the files pane says in place of a diff is a note, an area
+     * that holds the focus while the files are walked from the content panel (ADR 117).
      */
     private static Shown expanded(Model model, Mirrored mirrored) {
         return switch (repository(model, mirrored)) {
+            case Shown.Message(String title, String text, Tone tone)
+            when mirrored == Mirrored.FILES ->
+                new Shown.Area(ContentArea.FILE_NOTE, title, new ScrolledContent.Note(text), new Body.Note(text, tone));
             case Shown.Area area -> expanded(model, area);
             case Shown.Stacked(List<Shown.Area> areas) -> new Shown.Stacked(areas.map(area -> expanded(model, area)));
             case Shown other -> other;
@@ -631,6 +635,11 @@ public final class ContentView {
          * A pull request, and what it says and changes.
          */
         record PullRequest(PullRequestSummary pullRequest, PullRequestPreview preview) implements Body {}
+
+        /**
+         * What the files pane says in place of a diff or a file's content, drawn as {@code tone} says (ADR 117).
+         */
+        record Note(String text, Tone tone) implements Body {}
     }
 
     /**
