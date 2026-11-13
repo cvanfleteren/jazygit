@@ -355,8 +355,8 @@ public final class PullRequestUpdate {
                                         || model.gitHub().pullRequests().isEmpty()
                                 ? Next.of(model.fail(model.gitHub()
                                         .pullRequestsFailure()
-                                        .<AppError>map(AppError.PullRequestsUnavailable::new)
-                                        .getOrElse(AppError.PullRequestsNotRead::new)))
+                                        .<AppError>map(PullRequestsError.Unavailable::new)
+                                        .getOrElse(PullRequestsError.NotRead::new)))
                                 : CreatePullRequestUpdate.askPushed(model, known)))
                 .getOrElse(() -> Next.of(model));
     }

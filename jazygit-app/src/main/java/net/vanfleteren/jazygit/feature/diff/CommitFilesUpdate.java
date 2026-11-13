@@ -15,7 +15,7 @@ import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.image.MarkdownImage;
 import net.vanfleteren.jazygit.keys.Scopes;
-import net.vanfleteren.jazygit.state.AppError;
+import net.vanfleteren.jazygit.state.BaseBranchError;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
@@ -93,7 +93,7 @@ public final class CommitFilesUpdate {
     public static Next againstBase(Model model, BranchName branch) {
         LoadAhead load = AheadUpdate.of(model, new BranchRef.Local(branch));
         return AheadUpdate.main(model).contains(branch)
-                ? Next.of(model.fail(new AppError.IsBaseBranch(branch)))
+                ? Next.of(model.fail(new BaseBranchError.IsBase(branch)))
                 : load.base()
                         .map(base -> load.tip()
                                 .map(tip -> update(
@@ -101,7 +101,7 @@ public final class CommitFilesUpdate {
                                         new CommitFilesMsg.Opened(
                                                 new Changes.OfBranch(branch, base, tip), Scopes.BRANCHES.pane())))
                                 .getOrElse(() -> Next.of(model)))
-                        .getOrElse(() -> Next.of(model.fail(new AppError.NoBaseBranch(branch))));
+                        .getOrElse(() -> Next.of(model.fail(new BaseBranchError.None(branch))));
     }
 
     /**

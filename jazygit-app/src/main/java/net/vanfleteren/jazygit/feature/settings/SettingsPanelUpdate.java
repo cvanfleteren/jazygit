@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.operation.CommandLog;
 import net.vanfleteren.jazygit.state.preferences.Preferences;
 import net.vanfleteren.jazygit.state.preferences.SaveSettings;
+import net.vanfleteren.jazygit.state.preferences.SettingsError;
 import net.vanfleteren.jazygit.state.preferences.SettingsMsg;
 
 /**
@@ -222,7 +223,7 @@ public final class SettingsPanelUpdate {
                 last.preferences().reported(),
                 last.outcome()
                         .error()
-                        .flatMap(error -> error instanceof AppError.SettingsNotReread(var problem)
+                        .flatMap(error -> error instanceof SettingsError.NotReread(var problem)
                                 ? Option.of(problem)
                                 : Option.none()));
     }
@@ -252,7 +253,7 @@ public final class SettingsPanelUpdate {
         Option<SettingsProblem> report = edited
                 ? loaded.problem()
                 : loaded.problem().filter(problem -> !before.reported().contains(problem));
-        Model reported = report.map(problem -> shown.fail(new AppError.SettingsNotReread(problem)))
+        Model reported = report.map(problem -> shown.fail(new SettingsError.NotReread(problem)))
                 .getOrElse(shown);
         if (!settings.ghExecutable().equals(before.settings().ghExecutable())) {
             // Shown again, the diffs are read with the settings as they are now, too.

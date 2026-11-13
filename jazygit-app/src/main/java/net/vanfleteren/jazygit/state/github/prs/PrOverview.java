@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Freshness;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.PaneId;
+import net.vanfleteren.jazygit.state.github.PullRequestsError;
 import net.vanfleteren.jazygit.state.view.Preview;
 
 /**
@@ -84,7 +85,7 @@ public record PrOverview(
                 .map(name -> Either.<AppError, Boolean>right(name.equalsIgnoreCase(pullRequest.repository())))
                 .getOrElse(() -> Either.left(
                         repository instanceof Loadable.Failed<PullRequestList>(Failure failure)
-                                ? new AppError.PullRequestsUnavailable(failure)
-                                : new AppError.PullRequestsNotRead()));
+                                ? new PullRequestsError.Unavailable(failure)
+                                : new PullRequestsError.NotRead()));
     }
 }

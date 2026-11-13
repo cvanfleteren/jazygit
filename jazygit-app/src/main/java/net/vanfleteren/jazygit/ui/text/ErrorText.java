@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.settings.SettingsProblem;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Phrase;
+import net.vanfleteren.jazygit.state.preferences.SettingsError;
 
 /**
  * Describes errors to the user. The only place that turns them into text.
@@ -54,7 +55,7 @@ public final class ErrorText {
     }
 
     public static String of(SettingsProblem problem) {
-        return of(AppError.settingsProblem(problem));
+        return of(SettingsError.said(problem));
     }
 
     public static String of(GhError error) {

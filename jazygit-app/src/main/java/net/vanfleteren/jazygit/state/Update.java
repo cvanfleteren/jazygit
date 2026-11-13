@@ -37,6 +37,7 @@ import net.vanfleteren.jazygit.state.operation.OperationCmd;
 import net.vanfleteren.jazygit.state.popup.Popup;
 import net.vanfleteren.jazygit.state.preferences.RepositoryTheme;
 import net.vanfleteren.jazygit.state.preferences.Screen;
+import net.vanfleteren.jazygit.state.preferences.SettingsError;
 import net.vanfleteren.jazygit.state.view.BranchCommitsView;
 import net.vanfleteren.jazygit.state.view.BranchesTab;
 import net.vanfleteren.jazygit.state.view.DivergenceView;
@@ -111,7 +112,7 @@ public final class Update {
                         .withReported(settings.problem())
                         .withThemeOverride(themeOverride)
                         .withRepositoryTheme(repositoryTheme))
-                .mapOutcome(outcome -> outcome.withError(settings.problem().map(AppError.SettingsNotLoaded::new))));
+                .mapOutcome(outcome -> outcome.withError(settings.problem().map(SettingsError.NotLoaded::new))));
     }
 
     /**

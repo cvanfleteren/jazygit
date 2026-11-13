@@ -29,6 +29,7 @@ import net.vanfleteren.jazygit.state.Terminal;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.compose.ComposeCmd.OpenInEditor;
+import net.vanfleteren.jazygit.state.github.PullRequestsError;
 import net.vanfleteren.jazygit.state.operation.Operation;
 import net.vanfleteren.jazygit.state.popup.ErrorPopup;
 import org.junit.jupiter.api.Test;
@@ -115,7 +116,7 @@ class ComposeUpdateTest {
 
     @Test
     void withoutAPopupThatComposesNothingHappens() {
-        Model other = loaded().openPopup(new ErrorPopup(new AppError.PullRequestsNotRead()));
+        Model other = loaded().openPopup(new ErrorPopup(new PullRequestsError.NotRead()));
 
         assertEquals(Next.of(other), Update.update(other, new ComposeMsg.Edited("Looks good")));
         assertEquals(Next.of(other), Update.update(other, new ComposeMsg.Confirmed()));

@@ -82,8 +82,7 @@ class SettingsUpdateTest {
                 .model();
 
         assertEquals(
-                Option.of(new AppError.SettingsNotLoaded(invalid)),
-                model.outcome().error());
+                Option.of(new SettingsError.NotLoaded(invalid)), model.outcome().error());
         assertEquals(Option.none(), model.popup());
     }
 
@@ -127,8 +126,7 @@ class SettingsUpdateTest {
                 .model();
 
         assertEquals(
-                Option.of(new AppError.SettingsNotReread(invalid)),
-                model.outcome().error());
+                Option.of(new SettingsError.NotReread(invalid)), model.outcome().error());
         assertEquals(Option.of(invalid), model.preferences().reported());
     }
 
@@ -151,7 +149,7 @@ class SettingsUpdateTest {
         Model after = Update.update(model, Program.perform(env(saving(Either.left(unwritable))), SAVE))
                 .model();
 
-        AppError error = new AppError.SettingsNotSaved(new Failure.Settings(unwritable));
+        AppError error = new SettingsError.NotSaved(new Failure.Settings(unwritable));
         assertEquals(DARCULA, after.preferences().settings());
         assertEquals(Option.of(error), after.outcome().error());
         assertEquals(Option.of(new ErrorPopup(error)), after.popup());

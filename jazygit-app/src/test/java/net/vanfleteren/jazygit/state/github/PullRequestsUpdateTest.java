@@ -16,7 +16,6 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.git.StubGit;
 import net.vanfleteren.jazygit.git.model.BranchName;
-import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.GitHubBases;
@@ -93,7 +92,7 @@ class PullRequestsUpdateTest {
                 .model();
 
         assertEquals(
-                Option.of(new AppError.PullRequestsUnavailable(unavailable)),
+                Option.of(new PullRequestsError.Unavailable(unavailable)),
                 failed.outcome().error());
         assertEquals(Option.none(), again.outcome().error());
         assertEquals(Option.none(), again.popup());

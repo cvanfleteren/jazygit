@@ -5,10 +5,10 @@ import net.vanfleteren.jazygit.feature.branch.Branches;
 import net.vanfleteren.jazygit.feature.branch.pull.PullCmd.FastForward;
 import net.vanfleteren.jazygit.feature.branch.pull.PullCmd.Pull;
 import net.vanfleteren.jazygit.git.model.BranchName;
-import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.UpstreamError;
 
 /**
  * Pulling a branch, as lazygit does: the checked out branch is pulled, any other one is fast-forwarded to its
@@ -40,7 +40,7 @@ public final class PullUpdate {
                                                 .getOrElse(() -> Update.start(
                                                         model.clearError(),
                                                         new FastForward(branch, upstream.branch()))))
-                        .getOrElse(() -> Next.of(model.fail(AppError.noUpstream(known)))))
+                        .getOrElse(() -> Next.of(model.fail(UpstreamError.of(known)))))
                 .getOrElse(() -> Next.of(model));
     }
 }

@@ -7,6 +7,7 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.util.concurrent.atomic.AtomicInteger;
 import net.vanfleteren.jazygit.feature.discard.DiscardMsg;
+import net.vanfleteren.jazygit.feature.files.FilesError;
 import net.vanfleteren.jazygit.feature.stage.StageMsg;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.git.GitError;
@@ -161,12 +162,12 @@ class AllFilesUpdateTest {
         List<FileEntry> docs = List.of(FileEntry.unchanged("docs/guide/a.md"), FileEntry.unchanged("docs/b.md"));
 
         assertEquals(
-                Option.of(new AppError.Unchanged("b.txt")),
+                Option.of(new FilesError.Unchanged("b.txt")),
                 error(model, new StageMsg.Requested(List.of(FileEntry.unchanged("b.txt")), Option.none())));
         assertEquals(
-                Option.of(new AppError.Unchanged("docs")),
+                Option.of(new FilesError.Unchanged("docs")),
                 error(model, new StageMsg.Requested(docs, Option.of("docs"))));
-        assertEquals(Option.of(new AppError.Unchanged("docs")), error(model, new DiscardMsg.Requested(docs)));
+        assertEquals(Option.of(new FilesError.Unchanged("docs")), error(model, new DiscardMsg.Requested(docs)));
     }
 
     @Test
