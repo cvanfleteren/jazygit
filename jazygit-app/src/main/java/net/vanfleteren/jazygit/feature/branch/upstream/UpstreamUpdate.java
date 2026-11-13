@@ -10,10 +10,11 @@ import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.ResetTarget;
-import net.vanfleteren.jazygit.state.AppError;
+import net.vanfleteren.jazygit.state.BaseBranchError;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.UpstreamError;
 import net.vanfleteren.jazygit.state.load.LoadDivergence;
 import net.vanfleteren.jazygit.state.view.DivergenceView;
 import net.vanfleteren.jazygit.state.view.DivergenceView.Against;
@@ -74,7 +75,7 @@ public final class UpstreamUpdate {
         return popup.branch()
                 .map(branch -> branch.upstream()
                         .map(upstream -> open(model, branch, upstream.branch(), Against.UPSTREAM))
-                        .getOrElse(() -> Next.of(model.fail(AppError.noUpstream(branch)))))
+                        .getOrElse(() -> Next.of(model.fail(UpstreamError.of(branch)))))
                 .getOrElse(() -> Next.of(model));
     }
 
@@ -85,10 +86,10 @@ public final class UpstreamUpdate {
     private static Next baseDivergence(Model model, UpstreamPopup popup) {
         return popup.branch()
                 .map(branch -> branch.isDefault()
-                        ? Next.of(model.fail(new AppError.IsBaseBranch(branch.name())))
+                        ? Next.of(model.fail(new BaseBranchError.IsBase(branch.name())))
                         : popup.base()
                                 .map(base -> open(model, branch, base, Against.BASE))
-                                .getOrElse(() -> Next.of(model.fail(new AppError.NoBaseBranch(branch.name())))))
+                                .getOrElse(() -> Next.of(model.fail(new BaseBranchError.None(branch.name())))))
                 .getOrElse(() -> Next.of(model));
     }
 
@@ -109,7 +110,7 @@ public final class UpstreamUpdate {
                 .map(branch -> branch.upstream()
                         .map(upstream -> Update.ask(
                                 model, new ResetPopup(new ResetTarget.ToUpstream(upstream.branch()), upstream.ahead())))
-                        .getOrElse(() -> Next.of(model.fail(AppError.noUpstream(branch)))))
+                        .getOrElse(() -> Next.of(model.fail(UpstreamError.of(branch)))))
                 .getOrElse(() ->
                         detached(model) ? Next.of(model.fail(new BranchError.NoBranchCheckedOut())) : Next.of(model));
     }

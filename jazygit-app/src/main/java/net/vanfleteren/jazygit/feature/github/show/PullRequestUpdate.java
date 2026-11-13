@@ -30,6 +30,7 @@ import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.github.*;
+import net.vanfleteren.jazygit.state.github.PullRequestsError;
 import net.vanfleteren.jazygit.state.github.prs.PrOverviewUpdate;
 import net.vanfleteren.jazygit.state.operation.*;
 import net.vanfleteren.jazygit.state.preferences.*;
@@ -355,8 +356,8 @@ public final class PullRequestUpdate {
                                         || model.gitHub().pullRequests().isEmpty()
                                 ? Next.of(model.fail(model.gitHub()
                                         .pullRequestsFailure()
-                                        .<AppError>map(AppError.PullRequestsUnavailable::new)
-                                        .getOrElse(AppError.PullRequestsNotRead::new)))
+                                        .<AppError>map(PullRequestsError.Unavailable::new)
+                                        .getOrElse(PullRequestsError.NotRead::new)))
                                 : CreatePullRequestUpdate.askPushed(model, known)))
                 .getOrElse(() -> Next.of(model));
     }

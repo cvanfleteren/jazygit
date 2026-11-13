@@ -70,10 +70,12 @@ import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.BaseBranchError;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.diff.BaseTip;
 import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.github.*;
+import net.vanfleteren.jazygit.state.github.PullRequestsError;
 import net.vanfleteren.jazygit.state.github.prs.LoadRepositoryPullRequests;
 import net.vanfleteren.jazygit.state.load.*;
 import net.vanfleteren.jazygit.state.operation.*;
@@ -147,7 +149,7 @@ class PullRequestUpdateTest {
         Next asked = Update.update(starting, new PullRequestMsg.Requested(new BranchName("feature")));
 
         assertEquals(
-                Option.of(new AppError.PullRequestsNotRead()),
+                Option.of(new PullRequestsError.NotRead()),
                 asked.model().outcome().error());
         assertEquals(List.empty(), asked.cmds());
     }
@@ -1553,7 +1555,7 @@ class PullRequestUpdateTest {
         Next opened = Update.update(withPr(), new PullRequestMsg.FilesRequested(MAIN.name()));
 
         assertEquals(
-                Option.of(new AppError.IsBaseBranch(MAIN.name())),
+                Option.of(new BaseBranchError.IsBase(MAIN.name())),
                 opened.model().outcome().error());
         assertEquals(Option.none(), opened.model().repoView().commitFiles());
         assertEquals(List.empty(), opened.cmds());
@@ -1666,7 +1668,7 @@ class PullRequestUpdateTest {
         Next opened = Update.update(alone, new PullRequestMsg.FilesRequested(UNPUSHED.name()));
 
         assertEquals(
-                Option.of(new AppError.NoBaseBranch(UNPUSHED.name())),
+                Option.of(new BaseBranchError.None(UNPUSHED.name())),
                 opened.model().outcome().error());
         assertEquals(List.empty(), opened.cmds());
     }
@@ -2330,7 +2332,7 @@ class PullRequestUpdateTest {
         Next asked = Update.update(failed, new PullRequestMsg.Requested(new BranchName("feature")));
 
         assertEquals(
-                Option.of(new AppError.PullRequestsUnavailable(failure)),
+                Option.of(new PullRequestsError.Unavailable(failure)),
                 asked.model().outcome().error());
         assertEquals(List.empty(), asked.cmds());
     }
@@ -2759,7 +2761,7 @@ class PullRequestUpdateTest {
 
         assertEquals(List.empty(), refused.cmds());
         assertEquals(
-                Option.of(new AppError.PullRequestsNotRead()),
+                Option.of(new PullRequestsError.NotRead()),
                 refused.model().outcome().error());
     }
 

@@ -7,10 +7,10 @@ import net.vanfleteren.jazygit.feature.discard.DiscardCmd.Discard;
 import net.vanfleteren.jazygit.feature.discard.DiscardMsg.Chosen;
 import net.vanfleteren.jazygit.feature.discard.DiscardMsg.Requested;
 import net.vanfleteren.jazygit.feature.discard.DiscardMsg.Scope;
+import net.vanfleteren.jazygit.feature.files.FilesError;
 import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.DiscardPlan;
 import net.vanfleteren.jazygit.git.model.FileEntry;
-import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -37,7 +37,7 @@ public final class DiscardUpdate {
     private static Next requested(Model model, List<FileEntry> files) {
         List<FileEntry> changed = files.filter(FileEntry::changed);
         return !files.isEmpty() && changed.isEmpty()
-                ? Next.of(model.fail(AppError.Unchanged.of(files, Option.none())))
+                ? Next.of(model.fail(FilesError.Unchanged.of(files, Option.none())))
                 : Update.ask(model, Option.when(!changed.isEmpty(), () -> new DiscardPopup(changed)));
     }
 

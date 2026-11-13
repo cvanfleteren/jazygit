@@ -10,6 +10,7 @@ import java.util.function.Predicate;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.AreaId;
+import net.vanfleteren.jazygit.state.BaseBranchError;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
@@ -17,6 +18,7 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Repo;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.UpstreamError;
 import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.diff.Scrolled;
 import net.vanfleteren.jazygit.state.diff.ScrolledContent;
@@ -301,12 +303,12 @@ public final class LoadUpdate {
                 known.filter(b -> !b.upstream().map(Upstream::branch).contains(view.other()))
                         .<Validity>map(b -> b.upstream().isDefined()
                                 ? new Validity.Close()
-                                : new Validity.CloseWith(AppError.noUpstream(b)))
+                                : new Validity.CloseWith(UpstreamError.of(b)))
                         .getOrElse(new Validity.Keep());
             case BASE ->
                 tipOf(model, view.other())
                         .filter(Option::isEmpty)
-                        .<Validity>map(gone -> new Validity.CloseWith(new AppError.NoBaseBranch(view.branch())))
+                        .<Validity>map(gone -> new Validity.CloseWith(new BaseBranchError.None(view.branch())))
                         .getOrElse(new Validity.Keep());
         };
     }

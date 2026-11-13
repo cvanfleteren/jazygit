@@ -20,13 +20,13 @@ import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.gh.model.RepositoryPullRequests;
 import net.vanfleteren.jazygit.settings.UnseenPullRequests;
-import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.github.PullRequestsError;
 import net.vanfleteren.jazygit.state.preferences.Screen;
 import net.vanfleteren.jazygit.state.view.ViewMsg;
 import org.junit.jupiter.api.Test;
@@ -323,9 +323,9 @@ class PrOverviewUpdateTest {
     void whetherAPullRequestIsOfTheRepositoryIsNotKnownWhileItsPullRequestsAreReadOrWhenThatFailed() {
         var failure = refused("gh: not logged in");
 
-        assertEquals(Either.left(new AppError.PullRequestsNotRead()), PrOverview.INITIAL.ofThisRepository(NEW));
+        assertEquals(Either.left(new PullRequestsError.NotRead()), PrOverview.INITIAL.ofThisRepository(NEW));
         assertEquals(
-                Either.left(new AppError.PullRequestsUnavailable(failure)),
+                Either.left(new PullRequestsError.Unavailable(failure)),
                 PrOverview.INITIAL
                         .withRepository(new Loadable.Failed<>(failure))
                         .ofThisRepository(NEW));

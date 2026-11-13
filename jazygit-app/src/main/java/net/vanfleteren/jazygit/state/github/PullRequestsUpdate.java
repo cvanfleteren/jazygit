@@ -3,7 +3,6 @@ package net.vanfleteren.jazygit.state.github;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
-import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.GitHubBases;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -59,7 +58,7 @@ public final class PullRequestsUpdate {
                 yield GitHubReads.done(
                         failure.accountUnavailable()
                                         && !model.gitHub().pullRequestsFailure().contains(failure)
-                                ? failed.fail(new AppError.PullRequestsUnavailable(failure))
+                                ? failed.fail(new PullRequestsError.Unavailable(failure))
                                 : failed,
                         new LoadRepositoryPullRequests());
             }

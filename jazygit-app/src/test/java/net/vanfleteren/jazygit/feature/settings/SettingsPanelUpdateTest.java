@@ -47,6 +47,7 @@ import net.vanfleteren.jazygit.state.operation.CommandLog;
 import net.vanfleteren.jazygit.state.popup.*;
 import net.vanfleteren.jazygit.state.preferences.RepositoryTheme;
 import net.vanfleteren.jazygit.state.preferences.SaveSettings;
+import net.vanfleteren.jazygit.state.preferences.SettingsError;
 import net.vanfleteren.jazygit.state.preferences.SettingsMsg;
 import net.vanfleteren.jazygit.state.view.*;
 import org.junit.jupiter.api.Test;
@@ -633,7 +634,7 @@ class SettingsPanelUpdateTest {
 
         assertEquals(ThemeName.DARCULA, read.preferences().settings().theme());
         assertEquals(
-                Option.of(new AppError.SettingsNotReread(INVALID_THEME)),
+                Option.of(new SettingsError.NotReread(INVALID_THEME)),
                 read.outcome().error());
         assertEquals(Option.of(INVALID_THEME), read.preferences().reported());
     }
@@ -651,7 +652,7 @@ class SettingsPanelUpdateTest {
                 .model();
 
         assertEquals(
-                Option.of(new AppError.SettingsNotReread(INVALID_THEME)),
+                Option.of(new SettingsError.NotReread(INVALID_THEME)),
                 read.outcome().error());
     }
 
@@ -677,8 +678,7 @@ class SettingsPanelUpdateTest {
 
         assertEquals(Option.none(), same.outcome().error());
         assertEquals(
-                Option.of(new AppError.SettingsNotReread(other)),
-                changed.outcome().error());
+                Option.of(new SettingsError.NotReread(other)), changed.outcome().error());
     }
 
     @Test
@@ -730,7 +730,7 @@ class SettingsPanelUpdateTest {
 
         assertEquals(List.of(new SettingsPanelCmd.Reopen(Landing.of(model.repoView()))), next.cmds());
         assertEquals(
-                Option.of(new AppError.SettingsNotReread(INVALID_THEME)),
+                Option.of(new SettingsError.NotReread(INVALID_THEME)),
                 shownAgain.outcome().error());
     }
 
@@ -739,7 +739,7 @@ class SettingsPanelUpdateTest {
         SettingsStore.Loaded file = read(Settings.DEFAULT.withAnimations(false));
         Model last = TestModels.loaded()
                 .mapPreferences(preferences -> preferences.withFile(file).withReported(Option.of(INVALID_THEME)))
-                .fail(new AppError.SettingsNotSaved(
+                .fail(new SettingsError.NotSaved(
                         new Failure.Settings(new SettingsProblem.Unwritable(FILE, "Permission denied"))));
 
         assertEquals(

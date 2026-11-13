@@ -11,6 +11,7 @@ import dev.tamboui.tui.event.KeyCode;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.state.*;
+import net.vanfleteren.jazygit.state.UpstreamError;
 import net.vanfleteren.jazygit.state.popup.*;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
@@ -24,7 +25,7 @@ class ErrorDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     private final ConfirmDialog<ErrorPopup> dialog = new ConfirmDialog<>(ErrorDialog.SPEC, dispatched::add);
-    private final Model open = TestModels.loaded().fail(new AppError.NoUpstream(new BranchName("feature")));
+    private final Model open = TestModels.loaded().fail(new UpstreamError.None(new BranchName("feature")));
 
     @Test
     void showsTheErrorUnderTheTitleError() throws Exception {
