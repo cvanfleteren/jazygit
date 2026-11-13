@@ -136,16 +136,14 @@ public final class ScrollArea {
         Body body = shown.body();
         // A version rendered is drawn as wide as the area, which it learns while it draws (ADR 80, 103).
         int width = element.state().viewportWidth() > 0 ? element.state().viewportWidth() : RichDiff.RENDERED_WIDTH;
-        Option<Styled> last = styled.filter(before -> before.body().equals(body)
-                && before.theme() == theme
-                && (!rendering(body) || before.width() == width));
+        Option<Styled> last = styled.filter(before ->
+                before.body().equals(body) && before.theme() == theme && (!rendering(body) || before.width() == width));
         // The hunk a range is open in is shown as git gives it, so a range holds the lines it shows (ADR 83). A new
         // body has its hunk looked up in its diff, so it is drawn once, in the order it is shown in.
         // The stop the cursor was on, which the stops of the cursor and the range are looked for from.
         int near = cursor.map(DiffCursor::stop).getOrElse(0);
         Option<DiffStops.HunkAt> asGiven = told.mark()
-                .flatMap(mark ->
-                        last.map(before -> before.hunk(mark, near)).getOrElse(() -> markedHunk(body, mark)));
+                .flatMap(mark -> last.map(before -> before.hunk(mark, near)).getOrElse(() -> markedHunk(body, mark)));
         Styled current = last.filter(before -> before.asGiven().equals(asGiven))
                 .getOrElse(() -> Styled.of(body, theme, asGiven, style.drawn(body, asGiven, width), width));
         styled = Option.of(current);
@@ -163,11 +161,7 @@ public final class ScrollArea {
                 .filter(shift -> shift != 0)
                 .map(shift -> {
                     Scrolled shifted = new Scrolled(
-                            told.content(),
-                            Math.max(0, told.row() + shift),
-                            told.column(),
-                            told.cursor(),
-                            told.mark());
+                            told.content(), Math.max(0, told.row() + shift), told.column(), told.cursor(), told.mark());
                     sent = Option.of(Tuple.of(known, shifted));
                     return shifted;
                 })
@@ -201,8 +195,7 @@ public final class ScrollArea {
         state.setContentHeight(current.lines().size());
         state.scrollToTop();
         state.scrollDown(row);
-        return element.onKeyEvent(event -> keys(event, focused, content))
-                .onMouseEvent(event -> mouse(event, content));
+        return element.onKeyEvent(event -> keys(event, focused, content)).onMouseEvent(event -> mouse(event, content));
     }
 
     /**
