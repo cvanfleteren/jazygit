@@ -4,16 +4,14 @@ import java.util.function.IntPredicate;
 
 /**
  * The commands of readline that move in or delete from the text being typed, named as readline names them. Like
- * readline, they know two kinds of words: {@link #UNIX_WORD_RUBOUT} deletes back to whitespace, so all of
- * {@code feature/foo-bar}, while the other word commands stop at anything that is not a letter or a digit. The
- * line ones work on the line the cursor is on.
+ * readline's, the word commands stop at anything that is not a letter or a digit. The line ones work on the line the
+ * cursor is on.
  */
 public enum LineCommand {
     BEGINNING_OF_LINE,
     END_OF_LINE,
     BACKWARD_WORD,
     FORWARD_WORD,
-    UNIX_WORD_RUBOUT,
     BACKWARD_KILL_WORD,
     KILL_WORD,
     UNIX_LINE_DISCARD,
@@ -21,8 +19,6 @@ public enum LineCommand {
 
     private static final IntPredicate WORD = LineCommand::isWordChar;
     private static final IntPredicate NOT_WORD = WORD.negate();
-    private static final IntPredicate SPACE = Character::isWhitespace;
-    private static final IntPredicate NOT_SPACE = SPACE.negate();
     private static final IntPredicate NOT_NEWLINE = c -> c != '\n';
 
     /**
@@ -36,7 +32,6 @@ public enum LineCommand {
             case END_OF_LINE -> new Edit.Move(lineEnd(text, cursor));
             case BACKWARD_WORD -> new Edit.Move(wordStart(text, cursor));
             case FORWARD_WORD -> new Edit.Move(wordEnd(text, cursor));
-            case UNIX_WORD_RUBOUT -> new Edit.Delete(back(text, back(text, cursor, SPACE), NOT_SPACE), cursor);
             case BACKWARD_KILL_WORD -> new Edit.Delete(wordStart(text, cursor), cursor);
             case KILL_WORD -> new Edit.Delete(cursor, wordEnd(text, cursor));
             case UNIX_LINE_DISCARD -> new Edit.Delete(lineStart(text, cursor), cursor);

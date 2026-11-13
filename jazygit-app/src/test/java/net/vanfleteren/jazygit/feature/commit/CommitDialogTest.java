@@ -141,6 +141,32 @@ class CommitDialogTest {
     }
 
     @Test
+    void ctrlWInTheDescriptionStaysOnItsLine() throws Exception {
+        java.util.List<KeyEvent> global = new ArrayList<>();
+        try (ToolkitTestRunner runner = start()) {
+            // The app's global Ctrl+W shows whitespace in the diffs, after the field had its chance.
+            runner.runner().eventRouter().addGlobalHandler(event -> {
+                if (event instanceof KeyEvent key && key.hasCtrl() && key.isChar('w')) {
+                    global.add(key);
+                }
+                return EventResult.UNHANDLED;
+            });
+            type(runner, "fix it");
+            SettledPilot.of(runner).press(KeyCode.TAB);
+            type(runner, "first");
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            type(runner, "second");
+            SettledPilot.of(runner).press('w', KeyModifiers.CTRL);
+            type(runner, "next");
+            SettledPilot.of(runner).press(KeyCode.ENTER, KeyModifiers.CTRL);
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(java.util.List.of(new CommitMessage("fix it", "first\nnext")), held);
+        assertEquals(java.util.List.of(), global);
+    }
+
+    @Test
     void aPasteKeepsItsLineBreaksInTheDescriptionOnly() throws Exception {
         try (ToolkitTestRunner runner = start()) {
             SettledPilot.paste(runner, "fix\nit");

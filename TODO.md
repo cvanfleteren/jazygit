@@ -34,13 +34,6 @@ Refactorings that were left out of the functional/immutable cleanup, and why.
   - Commit signing with a terminal pinentry still prompts on the TUI's terminal.
   - The pull requests are read up to 200 at a time.
   - Opening the app from inside `.git` reports a failed command, not that there is no working tree.
-- [ ] **Word-level editing in text fields.** Ctrl+W and Alt+Backspace (delete word back), Ctrl+←/→ and Alt+B/F
-  (move by word), Ctrl+A/E (line start/end), Ctrl+U/K (delete to line start/end). TamboUI has none of these:
-  its states only edit by character and can't set the cursor, its key handlers treat Ctrl+arrows as plain
-  arrows, and they handle keys before an `onKeyEvent` lambda. A wrapper registered under the field's id, like
-  `SubmittableTextArea`, can see the keys first and apply pure word functions on (text, cursor). Start with
-  the single-line inputs and the commit summary; the description area needs rows and wrapping. How terminals
-  send Ctrl+Backspace and Ctrl+arrows varies. Worth contributing to TamboUI later.
 - [ ] **Resolve conflicts in the app.** A merge, rebase, cherry-pick or revert in progress is shown in the status
   panel, and can be continued, aborted or skipped (M); operations started in the app that stop on conflicts are left
   so. But the conflicts themselves are resolved outside the app. Picking ours or theirs per file, and opening a file

@@ -25,8 +25,6 @@ class LineEditTest {
                 Option.of(LineCommand.BEGINNING_OF_LINE), LineEdit.command(KeyEvent.ofChar('a', KeyModifiers.CTRL)));
         assertEquals(Option.of(LineCommand.END_OF_LINE), LineEdit.command(KeyEvent.ofChar('e', KeyModifiers.CTRL)));
         assertEquals(
-                Option.of(LineCommand.UNIX_WORD_RUBOUT), LineEdit.command(KeyEvent.ofChar('w', KeyModifiers.CTRL)));
-        assertEquals(
                 Option.of(LineCommand.UNIX_LINE_DISCARD), LineEdit.command(KeyEvent.ofChar('u', KeyModifiers.CTRL)));
         assertEquals(Option.of(LineCommand.KILL_LINE), LineEdit.command(KeyEvent.ofChar('k', KeyModifiers.CTRL)));
         assertEquals(Option.of(LineCommand.BACKWARD_WORD), LineEdit.command(KeyEvent.ofChar('b', ALT)));
@@ -37,24 +35,17 @@ class LineEditTest {
     }
 
     @Test
-    void ctrlWithTheArrowsAndDeleteGoesByWords() {
-        assertEquals(
-                Option.of(LineCommand.BACKWARD_WORD),
-                LineEdit.command(KeyEvent.ofKey(KeyCode.LEFT, KeyModifiers.CTRL)));
-        assertEquals(
-                Option.of(LineCommand.FORWARD_WORD),
-                LineEdit.command(KeyEvent.ofKey(KeyCode.RIGHT, KeyModifiers.CTRL)));
-        assertEquals(
-                Option.of(LineCommand.KILL_WORD), LineEdit.command(KeyEvent.ofKey(KeyCode.DELETE, KeyModifiers.CTRL)));
-    }
-
-    @Test
     void otherKeysAreLeftToTheField() {
         assertEquals(Option.none(), LineEdit.command(KeyEvent.ofChar('w')));
         assertEquals(Option.none(), LineEdit.command(KeyEvent.ofChar('b', KeyModifiers.CTRL)));
         assertEquals(Option.none(), LineEdit.command(KeyEvent.ofChar('w', ALT)));
         assertEquals(Option.none(), LineEdit.command(KeyEvent.ofKey(KeyCode.LEFT)));
         assertEquals(Option.none(), LineEdit.command(KeyEvent.ofKey(KeyCode.BACKSPACE)));
+        // The field's own words suit branch names and paths better.
+        assertEquals(Option.none(), LineEdit.command(KeyEvent.ofChar('w', KeyModifiers.CTRL)));
+        assertEquals(Option.none(), LineEdit.command(KeyEvent.ofKey(KeyCode.LEFT, KeyModifiers.CTRL)));
+        assertEquals(Option.none(), LineEdit.command(KeyEvent.ofKey(KeyCode.RIGHT, KeyModifiers.CTRL)));
+        assertEquals(Option.none(), LineEdit.command(KeyEvent.ofKey(KeyCode.DELETE, KeyModifiers.CTRL)));
     }
 
     @Test
@@ -62,13 +53,13 @@ class LineEditTest {
         TextInputState state = new TextInputState("git checkout feature/foo-bar");
         state.moveCursorToEnd();
 
-        assertTrue(LineEdit.handle(state, KeyEvent.ofKey(KeyCode.LEFT, KeyModifiers.CTRL)));
+        assertTrue(LineEdit.handle(state, KeyEvent.ofChar('b', ALT)));
         assertEquals(25, state.cursorPosition());
-        assertTrue(LineEdit.handle(state, KeyEvent.ofChar('w', KeyModifiers.CTRL)));
-        assertEquals("git checkout bar", state.text());
-        assertEquals(13, state.cursorPosition());
+        assertTrue(LineEdit.handle(state, KeyEvent.ofKey(KeyCode.BACKSPACE, ALT)));
+        assertEquals("git checkout feature/bar", state.text());
+        assertEquals(21, state.cursorPosition());
         assertFalse(LineEdit.handle(state, KeyEvent.ofChar('x')));
-        assertEquals("git checkout bar", state.text());
+        assertEquals("git checkout feature/bar", state.text());
     }
 
     @Test
@@ -78,7 +69,7 @@ class LineEditTest {
         assertTrue(LineEdit.handle(state, KeyEvent.ofChar('a', KeyModifiers.CTRL)));
         assertEquals(1, state.cursorRow());
         assertEquals(0, state.cursorCol());
-        assertTrue(LineEdit.handle(state, KeyEvent.ofChar('w', KeyModifiers.CTRL)));
+        assertTrue(LineEdit.handle(state, KeyEvent.ofKey(KeyCode.BACKSPACE, ALT)));
         assertEquals("first second line", state.text());
         assertEquals(0, state.cursorRow());
         assertEquals(6, state.cursorCol());
