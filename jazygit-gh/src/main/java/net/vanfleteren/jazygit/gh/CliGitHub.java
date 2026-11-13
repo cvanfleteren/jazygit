@@ -4,7 +4,14 @@ import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import net.vanfleteren.jazygit.gh.account.CliAccount;
+import net.vanfleteren.jazygit.gh.checks.CliChecks;
 import net.vanfleteren.jazygit.gh.model.GhAccount;
+import net.vanfleteren.jazygit.gh.process.GhProcess;
+import net.vanfleteren.jazygit.gh.process.GhToken;
+import net.vanfleteren.jazygit.gh.pullrequests.CliPullRequests;
+import net.vanfleteren.jazygit.gh.reviews.CliReviews;
+import net.vanfleteren.jazygit.gh.stacks.CliStacks;
 
 /**
  * Gives the {@link GitHub} of the repository in a working tree, whose roles go through the {@code gh} command line
@@ -46,7 +53,7 @@ public final class CliGitHub {
      * GitHub as {@link #of(Path, String, GhToken)}, choosing the browser by the variables {@code environment} gives
      * and the system {@code os}.
      */
-    static GitHub of(
+    public static GitHub of(
             Path worktree, String executable, GhToken token, Function<String, Option<String>> environment, String os) {
         return of(worktree, executable, token, () -> GhAccount.GITHUB, account -> Option.none(), environment, os);
     }
@@ -55,7 +62,7 @@ public final class CliGitHub {
      * GitHub as {@link #of(Path, String, GhToken, Supplier, Function)}, choosing the browser by the variables
      * {@code environment} gives and the system {@code os}.
      */
-    static GitHub of(
+    public static GitHub of(
             Path worktree,
             String executable,
             GhToken token,

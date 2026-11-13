@@ -8,7 +8,28 @@ import io.vavr.control.Try;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.function.Supplier;
-import net.vanfleteren.jazygit.git.GitError.*;
+import net.vanfleteren.jazygit.git.branches.CliBranches;
+import net.vanfleteren.jazygit.git.branches.CliCheckout;
+import net.vanfleteren.jazygit.git.branches.CliConfig;
+import net.vanfleteren.jazygit.git.branches.CliRemotes;
+import net.vanfleteren.jazygit.git.branches.CliWorktrees;
+import net.vanfleteren.jazygit.git.branches.Remotes;
+import net.vanfleteren.jazygit.git.commits.CliCommits;
+import net.vanfleteren.jazygit.git.files.CliDiffs;
+import net.vanfleteren.jazygit.git.files.CliEditor;
+import net.vanfleteren.jazygit.git.files.CliIndex;
+import net.vanfleteren.jazygit.git.files.CliMetadata;
+import net.vanfleteren.jazygit.git.files.CliStashes;
+import net.vanfleteren.jazygit.git.files.CliStatus;
+import net.vanfleteren.jazygit.git.files.RepositoryIdentity;
+import net.vanfleteren.jazygit.git.history.CliHistory;
+import net.vanfleteren.jazygit.git.history.CliInProgress;
+import net.vanfleteren.jazygit.git.history.CliIntegrate;
+import net.vanfleteren.jazygit.git.process.GitCommand;
+import net.vanfleteren.jazygit.git.process.GitError;
+import net.vanfleteren.jazygit.git.process.GitError.*;
+import net.vanfleteren.jazygit.git.process.GitFailure;
+import net.vanfleteren.jazygit.git.process.GitProcess;
 
 /**
  * Gives the {@link Git} of a real repository, whose roles go through the {@code git} command line tool only, so the

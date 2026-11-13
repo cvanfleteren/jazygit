@@ -15,7 +15,7 @@ import net.vanfleteren.jazygit.feature.fetch.FetchMsg;
 import net.vanfleteren.jazygit.feature.settings.SettingsPanelUpdate;
 import net.vanfleteren.jazygit.git.CliGit;
 import net.vanfleteren.jazygit.git.Git;
-import net.vanfleteren.jazygit.git.GitError;
+import net.vanfleteren.jazygit.git.process.GitError;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import net.vanfleteren.jazygit.state.*;

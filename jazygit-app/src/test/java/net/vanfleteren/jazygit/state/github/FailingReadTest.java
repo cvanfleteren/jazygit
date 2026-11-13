@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.List;
 import java.time.Duration;
-import net.vanfleteren.jazygit.gh.GhError;
+import net.vanfleteren.jazygit.gh.process.GhError;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;

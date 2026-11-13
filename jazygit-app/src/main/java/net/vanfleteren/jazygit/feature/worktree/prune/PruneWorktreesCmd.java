@@ -3,7 +3,7 @@ package net.vanfleteren.jazygit.feature.worktree.prune;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import net.vanfleteren.jazygit.git.Git;
-import net.vanfleteren.jazygit.git.GitFailure;
+import net.vanfleteren.jazygit.git.process.GitFailure;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.operation.GitOperationCmd;
 import net.vanfleteren.jazygit.state.operation.Operation;

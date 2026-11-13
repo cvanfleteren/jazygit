@@ -8,7 +8,7 @@ import io.vavr.control.Option;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import net.vanfleteren.jazygit.git.History;
+import net.vanfleteren.jazygit.git.history.History;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitGraph;
 import net.vanfleteren.jazygit.git.model.Sha;

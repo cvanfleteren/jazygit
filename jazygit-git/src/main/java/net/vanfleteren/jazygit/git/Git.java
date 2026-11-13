@@ -2,6 +2,20 @@ package net.vanfleteren.jazygit.git;
 
 import java.nio.file.Path;
 import lombok.With;
+import net.vanfleteren.jazygit.git.branches.Branches;
+import net.vanfleteren.jazygit.git.branches.Checkout;
+import net.vanfleteren.jazygit.git.branches.Config;
+import net.vanfleteren.jazygit.git.branches.Remotes;
+import net.vanfleteren.jazygit.git.branches.Worktrees;
+import net.vanfleteren.jazygit.git.commits.Commits;
+import net.vanfleteren.jazygit.git.files.Diffs;
+import net.vanfleteren.jazygit.git.files.Editor;
+import net.vanfleteren.jazygit.git.files.Index;
+import net.vanfleteren.jazygit.git.files.RepositoryIdentity;
+import net.vanfleteren.jazygit.git.files.Stashes;
+import net.vanfleteren.jazygit.git.files.Status;
+import net.vanfleteren.jazygit.git.history.History;
+import net.vanfleteren.jazygit.git.history.Integrate;
 
 /**
  * Everything the TUI does with git, in a repository, split into roles (ADR 69): the information it shows and the
