@@ -11,13 +11,13 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.feature.branch.tabs.BranchesTabMsg;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.git.Git;
-import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.StubGit;
-import net.vanfleteren.jazygit.git.StubWorktrees;
+import net.vanfleteren.jazygit.git.branches.StubWorktrees;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.Head;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.Worktree;
+import net.vanfleteren.jazygit.git.process.GitError;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.load.LoadMsg;
 import net.vanfleteren.jazygit.state.load.LoadWorktreeChanges;
@@ -164,7 +164,8 @@ class WorktreeChangesTest {
                         known,
                         new LoadMsg.Failed(
                                 LOAD,
-                                new Failure.Git(new net.vanfleteren.jazygit.git.GitError.TimedOut("status", LINKED))))
+                                new Failure.Git(
+                                        new net.vanfleteren.jazygit.git.process.GitError.TimedOut("status", LINKED))))
                 .model();
 
         assertEquals(HashMap.of(LINKED.toString(), true), model.repo().worktreeChanges());

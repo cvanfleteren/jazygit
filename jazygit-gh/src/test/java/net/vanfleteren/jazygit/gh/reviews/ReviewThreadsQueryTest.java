@@ -1,0 +1,317 @@
+package net.vanfleteren.jazygit.gh.reviews;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+import io.vavr.collection.List;
+import io.vavr.control.Either;
+import io.vavr.control.Option;
+import java.time.Instant;
+import net.vanfleteren.jazygit.gh.model.CommentRights;
+import net.vanfleteren.jazygit.gh.model.GhCommit;
+import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
+import net.vanfleteren.jazygit.gh.model.Reaction;
+import net.vanfleteren.jazygit.gh.model.Reactions;
+import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
+import net.vanfleteren.jazygit.gh.model.ReviewThread;
+import net.vanfleteren.jazygit.gh.model.ReviewThread.Comment;
+import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
+import net.vanfleteren.jazygit.gh.model.ReviewThread.Subject;
+import net.vanfleteren.jazygit.gh.process.GhError;
+import net.vanfleteren.jazygit.gh.process.GhProcess;
+import org.junit.jupiter.api.Test;
+
+/**
+ * The review threads of a pull request, from the pages GitHub answers the query of {@link ReviewThreadsQuery} with.
+ */
+class ReviewThreadsQueryTest {
+
+    private static final String AT = "2026-10-10T08:00:00Z";
+
+    private static Either<GhError.UnexpectedOutput, ReviewRemarks> read(String... pages) {
+        return GhProcess.decoded(List.of(pages).mkString("[", ", ", "]"), ReviewThreadsQuery.DECODER);
+    }
+
+    private static String page(String head, String threads) {
+        return """
+                { "data": { "repository": { "pullRequest": { "state": "OPEN", "headRefOid": %s, "baseRefOid": "def456",
+                  "isDraft": false, "id": "", "viewerDidAuthor": false, "viewerLatestReview": null,
+                  "reviewThreads": { "pageInfo": { "hasNextPage": false, "endCursor": null },
+                  "nodes": [ %s ] } } } } }""".formatted(head, threads);
+    }
+
+    private static String thread(String place, int total, String comments) {
+        return """
+                { "id": "PRRT_1", "path": "src/Foo.java", %s, "originalLine": 12, "isResolved": false, "isOutdated": false,
+                  "viewerCanReply": true, "viewerCanResolve": true, "viewerCanUnresolve": false,
+                  "comments": { "totalCount": %d, "nodes": [ %s ] } }""".formatted(place, total, comments);
+    }
+
+    private static String onLine(int line) {
+        return """
+                "diffSide": "RIGHT", "line": %d, "startLine": null, "startDiffSide": null,
+                "subjectType": "LINE\"""".formatted(line);
+    }
+
+    private static String comment(String author, String state, String minimized, String body) {
+        return comment(author, state, minimized, body, "true", "true");
+    }
+
+    private static String comment(
+            String author, String state, String minimized, String body, String update, String delete) {
+        return """
+                { "id": "IC_1", "fullDatabaseId": "101", "author": %s, "createdAt": "%s", "body": "%s", "state": "%s", "isMinimized": %b,
+                  "minimizedReason": %s, "viewerCanUpdate": %s, "viewerCanDelete": %s, "viewerCanReact": %s, "reactionGroups": [] }""".formatted(author, AT, body, state, !minimized.equals("null"), minimized, update, delete, update);
+    }
+
+    private static ReviewThread onLine12(List<Comment> comments, int more) {
+        return new ReviewThread(
+                "src/Foo.java",
+                Side.RIGHT,
+                Option.of(12),
+                Option.none(),
+                Side.RIGHT,
+                Option.of(12),
+                false,
+                false,
+                Subject.LINE,
+                comments,
+                more,
+                new ReviewThread.Id("PRRT_1"),
+                new ReviewThread.Rights(true, true, false));
+    }
+
+    @Test
+    void theThreadsOfAllPagesWithTheCommitsOfTheFirst() {
+        Comment bob = new Comment(
+                "bob",
+                Instant.parse(AT),
+                "Rename this?",
+                Option.none(),
+                new Comment.Id("IC_1"),
+                new Comment.RestId("101"),
+                CommentRights.ALL);
+        Comment carol = new Comment(
+                "carol",
+                Instant.parse(AT),
+                "Agreed",
+                Option.none(),
+                new Comment.Id("IC_1"),
+                new Comment.RestId("101"),
+                CommentRights.ALL);
+
+        assertEquals(
+                Either.right(new ReviewRemarks(
+                        PullRequestDetails.State.OPEN,
+                        Option.of(new GhCommit("abc123")),
+                        Option.of(new GhCommit("def456")),
+                        List.of(onLine12(List.of(bob), 0), onLine12(List.of(carol), 0)))),
+                read(
+                        page(
+                                "\"abc123\"",
+                                thread(
+                                        onLine(12),
+                                        1,
+                                        comment("{ \"login\": \"bob\" }", "SUBMITTED", "null", "Rename this?"))),
+                        page(
+                                "\"abc123\"",
+                                thread(
+                                        onLine(12),
+                                        1,
+                                        comment("{ \"login\": \"carol\" }", "SUBMITTED", "null", "Agreed")))));
+    }
+
+    @Test
+    void whetherItIsADraftAndWhatTheViewerNeedsToReviewItAsTheFirstPageSays() {
+        String first = page("\"abc123\"", "")
+                .replace(
+                        "\"isDraft\": false, \"id\": \"\", \"viewerDidAuthor\": false, \"viewerLatestReview\": null",
+                        "\"isDraft\": true, \"id\": \"PR_1\", \"viewerDidAuthor\": true, "
+                                + "\"viewerLatestReview\": { \"state\": \"PENDING\" }");
+
+        Either<GhError.UnexpectedOutput, ReviewRemarks> read = read(first, page("\"abc123\"", ""));
+
+        assertEquals(Either.right(true), read.map(ReviewRemarks::draft));
+        assertEquals(
+                Either.right(new PullRequestDetails.Reviewing("PR_1", true, true)), read.map(ReviewRemarks::reviewing));
+    }
+
+    @Test
+    void aCommentNotSubmittedYetIsLeftOutAndAThreadOfOnlyThoseToo() {
+        String mine = comment("{ \"login\": \"me\" }", "PENDING", "null", "Draft");
+        String theirs = comment("{ \"login\": \"bob\" }", "SUBMITTED", "null", "Done");
+
+        assertEquals(
+                List.of(onLine12(
+                        List.of(new Comment(
+                                "bob",
+                                Instant.parse(AT),
+                                "Done",
+                                Option.none(),
+                                new Comment.Id("IC_1"),
+                                new Comment.RestId("101"),
+                                CommentRights.ALL)),
+                        0)),
+                read(page(
+                                "\"abc123\"",
+                                thread(onLine(12), 2, theirs + ", " + mine) + ", " + thread(onLine(12), 1, mine)))
+                        .get()
+                        .threads());
+    }
+
+    @Test
+    void aHiddenCommentSaysWhyAndADeletedAuthorHasNoName() {
+        assertEquals(
+                List.of(new Comment(
+                        "",
+                        Instant.parse(AT),
+                        "spam",
+                        Option.of("SPAM"),
+                        new Comment.Id("IC_1"),
+                        new Comment.RestId("101"),
+                        CommentRights.ALL)),
+                read(page("\"abc123\"", thread(onLine(12), 1, comment("null", "SUBMITTED", "\"SPAM\"", "spam"))))
+                        .get()
+                        .threads()
+                        .head()
+                        .comments());
+    }
+
+    @Test
+    void aThreadWithMoreCommentsThanAreReadSaysHowManyMore() {
+        assertEquals(
+                49,
+                read(page(
+                                "\"abc123\"",
+                                thread(
+                                        onLine(12),
+                                        50,
+                                        comment("{ \"login\": \"bob\" }", "SUBMITTED", "null", "First"))))
+                        .get()
+                        .threads()
+                        .head()
+                        .more());
+    }
+
+    @Test
+    void anOutdatedThreadOnSeveralLinesOfTheOldFileAndOneOnAWholeFile() {
+        String outdated = """
+                "diffSide": "LEFT", "line": null, "startLine": 10, "startDiffSide": "RIGHT", "subjectType": "LINE\"""";
+        String onFile = """
+                "diffSide": "RIGHT", "line": null, "startLine": null, "startDiffSide": null, "subjectType": "FILE\"""";
+        String bob = comment("{ \"login\": \"bob\" }", "SUBMITTED", "null", "Hm");
+
+        List<ReviewThread> threads = read(page("null", thread(outdated, 1, bob) + ", " + thread(onFile, 1, bob)))
+                .get()
+                .threads();
+
+        assertEquals(Side.LEFT, threads.head().side());
+        assertEquals(Option.none(), threads.head().line());
+        assertEquals(Option.of(10), threads.head().startLine());
+        // Its first line on the other side than its last.
+        assertEquals(Side.RIGHT, threads.head().startSide());
+        assertEquals(Side.RIGHT, threads.last().startSide());
+        assertEquals(Subject.FILE, threads.last().subject());
+    }
+
+    @Test
+    void withoutAPageThereIsNothing() {
+        assertEquals(Either.right(ReviewRemarks.none()), read());
+    }
+
+    @Test
+    void theQueryAsksForEveryPageOfThreadsAndAtMostFiftyCommentsEach() {
+        String command = ReviewThreadsQuery.command(7).args().mkString(" ");
+
+        assertTrue(command.contains("--paginate --slurp"), command);
+        assertTrue(command.contains("number=7"), command);
+        assertTrue(command.contains("reviewThreads(first: 100, after: $endCursor)"), command);
+        assertTrue(command.contains("comments(first: 50)"), command);
+    }
+
+    @Test
+    void theIdsAndTheRightsOfTheViewerAreRead() {
+        ReviewRemarks read = read(page(
+                        "\"abc123\"",
+                        thread(onLine(12), 1, comment("{ \"login\": \"bob\" }", "SUBMITTED", "null", "Hm"))))
+                .get();
+
+        assertEquals(new ReviewThread.Id("PRRT_1"), read.threads().head().id());
+        assertEquals(
+                new ReviewThread.Rights(true, true, false),
+                read.threads().head().rights());
+        assertEquals(
+                new Comment.Id("IC_1"), read.threads().head().comments().head().id());
+        assertEquals(
+                new Comment.RestId("101"),
+                read.threads().head().comments().head().restId());
+    }
+
+    @Test
+    void whatTheViewerMayDoWithEachCommentIsRead() {
+        ReviewRemarks read = read(page(
+                        "\"abc123\"",
+                        thread(
+                                onLine(12),
+                                2,
+                                comment("{ \"login\": \"bob\" }", "SUBMITTED", "null", "Hm", "false", "false") + ", "
+                                        + comment("{ \"login\": \"me\" }", "SUBMITTED", "null", "Ok", "true", "true"))))
+                .get();
+
+        assertEquals(
+                List.of(CommentRights.NONE, CommentRights.ALL),
+                read.threads().head().comments().map(Comment::rights));
+        assertTrue(ReviewThreadsQuery.QUERY.contains("viewerCanUpdate viewerCanDelete viewerCanReact"));
+    }
+
+    @Test
+    void theReactionsGivenToEachCommentAreReadInTheOrderOfGitHubsSite() {
+        String reacted =
+                comment("{ \"login\": \"bob\" }", "SUBMITTED", "null", "Hm").replace("\"reactionGroups\": []", """
+                        "reactionGroups": [
+                          { "content": "EYES", "viewerHasReacted": false, "reactors": { "totalCount": 2 } },
+                          { "content": "LAUGH", "viewerHasReacted": false, "reactors": { "totalCount": 0 } },
+                          { "content": "THUMBS_UP", "viewerHasReacted": true, "reactors": { "totalCount": 1 } }
+                        ]""");
+
+        ReviewRemarks read =
+                read(page("\"abc123\"", thread(onLine(12), 1, reacted))).get();
+
+        assertEquals(
+                new Reactions(List.of(
+                        new Reactions.Group(Reaction.THUMBS_UP, 1, true),
+                        new Reactions.Group(Reaction.EYES, 2, false))),
+                read.threads().head().comments().head().reactions());
+        assertTrue(ReviewThreadsQuery.QUERY.contains(
+                "reactionGroups { content viewerHasReacted reactors { totalCount } }"));
+    }
+
+    @Test
+    void whetherTheViewerMayReactToACommentIsReadApartFromTheirOtherRights() {
+        String locked = comment("{ \"login\": \"me\" }", "SUBMITTED", "null", "Hm", "true", "true")
+                .replace("\"viewerCanReact\": true", "\"viewerCanReact\": false");
+
+        ReviewRemarks read =
+                read(page("\"abc123\"", thread(onLine(12), 1, locked))).get();
+
+        assertEquals(
+                new CommentRights(true, true, false),
+                read.threads().head().comments().head().rights());
+    }
+
+    @Test
+    void aReactionOfAKindJazygitDoesNotKnowIsLeftOutRatherThanFailingTheRead() {
+        String reacted =
+                comment("{ \"login\": \"bob\" }", "SUBMITTED", "null", "Hm").replace("\"reactionGroups\": []", """
+                        "reactionGroups": [
+                          { "content": "SPARKLES", "viewerHasReacted": true, "reactors": { "totalCount": 3 } },
+                          { "content": "ROCKET", "viewerHasReacted": false, "reactors": { "totalCount": 1 } }
+                        ]""");
+
+        ReviewRemarks read =
+                read(page("\"abc123\"", thread(onLine(12), 1, reacted))).get();
+
+        assertEquals(
+                new Reactions(List.of(new Reactions.Group(Reaction.ROCKET, 1, false))),
+                read.threads().head().comments().head().reactions());
+    }
+}

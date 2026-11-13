@@ -57,3 +57,5 @@ browser an account opens links in, and the commands of `gh pr`.
 - This amends ADR 69, decision 8.
 
 Follows from the review's section 2e, the half of section 1a that was not done.
+
+Amended by ADR 120: each role is in a package of its own, its classes public where another package calls them.

@@ -526,7 +526,7 @@ class BranchUpdateTest {
                 new PushMsg.ForceCheckFailed(
                         new BranchName("feature"),
                         net.vanfleteren.jazygit.state.Failure.of(
-                                new net.vanfleteren.jazygit.git.GitError.CommandFailed("boom", 1))));
+                                new net.vanfleteren.jazygit.git.process.GitError.CommandFailed("boom", 1))));
 
         assertEquals(List.of(), next.cmds());
         assertEquals(Option.none(), next.model().popup(ForcePushPopup.class));

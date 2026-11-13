@@ -43,9 +43,9 @@ graph TD
     Keys["keys<br/><i>Keymap: every shortcut, declared once</i>"]
     Feature["feature.*<br/><i>one package per feature</i>"]
     State["state.*<br/><i>Model, Msg, Update, Cmd, Program,<br/>and a subpackage per part of the Model</i>"]
-    Git["git<br/><i>Git, its roles, Cli*, GitProcess, GitError</i>"]
+    Git["git.*<br/><i>Git, CliGit; roles in commits, branches, files, history;<br/>GitProcess, GitError in process</i>"]
     GitModel["git.model"]
-    Gh["gh<br/><i>GitHub, its roles, Cli*, GhProcess, GhError</i>"]
+    Gh["gh.*<br/><i>GitHub, CliGitHub; a package per role;<br/>shared GraphQL; GhProcess, GhError in process</i>"]
     GhModel["gh.model"]
     Process["process<br/><i>Exec</i>"]
     I18n["i18n<br/><i>Messages</i>"]
@@ -219,7 +219,11 @@ adding an operation is adding its subpackage and one line in the `XxxFeature`.
 - **Everything goes through the command line**, `git` and `gh`, so the repository is read and changed exactly as git
   does, with its configuration, hooks and credentials.
 - **Roles** (ADR 69, 114): `Git` and `GitHub` are records holding one interface per role (`Stashes`, `Branches`,
-  `PullRequests`, `Reviews`, ...), each implemented by a package-private `Cli*` class. Tests replace the roles they
+  `PullRequests`, `Reviews`, ...), each implemented by a `Cli*` class. The roles live in subpackages that depend one
+  way (ADR 120): gh has a package per role over `gh.graphql` and `gh.process`; git groups its roles in
+  `git.commits`, `git.branches`, `git.files` and `git.history` over `git.process`, because its `Cli*` classes call
+  each other across roles. What crosses a package is public; ArchUnit keeps the app to `CliGit`, `CliGitHub`, the
+  roles and the errors. Tests replace the roles they
   need on `StubGit.of()` and `StubGitHub.of()`.
 - **One place starts a process:** `GitProcess` and `GhProcess`, both through `process.Exec`. A command is data
   (arguments, environment, timeout) and never prompts: no terminal credentials, no editor, ssh in batch mode.

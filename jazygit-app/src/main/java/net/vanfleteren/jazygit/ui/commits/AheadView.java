@@ -2,7 +2,7 @@ package net.vanfleteren.jazygit.ui.commits;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.History;
+import net.vanfleteren.jazygit.git.history.History;
 import net.vanfleteren.jazygit.git.model.Ahead;
 import net.vanfleteren.jazygit.git.model.BaseDistance;
 import net.vanfleteren.jazygit.git.model.BranchRef;

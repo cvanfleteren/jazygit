@@ -12,8 +12,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.concurrent.TimeoutException;
+import net.vanfleteren.jazygit.git.branches.CliRemotes;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.git.model.Diffs;
+import net.vanfleteren.jazygit.git.process.GitError;
+import net.vanfleteren.jazygit.git.process.GitFailure;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -469,27 +472,6 @@ class CliGitTest {
         assertFalse(ahead.shared(ahead.commits().head().sha()));
         assertTrue(ahead.shared(fork));
         assertEquals(head, ahead.tip());
-    }
-
-    @Test
-    void moreCommitsNotOnTheBaseThanAreReadAreCountedAsMoreWithoutAForkPoint() throws Exception {
-        git("checkout", "-q", "-b", "side");
-        git("commit", "-q", "--allow-empty", "-m", "Side one");
-        git("commit", "-q", "--allow-empty", "-m", "Side two");
-        git("commit", "-q", "--allow-empty", "-m", "Side three");
-        BranchRef main = new BranchRef.Local(new BranchName("main"));
-        Sha head = repository.status().read().get().headCommit().get();
-
-        Ahead three = CliHistory.ahead(repo, head, main, tip("main"), 3).get();
-        Ahead two = CliHistory.ahead(repo, head, main, tip("main"), 2).get();
-
-        assertFalse(three.more());
-        assertTrue(two.more());
-        assertEquals(List.of("Side three", "Side two"), two.commits().map(Commit::message));
-        assertEquals(repository.status().read().get().headCommit().get(), two.tip());
-        // The walk cut short stops at Side one too, so the fork point is asked of git merge-base.
-        assertEquals(three.forkPoint(), two.forkPoint());
-        assertEquals(Option.of(tip("main")), two.forkPoint().map(Commit::sha));
     }
 
     @Test

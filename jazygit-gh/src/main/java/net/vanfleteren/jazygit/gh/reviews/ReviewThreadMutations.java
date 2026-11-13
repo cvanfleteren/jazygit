@@ -1,0 +1,147 @@
+package net.vanfleteren.jazygit.gh.reviews;
+
+import static net.vanfleteren.jazygit.gh.process.GhCommand.gh;
+import static net.vanfleteren.jazygit.json.Decoder.at;
+import static net.vanfleteren.jazygit.json.Decoder.string;
+
+import io.vavr.collection.List;
+import net.vanfleteren.jazygit.gh.model.GhCommit;
+import net.vanfleteren.jazygit.gh.model.NewReviewThread;
+import net.vanfleteren.jazygit.gh.model.Reaction;
+import net.vanfleteren.jazygit.gh.model.ReviewThread;
+import net.vanfleteren.jazygit.gh.process.GhCommand;
+import net.vanfleteren.jazygit.json.Decoder;
+
+/**
+ * Starting a review thread on a pull request, replying to one, resolving it, editing or deleting a comment of it, and
+ * reacting to one (ADR 60, ADR 64, ADR 65, ADR 86). A thread is started and
+ * replied to with REST's review comments, which GitHub publishes at once, as its "Add single comment" does: GraphQL's
+ * {@code addPullRequestReviewThread} and {@code addPullRequestReviewThreadReply} add them to the viewer's pending
+ * review instead, which only they see until it is submitted. A thread is resolved with GraphQL, which REST cannot,
+ * and a comment edited or deleted with GraphQL too, by the node id it is read with.
+ * The text of a comment and a path are passed as strings ({@code -f}), never as {@code -F}, which reads a value
+ * starting with {@code @} from a file. gh fills in the repository of the working tree for {owner} and {repo}.
+ */
+final class ReviewThreadMutations {
+
+    static final String RESOLVE = """
+            mutation($thread: ID!) { resolveReviewThread(input: { threadId: $thread }) { thread { id } } }""";
+
+    static final String UNRESOLVE = """
+            mutation($thread: ID!) { unresolveReviewThread(input: { threadId: $thread }) { thread { id } } }""";
+
+    static final String DELETE = """
+            mutation($comment: ID!) { deletePullRequestReviewComment(input: { id: $comment }) { clientMutationId } }""";
+
+    static final String EDIT = """
+            mutation($comment: ID!, $body: String!) {
+              updatePullRequestReviewComment(input: { pullRequestReviewCommentId: $comment, body: $body }) {
+                pullRequestReviewComment { body }
+              }
+            }""";
+
+    static final String ADD_REACTION = """
+            mutation($subject: ID!, $content: ReactionContent!) { \
+            addReaction(input: { subjectId: $subject, content: $content }) { reaction { content } } }""";
+
+    static final String REMOVE_REACTION = """
+            mutation($subject: ID!, $content: ReactionContent!) { \
+            removeReaction(input: { subjectId: $subject, content: $content }) { reaction { content } } }""";
+
+    // The body of the comment, as GitHub holds it once it is edited.
+    static final Decoder<String> EDITED =
+            at("data.updatePullRequestReviewComment.pullRequestReviewComment.body", string());
+
+    private ReviewThreadMutations() {}
+
+    /**
+     * The command that starts {@code thread} on pull request {@code number}, at its head commit {@code commit}: on its
+     * lines, the first only when it has several, or on its whole file.
+     */
+    static GhCommand start(int number, GhCommit commit, NewReviewThread thread) {
+        List<String> place = thread.lines()
+                .map(lines -> List.of("-F", "line=" + lines.line(), "-f", "side=" + lines.side())
+                        .appendAll(
+                                lines.single()
+                                        ? List.empty()
+                                        : List.of(
+                                                "-F",
+                                                "start_line=" + lines.startLine(),
+                                                "-f",
+                                                "start_side=" + lines.startSide())))
+                .getOrElse(() -> List.of("-f", "subject_type=file"));
+        return post(
+                "repos/{owner}/{repo}/pulls/" + number + "/comments",
+                List.of("-f", "body=" + thread.body(), "-f", "commit_id=" + commit.oid(), "-f", "path=" + thread.path())
+                        .appendAll(place));
+    }
+
+    /**
+     * The command that replies {@code body} to the thread of pull request {@code number} whose first comment has the
+     * id {@code comment}, as REST numbers it.
+     */
+    static GhCommand reply(int number, ReviewThread.Comment.RestId comment, String body) {
+        return post(
+                "repos/{owner}/{repo}/pulls/" + number + "/comments/" + comment.value() + "/replies",
+                List.of("-f", "body=" + body));
+    }
+
+    /**
+     * The command that resolves the thread with node id {@code thread} when {@code resolved}, else unresolves it.
+     */
+    static GhCommand resolve(ReviewThread.Id thread, boolean resolved) {
+        return gh(List.of(
+                        "api",
+                        "graphql",
+                        "-f",
+                        "query=" + (resolved ? RESOLVE : UNRESOLVE),
+                        "-f",
+                        "thread=" + thread.value())
+                .toJavaArray(String[]::new));
+    }
+
+    /**
+     * The command that deletes the comment of a review thread with node id {@code comment}.
+     */
+    static GhCommand delete(ReviewThread.Comment.Id comment) {
+        return gh(List.of("api", "graphql", "-f", "query=" + DELETE, "-f", "comment=" + comment.value())
+                .toJavaArray(String[]::new));
+    }
+
+    /**
+     * The command that changes the comment of a review thread with node id {@code comment} to {@code body}.
+     */
+    static GhCommand edit(ReviewThread.Comment.Id comment, String body) {
+        return gh(List.of(
+                        "api",
+                        "graphql",
+                        "-f",
+                        "query=" + EDIT,
+                        "-f",
+                        "comment=" + comment.value(),
+                        "-f",
+                        "body=" + body)
+                .toJavaArray(String[]::new));
+    }
+
+    /**
+     * The command that gives {@code reaction} to the comment with node id {@code comment} when {@code given}, else
+     * takes it back (ADR 86).
+     */
+    static GhCommand react(ReviewThread.Comment.Id comment, Reaction reaction, boolean given) {
+        return gh(List.of(
+                        "api",
+                        "graphql",
+                        "-f",
+                        "query=" + (given ? ADD_REACTION : REMOVE_REACTION),
+                        "-f",
+                        "subject=" + comment.value(),
+                        "-f",
+                        "content=" + reaction.name())
+                .toJavaArray(String[]::new));
+    }
+
+    private static GhCommand post(String path, List<String> fields) {
+        return gh(List.of("api", "--method", "POST", path).appendAll(fields).toJavaArray(String[]::new));
+    }
+}

@@ -9,7 +9,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
 import java.util.concurrent.atomic.AtomicReference;
-import net.vanfleteren.jazygit.git.History;
+import net.vanfleteren.jazygit.git.history.History;
 import net.vanfleteren.jazygit.git.model.Commit;
 import net.vanfleteren.jazygit.git.model.CommitGraph;
 import net.vanfleteren.jazygit.git.model.CommitQuery;

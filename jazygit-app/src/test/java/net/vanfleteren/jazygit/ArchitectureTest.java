@@ -23,6 +23,12 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
+import net.vanfleteren.jazygit.gh.process.GhError;
+import net.vanfleteren.jazygit.gh.process.GhFailure;
+import net.vanfleteren.jazygit.gh.process.GhToken;
+import net.vanfleteren.jazygit.git.process.GitError;
+import net.vanfleteren.jazygit.git.process.GitFailure;
+import net.vanfleteren.jazygit.git.process.HeadFile;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Cmd;
@@ -113,9 +119,18 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule gitIsReachedThroughItsRoles = noClasses()
             .should()
-            .dependOnClassesThat(resideInAPackage("..jazygit.git")
+            .dependOnClassesThat(resideInAPackage("..jazygit.git..")
                     .and(simpleNameStartingWith("Cli"))
                     .and(not(simpleName("CliGit"))));
+    /**
+     * How git is run is the business of its roles (ADR 120): of {@code git.process} the application only sees the
+     * errors and the files of a repository's metadata.
+     */
+    @ArchTest
+    static final ArchRule gitKeepsHowItRunsToItself = noClasses()
+            .should()
+            .dependOnClassesThat(resideInAPackage("..jazygit.git.process..")
+                    .and(not(belongToAnyOf(GitError.class, GitFailure.class, HeadFile.class))));
     /**
      * The application reaches GitHub through a {@code GitHub} and its roles, which {@code CliGitHub} gives for a real
      * repository; the {@code Cli} classes behind the roles are none of its business (ADR 114).
@@ -123,9 +138,19 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule gitHubIsReachedThroughItsRoles = noClasses()
             .should()
-            .dependOnClassesThat(resideInAPackage("..jazygit.gh")
+            .dependOnClassesThat(resideInAPackage("..jazygit.gh..")
                     .and(simpleNameStartingWith("Cli"))
                     .and(not(simpleName("CliGitHub"))));
+    /**
+     * How gh is asked is the business of its roles (ADR 120): the GraphQL their queries share, and the process that
+     * runs gh. Of {@code gh.process} the application only sees the errors and the token.
+     */
+    @ArchTest
+    static final ArchRule gitHubKeepsHowItAsksToItself = noClasses()
+            .should()
+            .dependOnClassesThat(resideInAPackage("..jazygit.gh.graphql..")
+                    .or(resideInAPackage("..jazygit.gh.process..")
+                            .and(not(belongToAnyOf(GhError.class, GhFailure.class, GhToken.class)))));
     /**
      * {@code Exec} is the only place that starts a program.
      */
@@ -551,8 +576,16 @@ class ArchitectureTest {
         });
     }
 
+    /**
+     * The classes of git and gh, but for their models and the timing of checks, which are values.
+     */
+    private static DescribedPredicate<JavaClass> gitOrGh() {
+        return resideInAnyPackage("..jazygit.git..", "..jazygit.gh..")
+                .and(not(resideInAnyPackage("..jazygit.git.model..", "..jazygit.gh.model..", "..jazygit.gh.timing..")));
+    }
+
     private static DescribedPredicate<JavaClass> runsGitOrGh() {
-        return resideInAnyPackage("..jazygit.git", "..jazygit.gh")
+        return gitOrGh()
                 .and(simpleNameStartingWith("Cli").or(simpleNameEndingWith("Process")))
                 .or(resideInAnyPackage("..jazygit.process").and(simpleName("Exec")))
                 .as("run git or gh");
@@ -583,15 +616,14 @@ class ArchitectureTest {
     }
 
     private static DescribedPredicate<JavaClass> effects() {
-        return resideInAnyPackage(
-                        "..jazygit.git",
-                        "..jazygit.gh",
+        return gitOrGh()
+                .or(resideInAnyPackage(
                         "..jazygit.process..",
                         "..jazygit.ui..",
                         "..jazygit.i18n..",
                         "dev.tamboui..",
                         "java.io..",
-                        "java.nio.file..")
+                        "java.nio.file.."))
                 .or(JavaClass.Predicates.belongToAnyOf(Thread.class, ProcessBuilder.class, java.time.Clock.class))
                 .and(not(equivalentTo(ExecutedCommand.class)))
                 .as("run git or gh, or show something");

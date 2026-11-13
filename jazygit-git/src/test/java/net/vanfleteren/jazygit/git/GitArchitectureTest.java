@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.git;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
+import static com.tngtech.archunit.library.Architectures.layeredArchitecture;
 
 import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.importer.ImportOption;
@@ -34,7 +35,9 @@ class GitArchitectureTest {
     @ArchTest
     static final ArchRule onlyGitArgsWritesRevisionsAndNames = noClasses()
             .that()
-            .resideInAPackage("..jazygit.git")
+            .resideInAPackage("..jazygit.git..")
+            .and()
+            .resideOutsideOfPackage("..jazygit.git.model..")
             .and()
             .doNotHaveSimpleName("GitArgs")
             .should()
@@ -45,4 +48,36 @@ class GitArchitectureTest {
                             || access.getName().equals("value")
                                     && (access.getTargetOwner().isEquivalentTo(BranchName.class)
                                             || access.getTargetOwner().isEquivalentTo(RemoteName.class))));
+
+    /**
+     * The packages of git depend one way (ADR 120): {@code Git} and {@code CliGit} on all of them, the commits on the
+     * branches, the branches on the files, the files on the history, and all of them on the process that runs git.
+     */
+    @ArchTest
+    static final ArchRule packagesDependOneWay = layeredArchitecture()
+            .consideringOnlyDependenciesInLayers()
+            .layer("Git")
+            .definedBy("net.vanfleteren.jazygit.git")
+            .layer("Commits")
+            .definedBy("..git.commits..")
+            .layer("Branches")
+            .definedBy("..git.branches..")
+            .layer("Files")
+            .definedBy("..git.files..")
+            .layer("History")
+            .definedBy("..git.history..")
+            .layer("Process")
+            .definedBy("..git.process..")
+            .whereLayer("Git")
+            .mayNotBeAccessedByAnyLayer()
+            .whereLayer("Commits")
+            .mayOnlyBeAccessedByLayers("Git")
+            .whereLayer("Branches")
+            .mayOnlyBeAccessedByLayers("Git", "Commits")
+            .whereLayer("Files")
+            .mayOnlyBeAccessedByLayers("Git", "Commits", "Branches")
+            .whereLayer("History")
+            .mayOnlyBeAccessedByLayers("Git", "Commits", "Branches", "Files")
+            .whereLayer("Process")
+            .mayOnlyBeAccessedByLayers("Git", "Commits", "Branches", "Files", "History");
 }

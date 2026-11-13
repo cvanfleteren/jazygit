@@ -35,29 +35,27 @@ import net.vanfleteren.jazygit.feature.fetch.FetchCmd;
 import net.vanfleteren.jazygit.feature.fetch.FetchMsg;
 import net.vanfleteren.jazygit.feature.stage.StageMsg;
 import net.vanfleteren.jazygit.gh.StubGitHub;
-import net.vanfleteren.jazygit.git.Branches;
-import net.vanfleteren.jazygit.git.Checkout;
-import net.vanfleteren.jazygit.git.Commits;
 import net.vanfleteren.jazygit.git.Git;
-import net.vanfleteren.jazygit.git.GitError;
-import net.vanfleteren.jazygit.git.GitFailure;
-import net.vanfleteren.jazygit.git.History;
-import net.vanfleteren.jazygit.git.Index;
-import net.vanfleteren.jazygit.git.Integrate;
-import net.vanfleteren.jazygit.git.Remotes;
-import net.vanfleteren.jazygit.git.Stashes;
-import net.vanfleteren.jazygit.git.Status;
-import net.vanfleteren.jazygit.git.StubBranches;
-import net.vanfleteren.jazygit.git.StubCheckout;
-import net.vanfleteren.jazygit.git.StubCommits;
-import net.vanfleteren.jazygit.git.StubDiffs;
 import net.vanfleteren.jazygit.git.StubGit;
-import net.vanfleteren.jazygit.git.StubHistory;
-import net.vanfleteren.jazygit.git.StubIndex;
-import net.vanfleteren.jazygit.git.StubIntegrate;
-import net.vanfleteren.jazygit.git.StubRemotes;
-import net.vanfleteren.jazygit.git.StubStashes;
-import net.vanfleteren.jazygit.git.StubStatus;
+import net.vanfleteren.jazygit.git.branches.Branches;
+import net.vanfleteren.jazygit.git.branches.Checkout;
+import net.vanfleteren.jazygit.git.branches.Remotes;
+import net.vanfleteren.jazygit.git.branches.StubBranches;
+import net.vanfleteren.jazygit.git.branches.StubCheckout;
+import net.vanfleteren.jazygit.git.branches.StubRemotes;
+import net.vanfleteren.jazygit.git.commits.Commits;
+import net.vanfleteren.jazygit.git.commits.StubCommits;
+import net.vanfleteren.jazygit.git.files.Index;
+import net.vanfleteren.jazygit.git.files.Stashes;
+import net.vanfleteren.jazygit.git.files.Status;
+import net.vanfleteren.jazygit.git.files.StubDiffs;
+import net.vanfleteren.jazygit.git.files.StubIndex;
+import net.vanfleteren.jazygit.git.files.StubStashes;
+import net.vanfleteren.jazygit.git.files.StubStatus;
+import net.vanfleteren.jazygit.git.history.History;
+import net.vanfleteren.jazygit.git.history.Integrate;
+import net.vanfleteren.jazygit.git.history.StubHistory;
+import net.vanfleteren.jazygit.git.history.StubIntegrate;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
@@ -80,6 +78,8 @@ import net.vanfleteren.jazygit.git.model.Revision;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.SquashMode;
 import net.vanfleteren.jazygit.git.model.Stash;
+import net.vanfleteren.jazygit.git.process.GitError;
+import net.vanfleteren.jazygit.git.process.GitFailure;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.settings.SettingsStore;
 import net.vanfleteren.jazygit.state.Loadable.Failed;
@@ -241,7 +241,7 @@ class ProgramTest {
             return Fixtures.commit(new Sha(sha), "Ada", "ada@example.com", Instant.EPOCH, "msg", "");
         }
 
-        public net.vanfleteren.jazygit.git.Diffs diffs() {
+        public net.vanfleteren.jazygit.git.files.Diffs diffs() {
             return new StubDiffs() {
                 @Override
                 public Either<GitError, DiffText> commitChanges(Sha sha, DiffOptions options) {

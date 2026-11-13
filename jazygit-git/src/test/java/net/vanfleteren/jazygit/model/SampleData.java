@@ -3,17 +3,17 @@ package net.vanfleteren.jazygit.model;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import java.time.Instant;
-import net.vanfleteren.jazygit.git.Branches;
 import net.vanfleteren.jazygit.git.Git;
-import net.vanfleteren.jazygit.git.GitError;
-import net.vanfleteren.jazygit.git.History;
-import net.vanfleteren.jazygit.git.Status;
-import net.vanfleteren.jazygit.git.StubBranches;
-import net.vanfleteren.jazygit.git.StubDiffs;
 import net.vanfleteren.jazygit.git.StubGit;
-import net.vanfleteren.jazygit.git.StubHistory;
-import net.vanfleteren.jazygit.git.StubStatus;
+import net.vanfleteren.jazygit.git.branches.Branches;
+import net.vanfleteren.jazygit.git.branches.StubBranches;
+import net.vanfleteren.jazygit.git.files.Status;
+import net.vanfleteren.jazygit.git.files.StubDiffs;
+import net.vanfleteren.jazygit.git.files.StubStatus;
+import net.vanfleteren.jazygit.git.history.History;
+import net.vanfleteren.jazygit.git.history.StubHistory;
 import net.vanfleteren.jazygit.git.model.*;
+import net.vanfleteren.jazygit.git.process.GitError;
 
 /**
  * Fixed sample data used by tests, so they don't depend on the state of a real repository.
@@ -176,7 +176,7 @@ public final class SampleData {
         };
     }
 
-    private static net.vanfleteren.jazygit.git.Diffs diffs() {
+    private static net.vanfleteren.jazygit.git.files.Diffs diffs() {
         return new StubDiffs() {
             @Override
             public Either<GitError, DiffText> commitChanges(Sha sha, DiffOptions options) {

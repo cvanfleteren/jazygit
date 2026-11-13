@@ -1,6 +1,11 @@
 package net.vanfleteren.jazygit.gh;
 
 import lombok.With;
+import net.vanfleteren.jazygit.gh.account.Account;
+import net.vanfleteren.jazygit.gh.checks.Checks;
+import net.vanfleteren.jazygit.gh.pullrequests.PullRequests;
+import net.vanfleteren.jazygit.gh.reviews.Reviews;
+import net.vanfleteren.jazygit.gh.stacks.Stacks;
 
 /**
  * Everything the TUI does with GitHub, through the {@code gh} command line tool, split into roles (ADR 114), as

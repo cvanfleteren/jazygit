@@ -6,12 +6,12 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import io.vavr.control.Either;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.git.Git;
-import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.StubGit;
-import net.vanfleteren.jazygit.git.StubHistory;
+import net.vanfleteren.jazygit.git.history.StubHistory;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.git.model.Revision;
+import net.vanfleteren.jazygit.git.process.GitError;
 import net.vanfleteren.jazygit.state.Env;
 import org.junit.jupiter.api.Test;
 
