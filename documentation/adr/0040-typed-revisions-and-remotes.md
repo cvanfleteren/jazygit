@@ -168,5 +168,5 @@ The gh layer knows nothing of git's (`CoreArchitectureTest.ghKnowsNothingOfGit`)
 - Stash refs (`Stash.ref`) are still a `String`; they are left for later.
 - gh's `owner:branch` head for a pull request from a fork stays unsupported.
 
-Amended by ADR 116: a branch behind its upstream, diverged or behind only, is offered a force push only when its reflog shows
-it once had the commit on the remote; a force push also passes `--force-if-includes`.
+Amended by ADR 116: a branch behind its upstream, diverged or behind only, is offered a force push only when its
+reflog shows it once had the commit on the remote; a force push also passes `--force-if-includes`.
