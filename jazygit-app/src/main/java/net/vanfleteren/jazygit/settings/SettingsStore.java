@@ -79,10 +79,10 @@ public interface SettingsStore {
          * and a value that is not valid does not undo the one in use (ADR 111).
          */
         public Applied appliedTo(Settings inUse, Loaded before) {
-            List<Setting> changed = Setting.ALL.filter(setting -> valid(setting.key())
+            List<Setting<?>> changed = Setting.ALL.filter(setting -> valid(setting.key())
                     && (!before.valid(setting.key()) || setting.differs(settings, before.settings())));
             return new Applied(
-                    changed.foldLeft(inUse, (applied, setting) -> setting.take().apply(applied, settings)),
+                    changed.foldLeft(inUse, (applied, setting) -> setting.take(applied, settings)),
                     changed.map(Setting::key).toSet());
         }
 
@@ -91,10 +91,10 @@ public interface SettingsStore {
          * that differ between them, which saving writes, as {@code next} has them, and valid now.
          */
         public Loaded saved(Settings previous, Settings next) {
-            List<Setting> written = Setting.ALL.filter(setting -> setting.differs(previous, next));
+            List<Setting<?>> written = Setting.ALL.filter(setting -> setting.differs(previous, next));
             Set<String> keys = written.map(Setting::key).toSet();
             return new Loaded(
-                    written.foldLeft(settings, (file, setting) -> setting.take().apply(file, next)),
+                    written.foldLeft(settings, (file, setting) -> setting.take(file, next)),
                     problem.flatMap(found -> switch (found) {
                         case SettingsProblem.Invalid(var file, var invalid) ->
                             Option.when(
