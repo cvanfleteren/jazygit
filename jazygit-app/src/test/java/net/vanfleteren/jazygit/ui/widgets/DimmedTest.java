@@ -15,7 +15,7 @@ import dev.tamboui.toolkit.element.RenderContext;
 import io.vavr.control.Option;
 import java.util.Optional;
 import net.vanfleteren.jazygit.ui.SettledPilot;
-import net.vanfleteren.jazygit.ui.Theme.Backdrop;
+import net.vanfleteren.jazygit.ui.theme.Theme.Backdrop;
 import org.junit.jupiter.api.Test;
 
 /**

@@ -5,8 +5,8 @@ import net.vanfleteren.jazygit.feature.github.checks.ChecksDialog;
 import net.vanfleteren.jazygit.feature.github.comments.CommentsDialog;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestDialog;
 import net.vanfleteren.jazygit.state.Model;
-import net.vanfleteren.jazygit.ui.BranchesPanel;
 import net.vanfleteren.jazygit.ui.FetchLine;
+import net.vanfleteren.jazygit.ui.branches.BranchesPanel;
 
 /**
  * The spinners on the screen, which only turn while frames are drawn: their frame is told by the clock.

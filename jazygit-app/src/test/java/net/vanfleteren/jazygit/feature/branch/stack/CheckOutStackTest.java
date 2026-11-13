@@ -41,7 +41,7 @@ import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.github.prs.PrOverview;
 import net.vanfleteren.jazygit.state.operation.Notice;
-import net.vanfleteren.jazygit.ui.TextWidth;
+import net.vanfleteren.jazygit.ui.text.TextWidth;
 import org.junit.jupiter.api.Test;
 
 /**

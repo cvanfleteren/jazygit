@@ -30,17 +30,17 @@ import net.vanfleteren.jazygit.gh.model.PullRequestComment;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.ui.ErrorText;
-import net.vanfleteren.jazygit.ui.PullRequestSymbols;
-import net.vanfleteren.jazygit.ui.TextWidth;
-import net.vanfleteren.jazygit.ui.Theme;
-import net.vanfleteren.jazygit.ui.TimeText;
+import net.vanfleteren.jazygit.ui.github.PullRequestSymbols;
+import net.vanfleteren.jazygit.ui.markdown.MarkdownAutolinks;
+import net.vanfleteren.jazygit.ui.markdown.MarkdownImages;
+import net.vanfleteren.jazygit.ui.markdown.MarkdownScroll;
+import net.vanfleteren.jazygit.ui.text.ErrorText;
+import net.vanfleteren.jazygit.ui.text.TextWidth;
+import net.vanfleteren.jazygit.ui.text.TimeText;
+import net.vanfleteren.jazygit.ui.theme.Theme;
 import net.vanfleteren.jazygit.ui.widgets.DialogFrame;
 import net.vanfleteren.jazygit.ui.widgets.LargeDialog;
 import net.vanfleteren.jazygit.ui.widgets.ListKeys;
-import net.vanfleteren.jazygit.ui.widgets.MarkdownAutolinks;
-import net.vanfleteren.jazygit.ui.widgets.MarkdownImages;
-import net.vanfleteren.jazygit.ui.widgets.MarkdownScroll;
 import net.vanfleteren.jazygit.ui.widgets.PopupView;
 
 /**

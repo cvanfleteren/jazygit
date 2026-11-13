@@ -41,13 +41,12 @@ import net.vanfleteren.jazygit.state.diff.DiffStops;
 import net.vanfleteren.jazygit.state.diff.Scrolled;
 import net.vanfleteren.jazygit.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.state.view.ViewMsg;
-import net.vanfleteren.jazygit.ui.ContentArea;
-import net.vanfleteren.jazygit.ui.ContentView.Body;
-import net.vanfleteren.jazygit.ui.ContentView.Shown;
-import net.vanfleteren.jazygit.ui.DiffCursor;
-import net.vanfleteren.jazygit.ui.RichDiff;
-import net.vanfleteren.jazygit.ui.Rows;
-import net.vanfleteren.jazygit.ui.Theme;
+import net.vanfleteren.jazygit.ui.content.ContentView.Body;
+import net.vanfleteren.jazygit.ui.content.ContentView.Shown;
+import net.vanfleteren.jazygit.ui.diff.DiffCursor;
+import net.vanfleteren.jazygit.ui.diff.RichDiff;
+import net.vanfleteren.jazygit.ui.text.Rows;
+import net.vanfleteren.jazygit.ui.theme.Theme;
 
 /**
  * A scrollable area of the content panel. It shows what it is given at the position the model has for that, and tells

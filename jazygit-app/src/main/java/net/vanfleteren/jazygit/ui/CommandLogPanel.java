@@ -10,6 +10,9 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.ui.text.ErrorText;
+import net.vanfleteren.jazygit.ui.text.NoticeText;
+import net.vanfleteren.jazygit.ui.theme.Theme;
 
 /**
  * Right-hand panel under the content panel, logging the mutating git commands that were executed, each

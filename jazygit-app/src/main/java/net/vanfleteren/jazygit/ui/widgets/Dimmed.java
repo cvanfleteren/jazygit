@@ -12,7 +12,7 @@ import dev.tamboui.toolkit.element.RenderContext;
 import dev.tamboui.toolkit.element.Size;
 import dev.tamboui.toolkit.event.EventRouter;
 import dev.tamboui.toolkit.focus.FocusManager;
-import net.vanfleteren.jazygit.ui.Theme.Backdrop;
+import net.vanfleteren.jazygit.ui.theme.Theme.Backdrop;
 
 /**
  * {@code content} rendered dimmed, as it is behind a popup: every cell is dimmed as {@code backdrop} says. It is

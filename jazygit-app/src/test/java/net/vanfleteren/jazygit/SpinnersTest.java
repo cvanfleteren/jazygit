@@ -26,8 +26,8 @@ import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.github.Reading;
 import net.vanfleteren.jazygit.state.load.LoadStatus;
 import net.vanfleteren.jazygit.state.view.BranchesTab;
-import net.vanfleteren.jazygit.ui.BranchesPanel;
-import net.vanfleteren.jazygit.ui.TimeText;
+import net.vanfleteren.jazygit.ui.branches.BranchesPanel;
+import net.vanfleteren.jazygit.ui.text.TimeText;
 import org.junit.jupiter.api.Test;
 
 /**

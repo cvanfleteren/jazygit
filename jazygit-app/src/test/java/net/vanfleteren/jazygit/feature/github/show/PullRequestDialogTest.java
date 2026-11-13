@@ -49,10 +49,10 @@ import net.vanfleteren.jazygit.state.github.CheckTimes;
 import net.vanfleteren.jazygit.state.github.GitHubChecks;
 import net.vanfleteren.jazygit.state.github.Reading;
 import net.vanfleteren.jazygit.state.popup.PopupMsg;
-import net.vanfleteren.jazygit.ui.CheckRows;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
-import net.vanfleteren.jazygit.ui.Theme;
+import net.vanfleteren.jazygit.ui.github.CheckRows;
+import net.vanfleteren.jazygit.ui.theme.Theme;
 import org.junit.jupiter.api.Test;
 
 class PullRequestDialogTest {
@@ -206,7 +206,7 @@ class PullRequestDialogTest {
         assertTrue(screen.contains("Branch  support_rename"), screen);
         assertTrue(
                 screen.contains("Reading the pull request from GitHub… "
-                        + net.vanfleteren.jazygit.ui.TimeText.spinnerFrame(NOW)),
+                        + net.vanfleteren.jazygit.ui.text.TimeText.spinnerFrame(NOW)),
                 screen);
         assertTrue(screen.contains("(enter) select   (esc) cancel"), screen);
     }
@@ -218,7 +218,8 @@ class PullRequestDialogTest {
                 .readingAgain(Reading.ASKED, NOW, 1));
 
         assertTrue(
-                screen.contains("Pull request #42 " + net.vanfleteren.jazygit.ui.TimeText.spinnerFrame(NOW)), screen);
+                screen.contains("Pull request #42 " + net.vanfleteren.jazygit.ui.text.TimeText.spinnerFrame(NOW)),
+                screen);
         assertTrue(screen.contains("Add rename support to the files panel"), screen);
         assertTrue(screen.contains("(R) Refresh"), screen);
     }
@@ -230,7 +231,8 @@ class PullRequestDialogTest {
                 .readingAgain(Reading.BY_ITSELF, NOW, 1));
 
         assertFalse(
-                screen.contains("Pull request #42 " + net.vanfleteren.jazygit.ui.TimeText.spinnerFrame(NOW)), screen);
+                screen.contains("Pull request #42 " + net.vanfleteren.jazygit.ui.text.TimeText.spinnerFrame(NOW)),
+                screen);
         assertTrue(screen.contains("Pull request #42"), screen);
         assertTrue(screen.contains("Add rename support to the files panel"), screen);
     }

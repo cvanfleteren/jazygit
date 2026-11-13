@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.feature.stash;
 
-import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
@@ -38,9 +37,6 @@ public final class StashUpdate {
      * Only a stash that is listed is unstashed or deleted.
      */
     private static boolean listed(Model model, net.vanfleteren.jazygit.git.model.Stash stash) {
-        return model.repo()
-                .stashes()
-                .getOrElse(List.empty())
-                .exists(listed -> listed.sha().equals(stash.sha()));
+        return model.repo().stash(stash.sha()).isDefined();
     }
 }

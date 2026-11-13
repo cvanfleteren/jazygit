@@ -17,6 +17,12 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.github.prs.PrOverviewMsg;
 import net.vanfleteren.jazygit.state.preferences.Screen;
 import net.vanfleteren.jazygit.state.view.BranchesTab;
+import net.vanfleteren.jazygit.ui.branches.BranchesPanel;
+import net.vanfleteren.jazygit.ui.commits.CommitsPanel;
+import net.vanfleteren.jazygit.ui.files.FilesPanel;
+import net.vanfleteren.jazygit.ui.github.PullRequestsPanel;
+import net.vanfleteren.jazygit.ui.stash.StashPanel;
+import net.vanfleteren.jazygit.ui.theme.Theme;
 import net.vanfleteren.jazygit.ui.widgets.Pane;
 
 /**

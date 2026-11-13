@@ -13,7 +13,7 @@ import net.vanfleteren.jazygit.gh.timing.CheckTimings;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TimerMsg;
 import net.vanfleteren.jazygit.state.github.prs.PrOverviewMsg;
-import net.vanfleteren.jazygit.ui.TimeText;
+import net.vanfleteren.jazygit.ui.text.TimeText;
 
 /**
  * What the app does every so often, without input: the messages it dispatches, and the spinners it turns.

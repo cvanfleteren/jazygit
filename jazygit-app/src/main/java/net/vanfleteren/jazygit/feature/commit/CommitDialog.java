@@ -19,9 +19,9 @@ import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.popup.PopupMsg;
-import net.vanfleteren.jazygit.ui.LineEditInput;
-import net.vanfleteren.jazygit.ui.SubmittableTextArea;
+import net.vanfleteren.jazygit.ui.edit.LineEditInput;
 import net.vanfleteren.jazygit.ui.widgets.PopupView;
+import net.vanfleteren.jazygit.ui.widgets.SubmittableTextArea;
 
 /**
  * Popup asking for a commit message: a summary and a description. Tab switches between them. Enter

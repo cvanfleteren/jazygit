@@ -24,6 +24,8 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
+import net.vanfleteren.jazygit.ui.files.FileTreeList;
+import net.vanfleteren.jazygit.ui.files.FilesPanel;
 
 /**
  * What all files of a large working tree cost the render thread (ADR 108): a key typed in the filter matches every

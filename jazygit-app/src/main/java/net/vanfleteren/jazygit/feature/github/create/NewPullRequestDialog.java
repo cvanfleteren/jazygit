@@ -17,14 +17,14 @@ import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.popup.PopupMsg;
-import net.vanfleteren.jazygit.ui.BasesField;
-import net.vanfleteren.jazygit.ui.LineEditInput;
-import net.vanfleteren.jazygit.ui.SubmittableTextArea;
-import net.vanfleteren.jazygit.ui.Theme;
+import net.vanfleteren.jazygit.ui.edit.LineEditInput;
+import net.vanfleteren.jazygit.ui.github.BasesField;
+import net.vanfleteren.jazygit.ui.theme.Theme;
 import net.vanfleteren.jazygit.ui.widgets.DialogFrame;
 import net.vanfleteren.jazygit.ui.widgets.FocusBordered;
 import net.vanfleteren.jazygit.ui.widgets.HintedDialog;
 import net.vanfleteren.jazygit.ui.widgets.PopupView;
+import net.vanfleteren.jazygit.ui.widgets.SubmittableTextArea;
 
 /**
  * Popup asking what a new pull request merges into and what it says: the list of branches it can merge into, its

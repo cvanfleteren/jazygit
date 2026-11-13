@@ -36,7 +36,7 @@ import net.vanfleteren.jazygit.state.popup.PopupMsg;
 import net.vanfleteren.jazygit.state.popup.TextPopup;
 import net.vanfleteren.jazygit.state.preferences.RepositoryTheme;
 import net.vanfleteren.jazygit.state.view.Preview;
-import net.vanfleteren.jazygit.ui.ErrorText;
+import net.vanfleteren.jazygit.ui.text.ErrorText;
 
 /**
  * Builds models for tests: with fixed sample data through {@link Update}, or by running the real

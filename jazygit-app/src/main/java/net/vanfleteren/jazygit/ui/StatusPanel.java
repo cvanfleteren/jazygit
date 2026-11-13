@@ -28,6 +28,10 @@ import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.preferences.LeftPanes;
 import net.vanfleteren.jazygit.state.preferences.Screen;
+import net.vanfleteren.jazygit.ui.github.PullRequestsPanel;
+import net.vanfleteren.jazygit.ui.text.Placeholders;
+import net.vanfleteren.jazygit.ui.text.TextWidth;
+import net.vanfleteren.jazygit.ui.theme.Theme;
 
 /**
  * Top-left panel showing the repository name and the current branch, and what the repository is in the middle

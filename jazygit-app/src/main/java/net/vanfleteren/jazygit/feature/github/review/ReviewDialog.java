@@ -8,7 +8,7 @@ import net.vanfleteren.jazygit.feature.github.review.ReviewPopup.Where;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
-import net.vanfleteren.jazygit.ui.CommentComposer;
+import net.vanfleteren.jazygit.ui.github.CommentComposer;
 import net.vanfleteren.jazygit.ui.widgets.PopupView;
 
 /**

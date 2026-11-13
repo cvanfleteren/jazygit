@@ -1,0 +1,1077 @@
+package net.vanfleteren.jazygit.ui.diff;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+import dev.tamboui.style.Color;
+import dev.tamboui.style.Style;
+import dev.tamboui.style.StylePropertyResolver;
+import dev.tamboui.text.Line;
+import dev.tamboui.text.Span;
+import io.vavr.collection.HashMap;
+import io.vavr.collection.HashSet;
+import io.vavr.collection.List;
+import io.vavr.collection.Vector;
+import io.vavr.control.Option;
+import java.time.Instant;
+import java.util.Optional;
+import java.util.stream.Collectors;
+import net.vanfleteren.jazygit.gh.model.CommentRights;
+import net.vanfleteren.jazygit.gh.model.Reaction;
+import net.vanfleteren.jazygit.gh.model.Reactions;
+import net.vanfleteren.jazygit.gh.model.ReviewThread;
+import net.vanfleteren.jazygit.gh.model.ReviewThread.Comment;
+import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
+import net.vanfleteren.jazygit.gh.model.ReviewThread.Subject;
+import net.vanfleteren.jazygit.git.model.DiffText;
+import net.vanfleteren.jazygit.git.model.ParsedDiff;
+import net.vanfleteren.jazygit.image.Picture;
+import net.vanfleteren.jazygit.settings.DiffLook;
+import net.vanfleteren.jazygit.settings.DiffStyle;
+import net.vanfleteren.jazygit.state.Failure;
+import net.vanfleteren.jazygit.state.diff.Anchor;
+import net.vanfleteren.jazygit.state.diff.Collapsed;
+import net.vanfleteren.jazygit.state.diff.DiffStops;
+import net.vanfleteren.jazygit.state.diff.Expansion;
+import net.vanfleteren.jazygit.ui.content.ContentText;
+import net.vanfleteren.jazygit.ui.content.ContentView;
+import net.vanfleteren.jazygit.ui.content.ContentView.ShownDiff;
+import net.vanfleteren.jazygit.ui.markdown.MarkdownImages;
+import net.vanfleteren.jazygit.ui.markdown.MarkdownLines;
+import net.vanfleteren.jazygit.ui.text.TextWidth;
+import net.vanfleteren.jazygit.ui.theme.Theme;
+import org.junit.jupiter.api.Test;
+
+/**
+ * The review threads of a pull request drawn in its diff (ADR 55).
+ */
+class RemarkLinesTest {
+
+    private static final Instant NOW = Instant.parse("2026-10-30T12:00:00Z");
+    private static final String DIFF = """
+            diff --git a/a.txt b/a.txt
+            index 1111111..2222222 100644
+            --- a/a.txt
+            +++ b/a.txt
+            @@ -1,3 +1,3 @@
+             one
+            -two
+            +TWO
+             three
+            """;
+
+    private static ReviewThread thread(int line, boolean resolved, String... bodies) {
+        return thread("a.txt", line, resolved, bodies);
+    }
+
+    private static ReviewThread thread(String path, int line, boolean resolved, String... bodies) {
+        return new ReviewThread(
+                path,
+                Side.RIGHT,
+                Option.of(line),
+                Option.none(),
+                Side.RIGHT,
+                Option.of(line),
+                resolved,
+                false,
+                Subject.LINE,
+                List.of(bodies)
+                        .zipWithIndex((body, at) -> new Comment(
+                                "bob",
+                                NOW.minusSeconds(7200),
+                                body,
+                                Option.none(),
+                                new ReviewThread.Comment.Id("C" + at),
+                                new ReviewThread.Comment.RestId("1"),
+                                CommentRights.ALL)),
+                0,
+                new ReviewThread.Id(path + line + String.join("", bodies)),
+                ReviewThread.Rights.ALL);
+    }
+
+    private static ShownRemarks shown(Collapsed collapsed, ReviewThread... threads) {
+        return new ShownRemarks(
+                List.of(threads), NOW, Option.none(), true, collapsed, HashSet.empty(), HashSet.empty());
+    }
+
+    private static List<String> rich(ShownRemarks remarks) {
+        return rich(DIFF, remarks);
+    }
+
+    private static List<String> rich(String diff, ShownRemarks remarks) {
+        return text(drawn(ParsedDiff.of(diff), false, Option.of(remarks), Theme.SpanStyles.NONE)
+                        .lines())
+                .map(String::stripTrailing);
+    }
+
+    private static final String PAIRS = """
+            diff --git a/a.txt b/a.txt
+            index 1111111..2222222 100644
+            --- a/a.txt
+            +++ b/a.txt
+            @@ -1,2 +1,2 @@
+            -int count = 1;
+            -int total = 2;
+            +int count = 42;
+            +int total = 43;
+            """;
+
+    private static ReviewThread onLines(Side startSide, int start, Side side, int line) {
+        return new ReviewThread(
+                "a.txt",
+                side,
+                Option.of(line),
+                Option.when(startSide != side || start != line, start),
+                startSide,
+                Option.of(line),
+                false,
+                false,
+                Subject.LINE,
+                List.of(new Comment(
+                        "bob",
+                        NOW.minusSeconds(7200),
+                        "Why?",
+                        Option.none(),
+                        new ReviewThread.Comment.Id("C0"),
+                        new ReviewThread.Comment.RestId("1"),
+                        CommentRights.ALL)),
+                0,
+                new ReviewThread.Id("T" + startSide + start + side + line),
+                ReviewThread.Rights.ALL);
+    }
+
+    /**
+     * The lines of the diff among {@code lines}, without the threads.
+     */
+    private static List<String> diffLines(List<String> lines) {
+        return lines.filter(line -> line.matches("^[ 0-9]*[0-9][ 0-9]* [│┃●] .*"));
+    }
+
+    @Test
+    void aThreadOnALineOfAPairGoesAfterThePair() {
+        List<String> lines = rich(PAIRS, shown(Collapsed.NONE, onLines(Side.LEFT, 1, Side.LEFT, 1)));
+
+        String indent = " ".repeat(8);
+        assertEquals(
+                List.of(
+                        " modified  a.txt",
+                        "1   ● - int count = 1;",
+                        "  1 │ + int count = 42;",
+                        indent + "┏━ bob · 2h ago",
+                        indent + "┃  Why?",
+                        indent + "┗━",
+                        "",
+                        "2   │ - int total = 2;",
+                        "  2 │ + int total = 43;",
+                        "┄┄┄ │ more ┄"),
+                lines);
+    }
+
+    @Test
+    void theThreadsOnBothLinesOfAPairFollowItOneAfterTheOther() {
+        List<String> lines = rich(
+                PAIRS,
+                shown(Collapsed.NONE, onLines(Side.LEFT, 1, Side.LEFT, 1), onLines(Side.RIGHT, 1, Side.RIGHT, 1)));
+
+        String indent = " ".repeat(8);
+        assertEquals(
+                List.of(
+                        " modified  a.txt",
+                        "1   ● - int count = 1;",
+                        "  1 ● + int count = 42;",
+                        indent + "┏━ bob · 2h ago",
+                        indent + "┃  Why?",
+                        indent + "┗━",
+                        "",
+                        indent + "┏━ bob · 2h ago",
+                        indent + "┃  Why?",
+                        indent + "┗━",
+                        "",
+                        "2   │ - int total = 2;",
+                        "  2 │ + int total = 43;",
+                        "┄┄┄ │ more ┄"),
+                lines);
+    }
+
+    @Test
+    void theThreadsOnTheLastPairOfAFileAreSetApartOnlyFromWhatFollowsThem() {
+        ShownRemarks remarks = shown(Collapsed.NONE, onLines(Side.LEFT, 2, Side.LEFT, 2));
+        String indent = " ".repeat(8);
+        List<String> pair = List.of(
+                " modified  a.txt",
+                "1   │ - int count = 1;",
+                "  1 │ + int count = 42;",
+                "2   ● - int total = 2;",
+                "  2 │ + int total = 43;",
+                indent + "┏━ bob · 2h ago",
+                indent + "┃  Why?",
+                indent + "┗━");
+
+        // How many lines follow is not known, so a marker follows the threads.
+        assertEquals(pair.appendAll(List.of("", "┄┄┄ │ more ┄")), rich(PAIRS, remarks));
+        // Read whole, the file has no more lines, and nothing follows them.
+        Expansion.Folded whole = new Expansion.Folded(
+                ParsedDiff.of(PAIRS), HashMap.of("a.txt", new Expansion.Fold(Option.of(2), Expansion.Read.WHOLE)));
+        assertEquals(
+                pair,
+                text(RichDiff.drawn(whole, false, true, Option.of(remarks), Option.none(), Theme.SpanStyles.NONE)
+                                .lines())
+                        .map(String::stripTrailing));
+    }
+
+    @Test
+    void theHunkOfARangeIsFoundInTheDiffWithoutDrawingIt() {
+        ContentView.Body body = new ContentView.Body.Diff(
+                new ShownDiff(DiffText.of(PAIRS + DIFF.replace("a.txt", "b.txt")), Option.none()),
+                new DiffLook(DiffStyle.RICH, true, true));
+
+        assertEquals(
+                Option.of(new DiffStops.HunkAt(0, 0)),
+                ContentText.markedHunk(body, new Anchor.OnLine("a.txt", Side.LEFT, 2)));
+        assertEquals(
+                Option.of(new DiffStops.HunkAt(1, 0)),
+                ContentText.markedHunk(body, new Anchor.OnLine("b.txt", Side.RIGHT, 2)));
+        assertEquals(Option.none(), ContentText.markedHunk(body, new Anchor.OnLine("c.txt", Side.RIGHT, 2)));
+    }
+
+    @Test
+    void aBlockAThreadOnSeveralLinesCoversIsShownAsGitGivesIt() {
+        List<String> lines = rich(PAIRS, shown(Collapsed.NONE, onLines(Side.LEFT, 1, Side.RIGHT, 1)));
+
+        assertEquals(
+                List.of(
+                        "1   ┃ - int count = 1;",
+                        "2   ┃ - int total = 2;",
+                        "  1 ● + int count = 42;",
+                        "  2 │ + int total = 43;"),
+                diffLines(lines));
+    }
+
+    @Test
+    void aThreadIsABlockAfterItsLineWhichTheGutterMarks() {
+        List<String> lines = rich(shown(Collapsed.NONE, thread(2, false, "Why **upper** case?", "Shouting.")));
+
+        String indent = " ".repeat(8);
+        assertEquals(
+                List.of(
+                        " modified  a.txt",
+                        "1 1 │   one",
+                        "2   │ - two",
+                        "  2 ● + TWO",
+                        indent + "┏━ bob · 2h ago",
+                        indent + "┃  Why upper case?",
+                        indent + "┃",
+                        indent + "┣━ bob · 2h ago",
+                        indent + "┃  Shouting.",
+                        indent + "┗━",
+                        "",
+                        "3 3 │   three",
+                        // How many lines follow is not known until the file is read whole (ADR 77).
+                        "┄┄┄ │ more ┄"),
+                lines);
+    }
+
+    @Test
+    void theHeaderOfACommentIsOnTheBandOfTheThemeToTheEndOfTheBlock() {
+        Theme.SpanStyles styles = cssClass -> switch (cssClass) {
+            case Theme.Classes.DIFF_THREAD_HEADER -> Style.EMPTY.bg(Color.BLUE);
+            case Theme.Classes.DIFF_THREAD_AUTHOR -> Style.EMPTY.fg(Color.CYAN);
+            default -> Style.EMPTY;
+        };
+
+        Line header = RemarkLines.threads(
+                        List.of(thread(2, false, "Why?")),
+                        8,
+                        RemarkLines.MIN_WIDTH,
+                        new RemarkLines.RemarkStyle(NOW),
+                        styles)
+                .head();
+
+        List<Span> band = List.ofAll(header.spans()).drop(2);
+        assertEquals(RemarkLines.MIN_WIDTH, header.width());
+        assertTrue(band.forAll(span -> span.style().bg().equals(Optional.of(Color.BLUE))), header.toString());
+        assertTrue(band.exists(
+                span -> span.content().equals("bob") && span.style().fg().equals(Optional.of(Color.CYAN))));
+    }
+
+    private static List<String> drawnAlone(
+            ReviewThread thread, Collapsed collapsed, io.vavr.collection.Set<ReviewThread.Id> sending) {
+        return text(RemarkLines.threads(
+                        List.of(thread),
+                        8,
+                        RemarkLines.MIN_WIDTH,
+                        new RemarkLines.RemarkStyle(collapsed, sending, HashSet.empty(), NOW),
+                        Theme.SpanStyles.NONE))
+                .map(String::stripTrailing);
+    }
+
+    @Test
+    void aThreadIsCollapsedOrOpenedAgainstItsDefaultAndSaysWhenSomethingIsSentForIt() {
+        ReviewThread resolved = thread(3, true, "Done");
+        ReviewThread open = thread(2, false, "Why?", "Because");
+        String indent = " ".repeat(8);
+
+        assertTrue(drawnAlone(
+                        resolved,
+                        Collapsed.NONE.flipped(Collapsed.Key.of(resolved.id()), List.of(resolved)),
+                        HashSet.empty())
+                .contains(indent + "┃  Done"));
+        assertEquals(
+                List.of(indent + "━━ ✓ resolved · bob: Done"), drawnAlone(resolved, Collapsed.NONE, HashSet.empty()));
+        assertEquals(
+                List.of(indent + "━━ ✓ resolved · bob: Done · sending…"),
+                drawnAlone(resolved, Collapsed.NONE, HashSet.of(resolved.id())));
+
+        // An unresolved thread collapsed says how many comments it has, not dimmed (ADR 62).
+        Collapsed closed = Collapsed.NONE.flipped(Collapsed.Key.of(open.id()), List.of(open));
+        assertEquals(List.of(indent + "━━ ▸ 2 remarks · bob: Why?"), drawnAlone(open, closed, HashSet.empty()));
+        assertEquals(
+                List.of(indent + "━━ ▸ 2 remarks · bob: Why? · sending…"),
+                drawnAlone(open, closed, HashSet.of(open.id())));
+        Theme.SpanStyles dim =
+                cssClass -> cssClass.equals(Theme.Classes.DIM) ? Style.EMPTY.fg(Color.GRAY) : Style.EMPTY;
+        Line line = RemarkLines.threads(
+                        List.of(open),
+                        8,
+                        RemarkLines.MIN_WIDTH,
+                        new RemarkLines.RemarkStyle(closed, HashSet.empty(), HashSet.empty(), NOW),
+                        dim)
+                .head();
+        assertTrue(List.ofAll(line.spans()).forAll(span -> span.style().equals(Style.EMPTY)), line.toString());
+
+        List<String> replying = drawnAlone(open, Collapsed.NONE, HashSet.of(open.id()));
+        assertEquals(indent + "┃  sending…", replying.get(replying.size() - 2));
+    }
+
+    @Test
+    void aCommentBeingDeletedSaysSoAfterItsHeaderAndACollapsedThreadAfterItsLineWhenItIsItsFirst() {
+        ReviewThread open = thread(2, false, "Why?", "Because");
+        String indent = " ".repeat(8);
+        Collapsed closed = Collapsed.NONE.flipped(Collapsed.Key.of(open.id()), List.of(open));
+
+        List<String> deleting = text(RemarkLines.threads(
+                        List.of(open),
+                        8,
+                        RemarkLines.MIN_WIDTH,
+                        new RemarkLines.RemarkStyle(
+                                Collapsed.NONE, HashSet.empty(), HashSet.of(new Comment.Id("C1")), NOW),
+                        Theme.SpanStyles.NONE))
+                .map(String::stripTrailing);
+        assertTrue(deleting.contains(indent + "┣━ bob · 2h ago · deleting…"), deleting.toString());
+        assertTrue(deleting.contains(indent + "┏━ bob · 2h ago"), deleting.toString());
+
+        assertEquals(
+                List.of(indent + "━━ ▸ 2 remarks · bob: Why? · deleting…"),
+                text(RemarkLines.threads(
+                                List.of(open),
+                                8,
+                                RemarkLines.MIN_WIDTH,
+                                new RemarkLines.RemarkStyle(
+                                        closed, HashSet.empty(), HashSet.of(new Comment.Id("C0")), NOW),
+                                Theme.SpanStyles.NONE))
+                        .map(String::stripTrailing));
+    }
+
+    @Test
+    void aCommentButTheFirstIsCollapsedToItsHeaderAndItsFirstLine() {
+        ReviewThread open = thread(2, false, "Why?", "Because\n\nreally");
+        String indent = " ".repeat(8);
+
+        assertEquals(
+                List.of(
+                        indent + "┏━ bob · 2h ago",
+                        indent + "┃  Why?",
+                        indent + "┃",
+                        indent + "┣━ bob · 2h ago · Because",
+                        indent + "┗━"),
+                drawnAlone(open, Collapsed.NONE.flipped(new Collapsed.Key("C1"), List.of(open)), HashSet.empty()));
+        // The first comment is the thread: flipping its id does nothing.
+        assertEquals(
+                drawnAlone(open, Collapsed.NONE, HashSet.empty()),
+                drawnAlone(open, Collapsed.NONE.flipped(new Collapsed.Key("C0"), List.of(open)), HashSet.empty()));
+    }
+
+    @Test
+    void aHiddenCommentIsCollapsedUntilItIsOpened() {
+        ReviewThread thread = thread(2, false, "Why?");
+        ReviewThread hidden = new ReviewThread(
+                thread.path(),
+                thread.side(),
+                thread.line(),
+                thread.startLine(),
+                thread.startSide(),
+                thread.originalLine(),
+                false,
+                false,
+                thread.subject(),
+                thread.comments()
+                        .append(new Comment(
+                                "carol",
+                                NOW.minusSeconds(7200),
+                                "Buy now",
+                                Option.of("SPAM"),
+                                new ReviewThread.Comment.Id("H"),
+                                new ReviewThread.Comment.RestId("2"),
+                                CommentRights.ALL)),
+                2,
+                thread.id(),
+                thread.rights());
+        String indent = " ".repeat(8);
+
+        List<String> collapsed = drawnAlone(hidden, Collapsed.NONE, HashSet.empty());
+        assertTrue(collapsed.contains(indent + "┣━ carol · 2h ago · hidden · spam"), collapsed.mkString("\n"));
+        assertFalse(collapsed.exists(line -> line.contains("Buy now")));
+        assertTrue(drawnAlone(hidden, Collapsed.NONE.flipped(new Collapsed.Key("H"), List.of(hidden)), HashSet.empty())
+                .contains(indent + "┃  Buy now"));
+        // The count of a collapsed thread is of the comments GitHub has more of too.
+        assertEquals(
+                List.of(indent + "━━ ▸ 4 remarks · bob: Why?"),
+                drawnAlone(
+                        hidden,
+                        Collapsed.NONE.flipped(Collapsed.Key.of(hidden.id()), List.of(hidden)),
+                        HashSet.empty()));
+    }
+
+    @Test
+    void aResolvedThreadIsOneLineUntilItIsOpened() {
+        ReviewThread resolved = thread(3, true, "Done\n\nmore");
+
+        assertTrue(rich(shown(Collapsed.NONE, resolved)).contains(" ".repeat(8) + "━━ ✓ resolved · bob: Done"));
+        assertEquals(
+                List.of(" ".repeat(8) + "┏━ on line 3", " ".repeat(8) + "┗━ ✓ resolved · bob: Done"),
+                text(RemarkLines.unplaced(
+                                List.of(resolved),
+                                8,
+                                RemarkLines.MIN_WIDTH,
+                                new RemarkLines.RemarkStyle(NOW),
+                                Theme.SpanStyles.NONE))
+                        .tail()
+                        .map(String::stripTrailing));
+        assertTrue(rich(shown(Collapsed.NONE.flipped(Collapsed.Key.of(resolved.id()), List.of(resolved)), resolved))
+                .contains(" ".repeat(8) + "┃  Done"));
+    }
+
+    @Test
+    void aThreadOnSeveralLinesMarksThemAndOneThatCannotBePlacedEndsItsFile() {
+        ReviewThread several = new ReviewThread(
+                "a.txt",
+                Side.RIGHT,
+                Option.of(3),
+                Option.of(1),
+                Side.RIGHT,
+                Option.of(3),
+                false,
+                false,
+                Subject.LINE,
+                List.of(new Comment(
+                        "",
+                        NOW,
+                        "All of it",
+                        Option.none(),
+                        new ReviewThread.Comment.Id("C"),
+                        new ReviewThread.Comment.RestId("1"),
+                        CommentRights.ALL)),
+                2,
+                new ReviewThread.Id("T"),
+                ReviewThread.Rights.ALL);
+        ReviewThread outdated = new ReviewThread(
+                "a.txt",
+                Side.RIGHT,
+                Option.none(),
+                Option.none(),
+                Side.RIGHT,
+                Option.of(40),
+                false,
+                true,
+                Subject.LINE,
+                List.of(new Comment(
+                        "carol",
+                        NOW,
+                        "Old",
+                        Option.of("OUTDATED"),
+                        new ReviewThread.Comment.Id("C"),
+                        new ReviewThread.Comment.RestId("1"),
+                        CommentRights.ALL)),
+                0,
+                new ReviewThread.Id("T"),
+                ReviewThread.Rights.ALL);
+
+        List<String> lines = rich(shown(Collapsed.NONE, several, outdated));
+
+        assertTrue(lines.contains("1 1 ┃   one"), lines.mkString("\n"));
+        assertTrue(lines.contains("3 3 ●   three"), lines.mkString("\n"));
+        assertTrue(lines.contains(" ".repeat(8) + "┏━ ghost · just now"), lines.mkString("\n"));
+        assertTrue(lines.contains(" ".repeat(8) + "┃  2 more on GitHub"), lines.mkString("\n"));
+        assertEquals(
+                List.of(
+                        " ".repeat(8) + "Not on a line of this diff",
+                        " ".repeat(8) + "┏━ on line 40, outdated",
+                        " ".repeat(8) + "┗━ ▸ 1 remark · carol: hidden · outdated"),
+                lines.takeRight(3));
+        assertEquals(
+                List.of(
+                        " ".repeat(8) + "┃  2 more on GitHub",
+                        " ".repeat(8) + "┗━",
+                        "",
+                        "┄┄┄ │ more ┄",
+                        " ".repeat(8) + "Not on a line of this diff"),
+                lines.dropRight(2).takeRight(5));
+    }
+
+    @Test
+    void twoThreadsOnALineHaveABlankLineBetweenThem() {
+        List<String> lines = rich(shown(Collapsed.NONE, thread(2, false, "One"), thread(2, false, "Two")));
+
+        String indent = " ".repeat(8);
+        assertEquals(
+                List.of(
+                        "  2 ● + TWO",
+                        indent + "┏━ bob · 2h ago",
+                        indent + "┃  One",
+                        indent + "┗━",
+                        "",
+                        indent + "┏━ bob · 2h ago",
+                        indent + "┃  Two",
+                        indent + "┗━",
+                        "",
+                        "3 3 │   three",
+                        "┄┄┄ │ more ┄"),
+                lines.drop(3));
+    }
+
+    @Test
+    void aBlankLineSetsAThreadOnTheLastLineOfAFileApartFromTheMarkerAfterIt() {
+        String diff = DIFF + """
+                diff --git a/b.txt b/b.txt
+                index 3333333..4444444 100644
+                --- a/b.txt
+                +++ b/b.txt
+                @@ -1 +1 @@
+                -x
+                +y
+                """;
+
+        List<String> lines = rich(
+                diff,
+                shown(Collapsed.NONE, thread("a.txt", 3, false, "End of a"), thread("b.txt", 1, false, "End of b")));
+
+        String indent = " ".repeat(8);
+        assertEquals(
+                List.of(
+                        "3 3 ●   three",
+                        indent + "┏━ bob · 2h ago",
+                        indent + "┃  End of a",
+                        indent + "┗━",
+                        "",
+                        "┄┄┄ │ more ┄",
+                        "",
+                        " modified  b.txt",
+                        "1   │ - x",
+                        "  1 ● + y",
+                        indent + "┏━ bob · 2h ago",
+                        indent + "┃  End of b",
+                        indent + "┗━",
+                        "",
+                        "┄┄┄ │ more ┄"),
+                lines.drop(4));
+    }
+
+    @Test
+    void aThreadAboutAWholeFileGoesUnderItsBar() {
+        ReviewThread onFile = new ReviewThread(
+                "a.txt",
+                Side.RIGHT,
+                Option.none(),
+                Option.none(),
+                Side.RIGHT,
+                Option.none(),
+                false,
+                false,
+                Subject.FILE,
+                List.of(new Comment(
+                        "bob",
+                        NOW.minusSeconds(7200),
+                        "Split this file",
+                        Option.none(),
+                        new ReviewThread.Comment.Id("C"),
+                        new ReviewThread.Comment.RestId("1"),
+                        CommentRights.ALL)),
+                0,
+                new ReviewThread.Id("T"),
+                ReviewThread.Rights.ALL);
+
+        List<String> lines = rich(shown(Collapsed.NONE, onFile));
+
+        assertEquals(
+                List.of(" modified  a.txt", " ".repeat(8) + "┏━ bob · 2h ago", " ".repeat(8) + "┃  Split this file"),
+                lines.take(3));
+        assertEquals(List.of(" ".repeat(8) + "┗━", "", "1 1 │   one"), lines.slice(3, 6));
+    }
+
+    @Test
+    void aThreadWhoseFirstCommentIsHiddenShowsItInFullOnceItIsOpened() {
+        ReviewThread hidden = new ReviewThread(
+                "a.txt",
+                Side.RIGHT,
+                Option.of(2),
+                Option.none(),
+                Side.RIGHT,
+                Option.of(2),
+                false,
+                false,
+                Subject.LINE,
+                List.of(new Comment(
+                        "carol",
+                        NOW,
+                        "Off topic",
+                        Option.of("OFF_TOPIC"),
+                        new ReviewThread.Comment.Id("C"),
+                        new ReviewThread.Comment.RestId("1"),
+                        CommentRights.ALL)),
+                0,
+                new ReviewThread.Id("T"),
+                ReviewThread.Rights.ALL);
+
+        // Its first comment hidden, the thread is collapsed, and says why in place of its first line (ADR 62).
+        List<String> collapsed = rich(shown(Collapsed.NONE, hidden));
+        assertTrue(
+                collapsed.contains(" ".repeat(8) + "━━ ▸ 1 remark · carol: hidden · off-topic"),
+                collapsed.mkString("\n"));
+        assertFalse(collapsed.exists(line -> line.contains("Off topic")));
+        assertTrue(rich(shown(Collapsed.NONE.flipped(new Collapsed.Key("T"), List.of(hidden)), hidden))
+                .contains(" ".repeat(8) + "┃  Off topic"));
+    }
+
+    @Test
+    void threadsReadAtOtherCommitsThanTheDiffAreListedAtTheEndOfTheirFile() {
+        ShownRemarks elsewhere = new ShownRemarks(
+                List.of(thread(2, false, "Moved on")),
+                NOW,
+                Option.none(),
+                false,
+                Collapsed.NONE,
+                HashSet.empty(),
+                HashSet.empty());
+
+        List<String> lines = rich(elsewhere);
+
+        assertTrue(lines.contains("  2   +TWO") || lines.contains("  2 │ + TWO"), lines.mkString("\n"));
+        assertFalse(lines.exists(line -> line.contains("●")), lines.mkString("\n"));
+        assertEquals(
+                " ".repeat(8) + "Not on a line of this diff",
+                lines.dropWhile(line -> !line.contains("three")).get(2));
+        assertTrue(lines.contains(" ".repeat(8) + "┃  Moved on"), lines.mkString("\n"));
+    }
+
+    @Test
+    void threadsThatCannotBePlacedHaveABlankLineBetweenThemAndAHeaderOnTheBand() {
+        Theme.SpanStyles styles = cssClass ->
+                cssClass.equals(Theme.Classes.DIFF_THREAD_HEADER) ? Style.EMPTY.bg(Color.BLUE) : Style.EMPTY;
+
+        List<Line> lines = RemarkLines.unplaced(
+                List.of(thread(40, false, "Old"), thread(50, false, "Older")),
+                8,
+                RemarkLines.MIN_WIDTH,
+                new RemarkLines.RemarkStyle(NOW),
+                styles);
+
+        String indent = " ".repeat(8);
+        assertEquals(
+                List.of(
+                        indent + "Not on a line of this diff",
+                        indent + "┏━ on line 40",
+                        indent + "┣━ bob · 2h ago",
+                        indent + "┃  Old",
+                        indent + "┗━",
+                        "",
+                        indent + "┏━ on line 50",
+                        indent + "┣━ bob · 2h ago",
+                        indent + "┃  Older",
+                        indent + "┗━"),
+                text(lines).map(String::stripTrailing));
+        assertEquals(RemarkLines.MIN_WIDTH, lines.get(1).width());
+        assertTrue(
+                List.ofAll(lines.get(1).spans())
+                        .drop(2)
+                        .forAll(span -> span.style().bg().equals(Optional.of(Color.BLUE))),
+                lines.get(1).toString());
+    }
+
+    @Test
+    void aBlockWrapsAtTheWidthOfItsFileAtLeastSixtyColumns() {
+        String words = "word ".repeat(30).strip();
+
+        List<String> lines = rich(shown(Collapsed.NONE, thread(2, false, words)));
+
+        assertTrue(lines.forAll(line -> TextWidth.of(line) <= RemarkLines.MIN_WIDTH), lines.mkString("\n"));
+        assertTrue(lines.count(line -> line.contains("word")) > 1, lines.mkString("\n"));
+    }
+
+    @Test
+    void anImageInACommentIsAPlaceholderNotItsTag() {
+        String body = "Claude Code is working… <img src=\"https://github.com/user-attachments/assets/5ac3\""
+                + " width=\"14px\" height=\"14px\" style=\"vertical-align: middle; margin-left: 4px;\" />";
+
+        List<String> lines = rich(shown(Collapsed.NONE, thread(2, false, body)));
+
+        assertTrue(lines.exists(line -> line.endsWith("Claude Code is working… [image]")), lines.mkString("\n"));
+        assertTrue(lines.forAll(line -> !line.contains("<img") && !line.contains("user-attachments")));
+    }
+
+    @Test
+    void anImageThatWasReadIsDrawnInHalfBlocksInItsPlaceAndOneThatWasNotIsAPlaceholder() {
+        String url = "https://github.com/user-attachments/assets/shot";
+        int red = 0xffff0000;
+        int blue = 0xff0000ff;
+        // Three pixels wide, three high: two rows, the last half of the last row empty, and one pixel transparent.
+        Picture picture = new Picture(3, 3, Vector.of(red, 0, red, blue, blue, blue, red, red, 0));
+        String body = "Look:\n\n![shot](" + url + ")\n\nand ![other](https://github.com/other.png)";
+
+        List<Line> lines = RemarkLines.threads(
+                List.of(thread(2, false, body)),
+                0,
+                RemarkLines.MIN_WIDTH,
+                new RemarkLines.RemarkStyle(
+                        Collapsed.NONE, HashSet.empty(), HashSet.empty(), NOW, HashMap.of(url, picture)),
+                Theme.SpanStyles.NONE);
+
+        List<String> text = text(lines);
+        int first = text.indexWhere(line -> line.endsWith("▀▄▀"));
+        assertTrue(first > 0, text.mkString("\n"));
+        assertTrue(text.get(first + 1).endsWith("▀▀"), text.mkString("\n"));
+        assertTrue(text.exists(line -> line.endsWith("and [image: other]")), text.mkString("\n"));
+        List<Span> cells = List.ofAll(lines.get(first).spans()).takeRight(2);
+        assertEquals(Style.EMPTY.fg(Color.rgb(0, 0, 255)), cells.head().style());
+        assertEquals(
+                Style.EMPTY.fg(Color.rgb(255, 0, 0)).bg(Color.rgb(0, 0, 255)),
+                cells.last().style());
+    }
+
+    @Test
+    void aPictureInAQuoteOrListIsDrawnWholeInTheRoomTheyLeaveIt() {
+        Picture picture = new Picture(10, 4, Vector.fill(40, 0xffff0000));
+
+        for (String markdown : List.of("> ![](a.png)", "- ![](a.png)", "1. ![](a.png)", "> > ![](a.png)")) {
+            MarkdownImages.Drawn drawn = MarkdownImages.drawn(markdown, HashMap.of("a.png", picture), 10);
+            List<String> lines =
+                    text(MarkdownLines.markdown(drawn.markdown(), 10, StylePropertyResolver.empty(), drawn.pictures()));
+
+            // Each row of the picture is one line of all its cells, never wrapped onto the next; two quotes leave it
+            // room for one row only.
+            List<Integer> cells = lines.map(
+                            line -> (int) line.chars().filter(c -> c == '▀').count())
+                    .filter(count -> count > 0);
+            Picture fitted = drawn.pictures().head();
+            assertEquals(fitted.rows(), cells.size(), markdown + "\n" + lines.mkString("\n"));
+            assertTrue(cells.forAll(count -> count == fitted.width()), markdown + "\n" + lines.mkString("\n"));
+            assertTrue(lines.forAll(line -> TextWidth.of(line) <= 10), markdown + "\n" + lines.mkString("\n"));
+        }
+    }
+
+    @Test
+    void markdownIsReadBackFromWhatTamboUiDrawsAsLinesWithoutTheirBlankEnd() {
+        List<String> lines = text(MarkdownLines.markdown(
+                "# Title\n\n- one\n- `two`\n\n```\ncode\n```", 30, StylePropertyResolver.empty()));
+
+        assertTrue(lines.exists(line -> line.contains("Title")), lines.mkString("\n"));
+        assertTrue(lines.exists(line -> line.contains("one")), lines.mkString("\n"));
+        assertTrue(lines.exists(line -> line.contains("code")), lines.mkString("\n"));
+        assertTrue(lines.forAll(line -> line.equals(line.stripTrailing())), lines.mkString("|\n"));
+        assertEquals(List.empty(), MarkdownLines.markdown("  ", 30, StylePropertyResolver.empty()));
+    }
+
+    @Test
+    void aCodeBlockTooWideForTheTextIsDrawnAsWideAsItsLinesAndTheTextAroundItStillWraps() {
+        String code = "x".repeat(20) + " " + "y".repeat(20) + " " + "z".repeat(10);
+
+        String markdown = "word ".repeat(12).strip() + "\n\n```suggestion\n" + code + "\n```\n\n"
+                + "after ".repeat(10).strip();
+
+        assertEquals(
+                List.of(
+                        "word word word word word word",
+                        "word word word word word word",
+                        "",
+                        "╭suggestion──────────────────────────────────────────╮",
+                        "│" + code + "│",
+                        "╰────────────────────────────────────────────────────╯",
+                        "",
+                        "after after after after after",
+                        "after after after after after"),
+                text(MarkdownLines.markdown(markdown, 30, StylePropertyResolver.empty())));
+    }
+
+    @Test
+    void theTextAndAWideCodeBlockAreSpacedAsTamboUiSpacesThemWhenItDrawsThemTogether() {
+        String code = "x".repeat(40);
+        String markdown = "# Title\n\nwords\n\n```\n" + code + "\n```\n\n- one\n- two";
+
+        List<String> together = text(MarkdownLines.markdown(markdown, 60, StylePropertyResolver.empty()));
+        List<String> apart = text(MarkdownLines.markdown(markdown, 30, StylePropertyResolver.empty()));
+
+        assertEquals(together.map(String::isEmpty), apart.map(String::isEmpty), apart.mkString("\n"));
+    }
+
+    @Test
+    void aLinkKeepsItsDefinitionOnTheOtherSideOfAWideCodeBlockWhichAddsNoBlankLine() {
+        String markdown = "See [the docs][d].\n\n```\n" + "x".repeat(50) + "\n```\n\n[d]: https://example.com";
+
+        List<String> lines = text(MarkdownLines.markdown(markdown, 30, StylePropertyResolver.empty()));
+
+        assertEquals("See the docs.", lines.head(), lines.mkString("\n"));
+        assertTrue(lines.last().startsWith("╰"), lines.mkString("|\n"));
+    }
+
+    @Test
+    void aCodeBlockAloneTooWideForTheTextIsDrawnAsWideAsItsLines() {
+        String code = "x".repeat(50);
+
+        List<String> lines = text(MarkdownLines.markdown("```\n" + code + "\n```", 30, StylePropertyResolver.empty()));
+
+        assertTrue(lines.exists(line -> line.contains(code)), lines.mkString("\n"));
+    }
+
+    @Test
+    void aSuggestionWiderThanItsBlockIsDrawnWholeInTheDiff() {
+        String code = "a".repeat(40) + " " + "b".repeat(40);
+
+        List<String> lines =
+                rich(shown(Collapsed.NONE, thread(2, false, "Wrap it:\n\n```suggestion\n" + code + "\n```")));
+
+        assertTrue(lines.exists(line -> line.contains("┃  ") && line.contains(code)), lines.mkString("\n"));
+        assertTrue(lines.exists(line -> line.contains("suggestion")), lines.mkString("\n"));
+    }
+
+    @Test
+    void thePlainViewCountsTheRemarksOfEachFileAtItsStart() {
+        Text text = new Text(ContentText.diffText(
+                new ShownDiff(DiffText.of(DIFF), Option.none()),
+                new DiffLook(DiffStyle.PLAIN, true, true),
+                Option.of(shown(Collapsed.NONE, thread(2, false, "a"), thread(3, true, "b"))),
+                Theme.SpanStyles.NONE));
+
+        assertEquals(
+                "diff --git a/a.txt b/a.txt  · 2 review remarks, Ctrl+D shows them",
+                text.lines().head());
+        assertFalse(text.lines().exists(line -> line.contains("bob")));
+    }
+
+    @Test
+    void whyTheRemarksCouldNotBeReadComesFirst() {
+        Text text = new Text(ContentText.diffText(
+                new ShownDiff(DiffText.of(DIFF), Option.none()),
+                new DiffLook(DiffStyle.RICH, true, true),
+                Option.of(new ShownRemarks(
+                        List.empty(),
+                        NOW,
+                        Option.of(new Failure.Bug(new RuntimeException("offline"))),
+                        true,
+                        Collapsed.NONE,
+                        HashSet.empty(),
+                        HashSet.empty())),
+                Theme.SpanStyles.NONE));
+
+        assertTrue(
+                text.lines().head().startsWith("The review remarks could not be read"),
+                text.lines().head());
+    }
+
+    @Test
+    void theCursorStopsOnEachBarLineThreadAndCommentInTheOrderTheyAreDrawn() {
+        ReviewThread first = thread(2, false, "a");
+        ReviewThread second = thread(2, false, "b", "c");
+        ReviewThread outdated = thread("a.txt", 40, false, "old");
+        ShownRemarks remarks = shown(Collapsed.NONE, first, second, outdated);
+
+        RichDiff.Drawn drawn = drawn(ParsedDiff.of(DIFF), true, Option.of(remarks), Theme.SpanStyles.NONE);
+
+        // Nothing comes before the file, so there is no lead.
+        Anchor.OnLine two = new Anchor.OnLine("a.txt", Side.RIGHT, 2);
+        Anchor.Thread replied = new Anchor.Thread(second.id(), Option.of(two));
+        assertEquals(
+                List.of(
+                        new Anchor.File("a.txt"),
+                        new Anchor.OnLine("a.txt", Side.RIGHT, 1),
+                        new Anchor.OnLine("a.txt", Side.LEFT, 2),
+                        two,
+                        new Anchor.Thread(first.id(), Option.of(two)),
+                        replied,
+                        new Anchor.Comment(new ReviewThread.Comment.Id("C1"), replied),
+                        new Anchor.OnLine("a.txt", Side.RIGHT, 3),
+                        new Anchor.Gap("a.txt", 4, Option.none()),
+                        new Anchor.Thread(outdated.id(), Option.none())),
+                drawn.stops().map(stop -> stop.mark().anchor()));
+        List<String> lines = text(drawn.lines());
+        List<Integer> rows = drawn.stops().map(RichDiff.Stop::row);
+        assertEquals(rows.sorted().distinct(), rows);
+        // Each thread starts on its own first line, and has as many lines as it is drawn with.
+        List<RichDiff.Stop> threads = drawn.stops().filter(stop -> stop.mark().anchor() instanceof Anchor.Thread);
+        assertEquals(3, threads.size());
+        assertTrue(threads.forAll(stop -> lines.get(stop.row()).contains("┏━")), lines.mkString("\n"));
+        assertTrue(lines.get(threads.head().row() + threads.head().mark().lines() - 1)
+                .contains("┗━"));
+        assertTrue(
+                lines.get(threads.head().row() + threads.head().mark().lines()).isBlank());
+        // A comment but the first starts its own stop, which ends its thread after the last (ADR 62).
+        RichDiff.Stop comment = drawn.stops()
+                .find(stop -> stop.mark().anchor() instanceof Anchor.Comment)
+                .get();
+        assertEquals(
+                new Anchor.Comment(
+                        new ReviewThread.Comment.Id("C1"),
+                        new Anchor.Thread(second.id(), Option.of(new Anchor.OnLine("a.txt", Side.RIGHT, 2)))),
+                comment.mark().anchor());
+        assertTrue(lines.get(comment.row()).contains("┣━ bob"), lines.mkString("\n"));
+        assertTrue(lines.get(comment.row() + comment.mark().lines() - 1).contains("┗━"));
+    }
+
+    @Test
+    void theStopsDrawnFollowHowTheThreadsAndCommentsAreCollapsed() {
+        String indent = " ".repeat(8);
+        ReviewThread replied = thread(2, false, "a", "b", "c");
+        ReviewThread collapsed = thread(3, false, "d", "e");
+        ReviewThread plain = thread(1, false, "f", "g");
+        ReviewThread hidden = new ReviewThread(
+                plain.path(),
+                plain.side(),
+                plain.line(),
+                plain.startLine(),
+                plain.startSide(),
+                plain.originalLine(),
+                false,
+                false,
+                plain.subject(),
+                List.of(
+                        new Comment(
+                                "carol",
+                                NOW,
+                                "Spam",
+                                Option.of("SPAM"),
+                                new ReviewThread.Comment.Id("H"),
+                                new ReviewThread.Comment.RestId("1"),
+                                CommentRights.ALL),
+                        new Comment(
+                                "bob",
+                                NOW,
+                                "g",
+                                Option.none(),
+                                new ReviewThread.Comment.Id("G"),
+                                new ReviewThread.Comment.RestId("2"),
+                                CommentRights.ALL)),
+                0,
+                plain.id(),
+                plain.rights());
+        ReviewThread resolved = thread("a.txt", 40, true, "h", "i");
+        // A reply collapsed, an unresolved thread collapsed, a thread whose first comment is hidden opened, and a
+        // resolved one as it starts.
+        Collapsed flipped = new Collapsed(io.vavr.collection.HashMap.of(
+                new Collapsed.Key("C1"),
+                false,
+                Collapsed.Key.of(collapsed.id()),
+                false,
+                Collapsed.Key.of(hidden.id()),
+                true));
+        ShownRemarks remarks = shown(flipped, replied, collapsed, hidden, resolved);
+
+        RichDiff.Drawn drawn = drawn(ParsedDiff.of(DIFF), true, Option.of(remarks), Theme.SpanStyles.NONE);
+
+        Anchor.OnLine one = new Anchor.OnLine("a.txt", Side.RIGHT, 1);
+        Anchor.OnLine two = new Anchor.OnLine("a.txt", Side.RIGHT, 2);
+        Anchor.OnLine three = new Anchor.OnLine("a.txt", Side.RIGHT, 3);
+        Anchor.Thread opened = new Anchor.Thread(hidden.id(), Option.of(one));
+        Anchor.Thread open = new Anchor.Thread(replied.id(), Option.of(two));
+        assertEquals(
+                List.of(
+                        new Anchor.File("a.txt"),
+                        one,
+                        opened,
+                        new Anchor.Comment(new ReviewThread.Comment.Id("G"), opened),
+                        new Anchor.OnLine("a.txt", Side.LEFT, 2),
+                        two,
+                        open,
+                        new Anchor.Comment(new ReviewThread.Comment.Id("C1"), open),
+                        new Anchor.Comment(new ReviewThread.Comment.Id("C2"), open),
+                        three,
+                        new Anchor.Thread(collapsed.id(), Option.of(three)),
+                        new Anchor.Gap("a.txt", 4, Option.none()),
+                        new Anchor.Thread(resolved.id(), Option.none())),
+                drawn.stops().map(stop -> stop.mark().anchor()));
+        assertEquals(
+                3,
+                drawn.stops()
+                        .filter(stop -> stop.mark().anchor() instanceof Anchor.Comment)
+                        .size());
+        // Every line of each thread is drawn, in the stop it starts in.
+        List<String> lines = text(drawn.lines()).map(String::stripTrailing);
+        assertTrue(
+                lines.containsAll(List.of(
+                        indent + "┣━ bob · 2h ago · b",
+                        indent + "┃  c",
+                        indent + "━━ ▸ 2 remarks · bob: d",
+                        indent + "┃  Spam",
+                        indent + "┃  g",
+                        indent + "┗━ ✓ resolved · bob: h")),
+                lines.mkString("\n"));
+        drawn.stops()
+                .zip(drawn.stops().tail())
+                .forEach(pair -> assertTrue(
+                        pair._1().row() + pair._1().mark().lines() <= pair._2().row(), pair.toString()));
+    }
+
+    @Test
+    void theLeadIsWhatComesBeforeTheFirstStop() {
+        RichDiff.Drawn drawn = RichDiff.Drawn.plain(List.of(Line.from("commit"), Line.from("---")))
+                .withLead();
+        assertEquals(List.empty(), drawn.stops());
+
+        RichDiff.Drawn lead = drawn(ParsedDiff.of(DIFF), true, Option.none(), Theme.SpanStyles.NONE)
+                .after(List.of(Line.from("commit"), Line.from("---")))
+                .withLead();
+        assertEquals(new Anchor.Lead(), lead.stops().head().mark().anchor());
+        assertEquals(new Anchor.File("a.txt"), lead.stops().get(1).mark().anchor());
+        assertEquals(2, lead.stops().get(1).row());
+    }
+
+    /**
+     * The text of styled text, line by line.
+     */
+    private record Text(dev.tamboui.text.Text styled) {
+
+        List<String> lines() {
+            return text(List.ofAll(styled.lines()));
+        }
+    }
+
+    /**
+     * {@code diff} drawn with the review threads {@code remarks}, the changed words highlighted.
+     */
+    private static RichDiff.Drawn drawn(
+            ParsedDiff diff, boolean syntax, Option<ShownRemarks> remarks, Theme.SpanStyles styles) {
+        return RichDiff.drawn(diff, syntax, true, remarks, styles);
+    }
+
+    private static List<String> text(List<Line> lines) {
+        return lines.map(line -> line.spans().stream().map(Span::content).collect(Collectors.joining()));
+    }
+
+    @Test
+    void theReactionsToACommentAreALineUnderItsText() {
+        ReviewThread plain = thread(2, false, "Why?");
+        ReviewThread reacted = plain.withComments(plain.comments()
+                .map(comment -> comment.withReactions(new Reactions(List.of(
+                        new Reactions.Group(Reaction.THUMBS_UP, 2, true),
+                        new Reactions.Group(Reaction.EYES, 1, false))))));
+        String indent = " ".repeat(8);
+
+        List<String> lines = text(RemarkLines.threads(
+                        List.of(reacted),
+                        8,
+                        RemarkLines.MIN_WIDTH,
+                        new RemarkLines.RemarkStyle(Collapsed.NONE, HashSet.empty(), HashSet.empty(), NOW),
+                        Theme.SpanStyles.NONE))
+                .map(String::stripTrailing);
+
+        assertEquals(
+                List.of(indent + "┏━ bob · 2h ago", indent + "┃  Why?", indent + "┃  👍 2  👀 1", indent + "┗━"),
+                lines);
+    }
+}

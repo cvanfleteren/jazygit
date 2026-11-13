@@ -20,8 +20,8 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.popup.ListCursor;
 import net.vanfleteren.jazygit.state.popup.PopupMsg;
-import net.vanfleteren.jazygit.ui.TextWidth;
-import net.vanfleteren.jazygit.ui.Theme;
+import net.vanfleteren.jazygit.ui.text.TextWidth;
+import net.vanfleteren.jazygit.ui.theme.Theme;
 import net.vanfleteren.jazygit.ui.widgets.DialogFrame;
 import net.vanfleteren.jazygit.ui.widgets.PopupView;
 

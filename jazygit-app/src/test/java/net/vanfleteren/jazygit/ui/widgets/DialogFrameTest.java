@@ -15,7 +15,7 @@ import dev.tamboui.toolkit.focus.FocusManager;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.settings.ThemeName;
-import net.vanfleteren.jazygit.ui.Theme;
+import net.vanfleteren.jazygit.ui.theme.Theme;
 import org.junit.jupiter.api.Test;
 
 class DialogFrameTest {

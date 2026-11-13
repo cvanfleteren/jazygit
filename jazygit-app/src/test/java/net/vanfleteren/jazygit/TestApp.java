@@ -24,7 +24,7 @@ import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.ui.SettledPilot;
-import net.vanfleteren.jazygit.ui.Theme;
+import net.vanfleteren.jazygit.ui.theme.Theme;
 
 /**
  * The app on the test's runner instead of one of its own, which only {@link #run()} makes.

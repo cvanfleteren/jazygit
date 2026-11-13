@@ -28,11 +28,11 @@ import net.vanfleteren.jazygit.state.github.CheckTimes;
 import net.vanfleteren.jazygit.state.github.Reading;
 import net.vanfleteren.jazygit.state.popup.ListCursor;
 import net.vanfleteren.jazygit.state.popup.PopupMsg;
-import net.vanfleteren.jazygit.ui.CheckRows;
-import net.vanfleteren.jazygit.ui.CheckTimesText;
-import net.vanfleteren.jazygit.ui.ErrorText;
-import net.vanfleteren.jazygit.ui.Theme;
-import net.vanfleteren.jazygit.ui.TimeText;
+import net.vanfleteren.jazygit.ui.github.CheckRows;
+import net.vanfleteren.jazygit.ui.github.CheckTimesText;
+import net.vanfleteren.jazygit.ui.text.ErrorText;
+import net.vanfleteren.jazygit.ui.text.TimeText;
+import net.vanfleteren.jazygit.ui.theme.Theme;
 import net.vanfleteren.jazygit.ui.widgets.DialogFrame;
 import net.vanfleteren.jazygit.ui.widgets.PopupView;
 

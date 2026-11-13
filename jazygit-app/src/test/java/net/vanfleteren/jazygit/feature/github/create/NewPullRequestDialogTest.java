@@ -27,8 +27,8 @@ import net.vanfleteren.jazygit.state.popup.ListCursor;
 import net.vanfleteren.jazygit.state.popup.PopupMsg;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
-import net.vanfleteren.jazygit.ui.Theme;
 import net.vanfleteren.jazygit.ui.ThemedBorders;
+import net.vanfleteren.jazygit.ui.theme.Theme;
 import net.vanfleteren.jazygit.ui.widgets.Dimmed;
 import org.junit.jupiter.api.Test;
 

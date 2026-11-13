@@ -448,6 +448,24 @@ class ArchitectureTest {
     static final ArchRule stateIsFreeOfCycles =
             slices().matching(ROOT + ".state.(*)..").should().beFreeOfCycles();
     /**
+     * The parts of the ui, each a subpackage of it, depend on each other one way only: the panes of a feature on the
+     * widgets, the text and the theme, the content on the panes and the diff. The shell, in {@code ui} itself, is no
+     * part: it lays the parts out.
+     */
+    @ArchTest
+    static final ArchRule uiIsFreeOfCycles =
+            slices().matching(ROOT + ".ui.(*)..").should().beFreeOfCycles();
+    /**
+     * The parts of the ui do not use the shell that lays them out, so the shell depends on them one way only.
+     */
+    @ArchTest
+    static final ArchRule uiPartsDoNotUseTheShell = noClasses()
+            .that()
+            .resideInAPackage(ROOT + ".ui.*..")
+            .should()
+            .dependOnClassesThat()
+            .resideInAPackage(ROOT + ".ui");
+    /**
      * Only {@code OnGitHub} names a branch for gh, from the branch on its remote, so the name of a local branch is not
      * handed to gh for it (ADR 40). A constructor reference, {@code GhBranch::new}, is an access too, so it counts as
      * a call does.
