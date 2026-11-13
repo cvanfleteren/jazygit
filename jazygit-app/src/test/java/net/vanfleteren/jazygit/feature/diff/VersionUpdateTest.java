@@ -11,8 +11,12 @@ import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.Diffs;
+import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.FileVersion;
+import net.vanfleteren.jazygit.git.model.Fixtures;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.keys.Scopes;
+import net.vanfleteren.jazygit.settings.DiffStyle;
 import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Model;
@@ -20,6 +24,7 @@ import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.diff.Anchor;
+import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.diff.DiffCursorAt;
 import net.vanfleteren.jazygit.state.diff.Scrolled;
 import net.vanfleteren.jazygit.state.diff.ScrolledContent;
@@ -52,6 +57,14 @@ class VersionUpdateTest {
             new Source.OfStash(STASH, new CommitFile("a.txt", ChangeType.MODIFIED, Option.none()));
     private static final Anchor.OnLine REMOVED = new Anchor.OnLine("a.txt", Side.LEFT, 10);
     private static final Anchor.OnLine ADDED = new Anchor.OnLine("a.txt", Side.RIGHT, 10);
+    private static final Anchor.OnLine TWO = new Anchor.OnLine("a.txt", Side.RIGHT, 2);
+    private static final String STAGED_CHANGE = HEADER + "@@ -1,2 +1,2 @@\n one\n-two\n+Two\n";
+    private static final String UNSTAGED_CHANGE = HEADER + "@@ -1,2 +1,2 @@\n one\n-Two\n+TWO\n";
+    /**
+     * The file added to the index, so it has no original there.
+     */
+    private static final String ADDED_CHANGE = "diff --git a/a.txt b/a.txt\nnew file mode 100644\n--- /dev/null\n"
+            + "+++ b/a.txt\n@@ -0,0 +1,2 @@\n+one\n+Two\n";
 
     @Test
     void theFirstTimeTheFileIsReadWholeWithWhitespaceNotIgnored() {
@@ -223,6 +236,148 @@ class VersionUpdateTest {
                 .model();
 
         assertTrue(other.repoView().versions().isEmpty());
+    }
+
+    @Test
+    void fromTheFilesPaneBothAreasOfAFileShowItsNewVersion() {
+        Model model = workingTree(STAGED_CHANGE, UNSTAGED_CHANGE);
+
+        Next next = Update.update(model, new VersionMsg.FilesCycled());
+
+        assertEquals(2, next.cmds().size(), next.cmds().mkString("\n"));
+        assertEquals(Option.of(FileVersion.NEW), shown(next.model(), AreaId.STAGED));
+        assertEquals(Option.of(FileVersion.NEW), shown(next.model(), AreaId.UNSTAGED));
+    }
+
+    @Test
+    void fromTheFilesPaneAFileWithOnlyUnstagedChangesShowsOneArea() {
+        Model model = workingTree("", UNSTAGED_CHANGE);
+
+        Next next = Update.update(model, new VersionMsg.FilesCycled());
+
+        assertEquals(1, next.cmds().size());
+        assertEquals(Option.of(FileVersion.NEW), shown(next.model(), AreaId.UNSTAGED));
+        assertTrue(next.model().repoView().versions().get(AreaId.STAGED).isEmpty());
+    }
+
+    @Test
+    void fromTheFilesPaneTheUnstagedAreaSaysWhereBothGo() {
+        Model model = workingTree(STAGED_CHANGE, UNSTAGED_CHANGE);
+        DiffCursorAt staged = new DiffCursorAt(
+                AreaId.STAGED,
+                new Scrolled(new ScrolledContent.Diff(DiffText.of(STAGED_CHANGE)), 0, 0, Option.of(TWO), Option.none()),
+                TWO,
+                Option.none(),
+                Option.none(),
+                Option.none());
+        Model original = Update.update(model, new VersionMsg.Cycled(staged)).model();
+        original = Update.update(original, new VersionMsg.Cycled(staged)).model();
+        assertEquals(Option.of(FileVersion.ORIGINAL), shown(original, AreaId.STAGED));
+
+        Next next = Update.update(original, new VersionMsg.FilesCycled());
+
+        assertEquals(Option.of(FileVersion.NEW), shown(next.model(), AreaId.STAGED));
+        assertEquals(Option.of(FileVersion.NEW), shown(next.model(), AreaId.UNSTAGED));
+    }
+
+    @Test
+    void fromTheFilesPaneAnAreaWithoutTheVersionShowsItsDiff() {
+        Model model = workingTree(ADDED_CHANGE, UNSTAGED_CHANGE);
+
+        Model once = Update.update(model, new VersionMsg.FilesCycled()).model();
+        Next twice = Update.update(once, new VersionMsg.FilesCycled());
+
+        assertEquals(Option.of(FileVersion.ORIGINAL), shown(twice.model(), AreaId.UNSTAGED));
+        assertEquals(Option.none(), shown(twice.model(), AreaId.STAGED));
+    }
+
+    @Test
+    void fromTheFilesPaneThePlainViewShowsNoVersion() {
+        Model model = workingTree(STAGED_CHANGE, UNSTAGED_CHANGE);
+        Model plain = Update.update(model, new DiffOptionsMsg.StyleToggled()).model();
+        assertEquals(DiffStyle.PLAIN, plain.preferences().diffLook().style());
+
+        Next next = Update.update(plain, new VersionMsg.FilesCycled());
+
+        assertEquals(List.of(), next.cmds());
+        assertTrue(next.model().repoView().versions().isEmpty());
+    }
+
+    @Test
+    void fromTheFilesPaneAFileThatCannotBeRenderedIsNot() {
+        Next next = Update.update(workingTree(STAGED_CHANGE, UNSTAGED_CHANGE), new VersionMsg.FilesRenderToggled());
+
+        assertEquals(List.of(), next.cmds());
+        assertTrue(next.model().repoView().versions().isEmpty());
+    }
+
+    @Test
+    void fromTheFilesPaneBothAreasOfAMarkdownFileAreRendered() {
+        List<FileEntry> files = List.of(Fixtures.fileEntry("a.md", ChangeType.MODIFIED));
+        Model model =
+                workingTree(files, STAGED_CHANGE.replace("a.txt", "a.md"), UNSTAGED_CHANGE.replace("a.txt", "a.md"));
+
+        Next next = Update.update(model, new VersionMsg.FilesRenderToggled());
+
+        assertEquals(2, next.cmds().size());
+        List.of(AreaId.STAGED, AreaId.UNSTAGED).forEach(area -> {
+            Version version = next.model().repoView().versions().get(area).get();
+            assertTrue(version.rendered());
+            assertEquals(Option.of(FileVersion.NEW), version.shown());
+        });
+    }
+
+    @Test
+    void fromTheFilesPaneTheChangesOfACommitFileShowItsNewVersion() {
+        Changes commit = new Changes.OfCommit(new Sha("aaaa"));
+        CommitFile file = new CommitFile("a.txt", ChangeType.MODIFIED);
+        Model opened = Update.update(rich(), new CommitFilesMsg.Opened(commit, Scopes.COMMITS.pane()))
+                .model();
+        opened = Update.update(opened, new LoadMsg.CommitFilesLoaded(commit, List.of(file)))
+                .model();
+        opened = Update.update(opened, new SelectionMsg.CommitFilesSelected(List.of(file)))
+                .model();
+        Model read = Update.update(
+                        opened,
+                        new LoadMsg.CommitFileDiffLoaded(
+                                commit, List.of(file), opened.preferences().diffOptions(), CHANGES))
+                .model();
+
+        Next next = Update.update(read, new VersionMsg.FilesCycled());
+
+        assertEquals(1, next.cmds().size());
+        assertEquals(Option.of(FileVersion.NEW), shown(next.model(), AreaId.COMMIT_FILE));
+    }
+
+    /**
+     * The working tree with its one file, {@code a.txt}, highlighted, and its {@code staged} and {@code unstaged}
+     * changes read.
+     */
+    private static Model workingTree(String staged, String unstaged) {
+        return workingTree(DIRTY.files(), staged, unstaged);
+    }
+
+    private static Model workingTree(List<FileEntry> files, String staged, String unstaged) {
+        Model model =
+                Update.update(rich(), new SelectionMsg.FilesSelected(files)).model();
+        return Update.update(
+                        model,
+                        new LoadMsg.FileDiffLoaded(
+                                files, model.preferences().diffOptions(), new Diffs(staged, unstaged)))
+                .model();
+    }
+
+    /**
+     * A loaded model drawing diffs in the rich view, where a version shows, as the tests start in the plain one.
+     */
+    private static Model rich() {
+        Model rich = Update.update(loaded(), new DiffOptionsMsg.StyleToggled()).model();
+        assertEquals(DiffStyle.RICH, rich.preferences().diffLook().style());
+        return rich;
+    }
+
+    private static Option<FileVersion> shown(Model model, AreaId area) {
+        return model.repoView().versions().get(area).flatMap(Version::shown);
     }
 
     /**

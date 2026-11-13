@@ -16,14 +16,14 @@ import net.vanfleteren.jazygit.ui.stash.StashPanel;
  * A scrollable area of the content panel, and the pane whose highlighted row it shows.
  */
 public enum ContentArea {
-    STAGED("diff-staged", FilesPanel.ID),
-    UNSTAGED("diff-unstaged", FilesPanel.ID),
+    STAGED(AreaId.STAGED, FilesPanel.ID),
+    UNSTAGED(AreaId.UNSTAGED, FilesPanel.ID),
     COMMIT("commit-changes", CommitsPanel.ID),
     STASH("stash-changes", StashPanel.ID),
     // What a commit or a stash changed in the files highlighted in the tree of them the files pane lists.
-    COMMIT_FILE("commit-file-changes", FilesPanel.ID),
+    COMMIT_FILE(AreaId.COMMIT_FILE, FilesPanel.ID),
     // A file without changes highlighted among all files of the working tree, as it is on disk (ADR 108).
-    FILE_CONTENT("file-content", FilesPanel.ID),
+    FILE_CONTENT(AreaId.FILE_CONTENT, FilesPanel.ID),
     // The commit highlighted in the divergence the branches pane lists.
     DIVERGENCE("divergence-commit", BranchesPanel.ID),
     // The commit highlighted in the commits of a branch the branches pane lists.
@@ -41,8 +41,16 @@ public enum ContentArea {
         this(id, model -> new PaneId(pane));
     }
 
+    ContentArea(AreaId id, String pane) {
+        this(id, model -> new PaneId(pane));
+    }
+
     ContentArea(String id, Function<Model, PaneId> pane) {
-        this.id = new AreaId(id);
+        this(new AreaId(id), pane);
+    }
+
+    ContentArea(AreaId id, Function<Model, PaneId> pane) {
+        this.id = id;
         this.pane = pane;
     }
 

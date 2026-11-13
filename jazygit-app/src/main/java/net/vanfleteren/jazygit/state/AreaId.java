@@ -7,4 +7,25 @@ package net.vanfleteren.jazygit.state;
  *
  * @param value the id
  */
-public record AreaId(String value) {}
+public record AreaId(String value) {
+
+    /**
+     * The area of the staged changes of the node highlighted in the files pane.
+     */
+    public static final AreaId STAGED = new AreaId("diff-staged");
+
+    /**
+     * The area of the unstaged changes of the node highlighted in the files pane.
+     */
+    public static final AreaId UNSTAGED = new AreaId("diff-unstaged");
+
+    /**
+     * The area of what a commit or a stash changed in the files highlighted in the tree of them the files pane lists.
+     */
+    public static final AreaId COMMIT_FILE = new AreaId("commit-file-changes");
+
+    /**
+     * The area of a file without changes highlighted among all files of the working tree (ADR 108).
+     */
+    public static final AreaId FILE_CONTENT = new AreaId("file-content");
+}

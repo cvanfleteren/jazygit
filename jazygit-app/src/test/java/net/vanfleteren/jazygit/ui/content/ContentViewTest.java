@@ -8,6 +8,8 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.feature.branch.commits.BranchCommitsMsg;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesMsg;
+import net.vanfleteren.jazygit.feature.diff.DiffOptionsMsg;
+import net.vanfleteren.jazygit.feature.diff.VersionMsg;
 import net.vanfleteren.jazygit.feature.help.HelpPopup;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
@@ -187,6 +189,32 @@ class ContentViewTest {
                         asked.withShown(Option.of(FileVersion.ORIGINAL))
                                 .withRendered(true)
                                 .withWhole(new Loadable.Loaded<>(changes))));
+    }
+
+    @Test
+    void ctrlOInTheFilesPaneShowsTheNewVersionInTheStagedAndTheUnstagedArea() {
+        String header = "diff --git a/a.txt b/a.txt\n--- a/a.txt\n+++ b/a.txt\n";
+        Model dirty = Update.update(TestModels.loaded(), new LoadMsg.StatusLoaded(TestModels.DIRTY))
+                .model();
+        Model rich = Update.update(dirty, new DiffOptionsMsg.StyleToggled()).model();
+        Model model = Update.update(rich, new SelectionMsg.FilesSelected(TestModels.DIRTY.files()))
+                .model();
+        model = Update.update(
+                        model,
+                        new LoadMsg.FileDiffLoaded(
+                                TestModels.DIRTY.files(),
+                                model.preferences().diffOptions(),
+                                new Diffs(
+                                        header + "@@ -1,2 +1,2 @@\n one\n-two\n+Two\n",
+                                        header + "@@ -1,2 +1,2 @@\n one\n-Two\n+TWO\n")))
+                .model();
+
+        Model cycled = Update.update(model, new VersionMsg.FilesCycled()).model();
+
+        Shown.Stacked shown = (Shown.Stacked) ContentView.of(cycled, FilesPanel.ID);
+        assertEquals(
+                List.of("Staged changes · new version (reading)", "Unstaged changes · new version (reading)"),
+                shown.areas().map(Shown.Area::title));
     }
 
     @Test

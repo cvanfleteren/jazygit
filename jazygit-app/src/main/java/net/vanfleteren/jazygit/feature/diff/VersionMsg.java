@@ -23,4 +23,16 @@ public sealed interface VersionMsg extends Msg {
      * again (ADR 103).
      */
     record RenderToggled(DiffCursorAt at) implements VersionMsg {}
+
+    /**
+     * The user asked, in the files pane, to show the next of the diff, the new version and the original of the file
+     * highlighted, in every area the content panel shows it in: where the unstaged area goes, the staged one goes too.
+     */
+    record FilesCycled() implements VersionMsg {}
+
+    /**
+     * The user asked, in the files pane, to show the file highlighted rendered, or as source again, in every area the
+     * content panel shows it in, as the unstaged area goes.
+     */
+    record FilesRenderToggled() implements VersionMsg {}
 }
