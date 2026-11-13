@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.repos.RecentRepo;
-import net.vanfleteren.jazygit.git.GitError;
+import net.vanfleteren.jazygit.git.process.GitError;
 import net.vanfleteren.jazygit.settings.Settings;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;

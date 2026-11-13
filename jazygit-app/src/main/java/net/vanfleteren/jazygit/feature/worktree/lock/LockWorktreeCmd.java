@@ -5,7 +5,7 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.worktree.WorktreeCmd;
 import net.vanfleteren.jazygit.git.Git;
-import net.vanfleteren.jazygit.git.GitFailure;
+import net.vanfleteren.jazygit.git.process.GitFailure;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.operation.Operation;
 

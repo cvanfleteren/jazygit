@@ -2,10 +2,10 @@ package net.vanfleteren.jazygit.ui.text;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.process.GhError;
-import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.git.process.GitError;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.settings.SettingsProblem;
 import net.vanfleteren.jazygit.state.AppError;

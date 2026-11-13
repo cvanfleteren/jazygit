@@ -114,3 +114,5 @@ within their role, and the tests are split per role in a later change.
 Amended by ADR 75: `GitFailure` is no longer generic, and `ProcessError` is folded into `GitError`.
 
 Amended by ADR 114: the GitHub operations are split into roles as well, as decision 8 left open.
+
+Amended by ADR 120: the role classes are in packages, by what they share, and public where another package calls them.

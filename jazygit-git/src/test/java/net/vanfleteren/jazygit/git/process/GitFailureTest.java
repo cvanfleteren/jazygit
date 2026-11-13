@@ -1,0 +1,47 @@
+package net.vanfleteren.jazygit.git.process;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import io.vavr.collection.List;
+import io.vavr.control.Either;
+import io.vavr.control.Option;
+import net.vanfleteren.jazygit.git.StubGit;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
+import org.junit.jupiter.api.Test;
+
+class GitFailureTest {
+
+    private static final GitError.CommandFailed REFUSED = new GitError.CommandFailed("error: refused", 1);
+    private static final GitError.CommandFailed ABORT_FAILED = new GitError.CommandFailed("fatal: no rebase", 128);
+
+    @Test
+    void aCleanupThatSucceedsOnlyAddsItsCommands() {
+        GitFailure failure = new GitFailure(REFUSED, StubGit.executed("git rebase main"));
+
+        assertEquals(
+                new GitFailure(REFUSED, StubGit.executed("git rebase main", "git rebase --abort")),
+                failure.followedBy(Either.right(StubGit.executed("git rebase --abort"))));
+    }
+
+    @Test
+    void aCleanupThatFailsIsReportedNextToTheFailure() {
+        GitFailure failure = new GitFailure(REFUSED, StubGit.executed("git rebase main"));
+
+        GitFailure cleanedUp =
+                failure.followedBy(Either.left(new GitFailure(ABORT_FAILED, StubGit.executed("git rebase --abort"))));
+
+        assertEquals(REFUSED, cleanedUp.error());
+        assertEquals(StubGit.executed("git rebase main", "git rebase --abort"), cleanedUp.commands());
+        assertEquals(Option.of(ABORT_FAILED), cleanedUp.cleanupFailed());
+    }
+
+    @Test
+    void aSequenceStopsAtTheFirstFailureKeepingTheEarlierCommands() {
+        Either<GitFailure, List<ExecutedCommand>> outcome = GitFailure.sequence(
+                () -> Either.right(StubGit.executed("git add a")),
+                () -> Either.left(new GitFailure(REFUSED, StubGit.executed("git commit"))),
+                () -> Either.right(StubGit.executed("git push")));
+
+        assertEquals(new GitFailure(REFUSED, StubGit.executed("git add a", "git commit")), outcome.getLeft());
+    }
+}

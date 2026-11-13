@@ -10,6 +10,8 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.InProgressAction;
 import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.git.process.GitError;
+import net.vanfleteren.jazygit.git.process.GitFailure;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

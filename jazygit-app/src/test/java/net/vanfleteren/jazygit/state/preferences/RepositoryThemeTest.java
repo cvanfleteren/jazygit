@@ -5,10 +5,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.git.GitError;
-import net.vanfleteren.jazygit.git.StubConfig;
 import net.vanfleteren.jazygit.git.StubGit;
+import net.vanfleteren.jazygit.git.branches.StubConfig;
 import net.vanfleteren.jazygit.git.model.ConfigValue;
+import net.vanfleteren.jazygit.git.process.GitError;
 import net.vanfleteren.jazygit.settings.ThemeName;
 import org.junit.jupiter.api.Test;
 

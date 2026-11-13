@@ -4,7 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
-import net.vanfleteren.jazygit.git.GitFailure;
+import net.vanfleteren.jazygit.git.process.GitFailure;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.settings.EditorProgram;
 import net.vanfleteren.jazygit.state.Env;

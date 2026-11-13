@@ -1,0 +1,396 @@
+package net.vanfleteren.jazygit.git.branches;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
+import io.vavr.collection.List;
+import io.vavr.control.Option;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import net.vanfleteren.jazygit.git.CliGit;
+import net.vanfleteren.jazygit.git.Git;
+import net.vanfleteren.jazygit.git.model.AllBranches;
+import net.vanfleteren.jazygit.git.model.BranchName;
+import net.vanfleteren.jazygit.git.model.BranchRef;
+import net.vanfleteren.jazygit.git.model.Head;
+import net.vanfleteren.jazygit.git.model.NewBranchStart;
+import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.git.model.Sha;
+import net.vanfleteren.jazygit.git.model.Worktree;
+import net.vanfleteren.jazygit.git.process.GitError;
+import net.vanfleteren.jazygit.git.process.GitFailure;
+import net.vanfleteren.jazygit.process.ExecutedCommand;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.zeroturnaround.exec.ProcessExecutor;
+import org.zeroturnaround.exec.ProcessResult;
+
+/**
+ * Listing, adding and removing worktrees: the parser on fixed output of {@code git worktree list --porcelain -z},
+ * and {@link Git} against a real repository.
+ */
+class CliWorktreesTest {
+
+    private static final String A = "a".repeat(40);
+    private static final String ZEROES = "0".repeat(40);
+
+    @TempDir
+    Path dir;
+
+    private Path main;
+
+    private static String worktree(String... lines) {
+        return String.join("\0", lines) + "\0\0";
+    }
+
+    private static void git(Path in, String... args) throws Exception {
+        java.util.List<String> command = new java.util.ArrayList<>(java.util.List.of(
+                "git", "-c", "user.name=Test", "-c", "user.email=test@example.com", "-c", "commit.gpgsign=false"));
+        command.addAll(java.util.List.of(args));
+        ProcessResult result = new ProcessExecutor()
+                .command(command)
+                .directory(in.toFile())
+                .redirectErrorStream(true)
+                .readOutput(true)
+                .exitValueAny()
+                .execute();
+        assertEquals(
+                0, result.getExitValue(), () -> "git " + String.join(" ", args) + " failed: " + result.outputUTF8());
+    }
+
+    private static boolean gitAvailable() {
+        try {
+            return new ProcessExecutor("git", "--version").execute().getExitValue() == 0;
+        } catch (IOException | java.util.concurrent.TimeoutException e) {
+            return false;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
+    }
+
+    private static void deleteRecursively(Path directory) throws IOException {
+        try (var paths = Files.walk(directory)) {
+            for (Path path : List.ofAll(paths::iterator).reverse()) {
+                Files.delete(path);
+            }
+        }
+    }
+
+    @BeforeEach
+    void setUp() throws Exception {
+        main = Files.createDirectories(dir.resolve("main")).toRealPath();
+    }
+
+    @Test
+    void theWorktreesAreReadWithTheirBranchOrDetachedHeadAndWhatKeepsThemFromBeingRemoved() {
+        String raw = worktree("worktree /repos/app", "HEAD " + A, "branch refs/heads/main")
+                + worktree("worktree /repos/app feature", "HEAD " + A, "branch refs/heads/feature/x", "locked on usb")
+                + worktree("worktree /repos/detached", "HEAD " + A, "detached", "locked")
+                + worktree(
+                        "worktree /repos/gone",
+                        "HEAD " + A,
+                        "branch refs/heads/gone",
+                        "prunable gitdir file points to non-existent location");
+
+        // The one shown first, then the others as git lists them.
+        assertEquals(
+                List.of(
+                        new Worktree(
+                                Path.of("/repos/app feature"),
+                                Option.of(new Head.OnBranch(new BranchName("feature/x"), Option.of(new Sha(A)))),
+                                false,
+                                true,
+                                Option.of("on usb"),
+                                false),
+                        new Worktree(
+                                Path.of("/repos/app"),
+                                Option.of(new Head.OnBranch(new BranchName("main"), Option.of(new Sha(A)))),
+                                true,
+                                false,
+                                Option.none(),
+                                false),
+                        new Worktree(
+                                Path.of("/repos/detached"),
+                                Option.of(new Head.Detached(new Sha(A))),
+                                false,
+                                false,
+                                Option.of(""),
+                                false),
+                        new Worktree(
+                                Path.of("/repos/gone"),
+                                Option.of(new Head.OnBranch(new BranchName("gone"), Option.of(new Sha(A)))),
+                                false,
+                                false,
+                                Option.none(),
+                                true)),
+                CliWorktrees.parse(raw, Path.of("/repos/app feature")).get());
+    }
+
+    @Test
+    void aBareRepositoryIsLeftOutAndNoneOfItsWorktreesIsTheMainOne() {
+        String raw = worktree("worktree /repos/app.git", "bare")
+                + worktree("worktree /repos/linked", "HEAD " + A, "branch refs/heads/main");
+
+        assertEquals(
+                List.of(new Worktree(
+                        Path.of("/repos/linked"),
+                        Option.of(new Head.OnBranch(new BranchName("main"), Option.of(new Sha(A)))),
+                        false,
+                        true,
+                        Option.none(),
+                        false)),
+                CliWorktrees.parse(raw, Path.of("/repos/linked")).get());
+    }
+
+    @Test
+    void aRepositoryWithoutCommitsHasABranchWithoutATipAndMalformedOutputIsAnError() {
+        assertEquals(
+                List.of(Option.of(new Head.OnBranch(new BranchName("main"), Option.none()))),
+                CliWorktrees.parse(
+                                worktree("worktree /repos/new", "HEAD " + ZEROES, "branch refs/heads/main"),
+                                Path.of("/repos/new"))
+                        .get()
+                        .map(Worktree::head));
+        assertEquals(
+                new GitError.UnexpectedOutput("/repos/app"),
+                CliWorktrees.parse(worktree("/repos/app"), Path.of("/repos/app"))
+                        .getLeft());
+        assertEquals(
+                new GitError.UnexpectedOutput("not a sha"),
+                CliWorktrees.parse(worktree("worktree /repos/app", "HEAD not a sha"), Path.of("/repos/app"))
+                        .getLeft());
+    }
+
+    @Test
+    void aWorktreeWhoseHeadGitCannotResolveIsListedWithoutOne() {
+        // While git worktree add sets it up, its HEAD is a placeholder of zeroes, detached; with a broken HEAD
+        // file, git says neither branch nor detached.
+        String raw = worktree("worktree /repos/app", "HEAD " + A, "branch refs/heads/main")
+                + worktree("worktree /repos/adding", "HEAD " + ZEROES, "detached")
+                + worktree("worktree /repos/broken", "HEAD " + ZEROES)
+                + worktree("worktree /repos/headless");
+
+        assertEquals(
+                List.of(
+                        Option.of(new Head.OnBranch(new BranchName("main"), Option.of(new Sha(A)))),
+                        Option.<Head>none(),
+                        Option.<Head>none(),
+                        Option.<Head>none()),
+                CliWorktrees.parse(raw, Path.of("/repos/app")).get().map(Worktree::head));
+    }
+
+    @Test
+    void aNewWorktreeGoesNextToThisOneNamedAfterItAndTheBranch() {
+        Worktree app = new Worktree(
+                Path.of("/repos/app"),
+                Option.of(new Head.OnBranch(new BranchName("main"), Option.none())),
+                true,
+                true,
+                Option.none(),
+                false);
+
+        assertEquals("/repos/app-feature-login", app.siblingFor(new BranchName("feature/login")));
+        assertEquals("app", app.name());
+        // Next to a bare repository, worktrees are named after their branch only.
+        assertEquals("/repos/feature-login", app.nextTo(new BranchName("feature/login")));
+    }
+
+    @Test
+    void worktreesAreAddedListedAndRemovedAndOneWithChangesOnlyByForce() throws Exception {
+        assumeTrue(gitAvailable(), "git is not installed");
+        git(main, "init", "-q", "-b", "main");
+        git(main, "commit", "-q", "--allow-empty", "-m", "Initial commit");
+        git(main, "branch", "feature");
+        Git repository = CliGit.open(main).get();
+        Path linked = main.resolveSibling("linked");
+
+        List<String> added = repository
+                .worktrees()
+                .add(Path.of("../linked"), new BranchName("feature"))
+                .get()
+                .map(ExecutedCommand::line);
+
+        assertEquals(List.of("git worktree add --quiet " + linked + " feature"), added);
+        List<Worktree> worktrees = repository.worktrees().list().get();
+        assertEquals(List.of(main, linked), worktrees.map(Worktree::path));
+        assertEquals(List.of(true, false), worktrees.map(Worktree::current));
+        assertEquals(List.of(true, false), worktrees.map(Worktree::main));
+        assertEquals(
+                List.of(Option.of(new BranchName("main")), Option.of(new BranchName("feature"))),
+                worktrees.map(Worktree::branch));
+        assertEquals(
+                List.of(linked, main),
+                CliGit.open(linked).get().worktrees().list().get().map(Worktree::path));
+
+        Files.writeString(linked.resolve("new.txt"), "untracked\n");
+        assertInstanceOf(
+                GitError.WorktreeHasChanges.class,
+                repository.worktrees().remove(linked, false).getLeft().error());
+        assertTrue(Files.exists(linked.resolve("new.txt")));
+
+        repository.worktrees().remove(linked, true).get();
+        assertFalse(Files.exists(linked));
+        assertEquals(List.of(main), repository.worktrees().list().get().map(Worktree::path));
+    }
+
+    @Test
+    void worktreesAreLockedUnlockedAndPrunedOnceTheirDirectoryIsGone() throws Exception {
+        assumeTrue(gitAvailable(), "git is not installed");
+        git(main, "init", "-q", "-b", "main");
+        git(main, "commit", "-q", "--allow-empty", "-m", "Initial commit");
+        git(main, "branch", "feature");
+        Git repository = CliGit.open(main).get();
+        Path linked = main.resolveSibling("linked");
+        repository.worktrees().add(linked, new BranchName("feature")).get();
+
+        assertEquals(
+                List.of("git worktree lock " + linked),
+                repository.worktrees().lock(linked, true).get().map(ExecutedCommand::line));
+        assertEquals(
+                List.of(Option.none(), Option.of("")),
+                repository.worktrees().list().get().map(Worktree::locked));
+        assertInstanceOf(
+                GitError.CommandFailed.class,
+                repository.worktrees().lock(main, true).getLeft().error());
+        repository.worktrees().lock(linked, false).get();
+        assertEquals(List.of(false, false), repository.worktrees().list().get().map(Worktree::isLocked));
+
+        assertEquals(
+                List.of("git worktree lock --reason 'on usb' " + linked),
+                repository.worktrees().lock(linked, "on usb").get().map(ExecutedCommand::line));
+        assertEquals(
+                Option.of("on usb"), repository.worktrees().list().get().last().locked());
+        git(main, "worktree", "unlock", linked.toString());
+        deleteRecursively(linked);
+        assertTrue(repository.worktrees().list().get().last().prunable());
+
+        assertEquals(
+                List.of("git worktree prune"),
+                repository.worktrees().prune().get().map(ExecutedCommand::line));
+        assertEquals(List.of(main), repository.worktrees().list().get().map(Worktree::path));
+    }
+
+    @Test
+    void aWorktreeIsRemovedAnywayWhenLockedWithChangesOrGoneAndLocked() throws Exception {
+        assumeTrue(gitAvailable(), "git is not installed");
+        git(main, "init", "-q", "-b", "main");
+        git(main, "commit", "-q", "--allow-empty", "-m", "Initial commit");
+        git(main, "branch", "dirty");
+        git(main, "branch", "gone");
+        Git repository = CliGit.open(main).get();
+        Path dirty = main.resolveSibling("dirty");
+        Path gone = main.resolveSibling("gone");
+        repository.worktrees().add(dirty, new BranchName("dirty")).get();
+        repository.worktrees().add(gone, new BranchName("gone")).get();
+        Files.writeString(dirty.resolve("new.txt"), "untracked\n");
+        repository.worktrees().lock(dirty, true).get();
+        repository.worktrees().lock(gone, true).get();
+        deleteRecursively(gone);
+        repository.worktrees().prune().get();
+        assertEquals(
+                List.of(main, dirty, gone), repository.worktrees().list().get().map(Worktree::path));
+
+        assertEquals(
+                List.of("git worktree remove --force --force " + dirty),
+                repository.worktrees().removeAnyway(dirty).get().map(ExecutedCommand::line));
+        repository.worktrees().removeAnyway(gone).get();
+
+        assertFalse(Files.exists(dirty));
+        assertEquals(List.of(main), repository.worktrees().list().get().map(Worktree::path));
+        repository.branches().forceDeleteLocal(new BranchName("gone")).get();
+    }
+
+    @Test
+    void aNewBranchIsCheckedOutInANewWorktreeFromABranchOrFollowingARemoteOne() throws Exception {
+        assumeTrue(gitAvailable(), "git is not installed");
+        Path origin = Files.createDirectories(main.resolveSibling("origin"));
+        git(origin, "init", "-q", "-b", "main");
+        git(origin, "commit", "-q", "--allow-empty", "-m", "Initial commit");
+        git(origin, "branch", "shared");
+        git(
+                main.getParent(),
+                "clone",
+                "-q",
+                origin.toString(),
+                main.getFileName().toString());
+        Git repository = CliGit.open(main).get();
+        Path fromLocal = main.resolveSibling("from-local");
+        Path fromRemote = main.resolveSibling("from-remote");
+
+        BranchName mainBranch = new BranchName("main");
+        List<String> added = repository
+                .worktrees()
+                .addWithNewBranch(
+                        fromLocal,
+                        new BranchName("topic"),
+                        new NewBranchStart.From(new BranchRef.Local(mainBranch), Option.of(mainBranch)))
+                .get()
+                .map(ExecutedCommand::line);
+        repository
+                .worktrees()
+                .addWithNewBranch(
+                        fromRemote,
+                        new BranchName("shared"),
+                        new NewBranchStart.Following(new RemoteBranch("origin", new BranchName("shared"))))
+                .get();
+
+        assertEquals("git worktree add --quiet -b topic " + fromLocal + " refs/heads/main", added.head());
+        assertEquals(
+                List.of(
+                        Option.of(new BranchName("main")),
+                        Option.of(new BranchName("topic")),
+                        Option.of(new BranchName("shared"))),
+                repository.worktrees().list().get().map(Worktree::branch));
+        assertEquals(
+                Option.of(new BranchName("main")),
+                new CliBranches(main).parent(new BranchName("topic")).get());
+        assertEquals(
+                Option.of("origin/shared"),
+                repository
+                        .branches()
+                        .all()
+                        .map(AllBranches::local)
+                        .get()
+                        .find(branch -> branch.name().value().equals("shared"))
+                        .flatMap(branch -> branch.upstream())
+                        .map(upstream -> upstream.branch().name()));
+    }
+
+    @Test
+    void aBranchThatIsCheckedOutAlreadyGetsNoWorktree() throws Exception {
+        assumeTrue(gitAvailable(), "git is not installed");
+        git(main, "init", "-q", "-b", "main");
+        git(main, "commit", "-q", "--allow-empty", "-m", "Initial commit");
+        Git repository = CliGit.open(main).get();
+
+        GitFailure failure = repository
+                .worktrees()
+                .add(main.resolveSibling("other"), new BranchName("main"))
+                .getLeft();
+
+        assertInstanceOf(GitError.CommandFailed.class, failure.error());
+        assertFalse(Files.exists(main.resolveSibling("other")));
+    }
+
+    @Test
+    void aDetachedWorktreeChecksOutAStartPointOnNoBranch() throws Exception {
+        assumeTrue(gitAvailable(), "git is not installed");
+        git(main, "init", "-q", "-b", "main");
+        git(main, "commit", "-q", "--allow-empty", "-m", "Initial commit");
+        git(main, "branch", "topic");
+        Git repository = CliGit.open(main).get();
+
+        assertTrue(repository
+                .worktrees()
+                .addDetached(Path.of("../detached"), new BranchRef.Local(new BranchName("topic")))
+                .isRight());
+
+        Worktree detached = repository.worktrees().list().get().last();
+        assertEquals(main.resolveSibling("detached"), detached.path());
+        assertEquals(Option.none(), detached.branch());
+        assertInstanceOf(Head.Detached.class, detached.head().get());
+    }
+}

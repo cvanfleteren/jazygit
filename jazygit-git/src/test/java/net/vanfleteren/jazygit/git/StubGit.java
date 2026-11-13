@@ -3,6 +3,21 @@ package net.vanfleteren.jazygit.git;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import java.nio.file.Path;
+import net.vanfleteren.jazygit.git.branches.StubBranches;
+import net.vanfleteren.jazygit.git.branches.StubCheckout;
+import net.vanfleteren.jazygit.git.branches.StubConfig;
+import net.vanfleteren.jazygit.git.branches.StubRemotes;
+import net.vanfleteren.jazygit.git.branches.StubWorktrees;
+import net.vanfleteren.jazygit.git.commits.StubCommits;
+import net.vanfleteren.jazygit.git.files.StubDiffs;
+import net.vanfleteren.jazygit.git.files.StubEditor;
+import net.vanfleteren.jazygit.git.files.StubIndex;
+import net.vanfleteren.jazygit.git.files.StubStashes;
+import net.vanfleteren.jazygit.git.files.StubStatus;
+import net.vanfleteren.jazygit.git.history.StubHistory;
+import net.vanfleteren.jazygit.git.history.StubIntegrate;
+import net.vanfleteren.jazygit.git.process.GitError;
+import net.vanfleteren.jazygit.git.process.GitFailure;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
 /**

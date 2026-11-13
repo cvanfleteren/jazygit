@@ -7,13 +7,13 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.push.PushCmd;
 import net.vanfleteren.jazygit.git.Git;
-import net.vanfleteren.jazygit.git.GitError;
-import net.vanfleteren.jazygit.git.GitFailure;
 import net.vanfleteren.jazygit.git.StubGit;
-import net.vanfleteren.jazygit.git.StubRemotes;
+import net.vanfleteren.jazygit.git.branches.StubRemotes;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.PushMode;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
+import net.vanfleteren.jazygit.git.process.GitError;
+import net.vanfleteren.jazygit.git.process.GitFailure;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import org.junit.jupiter.api.Test;
 

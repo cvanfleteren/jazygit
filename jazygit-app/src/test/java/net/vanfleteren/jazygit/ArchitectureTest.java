@@ -113,9 +113,22 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule gitIsReachedThroughItsRoles = noClasses()
             .should()
-            .dependOnClassesThat(resideInAPackage("..jazygit.git")
+            .dependOnClassesThat(resideInAPackage("..jazygit.git..")
                     .and(simpleNameStartingWith("Cli"))
                     .and(not(simpleName("CliGit"))));
+    /**
+     * How git is run is the business of its roles (ADR 120): of {@code git.process} the application only sees the
+     * errors and the files of a repository's metadata.
+     */
+    @ArchTest
+    static final ArchRule gitKeepsHowItRunsToItself = noClasses()
+            .should()
+            .dependOnClassesThat(resideInAPackage("..jazygit.git.process..")
+                    .and(simpleName("GitProcess")
+                            .or(simpleName("GitCommand"))
+                            .or(simpleName("GitArgs"))
+                            .or(simpleName("GitOutput"))
+                            .or(simpleName("TempFiles"))));
     /**
      * The application reaches GitHub through a {@code GitHub} and its roles, which {@code CliGitHub} gives for a real
      * repository; the {@code Cli} classes behind the roles are none of its business (ADR 114).
