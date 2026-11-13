@@ -16,9 +16,11 @@ import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.MouseEvent;
 import dev.tamboui.tui.event.MouseEventKind;
+import dev.tamboui.tui.event.PasteEvent;
 import dev.tamboui.widgets.common.ScrollBarPolicy;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Loadable;
@@ -79,11 +81,12 @@ public final class LoadableList<T> {
      * @param title the title to show instead of the one the list was made with
      */
     public Panel render(Loadable<T> value, Function<T, List<Row>> items, boolean focused, boolean active, Line title) {
-        return render(value, items, focused, active, title, Option.none());
+        return render(value, items, focused, active, title, Option.none(), event -> {});
     }
 
     /**
-     * @param above a line drawn above the rows, inside the border, if there is one
+     * @param above a line typed in drawn above the rows, inside the border, if there is one
+     * @param paste what a paste does while the list has the focus and the line is drawn
      */
     public Panel render(
             Loadable<T> value,
@@ -91,7 +94,8 @@ public final class LoadableList<T> {
             boolean focused,
             boolean active,
             Line title,
-            Option<StyledElement<?>> above) {
+            Option<StyledElement<?>> above,
+            Consumer<PasteEvent> paste) {
         this.focused = focused;
         list.highlightStyle(highlights.of(active))
                 .highlightSymbol(active ? highlightSymbol : " ".repeat(highlightSymbol.length()));
@@ -120,7 +124,8 @@ public final class LoadableList<T> {
             show(rows);
         }
         shownRows = rows;
-        Element content = above.<Element>map(line -> column(line, list)).getOrElse(list);
+        Element content = above.<Element>map(line -> new PasteTarget(column(line, list), list.id(), paste))
+                .getOrElse(list);
         return Pane.bordered(title, content, focused, selectedIndex(), count);
     }
 

@@ -88,6 +88,20 @@ class NewBranchDialogTest {
     }
 
     @Test
+    void aPasteGoesInTheNameAtOnceOnOneLine() throws Exception {
+        try (ToolkitTestRunner runner = start()) {
+            type(runner, "feature/");
+            dispatched.clear();
+            SettledPilot.paste(runner, "pasted\nname\n");
+        }
+
+        assertEquals(
+                Option.of("feature/pasted name"),
+                open.popup(NewBranchPopup.class).map(NewBranchPopup::name));
+        assertEquals(1, dispatched.size(), dispatched::toString);
+    }
+
+    @Test
     void escapeCancels() throws Exception {
         try (ToolkitTestRunner runner = start()) {
             type(runner, "topic");

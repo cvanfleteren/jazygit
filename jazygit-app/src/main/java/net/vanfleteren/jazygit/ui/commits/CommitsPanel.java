@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.ui.commits;
 
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.tui.event.KeyEvent;
+import dev.tamboui.tui.event.PasteEvent;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
@@ -44,6 +45,8 @@ public class CommitsPanel {
     // What the last render showed: the text of the open search line, and whether a search was listed.
     private Option<String> typing = Option.none();
     private boolean searching;
+    // What a paste does: while the search line is open, it goes in it.
+    private final Consumer<PasteEvent> paste;
 
     /**
      * @param dispatch   receives the messages for the user's actions, on the render thread
@@ -58,6 +61,8 @@ public class CommitsPanel {
      */
     public CommitsPanel(Consumer<Msg> dispatch, Runnable openCommit, Theme.Highlights highlights) {
         list = new LoadableList<>(Messages.get("panel.commits.title"), ID, CommitsPanel::reselect, highlights);
+        paste = event ->
+                typing.forEach(text -> dispatch.accept(new CommitSearchMsg.Edited(searchLine.paste(text, event))));
         list.onKey(event -> typing.map(text -> typed(text, event, dispatch))
                 .orElse(() -> event.isConfirm() && selectedCommit().isDefined()
                         ? Option.of(openCommit)
@@ -218,7 +223,8 @@ public class CommitsPanel {
                 ID.equals(activeId),
                 Pane.title(ahead.title(
                         search.map(CommitsPanel::title).getOrElse(() -> Messages.get("panel.commits.title")))),
-                typing.map(searchLine::field));
+                typing.map(searchLine::field),
+                paste);
     }
 
     /**

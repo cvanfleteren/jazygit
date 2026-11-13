@@ -152,13 +152,22 @@ public final class ChoiceList<P extends Popup> {
         List<Row> rows = rows(model, popup);
         FilteredCursor<Line> view = view(rows, model.listCursor(), opensAt);
         List<StyledElement<?>> elements = view.lines().map(line -> element(line, rows));
-        return down(rows)
+        StyledElement<?> shown = down(rows)
                 .<StyledElement<?>>map(first -> columns(view, rows, elements, first))
                 .getOrElse(() -> list.elements(elements.toJavaArray(StyledElement[]::new))
                         .selected(view.selected())
                         .onKeyEvent(event -> handleKey(view, rows, Option.none(), event))
                         .onMouseEvent(event -> wheel(view, event))
                         .length(height(model, popup)));
+        // While the filter is open, a paste goes in it.
+        return view.cursor().filter().isDefined()
+                ? new PasteTarget(
+                        shown,
+                        id,
+                        event -> ListKeys.pasted(event, view, filter)
+                                .flatMap(view::after)
+                                .forEach(cursor -> moved(view, cursor)))
+                : shown;
     }
 
     /**
