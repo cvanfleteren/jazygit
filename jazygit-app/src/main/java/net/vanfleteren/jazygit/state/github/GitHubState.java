@@ -105,8 +105,7 @@ public record GitHubState(
      * too; none when it is not listed, or not stacked.
      */
     public List<Integer> below(int number) {
-        List<PullRequest> open =
-                pullRequests.map(byBranch -> byBranch.values().toList()).getOrElse(List.empty());
+        List<PullRequest> open = open();
         return open.find(pr -> pr.number() == number)
                 .flatMap(PullRequest::stack)
                 .map(stack -> open.filter(other -> other.stack()
@@ -119,13 +118,13 @@ public record GitHubState(
     /**
      * This state with {@code merge} as the merge of its pull request, and of the ones below it: it replaces how earlier
      * merges went for those, each of which still tells how it went for its own pull request, when that is not one of
-     * them.
+     * them. Once it failed, it keeps how they stood then, as listed (ADR 119).
      */
     public GitHubState withMerge(PullRequestMerge merge) {
         List<Integer> merged = merge.below().prepend(merge.number());
         return withMerges(merges.removeAll(merged)
                 .mapValues(earlier -> earlier.withoutBelow(merged))
-                .put(merge.number(), merge));
+                .put(merge.number(), merge.failedAmong(open())));
     }
 
     /**
@@ -166,7 +165,7 @@ public record GitHubState(
     public GitHubState withListed(List<PullRequest> listed) {
         // Vavr's toMap has no merge function; a later entry replaces an earlier one, so ascending numbers keep the
         // newest.
-        return withPullRequests(Option.of(
+        return withOpen(Option.of(
                 listed.sortBy(PullRequest::number).toMap(pr -> FromGitHub.branch(pr.headBranch()), pr -> pr)));
     }
 
@@ -175,9 +174,25 @@ public record GitHubState(
      * longer listed once it is merged or closed. Unchanged when it is not listed.
      */
     public GitHubState withRead(PullRequestDetails details) {
-        return withPullRequests(pullRequests.map(open -> open.find(listed -> listed._2.number() == details.number())
+        return withOpen(pullRequests.map(open -> open.find(listed -> listed._2.number() == details.number())
                 .map(listed -> details.listed().fold(() -> open.remove(listed._1), now -> open.put(listed._1, now)))
                 .getOrElse(open)));
+    }
+
+    /**
+     * This state with the open pull requests {@code read}: a merge that failed no longer shows once one of the pull
+     * requests it merges no longer stands as it did then, as merging it again may go now (ADR 119).
+     */
+    private GitHubState withOpen(Option<Map<BranchName, PullRequest>> read) {
+        GitHubState now = withPullRequests(read);
+        return now.withMerges(merges.filterValues(merge -> !merge.outdatedBy(now.open())));
+    }
+
+    /**
+     * The open pull requests, as read last; none until they were read.
+     */
+    private List<PullRequest> open() {
+        return pullRequests.map(byBranch -> byBranch.values().toList()).getOrElse(List.empty());
     }
 
     /**

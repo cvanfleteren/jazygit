@@ -100,3 +100,5 @@ Amended by ADR 72, 73 and 74: stacks show as a node of the branches list, are li
 are rebased and pushed whole.
 
 Amended by ADR 112: the merge keys of the dialog enable auto-merge on a pull request that is blocked and not stacked.
+
+Amended by ADR 119: a failed merge no longer shows once a pull request it merges changed.

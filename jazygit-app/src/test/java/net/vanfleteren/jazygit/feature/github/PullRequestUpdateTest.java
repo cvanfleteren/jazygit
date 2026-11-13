@@ -2077,7 +2077,7 @@ class PullRequestUpdateTest {
     }
 
     @Test
-    void aMergeGitHubFailedIsShownAsAnErrorAndStaysShownUntilItIsMergedAgain() {
+    void aMergeGitHubFailedIsShownAsAnErrorAndStaysShownWhileThePullRequestStandsTheSame() {
         Model checking =
                 Update.update(asked(withPr()), new PullRequestMsg.MergeTick()).model();
 
@@ -2100,6 +2100,49 @@ class PullRequestUpdateTest {
         assertEquals(
                 Option.of(new MergeStatus.Pending("merge-42")),
                 asked(failed).gitHub().merge(42));
+    }
+
+    @Test
+    void aFailedMergeNoLongerShowsOnceThePullRequestChanged() {
+        PullRequest pending = new PullRequest(42, new GhBranch("feature"), false, Checks.PENDING, Review.APPROVED);
+        Model failed = askedFor(
+                Update.update(model(), new PullRequestsMsg.Loaded(List.of(pending)))
+                        .model(),
+                "feature",
+                42,
+                new MergeStatus.Failed("Required status check \"build\" is expected"));
+
+        assertEquals(
+                Option.of(new MergeStatus.Failed("Required status check \"build\" is expected")),
+                Update.update(failed, new PullRequestsMsg.Loaded(List.of(pending)))
+                        .model()
+                        .gitHub()
+                        .merge(42));
+        assertEquals(
+                Option.none(),
+                Update.update(failed, new PullRequestsMsg.Loaded(List.of(FEATURE_PR)))
+                        .model()
+                        .gitHub()
+                        .merge(42));
+    }
+
+    @Test
+    void aFailedMergeOfAStackNoLongerShowsOnceAPullRequestBelowChanged() {
+        Model failed = askedFor(stackOfTwo(), "feature", 42, new MergeStatus.Failed("conflicts"));
+        List<PullRequest> bottomFixed = failed.gitHub()
+                .pullRequests()
+                .get()
+                .values()
+                .toList()
+                .map(pr -> pr.number() == 41
+                        ? new PullRequest(41, pr.headBranch(), false, Checks.PENDING, pr.review(), pr.stack())
+                        : pr);
+
+        Model read =
+                Update.update(failed, new PullRequestsMsg.Loaded(bottomFixed)).model();
+
+        assertEquals(Option.none(), read.gitHub().merge(42));
+        assertEquals(Option.none(), read.gitHub().merge(41));
     }
 
     @Test
