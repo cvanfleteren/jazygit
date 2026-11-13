@@ -298,16 +298,13 @@ public final class ScrollArea {
         if (event.kind() == MouseEventKind.PRESS && event.isLeftButton()) {
             focus.accept(id);
             // The text starts a line below the top of the area, under its border.
-            return cursor.flatMap(on -> Option.of(element.renderedArea())
-                            .flatMap(drawn -> on.clicked(event.y() - drawn.top() - 1)))
+            return cursor.flatMap(on ->
+                            Option.of(element.renderedArea()).flatMap(drawn -> on.clicked(event.y() - drawn.top() - 1)))
                     .map(clicked -> {
                         EventResult result = moved(clicked, content);
                         // A click on a marker shows all the lines it leaves out, as Enter on it does (ADR 77).
                         if (clicked.anchor() instanceof Anchor.Gap) {
-                            KEYMAP.handle(
-                                            Scopes.DIFF,
-                                            KeyEvent.ofKey(KeyCode.ENTER),
-                                            Option.of(at(clicked, content)))
+                            KEYMAP.handle(Scopes.DIFF, KeyEvent.ofKey(KeyCode.ENTER), Option.of(at(clicked, content)))
                                     .forEach(dispatch);
                         }
                         return result;
