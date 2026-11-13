@@ -2,7 +2,7 @@ package net.vanfleteren.jazygit;
 
 import io.vavr.collection.HashMap;
 import net.vanfleteren.jazygit.gh.CliGitHub;
-import net.vanfleteren.jazygit.gh.GhToken;
+import net.vanfleteren.jazygit.gh.process.GhToken;
 import net.vanfleteren.jazygit.git.CliGit;
 import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.settings.CheckTimingsStore;

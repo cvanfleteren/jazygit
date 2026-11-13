@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.ui.text;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.gh.GhError;
+import net.vanfleteren.jazygit.gh.process.GhError;
 import net.vanfleteren.jazygit.git.GitError;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;

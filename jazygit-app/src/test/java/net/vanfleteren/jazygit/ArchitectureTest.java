@@ -123,9 +123,21 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule gitHubIsReachedThroughItsRoles = noClasses()
             .should()
-            .dependOnClassesThat(resideInAPackage("..jazygit.gh")
+            .dependOnClassesThat(resideInAPackage("..jazygit.gh..")
                     .and(simpleNameStartingWith("Cli"))
                     .and(not(simpleName("CliGitHub"))));
+    /**
+     * How gh is asked is the business of its roles (ADR 120): the GraphQL their queries share, and the process that
+     * runs gh. Of {@code gh.process} the application only sees the errors and the token.
+     */
+    @ArchTest
+    static final ArchRule gitHubKeepsHowItAsksToItself = noClasses()
+            .should()
+            .dependOnClassesThat(resideInAPackage("..jazygit.gh.graphql..")
+                    .or(resideInAPackage("..jazygit.gh.process..")
+                            .and(simpleName("GhProcess")
+                                    .or(simpleName("GhCommand"))
+                                    .or(simpleName("SshHost")))));
     /**
      * {@code Exec} is the only place that starts a program.
      */
@@ -551,8 +563,16 @@ class ArchitectureTest {
         });
     }
 
+    /**
+     * The classes of git and gh, but for their models and the timing of checks, which are values.
+     */
+    private static DescribedPredicate<JavaClass> gitOrGh() {
+        return resideInAnyPackage("..jazygit.git..", "..jazygit.gh..")
+                .and(not(resideInAnyPackage("..jazygit.git.model..", "..jazygit.gh.model..", "..jazygit.gh.timing..")));
+    }
+
     private static DescribedPredicate<JavaClass> runsGitOrGh() {
-        return resideInAnyPackage("..jazygit.git", "..jazygit.gh")
+        return gitOrGh()
                 .and(simpleNameStartingWith("Cli").or(simpleNameEndingWith("Process")))
                 .or(resideInAnyPackage("..jazygit.process").and(simpleName("Exec")))
                 .as("run git or gh");
@@ -583,15 +603,14 @@ class ArchitectureTest {
     }
 
     private static DescribedPredicate<JavaClass> effects() {
-        return resideInAnyPackage(
-                        "..jazygit.git",
-                        "..jazygit.gh",
+        return gitOrGh()
+                .or(resideInAnyPackage(
                         "..jazygit.process..",
                         "..jazygit.ui..",
                         "..jazygit.i18n..",
                         "dev.tamboui..",
                         "java.io..",
-                        "java.nio.file..")
+                        "java.nio.file.."))
                 .or(JavaClass.Predicates.belongToAnyOf(Thread.class, ProcessBuilder.class, java.time.Clock.class))
                 .and(not(equivalentTo(ExecutedCommand.class)))
                 .as("run git or gh, or show something");
