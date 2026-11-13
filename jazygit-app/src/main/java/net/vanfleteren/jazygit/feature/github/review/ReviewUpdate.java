@@ -16,7 +16,6 @@ import net.vanfleteren.jazygit.feature.github.GitHubError;
 import net.vanfleteren.jazygit.feature.github.GitHubError.CannotReview.Why;
 import net.vanfleteren.jazygit.feature.github.browse.BrowseRemarkCmd;
 import net.vanfleteren.jazygit.feature.github.review.ReviewCmd.DeleteComment;
-import net.vanfleteren.jazygit.feature.github.review.ReviewCmd.EditComment;
 import net.vanfleteren.jazygit.feature.github.review.ReviewCmd.React;
 import net.vanfleteren.jazygit.feature.github.review.ReviewCmd.Resolve;
 import net.vanfleteren.jazygit.feature.github.review.ReviewCmd.Send;
@@ -33,6 +32,7 @@ import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.compose.ComposeUpdate;
 import net.vanfleteren.jazygit.state.diff.*;
 import net.vanfleteren.jazygit.state.operation.*;
 import net.vanfleteren.jazygit.state.view.*;
@@ -45,7 +45,7 @@ import net.vanfleteren.jazygit.state.view.*;
  * for a merged one; nor twice for a thread while something is sent for it. A comment is deleted after asking, at any
  * commits, and taken out of the threads once GitHub took it, without reading them again (ADR 64); one is edited in the
  * same popup as a reply, at any commits too, and takes what GitHub holds once it is saved, without reading again either
- * (ADR 65).
+ * (ADR 65). Writing the comment, in that popup or in the editor, is a {@link ComposeUpdate}'s (ADR 115).
  */
 public final class ReviewUpdate {
 
@@ -63,12 +63,6 @@ public final class ReviewUpdate {
             case ReviewMsg.ThreadToggled(DiffCursorAt at) -> threadToggled(model, at);
             case ReviewMsg.OpenAsked(DiffCursorAt at) -> openAsked(model, at);
             case ReviewMsg.Refused(Why why) -> Next.of(refused(model, why));
-            case ReviewMsg.Edited(String text) -> typed(model, text);
-            case ReviewMsg.Confirmed() -> confirmed(model);
-            case ReviewMsg.Cancelled() -> cancelled(model);
-            case ReviewMsg.EditorRequested() -> editorRequested(model);
-            case ReviewMsg.EditorClosed(String text, var commands) -> editorClosed(model, text, commands);
-            case ReviewMsg.EditorFailed(Failure failure) -> editorFailed(model, failure);
             case ReviewMsg.Sent(Send cmd, var commands) -> sent(model, cmd, commands);
             case ReviewMsg.CommentEdited(Send cmd, String body, var commands) -> edited(model, cmd, body, commands);
             case ReviewMsg.SendFailed(Send cmd, Failure failure) -> sendFailed(model, cmd, failure);
@@ -132,59 +126,11 @@ public final class ReviewUpdate {
     }
 
     /**
-     * {@code text} typed in the popup. While it is being sent, the comment stays as it is sent.
-     */
-    private static Next typed(Model model, String text) {
-        return Next.of(changed(model, popup -> popup.withText(text), true));
-    }
-
-    /**
-     * Sending what the popup holds, asked for, unless it is being sent already.
-     */
-    private static Next confirmed(Model model) {
-        return editable(model).map(popup -> confirm(model, popup)).getOrElse(() -> Next.of(model));
-    }
-
-    /**
-     * The popup closed, unless it is being sent.
-     */
-    private static Next cancelled(Model model) {
-        return Next.of(editable(model)
-                .map(popup -> model.withoutPopup(ReviewPopup.class))
-                .getOrElse(model));
-    }
-
-    /**
-     * The comment of the popup opened in an editor, unless it is being sent.
-     */
-    private static Next editorRequested(Model model) {
-        return editable(model)
-                .map(popup -> Next.of(model.clearError(), new EditComment(popup.text())))
-                .getOrElse(() -> Next.of(model));
-    }
-
-    /**
-     * The editor closed on {@code text}, which the popup then holds. Cancelled meanwhile, the popup stays closed.
-     */
-    private static Next editorClosed(Model model, String text, List<ExecutedCommand> commands) {
-        return Next.of(changed(
-                CommandLog.append(model, ReviewCmd.EDIT_COMMENT, commands), popup -> popup.withText(text), false));
-    }
-
-    /**
-     * The editor failed: the failure says why.
-     */
-    private static Next editorFailed(Model model, Failure failure) {
-        return Next.of(CommandLog.append(model, ReviewCmd.EDIT_COMMENT, failure.commands())
-                .fail(new AppError.OperationFailed(ReviewCmd.EDIT_COMMENT, Option.none(), failure)));
-    }
-
-    /**
      * {@code cmd} failed to send. The popup stays open, with the comment, to send it again or to copy it.
      */
     private static Next sendFailed(Model model, Send cmd, Failure failure) {
         return OperationUpdate.update(model, new OperationMsg.Failed(cmd, failure))
-                .map(failed -> changed(failed, popup -> popup.withSending(false), false))
+                .map(failed -> ComposeUpdate.unsent(failed, ReviewPopup.class))
                 .map(back -> cmd.target() instanceof Target.Reply(ReviewThread.Id thread, var comment)
                         ? sending(back, set -> set.remove(thread))
                         : back);
@@ -309,7 +255,7 @@ public final class ReviewUpdate {
      * Sending what {@code popup} holds, asked for. A blank comment is not sent, as GitHub refuses it; a blank edit says
      * that deleting it is what empties it, and an edit that changed nothing closes the popup, sending nothing (ADR 65).
      */
-    private static Next confirm(Model model, ReviewPopup popup) {
+    static Next confirm(Model model, ReviewPopup popup) {
         return switch (popup.target()) {
             case Target.Edit(var _, var _, String body)
             when popup.text().equals(body) -> Next.of(model.clearError().withoutPopup(ReviewPopup.class));
@@ -810,23 +756,5 @@ public final class ReviewUpdate {
 
     private static Model sending(Model model, Function<Set<ReviewThread.Id>, Set<ReviewThread.Id>> f) {
         return mapView(model, view -> view.withSending(f.apply(view.sending())));
-    }
-
-    /**
-     * The review popup, if it is open and not being sent.
-     */
-    private static Option<ReviewPopup> editable(Model model) {
-        return model.popup(ReviewPopup.class).filter(popup -> !popup.sending());
-    }
-
-    /**
-     * {@code model} with the review popup as {@code change} makes it, if it is open, and not being sent when
-     * {@code editable}.
-     */
-    private static Model changed(Model model, Function<ReviewPopup, ReviewPopup> change, boolean editable) {
-        return model.popup(ReviewPopup.class)
-                .filter(popup -> !editable || !popup.sending())
-                .map(popup -> model.openPopup(change.apply(popup)))
-                .getOrElse(model);
     }
 }

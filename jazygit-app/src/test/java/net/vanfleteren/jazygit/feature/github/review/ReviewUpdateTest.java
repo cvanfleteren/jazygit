@@ -37,6 +37,9 @@ import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.compose.ComposeCmd.OpenInEditor;
+import net.vanfleteren.jazygit.state.compose.ComposeMsg;
+import net.vanfleteren.jazygit.state.compose.EditorFile;
 import net.vanfleteren.jazygit.state.diff.*;
 import net.vanfleteren.jazygit.state.load.*;
 import net.vanfleteren.jazygit.state.view.*;
@@ -509,8 +512,8 @@ class ReviewUpdateTest {
         assertEquals(new Target.Reply(new ReviewThread.Id("T1"), new ReviewThread.Comment.RestId("1")), popup.target());
         assertEquals(List.of("carol:", "Yes"), popup.quoted());
 
-        Model typed = Update.update(asked, new ReviewMsg.Edited("Because")).model();
-        Next sending = Update.update(typed, new ReviewMsg.Confirmed());
+        Model typed = Update.update(asked, new ComposeMsg.Edited("Because")).model();
+        Next sending = Update.update(typed, new ComposeMsg.Confirmed());
 
         ReviewCmd.Send send = new ReviewCmd.Send(
                 7, new Target.Reply(new ReviewThread.Id("T1"), new ReviewThread.Comment.RestId("1")), "Because");
@@ -530,7 +533,7 @@ class ReviewUpdateTest {
         Model asked = Update.update(files(), new ReviewMsg.ReplyAsked(at(onThread("T1"))))
                 .model();
         Model sending = Update.update(
-                        Update.update(asked, new ReviewMsg.Edited("Because")).model(), new ReviewMsg.Confirmed())
+                        Update.update(asked, new ComposeMsg.Edited("Because")).model(), new ComposeMsg.Confirmed())
                 .model();
 
         Model failed = Update.update(
@@ -563,7 +566,7 @@ class ReviewUpdateTest {
         assertEquals(Option.of(new ReviewPopup.Lines(2, 3)), popup.where().lines());
 
         Model sending = Update.update(
-                        Update.update(asked, new ReviewMsg.Edited("Rename")).model(), new ReviewMsg.Confirmed())
+                        Update.update(asked, new ComposeMsg.Edited("Rename")).model(), new ComposeMsg.Confirmed())
                 .model();
         ReviewCmd.Send send = new ReviewCmd.Send(7, start, "Rename");
         Next sent = Update.update(sending, new ReviewMsg.Sent(send, List.empty()));
@@ -713,7 +716,7 @@ class ReviewUpdateTest {
                 .model();
 
         assertEquals(
-                List.empty(), Update.update(asked, new ReviewMsg.Confirmed()).cmds());
+                List.empty(), Update.update(asked, new ComposeMsg.Confirmed()).cmds());
     }
 
     private static Anchor onComment(String comment, String thread) {
@@ -1105,9 +1108,9 @@ class ReviewUpdateTest {
         // Not changed yet, it does not stop a quit (ADR 65).
         assertFalse(popup.holdsInput());
 
-        Model typed = Update.update(asked, new ReviewMsg.Edited("Yes, see #3")).model();
+        Model typed = Update.update(asked, new ComposeMsg.Edited("Yes, see #3")).model();
         assertTrue(typed.popup(ReviewPopup.class).get().holdsInput());
-        Next saving = Update.update(typed, new ReviewMsg.Confirmed());
+        Next saving = Update.update(typed, new ComposeMsg.Confirmed());
         ReviewCmd.Send send = new ReviewCmd.Send(7, edit, "Yes, see #3");
         assertEquals(List.of(send), saving.cmds());
         assertTrue(saving.model().popup(ReviewPopup.class).get().sending());
@@ -1149,7 +1152,7 @@ class ReviewUpdateTest {
                 new Target.Edit(new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("R1"), "a\nb"), popup.target());
         assertFalse(popup.holdsInput());
         assertEquals(
-                List.empty(), Update.update(asked, new ReviewMsg.Confirmed()).cmds());
+                List.empty(), Update.update(asked, new ComposeMsg.Confirmed()).cmds());
     }
 
     @Test
@@ -1170,12 +1173,12 @@ class ReviewUpdateTest {
         Model asked = Update.update(files(), new ReviewMsg.EditAsked(at(onComment("R1", "T1"))))
                 .model();
 
-        Next unchanged = Update.update(asked, new ReviewMsg.Confirmed());
+        Next unchanged = Update.update(asked, new ComposeMsg.Confirmed());
         assertEquals(List.empty(), unchanged.cmds());
         assertEquals(Option.none(), unchanged.model().popup(ReviewPopup.class));
 
-        Next emptied =
-                Update.update(Update.update(asked, new ReviewMsg.Edited("  \n")).model(), new ReviewMsg.Confirmed());
+        Next emptied = Update.update(
+                Update.update(asked, new ComposeMsg.Edited("  \n")).model(), new ComposeMsg.Confirmed());
         assertEquals(List.empty(), emptied.cmds());
         assertFalse(emptied.model().popup(ReviewPopup.class).get().sending());
         assertEquals(Option.of(new GitHubError.CannotReview(Why.EMPTY)), error(emptied.model()));
@@ -1186,7 +1189,10 @@ class ReviewUpdateTest {
                         7,
                         new Target.Edit(new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("R1"), "Yes"),
                         "Yes ")),
-                Update.update(Update.update(asked, new ReviewMsg.Edited("Yes ")).model(), new ReviewMsg.Confirmed())
+                Update.update(
+                                Update.update(asked, new ComposeMsg.Edited("Yes "))
+                                        .model(),
+                                new ComposeMsg.Confirmed())
                         .cmds());
     }
 
@@ -1226,7 +1232,7 @@ class ReviewUpdateTest {
         Model asked = Update.update(files(), new ReviewMsg.EditAsked(at(onComment("R1", "T1"))))
                 .model();
         Model saving = Update.update(
-                        Update.update(asked, new ReviewMsg.Edited("Yes!")).model(), new ReviewMsg.Confirmed())
+                        Update.update(asked, new ComposeMsg.Edited("Yes!")).model(), new ComposeMsg.Confirmed())
                 .model();
 
         Model failed = Update.update(
@@ -1252,9 +1258,9 @@ class ReviewUpdateTest {
                         Update.update(
                                         Update.update(files(), new ReviewMsg.EditAsked(at(onComment("R1", "T1"))))
                                                 .model(),
-                                        new ReviewMsg.Edited("Yes!"))
+                                        new ComposeMsg.Edited("Yes!"))
                                 .model(),
-                        new ReviewMsg.Confirmed())
+                        new ComposeMsg.Confirmed())
                 .model();
         Model saved = Update.update(
                         saving,
@@ -1549,21 +1555,21 @@ class ReviewUpdateTest {
         Model asked = Update.update(files(), new ReviewMsg.ReplyAsked(at(onThread("T1"))))
                 .model();
         Model sending = Update.update(
-                        Update.update(asked, new ReviewMsg.Edited("Because")).model(), new ReviewMsg.Confirmed())
+                        Update.update(asked, new ComposeMsg.Edited("Because")).model(), new ComposeMsg.Confirmed())
                 .model();
 
         Model typed =
-                Update.update(sending, new ReviewMsg.Edited("Because not")).model();
+                Update.update(sending, new ComposeMsg.Edited("Because not")).model();
         assertEquals("Because", typed.popup(ReviewPopup.class).get().text());
         assertEquals(
-                List.empty(), Update.update(sending, new ReviewMsg.Confirmed()).cmds());
-        assertTrue(Update.update(sending, new ReviewMsg.Cancelled())
+                List.empty(), Update.update(sending, new ComposeMsg.Confirmed()).cmds());
+        assertTrue(Update.update(sending, new ComposeMsg.Cancelled())
                 .model()
                 .popup(ReviewPopup.class)
                 .isDefined());
         assertEquals(
                 List.empty(),
-                Update.update(sending, new ReviewMsg.EditorRequested()).cmds());
+                Update.update(sending, new ComposeMsg.EditorRequested()).cmds());
     }
 
     @Test
@@ -1571,20 +1577,22 @@ class ReviewUpdateTest {
         Model typed = Update.update(
                         Update.update(files(), new ReviewMsg.ReplyAsked(at(onThread("T1"))))
                                 .model(),
-                        new ReviewMsg.Edited("Bec"))
+                        new ComposeMsg.Edited("Bec"))
                 .model();
 
-        Next editing = Update.update(typed, new ReviewMsg.EditorRequested());
-        assertEquals(List.of(new ReviewCmd.EditComment("Bec")), editing.cmds());
+        Next editing = Update.update(typed, new ComposeMsg.EditorRequested());
+        assertEquals(List.of(new OpenInEditor(ReviewCmd.EDITOR, "Bec")), editing.cmds());
+        assertEquals(new EditorFile("PR_REVIEW_COMMENT.md", ReviewCmd.EDIT_COMMENT), ReviewCmd.EDITOR);
 
-        Model written = Update.update(editing.model(), new ReviewMsg.EditorClosed("Because", List.empty()))
+        Model written = Update.update(
+                        editing.model(), new ComposeMsg.EditorClosed(ReviewCmd.EDITOR, "Because", List.empty()))
                 .model();
         assertEquals("Because", written.popup(ReviewPopup.class).get().text());
 
         Model cancelled =
-                Update.update(editing.model(), new ReviewMsg.Cancelled()).model();
+                Update.update(editing.model(), new ComposeMsg.Cancelled()).model();
         assertTrue(cancelled.popup(ReviewPopup.class).isEmpty());
-        assertTrue(Update.update(cancelled, new ReviewMsg.EditorClosed("Because", List.empty()))
+        assertTrue(Update.update(cancelled, new ComposeMsg.EditorClosed(ReviewCmd.EDITOR, "Because", List.empty()))
                 .model()
                 .popup(ReviewPopup.class)
                 .isEmpty());

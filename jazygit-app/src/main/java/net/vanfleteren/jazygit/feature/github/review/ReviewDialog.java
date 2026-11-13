@@ -21,9 +21,6 @@ public final class ReviewDialog implements PopupView {
 
     public static final String ID = "pull-request-review-comment";
 
-    private static final CommentComposer.Actions ACTIONS = new CommentComposer.Actions(
-            ReviewMsg.Edited::new, ReviewMsg.Confirmed::new, ReviewMsg.Cancelled::new, ReviewMsg.EditorRequested::new);
-
     private final CommentComposer composer;
 
     /**
@@ -45,8 +42,7 @@ public final class ReviewDialog implements PopupView {
                         model,
                         title(popup),
                         popup.quoted(),
-                        new CommentComposer.Comment(popup.text(), popup.sending()),
-                        ACTIONS));
+                        new CommentComposer.Comment(popup.text(), popup.sending())));
     }
 
     private static String title(ReviewPopup popup) {

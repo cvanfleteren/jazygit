@@ -13,11 +13,12 @@ import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.compose.EditorFile;
 import net.vanfleteren.jazygit.state.operation.Operation;
 import net.vanfleteren.jazygit.state.operation.OperationCmd;
 
 /**
- * Writing a comment on the lines of a pull request in the editor, sending it, resolving a thread (ADR 60), and
+ * Sending a comment on the lines of a pull request, resolving a thread (ADR 60), and
  * editing (ADR 65), deleting (ADR 64) or reacting to a comment (ADR 86). None keeps a branch busy: they do not touch
  * one.
  */
@@ -44,28 +45,9 @@ public sealed interface ReviewCmd extends Cmd {
     Operation UNREACT = Operation.of("log.title.unreactReviewComment", "error.unreactReviewComment.failed");
 
     /**
-     * The file the comment is written in, in the editor; editors take it for Markdown, as GitHub does.
+     * The file the comment is written in, in the editor (ADR 115).
      */
-    String FILE_NAME = "PR_REVIEW_COMMENT.md";
-
-    /**
-     * Opens {@code text} in git's editor, with the terminal handed over to it, and reports how it was saved.
-     */
-    record EditComment(String text) implements ReviewCmd {
-
-        @Override
-        public Msg run(Env env) {
-            return env.terminal()
-                    .handOver(() -> env.git().editor().editText(FILE_NAME, text))
-                    .mapLeft(Failure::of)
-                    .fold(this::failed, edited -> new ReviewMsg.EditorClosed(edited._1, edited._2));
-        }
-
-        @Override
-        public Msg failed(Failure failure) {
-            return new ReviewMsg.EditorFailed(failure);
-        }
-    }
+    EditorFile EDITOR = new EditorFile("PR_REVIEW_COMMENT.md", EDIT_COMMENT);
 
     /**
      * Sends {@code body} to {@code target} of pull request {@code number}: a reply, a thread started, or the edit of a
