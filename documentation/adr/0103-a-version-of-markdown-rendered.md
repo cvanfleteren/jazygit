@@ -120,3 +120,6 @@ is one line saying it differs.
   which reads files as bytes, and may draw them as PR #378 does.
 - A rendered diff can come later as Ctrl+T on the diff, marking the blocks added and removed from both versions read
   whole.
+
+Amended by ADR 122: the seam is given which nodes are closed and its rows may name one; a renderer that gives nodes,
+as JSON, has a cursor row by row.
