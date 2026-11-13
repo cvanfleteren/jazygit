@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Failure;
+import net.vanfleteren.jazygit.state.github.prs.LoadRepositoryPullRequests;
 
 /**
  * What GitHub reports about the branches of the repository, which the branches pane shows.
@@ -38,8 +39,10 @@ import net.vanfleteren.jazygit.state.Failure;
  *                            told which repository it is (ADR 32)
  * @param pendingChecks       the checks one by one, with their timing, of the branches on GitHub whose checks are
  *                            pending; none until they were read once (ADR 32)
- * @param nextRead            the id the next read of the details of a pull request gets, higher than every one
- *                            given out before (ADR 34)
+ * @param nextRead            the id the next read of the details of a pull request, or of the open pull requests, gets,
+ *                            higher than every one given out before (ADR 34, 119)
+ * @param listRead            the id of the read of the open pull requests that runs, or ran last: one at a time runs
+ *                            (ADR 119)
  * @param readsFrom           by the number of a pull request, the lowest id of a read of its details that is still
  *                            taken: past the last one taken, and past every one given out before a change to it, so a
  *                            read that started earlier does not show the change undone (ADR 34)
@@ -60,6 +63,7 @@ public record GitHubState(
         Option<CheckTimes> checkTimes,
         Option<PendingChecks> pendingChecks,
         long nextRead,
+        long listRead,
         Map<Integer, Long> readsFrom,
         Map<Cmd, FailingRead> failing,
         Option<StackChange> stackChange) {
@@ -73,6 +77,7 @@ public record GitHubState(
             HashMap.empty(),
             Option.none(),
             Option.none(),
+            0,
             0,
             HashMap.empty(),
             HashMap.empty(),
@@ -118,13 +123,14 @@ public record GitHubState(
     /**
      * This state with {@code merge} as the merge of its pull request, and of the ones below it: it replaces how earlier
      * merges went for those, each of which still tells how it went for its own pull request, when that is not one of
-     * them. Once it failed, it keeps how they stood then, as listed (ADR 119).
+     * them. Once it failed, it keeps how they stood then, as listed, and that only a read given out from then on tells
+     * whether they changed (ADR 119).
      */
     public GitHubState withMerge(PullRequestMerge merge) {
         List<Integer> merged = merge.below().prepend(merge.number());
         return withMerges(merges.removeAll(merged)
                 .mapValues(earlier -> earlier.withoutBelow(merged))
-                .put(merge.number(), merge.failedAmong(open())));
+                .put(merge.number(), merge.failedAmong(open(), nextRead)));
     }
 
     /**
@@ -132,6 +138,16 @@ public record GitHubState(
      */
     public GitHubState withReadGivenOut() {
         return withNextRead(nextRead + 1);
+    }
+
+    /**
+     * The state once {@code cmds} started: a read of the open pull requests among them gets the id {@link #nextRead}
+     * (ADR 119).
+     */
+    public GitHubState withStarted(List<Cmd> cmds) {
+        return cmds.contains(new LoadRepositoryPullRequests())
+                ? withListRead(nextRead).withReadGivenOut()
+                : this;
     }
 
     /**
@@ -160,32 +176,37 @@ public record GitHubState(
     /**
      * This state with the open pull requests {@code listed}, by the branch they merge from. Several can merge from the
      * same branch, into different bases: the newest, the one with the highest number, is kept, so the choice does not
-     * depend on the order gh lists them in.
+     * depend on the order gh lists them in. They are what read {@link #listRead} listed.
      */
     public GitHubState withListed(List<PullRequest> listed) {
         // Vavr's toMap has no merge function; a later entry replaces an earlier one, so ascending numbers keep the
         // newest.
-        return withOpen(Option.of(
-                listed.sortBy(PullRequest::number).toMap(pr -> FromGitHub.branch(pr.headBranch()), pr -> pr)));
+        return withOpen(
+                Option.of(listed.sortBy(PullRequest::number).toMap(pr -> FromGitHub.branch(pr.headBranch()), pr -> pr)),
+                listRead);
     }
 
     /**
-     * This state with the pull request {@code details} are about as they were just read: as it now is, or no
-     * longer listed once it is merged or closed. Unchanged when it is not listed.
+     * This state with the pull request {@code details} are about as read {@code read} just read them: as it now is,
+     * or no longer listed once it is merged or closed. Unchanged when it is not listed.
      */
-    public GitHubState withRead(PullRequestDetails details) {
-        return withOpen(pullRequests.map(open -> open.find(listed -> listed._2.number() == details.number())
-                .map(listed -> details.listed().fold(() -> open.remove(listed._1), now -> open.put(listed._1, now)))
-                .getOrElse(open)));
+    public GitHubState withRead(PullRequestDetails details, long read) {
+        return withOpen(
+                pullRequests.map(open -> open.find(listed -> listed._2.number() == details.number())
+                        .map(listed ->
+                                details.listed().fold(() -> open.remove(listed._1), now -> open.put(listed._1, now)))
+                        .getOrElse(open)),
+                read);
     }
 
     /**
-     * This state with the open pull requests {@code read}: a merge that failed no longer shows once one of the pull
-     * requests it merges no longer stands as it did then, as merging it again may go now (ADR 119).
+     * This state with the open pull requests {@code open} as read {@code read} read them: a merge that failed before
+     * that read started no longer shows once one of the pull requests it merges no longer stands as it did then, as
+     * merging it again may go now (ADR 119).
      */
-    private GitHubState withOpen(Option<Map<BranchName, PullRequest>> read) {
-        GitHubState now = withPullRequests(read);
-        return now.withMerges(merges.filterValues(merge -> !merge.outdatedBy(now.open())));
+    private GitHubState withOpen(Option<Map<BranchName, PullRequest>> open, long read) {
+        GitHubState now = withPullRequests(open);
+        return now.withMerges(merges.filterValues(merge -> !merge.outdatedBy(now.open(), read)));
     }
 
     /**

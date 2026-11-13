@@ -2100,6 +2100,39 @@ class PullRequestUpdateTest {
         assertEquals(
                 Option.of(new MergeStatus.Pending("merge-42")),
                 asked(failed).gitHub().merge(42));
+        assertEquals(
+                Option.none(),
+                Update.update(
+                                failed,
+                                new PullRequestsMsg.Loaded(List.of(new PullRequest(
+                                        42, new GhBranch("feature"), false, Checks.FAILING, Review.APPROVED))))
+                        .model()
+                        .gitHub()
+                        .merge(42));
+    }
+
+    @Test
+    void theDetailsReadAfterAMergeFailedDropTheFailureOnlyOnceThePullRequestChanged() {
+        PullRequestDetails read = StubGitHub.of().pullRequests().details(42).get();
+        Model failed = askedFor(showingDetails(), "feature", 42, new MergeStatus.Failed("conflicts"));
+        Model reading = Update.update(
+                        Update.update(failed, new PopupMsg.Dismissed(PullRequestPopup.class))
+                                .model(),
+                        new PullRequestMsg.Requested(FEATURE))
+                .model();
+
+        assertEquals(
+                Option.of(new MergeStatus.Failed("conflicts")),
+                Update.update(reading, new PullRequestMsg.DetailsLoaded(42, lastRead(reading), read))
+                        .model()
+                        .gitHub()
+                        .merge(42));
+        assertEquals(
+                Option.none(),
+                Update.update(reading, new PullRequestMsg.DetailsLoaded(42, lastRead(reading), withARunningCheck(read)))
+                        .model()
+                        .gitHub()
+                        .merge(42));
     }
 
     @Test

@@ -17,6 +17,16 @@ now pass. Nothing tells that merging it again goes now; only a restart of jazygi
   checks, its review, whether it is a draft and the commit its branch is at (`PullRequestMerge.Standing`).
 - Each read of the pull requests, the list or the details of one, drops a failed merge once one of them no longer
   stands so: changed, or no longer listed. Its marker then shows its checks and review again, as before the merge.
+- Only a read that started after the merge failed counts. One that started before may show the pull request as it
+  stood before the read that the standing was kept from, and would drop a failure although nothing changed since.
+  - Reads are told apart by their id, as the reads of the details are (ADR 34): the failure keeps the id the next read
+    gets (`GitHubState.nextRead`), and a read with that id or a later one counts.
+  - A read of the open pull requests gets such an id too, when it starts (`GitHubState.listRead`, in
+    `Update.stamped`): one of them runs at a time, so the one whose result comes in is the one that started last. Not:
+    an id on `LoadRepositoryPullRequests`, which is told apart from others by being equal to them, to run once at a
+    time.
+  - Not: taking the standing from the first read after the merge failed instead, which keeps the `!` when the checks
+    finished before that read.
 - A read that shows them standing the same keeps the failure, so it stays seen as before.
 - A pull request that was not listed when the merge failed is not looked at: when none was, the failure stays until it
   is merged again, as before.

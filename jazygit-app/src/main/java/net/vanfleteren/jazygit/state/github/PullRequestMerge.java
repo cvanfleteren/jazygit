@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.state.github;
 
-import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.collection.Traversable;
@@ -23,8 +22,7 @@ import net.vanfleteren.jazygit.git.model.BranchName;
  * @param status      how it is doing, as GitHub last said
  * @param asked       when GitHub was asked for it
  * @param checking    whether GitHub is being asked how it is doing
- * @param failedWhile once it failed, how the pull requests it merges stood then, by their number, as far as they were
- *                    listed; empty before (ADR 119)
+ * @param failedWhile once it failed, how the pull requests it merges stood then; none before (ADR 119)
  */
 public record PullRequestMerge(
         int number,
@@ -33,7 +31,7 @@ public record PullRequestMerge(
         MergeStatus status,
         Instant asked,
         boolean checking,
-        Map<Integer, Standing> failedWhile) {
+        Option<FailedWhile> failedWhile) {
 
     /**
      * How long a pending merge is asked about before it is left to GitHub.
@@ -45,7 +43,7 @@ public record PullRequestMerge(
      */
     public static PullRequestMerge asked(
             int number, BranchName branch, List<Integer> below, MergeStatus status, Instant asked) {
-        return new PullRequestMerge(number, branch, below, status, asked, false, HashMap.empty());
+        return new PullRequestMerge(number, branch, below, status, asked, false, Option.none());
     }
 
     /**
@@ -71,23 +69,22 @@ public record PullRequestMerge(
     }
 
     /**
-     * Whether it failed, and one of the pull requests it merges no longer stands as it did then among the {@code open}
-     * ones: changed, or no longer listed. Merging it again may go now, so the failure no longer shows (ADR 119).
+     * Whether it failed, and read {@code read}, which started after that, lists the {@code open} pull requests without
+     * one it merges standing as it did then: changed, or no longer listed. Merging it again may go now, so the failure
+     * no longer shows (ADR 119).
      */
-    public boolean outdatedBy(Traversable<PullRequest> open) {
-        return status instanceof MergeStatus.Failed
-                && failedWhile.exists(stood -> !open.find(pr -> pr.number() == stood._1)
-                        .map(Standing::of)
-                        .contains(stood._2));
+    public boolean outdatedBy(Traversable<PullRequest> open, long read) {
+        return status instanceof MergeStatus.Failed && failedWhile.exists(failed -> failed.outdatedBy(open, read));
     }
 
     /**
-     * This merge, once it failed while the pull requests it merges stood as the {@code open} ones listed: the ones
-     * not listed are left out. Unchanged when it did not fail, or was told so before.
+     * This merge, once it failed while the pull requests it merges stood as the {@code open} ones listed, with
+     * {@code read} the id the next read gets. Unchanged when it did not fail, or was told so before.
      */
-    public PullRequestMerge failedAmong(Traversable<PullRequest> open) {
+    public PullRequestMerge failedAmong(Traversable<PullRequest> open, long read) {
         return status instanceof MergeStatus.Failed && failedWhile.isEmpty()
-                ? withFailedWhile(open.filter(pr -> merges(pr.number())).toMap(PullRequest::number, Standing::of))
+                ? withFailedWhile(Option.of(new FailedWhile(
+                        read, open.filter(pr -> merges(pr.number())).toMap(PullRequest::number, Standing::of))))
                 : this;
     }
 
@@ -96,7 +93,13 @@ public record PullRequestMerge(
      */
     public PullRequestMerge withoutBelow(List<Integer> numbers) {
         return new PullRequestMerge(
-                number, branch, below.removeAll(numbers), status, asked, checking, failedWhile.removeAll(numbers));
+                number,
+                branch,
+                below.removeAll(numbers),
+                status,
+                asked,
+                checking,
+                failedWhile.map(failed -> failed.without(numbers)));
     }
 
     /**
@@ -113,8 +116,35 @@ public record PullRequestMerge(
         return new PullRequestMerge(number, branch, below, now, asked, false, failedWhile);
     }
 
-    private PullRequestMerge withFailedWhile(Map<Integer, Standing> stood) {
-        return new PullRequestMerge(number, branch, below, status, asked, checking, stood);
+    private PullRequestMerge withFailedWhile(Option<FailedWhile> failed) {
+        return new PullRequestMerge(number, branch, below, status, asked, checking, failed);
+    }
+
+    /**
+     * How the pull requests a merge merges stood when it failed (ADR 119).
+     *
+     * @param read     the id the next read got then: only a read with this id or a later one started after it failed
+     * @param standing how each of them stood, by its number, as far as they were listed
+     */
+    public record FailedWhile(long read, Map<Integer, Standing> standing) {
+
+        /**
+         * Whether read {@code read} started after it failed, and lists the {@code open} pull requests without one of
+         * them standing as it did then.
+         */
+        public boolean outdatedBy(Traversable<PullRequest> open, long read) {
+            return read >= this.read
+                    && standing.exists(stood -> !open.find(pr -> pr.number() == stood._1)
+                            .map(Standing::of)
+                            .contains(stood._2));
+        }
+
+        /**
+         * This, no longer about pull requests {@code numbers}.
+         */
+        public FailedWhile without(List<Integer> numbers) {
+            return new FailedWhile(read, standing.removeAll(numbers));
+        }
     }
 
     /**
