@@ -294,9 +294,9 @@ closes; when the upstream is gone, or the base branch, it closes with the error 
 ## The commits of a branch
 
 Enter on a branch, local or remote, lists its commits in place of the branches (`feature.branch.commits`,
-`ui.branches.BranchCommitsList`), drawn by the same `CommitsPanel.rows` and `marked` as the commits pane: the commits on the
-base dimmed, and with `b` only the others and the fork point. Enter on a commit moves the focus to its diff; Escape,
-or switching tabs, goes back to the branches.
+`ui.branches.BranchCommitsList`), drawn by the same `CommitsPanel.rows` and `marked` as the commits pane: the commits
+on the base dimmed, and with `b` only the others and the fork point. Enter on a commit moves the focus to its diff;
+Escape, or switching tabs, goes back to the branches.
 
 `RepoView.branchCommits` (`state.view.BranchCommitsView`) holds only the branch and the preview of the highlighted
 commit. The commits are not held twice: while the list is open, the branch stays the one highlighted in the branches
