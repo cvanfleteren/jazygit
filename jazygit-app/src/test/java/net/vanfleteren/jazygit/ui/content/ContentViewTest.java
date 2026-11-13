@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.feature.diff.DiffOptionsMsg;
 import net.vanfleteren.jazygit.feature.diff.VersionMsg;
 import net.vanfleteren.jazygit.feature.help.HelpPopup;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
@@ -49,7 +50,7 @@ class ContentViewTest {
 
     private static final PullRequestSummary PULL_REQUEST = new PullRequestSummary(
             "owner/repo",
-            42,
+            new PrNumber(42),
             "Fix the login",
             "alice",
             new GhBranch("fix/login"),
@@ -374,7 +375,7 @@ class ContentViewTest {
         Model none = Update.update(
                         unresolved,
                         new CommitFilesMsg.RemarksLoaded(
-                                7,
+                                new PrNumber(7),
                                 new ReviewRemarks(
                                         PullRequestDetails.State.OPEN, Option.none(), Option.none(), List.empty()),
                                 HashSet.empty(),
@@ -390,7 +391,9 @@ class ContentViewTest {
         assertEquals(
                 note("Files of #7", Placeholders.error(failure), Tone.ERROR),
                 ContentView.of(
-                        Update.update(unresolved, new CommitFilesMsg.RemarksFailed(7, failure, HashSet.empty(), 0))
+                        Update.update(
+                                        unresolved,
+                                        new CommitFilesMsg.RemarksFailed(new PrNumber(7), failure, HashSet.empty(), 0))
                                 .model(),
                         FilesPanel.ID));
     }

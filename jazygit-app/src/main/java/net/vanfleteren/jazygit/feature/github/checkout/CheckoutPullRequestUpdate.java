@@ -165,7 +165,7 @@ public final class CheckoutPullRequestUpdate {
     }
 
     static String name(PullRequestSummary pullRequest) {
-        return pullRequest.repository() + "#" + pullRequest.number();
+        return pullRequest.repository() + "#" + pullRequest.number().value();
     }
 
     /**

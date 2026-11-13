@@ -152,7 +152,8 @@ final class BranchSegs {
                                 () -> checks(pr.checks(), waiting, after),
                                 status -> List.of(symbol(PullRequestSymbols.merge(status))))
                         .append(LoadableList.Seg.styled(
-                                " #" + pr.number(), pr.draft() ? Theme.Classes.DIM : Theme.Classes.PULL_REQUEST))
+                                " #" + pr.number().value(),
+                                pr.draft() ? Theme.Classes.DIM : Theme.Classes.PULL_REQUEST))
                         .appendAll(group(
                                 merge.isDefined()
                                         ? List.empty()

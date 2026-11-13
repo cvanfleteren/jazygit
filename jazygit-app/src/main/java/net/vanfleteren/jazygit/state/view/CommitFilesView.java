@@ -8,6 +8,7 @@ import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import java.util.function.Function;
 import lombok.With;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.Reaction;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
@@ -102,9 +103,9 @@ public record CommitFilesView(
     /**
      * The number of the pull request the files are of, if they are.
      */
-    public Option<Integer> pullRequest() {
+    public Option<PrNumber> pullRequest() {
         return of instanceof Changes.OfPullRequest(PullRequestCommits commits)
-                ? Option.of(commits.number())
+                ? Option.of(new PrNumber(commits.number()))
                 : Option.none();
     }
 

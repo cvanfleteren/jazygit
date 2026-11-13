@@ -5,6 +5,7 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.gh.model.*;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.process.GhError;
 import net.vanfleteren.jazygit.gh.process.GhFailure;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -40,7 +41,7 @@ public interface PullRequests {
     /**
      * What there is to know about pull request {@code number}.
      */
-    Either<GhError, PullRequestDetails> details(int number);
+    Either<GhError, PullRequestDetails> details(PrNumber number);
 
     /**
      * What is at {@code url}, an image GitHub keeps, as bytes, up to {@link #MAX_IMAGE_BYTES}: more is too much
@@ -57,40 +58,40 @@ public interface PullRequests {
      * Checks out pull request {@code number} of the repository in the working tree, from a fork too, as gh does:
      * on a local branch of its own, which follows the branch it comes from.
      */
-    Either<GhFailure, List<ExecutedCommand>> checkout(int number);
+    Either<GhFailure, List<ExecutedCommand>> checkout(PrNumber number);
 
     /**
-     * Checks out pull request {@code number} as {@link #checkout(int)} does, but in the worktree {@code in}, taken
+     * Checks out pull request {@code number} as {@link #checkout(PrNumber)} does, but in the worktree {@code in}, taken
      * relative to the working tree of this one.
      */
-    Either<GhFailure, List<ExecutedCommand>> checkout(int number, Path in);
+    Either<GhFailure, List<ExecutedCommand>> checkout(PrNumber number, Path in);
 
     /**
      * Has GitHub merge pull request {@code number} in the background as {@code method} says, keeping its branch,
      * together with the ones below it in its stack: only while its branch is still at {@code head}, if given, so
      * what was pushed since it was read is not merged.
      */
-    Either<GhFailure, Merging> merge(int number, Option<GhCommit> head, MergeMethod method);
+    Either<GhFailure, Merging> merge(PrNumber number, Option<GhCommit> head, MergeMethod method);
 
     /**
      * How the merge {@code id} of pull request {@code number} is doing.
      */
-    Either<GhError, MergeStatus> mergeStatus(int number, String id);
+    Either<GhError, MergeStatus> mergeStatus(PrNumber number, String id);
 
     /**
      * Closes pull request {@code number} without merging it.
      */
-    Either<GhFailure, List<ExecutedCommand>> close(int number);
+    Either<GhFailure, List<ExecutedCommand>> close(PrNumber number);
 
     /**
      * Turns pull request {@code number} into a draft when {@code draft}, else marks it ready for review.
      */
-    Either<GhFailure, List<ExecutedCommand>> setDraft(int number, boolean draft);
+    Either<GhFailure, List<ExecutedCommand>> setDraft(PrNumber number, boolean draft);
 
     /**
      * Changes what {@code edit} gives of pull request {@code number}: its title, its description and its base.
      */
-    Either<GhFailure, List<ExecutedCommand>> edit(int number, PullRequestEdit edit);
+    Either<GhFailure, List<ExecutedCommand>> edit(PrNumber number, PullRequestEdit edit);
 
     /**
      * A pull request that was created.
@@ -98,7 +99,7 @@ public interface PullRequests {
      * @param number   its number, if gh said where it is
      * @param commands the command log
      */
-    record Created(Option<Integer> number, List<ExecutedCommand> commands) {}
+    record Created(Option<PrNumber> number, List<ExecutedCommand> commands) {}
 
     /**
      * A merge GitHub was asked for.

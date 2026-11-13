@@ -10,6 +10,7 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.MergeStatus;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -22,7 +23,7 @@ class PullRequestMergeTest {
 
     private static PullRequest at(String head, boolean draft) {
         return new PullRequest(
-                42,
+                new PrNumber(42),
                 new GhBranch("feature"),
                 draft,
                 Checks.PENDING,
@@ -35,7 +36,7 @@ class PullRequestMergeTest {
     private static final PullRequest FEATURE_PR = at("abc", false);
 
     private static PullRequestMerge merge(MergeStatus status) {
-        return PullRequestMerge.asked(42, new BranchName("feature"), List.empty(), status, Instant.EPOCH);
+        return PullRequestMerge.asked(new PrNumber(42), new BranchName("feature"), List.empty(), status, Instant.EPOCH);
     }
 
     private static PullRequestMerge failedWhile(List<PullRequest> open) {
@@ -87,7 +88,8 @@ class PullRequestMergeTest {
 
     @Test
     void aPullRequestThatIsNotMergedByItIsNotLookedAt() {
-        PullRequest other = new PullRequest(7, new GhBranch("other"), false, Checks.PENDING, Review.APPROVED);
+        PullRequest other =
+                new PullRequest(new PrNumber(7), new GhBranch("other"), false, Checks.PENDING, Review.APPROVED);
         PullRequestMerge failed = failedWhile(List.of(FEATURE_PR, other));
 
         assertFalse(failed.outdatedBy(List.of(FEATURE_PR), FAILED_AT));

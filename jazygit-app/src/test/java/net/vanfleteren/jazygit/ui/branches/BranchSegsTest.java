@@ -8,6 +8,7 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.feature.branch.pull.PullCmd;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.MergeStatus;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -31,27 +32,27 @@ class BranchSegsTest {
                         LoadableList.Seg.styled(" ✓", Theme.Classes.CHECKS_PASSED),
                         LoadableList.Seg.styled(" #42", Theme.Classes.PULL_REQUEST),
                         LoadableList.Seg.styled("  +", Theme.Classes.REVIEW_APPROVED)),
-                BranchSegs.pullRequest(
-                        Option.of(new PullRequest(42, new GhBranch("b"), false, Checks.PASSING, Review.APPROVED))));
+                BranchSegs.pullRequest(Option.of(
+                        new PullRequest(new PrNumber(42), new GhBranch("b"), false, Checks.PASSING, Review.APPROVED))));
         assertEquals(
                 List.of(
                         LoadableList.Seg.styled(" ✗", Theme.Classes.CHECKS_FAILED),
                         LoadableList.Seg.styled(" #40", Theme.Classes.PULL_REQUEST),
                         LoadableList.Seg.styled("  ?", Theme.Classes.DIM)),
-                BranchSegs.pullRequest(
-                        Option.of(new PullRequest(40, new GhBranch("b"), false, Checks.FAILING, Review.REQUIRED))));
+                BranchSegs.pullRequest(Option.of(
+                        new PullRequest(new PrNumber(40), new GhBranch("b"), false, Checks.FAILING, Review.REQUIRED))));
         assertEquals(
                 List.of(
                         LoadableList.Seg.styled(" ●", Theme.Classes.CHECKS_RUNNING),
                         LoadableList.Seg.styled(" #38", Theme.Classes.PULL_REQUEST),
                         LoadableList.Seg.styled("  −", Theme.Classes.REVIEW_CHANGES)),
-                BranchSegs.pullRequest(Option.of(
-                        new PullRequest(38, new GhBranch("b"), false, Checks.PENDING, Review.CHANGES_REQUESTED))));
+                BranchSegs.pullRequest(Option.of(new PullRequest(
+                        new PrNumber(38), new GhBranch("b"), false, Checks.PENDING, Review.CHANGES_REQUESTED))));
         // A draft without checks or reviews shows only its number, dimmed.
         assertEquals(
                 List.of(LoadableList.Seg.styled(" #37", Theme.Classes.DIM)),
-                BranchSegs.pullRequest(
-                        Option.of(new PullRequest(37, new GhBranch("b"), true, Checks.NONE, Review.NONE))));
+                BranchSegs.pullRequest(Option.of(
+                        new PullRequest(new PrNumber(37), new GhBranch("b"), true, Checks.NONE, Review.NONE))));
     }
 
     @Test
@@ -74,7 +75,7 @@ class BranchSegsTest {
                         LoadableList.Seg.styled(" #95", Theme.Classes.PULL_REQUEST),
                         LoadableList.Seg.styled("  2/3", Theme.Classes.DIM)),
                 BranchSegs.pullRequest(Option.of(new PullRequest(
-                        95,
+                        new PrNumber(95),
                         new GhBranch("b"),
                         false,
                         Checks.PASSING,
@@ -84,15 +85,15 @@ class BranchSegsTest {
                                 2,
                                 3,
                                 List.of(
-                                        new PullRequestStack.Entry(1, 94, State.OPEN),
-                                        new PullRequestStack.Entry(2, 95, State.OPEN),
-                                        new PullRequestStack.Entry(3, 97, State.OPEN))))))));
+                                        new PullRequestStack.Entry(1, new PrNumber(94), State.OPEN),
+                                        new PullRequestStack.Entry(2, new PrNumber(95), State.OPEN),
+                                        new PullRequestStack.Entry(3, new PrNumber(97), State.OPEN))))))));
     }
 
     @Test
     void aMergeShowsHowItGoesInsteadOfTheChecksAndTheReview() {
         Option<PullRequest> pr =
-                Option.of(new PullRequest(42, new GhBranch("b"), false, Checks.FAILING, Review.APPROVED));
+                Option.of(new PullRequest(new PrNumber(42), new GhBranch("b"), false, Checks.FAILING, Review.APPROVED));
 
         assertEquals(
                 List.of(
@@ -117,7 +118,7 @@ class BranchSegsTest {
 
     @Test
     void aBranchShowsItsPullRequestElseTheChecksOnItsTip() {
-        PullRequest pr = new PullRequest(42, new GhBranch("b"), false, Checks.NONE, Review.NONE);
+        PullRequest pr = new PullRequest(new PrNumber(42), new GhBranch("b"), false, Checks.NONE, Review.NONE);
 
         assertEquals(
                 List.of(LoadableList.Seg.styled(" #42", Theme.Classes.PULL_REQUEST)),
@@ -131,7 +132,8 @@ class BranchSegsTest {
 
     @Test
     void runningChecksSayWhenTheyAreExpectedToBeDone() {
-        PullRequest running = new PullRequest(38, new GhBranch("b"), false, Checks.PENDING, Review.APPROVED);
+        PullRequest running =
+                new PullRequest(new PrNumber(38), new GhBranch("b"), false, Checks.PENDING, Review.APPROVED);
 
         assertEquals(
                 List.of(
@@ -162,7 +164,8 @@ class BranchSegsTest {
 
     @Test
     void checksThatAllWaitToStartSayHowLongTheyHave() {
-        PullRequest running = new PullRequest(38, new GhBranch("b"), false, Checks.PENDING, Review.APPROVED);
+        PullRequest running =
+                new PullRequest(new PrNumber(38), new GhBranch("b"), false, Checks.PENDING, Review.APPROVED);
         Option<Waiting> waiting = Option.of(new Waiting(Option.of(NOW.minusSeconds(200))));
 
         assertEquals(

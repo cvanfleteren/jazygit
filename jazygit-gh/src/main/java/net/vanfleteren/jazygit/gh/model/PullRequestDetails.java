@@ -29,7 +29,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
  */
 @With
 public record PullRequestDetails(
-        int number,
+        PrNumber number,
         String title,
         String author,
         Status status,
@@ -47,7 +47,7 @@ public record PullRequestDetails(
      * One of the repository {@code repository} at {@code url}, without a description.
      */
     public PullRequestDetails(
-            int number,
+            PrNumber number,
             String title,
             String author,
             Status status,
@@ -66,7 +66,7 @@ public record PullRequestDetails(
      * One of the repository {@code repository}, whose URL is not known.
      */
     public PullRequestDetails(
-            int number,
+            PrNumber number,
             String title,
             String author,
             Status status,
@@ -84,7 +84,7 @@ public record PullRequestDetails(
      * One that is not stacked, of a repository that is not known.
      */
     public PullRequestDetails(
-            int number,
+            PrNumber number,
             String title,
             String author,
             Status status,

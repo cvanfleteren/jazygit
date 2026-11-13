@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.gh.stacks;
 import static net.vanfleteren.jazygit.gh.process.GhCommand.gh;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.process.GhCommand;
 
 /**
@@ -17,14 +18,14 @@ final class StackMutations {
      * The command that makes a stack of {@code pullRequests}, the bottom one first: two or more, each with the head of
      * the one below it as its base.
      */
-    static GhCommand create(List<Integer> pullRequests) {
+    static GhCommand create(List<PrNumber> pullRequests) {
         return post("repos/{owner}/{repo}/stacks", pullRequests);
     }
 
     /**
      * The command that puts {@code pullRequests} on the top of stack {@code stack}, the lowest one first.
      */
-    static GhCommand add(int stack, List<Integer> pullRequests) {
+    static GhCommand add(int stack, List<PrNumber> pullRequests) {
         return post("repos/{owner}/{repo}/stacks/" + stack + "/add", pullRequests);
     }
 
@@ -36,9 +37,9 @@ final class StackMutations {
     }
 
     // The numbers go as a JSON array of numbers: -F, unlike -f, sends them typed.
-    private static GhCommand post(String path, List<Integer> pullRequests) {
+    private static GhCommand post(String path, List<PrNumber> pullRequests) {
         return gh(List.of("api", "--method", "POST", path)
-                .appendAll(pullRequests.flatMap(number -> List.of("-F", "pull_requests[]=" + number)))
+                .appendAll(pullRequests.flatMap(number -> List.of("-F", "pull_requests[]=" + number.value())))
                 .toJavaArray(String[]::new));
     }
 }

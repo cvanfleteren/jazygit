@@ -12,6 +12,7 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -48,7 +49,7 @@ class RepositoryPullRequestsQueryTest {
                         new PullRequestList(
                                 List.of(new PullRequestSummary(
                                         "owner/repo",
-                                        7,
+                                        new PrNumber(7),
                                         "WIP",
                                         "",
                                         new GhBranch("patch-1"),
@@ -64,7 +65,7 @@ class RepositoryPullRequestsQueryTest {
                                         Option.of(new GhBranch("main")))),
                                 1),
                         Option.of("bob"),
-                        7)),
+                        Option.of(new PrNumber(7)))),
                 read("{ \"login\": \"bob\" }", "{ \"number\": 7 }", 1, """
                         { "number": 7, "title": "WIP", "url": "https://github.com/owner/repo/pull/7",
                           "updatedAt": "2026-10-15T08:00:00Z", "isDraft": true, "isCrossRepository": true,
@@ -81,9 +82,10 @@ class RepositoryPullRequestsQueryTest {
 
     @Test
     void withoutAPullRequestNoneWasOpenedLast() {
-        assertEquals(0, read("{ \"login\": \"bob\" }", "", 0, "").get().latest());
         assertEquals(
-                142,
+                Option.none(), read("{ \"login\": \"bob\" }", "", 0, "").get().latest());
+        assertEquals(
+                Option.of(new PrNumber(142)),
                 read("{ \"login\": \"bob\" }", "{ \"number\": 142 }", 0, "")
                         .get()
                         .latest());
@@ -98,9 +100,9 @@ class RepositoryPullRequestsQueryTest {
                         2,
                         List.of(
                                 new PullRequestStack.Entry(
-                                        1, 94, State.MERGED, new GhBranch("b94"), new GhBranch("main")),
+                                        1, new PrNumber(94), State.MERGED, new GhBranch("b94"), new GhBranch("main")),
                                 new PullRequestStack.Entry(
-                                        2, 95, State.OPEN, new GhBranch("b95"), new GhBranch("b94"))))),
+                                        2, new PrNumber(95), State.OPEN, new GhBranch("b95"), new GhBranch("b94"))))),
                 read("{ \"login\": \"bob\" }", "", 1, summary(95, "null", NO_SUITES, STACKED))
                         .get()
                         .open()

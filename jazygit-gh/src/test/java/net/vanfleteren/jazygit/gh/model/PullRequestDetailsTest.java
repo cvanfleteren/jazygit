@@ -20,7 +20,7 @@ class PullRequestDetailsTest {
 
     private static PullRequestDetails details(State state, List<Check> checks) {
         return new PullRequestDetails(
-                42,
+                new PrNumber(42),
                 "A pull request",
                 "someone",
                 new Status(state, true, PullRequestDetails.Mergeable.UNKNOWN),
@@ -39,7 +39,7 @@ class PullRequestDetailsTest {
     void anOpenPullRequestIsListedAsItIs() {
         assertEquals(
                 Option.of(new PullRequest(
-                        42,
+                        new PrNumber(42),
                         new GhBranch("feature"),
                         Option.of(new GhBranch("main")),
                         true,

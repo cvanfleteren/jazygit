@@ -24,6 +24,7 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestList;
@@ -53,9 +54,9 @@ public final class SummaryFragment {
             .map(commits -> commits.headOption().getOrElse(Checks.NONE));
 
     // Its repository, number, title, author, empty for a deleted account, head branch and url.
-    static final Decoder<Tuple6<String, Integer, String, String, GhBranch, String>> NAMED = map6(
+    static final Decoder<Tuple6<String, PrNumber, String, String, GhBranch, String>> NAMED = map6(
             at("repository.nameWithOwner", string()),
-            field("number", integer()),
+            field("number", integer().map(PrNumber::new)),
             field("title", string()),
             field("author", nullable(field("login", string()))).map(login -> login.getOrElse("")),
             field("headRefName", string()).map(GhBranch::new),

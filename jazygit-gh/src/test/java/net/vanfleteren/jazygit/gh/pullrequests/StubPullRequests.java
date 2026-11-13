@@ -6,6 +6,7 @@ import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.*;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Activity;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Branches;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Conversation;
@@ -46,7 +47,7 @@ public interface StubPullRequests extends PullRequests {
      * An open pull request {@code number} from branch {@code feature} into {@code main}, with nothing else to it.
      */
     @Override
-    default Either<GhError, PullRequestDetails> details(int number) {
+    default Either<GhError, PullRequestDetails> details(PrNumber number) {
         return Either.right(new PullRequestDetails(
                 number,
                 "A pull request",
@@ -76,19 +77,19 @@ public interface StubPullRequests extends PullRequests {
     }
 
     @Override
-    default Either<GhFailure, List<ExecutedCommand>> checkout(int number) {
+    default Either<GhFailure, List<ExecutedCommand>> checkout(PrNumber number) {
         return Either.right(List.of(ExecutedCommand.of("gh", "pr", "checkout", String.valueOf(number))));
     }
 
     @Override
-    default Either<GhFailure, List<ExecutedCommand>> checkout(int number, Path in) {
+    default Either<GhFailure, List<ExecutedCommand>> checkout(PrNumber number, Path in) {
         return checkout(number);
     }
 
     @Override
-    default Either<GhFailure, Merging> merge(int number, Option<GhCommit> head, MergeMethod method) {
+    default Either<GhFailure, Merging> merge(PrNumber number, Option<GhCommit> head, MergeMethod method) {
         return Either.right(new Merging(
-                new MergeStatus.Pending("merge-" + number),
+                new MergeStatus.Pending("merge-" + number.value()),
                 List.of(MergeQuery.mergeCommand(number, head, method).executed())));
     }
 
@@ -96,22 +97,22 @@ public interface StubPullRequests extends PullRequests {
      * Still pending.
      */
     @Override
-    default Either<GhError, MergeStatus> mergeStatus(int number, String id) {
+    default Either<GhError, MergeStatus> mergeStatus(PrNumber number, String id) {
         return Either.right(new MergeStatus.Pending(id));
     }
 
     @Override
-    default Either<GhFailure, List<ExecutedCommand>> close(int number) {
+    default Either<GhFailure, List<ExecutedCommand>> close(PrNumber number) {
         return Either.right(List.of(ExecutedCommand.of("gh", "pr", "close", String.valueOf(number))));
     }
 
     @Override
-    default Either<GhFailure, List<ExecutedCommand>> setDraft(int number, boolean draft) {
+    default Either<GhFailure, List<ExecutedCommand>> setDraft(PrNumber number, boolean draft) {
         return Either.right(List.of(CliPullRequests.draftCommand(number, draft).executed()));
     }
 
     @Override
-    default Either<GhFailure, List<ExecutedCommand>> edit(int number, PullRequestEdit edit) {
+    default Either<GhFailure, List<ExecutedCommand>> edit(PrNumber number, PullRequestEdit edit) {
         return Either.right(List.of(CliPullRequests.editCommand(number, edit).executed()));
     }
 }

@@ -7,6 +7,7 @@ import io.vavr.collection.Map;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import lombok.With;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.state.AreaId;
 import net.vanfleteren.jazygit.state.diff.Expansion;
@@ -65,7 +66,7 @@ public record RepoView(
         Option<DivergenceView> divergence,
         Option<BranchCommitsView> branchCommits,
         Option<Preview<BranchRef, List<Commit>>> branchLog,
-        Option<Integer> unfetched,
+        Option<PrNumber> unfetched,
         Option<Preview<BranchRef, Option<Ahead>>> branchAhead,
         Option<Preview<Sha, DiffText>> commitDetail,
         Option<Preview<List<FileEntry>, Diffs>> fileDiff,

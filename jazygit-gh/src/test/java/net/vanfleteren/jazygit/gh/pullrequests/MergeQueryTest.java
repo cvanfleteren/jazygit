@@ -9,6 +9,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.MergeStatus;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.process.GhError;
 import net.vanfleteren.jazygit.gh.process.GhProcess;
 import org.junit.jupiter.api.Test;
@@ -37,16 +38,16 @@ class MergeQueryTest {
                         "merge_method=squash",
                         "-f",
                         "sha=abc123"),
-                MergeQuery.mergeCommand(95, Option.of(new GhCommit("abc123")), MergeMethod.SQUASH)
+                MergeQuery.mergeCommand(new PrNumber(95), Option.of(new GhCommit("abc123")), MergeMethod.SQUASH)
                         .executed()
                         .commandLine());
-        assertFalse(MergeQuery.mergeCommand(95, Option.none(), MergeMethod.REBASE)
+        assertFalse(MergeQuery.mergeCommand(new PrNumber(95), Option.none(), MergeMethod.REBASE)
                 .executed()
                 .commandLine()
                 .exists(arg -> arg.startsWith("sha=")));
         assertEquals(
                 List.of("gh", "api", "repos/{owner}/{repo}/pulls/95/merge-async/u-1"),
-                MergeQuery.statusCommand(95, "u-1").executed().commandLine());
+                MergeQuery.statusCommand(new PrNumber(95), "u-1").executed().commandLine());
     }
 
     @Test

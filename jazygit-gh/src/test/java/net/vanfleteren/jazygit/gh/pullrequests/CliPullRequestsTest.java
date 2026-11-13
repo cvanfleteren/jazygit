@@ -11,6 +11,7 @@ import java.nio.file.Path;
 import net.vanfleteren.jazygit.gh.CliGitHub;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.NewPullRequest;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.*;
 import net.vanfleteren.jazygit.gh.model.PullRequestEdit;
@@ -43,7 +44,7 @@ class CliPullRequestsTest {
                         + "echo \" $* \" > '" + dir.resolve("asked") + "'\n"
                         + "cat <<'EOF'\n" + answer + "\nEOF\n");
         gh.toFile().setExecutable(true);
-        return CliGitHub.of(dir, gh.toString(), GhToken.NONE).pullRequests().details(95);
+        return CliGitHub.of(dir, gh.toString(), GhToken.NONE).pullRequests().details(new PrNumber(95));
     }
 
     @Test
@@ -104,13 +105,14 @@ class CliPullRequestsTest {
     void anEditOnlyPassesWhatItChanges() {
         assertEquals(
                 List.of("gh", "pr", "edit", "12", "--body", ""),
-                CliPullRequests.editCommand(12, new PullRequestEdit(Option.none(), Option.of(""), Option.none()))
+                CliPullRequests.editCommand(
+                                new PrNumber(12), new PullRequestEdit(Option.none(), Option.of(""), Option.none()))
                         .executed()
                         .commandLine());
         assertEquals(
                 List.of("gh", "pr", "edit", "12", "--title", "Add login", "--body", "Why\n", "--base", "release"),
                 CliPullRequests.editCommand(
-                                12,
+                                new PrNumber(12),
                                 new PullRequestEdit(
                                         Option.of("Add login"), Option.of("Why\n"), Option.of(new GhBranch("release"))))
                         .executed()
@@ -120,7 +122,7 @@ class CliPullRequestsTest {
     @Test
     void theNumberOfACreatedPullRequestIsInTheUrlGhPrints() {
         assertEquals(
-                Option.of(12),
+                Option.of(new PrNumber(12)),
                 CliPullRequests.createdNumber("\nCreating pull request...\nhttps://github.com/o/r/pull/12\n"));
         assertEquals(Option.none(), CliPullRequests.createdNumber("nothing useful"));
     }
@@ -169,10 +171,10 @@ class CliPullRequestsTest {
 
         PullRequestDetails details = CliGitHub.of(dir, gh.toString(), GhToken.NONE)
                 .pullRequests()
-                .details(95)
+                .details(new PrNumber(95))
                 .get();
 
-        assertEquals(95, details.number());
+        assertEquals(new PrNumber(95), details.number());
         assertEquals(Option.none(), details.branches().behindBase());
     }
 
@@ -200,8 +202,9 @@ class CliPullRequestsTest {
         Path gh = Files.writeString(dir.resolve("gh"), "#!/bin/sh\necho \"$(pwd -P) $*\" >&2\nexit 1\n");
         gh.toFile().setExecutable(true);
 
-        Either<GhFailure, List<ExecutedCommand>> outcome =
-                CliGitHub.of(main, gh.toString(), GhToken.NONE).pullRequests().checkout(9, Path.of("../other"));
+        Either<GhFailure, List<ExecutedCommand>> outcome = CliGitHub.of(main, gh.toString(), GhToken.NONE)
+                .pullRequests()
+                .checkout(new PrNumber(9), Path.of("../other"));
 
         assertEquals(
                 new GhError.CommandFailed(Option.of(other + " pr checkout 9"), 1),

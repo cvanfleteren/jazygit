@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.state.github.prs;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.gh.model.RepositoryPullRequests;
@@ -177,16 +178,18 @@ public final class PrOverviewUpdate {
      */
     static UnseenPullRequests unseen(Option<UnseenPullRequests> before, RepositoryPullRequests read) {
         List<PullRequestSummary> open = read.open().pullRequests();
+        // The settings keep plain numbers, 0 for none.
+        List<Integer> numbers = open.map(pr -> pr.number().value());
         // The open ones count too, should GitHub not have said which was opened last.
         int highest =
-                open.map(PullRequestSummary::number).append(read.latest()).max().getOrElse(0);
+                numbers.appendAll(read.latest().map(PrNumber::value)).max().getOrElse(0);
         return before.map(kept -> new UnseenPullRequests(
                         Math.max(kept.highest(), highest),
                         kept.numbers()
-                                .retainAll(open.map(PullRequestSummary::number))
-                                .addAll(open.filter(pr -> pr.number() > kept.highest()
+                                .retainAll(numbers)
+                                .addAll(open.filter(pr -> pr.number().value() > kept.highest()
                                                 && !read.viewer().exists(pr.author()::equalsIgnoreCase))
-                                        .map(PullRequestSummary::number))))
+                                        .map(pr -> pr.number().value()))))
                 .getOrElse(() -> UnseenPullRequests.upTo(highest));
     }
 
@@ -198,7 +201,9 @@ public final class PrOverviewUpdate {
         return overview.isUnseen(pullRequest)
                 ? kept(
                         new Step(
-                                overview.withUnseen(overview.unseen().map(unseen -> unseen.seen(pullRequest.number()))),
+                                overview.withUnseen(overview.unseen()
+                                        .map(unseen ->
+                                                unseen.seen(pullRequest.number().value()))),
                                 step.cmds()),
                         false)
                 : step;

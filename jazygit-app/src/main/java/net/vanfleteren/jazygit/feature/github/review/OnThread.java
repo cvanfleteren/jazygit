@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.github.review;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.github.GitHubError.CannotReview.Why;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.state.diff.Anchor;
 import net.vanfleteren.jazygit.state.view.CommitFilesView;
@@ -32,15 +33,15 @@ record OnThread(CommitFilesView view, ReviewThread thread) {
     /**
      * The number of the pull request.
      */
-    int number() {
+    PrNumber number() {
         return number(view);
     }
 
     /**
      * The number of the pull request whose files {@code view} lists.
      */
-    static int number(CommitFilesView view) {
-        return view.pullRequest().getOrElse(0);
+    static PrNumber number(CommitFilesView view) {
+        return view.pullRequest().getOrElse(() -> new PrNumber(0));
     }
 
     /**

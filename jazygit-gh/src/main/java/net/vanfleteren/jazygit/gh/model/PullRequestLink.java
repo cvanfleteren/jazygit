@@ -10,13 +10,14 @@ import io.vavr.control.Option;
  * @param number     its number
  * @param comment    the REST id of the review comment to open it on, if any
  */
-public record PullRequestLink(String host, String repository, int number, Option<ReviewThread.Comment.RestId> comment) {
+public record PullRequestLink(
+        String host, String repository, PrNumber number, Option<ReviewThread.Comment.RestId> comment) {
 
     /**
      * The pull request's own URL, without an anchor.
      */
     public String pullRequest() {
-        return "https://" + host + "/" + repository + "/pull/" + number;
+        return "https://" + host + "/" + repository + "/pull/" + number.value();
     }
 
     /**

@@ -125,7 +125,7 @@ public final class EditPullRequestDialog implements PopupView {
                     DialogFrame.of(
                             Messages.get(
                                     "dialog.editPullRequest.title",
-                                    String.valueOf(popup.number()),
+                                    String.valueOf(popup.number().value()),
                                     popup.pullRequestPopup().branch().value()),
                             WIDTH,
                             content.toJavaArray(Element[]::new)),

@@ -44,7 +44,7 @@ public final class CommentUpdate {
                         .map(succeeded -> succeeded.mapGitHub(gitHub -> gitHub.withChanged(cmd.number())));
                 yield done.model()
                         .popup(CommentPopup.class)
-                        .filter(popup -> popup.number() == cmd.number())
+                        .filter(popup -> popup.number().equals(cmd.number()))
                         .map(popup -> done.then(changed -> PullRequestUpdate.read(changed, cmd.number())
                                 .apply((given, load) -> new Next(
                                         given.openPopup(sentFrom(popup.from(), load.read(), model.now())),

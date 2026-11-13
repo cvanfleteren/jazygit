@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.feature.github.GitHubError.CannotReview.Why;
 import net.vanfleteren.jazygit.feature.github.review.ReviewPopup.Target;
 import net.vanfleteren.jazygit.gh.model.CommentRights;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
@@ -35,8 +36,8 @@ class DeleteCommentUpdateTest {
         assertEquals(new ReviewThread.Id("T1"), popup.thread());
 
         Next confirmed = Update.update(asked, new DeleteCommentMsg.DeleteConfirmed());
-        DeleteCommentCmd.DeleteComment delete =
-                new DeleteCommentCmd.DeleteComment(7, new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("R1"));
+        DeleteCommentCmd.DeleteComment delete = new DeleteCommentCmd.DeleteComment(
+                new PrNumber(7), new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("R1"));
         assertEquals(List.of(delete), confirmed.cmds());
         assertTrue(confirmed.model().popup(DeleteCommentPopup.class).isEmpty());
         assertEquals(
@@ -54,8 +55,8 @@ class DeleteCommentUpdateTest {
     @Test
     void theStopOfAnOpenThreadIsItsFirstCommentAndOnceThatIsDeletedTheNextIsItsFirst() {
         Next confirmed = deleting(files(), onThread("T1"));
-        DeleteCommentCmd.DeleteComment delete =
-                new DeleteCommentCmd.DeleteComment(7, new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("C1"));
+        DeleteCommentCmd.DeleteComment delete = new DeleteCommentCmd.DeleteComment(
+                new PrNumber(7), new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("C1"));
         assertEquals(List.of(delete), confirmed.cmds());
 
         Model deleted = Update.update(confirmed.model(), new DeleteCommentMsg.CommentDeleted(delete, List.empty()))
@@ -76,14 +77,14 @@ class DeleteCommentUpdateTest {
                         deleting(files(), onComment("R1", "T1")).model(),
                         new DeleteCommentMsg.CommentDeleted(
                                 new DeleteCommentCmd.DeleteComment(
-                                        7, new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("R1")),
+                                        new PrNumber(7), new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("R1")),
                                 List.empty()))
                 .model();
         Model twice = Update.update(
                         deleting(once, onThread("T1")).model(),
                         new DeleteCommentMsg.CommentDeleted(
                                 new DeleteCommentCmd.DeleteComment(
-                                        7, new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("C1")),
+                                        new PrNumber(7), new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("C1")),
                                 List.empty()))
                 .model();
 
@@ -154,7 +155,7 @@ class DeleteCommentUpdateTest {
 
         assertEquals(
                 List.of(new DeleteCommentCmd.DeleteComment(
-                        7, new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("R1"))),
+                        new PrNumber(7), new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("R1"))),
                 deleting(movedOn, onComment("R1", "T1")).cmds());
     }
 
@@ -168,7 +169,8 @@ class DeleteCommentUpdateTest {
                 .get()
                 .toOption()
                 .get();
-        Model read = Update.update(asked, new CommitFilesMsg.RemarksLoaded(7, without, HashSet.empty(), 0))
+        Model read = Update.update(
+                        asked, new CommitFilesMsg.RemarksLoaded(new PrNumber(7), without, HashSet.empty(), 0))
                 .model();
 
         Next confirmed = Update.update(read, new DeleteCommentMsg.DeleteConfirmed());
@@ -179,8 +181,8 @@ class DeleteCommentUpdateTest {
 
     @Test
     void aDeleteThatFailedLeavesTheComment() {
-        DeleteCommentCmd.DeleteComment delete =
-                new DeleteCommentCmd.DeleteComment(7, new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("R1"));
+        DeleteCommentCmd.DeleteComment delete = new DeleteCommentCmd.DeleteComment(
+                new PrNumber(7), new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("R1"));
         Model failed = Update.update(
                         deleting(files(), onComment("R1", "T1")).model(),
                         new DeleteCommentMsg.DeleteFailed(delete, new Failure.Bug(new RuntimeException("offline"))))
@@ -197,23 +199,27 @@ class DeleteCommentUpdateTest {
         Next resolved = Update.update(
                 Update.update(files(), new ReviewMsg.ResolveAsked(at(onThread("T1"))))
                         .model(),
-                new ReviewMsg.Resolved(new ReviewCmd.Resolve(7, new ReviewThread.Id("T1"), true), List.empty()));
+                new ReviewMsg.Resolved(
+                        new ReviewCmd.Resolve(new PrNumber(7), new ReviewThread.Id("T1"), true), List.empty()));
         assertTrue(resolved.cmds()
-                .contains(new CommitFilesCmd.LoadReviewRemarks(7, HashSet.of(new ReviewThread.Id("T1")), 0)));
+                .contains(new CommitFilesCmd.LoadReviewRemarks(
+                        new PrNumber(7), HashSet.of(new ReviewThread.Id("T1")), 0)));
         Model deleted = Update.update(
                         deleting(resolved.model(), onComment("R2", "T2")).model(),
                         new DeleteCommentMsg.CommentDeleted(
                                 new DeleteCommentCmd.DeleteComment(
-                                        7, new ReviewThread.Id("T2"), new ReviewThread.Comment.Id("R2")),
+                                        new PrNumber(7), new ReviewThread.Id("T2"), new ReviewThread.Comment.Id("R2")),
                                 List.empty()))
                 .model();
 
         // The read of before the delete comes back with the comment still in it.
         Next stale = Update.update(
-                deleted, new CommitFilesMsg.RemarksLoaded(7, remarks(), HashSet.of(new ReviewThread.Id("T1")), 0));
+                deleted,
+                new CommitFilesMsg.RemarksLoaded(new PrNumber(7), remarks(), HashSet.of(new ReviewThread.Id("T1")), 0));
 
         assertEquals(
-                List.of(new CommitFilesCmd.LoadReviewRemarks(7, HashSet.of(new ReviewThread.Id("T1")), 1)),
+                List.of(new CommitFilesCmd.LoadReviewRemarks(
+                        new PrNumber(7), HashSet.of(new ReviewThread.Id("T1")), 1)),
                 stale.cmds());
         assertEquals(List.of("C2"), comments(stale.model(), "T2"));
         assertEquals(HashSet.of(new ReviewThread.Id("T1")), view(stale.model()).sending());
@@ -221,7 +227,8 @@ class DeleteCommentUpdateTest {
         ReviewRemarks after = view(deleted).remarks().get().toOption().get();
         Model read = Update.update(
                         stale.model(),
-                        new CommitFilesMsg.RemarksLoaded(7, after, HashSet.of(new ReviewThread.Id("T1")), 1))
+                        new CommitFilesMsg.RemarksLoaded(
+                                new PrNumber(7), after, HashSet.of(new ReviewThread.Id("T1")), 1))
                 .model();
         assertEquals(HashSet.empty(), view(read).sending());
         assertEquals(List.of("C2"), comments(read, "T2"));
@@ -233,13 +240,13 @@ class DeleteCommentUpdateTest {
         Next confirmed = deleting(one, onThread("T2"));
         assertEquals(
                 List.of(new DeleteCommentCmd.DeleteComment(
-                        7, new ReviewThread.Id("T2"), new ReviewThread.Comment.Id("C2"))),
+                        new PrNumber(7), new ReviewThread.Id("T2"), new ReviewThread.Comment.Id("C2"))),
                 confirmed.cmds());
         Model deleted = Update.update(
                         confirmed.model(),
                         new DeleteCommentMsg.CommentDeleted(
                                 new DeleteCommentCmd.DeleteComment(
-                                        7, new ReviewThread.Id("T2"), new ReviewThread.Comment.Id("C2")),
+                                        new PrNumber(7), new ReviewThread.Id("T2"), new ReviewThread.Comment.Id("C2")),
                                 List.empty()))
                 .model();
         assertEquals(List.of(new ReviewThread.Id("T1")), view(deleted).threads().map(ReviewThread::id));
@@ -260,14 +267,14 @@ class DeleteCommentUpdateTest {
     @Test
     void aThreadWhoseCommentsReadAreAllDeletedIsReadAgainAndTakesNoReplyUntilThen() {
         Model more = files(PullRequestDetails.State.OPEN, HEAD, List.of(firstOnly(OPEN, 60), SETTLED));
-        DeleteCommentCmd.DeleteComment delete =
-                new DeleteCommentCmd.DeleteComment(7, new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("C1"));
+        DeleteCommentCmd.DeleteComment delete = new DeleteCommentCmd.DeleteComment(
+                new PrNumber(7), new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("C1"));
 
         Next deleted = Update.update(
                 deleting(more, onThread("T1")).model(), new DeleteCommentMsg.CommentDeleted(delete, List.empty()));
 
         assertEquals(List.empty(), comments(deleted.model(), "T1"));
-        assertTrue(deleted.cmds().contains(new CommitFilesCmd.LoadReviewRemarks(7, HashSet.empty(), 1)));
+        assertTrue(deleted.cmds().contains(new CommitFilesCmd.LoadReviewRemarks(new PrNumber(7), HashSet.empty(), 1)));
         Model replying = Update.update(deleted.model(), new ReviewMsg.ReplyAsked(at(onThread("T1"))))
                 .model();
         assertTrue(replying.popup(ReviewPopup.class).isEmpty());
@@ -282,7 +289,7 @@ class DeleteCommentUpdateTest {
         Next moved = Update.update(
                 confirmed,
                 new CommitFilesMsg.RemarksLoaded(
-                        7,
+                        new PrNumber(7),
                         new ReviewRemarks(
                                 PullRequestDetails.State.OPEN,
                                 GhCommit.parse("c".repeat(40)),
@@ -299,13 +306,13 @@ class DeleteCommentUpdateTest {
                         moved.model(),
                         new DeleteCommentMsg.CommentDeleted(
                                 new DeleteCommentCmd.DeleteComment(
-                                        7, new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("R1")),
+                                        new PrNumber(7), new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("R1")),
                                 List.empty()))
                 .model();
         Model rebuilt = Update.update(
                         deleted,
                         new CommitFilesMsg.RemarksLoaded(
-                                7,
+                                new PrNumber(7),
                                 new ReviewRemarks(
                                         PullRequestDetails.State.OPEN,
                                         GhCommit.parse("d".repeat(40)),
@@ -316,8 +323,9 @@ class DeleteCommentUpdateTest {
                 .model();
         assertEquals(1, view(rebuilt).version());
 
-        Next stale = Update.update(rebuilt, new CommitFilesMsg.RemarksLoaded(7, remarks(), HashSet.empty(), 0));
-        assertEquals(List.of(new CommitFilesCmd.LoadReviewRemarks(7, HashSet.empty(), 1)), stale.cmds());
+        Next stale = Update.update(
+                rebuilt, new CommitFilesMsg.RemarksLoaded(new PrNumber(7), remarks(), HashSet.empty(), 0));
+        assertEquals(List.of(new CommitFilesCmd.LoadReviewRemarks(new PrNumber(7), HashSet.empty(), 1)), stale.cmds());
         assertEquals(List.of("C1"), comments(stale.model(), "T1"));
     }
 }

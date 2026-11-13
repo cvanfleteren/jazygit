@@ -6,6 +6,7 @@ import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import java.util.function.Function;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
@@ -52,11 +53,11 @@ public final class CommitFilesUpdate {
             }
             case CommitFilesMsg.Closed() ->
                 Next.of(model.mapRepoView(repoView -> repoView.withCommitFiles(Option.none())));
-            case CommitFilesMsg.RemarksLoaded(int number, var remarks, var settled, int version) ->
+            case CommitFilesMsg.RemarksLoaded(PrNumber number, var remarks, var settled, int version) ->
                 remarksRead(model, number, remarks, settled, version);
             // The review threads read before stay shown; what was sent is done with all the same. A failed read
             // older than they are changes nothing they show either (ADR 64).
-            case CommitFilesMsg.RemarksFailed(int number, var failure, var settled, int version) ->
+            case CommitFilesMsg.RemarksFailed(PrNumber number, var failure, var settled, int version) ->
                 Next.of(mapPullRequest(
                         model,
                         number,
@@ -70,13 +71,13 @@ public final class CommitFilesUpdate {
                                 ? view.withListed(view.listed().next())
                                 : view))));
             // Those flipped before the threads are read are as they start until then (ADR 63).
-            case CommitFilesMsg.CollapsedLoaded(int number, var kept) ->
+            case CommitFilesMsg.CollapsedLoaded(PrNumber number, var kept) ->
                 Next.of(mapPullRequest(
                         model,
                         number,
                         view -> view.withCollapsed(view.collapsed().with(kept).readAgain(view.threads()))));
             case CommitFilesMsg.CollapsedKept() -> Next.of(model);
-            case CommitFilesMsg.PictureLoaded(int number, String url, var picture) ->
+            case CommitFilesMsg.PictureLoaded(PrNumber number, String url, var picture) ->
                 Next.of(mapPullRequest(
                         model, number, view -> view.withPictures(view.pictures().put(url, picture))));
             case CommitFilesMsg.RemarksRefreshed() ->
@@ -118,7 +119,7 @@ public final class CommitFilesUpdate {
      */
     private static Option<CommitFilesCmd.LoadCollapsed> collapsedLoad(CommitFilesView view) {
         return view.of() instanceof Changes.OfPullRequest(PullRequestCommits commits)
-                ? Option.of(new CommitFilesCmd.LoadCollapsed(commits.repository(), commits.number()))
+                ? Option.of(new CommitFilesCmd.LoadCollapsed(commits.repository(), new PrNumber(commits.number())))
                 : Option.none();
     }
 
@@ -129,7 +130,7 @@ public final class CommitFilesUpdate {
      * before a comment was deleted, they are dropped, and read again for the threads {@code settled} (ADR 64).
      */
     private static Next remarksRead(
-            Model model, int number, ReviewRemarks remarks, Set<ReviewThread.Id> settled, int version) {
+            Model model, PrNumber number, ReviewRemarks remarks, Set<ReviewThread.Id> settled, int version) {
         return model.repoView()
                 .commitFiles()
                 .filter(view -> view.pullRequest().contains(number))
@@ -177,7 +178,7 @@ public final class CommitFilesUpdate {
      * lists the files of in {@code model}, that are not read or being read yet, up to {@link #MAX_PICTURES} of them,
      * to show them (ADR 84).
      */
-    private static Next pictures(Model model, CommitFilesView view, int number, List<Cmd> cmds) {
+    private static Next pictures(Model model, CommitFilesView view, PrNumber number, List<Cmd> cmds) {
         // Lazily, so that the comments are parsed only until there are enough images.
         List<String> urls = view.threads()
                 .iterator()
@@ -215,7 +216,7 @@ public final class CommitFilesUpdate {
         return commit.flatMap(read -> Sha.parse(read.oid()));
     }
 
-    private static Model mapPullRequest(Model model, int number, Function<CommitFilesView, CommitFilesView> f) {
+    private static Model mapPullRequest(Model model, PrNumber number, Function<CommitFilesView, CommitFilesView> f) {
         return model.mapRepoView(repoView -> repoView.withCommitFiles(
                 repoView.commitFiles().map(view -> view.pullRequest().contains(number) ? f.apply(view) : view)));
     }

@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.gh.reviews;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import net.vanfleteren.jazygit.gh.model.*;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.process.GhError;
 import net.vanfleteren.jazygit.gh.process.GhFailure;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -17,12 +18,12 @@ public interface StubReviews extends Reviews {
      * No description, comments or reviews.
      */
     @Override
-    default Either<GhError, List<PullRequestComment>> conversation(int number) {
+    default Either<GhError, List<PullRequestComment>> conversation(PrNumber number) {
         return Either.right(List.empty());
     }
 
     @Override
-    default Either<GhFailure, List<ExecutedCommand>> comment(int number, String body) {
+    default Either<GhFailure, List<ExecutedCommand>> comment(PrNumber number, String body) {
         return Either.right(List.of(CliReviews.commentCommand(number, body).executed()));
     }
 
@@ -47,19 +48,20 @@ public interface StubReviews extends Reviews {
      * No review threads, at commits that are not known.
      */
     @Override
-    default Either<GhError, ReviewRemarks> remarks(int number) {
+    default Either<GhError, ReviewRemarks> remarks(PrNumber number) {
         return Either.right(ReviewRemarks.none());
     }
 
     @Override
-    default Either<GhFailure, List<ExecutedCommand>> startThread(int number, GhCommit commit, NewReviewThread thread) {
+    default Either<GhFailure, List<ExecutedCommand>> startThread(
+            PrNumber number, GhCommit commit, NewReviewThread thread) {
         return Either.right(
                 List.of(ReviewThreadMutations.start(number, commit, thread).executed()));
     }
 
     @Override
     default Either<GhFailure, List<ExecutedCommand>> reply(
-            int number, ReviewThread.Comment.RestId comment, String body) {
+            PrNumber number, ReviewThread.Comment.RestId comment, String body) {
         return Either.right(
                 List.of(ReviewThreadMutations.reply(number, comment, body).executed()));
     }

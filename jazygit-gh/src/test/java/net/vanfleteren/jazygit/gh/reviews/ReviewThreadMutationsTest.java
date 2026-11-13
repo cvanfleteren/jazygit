@@ -6,6 +6,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.NewReviewThread;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.Reaction;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
@@ -44,7 +45,7 @@ class ReviewThreadMutationsTest {
                         "-f",
                         "side=RIGHT"),
                 args(ReviewThreadMutations.start(
-                        7,
+                        new PrNumber(7),
                         new GhCommit("abc123"),
                         new NewReviewThread(
                                 "src/Foo.java",
@@ -55,7 +56,7 @@ class ReviewThreadMutationsTest {
     @Test
     void aThreadOnSeveralLinesGivesItsFirstToo() {
         List<String> args = args(ReviewThreadMutations.start(
-                7,
+                new PrNumber(7),
                 new GhCommit("abc123"),
                 new NewReviewThread(
                         "src/Foo.java", Option.of(new NewReviewThread.Lines(Side.LEFT, 10, Side.RIGHT, 12)), "Hm")));
@@ -68,7 +69,7 @@ class ReviewThreadMutationsTest {
     @Test
     void aThreadOnAWholeFileHasNoLine() {
         List<String> args = args(ReviewThreadMutations.start(
-                7, new GhCommit("abc123"), new NewReviewThread("src/Foo.java", Option.none(), "Split")));
+                new PrNumber(7), new GhCommit("abc123"), new NewReviewThread("src/Foo.java", Option.none(), "Split")));
 
         assertEquals(List.of("-f", "subject_type=file"), args.drop(11));
     }
@@ -84,7 +85,7 @@ class ReviewThreadMutationsTest {
                         "repos/{owner}/{repo}/pulls/7/comments/101/replies",
                         "-f",
                         "body=Done"),
-                args(ReviewThreadMutations.reply(7, new ReviewThread.Comment.RestId("101"), "Done")));
+                args(ReviewThreadMutations.reply(new PrNumber(7), new ReviewThread.Comment.RestId("101"), "Done")));
     }
 
     @Test

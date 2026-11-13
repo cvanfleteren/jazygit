@@ -68,7 +68,7 @@ public final class StackDialogs {
             StackPopups.StackOn.class,
             popup -> Messages.get(
                     "dialog.stackOn.title",
-                    String.valueOf(popup.pullRequest().number()),
+                    String.valueOf(popup.pullRequest().number().value()),
                     popup.branch().name().value()),
             popup -> popup.targets()
                     .map(target -> new PickDialog.Row<>(
@@ -76,7 +76,7 @@ public final class StackDialogs {
                             List.of(
                                     PickDialog.Cell.of(target.branch().name().value()),
                                     PickDialog.Cell.of(
-                                            "#" + target.pullRequest().number()),
+                                            "#" + target.pullRequest().number().value()),
                                     PickDialog.Cell.styled(
                                             target.pullRequest()
                                                     .stack()
@@ -122,7 +122,10 @@ public final class StackDialogs {
             StackPopups.Confirm.class,
             confirm -> Messages.get(
                     "dialog.makeStack.confirmTitle",
-                    confirm.cmd().pullRequests().map(number -> "#" + number).mkString(" ")),
+                    confirm.cmd()
+                            .pullRequests()
+                            .map(number -> "#" + number.value())
+                            .mkString(" ")),
             StackDialogs::changes,
             'r',
             confirm -> !confirm.diverged().isEmpty(),
@@ -178,11 +181,11 @@ public final class StackDialogs {
                 .max()
                 .getOrElse(0);
         int numbers = checkout.lines()
-                .map(line -> String.valueOf(line.number()).length() + 1)
+                .map(line -> String.valueOf(line.number().value()).length() + 1)
                 .max()
                 .getOrElse(0);
         List<String> lines = checkout.lines()
-                .map(line -> pad("#" + line.number(), numbers) + "  "
+                .map(line -> pad("#" + line.number().value(), numbers) + "  "
                         + pad(line.branch().value(), width) + "  "
                         + Messages.get(
                                 "dialog.checkoutStack." + kindKey(line.kind()),
@@ -192,7 +195,9 @@ public final class StackDialogs {
                         !checkout.skipped().isEmpty(),
                         () -> Messages.get(
                                 "dialog.checkoutStack.skipped",
-                                checkout.skipped().map(number -> "#" + number).mkString(", ")))
+                                checkout.skipped()
+                                        .map(number -> "#" + number.value())
+                                        .mkString(", ")))
                 .toList();
         return List.of(lines.appendAll(skipped).mkString("\n"), landings(checkout))
                 .mkString("\n\n");
@@ -215,7 +220,7 @@ public final class StackDialogs {
                         .map(asked -> marked(
                                 Messages.get(
                                         "dialog.checkoutStack.asked",
-                                        String.valueOf(checkout.on().get()),
+                                        String.valueOf(checkout.on().get().value()),
                                         asked.value()),
                                 preferred == StackCheckout.Landing.ASKED)))
                 .append(Messages.get("dialog.checkoutStack.stay"));
@@ -276,7 +281,7 @@ public final class StackDialogs {
                 .changes()
                 .map(change -> Messages.get(
                         "dialog.makeStack.change",
-                        String.valueOf(change.number()),
+                        String.valueOf(change.number().value()),
                         change.from().map(GhBranch::name).getOrElse("?"),
                         change.to().name()));
         List<String> diverged = confirm.diverged()

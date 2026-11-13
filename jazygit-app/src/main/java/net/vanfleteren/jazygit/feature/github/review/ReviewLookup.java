@@ -7,6 +7,7 @@ import java.util.function.Function;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesCmd.LoadReviewRemarks;
 import net.vanfleteren.jazygit.feature.github.GitHubError;
 import net.vanfleteren.jazygit.feature.github.GitHubError.CannotReview.Why;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -52,7 +53,7 @@ final class ReviewLookup {
      * read of a thread GitHub has more of: which of those is its first now, that a reply goes to, is not known until
      * the threads are read again.
      */
-    static Next gone(Model model, int number, ReviewThread.Id thread, ReviewThread.Comment.Id comment) {
+    static Next gone(Model model, PrNumber number, ReviewThread.Id thread, ReviewThread.Comment.Id comment) {
         Model deleted = mapPullRequest(model, number, view -> view.withoutComment(comment));
         boolean unread = pullRequestFiles(deleted)
                 .filter(view -> view.pullRequest().contains(number))
@@ -78,7 +79,7 @@ final class ReviewLookup {
     /**
      * {@code model} with the files of pull request {@code number} as {@code f} makes them, while they are listed.
      */
-    static Model mapPullRequest(Model model, int number, Function<CommitFilesView, CommitFilesView> f) {
+    static Model mapPullRequest(Model model, PrNumber number, Function<CommitFilesView, CommitFilesView> f) {
         return mapView(model, view -> view.pullRequest().contains(number) ? f.apply(view) : view);
     }
 }

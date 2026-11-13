@@ -11,6 +11,7 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.feature.branch.stack.StackMsg;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -38,14 +39,15 @@ class StackRowsTest {
 
     // #95 is merged; #96 and #97 are checked out; #98 is only fetched.
     private static final List<PullRequestStack.Entry> ENTRIES = List.of(
-            new PullRequestStack.Entry(1, 95, State.MERGED, new GhBranch("feat/0"), new GhBranch("main")),
-            new PullRequestStack.Entry(2, 96, State.OPEN, new GhBranch("feat/a"), new GhBranch("main")),
-            new PullRequestStack.Entry(3, 97, State.OPEN, new GhBranch("feat/b"), new GhBranch("feat/a")),
-            new PullRequestStack.Entry(4, 98, State.OPEN, new GhBranch("feat/c"), new GhBranch("feat/b")));
+            new PullRequestStack.Entry(1, new PrNumber(95), State.MERGED, new GhBranch("feat/0"), new GhBranch("main")),
+            new PullRequestStack.Entry(2, new PrNumber(96), State.OPEN, new GhBranch("feat/a"), new GhBranch("main")),
+            new PullRequestStack.Entry(3, new PrNumber(97), State.OPEN, new GhBranch("feat/b"), new GhBranch("feat/a")),
+            new PullRequestStack.Entry(
+                    4, new PrNumber(98), State.OPEN, new GhBranch("feat/c"), new GhBranch("feat/b")));
 
     private static PullRequest stacked(int number, String head, int position) {
         return new PullRequest(
-                number,
+                new PrNumber(number),
                 new GhBranch(head),
                 Option.none(),
                 false,
@@ -100,7 +102,7 @@ class StackRowsTest {
                         selecting(new BranchRef.Local(MAIN)),
                         // The header shows the highest branch of the stack, whose log holds all of it.
                         selecting(new BranchRef.Local(FEAT_B)),
-                        Option.of(new SelectionMsg.UnfetchedSelected(95)),
+                        Option.of(new SelectionMsg.UnfetchedSelected(new PrNumber(95))),
                         selecting(new BranchRef.Local(FEAT_A)),
                         selecting(new BranchRef.Local(FEAT_B)),
                         selecting(new BranchRef.Remote(ORIGIN_FEAT_C))),
@@ -112,11 +114,11 @@ class StackRowsTest {
         Model unfetched = Update.update(
                         Update.update(OPEN, new SelectionMsg.BranchSelected(new BranchRef.Local(MAIN)))
                                 .model(),
-                        new SelectionMsg.UnfetchedSelected(95))
+                        new SelectionMsg.UnfetchedSelected(new PrNumber(95)))
                 .model();
 
         assertEquals(Option.none(), unfetched.repoView().branchLog());
-        assertEquals(Option.of(95), unfetched.repoView().unfetched());
+        assertEquals(Option.of(new PrNumber(95)), unfetched.repoView().unfetched());
         assertEquals(
                 Option.none(),
                 Update.update(unfetched, new SelectionMsg.BranchSelected(new BranchRef.Local(MAIN)))

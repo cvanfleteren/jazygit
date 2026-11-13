@@ -4,6 +4,7 @@ import io.vavr.collection.Map;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.image.Picture;
 import net.vanfleteren.jazygit.state.Cmd;
@@ -27,14 +28,14 @@ public sealed interface CommitFilesCmd extends Cmd {
      * those something was sent for, which it is read after (ADR 60). It is read at {@code version} of the threads,
      * which it gives back: one changed since, as by a comment deleted, is newer than what it read (ADR 64).
      */
-    record LoadReviewRemarks(int number, Set<ReviewThread.Id> settled, int version) implements CommitFilesCmd {
+    record LoadReviewRemarks(PrNumber number, Set<ReviewThread.Id> settled, int version) implements CommitFilesCmd {
 
         /**
          * The read of the review threads of pull request {@code number} after what was sent for the threads
          * {@code settled}, at the version the files listed in {@code model} have them at, if they are of that pull
          * request (ADR 64).
          */
-        public static LoadReviewRemarks after(Model model, int number, Set<ReviewThread.Id> settled) {
+        public static LoadReviewRemarks after(Model model, PrNumber number, Set<ReviewThread.Id> settled) {
             return new LoadReviewRemarks(
                     number,
                     settled,
@@ -47,7 +48,7 @@ public sealed interface CommitFilesCmd extends Cmd {
 
         @Override
         public Option<Label> label() {
-            return Option.of(Label.of("work.reviewRemarks", String.valueOf(number)));
+            return Option.of(Label.of("work.reviewRemarks", String.valueOf(number.value())));
         }
 
         @Override
@@ -75,11 +76,11 @@ public sealed interface CommitFilesCmd extends Cmd {
      * (ADR 84). It runs in the background, as it talks to GitHub. An image that cannot be read or shown is none, and
      * stays the text that says it is there: it is no failure to tell.
      */
-    record LoadPicture(int number, String url) implements CommitFilesCmd {
+    record LoadPicture(PrNumber number, String url) implements CommitFilesCmd {
 
         @Override
         public Option<Label> label() {
-            return Option.of(Label.of("work.picture", String.valueOf(number)));
+            return Option.of(Label.of("work.picture", String.valueOf(number.value())));
         }
 
         @Override
@@ -109,12 +110,12 @@ public sealed interface CommitFilesCmd extends Cmd {
      * Reads the review threads and comments of pull request {@code number} of {@code repository}, as
      * {@code owner/name}, that were collapsed or opened against their default in an earlier session (ADR 63).
      */
-    record LoadCollapsed(String repository, int number) implements CommitFilesCmd {
+    record LoadCollapsed(String repository, PrNumber number) implements CommitFilesCmd {
 
         @Override
         public Msg run(Env env) {
             return new CommitFilesMsg.CollapsedLoaded(
-                    number, env.collapsed().load(repository, number).mapKeys(Collapsed.Key::new));
+                    number, env.collapsed().load(repository, number.value()).mapKeys(Collapsed.Key::new));
         }
 
         // Nothing kept is as nothing flipped.
@@ -129,13 +130,13 @@ public sealed interface CommitFilesCmd extends Cmd {
      * as {@code owner/name}, collapsed or opened against their default, flipped at {@code at}, for the next session
      * (ADR 63). That they could not be kept is only written to the debug log: they are only a convenience.
      */
-    record SaveCollapsed(String repository, int number, Map<Collapsed.Key, Boolean> flipped, Instant at)
+    record SaveCollapsed(String repository, PrNumber number, Map<Collapsed.Key, Boolean> flipped, Instant at)
             implements CommitFilesCmd {
 
         @Override
         public Msg run(Env env) {
             env.collapsed()
-                    .save(repository, number, flipped.mapKeys(Collapsed.Key::value), at)
+                    .save(repository, number.value(), flipped.mapKeys(Collapsed.Key::value), at)
                     .onFailure(failed -> LoggerFactory.getLogger(SaveCollapsed.class)
                             .debug("The review threads collapsed or opened could not be kept", failed));
             return new CommitFilesMsg.CollapsedKept();

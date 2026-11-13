@@ -9,6 +9,7 @@ import io.vavr.control.Option;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.git.model.Branch;
 import net.vanfleteren.jazygit.git.model.BranchName;
@@ -202,7 +203,7 @@ public record StackChoice(List<StackChoice.Row> rows, int branch, int bottom, in
      * @param from   the base it has, as GitHub names it, if GitHub said
      * @param to     the head of the pull request below it
      */
-    public record BaseChange(int number, Option<GhBranch> from, GhBranch to) {}
+    public record BaseChange(PrNumber number, Option<GhBranch> from, GhBranch to) {}
 
     /**
      * What making the stack takes: the pull requests from the bottom up, and the bases that change first.

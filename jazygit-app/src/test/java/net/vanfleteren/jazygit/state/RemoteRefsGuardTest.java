@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestCmd.PushFi
 import net.vanfleteren.jazygit.feature.worktree.add.AddWorktreeCmd;
 import net.vanfleteren.jazygit.feature.worktree.add.WorktreeSource;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.BranchName;
@@ -56,7 +57,7 @@ class RemoteRefsGuardTest {
     void checkingOutAPullRequestTakesIt() {
         PullRequestSummary pullRequest = new PullRequestSummary(
                 "owner/repo",
-                9,
+                new PrNumber(9),
                 "Title",
                 "bob",
                 new GhBranch("patch-1"),

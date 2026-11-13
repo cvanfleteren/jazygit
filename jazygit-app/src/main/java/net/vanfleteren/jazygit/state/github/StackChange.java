@@ -4,6 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.git.model.BranchName;
@@ -29,13 +30,13 @@ public sealed interface StackChange {
      * Pull requests {@code pullRequests} were stacked: on stack {@code stack}, when they were put on one; and the stack
      * is to be rebased once it is listed, when {@code rebase} (ADR 74).
      */
-    record Stacked(List<Integer> pullRequests, Option<Integer> stack, Instant until, boolean rebase)
+    record Stacked(List<PrNumber> pullRequests, Option<Integer> stack, Instant until, boolean rebase)
             implements StackChange {
 
         /**
          * One after which the stack is not rebased.
          */
-        public Stacked(List<Integer> pullRequests, Option<Integer> stack, Instant until) {
+        public Stacked(List<PrNumber> pullRequests, Option<Integer> stack, Instant until) {
             this(pullRequests, stack, until, false);
         }
 
@@ -45,14 +46,14 @@ public sealed interface StackChange {
         public Option<PullRequestStack> in(Map<BranchName, PullRequest> open) {
             return pullRequests
                     .headOption()
-                    .flatMap(number -> open.values().find(pr -> pr.number() == number))
+                    .flatMap(number -> open.values().find(pr -> pr.number().equals(number)))
                     .flatMap(PullRequest::stack);
         }
 
         @Override
         public boolean shownIn(Map<BranchName, PullRequest> open) {
             List<Option<Integer>> stacks = pullRequests.map(number -> open.values()
-                    .find(pr -> pr.number() == number)
+                    .find(pr -> pr.number().equals(number))
                     .flatMap(PullRequest::stack)
                     .map(PullRequestStack::number));
             return stacks.forAll(Option::isDefined)

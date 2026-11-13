@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.feature.github.edit.EditPullRequestCmd.EditBody;
 import net.vanfleteren.jazygit.feature.github.edit.EditPullRequestCmd.SavePullRequest;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestUpdate;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestEdit;
 import net.vanfleteren.jazygit.git.model.Branch;
@@ -142,7 +143,7 @@ public final class EditPullRequestUpdate {
         Next back = OperationUpdate.succeeded(model, cmd, commands)
                 .map(done -> done.mapGitHub(gitHub -> gitHub.withChanged(cmd.number())))
                 .then(changed -> changed.popup(EditPullRequestPopup.class)
-                        .filter(popup -> popup.number() == cmd.number())
+                        .filter(popup -> popup.number().equals(cmd.number()))
                         .map(popup -> readAgain(changed, popup.from()))
                         .getOrElse(() -> Next.of(changed)));
         return cmd.changesGitHub() ? PrOverviewUpdate.reloadIfShown(back) : back;
@@ -252,9 +253,9 @@ public final class EditPullRequestUpdate {
      * {@code model} with the pull request dialog under the edit popup of pull request {@code number} reading its
      * details again, quietly, if that popup is open.
      */
-    private static Next readUnder(Model model, int number) {
+    private static Next readUnder(Model model, PrNumber number) {
         return model.popup(EditPullRequestPopup.class)
-                .filter(popup -> popup.number() == number)
+                .filter(popup -> popup.number().equals(number))
                 .map(popup -> PullRequestUpdate.read(model, number)
                         .apply((given, load) -> Next.of(
                                 given.openPopup(popup.withFrom(

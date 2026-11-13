@@ -4,6 +4,7 @@ import io.vavr.collection.List;
 import java.time.Duration;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.MergeStatus;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.BranchName;
@@ -44,9 +45,9 @@ public sealed interface PullRequestMsg extends Msg {
     /**
      * The details of pull request {@code number} were read, by read {@code read}.
      */
-    record DetailsLoaded(int number, long read, PullRequestDetails details) implements PullRequestMsg {}
+    record DetailsLoaded(PrNumber number, long read, PullRequestDetails details) implements PullRequestMsg {}
 
-    record DetailsFailed(int number, long read, Failure failure) implements PullRequestMsg {}
+    record DetailsFailed(PrNumber number, long read, Failure failure) implements PullRequestMsg {}
 
     /**
      * The user asked to open the pull request that is shown in the browser.
@@ -98,12 +99,12 @@ public sealed interface PullRequestMsg extends Msg {
     /**
      * GitHub said how the merge {@code id} of pull request {@code number} is doing.
      */
-    record MergeChecked(int number, String id, MergeStatus status) implements PullRequestMsg {}
+    record MergeChecked(PrNumber number, String id, MergeStatus status) implements PullRequestMsg {}
 
     /**
      * Asking GitHub how the merge {@code id} of pull request {@code number} is doing failed; the next tick asks again.
      */
-    record MergeCheckFailed(int number, String id, Failure failure) implements PullRequestMsg {}
+    record MergeCheckFailed(PrNumber number, String id, Failure failure) implements PullRequestMsg {}
 
     /**
      * The pull request was closed by running {@code commands}.

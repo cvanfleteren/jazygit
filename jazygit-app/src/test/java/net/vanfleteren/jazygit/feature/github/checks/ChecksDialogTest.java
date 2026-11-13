@@ -23,6 +23,7 @@ import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.CheckRun;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -443,7 +444,7 @@ class ChecksDialogTest {
                 check("build", Checks.PENDING, 300, Option.none()),
                 check("verify", Checks.PENDING, 10, Option.none()));
 
-        Model again = Update.update(model, new PullRequestMsg.DetailsLoaded(42, 1, pullRequest(twoDone)))
+        Model again = Update.update(model, new PullRequestMsg.DetailsLoaded(new PrNumber(42), 1, pullRequest(twoDone)))
                 .model();
 
         assertEquals(0.95 * 3 / 4, shown, 1e-9);
@@ -452,7 +453,9 @@ class ChecksDialogTest {
         Model rerun =
                 again.openPopup(again.popup(PullRequestPopup.class).get().readingAgain(Reading.BY_ITSELF, NOW, 2));
         Model reread = Update.update(
-                        rerun, new PullRequestMsg.DetailsLoaded(42, 2, pullRequest(List.of(rerun("verify", 10)))))
+                        rerun,
+                        new PullRequestMsg.DetailsLoaded(
+                                new PrNumber(42), 2, pullRequest(List.of(rerun("verify", 10)))))
                 .model();
         assertEquals(0, reread.popup(PullRequestPopup.class).get().progress(reread), 1e-9);
     }
@@ -586,9 +589,10 @@ class ChecksDialogTest {
      * Pull request 42 of owner/repo, from main, with the checks {@code checks}.
      */
     private static PullRequestDetails pullRequest(List<Check> checks) {
-        PullRequestDetails stub = StubGitHub.of().pullRequests().details(42).get();
+        PullRequestDetails stub =
+                StubGitHub.of().pullRequests().details(new PrNumber(42)).get();
         return new PullRequestDetails(
-                42,
+                new PrNumber(42),
                 stub.title(),
                 stub.author(),
                 stub.status(),
@@ -607,7 +611,7 @@ class ChecksDialogTest {
     private static PullRequestPopup pullRequestDialog(List<Check> checks) {
         return PullRequestPopup.loading(
                         new BranchName("main"),
-                        new PullRequest(42, new GhBranch("main"), false, Checks.PENDING, Review.APPROVED),
+                        new PullRequest(new PrNumber(42), new GhBranch("main"), false, Checks.PENDING, Review.APPROVED),
                         NOW,
                         0)
                 .with(Either.right(pullRequest(checks)), 0);

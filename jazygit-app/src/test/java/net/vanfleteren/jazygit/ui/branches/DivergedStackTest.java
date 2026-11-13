@@ -7,6 +7,7 @@ import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -34,8 +35,9 @@ class DivergedStackTest {
     private static final BranchName FEAT_D = new BranchName("feat/d");
 
     private static final List<PullRequestStack.Entry> ENTRIES = List.of(
-            new PullRequestStack.Entry(1, 98, State.OPEN, new GhBranch("feat/c"), new GhBranch("main")),
-            new PullRequestStack.Entry(2, 99, State.OPEN, new GhBranch("feat/d"), new GhBranch("feat/c")));
+            new PullRequestStack.Entry(1, new PrNumber(98), State.OPEN, new GhBranch("feat/c"), new GhBranch("main")),
+            new PullRequestStack.Entry(
+                    2, new PrNumber(99), State.OPEN, new GhBranch("feat/d"), new GhBranch("feat/c")));
 
     private static Branch branch(BranchName name) {
         return Fixtures.branch(name, false, new Sha("aaaa"));
@@ -43,7 +45,7 @@ class DivergedStackTest {
 
     private static PullRequest stacked(int number, String head, int position) {
         return new PullRequest(
-                number,
+                new PrNumber(number),
                 new GhBranch(head),
                 Option.none(),
                 false,

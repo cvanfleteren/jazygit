@@ -9,6 +9,7 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.MergeStatus;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -27,13 +28,13 @@ class GitHubStateTest {
 
     private static final BranchName FEATURE = new BranchName("feature");
     private static final PullRequest FEATURE_PR =
-            new PullRequest(42, new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED);
+            new PullRequest(new PrNumber(42), new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED);
     private static final GitHubState LISTED =
             GitHubState.NOT_READ.withPullRequests(Option.of(HashMap.of(FEATURE, FEATURE_PR)));
 
     private static PullRequestDetails details(int number, String headBranch, State state) {
         return new PullRequestDetails(
-                number,
+                new PrNumber(number),
                 "A pull request",
                 "someone",
                 new Status(state, true, PullRequestDetails.Mergeable.UNKNOWN),
@@ -51,7 +52,7 @@ class GitHubStateTest {
                 Option.of(HashMap.of(
                         FEATURE,
                         new PullRequest(
-                                42,
+                                new PrNumber(42),
                                 new GhBranch("feature"),
                                 Option.of(new GhBranch("main")),
                                 true,
@@ -96,11 +97,12 @@ class GitHubStateTest {
     }
 
     private static final PullRequest PENDING_PR =
-            new PullRequest(42, new GhBranch("feature"), false, Checks.PENDING, Review.APPROVED);
+            new PullRequest(new PrNumber(42), new GhBranch("feature"), false, Checks.PENDING, Review.APPROVED);
     private static final MergeStatus.Failed CONFLICTS = new MergeStatus.Failed("conflicts");
 
     private static GitHubState failed(GitHubState state) {
-        return state.withMerge(PullRequestMerge.asked(42, FEATURE, List.empty(), CONFLICTS, Instant.EPOCH));
+        return state.withMerge(
+                PullRequestMerge.asked(new PrNumber(42), FEATURE, List.empty(), CONFLICTS, Instant.EPOCH));
     }
 
     @Test
@@ -116,9 +118,9 @@ class GitHubStateTest {
         GitHubState stale = failed.withListed(List.of(PENDING_PR));
         GitHubState again = stale.withStarted(List.of(new LoadRepositoryPullRequests()));
 
-        assertEquals(Option.of(CONFLICTS), stale.merge(42));
-        assertEquals(Option.of(CONFLICTS), again.withListed(List.of(FEATURE_PR)).merge(42));
-        assertEquals(Option.none(), again.withListed(List.of(PENDING_PR)).merge(42));
+        assertEquals(Option.of(CONFLICTS), stale.merge(new PrNumber(42)));
+        assertEquals(Option.of(CONFLICTS), again.withListed(List.of(FEATURE_PR)).merge(new PrNumber(42)));
+        assertEquals(Option.none(), again.withListed(List.of(PENDING_PR)).merge(new PrNumber(42)));
     }
 
     @Test
@@ -128,7 +130,7 @@ class GitHubStateTest {
         long after = failed.nextRead();
         PullRequestDetails changed = details(42, "feature", State.OPEN);
 
-        assertEquals(Option.of(CONFLICTS), failed.withRead(changed, after - 1).merge(42));
-        assertEquals(Option.none(), failed.withRead(changed, after).merge(42));
+        assertEquals(Option.of(CONFLICTS), failed.withRead(changed, after - 1).merge(new PrNumber(42)));
+        assertEquals(Option.none(), failed.withRead(changed, after).merge(new PrNumber(42)));
     }
 }

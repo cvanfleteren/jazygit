@@ -18,6 +18,7 @@ import io.vavr.Tuple;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.CommentRights;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequestComment;
 import net.vanfleteren.jazygit.gh.model.PullRequestComment.Kind;
 import net.vanfleteren.jazygit.gh.process.GhCommand;
@@ -110,8 +111,8 @@ final class CommentsQuery {
 
     private CommentsQuery() {}
 
-    static GhCommand command(int number) {
-        return gh("pr", "view", String.valueOf(number), "--json", "body,author,createdAt,comments,reviews");
+    static GhCommand command(PrNumber number) {
+        return gh("pr", "view", String.valueOf(number.value()), "--json", "body,author,createdAt,comments,reviews");
     }
 
     // What a review of state did; a failure for a state that is not known.

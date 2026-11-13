@@ -143,7 +143,9 @@ public final class CommentsDialog implements PopupView {
                         .fill()
                 : row(listPane.length(listWidth), comment.fill()).fill();
         return DialogFrame.withHint(
-                        Messages.get("dialog.comments.title", String.valueOf(popup.number())),
+                        Messages.get(
+                                "dialog.comments.title",
+                                String.valueOf(popup.number().value())),
                         width,
                         "dialog.comments.hint",
                         List.of(column(body).length(contentHeight)))

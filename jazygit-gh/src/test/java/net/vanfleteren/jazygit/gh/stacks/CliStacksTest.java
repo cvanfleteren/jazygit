@@ -7,6 +7,7 @@ import io.vavr.collection.List;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.gh.CliGitHub;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.process.GhToken;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -29,17 +30,18 @@ class CliStacksTest {
         Stacks stacks = stacks(dir);
 
         assertEquals(
-                List.of(StackMutations.create(List.of(96, 97)).executed()),
-                stacks.create(List.of(96, 97)).get());
+                List.of(StackMutations.create(List.of(new PrNumber(96), new PrNumber(97)))
+                        .executed()),
+                stacks.create(List.of(new PrNumber(96), new PrNumber(97))).get());
         assertEquals(
-                List.of(StackMutations.add(3, List.of(98)).executed()),
-                stacks.add(3, List.of(98)).get());
+                List.of(StackMutations.add(3, List.of(new PrNumber(98))).executed()),
+                stacks.add(3, List.of(new PrNumber(98))).get());
         assertEquals(
                 List.of(StackMutations.unstack(3).executed()), stacks.unstack(3).get());
         assertEquals(
                 List.of(
-                                StackMutations.create(List.of(96, 97)),
-                                StackMutations.add(3, List.of(98)),
+                                StackMutations.create(List.of(new PrNumber(96), new PrNumber(97))),
+                                StackMutations.add(3, List.of(new PrNumber(98))),
                                 StackMutations.unstack(3))
                         .map(command -> String.join(
                                 " ", command.executed().commandLine().tail()))

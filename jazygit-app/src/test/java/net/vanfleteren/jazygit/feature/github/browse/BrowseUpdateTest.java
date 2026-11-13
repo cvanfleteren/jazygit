@@ -8,6 +8,7 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.feature.github.GitHubError;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.git.model.*;
@@ -91,7 +92,7 @@ class BrowseUpdateTest {
     void aPullRequestOfAnyRepositoryOpensByItsUrl() {
         PullRequestSummary pr = new PullRequestSummary(
                 "other/repo",
-                3,
+                new PrNumber(3),
                 "Elsewhere",
                 "carol",
                 new GhBranch("fix"),

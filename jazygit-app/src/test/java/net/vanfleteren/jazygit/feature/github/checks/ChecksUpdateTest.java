@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.CheckRun;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -91,9 +92,9 @@ class ChecksUpdateTest {
 
     // The pull request from feature, shown in its dialog once its details are read.
     private static final PullRequest FEATURE_PR =
-            new PullRequest(42, new GhBranch("feature"), false, Checks.PENDING, Review.APPROVED);
+            new PullRequest(new PrNumber(42), new GhBranch("feature"), false, Checks.PENDING, Review.APPROVED);
     private static final PullRequestDetails DETAILS =
-            StubGitHub.of().pullRequests().details(42).get();
+            StubGitHub.of().pullRequests().details(new PrNumber(42)).get();
     private static final PullRequestPopup DIALOG = PullRequestPopup.loading(
                     new BranchName("mine"), FEATURE_PR, Instant.EPOCH, 0)
             .with(Either.right(DETAILS), 0);
@@ -357,7 +358,7 @@ class ChecksUpdateTest {
         Model checks = model(Checks.PENDING)
                 .openPopup(ChecksPopup.loading(new BranchRef.Remote(FEATURE), FEATURE, Instant.EPOCH, loading));
 
-        Model read = Update.update(checks, new PullRequestMsg.DetailsLoaded(42, 0, DETAILS))
+        Model read = Update.update(checks, new PullRequestMsg.DetailsLoaded(new PrNumber(42), 0, DETAILS))
                 .model();
 
         assertEquals(

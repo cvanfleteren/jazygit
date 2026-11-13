@@ -12,6 +12,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.gh.CliGitHub;
 import net.vanfleteren.jazygit.gh.model.ChosenBrowser;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequestLink;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.gh.process.GhError;
@@ -26,8 +27,8 @@ import org.junit.jupiter.api.io.TempDir;
  */
 class BrowserTest {
 
-    private static final PullRequestLink COMMENT =
-            new PullRequestLink("github.com", "owner/repo", 7, Option.of(new ReviewThread.Comment.RestId("42")));
+    private static final PullRequestLink COMMENT = new PullRequestLink(
+            "github.com", "owner/repo", new PrNumber(7), Option.of(new ReviewThread.Comment.RestId("42")));
 
     @TempDir
     Path dir;
@@ -41,7 +42,7 @@ class BrowserTest {
         assertEquals("https://github.com/owner/repo/pull/7#discussion_r42", COMMENT.url());
         assertEquals(
                 "https://github.com/owner/repo/pull/7",
-                new PullRequestLink("github.com", "owner/repo", 7, Option.none()).url());
+                new PullRequestLink("github.com", "owner/repo", new PrNumber(7), Option.none()).url());
     }
 
     @Test
@@ -118,7 +119,7 @@ class BrowserTest {
                 Either.right(List.of(ExecutedCommand.of("gh", "pr", "view", "7", "--web"))),
                 github(HashMap.of("BROWSER", "firefox"), "Linux")
                         .openInBrowser(new PullRequestLink(
-                                "", "owner/repo", 7, Option.of(new ReviewThread.Comment.RestId("42")))));
+                                "", "owner/repo", new PrNumber(7), Option.of(new ReviewThread.Comment.RestId("42")))));
     }
 
     @Test

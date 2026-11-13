@@ -29,6 +29,7 @@ import net.vanfleteren.jazygit.gh.model.CheckRun;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -58,10 +59,10 @@ import org.junit.jupiter.api.Test;
 class PullRequestDialogTest {
 
     private static final Instant NOW = Instant.parse("2026-10-13T12:00:00Z");
-    private static final PullRequest PR =
-            new PullRequest(42, new GhBranch("support_rename"), true, Checks.FAILING, Review.CHANGES_REQUESTED);
+    private static final PullRequest PR = new PullRequest(
+            new PrNumber(42), new GhBranch("support_rename"), true, Checks.FAILING, Review.CHANGES_REQUESTED);
     private static final PullRequestDetails DETAILS = new PullRequestDetails(
-            42,
+            new PrNumber(42),
             "Add rename support to the files panel",
             "cvf",
             new Status(State.OPEN, true, Mergeable.MERGEABLE),
@@ -84,7 +85,7 @@ class PullRequestDialogTest {
                     new Check("build", Checks.FAILING)));
 
     private static final PullRequestDetails READY = new PullRequestDetails(
-            42,
+            new PrNumber(42),
             "Ready",
             "cvf",
             new Status(State.OPEN, false, Mergeable.MERGEABLE),
@@ -287,9 +288,9 @@ class PullRequestDialogTest {
                 3,
                 3,
                 List.of(
-                        new PullRequestStack.Entry(1, 40, State.OPEN),
-                        new PullRequestStack.Entry(2, 41, State.OPEN),
-                        new PullRequestStack.Entry(3, 42, State.OPEN))));
+                        new PullRequestStack.Entry(1, new PrNumber(40), State.OPEN),
+                        new PullRequestStack.Entry(2, new PrNumber(41), State.OPEN),
+                        new PullRequestStack.Entry(3, new PrNumber(42), State.OPEN))));
 
         String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
                 .with(Either.right(stacked), 0));
@@ -307,9 +308,9 @@ class PullRequestDialogTest {
                 3,
                 3,
                 List.of(
-                        new PullRequestStack.Entry(1, 40, State.MERGED),
-                        new PullRequestStack.Entry(2, 41, State.OPEN),
-                        new PullRequestStack.Entry(3, 42, State.OPEN))));
+                        new PullRequestStack.Entry(1, new PrNumber(40), State.MERGED),
+                        new PullRequestStack.Entry(2, new PrNumber(41), State.OPEN),
+                        new PullRequestStack.Entry(3, new PrNumber(42), State.OPEN))));
 
         String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
                 .with(Either.right(stacked), 0));
@@ -324,7 +325,9 @@ class PullRequestDialogTest {
                 9,
                 2,
                 2,
-                List.of(new PullRequestStack.Entry(1, 7, State.MERGED), new PullRequestStack.Entry(2, 8, State.OPEN))));
+                List.of(
+                        new PullRequestStack.Entry(1, new PrNumber(7), State.MERGED),
+                        new PullRequestStack.Entry(2, new PrNumber(8), State.OPEN))));
 
         String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), PR, Instant.EPOCH, 0)
                 .with(Either.right(stacked), 0));
@@ -360,7 +363,7 @@ class PullRequestDialogTest {
     @Test
     void theBottomOfAStackMergesOnlyItself() throws Exception {
         PullRequest bottom = new PullRequest(
-                42,
+                new PrNumber(42),
                 new GhBranch("support_rename"),
                 false,
                 Checks.PASSING,
@@ -370,8 +373,8 @@ class PullRequestDialogTest {
                         1,
                         2,
                         List.of(
-                                new PullRequestStack.Entry(1, 42, State.OPEN),
-                                new PullRequestStack.Entry(2, 43, State.OPEN)))));
+                                new PullRequestStack.Entry(1, new PrNumber(42), State.OPEN),
+                                new PullRequestStack.Entry(2, new PrNumber(43), State.OPEN)))));
 
         String screen = screen(PullRequestPopup.loading(new BranchName("support_rename"), bottom, Instant.EPOCH, 0)
                 .with(Either.right(READY), 0));
@@ -532,7 +535,7 @@ class PullRequestDialogTest {
     void manyChecksThatDidNotPassAreCut() throws Exception {
         List<Check> checks = List.range(0, 11).map(i -> new Check("check" + i, Checks.FAILING));
         PullRequestDetails details = new PullRequestDetails(
-                42,
+                new PrNumber(42),
                 "t",
                 "",
                 new Status(State.OPEN, false, Mergeable.UNKNOWN),
@@ -655,7 +658,7 @@ class PullRequestDialogTest {
     void keepsItsSizeWhenTheDetailsArrive() throws Exception {
         List<Check> checks = List.range(0, 12).map(i -> new Check("check" + i, Checks.FAILING));
         PullRequestDetails fullest = new PullRequestDetails(
-                42,
+                new PrNumber(42),
                 "A title long enough to need more than three lines at the width of the dialog, so that it must be "
                         + "cut to keep the dialog from growing, which takes quite a few words when the dialog is "
                         + "as wide as it is, so here are some more of them, and then a few more still, to be sure "
@@ -880,9 +883,9 @@ class PullRequestDialogTest {
                 3,
                 3,
                 List.of(
-                        new PullRequestStack.Entry(1, 40, State.OPEN),
-                        new PullRequestStack.Entry(2, 41, State.OPEN),
-                        new PullRequestStack.Entry(3, 42, State.OPEN))));
+                        new PullRequestStack.Entry(1, new PrNumber(40), State.OPEN),
+                        new PullRequestStack.Entry(2, new PrNumber(41), State.OPEN),
+                        new PullRequestStack.Entry(3, new PrNumber(42), State.OPEN))));
 
         String merging = movingRight(stacked, 120, 50).get(1);
 

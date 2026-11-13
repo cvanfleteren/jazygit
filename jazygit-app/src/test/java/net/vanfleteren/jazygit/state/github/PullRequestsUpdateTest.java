@@ -10,6 +10,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.GhAccount;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -42,11 +43,11 @@ class PullRequestsUpdateTest {
     }
 
     private static final PullRequest FEATURE_PR =
-            new PullRequest(42, new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED);
+            new PullRequest(new PrNumber(42), new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED);
 
     @Test
     void ofSeveralPullRequestsFromTheSameBranchTheNewestIsKeptWhateverTheOrder() {
-        PullRequest older = new PullRequest(7, new GhBranch("feature"), false, Checks.NONE, Review.NONE);
+        PullRequest older = new PullRequest(new PrNumber(7), new GhBranch("feature"), false, Checks.NONE, Review.NONE);
 
         assertEquals(
                 Option.of(FEATURE_PR),
@@ -228,7 +229,7 @@ class PullRequestsUpdateTest {
     @Test
     void theBranchesAreReadAgainWhenGitHubSaysAnotherBaseForOne() {
         PullRequest onA = new PullRequest(
-                42,
+                new PrNumber(42),
                 new GhBranch("feature"),
                 Option.of(new GhBranch("feat/a")),
                 false,

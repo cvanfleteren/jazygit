@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.github.review;
 
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.state.view.CommitFilesView;
 
@@ -28,7 +29,7 @@ record OnComment(OnThread on, ReviewThread.Comment comment) {
     /**
      * The number of the pull request.
      */
-    int number() {
+    PrNumber number() {
         return on.number();
     }
 

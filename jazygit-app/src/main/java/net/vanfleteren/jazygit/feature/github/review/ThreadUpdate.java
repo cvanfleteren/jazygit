@@ -9,6 +9,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesCmd;
 import net.vanfleteren.jazygit.feature.github.GitHubError.CannotReview.Why;
 import net.vanfleteren.jazygit.feature.github.browse.BrowseRemarkCmd;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequestLink;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.model.PullRequestCommits;
@@ -77,7 +78,7 @@ public final class ThreadUpdate {
                 mapView(model, files -> files.withCollapsed(collapsed)),
                 view.of() instanceof Changes.OfPullRequest(PullRequestCommits commits)
                         ? List.of(new CommitFilesCmd.SaveCollapsed(
-                                commits.repository(), commits.number(), collapsed.toggled(), model.now()))
+                                commits.repository(), new PrNumber(commits.number()), collapsed.toggled(), model.now()))
                         : List.empty());
     }
 
@@ -90,7 +91,7 @@ public final class ThreadUpdate {
                 ? Option.of(new PullRequestLink(
                         commits.host(),
                         commits.repository(),
-                        commits.number(),
+                        new PrNumber(commits.number()),
                         OnThread.of(view, on)
                                 .toOption()
                                 .flatMap(found -> found.comment(on))

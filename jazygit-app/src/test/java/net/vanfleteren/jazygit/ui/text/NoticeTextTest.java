@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.ui.text;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -50,7 +51,7 @@ class NoticeTextTest {
         assertEquals(
                 "GitHub did not list the stack of #1234 in time, so it was not rebased: rebase it from the stack menu"
                         + " (s) once it shows.",
-                NoticeText.of(new Notice.StackNotListed(1234)));
+                NoticeText.of(new Notice.StackNotListed(new PrNumber(1234))));
     }
 
     @Test

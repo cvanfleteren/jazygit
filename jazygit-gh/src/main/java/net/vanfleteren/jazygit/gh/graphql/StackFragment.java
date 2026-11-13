@@ -20,6 +20,7 @@ import io.vavr.Tuple3;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.json.Decoder;
@@ -41,7 +42,7 @@ public final class StackFragment {
                     field(
                             "pullRequest",
                             nullable(map7(
-                                    field("number", integer()),
+                                    field("number", integer().map(PrNumber::new)),
                                     field("state", enumOf(State.class)),
                                     field("headRefName", string()).map(GhBranch::named),
                                     field("baseRefName", string()).map(GhBranch::named),

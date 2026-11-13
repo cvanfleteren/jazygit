@@ -11,6 +11,7 @@ import java.time.Duration;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.git.model.*;
 import net.vanfleteren.jazygit.i18n.Messages;
@@ -243,8 +244,8 @@ class LocalBranchesList implements BranchesTabList {
             case MERGED -> "branches.stack.merged";
             case CLOSED -> "branches.stack.closed";
         };
-        return LoadableList.Row.of(
-                LoadableList.Seg.styled(INDENT + Messages.get(key, other.entry().number()), Theme.Classes.DIM));
+        return LoadableList.Row.of(LoadableList.Seg.styled(
+                INDENT + Messages.get(key, other.entry().number().value()), Theme.Classes.DIM));
     }
 
     /**
@@ -334,7 +335,7 @@ class LocalBranchesList implements BranchesTabList {
      * The highlighted pull request of a stack, whose branch is neither checked out nor fetched, so that it has no log.
      */
     @Override
-    public Option<Integer> unfetched() {
+    public Option<PrNumber> unfetched() {
         return selected()
                 .filter(BranchNode.Other.class::isInstance)
                 .map(node -> (BranchNode.Other) node)

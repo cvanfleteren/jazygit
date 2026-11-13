@@ -39,7 +39,9 @@ public final class CommentDialog implements PopupView {
         return model.popup(CommentPopup.class)
                 .map(popup -> composer.render(
                         model,
-                        Messages.get("dialog.comment.title", String.valueOf(popup.number())),
+                        Messages.get(
+                                "dialog.comment.title",
+                                String.valueOf(popup.number().value())),
                         List.empty(),
                         new CommentComposer.Comment(popup.text(), popup.sending())));
     }

@@ -7,6 +7,7 @@ import net.vanfleteren.jazygit.feature.github.GitHubError;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestCmd.CheckMerge;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestCmd.MergePullRequest;
 import net.vanfleteren.jazygit.gh.model.MergeStatus;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -60,7 +61,7 @@ final class MergeUpdate {
      * GitHub said the merge {@code id} of pull request {@code number} is doing as {@code status}. Unchanged when that
      * is no longer the merge that is pending for it.
      */
-    static Next checked(Model model, int number, String id, MergeStatus status) {
+    static Next checked(Model model, PrNumber number, String id, MergeStatus status) {
         return pending(model, number, id)
                 .map(merge -> merge.checked(status))
                 .map(merge -> went(Next.of(model.mapGitHub(gitHub -> gitHub.withMerge(merge))), merge))
@@ -71,13 +72,13 @@ final class MergeUpdate {
      * Asking GitHub how the merge {@code id} of pull request {@code number} is doing failed: it is still pending, and
      * the next tick asks again.
      */
-    static Next checkFailed(Model model, int number, String id) {
+    static Next checkFailed(Model model, PrNumber number, String id) {
         return Next.of(pending(model, number, id)
                 .map(merge -> model.mapGitHub(gitHub -> gitHub.withMerge(merge.checked(merge.status()))))
                 .getOrElse(model));
     }
 
-    private static Option<PullRequestMerge> pending(Model model, int number, String id) {
+    private static Option<PullRequestMerge> pending(Model model, PrNumber number, String id) {
         return model.gitHub()
                 .merges()
                 .get(number)

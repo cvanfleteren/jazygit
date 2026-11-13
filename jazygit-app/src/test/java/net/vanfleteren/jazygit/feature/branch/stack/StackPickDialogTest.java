@@ -12,6 +12,7 @@ import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -43,7 +44,7 @@ class StackPickDialogTest {
 
     private static PullRequest pr(int number, String head, String base) {
         return new PullRequest(
-                number,
+                new PrNumber(number),
                 new GhBranch(head),
                 Option.of(new GhBranch(base)),
                 false,

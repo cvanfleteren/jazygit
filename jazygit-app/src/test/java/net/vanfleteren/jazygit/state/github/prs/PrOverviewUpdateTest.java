@@ -13,6 +13,7 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.MyPullRequests;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestList;
@@ -40,7 +41,7 @@ class PrOverviewUpdateTest {
     static PullRequestSummary pr(String repository, int number, Instant updatedAt) {
         return new PullRequestSummary(
                 repository,
-                number,
+                new PrNumber(number),
                 "Pull request " + number,
                 "alice",
                 new GhBranch("branch-" + number),
@@ -83,7 +84,10 @@ class PrOverviewUpdateTest {
             Option<String> viewer, Option<UnseenPullRequests> kept, int latest, PullRequestSummary... pullRequests) {
         return new PrOverviewMsg.RepositoryLoaded(
                 new RepositoryPullRequests(
-                        "Owner/Repo", new PullRequestList(List.of(pullRequests), pullRequests.length), viewer, latest),
+                        "Owner/Repo",
+                        new PullRequestList(List.of(pullRequests), pullRequests.length),
+                        viewer,
+                        Option.of(latest).filter(number -> number > 0).map(PrNumber::new)),
                 kept);
     }
 

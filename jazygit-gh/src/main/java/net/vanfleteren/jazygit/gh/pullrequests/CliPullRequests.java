@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import net.vanfleteren.jazygit.gh.model.*;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.process.GhCommand;
 import net.vanfleteren.jazygit.gh.process.GhError;
 import net.vanfleteren.jazygit.gh.process.GhFailure;
@@ -31,9 +32,9 @@ public final class CliPullRequests implements PullRequests {
     /**
      * The number in the URL of the new pull request, which is the last thing {@code gh pr create} prints.
      */
-    static Option<Integer> createdNumber(String stdout) {
+    static Option<PrNumber> createdNumber(String stdout) {
         Matcher url = CREATED_URL.matcher(stdout.strip());
-        return Option.when(url.find(), () -> Integer.parseInt(url.group(1)));
+        return Option.when(url.find(), () -> new PrNumber(Integer.parseInt(url.group(1))));
     }
 
     /**
@@ -56,16 +57,18 @@ public final class CliPullRequests implements PullRequests {
                 .toJavaArray(String[]::new));
     }
 
-    static GhCommand editCommand(int number, PullRequestEdit edit) {
-        return gh(List.of("pr", "edit", String.valueOf(number))
+    static GhCommand editCommand(PrNumber number, PullRequestEdit edit) {
+        return gh(List.of("pr", "edit", String.valueOf(number.value()))
                 .appendAll(edit.title().toList().flatMap(title -> List.of("--title", title)))
                 .appendAll(edit.body().toList().flatMap(body -> List.of("--body", body)))
                 .appendAll(edit.base().toList().flatMap(base -> List.of("--base", base.name())))
                 .toJavaArray(String[]::new));
     }
 
-    static GhCommand draftCommand(int number, boolean draft) {
-        return draft ? gh("pr", "ready", String.valueOf(number), "--undo") : gh("pr", "ready", String.valueOf(number));
+    static GhCommand draftCommand(PrNumber number, boolean draft) {
+        return draft
+                ? gh("pr", "ready", String.valueOf(number.value()), "--undo")
+                : gh("pr", "ready", String.valueOf(number.value()));
     }
 
     @Override
@@ -86,7 +89,7 @@ public final class CliPullRequests implements PullRequests {
     }
 
     @Override
-    public Either<GhError, PullRequestDetails> details(int number) {
+    public Either<GhError, PullRequestDetails> details(PrNumber number) {
         // gh fails the whole query when GitHub cannot compare the base with the head: then the rest is read on its own.
         return process.readJson(DetailsQuery.command(number), DetailsQuery.DECODER)
                 .fold(
@@ -108,17 +111,17 @@ public final class CliPullRequests implements PullRequests {
     }
 
     @Override
-    public Either<GhFailure, List<ExecutedCommand>> checkout(int number) {
-        return process.log(gh("pr", "checkout", String.valueOf(number)));
+    public Either<GhFailure, List<ExecutedCommand>> checkout(PrNumber number) {
+        return process.log(gh("pr", "checkout", String.valueOf(number.value())));
     }
 
     @Override
-    public Either<GhFailure, List<ExecutedCommand>> checkout(int number, Path in) {
-        return process.in(in).log(gh("pr", "checkout", String.valueOf(number)));
+    public Either<GhFailure, List<ExecutedCommand>> checkout(PrNumber number, Path in) {
+        return process.in(in).log(gh("pr", "checkout", String.valueOf(number.value())));
     }
 
     @Override
-    public Either<GhFailure, Merging> merge(int number, Option<GhCommit> head, MergeMethod method) {
+    public Either<GhFailure, Merging> merge(PrNumber number, Option<GhCommit> head, MergeMethod method) {
         return process.run(MergeQuery.mergeCommand(number, head, method))
                 .flatMap(output -> GhProcess.decoded(output.stdout(), MergeQuery.DECODER)
                         .map(status -> new Merging(status, output.log()))
@@ -126,22 +129,22 @@ public final class CliPullRequests implements PullRequests {
     }
 
     @Override
-    public Either<GhError, MergeStatus> mergeStatus(int number, String id) {
+    public Either<GhError, MergeStatus> mergeStatus(PrNumber number, String id) {
         return process.readJson(MergeQuery.statusCommand(number, id), MergeQuery.DECODER);
     }
 
     @Override
-    public Either<GhFailure, List<ExecutedCommand>> close(int number) {
-        return process.log(gh("pr", "close", String.valueOf(number)));
+    public Either<GhFailure, List<ExecutedCommand>> close(PrNumber number) {
+        return process.log(gh("pr", "close", String.valueOf(number.value())));
     }
 
     @Override
-    public Either<GhFailure, List<ExecutedCommand>> setDraft(int number, boolean draft) {
+    public Either<GhFailure, List<ExecutedCommand>> setDraft(PrNumber number, boolean draft) {
         return process.log(draftCommand(number, draft));
     }
 
     @Override
-    public Either<GhFailure, List<ExecutedCommand>> edit(int number, PullRequestEdit edit) {
+    public Either<GhFailure, List<ExecutedCommand>> edit(PrNumber number, PullRequestEdit edit) {
         return process.log(editCommand(number, edit));
     }
 }

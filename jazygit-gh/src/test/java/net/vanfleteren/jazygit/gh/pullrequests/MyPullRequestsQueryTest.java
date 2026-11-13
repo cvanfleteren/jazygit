@@ -11,6 +11,7 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.MyPullRequests;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestList;
@@ -52,7 +53,7 @@ class MyPullRequestsQueryTest {
                         new PullRequestList(
                                 List.of(new PullRequestSummary(
                                         "other/repo",
-                                        9,
+                                        new PrNumber(9),
                                         "Fix the\tlogin",
                                         "alice",
                                         new GhBranch("feature/login"),
@@ -77,7 +78,7 @@ class MyPullRequestsQueryTest {
                         0, "", 2, "{ \"__typename\": \"Issue\" }, " + hit(summary(1, "null", WAITING_SUITES)))
                 .get();
 
-        assertEquals(List.of(1), mine.authored().pullRequests().map(PullRequestSummary::number));
+        assertEquals(List.of(new PrNumber(1)), mine.authored().pullRequests().map(PullRequestSummary::number));
         assertEquals(2, mine.authored().total());
     }
 

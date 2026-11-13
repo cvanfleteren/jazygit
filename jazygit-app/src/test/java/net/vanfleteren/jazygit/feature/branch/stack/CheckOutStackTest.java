@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.feature.branch.stack.StackCheckout.Kind;
 import net.vanfleteren.jazygit.feature.branch.stack.StackCheckout.Landing;
 import net.vanfleteren.jazygit.feature.branch.stack.StackCheckout.Status;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -59,12 +60,18 @@ class CheckOutStackTest {
 
     // Stack #12 on main: #95 merged, then feat/a (#96), feat/b (#97) and feat/c (#98), all open.
     private static final List<Entry> ENTRIES = List.of(
-            new Entry(1, 95, State.MERGED, new GhBranch("feat/old"), new GhBranch("main")),
+            new Entry(1, new PrNumber(95), State.MERGED, new GhBranch("feat/old"), new GhBranch("main")),
             new Entry(
-                    2, 96, State.OPEN, new GhBranch("feat/a"), new GhBranch("main"), Option.of("1".repeat(40)), false),
+                    2,
+                    new PrNumber(96),
+                    State.OPEN,
+                    new GhBranch("feat/a"),
+                    new GhBranch("main"),
+                    Option.of("1".repeat(40)),
+                    false),
             new Entry(
                     3,
-                    97,
+                    new PrNumber(97),
                     State.OPEN,
                     new GhBranch("feat/b"),
                     new GhBranch("feat/a"),
@@ -72,7 +79,7 @@ class CheckOutStackTest {
                     false),
             new Entry(
                     4,
-                    98,
+                    new PrNumber(98),
                     State.OPEN,
                     new GhBranch("feat/c"),
                     new GhBranch("feat/b"),
@@ -114,7 +121,7 @@ class CheckOutStackTest {
             List.of(remote(A, A_HEAD), remote(B, new Sha("b".repeat(40))), remote(C, new Sha("c".repeat(40)))));
 
     private static StackCheckout plan(AllBranches read, Option<Integer> on) {
-        return StackCheckout.of(STACK, ORIGIN, read, on);
+        return StackCheckout.of(STACK, ORIGIN, read, on.map(PrNumber::new));
     }
 
     private static AllBranches withLocal(Branch branch) {
@@ -122,7 +129,10 @@ class CheckOutStackTest {
     }
 
     private static Kind kindOf(StackCheckout checkout, int number) {
-        return checkout.lines().find(line -> line.number() == number).get().kind();
+        return checkout.lines()
+                .find(line -> line.number().value() == number)
+                .get()
+                .kind();
     }
 
     // main checked out, and feat/a of stack #12, whose pull request the model knows.
@@ -133,7 +143,7 @@ class CheckOutStackTest {
                 .map(branch -> io.vavr.Tuple.of(
                         branch.name(),
                         new PullRequest(
-                                96 + List.of(A, B, C).indexOf(branch.name()),
+                                new PrNumber(96 + List.of(A, B, C).indexOf(branch.name())),
                                 new GhBranch(branch.name().value()),
                                 Option.none(),
                                 false,
@@ -149,12 +159,14 @@ class CheckOutStackTest {
     void eachOpenPullRequestSaysWhatHappensToItsBranchTheMergedOneIsLeftOut() {
         StackCheckout checkout = plan(FETCHED, Option.none());
 
-        assertEquals(List.of(96, 97, 98), checkout.lines().map(StackCheckout.Line::number));
+        assertEquals(
+                List.of(new PrNumber(96), new PrNumber(97), new PrNumber(98)),
+                checkout.lines().map(StackCheckout.Line::number));
         assertEquals(
                 List.of(Kind.FAST_FORWARDED, Kind.MADE, Kind.MADE),
                 checkout.lines().map(StackCheckout.Line::kind));
         assertEquals(1, checkout.lines().head().commits());
-        assertEquals(List.of(95), checkout.skipped());
+        assertEquals(List.of(new PrNumber(95)), checkout.skipped());
         assertTrue(checkout.startable());
     }
 
@@ -258,7 +270,7 @@ class CheckOutStackTest {
                 3,
                 new Entry(
                         4,
-                        98,
+                        new PrNumber(98),
                         State.OPEN,
                         Option.of(new GhBranch("feat/c")),
                         Option.of(new GhBranch("feat/b")),
@@ -275,12 +287,13 @@ class CheckOutStackTest {
 
     @Test
     void anOpenPullRequestWhoseBranchGitHubDidNotSayIsLeftOutAndNotFetched() {
-        List<Entry> unnamed = ENTRIES.update(3, new Entry(4, 98, State.OPEN));
+        List<Entry> unnamed = ENTRIES.update(3, new Entry(4, new PrNumber(98), State.OPEN));
 
         assertEquals(List.of(A, B), StackCheckout.fetched(stack(unnamed, 2)));
         StackCheckout checkout = StackCheckout.of(stack(unnamed, 2), ORIGIN, FETCHED, Option.none());
-        assertEquals(List.of(96, 97), checkout.lines().map(StackCheckout.Line::number));
-        assertEquals(List.of(95, 98), checkout.skipped());
+        assertEquals(
+                List.of(new PrNumber(96), new PrNumber(97)), checkout.lines().map(StackCheckout.Line::number));
+        assertEquals(List.of(new PrNumber(95), new PrNumber(98)), checkout.skipped());
     }
 
     @Test
@@ -308,14 +321,17 @@ class CheckOutStackTest {
         assertEquals(Status.UP_TO_DATE, StackCheckout.status(model(all), STACK));
         assertEquals(Status.UPDATE, StackCheckout.status(model(all.update(1, following(A, A_TIP, 0, 0))), STACK));
         // A branch whose commit on GitHub is not known may be behind.
-        List<Entry> unknown =
-                ENTRIES.update(1, new Entry(2, 96, State.OPEN, new GhBranch("feat/a"), new GhBranch("main")));
+        List<Entry> unknown = ENTRIES.update(
+                1, new Entry(2, new PrNumber(96), State.OPEN, new GhBranch("feat/a"), new GhBranch("main")));
         assertEquals(Status.UPDATE, StackCheckout.status(model(all), stack(unknown, 2)));
         assertEquals(
                 Status.NOTHING,
                 StackCheckout.status(
                         ONE_LOCAL,
-                        stack(List.of(new Entry(1, 95, State.MERGED, new GhBranch("x"), new GhBranch("main"))), 1)));
+                        stack(
+                                List.of(new Entry(
+                                        1, new PrNumber(95), State.MERGED, new GhBranch("x"), new GhBranch("main"))),
+                                1)));
     }
 
     @Test
@@ -354,14 +370,14 @@ class CheckOutStackTest {
 
         Update.Next chosen = Update.update(menu, new StackMsg.CheckoutChosen());
 
-        assertEquals(List.of(new StackCheckoutCmd.Fetch(STACK, ORIGIN, Option.of(96))), chosen.cmds());
+        assertEquals(List.of(new StackCheckoutCmd.Fetch(STACK, ORIGIN, Option.of(new PrNumber(96)))), chosen.cmds());
         assertTrue(chosen.model().popup(StackPopups.Menu.class).isEmpty());
     }
 
     @Test
     void onceFetchedItAsksWhatHappens() {
         StackCheckout checkout = plan(FETCHED, Option.of(96));
-        StackCheckoutCmd.Fetch fetch = new StackCheckoutCmd.Fetch(STACK, ORIGIN, Option.of(96));
+        StackCheckoutCmd.Fetch fetch = new StackCheckoutCmd.Fetch(STACK, ORIGIN, Option.of(new PrNumber(96)));
 
         Model asked = Update.update(ONE_LOCAL, new StackMsg.StackFetched(fetch, List.empty(), checkout))
                 .model();
@@ -412,7 +428,7 @@ class CheckOutStackTest {
     private static PullRequestSummary summary(String repository, Option<PullRequestStack> stack) {
         return new PullRequestSummary(
                 repository,
-                97,
+                new PrNumber(97),
                 "Refresh flow",
                 "sam",
                 new GhBranch("feat/b"),
@@ -440,7 +456,7 @@ class CheckOutStackTest {
 
         StackPopups.Menu opened = menu.popup(StackPopups.Menu.class).get();
         assertEquals(Option.of(stack), opened.stack());
-        assertEquals(Option.of(97), opened.on());
+        assertEquals(Option.of(new PrNumber(97)), opened.on());
         assertTrue(opened.canCheckOut());
     }
 
@@ -467,8 +483,9 @@ class CheckOutStackTest {
         StackCheckout checkout = new StackCheckout(
                 12,
                 List.of(
-                        new StackCheckout.Line(10, A, origin(A), Kind.UP_TO_DATE, 0, Option.none()),
-                        new StackCheckout.Line(11, wide, origin(wide), Kind.UP_TO_DATE, 0, Option.none())),
+                        new StackCheckout.Line(new PrNumber(10), A, origin(A), Kind.UP_TO_DATE, 0, Option.none()),
+                        new StackCheckout.Line(
+                                new PrNumber(11), wide, origin(wide), Kind.UP_TO_DATE, 0, Option.none())),
                 List.empty(),
                 Option.none());
 

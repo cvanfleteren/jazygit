@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.gh.CliGitHub;
 import net.vanfleteren.jazygit.gh.GitHub;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequestComment;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.*;
 import net.vanfleteren.jazygit.gh.model.Reaction;
@@ -27,7 +28,7 @@ class CliReviewsTest {
     void aCommentIsAddedWithItsBodyAsTyped() {
         assertEquals(
                 List.of("gh", "pr", "comment", "12", "--body", "Looks good\n\n- one nit"),
-                CliReviews.commentCommand(12, "Looks good\n\n- one nit")
+                CliReviews.commentCommand(new PrNumber(12), "Looks good\n\n- one nit")
                         .executed()
                         .commandLine());
     }

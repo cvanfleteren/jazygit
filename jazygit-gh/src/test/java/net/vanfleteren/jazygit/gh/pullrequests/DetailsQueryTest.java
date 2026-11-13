@@ -15,6 +15,7 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
@@ -119,7 +120,7 @@ class DetailsQueryTest {
 
         assertEquals(
                 Either.right(new PullRequestDetails(
-                        42,
+                        new PrNumber(42),
                         "Add\trename",
                         "cvf",
                         new Status(State.OPEN, true, Mergeable.MERGEABLE),
@@ -172,7 +173,7 @@ class DetailsQueryTest {
     void aMergedPullRequestWithoutChecksLabelsOrReviewers() {
         assertEquals(
                 Either.right(new PullRequestDetails(
-                        5,
+                        new PrNumber(5),
                         "Fix",
                         "",
                         new Status(State.MERGED, false, Mergeable.UNKNOWN),
@@ -262,8 +263,10 @@ class DetailsQueryTest {
                 2,
                 2,
                 List.of(
-                        new PullRequestStack.Entry(1, 94, State.MERGED, new GhBranch("b94"), new GhBranch("main")),
-                        new PullRequestStack.Entry(2, 95, State.OPEN, new GhBranch("b95"), new GhBranch("b94"))));
+                        new PullRequestStack.Entry(
+                                1, new PrNumber(94), State.MERGED, new GhBranch("b94"), new GhBranch("main")),
+                        new PullRequestStack.Entry(
+                                2, new PrNumber(95), State.OPEN, new GhBranch("b95"), new GhBranch("b94"))));
 
         assertEquals(Option.of(new GhCommit("abc123")), details.branches().headCommit());
         assertEquals(Option.of(stack), details.stack());

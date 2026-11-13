@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.feature.branch.stack.StackChoice.BaseChange;
 import net.vanfleteren.jazygit.feature.branch.stack.StackChoice.Plan;
 import net.vanfleteren.jazygit.feature.branch.stack.StackChoice.Refusal;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -53,7 +54,7 @@ class StackChoiceTest {
 
     private static PullRequest pr(int number, String head, String base) {
         return new PullRequest(
-                number,
+                new PrNumber(number),
                 new GhBranch(head),
                 Option.of(new GhBranch(base)),
                 false,
@@ -108,7 +109,8 @@ class StackChoiceTest {
                         List.of(
                                 OPEN.get(name("feat/a")).get(),
                                 OPEN.get(name("feat/b")).get()),
-                        List.of(new BaseChange(97, Option.of(new GhBranch("develop")), new GhBranch("feat/a"))))),
+                        List.of(new BaseChange(
+                                new PrNumber(97), Option.of(new GhBranch("develop")), new GhBranch("feat/a"))))),
                 choice().plan(2, 0));
     }
 
@@ -145,9 +147,10 @@ class StackChoiceTest {
                 12,
                 1,
                 1,
-                List.of(new PullRequestStack.Entry(1, 98, State.OPEN, new GhBranch("feat/c"), new GhBranch("feat/b"))));
+                List.of(new PullRequestStack.Entry(
+                        1, new PrNumber(98), State.OPEN, new GhBranch("feat/c"), new GhBranch("feat/b"))));
         PullRequest stacked = new PullRequest(
-                98,
+                new PrNumber(98),
                 new GhBranch("feat/c"),
                 Option.of(new GhBranch("feat/b")),
                 false,

@@ -24,6 +24,7 @@ import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.gh.GitHub;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -63,9 +64,9 @@ class CommentUpdateTest {
 
     private static final BranchName FEATURE = new BranchName("feature");
     private static final PullRequest FEATURE_PR =
-            new PullRequest(42, new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED);
+            new PullRequest(new PrNumber(42), new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED);
     private static final PullRequestDetails DETAILS =
-            StubGitHub.of().pullRequests().details(42).get();
+            StubGitHub.of().pullRequests().details(new PrNumber(42)).get();
     private static final PullRequestPopup SHOWN =
             PullRequestPopup.loading(FEATURE, FEATURE_PR, Instant.EPOCH, 0).with(Either.right(DETAILS), 0);
     private static final ExecutedCommand NVIM = ExecutedCommand.of("nvim", "PR_COMMENT.md");
@@ -127,7 +128,7 @@ class CommentUpdateTest {
     void sendingAddsTheCommentAsTypedAndKeepsThePopupOpenMeanwhile() {
         Next sending = Update.update(commenting("  Looks good\n"), new ComposeMsg.Confirmed());
 
-        assertEquals(List.of(new AddComment(FEATURE, 42, "  Looks good\n")), sending.cmds());
+        assertEquals(List.of(new AddComment(FEATURE, new PrNumber(42), "  Looks good\n")), sending.cmds());
         assertEquals(
                 Option.of(CommentPopup.on(SHOWN).withText("  Looks good\n").withSending(true)),
                 sending.model().popup());
@@ -137,7 +138,7 @@ class CommentUpdateTest {
 
     @Test
     void aCommentSentWhileTheDraftChangesLeavesTheBranchBusyUntilThatIsDone() {
-        SetDraft drafting = new SetDraft(FEATURE, 42, true);
+        SetDraft drafting = new SetDraft(FEATURE, new PrNumber(42), true);
         Model busy = TestModels.running(commenting("Looks good"), drafting);
         Next sending = Update.update(busy, new ComposeMsg.Confirmed());
         AddComment cmd = (AddComment) sending.cmds().head();
@@ -152,7 +153,7 @@ class CommentUpdateTest {
 
     @Test
     void aDraftChangedWhileCommentingShowsInThePullRequestGoneBackTo() {
-        SetDraft drafting = new SetDraft(FEATURE, 42, true);
+        SetDraft drafting = new SetDraft(FEATURE, new PrNumber(42), true);
         Model commenting = commenting("half a thought");
 
         Model drafted = Update.update(commenting, drafting.run(env(StubGit.of(), StubGitHub.of(), Terminal.NONE)))
@@ -162,7 +163,7 @@ class CommentUpdateTest {
         assertEquals(Option.of(true), back.popup(PullRequestPopup.class).flatMap(PullRequestPopup::draft));
         // Changing the draft again turns it back.
         assertEquals(
-                List.of(new SetDraft(FEATURE, 42, false)),
+                List.of(new SetDraft(FEATURE, new PrNumber(42), false)),
                 Update.update(back, new PullRequestMsg.DraftChosen()).cmds());
     }
 
@@ -171,7 +172,7 @@ class CommentUpdateTest {
         Model commenting =
                 loaded().openPopup(CommentPopup.on(PullRequestPopup.loading(FEATURE, FEATURE_PR, Instant.EPOCH, 0)));
 
-        Model read = Update.update(commenting, new PullRequestMsg.DetailsLoaded(42, 0, DETAILS))
+        Model read = Update.update(commenting, new PullRequestMsg.DetailsLoaded(new PrNumber(42), 0, DETAILS))
                 .model();
 
         assertEquals(
@@ -181,7 +182,7 @@ class CommentUpdateTest {
         // Details of another pull request change nothing.
         assertEquals(
                 commenting.popup(),
-                Update.update(commenting, new PullRequestMsg.DetailsLoaded(7, 0, DETAILS))
+                Update.update(commenting, new PullRequestMsg.DetailsLoaded(new PrNumber(7), 0, DETAILS))
                         .model()
                         .popup());
     }
@@ -240,9 +241,11 @@ class CommentUpdateTest {
                                 Reading.BY_ITSELF, sent.model().now(), lastRead(sent.model())))),
                 sent.model().popup());
         assertTrue(
-                sent.cmds().contains(new LoadPullRequestDetails(42, lastRead(sent.model()))),
+                sent.cmds().contains(new LoadPullRequestDetails(new PrNumber(42), lastRead(sent.model()))),
                 sent.cmds().toString());
-        assertTrue(sent.cmds().contains(new LoadComments(42)), sent.cmds().toString());
+        assertTrue(
+                sent.cmds().contains(new LoadComments(new PrNumber(42))),
+                sent.cmds().toString());
     }
 
     @Test
@@ -256,12 +259,13 @@ class CommentUpdateTest {
                 Option.of(SHOWN.readingAgain(Reading.BY_ITSELF, sent.model().now(), lastRead(sent.model()))),
                 sent.model().popup());
         assertTrue(
-                sent.cmds().contains(new LoadPullRequestDetails(42, lastRead(sent.model()))),
+                sent.cmds().contains(new LoadPullRequestDetails(new PrNumber(42), lastRead(sent.model()))),
                 sent.cmds().toString());
         // That read is the dialog's own: what it brings shows in it.
         PullRequestPopup read = Update.update(
                         sent.model(),
-                        new PullRequestMsg.DetailsLoaded(42, lastRead(sent.model()), DETAILS.withDraft(true)))
+                        new PullRequestMsg.DetailsLoaded(
+                                new PrNumber(42), lastRead(sent.model()), DETAILS.withDraft(true)))
                 .model()
                 .popup(PullRequestPopup.class)
                 .get();
@@ -274,7 +278,7 @@ class CommentUpdateTest {
 
     @Test
     void aCommentSentAfterThePopupClosedOnlyLogsIt() {
-        AddComment cmd = new AddComment(FEATURE, 42, "Looks good");
+        AddComment cmd = new AddComment(FEATURE, new PrNumber(42), "Looks good");
         Model elsewhere = loaded();
 
         Next sent = Update.update(elsewhere, cmd.succeeded(List.empty()));
@@ -291,7 +295,7 @@ class CommentUpdateTest {
         AddComment cmd = (AddComment) sending.cmds().head();
         GitHub refusing = StubGitHub.of().withReviews(new StubReviews() {
             @Override
-            public Either<GhFailure, List<ExecutedCommand>> comment(int number, String body) {
+            public Either<GhFailure, List<ExecutedCommand>> comment(PrNumber number, String body) {
                 return Either.left(new GhFailure(
                         new GhError.CommandFailed(Option.of("could not add comment: network down"), 1),
                         List.of(ExecutedCommand.of("gh", "pr", "comment", "42", "--body", body))));

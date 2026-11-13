@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.branch.stack;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.git.model.AllBranches;
@@ -26,7 +27,7 @@ import net.vanfleteren.jazygit.state.github.FromGitHub;
  *                which are left out
  * @param on      the number of the pull request it was asked for on, if it was asked for on one
  */
-public record StackCheckout(int stack, List<Line> lines, List<Integer> skipped, Option<Integer> on) {
+public record StackCheckout(int stack, List<Line> lines, List<PrNumber> skipped, Option<PrNumber> on) {
 
     /**
      * The remote the branches of {@code stack} are fetched from: the one the local branch of an open pull request of
@@ -79,7 +80,7 @@ public record StackCheckout(int stack, List<Line> lines, List<Integer> skipped, 
      *
      * @param on the number of the pull request it was asked for on, if it was asked for on one
      */
-    public static StackCheckout of(PullRequestStack stack, RemoteName remote, AllBranches read, Option<Integer> on) {
+    public static StackCheckout of(PullRequestStack stack, RemoteName remote, AllBranches read, Option<PrNumber> on) {
         List<PullRequestStack.Entry> entries = stack.entries().sortBy(PullRequestStack.Entry::position);
         return new StackCheckout(
                 stack.number(),
@@ -181,7 +182,7 @@ public record StackCheckout(int stack, List<Line> lines, List<Integer> skipped, 
      */
     public Option<BranchName> asked() {
         return on.flatMap(number -> lines.find(
-                        line -> line.number() == number && line.kind().landable()))
+                        line -> line.number().equals(number) && line.kind().landable()))
                 .map(Line::branch);
     }
 
@@ -281,7 +282,12 @@ public record StackCheckout(int stack, List<Line> lines, List<Integer> skipped, 
      * @param parent   the branch it is built on, recorded for one that is made: the base of its pull request
      */
     public record Line(
-            int number, BranchName branch, RemoteBranch upstream, Kind kind, int commits, Option<BranchName> parent) {}
+            PrNumber number,
+            BranchName branch,
+            RemoteBranch upstream,
+            Kind kind,
+            int commits,
+            Option<BranchName> parent) {}
 
     /**
      * What the branches of a stack are, as the menu says it without reading anything (ADR 99).

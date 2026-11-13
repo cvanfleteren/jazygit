@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.feature.branch.push.PushCmd;
 import net.vanfleteren.jazygit.feature.branch.stack.StackCmd;
 import net.vanfleteren.jazygit.feature.github.OnGitHub;
 import net.vanfleteren.jazygit.gh.model.NewPullRequest;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -70,12 +71,12 @@ public sealed interface CreatePullRequestCmd extends Cmd {
      * Where a new pull request goes in a stack once it is created (ADR 73): on pull request {@code below}, a new stack
      * of the two, or on the top of its stack {@code stack}.
      */
-    record Stacking(int below, Option<Integer> stack) {
+    record Stacking(PrNumber below, Option<Integer> stack) {
 
         /**
          * Puts the pull request {@code number} on {@code below}.
          */
-        StackCmd.MakeStack cmd(int number) {
+        StackCmd.MakeStack cmd(PrNumber number) {
             return new StackCmd.MakeStack(
                     List.empty(), stack.isDefined() ? List.of(number) : List.of(below, number), stack);
         }
@@ -85,7 +86,7 @@ public sealed interface CreatePullRequestCmd extends Cmd {
      * Why a new pull request cannot be stacked on pull request {@code below}: it is in stack {@code stack}, but not on
      * its top, where only GitHub adds.
      */
-    record NotTop(int below, int stack) {}
+    record NotTop(PrNumber below, int stack) {}
 
     /**
      * Reads which of {@code bases} the branch {@code branch} was made from: the one recorded as such, or else the

@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.feature.github.comment.CommentPopup;
 import net.vanfleteren.jazygit.feature.github.comments.CommentsCmd.LoadComments;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestCmd.OpenPullRequest;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
@@ -30,9 +31,9 @@ public final class CommentsUpdate {
                                 Update.ask(model, CommentsPopup.loading(shown)).model(),
                                 new LoadComments(shown.pullRequest().number())))
                         .getOrElse(() -> Next.of(model));
-            case CommentsMsg.Loaded(int number, var comments) ->
+            case CommentsMsg.Loaded(PrNumber number, var comments) ->
                 Next.of(mapComments(model, number, popup -> popup.read(Either.right(comments))));
-            case CommentsMsg.LoadFailed(int number, var failure) ->
+            case CommentsMsg.LoadFailed(PrNumber number, var failure) ->
                 Next.of(mapComments(model, number, popup -> popup.read(Either.left(failure))));
             case CommentsMsg.Highlighted(var id) ->
                 Next.of(model.popup(CommentsPopup.class)
@@ -63,12 +64,13 @@ public final class CommentsUpdate {
      * {@code model} with the comments on pull request {@code number} as {@code change} makes them: the popup that is
      * open, or the one a comment goes back to. Unchanged when neither shows them, as the user went back meanwhile.
      */
-    private static Model mapComments(Model model, int number, UnaryOperator<CommentsPopup> change) {
+    private static Model mapComments(Model model, PrNumber number, UnaryOperator<CommentsPopup> change) {
         return model.popup(CommentsPopup.class)
-                .filter(popup -> popup.number() == number)
+                .filter(popup -> popup.number().equals(number))
                 .map(popup -> model.openPopup(change.apply(popup)))
                 .orElse(() -> model.popup(CommentPopup.class)
-                        .filter(popup -> popup.from() instanceof CommentsPopup from && from.number() == number)
+                        .filter(popup -> popup.from() instanceof CommentsPopup from
+                                && from.number().equals(number))
                         .map(popup -> model.openPopup(popup.withFrom(change.apply((CommentsPopup) popup.from())))))
                 .getOrElse(model);
     }

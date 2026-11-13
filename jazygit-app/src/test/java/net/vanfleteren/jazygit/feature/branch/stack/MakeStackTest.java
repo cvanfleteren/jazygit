@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.feature.branch.stack.StackChoice.BaseChange;
 import net.vanfleteren.jazygit.gh.GitHub;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -63,7 +64,7 @@ class MakeStackTest {
 
     private static PullRequest pr(int number, String head, String base) {
         return new PullRequest(
-                number,
+                new PrNumber(number),
                 new GhBranch(head),
                 Option.of(new GhBranch(base)),
                 false,
@@ -117,11 +118,13 @@ class MakeStackTest {
             2,
             2,
             List.of(
-                    new PullRequestStack.Entry(1, 96, State.OPEN, new GhBranch("feat/a"), new GhBranch("main")),
-                    new PullRequestStack.Entry(2, 97, State.OPEN, new GhBranch("feat/b"), new GhBranch("feat/a"))));
+                    new PullRequestStack.Entry(
+                            1, new PrNumber(96), State.OPEN, new GhBranch("feat/a"), new GhBranch("main")),
+                    new PullRequestStack.Entry(
+                            2, new PrNumber(97), State.OPEN, new GhBranch("feat/b"), new GhBranch("feat/a"))));
 
     private static final Model STACKED = model(new PullRequest(
-                    97,
+                    new PrNumber(97),
                     new GhBranch("feat/b"),
                     Option.of(new GhBranch("feat/a")),
                     false,
@@ -133,7 +136,7 @@ class MakeStackTest {
                     .map(open -> open.put(
                             name("feat/a"),
                             new PullRequest(
-                                    96,
+                                    new PrNumber(96),
                                     new GhBranch("feat/a"),
                                     Option.of(new GhBranch("main")),
                                     false,
@@ -177,7 +180,9 @@ class MakeStackTest {
 
         Update.Next confirmed = Update.update(step(picking, new StackMsg.TopChosen(1)), new StackMsg.PickConfirmed());
 
-        assertEquals(List.of(new StackCmd.MakeStack(List.empty(), List.of(98), Option.of(12))), confirmed.cmds());
+        assertEquals(
+                List.of(new StackCmd.MakeStack(List.empty(), List.of(new PrNumber(98)), Option.of(12))),
+                confirmed.cmds());
         assertEquals(
                 Option.of("dialog.addToStack.bottomFixed"),
                 step(picking, new StackMsg.BottomChosen(1))
@@ -198,8 +203,9 @@ class MakeStackTest {
         assertEquals(
                 Option.of(new StackPopups.Confirm(
                         new StackCmd.MakeStack(
-                                List.of(new BaseChange(98, Option.of(new GhBranch("feat/b")), new GhBranch("feat/a"))),
-                                List.of(96, 98),
+                                List.of(new BaseChange(
+                                        new PrNumber(98), Option.of(new GhBranch("feat/b")), new GhBranch("feat/a"))),
+                                List.of(new PrNumber(96), new PrNumber(98)),
                                 Option.none()),
                         List.empty())),
                 chosen.model().popup());
@@ -215,7 +221,8 @@ class MakeStackTest {
         Update.Next chosen = Update.update(
                 choosing, new StackMsg.TargetChosen(popup.targets().head()));
 
-        assertEquals(List.of(new StackCmd.MakeStack(List.empty(), List.of(98), Option.of(12))), chosen.cmds());
+        assertEquals(
+                List.of(new StackCmd.MakeStack(List.empty(), List.of(new PrNumber(98)), Option.of(12))), chosen.cmds());
     }
 
     @Test
@@ -251,10 +258,18 @@ class MakeStackTest {
             3,
             3,
             List.of(
-                    new PullRequestStack.Entry(1, 95, State.MERGED, new GhBranch("feat/z"), new GhBranch("main")),
                     new PullRequestStack.Entry(
-                            2, 96, State.OPEN, new GhBranch("feat/a"), new GhBranch("feat/z"), Option.none(), true),
-                    new PullRequestStack.Entry(3, 97, State.OPEN, new GhBranch("feat/b"), new GhBranch("feat/a"))));
+                            1, new PrNumber(95), State.MERGED, new GhBranch("feat/z"), new GhBranch("main")),
+                    new PullRequestStack.Entry(
+                            2,
+                            new PrNumber(96),
+                            State.OPEN,
+                            new GhBranch("feat/a"),
+                            new GhBranch("feat/z"),
+                            Option.none(),
+                            true),
+                    new PullRequestStack.Entry(
+                            3, new PrNumber(97), State.OPEN, new GhBranch("feat/b"), new GhBranch("feat/a"))));
 
     @Test
     void unstackingSaysMergedAndQueuedPullRequestsStayInTheStack() {
@@ -268,7 +283,7 @@ class MakeStackTest {
     void anUnstackedStackIsShownThoughAQueuedPullRequestStaysInIt() {
         StackChange gone = new StackChange.Unstacked(12, MODEL.now());
         PullRequest queued = new PullRequest(
-                96,
+                new PrNumber(96),
                 new GhBranch("feat/a"),
                 Option.of(new GhBranch("feat/z")),
                 false,
@@ -315,8 +330,8 @@ class MakeStackTest {
         Update.Next confirmed = Update.update(picking, new StackMsg.PickConfirmed());
 
         StackCmd.MakeStack cmd = new StackCmd.MakeStack(
-                List.of(new BaseChange(97, Option.of(new GhBranch("main")), new GhBranch("feat/a"))),
-                List.of(96, 97, 98),
+                List.of(new BaseChange(new PrNumber(97), Option.of(new GhBranch("main")), new GhBranch("feat/a"))),
+                List.of(new PrNumber(96), new PrNumber(97), new PrNumber(98)),
                 Option.none());
         assertEquals(
                 Option.of(new StackPopups.Confirm(cmd, List.empty())),
@@ -334,7 +349,10 @@ class MakeStackTest {
         Update.Next confirmed = Update.update(picking, new StackMsg.PickConfirmed());
 
         assertEquals(Option.none(), confirmed.model().popup());
-        assertEquals(List.of(new StackCmd.MakeStack(List.empty(), List.of(96, 97), Option.none())), confirmed.cmds());
+        assertEquals(
+                List.of(new StackCmd.MakeStack(
+                        List.empty(), List.of(new PrNumber(96), new PrNumber(97)), Option.none())),
+                confirmed.cmds());
     }
 
     @Test
@@ -351,9 +369,9 @@ class MakeStackTest {
     void theBasesChangeFromTheBottomUpThenTheStackIsMade() {
         StackCmd.MakeStack cmd = new StackCmd.MakeStack(
                 List.of(
-                        new BaseChange(97, Option.of(new GhBranch("main")), new GhBranch("feat/a")),
-                        new BaseChange(98, Option.of(new GhBranch("main")), new GhBranch("feat/b"))),
-                List.of(96, 97, 98),
+                        new BaseChange(new PrNumber(97), Option.of(new GhBranch("main")), new GhBranch("feat/a")),
+                        new BaseChange(new PrNumber(98), Option.of(new GhBranch("main")), new GhBranch("feat/b"))),
+                List.of(new PrNumber(96), new PrNumber(97), new PrNumber(98)),
                 Option.none());
 
         Msg done = cmd.run(new Env(StubGit.of(), StubGitHub.of()));
@@ -381,12 +399,12 @@ class MakeStackTest {
     @Test
     void aStackGitHubRefusesShowsTheBasesChangedBeforeInTheLog() {
         StackCmd.MakeStack cmd = new StackCmd.MakeStack(
-                List.of(new BaseChange(97, Option.of(new GhBranch("main")), new GhBranch("feat/a"))),
-                List.of(96, 97),
+                List.of(new BaseChange(new PrNumber(97), Option.of(new GhBranch("main")), new GhBranch("feat/a"))),
+                List.of(new PrNumber(96), new PrNumber(97)),
                 Option.none());
         GitHub refusing = StubGitHub.of().withStacks(new StubStacks() {
             @Override
-            public Either<GhFailure, List<ExecutedCommand>> create(List<Integer> pullRequests) {
+            public Either<GhFailure, List<ExecutedCommand>> create(List<PrNumber> pullRequests) {
                 return Either.left(
                         new GhFailure(new GhError.CommandFailed(Option.of("HTTP 404: Not Found"), 1), List.empty()));
             }
@@ -411,12 +429,15 @@ class MakeStackTest {
 
     @Test
     void aChangeMadeIsWaitedForUntilGitHubListsIt() {
-        StackCmd.MakeStack cmd = new StackCmd.MakeStack(List.empty(), List.of(96, 97), Option.none());
+        StackCmd.MakeStack cmd =
+                new StackCmd.MakeStack(List.empty(), List.of(new PrNumber(96), new PrNumber(97)), Option.none());
 
         Model changed = step(TestModels.running(MODEL, cmd), new StackMsg.Changed(cmd, List.empty()));
         assertEquals(
                 Option.of(new StackChange.Stacked(
-                        List.of(96, 97), Option.none(), MODEL.now().plus(StackUpdate.SETTLING))),
+                        List.of(new PrNumber(96), new PrNumber(97)),
+                        Option.none(),
+                        MODEL.now().plus(StackUpdate.SETTLING))),
                 changed.gitHub().stackChange());
 
         // GitHub still lists them as they were: they are read again.
@@ -437,7 +458,9 @@ class MakeStackTest {
     @Test
     void aChangeGitHubDoesNotListInTimeIsGivenUpOn() {
         Model late = MODEL.mapGitHub(gitHub -> gitHub.withStackChange(Option.of(new StackChange.Stacked(
-                List.of(96, 97), Option.none(), MODEL.now().minusSeconds(1)))));
+                List.of(new PrNumber(96), new PrNumber(97)),
+                Option.none(),
+                MODEL.now().minusSeconds(1)))));
 
         Update.Next given = Update.update(late, new StackMsg.Tick());
 
@@ -449,14 +472,17 @@ class MakeStackTest {
     @Test
     void aStackToBeRebasedThatGitHubDoesNotListInTimeSaysItWasNotRebased() {
         Model late = MODEL.mapGitHub(gitHub -> gitHub.withStackChange(Option.of(new StackChange.Stacked(
-                List.of(96, 97), Option.none(), MODEL.now().minusSeconds(1), true))));
+                List.of(new PrNumber(96), new PrNumber(97)),
+                Option.none(),
+                MODEL.now().minusSeconds(1),
+                true))));
 
         Update.Next given = Update.update(late, new StackMsg.Tick());
 
         assertEquals(List.empty(), given.cmds());
         assertEquals(Option.none(), given.model().gitHub().stackChange());
         Notice notice = given.model().outcome().notice().get();
-        assertEquals(new Notice.StackNotListed(96), notice);
+        assertEquals(new Notice.StackNotListed(new PrNumber(96)), notice);
         assertEquals(
                 "GitHub did not list the stack of #96 in time, so it was not rebased: rebase it from the stack menu"
                         + " (s) once it shows.",
@@ -496,7 +522,8 @@ class MakeStackTest {
 
     @Test
     void linkingAndRebasingIsOfferedOnlyForBranchesNotOnTheOneBelow() {
-        StackCmd.MakeStack cmd = new StackCmd.MakeStack(List.empty(), List.of(96, 97), Option.none());
+        StackCmd.MakeStack cmd =
+                new StackCmd.MakeStack(List.empty(), List.of(new PrNumber(96), new PrNumber(97)), Option.none());
         Model diverged = MODEL.openPopup(
                 new StackPopups.Confirm(cmd, List.of(new StackPopups.Diverged(name("feat/b"), name("feat/a"), 1))));
 
@@ -513,7 +540,9 @@ class MakeStackTest {
 
     @Test
     void aStackLinkedToBeRebasedIsRebasedOnceGitHubListsIt() {
-        StackCmd.MakeStack cmd = new StackCmd.MakeStack(List.empty(), List.of(96, 97), Option.none()).rebasing();
+        StackCmd.MakeStack cmd = new StackCmd.MakeStack(
+                        List.empty(), List.of(new PrNumber(96), new PrNumber(97)), Option.none())
+                .rebasing();
         Model changed = step(TestModels.running(MODEL, cmd), new StackMsg.Changed(cmd, List.empty()));
         // The base is rebased onto as fetched from origin.
         Model fetched = TestModels.remoteBranchesRead(

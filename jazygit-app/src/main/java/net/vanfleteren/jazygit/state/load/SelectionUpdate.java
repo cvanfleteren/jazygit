@@ -4,6 +4,7 @@ import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Function;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.FileEntry;
@@ -34,7 +35,7 @@ public final class SelectionUpdate {
     public static Next update(Model model, SelectionMsg msg) {
         return switch (msg) {
             case BranchSelected(var branch) -> branchSelected(model, branch);
-            case UnfetchedSelected(int pullRequest) -> unfetchedSelected(model, pullRequest);
+            case UnfetchedSelected(PrNumber pullRequest) -> unfetchedSelected(model, pullRequest);
             case CommitSelected(var sha) -> commitSelected(model, sha);
             case DivergenceCommitSelected(var sha) -> divergenceCommitSelected(model, sha);
             case BranchCommitSelected(var sha) -> branchCommitSelected(model, sha);
@@ -61,7 +62,7 @@ public final class SelectionUpdate {
     /**
      * No log is shown, nor read again as branches move.
      */
-    private static Next unfetchedSelected(Model model, int pullRequest) {
+    private static Next unfetchedSelected(Model model, PrNumber pullRequest) {
         return Next.of(model.mapRepoView(
                 repoView -> repoView.withBranchLog(Option.none()).withUnfetched(Option.of(pullRequest))));
     }

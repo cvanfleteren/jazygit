@@ -23,6 +23,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.graphql.ReviewingFragment;
 import net.vanfleteren.jazygit.gh.model.CommentRights;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.Reaction;
 import net.vanfleteren.jazygit.gh.model.Reactions;
@@ -181,7 +182,7 @@ final class ReviewThreadsQuery {
         return List.of(Reaction.values()).find(reaction -> reaction.name().equals(name));
     }
 
-    static GhCommand command(int number) {
+    static GhCommand command(PrNumber number) {
         return gh(
                 "api",
                 "graphql",
@@ -192,7 +193,7 @@ final class ReviewThreadsQuery {
                 "-F",
                 "name={repo}",
                 "-F",
-                "number=" + number,
+                "number=" + number.value(),
                 "-f",
                 "query=" + QUERY);
     }

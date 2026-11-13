@@ -121,7 +121,7 @@ final class StackPickDialog implements PopupView {
                 ? "▶"
                 : index == choice.bottom() ? "┗" : index == choice.top() ? "┏" : choice.isChosen(index) ? "┃" : " ";
         String pullRequest = row.pullRequest()
-                .map(pr -> "#" + pr.number())
+                .map(pr -> "#" + pr.number().value())
                 .getOrElse(() -> Messages.get("dialog.makeStack.noPullRequest"));
         String here = index == choice.branch() ? "  " + Messages.get("dialog.makeStack.thisBranch") : "";
         return mark + " " + " ".repeat(INDENT * row.depth())

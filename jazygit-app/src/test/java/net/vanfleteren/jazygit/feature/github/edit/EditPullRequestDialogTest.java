@@ -21,6 +21,7 @@ import java.util.Optional;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -48,10 +49,10 @@ class EditPullRequestDialogTest {
     private static final RemoteBranch MAIN = new RemoteBranch("origin", new BranchName("main"));
     private static final RemoteBranch RELEASE = new RemoteBranch("origin", new BranchName("release"));
     private static final PullRequestDetails DETAILS =
-            StubGitHub.of().pullRequests().details(42).get().withBody("Why");
+            StubGitHub.of().pullRequests().details(new PrNumber(42)).get().withBody("Why");
     private static final PullRequestPopup SHOWN = PullRequestPopup.loading(
                     new BranchName("feature"),
-                    new PullRequest(42, new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED),
+                    new PullRequest(new PrNumber(42), new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED),
                     Instant.EPOCH,
                     0)
             .with(Either.right(DETAILS), 0);

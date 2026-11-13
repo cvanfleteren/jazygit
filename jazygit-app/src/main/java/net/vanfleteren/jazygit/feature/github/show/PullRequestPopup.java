@@ -261,7 +261,7 @@ public record PullRequestPopup(
                                 .headCommit()
                                 .flatMap(head -> Sha.parse(head.oid()))
                                 .map(head -> new PullRequestCommits(
-                                        read.number(), read.repository(), read.host(), base, head))));
+                                        read.number().value(), read.repository(), read.host(), base, head))));
     }
 
     /**

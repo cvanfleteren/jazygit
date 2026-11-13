@@ -316,8 +316,8 @@ public final class StackUpdate {
                                                 List.empty(),
                                                 Option.of(pullRequest.number()),
                                                 StackCheckout.status(model, stack)))
-                                : Next.of(model.fail(new BranchError.OtherRepository(
-                                        pullRequest.repository() + "#" + pullRequest.number()))));
+                                : Next.of(model.fail(new BranchError.OtherRepository(pullRequest.repository() + "#"
+                                        + pullRequest.number().value()))));
     }
 
     /**

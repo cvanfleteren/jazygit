@@ -362,7 +362,8 @@ public final class PullRequestDialog implements PopupView {
      */
     private String title(PullRequestPopup popup) {
         String title = Messages.get(
-                "dialog.pullRequest.title", String.valueOf(popup.pullRequest().number()));
+                "dialog.pullRequest.title",
+                String.valueOf(popup.pullRequest().number().value()));
         return popup.reading() == Reading.ASKED
                 ? title + " " + TimeText.spinnerFrame(clock.instant())
                 : popup.refreshFailed()

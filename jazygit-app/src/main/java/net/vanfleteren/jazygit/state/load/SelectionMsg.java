@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.state.load;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.FileEntry;
@@ -28,7 +29,7 @@ public sealed interface SelectionMsg extends Msg {
      * The user highlighted a pull request of a stack in the branches pane whose branch is neither checked out nor
      * fetched, so that it has no log (ADR 72).
      */
-    record UnfetchedSelected(int pullRequest) implements SelectionMsg {}
+    record UnfetchedSelected(PrNumber pullRequest) implements SelectionMsg {}
 
     /**
      * The user highlighted a commit in the commits pane.

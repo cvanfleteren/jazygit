@@ -6,6 +6,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.gh.process.GhError;
@@ -34,8 +35,8 @@ class StackFragmentTest {
                         2,
                         2,
                         List.of(
-                                new PullRequestStack.Entry(1, 94, State.MERGED),
-                                new PullRequestStack.Entry(2, 95, State.OPEN))))),
+                                new PullRequestStack.Entry(1, new PrNumber(94), State.MERGED),
+                                new PullRequestStack.Entry(2, new PrNumber(95), State.OPEN))))),
                 stack("""
                         { "stackEntry": { "position": 2 }, "stack": { "number": 7, "size": 2, "entries": { "nodes": [
                           { "position": 1, "pullRequest": { "number": 94, "state": "MERGED", "headRefName": "", "baseRefName": "" } },
@@ -53,8 +54,10 @@ class StackFragmentTest {
 
         assertEquals(
                 Option.of(List.of(
-                        new PullRequestStack.Entry(1, 94, State.OPEN, new GhBranch("feat/a"), new GhBranch("main")),
-                        new PullRequestStack.Entry(2, 95, State.OPEN, new GhBranch("feat/b"), new GhBranch("feat/a")))),
+                        new PullRequestStack.Entry(
+                                1, new PrNumber(94), State.OPEN, new GhBranch("feat/a"), new GhBranch("main")),
+                        new PullRequestStack.Entry(
+                                2, new PrNumber(95), State.OPEN, new GhBranch("feat/b"), new GhBranch("feat/a")))),
                 read.map(PullRequestStack::entries));
         assertEquals(Option.of(Option.of(new GhBranch("feat/a"))), read.map(PullRequestStack::branchBelow));
         assertEquals(Option.of(Option.of(new GhBranch("main"))), read.map(PullRequestStack::base));
@@ -75,7 +78,7 @@ class StackFragmentTest {
                 Option.of(List.of(
                         new PullRequestStack.Entry(
                                 1,
-                                94,
+                                new PrNumber(94),
                                 State.MERGED,
                                 new GhBranch("feat/a"),
                                 new GhBranch("main"),
@@ -83,7 +86,7 @@ class StackFragmentTest {
                                 false),
                         new PullRequestStack.Entry(
                                 2,
-                                95,
+                                new PrNumber(95),
                                 State.OPEN,
                                 new GhBranch("feat/b"),
                                 new GhBranch("feat/a"),
@@ -103,7 +106,7 @@ class StackFragmentTest {
         assertEquals(
                 Option.of(List.of(new PullRequestStack.Entry(
                         1,
-                        94,
+                        new PrNumber(94),
                         State.OPEN,
                         Option.of(new GhBranch("feat/a")),
                         Option.of(new GhBranch("main")),
@@ -116,8 +119,8 @@ class StackFragmentTest {
     @Test
     void anEntryWhosePullRequestCannotBeReadIsLeftOut() {
         assertEquals(
-                Either.right(Option.of(
-                        new PullRequestStack(7, 2, 3, List.of(new PullRequestStack.Entry(2, 95, State.OPEN))))),
+                Either.right(Option.of(new PullRequestStack(
+                        7, 2, 3, List.of(new PullRequestStack.Entry(2, new PrNumber(95), State.OPEN))))),
                 stack("""
                         { "stackEntry": { "position": 2 }, "stack": { "number": 7, "size": 3, "entries": { "nodes": [
                           { "position": 1, "pullRequest": null }, null,

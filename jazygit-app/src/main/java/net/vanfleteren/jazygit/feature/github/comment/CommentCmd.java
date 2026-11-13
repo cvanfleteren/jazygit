@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.feature.github.comment;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Cmd;
@@ -31,7 +32,7 @@ public sealed interface CommentCmd extends Cmd {
     /**
      * Adds a comment saying {@code body} to pull request {@code number}, from {@code branch}.
      */
-    record AddComment(BranchName branch, int number, String body) implements CommentCmd, OperationCmd {
+    record AddComment(BranchName branch, PrNumber number, String body) implements CommentCmd, OperationCmd {
 
         @Override
         public Operation operation() {

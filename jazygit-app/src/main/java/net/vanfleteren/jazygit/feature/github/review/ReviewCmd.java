@@ -5,6 +5,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.github.review.ReviewPopup.Target;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.NewReviewThread;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -45,7 +46,7 @@ public sealed interface ReviewCmd extends Cmd {
      * Sends {@code body} to {@code target} of pull request {@code number}: a reply, a thread started, or the edit of a
      * comment, which GitHub answers with the body it holds.
      */
-    record Send(int number, Target target, String body) implements ReviewCmd, OperationCmd {
+    record Send(PrNumber number, Target target, String body) implements ReviewCmd, OperationCmd {
 
         @Override
         public Operation operation() {
@@ -58,7 +59,7 @@ public sealed interface ReviewCmd extends Cmd {
 
         @Override
         public Option<String> subject() {
-            return Option.of("#" + number);
+            return Option.of("#" + number.value());
         }
 
         @Override
@@ -102,7 +103,7 @@ public sealed interface ReviewCmd extends Cmd {
      * Resolves the thread with the id {@code thread} of pull request {@code number} when {@code resolved}, else
      * unresolves it.
      */
-    record Resolve(int number, ReviewThread.Id thread, boolean resolved) implements ReviewCmd, OperationCmd {
+    record Resolve(PrNumber number, ReviewThread.Id thread, boolean resolved) implements ReviewCmd, OperationCmd {
 
         @Override
         public Operation operation() {
@@ -111,7 +112,7 @@ public sealed interface ReviewCmd extends Cmd {
 
         @Override
         public Option<String> subject() {
-            return Option.of("#" + number);
+            return Option.of("#" + number.value());
         }
 
         @Override

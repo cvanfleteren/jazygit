@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.CommentRights;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -39,9 +40,9 @@ class CommentsUpdateTest {
 
     private static final BranchName FEATURE = new BranchName("feature");
     private static final PullRequest FEATURE_PR =
-            new PullRequest(42, new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED);
+            new PullRequest(new PrNumber(42), new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED);
     private static final PullRequestDetails DETAILS =
-            StubGitHub.of().pullRequests().details(42).get();
+            StubGitHub.of().pullRequests().details(new PrNumber(42)).get();
     private static final PullRequestPopup SHOWN =
             PullRequestPopup.loading(FEATURE, FEATURE_PR, Instant.EPOCH, 0).with(Either.right(DETAILS), 0);
     private static final PullRequestComment DESCRIPTION =
@@ -71,7 +72,7 @@ class CommentsUpdateTest {
         Next next = Update.update(loaded().openPopup(SHOWN), new CommentsMsg.Requested());
 
         assertEquals(Option.of(CommentsPopup.loading(SHOWN)), next.model().popup());
-        assertEquals(List.of(new LoadComments(42)), next.cmds());
+        assertEquals(List.of(new LoadComments(new PrNumber(42))), next.cmds());
     }
 
     @Test
@@ -87,7 +88,8 @@ class CommentsUpdateTest {
     @Test
     void theCommentsReadOpenOnTheNewest() {
         Model read = Update.update(
-                        loaded().openPopup(CommentsPopup.loading(SHOWN)), new CommentsMsg.Loaded(42, CONVERSATION))
+                        loaded().openPopup(CommentsPopup.loading(SHOWN)),
+                        new CommentsMsg.Loaded(new PrNumber(42), CONVERSATION))
                 .model();
 
         CommentsPopup popup = read.popup(CommentsPopup.class).get();
@@ -114,9 +116,9 @@ class CommentsUpdateTest {
                 .model();
         PullRequestComment newer = comment("IC_2", Kind.COMMENT, "Thanks");
 
-        Model again = Update.update(moved, new CommentsMsg.Loaded(42, CONVERSATION.append(newer)))
+        Model again = Update.update(moved, new CommentsMsg.Loaded(new PrNumber(42), CONVERSATION.append(newer)))
                 .model();
-        Model without = Update.update(moved, new CommentsMsg.Loaded(42, List.of(DESCRIPTION, APPROVAL)))
+        Model without = Update.update(moved, new CommentsMsg.Loaded(new PrNumber(42), List.of(DESCRIPTION, APPROVAL)))
                 .model();
 
         assertEquals(Option.of(FIRST), again.popup(CommentsPopup.class).flatMap(CommentsPopup::highlightedComment));
@@ -128,7 +130,7 @@ class CommentsUpdateTest {
     void readingTheCommentsCanFail() {
         Model failed = Update.update(
                         loaded().openPopup(CommentsPopup.loading(SHOWN)),
-                        new CommentsMsg.LoadFailed(42, refused("offline")))
+                        new CommentsMsg.LoadFailed(new PrNumber(42), refused("offline")))
                 .model();
 
         CommentsPopup popup = failed.popup(CommentsPopup.class).get();
@@ -144,12 +146,14 @@ class CommentsUpdateTest {
         assertEquals(Option.of(SHOWN), back.popup());
         assertEquals(
                 back,
-                Update.update(back, new CommentsMsg.Loaded(42, List.empty())).model());
+                Update.update(back, new CommentsMsg.Loaded(new PrNumber(42), List.empty()))
+                        .model());
         // Nor do those of another pull request.
         Model loading = loaded().openPopup(CommentsPopup.loading(SHOWN));
         assertEquals(
                 loading,
-                Update.update(loading, new CommentsMsg.Loaded(7, CONVERSATION)).model());
+                Update.update(loading, new CommentsMsg.Loaded(new PrNumber(7), CONVERSATION))
+                        .model());
     }
 
     @Test
@@ -158,7 +162,7 @@ class CommentsUpdateTest {
 
         Next next = Update.update(reading, new CommentsMsg.OpenChosen());
 
-        assertEquals(List.of(new OpenPullRequest(FEATURE, 42)), next.cmds());
+        assertEquals(List.of(new OpenPullRequest(FEATURE, new PrNumber(42))), next.cmds());
         assertEquals(reading.popup(), next.model().popup());
     }
 
@@ -191,9 +195,10 @@ class CommentsUpdateTest {
         Model reading = loaded().openPopup(CommentsPopup.loading(loading));
         Model commenting = loaded().openPopup(CommentPopup.on(CommentsPopup.loading(loading)));
 
-        Model read = Update.update(reading, new PullRequestMsg.DetailsLoaded(42, 0, DETAILS))
+        Model read = Update.update(reading, new PullRequestMsg.DetailsLoaded(new PrNumber(42), 0, DETAILS))
                 .model();
-        Model readWhileCommenting = Update.update(commenting, new PullRequestMsg.DetailsLoaded(42, 0, DETAILS))
+        Model readWhileCommenting = Update.update(
+                        commenting, new PullRequestMsg.DetailsLoaded(new PrNumber(42), 0, DETAILS))
                 .model();
 
         assertEquals(Option.of(SHOWN), read.popup(CommentsPopup.class).map(CommentsPopup::shown));
@@ -205,7 +210,7 @@ class CommentsUpdateTest {
     void commentsReadWhileCommentingShowOnceBack() {
         Model commenting = loaded().openPopup(CommentPopup.on(CommentsPopup.loading(SHOWN)));
 
-        Model read = Update.update(commenting, new CommentsMsg.Loaded(42, CONVERSATION))
+        Model read = Update.update(commenting, new CommentsMsg.Loaded(new PrNumber(42), CONVERSATION))
                 .model();
 
         assertEquals(

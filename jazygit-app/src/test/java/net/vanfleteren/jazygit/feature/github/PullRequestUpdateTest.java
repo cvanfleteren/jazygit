@@ -48,6 +48,7 @@ import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.MergeStatus;
 import net.vanfleteren.jazygit.gh.model.NewPullRequest;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -119,7 +120,7 @@ class PullRequestUpdateTest {
             Option.of(new Upstream(new BranchRef.Remote(new RemoteBranch("origin", new BranchName("ahead"))), 2, 0)));
     private static final BranchName FEATURE = PUSHED.name();
     private static final PullRequest FEATURE_PR =
-            new PullRequest(42, new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED);
+            new PullRequest(new PrNumber(42), new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED);
 
     private static Model withPr() {
         return Update.update(model(), new PullRequestsMsg.Loaded(List.of(FEATURE_PR)))
@@ -971,16 +972,17 @@ class PullRequestUpdateTest {
         assertEquals(
                 Option.of(PullRequestPopup.loading(new BranchName("feature"), FEATURE_PR, Instant.EPOCH, 0)),
                 shown.model().popup());
-        assertEquals(List.of(new LoadPullRequestDetails(42, lastRead(shown.model()))), shown.cmds());
+        assertEquals(List.of(new LoadPullRequestDetails(new PrNumber(42), lastRead(shown.model()))), shown.cmds());
     }
 
     @Test
     void theDetailsReadShowInThePopup() {
         Model shown = Update.update(withPr(), new PullRequestMsg.Requested(new BranchName("feature")))
                 .model();
-        PullRequestDetails details = StubGitHub.of().pullRequests().details(42).get();
+        PullRequestDetails details =
+                StubGitHub.of().pullRequests().details(new PrNumber(42)).get();
 
-        Model loaded = Update.update(shown, new LoadPullRequestDetails(42, lastRead(shown)).run(env()))
+        Model loaded = Update.update(shown, new LoadPullRequestDetails(new PrNumber(42), lastRead(shown)).run(env()))
                 .model();
 
         assertEquals(
@@ -993,9 +995,10 @@ class PullRequestUpdateTest {
     void theDetailsReadShowOnTheBranchToo() {
         Model shown =
                 Update.update(withPr(), new PullRequestMsg.Requested(FEATURE)).model();
-        PullRequestDetails details = StubGitHub.of().pullRequests().details(42).get();
+        PullRequestDetails details =
+                StubGitHub.of().pullRequests().details(new PrNumber(42)).get();
         PullRequestDetails failing = new PullRequestDetails(
-                42,
+                new PrNumber(42),
                 details.title(),
                 details.author(),
                 details.status().withDraft(true),
@@ -1012,17 +1015,18 @@ class PullRequestUpdateTest {
                         new PullRequestDetails.Check("build", Checks.PASSING),
                         new PullRequestDetails.Check("test", Checks.FAILING)));
 
-        Model loaded = Update.update(shown, new PullRequestMsg.DetailsLoaded(42, lastRead(shown), failing))
+        Model loaded = Update.update(
+                        shown, new PullRequestMsg.DetailsLoaded(new PrNumber(42), lastRead(shown), failing))
                 .model();
         // Also when the dialog was closed meanwhile.
         Model closed = Update.update(
                         Update.update(shown, new PopupMsg.Dismissed(PullRequestPopup.class))
                                 .model(),
-                        new PullRequestMsg.DetailsLoaded(42, lastRead(shown), failing))
+                        new PullRequestMsg.DetailsLoaded(new PrNumber(42), lastRead(shown), failing))
                 .model();
 
         PullRequest now = new PullRequest(
-                42,
+                new PrNumber(42),
                 new GhBranch("feature"),
                 Option.of(new GhBranch("main")),
                 true,
@@ -1038,13 +1042,14 @@ class PullRequestUpdateTest {
     void aPullRequestTheDetailsShowMergedIsNoLongerOnTheBranch() {
         Model shown =
                 Update.update(withPr(), new PullRequestMsg.Requested(FEATURE)).model();
-        PullRequestDetails details = StubGitHub.of().pullRequests().details(42).get();
+        PullRequestDetails details =
+                StubGitHub.of().pullRequests().details(new PrNumber(42)).get();
         PullRequestDetails merged = details.withStatus(new Status(
                 PullRequestDetails.State.MERGED,
                 details.status().draft(),
                 details.status().mergeable()));
 
-        Model loaded = Update.update(shown, new PullRequestMsg.DetailsLoaded(42, lastRead(shown), merged))
+        Model loaded = Update.update(shown, new PullRequestMsg.DetailsLoaded(new PrNumber(42), lastRead(shown), merged))
                 .model();
 
         assertEquals(Option.none(), loaded.gitHub().pullRequest(PUSHED));
@@ -1056,7 +1061,8 @@ class PullRequestUpdateTest {
                 .model();
         var failure = refused("gh: not logged in");
 
-        Model failed = Update.update(shown, new PullRequestMsg.DetailsFailed(42, lastRead(shown), failure))
+        Model failed = Update.update(
+                        shown, new PullRequestMsg.DetailsFailed(new PrNumber(42), lastRead(shown), failure))
                 .model();
 
         assertEquals(
@@ -1070,16 +1076,18 @@ class PullRequestUpdateTest {
     void detailsReadAfterThePopupClosedOrForAnotherPullRequestAreDropped() {
         Model shown = Update.update(withPr(), new PullRequestMsg.Requested(new BranchName("feature")))
                 .model();
-        PullRequestDetails details = StubGitHub.of().pullRequests().details(7).get();
+        PullRequestDetails details =
+                StubGitHub.of().pullRequests().details(new PrNumber(7)).get();
 
-        Model other = Update.update(shown, new PullRequestMsg.DetailsLoaded(7, lastRead(shown), details))
+        Model other = Update.update(shown, new PullRequestMsg.DetailsLoaded(new PrNumber(7), lastRead(shown), details))
                 .model();
         assertEquals(shown.popup(), other.popup());
         assertEquals(shown.gitHub().pullRequests(), other.gitHub().pullRequests());
         Model closed = Update.update(shown, new PopupMsg.Dismissed(PullRequestPopup.class))
                 .model();
         assertEquals(Option.none(), closed.popup());
-        Model late = Update.update(closed, new PullRequestMsg.DetailsLoaded(42, lastRead(closed), details))
+        Model late = Update.update(
+                        closed, new PullRequestMsg.DetailsLoaded(new PrNumber(42), lastRead(closed), details))
                 .model();
         assertEquals(Option.none(), late.popup());
         assertEquals(closed.gitHub().pullRequests(), late.gitHub().pullRequests());
@@ -1102,7 +1110,7 @@ class PullRequestUpdateTest {
                 Update.update(shown.withNow(shown.now().plusSeconds(54)), new PullRequestMsg.Tick())
                         .cmds());
         Next again = Update.update(aMinuteOn(shown), new PullRequestMsg.Tick());
-        assertEquals(List.of(new LoadPullRequestDetails(42, lastRead(again.model()))), again.cmds());
+        assertEquals(List.of(new LoadPullRequestDetails(new PrNumber(42), lastRead(again.model()))), again.cmds());
         assertEquals(
                 Reading.BY_ITSELF,
                 again.model().popup(PullRequestPopup.class).get().reading());
@@ -1136,16 +1144,17 @@ class PullRequestUpdateTest {
 
         Next drafting = Update.update(quiet, new PullRequestMsg.DraftChosen());
         SetDraft cmd = (SetDraft) drafting.cmds().head();
-        assertEquals(new SetDraft(FEATURE, 42, true), cmd);
+        assertEquals(new SetDraft(FEATURE, new PrNumber(42), true), cmd);
 
         // The quiet read started before the change, and comes back after it, with how it was before; the pull
         // requests read again after the change list it as a draft.
         Model drafted = Update.update(
                         Update.update(drafting.model(), cmd.run(env())).model(),
-                        new PullRequestsMsg.Loaded(List.of(
-                                new PullRequest(42, new GhBranch("feature"), true, Checks.PASSING, Review.APPROVED))))
+                        new PullRequestsMsg.Loaded(List.of(new PullRequest(
+                                new PrNumber(42), new GhBranch("feature"), true, Checks.PASSING, Review.APPROVED))))
                 .model();
-        Model dropped = Update.update(drafted, new PullRequestMsg.DetailsLoaded(42, lastRead(drafted), before))
+        Model dropped = Update.update(
+                        drafted, new PullRequestMsg.DetailsLoaded(new PrNumber(42), lastRead(drafted), before))
                 .model();
         PullRequestPopup popup = dropped.popup(PullRequestPopup.class).get();
         assertEquals(Option.of(true), popup.draft());
@@ -1163,7 +1172,8 @@ class PullRequestUpdateTest {
 
         // The quiet read comes back while the change still runs: how it was then, which is taken.
         Model read = Update.update(
-                        drafting.model(), new PullRequestMsg.DetailsLoaded(42, lastRead(drafting.model()), before))
+                        drafting.model(),
+                        new PullRequestMsg.DetailsLoaded(new PrNumber(42), lastRead(drafting.model()), before))
                 .model();
         assertEquals(Reading.NOT, read.popup(PullRequestPopup.class).get().reading());
         assertEquals(Option.of(false), read.popup(PullRequestPopup.class).get().draft());
@@ -1184,7 +1194,8 @@ class PullRequestUpdateTest {
                 .model();
 
         Model failed = Update.update(
-                        drafted, new PullRequestMsg.DetailsFailed(42, lastRead(drafted), refused("gh: offline")))
+                        drafted,
+                        new PullRequestMsg.DetailsFailed(new PrNumber(42), lastRead(drafted), refused("gh: offline")))
                 .model();
 
         PullRequestPopup popup = failed.popup(PullRequestPopup.class).get();
@@ -1192,7 +1203,8 @@ class PullRequestUpdateTest {
         assertEquals(Option.of(true), popup.draft());
         assertEquals(Reading.NOT, popup.reading());
         assertEquals(
-                List.of(new LoadPullRequestDetails(42, failed.gitHub().nextRead())),
+                List.of(new LoadPullRequestDetails(
+                        new PrNumber(42), failed.gitHub().nextRead())),
                 Update.update(aMinuteOn(failed), new PullRequestMsg.Tick()).cmds());
     }
 
@@ -1207,7 +1219,10 @@ class PullRequestUpdateTest {
 
         Next asked = Update.update(drafted, new PullRequestMsg.RefreshChosen());
 
-        assertEquals(List.of(new LoadPullRequestDetails(42, drafted.gitHub().nextRead())), asked.cmds());
+        assertEquals(
+                List.of(new LoadPullRequestDetails(
+                        new PrNumber(42), drafted.gitHub().nextRead())),
+                asked.cmds());
         PullRequestPopup popup = asked.model().popup(PullRequestPopup.class).get();
         assertEquals(Reading.ASKED, popup.reading());
         assertEquals(drafted.gitHub().nextRead(), popup.read());
@@ -1227,16 +1242,17 @@ class PullRequestUpdateTest {
         Model running = Update.update(
                         shown,
                         new PullRequestMsg.DetailsLoaded(
-                                42,
+                                new PrNumber(42),
                                 lastRead(shown),
                                 withARunningCheck(StubGitHub.of()
                                         .pullRequests()
-                                        .details(42)
+                                        .details(new PrNumber(42))
                                         .get())))
                 .model();
 
         assertEquals(
-                List.of(new LoadPullRequestDetails(42, running.gitHub().nextRead())),
+                List.of(new LoadPullRequestDetails(
+                        new PrNumber(42), running.gitHub().nextRead())),
                 Update.update(running.withNow(running.now().plusSeconds(10)), new PullRequestMsg.Tick())
                         .cmds());
     }
@@ -1248,17 +1264,18 @@ class PullRequestUpdateTest {
         Model running = Update.update(
                         shown,
                         new PullRequestMsg.DetailsLoaded(
-                                42,
+                                new PrNumber(42),
                                 lastRead(shown),
                                 withARunningCheck(StubGitHub.of()
                                         .pullRequests()
-                                        .details(42)
+                                        .details(new PrNumber(42))
                                         .get())))
                 .model();
         Model reading = Update.update(running.withNow(running.now().plusSeconds(10)), new PullRequestMsg.Tick())
                 .model();
         Model failed = Update.update(
-                        reading, new PullRequestMsg.DetailsFailed(42, lastRead(reading), refused("gh: offline")))
+                        reading,
+                        new PullRequestMsg.DetailsFailed(new PrNumber(42), lastRead(reading), refused("gh: offline")))
                 .model();
 
         assertEquals(
@@ -1266,7 +1283,8 @@ class PullRequestUpdateTest {
                 Update.update(failed.withNow(failed.now().plusSeconds(10)), new PullRequestMsg.Tick())
                         .cmds());
         assertEquals(
-                List.of(new LoadPullRequestDetails(42, failed.gitHub().nextRead())),
+                List.of(new LoadPullRequestDetails(
+                        new PrNumber(42), failed.gitHub().nextRead())),
                 Update.update(aMinuteOn(failed), new PullRequestMsg.Tick()).cmds());
     }
 
@@ -1285,11 +1303,12 @@ class PullRequestUpdateTest {
         // The pull requests read again after the change list it as a draft.
         Model listed = Update.update(
                         closed,
-                        new PullRequestsMsg.Loaded(List.of(
-                                new PullRequest(42, new GhBranch("feature"), true, Checks.PASSING, Review.APPROVED))))
+                        new PullRequestsMsg.Loaded(List.of(new PullRequest(
+                                new PrNumber(42), new GhBranch("feature"), true, Checks.PASSING, Review.APPROVED))))
                 .model();
 
-        Model dropped = Update.update(listed, new PullRequestMsg.DetailsLoaded(42, lastRead(listed), before))
+        Model dropped = Update.update(
+                        listed, new PullRequestMsg.DetailsLoaded(new PrNumber(42), lastRead(listed), before))
                 .model();
 
         assertEquals(listed.gitHub().pullRequests(), dropped.gitHub().pullRequests());
@@ -1300,7 +1319,8 @@ class PullRequestUpdateTest {
         Model quiet = Update.update(aMinuteOn(showingDetails()), new PullRequestMsg.Tick())
                 .model();
         long older = lastRead(quiet);
-        PullRequestDetails details = StubGitHub.of().pullRequests().details(42).get();
+        PullRequestDetails details =
+                StubGitHub.of().pullRequests().details(new PrNumber(42)).get();
         Model reopened = Update.update(
                         Update.update(quiet, new PopupMsg.Dismissed(PullRequestPopup.class))
                                 .model(),
@@ -1309,16 +1329,18 @@ class PullRequestUpdateTest {
         PullRequestPopup loading = reopened.popup(PullRequestPopup.class).get();
 
         // The older read is still taken, as nothing changed since, but the dialog waits for its own.
-        Model failed = Update.update(reopened, new PullRequestMsg.DetailsFailed(42, older, refused("gh: offline")))
+        Model failed = Update.update(
+                        reopened, new PullRequestMsg.DetailsFailed(new PrNumber(42), older, refused("gh: offline")))
                 .model();
         assertEquals(Option.of(loading), failed.popup(PullRequestPopup.class));
 
-        Model read = Update.update(reopened, new PullRequestMsg.DetailsLoaded(42, older, details.withDraft(true)))
+        Model read = Update.update(
+                        reopened, new PullRequestMsg.DetailsLoaded(new PrNumber(42), older, details.withDraft(true)))
                 .model();
         assertEquals(Option.of(loading), read.popup(PullRequestPopup.class));
         assertEquals(
                 Option.of(new PullRequest(
-                        42,
+                        new PrNumber(42),
                         new GhBranch("feature"),
                         Option.of(new GhBranch("main")),
                         true,
@@ -1348,9 +1370,10 @@ class PullRequestUpdateTest {
 
         // Its own read comes back first, then the one that started before the change.
         Model own = Update.update(
-                        reopened, new PullRequestMsg.DetailsLoaded(42, lastRead(reopened), before.withDraft(true)))
+                        reopened,
+                        new PullRequestMsg.DetailsLoaded(new PrNumber(42), lastRead(reopened), before.withDraft(true)))
                 .model();
-        Model late = Update.update(own, new PullRequestMsg.DetailsLoaded(42, stale, before))
+        Model late = Update.update(own, new PullRequestMsg.DetailsLoaded(new PrNumber(42), stale, before))
                 .model();
 
         PullRequestPopup popup = late.popup(PullRequestPopup.class).get();
@@ -1365,7 +1388,7 @@ class PullRequestUpdateTest {
     private static Model showingDetails() {
         Model shown =
                 Update.update(withPr(), new PullRequestMsg.Requested(FEATURE)).model();
-        return Update.update(shown, new LoadPullRequestDetails(42, lastRead(shown)).run(env()))
+        return Update.update(shown, new LoadPullRequestDetails(new PrNumber(42), lastRead(shown)).run(env()))
                 .model();
     }
 
@@ -1379,7 +1402,8 @@ class PullRequestUpdateTest {
     private static Model showingCommits(PullRequestDetails.State state, boolean known) {
         Model shown =
                 Update.update(withPr(), new PullRequestMsg.Requested(FEATURE)).model();
-        PullRequestDetails read = StubGitHub.of().pullRequests().details(42).get();
+        PullRequestDetails read =
+                StubGitHub.of().pullRequests().details(new PrNumber(42)).get();
         PullRequestDetails details = read.withRepository("owner/repo")
                 .withUrl("https://github.com/owner/repo")
                 .withStatus(read.status().withState(state))
@@ -1389,7 +1413,7 @@ class PullRequestUpdateTest {
                         GhCommit.parse(known ? HEAD_OID : ""),
                         Option.none(),
                         GhCommit.parse(BASE_OID)));
-        return Update.update(shown, new PullRequestMsg.DetailsLoaded(42, lastRead(shown), details))
+        return Update.update(shown, new PullRequestMsg.DetailsLoaded(new PrNumber(42), lastRead(shown), details))
                 .model();
     }
 
@@ -1412,8 +1436,8 @@ class PullRequestUpdateTest {
             assertEquals(
                     List.of(
                             new LoadCommitFiles(of),
-                            new CommitFilesCmd.LoadReviewRemarks(42, HashSet.empty(), 0),
-                            new CommitFilesCmd.LoadCollapsed("owner/repo", 42)),
+                            new CommitFilesCmd.LoadReviewRemarks(new PrNumber(42), HashSet.empty(), 0),
+                            new CommitFilesCmd.LoadCollapsed("owner/repo", new PrNumber(42))),
                     opened.cmds());
             assertTrue(opened.cmds().head().background());
         }
@@ -1435,7 +1459,8 @@ class PullRequestUpdateTest {
      * The details of pull request 42 as read, of {@code owner/repo} on github.com, at known commits.
      */
     private static PullRequestDetails readAtCommits(PullRequestDetails.State state) {
-        PullRequestDetails read = StubGitHub.of().pullRequests().details(42).get();
+        PullRequestDetails read =
+                StubGitHub.of().pullRequests().details(new PrNumber(42)).get();
         return read.withRepository("owner/repo")
                 .withUrl("https://github.com/owner/repo")
                 .withStatus(read.status().withState(state))
@@ -1455,12 +1480,13 @@ class PullRequestUpdateTest {
         PullRequestPopup loading =
                 requested.model().popup(PullRequestPopup.class).get();
         assertTrue(loading.filesWanted());
-        assertEquals(List.of(new LoadPullRequestDetails(42, lastRead(requested.model()))), requested.cmds());
+        assertEquals(
+                List.of(new LoadPullRequestDetails(new PrNumber(42), lastRead(requested.model()))), requested.cmds());
 
         Next opened = Update.update(
                 requested.model(),
                 new PullRequestMsg.DetailsLoaded(
-                        42, lastRead(requested.model()), readAtCommits(PullRequestDetails.State.OPEN)));
+                        new PrNumber(42), lastRead(requested.model()), readAtCommits(PullRequestDetails.State.OPEN)));
 
         Changes of = new Changes.OfPullRequest(
                 new PullRequestCommits(42, "owner/repo", "github.com", new Sha(BASE_OID), new Sha(HEAD_OID)));
@@ -1471,7 +1497,8 @@ class PullRequestUpdateTest {
                 opened.model().repoView().commitFiles());
         assertTrue(opened.cmds()
                 .containsAll(List.of(
-                        new LoadCommitFiles(of), new CommitFilesCmd.LoadReviewRemarks(42, HashSet.empty(), 0))));
+                        new LoadCommitFiles(of),
+                        new CommitFilesCmd.LoadReviewRemarks(new PrNumber(42), HashSet.empty(), 0))));
     }
 
     @Test
@@ -1481,10 +1508,11 @@ class PullRequestUpdateTest {
         Model merged = Update.update(
                         requested,
                         new PullRequestMsg.DetailsLoaded(
-                                42, lastRead(requested), readAtCommits(PullRequestDetails.State.MERGED)))
+                                new PrNumber(42), lastRead(requested), readAtCommits(PullRequestDetails.State.MERGED)))
                 .model();
         Model failed = Update.update(
-                        requested, new PullRequestMsg.DetailsFailed(42, lastRead(requested), refused("gh: offline")))
+                        requested,
+                        new PullRequestMsg.DetailsFailed(new PrNumber(42), lastRead(requested), refused("gh: offline")))
                 .model();
 
         for (Model shown : List.of(merged, failed)) {
@@ -1498,7 +1526,7 @@ class PullRequestUpdateTest {
     @Test
     void shiftFOnABranchWhosePullRequestIsListedWithItsCommitsShowsItsFilesAtOnce() {
         PullRequest listed = new PullRequest(
-                42,
+                new PrNumber(42),
                 new GhBranch("feature"),
                 false,
                 Checks.PASSING,
@@ -1523,8 +1551,8 @@ class PullRequestUpdateTest {
         assertEquals(
                 List.of(
                         new LoadCommitFiles(of),
-                        new CommitFilesCmd.LoadReviewRemarks(42, HashSet.empty(), 0),
-                        new CommitFilesCmd.LoadCollapsed("owner/repo", 42)),
+                        new CommitFilesCmd.LoadReviewRemarks(new PrNumber(42), HashSet.empty(), 0),
+                        new CommitFilesCmd.LoadCollapsed("owner/repo", new PrNumber(42))),
                 opened.cmds());
     }
 
@@ -1575,7 +1603,8 @@ class PullRequestUpdateTest {
      */
     private static Next readAt(Model model, long read) {
         return Update.update(
-                model, new PullRequestMsg.DetailsLoaded(42, read, readAtCommits(PullRequestDetails.State.OPEN)));
+                model,
+                new PullRequestMsg.DetailsLoaded(new PrNumber(42), read, readAtCommits(PullRequestDetails.State.OPEN)));
     }
 
     @Test
@@ -1598,7 +1627,8 @@ class PullRequestUpdateTest {
                         model(),
                         new PullRequestsMsg.Loaded(List.of(
                                 FEATURE_PR,
-                                new PullRequest(43, new GhBranch("ahead"), false, Checks.PASSING, Review.NONE))))
+                                new PullRequest(
+                                        new PrNumber(43), new GhBranch("ahead"), false, Checks.PASSING, Review.NONE))))
                 .model();
         Model requested =
                 Update.update(both, new PullRequestMsg.FilesRequested(FEATURE)).model();
@@ -1610,7 +1640,7 @@ class PullRequestUpdateTest {
 
         assertEquals(Option.none(), read.model().repoView().commitFiles());
         PullRequestPopup shown = read.model().popup(PullRequestPopup.class).get();
-        assertEquals(43, shown.number());
+        assertEquals(new PrNumber(43), shown.number());
         assertTrue(shown.filesWanted());
     }
 
@@ -1682,7 +1712,8 @@ class PullRequestUpdateTest {
                 refreshing.model().popup(PullRequestPopup.class).get();
         assertEquals(before.details(), popup.details());
         assertTrue(popup.refreshing());
-        assertEquals(List.of(new LoadPullRequestDetails(42, lastRead(refreshing.model()))), refreshing.cmds());
+        assertEquals(
+                List.of(new LoadPullRequestDetails(new PrNumber(42), lastRead(refreshing.model()))), refreshing.cmds());
         // Once it is being read again, it is not read a second time.
         assertEquals(
                 List.empty(),
@@ -1697,7 +1728,8 @@ class PullRequestUpdateTest {
         assertEquals(
                 List.empty(), Update.update(reading, new PullRequestMsg.Tick()).cmds());
         assertEquals(
-                List.of(new LoadPullRequestDetails(42, showingDetails().gitHub().nextRead())),
+                List.of(new LoadPullRequestDetails(
+                        new PrNumber(42), showingDetails().gitHub().nextRead())),
                 Update.update(aMinuteOn(showingDetails()), new PullRequestMsg.Tick())
                         .cmds());
         assertEquals(
@@ -1711,7 +1743,7 @@ class PullRequestUpdateTest {
         var failure = refused("gh: offline");
 
         PullRequestPopup failed = Update.update(
-                        refreshing, new PullRequestMsg.DetailsFailed(42, lastRead(refreshing), failure))
+                        refreshing, new PullRequestMsg.DetailsFailed(new PrNumber(42), lastRead(refreshing), failure))
                 .model()
                 .popup(PullRequestPopup.class)
                 .get();
@@ -1721,11 +1753,15 @@ class PullRequestUpdateTest {
         assertEquals(Option.of(failure), failed.refreshFailed());
 
         Model again = Update.update(
-                        Update.update(refreshing, new PullRequestMsg.DetailsFailed(42, lastRead(refreshing), failure))
+                        Update.update(
+                                        refreshing,
+                                        new PullRequestMsg.DetailsFailed(
+                                                new PrNumber(42), lastRead(refreshing), failure))
                                 .model(),
                         new PullRequestMsg.RefreshChosen())
                 .model();
-        PullRequestPopup recovered = Update.update(again, new LoadPullRequestDetails(42, lastRead(again)).run(env()))
+        PullRequestPopup recovered = Update.update(
+                        again, new LoadPullRequestDetails(new PrNumber(42), lastRead(again)).run(env()))
                 .model()
                 .popup(PullRequestPopup.class)
                 .get();
@@ -1755,10 +1791,11 @@ class PullRequestUpdateTest {
                 List.empty(),
                 Update.update(refreshing, new PullRequestMsg.DraftChosen()).cmds());
 
-        Model read = Update.update(refreshing, new LoadPullRequestDetails(42, lastRead(refreshing)).run(env()))
+        Model read = Update.update(
+                        refreshing, new LoadPullRequestDetails(new PrNumber(42), lastRead(refreshing)).run(env()))
                 .model();
         assertEquals(
-                List.of(new SetDraft(FEATURE, 42, true)),
+                List.of(new SetDraft(FEATURE, new PrNumber(42), true)),
                 Update.update(read, new PullRequestMsg.DraftChosen()).cmds());
     }
 
@@ -1778,7 +1815,8 @@ class PullRequestUpdateTest {
 
         Model done = TestModels.done(drafting.model(), cmd, cmd.run(env())).model();
         assertEquals(
-                List.of(new LoadPullRequestDetails(42, done.gitHub().nextRead())),
+                List.of(new LoadPullRequestDetails(
+                        new PrNumber(42), done.gitHub().nextRead())),
                 Update.update(aMinuteOn(done), new PullRequestMsg.Tick()).cmds());
     }
 
@@ -1789,10 +1827,12 @@ class PullRequestUpdateTest {
         Model comments = Update.update(
                         refreshing, new net.vanfleteren.jazygit.feature.github.comments.CommentsMsg.Requested())
                 .model();
-        PullRequestDetails details = StubGitHub.of().pullRequests().details(42).get();
+        PullRequestDetails details =
+                StubGitHub.of().pullRequests().details(new PrNumber(42)).get();
 
         Model read = Update.update(
-                        comments, new PullRequestMsg.DetailsLoaded(42, lastRead(comments), details.withDraft(true)))
+                        comments,
+                        new PullRequestMsg.DetailsLoaded(new PrNumber(42), lastRead(comments), details.withDraft(true)))
                 .model();
 
         PullRequestPopup kept = read.popup(net.vanfleteren.jazygit.feature.github.comments.CommentsPopup.class)
@@ -1807,15 +1847,17 @@ class PullRequestUpdateTest {
         Model shown =
                 Update.update(withPr(), new PullRequestMsg.Requested(FEATURE)).model();
         Model failed = Update.update(
-                        shown, new PullRequestMsg.DetailsFailed(42, lastRead(shown), refused("gh: offline")))
+                        shown,
+                        new PullRequestMsg.DetailsFailed(new PrNumber(42), lastRead(shown), refused("gh: offline")))
                 .model();
 
         Next again = Update.update(aMinuteOn(failed), new PullRequestMsg.Tick());
-        assertEquals(List.of(new LoadPullRequestDetails(42, lastRead(again.model()))), again.cmds());
+        assertEquals(List.of(new LoadPullRequestDetails(new PrNumber(42), lastRead(again.model()))), again.cmds());
 
         var second = refused("gh: not logged in");
         PullRequestPopup popup = Update.update(
-                        again.model(), new PullRequestMsg.DetailsFailed(42, lastRead(again.model()), second))
+                        again.model(),
+                        new PullRequestMsg.DetailsFailed(new PrNumber(42), lastRead(again.model()), second))
                 .model()
                 .popup(PullRequestPopup.class)
                 .get();
@@ -1840,21 +1882,25 @@ class PullRequestUpdateTest {
         Model read = Update.update(
                         shown,
                         new PullRequestMsg.DetailsLoaded(
-                                42,
+                                new PrNumber(42),
                                 lastRead(shown),
-                                StubGitHub.of().pullRequests().details(42).get()))
+                                StubGitHub.of()
+                                        .pullRequests()
+                                        .details(new PrNumber(42))
+                                        .get()))
                 .model();
         Next merging = TestModels.stepped(read, new PullRequestMsg.MergeChosen(MergeMethod.SQUASH));
         Next closing = TestModels.stepped(read, new PullRequestMsg.CloseChosen());
 
         assertEquals(
-                List.of(new MergePullRequest(new BranchName("feature"), 42, Option.none(), MergeMethod.SQUASH)),
+                List.of(new MergePullRequest(
+                        new BranchName("feature"), new PrNumber(42), Option.none(), MergeMethod.SQUASH)),
                 merging.cmds());
         assertEquals(Option.none(), merging.model().popup());
         assertEquals(
                 Option.of(PullRequestCmd.MERGE_PR),
                 merging.model().jobs().busy().get(new BranchRef.Local(new BranchName("feature"))));
-        assertEquals(List.of(new ClosePullRequest(new BranchName("feature"), 42)), closing.cmds());
+        assertEquals(List.of(new ClosePullRequest(new BranchName("feature"), new PrNumber(42))), closing.cmds());
         assertEquals(
                 Option.of(PullRequestCmd.CLOSE_PR),
                 closing.model().jobs().busy().get(new BranchRef.Local(new BranchName("feature"))));
@@ -1871,13 +1917,16 @@ class PullRequestUpdateTest {
         Model read = Update.update(
                         shown,
                         new PullRequestMsg.DetailsLoaded(
-                                42,
+                                new PrNumber(42),
                                 lastRead(shown),
-                                StubGitHub.of().pullRequests().details(42).get()))
+                                StubGitHub.of()
+                                        .pullRequests()
+                                        .details(new PrNumber(42))
+                                        .get()))
                 .model();
         Next drafting = TestModels.stepped(read, new PullRequestMsg.DraftChosen());
 
-        assertEquals(List.of(new SetDraft(FEATURE, 42, true)), drafting.cmds());
+        assertEquals(List.of(new SetDraft(FEATURE, new PrNumber(42), true)), drafting.cmds());
         assertTrue(drafting.model().popup(PullRequestPopup.class).isDefined());
         assertEquals(
                 Option.of(PullRequestCmd.DRAFT_PR),
@@ -1895,9 +1944,12 @@ class PullRequestUpdateTest {
                         Update.update(withPr(), new PullRequestMsg.Requested(FEATURE))
                                 .model(),
                         new PullRequestMsg.DetailsLoaded(
-                                42,
+                                new PrNumber(42),
                                 0,
-                                StubGitHub.of().pullRequests().details(42).get()))
+                                StubGitHub.of()
+                                        .pullRequests()
+                                        .details(new PrNumber(42))
+                                        .get()))
                 .model();
         Next drafting = Update.update(read, new PullRequestMsg.DraftChosen());
         SetDraft cmd = (SetDraft) drafting.cmds().head();
@@ -1916,7 +1968,7 @@ class PullRequestUpdateTest {
 
     @Test
     void markingADraftReadyRunsGhPrReady() {
-        SetDraft cmd = new SetDraft(FEATURE, 42, false);
+        SetDraft cmd = new SetDraft(FEATURE, new PrNumber(42), false);
         Model marking = TestModels.running(withPr(), cmd);
 
         Next done = TestModels.done(marking, cmd, cmd.run(env()));
@@ -1933,7 +1985,7 @@ class PullRequestUpdateTest {
         return StubGitHub.of().withPullRequests(new StubPullRequests() {
             @Override
             public Either<GhFailure, PullRequests.Merging> merge(
-                    int number, Option<GhCommit> head, MergeMethod method) {
+                    PrNumber number, Option<GhCommit> head, MergeMethod method) {
                 return Either.right(new PullRequests.Merging(new MergeStatus.Merged(), List.empty()));
             }
         });
@@ -1943,14 +1995,15 @@ class PullRequestUpdateTest {
      * {@code model} once GitHub was asked to merge pull request 42 of feature, and said it is doing so.
      */
     private static Model asked(Model model) {
-        MergePullRequest cmd = new MergePullRequest(FEATURE, 42, Option.of(new GhCommit("abc123")), MergeMethod.MERGE);
+        MergePullRequest cmd =
+                new MergePullRequest(FEATURE, new PrNumber(42), Option.of(new GhCommit("abc123")), MergeMethod.MERGE);
         return TestModels.done(TestModels.running(model, cmd), cmd, cmd.run(env()))
                 .model();
     }
 
     @Test
     void aMergedPullRequestIsReadAgainOnceAnEarlierReadIsDone() {
-        MergePullRequest cmd = new MergePullRequest(FEATURE, 42, Option.none(), MergeMethod.MERGE);
+        MergePullRequest cmd = new MergePullRequest(FEATURE, new PrNumber(42), Option.none(), MergeMethod.MERGE);
         // The running read started before the merge, and would list the pull request as still open.
         Model merging = TestModels.running(withPr(), cmd, new LoadRepositoryPullRequests());
 
@@ -1968,13 +2021,13 @@ class PullRequestUpdateTest {
 
     @Test
     void aPullRequestGitHubMergedAtOnceShowsMergedUntilThePullRequestsAreReadAgain() {
-        MergePullRequest cmd = new MergePullRequest(FEATURE, 42, Option.none(), MergeMethod.MERGE);
+        MergePullRequest cmd = new MergePullRequest(FEATURE, new PrNumber(42), Option.none(), MergeMethod.MERGE);
         Model merging = TestModels.running(withPr(), cmd);
 
         Next done = TestModels.done(merging, cmd, cmd.run(new Env(StubGit.of(), mergingAtOnce())));
 
         assertEquals(Option.of(FEATURE_PR), done.model().gitHub().pullRequests().flatMap(open -> open.get(FEATURE)));
-        assertEquals(Option.of(new MergeStatus.Merged()), done.model().gitHub().merge(42));
+        assertEquals(Option.of(new MergeStatus.Merged()), done.model().gitHub().merge(new PrNumber(42)));
         assertEquals(Option.none(), done.model().jobs().busy().get(new BranchRef.Local(FEATURE)));
         assertTrue(
                 done.cmds().contains(new LoadRepositoryPullRequests()),
@@ -1989,8 +2042,8 @@ class PullRequestUpdateTest {
 
         assertEquals(Option.none(), merging.jobs().busy().get(new BranchRef.Local(FEATURE)));
         assertEquals(
-                Option.of(new MergeStatus.Pending("merge-42")), merging.gitHub().merge(42));
-        assertTrue(merging.gitHub().merging(42));
+                Option.of(new MergeStatus.Pending("merge-42")), merging.gitHub().merge(new PrNumber(42)));
+        assertTrue(merging.gitHub().merging(new PrNumber(42)));
         assertEquals(
                 "gh api --method PUT 'repos/{owner}/{repo}/pulls/42/merge-async' -f merge_method=merge -f sha=abc123",
                 merging.outcome().commandLog().last().commands().last().line());
@@ -2002,9 +2055,12 @@ class PullRequestUpdateTest {
                         Update.update(asked(withPr()), new PullRequestMsg.Requested(FEATURE))
                                 .model(),
                         new PullRequestMsg.DetailsLoaded(
-                                42,
+                                new PrNumber(42),
                                 0,
-                                StubGitHub.of().pullRequests().details(42).get()))
+                                StubGitHub.of()
+                                        .pullRequests()
+                                        .details(new PrNumber(42))
+                                        .get()))
                 .model();
 
         assertEquals(
@@ -2017,16 +2073,17 @@ class PullRequestUpdateTest {
     void eachTickAsksGitHubOnceHowAPendingMergeIsDoing() {
         Next ticked = Update.update(asked(withPr()), new PullRequestMsg.MergeTick());
 
-        assertEquals(List.of(new CheckMerge(42, "merge-42")), ticked.cmds());
+        assertEquals(List.of(new CheckMerge(new PrNumber(42), "merge-42")), ticked.cmds());
         // While it is asked, the next tick does not ask again.
         assertEquals(
                 List.empty(),
                 Update.update(ticked.model(), new PullRequestMsg.MergeTick()).cmds());
 
         Next stillPending = Update.update(
-                ticked.model(), new PullRequestMsg.MergeChecked(42, "merge-42", new MergeStatus.Pending("merge-42")));
+                ticked.model(),
+                new PullRequestMsg.MergeChecked(new PrNumber(42), "merge-42", new MergeStatus.Pending("merge-42")));
         assertEquals(
-                List.of(new CheckMerge(42, "merge-42")),
+                List.of(new CheckMerge(new PrNumber(42), "merge-42")),
                 Update.update(stillPending.model(), new PullRequestMsg.MergeTick())
                         .cmds());
     }
@@ -2047,11 +2104,13 @@ class PullRequestUpdateTest {
                 Update.update(asked(withPr()), new PullRequestMsg.MergeTick()).model();
 
         Next failed = Update.update(
-                checking, new PullRequestMsg.MergeCheckFailed(42, "merge-42", refused("gh: Bad Gateway (HTTP 502)")));
+                checking,
+                new PullRequestMsg.MergeCheckFailed(
+                        new PrNumber(42), "merge-42", refused("gh: Bad Gateway (HTTP 502)")));
 
         assertEquals(Option.none(), failed.model().popup(ErrorPopup.class));
         assertEquals(
-                List.of(new CheckMerge(42, "merge-42")),
+                List.of(new CheckMerge(new PrNumber(42), "merge-42")),
                 Update.update(failed.model(), new PullRequestMsg.MergeTick()).cmds());
     }
 
@@ -2060,11 +2119,11 @@ class PullRequestUpdateTest {
         Model checking =
                 Update.update(asked(withPr()), new PullRequestMsg.MergeTick()).model();
 
-        Next merged =
-                Update.update(checking, new PullRequestMsg.MergeChecked(42, "merge-42", new MergeStatus.Merged()));
+        Next merged = Update.update(
+                checking, new PullRequestMsg.MergeChecked(new PrNumber(42), "merge-42", new MergeStatus.Merged()));
 
         assertEquals(
-                Option.of(new MergeStatus.Merged()), merged.model().gitHub().merge(42));
+                Option.of(new MergeStatus.Merged()), merged.model().gitHub().merge(new PrNumber(42)));
         assertTrue(
                 merged.cmds().contains(new LoadRepositoryPullRequests()),
                 merged.cmds().toString());
@@ -2084,7 +2143,9 @@ class PullRequestUpdateTest {
         Model failed = Update.update(
                         checking,
                         new PullRequestMsg.MergeChecked(
-                                42, "merge-42", new MergeStatus.Failed("Required status check \"build\" is failing")))
+                                new PrNumber(42),
+                                "merge-42",
+                                new MergeStatus.Failed("Required status check \"build\" is failing")))
                 .model();
 
         assertEquals(
@@ -2095,25 +2156,30 @@ class PullRequestUpdateTest {
                 Update.update(failed, new PullRequestsMsg.Loaded(List.of(FEATURE_PR)))
                         .model()
                         .gitHub()
-                        .merge(42));
-        assertFalse(failed.gitHub().merging(42));
+                        .merge(new PrNumber(42)));
+        assertFalse(failed.gitHub().merging(new PrNumber(42)));
         assertEquals(
                 Option.of(new MergeStatus.Pending("merge-42")),
-                asked(failed).gitHub().merge(42));
+                asked(failed).gitHub().merge(new PrNumber(42)));
         assertEquals(
                 Option.none(),
                 Update.update(
                                 failed,
                                 new PullRequestsMsg.Loaded(List.of(new PullRequest(
-                                        42, new GhBranch("feature"), false, Checks.FAILING, Review.APPROVED))))
+                                        new PrNumber(42),
+                                        new GhBranch("feature"),
+                                        false,
+                                        Checks.FAILING,
+                                        Review.APPROVED))))
                         .model()
                         .gitHub()
-                        .merge(42));
+                        .merge(new PrNumber(42)));
     }
 
     @Test
     void theDetailsReadAfterAMergeFailedDropTheFailureOnlyOnceThePullRequestChanged() {
-        PullRequestDetails read = StubGitHub.of().pullRequests().details(42).get();
+        PullRequestDetails read =
+                StubGitHub.of().pullRequests().details(new PrNumber(42)).get();
         Model failed = askedFor(showingDetails(), "feature", 42, new MergeStatus.Failed("conflicts"));
         Model reading = Update.update(
                         Update.update(failed, new PopupMsg.Dismissed(PullRequestPopup.class))
@@ -2123,21 +2189,25 @@ class PullRequestUpdateTest {
 
         assertEquals(
                 Option.of(new MergeStatus.Failed("conflicts")),
-                Update.update(reading, new PullRequestMsg.DetailsLoaded(42, lastRead(reading), read))
+                Update.update(reading, new PullRequestMsg.DetailsLoaded(new PrNumber(42), lastRead(reading), read))
                         .model()
                         .gitHub()
-                        .merge(42));
+                        .merge(new PrNumber(42)));
         assertEquals(
                 Option.none(),
-                Update.update(reading, new PullRequestMsg.DetailsLoaded(42, lastRead(reading), withARunningCheck(read)))
+                Update.update(
+                                reading,
+                                new PullRequestMsg.DetailsLoaded(
+                                        new PrNumber(42), lastRead(reading), withARunningCheck(read)))
                         .model()
                         .gitHub()
-                        .merge(42));
+                        .merge(new PrNumber(42)));
     }
 
     @Test
     void aFailedMergeNoLongerShowsOnceThePullRequestChanged() {
-        PullRequest pending = new PullRequest(42, new GhBranch("feature"), false, Checks.PENDING, Review.APPROVED);
+        PullRequest pending =
+                new PullRequest(new PrNumber(42), new GhBranch("feature"), false, Checks.PENDING, Review.APPROVED);
         Model failed = askedFor(
                 Update.update(model(), new PullRequestsMsg.Loaded(List.of(pending)))
                         .model(),
@@ -2150,13 +2220,13 @@ class PullRequestUpdateTest {
                 Update.update(failed, new PullRequestsMsg.Loaded(List.of(pending)))
                         .model()
                         .gitHub()
-                        .merge(42));
+                        .merge(new PrNumber(42)));
         assertEquals(
                 Option.none(),
                 Update.update(failed, new PullRequestsMsg.Loaded(List.of(FEATURE_PR)))
                         .model()
                         .gitHub()
-                        .merge(42));
+                        .merge(new PrNumber(42)));
     }
 
     @Test
@@ -2167,15 +2237,16 @@ class PullRequestUpdateTest {
                 .get()
                 .values()
                 .toList()
-                .map(pr -> pr.number() == 41
-                        ? new PullRequest(41, pr.headBranch(), false, Checks.PENDING, pr.review(), pr.stack())
+                .map(pr -> pr.number().value() == 41
+                        ? new PullRequest(
+                                new PrNumber(41), pr.headBranch(), false, Checks.PENDING, pr.review(), pr.stack())
                         : pr);
 
         Model read =
                 Update.update(failed, new PullRequestsMsg.Loaded(bottomFixed)).model();
 
-        assertEquals(Option.none(), read.gitHub().merge(42));
-        assertEquals(Option.none(), read.gitHub().merge(41));
+        assertEquals(Option.none(), read.gitHub().merge(new PrNumber(42)));
+        assertEquals(Option.none(), read.gitHub().merge(new PrNumber(41)));
     }
 
     @Test
@@ -2184,10 +2255,11 @@ class PullRequestUpdateTest {
                 Update.update(asked(withPr()), new PullRequestMsg.MergeTick()).model();
 
         Model enqueued = Update.update(
-                        checking, new PullRequestMsg.MergeChecked(42, "merge-42", new MergeStatus.Enqueued()))
+                        checking,
+                        new PullRequestMsg.MergeChecked(new PrNumber(42), "merge-42", new MergeStatus.Enqueued()))
                 .model();
 
-        assertEquals(Option.of(new MergeStatus.Enqueued()), enqueued.gitHub().merge(42));
+        assertEquals(Option.of(new MergeStatus.Enqueued()), enqueued.gitHub().merge(new PrNumber(42)));
         assertEquals(
                 Option.of(new Notice.MergeEnqueued(FEATURE)), enqueued.outcome().notice());
     }
@@ -2197,8 +2269,8 @@ class PullRequestUpdateTest {
         Model checking =
                 Update.update(asked(withPr()), new PullRequestMsg.MergeTick()).model();
 
-        Next answered =
-                Update.update(checking, new PullRequestMsg.MergeChecked(42, "earlier", new MergeStatus.Merged()));
+        Next answered = Update.update(
+                checking, new PullRequestMsg.MergeChecked(new PrNumber(42), "earlier", new MergeStatus.Merged()));
 
         assertEquals(checking, answered.model());
     }
@@ -2211,7 +2283,7 @@ class PullRequestUpdateTest {
                 Update.update(merging.withNow(Instant.parse("2026-10-23T10:10:05Z")), new PullRequestMsg.MergeTick());
 
         assertEquals(List.empty(), ticked.cmds());
-        assertEquals(Option.none(), ticked.model().gitHub().merge(42));
+        assertEquals(Option.none(), ticked.model().gitHub().merge(new PrNumber(42)));
         assertEquals(
                 Option.of(new Notice.MergeStillPending(FEATURE)),
                 ticked.model().outcome().notice());
@@ -2222,7 +2294,8 @@ class PullRequestUpdateTest {
      * {@code status}.
      */
     private static Model askedFor(Model model, String branch, int number, MergeStatus status) {
-        MergePullRequest cmd = new MergePullRequest(new BranchName(branch), number, Option.none(), MergeMethod.MERGE);
+        MergePullRequest cmd =
+                new MergePullRequest(new BranchName(branch), new PrNumber(number), Option.none(), MergeMethod.MERGE);
         return Update.update(model, new PullRequestMsg.MergeAsked(cmd, status, List.empty()))
                 .model();
     }
@@ -2233,7 +2306,8 @@ class PullRequestUpdateTest {
      */
     private static PullRequestStack stack(int number, int position, Integer... numbers) {
         List<PullRequestStack.Entry> entries = List.of(numbers)
-                .zipWithIndex((pr, index) -> new PullRequestStack.Entry(index + 1, pr, PullRequestDetails.State.OPEN));
+                .zipWithIndex((pr, index) ->
+                        new PullRequestStack.Entry(index + 1, new PrNumber(pr), PullRequestDetails.State.OPEN));
         return new PullRequestStack(number, position, entries.size(), entries);
     }
 
@@ -2242,9 +2316,19 @@ class PullRequestUpdateTest {
      */
     private static Model stackOfTwo() {
         PullRequest bottom = new PullRequest(
-                41, new GhBranch("base-work"), false, Checks.PASSING, Review.APPROVED, Option.of(stack(7, 1, 41, 42)));
+                new PrNumber(41),
+                new GhBranch("base-work"),
+                false,
+                Checks.PASSING,
+                Review.APPROVED,
+                Option.of(stack(7, 1, 41, 42)));
         PullRequest top = new PullRequest(
-                42, new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED, Option.of(stack(7, 2, 41, 42)));
+                new PrNumber(42),
+                new GhBranch("feature"),
+                false,
+                Checks.PASSING,
+                Review.APPROVED,
+                Option.of(stack(7, 2, 41, 42)));
         return Update.update(model(), new PullRequestsMsg.Loaded(List.of(bottom, top)))
                 .model();
     }
@@ -2256,8 +2340,8 @@ class PullRequestUpdateTest {
         Model merging = askedFor(failedBelow, "feature", 42, new MergeStatus.Pending("merge-42"));
 
         assertEquals(
-                Option.of(new MergeStatus.Pending("merge-42")), merging.gitHub().merge(41));
-        assertTrue(merging.gitHub().merging(41));
+                Option.of(new MergeStatus.Pending("merge-42")), merging.gitHub().merge(new PrNumber(41)));
+        assertTrue(merging.gitHub().merging(new PrNumber(41)));
     }
 
     @Test
@@ -2267,40 +2351,50 @@ class PullRequestUpdateTest {
         Model merging = askedFor(failedAbove, "base-work", 41, new MergeStatus.Pending("merge-41"));
 
         assertEquals(
-                Option.of(new MergeStatus.Pending("merge-41")), merging.gitHub().merge(41));
+                Option.of(new MergeStatus.Pending("merge-41")), merging.gitHub().merge(new PrNumber(41)));
         assertEquals(
-                Option.of(new MergeStatus.Failed("conflicts")), merging.gitHub().merge(42));
+                Option.of(new MergeStatus.Failed("conflicts")), merging.gitHub().merge(new PrNumber(42)));
     }
 
     @Test
     void mergingAStackedPullRequestMergesTheOnesBelowItToo() {
         PullRequest bottom = new PullRequest(
-                41,
+                new PrNumber(41),
                 new GhBranch("base-work"),
                 false,
                 Checks.PASSING,
                 Review.APPROVED,
                 Option.of(stack(7, 1, 41, 42, 43)));
         PullRequest middle = new PullRequest(
-                42,
+                new PrNumber(42),
                 new GhBranch("feature"),
                 false,
                 Checks.PASSING,
                 Review.APPROVED,
                 Option.of(stack(7, 2, 41, 42, 43)));
         PullRequest top = new PullRequest(
-                43, new GhBranch("on-top"), false, Checks.PASSING, Review.APPROVED, Option.of(stack(7, 3, 41, 42, 43)));
+                new PrNumber(43),
+                new GhBranch("on-top"),
+                false,
+                Checks.PASSING,
+                Review.APPROVED,
+                Option.of(stack(7, 3, 41, 42, 43)));
         PullRequest other = new PullRequest(
-                40, new GhBranch("elsewhere"), false, Checks.PASSING, Review.APPROVED, Option.of(stack(8, 1, 40, 44)));
+                new PrNumber(40),
+                new GhBranch("elsewhere"),
+                false,
+                Checks.PASSING,
+                Review.APPROVED,
+                Option.of(stack(8, 1, 40, 44)));
         Model stacked = Update.update(model(), new PullRequestsMsg.Loaded(List.of(bottom, middle, top, other)))
                 .model();
 
         Model merging = asked(stacked);
 
         assertEquals(
-                Option.of(new MergeStatus.Pending("merge-42")), merging.gitHub().merge(41));
-        assertEquals(Option.none(), merging.gitHub().merge(43));
-        assertEquals(Option.none(), merging.gitHub().merge(40));
+                Option.of(new MergeStatus.Pending("merge-42")), merging.gitHub().merge(new PrNumber(41)));
+        assertEquals(Option.none(), merging.gitHub().merge(new PrNumber(43)));
+        assertEquals(Option.none(), merging.gitHub().merge(new PrNumber(40)));
     }
 
     @Test
@@ -2310,9 +2404,12 @@ class PullRequestUpdateTest {
         Model read = Update.update(
                         shown,
                         new PullRequestMsg.DetailsLoaded(
-                                42,
+                                new PrNumber(42),
                                 lastRead(shown),
-                                StubGitHub.of().pullRequests().details(42).get()))
+                                StubGitHub.of()
+                                        .pullRequests()
+                                        .details(new PrNumber(42))
+                                        .get()))
                 .model();
         Next merging = Update.update(read, new PullRequestMsg.MergeChosen(MergeMethod.SQUASH));
         MergePullRequest cmd = (MergePullRequest) merging.cmds().head();
@@ -2320,7 +2417,7 @@ class PullRequestUpdateTest {
         GitHub refusing = StubGitHub.of().withPullRequests(new StubPullRequests() {
             @Override
             public Either<GhFailure, PullRequests.Merging> merge(
-                    int number, Option<GhCommit> head, MergeMethod method) {
+                    PrNumber number, Option<GhCommit> head, MergeMethod method) {
                 return Either.left(new GhFailure(
                         new GhError.CommandFailed(
                                 Option.of(
@@ -2343,7 +2440,7 @@ class PullRequestUpdateTest {
                 errorText(failed.model()));
         assertEquals(Option.none(), failed.model().jobs().busy().get(new BranchRef.Local(new BranchName("feature"))));
         assertEquals(
-                StubGitHub.of().pullRequests().details(42).get().listed(),
+                StubGitHub.of().pullRequests().details(new PrNumber(42)).get().listed(),
                 failed.model().gitHub().pullRequests().flatMap(open -> open.get(new BranchName("feature"))));
     }
 
@@ -2354,11 +2451,12 @@ class PullRequestUpdateTest {
 
         Next opened = Update.update(shown, new PullRequestMsg.OpenConfirmed());
 
-        assertEquals(List.of(new OpenPullRequest(new BranchName("feature"), 42)), opened.cmds());
+        assertEquals(List.of(new OpenPullRequest(new BranchName("feature"), new PrNumber(42))), opened.cmds());
         assertEquals(shown.popup(), opened.model().popup());
 
         Next done = Update.update(
-                opened.model(), new OpenPullRequest(new BranchName("feature"), 42).succeeded(List.empty()));
+                opened.model(),
+                new OpenPullRequest(new BranchName("feature"), new PrNumber(42)).succeeded(List.empty()));
         assertEquals(shown.popup(), done.model().popup());
     }
 
@@ -2439,7 +2537,8 @@ class PullRequestUpdateTest {
                 new RemoteBranch("origin", FEATURE),
                 new RemoteBranch("origin", MAIN.name()),
                 new NewPullRequest("Login", "", false));
-        PullRequest created = new PullRequest(43, new GhBranch("feature"), false, Checks.NONE, Review.NONE);
+        PullRequest created =
+                new PullRequest(new PrNumber(43), new GhBranch("feature"), false, Checks.NONE, Review.NONE);
         Model creating = confirmed(cmd.pullRequest()).model();
 
         Next done = Update.update(creating, new CreatePullRequestMsg.Created(cmd, Option.of(created), List.empty()));
@@ -2454,7 +2553,7 @@ class PullRequestUpdateTest {
     void aPullRequestFromThePullRequestsScreenIsShownAndItsDetailsRead() {
         PullRequestSummary summary = new PullRequestSummary(
                 "owner/repo",
-                9,
+                new PrNumber(9),
                 "From a fork",
                 "bob",
                 new GhBranch("patch-1"),
@@ -2475,19 +2574,24 @@ class PullRequestUpdateTest {
         assertEquals(
                 Option.of(PullRequestPopup.loading(
                                 new BranchName("patch-1"),
-                                new PullRequest(9, new GhBranch("patch-1"), true, Checks.FAILING, Review.REQUIRED),
+                                new PullRequest(
+                                        new PrNumber(9),
+                                        new GhBranch("patch-1"),
+                                        true,
+                                        Checks.FAILING,
+                                        Review.REQUIRED),
                                 Instant.EPOCH,
                                 0)
                         .ofFork()),
                 shown.model().popup(PullRequestPopup.class));
-        assertEquals(List.of(new LoadPullRequestDetails(9, lastRead(shown.model()))), shown.cmds());
+        assertEquals(List.of(new LoadPullRequestDetails(new PrNumber(9), lastRead(shown.model()))), shown.cmds());
     }
 
     @Test
     void aPullRequestOfAnotherRepositoryOpensInTheBrowser() {
         PullRequestSummary elsewhere = new PullRequestSummary(
                 "other/repo",
-                3,
+                new PrNumber(3),
                 "Elsewhere",
                 "carol",
                 new GhBranch("fix"),
@@ -2511,7 +2615,7 @@ class PullRequestUpdateTest {
     void shiftFOnThePullRequestsScreenShowsTheFilesOfAPullRequestAtItsCommits() {
         PullRequestSummary listed = new PullRequestSummary(
                 "owner/repo",
-                9,
+                new PrNumber(9),
                 "From a fork",
                 "bob",
                 new GhBranch("patch-1"),
@@ -2554,12 +2658,13 @@ class PullRequestUpdateTest {
                 requested.model().popup(PullRequestPopup.class).get();
         assertTrue(loading.filesWanted());
         assertEquals(Screen.PULL_REQUESTS, requested.model().screen());
-        assertEquals(List.of(new LoadPullRequestDetails(42, lastRead(requested.model()))), requested.cmds());
+        assertEquals(
+                List.of(new LoadPullRequestDetails(new PrNumber(42), lastRead(requested.model()))), requested.cmds());
 
         Next opened = Update.update(
                 requested.model(),
                 new PullRequestMsg.DetailsLoaded(
-                        42, lastRead(requested.model()), readAtCommits(PullRequestDetails.State.OPEN)));
+                        new PrNumber(42), lastRead(requested.model()), readAtCommits(PullRequestDetails.State.OPEN)));
 
         Changes of = new Changes.OfPullRequest(
                 new PullRequestCommits(42, "owner/repo", "github.com", new Sha(BASE_OID), new Sha(HEAD_OID)));
@@ -2595,7 +2700,7 @@ class PullRequestUpdateTest {
     private static PullRequestSummary summary(String repository, int number) {
         return new PullRequestSummary(
                 repository,
-                number,
+                new PrNumber(number),
                 "From a fork",
                 "bob",
                 new GhBranch("patch-1"),

@@ -56,12 +56,12 @@ public record StackPush(int stack, RemoteName remote, List<Tuple2<Branch, Branch
         Option<PullRequestStack.Entry> missing =
                 open.find(entry -> checkedOut(model, entry).isEmpty());
         if (missing.isDefined()) {
-            return Either.left(new Refused("#" + missing.get().number(), StackRefusal.NOT_CHECKED_OUT));
+            return Either.left(new Refused("#" + missing.get().number().value(), StackRefusal.NOT_CHECKED_OUT));
         }
         Option<PullRequestStack.Entry> unnamed =
                 open.find(entry -> entry.headBranch().isEmpty());
         if (unnamed.isDefined()) {
-            return Either.left(new Refused("#" + unnamed.get().number(), StackRefusal.UNKNOWN_BRANCH));
+            return Either.left(new Refused("#" + unnamed.get().number().value(), StackRefusal.UNKNOWN_BRANCH));
         }
         List<Tuple2<Branch, BranchName>> branches = open.map(entry -> Tuple.of(
                 checkedOut(model, entry).get(),
@@ -85,7 +85,9 @@ public record StackPush(int stack, RemoteName remote, List<Tuple2<Branch, Branch
                 .branches()
                 .toOption()
                 .getOrElse(List.empty())
-                .find(branch -> model.gitHub().pullRequest(branch).exists(pr -> pr.number() == entry.number()));
+                .find(branch -> model.gitHub()
+                        .pullRequest(branch)
+                        .exists(pr -> pr.number().equals(entry.number())));
     }
 
     /**

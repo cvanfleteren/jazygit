@@ -17,6 +17,7 @@ import net.vanfleteren.jazygit.feature.github.show.PullRequestCmd.*;
 import net.vanfleteren.jazygit.feature.github.verdict.VerdictPopup;
 import net.vanfleteren.jazygit.feature.github.verdict.VerdictUpdate;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
@@ -51,13 +52,13 @@ public final class PullRequestUpdate {
             case PullRequestMsg.SummaryFilesRequested(var pullRequest) -> summaryFilesRequested(model, pullRequest);
             // A read that a later one was taken before, or that started before a change, is not taken: it would show
             // older details, or the change undone, here and on the branch; failing, it says nothing of them (ADR 34).
-            case PullRequestMsg.DetailsLoaded(int number, long read, var details)
+            case PullRequestMsg.DetailsLoaded(PrNumber number, long read, var details)
             when !model.gitHub().current(number, read) -> Next.of(notTaken(model, number, read));
-            case PullRequestMsg.DetailsFailed(int number, long read, var failure)
+            case PullRequestMsg.DetailsFailed(PrNumber number, long read, var failure)
             when !model.gitHub().current(number, read) -> Next.of(notTaken(model, number, read));
-            case PullRequestMsg.DetailsLoaded(int number, long read, var details) ->
+            case PullRequestMsg.DetailsLoaded(PrNumber number, long read, var details) ->
                 detailsLoaded(model, number, read, details);
-            case PullRequestMsg.DetailsFailed(int number, long read, var failure) ->
+            case PullRequestMsg.DetailsFailed(PrNumber number, long read, var failure) ->
                 detailsFailed(model, number, read, failure);
             case PullRequestMsg.OpenConfirmed() -> openConfirmed(model);
             case PullRequestMsg.FilesChosen() -> filesChosen(model);
@@ -65,9 +66,9 @@ public final class PullRequestUpdate {
             case PullRequestMsg.MergeAsked(MergePullRequest cmd, var status, var commands) ->
                 MergeUpdate.asked(model, cmd, status, commands);
             case PullRequestMsg.MergeTick() -> MergeUpdate.tick(model);
-            case PullRequestMsg.MergeChecked(int number, String id, var status) ->
+            case PullRequestMsg.MergeChecked(PrNumber number, String id, var status) ->
                 MergeUpdate.checked(model, number, id, status);
-            case PullRequestMsg.MergeCheckFailed(int number, String id, var failure) ->
+            case PullRequestMsg.MergeCheckFailed(PrNumber number, String id, var failure) ->
                 MergeUpdate.checkFailed(model, number, id);
             case PullRequestMsg.CloseChosen() -> closeChosen(model);
             case PullRequestMsg.DraftChosen() -> draftChosen(model);
@@ -112,7 +113,7 @@ public final class PullRequestUpdate {
      * request as it was just read too, also when the dialog is closed. How long its checks take is learned from them
      * too (ADR 32).
      */
-    private static Next detailsLoaded(Model model, int number, long read, PullRequestDetails details) {
+    private static Next detailsLoaded(Model model, PrNumber number, long read, PullRequestDetails details) {
         return filesIfWanted(
                 model,
                 CheckTimesUpdate.read(
@@ -129,7 +130,7 @@ public final class PullRequestUpdate {
     /**
      * Shows that read {@code read} of pull request {@code number} failed.
      */
-    private static Next detailsFailed(Model model, int number, long read, Failure failure) {
+    private static Next detailsFailed(Model model, PrNumber number, long read, Failure failure) {
         return Next.of(shown(
                 model.mapGitHub(gitHub -> gitHub.withReadTaken(number, read)), number, read, Either.left(failure)));
     }
@@ -215,8 +216,8 @@ public final class PullRequestUpdate {
      */
     private static Next ended(Model model, ChangingCmd cmd, List<ExecutedCommand> commands) {
         Next ended = OperationUpdate.succeeded(model, cmd, commands)
-                .map(done -> done.mapGitHub(gitHub -> gitHub.withPullRequests(
-                        gitHub.pullRequests().map(open -> open.filterValues(pr -> pr.number() != cmd.number())))));
+                .map(done -> done.mapGitHub(gitHub -> gitHub.withPullRequests(gitHub.pullRequests()
+                        .map(open -> open.filterValues(pr -> !pr.number().equals(cmd.number()))))));
         // A read that is still running may have missed it, and would show it open again.
         return PrOverviewUpdate.reloadIfShown(FetchUpdate.requested(PullRequestsUpdate.loadAnyway(ended)));
     }
@@ -278,7 +279,7 @@ public final class PullRequestUpdate {
     /**
      * {@code model} giving out the next read of the details of pull request {@code number}, and that read (ADR 34).
      */
-    public static Tuple2<Model, LoadPullRequestDetails> read(Model model, int number) {
+    public static Tuple2<Model, LoadPullRequestDetails> read(Model model, PrNumber number) {
         return Tuple.of(
                 model.mapGitHub(GitHubState::withReadGivenOut),
                 new LoadPullRequestDetails(number, model.gitHub().nextRead()));
@@ -301,7 +302,7 @@ public final class PullRequestUpdate {
      * {@code model} once read {@code read} of pull request {@code number} came back too late to be taken: the dialog
      * that shows it, if one does, no longer reads when it waited for that read.
      */
-    private static Model notTaken(Model model, int number, long read) {
+    private static Model notTaken(Model model, PrNumber number, long read) {
         return mapShown(model, number, popup -> popup.notTaken(read));
     }
 
@@ -314,7 +315,7 @@ public final class PullRequestUpdate {
      * than they were shown to be (ADR 89); unchanged when it is no longer shown, as the user closed it, or opened
      * another one, while it was being read.
      */
-    private static Model shown(Model model, int number, long read, Either<Failure, PullRequestDetails> result) {
+    private static Model shown(Model model, PrNumber number, long read, Either<Failure, PullRequestDetails> result) {
         return mapShown(model, number, popup -> popup.reaching(model).with(result, read));
     }
 
@@ -323,18 +324,18 @@ public final class PullRequestUpdate {
      * or the one the open popup goes back to, like a comment on it, its checks or a review, so that one is not out of date
      * then. Unchanged when no popup shows it.
      */
-    private static Model mapShown(Model model, int number, Function<PullRequestPopup, PullRequestPopup> change) {
+    private static Model mapShown(Model model, PrNumber number, Function<PullRequestPopup, PullRequestPopup> change) {
         return model.popup(ShowsPullRequest.class)
-                .filter(popup -> popup.number() == number)
+                .filter(popup -> popup.number().equals(number))
                 .map(popup -> model.openPopup(popup.withPullRequestPopup(change.apply(popup.pullRequestPopup()))))
                 .orElse(() -> model.popup(ChecksPopup.class)
                         .flatMap(checks -> checks.from()
-                                .filter(dialog -> dialog.pullRequest().number() == number)
+                                .filter(dialog -> dialog.pullRequest().number().equals(number))
                                 .map(dialog -> model.openPopup(checks.withFrom(change.apply(dialog))))))
                 // A review opened from the dialog, which follows whether it is a draft (ADR 100).
                 .orElse(() -> model.popup(VerdictPopup.class)
                         .flatMap(review -> review.from()
-                                .filter(from -> from.number() == number)
+                                .filter(from -> from.number().equals(number))
                                 .map(from -> VerdictUpdate.followed(
                                         model, review, review.following(change.apply(from.pullRequestPopup()))))))
                 .getOrElse(model);
@@ -401,10 +402,11 @@ public final class PullRequestUpdate {
      * The commits pull request {@code number}, listed with {@code commits}, is diffed between; none when GitHub named
      * one that is no sha.
      */
-    private static Option<PullRequestCommits> commits(int number, PullRequest.Commits commits) {
+    private static Option<PullRequestCommits> commits(PrNumber number, PullRequest.Commits commits) {
         return Sha.parse(commits.base().oid())
                 .flatMap(base -> Sha.parse(commits.head().oid())
-                        .map(head -> new PullRequestCommits(number, commits.repository(), commits.host(), base, head)));
+                        .map(head -> new PullRequestCommits(
+                                number.value(), commits.repository(), commits.host(), base, head)));
     }
 
     /**

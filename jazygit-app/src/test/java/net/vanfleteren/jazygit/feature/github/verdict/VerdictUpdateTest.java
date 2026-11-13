@@ -23,6 +23,7 @@ import net.vanfleteren.jazygit.feature.github.verdict.VerdictCmd.SubmitReview;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -56,12 +57,13 @@ class VerdictUpdateTest {
 
     private static final BranchName FEATURE = new BranchName("feature");
     private static final PullRequest FEATURE_PR =
-            new PullRequest(42, new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED);
+            new PullRequest(new PrNumber(42), new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED);
     private static final Reviewing BY_A_REVIEWER = new Reviewing("PR_42", false, false);
     private static final ExecutedCommand GH = ExecutedCommand.of("gh", "api", "graphql");
 
     private static PullRequestDetails details(Status status, Reviewing reviewing) {
-        PullRequestDetails read = StubGitHub.of().pullRequests().details(42).get();
+        PullRequestDetails read =
+                StubGitHub.of().pullRequests().details(new PrNumber(42)).get();
         Conversation conversation = read.conversation();
         return read.withStatus(status)
                 .withConversation(new Conversation(
@@ -102,7 +104,7 @@ class VerdictUpdateTest {
                                         new PullRequestCommits(7, "owner/repo", "", new Sha(base), new Sha(head))),
                                 Scopes.BRANCHES.pane()))
                 .model();
-        return Update.update(opened, new CommitFilesMsg.RemarksLoaded(7, remarks, HashSet.empty(), 0))
+        return Update.update(opened, new CommitFilesMsg.RemarksLoaded(new PrNumber(7), remarks, HashSet.empty(), 0))
                 .model();
     }
 
@@ -116,7 +118,8 @@ class VerdictUpdateTest {
         Next next = Update.update(loaded().openPopup(SHOWN), new VerdictMsg.DialogAsked());
 
         assertEquals(
-                Option.of(new VerdictPopup(42, "PR_42", false, Option.of(SHOWN), Verdict.APPROVE, false, "", false)),
+                Option.of(new VerdictPopup(
+                        new PrNumber(42), "PR_42", false, Option.of(SHOWN), Verdict.APPROVE, false, "", false)),
                 next.model().popup());
         assertEquals(List.empty(), next.cmds());
     }
@@ -173,7 +176,7 @@ class VerdictUpdateTest {
     void anApprovalIsSentWithoutText() {
         Next sending = Update.update(reviewing(Verdict.APPROVE, ""), new ComposeMsg.Confirmed());
 
-        assertEquals(List.of(new SubmitReview(42, "PR_42", Verdict.APPROVE, "")), sending.cmds());
+        assertEquals(List.of(new SubmitReview(new PrNumber(42), "PR_42", Verdict.APPROVE, "")), sending.cmds());
         assertEquals(Option.of(true), sending.model().popup(VerdictPopup.class).map(VerdictPopup::sending));
     }
 
@@ -185,7 +188,9 @@ class VerdictUpdateTest {
         assertEquals(List.empty(), blank.cmds());
         assertEquals(Option.of(new GitHubError.CannotReview(Why.NO_REASON)), error(blank.model()));
         assertEquals(Option.of(false), blank.model().popup(VerdictPopup.class).map(VerdictPopup::sending));
-        assertEquals(List.of(new SubmitReview(42, "PR_42", Verdict.REQUEST_CHANGES, "  Rename it\n")), typed.cmds());
+        assertEquals(
+                List.of(new SubmitReview(new PrNumber(42), "PR_42", Verdict.REQUEST_CHANGES, "  Rename it\n")),
+                typed.cmds());
     }
 
     @Test
@@ -234,7 +239,7 @@ class VerdictUpdateTest {
         PullRequestPopup back = sent.model().popup(PullRequestPopup.class).get();
         assertEquals(Reading.BY_ITSELF, back.reading());
         assertInstanceOf(LoadPullRequestDetails.class, sent.cmds().last());
-        assertEquals(42, ((LoadPullRequestDetails) sent.cmds().last()).number());
+        assertEquals(new PrNumber(42), ((LoadPullRequestDetails) sent.cmds().last()).number());
     }
 
     @Test
@@ -277,7 +282,7 @@ class VerdictUpdateTest {
         assertFalse(now.pending());
         assertEquals(Option.none(), error(followed));
         assertEquals(
-                List.of(new SubmitReview(42, "PR_42", Verdict.APPROVE, "")),
+                List.of(new SubmitReview(new PrNumber(42), "PR_42", Verdict.APPROVE, "")),
                 Update.update(followed, new ComposeMsg.Confirmed()).cmds());
     }
 
@@ -307,7 +312,8 @@ class VerdictUpdateTest {
                 .model();
 
         assertEquals(
-                Option.of(new VerdictPopup(7, "PR_7", true, Option.none(), Verdict.APPROVE, false, "", false)),
+                Option.of(new VerdictPopup(
+                        new PrNumber(7), "PR_7", true, Option.none(), Verdict.APPROVE, false, "", false)),
                 asked.popup());
     }
 
@@ -348,6 +354,8 @@ class VerdictUpdateTest {
         Next sent = Update.update(sending.model(), new VerdictMsg.Sent(cmd, List.of(GH)));
 
         assertEquals(Option.none(), sent.model().popup());
-        assertEquals(new LoadReviewRemarks(7, HashSet.empty(), 0), sent.cmds().last());
+        assertEquals(
+                new LoadReviewRemarks(new PrNumber(7), HashSet.empty(), 0),
+                sent.cmds().last());
     }
 }

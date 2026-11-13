@@ -33,6 +33,7 @@ import net.vanfleteren.jazygit.gh.graphql.StackFragment;
 import net.vanfleteren.jazygit.gh.graphql.SuiteFragment;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Activity;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Branches;
@@ -201,13 +202,13 @@ final class DetailsQuery {
     // What it is and how it stands, its checks, its stack and its description.
     static final Decoder<
                     Tuple4<
-                            Tuple8<Integer, String, String, Status, Branches, Activity, Size, Conversation>,
+                            Tuple8<PrNumber, String, String, Status, Branches, Activity, Size, Conversation>,
                             List<Check>,
                             Option<PullRequestStack>,
                             String>>
             PULL_REQUEST = map4(
                     map8(
-                            field("number", integer()),
+                            field("number", integer().map(PrNumber::new)),
                             field("title", string()),
                             field("author", nullable(field("login", string()))).map(login -> login.getOrElse("")),
                             STATUS,
@@ -251,7 +252,7 @@ final class DetailsQuery {
 
     private DetailsQuery() {}
 
-    static GhCommand command(int number) {
+    static GhCommand command(PrNumber number) {
         return gh(
                 "api",
                 "graphql",
@@ -260,9 +261,9 @@ final class DetailsQuery {
                 "-F",
                 "name={repo}",
                 "-F",
-                "number=" + number,
+                "number=" + number.value(),
                 "-f",
-                "pullHead=refs/pull/" + number + "/head",
+                "pullHead=refs/pull/" + number.value() + "/head",
                 "-f",
                 "query=" + QUERY);
     }
@@ -270,7 +271,7 @@ final class DetailsQuery {
     /**
      * The command that reads the details of pull request {@code number} without how far behind its base it is.
      */
-    static GhCommand withoutBehind(int number) {
+    static GhCommand withoutBehind(PrNumber number) {
         return gh(
                 "api",
                 "graphql",
@@ -279,7 +280,7 @@ final class DetailsQuery {
                 "-F",
                 "name={repo}",
                 "-F",
-                "number=" + number,
+                "number=" + number.value(),
                 "-f",
                 "query=" + WITHOUT_BEHIND);
     }

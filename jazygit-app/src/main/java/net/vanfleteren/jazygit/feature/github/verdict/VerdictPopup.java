@@ -4,6 +4,7 @@ import io.vavr.control.Option;
 import lombok.With;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.feature.github.show.ShowsPullRequest;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Reviewing;
 import net.vanfleteren.jazygit.gh.model.Verdict;
 import net.vanfleteren.jazygit.state.Model;
@@ -27,7 +28,7 @@ import net.vanfleteren.jazygit.state.compose.EditorFile;
  */
 @With
 public record VerdictPopup(
-        int number,
+        PrNumber number,
         String pullRequest,
         boolean draft,
         Option<ShowsPullRequest> from,
@@ -56,7 +57,7 @@ public record VerdictPopup(
      * The popup asking for a review of pull request {@code number} from the diff of its files, which {@code reviewing}
      * says how to.
      */
-    static VerdictPopup ofDiff(int number, Reviewing reviewing, boolean draft) {
+    static VerdictPopup ofDiff(PrNumber number, Reviewing reviewing, boolean draft) {
         return new VerdictPopup(
                 number, reviewing.pullRequest(), draft, Option.none(), Verdict.APPROVE, reviewing.pending(), "", false);
     }

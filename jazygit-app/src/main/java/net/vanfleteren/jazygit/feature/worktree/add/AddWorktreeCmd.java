@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import net.vanfleteren.jazygit.feature.worktree.WorktreeCmd;
 import net.vanfleteren.jazygit.feature.worktree.add.WorktreeSource.*;
 import net.vanfleteren.jazygit.gh.GitHub;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
@@ -106,7 +107,7 @@ public record AddWorktreeCmd(WorktreeSource source, String location, boolean swi
      * worktree failed too, if it did, as the worktree is then left behind.
      */
     private static Either<Failure, List<ExecutedCommand>> checkout(
-            Git git, GitHub gitHub, Path path, int number, List<ExecutedCommand> added) {
+            Git git, GitHub gitHub, Path path, PrNumber number, List<ExecutedCommand> added) {
         return gitHub.pullRequests()
                 .checkout(number, path)
                 .map(added::appendAll)
