@@ -200,11 +200,15 @@ public final class ScrollArea {
 
     /**
      * What {@code event} does: Left leaves the area as Escape does once it is scrolled all the way left, as Right in
-     * its pane moves into it.
+     * its pane moves into it. Left held down stops there: only pressing it again leaves (ADR 117).
      */
     private EventResult keys(KeyEvent event, boolean focused, ScrolledContent content) {
         // Only the arrow leaves: h scrolls, as j and k move, without going to another panel.
-        boolean leaving = event.isCancel() || (focused && event.matches(Actions.MOVE_LEFT) && column == 0);
+        boolean atLeftEdge = focused && event.matches(Actions.MOVE_LEFT) && column == 0;
+        if (atLeftEdge && event.isRepeat()) {
+            return EventResult.HANDLED;
+        }
+        boolean leaving = event.isCancel() || atLeftEdge;
         // Escape, and Left where it leaves as Escape does, drop an open range before they leave the area (ADR 60).
         return cursor.filter(on -> leaving && focused && on.mark().isDefined())
                 .map(ranged -> moved(ranged.marked().get(), content))

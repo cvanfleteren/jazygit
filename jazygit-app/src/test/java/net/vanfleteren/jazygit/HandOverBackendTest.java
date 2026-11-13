@@ -81,6 +81,38 @@ class HandOverBackendTest {
     }
 
     @Test
+    void aKeyLetGoIsNotReadButAHeldOneIs() throws IOException {
+        // Left held: a press, a repeat and its release; then a released a, as CSI u, and a click, as SGR.
+        HandOverBackend backend = new HandOverBackend(
+                typed("\u001b[D\u001b[1;1:2D\u001b[1;1:3D\u001b[97;1:3ux\u001b[<0;3;4M"), focused -> {});
+
+        assertEquals("\u001b[D\u001b[1;1:2Dx\u001b[<0;3;4M", read(backend));
+    }
+
+    @Test
+    void aKeyLetGoAfterTheFocusWasLostDoesNotTellItIsBack() throws IOException {
+        List<Boolean> focus = new ArrayList<>();
+        HandOverBackend backend = new HandOverBackend(typed("\u001b[O\u001b[57443;3:3u"), focus::add);
+
+        assertEquals(NO_KEY, backend.read(10));
+        assertEquals(List.of(false), focus);
+    }
+
+    @Test
+    void theTerminalIsAskedToTellAHeldKeyFromAPressedOne() throws IOException {
+        TestBackend terminal = typed("");
+        HandOverBackend backend = new HandOverBackend(terminal, focused -> {});
+
+        backend.enableKeyboardProtocol(TuiConfig.defaults().keyboardProtocol());
+
+        assertTrue(
+                terminal.rawOutput()
+                        .contains(KittyKeyboardSupport.pushSequence(
+                                KittyKeyboardSupport.AUTO_FLAGS | KittyKeyboardSupport.REPORT_EVENT_TYPES)),
+                terminal.rawOutput());
+    }
+
+    @Test
     void theKeyboardEnhancementsAreOffWhileTheTerminalIsHandedOver() throws IOException {
         TestBackend terminal = typed("");
         HandOverBackend backend = new HandOverBackend(terminal, focused -> {});
@@ -94,7 +126,7 @@ class HandOverBackendTest {
         assertTrue(left.contains(KittyKeyboardSupport.popSequence()), left);
         assertTrue(
                 back.contains(KittyKeyboardSupport.pushSequence(
-                        config.keyboardProtocol().flags())),
+                        KittyKeyboardSupport.AUTO_FLAGS | KittyKeyboardSupport.REPORT_EVENT_TYPES)),
                 back);
     }
 
@@ -141,6 +173,17 @@ class HandOverBackendTest {
             keys.add(backend.read(10));
         }
         return keys;
+    }
+
+    /**
+     * What {@code backend} reads until no key comes.
+     */
+    private static String read(HandOverBackend backend) throws IOException {
+        StringBuilder read = new StringBuilder();
+        for (int key = backend.read(10); key != NO_KEY; key = backend.read(10)) {
+            read.appendCodePoint(key);
+        }
+        return read.toString();
     }
 
     /**

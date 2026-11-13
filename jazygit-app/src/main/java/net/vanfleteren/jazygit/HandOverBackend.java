@@ -5,6 +5,8 @@ import dev.tamboui.layout.Position;
 import dev.tamboui.layout.Size;
 import dev.tamboui.terminal.Backend;
 import dev.tamboui.terminal.BackendFactory;
+import dev.tamboui.terminal.KeyboardProtocol;
+import dev.tamboui.terminal.KittyKeyboardSupport;
 import dev.tamboui.tui.TuiConfig;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -35,6 +37,11 @@ final class HandOverBackend implements Backend {
     // reads both as an unknown key, so they are taken out before it reads them (ADR 58).
     private static final int FOCUS_IN = 'I';
     private static final int FOCUS_OUT = 'O';
+    // The enhancements TamboUI asks for by default, and that the terminal tells a key held down, which it repeats,
+    // from one pressed again (ADR 117). It then also tells when a key is let go, ESC [ ... ; <modifiers>:3 <final>,
+    // which is taken out before TamboUI reads it: not every key handler of the app tells a key let go from a press.
+    private static final int KEYBOARD_FLAGS = KittyKeyboardSupport.AUTO_FLAGS | KittyKeyboardSupport.REPORT_EVENT_TYPES;
+    private static final String LET_GO = "3";
     private static final String REPORT_FOCUS = "\u001b[?1004h";
     private static final String STOP_REPORTING_FOCUS = "\u001b[?1004l";
     // How long the rest of an escape sequence is waited for once its ESC came: the terminal sends it at once.
@@ -118,7 +125,7 @@ final class HandOverBackend implements Backend {
             backend.enterAlternateScreen();
             backend.writeRaw(REPORT_FOCUS);
         }
-        backend.enableKeyboardProtocol(config.keyboardProtocol());
+        var _ = enableKeyboardProtocol(config.keyboardProtocol());
         if (config.hideCursor()) {
             backend.hideCursor();
         }
@@ -130,6 +137,20 @@ final class HandOverBackend implements Backend {
         }
         backend.flush();
         keysPaused = false;
+    }
+
+    /**
+     * Asks the terminal for the keyboard enhancements of {@code protocol}; by default, also to tell a key held down
+     * from one pressed again (ADR 117).
+     */
+    @Override
+    public boolean enableKeyboardProtocol(KeyboardProtocol protocol) throws IOException {
+        if (protocol != KeyboardProtocol.AUTO) {
+            return Backend.super.enableKeyboardProtocol(protocol);
+        }
+        writeRaw(KittyKeyboardSupport.pushSequence(KEYBOARD_FLAGS));
+        flush();
+        return true;
     }
 
     @Override
@@ -175,7 +196,7 @@ final class HandOverBackend implements Backend {
     }
 
     /**
-     * The next key within {@code timeoutMs}, the reports of the focus left out.
+     * The next key within {@code timeoutMs}, the reports of the focus and the keys let go left out.
      */
     private int next(int timeoutMs) throws IOException {
         if (!unread.isEmpty()) {
@@ -187,19 +208,56 @@ final class HandOverBackend implements Backend {
             if (key != ESC || await(SEQUENCE_MILLIS, backend::peek) != '[') {
                 return key;
             }
-            int bracket = await(SEQUENCE_MILLIS, backend::read);
-            int last = await(SEQUENCE_MILLIS, backend::read);
-            if (last != FOCUS_IN && last != FOCUS_OUT) {
-                unread.add(bracket);
-                if (last != NO_KEY) {
-                    unread.add(last);
-                }
+            String sequence = controlSequence();
+            // Past the deadline, the next round still reads once without waiting: a key that came after the report,
+            // or after the key let go, is there now, and is not to wait for the next read.
+            if (sequence.equals("[" + (char) FOCUS_IN) || sequence.equals("[" + (char) FOCUS_OUT)) {
+                reportFocus(sequence.charAt(1) == FOCUS_IN);
+            } else if (!letGo(sequence)) {
+                sequence.chars().forEach(unread::add);
                 return key;
             }
-            // Past the deadline, the next round still reads once without waiting: a key that came after the report
-            // is there now, and is not to wait for the next read.
-            reportFocus(last == FOCUS_IN);
         }
+    }
+
+    /**
+     * The rest of a control sequence whose ESC was read: its {@code [}, its parameters, and the byte that ends it, as
+     * far as they came in time.
+     */
+    private String controlSequence() throws IOException {
+        StringBuilder sequence = new StringBuilder().appendCodePoint(await(SEQUENCE_MILLIS, backend::read));
+        while (true) {
+            int next = await(SEQUENCE_MILLIS, backend::peek);
+            // Parameter and intermediate bytes go on, a final byte ends it, and anything else is not part of it.
+            if (next < 0x20 || next > 0x7E) {
+                return sequence.toString();
+            }
+            sequence.appendCodePoint(await(SEQUENCE_MILLIS, backend::read));
+            if (next >= 0x40) {
+                return sequence.toString();
+            }
+        }
+    }
+
+    /**
+     * Whether {@code sequence}, read after an ESC, tells that a key was let go: its second parameter, the modifiers,
+     * has the event type 3 after a colon, as {@code [1;1:3D} for Left or {@code [97;1:3u} for a.
+     */
+    private static boolean letGo(String sequence) {
+        // Cut off before its final byte, it may be anything but a key.
+        if (sequence.length() < 3 || sequence.charAt(sequence.length() - 1) < 0x40) {
+            return false;
+        }
+        String parameters = sequence.substring(1, sequence.length() - 1);
+        if (!Character.isDigit(parameters.charAt(0))) {
+            return false;
+        }
+        String[] fields = parameters.split(";", -1);
+        if (fields.length < 2) {
+            return false;
+        }
+        String[] modifiers = fields[1].split(":", -1);
+        return modifiers.length > 1 && modifiers[1].equals(LET_GO);
     }
 
     @Override
