@@ -26,9 +26,9 @@ public final class ReviewAction {
                     Binding.onSelected("x", "help.pullRequestDiff.resolve", ReviewMsg.ResolveAsked::new),
                     Binding.onSelected(" ", "help.pullRequestDiff.toggle", ReviewMsg.ThreadToggled::new),
                     Binding.onSelected("e", "help.pullRequestDiff.edit", ReviewMsg.EditAsked::new),
-                    Binding.onSelected("d", "help.pullRequestDiff.delete", ReviewMsg.DeleteAsked::new),
+                    Binding.onSelected("d", "help.pullRequestDiff.delete", DeleteCommentMsg.DeleteAsked::new),
                     Binding.onSelected("o", "help.pullRequestDiff.open", ReviewMsg.OpenAsked::new),
-                    Binding.onSelected("+", "help.pullRequestDiff.react", ReviewMsg.ReactAsked::new),
+                    Binding.onSelected("+", "help.pullRequestDiff.react", ReactMsg.ReactAsked::new),
                     new Binding<DiffCursorAt>(
                             "v",
                             "help.pullRequestDiff.range",

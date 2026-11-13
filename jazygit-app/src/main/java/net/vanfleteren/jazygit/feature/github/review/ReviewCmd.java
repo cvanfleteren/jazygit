@@ -5,7 +5,6 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.github.review.ReviewPopup.Target;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.NewReviewThread;
-import net.vanfleteren.jazygit.gh.model.Reaction;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -18,9 +17,8 @@ import net.vanfleteren.jazygit.state.operation.Operation;
 import net.vanfleteren.jazygit.state.operation.OperationCmd;
 
 /**
- * Sending a comment on the lines of a pull request, resolving a thread (ADR 60), and
- * editing (ADR 65), deleting (ADR 64) or reacting to a comment (ADR 86). None keeps a branch busy: they do not touch
- * one.
+ * Sending a comment on the lines of a pull request, resolving a thread (ADR 60), and saving the edit of a comment
+ * (ADR 65). None keeps a branch busy: they do not touch one.
  */
 public sealed interface ReviewCmd extends Cmd {
 
@@ -37,12 +35,6 @@ public sealed interface ReviewCmd extends Cmd {
 
     // Saving the edit of a comment with GitHub (ADR 65).
     Operation UPDATE_COMMENT = Operation.of("log.title.updateReviewComment", "error.updateReviewComment.failed");
-
-    Operation DELETE_COMMENT = Operation.of("log.title.deleteReviewComment", "error.deleteReviewComment.failed");
-
-    Operation REACT = Operation.of("log.title.reactReviewComment", "error.reactReviewComment.failed");
-
-    Operation UNREACT = Operation.of("log.title.unreactReviewComment", "error.unreactReviewComment.failed");
 
     /**
      * The file the comment is written in, in the editor (ADR 115).
@@ -139,80 +131,6 @@ public sealed interface ReviewCmd extends Cmd {
         @Override
         public Msg failed(Failure failure) {
             return new ReviewMsg.ResolveFailed(this, failure);
-        }
-    }
-
-    /**
-     * Deletes the comment with the id {@code comment} of the thread with the id {@code thread} of pull request
-     * {@code number} (ADR 64).
-     */
-    record DeleteComment(int number, ReviewThread.Id thread, ReviewThread.Comment.Id comment)
-            implements ReviewCmd, OperationCmd {
-
-        @Override
-        public Operation operation() {
-            return DELETE_COMMENT;
-        }
-
-        @Override
-        public Option<String> subject() {
-            return Option.of("#" + number);
-        }
-
-        @Override
-        public Msg run(Env env) {
-            return env.gitHub()
-                    .reviews()
-                    .deleteRemark(comment)
-                    .mapLeft(Failure::of)
-                    .fold(this::failed, this::succeeded);
-        }
-
-        @Override
-        public Msg succeeded(List<ExecutedCommand> commands) {
-            return new ReviewMsg.CommentDeleted(this, commands);
-        }
-
-        @Override
-        public Msg failed(Failure failure) {
-            return new ReviewMsg.DeleteFailed(this, failure);
-        }
-    }
-
-    /**
-     * Gives {@code reaction} to the comment with the id {@code comment} of the thread with the id {@code thread} of
-     * pull request {@code number} when {@code given}, else takes it back (ADR 86).
-     */
-    record React(int number, ReviewThread.Id thread, ReviewThread.Comment.Id comment, Reaction reaction, boolean given)
-            implements ReviewCmd, OperationCmd {
-
-        @Override
-        public Operation operation() {
-            return given ? REACT : UNREACT;
-        }
-
-        @Override
-        public Option<String> subject() {
-            return Option.of("#" + number);
-        }
-
-        @Override
-        public Msg run(Env env) {
-            return env.gitHub()
-                    .reviews()
-                    .react(comment, reaction, given)
-                    .mapLeft(Failure::of)
-                    .fold(this::failed, this::succeeded);
-        }
-
-        @Override
-        public Msg succeeded(List<ExecutedCommand> commands) {
-            return new ReviewMsg.Reacted(this, commands);
-        }
-
-        @Override
-        public Msg failed(Failure failure) {
-            return new ReviewMsg.ReactFailed(this, failure);
         }
     }
 }

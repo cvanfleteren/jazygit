@@ -19,7 +19,7 @@ public final class DeleteCommentDialog {
             DeleteCommentPopup.class,
             popup -> Messages.get("dialog.deleteComment.title"),
             DeleteCommentDialog::message,
-            ReviewMsg.DeleteConfirmed::new);
+            DeleteCommentMsg.DeleteConfirmed::new);
 
     private DeleteCommentDialog() {}
 
