@@ -90,16 +90,6 @@ class ArchitectureTest {
             .onlyDependOnClassesThat()
             .resideInAnyPackage("java..", "io.vavr..", "..jazygit.lens..");
     /**
-     * The lens is a tool for any value, which every part may use: it knows nothing of the application.
-     */
-    @ArchTest
-    static final ArchRule lensKnowsNothingOfTheApplication = classes()
-            .that()
-            .resideInAPackage("..jazygit.lens..")
-            .should()
-            .onlyDependOnClassesThat()
-            .resideInAnyPackage("java..", "io.vavr..", "..jazygit.lens..");
-    /**
      * How the settings file is read and written stays inside the settings.
      */
     @ArchTest
@@ -407,7 +397,12 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule valuesAreValuesAllTheWayDown = fields().that()
             .areDeclaredInClassesThat()
-            .resideInAnyPackage("..jazygit.state..", "..jazygit.feature..", "..jazygit.settings..", "..jazygit.cli..")
+            .resideInAnyPackage(
+                    "..jazygit.state..",
+                    "..jazygit.feature..",
+                    "..jazygit.settings..",
+                    "..jazygit.cli..",
+                    "..jazygit.lens..")
             .and()
             .areNotDeclaredIn(Program.class)
             .and()
@@ -437,7 +432,7 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule pureCodeFillsNoCollections = noClasses()
             .that()
-            .resideInAnyPackage("..jazygit.state..", "..jazygit.feature..")
+            .resideInAnyPackage("..jazygit.state..", "..jazygit.feature..", "..jazygit.lens..")
             .and()
             .doNotBelongToAnyOf(Program.class)
             .and()
@@ -469,7 +464,7 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule noClassesExtendOthers = classes()
             .that()
-            .resideInAnyPackage("..jazygit.state..", "..jazygit.feature..")
+            .resideInAnyPackage("..jazygit.state..", "..jazygit.feature..", "..jazygit.lens..")
             .and()
             .haveNameNotMatching(DIALOGS)
             .should(Values.extendNothing());
@@ -562,7 +557,12 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule fieldsAreFinal = fields().that()
             .areDeclaredInClassesThat()
-            .resideInAnyPackage("..jazygit.state..", "..jazygit.feature..", "..jazygit.settings..", "..jazygit.cli..")
+            .resideInAnyPackage(
+                    "..jazygit.state..",
+                    "..jazygit.feature..",
+                    "..jazygit.settings..",
+                    "..jazygit.cli..",
+                    "..jazygit.lens..")
             .and()
             .areNotDeclaredIn(Program.class)
             .and()
