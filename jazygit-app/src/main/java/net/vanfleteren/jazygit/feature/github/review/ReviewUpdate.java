@@ -13,19 +13,15 @@ import io.vavr.collection.Vector;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.util.function.Function;
-import net.vanfleteren.jazygit.feature.diff.CommitFilesCmd;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesCmd.LoadReviewRemarks;
 import net.vanfleteren.jazygit.feature.github.GitHubError.CannotReview.Why;
-import net.vanfleteren.jazygit.feature.github.browse.BrowseRemarkCmd;
 import net.vanfleteren.jazygit.feature.github.review.ReviewCmd.Resolve;
 import net.vanfleteren.jazygit.feature.github.review.ReviewCmd.Send;
 import net.vanfleteren.jazygit.feature.github.review.ReviewPopup.Target;
 import net.vanfleteren.jazygit.feature.github.review.ReviewPopup.Where;
 import net.vanfleteren.jazygit.gh.model.NewReviewThread;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
-import net.vanfleteren.jazygit.gh.model.PullRequestLink;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
-import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.git.model.UnifiedDiff.DiffLine;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -44,7 +40,8 @@ import net.vanfleteren.jazygit.state.view.*;
  * for a merged one; nor twice for a thread while something is sent for it. A comment is edited in the same popup as a
  * reply, at any commits, and takes what GitHub holds once it is saved, without reading the threads again (ADR 65).
  * Writing the comment, in that popup or in the editor, is a {@link ComposeUpdate}'s (ADR 115); deleting one a {@link
- * DeleteCommentUpdate}'s, and reacting to one a {@link ReactUpdate}'s.
+ * DeleteCommentUpdate}'s, reacting to one a {@link ReactUpdate}'s, and collapsing or opening one a {@link
+ * ThreadUpdate}'s.
  */
 public final class ReviewUpdate {
 
@@ -59,8 +56,6 @@ public final class ReviewUpdate {
             case ReviewMsg.ReplyAsked(DiffCursorAt at) -> asked(model, reply(model, at));
             case ReviewMsg.EditAsked(DiffCursorAt at) -> asked(model, edit(model, at));
             case ReviewMsg.ResolveAsked(DiffCursorAt at) -> resolveAsked(model, at);
-            case ReviewMsg.ThreadToggled(DiffCursorAt at) -> threadToggled(model, at);
-            case ReviewMsg.OpenAsked(DiffCursorAt at) -> openAsked(model, at);
             case ReviewMsg.Refused(Why why) -> Next.of(refused(model, why));
             case ReviewMsg.Sent(Send cmd, var commands) -> sent(model, cmd, commands);
             case ReviewMsg.CommentEdited(Send cmd, String body, var commands) -> edited(model, cmd, body, commands);
@@ -84,33 +79,6 @@ public final class ReviewUpdate {
                             on.number(), on.thread().id(), !on.thread().resolved());
                     return Update.start(sending(model.clearError(), set -> set.add(resolve.thread())), resolve);
                 });
-    }
-
-    /**
-     * Collapsing the thread or the comment of the cursor {@code at}, or opening it. Collapsing a thread or a comment
-     * needs no more than the thread: a merged pull request's too. The first comment of a thread is the thread (ADR 62).
-     * Off a thread, Space does nothing: there is nothing to refuse.
-     */
-    private static Next threadToggled(Model model, DiffCursorAt at) {
-        return pullRequestFiles(model)
-                .toEither(Why.NOT_READ)
-                .flatMap(view -> OnThread.of(view, at.cursor()))
-                .flatMap(OnThread::notSending)
-                .filterOrElse(on -> !on.comment(at.cursor()).exists(on::deleting), on -> Why.DELETING)
-                .fold(
-                        why -> Next.of(why == Why.NOT_ON_THREAD ? model : refused(model, why)),
-                        on -> toggled(model, on, at.cursor()));
-    }
-
-    /**
-     * The comment of the cursor {@code at} opened on GitHub. Opening only reads: it is never refused, whatever the pull
-     * request or its threads are at (ADR 85).
-     */
-    private static Next openAsked(Model model, DiffCursorAt at) {
-        return pullRequestFiles(model)
-                .flatMap(view -> link(view, at.cursor()))
-                .map(link -> Update.start(model.clearError(), new BrowseRemarkCmd(link)))
-                .getOrElse(() -> Next.of(model));
     }
 
     /**
@@ -424,43 +392,6 @@ public final class ReviewUpdate {
                 .toEither(Why.NOT_READ)
                 .filterOrElse(view -> !view.ended().contains(PullRequestDetails.State.MERGED), view -> Why.MERGED)
                 .filterOrElse(CommitFilesView::remarksAtItsCommits, view -> Why.MOVED_ON);
-    }
-
-    /**
-     * {@code found} with the thread, or the comment of it the cursor is {@code on}, collapsed or opened, which is kept
-     * for the next session (ADR 63).
-     */
-    private static Next toggled(Model model, OnThread found, Anchor on) {
-        CommitFilesView view = found.view();
-        Collapsed collapsed = view.collapsed()
-                .flipped(
-                        on instanceof Anchor.Comment(ReviewThread.Comment.Id id, var _)
-                                ? Collapsed.Key.of(id)
-                                : Collapsed.Key.of(found.thread().id()),
-                        view.threads());
-        return new Next(
-                mapView(model, files -> files.withCollapsed(collapsed)),
-                view.of() instanceof Changes.OfPullRequest(PullRequestCommits commits)
-                        ? List.of(new CommitFilesCmd.SaveCollapsed(
-                                commits.repository(), commits.number(), collapsed.toggled(), model.now()))
-                        : List.empty());
-    }
-
-    /**
-     * Where the pull request {@code view} lists the files of is on GitHub, on the comment the cursor {@code on} is on,
-     * if any: the reply it names, or the first of its thread (ADR 85).
-     */
-    private static Option<PullRequestLink> link(CommitFilesView view, Anchor on) {
-        return view.of() instanceof Changes.OfPullRequest(PullRequestCommits commits)
-                ? Option.of(new PullRequestLink(
-                        commits.host(),
-                        commits.repository(),
-                        commits.number(),
-                        OnThread.of(view, on)
-                                .toOption()
-                                .flatMap(found -> found.comment(on))
-                                .map(ReviewThread.Comment::restId)))
-                : Option.none();
     }
 
     private static Model sending(Model model, Function<Set<ReviewThread.Id>, Set<ReviewThread.Id>> f) {

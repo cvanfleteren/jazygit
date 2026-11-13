@@ -24,10 +24,10 @@ public final class ReviewAction {
                     Binding.onSelected("c", "help.pullRequestDiff.comment", ReviewMsg.StartAsked::new),
                     Binding.onSelected("r", "help.pullRequestDiff.reply", ReviewMsg.ReplyAsked::new),
                     Binding.onSelected("x", "help.pullRequestDiff.resolve", ReviewMsg.ResolveAsked::new),
-                    Binding.onSelected(" ", "help.pullRequestDiff.toggle", ReviewMsg.ThreadToggled::new),
+                    Binding.onSelected(" ", "help.pullRequestDiff.toggle", ThreadMsg.ThreadToggled::new),
                     Binding.onSelected("e", "help.pullRequestDiff.edit", ReviewMsg.EditAsked::new),
                     Binding.onSelected("d", "help.pullRequestDiff.delete", DeleteCommentMsg.DeleteAsked::new),
-                    Binding.onSelected("o", "help.pullRequestDiff.open", ReviewMsg.OpenAsked::new),
+                    Binding.onSelected("o", "help.pullRequestDiff.open", ThreadMsg.OpenAsked::new),
                     Binding.onSelected("+", "help.pullRequestDiff.react", ReactMsg.ReactAsked::new),
                     new Binding<DiffCursorAt>(
                             "v",

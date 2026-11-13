@@ -13,12 +13,10 @@ import net.vanfleteren.jazygit.feature.diff.CommitFilesCmd;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.feature.github.GitHubError;
 import net.vanfleteren.jazygit.feature.github.GitHubError.CannotReview.Why;
-import net.vanfleteren.jazygit.feature.github.browse.BrowseRemarkCmd;
 import net.vanfleteren.jazygit.feature.github.review.ReviewPopup.Target;
 import net.vanfleteren.jazygit.gh.model.CommentRights;
 import net.vanfleteren.jazygit.gh.model.NewReviewThread;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
-import net.vanfleteren.jazygit.gh.model.PullRequestLink;
 import net.vanfleteren.jazygit.gh.model.Reaction;
 import net.vanfleteren.jazygit.gh.model.Reactions;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
@@ -57,7 +55,7 @@ class ReviewUpdateTest {
         assertEquals(Option.of(new GitHubError.CannotReview(Why.SENDING)), error(again.model()));
         assertEquals(
                 Option.of(new GitHubError.CannotReview(Why.SENDING)),
-                error(Update.update(resolving.model(), new ReviewMsg.ThreadToggled(at(onThread("T1"))))
+                error(Update.update(resolving.model(), new ThreadMsg.ThreadToggled(at(onThread("T1"))))
                         .model()));
 
         Next resolved = Update.update(resolving.model(), new ReviewMsg.Resolved(resolve, List.empty()));
@@ -133,39 +131,6 @@ class ReviewUpdateTest {
     }
 
     @Test
-    void theBrowserOpensOnTheCommentOfTheCursorOrElseOnThePullRequest() {
-        assertEquals(
-                List.of(new BrowseRemarkCmd(
-                        new PullRequestLink("", "owner/repo", 7, Option.of(new ReviewThread.Comment.RestId("1"))))),
-                Update.update(files(), new ReviewMsg.OpenAsked(at(onThread("T1"))))
-                        .cmds());
-        assertEquals(
-                List.of(new BrowseRemarkCmd(
-                        new PullRequestLink("", "owner/repo", 7, Option.of(new ReviewThread.Comment.RestId("2"))))),
-                Update.update(
-                                files(),
-                                new ReviewMsg.OpenAsked(at(new Anchor.Comment(
-                                        new ReviewThread.Comment.Id("R1"), (Anchor.Thread) onThread("T1")))))
-                        .cmds());
-        assertEquals(
-                List.of(new BrowseRemarkCmd(new PullRequestLink("", "owner/repo", 7, Option.none()))),
-                Update.update(files(), new ReviewMsg.OpenAsked(at(line(Side.RIGHT, 2))))
-                        .cmds());
-    }
-
-    @Test
-    void theBrowserOpensWhateverThePullRequestIsAt() {
-        Next opened = Update.update(
-                files(PullRequestDetails.State.MERGED, "c".repeat(40)), new ReviewMsg.OpenAsked(at(onThread("T1"))));
-
-        assertEquals(
-                List.of(new BrowseRemarkCmd(
-                        new PullRequestLink("", "owner/repo", 7, Option.of(new ReviewThread.Comment.RestId("1"))))),
-                opened.cmds());
-        assertEquals(Option.none(), error(opened.model()));
-    }
-
-    @Test
     void theKeysOfAThreadNeedTheCursorOnOne() {
         assertEquals(
                 Option.of(new GitHubError.CannotReview(Why.NOT_ON_THREAD)),
@@ -190,102 +155,11 @@ class ReviewUpdateTest {
     }
 
     @Test
-    void aThreadOrACommentIsCollapsedAndOpenedAgainstItsDefault() {
-        Model opened = Update.update(files(), new ReviewMsg.ThreadToggled(at(onThread("T2"))))
-                .model();
-        assertEquals(
-                new Collapsed(HashMap.of(new Collapsed.Key("T2"), true)),
-                view(opened).collapsed());
-        assertFalse(view(opened).collapsed().thread(SETTLED));
-
-        Model closed = Update.update(opened, new ReviewMsg.ThreadToggled(at(onThread("T2"))))
-                .model();
-        assertEquals(Collapsed.NONE, view(closed).collapsed());
-
-        // An unresolved thread is collapsed too, and a comment on its own, by its id (ADR 62).
-        Model collapsed = Update.update(files(), new ReviewMsg.ThreadToggled(at(onThread("T1"))))
-                .model();
-        assertTrue(view(collapsed).collapsed().thread(OPEN));
-        Model comment = Update.update(
-                        files(),
-                        new ReviewMsg.ThreadToggled(at(
-                                new Anchor.Comment(new ReviewThread.Comment.Id("R1"), (Anchor.Thread) onThread("T1")))))
-                .model();
-        assertEquals(
-                new Collapsed(HashMap.of(new Collapsed.Key("R1"), false)),
-                view(comment).collapsed());
-    }
-
-    @Test
-    void spaceOffAThreadDoesNothing() {
-        Model files = files();
-        assertEquals(
-                files,
-                Update.update(files, new ReviewMsg.ThreadToggled(at(line(Side.RIGHT, 2))))
-                        .model());
-        // A thread no longer read, as after the threads are read again, is off a thread too.
-        assertEquals(
-                files,
-                Update.update(files, new ReviewMsg.ThreadToggled(at(onThread("GONE"))))
-                        .model());
-    }
-
-    @Test
-    void whatIsCollapsedOrOpenedIsKeptForTheNextSession() {
-        Next opened = Update.update(files(), new ReviewMsg.ThreadToggled(at(onThread("T2"))));
-
-        // With whether each was collapsed by default, and when it was flipped (ADR 63).
-        assertEquals(
-                List.of(new CommitFilesCmd.SaveCollapsed(
-                        "owner/repo",
-                        7,
-                        HashMap.of(new Collapsed.Key("T2"), true),
-                        opened.model().now())),
-                opened.cmds());
-        assertEquals(
-                List.of(new CommitFilesCmd.SaveCollapsed(
-                        "owner/repo", 7, HashMap.empty(), opened.model().now())),
-                Update.update(opened.model(), new ReviewMsg.ThreadToggled(at(onThread("T2"))))
-                        .cmds());
-    }
-
-    @Test
-    void whatWasCollapsedOrOpenedInAnEarlierSessionIsAsItWasUnlessItsDefaultChangedSince() {
-        // T2 opened while resolved, R1 collapsed, and T1 opened while resolved, which it is no longer.
-        CommitFilesMsg.CollapsedLoaded kept = new CommitFilesMsg.CollapsedLoaded(
-                7,
-                HashMap.of(
-                        new Collapsed.Key("T2"), true, new Collapsed.Key("R1"), false, new Collapsed.Key("T1"), true));
-        Collapsed expected = new Collapsed(HashMap.of(new Collapsed.Key("T2"), true, new Collapsed.Key("R1"), false));
-
-        Model read = Update.update(files(), kept).model();
-        assertEquals(expected, view(read).collapsed());
-        assertFalse(view(read).collapsed().thread(SETTLED));
-        assertFalse(view(read).collapsed().thread(OPEN));
-
-        // Kept before the threads are read, it is the same once they are.
-        Model opened = Update.update(
-                        loaded(), new CommitFilesMsg.Opened(new Changes.OfPullRequest(COMMITS), Scopes.BRANCHES.pane()))
-                .model();
-        Model early = Update.update(opened, kept).model();
-        assertEquals(
-                expected,
-                view(Update.update(early, readAgain(HashSet.empty(), OPEN, SETTLED))
-                                .model())
-                        .collapsed());
-
-        // What was flipped in this session wins.
-        Model collapsed = Update.update(files(), new ReviewMsg.ThreadToggled(at(onThread("T1"))))
-                .model();
-        assertTrue(view(Update.update(collapsed, kept).model()).collapsed().thread(OPEN));
-    }
-
-    @Test
     void aThreadResolvedIsAsItWasReadUntilTheThreadsReadAgainShowItResolved() {
         Model toggled = Update.update(
-                        Update.update(files(), new ReviewMsg.ThreadToggled(at(onThread("T1"))))
+                        Update.update(files(), new ThreadMsg.ThreadToggled(at(onThread("T1"))))
                                 .model(),
-                        new ReviewMsg.ThreadToggled(at(
+                        new ThreadMsg.ThreadToggled(at(
                                 new Anchor.Comment(new ReviewThread.Comment.Id("R1"), (Anchor.Thread) onThread("T1")))))
                 .model();
         Next resolving = Update.update(toggled, new ReviewMsg.ResolveAsked(at(onThread("T1"))));
@@ -331,7 +205,7 @@ class ReviewUpdateTest {
 
     @Test
     void aThreadResolvedOrUnresolvedElsewhereIsAsItStartsOnceReadAgain() {
-        Model opened = Update.update(files(), new ReviewMsg.ThreadToggled(at(onThread("T2"))))
+        Model opened = Update.update(files(), new ThreadMsg.ThreadToggled(at(onThread("T2"))))
                 .model();
         assertEquals(
                 new Collapsed(HashMap.of(new Collapsed.Key("T2"), true)),

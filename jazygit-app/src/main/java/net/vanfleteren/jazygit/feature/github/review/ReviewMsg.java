@@ -11,8 +11,8 @@ import net.vanfleteren.jazygit.state.diff.DiffCursorAt;
 
 /**
  * Commenting on the lines of the diff of a pull request's files, from its cursor (ADR 60): starting a review thread,
- * replying to one, resolving it, opening or closing it, and editing a comment of it (ADR 65). Deleting a comment is a
- * {@link DeleteCommentMsg}, reacting to one a {@link ReactMsg}.
+ * replying to one, resolving it, and editing a comment of it (ADR 65). Deleting a comment is a {@link
+ * DeleteCommentMsg}, reacting to one a {@link ReactMsg}, and collapsing or opening one a {@link ThreadMsg}.
  */
 public sealed interface ReviewMsg extends Msg {
 
@@ -35,17 +35,6 @@ public sealed interface ReviewMsg extends Msg {
      * The user asked to resolve the thread of the cursor {@code at}, or to unresolve it.
      */
     record ResolveAsked(DiffCursorAt at) implements ReviewMsg {}
-
-    /**
-     * The user asked to open or close the thread of the cursor {@code at}.
-     */
-    record ThreadToggled(DiffCursorAt at) implements ReviewMsg {}
-
-    /**
-     * The user asked to open the pull request in the browser, on the comment of the cursor {@code at}, if it is on one
-     * (ADR 85).
-     */
-    record OpenAsked(DiffCursorAt at) implements ReviewMsg {}
 
     /**
      * The user pressed a key the cursor is not on the right stop for, as {@code why} says.

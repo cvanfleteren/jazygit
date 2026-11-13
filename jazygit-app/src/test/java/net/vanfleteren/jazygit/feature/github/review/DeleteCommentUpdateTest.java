@@ -124,7 +124,7 @@ class DeleteCommentUpdateTest {
                         .model()));
         assertEquals(
                 beingDeleted,
-                error(Update.update(deleting, new ReviewMsg.ThreadToggled(at(onThread("T1"))))
+                error(Update.update(deleting, new ThreadMsg.ThreadToggled(at(onThread("T1"))))
                         .model()));
         assertEquals(
                 beingDeleted,
