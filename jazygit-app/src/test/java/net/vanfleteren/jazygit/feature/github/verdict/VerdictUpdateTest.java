@@ -18,7 +18,6 @@ import net.vanfleteren.jazygit.feature.github.GitHubError;
 import net.vanfleteren.jazygit.feature.github.GitHubError.CannotReview.Why;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestCmd.LoadPullRequestDetails;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
-import net.vanfleteren.jazygit.feature.github.verdict.VerdictCmd.EditReview;
 import net.vanfleteren.jazygit.feature.github.verdict.VerdictCmd.SubmitReview;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
@@ -42,6 +41,8 @@ import net.vanfleteren.jazygit.state.AppError;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.compose.ComposeCmd.OpenInEditor;
+import net.vanfleteren.jazygit.state.compose.ComposeMsg;
 import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.github.Reading;
 import org.junit.jupiter.api.Test;
@@ -145,7 +146,7 @@ class VerdictUpdateTest {
 
         Model asked = Update.update(loaded().openPopup(pending), new VerdictMsg.DialogAsked())
                 .model();
-        Next confirmed = Update.update(asked, new VerdictMsg.Confirmed());
+        Next confirmed = Update.update(asked, new ComposeMsg.Confirmed());
 
         assertTrue(asked.popup(VerdictPopup.class).isDefined());
         assertEquals(Option.of(new GitHubError.CannotReview(Why.PENDING_REVIEW)), error(asked));
@@ -168,7 +169,7 @@ class VerdictUpdateTest {
 
     @Test
     void anApprovalIsSentWithoutText() {
-        Next sending = Update.update(reviewing(Verdict.APPROVE, ""), new VerdictMsg.Confirmed());
+        Next sending = Update.update(reviewing(Verdict.APPROVE, ""), new ComposeMsg.Confirmed());
 
         assertEquals(List.of(new SubmitReview(42, "PR_42", Verdict.APPROVE, "")), sending.cmds());
         assertEquals(Option.of(true), sending.model().popup(VerdictPopup.class).map(VerdictPopup::sending));
@@ -176,8 +177,8 @@ class VerdictUpdateTest {
 
     @Test
     void askingForChangesNeedsAReasonAndSendsItAsTyped() {
-        Next blank = Update.update(reviewing(Verdict.REQUEST_CHANGES, "  \n"), new VerdictMsg.Confirmed());
-        Next typed = Update.update(reviewing(Verdict.REQUEST_CHANGES, "  Rename it\n"), new VerdictMsg.Confirmed());
+        Next blank = Update.update(reviewing(Verdict.REQUEST_CHANGES, "  \n"), new ComposeMsg.Confirmed());
+        Next typed = Update.update(reviewing(Verdict.REQUEST_CHANGES, "  Rename it\n"), new ComposeMsg.Confirmed());
 
         assertEquals(List.empty(), blank.cmds());
         assertEquals(Option.of(new GitHubError.CannotReview(Why.NO_REASON)), error(blank.model()));
@@ -187,23 +188,23 @@ class VerdictUpdateTest {
 
     @Test
     void whileSentNothingChangesItNorSendsItAgain() {
-        Model sending = Update.update(reviewing(Verdict.APPROVE, "Nice"), new VerdictMsg.Confirmed())
+        Model sending = Update.update(reviewing(Verdict.APPROVE, "Nice"), new ComposeMsg.Confirmed())
                 .model();
 
         assertEquals(
-                sending, Update.update(sending, new VerdictMsg.Edited("Other")).model());
+                sending, Update.update(sending, new ComposeMsg.Edited("Other")).model());
         assertEquals(
                 sending,
                 Update.update(sending, new VerdictMsg.Chosen(Verdict.REQUEST_CHANGES))
                         .model());
         assertEquals(
-                List.empty(), Update.update(sending, new VerdictMsg.Confirmed()).cmds());
-        assertEquals(sending, Update.update(sending, new VerdictMsg.Cancelled()).model());
+                List.empty(), Update.update(sending, new ComposeMsg.Confirmed()).cmds());
+        assertEquals(sending, Update.update(sending, new ComposeMsg.Cancelled()).model());
     }
 
     @Test
     void escapeGoesBackToTheDialogDroppingTheText() {
-        Model back = Update.update(reviewing(Verdict.APPROVE, "Nice"), new VerdictMsg.Cancelled())
+        Model back = Update.update(reviewing(Verdict.APPROVE, "Nice"), new ComposeMsg.Cancelled())
                 .model();
 
         assertEquals(Option.of(SHOWN), back.popup());
@@ -211,18 +212,19 @@ class VerdictUpdateTest {
 
     @Test
     void theEditorWritesTheTextInItsOwnFile() {
-        Next asked = Update.update(reviewing(Verdict.APPROVE, "Nice"), new VerdictMsg.EditorRequested());
-        Model saved = Update.update(asked.model(), new VerdictMsg.EditorClosed("Nicer", List.empty()))
+        Next asked = Update.update(reviewing(Verdict.APPROVE, "Nice"), new ComposeMsg.EditorRequested());
+        Model saved = Update.update(
+                        asked.model(), new ComposeMsg.EditorClosed(VerdictCmd.EDITOR, "Nicer", List.empty()))
                 .model();
 
-        assertEquals(List.of(new EditReview("Nice")), asked.cmds());
-        assertEquals("PR_REVIEW.md", VerdictCmd.FILE_NAME);
+        assertEquals(List.of(new OpenInEditor(VerdictCmd.EDITOR, "Nice")), asked.cmds());
+        assertEquals("PR_REVIEW.md", VerdictCmd.EDITOR.name());
         assertEquals(Option.of("Nicer"), saved.popup(VerdictPopup.class).map(VerdictPopup::text));
     }
 
     @Test
     void onceSentTheDialogComesBackReadingItsDetailsAgain() {
-        Next sending = Update.update(reviewing(Verdict.APPROVE, ""), new VerdictMsg.Confirmed());
+        Next sending = Update.update(reviewing(Verdict.APPROVE, ""), new ComposeMsg.Confirmed());
         SubmitReview cmd = (SubmitReview) sending.cmds().head();
 
         Next sent = Update.update(sending.model(), new VerdictMsg.Sent(cmd, List.of(GH)));
@@ -235,7 +237,7 @@ class VerdictUpdateTest {
 
     @Test
     void aFailureKeepsThePopupOpenWithTheText() {
-        Next sending = Update.update(reviewing(Verdict.REQUEST_CHANGES, "Rename it"), new VerdictMsg.Confirmed());
+        Next sending = Update.update(reviewing(Verdict.REQUEST_CHANGES, "Rename it"), new ComposeMsg.Confirmed());
         SubmitReview cmd = (SubmitReview) sending.cmds().head();
 
         Model failed = Update.update(
@@ -274,7 +276,7 @@ class VerdictUpdateTest {
         assertEquals(Option.none(), error(followed));
         assertEquals(
                 List.of(new SubmitReview(42, "PR_42", Verdict.APPROVE, "")),
-                Update.update(followed, new VerdictMsg.Confirmed()).cmds());
+                Update.update(followed, new ComposeMsg.Confirmed()).cmds());
     }
 
     @Test
@@ -338,7 +340,7 @@ class VerdictUpdateTest {
                         diff(remarks(State.OPEN, false, new Reviewing("PR_7", false, false))),
                         new VerdictMsg.DiffAsked())
                 .model();
-        Next sending = Update.update(asked, new VerdictMsg.Confirmed());
+        Next sending = Update.update(asked, new ComposeMsg.Confirmed());
         SubmitReview cmd = (SubmitReview) sending.cmds().head();
 
         Next sent = Update.update(sending.model(), new VerdictMsg.Sent(cmd, List.of(GH)));

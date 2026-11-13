@@ -2,17 +2,19 @@ package net.vanfleteren.jazygit.feature.github.verdict;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.feature.github.comment.CommentCmd;
 import net.vanfleteren.jazygit.gh.model.Verdict;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.compose.EditorFile;
 import net.vanfleteren.jazygit.state.operation.Operation;
 import net.vanfleteren.jazygit.state.operation.OperationCmd;
 
 /**
- * Writing the text of a review in the editor, and submitting the review (ADR 100).
+ * Submitting a review (ADR 100).
  */
 public sealed interface VerdictCmd extends Cmd {
 
@@ -20,28 +22,9 @@ public sealed interface VerdictCmd extends Cmd {
     Operation REVIEW_PR = Operation.of("log.title.reviewPr", "error.reviewPr.failed");
 
     /**
-     * The file the text is written in, in the editor; editors take it for Markdown, as GitHub does.
+     * The file the text is written in, in the editor (ADR 115). It is logged as writing a comment is.
      */
-    String FILE_NAME = "PR_REVIEW.md";
-
-    /**
-     * Opens {@code text} in git's editor, with the terminal handed over to it, and reports how it was saved.
-     */
-    record EditReview(String text) implements VerdictCmd {
-
-        @Override
-        public Msg run(Env env) {
-            return env.terminal()
-                    .handOver(() -> env.git().editor().editText(FILE_NAME, text))
-                    .mapLeft(Failure::of)
-                    .fold(this::failed, edited -> new VerdictMsg.EditorClosed(edited._1, edited._2));
-        }
-
-        @Override
-        public Msg failed(Failure failure) {
-            return new VerdictMsg.EditorFailed(failure);
-        }
-    }
+    EditorFile EDITOR = new EditorFile("PR_REVIEW.md", CommentCmd.EDIT_COMMENT);
 
     /**
      * Submits a review saying {@code verdict}, with {@code body}, on pull request {@code number}, whose node id is

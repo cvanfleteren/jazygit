@@ -6,7 +6,10 @@ import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.feature.github.show.ShowsPullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Reviewing;
 import net.vanfleteren.jazygit.gh.model.Verdict;
-import net.vanfleteren.jazygit.state.popup.Popup;
+import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.compose.ComposePopup;
+import net.vanfleteren.jazygit.state.compose.EditorFile;
 
 /**
  * Asking for a review of a pull request, which approves it or asks for changes (ADR 100), from its dialog or from the
@@ -32,7 +35,7 @@ public record VerdictPopup(
         boolean pending,
         String text,
         boolean sending)
-        implements Popup {
+        implements ComposePopup {
 
     /**
      * The popup asking for a review of the pull request {@code from} shows, which {@code reviewing} says how to.
@@ -75,5 +78,23 @@ public record VerdictPopup(
     @Override
     public boolean holdsInput() {
         return !text.isBlank();
+    }
+
+    @Override
+    public EditorFile editorFile() {
+        return VerdictCmd.EDITOR;
+    }
+
+    @Override
+    public Next send(Model model) {
+        return VerdictUpdate.confirmed(model, this);
+    }
+
+    /**
+     * Back where it was opened from: the dialog, or the diff.
+     */
+    @Override
+    public Model back(Model model) {
+        return VerdictUpdate.back(model, this);
     }
 }

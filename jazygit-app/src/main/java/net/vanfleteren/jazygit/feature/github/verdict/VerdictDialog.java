@@ -32,12 +32,6 @@ public final class VerdictDialog implements PopupView {
     // The box of the choices, one stop of the focus.
     public static final String CHOICES_ID = "pull-request-verdict-choices";
 
-    private static final CommentComposer.Actions ACTIONS = new CommentComposer.Actions(
-            VerdictMsg.Edited::new,
-            VerdictMsg.Confirmed::new,
-            VerdictMsg.Cancelled::new,
-            VerdictMsg.EditorRequested::new);
-
     private static final CommentComposer.Hints HINTS =
             new CommentComposer.Hints("dialog.verdict.hint", "dialog.verdict.sending");
 
@@ -83,7 +77,6 @@ public final class VerdictDialog implements PopupView {
                                         ? "dialog.verdict.textRequired"
                                         : "dialog.verdict.textOptional")),
                         new CommentComposer.Comment(popup.text(), popup.sending()),
-                        ACTIONS,
                         HINTS));
     }
 
@@ -123,7 +116,7 @@ public final class VerdictDialog implements PopupView {
         return switch (event.code()) {
             case LEFT, UP -> chosen(Verdict.APPROVE);
             case RIGHT, DOWN -> chosen(Verdict.REQUEST_CHANGES);
-            default -> composer.keys(event, ACTIONS);
+            default -> composer.keys(event);
         };
     }
 

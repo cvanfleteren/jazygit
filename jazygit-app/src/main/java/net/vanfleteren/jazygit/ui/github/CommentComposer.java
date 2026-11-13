@@ -11,11 +11,10 @@ import dev.tamboui.widgets.input.TextAreaState;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Supplier;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.compose.ComposeMsg;
 import net.vanfleteren.jazygit.ui.text.ErrorText;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import net.vanfleteren.jazygit.ui.widgets.DialogFrame;
@@ -25,8 +24,9 @@ import net.vanfleteren.jazygit.ui.widgets.SubmittableTextArea;
 /**
  * What the popups that write a comment on a pull request have alike (ADR 5, ADR 60): the lines the comment is about,
  * dimmed, a text area where Enter adds a line, Ctrl+S sends it, Ctrl+O opens it in the editor and Escape goes back,
- * and why sending it failed, under it. The comment lives in the {@link Model}, which every change is sent to; the text
- * area only keeps where its cursor is.
+ * and why sending it failed, under it. The comment lives in the {@link Model}, as a
+ * {@link net.vanfleteren.jazygit.state.compose.ComposePopup}, which every change is sent to as a {@link ComposeMsg}
+ * (ADR 115); the text area only keeps where its cursor is.
  */
 public final class CommentComposer {
 
@@ -54,18 +54,15 @@ public final class CommentComposer {
     }
 
     /**
-     * The popup that writes {@code comment}, titled {@code title}, under {@code quoted}, sending what the user does as
-     * {@code actions} makes it.
+     * The popup that writes {@code comment}, titled {@code title}, under {@code quoted}.
      */
-    public Element render(Model model, String title, List<String> quoted, Comment comment, Actions actions) {
-        return render(
-                model, title, List.empty(), quoted, Option.none(), Option.none(), comment, actions, Hints.COMMENT);
+    public Element render(Model model, String title, List<String> quoted, Comment comment) {
+        return render(model, title, List.empty(), quoted, Option.none(), Option.none(), comment, Hints.COMMENT);
     }
 
     /**
      * The popup that writes {@code comment}, titled {@code title}, under {@code fields}, which come first and choose
-     * how it is sent, then {@code quoted} and then {@code notice}, which stands out; sending what the user does as
-     * {@code actions} makes it, with {@code hints} below it. The fields take their keys before {@link #keys}. With
+     * how it is sent, then {@code quoted} and then {@code notice}, which stands out, with {@code hints} below it. The fields take their keys before {@link #keys}. With
      * {@code textTitle}, the text is in a box of its own under that title, set apart from the fields (ADR 100).
      */
     public Element render(
@@ -76,7 +73,6 @@ public final class CommentComposer {
             Option<String> notice,
             Option<String> textTitle,
             Comment comment,
-            Actions actions,
             Hints hints) {
         // The text area shows what the model has: what was typed in it, or what came back from the editor.
         if (!text.text().equals(comment.text())) {
@@ -89,10 +85,10 @@ public final class CommentComposer {
                         textTitle.map(plain::title).getOrElse(plain),
                         text,
                         id,
-                        () -> dispatch.accept(actions.confirmed().get()))
-                .onChange(typed -> dispatch.accept(actions.edited().apply(typed)))
+                        () -> dispatch.accept(new ComposeMsg.Confirmed()))
+                .onChange(typed -> dispatch.accept(new ComposeMsg.Edited(typed)))
                 .rows(ROWS)
-                .onKeyEvent(event -> keys(event, actions));
+                .onKeyEvent(this::keys);
         List<Element> about = quoted.size() > QUOTED
                 ? quoted.take(QUOTED).append("…").map(line -> about(line))
                 : quoted.map(CommentComposer::about);
@@ -120,18 +116,18 @@ public final class CommentComposer {
      * from the text area or from a field above it. The dialog around them only gets keys after the global handlers,
      * and those take Escape and Ctrl+S too.
      */
-    public EventResult keys(KeyEvent event, Actions actions) {
+    public EventResult keys(KeyEvent event) {
         if (event.isCancel()) {
-            dispatch.accept(actions.cancelled().get());
+            dispatch.accept(new ComposeMsg.Cancelled());
             return EventResult.HANDLED;
         }
         if (event.hasCtrl() && event.isChar(CONFIRM_KEY)) {
             // A blank comment keeps the popup open.
-            dispatch.accept(actions.confirmed().get());
+            dispatch.accept(new ComposeMsg.Confirmed());
             return EventResult.HANDLED;
         }
         if (event.hasCtrl() && event.isChar(EDITOR_KEY)) {
-            dispatch.accept(actions.editor().get());
+            dispatch.accept(new ComposeMsg.EditorRequested());
             return EventResult.HANDLED;
         }
         return EventResult.UNHANDLED;
@@ -144,17 +140,6 @@ public final class CommentComposer {
      * @param sending whether it is being sent
      */
     public record Comment(String text, boolean sending) {}
-
-    /**
-     * The messages of what the user does in the popup.
-     *
-     * @param edited    the comment changed to a text
-     * @param confirmed send it
-     * @param cancelled go back
-     * @param editor    write it in the editor
-     */
-    public record Actions(
-            Function<String, Msg> edited, Supplier<Msg> confirmed, Supplier<Msg> cancelled, Supplier<Msg> editor) {}
 
     /**
      * The keys of the hints below the popup.

@@ -7,8 +7,11 @@ import net.vanfleteren.jazygit.gh.model.NewReviewThread;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.AreaId;
+import net.vanfleteren.jazygit.state.Model;
+import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.compose.ComposePopup;
+import net.vanfleteren.jazygit.state.compose.EditorFile;
 import net.vanfleteren.jazygit.state.diff.Scrolled;
-import net.vanfleteren.jazygit.state.popup.Popup;
 
 /**
  * Asking for a comment on the lines of the diff of a pull request's files, a reply to one of its threads (ADR 60), or
@@ -35,12 +38,30 @@ public record ReviewPopup(
         boolean sending,
         AreaId area,
         Scrolled at)
-        implements Popup {
+        implements ComposePopup {
 
     // An edit starts out from a body that is not blank, which does not stop a quit until it is changed (ADR 65).
     @Override
     public boolean holdsInput() {
         return target instanceof Target.Edit edit ? !text.equals(edit.body()) : !text.isBlank();
+    }
+
+    @Override
+    public EditorFile editorFile() {
+        return ReviewCmd.EDITOR;
+    }
+
+    @Override
+    public Next send(Model model) {
+        return ReviewUpdate.confirm(model, this);
+    }
+
+    /**
+     * Back on the diff, the comment dropped.
+     */
+    @Override
+    public Model back(Model model) {
+        return model.withoutPopup(ReviewPopup.class);
     }
 
     /**

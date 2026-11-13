@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.compose.ComposeMsg;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import org.junit.jupiter.api.Test;
@@ -37,7 +38,7 @@ class VerdictDialogTest {
     // As in the app, what is chosen or typed changes the model the popup shows; the other messages are only kept.
     private final VerdictDialog dialog = new VerdictDialog(msg -> {
         dispatched.add(msg);
-        if (msg instanceof VerdictMsg.Edited || msg instanceof VerdictMsg.Chosen) {
+        if (msg instanceof ComposeMsg.Edited || msg instanceof VerdictMsg.Chosen) {
             model = Update.update(model, msg).model();
         }
     });
@@ -114,7 +115,7 @@ class VerdictDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new VerdictMsg.Confirmed()), dispatched);
+        assertEquals(java.util.List.of(new ComposeMsg.Confirmed()), dispatched);
     }
 
     @Test

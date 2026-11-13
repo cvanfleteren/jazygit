@@ -54,30 +54,6 @@ public sealed interface ReviewMsg extends Msg {
     record Refused(GitHubError.CannotReview.Why why) implements ReviewMsg {}
 
     /**
-     * The user changed the comment to {@code text}.
-     */
-    record Edited(String text) implements ReviewMsg {}
-
-    /**
-     * The user asked to send the comment.
-     */
-    record Confirmed() implements ReviewMsg {}
-
-    record Cancelled() implements ReviewMsg {}
-
-    /**
-     * The user asked to write the comment in the editor.
-     */
-    record EditorRequested() implements ReviewMsg {}
-
-    /**
-     * The editor ran {@code commands}, and saved the comment as {@code text}.
-     */
-    record EditorClosed(String text, List<ExecutedCommand> commands) implements ReviewMsg {}
-
-    record EditorFailed(Failure failure) implements ReviewMsg {}
-
-    /**
      * The comment was sent by running {@code commands}: a reply, or a thread started.
      */
     record Sent(ReviewCmd.Send cmd, List<ExecutedCommand> commands) implements ReviewMsg {}
