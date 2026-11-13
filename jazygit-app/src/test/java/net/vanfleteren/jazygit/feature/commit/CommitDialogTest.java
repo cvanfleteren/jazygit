@@ -141,6 +141,19 @@ class CommitDialogTest {
     }
 
     @Test
+    void aPasteKeepsItsLineBreaksInTheDescriptionOnly() throws Exception {
+        try (ToolkitTestRunner runner = start()) {
+            SettledPilot.paste(runner, "fix\nit");
+            SettledPilot.of(runner).press(KeyCode.TAB);
+            SettledPilot.paste(runner, "because\r\nreasons");
+            SettledPilot.of(runner).press(KeyCode.ENTER, KeyModifiers.CTRL);
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(java.util.List.of(new CommitMessage("fix it", "because\nreasons")), held);
+    }
+
+    @Test
     void ctrlSCommitsFromEitherField() throws Exception {
         try (ToolkitTestRunner runner = start()) {
             // The app's global Ctrl+S opens the settings, after the fields had their chance.

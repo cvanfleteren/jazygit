@@ -5,6 +5,7 @@ import dev.tamboui.tui.bindings.Actions;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.MouseEvent;
 import dev.tamboui.tui.event.MouseEventKind;
+import dev.tamboui.tui.event.PasteEvent;
 import io.vavr.collection.Iterator;
 import io.vavr.control.Option;
 import java.util.function.IntConsumer;
@@ -59,6 +60,14 @@ public final class ListKeys {
                 .orElse(() -> move(event, list.selected(), list.size(), list::highlightable)
                         .map(ListKey.Move::new))
                 .orElse(() -> Option.when(event.isConfirm(), ListKey.Confirm::new));
+    }
+
+    /**
+     * What pasting {@code event} means to {@code list}, whose filter {@code line} edits: it goes in the filter, while
+     * that is open.
+     */
+    static Option<ListKey.CursorKey> pasted(PasteEvent event, FilteredList list, FilterLine line) {
+        return list.cursor().filter().map(text -> new ListKey.EditFilter(line.paste(text, event)));
     }
 
     /**

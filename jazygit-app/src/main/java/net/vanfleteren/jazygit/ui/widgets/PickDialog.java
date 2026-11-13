@@ -111,7 +111,14 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
                             Math.max(DialogFrame.LIST_WIDTH, Math.max(width, hint) + DialogFrame.FRAME),
                             cursor.filter().isDefined() ? FILTERING_HINT : HINT,
                             cursor.filter()
-                                    .map(typed -> List.of(filter.field(typed), rows.constraint(Constraint.fill())))
+                                    .map(typed -> List.of(
+                                            filter.field(typed),
+                                            new PasteTarget(
+                                                    rows.constraint(Constraint.fill()),
+                                                    spec.id(),
+                                                    event -> ListKeys.pasted(event, view, filter)
+                                                            .flatMap(view::after)
+                                                            .forEach(this::moved))))
                                     .getOrElse(() -> List.of(rows.constraint(Constraint.fill()))))
                     // The filter, the rows of the popup whatever the filter, the blank line and the hint, plus the
                     // border.

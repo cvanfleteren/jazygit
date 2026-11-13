@@ -10,6 +10,8 @@ import dev.tamboui.style.Style;
 import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
+import dev.tamboui.tui.event.PasteEvent;
+import dev.tamboui.tui.event.TextEditing;
 import dev.tamboui.widgets.input.TextInputState;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.ui.edit.LineEdit;
@@ -34,6 +36,16 @@ public final class FilterLine {
         boolean edited = LineEdit.handle(input, event)
                 || (event.code() != KeyCode.HOME && event.code() != KeyCode.END && handleTextInputKey(input, event));
         return Option.when(edited, input::text);
+    }
+
+    /**
+     * The text of the line, {@code text} before, with {@code event} pasted in at the cursor, on one line: its line
+     * breaks become spaces.
+     */
+    public String paste(String text, PasteEvent event) {
+        sync(text);
+        TextEditing.handle(input, event);
+        return input.text();
     }
 
     /**

@@ -693,6 +693,33 @@ class FilesPanelTest {
     }
 
     @Test
+    void aPasteGoesInTheOpenFilterAtOnce() throws Exception {
+        AtomicReference<Model> model = new AtomicReference<>(TestModels.loaded(fixed(FILTERED)));
+        java.util.List<Msg> sent = new java.util.ArrayList<>();
+        FilesPanel panel = new FilesPanel(
+                msg -> {
+                    sent.add(msg);
+                    model.set(Update.update(model.get(), msg).model());
+                },
+                () -> {});
+
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model.get(), FilesPanel.ID))) {
+            SettledPilot.focus(testRunner, FilesPanel.ID);
+            // Without the filter line, a paste does nothing: its space would stage, its d discard.
+            SettledPilot.paste(testRunner, "Test d");
+            SettledPilot.of(testRunner).press('/');
+            SettledPilot.of(testRunner).pause();
+            SettledPilot.paste(testRunner, "Test");
+            String typing = RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), FilesPanel.ID));
+            assertTrue(typing.contains("/ Test"), typing);
+            assertFalse(typing.contains("README.md"), typing);
+
+            assertEquals(java.util.List.of(new FileFilterMsg.Opened(), new FileFilterMsg.Edited("Test")), sent);
+            SettledPilot.of(testRunner).quit();
+        }
+    }
+
+    @Test
     void escapeInTheLinePutsBackTheFilterFromBefore() throws Exception {
         AtomicReference<Model> model = new AtomicReference<>(TestModels.loaded(fixed(FILTERED))
                 .mapRepoView(repoView -> repoView.withFilesFilter(Option.of(new FileFilter("README", Option.none())))));

@@ -459,6 +459,33 @@ class CommitsPanelTest {
     }
 
     @Test
+    void aPasteGoesInTheOpenSearchAtOnce() throws Exception {
+        AtomicReference<Model> model = new AtomicReference<>(TestModels.loaded(SampleData.git())
+                .mapRepo(repo -> repo.withCommits(new Loadable.Loaded<>(List.of(commit("s1"), commit("s0"))))));
+        java.util.List<Msg> sent = new java.util.ArrayList<>();
+        CommitsPanel panel = new CommitsPanel(
+                msg -> {
+                    sent.add(msg);
+                    model.set(Update.update(model.get(), msg).model());
+                },
+                () -> {});
+
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(() -> panel.render(model.get(), CommitsPanel.ID))) {
+            SettledPilot.focus(testRunner, CommitsPanel.ID);
+            // Without the search line, a paste does nothing: its letters are no keys of the commits.
+            SettledPilot.paste(testRunner, "dd");
+            SettledPilot.of(testRunner).press('/');
+            SettledPilot.of(testRunner).pause();
+            SettledPilot.paste(testRunner, "fix bug");
+
+            assertEquals(
+                    List.of(new CommitSearchMsg.Opened(), new CommitSearchMsg.Edited("fix bug")), List.ofAll(sent));
+            SettledPilot.of(testRunner).quit();
+        }
+    }
+
+    @Test
     void aSearchThatFindsNothingSaysSo() throws Exception {
         Model model = TestModels.loaded(SampleData.git())
                 .mapRepoView(
