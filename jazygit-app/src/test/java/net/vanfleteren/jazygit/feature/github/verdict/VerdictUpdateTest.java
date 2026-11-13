@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.feature.diff.CommitFilesCmd.LoadReviewRemarks;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.feature.github.GitHubError;
 import net.vanfleteren.jazygit.feature.github.GitHubError.CannotReview.Why;
+import net.vanfleteren.jazygit.feature.github.comment.CommentCmd;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestCmd.LoadPullRequestDetails;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.feature.github.verdict.VerdictCmd.SubmitReview;
@@ -43,6 +44,7 @@ import net.vanfleteren.jazygit.state.Update;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.compose.ComposeCmd.OpenInEditor;
 import net.vanfleteren.jazygit.state.compose.ComposeMsg;
+import net.vanfleteren.jazygit.state.compose.EditorFile;
 import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.github.Reading;
 import org.junit.jupiter.api.Test;
@@ -218,7 +220,7 @@ class VerdictUpdateTest {
                 .model();
 
         assertEquals(List.of(new OpenInEditor(VerdictCmd.EDITOR, "Nice")), asked.cmds());
-        assertEquals("PR_REVIEW.md", VerdictCmd.EDITOR.name());
+        assertEquals(new EditorFile("PR_REVIEW.md", CommentCmd.EDIT_COMMENT), VerdictCmd.EDITOR);
         assertEquals(Option.of("Nicer"), saved.popup(VerdictPopup.class).map(VerdictPopup::text));
     }
 

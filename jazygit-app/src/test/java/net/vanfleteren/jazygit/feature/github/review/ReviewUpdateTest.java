@@ -39,6 +39,7 @@ import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.compose.ComposeCmd.OpenInEditor;
 import net.vanfleteren.jazygit.state.compose.ComposeMsg;
+import net.vanfleteren.jazygit.state.compose.EditorFile;
 import net.vanfleteren.jazygit.state.diff.*;
 import net.vanfleteren.jazygit.state.load.*;
 import net.vanfleteren.jazygit.state.view.*;
@@ -1581,6 +1582,7 @@ class ReviewUpdateTest {
 
         Next editing = Update.update(typed, new ComposeMsg.EditorRequested());
         assertEquals(List.of(new OpenInEditor(ReviewCmd.EDITOR, "Bec")), editing.cmds());
+        assertEquals(new EditorFile("PR_REVIEW_COMMENT.md", ReviewCmd.EDIT_COMMENT), ReviewCmd.EDITOR);
 
         Model written = Update.update(
                         editing.model(), new ComposeMsg.EditorClosed(ReviewCmd.EDITOR, "Because", List.empty()))

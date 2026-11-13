@@ -31,8 +31,8 @@ import net.vanfleteren.jazygit.state.view.CommitFilesView;
  * open pull request is reviewed, not by who opened it, nor while they have a pending review; the dialog leaves its
  * choice out when it may not be, but for a pending review, which it does not know of until it is asked. The text is
  * written in a popup of its own, or in the editor, and sent from that popup, which stays open until it is sent, so a
- * review that fails to send is not lost (ADR 115). Once it is sent, the popup it was opened from comes back, the dialog, with
- * its details read again; or, from the diff, its remarks are read again.
+ * review that fails to send is not lost (ADR 115). Once it is sent, the popup it was opened from comes back, the
+ * dialog, with its details read again; or, from the diff, its remarks are read again.
  */
 public final class VerdictUpdate {
 
