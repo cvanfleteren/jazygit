@@ -366,6 +366,9 @@
                          loop runs, another test can't draw outside of one. -->
                     <forkCount>1C</forkCount>
                     <reuseForks>true</reuseForks>
+                    <!-- Tests run gh and git as fakes, which inherit the environment: a token exported in the shell
+                         would leak into what they report, and into which account gh uses. -->
+                    <excludedEnvironmentVariables>GH_TOKEN,GITHUB_TOKEN,GH_ENTERPRISE_TOKEN,GITHUB_ENTERPRISE_TOKEN</excludedEnvironmentVariables>
                 </configuration>
             </plugin>
             <!-- Mutation testing on demand only, it's no part of verify: mvn test-compile pitest:mutationCoverage -->
