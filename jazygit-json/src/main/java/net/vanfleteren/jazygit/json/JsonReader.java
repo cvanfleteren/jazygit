@@ -159,17 +159,53 @@ final class JsonReader {
         return new JsonArray(line, asInt(parser.getLocation().getLineNumber()), elements.reverse());
     }
 
-    // Where Parsson stopped, and the character of the text there: none where the text stops. Its column is that of
-    // the last character of the token it stopped at.
+    // Where the token Parsson stopped at starts, and the token as written. Parsson's column is that of the last
+    // character of the token, so it is read back to where the token starts. Past the end of the text, as Parsson puts
+    // a text that stops early, nothing is found, at the end of the text's last line.
     private static NotJson.Broken broken(String text, JsonParsingException e) {
+        List<String> lines = List.of(text.split("\\R", -1));
         int line = asInt(e.getLocation().getLineNumber());
         int column = asInt(e.getLocation().getColumnNumber());
-        Option<String> found = List.of(text.split("\\R", -1))
-                .drop(line - 1)
+        return lines.drop(line - 1)
                 .headOption()
-                .filter(written -> column >= 1 && column <= written.length())
-                .map(written -> written.substring(column - 1, written.offsetByCodePoints(column - 1, 1)));
-        return new NotJson.Broken(line, column, found);
+                .filter(written -> line >= 1 && column >= 1 && column <= written.length())
+                .map(written -> {
+                    int start = tokenStart(written, column - 1);
+                    return new NotJson.Broken(line, start + 1, Option.of(written.substring(start, column)));
+                })
+                .getOrElse(() -> new NotJson.Broken(lines.size(), lines.last().length() + 1, Option.none()));
+    }
+
+    // Where the token that ends at index last of a line starts: a string at its opening quote, a word or a number at
+    // its first character, any other character at itself.
+    private static int tokenStart(String written, int last) {
+        char end = written.charAt(last);
+        if (end == '"') {
+            for (int at = last - 1; at >= 0; at--) {
+                if (written.charAt(at) == '"' && !escaped(written, at)) {
+                    return at;
+                }
+            }
+            return last;
+        }
+        int start = last;
+        while (start > 0 && isWordChar(written.charAt(start - 1)) && isWordChar(end)) {
+            start--;
+        }
+        return start;
+    }
+
+    // Whether the character at index at follows an odd number of backslashes.
+    private static boolean escaped(String written, int at) {
+        int backslashes = 0;
+        for (int before = at - 1; before >= 0 && written.charAt(before) == '\\'; before--) {
+            backslashes++;
+        }
+        return backslashes % 2 == 1;
+    }
+
+    private static boolean isWordChar(char c) {
+        return Character.isLetterOrDigit(c) || c == '.' || c == '-' || c == '+';
     }
 
     // Parsson counts in longs; no text read here has more lines or columns than an int holds (ADR 79).

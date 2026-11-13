@@ -15,9 +15,10 @@ public sealed interface NotJson {
     /**
      * Reading stopped at a place that is not JSON.
      *
-     * @param line   the line it stopped on, counted from 1
-     * @param column the column it stopped at, counted from 1: that of the last character of what it read there
-     * @param found  the character of the text there; none where the text stops
+     * @param line   the line of the token it stopped at, counted from 1; the text's last line where the text stops
+     * @param column the column the token starts at, counted from 1; after the text's last character where the text
+     *               stops
+     * @param found  the token as written there, a string with its quotes; none where the text stops
      */
     record Broken(int line, int column, Option<String> found) implements NotJson {}
 

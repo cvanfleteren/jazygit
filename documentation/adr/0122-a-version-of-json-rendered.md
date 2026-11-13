@@ -31,8 +31,10 @@ its scroll in the model, its stops from `DiffCursor` and its gutter of marks.
 - The seam of ADR 103 is given which nodes of the version are closed, and each row it gives says which node it opens
   or closes, if any. Markdown is given them too, and gives no nodes. Not: a seam for JSON only.
 - Text that is not JSON is shown as source, under one line saying where reading it stopped: `Not rendered: line 12,
-  column 3, unexpected ']'`, or `unexpected end` where the text stops. jazygit writes that line itself, from the
-  location Parsson gives and the character of the text found there. Not: what was expected, which Parsson gives only
+  column 3, unexpected ']'`, `unexpected 'true'`, `unexpected string`, and `unexpected end` at the end of the text's
+  last line where the text stops. jazygit writes that line itself: Parsson's location is the last character of the
+  token it stopped at, or past the end of the text, so the line and column are those where that token starts, read
+  back from it in the text. Not: what was expected, which Parsson gives only
   in the words of its message, often as more than one token, and not at all for a character it cannot read. Not:
   Parsson's own text, `Invalid token=CURLYCLOSE at (line no=12, ...)`. A version cut at the limit
   of ADR 79 is not JSON either: the line says it was cut. JSON nested deeper than the reader goes, `MAX_DEPTH`, is shown

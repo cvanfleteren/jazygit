@@ -90,8 +90,19 @@ class JsonTreeTest {
     }
 
     @Test
-    void aTokenFoundWhereItCannotBeIsTakenAtItsLastCharacter() {
-        assertEquals(Either.left(new NotJson.Broken(2, 5, Option.of("\""))), JsonTree.read("{\"a\": 1\n  \"b\": 2}"));
+    void aStringFoundWhereItCannotBeIsFoundWholeWhereItStarts() {
+        assertEquals(
+                Either.left(new NotJson.Broken(2, 3, Option.of("\"b\""))), JsonTree.read("{\"a\": 1\n  \"b\": 2}"));
+    }
+
+    @Test
+    void aWordFoundWhereItCannotBeIsFoundWholeWhereItStarts() {
+        assertEquals(Either.left(new NotJson.Broken(2, 8, Option.of("true"))), JsonTree.read("[1,\n  true true]"));
+    }
+
+    @Test
+    void aNumberFoundWhereItCannotBeIsFoundWholeWhereItStarts() {
+        assertEquals(Either.left(new NotJson.Broken(1, 4, Option.of("1234"))), JsonTree.read("[1 1234]"));
     }
 
     @Test
@@ -100,10 +111,8 @@ class JsonTreeTest {
     }
 
     @Test
-    void textThatStopsEarlyFindsNothing() {
-        Either<NotJson, JsonTree> tree = JsonTree.read("{\"a\": [1, 2");
-
-        assertEquals(Option.none(), ((NotJson.Broken) tree.getLeft()).found());
+    void textThatStopsEarlyFindsNothingAtItsEnd() {
+        assertEquals(Either.left(new NotJson.Broken(2, 8, Option.none())), JsonTree.read("{\"a\":\n  [1, 2"));
     }
 
     @Test
