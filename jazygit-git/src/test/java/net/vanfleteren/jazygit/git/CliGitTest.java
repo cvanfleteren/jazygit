@@ -2105,19 +2105,16 @@ class CliGitTest {
     }
 
     @Test
-    void aDivergedBranchOnlyPushesWithForceWithLease() throws Exception {
+    void aRewrittenBranchOnlyPushesWithForceWithLease() throws Exception {
         java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
         git("init", "-q", "--bare", "-b", "main", bare.toString());
         git("remote", "add", "origin", bare.toString());
         git("push", "-q", "-u", "origin", "main");
-
-        // The remote gets a commit that this repository fetches, while the local branch is rewritten.
-        java.nio.file.Path other = Files.createTempDirectory("other");
-        gitIn(other, "clone", "-q", bare.toString(), "clone");
-        gitIn(other.resolve("clone"), "commit", "-q", "--allow-empty", "-m", "theirs");
-        gitIn(other.resolve("clone"), "push", "-q", "origin", "main");
-        git("fetch", "-q", "origin");
         git("commit", "-q", "--allow-empty", "-m", "ours");
+        git("push", "-q", "origin", "main");
+
+        // The commit pushed is amended here.
+        git("commit", "-q", "--amend", "--allow-empty", "-m", "ours, amended");
         assertEquals(List.of(1, 1), counts("main"));
 
         assertTrue(repository
@@ -2134,6 +2131,34 @@ class CliGitTest {
                 .get();
         git("fetch", "-q", "origin");
         assertEquals(List.of(0, 0), counts("main"));
+    }
+
+    @Test
+    void aForcePushDoesNotDropWhatSomeoneElsePushedOnceItWasFetched() throws Exception {
+        java.nio.file.Path bare = Files.createTempDirectory("remote").resolve("remote.git");
+        git("init", "-q", "--bare", "-b", "main", bare.toString());
+        git("remote", "add", "origin", bare.toString());
+        git("push", "-q", "-u", "origin", "main");
+
+        // The remote gets a commit that this repository fetches, while the local branch gets one of its own: the
+        // lease holds, as origin/main is where the remote is, but the branch never had that commit.
+        java.nio.file.Path other = Files.createTempDirectory("other");
+        gitIn(other, "clone", "-q", bare.toString(), "clone");
+        gitIn(other.resolve("clone"), "commit", "-q", "--allow-empty", "-m", "theirs");
+        gitIn(other.resolve("clone"), "push", "-q", "origin", "main");
+        git("fetch", "-q", "origin");
+        git("commit", "-q", "--allow-empty", "-m", "ours");
+        assertEquals(List.of(1, 1), counts("main"));
+
+        assertTrue(repository
+                .remotes()
+                .push(
+                        new BranchName("main"),
+                        new RemoteBranch("origin", new BranchName("main")),
+                        PushMode.FORCE_WITH_LEASE)
+                .isLeft());
+        git("fetch", "-q", "origin");
+        assertEquals(List.of(1, 1), counts("main"));
     }
 
     /**

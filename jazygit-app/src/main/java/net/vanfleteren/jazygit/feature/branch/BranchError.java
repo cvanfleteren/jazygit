@@ -28,6 +28,20 @@ public sealed interface BranchError extends AppError {
     }
 
     /**
+     * A push was asked for, but the branch is behind its upstream, which has commits the branch never had, as
+     * someone else pushed them: a force push would drop them, so it is to be pulled first (ADR 116).
+     *
+     * @param diverged whether the branch also has commits of its own, which a pull then rebases or merges
+     */
+    record BehindUpstream(BranchName branch, boolean diverged) implements BranchError {
+
+        @Override
+        public Phrase phrase() {
+            return Phrase.of(diverged ? "error.push.diverged" : "error.push.behind", branch.value());
+        }
+    }
+
+    /**
      * Renaming the upstream of the branch too was chosen, but the branch no longer follows that upstream, or it is no
      * longer on the remote, as the branches were read again while the dialog was open (ADR 90).
      *

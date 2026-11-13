@@ -49,7 +49,7 @@ class ForcePushDialogTest {
                                         1,
                                         2)))))
                 .model();
-        return Update.update(diverged, new PushMsg.Requested(new BranchName("main")))
+        return Update.update(diverged, new PushMsg.ForceChecked(new ForcePushPopup(new BranchName("main"), 1, 2), true))
                 .model();
     }
 
@@ -102,7 +102,7 @@ class ForcePushDialogTest {
                                                         0,
                                                         1)))))
                                 .model(),
-                        new PushMsg.Requested(new BranchName("main")))
+                        new PushMsg.ForceChecked(new ForcePushPopup(new BranchName("main"), 0, 1), true))
                 .model();
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(
                 () -> stack(text("background"), dialog.render(behind).get()))) {

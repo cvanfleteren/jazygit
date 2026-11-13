@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.branch.push;
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
+import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
@@ -25,9 +26,19 @@ public sealed interface PushMsg extends Msg {
     record UpstreamConfirmed() implements PushMsg {}
 
     /**
-     * The user confirmed overwriting the diverged remote branch.
+     * The user confirmed overwriting the remote branch, which the branch is behind.
      */
     record ForceConfirmed() implements PushMsg {}
+
+    /**
+     * Git said whether the branch of {@code popup} ever had the commit its upstream is at: {@code had}.
+     */
+    record ForceChecked(ForcePushPopup popup, boolean had) implements PushMsg {}
+
+    /**
+     * Asking git whether {@code branch} ever had the commit its upstream is at failed.
+     */
+    record ForceCheckFailed(BranchName branch, Failure failure) implements PushMsg {}
 
     /**
      * The push {@code cmd}, which ran {@code commands}, pushed nothing: {@code push.default} does not push the branch
