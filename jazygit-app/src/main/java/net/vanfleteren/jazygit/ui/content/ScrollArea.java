@@ -29,6 +29,7 @@ import io.vavr.control.Option;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.keys.Keymap;
 import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.settings.ThemeName;
