@@ -81,20 +81,7 @@ public final class LoadableList<T> {
      * @param title the title to show instead of the one the list was made with
      */
     public Panel render(Loadable<T> value, Function<T, List<Row>> items, boolean focused, boolean active, Line title) {
-        return render(value, items, focused, active, title, Option.none());
-    }
-
-    /**
-     * @param above a line drawn above the rows, inside the border, if there is one
-     */
-    public Panel render(
-            Loadable<T> value,
-            Function<T, List<Row>> items,
-            boolean focused,
-            boolean active,
-            Line title,
-            Option<StyledElement<?>> above) {
-        return render(value, items, focused, active, title, above, event -> {});
+        return render(value, items, focused, active, title, Option.none(), event -> {});
     }
 
     /**

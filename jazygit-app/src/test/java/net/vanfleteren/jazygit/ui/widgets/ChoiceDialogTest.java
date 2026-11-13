@@ -217,6 +217,35 @@ class ChoiceDialogTest {
     }
 
     @Test
+    void aPasteChoosesNothingWhileTheFilterIsClosed() throws Exception {
+        try (ToolkitTestRunner runner = start(true)) {
+            // As keys, its letters would choose: b discards the unstaged changes.
+            SettledPilot.paste(runner, "b");
+            String screen = RenderedText.ofLarge(runner, () -> view(true));
+            assertTrue(screen.contains("(a) Discard all changes"), screen);
+            assertFalse(screen.contains("/ b"), screen);
+        }
+
+        assertEquals(java.util.List.of(), dispatched);
+    }
+
+    @Test
+    void aPasteGoesInTheOpenFilter() throws Exception {
+        try (ToolkitTestRunner runner = start(true)) {
+            type(runner, "/");
+            SettledPilot.paste(runner, "uns");
+            String screen = RenderedText.ofLarge(runner, () -> view(true));
+            assertTrue(screen.contains("/ uns"), screen);
+            assertTrue(screen.contains("(b) Discard unstaged changes"), screen);
+            assertFalse(screen.contains("(a) Discard all changes"), screen);
+            SettledPilot.of(runner).press(KeyCode.ENTER);
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(java.util.List.of(new Picked("b")), dispatched);
+    }
+
+    @Test
     void escapeClosesTheFilterBeforeItCancels() throws Exception {
         try (ToolkitTestRunner runner = start(true)) {
             type(runner, "/uns");
