@@ -4,8 +4,8 @@ import io.vavr.control.Option;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
+import net.vanfleteren.jazygit.lens.Lens;
 import net.vanfleteren.jazygit.state.Failure;
-import net.vanfleteren.jazygit.state.Lens;
 import net.vanfleteren.jazygit.state.Loadable;
 
 /**

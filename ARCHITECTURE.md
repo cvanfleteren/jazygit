@@ -25,7 +25,7 @@ does not describe features; the code, its Javadoc and the tests do. Why things a
 | `jazygit-process` | `process`: running a program, and what it did as a value (`Exec`, `ExecutedCommand`). | vavr, zt-exec |
 | `jazygit-git` | `git`, `git.model`: running git, and what it reports as values. | process, syntax |
 | `jazygit-gh` | `gh`, `gh.model`: running gh, and what GitHub reports as values. | process, json |
-| `jazygit-app` | Everything else: `JazygitApp`, `state`, `feature.*`, `ui`, `keys`, `settings`, `i18n`. Builds the fat jar and the native image. | git, gh, TamboUI, picocli, night-config |
+| `jazygit-app` | Everything else: `JazygitApp`, `state`, `feature.*`, `ui`, `keys`, `settings`, `i18n`, `lens`. Builds the fat jar and the native image. | git, gh, TamboUI, picocli, night-config |
 | `jazygit-test-support` | What the architecture tests share (`CoreRules`, `ModelRules`). Test scope only. | ArchUnit |
 | `jazygit-benchmarks` | JMH benchmarks, only built with `-Pbench`. | git, app, JMH |
 
@@ -97,6 +97,8 @@ source of truth when the two disagree.
   place that turns errors into text.
 - **Only views use `i18n`.** `state` does not.
 - **`settings` knows nothing of the application**, and is the only part that reads or writes TOML.
+- **`lens` knows nothing of the application either**: `Lens`, where a value sits in another, is a tool any part
+  may use, and is left out of the diagram.
 
 ## The runtime loop
 

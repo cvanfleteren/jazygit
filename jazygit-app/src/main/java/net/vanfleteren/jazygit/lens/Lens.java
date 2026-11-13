@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.state;
+package net.vanfleteren.jazygit.lens;
 
 import io.vavr.control.Option;
 import java.util.function.BiFunction;
