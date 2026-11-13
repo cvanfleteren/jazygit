@@ -7,6 +7,7 @@ import java.util.function.Consumer;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
+import net.vanfleteren.jazygit.state.compose.ComposeMsg;
 import net.vanfleteren.jazygit.ui.github.CommentComposer;
 import net.vanfleteren.jazygit.ui.widgets.PopupView;
 
@@ -21,10 +22,10 @@ public final class CommentDialog implements PopupView {
     public static final String ID = "pull-request-comment";
 
     private static final CommentComposer.Actions ACTIONS = new CommentComposer.Actions(
-            CommentMsg.Edited::new,
-            CommentMsg.Confirmed::new,
-            CommentMsg.Cancelled::new,
-            CommentMsg.EditorRequested::new);
+            ComposeMsg.Edited::new,
+            ComposeMsg.Confirmed::new,
+            ComposeMsg.Cancelled::new,
+            ComposeMsg.EditorRequested::new);
 
     private final CommentComposer composer;
 

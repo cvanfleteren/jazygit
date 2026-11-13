@@ -8,7 +8,8 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.Update;
 
 /**
- * Commenting on the pull request that is shown: writing the comment, in the popup or in the editor, and sending it.
+ * Commenting on the pull request that is shown: asking for it, and sending it. Writing the comment is a
+ * {@link net.vanfleteren.jazygit.state.compose.ComposeMsg} (ADR 115).
  */
 public sealed interface CommentMsg extends Msg {
 
@@ -21,30 +22,6 @@ public sealed interface CommentMsg extends Msg {
      * The user asked to comment on the pull request that is shown.
      */
     record Requested() implements CommentMsg {}
-
-    /**
-     * The user changed the comment to {@code text}.
-     */
-    record Edited(String text) implements CommentMsg {}
-
-    /**
-     * The user asked to send the comment.
-     */
-    record Confirmed() implements CommentMsg {}
-
-    record Cancelled() implements CommentMsg {}
-
-    /**
-     * The user asked to write the comment in the editor.
-     */
-    record EditorRequested() implements CommentMsg {}
-
-    /**
-     * The editor ran {@code commands}, and saved the comment as {@code text}.
-     */
-    record EditorClosed(String text, List<ExecutedCommand> commands) implements CommentMsg {}
-
-    record EditorFailed(Failure failure) implements CommentMsg {}
 
     /**
      * The comment was added by running {@code commands}.

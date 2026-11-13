@@ -3,9 +3,7 @@ package net.vanfleteren.jazygit.feature.github.comment;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
-import java.util.function.Function;
 import net.vanfleteren.jazygit.feature.github.comment.CommentCmd.AddComment;
-import net.vanfleteren.jazygit.feature.github.comment.CommentCmd.EditComment;
 import net.vanfleteren.jazygit.feature.github.comments.CommentsCmd.LoadComments;
 import net.vanfleteren.jazygit.feature.github.comments.CommentsPopup;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
@@ -13,14 +11,15 @@ import net.vanfleteren.jazygit.feature.github.show.PullRequestUpdate;
 import net.vanfleteren.jazygit.feature.github.show.ShowsPullRequest;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.Update.Next;
+import net.vanfleteren.jazygit.state.compose.ComposeUpdate;
 import net.vanfleteren.jazygit.state.github.*;
 import net.vanfleteren.jazygit.state.operation.*;
 
 /**
  * Commenting on the pull request that is shown. The comment is written in a popup of its own, or in the editor, and
- * sent from that popup, which stays open until it is sent, so a comment that fails to send is not lost. Once it is
- * sent, the popup it was opened from comes back, the pull request dialog or the comments, and the details of the pull
- * request are read again to count the new comment; the comments are read again too, to show it.
+ * sent from that popup, which stays open until it is sent, so a comment that fails to send is not lost (ADR 115). Once
+ * it is sent, the popup it was opened from comes back, the pull request dialog or the comments, and the details of the
+ * pull request are read again to count the new comment; the comments are read again too, to show it.
  */
 public final class CommentUpdate {
 
@@ -38,35 +37,6 @@ public final class CommentUpdate {
                                 .<ShowsPullRequest>map(shown -> shown)
                                 .orElse(() -> model.popup(CommentsPopup.class))
                                 .map(CommentPopup::on));
-            // While it is being sent, the comment stays as it is sent.
-            case CommentMsg.Edited(String text) ->
-                Next.of(editable(model)
-                        .map(popup -> model.openPopup(popup.withText(text)))
-                        .getOrElse(model));
-            // A blank comment is not sent, as GitHub refuses it.
-            case CommentMsg.Confirmed() ->
-                editable(model)
-                        .filter(popup -> !popup.text().isBlank())
-                        .map(popup -> Update.start(
-                                model.clearError().openPopup(popup.withSending(true)),
-                                new AddComment(popup.pullRequestPopup().branch(), popup.number(), popup.text())))
-                        .getOrElse(() -> Next.of(model));
-            case CommentMsg.Cancelled() ->
-                Next.of(editable(model)
-                        .map(popup -> model.openPopup(popup.from()))
-                        .getOrElse(model));
-            case CommentMsg.EditorRequested() ->
-                editable(model)
-                        .map(popup -> Next.of(model.clearError(), new EditComment(popup.text())))
-                        .getOrElse(() -> Next.of(model));
-            // Cancelled meanwhile, the popup stays closed.
-            case CommentMsg.EditorClosed(String text, var commands) -> {
-                Model logged = CommandLog.append(model, CommentCmd.EDIT_COMMENT, commands);
-                yield Next.of(changed(logged, popup -> popup.withText(text)));
-            }
-            case CommentMsg.EditorFailed(Failure failure) ->
-                Next.of(CommandLog.append(model, CommentCmd.EDIT_COMMENT, failure.commands())
-                        .fail(new AppError.OperationFailed(CommentCmd.EDIT_COMMENT, Option.none(), failure)));
             // A read of the pull request that started before the comment was sent is not taken; the one started now is
             // the dialog's own, read quietly (ADR 34).
             case CommentMsg.Sent(AddComment cmd, var commands) -> {
@@ -87,8 +57,19 @@ public final class CommentUpdate {
             // The popup stays open, with the comment, to send it again or to copy it.
             case CommentMsg.SendFailed(AddComment cmd, Failure failure) ->
                 OperationUpdate.update(model, new OperationMsg.Failed(cmd, failure))
-                        .map(failed -> changed(failed, popup -> popup.withSending(false)));
+                        .map(failed -> ComposeUpdate.unsent(failed, CommentPopup.class));
         };
+    }
+
+    /**
+     * Sending the comment {@code popup} holds. A blank comment is not sent, as GitHub refuses it.
+     */
+    static Next send(Model model, CommentPopup popup) {
+        return popup.text().isBlank()
+                ? Next.of(model)
+                : Update.start(
+                        model.clearError().openPopup(popup.withSending(true)),
+                        new AddComment(popup.pullRequestPopup().branch(), popup.number(), popup.text()));
     }
 
     /**
@@ -98,21 +79,5 @@ public final class CommentUpdate {
     private static ShowsPullRequest sentFrom(ShowsPullRequest from, long read, Instant now) {
         ShowsPullRequest back = from instanceof CommentsPopup comments ? comments.withHighlighted(Option.none()) : from;
         return back.withPullRequestPopup(back.pullRequestPopup().readingAgain(Reading.BY_ITSELF, now, read));
-    }
-
-    /**
-     * The comment popup, if it is open and not being sent.
-     */
-    private static Option<CommentPopup> editable(Model model) {
-        return model.popup(CommentPopup.class).filter(popup -> !popup.sending());
-    }
-
-    /**
-     * {@code model} with the comment popup as {@code change} makes it, if it is open.
-     */
-    private static Model changed(Model model, Function<CommentPopup, CommentPopup> change) {
-        return model.popup(CommentPopup.class)
-                .map(popup -> model.openPopup(change.apply(popup)))
-                .getOrElse(model);
     }
 }

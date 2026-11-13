@@ -26,6 +26,7 @@ import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.Update;
+import net.vanfleteren.jazygit.state.compose.ComposeMsg;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import org.junit.jupiter.api.Test;
@@ -48,7 +49,7 @@ class CommentDialogTest {
     // As in the app, an edit changes the model the popup shows; the other messages are only kept.
     private final CommentDialog dialog = new CommentDialog(msg -> {
         dispatched.add(msg);
-        if (msg instanceof CommentMsg.Edited) {
+        if (msg instanceof ComposeMsg.Edited) {
             model = Update.update(model, msg).model();
         }
     });
@@ -82,7 +83,7 @@ class CommentDialogTest {
         }
 
         assertEquals(Option.of("Nice\n!"), model.popup(CommentPopup.class).map(CommentPopup::text));
-        assertEquals(new CommentMsg.Confirmed(), dispatched.getLast());
+        assertEquals(new ComposeMsg.Confirmed(), dispatched.getLast());
     }
 
     @Test
@@ -99,7 +100,7 @@ class CommentDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new CommentMsg.EditorRequested(), new CommentMsg.Cancelled()), dispatched);
+        assertEquals(java.util.List.of(new ComposeMsg.EditorRequested(), new ComposeMsg.Cancelled()), dispatched);
     }
 
     @Test
