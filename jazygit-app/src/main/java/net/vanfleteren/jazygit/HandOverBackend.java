@@ -38,7 +38,7 @@ final class HandOverBackend implements Backend {
     private static final int FOCUS_IN = 'I';
     private static final int FOCUS_OUT = 'O';
     // The enhancements TamboUI asks for by default, and that the terminal tells a key held down, which it repeats,
-    // from one pressed again (ADR 117). It then also tells when a key is let go, ESC [ ... ; <modifiers>:3 <final>,
+    // from one pressed again (ADR 118). It then also tells when a key is let go, ESC [ ... ; <modifiers>:3 <final>,
     // which is taken out before TamboUI reads it: not every key handler of the app tells a key let go from a press.
     private static final int KEYBOARD_FLAGS = KittyKeyboardSupport.AUTO_FLAGS | KittyKeyboardSupport.REPORT_EVENT_TYPES;
     private static final String LET_GO = "3";
@@ -141,7 +141,7 @@ final class HandOverBackend implements Backend {
 
     /**
      * Asks the terminal for the keyboard enhancements of {@code protocol}; by default, also to tell a key held down
-     * from one pressed again (ADR 117).
+     * from one pressed again (ADR 118).
      */
     @Override
     public boolean enableKeyboardProtocol(KeyboardProtocol protocol) throws IOException {

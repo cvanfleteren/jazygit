@@ -90,6 +90,16 @@ class HandOverBackendTest {
     }
 
     @Test
+    void sequencesThatAreNoKeyLetGoAreReadAsTheyCame() throws IOException {
+        // A click as X10 sends it, its bytes after the M; F1 of the Linux console; a key let go cut off before its
+        // final byte, which cannot be told from anything else.
+        String sent = "\u001b[M !\"\u001b[[A\u001b[1;1:3";
+        HandOverBackend backend = new HandOverBackend(typed(sent), focused -> {});
+
+        assertEquals(sent, read(backend));
+    }
+
+    @Test
     void aKeyLetGoAfterTheFocusWasLostDoesNotTellItIsBack() throws IOException {
         List<Boolean> focus = new ArrayList<>();
         HandOverBackend backend = new HandOverBackend(typed("\u001b[O\u001b[57443;3:3u"), focus::add);

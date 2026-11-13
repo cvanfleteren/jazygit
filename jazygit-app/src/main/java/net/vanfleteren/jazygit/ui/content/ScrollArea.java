@@ -201,7 +201,7 @@ public final class ScrollArea {
 
     /**
      * What {@code event} does: Left leaves the area as Escape does once it is scrolled all the way left, as Right in
-     * its pane moves into it. Left held down stops there: only pressing it again leaves (ADR 117).
+     * its pane moves into it. Left held down stops there: only pressing it again leaves (ADR 118).
      */
     private EventResult keys(KeyEvent event, boolean focused, ScrolledContent content) {
         // Only the arrow leaves: h scrolls, as j and k move, without going to another panel.
