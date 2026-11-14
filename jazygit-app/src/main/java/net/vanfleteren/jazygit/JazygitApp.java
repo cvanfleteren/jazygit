@@ -78,6 +78,9 @@ public class JazygitApp extends ToolkitApp {
     // the render thread.
     private Option<ColumnSlide> leftSlide = Option.none();
     private Option<PaneSlide> paneSlide = Option.none();
+    // The command log as the frame before drew it, maybe on its way to its height, which the left column collapsing
+    // shrinks; only touched on the render thread.
+    private Option<CommandLogSlide> logSlide = Option.none();
     private boolean slideFramePending;
     // The one wake for when a time the screen shows changes next (ADR 124): it tells the model the time, and draws.
     private final ShownTimeWake shownTimeWake = new ShownTimeWake(
@@ -308,7 +311,7 @@ public class JazygitApp extends ToolkitApp {
                 left,
                 column(
                                 contentPanel.render(model, focusedId).fill(),
-                                CommandLogPanel.render(model).length(CommandLogPanel.height(model)))
+                                CommandLogPanel.render(model).length(commandLogRows(model)))
                         .fill());
         // The fetch line keeps its row under the panes, also when nothing is fetched, so they do not move.
         Element layout = column(
@@ -404,6 +407,23 @@ public class JazygitApp extends ToolkitApp {
                 preferences.draggedHeights().isDefined(),
                 now);
         paneSlide = Option.of(shown);
+        slideOn(shown.moving(now));
+        return shown.rowsAt(now);
+    }
+
+    /**
+     * How many rows the command log takes in a frame drawn now, as {@link CommandLogSlide#next} says, asking for the
+     * frame that moves it on while it is on its way.
+     */
+    private int commandLogRows(Model model) {
+        Instant now = clock.instant();
+        CommandLogSlide shown = CommandLogSlide.next(
+                logSlide,
+                model.screen(),
+                CommandLogPanel.height(model),
+                model.preferences().settings().animations(),
+                now);
+        logSlide = Option.of(shown);
         slideOn(shown.moving(now));
         return shown.rowsAt(now);
     }
