@@ -142,17 +142,22 @@ class YamlTreeTest {
     }
 
     @Test
-    void aSequenceAndAMappingOfFiftyThousandEntriesAreReadInTimeLinearInThem() {
+    void aSequenceAMappingAndBlocksOfThousandsOfEntriesAreReadInTimeLinearInThem() {
         String sequence = List.range(0, 50_000).map(at -> "- " + at).mkString("\n");
         String mapping = List.range(0, 50_000).map(at -> "k" + at + ": " + at).mkString("\n");
+        String blocks = List.range(0, 16_000)
+                .map(at -> "b" + at + ": |\n  x" + at + "\n  y")
+                .mkString("\n");
 
         long started = System.nanoTime();
         int read = ((Sequence) root(sequence)).elements().size()
-                + ((Mapping) root(mapping)).fields().size();
+                + ((Mapping) root(mapping)).fields().size()
+                + ((Mapping) root(blocks)).fields().size();
         long millis = (System.nanoTime() - started) / 1_000_000;
 
-        assertEquals(100_000, read);
-        // Appending to lists, reading 40 000 entries took forty seconds.
+        assertEquals(116_000, read);
+        // Appending to lists, reading 40 000 entries took forty seconds; finding the indicator of each block in a range
+        // of the rest of the file, 16 000 blocks took half a minute.
         assertTrue(millis < 5_000, millis + " ms");
     }
 

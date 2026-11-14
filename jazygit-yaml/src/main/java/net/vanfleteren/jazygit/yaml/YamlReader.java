@@ -236,22 +236,17 @@ final class YamlReader {
      * its tag or anchor is, which may be a line or more before its {@code |} or {@code >}.
      */
     private static int indicator(Mark start, Vector<String> lines) {
-        return Vector.range(start.getLine(), lines.size())
-                .find(at -> opens(
-                        at == start.getLine()
-                                ? lines.get(at)
-                                        .substring(lines.get(at)
-                                                .offsetByCodePoints(
-                                                        0,
-                                                        Math.min(
-                                                                start.getColumn(),
-                                                                lines.get(at)
-                                                                        .codePointCount(
-                                                                                0,
-                                                                                lines.get(at)
-                                                                                        .length()))))
-                                : lines.get(at)))
+        // Lazily: a range of the rest of the file for each block made a file of many blocks take seconds to read.
+        return io.vavr.collection.Iterator.range(start.getLine(), lines.size())
+                .find(at -> opens(at == start.getLine() ? from(lines.get(at), start.getColumn()) : lines.get(at)))
                 .getOrElse(start.getLine());
+    }
+
+    /**
+     * What {@code line} holds from its {@code column}, counted in code points as SnakeYAML counts them.
+     */
+    private static String from(String line, int column) {
+        return line.substring(line.offsetByCodePoints(0, Math.min(column, line.codePointCount(0, line.length()))));
     }
 
     /**
