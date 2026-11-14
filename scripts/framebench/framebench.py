@@ -131,6 +131,9 @@ def main():
         n, t = window(stats, idle)
         m, u = window(stats, moves)
         print(f"== {name}")
+        if not (n and m):
+            print(f"  no stats lines in a window: idle {n}s, moves {m}s; see {stats}")
+            continue
         print(f"  idle {n}s: {t['frames'] / n:.2f} frames/s, needless {t['needless'] / n:.2f}/s,"
               f" render() {t['renderMs'] / max(t['frames'], 1):.1f} ms/frame")
         print(f"    whole frames: {described(jfr_frames(jfr, idle))}")
