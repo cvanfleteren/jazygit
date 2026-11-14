@@ -2,6 +2,8 @@ package net.vanfleteren.jazygit.ui.diff;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import dev.tamboui.style.Color;
+import dev.tamboui.style.Style;
 import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
 import io.vavr.collection.HashMap;
@@ -9,6 +11,7 @@ import io.vavr.collection.LinkedHashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import net.vanfleteren.jazygit.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.git.model.FileVersion;
@@ -101,6 +104,30 @@ class RenderedMarkdownTest {
         assertEquals(
                 List.of("  Intro text.", "", "+ New text.", "", "  • one", "  • two"),
                 lines.tail().map(String::stripTrailing));
+    }
+
+    @Test
+    void aThemeThatTintsChangedLinesHasABarInTheColourOfTheirMarkerNotOfTheTint() {
+        assertEquals(List.of(Optional.of(Color.LIGHT_GREEN)), bars(FileVersion.NEW));
+        assertEquals(List.of(Optional.of(Color.LIGHT_RED)), bars(FileVersion.ORIGINAL));
+    }
+
+    /**
+     * The colour of each bar beside a block that changed in {@code version}, drawn in a theme that tints changed lines.
+     */
+    private static List<Optional<Color>> bars(FileVersion version) {
+        Theme.SpanStyles styles = cssClass -> switch (cssClass) {
+            case Theme.Classes.DIFF_ADDED_LINE, Theme.Classes.DIFF_REMOVED_LINE ->
+                Style.EMPTY.fg(Color.GREEN).bg(Color.BLACK);
+            case Theme.Classes.DIFF_ADDED -> Style.EMPTY.fg(Color.LIGHT_GREEN);
+            case Theme.Classes.DIFF_REMOVED -> Style.EMPTY.fg(Color.LIGHT_RED);
+            default -> Style.EMPTY;
+        };
+        return drawn(version, false, styles)
+                .lines()
+                .flatMap(line -> List.ofAll(line.spans()).headOption())
+                .filter(span -> span.content().equals("▎"))
+                .map(span -> span.style().fg());
     }
 
     @Test
@@ -266,6 +293,10 @@ class RenderedMarkdownTest {
     }
 
     private static RichDiff.Drawn drawn(FileVersion version, boolean cut) {
+        return drawn(version, cut, Theme.SpanStyles.NONE);
+    }
+
+    private static RichDiff.Drawn drawn(FileVersion version, boolean cut, Theme.SpanStyles styles) {
         ParsedDiff.ParsedFile whole = ParsedDiff.of(README).files().head();
         return RichDiff.drawn(
                 new Expansion.Folded(
@@ -275,7 +306,7 @@ class RenderedMarkdownTest {
                 true,
                 Option.none(),
                 Option.none(),
-                Theme.SpanStyles.NONE,
+                styles,
                 40);
     }
 

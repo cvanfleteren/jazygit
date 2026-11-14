@@ -294,15 +294,13 @@ public final class RichDiff {
                 .filter(line -> line.kind() != DiffLine.Kind.NOTE)
                 .toVector();
         Change change = version == FileVersion.NEW ? Change.ADDED : Change.REMOVED;
-        // A theme that tints a changed line has the bar take the colour of the tint; one that does not, as mono, has
-        // the marker the line would have.
-        Span changed = styles.of(change.lineClass())
-                .bg()
-                .map(tint -> Span.styled(RENDERED_BAR, Style.EMPTY.fg(tint)))
-                .orElseGet(() -> styled(
-                        change.marker(),
-                        version == FileVersion.NEW ? Theme.Classes.DIFF_ADDED : Theme.Classes.DIFF_REMOVED,
-                        styles));
+        // A theme that tints a changed line has a bar in the colour of its marker, green for an added one as GitHub's
+        // is: the tint itself is a background, too dark to be seen as a bar. One that does not tint, as mono, has the
+        // marker the line would have.
+        Span changed = styled(
+                styles.of(change.lineClass()).bg().isPresent() ? RENDERED_BAR : change.marker(),
+                change.markerClass(),
+                styles);
         Span unchanged = Span.raw(" ");
         List<RenderedMarkdown.Block> blocks =
                 RenderedMarkdown.blocks(lines.map(DiffLine::text), Math.max(1, width - RENDERED_GUTTER), styles);
@@ -847,12 +845,15 @@ public final class RichDiff {
     private record Row(ParsedLine parsed, int measured, LineRemarks remarks) {}
 
     /**
-     * How a changed line is drawn: its marker, the class of the line and that of its changed words.
+     * How a changed line is drawn: its marker and the class of the marker, the class of the line and that of its
+     * changed words.
      */
-    private record Change(String marker, String lineClass, String wordClass) {
+    private record Change(String marker, String markerClass, String lineClass, String wordClass) {
 
-        static final Change ADDED = new Change("+", Theme.Classes.DIFF_ADDED_LINE, Theme.Classes.DIFF_ADDED_WORD);
-        static final Change REMOVED = new Change("-", Theme.Classes.DIFF_REMOVED_LINE, Theme.Classes.DIFF_REMOVED_WORD);
+        static final Change ADDED =
+                new Change("+", Theme.Classes.DIFF_ADDED, Theme.Classes.DIFF_ADDED_LINE, Theme.Classes.DIFF_ADDED_WORD);
+        static final Change REMOVED = new Change(
+                "-", Theme.Classes.DIFF_REMOVED, Theme.Classes.DIFF_REMOVED_LINE, Theme.Classes.DIFF_REMOVED_WORD);
     }
 
     /**
