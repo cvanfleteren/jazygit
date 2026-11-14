@@ -209,6 +209,10 @@ class RenderedJsonTest {
                 Either.left("Not rendered: line 1, column 4, unexpected character U+000D"),
                 RenderedJson.rows(Vector.of("[\"a\rb\"]"), false, 80, HashMap.empty(), Theme.SpanStyles.NONE)
                         .map(rows -> rows.size()));
+        assertEquals(
+                Either.left("Not rendered: line 1, column 6, unexpected character U+00A0"),
+                RenderedJson.rows(Vector.of("{\"a\":\u00A01}"), false, 80, HashMap.empty(), Theme.SpanStyles.NONE)
+                        .map(rows -> rows.size()));
     }
 
     @Test

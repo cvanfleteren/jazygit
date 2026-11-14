@@ -338,10 +338,6 @@ final class RenderedMarkdown {
     }
 
     /**
-     * {@code lines} with their front matter, a block of YAML between {@code ---} lines at the top, as a {@code yaml}
-     * code block of as many lines.
-     */
-    /**
      * {@code lines} without the byte order mark the first of them starts with, if it does: as GitHub has it, it is no
      * part of the text, and commonmark would take it for one, so a heading, a list or front matter on the first line
      * would not be one. The lines stay as many, so each block keeps the lines it was parsed from.
@@ -353,6 +349,10 @@ final class RenderedMarkdown {
                 .getOrElse(lines);
     }
 
+    /**
+     * {@code lines} with their front matter, a block of YAML between {@code ---} lines at the top, as a {@code yaml}
+     * code block of as many lines.
+     */
     static Vector<String> withFrontMatter(Vector<String> lines) {
         return lines.headOption()
                 .filter(first -> first.strip().equals("---"))

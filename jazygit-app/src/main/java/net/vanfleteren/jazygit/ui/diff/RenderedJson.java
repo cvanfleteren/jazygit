@@ -81,11 +81,12 @@ final class RenderedJson {
     }
 
     /**
-     * Whether {@code codePoint} draws nothing a reader sees, or draws badly in a terminal: white space, a control
-     * character or a format character, as a byte order mark.
+     * Whether {@code codePoint} draws nothing a reader sees, or draws badly in a terminal: white space, a space that
+     * does not break, a control character or a format character, as a byte order mark.
      */
     private static boolean unseen(int codePoint) {
         return Character.isWhitespace(codePoint)
+                || Character.isSpaceChar(codePoint)
                 || Character.isISOControl(codePoint)
                 || Character.getType(codePoint) == Character.FORMAT;
     }
