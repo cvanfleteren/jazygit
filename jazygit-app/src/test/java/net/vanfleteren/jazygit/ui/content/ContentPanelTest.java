@@ -554,6 +554,56 @@ class ContentPanelTest {
     }
 
     @Test
+    void shiftArrowsAndCapitalHAndLScrollAFocusedAreaAllTheWaySideways() throws Exception {
+        java.util.List<Msg> dispatched = new java.util.ArrayList<>();
+        java.util.concurrent.atomic.AtomicInteger leaves = new java.util.concurrent.atomic.AtomicInteger();
+        // The model takes where the area is scrolled to, as the app's does.
+        java.util.concurrent.atomic.AtomicReference<Model> model =
+                new java.util.concurrent.atomic.AtomicReference<>(showingCommit("+" + "x".repeat(110) + "END"));
+        ContentPanel scrolling = new ContentPanel(
+                Theme.SpanStyles.NONE,
+                () -> {
+                    leaves.incrementAndGet();
+                    return true;
+                },
+                id -> {},
+                msg -> {
+                    dispatched.add(msg);
+                    model.set(Update.update(model.get(), msg).model());
+                });
+        String area = scrolling.areaOfPane(model.get(), CommitsPanel.ID).get();
+
+        String end;
+        String start;
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(
+                () -> scrolling.render(model.get(), area), new dev.tamboui.layout.Size(100, 30))) {
+            var pilot = SettledPilot.of(testRunner);
+            SettledPilot.focus(testRunner, area);
+            RenderedText.ofLarge(testRunner, () -> scrolling.render(model.get(), area));
+            pilot.press(KeyCode.RIGHT, KeyModifiers.SHIFT);
+            pilot.pause();
+            end = RenderedText.ofLarge(testRunner, () -> scrolling.render(model.get(), area));
+            pilot.press(KeyCode.LEFT, KeyModifiers.SHIFT);
+            pilot.pause();
+            start = RenderedText.ofLarge(testRunner, () -> scrolling.render(model.get(), area));
+            // All the way left already, Shift+Left stays in the area, where Left would leave it.
+            pilot.press(KeyCode.LEFT, KeyModifiers.SHIFT);
+            pilot.press('L');
+            pilot.press('H');
+            pilot.pause();
+        }
+
+        List<Integer> columns = List.ofAll(dispatched)
+                .map(msg -> ((ViewMsg.ContentScrolled) msg).to().column());
+        int last = columns.head();
+        assertTrue(last > 0, columns.toString());
+        assertEquals(List.of(last, 0, 0, last, 0), columns);
+        assertEquals(0, leaves.get());
+        assertTrue(java.util.regex.Pattern.compile("xEND[│┃]").matcher(end).find(), end);
+        assertTrue(start.contains("│+xxx"), start);
+    }
+
+    @Test
     void rightStopsWithTheEndOfTheWidestLineAtTheBorderOfTheArea() throws Exception {
         java.util.List<Msg> dispatched = new java.util.ArrayList<>();
         // The model takes where the area is scrolled to, as the app's does.
