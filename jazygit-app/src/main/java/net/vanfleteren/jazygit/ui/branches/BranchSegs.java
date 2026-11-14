@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.state.github.*;
 import net.vanfleteren.jazygit.state.operation.*;
 import net.vanfleteren.jazygit.ui.github.CheckTimesText;
 import net.vanfleteren.jazygit.ui.github.PullRequestSymbols;
+import net.vanfleteren.jazygit.ui.text.ShownTime;
 import net.vanfleteren.jazygit.ui.text.TimeText;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import net.vanfleteren.jazygit.ui.widgets.LoadableList;
@@ -216,13 +217,7 @@ final class BranchSegs {
             Option<Waiting> waiting,
             Option<String> eta,
             Instant now) {
-        return gitHub(
-                pullRequest,
-                merge,
-                checks,
-                waiting.isDefined(),
-                waiting.map(known -> known.since().map(since -> CheckTimesText.waited(Duration.between(since, now))))
-                        .getOrElse(eta));
+        return gitHub(pullRequest, merge, checks, waiting.isDefined(), after(waiting, eta, now));
     }
 
     /**
@@ -241,14 +236,22 @@ final class BranchSegs {
     }
 
     /**
-     * What a list shows in time of how the checks of a branch are doing, at the model's time, as
-     * {@link #gitHub(Option, Option, Option, Option, Option, Instant)} draws it: how long they have waited to start, or
-     * when they are expected to be done.
+     * What a list shows after the symbol of the checks of a branch at {@code now}: while they all wait to start,
+     * {@code waiting}, how long they have; else when they are expected to be done, {@code eta}.
      */
-    static Option<String> timed(Model model, Option<Waiting> waiting, Option<Eta> eta) {
-        return waiting.map(known ->
-                        known.since().map(since -> CheckTimesText.waited(Duration.between(since, model.now()))))
-                .getOrElse(() -> eta(model, eta));
+    private static Option<String> after(Option<Waiting> waiting, Option<String> eta, Instant now) {
+        return waiting.map(known -> known.since().map(since -> CheckTimesText.waited(Duration.between(since, now))))
+                .getOrElse(eta);
+    }
+
+    /**
+     * The time a list shows of a branch (ADR 124): its age, counted from {@code since}, and how its checks are doing
+     * in time, with the functions its row draws them with. What does not change with the time is looked up once.
+     */
+    static ShownTime shownTime(Model model, Instant since, Option<Waiting> waiting, Option<Eta> eta) {
+        boolean learning = model.gitHub().learningCheckTimes();
+        return ShownTime.reading(now -> TimeText.age(Duration.between(since, now)) + " "
+                + after(waiting, eta(eta, learning, now), now).getOrElse(""));
     }
 
     /**
@@ -256,7 +259,15 @@ final class BranchSegs {
      * (ADR 32).
      */
     static Option<String> eta(Model model, Option<Eta> eta) {
-        return eta.flatMap(known -> CheckTimesText.brief(known, model.gitHub().learningCheckTimes(), model.now()));
+        return eta(eta, model.gitHub().learningCheckTimes(), model.now());
+    }
+
+    /**
+     * When the checks of a branch are expected to be done, as the lists show it at {@code now}, while the checks that
+     * ran lately are read or not, {@code learning}.
+     */
+    private static Option<String> eta(Option<Eta> eta, boolean learning, Instant now) {
+        return eta.flatMap(known -> CheckTimesText.brief(known, learning, now));
     }
 
     private static LoadableList.Seg symbol(PullRequestSymbols.Symbol symbol) {

@@ -1,10 +1,8 @@
 package net.vanfleteren.jazygit;
 
-import dev.tamboui.toolkit.app.ToolkitRunner;
 import io.vavr.control.Option;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.function.Supplier;
 
 /**
  * The one wake scheduled for when a time the screen shows changes next (ADR 124): told after each frame when that is,
@@ -13,16 +11,16 @@ import java.util.function.Supplier;
  */
 final class ShownTimeWake {
 
-    private final Supplier<ToolkitRunner> runner;
+    private final Scheduler scheduler;
     private final Runnable wake;
     private Option<Instant> at = Option.none();
-    private Option<ToolkitRunner.ScheduledAction> scheduled = Option.none();
+    private Option<Runnable> cancel = Option.none();
 
     /**
      * @param wake what is run on the render thread at the moment: it tells the model the time, and draws a frame
      */
-    ShownTimeWake(Supplier<ToolkitRunner> runner, Runnable wake) {
-        this.runner = runner;
+    ShownTimeWake(Scheduler scheduler, Runnable wake) {
+        this.scheduler = scheduler;
         this.wake = wake;
     }
 
@@ -33,15 +31,21 @@ final class ShownTimeWake {
         if (next.equals(at)) {
             return;
         }
-        scheduled.forEach(ToolkitRunner.ScheduledAction::cancel);
+        cancel.forEach(Runnable::run);
         at = next;
-        scheduled = next.map(moment ->
-                runner.get().schedule(() -> runner.get().runOnRenderThread(this::woken), until(now, moment)));
+        cancel = next.map(moment -> scheduler.schedule(() -> woken(moment), until(now, moment)));
     }
 
-    private void woken() {
+    /**
+     * The wake for {@code moment} came; one that another took the place of while it was on its way to the render
+     * thread does nothing, as its cancel came too late.
+     */
+    private void woken(Instant moment) {
+        if (!at.contains(moment)) {
+            return;
+        }
         at = Option.none();
-        scheduled = Option.none();
+        cancel = Option.none();
         wake.run();
     }
 
@@ -51,5 +55,19 @@ final class ShownTimeWake {
     private static Duration until(Instant now, Instant moment) {
         Duration left = Duration.between(now, moment).plusMillis(1);
         return left.isNegative() ? Duration.ZERO : left;
+    }
+
+    /**
+     * Runs an action on the render thread after a delay.
+     */
+    @FunctionalInterface
+    interface Scheduler {
+
+        /**
+         * Runs {@code action} on the render thread once {@code delay} went by.
+         *
+         * @return what cancels it, if it did not run yet
+         */
+        Runnable schedule(Runnable action, Duration delay);
     }
 }

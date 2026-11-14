@@ -266,15 +266,11 @@ class LocalBranchesList implements BranchesTabList {
                 .branches()
                 .toOption()
                 .toList()
-                .flatMap(branches -> branches.map(b -> ShownTime.reading(now -> {
-                    Model at = model.withNow(now);
-                    return TimeText.age(Duration.between(b.lastActivity(), now)) + " "
-                            + BranchSegs.timed(
-                                            at,
-                                            at.gitHub().waiting(b),
-                                            at.gitHub().eta(b))
-                                    .getOrElse("");
-                })));
+                .flatMap(read -> read.map(b -> BranchSegs.shownTime(
+                        model,
+                        b.lastActivity(),
+                        model.gitHub().waiting(b),
+                        model.gitHub().eta(b))));
     }
 
     @Override

@@ -35,6 +35,7 @@ import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
+import net.vanfleteren.jazygit.ui.text.ShownTime;
 import net.vanfleteren.jazygit.ui.text.TextWidth;
 import org.junit.jupiter.api.Test;
 
@@ -76,6 +77,15 @@ class CommentsDialogTest {
 
     private static Model reading(List<PullRequestComment> comments) {
         return TestModels.loaded().openPopup(CommentsPopup.loading(SHOWN).read(Either.right(comments)));
+    }
+
+    @Test
+    void theDialogIsWokenWhenTheAgeOfACommentChanges() {
+        Instant now = AT.plusSeconds(3 * 60 + 20);
+
+        assertEquals(
+                Option.of(now.plusSeconds(40)), ShownTime.next(CommentsDialog.shownTimes(reading(CONVERSATION)), now));
+        assertEquals(List.empty(), CommentsDialog.shownTimes(TestModels.loaded()));
     }
 
     @Test

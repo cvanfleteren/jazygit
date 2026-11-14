@@ -75,15 +75,11 @@ class RemoteBranchesList implements BranchesTabList {
                 .remoteBranches()
                 .toOption()
                 .toList()
-                .flatMap(refs -> refs.map(ref -> ShownTime.reading(now -> {
-                    Model at = model.withNow(now);
-                    return TimeText.age(Duration.between(ref.tipTime(), now)) + " "
-                            + BranchSegs.timed(
-                                            at,
-                                            at.gitHub().waiting(ref.branch()),
-                                            at.gitHub().eta(ref.branch()))
-                                    .getOrElse("");
-                })));
+                .flatMap(read -> read.map(ref -> BranchSegs.shownTime(
+                        model,
+                        ref.tipTime(),
+                        model.gitHub().waiting(ref.branch()),
+                        model.gitHub().eta(ref.branch()))));
     }
 
     @Override

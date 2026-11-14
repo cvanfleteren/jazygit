@@ -4,7 +4,9 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.time.Duration;
 import java.time.Instant;
+import java.util.function.Function;
 import net.vanfleteren.jazygit.feature.branch.pull.PullCmd;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.MergeStatus;
@@ -15,7 +17,9 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.git.model.*;
+import net.vanfleteren.jazygit.state.TestModels;
 import net.vanfleteren.jazygit.state.github.Waiting;
+import net.vanfleteren.jazygit.ui.text.ShownTime;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import net.vanfleteren.jazygit.ui.widgets.LoadableList;
 import org.junit.jupiter.api.Test;
@@ -186,6 +190,21 @@ class BranchSegsTest {
                 List.of(LoadableList.Seg.styled(" ✗", Theme.Classes.CHECKS_FAILED)),
                 BranchSegs.gitHub(
                         Option.none(), Option.none(), Option.of(Checks.FAILING), waiting, Option.of("~4m"), NOW));
+    }
+
+    @Test
+    void howLongChecksHaveWaitedChangesTheMomentTheTimeOfTheirBranchSays() {
+        Option<Waiting> waiting = Option.of(new Waiting(Option.of(NOW.minusSeconds(200))));
+        // Ten and a half days old: its age changes only in half a day.
+        Instant since = NOW.minus(Duration.ofDays(10)).minus(Duration.ofHours(12));
+        ShownTime shown = BranchSegs.shownTime(TestModels.loaded(), since, waiting, Option.none());
+        Function<Instant, List<LoadableList.Seg>> drawn = at ->
+                BranchSegs.gitHub(Option.none(), Option.none(), Option.of(Checks.PENDING), waiting, Option.none(), at);
+        Instant next = ShownTime.next(List.of(shown), NOW).get();
+
+        assertEquals(NOW.plusSeconds(40), next);
+        assertEquals(drawn.apply(NOW), drawn.apply(next.minusMillis(1)));
+        assertNotEquals(drawn.apply(NOW), drawn.apply(next));
     }
 
     @Test

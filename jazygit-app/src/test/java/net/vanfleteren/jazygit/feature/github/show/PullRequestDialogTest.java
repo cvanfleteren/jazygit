@@ -53,6 +53,7 @@ import net.vanfleteren.jazygit.state.popup.PopupMsg;
 import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import net.vanfleteren.jazygit.ui.github.CheckRows;
+import net.vanfleteren.jazygit.ui.text.ShownTime;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import org.junit.jupiter.api.Test;
 
@@ -192,6 +193,21 @@ class PullRequestDialogTest {
         assertFalse(done.dueByItself(NOW.plusSeconds(54)));
         // The tick a minute on can come a few ms short of it.
         assertTrue(done.dueByItself(NOW.plusSeconds(60).minusMillis(3)));
+    }
+
+    @Test
+    void theDialogIsWokenWhenHowLongAgoItWasOpenedChangesAndEverySecondWhileACheckRuns() {
+        // Opened and pushed to NOW: "just now" until a minute later.
+        Model done = TestModels.loaded()
+                .openPopup(PullRequestPopup.loading(new BranchName("support_rename"), PR, NOW, 0)
+                        .with(Either.right(withChecks(List.empty())), 0));
+        Model running = TestModels.loaded()
+                .openPopup(PullRequestPopup.loading(new BranchName("support_rename"), PR, NOW, 0)
+                        .with(Either.right(withChecks(List.of(timed("verify", 120, Option.of(30))))), 0));
+
+        assertEquals(Option.of(NOW.plusSeconds(60)), ShownTime.next(PullRequestDialog.shownTimes(done), NOW));
+        assertEquals(Option.of(NOW.plusSeconds(1)), ShownTime.next(PullRequestDialog.shownTimes(running), NOW));
+        assertEquals(List.empty(), PullRequestDialog.shownTimes(TestModels.loaded()));
     }
 
     @Test
