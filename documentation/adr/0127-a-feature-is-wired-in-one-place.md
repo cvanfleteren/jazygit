@@ -9,8 +9,8 @@ package is two lists (#482):
 
 - `Popups`, which named 14 classes, as `BranchFeature.popups(dispatch)`, `StashDialogs.popups(dispatch)`,
   `ThemeDialog.popups(dispatch)`, `ErrorDialog.popups(dispatch)`, …;
-- `keys/Standard`, which named 18, as `StageKeys::register`, `CommitFeature::register`, `CommitFilesAction.ACTION.keys()`,
-  `FileStepAction.ACTION.keys()`, …, and then `GlobalKeys::register`.
+- `keys/Standard`, which named 18, as `StageKeys::register`, `CommitFeature::register`,
+  `CommitFilesAction.ACTION.keys()`, `FileStepAction.ACTION.keys()`, …, and then `GlobalKeys::register`.
 
 They name the features apart from each other, in another order and in three styles. Only `branch`, `commit`, `github`
 and `worktree` had an `XxxFeature`; the other packages registered through `XxxKeys`, an `XxxAction.ACTION` or an
@@ -24,8 +24,8 @@ The help lists the keys of a scope in the order they are added. `Standard` inter
 `VersionAction`, `CopyAction`, `FileStepAction`), so no order of one feature per package keeps every scope's order as it
 was.
 
-Only one popup is open at a time (`Model.popup` is an `Option`), and each dialog shows its own popup record, so the order
-of the popups decides nothing.
+Only one popup is open at a time (`Model.popup` is an `Option`), and each dialog shows its own popup record, so the
+order of the popups decides nothing.
 
 ## Decision
 
@@ -34,8 +34,8 @@ of the popups decides nothing.
    not an interface: no feature has more to it than its actions. `FeatureAction.register` and `FeatureAction.popups`
    move into it.
 2. **Each top-level feature package that has keys or popups declares one**, as `public static final Feature FEATURE` in
-   its `XxxFeature`. A package that registered through `XxxKeys` or `XxxDialogs` keeps them, and its feature wraps them in
-   `FeatureAction.ofKeys` and `FeatureAction.ofPopups`. The help and the error popup are features too.
+   its `XxxFeature`. A package that registered through `XxxKeys` or `XxxDialogs` keeps them, and its feature wraps them
+   in `FeatureAction.ofKeys` and `FeatureAction.ofPopups`. The help and the error popup are features too.
 3. **`Features.ALL` lists them all, once**, in `feature`, in the order their keys are listed in a panel.
    `keys/Standard` folds the keys of `Features.ALL` and then adds `GlobalKeys`; `Popups` takes the popups of
    `Features.ALL`. Neither names a feature. `keys` depending on `feature` stays the one exception to the parts having no
