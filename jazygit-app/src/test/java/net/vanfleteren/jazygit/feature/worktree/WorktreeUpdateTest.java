@@ -39,6 +39,7 @@ import net.vanfleteren.jazygit.feature.worktree.switchto.SwitchWorktreeMsg;
 import net.vanfleteren.jazygit.gh.GitHub;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.gh.process.GhError;
@@ -372,7 +373,7 @@ class WorktreeUpdateTest {
     private static PullRequestSummary pullRequest() {
         return new PullRequestSummary(
                 "owner/repo",
-                9,
+                new PrNumber(9),
                 "Title",
                 "bob",
                 new GhBranch("patch-1"),
@@ -396,8 +397,8 @@ class WorktreeUpdateTest {
         });
         GitHub gitHub = StubGitHub.of().withPullRequests(new StubPullRequests() {
             @Override
-            public Either<GhFailure, List<ExecutedCommand>> checkout(int number, Path in) {
-                ran.add("gh " + number + " " + in);
+            public Either<GhFailure, List<ExecutedCommand>> checkout(PrNumber number, Path in) {
+                ran.add("gh " + number.value() + " " + in);
                 return Either.right(StubGit.executed("gh pr checkout 9"));
             }
         });
@@ -429,7 +430,7 @@ class WorktreeUpdateTest {
         });
         GitHub fails = StubGitHub.of().withPullRequests(new StubPullRequests() {
             @Override
-            public Either<GhFailure, List<ExecutedCommand>> checkout(int number, Path in) {
+            public Either<GhFailure, List<ExecutedCommand>> checkout(PrNumber number, Path in) {
                 return Either.left(new GhFailure(
                         new GhError.CommandFailed(Option.of("no such pull request"), 1),
                         StubGit.executed("gh pr checkout 9")));
@@ -459,7 +460,7 @@ class WorktreeUpdateTest {
         });
         GitHub fails = StubGitHub.of().withPullRequests(new StubPullRequests() {
             @Override
-            public Either<GhFailure, List<ExecutedCommand>> checkout(int number, Path in) {
+            public Either<GhFailure, List<ExecutedCommand>> checkout(PrNumber number, Path in) {
                 return Either.left(new GhFailure(
                         new GhError.CommandFailed(Option.of("no such pull request"), 1),
                         StubGit.executed("gh pr checkout 9")));
@@ -497,7 +498,7 @@ class WorktreeUpdateTest {
         });
         GitHub fails = StubGitHub.of().withPullRequests(new StubPullRequests() {
             @Override
-            public Either<GhFailure, List<ExecutedCommand>> checkout(int number, Path in) {
+            public Either<GhFailure, List<ExecutedCommand>> checkout(PrNumber number, Path in) {
                 return Either.left(new GhFailure(
                         new GhError.CommandFailed(Option.of("no such pull request"), 1),
                         StubGit.executed("gh pr checkout 9")));

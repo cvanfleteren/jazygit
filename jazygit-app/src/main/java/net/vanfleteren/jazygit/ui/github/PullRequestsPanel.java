@@ -70,7 +70,7 @@ public final class PullRequestsPanel {
                 Messages.get(scope.titleKey()),
                 scope.id(),
                 (previous, next, selected) -> LoadableList.Reselect.<PullRequestSummary, String>following(
-                                pr -> pr.repository() + "#" + pr.number())
+                                pr -> pr.repository() + "#" + pr.number().value())
                         .apply(previous.pullRequests(), next.pullRequests(), selected),
                 highlights);
         list.whenEmpty(Messages.get("prs.empty"));
@@ -125,7 +125,8 @@ public final class PullRequestsPanel {
                 ? List.of(LoadableList.Seg.of(age), LoadableList.Seg.styled(UNSEEN_MARK, Theme.Classes.UNSEEN))
                 : List.of(LoadableList.Seg.of(age + " "));
         return new LoadableList.Row(start.append(LoadableList.Seg.styled(
-                        repository + "#" + pr.number(), pr.draft() ? Theme.Classes.DIM : Theme.Classes.PULL_REQUEST))
+                        repository + "#" + pr.number().value(),
+                        pr.draft() ? Theme.Classes.DIM : Theme.Classes.PULL_REQUEST))
                 .appendAll(PullRequestSymbols.state(pr.stack(), pr.checks(), pr.review(), merge)
                         .map(PullRequestsPanel::symbol))
                 .appendAll(List.of(

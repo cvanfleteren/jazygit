@@ -8,6 +8,7 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.CommentRights;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.Reaction;
 import net.vanfleteren.jazygit.gh.model.Reactions;
@@ -220,7 +221,7 @@ class ReviewThreadsQueryTest {
 
     @Test
     void theQueryAsksForEveryPageOfThreadsAndAtMostFiftyCommentsEach() {
-        String command = ReviewThreadsQuery.command(7).args().mkString(" ");
+        String command = ReviewThreadsQuery.command(new PrNumber(7)).args().mkString(" ");
 
         assertTrue(command.contains("--paginate --slurp"), command);
         assertTrue(command.contains("number=7"), command);

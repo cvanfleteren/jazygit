@@ -9,6 +9,7 @@ import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -59,7 +60,7 @@ class GitHubBasesTest {
 
     private static PullRequest pr(int number, String head, String base) {
         return new PullRequest(
-                number,
+                new PrNumber(number),
                 new GhBranch(head),
                 Option.of(new GhBranch(base)),
                 false,
@@ -80,10 +81,12 @@ class GitHubBasesTest {
                 position,
                 2,
                 List.of(
-                        new PullRequestStack.Entry(1, 1, belowState, new GhBranch(below), new GhBranch("main")),
-                        new PullRequestStack.Entry(2, number, State.OPEN, new GhBranch(head), new GhBranch(base))));
+                        new PullRequestStack.Entry(
+                                1, new PrNumber(1), belowState, new GhBranch(below), new GhBranch("main")),
+                        new PullRequestStack.Entry(
+                                2, new PrNumber(number), State.OPEN, new GhBranch(head), new GhBranch(base))));
         return new PullRequest(
-                number,
+                new PrNumber(number),
                 new GhBranch(head),
                 Option.of(new GhBranch(base)),
                 false,

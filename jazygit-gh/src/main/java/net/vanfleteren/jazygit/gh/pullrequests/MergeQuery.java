@@ -13,6 +13,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.gh.model.MergeStatus;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.process.GhCommand;
 import net.vanfleteren.jazygit.json.Decoder;
 
@@ -44,12 +45,12 @@ final class MergeQuery {
      * The command that has GitHub merge pull request {@code number} in the background, only while its branch is at
      * {@code head}, if given. gh fills in the repository of the working tree for {owner} and {repo}.
      */
-    static GhCommand mergeCommand(int number, Option<GhCommit> head, MergeMethod method) {
+    static GhCommand mergeCommand(PrNumber number, Option<GhCommit> head, MergeMethod method) {
         return gh(List.of(
                         "api",
                         "--method",
                         "PUT",
-                        "repos/{owner}/{repo}/pulls/" + number + "/merge-async",
+                        "repos/{owner}/{repo}/pulls/" + number.value() + "/merge-async",
                         "-f",
                         "merge_method=" + mergeMethod(method))
                 .appendAll(head.toList().flatMap(commit -> List.of("-f", "sha=" + commit.oid())))
@@ -59,8 +60,8 @@ final class MergeQuery {
     /**
      * The command that asks GitHub how the merge {@code id} of pull request {@code number} is doing.
      */
-    static GhCommand statusCommand(int number, String id) {
-        return gh("api", "repos/{owner}/{repo}/pulls/" + number + "/merge-async/" + id);
+    static GhCommand statusCommand(PrNumber number, String id) {
+        return gh("api", "repos/{owner}/{repo}/pulls/" + number.value() + "/merge-async/" + id);
     }
 
     private static String mergeMethod(MergeMethod method) {

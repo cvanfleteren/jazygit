@@ -106,7 +106,7 @@ public final class ReactUpdate {
     private static Next confirmReaction(Model model, ReactionPopup popup, Reaction reaction) {
         Anchor on = new Anchor.Comment(popup.comment(), new Anchor.Thread(popup.thread(), Option.none()));
         return reactable(model, on)
-                .filterOrElse(found -> found.number() == popup.number(), found -> Why.NOT_READ)
+                .filterOrElse(found -> found.number().equals(popup.number()), found -> Why.NOT_READ)
                 .fold(why -> Next.of(refused(model.withoutPopup(ReactionPopup.class), why)), found -> {
                     React react = new React(
                             popup.number(),

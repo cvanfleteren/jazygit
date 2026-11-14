@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.feature.diff.CommitFilesCmd;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestCmd;
 import net.vanfleteren.jazygit.feature.settings.SettingsPanelCmd;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
@@ -27,7 +28,7 @@ class BackgroundCmdTest {
 
     private static final PullRequestSummary PULL_REQUEST = new PullRequestSummary(
             "owner/repo",
-            7,
+            new PrNumber(7),
             "Pull request 7",
             "alice",
             new GhBranch("feature"),
@@ -43,9 +44,9 @@ class BackgroundCmdTest {
         List<Cmd> reads = List.of(
                 new LoadMyPullRequests(),
                 new LoadPullRequestPreview(PULL_REQUEST),
-                new PullRequestCmd.CheckMerge(7, "PR_1"),
+                new PullRequestCmd.CheckMerge(new PrNumber(7), "PR_1"),
                 new LoadBranchCheckRuns(List.empty()),
-                new CommitFilesCmd.LoadReviewRemarks(7, HashSet.empty(), 0),
+                new CommitFilesCmd.LoadReviewRemarks(new PrNumber(7), HashSet.empty(), 0),
                 new CheckTimesCmd.TopUpCheckTimes("owner/repo", Instant.EPOCH),
                 new CheckTimesCmd.RecordCheckTimes("owner/repo", List.empty(), Instant.EPOCH, false),
                 new SettingsPanelCmd.CheckGhExecutable(Option.none()),

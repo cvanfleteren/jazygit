@@ -8,6 +8,7 @@ import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import lombok.With;
 import net.vanfleteren.jazygit.gh.model.MergeStatus;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
@@ -59,12 +60,12 @@ public record GitHubState(
         Option<Set<BranchName>> protectedBranches,
         Option<GitHubChecks> branchChecks,
         Set<Cmd> again,
-        Map<Integer, PullRequestMerge> merges,
+        Map<PrNumber, PullRequestMerge> merges,
         Option<CheckTimes> checkTimes,
         Option<PendingChecks> pendingChecks,
         long nextRead,
         long listRead,
-        Map<Integer, Long> readsFrom,
+        Map<PrNumber, Long> readsFrom,
         Map<Cmd, FailingRead> failing,
         Option<StackChange> stackChange) {
 
@@ -87,7 +88,7 @@ public record GitHubState(
      * How the latest merge that merges pull request {@code number} went, or is going: the merge of it, or of one
      * above it in its stack. Only one merge merges it, as a later one replaces it ({@link #withMerge}).
      */
-    public Option<MergeStatus> merge(int number) {
+    public Option<MergeStatus> merge(PrNumber number) {
         return merges.values().find(merge -> merge.merges(number)).map(PullRequestMerge::status);
     }
 
@@ -101,7 +102,7 @@ public record GitHubState(
     /**
      * Whether GitHub is merging pull request {@code number} still, so it is not to be merged again meanwhile.
      */
-    public boolean merging(int number) {
+    public boolean merging(PrNumber number) {
         return merge(number).exists(status -> status instanceof MergeStatus.Pending);
     }
 
@@ -109,9 +110,9 @@ public record GitHubState(
      * The numbers of the open pull requests below pull request {@code number} in its stack, which merging it merges
      * too; none when it is not listed, or not stacked.
      */
-    public List<Integer> below(int number) {
+    public List<PrNumber> below(PrNumber number) {
         List<PullRequest> open = open();
-        return open.find(pr -> pr.number() == number)
+        return open.find(pr -> pr.number().equals(number))
                 .flatMap(PullRequest::stack)
                 .map(stack -> open.filter(other -> other.stack()
                                 .exists(its -> its.number() == stack.number() && its.position() < stack.position()))
@@ -127,7 +128,7 @@ public record GitHubState(
      * whether they changed (ADR 119).
      */
     public GitHubState withMerge(PullRequestMerge merge) {
-        List<Integer> merged = merge.below().prepend(merge.number());
+        List<PrNumber> merged = merge.below().prepend(merge.number());
         return withMerges(merges.removeAll(merged)
                 .mapValues(earlier -> earlier.withoutBelow(merged))
                 .put(merge.number(), merge.failedAmong(open(), nextRead)));
@@ -154,7 +155,7 @@ public record GitHubState(
      * Whether read {@code read} of the details of pull request {@code number} is still taken when it comes back: no
      * later one was taken, and it started after the last change to it.
      */
-    public boolean current(int number, long read) {
+    public boolean current(PrNumber number, long read) {
         return read >= readsFrom.getOrElse(number, 0L);
     }
 
@@ -162,14 +163,14 @@ public record GitHubState(
      * The state once read {@code read} of the details of pull request {@code number} was taken: one that started
      * before it is no longer.
      */
-    public GitHubState withReadTaken(int number, long read) {
+    public GitHubState withReadTaken(PrNumber number, long read) {
         return withReadsFrom(readsFrom.put(number, read + 1));
     }
 
     /**
      * The state once pull request {@code number} was changed: no read of it given out before is taken anymore.
      */
-    public GitHubState withChanged(int number) {
+    public GitHubState withChanged(PrNumber number) {
         return withReadsFrom(readsFrom.put(number, nextRead));
     }
 
@@ -192,7 +193,7 @@ public record GitHubState(
      */
     public GitHubState withRead(PullRequestDetails details, long read) {
         return withOpen(
-                pullRequests.map(open -> open.find(listed -> listed._2.number() == details.number())
+                pullRequests.map(open -> open.find(listed -> listed._2.number().equals(details.number()))
                         .map(listed ->
                                 details.listed().fold(() -> open.remove(listed._1), now -> open.put(listed._1, now)))
                         .getOrElse(open)),

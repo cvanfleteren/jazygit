@@ -5,6 +5,7 @@ import static net.vanfleteren.jazygit.gh.process.GhCommand.gh;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import net.vanfleteren.jazygit.gh.model.*;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.process.GhCommand;
 import net.vanfleteren.jazygit.gh.process.GhError;
 import net.vanfleteren.jazygit.gh.process.GhFailure;
@@ -37,8 +38,8 @@ public final class CliReviews implements Reviews {
         this.process = process;
     }
 
-    static GhCommand commentCommand(int number, String body) {
-        return gh("pr", "comment", String.valueOf(number), "--body", body);
+    static GhCommand commentCommand(PrNumber number, String body) {
+        return gh("pr", "comment", String.valueOf(number.value()), "--body", body);
     }
 
     static GhCommand deleteCommentCommand(PullRequestComment.Id comment) {
@@ -58,12 +59,12 @@ public final class CliReviews implements Reviews {
     }
 
     @Override
-    public Either<GhError, List<PullRequestComment>> conversation(int number) {
+    public Either<GhError, List<PullRequestComment>> conversation(PrNumber number) {
         return process.readJson(CommentsQuery.command(number), CommentsQuery.DECODER);
     }
 
     @Override
-    public Either<GhFailure, List<ExecutedCommand>> comment(int number, String body) {
+    public Either<GhFailure, List<ExecutedCommand>> comment(PrNumber number, String body) {
         return process.log(commentCommand(number, body));
     }
 
@@ -83,18 +84,19 @@ public final class CliReviews implements Reviews {
     }
 
     @Override
-    public Either<GhError, ReviewRemarks> remarks(int number) {
+    public Either<GhError, ReviewRemarks> remarks(PrNumber number) {
         return process.readJson(ReviewThreadsQuery.command(number), ReviewThreadsQuery.DECODER);
     }
 
     @Override
-    public Either<GhFailure, List<ExecutedCommand>> startThread(int number, GhCommit commit, NewReviewThread thread) {
+    public Either<GhFailure, List<ExecutedCommand>> startThread(
+            PrNumber number, GhCommit commit, NewReviewThread thread) {
         return process.log(ReviewThreadMutations.start(number, commit, thread));
     }
 
     @Override
     public Either<GhFailure, List<ExecutedCommand>> reply(
-            int number, ReviewThread.Comment.RestId comment, String body) {
+            PrNumber number, ReviewThread.Comment.RestId comment, String body) {
         return process.log(ReviewThreadMutations.reply(number, comment, body));
     }
 

@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.github.edit;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequestEdit;
 import net.vanfleteren.jazygit.gh.process.GhFailure;
 import net.vanfleteren.jazygit.git.model.BranchName;
@@ -54,7 +55,7 @@ public sealed interface EditPullRequestCmd extends Cmd {
      * title, body and base, then, when {@code draft} is given, makes it a draft or ready for review, as gh does that
      * apart.
      */
-    record SavePullRequest(BranchName branch, int number, PullRequestEdit edit, Option<Boolean> draft)
+    record SavePullRequest(BranchName branch, PrNumber number, PullRequestEdit edit, Option<Boolean> draft)
             implements EditPullRequestCmd, OperationCmd {
 
         @Override

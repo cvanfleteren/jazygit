@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 import net.vanfleteren.jazygit.feature.branch.commits.BranchCommitsMsg;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.gh.model.PullRequestSummary;
@@ -1617,7 +1618,7 @@ class ContentPanelTest {
                                         new LoadMsg.CommitFilesLoaded(of, List.of(file)))
                                 .model(),
                         new net.vanfleteren.jazygit.feature.diff.CommitFilesMsg.RemarksLoaded(
-                                7,
+                                new PrNumber(7),
                                 new net.vanfleteren.jazygit.gh.model.ReviewRemarks(
                                         net.vanfleteren.jazygit.gh.model.PullRequestDetails.State.OPEN,
                                         net.vanfleteren.jazygit.gh.model.GhCommit.parse("a".repeat(40)),
@@ -1646,7 +1647,7 @@ class ContentPanelTest {
     void thePullRequestAreaIsFocusedFromTheListWhosePullRequestItShows() {
         PullRequestSummary pr = new PullRequestSummary(
                 "owner/repo",
-                42,
+                new PrNumber(42),
                 "Fix the login",
                 "alice",
                 new GhBranch("fix/login"),
@@ -1719,7 +1720,7 @@ class ContentPanelTest {
     void aPullRequestShowsLikeACommitWithItsBranchesItsDescriptionAndItsDiff() {
         PullRequestSummary pr = new PullRequestSummary(
                 "owner/repo",
-                12,
+                new PrNumber(12),
                 "Fix the login",
                 "alice",
                 new GhBranch("fix/login"),

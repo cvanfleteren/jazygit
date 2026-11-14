@@ -25,6 +25,7 @@ import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.gh.GitHub;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -73,9 +74,9 @@ class EditPullRequestUpdateTest {
     // A local branch that has another name on its remote.
     private static final RemoteBranch ORIGIN_RELEASE = new RemoteBranch("origin", new BranchName("release-2"));
     private static final PullRequest FEATURE_PR =
-            new PullRequest(42, new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED);
+            new PullRequest(new PrNumber(42), new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED);
     private static final PullRequestDetails DETAILS =
-            StubGitHub.of().pullRequests().details(42).get().withBody("Why");
+            StubGitHub.of().pullRequests().details(new PrNumber(42)).get().withBody("Why");
     private static final PullRequestPopup SHOWN = shown(DETAILS);
     private static final PullRequestFields OPENED = new PullRequestFields("A pull request", "Why", ORIGIN_MAIN, false);
     private static final EditPullRequestPopup EDITING =
@@ -84,7 +85,7 @@ class EditPullRequestUpdateTest {
     // GitHub, where making pull request 42 a draft fails.
     private static final GitHub NOT_READY = StubGitHub.of().withPullRequests(new StubPullRequests() {
         @Override
-        public Either<GhFailure, List<ExecutedCommand>> setDraft(int number, boolean draft) {
+        public Either<GhFailure, List<ExecutedCommand>> setDraft(PrNumber number, boolean draft) {
             return Either.left(new GhFailure(
                     new GhError.CommandFailed(Option.of("could not convert"), 1),
                     List.of(ExecutedCommand.of("gh", "pr", "ready", "42", "--undo"))));
@@ -250,7 +251,10 @@ class EditPullRequestUpdateTest {
         Next next = saving(OPENED.withBody("Because"));
 
         SavePullRequest cmd = new SavePullRequest(
-                FEATURE, 42, new PullRequestEdit(Option.none(), Option.of("Because"), Option.none()), Option.none());
+                FEATURE,
+                new PrNumber(42),
+                new PullRequestEdit(Option.none(), Option.of("Because"), Option.none()),
+                Option.none());
         assertEquals(List.of(cmd), next.cmds());
         assertEquals(
                 Option.of(EDITING.withFields(OPENED.withBody("Because")).withSaving(true)),
@@ -266,7 +270,7 @@ class EditPullRequestUpdateTest {
 
         SavePullRequest cmd = new SavePullRequest(
                 FEATURE,
-                42,
+                new PrNumber(42),
                 new PullRequestEdit(Option.none(), Option.none(), Option.of(new GhBranch("release-2"))),
                 Option.of(true));
         assertEquals(List.of(cmd), next.cmds());
@@ -279,7 +283,7 @@ class EditPullRequestUpdateTest {
         assertEquals(
                 List.of(new SavePullRequest(
                         FEATURE,
-                        42,
+                        new PrNumber(42),
                         new PullRequestEdit(Option.of("Better"), Option.none(), Option.none()),
                         Option.none())),
                 saving(OPENED.withTitle(" Better\t")).cmds());
@@ -344,7 +348,7 @@ class EditPullRequestUpdateTest {
         Model editing = editing(OPENED.withTitle("Mine"));
         PullRequestDetails changed = DETAILS.withTitle("Theirs").withBody("Elsewhere");
 
-        Model read = Update.update(editing, new PullRequestMsg.DetailsLoaded(42, 0, changed))
+        Model read = Update.update(editing, new PullRequestMsg.DetailsLoaded(new PrNumber(42), 0, changed))
                 .model();
 
         EditPullRequestPopup popup = read.popup(EditPullRequestPopup.class).get();
@@ -364,7 +368,7 @@ class EditPullRequestUpdateTest {
                 Option.of(SHOWN.readingAgain(Reading.BY_ITSELF, saved.model().now(), lastRead(saved.model()))),
                 saved.model().popup());
         assertTrue(
-                saved.cmds().contains(new LoadPullRequestDetails(42, lastRead(saved.model()))),
+                saved.cmds().contains(new LoadPullRequestDetails(new PrNumber(42), lastRead(saved.model()))),
                 saved.cmds().toString());
         assertEquals(
                 "gh pr edit 42 --body Because",
@@ -389,7 +393,10 @@ class EditPullRequestUpdateTest {
     @Test
     void anEditSavedAfterThePopupClosedOnlyLogsIt() {
         SavePullRequest cmd = new SavePullRequest(
-                FEATURE, 42, new PullRequestEdit(Option.of("New"), Option.none(), Option.none()), Option.none());
+                FEATURE,
+                new PrNumber(42),
+                new PullRequestEdit(Option.of("New"), Option.none(), Option.none()),
+                Option.none());
 
         Next saved = Update.update(loaded(), cmd.succeeded(List.empty()));
 
@@ -405,7 +412,7 @@ class EditPullRequestUpdateTest {
         SavePullRequest cmd = (SavePullRequest) saving.cmds().head();
         GitHub refusing = StubGitHub.of().withPullRequests(new StubPullRequests() {
             @Override
-            public Either<GhFailure, List<ExecutedCommand>> edit(int number, PullRequestEdit edit) {
+            public Either<GhFailure, List<ExecutedCommand>> edit(PrNumber number, PullRequestEdit edit) {
                 return Either.left(new GhFailure(
                         new GhError.CommandFailed(Option.of("could not edit: network down"), 1),
                         List.of(ExecutedCommand.of("gh", "pr", "edit", "42"))));
@@ -446,7 +453,7 @@ class EditPullRequestUpdateTest {
                 List.of("gh pr edit 42 --title New --base release-2", "gh pr ready 42 --undo"),
                 failed.model().outcome().commandLog().last().commands().map(ExecutedCommand::line));
         assertTrue(
-                failed.cmds().contains(new LoadPullRequestDetails(42, lastRead(failed.model()))),
+                failed.cmds().contains(new LoadPullRequestDetails(new PrNumber(42), lastRead(failed.model()))),
                 failed.cmds().toString());
         assertEquals(Reading.BY_ITSELF, popup.from().reading());
         // The new base shows on the branch.
@@ -456,7 +463,7 @@ class EditPullRequestUpdateTest {
         assertEquals(
                 List.of(new SavePullRequest(
                         FEATURE,
-                        42,
+                        new PrNumber(42),
                         new PullRequestEdit(Option.none(), Option.none(), Option.none()),
                         Option.of(true))),
                 Update.update(failed.model(), new EditPullRequestMsg.Confirmed())
@@ -471,7 +478,7 @@ class EditPullRequestUpdateTest {
         Next failed = Update.update(saving.model(), cmd.run(env(NOT_READY)));
 
         assertTrue(
-                failed.cmds().contains(new LoadPullRequestDetails(42, lastRead(failed.model()))),
+                failed.cmds().contains(new LoadPullRequestDetails(new PrNumber(42), lastRead(failed.model()))),
                 failed.cmds().toString());
         assertFalse(
                 failed.cmds().exists(LoadRepositoryPullRequests.class::isInstance),

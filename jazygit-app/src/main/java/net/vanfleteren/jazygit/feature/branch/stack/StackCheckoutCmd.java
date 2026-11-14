@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.branch.stack;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.git.Git;
 import net.vanfleteren.jazygit.git.model.BranchRef;
@@ -33,7 +34,7 @@ public sealed interface StackCheckoutCmd extends OperationCmd {
      *
      * @param on the number of the pull request it was asked for on, if it was asked for on one
      */
-    record Fetch(PullRequestStack stack, RemoteName remote, Option<Integer> on) implements StackCheckoutCmd {
+    record Fetch(PullRequestStack stack, RemoteName remote, Option<PrNumber> on) implements StackCheckoutCmd {
 
         @Override
         public Operation operation() {

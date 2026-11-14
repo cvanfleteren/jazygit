@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.state.operation;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.git.model.RemoteBranch;
@@ -42,7 +43,7 @@ public sealed interface Notice {
      * The stack of pull request {@code pullRequest}, linked to be rebased, was not listed by GitHub after so long
      * that it is no longer waited for: it was not rebased (ADR 74).
      */
-    record StackNotListed(int pullRequest) implements Notice {}
+    record StackNotListed(PrNumber pullRequest) implements Notice {}
 
     /**
      * Stack {@code stack} was ready to be rebased while another dialog was open, which it does not take the place of:

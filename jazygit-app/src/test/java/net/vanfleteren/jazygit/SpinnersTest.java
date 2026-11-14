@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.feature.github.checks.ChecksPopup;
 import net.vanfleteren.jazygit.feature.github.comments.CommentsPopup;
 import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -40,7 +41,7 @@ class SpinnersTest {
     private static final BranchRef.Local FEATURE = new BranchRef.Local(new BranchName("feature"));
     private static final PullRequestPopup PULL_REQUEST = PullRequestPopup.loading(
             new BranchName("feature"),
-            new PullRequest(42, new GhBranch("feature"), true, Checks.PASSING, Review.APPROVED),
+            new PullRequest(new PrNumber(42), new GhBranch("feature"), true, Checks.PASSING, Review.APPROVED),
             Instant.EPOCH,
             0);
 

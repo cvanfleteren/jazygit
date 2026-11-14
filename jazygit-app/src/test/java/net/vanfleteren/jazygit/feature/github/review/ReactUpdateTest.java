@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.feature.diff.CommitFilesCmd;
 import net.vanfleteren.jazygit.feature.github.GitHubError;
 import net.vanfleteren.jazygit.feature.github.GitHubError.CannotReview.Why;
 import net.vanfleteren.jazygit.gh.model.CommentRights;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.Reaction;
 import net.vanfleteren.jazygit.gh.model.Reactions;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
@@ -29,12 +30,13 @@ class ReactUpdateTest {
                 .model();
         ReactionPopup popup = asked.popup(ReactionPopup.class).get();
         assertEquals(
-                new ReactionPopup(7, new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("R1"), Reactions.NONE),
+                new ReactionPopup(
+                        new PrNumber(7), new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("R1"), Reactions.NONE),
                 popup);
 
         Next chosen = Update.update(asked, new ReactMsg.ReactionChosen(Reaction.EYES));
         ReactCmd.React react = new ReactCmd.React(
-                7, new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("R1"), Reaction.EYES, true);
+                new PrNumber(7), new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("R1"), Reaction.EYES, true);
         assertEquals(List.of(react), chosen.cmds());
         assertTrue(chosen.model().popup(ReactionPopup.class).isEmpty());
         assertEquals(
@@ -55,7 +57,7 @@ class ReactUpdateTest {
                         files(),
                         new ReactMsg.Reacted(
                                 new ReactCmd.React(
-                                        7,
+                                        new PrNumber(7),
                                         new ReviewThread.Id("T1"),
                                         new ReviewThread.Comment.Id("C1"),
                                         Reaction.HEART,
@@ -68,7 +70,7 @@ class ReactUpdateTest {
         Next chosen = Update.update(asked, new ReactMsg.ReactionChosen(Reaction.HEART));
 
         ReactCmd.React unreact = new ReactCmd.React(
-                7, new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("C1"), Reaction.HEART, false);
+                new PrNumber(7), new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("C1"), Reaction.HEART, false);
         assertEquals(List.of(unreact), chosen.cmds());
         assertEquals(
                 Reactions.NONE,
@@ -106,7 +108,7 @@ class ReactUpdateTest {
                         asked,
                         new ReactMsg.Reacted(
                                 new ReactCmd.React(
-                                        7,
+                                        new PrNumber(7),
                                         new ReviewThread.Id("T1"),
                                         new ReviewThread.Comment.Id("C1"),
                                         Reaction.HEART,
@@ -119,7 +121,11 @@ class ReactUpdateTest {
 
         assertEquals(
                 List.of(new ReactCmd.React(
-                        7, new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("C1"), Reaction.HEART, false)),
+                        new PrNumber(7),
+                        new ReviewThread.Id("T1"),
+                        new ReviewThread.Comment.Id("C1"),
+                        Reaction.HEART,
+                        false)),
                 chosen.cmds());
     }
 
@@ -131,7 +137,7 @@ class ReactUpdateTest {
                         asked,
                         new DeleteCommentMsg.CommentDeleted(
                                 new DeleteCommentCmd.DeleteComment(
-                                        7, new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("R1")),
+                                        new PrNumber(7), new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("R1")),
                                 List.empty()))
                 .model();
 
@@ -181,7 +187,7 @@ class ReactUpdateTest {
                         new ReactMsg.ReactionChosen(Reaction.ROCKET))
                 .model();
         ReactCmd.React react = new ReactCmd.React(
-                7, new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("R1"), Reaction.ROCKET, true);
+                new PrNumber(7), new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("R1"), Reaction.ROCKET, true);
 
         Model failed = Update.update(
                         sending, new ReactMsg.ReactFailed(react, new Failure.Bug(new RuntimeException("offline"))))
@@ -196,7 +202,7 @@ class ReactUpdateTest {
     @Test
     void aReactionToACommentGitHubNoLongerHasTakesItOutOfItsThreadAndSaysSo() {
         ReactCmd.React react = new ReactCmd.React(
-                7, new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("R1"), Reaction.ROCKET, true);
+                new PrNumber(7), new ReviewThread.Id("T1"), new ReviewThread.Comment.Id("R1"), Reaction.ROCKET, true);
 
         Next failed = Update.update(
                 files(), new ReactMsg.ReactFailed(react, new Failure.GitHub(new GhError.Gone(), List.empty())));

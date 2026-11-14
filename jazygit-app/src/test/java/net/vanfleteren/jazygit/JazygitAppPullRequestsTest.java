@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.feature.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.MyPullRequests;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.gh.model.PullRequestList;
@@ -118,7 +119,7 @@ class JazygitAppPullRequestsTest {
                     new PullRequestList(
                             List.of(new PullRequestSummary(
                                     "owner/repo",
-                                    12,
+                                    new PrNumber(12),
                                     "Fix the login",
                                     "alice",
                                     new GhBranch("fix/login"),

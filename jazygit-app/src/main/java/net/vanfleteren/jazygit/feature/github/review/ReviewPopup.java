@@ -4,6 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import lombok.With;
 import net.vanfleteren.jazygit.gh.model.NewReviewThread;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.AreaId;
@@ -30,7 +31,7 @@ import net.vanfleteren.jazygit.state.diff.Scrolled;
  */
 @With
 public record ReviewPopup(
-        int number,
+        PrNumber number,
         Target target,
         Where where,
         List<String> quoted,

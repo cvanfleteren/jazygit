@@ -5,6 +5,7 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.branch.stack.StackChoice.Plan;
 import net.vanfleteren.jazygit.feature.branch.stack.StackChoice.Refusal;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.gh.model.PullRequestStack;
@@ -40,7 +41,7 @@ public final class StackPopups {
             Option<Branch> top,
             boolean root,
             List<Target> targets,
-            Option<Integer> on,
+            Option<PrNumber> on,
             StackCheckout.Status checkout)
             implements Popup {
 

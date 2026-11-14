@@ -485,7 +485,9 @@ public final class ContentText {
         return styledText(List.of(
                         styled(
                                 Messages.get(
-                                        "content.pullRequest.header", pr.repository(), String.valueOf(pr.number())),
+                                        "content.pullRequest.header",
+                                        pr.repository(),
+                                        String.valueOf(pr.number().value())),
                                 Theme.Classes.SHA,
                                 styles),
                         Span.raw(Messages.get("content.pullRequest.author", pr.author())),

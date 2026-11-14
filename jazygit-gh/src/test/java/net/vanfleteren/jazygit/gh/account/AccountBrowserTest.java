@@ -13,6 +13,7 @@ import java.nio.file.Path;
 import net.vanfleteren.jazygit.gh.CliGitHub;
 import net.vanfleteren.jazygit.gh.model.GhAccount;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequestLink;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.gh.process.GhError;
@@ -31,8 +32,8 @@ import org.junit.jupiter.api.io.TempDir;
 @DisabledOnOs(OS.WINDOWS)
 class AccountBrowserTest {
 
-    private static final PullRequestLink COMMENT =
-            new PullRequestLink("github.com", "owner/repo", 7, Option.of(new ReviewThread.Comment.RestId("42")));
+    private static final PullRequestLink COMMENT = new PullRequestLink(
+            "github.com", "owner/repo", new PrNumber(7), Option.of(new ReviewThread.Comment.RestId("42")));
     private static final GhAccount ACTIVE = new GhAccount("github.com", "cvf");
 
     @TempDir
@@ -120,7 +121,7 @@ class AccountBrowserTest {
     void ghOpensInTheAccountsBrowserToo() throws Exception {
         Account github = github(GhToken.NONE, HashMap.empty(), browserOf(ACTIVE, "firefox -P work"));
 
-        assertTrue(github.openPullRequest(7).isRight());
+        assertTrue(github.openPullRequest(new PrNumber(7)).isRight());
         assertEquals("firefox -P work\n", Files.readString(dir.resolve("browser")));
         assertTrue(github.browse(new GhBranch("feature")).isRight());
         assertEquals("firefox -P work\n", Files.readString(dir.resolve("browser")));
@@ -129,7 +130,7 @@ class AccountBrowserTest {
     @Test
     void withoutABrowserForTheAccountGhChoosesAsBefore() throws Exception {
         assertTrue(github(GhToken.NONE, HashMap.empty(), account -> Option.none())
-                .openPullRequest(7)
+                .openPullRequest(new PrNumber(7))
                 .isRight());
         assertEquals("unset\n", Files.readString(dir.resolve("browser")));
     }

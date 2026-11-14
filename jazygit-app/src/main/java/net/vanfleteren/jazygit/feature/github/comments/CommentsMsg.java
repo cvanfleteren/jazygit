@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.github.comments;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequestComment;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Model;
@@ -25,9 +26,9 @@ public sealed interface CommentsMsg extends Msg {
     /**
      * The conversation on pull request {@code number} was read.
      */
-    record Loaded(int number, List<PullRequestComment> comments) implements CommentsMsg {}
+    record Loaded(PrNumber number, List<PullRequestComment> comments) implements CommentsMsg {}
 
-    record LoadFailed(int number, Failure failure) implements CommentsMsg {}
+    record LoadFailed(PrNumber number, Failure failure) implements CommentsMsg {}
 
     /**
      * The user moved to comment {@code id}.

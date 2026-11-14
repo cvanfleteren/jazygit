@@ -14,6 +14,7 @@ import io.vavr.control.Option;
 import java.util.concurrent.atomic.AtomicReference;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.gh.model.CommentRights;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
@@ -413,7 +414,7 @@ class FilesPanelTest {
         Model read = Update.update(
                         open,
                         new CommitFilesMsg.RemarksLoaded(
-                                7,
+                                new PrNumber(7),
                                 new ReviewRemarks(
                                         PullRequestDetails.State.MERGED,
                                         Option.none(),
@@ -455,7 +456,7 @@ class FilesPanelTest {
                         Update.update(
                                         open,
                                         new CommitFilesMsg.RemarksLoaded(
-                                                7,
+                                                new PrNumber(7),
                                                 new ReviewRemarks(
                                                         PullRequestDetails.State.OPEN,
                                                         Option.none(),
@@ -473,7 +474,7 @@ class FilesPanelTest {
         Model none = Update.update(
                         unresolved,
                         new CommitFilesMsg.RemarksLoaded(
-                                7,
+                                new PrNumber(7),
                                 new ReviewRemarks(
                                         PullRequestDetails.State.OPEN,
                                         Option.none(),
@@ -521,7 +522,7 @@ class FilesPanelTest {
         Model read = Update.update(
                         loaded,
                         new CommitFilesMsg.RemarksLoaded(
-                                7,
+                                new PrNumber(7),
                                 new ReviewRemarks(
                                         PullRequestDetails.State.OPEN,
                                         Option.none(),

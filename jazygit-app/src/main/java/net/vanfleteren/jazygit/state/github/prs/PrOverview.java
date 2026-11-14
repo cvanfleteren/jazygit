@@ -72,7 +72,8 @@ public record PrOverview(
      */
     public boolean isUnseen(PullRequestSummary pullRequest) {
         return ofThisRepository(pullRequest).getOrElse(false)
-                && unseen.exists(read -> read.numbers().contains(pullRequest.number()));
+                && unseen.exists(
+                        read -> read.numbers().contains(pullRequest.number().value()));
     }
 
     /**

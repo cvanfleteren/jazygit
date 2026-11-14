@@ -4,6 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.*;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.process.GhError;
 import net.vanfleteren.jazygit.gh.process.GhFailure;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -38,7 +39,7 @@ public interface StubAccount extends Account {
     }
 
     @Override
-    default Either<GhFailure, List<ExecutedCommand>> openPullRequest(int number) {
+    default Either<GhFailure, List<ExecutedCommand>> openPullRequest(PrNumber number) {
         return Either.right(List.of(ExecutedCommand.of("gh", "pr", "view", String.valueOf(number), "--web")));
     }
 

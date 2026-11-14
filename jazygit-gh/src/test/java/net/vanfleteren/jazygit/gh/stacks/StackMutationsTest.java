@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.gh.stacks;
 import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.process.GhCommand;
 import org.junit.jupiter.api.Test;
 
@@ -28,7 +29,7 @@ class StackMutationsTest {
                         "pull_requests[]=96",
                         "-F",
                         "pull_requests[]=97"),
-                args(StackMutations.create(List.of(96, 97))));
+                args(StackMutations.create(List.of(new PrNumber(96), new PrNumber(97)))));
     }
 
     @Test
@@ -42,7 +43,7 @@ class StackMutationsTest {
                         "repos/{owner}/{repo}/stacks/12/add",
                         "-F",
                         "pull_requests[]=98"),
-                args(StackMutations.add(12, List.of(98))));
+                args(StackMutations.add(12, List.of(new PrNumber(98)))));
     }
 
     @Test

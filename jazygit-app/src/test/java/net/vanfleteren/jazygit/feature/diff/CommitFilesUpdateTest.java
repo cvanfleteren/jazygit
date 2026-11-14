@@ -11,6 +11,7 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.CommentRights;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
@@ -197,8 +198,8 @@ class CommitFilesUpdateTest {
         assertEquals(
                 List.of(
                         new LoadCommitFiles(PULL_REQUEST),
-                        new CommitFilesCmd.LoadReviewRemarks(7, HashSet.empty(), 0),
-                        new CommitFilesCmd.LoadCollapsed("owner/repo", 7)),
+                        new CommitFilesCmd.LoadReviewRemarks(new PrNumber(7), HashSet.empty(), 0),
+                        new CommitFilesCmd.LoadCollapsed("owner/repo", new PrNumber(7))),
                 opened.cmds());
         assertEquals(
                 Option.of(new Loading<>()),
@@ -207,7 +208,7 @@ class CommitFilesUpdateTest {
         Model read = Update.update(
                         opened.model(),
                         new CommitFilesMsg.RemarksLoaded(
-                                7, remarks("a".repeat(40), "b".repeat(40)), HashSet.empty(), 0))
+                                new PrNumber(7), remarks("a".repeat(40), "b".repeat(40)), HashSet.empty(), 0))
                 .model();
         CommitFilesView view = read.repoView().commitFiles().get();
         assertEquals(List.of(THREAD), view.threads());
@@ -215,12 +216,14 @@ class CommitFilesUpdateTest {
         assertTrue(view.remarksAtItsCommits());
 
         assertEquals(
-                List.of(new CommitFilesCmd.LoadReviewRemarks(7, HashSet.empty(), 0)),
+                List.of(new CommitFilesCmd.LoadReviewRemarks(new PrNumber(7), HashSet.empty(), 0)),
                 Update.update(read, new CommitFilesMsg.RemarksRefreshed()).cmds());
 
         // A failed read again keeps the threads read before.
         Model failed = Update.update(
-                        read, new CommitFilesMsg.RemarksFailed(7, new Failure.Bug(new Exception()), HashSet.empty(), 0))
+                        read,
+                        new CommitFilesMsg.RemarksFailed(
+                                new PrNumber(7), new Failure.Bug(new Exception()), HashSet.empty(), 0))
                 .model();
         assertEquals(List.of(THREAD), failed.repoView().commitFiles().get().threads());
     }
@@ -252,12 +255,14 @@ class CommitFilesUpdateTest {
                 GhCommit.parse("b".repeat(40)),
                 List.of(withImages));
 
-        Next read =
-                Update.update(openedPullRequest(), new CommitFilesMsg.RemarksLoaded(7, remarks, HashSet.empty(), 0));
+        Next read = Update.update(
+                openedPullRequest(), new CommitFilesMsg.RemarksLoaded(new PrNumber(7), remarks, HashSet.empty(), 0));
 
         // Each once, and not one elsewhere, which would tell its server who reads the comment.
         assertEquals(
-                List.of(new CommitFilesCmd.LoadPicture(7, icon), new CommitFilesCmd.LoadPicture(7, pasted)),
+                List.of(
+                        new CommitFilesCmd.LoadPicture(new PrNumber(7), icon),
+                        new CommitFilesCmd.LoadPicture(new PrNumber(7), pasted)),
                 read.cmds());
         assertEquals(
                 HashMap.of(icon, Option.none(), pasted, Option.none()),
@@ -265,11 +270,14 @@ class CommitFilesUpdateTest {
         // Read again, they are not read again.
         assertEquals(
                 List.empty(),
-                Update.update(read.model(), new CommitFilesMsg.RemarksLoaded(7, remarks, HashSet.empty(), 0))
+                Update.update(
+                                read.model(),
+                                new CommitFilesMsg.RemarksLoaded(new PrNumber(7), remarks, HashSet.empty(), 0))
                         .cmds());
 
         Picture picture = new Picture(1, 2, Vector.of(0xffff0000, 0xff00ff00));
-        Model shown = Update.update(read.model(), new CommitFilesMsg.PictureLoaded(7, icon, Option.of(picture)))
+        Model shown = Update.update(
+                        read.model(), new CommitFilesMsg.PictureLoaded(new PrNumber(7), icon, Option.of(picture)))
                 .model();
         assertEquals(
                 Option.of(Option.of(picture)),
@@ -301,7 +309,7 @@ class CommitFilesUpdateTest {
         Model moved = Update.update(
                         withFiles(remarked),
                         new CommitFilesMsg.RemarksLoaded(
-                                7, remarks("c".repeat(40), "b".repeat(40)), HashSet.empty(), 0))
+                                new PrNumber(7), remarks("c".repeat(40), "b".repeat(40)), HashSet.empty(), 0))
                 .model();
         assertEquals(
                 CommitFilesView.Listed.REMARKED,
@@ -312,7 +320,8 @@ class CommitFilesUpdateTest {
     void whenThePullRequestMovedOnItsFilesAreReadAgainAtItsNewCommits() {
         Next moved = Update.update(
                 withFiles(openedPullRequest()),
-                new CommitFilesMsg.RemarksLoaded(7, remarks("c".repeat(40), "b".repeat(40)), HashSet.empty(), 0));
+                new CommitFilesMsg.RemarksLoaded(
+                        new PrNumber(7), remarks("c".repeat(40), "b".repeat(40)), HashSet.empty(), 0));
 
         Changes now = new Changes.OfPullRequest(
                 new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("c".repeat(40))));
@@ -335,7 +344,7 @@ class CommitFilesUpdateTest {
         Model moved = Update.update(
                         filtered,
                         new CommitFilesMsg.RemarksLoaded(
-                                7, remarks("c".repeat(40), "b".repeat(40)), HashSet.empty(), 0))
+                                new PrNumber(7), remarks("c".repeat(40), "b".repeat(40)), HashSet.empty(), 0))
                 .model();
 
         assertEquals(filter, moved.repoView().commitFiles().get().filter());
@@ -360,7 +369,7 @@ class CommitFilesUpdateTest {
             Next read = Update.update(
                     withFiles(openedPullRequest()),
                     new CommitFilesMsg.RemarksLoaded(
-                            7, remarks(state, "c".repeat(40), "b".repeat(40)), HashSet.empty(), 0));
+                            new PrNumber(7), remarks(state, "c".repeat(40), "b".repeat(40)), HashSet.empty(), 0));
 
             CommitFilesView view = read.model().repoView().commitFiles().get();
             assertEquals(PULL_REQUEST, view.of());
@@ -383,7 +392,7 @@ class CommitFilesUpdateTest {
                 Update.update(
                                 other,
                                 new CommitFilesMsg.RemarksLoaded(
-                                        8, remarks("a".repeat(40), "b".repeat(40)), HashSet.empty(), 0))
+                                        new PrNumber(8), remarks("a".repeat(40), "b".repeat(40)), HashSet.empty(), 0))
                         .model());
 
         Model commit = opened();

@@ -13,6 +13,7 @@ import static net.vanfleteren.jazygit.json.Decoder.succeed;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.graphql.SummaryFragment;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.gh.model.RepositoryPullRequests;
 import net.vanfleteren.jazygit.gh.process.GhCommand;
@@ -49,9 +50,9 @@ final class RepositoryPullRequestsQuery {
             "-f",
             "query=" + QUERY);
 
-    // The number of the pull request opened last, 0 for none.
-    static final Decoder<Integer> LATEST = at("latest.nodes", list(field("number", integer())))
-            .map(latest -> latest.headOption().getOrElse(0));
+    // The number of the pull request opened last, if there is one.
+    static final Decoder<Option<PrNumber>> LATEST = at("latest.nodes", list(field("number", integer())))
+            .map(latest -> latest.headOption().map(PrNumber::new));
 
     // The account gh runs as; none when GitHub does not say.
     static final Decoder<Option<String>> VIEWER =

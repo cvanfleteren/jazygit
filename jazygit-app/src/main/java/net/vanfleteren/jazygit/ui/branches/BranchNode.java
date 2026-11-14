@@ -72,8 +72,9 @@ sealed interface BranchNode {
                 members.map(Tuple2::_2).maxBy(read -> read.entries().size()).get();
         List<BranchNode> leaves = stack.entries()
                 .sortBy(PullRequestStack.Entry::position)
-                .map(entry -> members.find(
-                                member -> pullRequest.apply(member._1()).exists(pr -> pr.number() == entry.number()))
+                .map(entry -> members.find(member -> pullRequest
+                                .apply(member._1())
+                                .exists(pr -> pr.number().equals(entry.number())))
                         .<BranchNode>map(member -> new Leaf(member._1(), true))
                         .getOrElse(() ->
                                 new Other(number, entry, entry.headBranch().flatMap(fetched))));
@@ -134,7 +135,7 @@ sealed interface BranchNode {
 
         @Override
         public String key() {
-            return "pullRequest:" + entry.number();
+            return "pullRequest:" + entry.number().value();
         }
     }
 }

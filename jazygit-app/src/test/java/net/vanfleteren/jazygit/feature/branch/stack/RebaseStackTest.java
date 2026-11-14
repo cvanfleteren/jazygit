@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.feature.branch.BranchError.StackRefusal;
 import net.vanfleteren.jazygit.feature.commit.create.CommitPopup;
 import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -76,12 +77,12 @@ class RebaseStackTest {
     }
 
     private static final List<Entry> ENTRIES = List.of(
-            new Entry(1, 98, State.OPEN, new GhBranch("feat/c"), new GhBranch("main")),
-            new Entry(2, 99, State.OPEN, new GhBranch("feat/d"), new GhBranch("feat/c")));
+            new Entry(1, new PrNumber(98), State.OPEN, new GhBranch("feat/c"), new GhBranch("main")),
+            new Entry(2, new PrNumber(99), State.OPEN, new GhBranch("feat/d"), new GhBranch("feat/c")));
 
     private static PullRequest pr(int number, String head, List<Entry> entries, int position) {
         return new PullRequest(
-                number,
+                new PrNumber(number),
                 new GhBranch(head),
                 Option.none(),
                 false,
@@ -152,7 +153,15 @@ class RebaseStackTest {
     @Test
     void aBranchInAMergeQueueIsNotRewritten() {
         List<Entry> queued = ENTRIES.update(
-                1, new Entry(2, 99, State.OPEN, new GhBranch("feat/d"), new GhBranch("feat/c"), Option.none(), true));
+                1,
+                new Entry(
+                        2,
+                        new PrNumber(99),
+                        State.OPEN,
+                        new GhBranch("feat/d"),
+                        new GhBranch("feat/c"),
+                        Option.none(),
+                        true));
 
         assertEquals(Option.of(StackRefusal.MERGE_QUEUE), refusal(model(LOCAL, queued), queued));
     }
@@ -245,15 +254,15 @@ class RebaseStackTest {
 
     @Test
     void anOpenPullRequestWithoutALocalBranchCannotBeMoved() {
-        List<Entry> three =
-                ENTRIES.append(new Entry(3, 100, State.OPEN, new GhBranch("feat/e"), new GhBranch("feat/d")));
+        List<Entry> three = ENTRIES.append(
+                new Entry(3, new PrNumber(100), State.OPEN, new GhBranch("feat/e"), new GhBranch("feat/d")));
 
         assertEquals(Option.of(StackRefusal.NOT_CHECKED_OUT), refusal(model(LOCAL, three), three));
     }
 
     @Test
     void anOpenPullRequestWhoseBranchGitHubDidNotSayIsNotPushed() {
-        List<Entry> unnamed = ENTRIES.update(1, new Entry(2, 99, State.OPEN));
+        List<Entry> unnamed = ENTRIES.update(1, new Entry(2, new PrNumber(99), State.OPEN));
 
         assertEquals(Option.of(StackRefusal.UNKNOWN_BRANCH), refusal(model(LOCAL, unnamed), unnamed));
     }
@@ -263,14 +272,14 @@ class RebaseStackTest {
         List<Entry> merged = List.of(
                 new Entry(
                         1,
-                        97,
+                        new PrNumber(97),
                         State.MERGED,
                         new GhBranch("feat/b"),
                         new GhBranch("main"),
                         Option.of("b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0"),
                         false),
-                new Entry(2, 98, State.OPEN, new GhBranch("feat/c"), new GhBranch("feat/b")),
-                new Entry(3, 99, State.OPEN, new GhBranch("feat/d"), new GhBranch("feat/c")));
+                new Entry(2, new PrNumber(98), State.OPEN, new GhBranch("feat/c"), new GhBranch("feat/b")),
+                new Entry(3, new PrNumber(99), State.OPEN, new GhBranch("feat/d"), new GhBranch("feat/c")));
 
         assertEquals(
                 new StackLayer(C, List.of(new Revision.Commit(new Sha("b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0")))),
@@ -285,14 +294,14 @@ class RebaseStackTest {
         List<Entry> merged = List.of(
                 new Entry(
                         1,
-                        97,
+                        new PrNumber(97),
                         State.MERGED,
                         new GhBranch("feat/b"),
                         new GhBranch("main"),
                         Option.of("b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0"),
                         false),
-                new Entry(2, 98, State.OPEN, new GhBranch("feat/c"), new GhBranch("feat/b")),
-                new Entry(3, 99, State.OPEN, new GhBranch("feat/d"), new GhBranch("feat/c")));
+                new Entry(2, new PrNumber(98), State.OPEN, new GhBranch("feat/c"), new GhBranch("feat/b")),
+                new Entry(3, new PrNumber(99), State.OPEN, new GhBranch("feat/d"), new GhBranch("feat/c")));
         Model known = TestModels.remoteBranchesRead(
                         model(LOCAL.append(branch(b, new Sha("b1b1"))), merged),
                         List.of(
@@ -377,9 +386,9 @@ class RebaseStackTest {
     @Test
     void aMergedBottomNobodyKnowsWhereItWasRefuses() {
         List<Entry> merged = List.of(
-                new Entry(1, 97, State.MERGED, new GhBranch("feat/b"), new GhBranch("main")),
-                new Entry(2, 98, State.OPEN, new GhBranch("feat/c"), new GhBranch("feat/b")),
-                new Entry(3, 99, State.OPEN, new GhBranch("feat/d"), new GhBranch("feat/c")));
+                new Entry(1, new PrNumber(97), State.MERGED, new GhBranch("feat/b"), new GhBranch("main")),
+                new Entry(2, new PrNumber(98), State.OPEN, new GhBranch("feat/c"), new GhBranch("feat/b")),
+                new Entry(3, new PrNumber(99), State.OPEN, new GhBranch("feat/d"), new GhBranch("feat/c")));
 
         assertEquals(Option.of(StackRefusal.MERGED_UNKNOWN), refusal(model(LOCAL, merged), merged));
     }
@@ -441,12 +450,12 @@ class RebaseStackTest {
 
     @Test
     void aRefusalForWhatGitHubDidNotSayNamesWhatIsMissing() {
-        List<Entry> unnamed = ENTRIES.update(1, new Entry(2, 99, State.OPEN));
+        List<Entry> unnamed = ENTRIES.update(1, new Entry(2, new PrNumber(99), State.OPEN));
         List<Entry> baseless = ENTRIES.update(
                 0,
                 new Entry(
                         1,
-                        98,
+                        new PrNumber(98),
                         State.OPEN,
                         Option.of(new GhBranch("feat/c")),
                         Option.none(),
@@ -465,8 +474,8 @@ class RebaseStackTest {
     @Test
     void aStackWithNothingOpenIsNotRebased() {
         List<Entry> closed = List.of(
-                new Entry(1, 98, State.MERGED, new GhBranch("feat/c"), new GhBranch("main")),
-                new Entry(2, 99, State.CLOSED, new GhBranch("feat/d"), new GhBranch("feat/c")));
+                new Entry(1, new PrNumber(98), State.MERGED, new GhBranch("feat/c"), new GhBranch("main")),
+                new Entry(2, new PrNumber(99), State.CLOSED, new GhBranch("feat/d"), new GhBranch("feat/c")));
 
         assertEquals(Option.of(StackRefusal.NOTHING_OPEN), refusal(model(LOCAL, closed), closed));
         assertEquals(
@@ -477,7 +486,15 @@ class RebaseStackTest {
     @Test
     void aRefusedRebaseSaysWhy() {
         List<Entry> queued = ENTRIES.update(
-                1, new Entry(2, 99, State.OPEN, new GhBranch("feat/d"), new GhBranch("feat/c"), Option.none(), true));
+                1,
+                new Entry(
+                        2,
+                        new PrNumber(99),
+                        State.OPEN,
+                        new GhBranch("feat/d"),
+                        new GhBranch("feat/c"),
+                        Option.none(),
+                        true));
         Model menu = Update.update(model(LOCAL, queued), new StackMsg.MenuRequested(Option.none(), Option.of(12)))
                 .model();
 
@@ -577,8 +594,8 @@ class RebaseStackTest {
 
     @Test
     void pushingAStackWithAPullRequestNotCheckedOutSaysSo() {
-        List<Entry> three =
-                ENTRIES.append(new Entry(3, 100, State.OPEN, new GhBranch("feat/e"), new GhBranch("feat/d")));
+        List<Entry> three = ENTRIES.append(
+                new Entry(3, new PrNumber(100), State.OPEN, new GhBranch("feat/e"), new GhBranch("feat/d")));
         Model menu = Update.update(model(LOCAL, three), new StackMsg.MenuRequested(Option.none(), Option.of(12)))
                 .model();
 

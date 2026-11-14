@@ -17,7 +17,8 @@ public record LoadPullRequestPreview(PullRequestSummary key) implements Cmd {
 
     @Override
     public Option<Label> label() {
-        return Option.of(Label.of("work.pullRequest", String.valueOf(key.number())));
+        return Option.of(
+                Label.of("work.pullRequest", String.valueOf(key.number().value())));
     }
 
     @Override

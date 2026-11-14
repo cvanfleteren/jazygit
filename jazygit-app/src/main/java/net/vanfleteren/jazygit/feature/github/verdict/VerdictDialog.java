@@ -67,7 +67,7 @@ public final class VerdictDialog implements PopupView {
                         model,
                         Messages.get(
                                 popup.draft() ? "dialog.verdict.titleDraft" : "dialog.verdict.title",
-                                String.valueOf(popup.number())),
+                                String.valueOf(popup.number().value())),
                         List.of(choices(popup.verdict())),
                         List.empty(),
                         Option.when(popup.draft(), () -> Messages.get("dialog.verdict.draft")),

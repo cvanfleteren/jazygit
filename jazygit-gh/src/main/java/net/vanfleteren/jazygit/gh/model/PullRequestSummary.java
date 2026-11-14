@@ -26,7 +26,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
  */
 public record PullRequestSummary(
         String repository,
-        int number,
+        PrNumber number,
         String title,
         String author,
         GhBranch headBranch,
@@ -46,7 +46,7 @@ public record PullRequestSummary(
      */
     public PullRequestSummary(
             String repository,
-            int number,
+            PrNumber number,
             String title,
             String author,
             GhBranch headBranch,
@@ -82,7 +82,7 @@ public record PullRequestSummary(
      */
     public PullRequestSummary(
             String repository,
-            int number,
+            PrNumber number,
             String title,
             String author,
             GhBranch headBranch,
@@ -115,7 +115,7 @@ public record PullRequestSummary(
      */
     public PullRequestSummary(
             String repository,
-            int number,
+            PrNumber number,
             String title,
             String author,
             GhBranch headBranch,

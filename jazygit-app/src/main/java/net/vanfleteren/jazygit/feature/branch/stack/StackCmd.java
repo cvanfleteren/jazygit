@@ -6,6 +6,7 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.feature.branch.stack.StackChoice.BaseChange;
 import net.vanfleteren.jazygit.gh.GitHub;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequestEdit;
 import net.vanfleteren.jazygit.gh.process.GhFailure;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -79,13 +80,13 @@ public sealed interface StackCmd extends OperationCmd {
      * one first; or puts them on the top of stack {@code stack}, when one is given. When {@code rebase}, the stack is
      * rebased once GitHub lists it (ADR 74).
      */
-    record MakeStack(List<BaseChange> changes, List<Integer> pullRequests, Option<Integer> stack, boolean rebase)
+    record MakeStack(List<BaseChange> changes, List<PrNumber> pullRequests, Option<Integer> stack, boolean rebase)
             implements StackCmd {
 
         /**
          * One after which the stack is not rebased.
          */
-        public MakeStack(List<BaseChange> changes, List<Integer> pullRequests, Option<Integer> stack) {
+        public MakeStack(List<BaseChange> changes, List<PrNumber> pullRequests, Option<Integer> stack) {
             this(changes, pullRequests, stack, false);
         }
 
@@ -103,7 +104,7 @@ public sealed interface StackCmd extends OperationCmd {
 
         @Override
         public Option<String> subject() {
-            return Option.of(pullRequests.map(number -> "#" + number).mkString(" "));
+            return Option.of(pullRequests.map(number -> "#" + number.value()).mkString(" "));
         }
 
         @Override

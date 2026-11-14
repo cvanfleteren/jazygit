@@ -4,6 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.*;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.process.GhError;
 import net.vanfleteren.jazygit.gh.process.GhFailure;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -40,7 +41,7 @@ public interface Account {
     /**
      * Opens pull request {@code number} in the browser.
      */
-    Either<GhFailure, List<ExecutedCommand>> openPullRequest(int number);
+    Either<GhFailure, List<ExecutedCommand>> openPullRequest(PrNumber number);
 
     /**
      * Opens the pull request at {@code url}, of any repository, in the browser.

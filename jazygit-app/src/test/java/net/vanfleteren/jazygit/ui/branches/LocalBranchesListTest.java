@@ -13,6 +13,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -70,7 +71,8 @@ class LocalBranchesListTest {
                 Duration.ofDays(3),
                 Option.of(new BaseDistance(ORIGIN_MAIN, new Sha("1"), 1, 58)),
                 BranchSegs.gitHub(
-                        Option.of(new PullRequest(42, new GhBranch("b"), false, Checks.PASSING, Review.APPROVED)),
+                        Option.of(new PullRequest(
+                                new PrNumber(42), new GhBranch("b"), false, Checks.PASSING, Review.APPROVED)),
                         Option.none()),
                 Option.of("Pushing |"));
 
@@ -87,7 +89,8 @@ class LocalBranchesListTest {
                 Option.of(new BaseDistance(new BranchRef.Local(new BranchName("feat/a")), new Sha("1"), 0, 1)),
                 Option.of(new BranchName("feat/a")),
                 BranchSegs.gitHub(
-                        Option.of(new PullRequest(97, new GhBranch("feat/b"), false, Checks.PASSING, Review.NONE)),
+                        Option.of(new PullRequest(
+                                new PrNumber(97), new GhBranch("feat/b"), false, Checks.PASSING, Review.NONE)),
                         Option.none()),
                 Option.none());
 
@@ -138,7 +141,8 @@ class LocalBranchesListTest {
                 Option.none(),
                 Option.of(new BranchName("feature/a-very-long-name")),
                 BranchSegs.gitHub(
-                        Option.of(new PullRequest(42, new GhBranch("b"), false, Checks.PASSING, Review.APPROVED)),
+                        Option.of(new PullRequest(
+                                new PrNumber(42), new GhBranch("b"), false, Checks.PASSING, Review.APPROVED)),
                         Option.none()),
                 Option.none());
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(row::element)) {
@@ -195,11 +199,12 @@ class LocalBranchesListTest {
                 2,
                 2,
                 List.of(
-                        new PullRequestStack.Entry(1, 96, State.OPEN, new GhBranch("feat/a"), new GhBranch("main")),
                         new PullRequestStack.Entry(
-                                2, 97, State.OPEN, new GhBranch("feature"), new GhBranch("feat/a"))));
+                                1, new PrNumber(96), State.OPEN, new GhBranch("feat/a"), new GhBranch("main")),
+                        new PullRequestStack.Entry(
+                                2, new PrNumber(97), State.OPEN, new GhBranch("feature"), new GhBranch("feat/a"))));
         PullRequest stacked = new PullRequest(
-                97,
+                new PrNumber(97),
                 new GhBranch("feature"),
                 Option.of(new GhBranch("feat/a")),
                 false,

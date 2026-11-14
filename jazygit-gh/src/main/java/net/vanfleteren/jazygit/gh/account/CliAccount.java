@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.gh.model.*;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.process.GhCommand;
 import net.vanfleteren.jazygit.gh.process.GhError;
 import net.vanfleteren.jazygit.gh.process.GhError.UnexpectedOutput;
@@ -97,8 +98,8 @@ public final class CliAccount implements Account {
     }
 
     @Override
-    public Either<GhFailure, List<ExecutedCommand>> openPullRequest(int number) {
-        return web(gh("pr", "view", String.valueOf(number), "--web"), accountBrowser());
+    public Either<GhFailure, List<ExecutedCommand>> openPullRequest(PrNumber number) {
+        return web(gh("pr", "view", String.valueOf(number.value()), "--web"), accountBrowser());
     }
 
     @Override
@@ -110,7 +111,7 @@ public final class CliAccount implements Account {
     public Either<GhFailure, List<ExecutedCommand>> openInBrowser(PullRequestLink link) {
         Option<String> account = accountBrowser();
         if (link.host().isEmpty()) {
-            return web(gh("pr", "view", String.valueOf(link.number()), "--web"), account);
+            return web(gh("pr", "view", String.valueOf(link.number().value()), "--web"), account);
         }
         return account.orElse(() -> ghBrowser(link.host()).map(ChosenBrowser::command))
                 .map(browser -> launch(browser, link.url()))

@@ -9,6 +9,7 @@ import io.vavr.collection.Map;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -28,9 +29,10 @@ import org.junit.jupiter.api.Test;
 class BranchNodeTest {
 
     private static final List<PullRequestStack.Entry> ENTRIES = List.of(
-            new PullRequestStack.Entry(1, 96, State.OPEN, new GhBranch("feat/a"), new GhBranch("main")),
-            new PullRequestStack.Entry(2, 97, State.OPEN, new GhBranch("feat/b"), new GhBranch("feat/a")),
-            new PullRequestStack.Entry(3, 98, State.OPEN, new GhBranch("feat/c"), new GhBranch("feat/b")));
+            new PullRequestStack.Entry(1, new PrNumber(96), State.OPEN, new GhBranch("feat/a"), new GhBranch("main")),
+            new PullRequestStack.Entry(2, new PrNumber(97), State.OPEN, new GhBranch("feat/b"), new GhBranch("feat/a")),
+            new PullRequestStack.Entry(
+                    3, new PrNumber(98), State.OPEN, new GhBranch("feat/c"), new GhBranch("feat/b")));
 
     private static Branch branch(String name) {
         return Fixtures.branch(new BranchName(name), false, new Sha("aaaa"));
@@ -38,7 +40,7 @@ class BranchNodeTest {
 
     private static PullRequest stacked(int number, String head, int position, List<PullRequestStack.Entry> entries) {
         return new PullRequest(
-                number,
+                new PrNumber(number),
                 new GhBranch(head),
                 Option.none(),
                 false,
@@ -82,9 +84,12 @@ class BranchNodeTest {
     @Test
     void aPullRequestOfTheStackWhoseBranchIsNotCheckedOutStillShows() {
         List<PullRequestStack.Entry> entries = List.of(
-                new PullRequestStack.Entry(1, 95, State.MERGED, new GhBranch("feat/0"), new GhBranch("main")),
-                new PullRequestStack.Entry(2, 96, State.OPEN, new GhBranch("feat/a"), new GhBranch("feat/0")),
-                new PullRequestStack.Entry(3, 97, State.OPEN, new GhBranch("feat/b"), new GhBranch("feat/a")));
+                new PullRequestStack.Entry(
+                        1, new PrNumber(95), State.MERGED, new GhBranch("feat/0"), new GhBranch("main")),
+                new PullRequestStack.Entry(
+                        2, new PrNumber(96), State.OPEN, new GhBranch("feat/a"), new GhBranch("feat/0")),
+                new PullRequestStack.Entry(
+                        3, new PrNumber(97), State.OPEN, new GhBranch("feat/b"), new GhBranch("feat/a")));
 
         List<BranchNode> nodes = BranchNode.of(
                 List.of(branch("feat/b")),

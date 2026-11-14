@@ -70,7 +70,7 @@ public record PullRequestStack(int number, int position, int size, List<Entry> e
      */
     public record Entry(
             int position,
-            int number,
+            PrNumber number,
             State state,
             Option<GhBranch> headBranch,
             Option<GhBranch> baseBranch,
@@ -83,7 +83,7 @@ public record PullRequestStack(int number, int position, int size, List<Entry> e
          */
         public Entry(
                 int position,
-                int number,
+                PrNumber number,
                 State state,
                 GhBranch headBranch,
                 GhBranch baseBranch,
@@ -95,14 +95,14 @@ public record PullRequestStack(int number, int position, int size, List<Entry> e
         /**
          * One whose head commit and queue are not known.
          */
-        public Entry(int position, int number, State state, GhBranch headBranch, GhBranch baseBranch) {
+        public Entry(int position, PrNumber number, State state, GhBranch headBranch, GhBranch baseBranch) {
             this(position, number, state, headBranch, baseBranch, Option.none(), false);
         }
 
         /**
          * One whose branches are not known.
          */
-        public Entry(int position, int number, State state) {
+        public Entry(int position, PrNumber number, State state) {
             this(position, number, state, Option.none(), Option.none(), Option.none(), false, false);
         }
 

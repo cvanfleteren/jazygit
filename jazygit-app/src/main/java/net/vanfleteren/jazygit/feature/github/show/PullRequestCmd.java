@@ -5,6 +5,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.github.browse.BrowsePullRequestCmd;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.MergeMethod;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.git.model.BranchName;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -36,7 +37,7 @@ public sealed interface PullRequestCmd extends Cmd {
 
         BranchName branch();
 
-        int number();
+        PrNumber number();
 
         @Override
         default Option<String> subject() {
@@ -57,7 +58,7 @@ public sealed interface PullRequestCmd extends Cmd {
     /**
      * Opens pull request {@code number}, from {@code branch}, in the browser.
      */
-    record OpenPullRequest(BranchName branch, int number) implements PullRequestCmd, OperationCmd {
+    record OpenPullRequest(BranchName branch, PrNumber number) implements PullRequestCmd, OperationCmd {
 
         @Override
         public Operation operation() {
@@ -83,7 +84,7 @@ public sealed interface PullRequestCmd extends Cmd {
      * Asks GitHub to merge pull request {@code number}, from {@code branch}, as {@code method} says, while its branch
      * is at {@code head}: GitHub merges it in the background (ADR 24).
      */
-    record MergePullRequest(BranchName branch, int number, Option<GhCommit> head, MergeMethod method)
+    record MergePullRequest(BranchName branch, PrNumber number, Option<GhCommit> head, MergeMethod method)
             implements PullRequestCmd, ChangingCmd {
 
         @Override
@@ -106,11 +107,11 @@ public sealed interface PullRequestCmd extends Cmd {
     /**
      * Asks GitHub how the merge {@code id} of pull request {@code number} is doing. Nobody waits for it.
      */
-    record CheckMerge(int number, String id) implements PullRequestCmd {
+    record CheckMerge(PrNumber number, String id) implements PullRequestCmd {
 
         @Override
         public Option<Label> label() {
-            return Option.of(Label.of("work.checkMerge", String.valueOf(number)));
+            return Option.of(Label.of("work.checkMerge", String.valueOf(number.value())));
         }
 
         @Override
@@ -136,7 +137,7 @@ public sealed interface PullRequestCmd extends Cmd {
     /**
      * Closes pull request {@code number}, from {@code branch}, without merging it.
      */
-    record ClosePullRequest(BranchName branch, int number) implements PullRequestCmd, ChangingCmd {
+    record ClosePullRequest(BranchName branch, PrNumber number) implements PullRequestCmd, ChangingCmd {
 
         @Override
         public Operation operation() {
@@ -157,7 +158,7 @@ public sealed interface PullRequestCmd extends Cmd {
      * Turns pull request {@code number}, from {@code branch}, into a draft when {@code draft}, else marks it
      * ready for review.
      */
-    record SetDraft(BranchName branch, int number, boolean draft) implements PullRequestCmd, OperationCmd {
+    record SetDraft(BranchName branch, PrNumber number, boolean draft) implements PullRequestCmd, OperationCmd {
 
         @Override
         public Operation operation() {
@@ -198,11 +199,11 @@ public sealed interface PullRequestCmd extends Cmd {
      * Reads the details of pull request {@code number}, which the user is waiting for, as read {@code read}: what it
      * brings is only taken while no later read was, nor a change made since it started (ADR 34).
      */
-    record LoadPullRequestDetails(int number, long read) implements PullRequestCmd {
+    record LoadPullRequestDetails(PrNumber number, long read) implements PullRequestCmd {
 
         @Override
         public Option<Label> label() {
-            return Option.of(Label.of("work.pullRequest", String.valueOf(number)));
+            return Option.of(Label.of("work.pullRequest", String.valueOf(number.value())));
         }
 
         @Override

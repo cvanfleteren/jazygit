@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.feature.github.show;
 
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.state.popup.Popup;
 
 /**
@@ -22,7 +23,7 @@ public interface ShowsPullRequest extends Popup {
     /**
      * The number of the pull request.
      */
-    default int number() {
+    default PrNumber number() {
         return pullRequestPopup().pullRequest().number();
     }
 }

@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.github.comments;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.state.Cmd;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
@@ -15,11 +16,11 @@ public sealed interface CommentsCmd extends Cmd {
     /**
      * Reads the description, comments and reviews of pull request {@code number}.
      */
-    record LoadComments(int number) implements CommentsCmd {
+    record LoadComments(PrNumber number) implements CommentsCmd {
 
         @Override
         public Option<Label> label() {
-            return Option.of(Label.of("work.comments", String.valueOf(number)));
+            return Option.of(Label.of("work.comments", String.valueOf(number.value())));
         }
 
         @Override

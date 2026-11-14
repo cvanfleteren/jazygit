@@ -11,6 +11,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesCmd;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.feature.github.browse.BrowseRemarkCmd;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.PullRequestLink;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
@@ -29,20 +30,20 @@ class ThreadUpdateTest {
     @Test
     void theBrowserOpensOnTheCommentOfTheCursorOrElseOnThePullRequest() {
         assertEquals(
-                List.of(new BrowseRemarkCmd(
-                        new PullRequestLink("", "owner/repo", 7, Option.of(new ReviewThread.Comment.RestId("1"))))),
+                List.of(new BrowseRemarkCmd(new PullRequestLink(
+                        "", "owner/repo", new PrNumber(7), Option.of(new ReviewThread.Comment.RestId("1"))))),
                 Update.update(files(), new ThreadMsg.OpenAsked(at(onThread("T1"))))
                         .cmds());
         assertEquals(
-                List.of(new BrowseRemarkCmd(
-                        new PullRequestLink("", "owner/repo", 7, Option.of(new ReviewThread.Comment.RestId("2"))))),
+                List.of(new BrowseRemarkCmd(new PullRequestLink(
+                        "", "owner/repo", new PrNumber(7), Option.of(new ReviewThread.Comment.RestId("2"))))),
                 Update.update(
                                 files(),
                                 new ThreadMsg.OpenAsked(at(new Anchor.Comment(
                                         new ReviewThread.Comment.Id("R1"), (Anchor.Thread) onThread("T1")))))
                         .cmds());
         assertEquals(
-                List.of(new BrowseRemarkCmd(new PullRequestLink("", "owner/repo", 7, Option.none()))),
+                List.of(new BrowseRemarkCmd(new PullRequestLink("", "owner/repo", new PrNumber(7), Option.none()))),
                 Update.update(files(), new ThreadMsg.OpenAsked(at(line(Side.RIGHT, 2))))
                         .cmds());
     }
@@ -53,8 +54,8 @@ class ThreadUpdateTest {
                 files(PullRequestDetails.State.MERGED, "c".repeat(40)), new ThreadMsg.OpenAsked(at(onThread("T1"))));
 
         assertEquals(
-                List.of(new BrowseRemarkCmd(
-                        new PullRequestLink("", "owner/repo", 7, Option.of(new ReviewThread.Comment.RestId("1"))))),
+                List.of(new BrowseRemarkCmd(new PullRequestLink(
+                        "", "owner/repo", new PrNumber(7), Option.of(new ReviewThread.Comment.RestId("1"))))),
                 opened.cmds());
         assertEquals(Option.none(), error(opened.model()));
     }
@@ -108,13 +109,16 @@ class ThreadUpdateTest {
         assertEquals(
                 List.of(new CommitFilesCmd.SaveCollapsed(
                         "owner/repo",
-                        7,
+                        new PrNumber(7),
                         HashMap.of(new Collapsed.Key("T2"), true),
                         opened.model().now())),
                 opened.cmds());
         assertEquals(
                 List.of(new CommitFilesCmd.SaveCollapsed(
-                        "owner/repo", 7, HashMap.empty(), opened.model().now())),
+                        "owner/repo",
+                        new PrNumber(7),
+                        HashMap.empty(),
+                        opened.model().now())),
                 Update.update(opened.model(), new ThreadMsg.ThreadToggled(at(onThread("T2"))))
                         .cmds());
     }
@@ -123,7 +127,7 @@ class ThreadUpdateTest {
     void whatWasCollapsedOrOpenedInAnEarlierSessionIsAsItWasUnlessItsDefaultChangedSince() {
         // T2 opened while resolved, R1 collapsed, and T1 opened while resolved, which it is no longer.
         CommitFilesMsg.CollapsedLoaded kept = new CommitFilesMsg.CollapsedLoaded(
-                7,
+                new PrNumber(7),
                 HashMap.of(
                         new Collapsed.Key("T2"), true, new Collapsed.Key("R1"), false, new Collapsed.Key("T1"), true));
         Collapsed expected = new Collapsed(HashMap.of(new Collapsed.Key("T2"), true, new Collapsed.Key("R1"), false));

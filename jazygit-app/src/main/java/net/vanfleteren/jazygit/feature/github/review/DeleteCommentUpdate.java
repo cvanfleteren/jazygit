@@ -96,7 +96,7 @@ public final class DeleteCommentUpdate {
     private static Next confirmDelete(Model model, DeleteCommentPopup popup) {
         Anchor on = new Anchor.Comment(popup.comment().id(), new Anchor.Thread(popup.thread(), Option.none()));
         return deletable(model, on)
-                .filterOrElse(found -> found.number() == popup.number(), found -> Why.NOT_READ)
+                .filterOrElse(found -> found.number().equals(popup.number()), found -> Why.NOT_READ)
                 .fold(
                         why -> Next.of(refused(model.withoutPopup(DeleteCommentPopup.class), why)),
                         found -> Update.confirm(

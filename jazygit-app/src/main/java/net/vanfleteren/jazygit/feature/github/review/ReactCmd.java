@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.feature.github.review;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.Reaction;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -26,7 +27,8 @@ public sealed interface ReactCmd extends Cmd {
      * Gives {@code reaction} to the comment with the id {@code comment} of the thread with the id {@code thread} of
      * pull request {@code number} when {@code given}, else takes it back (ADR 86).
      */
-    record React(int number, ReviewThread.Id thread, ReviewThread.Comment.Id comment, Reaction reaction, boolean given)
+    record React(
+            PrNumber number, ReviewThread.Id thread, ReviewThread.Comment.Id comment, Reaction reaction, boolean given)
             implements ReactCmd, OperationCmd {
 
         @Override
@@ -36,7 +38,7 @@ public sealed interface ReactCmd extends Cmd {
 
         @Override
         public Option<String> subject() {
-            return Option.of("#" + number);
+            return Option.of("#" + number.value());
         }
 
         @Override

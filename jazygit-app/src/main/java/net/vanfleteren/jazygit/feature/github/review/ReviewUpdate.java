@@ -312,8 +312,8 @@ public final class ReviewUpdate {
      * started, if it did.
      */
     private static Model closedOnSent(Model model, Send cmd) {
-        Option<ReviewPopup> popup =
-                model.popup(ReviewPopup.class).filter(open -> open.sending() && open.number() == cmd.number());
+        Option<ReviewPopup> popup = model.popup(ReviewPopup.class)
+                .filter(open -> open.sending() && open.number().equals(cmd.number()));
         Model closed = popup.map(open -> model.withoutPopup(ReviewPopup.class)).getOrElse(model);
         return popup.flatMap(open -> lastLine(open.target())
                         .map(line -> closed.withScrolled(closed.scrolled()
@@ -335,7 +335,7 @@ public final class ReviewUpdate {
     private static Next edited(Model model, Send cmd, String body, List<ExecutedCommand> commands) {
         return OperationUpdate.succeeded(model, cmd, commands)
                 .map(done -> done.popup(ReviewPopup.class)
-                        .filter(open -> open.sending() && open.number() == cmd.number())
+                        .filter(open -> open.sending() && open.number().equals(cmd.number()))
                         .map(open -> done.withoutPopup(ReviewPopup.class))
                         .getOrElse(done))
                 .map(closed ->

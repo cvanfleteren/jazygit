@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.gh.reviews;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import net.vanfleteren.jazygit.gh.model.*;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.process.GhError;
 import net.vanfleteren.jazygit.gh.process.GhFailure;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
@@ -18,12 +19,12 @@ public interface Reviews {
      * the reviews that say something, oldest first. A review says something when it has text, approves, asks for
      * changes or was dismissed; pending reviews, which only their author sees, are left out.
      */
-    Either<GhError, List<PullRequestComment>> conversation(int number);
+    Either<GhError, List<PullRequestComment>> conversation(PrNumber number);
 
     /**
      * Adds a comment saying {@code body} to the conversation of pull request {@code number}.
      */
-    Either<GhFailure, List<ExecutedCommand>> comment(int number, String body);
+    Either<GhFailure, List<ExecutedCommand>> comment(PrNumber number, String body);
 
     /**
      * Deletes the comment of the conversation on a pull request with node id {@code comment}; one that is gone already
@@ -48,19 +49,19 @@ public interface Reviews {
      * changes are diffed between (ADR 55). The comments of a review that is not submitted yet, which only their author
      * sees, are left out, and so is a thread of only those.
      */
-    Either<GhError, ReviewRemarks> remarks(int number);
+    Either<GhError, ReviewRemarks> remarks(PrNumber number);
 
     /**
      * Starts {@code thread} on pull request {@code number}, at its head commit {@code commit}, published at once
      * (ADR 60).
      */
-    Either<GhFailure, List<ExecutedCommand>> startThread(int number, GhCommit commit, NewReviewThread thread);
+    Either<GhFailure, List<ExecutedCommand>> startThread(PrNumber number, GhCommit commit, NewReviewThread thread);
 
     /**
      * Replies {@code body} to the review thread of pull request {@code number} whose first comment has the id
      * {@code comment}, as REST numbers it, published at once (ADR 60).
      */
-    Either<GhFailure, List<ExecutedCommand>> reply(int number, ReviewThread.Comment.RestId comment, String body);
+    Either<GhFailure, List<ExecutedCommand>> reply(PrNumber number, ReviewThread.Comment.RestId comment, String body);
 
     /**
      * Resolves the review thread with node id {@code thread} when {@code resolved}, else unresolves it (ADR 60).

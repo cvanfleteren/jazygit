@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.feature.github.verdict;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.feature.github.comment.CommentCmd;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.Verdict;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 import net.vanfleteren.jazygit.state.Cmd;
@@ -30,7 +31,7 @@ public sealed interface VerdictCmd extends Cmd {
      * Submits a review saying {@code verdict}, with {@code body}, on pull request {@code number}, whose node id is
      * {@code pullRequest}.
      */
-    record SubmitReview(int number, String pullRequest, Verdict verdict, String body)
+    record SubmitReview(PrNumber number, String pullRequest, Verdict verdict, String body)
             implements VerdictCmd, OperationCmd {
 
         @Override
@@ -40,7 +41,7 @@ public sealed interface VerdictCmd extends Cmd {
 
         @Override
         public Option<String> subject() {
-            return Option.of("#" + number);
+            return Option.of("#" + number.value());
         }
 
         @Override

@@ -16,7 +16,7 @@ import io.vavr.control.Option;
  * @param commits    the commits its changes are diffed between, when GitHub said (ADR 61)
  */
 public record PullRequest(
-        int number,
+        PrNumber number,
         GhBranch headBranch,
         Option<GhBranch> baseBranch,
         boolean draft,
@@ -29,7 +29,7 @@ public record PullRequest(
      * One whose base branch is not known.
      */
     public PullRequest(
-            int number,
+            PrNumber number,
             GhBranch headBranch,
             boolean draft,
             Checks checks,
@@ -43,7 +43,7 @@ public record PullRequest(
      * One whose base branch and commits are not known.
      */
     public PullRequest(
-            int number,
+            PrNumber number,
             GhBranch headBranch,
             boolean draft,
             Checks checks,
@@ -55,7 +55,7 @@ public record PullRequest(
     /**
      * One that is not stacked.
      */
-    public PullRequest(int number, GhBranch headBranch, boolean draft, Checks checks, Review review) {
+    public PullRequest(PrNumber number, GhBranch headBranch, boolean draft, Checks checks, Review review) {
         this(number, headBranch, draft, checks, review, Option.none());
     }
 

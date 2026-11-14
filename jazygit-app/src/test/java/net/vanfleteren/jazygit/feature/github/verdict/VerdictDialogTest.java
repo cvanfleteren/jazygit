@@ -14,6 +14,7 @@ import io.vavr.control.Option;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.feature.github.GitHubError;
 import net.vanfleteren.jazygit.feature.github.GitHubError.CannotReview.Why;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails.Reviewing;
 import net.vanfleteren.jazygit.gh.model.Verdict;
 import net.vanfleteren.jazygit.state.Model;
@@ -31,7 +32,8 @@ import org.junit.jupiter.api.Test;
  */
 class VerdictDialogTest {
 
-    private static final VerdictPopup REVIEW = VerdictPopup.ofDiff(42, new Reviewing("PR_42", false, false), false);
+    private static final VerdictPopup REVIEW =
+            VerdictPopup.ofDiff(new PrNumber(42), new Reviewing("PR_42", false, false), false);
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     private Model model = TestModels.loaded().openPopup(REVIEW);

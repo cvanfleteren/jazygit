@@ -159,11 +159,13 @@ public final class NewPullRequestDialog implements PopupView {
                         notTop -> List.<StyledElement<?>>of(text(GAP
                                         + box(false)
                                         + " "
-                                        + Messages.get("dialog.newPullRequest.stack", String.valueOf(notTop.below()))
+                                        + Messages.get(
+                                                "dialog.newPullRequest.stack",
+                                                String.valueOf(notTop.below().value()))
                                         + " · "
                                         + Messages.get(
                                                 "dialog.newPullRequest.notTop",
-                                                String.valueOf(notTop.below()),
+                                                String.valueOf(notTop.below().value()),
                                                 String.valueOf(notTop.stack())))
                                 .addClass(Theme.Classes.DIM)),
                         stacking -> List.<StyledElement<?>>of(
@@ -176,7 +178,8 @@ public final class NewPullRequestDialog implements PopupView {
                                         .onKeyEvent(this::stackKeys),
                                 text(" "
                                         + Messages.get(
-                                                "dialog.newPullRequest.stack", String.valueOf(stacking.below()))))))
+                                                "dialog.newPullRequest.stack",
+                                                String.valueOf(stacking.below().value()))))))
                 .getOrElse(List.empty());
     }
 

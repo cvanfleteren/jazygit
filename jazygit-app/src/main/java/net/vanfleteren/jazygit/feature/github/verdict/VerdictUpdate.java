@@ -149,7 +149,7 @@ public final class VerdictUpdate {
                 .map(succeeded -> succeeded.mapGitHub(gitHub -> gitHub.withChanged(cmd.number())));
         return done.model()
                 .popup(VerdictPopup.class)
-                .filter(popup -> popup.sending() && popup.number() == cmd.number())
+                .filter(popup -> popup.sending() && popup.number().equals(cmd.number()))
                 .map(popup -> done.then(changed -> popup.from()
                         .map(from -> PullRequestUpdate.read(changed, cmd.number())
                                 .apply((given, load) -> Next.of(

@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.ui.text;
 
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.git.model.InProgress;
 import net.vanfleteren.jazygit.i18n.Messages;
 import net.vanfleteren.jazygit.state.operation.Notice;
@@ -23,8 +24,8 @@ public final class NoticeText {
                         + Messages.get("notice.moveStopped", branch.value(), oldest.shortSha(), target.value());
             case Notice.MergeEnqueued(var branch) -> Messages.get("notice.mergeEnqueued", branch.value());
             case Notice.MergeStillPending(var branch) -> Messages.get("notice.mergeStillPending", branch.value());
-            case Notice.StackNotListed(int pullRequest) ->
-                Messages.get("notice.stackNotListed", String.valueOf(pullRequest));
+            case Notice.StackNotListed(PrNumber pullRequest) ->
+                Messages.get("notice.stackNotListed", String.valueOf(pullRequest.value()));
             case Notice.StackNotAsked(int stack) -> Messages.get("notice.stackNotAsked", String.valueOf(stack));
             case Notice.BranchKept(var branch, int ahead, var upstream) ->
                 Messages.get("notice.branchKept", branch.value(), ahead, upstream.shortName());

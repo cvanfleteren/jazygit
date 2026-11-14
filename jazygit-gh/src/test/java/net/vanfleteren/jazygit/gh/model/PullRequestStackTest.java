@@ -17,10 +17,10 @@ class PullRequestStackTest {
                 4,
                 4,
                 List.of(
-                        new PullRequestStack.Entry(1, 40, first),
-                        new PullRequestStack.Entry(2, 41, second),
-                        new PullRequestStack.Entry(3, 42, third),
-                        new PullRequestStack.Entry(4, 43, State.OPEN)));
+                        new PullRequestStack.Entry(1, new PrNumber(40), first),
+                        new PullRequestStack.Entry(2, new PrNumber(41), second),
+                        new PullRequestStack.Entry(3, new PrNumber(42), third),
+                        new PullRequestStack.Entry(4, new PrNumber(43), State.OPEN)));
     }
 
     @Test
@@ -40,7 +40,9 @@ class PullRequestStackTest {
                 7,
                 1,
                 2,
-                List.of(new PullRequestStack.Entry(1, 40, State.OPEN), new PullRequestStack.Entry(2, 41, State.OPEN)));
+                List.of(
+                        new PullRequestStack.Entry(1, new PrNumber(40), State.OPEN),
+                        new PullRequestStack.Entry(2, new PrNumber(41), State.OPEN)));
 
         assertEquals(0, bottom.below());
     }

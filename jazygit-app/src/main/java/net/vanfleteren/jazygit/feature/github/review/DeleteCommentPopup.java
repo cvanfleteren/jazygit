@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.feature.github.review;
 
 import java.time.Instant;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.state.popup.Popup;
 
@@ -12,5 +13,5 @@ import net.vanfleteren.jazygit.state.popup.Popup;
  * @param comment the comment, which the popup says who wrote, when, and the first line of
  * @param now     when it was asked, to tell how long ago the comment was written
  */
-public record DeleteCommentPopup(int number, ReviewThread.Id thread, ReviewThread.Comment comment, Instant now)
+public record DeleteCommentPopup(PrNumber number, ReviewThread.Id thread, ReviewThread.Comment comment, Instant now)
         implements Popup {}

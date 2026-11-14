@@ -99,7 +99,7 @@ public sealed interface WorktreeSource {
 
         @Override
         public String label() {
-            return "#" + pullRequest.number();
+            return "#" + pullRequest.number().value();
         }
 
         /**
@@ -108,7 +108,7 @@ public sealed interface WorktreeSource {
         @Override
         public BranchName directory() {
             return pullRequest.fromFork()
-                    ? new BranchName("pr-" + pullRequest.number())
+                    ? new BranchName("pr-" + pullRequest.number().value())
                     : FromGitHub.branch(pullRequest.headBranch());
         }
 

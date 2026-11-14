@@ -97,7 +97,8 @@ public record StackRebase(
         List<Revision> belowBottom =
                 merged.map(entry -> where(model, push.remote(), entry)).getOrElse(List.of(base.tracking()));
         if (belowBottom.isEmpty()) {
-            return refused(stack, new StackPush.Refused("#" + merged.get().number(), StackRefusal.MERGED_UNKNOWN));
+            return refused(
+                    stack, new StackPush.Refused("#" + merged.get().number().value(), StackRefusal.MERGED_UNKNOWN));
         }
         List<Tuple2<Branch, RemoteBranch>> targets = push.targets();
         List<StackLayer> layers = targets.zipWithIndex()

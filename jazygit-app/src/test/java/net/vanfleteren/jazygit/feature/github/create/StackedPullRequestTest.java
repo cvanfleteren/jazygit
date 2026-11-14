@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestCmd.Create
 import net.vanfleteren.jazygit.feature.github.create.CreatePullRequestCmd.Stacking;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.NewPullRequest;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -43,7 +44,7 @@ class StackedPullRequestTest {
 
     private static PullRequest pr(int number, String head, Option<PullRequestStack> stack) {
         return new PullRequest(
-                number,
+                new PrNumber(number),
                 new GhBranch(head),
                 Option.of(new GhBranch("main")),
                 false,
@@ -69,8 +70,10 @@ class StackedPullRequestTest {
                 position,
                 2,
                 List.of(
-                        new PullRequestStack.Entry(1, 96, State.OPEN, new GhBranch("feat/a"), new GhBranch("main")),
-                        new PullRequestStack.Entry(2, 95, State.OPEN, new GhBranch("other"), new GhBranch("feat/a"))));
+                        new PullRequestStack.Entry(
+                                1, new PrNumber(96), State.OPEN, new GhBranch("feat/a"), new GhBranch("main")),
+                        new PullRequestStack.Entry(
+                                2, new PrNumber(95), State.OPEN, new GhBranch("other"), new GhBranch("feat/a"))));
     }
 
     private static NewPullRequestPopup popup(BranchName base, boolean stacked) {
@@ -92,7 +95,7 @@ class StackedPullRequestTest {
     @Test
     void onAPullRequestInNoStackTheTwoMakeOne() {
         assertEquals(
-                Option.of(Either.right(new Stacking(96, Option.none()))),
+                Option.of(Either.right(new Stacking(new PrNumber(96), Option.none()))),
                 CreatePullRequestUpdate.stackOn(model(Option.none()), FEAT_A));
     }
 
@@ -102,17 +105,18 @@ class StackedPullRequestTest {
                 12,
                 1,
                 1,
-                List.of(new PullRequestStack.Entry(1, 96, State.OPEN, new GhBranch("feat/a"), new GhBranch("main"))));
+                List.of(new PullRequestStack.Entry(
+                        1, new PrNumber(96), State.OPEN, new GhBranch("feat/a"), new GhBranch("main"))));
 
         assertEquals(
-                Option.of(Either.right(new Stacking(96, Option.of(12)))),
+                Option.of(Either.right(new Stacking(new PrNumber(96), Option.of(12)))),
                 CreatePullRequestUpdate.stackOn(model(Option.of(top)), FEAT_A));
     }
 
     @Test
     void notOnTheTopOfAStackItSaysWhy() {
         assertEquals(
-                Option.of(Either.left(new CreatePullRequestCmd.NotTop(96, 12))),
+                Option.of(Either.left(new CreatePullRequestCmd.NotTop(new PrNumber(96), 12))),
                 CreatePullRequestUpdate.stackOn(model(Option.of(stackOf(1))), FEAT_A));
     }
 
@@ -127,7 +131,7 @@ class StackedPullRequestTest {
                 new CreatePullRequestMsg.Confirmed());
 
         assertEquals(
-                List.of(Option.of(new Stacking(96, Option.none()))),
+                List.of(Option.of(new Stacking(new PrNumber(96), Option.none()))),
                 ticked.cmds().map(cmd -> ((CreatePullRequest) cmd).stacking()));
         assertEquals(
                 List.of(Option.<Stacking>none()), unticked.cmds().map(cmd -> ((CreatePullRequest) cmd).stacking()));
@@ -140,7 +144,7 @@ class StackedPullRequestTest {
                 new RemoteBranch("origin", FEATURE),
                 new RemoteBranch("origin", FEAT_A),
                 new NewPullRequest("Add b", "", false),
-                Option.of(new Stacking(96, Option.none())));
+                Option.of(new Stacking(new PrNumber(96), Option.none())));
         Model running = TestModels.running(model(Option.none()), cmd);
 
         Update.Next created = Update.update(
@@ -148,7 +152,9 @@ class StackedPullRequestTest {
                 new CreatePullRequestMsg.Created(cmd, Option.of(pr(101, "feature", Option.none())), List.empty()));
 
         assertTrue(
-                created.cmds().contains(new StackCmd.MakeStack(List.empty(), List.of(96, 101), Option.none())),
+                created.cmds()
+                        .contains(new StackCmd.MakeStack(
+                                List.empty(), List.of(new PrNumber(96), new PrNumber(101)), Option.none())),
                 created.cmds().toString());
     }
 

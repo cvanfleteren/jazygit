@@ -305,7 +305,7 @@ public final class ContentView {
                                 Messages.get(
                                         "panel.pullRequest.titleFor",
                                         preview.key().repository(),
-                                        String.valueOf(preview.key().number())),
+                                        String.valueOf(preview.key().number().value())),
                                 new ScrolledContent.PullRequest(preview.key(), read),
                                 new Body.PullRequest(preview.key(), read))))
                 .getOrElse(() -> dim(title, Messages.get("content.noPullRequest")));
@@ -401,7 +401,7 @@ public final class ContentView {
                         .unfetched()
                         .map(pullRequest -> dim(
                                 Messages.get("panel.log.title"),
-                                Messages.get("content.unfetched", String.valueOf(pullRequest))))
+                                Messages.get("content.unfetched", String.valueOf(pullRequest.value()))))
                         .getOrElse(() -> loading(Messages.get("panel.log.title"))));
     }
 

@@ -11,6 +11,7 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.feature.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.gh.model.CommentRights;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.Reactions;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
@@ -110,7 +111,7 @@ final class ReviewFixtures {
         Model read = Update.update(
                         opened,
                         new CommitFilesMsg.RemarksLoaded(
-                                7,
+                                new PrNumber(7),
                                 new ReviewRemarks(state, GhCommit.parse(head), GhCommit.parse(BASE), threads),
                                 HashSet.empty(),
                                 0))
@@ -156,7 +157,7 @@ final class ReviewFixtures {
 
     static CommitFilesMsg.RemarksLoaded readAgain(Set<ReviewThread.Id> settled, ReviewThread... threads) {
         return new CommitFilesMsg.RemarksLoaded(
-                7,
+                new PrNumber(7),
                 new ReviewRemarks(
                         PullRequestDetails.State.OPEN, GhCommit.parse(HEAD), GhCommit.parse(BASE), List.of(threads)),
                 settled,

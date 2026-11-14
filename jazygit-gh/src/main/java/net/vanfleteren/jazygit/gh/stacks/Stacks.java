@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.gh.stacks;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.process.GhFailure;
 import net.vanfleteren.jazygit.process.ExecutedCommand;
 
@@ -14,12 +15,12 @@ public interface Stacks {
      * Makes a stack on GitHub of {@code pullRequests}, the bottom one first: two or more, each with the head of the one
      * below it as its base.
      */
-    Either<GhFailure, List<ExecutedCommand>> create(List<Integer> pullRequests);
+    Either<GhFailure, List<ExecutedCommand>> create(List<PrNumber> pullRequests);
 
     /**
      * Puts {@code pullRequests}, the lowest one first, on the top of stack {@code stack}.
      */
-    Either<GhFailure, List<ExecutedCommand>> add(int stack, List<Integer> pullRequests);
+    Either<GhFailure, List<ExecutedCommand>> add(int stack, List<PrNumber> pullRequests);
 
     /**
      * Takes stack {@code stack} apart on GitHub; its pull requests stay open, with their bases.

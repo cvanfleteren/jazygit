@@ -7,6 +7,7 @@ import io.vavr.control.Option;
 import java.time.Duration;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -42,7 +43,8 @@ class RemoteBranchesListTest {
                 Duration.ofMinutes(5),
                 false,
                 BranchSegs.gitHub(
-                        Option.of(new PullRequest(42, new GhBranch("b"), false, Checks.NONE, Review.NONE)),
+                        Option.of(
+                                new PullRequest(new PrNumber(42), new GhBranch("b"), false, Checks.NONE, Review.NONE)),
                         Option.none()),
                 Option.of("Pushing |"));
 

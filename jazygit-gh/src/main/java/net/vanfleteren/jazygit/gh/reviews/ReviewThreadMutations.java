@@ -7,6 +7,7 @@ import static net.vanfleteren.jazygit.json.Decoder.string;
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.NewReviewThread;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.Reaction;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.gh.process.GhCommand;
@@ -58,7 +59,7 @@ final class ReviewThreadMutations {
      * The command that starts {@code thread} on pull request {@code number}, at its head commit {@code commit}: on its
      * lines, the first only when it has several, or on its whole file.
      */
-    static GhCommand start(int number, GhCommit commit, NewReviewThread thread) {
+    static GhCommand start(PrNumber number, GhCommit commit, NewReviewThread thread) {
         List<String> place = thread.lines()
                 .map(lines -> List.of("-F", "line=" + lines.line(), "-f", "side=" + lines.side())
                         .appendAll(
@@ -71,7 +72,7 @@ final class ReviewThreadMutations {
                                                 "start_side=" + lines.startSide())))
                 .getOrElse(() -> List.of("-f", "subject_type=file"));
         return post(
-                "repos/{owner}/{repo}/pulls/" + number + "/comments",
+                "repos/{owner}/{repo}/pulls/" + number.value() + "/comments",
                 List.of("-f", "body=" + thread.body(), "-f", "commit_id=" + commit.oid(), "-f", "path=" + thread.path())
                         .appendAll(place));
     }
@@ -80,9 +81,9 @@ final class ReviewThreadMutations {
      * The command that replies {@code body} to the thread of pull request {@code number} whose first comment has the
      * id {@code comment}, as REST numbers it.
      */
-    static GhCommand reply(int number, ReviewThread.Comment.RestId comment, String body) {
+    static GhCommand reply(PrNumber number, ReviewThread.Comment.RestId comment, String body) {
         return post(
-                "repos/{owner}/{repo}/pulls/" + number + "/comments/" + comment.value() + "/replies",
+                "repos/{owner}/{repo}/pulls/" + number.value() + "/comments/" + comment.value() + "/replies",
                 List.of("-f", "body=" + body));
     }
 

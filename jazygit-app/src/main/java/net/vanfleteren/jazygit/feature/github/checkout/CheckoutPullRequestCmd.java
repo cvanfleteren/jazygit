@@ -23,7 +23,7 @@ public record CheckoutPullRequestCmd(PullRequestSummary pullRequest) implements 
 
     @Override
     public Option<String> subject() {
-        return Option.of(pullRequest.repository() + "#" + pullRequest.number());
+        return Option.of(pullRequest.repository() + "#" + pullRequest.number().value());
     }
 
     @Override

@@ -23,6 +23,7 @@ import net.vanfleteren.jazygit.gh.StubGitHub;
 import net.vanfleteren.jazygit.gh.model.CommentRights;
 import net.vanfleteren.jazygit.gh.model.GhBranch;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -45,10 +46,15 @@ class CommentsDialogTest {
 
     private static final PullRequestPopup SHOWN = PullRequestPopup.loading(
                     new BranchName("feature"),
-                    new PullRequest(42, new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED),
+                    new PullRequest(new PrNumber(42), new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED),
                     Instant.EPOCH,
                     0)
-            .with(Either.right(StubGitHub.of().pullRequests().details(42).get()), 0);
+            .with(
+                    Either.right(StubGitHub.of()
+                            .pullRequests()
+                            .details(new PrNumber(42))
+                            .get()),
+                    0);
     private static final Size WIDE = new Size(140, 30);
     // Under 100 columns, the list is above the comment, a third of the popup high.
     private static final Size NARROW = new Size(90, 24);
@@ -323,7 +329,7 @@ class CommentsDialogTest {
         PullRequestPopup ofRepository = SHOWN.with(
                 Either.right(StubGitHub.of()
                         .pullRequests()
-                        .details(42)
+                        .details(new PrNumber(42))
                         .get()
                         .withRepository("owner/repo")
                         .withUrl("https://github.com/owner/repo")),
@@ -360,7 +366,7 @@ class CommentsDialogTest {
         PullRequestPopup listed = PullRequestPopup.loading(
                 new BranchName("feature"),
                 new PullRequest(
-                        42,
+                        new PrNumber(42),
                         new GhBranch("feature"),
                         Option.of(new GhBranch("main")),
                         false,

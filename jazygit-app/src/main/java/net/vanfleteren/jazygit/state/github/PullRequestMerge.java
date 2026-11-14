@@ -8,6 +8,7 @@ import java.time.Duration;
 import java.time.Instant;
 import net.vanfleteren.jazygit.gh.model.GhCommit;
 import net.vanfleteren.jazygit.gh.model.MergeStatus;
+import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.gh.model.PullRequest;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.gh.model.PullRequest.Review;
@@ -25,9 +26,9 @@ import net.vanfleteren.jazygit.git.model.BranchName;
  * @param failedWhile once it failed, how the pull requests it merges stood then; none before (ADR 119)
  */
 public record PullRequestMerge(
-        int number,
+        PrNumber number,
         BranchName branch,
-        List<Integer> below,
+        List<PrNumber> below,
         MergeStatus status,
         Instant asked,
         boolean checking,
@@ -42,15 +43,15 @@ public record PullRequestMerge(
      * A merge GitHub was just asked for, which said {@code status}.
      */
     public static PullRequestMerge asked(
-            int number, BranchName branch, List<Integer> below, MergeStatus status, Instant asked) {
+            PrNumber number, BranchName branch, List<PrNumber> below, MergeStatus status, Instant asked) {
         return new PullRequestMerge(number, branch, below, status, asked, false, Option.none());
     }
 
     /**
      * Whether it merges pull request {@code pullRequest}: its own, or one below it.
      */
-    public boolean merges(int pullRequest) {
-        return number == pullRequest || below.contains(pullRequest);
+    public boolean merges(PrNumber pullRequest) {
+        return number.equals(pullRequest) || below.contains(pullRequest);
     }
 
     /**
@@ -91,7 +92,7 @@ public record PullRequestMerge(
     /**
      * This merge, no longer telling how it went for {@code numbers}, which a later merge merges.
      */
-    public PullRequestMerge withoutBelow(List<Integer> numbers) {
+    public PullRequestMerge withoutBelow(List<PrNumber> numbers) {
         return new PullRequestMerge(
                 number,
                 branch,
@@ -126,7 +127,7 @@ public record PullRequestMerge(
      * @param read     the id the next read got then: only a read with this id or a later one started after it failed
      * @param standing how each of them stood, by its number, as far as they were listed
      */
-    public record FailedWhile(long read, Map<Integer, Standing> standing) {
+    public record FailedWhile(long read, Map<PrNumber, Standing> standing) {
 
         /**
          * Whether read {@code read} started after it failed, and lists the {@code open} pull requests without one of
@@ -134,7 +135,7 @@ public record PullRequestMerge(
          */
         public boolean outdatedBy(Traversable<PullRequest> open, long read) {
             return read >= this.read
-                    && standing.exists(stood -> !open.find(pr -> pr.number() == stood._1)
+                    && standing.exists(stood -> !open.find(pr -> pr.number().equals(stood._1))
                             .map(Standing::of)
                             .contains(stood._2));
         }
@@ -142,7 +143,7 @@ public record PullRequestMerge(
         /**
          * This, no longer about pull requests {@code numbers}.
          */
-        public FailedWhile without(List<Integer> numbers) {
+        public FailedWhile without(List<PrNumber> numbers) {
             return new FailedWhile(read, standing.removeAll(numbers));
         }
     }
