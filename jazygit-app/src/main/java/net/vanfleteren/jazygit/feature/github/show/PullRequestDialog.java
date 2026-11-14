@@ -6,6 +6,7 @@ import static dev.tamboui.toolkit.Toolkit.text;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.StyledElement;
 import io.vavr.collection.List;
+import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Clock;
 import java.time.Duration;
@@ -37,6 +38,7 @@ import net.vanfleteren.jazygit.ui.github.CheckRows;
 import net.vanfleteren.jazygit.ui.github.PullRequestSymbols;
 import net.vanfleteren.jazygit.ui.github.PullRequestSymbols.Symbol;
 import net.vanfleteren.jazygit.ui.text.ErrorText;
+import net.vanfleteren.jazygit.ui.text.ShownTime;
 import net.vanfleteren.jazygit.ui.text.TextWidth;
 import net.vanfleteren.jazygit.ui.text.TimeText;
 import net.vanfleteren.jazygit.ui.theme.Theme;
@@ -313,6 +315,23 @@ public final class PullRequestDialog implements PopupView {
     @Override
     public List<String> ids() {
         return List.of(ID);
+    }
+
+    /**
+     * The times the dialog shows (ADR 124): how long ago the pull request was opened and pushed to, and every second
+     * while one of its checks is not done.
+     */
+    public static List<ShownTime> shownTimes(Model model) {
+        return model.popup(PullRequestPopup.class)
+                .flatMap(popup -> popup.details().flatMap(Either::toOption))
+                .toList()
+                .flatMap(pr -> List.of(ShownTime.reading(now -> TimeText.ago(
+                                        Duration.between(pr.activity().createdAt(), now))
+                                + " "
+                                + TimeText.ago(Duration.between(pr.activity().pushedAt(), now))))
+                        .appendAll(Option.when(
+                                pr.checks().exists(check -> !check.done()),
+                                () -> ShownTime.every(Duration.ofSeconds(1)))));
     }
 
     /**

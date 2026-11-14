@@ -241,6 +241,17 @@ final class BranchSegs {
     }
 
     /**
+     * What a list shows in time of how the checks of a branch are doing, at the model's time, as
+     * {@link #gitHub(Option, Option, Option, Option, Option, Instant)} draws it: how long they have waited to start, or
+     * when they are expected to be done.
+     */
+    static Option<String> timed(Model model, Option<Waiting> waiting, Option<Eta> eta) {
+        return waiting.map(known ->
+                        known.since().map(since -> CheckTimesText.waited(Duration.between(since, model.now()))))
+                .getOrElse(() -> eta(model, eta));
+    }
+
+    /**
      * When the checks of a branch are expected to be done, as the lists show it, from what {@code model} knows
      * (ADR 32).
      */

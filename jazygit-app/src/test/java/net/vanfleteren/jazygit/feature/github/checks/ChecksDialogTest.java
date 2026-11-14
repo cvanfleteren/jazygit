@@ -49,6 +49,7 @@ import net.vanfleteren.jazygit.ui.RenderedText;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import net.vanfleteren.jazygit.ui.github.CheckRows;
 import net.vanfleteren.jazygit.ui.github.CheckTimesText;
+import net.vanfleteren.jazygit.ui.text.ShownTime;
 import net.vanfleteren.jazygit.ui.text.TextWidth;
 import net.vanfleteren.jazygit.ui.text.TimeText;
 import net.vanfleteren.jazygit.ui.theme.Theme;
@@ -129,6 +130,19 @@ class ChecksDialogTest {
 
     private static Either<Failure, PendingChecks> readOf(List<Check> checks) {
         return Either.right(new PendingChecks("owner/repo", HashMap.of(new BranchName("main"), checks)));
+    }
+
+    @Test
+    void whileACheckRunsWhatTheDialogShowsMovesOnEverySecondAndOnceTheyAreDoneNot() {
+        Model running = TestModels.loaded()
+                .withNow(NOW)
+                .openPopup(read(List.of(check("verify", Checks.PENDING, 30, Option.none()))));
+        Model done = TestModels.loaded()
+                .withNow(NOW)
+                .openPopup(read(List.of(check("verify", Checks.PASSING, 30, Option.of(20)))));
+
+        assertEquals(Option.of(NOW.plusSeconds(1)), ShownTime.next(ChecksDialog.shownTimes(running), NOW));
+        assertEquals(List.empty(), ChecksDialog.shownTimes(done));
     }
 
     @Test

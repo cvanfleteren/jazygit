@@ -1,6 +1,9 @@
 package net.vanfleteren.jazygit.ui;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import io.vavr.collection.List;
@@ -24,6 +27,7 @@ import net.vanfleteren.jazygit.state.github.prs.PrOverview;
 import net.vanfleteren.jazygit.state.load.LoadBranches;
 import net.vanfleteren.jazygit.state.load.LoadStatus;
 import net.vanfleteren.jazygit.state.preferences.Screen;
+import net.vanfleteren.jazygit.ui.text.ShownTime;
 import net.vanfleteren.jazygit.ui.text.TextWidth;
 import net.vanfleteren.jazygit.ui.text.TimeText;
 import org.junit.jupiter.api.Test;
@@ -249,5 +253,26 @@ class FetchLineTest {
         return FetchLine.freshness(TestModels.loaded()
                 .withNow(NOW)
                 .mapJobs(jobs -> jobs.withLastFetch(Freshness.NEVER.succeeded("origin", NOW.minus(since)))));
+    }
+
+    @Test
+    void howLongAgoTheRemotesWereFetchedChangesTheMomentItsShownTimeSays() throws Exception {
+        Model fetched = TestModels.loaded()
+                .mapJobs(jobs -> jobs.withLastFetch(Freshness.NEVER.succeeded("origin", START.minusSeconds(23))));
+        Instant next = ShownTime.next(FetchLine.shownTimes(fetched.withNow(START)), START)
+                .get();
+        String shown = rendered(fetched.withNow(START), START);
+
+        assertEquals(START.plusSeconds(7), next);
+        assertEquals(shown, rendered(fetched.withNow(next.minusMillis(1)), next.minusMillis(1)));
+        assertNotEquals(shown, rendered(fetched.withNow(next), next));
+    }
+
+    @Test
+    void aCommandThatRunsAsksForTheFramesOfTheSpinnerOnlyOnceItRanLongEnoughToShow() {
+        Model running = running(TestModels.loaded(), new LoadStatus(), START);
+
+        assertFalse(FetchLine.showsSpinner(running, START.plus(Jobs.SHOWN_AFTER).minusMillis(1)));
+        assertTrue(FetchLine.showsSpinner(running, START.plus(Jobs.SHOWN_AFTER)));
     }
 }

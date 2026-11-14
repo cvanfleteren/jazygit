@@ -11,6 +11,7 @@ import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -31,6 +32,7 @@ import net.vanfleteren.jazygit.state.popup.PopupMsg;
 import net.vanfleteren.jazygit.ui.github.CheckRows;
 import net.vanfleteren.jazygit.ui.github.CheckTimesText;
 import net.vanfleteren.jazygit.ui.text.ErrorText;
+import net.vanfleteren.jazygit.ui.text.ShownTime;
 import net.vanfleteren.jazygit.ui.text.TimeText;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import net.vanfleteren.jazygit.ui.widgets.DialogFrame;
@@ -113,6 +115,17 @@ public final class ChecksDialog implements PopupView {
                     // The lines, the blank line and the hint, plus the border.
                     .length(CONTENT_HEIGHT + 2 + 2);
         });
+    }
+
+    /**
+     * The times the dialog shows (ADR 124): every second while a check it lists is not done, as their bars and how
+     * long they run move on.
+     */
+    public static List<ShownTime> shownTimes(Model model) {
+        return model.popup(ChecksPopup.class)
+                .filter(popup -> popup.checksRead().exists(check -> !check.done()))
+                .map(popup -> ShownTime.every(Duration.ofSeconds(1)))
+                .toList();
     }
 
     /**

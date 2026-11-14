@@ -29,8 +29,9 @@ public sealed interface TimerMsg extends Msg {
     }
 
     /**
-     * A second went by, told apart from the refresh: every message tells the model the time it is
-     * ({@link Update#step}), and this one wakes it up when nothing else happens, so that the ages shown move on.
+     * A time the screen shows changes, told apart from the refresh: every message tells the model the time it is
+     * ({@link Update#step}), and this one wakes it up at the moment the first time shown changes, which the app then
+     * draws a frame for (ADR 124).
      */
     record Clock() implements TimerMsg {
 

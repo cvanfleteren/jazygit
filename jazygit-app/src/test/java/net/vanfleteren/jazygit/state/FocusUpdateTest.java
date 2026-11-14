@@ -140,17 +140,6 @@ class FocusUpdateTest {
     }
 
     @Test
-    void awayTheClockIsDrawnEveryFiveSeconds() {
-        Model away = Update.update(loaded().withNow(AWAY_AT), new TerminalMsg.Focused(false))
-                .model();
-
-        assertEquals(away.drawn(), at(away, Model.AWAY_CLOCK.minusMillis(1)).drawn());
-        assertNotEquals(away.drawn(), at(away, Model.AWAY_CLOCK).drawn());
-        Model focused = loaded().withNow(AWAY_AT);
-        assertNotEquals(focused.drawn(), at(focused, Duration.ofSeconds(1)).drawn());
-    }
-
-    @Test
     void awayWhatTheTimersKeepIsNotDrawn() {
         Model away = Update.update(loaded().withNow(AWAY_AT), new TerminalMsg.Focused(false))
                 .model();

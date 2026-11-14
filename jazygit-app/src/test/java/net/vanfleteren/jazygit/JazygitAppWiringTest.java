@@ -38,7 +38,6 @@ import net.vanfleteren.jazygit.state.preferences.Screen;
 import net.vanfleteren.jazygit.ui.SettledPilot;
 import net.vanfleteren.jazygit.ui.commits.CommitsPanel;
 import net.vanfleteren.jazygit.ui.files.FilesPanel;
-import net.vanfleteren.jazygit.ui.text.TimeText;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -78,10 +77,9 @@ class JazygitAppWiringTest {
     }
 
     @Test
-    void theTimeTheRepositoryTheRemotesAndGitHubAreEachReadEverySoOften() {
+    void theRepositoryTheRemotesAndGitHubAreEachReadEverySoOftenAndTheTimeIsNot() {
         assertEquals(
                 List.of(
-                        Tuple.of(TimeText.CLOCK_INTERVAL, TimerMsg.Clock.class),
                         Tuple.of(Timers.REFRESH_INTERVAL, TimerMsg.Tick.class),
                         Tuple.of(Duration.ofMinutes(1), FetchMsg.Tick.class),
                         Tuple.of(Duration.ofMinutes(1), PrOverviewMsg.Tick.class),

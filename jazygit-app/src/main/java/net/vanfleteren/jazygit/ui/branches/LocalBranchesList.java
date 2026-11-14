@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.keys.Scopes;
 import net.vanfleteren.jazygit.state.*;
 import net.vanfleteren.jazygit.state.github.*;
 import net.vanfleteren.jazygit.state.load.*;
+import net.vanfleteren.jazygit.ui.text.ShownTime;
 import net.vanfleteren.jazygit.ui.text.TimeText;
 import net.vanfleteren.jazygit.ui.theme.Theme;
 import net.vanfleteren.jazygit.ui.widgets.LoadableList;
@@ -255,6 +256,25 @@ class LocalBranchesList implements BranchesTabList {
         return new LoadableList.Row(
                 row.segs().prepend(LoadableList.Seg.of(INDENT)),
                 row.detail().map(detail -> detail.prepend(LoadableList.Seg.of(INDENT))));
+    }
+
+    /**
+     * The times the list shows (ADR 124): the age of each branch, and how its checks are doing in time.
+     */
+    static List<ShownTime> shownTimes(Model model) {
+        return model.repo()
+                .branches()
+                .toOption()
+                .toList()
+                .flatMap(branches -> branches.map(b -> ShownTime.reading(now -> {
+                    Model at = model.withNow(now);
+                    return TimeText.age(Duration.between(b.lastActivity(), now)) + " "
+                            + BranchSegs.timed(
+                                            at,
+                                            at.gitHub().waiting(b),
+                                            at.gitHub().eta(b))
+                                    .getOrElse("");
+                })));
     }
 
     @Override

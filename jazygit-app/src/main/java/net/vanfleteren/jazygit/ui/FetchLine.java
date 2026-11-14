@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.state.Jobs;
 import net.vanfleteren.jazygit.state.Label;
 import net.vanfleteren.jazygit.state.Model;
 import net.vanfleteren.jazygit.state.preferences.Screen;
+import net.vanfleteren.jazygit.ui.text.ShownTime;
 import net.vanfleteren.jazygit.ui.text.TextWidth;
 import net.vanfleteren.jazygit.ui.text.TimeText;
 import net.vanfleteren.jazygit.ui.theme.Theme;
@@ -74,11 +75,13 @@ public final class FetchLine {
     }
 
     /**
-     * Whether the line shows a spinner at {@code now}, or is about to: while a command runs, as it shows once it ran
-     * a while, and while what showed lingers, and one frame longer, so that it is drawn gone.
+     * Whether the line shows a spinner at {@code now}: while a command runs that ran long enough to show, and while
+     * what showed lingers, and one frame longer, so that it is drawn gone. A command that runs but does not show yet
+     * asks for no frame: the spinners are looked at every frame of theirs, so the first frame it shows in comes at
+     * most a frame late, and the many short reads in the background draw nothing (ADR 124).
      */
     public static boolean showsSpinner(Model model, Instant now) {
-        return model.jobs().running().nonEmpty()
+        return model.jobs().running().values().exists(running -> running.shown(now))
                 || model.jobs()
                         .lingering()
                         .exists(lingering -> !now.isAfter(lingering.until().plus(TimeText.SPINNER_FRAME)));
@@ -113,6 +116,13 @@ public final class FetchLine {
                 label.args()
                         .map(arg -> arg instanceof Label inner ? labelText(inner) : arg)
                         .toJavaArray());
+    }
+
+    /**
+     * The time the line shows: how long ago what the screen shows was read (ADR 124).
+     */
+    public static List<ShownTime> shownTimes(Model model) {
+        return List.of(ShownTime.reading(now -> freshness(model.withNow(now))));
     }
 
     /**

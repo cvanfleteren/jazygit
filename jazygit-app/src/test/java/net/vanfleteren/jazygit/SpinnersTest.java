@@ -92,11 +92,13 @@ class SpinnersTest {
     }
 
     @Test
-    void theFetchLineShowsOneWhileACommandRunsAndWhileWhatShowedLingers() {
+    void theFetchLineShowsOneWhileACommandRunsThatShowsAndWhileWhatShowedLingers() {
         Model running = LOADED.mapJobs(jobs -> jobs.withStarted(List.of(new LoadStatus()), NOW));
         Model lingering = running.mapJobs(jobs -> jobs.withDone(LOADED.jobs().nextId(), NOW.plusSeconds(1)));
 
-        assertTrue(Spinners.shown(running, NOW));
+        // Not before it ran long enough to show (ADR 124).
+        assertFalse(Spinners.shown(running, NOW));
+        assertTrue(Spinners.shown(running, NOW.plus(Jobs.SHOWN_AFTER)));
         assertTrue(Spinners.shown(lingering, NOW.plusSeconds(1).plus(Jobs.LINGER)));
         // One frame longer, so that it is drawn gone.
         assertTrue(

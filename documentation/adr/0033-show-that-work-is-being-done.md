@@ -122,3 +122,6 @@ run, on the right of `FetchLine`, before how fresh the screen is: `⠋ fetching 
   counted from exact times.
 
 Amended by ADR 101: a command that a newer one for its slot cancelled reports nothing; `Cmd.skipped()` is gone.
+
+Amended by ADR 124: `Msg.Clock` no longer comes every second, `Model.drawn()` no longer holds the time, and a
+command asks for the frames of the spinner only once it shows; the app is woken when a time shown changes.
