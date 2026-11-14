@@ -108,16 +108,26 @@ class RenderedMarkdownTest {
 
     @Test
     void aThemeThatTintsChangedLinesHasABarInTheColourOfTheirMarkerNotOfTheTint() {
+        assertEquals(List.of(Optional.of(Color.LIGHT_GREEN)), bars(FileVersion.NEW));
+        assertEquals(List.of(Optional.of(Color.LIGHT_RED)), bars(FileVersion.ORIGINAL));
+    }
+
+    /**
+     * The colour of each bar beside a block that changed in {@code version}, drawn in a theme that tints changed lines.
+     */
+    private static List<Optional<Color>> bars(FileVersion version) {
         Theme.SpanStyles styles = cssClass -> switch (cssClass) {
-            case Theme.Classes.DIFF_ADDED_LINE -> Style.EMPTY.fg(Color.GREEN).bg(Color.BLACK);
+            case Theme.Classes.DIFF_ADDED_LINE, Theme.Classes.DIFF_REMOVED_LINE ->
+                Style.EMPTY.fg(Color.GREEN).bg(Color.BLACK);
             case Theme.Classes.DIFF_ADDED -> Style.EMPTY.fg(Color.LIGHT_GREEN);
+            case Theme.Classes.DIFF_REMOVED -> Style.EMPTY.fg(Color.LIGHT_RED);
             default -> Style.EMPTY;
         };
-
-        Span bar = drawn(FileVersion.NEW, false, styles).lines().get(3).spans().getFirst();
-
-        assertEquals("▎", bar.content());
-        assertEquals(Optional.of(Color.LIGHT_GREEN), bar.style().fg());
+        return drawn(version, false, styles)
+                .lines()
+                .flatMap(line -> List.ofAll(line.spans()).headOption())
+                .filter(span -> span.content().equals("▎"))
+                .map(span -> span.style().fg());
     }
 
     @Test
