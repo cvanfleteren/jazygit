@@ -32,8 +32,7 @@ public final class Pane {
      * @param count    the number of rows, or empty to show no position, as long as they are not known
      */
     public static Panel bordered(Line title, Element content, boolean focused, int selected, Option<Integer> count) {
-        // The scrollbar of a list goes on the right border, as in the areas of the content panel.
-        Panel panel = panel(BorderBar.of(content)).title(title);
+        Panel panel = panel(content).title(title);
         if (focused) {
             panel.addClass(Theme.Classes.FOCUSED);
         }

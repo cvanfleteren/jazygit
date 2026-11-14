@@ -169,6 +169,40 @@ class LoadableListTest {
         assertEquals(corner.style().fg(), track.style().fg());
     }
 
+    @Test
+    void theLineToFilterOnStaysInsideTheBorderBesideTheScrollbarOfTheList() {
+        // As long as the line is wide: the cursor goes to its last column.
+        String typed = "a".repeat(SCREEN.width() - 3);
+        for (int count : new int[] {2, 20}) {
+            dev.tamboui.toolkit.focus.FocusManager focus = new dev.tamboui.toolkit.focus.FocusManager();
+            focus.setFocus(ID);
+            dev.tamboui.toolkit.element.DefaultRenderContext context =
+                    new dev.tamboui.toolkit.element.DefaultRenderContext(
+                            focus,
+                            new dev.tamboui.toolkit.event.EventRouter(
+                                    focus, new dev.tamboui.toolkit.element.ElementRegistry()));
+            context.setStyleEngine(Theme.createEngine().get());
+            dev.tamboui.layout.Rect area = new dev.tamboui.layout.Rect(0, 0, SCREEN.width(), SCREEN.height());
+            dev.tamboui.terminal.Frame frame =
+                    dev.tamboui.terminal.Frame.forTesting(dev.tamboui.buffer.Buffer.empty(area));
+
+            list.render(
+                            new Loadable.Loaded<>(List.range(0, count).map(i -> "item " + i)),
+                            all -> all.map(LoadableList.Row::of),
+                            true,
+                            true,
+                            Pane.title("Items"),
+                            Option.of(new FilterLine().field(typed)),
+                            event -> {})
+                    .render(frame, area, context);
+
+            int border = SCREEN.width() - 1;
+            assertTrue(
+                    frame.cursorPosition().map(cursor -> cursor.x() < border).orElse(false),
+                    count + " rows: " + frame.cursorPosition());
+        }
+    }
+
     /**
      * {@code items} drawn in the list, focused, in the dark theme, on the screen of these tests.
      */
