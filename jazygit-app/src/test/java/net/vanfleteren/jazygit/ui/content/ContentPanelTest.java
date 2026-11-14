@@ -613,6 +613,33 @@ class ContentPanelTest {
     }
 
     @Test
+    void theTrackOnTheBottomBorderIsTheLineOfTheBorderAsDoubleAsTheThemeDrawsIt() {
+        Model model = showingCommit("+" + "x".repeat(150) + "END");
+        ContentPanel panel = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, msg -> {});
+        String area = panel.areaOfPane(model, CommitsPanel.ID).get();
+        // The none theme borders the area that has the focus with a double line.
+        dev.tamboui.css.engine.StyleEngine engine = Theme.createEngine().get();
+        Theme.activate(engine, net.vanfleteren.jazygit.settings.ThemeName.NONE);
+        dev.tamboui.toolkit.focus.FocusManager focus = new dev.tamboui.toolkit.focus.FocusManager();
+        focus.setFocus(area);
+        dev.tamboui.toolkit.element.DefaultRenderContext context = new dev.tamboui.toolkit.element.DefaultRenderContext(
+                focus,
+                new dev.tamboui.toolkit.event.EventRouter(focus, new dev.tamboui.toolkit.element.ElementRegistry()));
+        context.setStyleEngine(engine);
+        dev.tamboui.layout.Rect size = new dev.tamboui.layout.Rect(0, 0, 100, 30);
+        dev.tamboui.buffer.Buffer buffer = dev.tamboui.buffer.Buffer.empty(size);
+
+        panel.render(model, area).render(dev.tamboui.terminal.Frame.forTesting(buffer), size, context);
+
+        String screen = List.range(0, size.height())
+                .map(y -> List.range(0, size.width())
+                        .map(x -> buffer.get(x, y).symbol())
+                        .mkString())
+                .mkString("\n");
+        assertTrue(java.util.regex.Pattern.compile("╚█+═+╝").matcher(screen).find(), screen);
+    }
+
+    @Test
     void theBottomBorderOfAnAreaWithLinesNoWiderThanItIsLeftAsItIs() throws Exception {
         Model model = showingCommit("+short");
         ContentPanel panel = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, msg -> {});

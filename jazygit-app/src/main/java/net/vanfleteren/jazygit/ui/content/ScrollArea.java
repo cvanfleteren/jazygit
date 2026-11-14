@@ -23,6 +23,7 @@ import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.MouseEvent;
 import dev.tamboui.tui.event.MouseEventKind;
 import dev.tamboui.widgets.scrollbar.Scrollbar;
+import dev.tamboui.widgets.scrollbar.ScrollbarOrientation;
 import dev.tamboui.widgets.scrollbar.ScrollbarState;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
@@ -427,17 +428,22 @@ public final class ScrollArea {
 
         /**
          * Draws on the bottom border of the area, drawn in {@code at}, how far it is scrolled sideways, as the bar on
-         * its right shows how far down, while its lines are wider than it. Its track is a line, as the border is,
-         * and it is drawn in the colours of the border.
+         * its right shows how far down, while its lines are wider than it. Its track is the line the border is drawn
+         * with, single or double as the theme has it, and it is drawn in the colours of the border.
          */
         private void sideways(Frame frame, Rect at) {
             int width = element.state().viewportWidth();
             if (columns == 0 || at.width() <= 2 || at.height() < 2) {
                 return;
             }
+            Rect border = new Rect(at.x() + 1, at.bottom() - 1, at.width() - 2, 1);
             frame.renderStatefulWidget(
-                    Scrollbar.horizontal(),
-                    new Rect(at.x() + 1, at.bottom() - 1, at.width() - 2, 1),
+                    Scrollbar.builder()
+                            .orientation(ScrollbarOrientation.HORIZONTAL_BOTTOM)
+                            .trackSymbol(
+                                    frame.buffer().get(border.x(), border.y()).symbol())
+                            .build(),
+                    border,
                     new ScrollbarState()
                             .contentLength(columns + width)
                             .viewportContentLength(width)
