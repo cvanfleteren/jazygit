@@ -10,7 +10,9 @@ import dev.tamboui.buffer.Buffer;
 import dev.tamboui.buffer.Cell;
 import dev.tamboui.layout.Constraint;
 import dev.tamboui.layout.Rect;
+import dev.tamboui.style.Color;
 import dev.tamboui.style.RichTextState;
+import dev.tamboui.style.Style;
 import dev.tamboui.terminal.Frame;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.RenderContext;
@@ -57,6 +59,9 @@ import net.vanfleteren.jazygit.ui.theme.Theme;
  * where the user scrolled it to; the element only keeps the layout of the text.
  */
 public final class ScrollArea {
+
+    // The thumb of the bar on the bottom border that shows how far the area is scrolled sideways.
+    static final String SIDEWAYS_THUMB = "━";
 
     private static final int WHEEL_LINES = 3;
     // The keys that move the cursor of a rich diff by a stop besides the arrows, as the lists of the panes are
@@ -429,7 +434,8 @@ public final class ScrollArea {
         /**
          * Draws on the bottom border of the area, drawn in {@code at}, how far it is scrolled sideways, as the bar on
          * its right shows how far down, while its lines are wider than it. Its track is the line the border is drawn
-         * with, single or double as the theme has it, and it is drawn in the colours of the border.
+         * with, single or double as the theme has it, in the colour of the border. Its thumb is a heavy line, as
+         * high as the border's, in the terminal's own colour, as the thumb of the bar on its right is.
          */
         private void sideways(Frame frame, Rect at) {
             int width = element.state().viewportWidth();
@@ -442,6 +448,8 @@ public final class ScrollArea {
                             .orientation(ScrollbarOrientation.HORIZONTAL_BOTTOM)
                             .trackSymbol(
                                     frame.buffer().get(border.x(), border.y()).symbol())
+                            .thumbSymbol(SIDEWAYS_THUMB)
+                            .thumbStyle(Style.EMPTY.fg(Color.RESET))
                             .build(),
                     border,
                     new ScrollbarState()

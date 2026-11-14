@@ -607,9 +607,9 @@ class ContentPanelTest {
             right = RenderedText.ofLarge(testRunner, () -> scrolling.render(model.get(), area));
         }
 
-        assertTrue(java.util.regex.Pattern.compile("[╰└]█+─+[╯┘]").matcher(left).find(), left);
+        assertTrue(java.util.regex.Pattern.compile("[╰└]━+─+[╯┘]").matcher(left).find(), left);
         assertTrue(
-                java.util.regex.Pattern.compile("[╰└]─+█+[╯┘]").matcher(right).find(), right);
+                java.util.regex.Pattern.compile("[╰└]─+━+[╯┘]").matcher(right).find(), right);
     }
 
     @Test
@@ -617,26 +617,67 @@ class ContentPanelTest {
         Model model = showingCommit("+" + "x".repeat(150) + "END");
         ContentPanel panel = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, msg -> {});
         String area = panel.areaOfPane(model, CommitsPanel.ID).get();
+
         // The none theme borders the area that has the focus with a double line.
+        dev.tamboui.buffer.Buffer buffer =
+                themed(panel.render(model, area), area, net.vanfleteren.jazygit.settings.ThemeName.NONE);
+
+        String screen = List.range(0, buffer.area().height())
+                .map(y -> List.range(0, buffer.area().width())
+                        .map(x -> buffer.get(x, y).symbol())
+                        .mkString())
+                .mkString("\n");
+        assertTrue(java.util.regex.Pattern.compile("╚━+═+╝").matcher(screen).find(), screen);
+    }
+
+    @Test
+    void theThumbOnTheBottomBorderIsInTheColourOfTheBarOnTheRightAndItsTrackInThatOfTheBorder() {
+        Model model =
+                showingCommit(List.range(0, 100).map(i -> "+" + "x".repeat(150)).mkString("\n"));
+        ContentPanel panel = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, msg -> {});
+        String area = panel.areaOfPane(model, CommitsPanel.ID).get();
+
+        dev.tamboui.buffer.Buffer buffer =
+                themed(panel.render(model, area), area, net.vanfleteren.jazygit.settings.ThemeName.DARK);
+
+        int bottom = buffer.area().height() - 1;
+        int right = buffer.area().width() - 1;
+        dev.tamboui.buffer.Cell thumb = buffer.get(1, bottom);
+        dev.tamboui.buffer.Cell track = buffer.get(right - 1, bottom);
+        dev.tamboui.buffer.Cell corner = buffer.get(right, bottom);
+        // The thumb of the bar on the right, on the first line inside the border, left of it.
+        dev.tamboui.buffer.Cell rightThumb = buffer.get(right - 1, 1);
+        assertEquals(
+                List.of(ScrollArea.SIDEWAYS_THUMB, "─", "█"),
+                List.of(thumb, track, rightThumb).map(dev.tamboui.buffer.Cell::symbol));
+        // In the terminal's own colour, as the thumb on the right is.
+        assertTrue(
+                thumb.style().fg().map(Color.RESET::equals).orElse(true)
+                        && rightThumb.style().fg().map(Color.RESET::equals).orElse(true),
+                thumb.style() + " " + rightThumb.style());
+        assertTrue(corner.style().fg().isPresent(), corner.style().toString());
+        assertEquals(corner.style().fg(), track.style().fg());
+    }
+
+    /**
+     * What {@code view} draws on a screen 100 by 30 in {@code theme}, while {@code focused} has the focus.
+     */
+    private static dev.tamboui.buffer.Buffer themed(
+            dev.tamboui.toolkit.element.Element view,
+            String focused,
+            net.vanfleteren.jazygit.settings.ThemeName theme) {
         dev.tamboui.css.engine.StyleEngine engine = Theme.createEngine().get();
-        Theme.activate(engine, net.vanfleteren.jazygit.settings.ThemeName.NONE);
+        Theme.activate(engine, theme);
         dev.tamboui.toolkit.focus.FocusManager focus = new dev.tamboui.toolkit.focus.FocusManager();
-        focus.setFocus(area);
+        focus.setFocus(focused);
         dev.tamboui.toolkit.element.DefaultRenderContext context = new dev.tamboui.toolkit.element.DefaultRenderContext(
                 focus,
                 new dev.tamboui.toolkit.event.EventRouter(focus, new dev.tamboui.toolkit.element.ElementRegistry()));
         context.setStyleEngine(engine);
         dev.tamboui.layout.Rect size = new dev.tamboui.layout.Rect(0, 0, 100, 30);
         dev.tamboui.buffer.Buffer buffer = dev.tamboui.buffer.Buffer.empty(size);
-
-        panel.render(model, area).render(dev.tamboui.terminal.Frame.forTesting(buffer), size, context);
-
-        String screen = List.range(0, size.height())
-                .map(y -> List.range(0, size.width())
-                        .map(x -> buffer.get(x, y).symbol())
-                        .mkString())
-                .mkString("\n");
-        assertTrue(java.util.regex.Pattern.compile("╚█+═+╝").matcher(screen).find(), screen);
+        view.render(dev.tamboui.terminal.Frame.forTesting(buffer), size, context);
+        return buffer;
     }
 
     @Test
@@ -653,7 +694,7 @@ class ContentPanelTest {
 
         assertTrue(java.util.regex.Pattern.compile("[╰└]─+[╯┘]").matcher(screen).find(), screen);
         assertFalse(
-                java.util.regex.Pattern.compile("[╰└][─█]*█[─█]*[╯┘]")
+                java.util.regex.Pattern.compile("[╰└][─━]*━[─━]*[╯┘]")
                         .matcher(screen)
                         .find(),
                 screen);
