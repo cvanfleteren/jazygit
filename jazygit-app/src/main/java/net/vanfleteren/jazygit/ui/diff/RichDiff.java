@@ -309,8 +309,9 @@ public final class RichDiff {
                         styled(bar, Theme.Classes.DIFF_FILE_HEADER, styles),
                         styled(" ".repeat(Math.max(0, tinted - width(bar))), Theme.Classes.DIFF_FILE_HEADER, styles))),
                 Option.of(new Mark(new Anchor.File(path), 1, tinted, Option.none())));
-        if (Rendered.of(path).contains(Rendered.JSON)) {
-            return json(path, lines, fold, width, tinted, changed, unchanged, styles)
+        Option<Rendered> tree = Rendered.of(path).filter(Rendered::tree);
+        if (tree.isDefined()) {
+            return tree(tree.get(), path, lines, fold, width, tinted, changed, unchanged, styles)
                     .prepend(header);
         }
         List<RenderedMarkdown.Block> blocks =
@@ -353,12 +354,14 @@ public final class RichDiff {
     }
 
     /**
-     * The rows of a version of JSON rendered, its source {@code lines}, read as {@code fold} says, {@code width}
-     * columns wide, its gutter included (ADR 122): each a stop of the cursor, but the keys of a table, with a bar in
-     * the gutter when a line it stands for changed, those lines placed on it. JSON that cannot be read is its source,
-     * after a line that says why, its lines placed on them, and no stops but the bar of the file.
+     * The rows of a version of JSON or YAML rendered, a file of {@code kind}, its source {@code lines}, read as
+     * {@code fold} says, {@code width} columns wide, its gutter included (ADR 122, 123): each a stop of the cursor, but
+     * the keys of a table, with a bar in the gutter when a line it stands for changed, those lines placed on it. A file
+     * that cannot be read is its source, after a line that says why, its lines placed on them, and no stops but the bar
+     * of the file.
      */
-    private static List<Marked> json(
+    private static List<Marked> tree(
+            Rendered kind,
             String path,
             Vector<DiffLine> lines,
             Expansion.Fold fold,
@@ -376,7 +379,8 @@ public final class RichDiff {
         Function<List<Integer>, List<Anchor>> placed = numbers -> numbers.flatMap(line::apply)
                 .flatMap(diffLine -> Anchor.of(path, diffLine))
                 .map(anchor -> (Anchor) anchor);
-        return RenderedJson.rows(
+        return RenderedTree.rows(
+                        kind,
                         lines.map(DiffLine::text),
                         fold.read() == Expansion.Read.CUT,
                         Math.max(1, width - RENDERED_GUTTER),
@@ -390,7 +394,7 @@ public final class RichDiff {
                                             Rows.kept(Line.from(List.of(
                                                             gutter.apply(List.of(at._2() + 1)), Span.raw(" "))
                                                     .appendAll(List.ofAll(lexed.highlight(
-                                                                    at._1().text(), "json", Style.EMPTY, null))
+                                                                    at._1().text(), kind.language(), Style.EMPTY, null))
                                                             .flatMap(drawn -> drawn.spans()))
                                                     .toJavaList())),
                                             Option.none(),

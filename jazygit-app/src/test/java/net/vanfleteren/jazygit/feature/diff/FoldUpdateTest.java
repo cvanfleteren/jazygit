@@ -26,7 +26,7 @@ import net.vanfleteren.jazygit.state.load.ReadVersion;
 import org.junit.jupiter.api.Test;
 
 /**
- * Opening and closing the nodes of a version of JSON rendered, Enter and {@code z} (ADR 122).
+ * Opening and closing the nodes of a version of JSON or YAML rendered, Enter and {@code z} (ADR 122, 123).
  */
 class FoldUpdateTest {
 
@@ -47,6 +47,17 @@ class FoldUpdateTest {
             new Anchor.Node("a.json", "/few", new Anchor.OnLine("a.json", Side.RIGHT, 2));
     private static final Anchor.Node MANY =
             new Anchor.Node("a.json", "/many", new Anchor.OnLine("a.json", Side.RIGHT, 6));
+    private static final DiffText MANIFESTS = DiffText.of("diff --git a/a.yml b/a.yml\n--- a/a.yml\n+++ b/a.yml\n"
+            + "@@ -1,6 +1,6 @@\n"
+            + " kind: Job\n"
+            + " run: |\n"
+            + "-  old\n"
+            + "+  new\n"
+            + " ---\n"
+            + " kind: Service\n"
+            + " port: 80\n");
+    private static final Anchor.Node RUN =
+            new Anchor.Node("a.yml", "/0/run", new Anchor.OnLine("a.yml", Side.RIGHT, 2));
 
     @Test
     void enterClosesAnOpenNode() {
@@ -118,13 +129,33 @@ class FoldUpdateTest {
                 source.scrolled().get(AREA).flatMap(Scrolled::cursor));
     }
 
+    @Test
+    void aBlockOfYamlAndADocumentFoldAsANodeOfJsonDoes() {
+        Model yaml = rendered(MANIFESTS, new Anchor.OnLine("a.yml", Side.RIGHT, 3));
+
+        Model folded =
+                Update.update(yaml, new FoldMsg.Toggled(at(RUN, MANIFESTS))).model();
+        assertEquals(HashMap.of("/0/run", false), nodes(folded));
+
+        Model closed =
+                Update.update(yaml, new FoldMsg.AllToggled(at(RUN, MANIFESTS))).model();
+        assertEquals(HashMap.of("/0", false, "/0/run", false, "/1", false), nodes(closed));
+    }
+
     /**
      * The new version of {@code a.json} shown rendered, read whole.
      */
     private static Model rendered() {
-        Next asked = Update.update(loaded(), new VersionMsg.RenderToggled(at(ADDED)));
+        return rendered(CHANGES, ADDED);
+    }
+
+    /**
+     * The new version of the file of {@code changes} shown rendered from the cursor on {@code on}, read whole.
+     */
+    private static Model rendered(DiffText changes, Anchor on) {
+        Next asked = Update.update(loaded(), new VersionMsg.RenderToggled(at(on, changes)));
         ReadVersion read = (ReadVersion) asked.cmds().head();
-        return TestModels.done(TestModels.running(asked.model(), read), read, new LoadMsg.VersionRead(read, CHANGES))
+        return TestModels.done(TestModels.running(asked.model(), read), read, new LoadMsg.VersionRead(read, changes))
                 .model();
     }
 
@@ -132,9 +163,16 @@ class FoldUpdateTest {
      * The cursor on {@code anchor} in the changes of the stash.
      */
     private static DiffCursorAt at(Anchor anchor) {
+        return at(anchor, CHANGES);
+    }
+
+    /**
+     * The cursor on {@code anchor} in the stash, of the {@code changes}.
+     */
+    private static DiffCursorAt at(Anchor anchor, DiffText changes) {
         return new DiffCursorAt(
                 AREA,
-                new Scrolled(new ScrolledContent.StashChanges(STASH, CHANGES), 0, 0, Option.of(anchor), Option.none()),
+                new Scrolled(new ScrolledContent.StashChanges(STASH, changes), 0, 0, Option.of(anchor), Option.none()),
                 anchor,
                 Option.none(),
                 Option.none(),

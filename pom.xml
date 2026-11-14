@@ -18,6 +18,7 @@
     <modules>
         <module>jazygit-test-support</module>
         <module>jazygit-json</module>
+        <module>jazygit-yaml</module>
         <module>jazygit-syntax</module>
         <module>jazygit-process</module>
         <module>jazygit-git</module>
@@ -41,6 +42,7 @@
         <commonmark.version>0.28.0</commonmark.version>
         <picocli.version>4.7.7</picocli.version>
         <parsson.version>1.1.9</parsson.version>
+        <snakeyaml-engine.version>3.0.1</snakeyaml-engine.version>
         <spotless.version>3.11.0</spotless.version>
         <palantir-java-format.version>2.102.0</palantir-java-format.version>
         <checkstyle.version>14.4.0</checkstyle.version>
@@ -70,6 +72,11 @@
             <dependency>
                 <groupId>net.vanfleteren</groupId>
                 <artifactId>jazygit-json</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.vanfleteren</groupId>
+                <artifactId>jazygit-yaml</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
@@ -147,6 +154,11 @@
                 <groupId>org.eclipse.parsson</groupId>
                 <artifactId>parsson</artifactId>
                 <version>${parsson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.snakeyaml</groupId>
+                <artifactId>snakeyaml-engine</artifactId>
+                <version>${snakeyaml-engine.version}</version>
             </dependency>
             <dependency>
                 <groupId>info.picocli</groupId>
