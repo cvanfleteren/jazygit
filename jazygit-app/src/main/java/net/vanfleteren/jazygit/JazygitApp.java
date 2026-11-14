@@ -309,9 +309,7 @@ public class JazygitApp extends ToolkitApp {
                         : rendered.column().percent(model.preferences().leftWidth(model.screen())));
         var panes = row(
                 left,
-                column(
-                                contentPanel.render(model, focusedId).fill(),
-                                CommandLogPanel.render(model).length(commandLogRows(model)))
+                column(contentPanel.render(model, focusedId).fill(), commandLog(model))
                         .fill());
         // The fetch line keeps its row under the panes, also when nothing is fetched, so they do not move.
         Element layout = column(
@@ -378,9 +376,7 @@ public class JazygitApp extends ToolkitApp {
                 leftSlide,
                 model.screen(),
                 width,
-                model.preferences().leftCollapsed(model.screen())
-                        ? LeftColumn.COLLAPSED_COLUMNS
-                        : LeftBorder.columns(width, model.preferences().leftWidth(model.screen())),
+                leftColumnsChosen(model, width),
                 model.preferences().settings().animations(),
                 model.preferences().dragged().isDefined(),
                 now);
@@ -412,15 +408,43 @@ public class JazygitApp extends ToolkitApp {
     }
 
     /**
-     * How many rows the command log takes in a frame drawn now, as {@link CommandLogSlide#next} says, asking for the
-     * frame that moves it on while it is on its way.
+     * The command log under the content panel, as tall as its lines in the rows the content panel spares of the right
+     * column, which is as tall as the left one, once the height of the screen is known. It is drawn for the height it
+     * goes to, in the rows it takes on its way there.
      */
-    private int commandLogRows(Model model) {
+    private Element commandLog(Model model) {
+        Option<CommandLogPanel.Room> room = leftHeight()
+                .flatMap(column -> Try.of(
+                                () -> runner().tuiRunner().backend().size().width())
+                        .toOption()
+                        .map(width -> new CommandLogPanel.Room(column, width - leftColumnsChosen(model, width))));
+        int rows = CommandLogPanel.height(model, room);
+        return CommandLogPanel.render(model, rows, room)
+                .length(commandLogRows(
+                        model, room.map(CommandLogPanel.Room::rows).getOrElse(0), rows));
+    }
+
+    /**
+     * How many columns the left column of the screen shown is chosen to take on a screen {@code width} columns wide,
+     * where it slides to: the command log wraps its lines in the rest, which does not change while it slides.
+     */
+    private static int leftColumnsChosen(Model model, int width) {
+        return model.preferences().leftCollapsed(model.screen())
+                ? LeftColumn.COLLAPSED_COLUMNS
+                : LeftBorder.columns(width, model.preferences().leftWidth(model.screen()));
+    }
+
+    /**
+     * How many rows the command log takes in a frame drawn now in a column {@code column} rows tall, on its way to
+     * {@code rows}, as {@link CommandLogSlide#next} says, asking for the frame that moves it on while it is on its way.
+     */
+    private int commandLogRows(Model model, int column, int rows) {
         Instant now = clock.instant();
         CommandLogSlide shown = CommandLogSlide.next(
                 logSlide,
                 model.screen(),
-                CommandLogPanel.height(model),
+                column,
+                rows,
                 model.preferences().settings().animations(),
                 now);
         logSlide = Option.of(shown);
