@@ -152,12 +152,14 @@ public final class MarkdownLines {
         view.render(area, buffer);
         // The lines, and how many cells of each picture they have drawn.
         return List.range(0, height)
-                .foldLeft(Tuple.<List<Line>, Map<Integer, Integer>>of(List.empty(), HashMap.empty()), (done, row) -> {
-                    Tuple2<Vector<Tuple2<Style, String>>, Map<Integer, Integer>> painted =
-                            painted(row(buffer, row, width), pictures, done._2());
-                    return Tuple.of(done._1().append(line(painted._1())), painted._2());
-                })
-                ._1();
+                .foldLeft(
+                        Tuple.<Vector<Line>, Map<Integer, Integer>>of(Vector.empty(), HashMap.empty()), (done, row) -> {
+                            Tuple2<Vector<Tuple2<Style, String>>, Map<Integer, Integer>> painted =
+                                    painted(row(buffer, row, width), pictures, done._2());
+                            return Tuple.of(done._1().append(line(painted._1())), painted._2());
+                        })
+                ._1()
+                .toList();
     }
 
     /**

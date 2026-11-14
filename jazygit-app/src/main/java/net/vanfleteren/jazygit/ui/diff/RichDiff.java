@@ -259,10 +259,11 @@ public final class RichDiff {
                         .<Pending>map(placed -> () -> blocks.threads(
                                 placed.onFile(), Option.none(), !file.hunks().isEmpty() || unplaced, styles)))
                 .appendAll(parsed.hunks()
+                        .zip(groups)
                         .zipWithIndex((hunk, at) -> hunk(
-                                hunk.hunk(),
+                                hunk._1().hunk(),
                                 byHunk.get(at),
-                                groups.get(at),
+                                hunk._2(),
                                 at,
                                 afterLast || at < parsed.hunks().size() - 1,
                                 gaps.find(gap -> gap.before() == at),
@@ -313,9 +314,10 @@ public final class RichDiff {
             return json(path, lines, fold, width, tinted, changed, unchanged, styles)
                     .prepend(header);
         }
-        List<RenderedMarkdown.Block> blocks =
-                RenderedMarkdown.blocks(lines.map(DiffLine::text), Math.max(1, width - RENDERED_GUTTER), styles);
-        List<Marked> body = blocks.zipWithIndex().flatMap(at -> {
+        Vector<RenderedMarkdown.Block> blocks = RenderedMarkdown.blocks(
+                        lines.map(DiffLine::text), Math.max(1, width - RENDERED_GUTTER), styles)
+                .toVector();
+        Vector<Marked> body = blocks.zipWithIndex().flatMap(at -> {
             RenderedMarkdown.Block block = at._1();
             Span gutter = Vector.rangeClosed(block.first(), block.last())
                             .exists(line ->
