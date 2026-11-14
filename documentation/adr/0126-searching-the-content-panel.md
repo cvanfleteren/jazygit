@@ -31,9 +31,11 @@ In the diff of a pull request, `n` and `N` already go to the next and the previo
 - A match lies within one line.
 - It is looked for in the text shown: the lines, the paths in the bars of files, and the text of threads. Not in the
   gutter of a rich diff: line numbers and the `+` and `-`.
-- The plain diff has no gutter: there the first column of a line of a hunk, its `+`, `-` or space, is left out of the
-  match, so a query finds the same code in both views. Its `@@` headers and its `diff --git` and `index` lines are
-  text like any other, and are searched.
+- Where a line of a hunk keeps its prefix as git printed it, it is left out of the match: as many columns as the
+  header of its hunk has `@` signs less one, so one for `@@` and two for the `@@@` of a combined diff, of a conflicted
+  file or a merge commit (`UnifiedDiff.conflicted` keeps those as printed in the rich view too). That is every hunk of
+  the plain diff, which has no gutter. A query finds the same code in both views and in every kind of hunk. The `@@`
+  headers and the `diff --git` and `index` lines of the plain diff are text like any other, and are searched.
 - Only what shows is searched. A collapsed thread (ADR 62), a folded node of JSON or YAML (ADRs 122, 123) and the
   lines around a hunk not expanded (ADR 77) are not, nor are they opened to show a match.
 - Every view of the panel is searched: rich and plain diffs, the versions of a file, the log of a branch, and the body
@@ -82,13 +84,15 @@ In the diff of a pull request, `n` and `N` already go to the next and the previo
   the tint of the cursor is (ADRs 60, 78), over the styles of syntax, changed words and the cursor: neither a new
   query nor `n` styles the body again, and nothing is drawn for rows off the screen. Each theme gives both a value.
 - The title of an area gets the query and which of its matches is current after what it says already:
-  `Diff · /foo 3/17`. With no match it says `/foo · no matches`, nothing is styled, and the view stays where it is.
+  `Diff · /foo 3/17`. While none is current, as in a new body, it says how many there are: `/foo · 17 matches`. With
+  no match it says `/foo · no matches`, nothing is styled, and the view stays where it is.
 
 ### How long it lasts
 
 - There is one search for the panel, as vim has one last search, whichever area shows it.
 - It stays while another item is highlighted, in any pane: its matches are found in what shows next, the view does
-  not move, and `n` goes on from where the new content opens. A search with no matches in one file finds them in the
+  not move, and `n` goes on from where the new content opens. The match gone to in an area is dropped when the area
+  gets a new body, so none is current until `n`, `N` or Enter. A search with no matches in one file finds them in the
   next.
 - It is kept per repository, and not for the next session.
 
