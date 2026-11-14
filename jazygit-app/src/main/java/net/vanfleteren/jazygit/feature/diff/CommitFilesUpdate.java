@@ -118,7 +118,8 @@ public final class CommitFilesUpdate {
     /**
      * Lists the files {@code branch} changes against its base, the base of ADR 20, at the commits the branches read
      * last have them at (ADR 61). The main branch has no base to be compared with: all files of its tip are listed,
-     * as committed, whatever is checked out (ADR 128). A branch without a base has nothing to be compared with.
+     * as committed, whatever is checked out (ADR 128). A branch without a base has nothing to be compared with. A
+     * branch with an open pull request, the main branch too, shows the files of that instead, before this is asked.
      */
     public static Next againstBase(Model model, BranchName branch) {
         LoadAhead load = AheadUpdate.of(model, new BranchRef.Local(branch));

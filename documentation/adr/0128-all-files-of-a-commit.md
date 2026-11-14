@@ -64,9 +64,13 @@ the object database, whatever is checked out and in whichever worktree.
 ### `F` on the main branch
 
 - `F` on the main branch lists all files of its tip, at the commit the branches read last have it at (ADR 61): the
-  main branch as committed, whatever is checked out, here or in another worktree. Its title is `Files of main · all
-  files`; `a` lists the files its tip commit changed. It stays at that commit, as the files of a branch do; `F` again
-  reads them anew.
+  main branch as committed, whatever is checked out, here or in another worktree. Its title names the branch and the
+  commit, `Files of main · abc1234 · all files`; `a` lists the files that commit changed, as `Files of main · abc1234`.
+  Not: `Files of main` alone, which for any other branch is what it changed against its base. It stays at that commit,
+  as the files of a branch do; `F` again reads them anew.
+- With an open pull request, `F` on the main branch lists the files of that, as on any branch (ADR 61): in a fork,
+  the main branch is often what the user changes, and its pull request what they review. `a` in them lists all files
+  of its head, which is the tip of the main branch. Without one, as far as is known, all files of its tip.
 - It is the same whether the main branch is checked out or not. Not: the working tree when it is checked out, which is
   the files of the working tree with `a` (ADR 108), and would make `F` show uncommitted edits on one branch only.
 - The error of the main branch having no base goes from `F`. Without a main branch known, `F` on a branch still says

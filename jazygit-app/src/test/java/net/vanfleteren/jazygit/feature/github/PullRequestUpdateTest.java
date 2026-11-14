@@ -1591,6 +1591,22 @@ class PullRequestUpdateTest {
     }
 
     @Test
+    void shiftFOnTheMainBranchWithAPullRequestShowsTheFilesOfThatAsOnAnyBranch() {
+        PullRequest fromMain =
+                new PullRequest(new PrNumber(7), new GhBranch("main"), false, Checks.PASSING, Review.APPROVED);
+        Model shown = Update.update(model(), new PullRequestsMsg.Loaded(List.of(fromMain)))
+                .model();
+
+        Next requested = Update.update(shown, new PullRequestMsg.FilesRequested(MAIN.name()));
+
+        // Its dialog reads its commits first, as for a pull request of any branch listed without them.
+        assertTrue(requested.model().popup(PullRequestPopup.class).get().filesWanted());
+        assertEquals(
+                List.of(new LoadPullRequestDetails(new PrNumber(7), lastRead(requested.model()))), requested.cmds());
+        assertEquals(Option.none(), requested.model().repoView().commitFiles());
+    }
+
+    @Test
     void theFilesOfABranchShownTakeTheErrorBeforeAway() {
         Model failed = withPr().fail(new BaseBranchError.None(UNPUSHED.name()));
 

@@ -7,7 +7,6 @@ import net.vanfleteren.jazygit.lens.Lens;
 import net.vanfleteren.jazygit.state.Env;
 import net.vanfleteren.jazygit.state.Failure;
 import net.vanfleteren.jazygit.state.Label;
-import net.vanfleteren.jazygit.state.Loadable;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.view.CommitFilesView;
@@ -34,9 +33,8 @@ public record LoadCommitTree(Changes of) implements Targeted<List<CommitFile>> {
      */
     @Override
     public Target<List<CommitFile>> target() {
-        return Target.inView(CommitFilesView.open(of)
-                .andThen(Lens.where(
-                        CommitFilesView::tree, CommitFilesView::withTree, (Loadable<List<CommitFile>> any) -> true)));
+        return Target.inView(
+                CommitFilesView.open(of).andThen(Lens.some(CommitFilesView::tree, CommitFilesView::withTree)));
     }
 
     @Override

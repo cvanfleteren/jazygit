@@ -68,7 +68,7 @@ class CommitUnchangedContentTest {
     void aFileShowsAsItIsInTheCommitTitledWithIt() throws Exception {
         String screen = screen(readme());
 
-        assertTrue(screen.contains("main · README.md"), screen);
+        assertTrue(screen.contains("main · abcdef1 · README.md"), screen);
         assertTrue(screen.contains("# Title"), screen);
         assertTrue(screen.contains("Some text"), screen);
         assertFalse(screen.contains("@@"), screen);

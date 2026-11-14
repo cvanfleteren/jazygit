@@ -53,7 +53,7 @@ class FilesPanelCommitAllFilesTest {
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.ID))) {
             String screen = RenderedText.ofLarge(testRunner, () -> panel.render(model, FilesPanel.ID));
 
-            assertTrue(screen.contains("Files of main · all files"), screen);
+            assertTrue(screen.contains("Files of main · abcdef1 · all files"), screen);
             assertTrue(screen.contains("M A.java"), screen);
             assertTrue(screen.contains("  B.java"), screen);
             assertTrue(screen.contains("README.md"), screen);

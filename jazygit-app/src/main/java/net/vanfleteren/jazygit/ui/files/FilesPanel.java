@@ -582,12 +582,13 @@ public class FilesPanel {
     /**
      * How the commit, the stash, the pull request or the branch {@code of} is named: by its short sha, by its
      * {@code stash@{n}}, by its {@code #n}, by its name and the base it is compared with (ADR 61), or the main branch
-     * by its name (ADR 128).
+     * by its name and the commit it is at (ADR 128): what it shows is that commit, not what the branch changed.
      */
     public static String changesName(Model model, Changes of) {
         return switch (of) {
             case Changes.OfCommit(Sha sha) -> sha.shortSha();
-            case Changes.OfTip(var branch, var _) -> branch.value();
+            case Changes.OfTip(var branch, Sha sha) ->
+                Messages.get("panel.commitFiles.tip", branch.value(), sha.shortSha());
             case Changes.OfStash(Sha sha) ->
                 model.repo().stash(sha).map(Stash::ref).getOrElse(sha::shortSha);
             case Changes.OfPullRequest(var commits) -> "#" + commits.number();
