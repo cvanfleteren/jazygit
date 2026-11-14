@@ -53,6 +53,28 @@ class RenderedMarkdownTest {
     }
 
     @Test
+    void aByteOrderMarkStartingTheFileIsNoPartOfItsFirstBlock() {
+        List<RenderedMarkdown.Block> heading =
+                RenderedMarkdown.blocks(Vector.of("\uFEFF# Title", "", "Text."), 40, Theme.SpanStyles.NONE);
+        List<RenderedMarkdown.Block> list =
+                RenderedMarkdown.blocks(Vector.of("\uFEFF- one", "- two"), 40, Theme.SpanStyles.NONE);
+        List<RenderedMarkdown.Block> frontMatter =
+                RenderedMarkdown.blocks(Vector.of("\uFEFF---", "title: x", "---", "# T"), 40, Theme.SpanStyles.NONE);
+
+        assertEquals(
+                RenderedMarkdown.blocks(Vector.of("# Title", "", "Text."), 40, Theme.SpanStyles.NONE)
+                        .map(block -> text(block.rows())),
+                heading.map(block -> text(block.rows())));
+        assertEquals(List.of(List.of("• one"), List.of("• two")), list.map(block -> text(block.rows())));
+        assertEquals(
+                RenderedMarkdown.blocks(Vector.of("---", "title: x", "---", "# T"), 40, Theme.SpanStyles.NONE)
+                        .map(block -> text(block.rows())),
+                frontMatter.map(block -> text(block.rows())));
+        // The lines stay where they were.
+        assertEquals(List.of(0, 2), heading.map(RenderedMarkdown.Block::first));
+    }
+
+    @Test
     void theItemsOfALooseListAreSetApart() {
         List<RenderedMarkdown.Block> blocks =
                 RenderedMarkdown.blocks(Vector.of("- one", "", "- two"), 40, Theme.SpanStyles.NONE);

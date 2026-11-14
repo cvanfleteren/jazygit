@@ -58,6 +58,7 @@ final class RenderedMarkdown {
     // A thematic break: three or more of one of -, * and _, with blanks between them.
     private static final Pattern THEMATIC = Pattern.compile("([-*_])(\\s*\\1){2,}\\s*");
     private static final String COLUMN_GAP = "  ";
+    private static final String BYTE_ORDER_MARK = "\uFEFF";
 
     private RenderedMarkdown() {}
 
@@ -68,7 +69,7 @@ final class RenderedMarkdown {
      * to, and the blocks are drawn side by side: a changelog of hundreds of releases has as many blocks and definitions.
      */
     static List<Block> blocks(Vector<String> lines, int width, Theme.SpanStyles styles) {
-        Vector<String> source = withoutComments(withFrontMatter(lines));
+        Vector<String> source = withoutComments(withFrontMatter(withoutByteOrderMark(lines)));
         Node document = PARSER.parse(source.mkString("\n"));
         List<Node> top =
                 children(document).filter(block -> !block.getSourceSpans().isEmpty());
@@ -340,6 +341,18 @@ final class RenderedMarkdown {
      * {@code lines} with their front matter, a block of YAML between {@code ---} lines at the top, as a {@code yaml}
      * code block of as many lines.
      */
+    /**
+     * {@code lines} without the byte order mark the first of them starts with, if it does: as GitHub has it, it is no
+     * part of the text, and commonmark would take it for one, so a heading, a list or front matter on the first line
+     * would not be one. The lines stay as many, so each block keeps the lines it was parsed from.
+     */
+    static Vector<String> withoutByteOrderMark(Vector<String> lines) {
+        return lines.headOption()
+                .filter(first -> first.startsWith(BYTE_ORDER_MARK))
+                .map(first -> lines.update(0, first.substring(1)))
+                .getOrElse(lines);
+    }
+
     static Vector<String> withFrontMatter(Vector<String> lines) {
         return lines.headOption()
                 .filter(first -> first.strip().equals("---"))
