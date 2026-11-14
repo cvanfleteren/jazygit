@@ -141,6 +141,13 @@ class RenderedYamlTest {
     }
 
     @Test
+    void thePreviewOfAClosedBlockIsCutToItsColumns() {
+        List<RenderedTree.TreeRow> rows = rows("run: |\n  " + "東".repeat(30) + "\n  x\n", HashMap.of("/run", false));
+
+        assertEquals(List.of("run |2  " + "東".repeat(20) + " …"), rows.map(RenderedYamlTest::text));
+    }
+
+    @Test
     void wideCharactersKeepTheColumnsOfATableInLine() {
         List<String> table = text("""
                         - {name: 東京, people: 37400068}

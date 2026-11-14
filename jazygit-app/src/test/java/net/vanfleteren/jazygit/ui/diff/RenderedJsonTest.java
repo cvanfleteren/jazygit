@@ -172,6 +172,25 @@ class RenderedJsonTest {
     }
 
     @Test
+    void wideValuesArePackedIntoRowsNoWiderThanTheArea() {
+        List<String> rows = text(List.fill(40, "\"東京\"").mkString("[", ", ", "]"), HashMap.empty(), 80);
+
+        assertTrue(rows.size() > 1, rows.toString());
+        assertTrue(
+                rows.forAll(row -> TextWidth.of(row) <= 80),
+                rows.map(TextWidth::of).toString());
+    }
+
+    @Test
+    void thePreviewOfAClosedObjectStopsAtTheKeyThatPassesItsColumns() {
+        String keys = List.range(0, 21)
+                .map(at -> "\"東京東京" + (char) ('a' + at) + "\": " + at)
+                .mkString("{\"m\": {", ", ", "}}");
+
+        assertEquals(List.of("m {21}  東京東京a, 東京東京b, 東京東京c, …"), text(keys));
+    }
+
+    @Test
     void theColumnsOfATableAreAsWideAsTheyAreDrawnACharacterOfTwoColumnsCountingTwo() {
         List<String> rows = text("""
                 {"cities": [
