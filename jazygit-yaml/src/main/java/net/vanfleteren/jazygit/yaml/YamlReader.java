@@ -36,6 +36,7 @@ import org.snakeyaml.engine.v2.exceptions.Mark;
 import org.snakeyaml.engine.v2.exceptions.MarkedYamlEngineException;
 import org.snakeyaml.engine.v2.exceptions.ReaderException;
 import org.snakeyaml.engine.v2.exceptions.YamlEngineException;
+import org.snakeyaml.engine.v2.exceptions.YamlVersionException;
 import org.snakeyaml.engine.v2.nodes.Tag;
 import org.snakeyaml.engine.v2.resolver.CoreScalarResolver;
 import org.snakeyaml.engine.v2.resolver.ScalarResolver;
@@ -78,6 +79,13 @@ final class YamlReader {
                     Option.of(e.getMessage()).getOrElse("special characters are not allowed")));
         } catch (TooDeep e) {
             return Either.left(new NotYaml.TooDeep(MAX_DEPTH));
+        } catch (YamlVersionException e) {
+            // Its message is the version's toString, Version{major=2, minor=0}; it has no mark, so the line is that of
+            // the directive.
+            return Either.left(new NotYaml.Broken(
+                    1 + lines.indexWhere(line -> line.startsWith("%YAML")),
+                    1,
+                    "found YAML " + e.getSpecVersion().getRepresentation() + ", which is not read"));
         } catch (YamlEngineException e) {
             return Either.left(new NotYaml.Broken(1, 1, e.getMessage()));
         }

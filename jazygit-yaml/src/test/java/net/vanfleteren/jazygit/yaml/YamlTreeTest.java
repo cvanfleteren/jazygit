@@ -194,6 +194,9 @@ class YamlTreeTest {
                               {{- with .Values.resources }}
                               resources:
                         """));
+        assertEquals(
+                Either.left(new NotYaml.Broken(2, 1, "found YAML 2.0, which is not read")),
+                YamlTree.read("# a comment\n%YAML 2.0\n---\na: 1\n"));
         assertEquals(Either.left(new NotYaml.Nothing()), YamlTree.read("# only a comment\n"));
         assertEquals(Either.left(new NotYaml.Nothing()), YamlTree.read(""));
     }
