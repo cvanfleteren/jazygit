@@ -28,7 +28,6 @@ Refactorings that were left out of the functional/immutable cleanup, and why.
   others; git's locks keep the repository intact, but a command that needs a ref the fetch holds can fail.
   Retrying such a failure, or pausing the fetch while an operation runs, would avoid it.
 - [ ] **Robustness left out:**
-  - The command log reserves one line for the error, which can wrap onto more.
   - Thousands of paths in one command can exceed the system's limit; `--pathspec-from-file` would avoid
     that.
   - Commit signing with a terminal pinentry still prompts on the TUI's terminal.
