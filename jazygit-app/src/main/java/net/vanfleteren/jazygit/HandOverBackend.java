@@ -315,6 +315,7 @@ final class HandOverBackend implements Backend {
 
     @Override
     public void draw(DiffResult diff) throws IOException {
+        FrameStats.drawn(diff.size());
         if (!muted) {
             backend.draw(diff);
         }

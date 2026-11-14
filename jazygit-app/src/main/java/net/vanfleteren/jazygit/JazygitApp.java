@@ -273,6 +273,8 @@ public class JazygitApp extends ToolkitApp {
 
     @Override
     protected Element render() {
+        FrameStats.rendering();
+        long started = System.nanoTime();
         redrawPending = false;
         Model model = model();
         Theme.activate(styleEngine, model.preferences().theme());
@@ -307,6 +309,7 @@ public class JazygitApp extends ToolkitApp {
         // What is behind an open popup is dimmed, so the popup stands out, unless the popup previews its choices there.
         Element behind = shown.dimsBehind() ? new Dimmed(layout, Theme.backdrop(styleEngine)) : layout;
         Element screen = shown.dialog().<Element>map(d -> stack(behind, d)).getOrElse(layout);
+        FrameStats.rendered(started);
         return new SelectedTextColoured(screen, Theme.selectedText(styleEngine));
     }
 
