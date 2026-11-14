@@ -73,7 +73,12 @@ class ArchitectureTest {
             .should()
             .onlyDependOnClassesThat()
             .resideInAnyPackage(
-                    "java..", "io.vavr..", "lombok..", "com.electronwill.nightconfig..", "..jazygit.settings..");
+                    "java..",
+                    "io.vavr..",
+                    "lombok..",
+                    "com.electronwill.nightconfig..",
+                    "..jazygit.settings..",
+                    "..jazygit.lens..");
     /**
      * The lens is a tool for any value, which every part may use: it knows nothing of the application.
      */
@@ -392,7 +397,12 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule valuesAreValuesAllTheWayDown = fields().that()
             .areDeclaredInClassesThat()
-            .resideInAnyPackage("..jazygit.state..", "..jazygit.feature..", "..jazygit.settings..", "..jazygit.cli..")
+            .resideInAnyPackage(
+                    "..jazygit.state..",
+                    "..jazygit.feature..",
+                    "..jazygit.settings..",
+                    "..jazygit.cli..",
+                    "..jazygit.lens..")
             .and()
             .areNotDeclaredIn(Program.class)
             .and()
@@ -422,7 +432,7 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule pureCodeFillsNoCollections = noClasses()
             .that()
-            .resideInAnyPackage("..jazygit.state..", "..jazygit.feature..")
+            .resideInAnyPackage("..jazygit.state..", "..jazygit.feature..", "..jazygit.lens..")
             .and()
             .doNotBelongToAnyOf(Program.class)
             .and()
@@ -454,7 +464,7 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule noClassesExtendOthers = classes()
             .that()
-            .resideInAnyPackage("..jazygit.state..", "..jazygit.feature..")
+            .resideInAnyPackage("..jazygit.state..", "..jazygit.feature..", "..jazygit.lens..")
             .and()
             .haveNameNotMatching(DIALOGS)
             .should(Values.extendNothing());
@@ -547,7 +557,12 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule fieldsAreFinal = fields().that()
             .areDeclaredInClassesThat()
-            .resideInAnyPackage("..jazygit.state..", "..jazygit.feature..", "..jazygit.settings..", "..jazygit.cli..")
+            .resideInAnyPackage(
+                    "..jazygit.state..",
+                    "..jazygit.feature..",
+                    "..jazygit.settings..",
+                    "..jazygit.cli..",
+                    "..jazygit.lens..")
             .and()
             .areNotDeclaredIn(Program.class)
             .and()

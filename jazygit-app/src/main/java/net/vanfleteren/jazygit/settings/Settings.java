@@ -163,79 +163,13 @@ public record Settings(
      * for the ones it finds no valid value for, whose keys come with them.
      */
     static Read read(Function<String, Option<Object>> value) {
-        Option<Object> theme = value.apply(THEME);
-        Option<ThemeName> validTheme =
-                theme.filter(String.class::isInstance).map(String.class::cast).flatMap(ThemeName::of);
-        Option<Object> gh = value.apply(GH_EXECUTABLE);
-        Option<String> validGh =
-                gh.filter(String.class::isInstance).map(String.class::cast).filter(path -> !path.isBlank());
-        Option<Object> repositoryWidth = value.apply(REPOSITORY_WIDTH);
-        Option<Integer> validRepositoryWidth = repositoryWidth.flatMap(Settings::width);
-        Option<Object> pullRequestsWidth = value.apply(PULL_REQUESTS_WIDTH);
-        Option<Integer> validPullRequestsWidth = pullRequestsWidth.flatMap(Settings::width);
-        Option<Object> diffStyle = value.apply(DIFF_STYLE);
-        Option<DiffStyle> validDiffStyle = diffStyle
-                .filter(String.class::isInstance)
-                .map(String.class::cast)
-                .flatMap(DiffStyle::of);
-        Option<Object> diffSyntax = value.apply(DIFF_SYNTAX);
-        Option<Boolean> validDiffSyntax =
-                diffSyntax.filter(Boolean.class::isInstance).map(Boolean.class::cast);
-        Option<Object> diffWords = value.apply(DIFF_WORDS);
-        Option<Boolean> validDiffWords =
-                diffWords.filter(Boolean.class::isInstance).map(Boolean.class::cast);
-        Option<Object> repositoryHeights = value.apply(REPOSITORY_HEIGHTS);
-        Option<List<Integer>> validRepositoryHeights =
-                repositoryHeights.flatMap(heights -> heights(heights, DEFAULT_REPOSITORY_HEIGHTS.size()));
-        Option<Object> pullRequestsHeights = value.apply(PULL_REQUESTS_HEIGHTS);
-        Option<List<Integer>> validPullRequestsHeights =
-                pullRequestsHeights.flatMap(heights -> heights(heights, DEFAULT_PULL_REQUESTS_HEIGHTS.size()));
-        Option<Object> animations = value.apply(ANIMATIONS);
-        Option<Boolean> validAnimations =
-                animations.filter(Boolean.class::isInstance).map(Boolean.class::cast);
-        Option<Object> browsers = value.apply(BROWSERS);
-        Option<AccountBrowsers> validBrowsers = browsers.flatMap(AccountBrowsers::read);
-        Editors.Read editors = value.apply(Editors.KEY)
-                .map(Editors::read)
-                .getOrElse(() -> new Editors.Read(Editors.NONE, List.empty()));
-        return new Read(
-                new Settings(
-                        validTheme.getOrElse(DEFAULT.theme),
-                        validGh,
-                        validRepositoryWidth.getOrElse(DEFAULT_WIDTH),
-                        validPullRequestsWidth.getOrElse(DEFAULT_WIDTH),
-                        validDiffStyle.getOrElse(DEFAULT.diffStyle),
-                        validDiffSyntax.getOrElse(DEFAULT.diffSyntax),
-                        validDiffWords.getOrElse(DEFAULT.diffWords),
-                        validRepositoryHeights.getOrElse(DEFAULT_REPOSITORY_HEIGHTS),
-                        validPullRequestsHeights.getOrElse(DEFAULT_PULL_REQUESTS_HEIGHTS),
-                        validAnimations.getOrElse(DEFAULT.animations),
-                        validBrowsers.getOrElse(DEFAULT.browsers),
-                        editors.editors()),
-                Option.when(theme.isDefined() && validTheme.isEmpty(), THEME)
-                        .toList()
-                        .appendAll(Option.when(gh.isDefined() && validGh.isEmpty(), GH_EXECUTABLE))
-                        .appendAll(Option.when(
-                                repositoryWidth.isDefined() && validRepositoryWidth.isEmpty(), REPOSITORY_WIDTH))
-                        .appendAll(Option.when(
-                                pullRequestsWidth.isDefined() && validPullRequestsWidth.isEmpty(), PULL_REQUESTS_WIDTH))
-                        .appendAll(Option.when(diffStyle.isDefined() && validDiffStyle.isEmpty(), DIFF_STYLE))
-                        .appendAll(Option.when(diffSyntax.isDefined() && validDiffSyntax.isEmpty(), DIFF_SYNTAX))
-                        .appendAll(Option.when(diffWords.isDefined() && validDiffWords.isEmpty(), DIFF_WORDS))
-                        .appendAll(Option.when(
-                                repositoryHeights.isDefined() && validRepositoryHeights.isEmpty(), REPOSITORY_HEIGHTS))
-                        .appendAll(Option.when(
-                                pullRequestsHeights.isDefined() && validPullRequestsHeights.isEmpty(),
-                                PULL_REQUESTS_HEIGHTS))
-                        .appendAll(Option.when(animations.isDefined() && validAnimations.isEmpty(), ANIMATIONS))
-                        .appendAll(Option.when(browsers.isDefined() && validBrowsers.isEmpty(), BROWSERS))
-                        .appendAll(editors.invalid()));
+        return Setting.ALL.foldLeft(new Read(DEFAULT, List.empty()), (read, setting) -> setting.readInto(read, value));
     }
 
     /**
      * The width of the left column {@code value} is, if it is a whole number of percent the column may have.
      */
-    private static Option<Integer> width(Object value) {
+    static Option<Integer> width(Object value) {
         return Option.of(value)
                 .filter(number -> number instanceof Integer || number instanceof Long)
                 .map(number -> ((Number) number).longValue())
@@ -247,7 +181,7 @@ public record Settings(
      * The heights of the panes of a left column {@code value} is, if it is an array of {@code count} whole numbers of
      * percent that leave each pane, the last one too, at least {@link #MIN_HEIGHT}.
      */
-    private static Option<List<Integer>> heights(Object value, int count) {
+    static Option<List<Integer>> heights(Object value, int count) {
         return Option.of(value)
                 .filter(java.util.List.class::isInstance)
                 .map(array -> List.ofAll((java.util.List<?>) array))
@@ -272,43 +206,8 @@ public record Settings(
      * them, and saving leaves them as they are.
      */
     Map<List<String>, Object> entries() {
-        return dotted().mapKeys(key -> List.of(key.split("\\."))).merge(browsers.entries());
-    }
-
-    /**
-     * The settings with a key of their own, by their dotted key.
-     */
-    private Map<String, Object> dotted() {
-        return LinkedHashMap.<String, Object>of(THEME, theme.id())
-                .merge(ghExecutable
-                        .map(path -> LinkedHashMap.<String, Object>of(GH_EXECUTABLE, path))
-                        .getOrElse(LinkedHashMap.empty()))
-                .merge(widthEntry(REPOSITORY_WIDTH, repositoryWidth))
-                .merge(widthEntry(PULL_REQUESTS_WIDTH, pullRequestsWidth))
-                .merge(
-                        diffStyle == DEFAULT.diffStyle
-                                ? LinkedHashMap.empty()
-                                : LinkedHashMap.of(DIFF_STYLE, diffStyle.id()))
-                .merge(
-                        diffSyntax == DEFAULT.diffSyntax
-                                ? LinkedHashMap.empty()
-                                : LinkedHashMap.of(DIFF_SYNTAX, diffSyntax))
-                .merge(diffWords == DEFAULT.diffWords ? LinkedHashMap.empty() : LinkedHashMap.of(DIFF_WORDS, diffWords))
-                .merge(heightsEntry(REPOSITORY_HEIGHTS, repositoryHeights, DEFAULT_REPOSITORY_HEIGHTS))
-                .merge(heightsEntry(PULL_REQUESTS_HEIGHTS, pullRequestsHeights, DEFAULT_PULL_REQUESTS_HEIGHTS))
-                .merge(
-                        animations == DEFAULT.animations
-                                ? LinkedHashMap.empty()
-                                : LinkedHashMap.of(ANIMATIONS, animations));
-    }
-
-    private static Map<String, Object> widthEntry(String key, int width) {
-        return width == DEFAULT_WIDTH ? LinkedHashMap.empty() : LinkedHashMap.of(key, width);
-    }
-
-    // The TOML writer writes a java.util list as an array.
-    private static Map<String, Object> heightsEntry(String key, List<Integer> heights, List<Integer> defaults) {
-        return heights.equals(defaults) ? LinkedHashMap.empty() : LinkedHashMap.of(key, heights.toJavaList());
+        return Setting.ALL.foldLeft(
+                LinkedHashMap.empty(), (entries, setting) -> entries.merge(setting.entriesOf(this)));
     }
 
     /**
