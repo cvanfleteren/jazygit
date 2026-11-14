@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.state.PaneId;
 import net.vanfleteren.jazygit.state.preferences.Screen;
 import net.vanfleteren.jazygit.state.view.CommitFilesView;
 import net.vanfleteren.jazygit.state.view.ViewMsg;
+import net.vanfleteren.jazygit.ui.CommandLogPanel;
 import net.vanfleteren.jazygit.ui.PopupSlot;
 import net.vanfleteren.jazygit.ui.content.ContentPanel;
 
@@ -138,20 +139,20 @@ final class FocusKeeper {
      */
     String activePane(Model model, String focusedId) {
         return Option.of(focusedId)
-                .filter(id -> !popups.owns(id))
+                .filter(id -> !aside(id))
                 .orElse(model.shownPane())
                 .map(id -> contentPanel.paneOfArea(model, id).map(PaneId::value).getOrElse(id))
                 .getOrNull();
     }
 
     /**
-     * Tells the model where the focus is, {@code focusedId}, when it is outside the popups and the model does not
-     * know yet: a closing popup gives it back there.
+     * Tells the model where the focus is, {@code focusedId}, when it is outside the popups and the command log and the
+     * model does not know yet: a closing popup gives it back there, as Escape in the log does.
      */
     Option<Msg> report(Model model, String focusedId) {
         // The framework knows no focus before the first render.
         return Option.of(focusedId)
-                .filter(id -> !popups.owns(id))
+                .filter(id -> !aside(id))
                 .filter(id -> !model.shownPane().contains(id))
                 .map(id -> new ViewMsg.Focused(id, ContentPanel.isArea(id)));
     }
@@ -185,7 +186,7 @@ final class FocusKeeper {
      */
     boolean inContentOf(Model model, String paneId) {
         return Option.of(focusedId())
-                .filter(id -> !popups.owns(id))
+                .filter(id -> !aside(id))
                 .orElse(model.shownPane())
                 .flatMap(id -> contentPanel.paneOfArea(model, id))
                 .exists(pane -> pane.value().equals(paneId));
@@ -222,6 +223,31 @@ final class FocusKeeper {
                 requestRedraw.run();
             }
         });
+    }
+
+    /**
+     * Whether the element {@code id} has the focus aside from the panes and the content panel: a popup, or the command
+     * log (ADR 129). The model keeps where the focus was before, which the content panel and the highlighted row of a
+     * pane go by, and which the focus goes back to.
+     */
+    private boolean aside(String id) {
+        return popups.owns(id) || CommandLogPanel.ID.equals(id);
+    }
+
+    /**
+     * Gives the focus to the command log (ADR 129).
+     */
+    void moveToCommandLog() {
+        moveTo(CommandLogPanel.ID);
+    }
+
+    /**
+     * Gives the focus back from the command log to where it was before, if the log has it.
+     */
+    void leaveCommandLog(Model model) {
+        if (CommandLogPanel.ID.equals(focusedId())) {
+            moveToPaneOf(model);
+        }
     }
 
     private FocusManager focus() {

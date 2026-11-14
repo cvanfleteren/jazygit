@@ -5,6 +5,7 @@ import dev.tamboui.layout.Rect;
 import dev.tamboui.style.Overflow;
 import dev.tamboui.text.CharWidth;
 import dev.tamboui.widgets.paragraph.Paragraph;
+import io.vavr.collection.List;
 import java.util.stream.IntStream;
 
 /**
@@ -102,6 +103,28 @@ public final class TextWidth {
                 + 1;
         // Blank lines at the end show nothing, but take their room.
         return Math.min(maxLines, Math.max(drawn + blankAtEnd(text), ownLines));
+    }
+
+    /**
+     * The rows {@code text} takes when wrapped on words at {@code width} columns, as a word wrapping {@link Paragraph}
+     * draws them, as many as {@link #lines(String, int)} counts, without the spaces at their end. Drawn, so they are
+     * exactly what is shown; at no width, its own lines.
+     */
+    public static List<String> wrapped(String text, int width) {
+        if (width <= 0) {
+            return List.of(text.split("\\R", -1));
+        }
+        int rows = lines(text, width);
+        // Wider than the text it wraps nowhere.
+        int columns = Math.min(width, Math.max(1, of(text)));
+        Rect area = new Rect(0, 0, columns, rows);
+        Buffer buffer = Buffer.empty(area);
+        Paragraph.builder().text(text).overflow(Overflow.WRAP_WORD).build().render(area, buffer);
+        return List.range(0, rows)
+                .map(y -> List.range(0, columns)
+                        .map(x -> buffer.get(x, y).symbol())
+                        .mkString()
+                        .stripTrailing());
     }
 
     /**

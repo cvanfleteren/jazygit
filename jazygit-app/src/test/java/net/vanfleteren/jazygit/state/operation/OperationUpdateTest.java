@@ -9,6 +9,7 @@ import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import java.time.Instant;
 import net.vanfleteren.jazygit.feature.branch.merge.MergeCmd;
 import net.vanfleteren.jazygit.feature.branch.pull.PullCmd;
 import net.vanfleteren.jazygit.feature.branch.push.PushCmd;
@@ -60,7 +61,7 @@ class OperationUpdateTest {
         Next next = TestModels.done(pushing, PUSH, succeeded(PUSH, "git push origin feature"));
 
         assertEquals(
-                List.of(new LogEntry(PushCmd.PUSH, executed("git push origin feature"))),
+                List.of(new LogEntry(PushCmd.PUSH, executed("git push origin feature"), Instant.EPOCH)),
                 next.model().outcome().commandLog());
         assertEquals(HashSet.empty(), next.model().jobs().busy().keySet());
         assertEquals(Option.none(), next.model().outcome().error());
@@ -94,7 +95,7 @@ class OperationUpdateTest {
         Next next = TestModels.done(TestModels.running(loaded(), PUSH), PUSH, new OperationMsg.Failed(PUSH, failure));
 
         assertEquals(
-                List.of(new LogEntry(PushCmd.PUSH, executed("git push origin feature"))),
+                List.of(new LogEntry(PushCmd.PUSH, executed("git push origin feature"), Instant.EPOCH)),
                 next.model().outcome().commandLog());
         assertEquals(HashSet.empty(), next.model().jobs().busy().keySet());
         assertEquals(
@@ -190,7 +191,7 @@ class OperationUpdateTest {
                 new OperationMsg.Stopped(MERGE, executed("git merge feature"), notice));
 
         assertEquals(
-                List.of(new LogEntry(MergeCmd.MERGE, executed("git merge feature"))),
+                List.of(new LogEntry(MergeCmd.MERGE, executed("git merge feature"), Instant.EPOCH)),
                 next.model().outcome().commandLog());
         assertEquals(Option.none(), next.model().outcome().error());
         assertEquals(Option.of(notice), next.model().outcome().notice());

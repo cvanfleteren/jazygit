@@ -147,6 +147,20 @@ class TextWidthTest {
     }
 
     @Test
+    void wrappedGivesTheRowsAsTheyAreShown() {
+        assertEquals(io.vavr.collection.List.of("one two", "three"), TextWidth.wrapped("one two three", 8));
+        assertEquals(io.vavr.collection.List.of("one", "", "three"), TextWidth.wrapped("one\n\nthree", 56));
+        // Runs of spaces stay, and an indented line keeps its indent on the rows it wraps onto.
+        assertEquals(io.vavr.collection.List.of("a  b", "c"), TextWidth.wrapped("a  b  c", 5));
+        assertEquals(
+                TextWidth.lines("x:\n    indented hint text here", 14),
+                TextWidth.wrapped("x:\n    indented hint text here", 14).size());
+        // As wide as can be, it wraps nowhere.
+        assertEquals(io.vavr.collection.List.of("one", "two"), TextWidth.wrapped("one\ntwo", Integer.MAX_VALUE));
+        assertEquals(io.vavr.collection.List.of("日本語日本", "語日本語日"), TextWidth.wrapped("日本語日本語日本語日", 10));
+    }
+
+    @Test
     void wideCharactersWrapSooner() {
         // Ten CJK characters take twenty columns: two lines of ten columns.
         assertEquals(2, TextWidth.lines("日本語日本語日本語日", 10));

@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.feature.settings.SettingsPanelMsg;
 import net.vanfleteren.jazygit.state.Msg;
 import net.vanfleteren.jazygit.state.github.prs.PrOverviewMsg;
 import net.vanfleteren.jazygit.state.popup.PopupMsg;
+import net.vanfleteren.jazygit.state.view.CommandLogFocused;
 
 /**
  * The keys that work wherever the focus is.
@@ -90,6 +91,8 @@ final class GlobalKeys {
                         () -> new LayoutMsg.PaneStepped(-LayoutUpdate.STEP)))
                 .global(new Keymap.Global.Dispatching(
                         "Z", "help.global.maximize", event -> isChar(event, 'Z'), LayoutMsg.MaximizeToggled::new))
+                .global(new Keymap.Global.Dispatching(
+                        "@", "help.global.commandLog", event -> isChar(event, '@'), CommandLogFocused::new))
                 .global(new Keymap.Global.Dispatching("q", "help.global.quit", GlobalKeys::isQuitKey, Msg.Quit::new));
     }
 
