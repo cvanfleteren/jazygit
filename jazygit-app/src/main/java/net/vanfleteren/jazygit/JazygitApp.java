@@ -60,8 +60,10 @@ public class JazygitApp extends ToolkitApp {
     // Tells the time a frame is drawn at, which the spinners turn by.
     private final Clock clock = Clock.systemUTC();
     // The terminal the app is shown on, which it hands over to an editor.
-    private final TerminalHandOver terminal =
-            new TerminalHandOver(this::runner, this::requestRedraw, focused -> send(new TerminalMsg.Focused(focused)));
+    // Counts the frames drawn, when measured (scripts/framebench).
+    private final FrameStats frameStats = FrameStats.fromProperty();
+    private final TerminalHandOver terminal = new TerminalHandOver(
+            this::runner, this::requestRedraw, focused -> send(new TerminalMsg.Focused(focused)), frameStats::drawn);
     private final RepositorySession session;
     // Quitting is up to the model, which may refuse; the runner stops on what the update returns.
     private final Consumer<Msg> dispatch = this::send;
@@ -287,6 +289,8 @@ public class JazygitApp extends ToolkitApp {
 
     @Override
     protected Element render() {
+        frameStats.rendering();
+        long started = System.nanoTime();
         redrawPending = false;
         Model model = model();
         Theme.activate(styleEngine, model.preferences().theme());
@@ -325,6 +329,7 @@ public class JazygitApp extends ToolkitApp {
         // What is behind an open popup is dimmed, so the popup stands out, unless the popup previews its choices there.
         Element behind = shown.dimsBehind() ? new Dimmed(layout, Theme.backdrop(styleEngine)) : layout;
         Element screen = shown.dialog().<Element>map(d -> stack(behind, d)).getOrElse(layout);
+        frameStats.rendered(started);
         return new SelectedTextColoured(screen, Theme.selectedText(styleEngine));
     }
 

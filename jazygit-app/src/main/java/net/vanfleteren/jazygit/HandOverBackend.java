@@ -15,6 +15,7 @@ import java.util.Deque;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
+import java.util.function.IntConsumer;
 
 /**
  * The terminal backend of the app, which can hand the terminal over to another program, like an editor, and take it
@@ -53,6 +54,8 @@ final class HandOverBackend implements Backend {
     private final Backend backend;
     // Told when the terminal gets the focus (true) or loses it (false), on the thread that reads keys.
     private final Consumer<Boolean> focus;
+    // Told how many cells a frame drawn on the terminal changed, for FrameStats.
+    private final IntConsumer drawn;
     // Held while a key is read, so none is read once the terminal is handed over. Fair, as the reader takes it again
     // right after it lets go, and would else keep the render thread waiting in leave for as long as it reads.
     private final Lock reading = new ReentrantLock(true);
@@ -66,16 +69,22 @@ final class HandOverBackend implements Backend {
     private boolean focused = true;
 
     HandOverBackend(Backend backend, Consumer<Boolean> focus) {
+        this(backend, focus, cells -> {});
+    }
+
+    HandOverBackend(Backend backend, Consumer<Boolean> focus, IntConsumer drawn) {
         this.backend = backend;
         this.focus = focus;
+        this.drawn = drawn;
     }
 
     /**
      * On the terminal of this process, through the backend TamboUI picks, as {@code tamboui.backend} or
-     * {@code TAMBOUI_BACKEND} may say, telling {@code focus} when the terminal gets the focus or loses it.
+     * {@code TAMBOUI_BACKEND} may say, telling {@code focus} when the terminal gets the focus or loses it, and
+     * {@code drawn} how many cells each frame drawn changed.
      */
-    static HandOverBackend system(Consumer<Boolean> focus) throws IOException {
-        return new HandOverBackend(BackendFactory.create(), focus);
+    static HandOverBackend system(Consumer<Boolean> focus, IntConsumer drawn) throws IOException {
+        return new HandOverBackend(BackendFactory.create(), focus, drawn);
     }
 
     /**
@@ -316,6 +325,7 @@ final class HandOverBackend implements Backend {
     @Override
     public void draw(DiffResult diff) throws IOException {
         if (!muted) {
+            drawn.accept(diff.size());
             backend.draw(diff);
         }
     }
