@@ -60,3 +60,6 @@ was made from, else the main branch, of each the one on `origin` before the loca
 - Neither the remote branches nor the pull requests screen (Ctrl+P) get `f`; the latter could, from the same commits.
 - The files of a branch against its base are not warned about when that base is behind its remote; that cannot be
   told without a fetch.
+
+Amended by ADR 128: `F` on the main branch lists all files of its tip, as committed, instead of saying it has no
+base.

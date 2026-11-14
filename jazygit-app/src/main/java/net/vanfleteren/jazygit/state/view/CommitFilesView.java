@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.gh.model.Reaction;
 import net.vanfleteren.jazygit.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.gh.model.ReviewThread;
+import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.DiffText;
 import net.vanfleteren.jazygit.git.model.PullRequestCommits;
@@ -47,6 +48,11 @@ import net.vanfleteren.jazygit.state.diff.Collapsed;
  * @param pictures the images of the review threads that are read to be shown, by where they are: none while one is
  *                 read, or when it could not be (ADR 84)
  * @param filter   the filter of the files: the tree shows only those listed that match it (ADR 105)
+ * @param allFiles whether the tree lists all files of the commit the files end at, not only those changed (ADR 128)
+ * @param tree     all files of that commit, the changed ones as they changed and the others unchanged, once they were
+ *                 asked for: they are read once
+ * @param unchanged the node highlighted while all files are listed, when nothing under it changed: the content panel
+ *                  shows it in place of a diff (ADR 128)
  */
 @With
 public record CommitFilesView(
@@ -63,7 +69,10 @@ public record CommitFilesView(
         Set<ReviewThread.Comment.Id> reacting,
         int version,
         Map<String, Option<Picture>> pictures,
-        Option<FileFilter> filter) {
+        Option<FileFilter> filter,
+        boolean allFiles,
+        Option<Loadable<List<CommitFile>>> tree,
+        Option<UnchangedNode> unchanged) {
 
     /**
      * The view of the files of {@code of}, opened from the pane {@code pane} and listed in {@code listedIn}, while
@@ -84,7 +93,38 @@ public record CommitFilesView(
                 HashSet.empty(),
                 0,
                 HashMap.empty(),
+                Option.none(),
+                false,
+                Option.none(),
                 Option.none());
+    }
+
+    /**
+     * The files the tree shows: all files of the commit while they are listed, read or not, else the changed ones
+     * (ADR 128).
+     */
+    public Loadable<List<CommitFile>> shownFiles() {
+        return allFiles ? tree.getOrElse(Loadable::loading) : files;
+    }
+
+    /**
+     * These listing all files of the commit when {@code all}, else the changed ones; the node without changes shown
+     * goes with all files. Whether all files are still to be read is for the caller to say, by {@link #tree}.
+     */
+    public CommitFilesView listingAll(boolean all) {
+        return withAllFiles(all).withUnchanged(all ? unchanged : Option.none());
+    }
+
+    /**
+     * {@code changed}, the files the changes end at changed, with the others of {@code paths}, all files of the commit
+     * they end at, as unchanged: those changed keep how, also those that are not in it, as a file the commit deleted;
+     * sorted by path (ADR 128).
+     */
+    public static List<CommitFile> merged(List<CommitFile> changed, List<String> paths) {
+        io.vavr.collection.Set<String> touched = changed.map(CommitFile::path).toSet();
+        return changed.appendAll(paths.filter(path -> !touched.contains(path))
+                        .map(path -> new CommitFile(path, ChangeType.UNCHANGED)))
+                .sortBy(CommitFile::path);
     }
 
     /**
@@ -92,8 +132,9 @@ public record CommitFilesView(
      * once those are read too (ADR 57).
      */
     public Loadable<List<CommitFile>> listedFiles() {
-        if (listed == Listed.ALL || !(files instanceof Loadable.Loaded<List<CommitFile>>(List<CommitFile> read))) {
-            return files;
+        Loadable<List<CommitFile>> shown = shownFiles();
+        if (listed == Listed.ALL || !(shown instanceof Loadable.Loaded<List<CommitFile>>(List<CommitFile> read))) {
+            return shown;
         }
         return remarks.<Loadable<List<ReviewThread>>>map(loaded -> loaded.map(ReviewRemarks::threads))
                 .getOrElse(() -> new Loadable.Loaded<>(List.empty()))

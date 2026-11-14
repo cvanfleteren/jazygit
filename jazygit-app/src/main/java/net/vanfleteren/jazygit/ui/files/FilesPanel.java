@@ -38,7 +38,7 @@ import net.vanfleteren.jazygit.ui.widgets.PasteTarget;
  * that holds files directly, so its diff shows at once. {@code /} filters the tree shown by the paths of its files
  * (ADR 105): the line above it takes the keys that edit the filter, and Escape clears it before it does anything else.
  * {@code a} lists all files of the working tree in place of its changed ones (ADR 108), in a tree of its own that opens
- * only on the directories with changes.
+ * only on the directories with changes; in the files of a commit, all files of that commit (ADR 128), the same way.
  */
 public class FilesPanel {
 
@@ -49,6 +49,9 @@ public class FilesPanel {
     // directories collapsed in it as the files pane switches between them (ADR 108).
     private final FileTreeList<FileEntry> allTree;
     private final FileTreeList<CommitFile> commitTree;
+    // All files of the commit whose files are listed, kept apart from those it changed, as for the working tree
+    // (ADR 128).
+    private final FileTreeList<CommitFile> commitAllTree;
     private final Keymap keymap = Keymap.standard();
     private final FilterLine filterLine = new FilterLine();
     // What a paste does: while the filter line is open, it goes in it.
@@ -99,6 +102,13 @@ public class FilesPanel {
                 this::drawCommitFile,
                 highlights,
                 FileTreeList::firstWithDiff);
+        commitAllTree = new FileTreeList<>(
+                ID,
+                file -> file.entry().type().marker() + " " + name(file),
+                this::drawCommitFile,
+                highlights,
+                FileTreeList::firstWithDiff,
+                files -> unchangedDirectories(files, FilesPanel::changed));
         List.of(statusTree, allTree)
                 .forEach(tree -> tree.onKey(PaneKeys.whileFocused(
                         () -> focused,
@@ -107,13 +117,15 @@ public class FilesPanel {
                                         ? Option.of(openDiff)
                                         : PaneKeys.sending(
                                                 keymap.handle(Scopes.FILES, event, tree.selected()), dispatch)))));
-        commitTree.onKey(PaneKeys.whileFocused(
-                () -> focused,
-                event -> filtered(event, dispatch)
-                        .orElse(() -> opensDiff(event, commitTree)
-                                ? Option.of(openDiff)
-                                : PaneKeys.sending(
-                                        keymap.handle(Scopes.COMMIT_FILES, event, commitTree.selected()), dispatch))));
+        List.of(commitTree, commitAllTree)
+                .forEach(tree -> tree.onKey(PaneKeys.whileFocused(
+                        () -> focused,
+                        event -> filtered(event, dispatch)
+                                .orElse(() -> opensDiff(event, tree)
+                                        ? Option.of(openDiff)
+                                        : PaneKeys.sending(
+                                                keymap.handle(Scopes.COMMIT_FILES, event, tree.selected()),
+                                                dispatch)))));
     }
 
     /**
@@ -196,6 +208,10 @@ public class FilesPanel {
      * dimmed (ADR 57).
      */
     private StyledElement<?> drawCommitFile(FileTree.File<CommitFile> file) {
+        // A file the commit did not change, among all its files, has no marker: its name lines up with the others.
+        if (!changed(file.entry())) {
+            return Toolkit.text("  " + file.name());
+        }
         List<ReviewThread> on = threads.on(file.entry().path(), file.entry().origin());
         int resolved = on.count(ReviewThread::resolved);
         return Toolkit.row(List.<StyledElement<?>>of(
@@ -229,7 +245,7 @@ public class FilesPanel {
      */
     private static FileTreeList.Placeholder placeholder(CommitFilesView view) {
         return new FileTreeList.Placeholder(
-                view.files() instanceof Loadable.Loaded<?>
+                view.shownFiles() instanceof Loadable.Loaded<?>
                         ? Messages.get("panel.commitFiles.readingRemarks")
                         : Placeholders.loading(),
                 nothingListed(view.listed()));
@@ -286,11 +302,50 @@ public class FilesPanel {
     public Option<Msg> selectionChange(Model model) {
         return model.repoView()
                 .commitFiles()
-                .map(view -> PaneKeys.selectionChange(
-                        commitTree.selected().map(FileTree::directEntries),
-                        view.diff(),
-                        SelectionMsg.CommitFilesSelected::new))
+                .map(this::commitSelectionChange)
                 .getOrElse(() -> workingSelectionChange(model));
+    }
+
+    /**
+     * The message to send when the node highlighted in the files of a commit is not the one the content panel shows:
+     * its diff, or, among all files of the commit, the file or the directory it did not change (ADR 128).
+     */
+    private Option<Msg> commitSelectionChange(CommitFilesView view) {
+        Option<FileTree<CommitFile>> selected = commitTreeOf(view).selected();
+        if (selected.exists(node -> view.allFiles() && !hasChanges(node, FilesPanel::changed))) {
+            return unchangedSelection(selected.get()).filter(msg -> !shows(view.unchanged(), msg));
+        }
+        Option<List<CommitFile>> entries =
+                selected.map(node -> node.directEntries().filter(FilesPanel::changed));
+        // Coming from a node without changes, its diff shows again even when it is the one read last.
+        return view.unchanged().isDefined()
+                ? entries.map(SelectionMsg.CommitFilesSelected::new)
+                : PaneKeys.selectionChange(entries, view.diff(), SelectionMsg.CommitFilesSelected::new);
+    }
+
+    /**
+     * What highlighting {@code node}, without changes, asks to show: a file's content, or how many files a directory
+     * holds.
+     */
+    private <T extends Pathed> Option<Msg> unchangedSelection(FileTree<T> node) {
+        return Option.of(
+                node instanceof FileTree.File<T> file
+                        ? new SelectionMsg.UnchangedFileSelected(file.path())
+                        : new SelectionMsg.UnchangedDirectorySelected(node.path(), count(node)));
+    }
+
+    /**
+     * Whether the commit whose files are listed changed {@code file}: among all its files, most it did not.
+     */
+    static boolean changed(CommitFile file) {
+        return file.type() != ChangeType.UNCHANGED;
+    }
+
+    /**
+     * The tree of the files of a commit shown: of all files of the commit, or of those it changed (ADR 128).
+     */
+    private FileTreeList<CommitFile> commitTreeOf(CommitFilesView view) {
+        return view.allFiles() ? commitAllTree : commitTree;
     }
 
     /**
@@ -301,12 +356,7 @@ public class FilesPanel {
         RepoView view = model.repoView();
         Option<FileTree<FileEntry>> selected = workingTree(view).selected();
         if (selected.exists(node -> view.allFiles() && !hasChanges(node))) {
-            FileTree<FileEntry> node = selected.get();
-            return Option.<Msg>of(
-                            node instanceof FileTree.File<FileEntry> file
-                                    ? new SelectionMsg.UnchangedFileSelected(file.path())
-                                    : new SelectionMsg.UnchangedDirectorySelected(node.path(), count(node)))
-                    .filter(msg -> !shows(view.unchanged(), msg));
+            return unchangedSelection(selected.get()).filter(msg -> !shows(view.unchanged(), msg));
         }
         Option<List<FileEntry>> entries =
                 selected.map(node -> node.directEntries().filter(FileEntry::changed));
@@ -333,16 +383,23 @@ public class FilesPanel {
      * Whether a file under {@code node}, or it itself, has changes; it stops at the first one.
      */
     static boolean hasChanges(FileTree<FileEntry> node) {
+        return hasChanges(node, FileEntry::changed);
+    }
+
+    /**
+     * Whether a file under {@code node}, or it itself, is {@code changed}; it stops at the first one.
+     */
+    static <T extends Pathed> boolean hasChanges(FileTree<T> node, java.util.function.Predicate<T> changed) {
         return switch (node) {
-            case FileTree.File<FileEntry> file -> file.entry().changed();
-            case FileTree.Dir<FileEntry> dir -> dir.children().exists(FilesPanel::hasChanges);
+            case FileTree.File<T> file -> changed.test(file.entry());
+            case FileTree.Dir<T> dir -> dir.children().exists(child -> hasChanges(child, changed));
         };
     }
 
     /**
      * How many files are under {@code node}, counted once for each node.
      */
-    private int count(FileTree<FileEntry> node) {
+    private int count(FileTree<?> node) {
         Counted known = counted.filter(last -> last.node() == node)
                 .getOrElse(() -> new Counted(node, node.entries().size()));
         counted = Option.of(known);
@@ -354,14 +411,23 @@ public class FilesPanel {
      * working tree starts collapsed: it opens on its changes (ADR 108).
      */
     static io.vavr.collection.Set<String> unchangedDirectories(List<FileEntry> files) {
+        return unchangedDirectories(files, FileEntry::changed);
+    }
+
+    /**
+     * The paths of the directories of {@code files} with none {@code changed} under them, which a tree of all files
+     * starts collapsed: of the working tree (ADR 108), or of a commit (ADR 128).
+     */
+    static <T extends Pathed> io.vavr.collection.Set<String> unchangedDirectories(
+            List<T> files, java.util.function.Predicate<T> changed) {
         return directories(FileTree.of(files))
-                .filter(dir -> !hasChanges(dir))
+                .filter(dir -> !hasChanges(dir, changed))
                 .map(FileTree.Dir::path)
                 .toSet();
     }
 
-    private static List<FileTree.Dir<FileEntry>> directories(List<FileTree<FileEntry>> nodes) {
-        return nodes.flatMap(node -> node instanceof FileTree.Dir<FileEntry> dir
+    private static <T extends Pathed> List<FileTree.Dir<T>> directories(List<FileTree<T>> nodes) {
+        return nodes.flatMap(node -> node instanceof FileTree.Dir<T> dir
                 ? directories(dir.children()).prepend(dir)
                 : List.empty());
     }
@@ -371,9 +437,10 @@ public class FilesPanel {
      * {@link FileTreeList#step} does, and says whether there was one (ADR 117). The pane does not get the focus.
      */
     public boolean step(Model model, FileStepMsg.Step step) {
-        return model.repoView().commitFiles().isDefined()
-                ? commitTree.step(step)
-                : workingTree(model.repoView()).step(step);
+        return model.repoView()
+                .commitFiles()
+                .map(view -> commitTreeOf(view).step(step))
+                .getOrElse(() -> workingTree(model.repoView()).step(step));
     }
 
     /**
@@ -428,11 +495,13 @@ public class FilesPanel {
                                         .getOrElse(() -> Messages.get(
                                                 "panel.commitFiles.titleFor", changesName(model, view.of())))
                                 + listedTitle(view.listed()).map(Messages::get).getOrElse("")
+                                + (view.allFiles() ? Messages.get("panel.files.all") : "")
                                 + filteredTitle(),
-                        withLine(commitTree.render(view.of(), view.listedFiles(), active, placeholder(view), shown)),
+                        withLine(commitTreeOf(view)
+                                .render(view.of(), view.listedFiles(), active, placeholder(view), shown)),
                         focused,
-                        commitTree.selectedRow(),
-                        commitTree.count(view.listedFiles())))
+                        commitTreeOf(view).selectedRow(),
+                        commitTreeOf(view).count(view.listedFiles())))
                 .getOrElse(() -> {
                     boolean all = model.repoView().allFiles();
                     Loadable<List<FileEntry>> files = workingFiles(model.repo(), all);
@@ -504,12 +573,22 @@ public class FilesPanel {
     }
 
     /**
+     * The tree widget of all files of a commit, which holds their selection and expansion state (ADR 128).
+     */
+    TreeElement<FileTree<CommitFile>> commitAllTree() {
+        return commitAllTree.tree();
+    }
+
+    /**
      * How the commit, the stash, the pull request or the branch {@code of} is named: by its short sha, by its
-     * {@code stash@{n}}, by its {@code #n}, or by its name and the base it is compared with (ADR 61).
+     * {@code stash@{n}}, by its {@code #n}, by its name and the base it is compared with (ADR 61), or the main branch
+     * by its name and the commit it is at (ADR 128): what it shows is that commit, not what the branch changed.
      */
     public static String changesName(Model model, Changes of) {
         return switch (of) {
             case Changes.OfCommit(Sha sha) -> sha.shortSha();
+            case Changes.OfTip(var branch, Sha sha) ->
+                Messages.get("panel.commitFiles.tip", branch.value(), sha.shortSha());
             case Changes.OfStash(Sha sha) ->
                 model.repo().stash(sha).map(Stash::ref).getOrElse(sha::shortSha);
             case Changes.OfPullRequest(var commits) -> "#" + commits.number();
@@ -527,5 +606,5 @@ public class FilesPanel {
     /**
      * How many files are under {@code node}.
      */
-    private record Counted(FileTree<FileEntry> node, int files) {}
+    private record Counted(FileTree<?> node, int files) {}
 }

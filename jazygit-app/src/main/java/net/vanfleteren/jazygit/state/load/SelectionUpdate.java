@@ -7,6 +7,7 @@ import java.util.function.Function;
 import net.vanfleteren.jazygit.gh.model.PrNumber;
 import net.vanfleteren.jazygit.git.model.BranchRef;
 import net.vanfleteren.jazygit.git.model.CommitFile;
+import net.vanfleteren.jazygit.git.model.FileContent;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.Sha;
 import net.vanfleteren.jazygit.state.Cmd;
@@ -125,40 +126,63 @@ public final class SelectionUpdate {
     }
 
     /**
-     * Reads the content of the file without changes at {@code path}.
+     * Reads the content of the file without changes at {@code path}: in the commit whose files are listed, while they
+     * are (ADR 128), else on disk (ADR 108).
      */
     private static Next unchangedFileSelected(Model model, String path) {
+        return model.repoView()
+                .commitFiles()
+                .map(view -> selected(
+                        model,
+                        path,
+                        file(view.unchanged()),
+                        content -> model.mapRepoView(repoView -> repoView.withCommitFiles(
+                                Option.of(view.withUnchanged(content.map(UnchangedNode.File::new))))),
+                        read -> new ReadCommitFileContent(view.of(), read)))
+                .getOrElse(() -> workingFileSelected(model, path));
+    }
+
+    private static Option<Preview<String, FileContent>> file(Option<UnchangedNode> node) {
+        return node.flatMap(
+                shown -> shown instanceof UnchangedNode.File(var content) ? Option.of(content) : Option.none());
+    }
+
+    private static Next workingFileSelected(Model model, String path) {
         return selected(
                 model,
                 path,
-                model.repoView()
-                        .unchanged()
-                        .flatMap(node ->
-                                node instanceof UnchangedNode.File(var content) ? Option.of(content) : Option.none()),
+                file(model.repoView().unchanged()),
                 content -> model.mapRepoView(repoView -> repoView.withUnchanged(content.map(UnchangedNode.File::new))),
                 ReadFileContent::new);
     }
 
     /**
-     * A directory without changes needs nothing read: it says how many files it holds.
+     * A directory without changes needs nothing read: it says how many files it holds, in the commit whose files are
+     * listed, while they are.
      */
     private static Next unchangedDirectorySelected(Model model, String path, int files) {
-        return Next.of(model.mapRepoView(
-                repoView -> repoView.withUnchanged(Option.of(new UnchangedNode.Directory(path, files)))
-                        .withVersions(HashMap.empty())));
+        UnchangedNode node = new UnchangedNode.Directory(path, files);
+        return Next.of(model.mapRepoView(repoView -> repoView.commitFiles()
+                .map(view -> repoView.withCommitFiles(Option.of(view.withUnchanged(Option.of(node)))))
+                .getOrElse(() -> repoView.withUnchanged(Option.of(node)))
+                .withVersions(HashMap.empty())));
     }
 
     /**
-     * Loads the diff of {@code files} of the commit files shown, if they are.
+     * Loads the diff of {@code files} of the commit files shown, if they are. A node with changes shows its diff, not
+     * the node without them highlighted before (ADR 128).
      */
     private static Next commitFilesSelected(Model model, List<CommitFile> files) {
-        return model.repoView()
+        Model changed = model.mapRepoView(repoView ->
+                repoView.withCommitFiles(repoView.commitFiles().map(open -> open.withUnchanged(Option.none()))));
+        return changed.repoView()
                 .commitFiles()
                 .map(view -> selected(
-                        model,
+                        changed,
                         files,
                         view.diff(),
-                        diff -> model.mapRepoView(repoView -> repoView.withCommitFiles(Option.of(view.withDiff(diff)))),
+                        diff -> changed.mapRepoView(
+                                repoView -> repoView.withCommitFiles(Option.of(view.withDiff(diff)))),
                         entries -> LoadCommitFileDiff.of(
                                 view, entries, model.preferences().diffOptions())))
                 .getOrElse(() -> Next.of(model));

@@ -355,5 +355,37 @@ public sealed interface LoadMsg extends Msg {
         }
     }
 
+    /**
+     * All files of the commit the files of {@code of} end at, with those it changed (ADR 128).
+     */
+    record CommitTreeLoaded(Changes of, List<CommitFile> files) implements Read<List<CommitFile>> {
+
+        @Override
+        public List<CommitFile> value() {
+            return files;
+        }
+
+        @Override
+        public LoadCommitTree cmd() {
+            return new LoadCommitTree(of);
+        }
+    }
+
+    /**
+     * What the file at {@code path} holds in the commit the files of {@code of} end at (ADR 128).
+     */
+    record CommitFileContentRead(Changes of, String path, FileContent content) implements Read<FileContent> {
+
+        @Override
+        public FileContent value() {
+            return content;
+        }
+
+        @Override
+        public ReadCommitFileContent cmd() {
+            return new ReadCommitFileContent(of, path);
+        }
+    }
+
     record Failed(Load cmd, Failure failure) implements LoadMsg {}
 }

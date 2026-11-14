@@ -232,6 +232,7 @@ class KeymapTest {
                 List.of(
                         "help.commitFiles.filter",
                         "help.commitFiles.close",
+                        "help.commitFiles.allFiles",
                         "help.commitFiles.listed",
                         "help.commitFiles.refresh",
                         "help.commitFiles.version",

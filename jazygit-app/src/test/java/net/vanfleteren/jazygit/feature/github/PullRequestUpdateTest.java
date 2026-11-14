@@ -1577,20 +1577,38 @@ class PullRequestUpdateTest {
     }
 
     @Test
-    void theMainBranchHasNoBaseToShowItsFilesAgainst() {
+    void shiftFOnTheMainBranchListsAllFilesOfItsTipAsCommitted() {
         Next opened = Update.update(withPr(), new PullRequestMsg.FilesRequested(MAIN.name()));
 
+        Changes of = new Changes.OfTip(MAIN.name(), MAIN.tip());
+        assertEquals(Option.none(), opened.model().outcome().error());
         assertEquals(
-                Option.of(new BaseBranchError.IsBase(MAIN.name())),
-                opened.model().outcome().error());
-        assertEquals(Option.none(), opened.model().repoView().commitFiles());
-        assertEquals(List.empty(), opened.cmds());
+                Option.of(CommitFilesView.of(of, new PaneId("branches"), new PaneId("files"))
+                        .withAllFiles(true)
+                        .withTree(Option.of(Loadable.loading()))),
+                opened.model().repoView().commitFiles());
+        assertEquals(List.of(new LoadCommitFiles(of), new LoadCommitTree(of)), opened.cmds());
+    }
+
+    @Test
+    void shiftFOnTheMainBranchWithAPullRequestShowsTheFilesOfThatAsOnAnyBranch() {
+        PullRequest fromMain =
+                new PullRequest(new PrNumber(7), new GhBranch("main"), false, Checks.PASSING, Review.APPROVED);
+        Model shown = Update.update(model(), new PullRequestsMsg.Loaded(List.of(fromMain)))
+                .model();
+
+        Next requested = Update.update(shown, new PullRequestMsg.FilesRequested(MAIN.name()));
+
+        // Its dialog reads its commits first, as for a pull request of any branch listed without them.
+        assertTrue(requested.model().popup(PullRequestPopup.class).get().filesWanted());
+        assertEquals(
+                List.of(new LoadPullRequestDetails(new PrNumber(7), lastRead(requested.model()))), requested.cmds());
+        assertEquals(Option.none(), requested.model().repoView().commitFiles());
     }
 
     @Test
     void theFilesOfABranchShownTakeTheErrorBeforeAway() {
-        Model failed = Update.update(withPr(), new PullRequestMsg.FilesRequested(MAIN.name()))
-                .model();
+        Model failed = withPr().fail(new BaseBranchError.None(UNPUSHED.name()));
 
         Next opened = Update.update(failed, new PullRequestMsg.FilesRequested(UNPUSHED.name()));
 

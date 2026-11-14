@@ -35,6 +35,7 @@ import net.vanfleteren.jazygit.state.Update.Next;
 import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.load.LoadCommitFileDiff;
 import net.vanfleteren.jazygit.state.load.LoadCommitFiles;
+import net.vanfleteren.jazygit.state.load.LoadCommitTree;
 import net.vanfleteren.jazygit.state.load.LoadMsg;
 import net.vanfleteren.jazygit.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.state.preferences.SaveSettings;
@@ -332,6 +333,37 @@ class CommitFilesUpdateTest {
         assertEquals(List.of(new LoadCommitFiles(now)), moved.cmds());
         // The files are read again at the commits the threads were read at.
         assertTrue(view.remarksAtItsCommits());
+    }
+
+    @Test
+    void allFilesOfAPullRequestThatMovedOnAreListedStillAndReadAgainAtItsHead() {
+        Model all = Update.update(withFiles(openedPullRequest()), new CommitFilesMsg.AllToggled())
+                .model();
+
+        Next moved = Update.update(
+                all,
+                new CommitFilesMsg.RemarksLoaded(
+                        new PrNumber(7), remarks("c".repeat(40), "b".repeat(40)), HashSet.empty(), 0));
+
+        Changes now = new Changes.OfPullRequest(
+                new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("c".repeat(40))));
+        CommitFilesView view = moved.model().repoView().commitFiles().get();
+        assertTrue(view.allFiles());
+        assertEquals(Option.of(new Loading<>()), view.tree());
+        assertEquals(List.of(new LoadCommitFiles(now), new LoadCommitTree(now)), moved.cmds());
+    }
+
+    @Test
+    void theChangedFilesOfAPullRequestThatMovedOnReadNotAllItsFiles() {
+        Next moved = Update.update(
+                withFiles(openedPullRequest()),
+                new CommitFilesMsg.RemarksLoaded(
+                        new PrNumber(7), remarks("c".repeat(40), "b".repeat(40)), HashSet.empty(), 0));
+
+        CommitFilesView view = moved.model().repoView().commitFiles().get();
+        assertFalse(view.allFiles());
+        assertEquals(Option.none(), view.tree());
+        assertFalse(moved.cmds().exists(LoadCommitTree.class::isInstance));
     }
 
     @Test

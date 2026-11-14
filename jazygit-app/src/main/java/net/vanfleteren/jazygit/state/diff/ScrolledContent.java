@@ -42,7 +42,7 @@ public sealed interface ScrolledContent {
             case CommitChanges(var commit, DiffText changes) -> Option.of(changes);
             case StashChanges(var sha, DiffText changes) -> Option.of(changes);
             case FileChanges(var of, var files, DiffText diff) -> Option.of(diff);
-            case Unchanged(var path, DiffText asDiff) -> Option.of(asDiff);
+            case Unchanged(var path, DiffText asDiff, var commit) -> Option.of(asDiff);
             case BranchLog _, PullRequest _, Note _ -> Option.none();
         };
     }
@@ -53,10 +53,26 @@ public sealed interface ScrolledContent {
     record Diff(DiffText diff) implements ScrolledContent {}
 
     /**
-     * The file at {@code path} in the working tree, without changes, as it is on disk: a diff of it against itself
-     * (ADR 108).
+     * The file at {@code path} without changes, a diff of it against itself: in the working tree, as it is on disk
+     * (ADR 108), or in the commit {@code commit} whose files are listed, as it is in it (ADR 128).
      */
-    record Unchanged(String path, DiffText asDiff) implements ScrolledContent {}
+    record Unchanged(String path, DiffText asDiff, Option<Sha> commit) implements ScrolledContent {
+
+        /**
+         * The file at {@code path} in the working tree, as it is on disk.
+         */
+        public Unchanged(String path, DiffText asDiff) {
+            this(path, asDiff, Option.none());
+        }
+
+        /**
+         * How the file is read whole: from disk, or from its commit.
+         */
+        public WholeFile.Source source() {
+            return commit.<WholeFile.Source>map(sha -> new WholeFile.Source.AtCommit(sha, path))
+                    .getOrElse(() -> new WholeFile.Source.OnDisk(path));
+        }
+    }
 
     /**
      * The log of a branch.

@@ -25,6 +25,7 @@ import net.vanfleteren.jazygit.state.diff.Changes;
 import net.vanfleteren.jazygit.state.load.AheadUpdate;
 import net.vanfleteren.jazygit.state.load.LoadAhead;
 import net.vanfleteren.jazygit.state.load.LoadCommitFiles;
+import net.vanfleteren.jazygit.state.load.LoadCommitTree;
 import net.vanfleteren.jazygit.state.view.CommitFilesView;
 
 /**
@@ -43,14 +44,8 @@ public final class CommitFilesUpdate {
 
     public static Next update(Model model, CommitFilesMsg msg) {
         return switch (msg) {
-            case CommitFilesMsg.Opened(var of, var pane) -> {
-                CommitFilesView view = CommitFilesView.of(of, pane, Scopes.FILES.pane());
-                yield new Next(
-                        model.mapRepoView(repoView -> repoView.withCommitFiles(Option.of(view))),
-                        List.<Cmd>of(LoadCommitFiles.of(view))
-                                .appendAll(remarksLoad(view))
-                                .appendAll(collapsedLoad(view)));
-            }
+            case CommitFilesMsg.Opened(var of, var pane) ->
+                open(model, CommitFilesView.of(of, pane, Scopes.FILES.pane()));
             case CommitFilesMsg.Closed() ->
                 Next.of(model.mapRepoView(repoView -> repoView.withCommitFiles(Option.none())));
             case CommitFilesMsg.RemarksLoaded(PrNumber number, var remarks, var settled, int version) ->
@@ -77,6 +72,7 @@ public final class CommitFilesUpdate {
                         number,
                         view -> view.withCollapsed(view.collapsed().with(kept).readAgain(view.threads()))));
             case CommitFilesMsg.CollapsedKept() -> Next.of(model);
+            case CommitFilesMsg.AllToggled() -> allToggled(model);
             case CommitFilesMsg.PictureLoaded(PrNumber number, String url, var picture) ->
                 Next.of(mapPullRequest(
                         model, number, view -> view.withPictures(view.pictures().put(url, picture))));
@@ -88,13 +84,56 @@ public final class CommitFilesUpdate {
     }
 
     /**
+     * Shows {@code view}, reading its files, and what goes with them: the review threads of a pull request and those
+     * collapsed, and all files of its commit when it lists them.
+     */
+    private static Next open(Model model, CommitFilesView view) {
+        return new Next(
+                model.mapRepoView(repoView -> repoView.withCommitFiles(Option.of(view))),
+                List.<Cmd>of(LoadCommitFiles.of(view))
+                        .appendAll(treeLoad(view))
+                        .appendAll(remarksLoad(view))
+                        .appendAll(collapsedLoad(view)));
+    }
+
+    /**
+     * Lists all files of the commit the files listed end at, or only those changed again (ADR 128). All files are
+     * read the first time they are listed, and again only when reading them failed.
+     */
+    private static Next allToggled(Model model) {
+        return model.repoView()
+                .commitFiles()
+                .map(view -> {
+                    boolean all = !view.allFiles();
+                    boolean reads = all && view.tree().forAll(Loadable::isFailed);
+                    CommitFilesView toggled =
+                            view.listingAll(all).withTree(reads ? Option.of(Loadable.loading()) : view.tree());
+                    return new Next(
+                            model.mapRepoView(repoView -> repoView.withCommitFiles(Option.of(toggled))),
+                            reads ? List.<Cmd>of(new LoadCommitTree(view.of())) : List.empty());
+                })
+                .getOrElse(() -> Next.of(model));
+    }
+
+    /**
      * Lists the files {@code branch} changes against its base, the base of ADR 20, at the commits the branches read
-     * last have them at (ADR 61). The main branch has no base to be compared with, nor has a branch without one.
+     * last have them at (ADR 61). The main branch has no base to be compared with: all files of its tip are listed,
+     * as committed, whatever is checked out (ADR 128). A branch without a base has nothing to be compared with. A
+     * branch with an open pull request, the main branch too, shows the files of that instead, before this is asked.
      */
     public static Next againstBase(Model model, BranchName branch) {
         LoadAhead load = AheadUpdate.of(model, new BranchRef.Local(branch));
         return AheadUpdate.main(model).contains(branch)
-                ? Next.of(model.fail(new BaseBranchError.IsBase(branch)))
+                ? load.tip()
+                        .map(tip -> open(
+                                model,
+                                CommitFilesView.of(
+                                                new Changes.OfTip(branch, tip),
+                                                Scopes.BRANCHES.pane(),
+                                                Scopes.FILES.pane())
+                                        .withAllFiles(true)
+                                        .withTree(Option.of(Loadable.loading()))))
+                        .getOrElse(() -> Next.of(model))
                 : load.base()
                         .map(base -> load.tip()
                                 .map(tip -> update(
@@ -103,6 +142,15 @@ public final class CommitFilesUpdate {
                                                 new Changes.OfBranch(branch, base, tip), Scopes.BRANCHES.pane())))
                                 .getOrElse(() -> Next.of(model)))
                         .getOrElse(() -> Next.of(model.fail(new BaseBranchError.None(branch))));
+    }
+
+    /**
+     * All files of the commit the files of {@code view} end at, when it lists them and they are still to be read.
+     */
+    private static Option<LoadCommitTree> treeLoad(CommitFilesView view) {
+        return Option.when(
+                view.allFiles() && view.tree().exists(tree -> tree instanceof Loadable.Loading<?>),
+                () -> new LoadCommitTree(view.of()));
     }
 
     /**
@@ -156,13 +204,16 @@ public final class CommitFilesUpdate {
                                         .withReacting(read.reacting())
                                         .withVersion(read.version())
                                         .withPictures(read.pictures())
-                                        // The same pull request, read again: its filter stays (ADR 105).
-                                        .withFilter(read.filter());
+                                        // The same pull request, read again: its filter stays (ADR 105), and so
+                                        // does whether all its files are listed, read anew at its head (ADR 128).
+                                        .withFilter(read.filter())
+                                        .withAllFiles(read.allFiles())
+                                        .withTree(Option.when(read.allFiles(), Loadable::loading));
                                 return pictures(
                                         model.mapRepoView(repoView -> repoView.withCommitFiles(Option.of(again))),
                                         again,
                                         number,
-                                        List.of(LoadCommitFiles.of(again)));
+                                        List.<Cmd>of(LoadCommitFiles.of(again)).appendAll(treeLoad(again)));
                             })
                             .getOrElse(() -> pictures(
                                     model.mapRepoView(repoView -> repoView.withCommitFiles(Option.of(read))),

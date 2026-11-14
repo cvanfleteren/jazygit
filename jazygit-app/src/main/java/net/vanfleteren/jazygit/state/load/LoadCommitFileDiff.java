@@ -52,6 +52,7 @@ public record LoadCommitFileDiff(Changes of, List<CommitFile> files, DiffOptions
     public Msg run(Env env) {
         return (switch (of) {
                     case Changes.OfCommit(Sha sha) -> env.git().diffs().commitFileChanges(sha, files, options);
+                    case Changes.OfTip(var _, Sha sha) -> env.git().diffs().commitFileChanges(sha, files, options);
                     case Changes.OfStash(Sha sha) -> env.git().stashes().fileChanges(sha, files, options);
                     case Changes.OfBranch(var branch, var base, Sha sha) ->
                         env.git().diffs().rangeFileChanges(base.tip(), sha, files, options);

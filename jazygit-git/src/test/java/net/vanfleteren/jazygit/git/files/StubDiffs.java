@@ -5,6 +5,7 @@ import io.vavr.control.Either;
 import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.DiffText;
+import net.vanfleteren.jazygit.git.model.FileContent;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.Sha;
@@ -23,6 +24,16 @@ public interface StubDiffs extends Diffs {
     @Override
     default Either<GitError, List<CommitFile>> commitFiles(Sha sha) {
         return Either.right(List.empty());
+    }
+
+    @Override
+    default Either<GitError, List<String>> treeFiles(Sha sha) {
+        return Either.right(List.empty());
+    }
+
+    @Override
+    default Either<GitError, FileContent> treeContent(Sha sha, String path) {
+        return Either.left(new GitError.Unreadable(path, "not in " + sha.shortSha()));
     }
 
     @Override

@@ -53,13 +53,13 @@ public sealed interface SelectionMsg extends Msg {
 
     /**
      * The user highlighted the file at {@code path} in the files tree while it lists all files, a file without
-     * changes (ADR 108).
+     * changes: of the working tree (ADR 108), or of the commit whose files it lists (ADR 128).
      */
     record UnchangedFileSelected(String path) implements SelectionMsg {}
 
     /**
      * The user highlighted the directory at {@code path}, the root when it is empty, in the files tree while it lists
-     * all files, with no changes under it; it holds {@code files} files shown (ADR 108).
+     * all files, with no changes under it; it holds {@code files} files shown (ADR 108, 128).
      */
     record UnchangedDirectorySelected(String path, int files) implements SelectionMsg {}
 

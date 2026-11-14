@@ -45,6 +45,15 @@ public sealed interface Changes {
     record OfBranch(BranchName branch, BaseTip base, Sha sha) implements Changes {}
 
     /**
+     * The main branch as committed, which has no base (ADR 128): what its tip commit changed, of a merge against its
+     * first parent; its files are listed with all files of that commit.
+     *
+     * @param branch the main branch
+     * @param sha    the commit it was at
+     */
+    record OfTip(BranchName branch, Sha sha) implements Changes {}
+
+    /**
      * The changes of a pull request on GitHub, as GitHub shows them: its head against the merge base of its head
      * and its base (ADR 55).
      */

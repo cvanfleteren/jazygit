@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.git.model.ChangeType;
 import net.vanfleteren.jazygit.git.model.CommitFile;
 import net.vanfleteren.jazygit.git.model.DiffOptions;
 import net.vanfleteren.jazygit.git.model.DiffText;
+import net.vanfleteren.jazygit.git.model.FileContent;
 import net.vanfleteren.jazygit.git.model.FileEntry;
 import net.vanfleteren.jazygit.git.model.PullRequestCommits;
 import net.vanfleteren.jazygit.git.model.Revision;
@@ -96,6 +97,16 @@ public final class CliDiffs implements Diffs {
                 reading(SHOW.appendAll(List.of("--name-status", "-z", "-M", FIRST_PARENT))
                         .append(sha.value())),
                 CliDiffs::parseFiles);
+    }
+
+    @Override
+    public Either<GitError, List<String>> treeFiles(Sha sha) {
+        return CliTreeFiles.files(worktree, sha);
+    }
+
+    @Override
+    public Either<GitError, FileContent> treeContent(Sha sha, String path) {
+        return CliTreeFiles.content(worktree, sha, path, LIMIT);
     }
 
     /**

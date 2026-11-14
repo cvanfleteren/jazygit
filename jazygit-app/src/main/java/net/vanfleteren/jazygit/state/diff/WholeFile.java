@@ -48,5 +48,10 @@ public record WholeFile(ScrolledContent content, Source source, String path, Dif
          * The file at {@code path} in the working tree, without changes, as it is on disk (ADR 108).
          */
         record OnDisk(String path) implements Source {}
+
+        /**
+         * The file at {@code path} in the commit {@code sha}, which it did not change, as it is in it (ADR 128).
+         */
+        record AtCommit(Sha sha, String path) implements Source {}
     }
 }

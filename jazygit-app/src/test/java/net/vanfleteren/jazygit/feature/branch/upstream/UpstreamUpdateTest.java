@@ -143,7 +143,8 @@ class UpstreamUpdateTest {
         Next next = Update.update(opened(with(TRACKING, FEATURE_BRANCH)), new UpstreamMsg.BaseDivergenceChosen());
 
         assertEquals(Option.none(), next.model().repoView().divergence());
-        assertEquals(Option.of("Branch main is the base branch itself"), errorText(next.model()));
+        assertEquals(
+                Option.of("main is the main branch: there is no base to compare it with"), errorText(next.model()));
     }
 
     @Test
